@@ -1,0 +1,227 @@
+
+<html>
+  <head>
+    <title>email</title>
+    <link href='http://fonts.googleapis.com/css?family=Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+
+    <script type="text/javascript">
+    jQuery(document).ready(function() {
+      jQuery(".content").hide();
+      //toggle the componenet with class msg_body
+      jQuery(".heading").click(function()
+      {
+        jQuery(this).next(".content").slideToggle(500);
+      });
+    });
+</script>
+
+
+
+  </head>
+
+  <style>
+    body {
+      background-color: #E6EBEA;
+      font-family: Helvetica Neue, Arial, sans-serif;
+      color: #616566;
+    }
+
+
+    .wrapper {
+
+      position: relative;
+
+      margin-right: auto;
+      margin-left: auto;
+      margin-top: 30px;
+      margin-bottom: 30px;
+
+      width: 700px;
+
+
+    }
+
+    .panel {
+
+      background: white;
+      -webkit-box-shadow: 0 0 2px 4px rgba(0, 0, 0, 0.03), 0 0 0 1px rgba(0, 0, 0, 0.15);
+      -moz-box-shadow: 0 0 2px 4px rgba(0, 0, 0, 0.03), 0 0 0 1px rgba(0,0,0,0.15);
+      box-shadow: 0 0 4px 2px rgba(0, 0, 0, 0.03), 0 0 0 1px rgba(0, 0, 0, 0.15);
+
+      width: 640px;
+
+      text-align: left;
+
+      padding: 30px;
+
+      position: relative;
+    }
+
+
+
+    .panel_shadow
+    {
+/*      position: absolute; 
+*/      
+      bottom: 0;
+      height: 10px;
+      width:700px;
+
+
+      background-position-x: 0%;
+      background-position-y: 50%;
+
+
+      /*background: url(http://static.tumblr.com/njty47g/yu0leufgq/post_shadow.png) left top no-repeat;*/
+      
+      background: url(static/post_shadow.png) left bottom no-repeat;
+
+      width: 100%;
+      height: 10px;
+      display: block;
+      position: absolute;
+      left: 0;
+      bottom: -10px;
+      z-index: 2;
+
+  }
+
+
+    .author
+    {
+      width: 100%;
+      height: 25px;
+
+      border-bottom-width: 2px;
+      border-bottom-style: solid;
+      border-bottom-color: #E6E8EA;
+
+      margin-bottom: 15px;
+      padding-bottom:15px;
+
+      /*font-family: 'Inconsolata', sans-serif;*/
+      font-family: "Lucida Grande", sans-serif;
+      color: #4C4C4C;
+      font-size: 14px;
+
+    }
+
+    .author img
+    {
+      float: left;
+    }
+
+    .author_byline
+    {
+      margin-top: 4px;
+      display:block; 
+      padding-left: 8px;
+      float:left;
+      font-weight: bold;
+
+    }
+
+    .message_date
+    {
+      margin-top: 6px;
+      text-align: right;
+      float:right;
+      font-size: 12px;
+      color: #ccc;
+    }
+
+
+    .fixedwidth 
+    {
+      font-family: 'Inconsolata', sans-serif;
+    }
+
+@font-face{
+  font-family:'MuseoSans';
+  src:url(static/font/museosans/museosans-300-webfont.woff) format('woff');
+  font-style:normal;
+  font-weight:300;
+  font-stretch:normal;
+}
+
+    .regular_message
+    {
+      font: 300 15px/21px "MuseoSans",Arial,Helvetica,sans-serif;
+      font-family: MuseoSans, Arial, Helvetica, sans-serif;
+      font-size: 15px;
+      font-style: normal;
+      font-variant: normal;
+      font-weight: 300;
+      line-height: 21px;
+      margin-bottom: 1em;
+
+    }
+
+
+
+  </style>
+
+
+
+  <body>
+
+
+  <div class="wrapper">
+
+    <div class="panel">
+
+        <div class="author">
+
+          <img src="{{ sender_gravatar_url }}"/>
+          <div class="author_byline">{{ from_name }}</div>
+
+          <div class="message_date">{% raw sent_time %}</div>
+
+        </div>
+
+
+<!--         <p class="fixedwidth"><strong>To:</strong> {{ to_name }}<span style="color:#ccc"> {{ to_addr }}</span></p>
+        <p class="fixedwidth"><strong>Date:</strong> {{ sent_time }}
+
+        <p class="fixedwidth"><strong>Subject:</strong> {{ subject }}
+
+        
+
+        </div>
+
+ -->
+        {% if content_type == 'text/plain' %}
+          <div class='fixedwidth'>{% raw raw_msg_data %}</div>
+        {% elif content_type == 'text/html' %}
+            <div class="regular_message">{% raw raw_msg_data %}</div>
+        {% else %}
+            <div>Not sure how to display {{ content_type }}.</div>
+        {% end %}
+
+
+
+    </div>
+    <div class="panel_shadow"></div>
+
+  </div> <!-- /wrapper -->
+
+
+
+    <div class="panel">
+
+      <p class="heading"><a href="#fixedwidths">Show/Hide Headers</a></p>
+      <div class="content">
+        {% for header in headers %}
+          <p class="fixedwidth"><strong>{{ header[0]}}:</strong> {{ header[1] }}<p>
+        {% end %}
+      </div>
+
+
+    </div>
+
+
+
+  </body>
+</html>

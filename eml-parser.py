@@ -219,17 +219,7 @@ def main():
             # atime = st[ST_ATIME] #access time
             # mtime = st[ST_MTIME] #modification time
 
-            # created_time = time.mktime( parse(mail["Date"]).timetuple() ) # no good
-            date_tuple = email.utils.parsedate_tz(mail["Date"])
-            created_time = time.mktime( date_tuple[:9]  )
-
-            # created_time = time.strptime([:24], "%a, %d %b %Y %H:%M:%S")
-            created_time_since_epoch = created_time
-
-            #modify the file timestamp
-            os.utime(att_path, (time.mktime(time.gmtime()), created_time_since_epoch) )
-
-
+]
 
 
     # if emailMessage.is_multipart():
