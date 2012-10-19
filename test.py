@@ -77,6 +77,15 @@ def get_mailbox_uids():
 
 
 
+# >>> m.fetch('973:974', "(X-GM-MSGID)")
+# ('OK',
+#  ['973 (X-GM-MSGID 1379737035591830674)',
+#   '974 (X-GM-MSGID 1379738451193255630)'])
+ 
+# >>> m.fetch('973:974', "(X-GM-LABELS)")
+# >>> m.fetch('973:976', "(X-GM-THRID)")
+
+
 
 def get_header_key(uid):
 
@@ -84,6 +93,8 @@ def get_header_key(uid):
 
     return data
 
+
+# FETCH 88 BODY.PEEK[1]
 
 # get_headers_subjects()
 uids =  get_mailbox_uids()

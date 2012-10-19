@@ -31,5 +31,4 @@ status, data = conn.uid('fetch', uid, 'RFC822')
 
 
 
-
 print my_mailboxes
