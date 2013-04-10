@@ -1,51 +1,35 @@
-
 <html>
   <head>
-    <title>email</title>
+  <link rel="stylesheet" href="{{ static_url("style.css") }}" type="text/css"/>
+
+  <link rel="stylesheet" href="{{ static_url("fonts.css") }}" type="text/css"/>
+
+  <script type="text/javascript" src="{{ static_url("script.js") }}"></script>
+
+  <title>email</title>
+
+  <link href='http://fonts.googleapis.com/css?family=Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+
+
+  <script type="text/javascript">
+  jQuery(document).ready(function() {
+    jQuery(".content").hide();
+    //toggle the componenet with class msg_body
+    jQuery(".heading").click(function()
+    {
+      jQuery(this).next(".content").slideToggle(500);
+    });
+  });
+  </script>
+
+
   </head>
 
-  <style>
-    body {
-      background-color: #E6EBEA;
-      font-family: Helvetica Neue, Arial, sans-serif;
-      color: #616566;
-    }
-
-
-
-    .panel {
-
-      background: white;
-      -webkit-box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.03) inset, 0 0 0 1px rgba(0, 0, 0, 0.15);
-      -moz-box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.03) inset, 0 0 0 1px rgba(0,0,0,0.15);
-      box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.03) inset, 0 0 0 1px rgba(0, 0, 0, 0.15);
-      position: relative;
-
-      width: 600px;
-      height: 800px;
-
-      position: relative;
-      margin-right: auto;
-      margin-left: auto;
-      width: 600px;
-      height: 800px;
-
-      text-align: left;
-      padding: 30px;
-
-      ;
-    }
-  </style>
   <body>
 
-    <div class="panel">
-
-      {% for email in emails %} 
-        {{ email }}
-        <br/>
-      {% end %}
-
-    </div>
+      {% block body %}{% end %}
 
   </body>
 </html>

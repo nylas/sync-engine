@@ -6,10 +6,12 @@ token = oauth.Token('1/YoIFxSm3m7k5obAAioR8megV7M1H7uw4BR9KwIXtaBc',
 
 account = 'mgrinich@gmail.com'
 
-
+BASE_GMAIL_URL = 'https://mail.google.com/mail/b/' + account + '/imap/'
+HOST = 'imap.gmail.com'
 
 OAUTH_TOKEN = '1/4J0lPiDhSymOZtF-dzXz3x7GXNqUgXCwiouiKT6s8sg'
 OAUTH_TOKEN_SECRET = 'Q29x3VnMyY5YGSxTUOkNfHgl'
 CONSUMER_KEY = 'anonymous'
 CONSUMER_SECRET = 'anonymous'
 ACCOUNT = 'mgrinich@gmail.com'
+

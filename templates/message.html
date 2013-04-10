@@ -1,317 +1,60 @@
+{% extends "base.html" %}
 
-<html>
-  <head>
-    <title>email</title>
-    <link href='http://fonts.googleapis.com/css?family=Inconsolata:400,700' rel='stylesheet' type='text/css'>
-
-    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
-
-    <script type="text/javascript">
-    jQuery(document).ready(function() {
-      jQuery(".content").hide();
-      //toggle the componenet with class msg_body
-      jQuery(".heading").click(function()
-      {
-        jQuery(this).next(".content").slideToggle(500);
-      });
-    });
-</script>
-
-
-
-  </head>
-
-  <style>
-    body {
-      background-color: #E6EBEA;
-      font-family: Helvetica Neue, Arial, sans-serif;
-      color: #616566;
-    }
-
-
-    .wrapper {
-
-      position: relative;
-
-      margin-right: auto;
-      margin-left: auto;
-      margin-top: 30px;
-      margin-bottom: 30px;
-
-      width: {{ page_width }}px;
-
-
-    }
-
-    .panel {
-
-      background: white;
-      -webkit-box-shadow: 0 0 2px 4px rgba(0, 0, 0, 0.03), 0 0 0 1px rgba(0, 0, 0, 0.15);
-      -moz-box-shadow: 0 0 2px 4px rgba(0, 0, 0, 0.03), 0 0 0 1px rgba(0,0,0,0.15);
-      box-shadow: 0 0 4px 2px rgba(0, 0, 0, 0.03), 0 0 0 1px rgba(0, 0, 0, 0.15);
-
-      width: {{ page_width - 30 }};
-
-      text-align: left;
-      position: relative;
-
-      padding: 15px;
-
-    }
-
-
-    .subject 
-    {
-      font: 700 19px/23px "MuseoSans",Arial,Helvetica,sans-serif;
-      font-family: MuseoSans, Arial, Helvetica, sans-serif;
-      font-size: 19px;
-      font-style: normal;
-      font-variant: normal;
-      font-weight: 700;
-      line-height: 25px;
-
-      padding: 15px;
-
-      text-shadow: 1px 1px 0 white;
-    }
-
-
-
-    .panel_shadow
-    {
-      bottom: 0;
-      height: 10px;
-
-      width: {{ page_width }}px;
-
-      background-position-x: 0%;
-      background-position-y: 50%;
-
-      
-      {% if page_width == 700 %}
-      background: url(static/post_shadow.png) left bottom no-repeat;
-      {% elif page_width == 600 %}
-      background: url(static/post_shadow.png) left center no-repeat;
-      {% elif page_width == 500 %}
-      background: url(static/post_shadow.png) left top no-repeat;
-      {% else%}
-      /* No shadow for size {{ page_width }}. */
-      {% end %}
-
-
-      width: 100%;
-      height: 10px;
-      display: block;
-      position: absolute;
-      left: 0;
-      bottom: -10px;
-      z-index: 2;
-
-  }
-
-
-
-    @font-face{
-      font-family:'MuseoSans';
-      src:url(static/font/museosans/museosans-300-webfont.woff) format('woff');
-      font-style:normal;
-      font-weight:300;
-      font-stretch:normal;
-    }
-
-    @font-face{
-      font-family:'MuseoSans';
-      src:url(static/font/museosans/museosans-500-webfont.woff) format('woff');
-      font-style:normal;
-      font-weight:500;
-      font-stretch:normal;
-    }
-
-
-    @font-face{
-      font-family:'MuseoSans';
-      src:url(static/font/museosans/museosans-700-webfont.woff) format('woff');
-      font-style:normal;
-      font-weight:700;
-      font-stretch:normal;
-    }
-
-
-
-    .author img
-    {
-      float: left;
-    }
-
-    .author_byline
-    {
-      margin-top: 4px;
-      margin-bottom: 5px;
-
-      display:block; 
-      padding-left: 8px;
-      float:left;
-
-      font: 500 15px/21px "MuseoSans",Arial,Helvetica,sans-serif;
-      font-family: MuseoSans, Arial, Helvetica, sans-serif;
-      font-size: 15px;
-      font-style: normal;
-      font-variant: normal;
-      font-weight: 500;
-      line-height: 21px;
-
-    }
-
-    .message_date
-    {
-      margin-top: 6px;
-      text-align: right;
-      float:right;
-      font-size: 12px;
-      color: #ccc;
-    }
-
-
-    .fixedwidth 
-    {
-      font-family: 'Inconsolata', sans-serif;
-    }
-
-    .clear
-    {
-      clear: both;
-    }
-
-
-    .regular_message
-    {
-      font: 300 15px/21px "MuseoSans",Arial,Helvetica,sans-serif;
-      font-family: MuseoSans, Arial, Helvetica, sans-serif;
-      font-size: 15px;
-      font-style: normal;
-      font-variant: normal;
-      font-weight: 300;
-      line-height: 21px;
-      margin-bottom: 1em;
-
-    }
-
-    .author
-    {
-      width: 100%;
-
-      border-bottom-width: 1px;
-      border-bottom-style: solid;
-      border-bottom-color: #E6E8EA;
-
-      margin-bottom: 20px;
-      padding-bottom:8px;
-
-      /*font-family: 'Inconsolata', sans-serif;*/
-      font-family: "Lucida Grande", sans-serif;
-      color: #4C4C4C;
-      font-size: 14px;
-
-    }
-
-
-
-
-    .gravatar_img {
-
-      border:1px solid #E6E8EA; 
-     }
-
-
-    hr
-    {
-      border: 0;
-      color: #9E9E9E;
-      background-color: #E6E8EA;  
-      height: 1px;
-      width: 100%;
-    }
-
-    .spacer
-
-    {
-      height:50px;
-    }
-
-
-
-  </style>
-
-
-
-  <body>
-
+{% block body %}
 
   <div class="wrapper">
-
     <div class="subject">{{ subject }}</div>
-
     <div class="panel">
-
         <div class="author">
-
-          <img src="{{ sender_gravatar_url }}" class="gravatar_img"/>
+          <div class="gravatar_img" style="background:url({{ sender_gravatar_url }})"></div>
           <div class="author_byline">{{ from_name }}</div>
-
           <div class="message_date">{% raw sent_time %}</div>
-
           <div class="clear"></div>
-
-
         </div>
 
-
-<!--         <p class="fixedwidth"><strong>To:</strong> {{ to_name }}<span style="color:#ccc"> {{ to_addr }}</span></p>
-        <p class="fixedwidth"><strong>Date:</strong> {{ sent_time }}
-
-        <p class="fixedwidth"><strong>Subject:</strong> {{ subject }}
-
-        
-
-        </div>
-
- -->
         {% if content_type == 'text/plain' %}
           <div class='fixedwidth'>{% raw raw_msg_data %}</div>
         {% elif content_type == 'text/html' %}
-            <div class="regular_message">{% raw raw_msg_data %}</div>
+            <div class="regular_message">
+
+            <IFRAME SRC="/message_raw" width="100%" height="200px" id="iframe1" marginheight="0" frameborder="0" onLoad="autoResize('iframe1');"></iframe>
+
+            </div>
         {% else %}
             <div>Not sure how to display {{ content_type }}.</div>
         {% end %}
 
 
-
     </div>
     <div class="panel_shadow"></div>
 
+  </div> <!-- /wrapper
+
+
+  <div class="wrapper">
+    <div class="subject">Reply:</div>
+    <div class="panel">
+
+        <div class="reply_box" contenteditable="true" hidefocus="true">Your message here...</div>
+
+    </div>
+    <div class="panel_shadow"></div>
   </div> <!-- /wrapper -->
 
   <div class="spacer"></div>
 
 
+
   <div class="wrapper">
-
     <div class="panel">
-
       <p class="heading"><a href="#">Show/Hide Headers</a></p>
       <div class="content">
         {% for header in headers %}
           <p class="fixedwidth"><strong>{{ header[0]}}:</strong> {{ header[1] }}<p>
         {% end %}
       </div>
-
-
     </div>
     <div class="panel_shadow"></div>
-
-
   </div> <!-- /wrapper -->
 
-
-  </body>
-</html>
+{% end %}

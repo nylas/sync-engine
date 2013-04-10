@@ -1,0 +1,23 @@
+@font-face {
+  font-family:'MuseoSans';
+  src:url(/static/font/museosans/museosans-500-webfont.woff) format('woff');
+  font-style:normal;
+  font-weight:500;
+  font-stretch:normal;
+}
+
+@font-face {
+  font-family:'MuseoSans';
+  src:url(static/font/museosans/museosans-700-webfont.woff) format('woff');
+  font-style:normal;
+  font-weight:700;
+  font-stretch:normal;
+}
+
+@font-face {
+  font-family:'MuseoSans';
+  src:url(static/font/museosans/museosans-700-webfont.woff) format('woff');
+  font-style:normal;
+  font-weight:700;
+  font-stretch:normal;
+}
