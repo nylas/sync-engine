@@ -40,3 +40,7 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+
+# virtualenv
+local
+include
