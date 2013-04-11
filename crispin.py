@@ -1,15 +1,14 @@
-import email # TOFIX yuck
+from email import message_from_string
+import email.utils as email_utils
+from email.Parser import Parser
 
 # import imaplib as imaplib_original
 import auth
 from email.header import decode_header
 from imapclient import IMAPClient
-from email.Parser import Parser
-import email.utils
 import time
 import datetime
 import logging as log
-import re
 
 from webify import plaintext2html, fix_links, gravatar_url
 
@@ -191,7 +190,7 @@ def fetch_msg(msg_uid):
         if len(addrs) > 0:
             return [ dict(name = make_uni(t[0]),
                           address=make_uni(t[1]))
-                    for t in email.utils.getaddresses(addrs)]
+                    for t in email_utils.getaddresses(addrs)]
         else:
             return dict(name = "undisclosed recipients", address = "")
 
@@ -211,12 +210,12 @@ def fetch_msg(msg_uid):
     new_msg.subject = subject
 
     # TODO : upgrade to python3?
-    # new_msg.date = email.utils.parsedate_to_datetime(msg["Date"])
+    # new_msg.date = email_utils.parsedate_to_datetime(msg["Date"])
 
-    # date_tuple = email.utils.parsedate_tz(message["Date"])
+    # date_tuple = email_utils.parsedate_tz(message["Date"])
     # sent_time = time.strftime("%b %m, %Y &mdash; %I:%M %p", date_tuple[:9])
 
-    time_epoch = time.mktime( email.utils.parsedate_tz(msg["Date"])[:9] )
+    time_epoch = time.mktime( email_utils.parsedate_tz(msg["Date"])[:9] )
     new_msg.date = datetime.datetime.fromtimestamp(time_epoch)
 
     log.info('To: %s' % new_msg.to_contacts)
@@ -330,7 +329,7 @@ def fetch_headers(self, folder_name):
         # Headers will wrap when longer than 78 lines per RFC822_2
         subject = u"".join(header_sections).replace('\n\t', '').replace('\r\n', '')
         
-        date_tuple = email.utils.parsedate_tz(message["Date"])
+        date_tuple = email_utils.parsedate_tz(message["Date"])
         sent_time = time.strftime("%I:%M %p - %b %d, %Y", date_tuple[:9])
 
         print 'From:', from_address[0]
