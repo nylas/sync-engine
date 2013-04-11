@@ -192,7 +192,7 @@ def fetch_msg(msg_uid):
                           address=make_uni(t[1]))
                     for t in email_utils.getaddresses(addrs)]
         else:
-            return dict(name = "undisclosed recipients", address = "")
+            return [ dict(name = "undisclosed recipients", address = "") ]
 
 
     new_msg.to_contacts = parse_contact(['to', 'cc'])
