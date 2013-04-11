@@ -1,3 +1,5 @@
+// This should resize the container for the message 
+// via http://stackoverflow.com/questions/819416/adjust-width-height-of-iframe-to-fit-with-content-in-it
 function autoResize(id){
     var newheight;
     var newwidth;

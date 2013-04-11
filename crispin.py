@@ -5,7 +5,13 @@ import auth
 from email.header import decode_header
 from imapclient import IMAPClient
 from email.Parser import Parser
+import email.utils
 import time
+import datetime
+import logging as log
+import re
+
+from webify import plaintext2html, fix_links, gravatar_url
 
 
 base_gmail_url = 'https://mail.google.com/mail/b/' + auth.ACCOUNT + '/imap/'
@@ -15,11 +21,73 @@ ssl = True
 
 server = None
 
+
+        # { 
+        # tos: [ <Contacts>, ... ]
+        # from: 
+        #     [ <Contact> name, address, ... ]
+        # headers:
+        #     { 'someheader', value}
+
+        # body-text { 'content-type', bodyvalue}
+        #     >>> somehow have resource keys in body-text
+
+        # resources {'file-key', value}
+
+        # }
+
+
+     # BODY.PEEK[HEADER]
+         # X-GM-THRID
+         # X-GM-MSGID
+         # X-GM-LABELS
+        # BODY.PEEK[HEADER.FIELDS (Message-Id)]
+        # BODY.PEEK[HEADER.FIELDS (From)]
+        # ENVELOPE
+        # RFC822.SIZE
+        # UID
+        # FLAGS
+        # INTERNALDATE
+        # X-GM-THRID
+        # X-GM-MSGID
+        # X-GM-LABELS
+
+
+
+
+class Message():
+    def __init__(self):
+        self.to_contacts = []
+        self.from_contacts = None
+        self.subject = None
+        self.date = None
+        self.body_text = {}
+
+        self.thread_id = None
+        self.size = None
+        self.uid = None
+
+    def gravatar(self):
+        return gravatar_url(self.from_contacts[0]['address'])
+
+    def gmail_url(self):
+        if not self.uid: return
+        return "https://mail.google.com/mail/u/0/#inbox/" + hex(self.uid)
+
+
+
 # use decorators to make sure this happens? 
 def connect():
     global server
+    log.info('Connecting to %s ...' % auth.HOST,)
 
-    print 'Connecting to', auth.HOST
+    try:
+        server.noop()
+        log.info('Already connected to host.')
+        return True
+    except Exception, e:
+        log.info('No active connection. Opening connection...')
+
     try:
         server = IMAPClient(HOST, use_uid=True, ssl=ssl)
         server.oauth_login(base_gmail_url, 
@@ -28,9 +96,11 @@ def connect():
                     auth.CONSUMER_KEY, 
                     auth.CONSUMER_SECRET)
     except IMAPClient.Error, err:
-        print 'Could not connect: ', e
-        return
-    print '    Connected.'
+        log.error("Could not connect. %s", e)
+        return False
+
+    log.info('Connection successful.')
+    return True
 
 
 def setup():
@@ -39,18 +109,12 @@ def setup():
 
 
 def list_folders():
-    # TODO check failure case here
     global server
-
-    if server == None:
-        print "Why is there no server?"
-        return
 
     try:
         resp = server.xlist_folders()
     except Exception, e:
         raise e
-    
     return [dict(flags = f[0], delimiter = f[1], name = f[2]) for f in resp]
     
 
@@ -65,14 +129,12 @@ def select_folder(folder):
 
     # TOFIX catch exception here
     select_info = server.select_folder(folder, readonly=True)
-
     # Format of select_info
     # {'EXISTS': 3597, 'PERMANENTFLAGS': (), 
     # 'UIDNEXT': 3719, 
     # 'FLAGS': ('\\Answered', '\\Flagged', '\\Draft', '\\Deleted', '\\Seen', '$Pending', 'Junk', 'NonJunk', 'NotJunk', '$Junk', 'Forwarded', '$Forwarded', 'JunkRecorded', '$NotJunk'), 
     # 'UIDVALIDITY': 196, 'READ-ONLY': [''], 'RECENT': 0}
-
-    print 'Selected folder %s with %d messages.' % (folder, select_info['EXISTS'])
+    log.info('Selected folder %s with %d messages.' % (folder, select_info['EXISTS']) )
     return select_info
 
 
@@ -85,94 +147,150 @@ def create_draft(message_string):
                 str(email.message_from_string(message_string)))
     print 'Done!'
 
-    # conn = imaplib.IMAP4_SSL('imap.gmail.com', port = 993)
-    # psw = getpass.getpass("What's your password kiddo?: ")
-    # print 'Logging in'
-    # conn.login('mgrinich@gmail.com', psw)
 
+
+def latest_message_uid():
+    global server
+    messages = server.search(['NOT DELETED'])
+    return messages[-1]
 
 
 def fetch_latest_message():
     global server
-
-    messages = server.search(['NOT DELETED'])
-    latest_email_uid = messages[-1]
+    latest_email_uid = latest_message_uid();
     response = server.fetch(latest_email_uid, ['RFC822', 'X-GM-THRID', 'X-GM-MSGID'])
     return response[latest_email_uid]['RFC822']
 
 
-def fetch_msg(msgid):
+
+def fetch_msg(msg_uid):
     global server
+    response = server.fetch(msg_uid, ['RFC822', 'X-GM-THRID', 'X-GM-MSGID'])
+    raw_response = response[msg_uid]['RFC822']
 
-    # TODO actually use msgid here to look it up
 
-    messages = server.search(['NOT DELETED'])
-    latest_email_uid = messages[-1]
-    response = server.fetch(latest_email_uid, ['RFC822', 'X-GM-THRID', 'X-GM-MSGID'])
-    body = response[latest_email_uid]['RFC822']
-
+    new_msg = Message()
 
     parser = Parser()
-    message = parser.parsestr(body)
+    msg = parser.parsestr(raw_response)
+
+
+    def make_uni(txt, default_encoding="ascii"):
+        return u"".join([unicode(text, charset or default_encoding)
+                   for text, charset in decode_header(txt)]) 
+
+
+    def parse_contact(headers):
+        # Works with both strings and lists
+        try: headers += []
+        except: headers = [headers] 
+
+        # combine and flatten header values
+        addrs = reduce(lambda x,y: x+y, [msg.get_all(a, []) for a in headers])
+        
+        if len(addrs) > 0:
+            return [ dict(name = make_uni(t[0]),
+                          address=make_uni(t[1]))
+                    for t in email.utils.getaddresses(addrs)]
+        else:
+            return dict(name = "undisclosed recipients", address = "")
+
+
+    new_msg.to_contacts = parse_contact(['to', 'cc'])
+    new_msg.from_contacts = parse_contact(['from'])
+
+    subject = make_uni(msg['subject'])
+    # Headers will wrap when longer than 78 lines per RFC822_2
+    subject = subject.replace('\n\t', '')
+    subject = subject.replace('\r\n', '')
+
+    # Remove "RE" or whatever
+    if subject[:4] == u'RE: ' or subject[:4] == u'Re: ' :
+        subject = subject[4:]
+
+    new_msg.subject = subject
+
+    # TODO : upgrade to python3?
+    # new_msg.date = email.utils.parsedate_to_datetime(msg["Date"])
+
+    # date_tuple = email.utils.parsedate_tz(message["Date"])
+    # sent_time = time.strftime("%b %m, %Y &mdash; %I:%M %p", date_tuple[:9])
+
+    time_epoch = time.mktime( email.utils.parsedate_tz(msg["Date"])[:9] )
+    new_msg.date = datetime.datetime.fromtimestamp(time_epoch)
+
+    log.info('To: %s' % new_msg.to_contacts)
+    log.info('From: %s' % new_msg.from_contacts)
+    log.info('Subject: %s' % new_msg.subject)
+    log.info('Date: %s' % new_msg.date.strftime('%b %m, %Y %I:%M %p') )
+
+    # log.info('Date: %s' % new_msg.date )
 
 
     msg_text = None
     content_type = None
 
+    maintype = msg.get_content_maintype()
+    if maintype == 'multipart':
+        for part in msg.get_payload():
+            if part.get_content_maintype() == 'text':
+                msg_text = part.get_payload(decode=True)
+                content_type = part.get_content_type()
+    elif maintype == 'text':
+        msg_text = msg.get_payload(decode=True)
+        content_type = msg.get_content_type()
+    else:
+        log.error("Message doesn't have text Content-Type: %s" % msg)
 
-    for part in message.walk():
-        content_type = part.get_content_type()
-        msg_text = part.get_payload(decode=True)
-
-        if content_type == "text/html":
-            break
-
-        if part.get_content_type() == 'text/plain':
-            msg_encoding = part.get_content_charset()
-
-            # TODO check to see if we always have to do this? does it break stuff?
-            msg_text = part.get_payload().decode('quoted-printable')
-            # break
-
-    return msg_text
+        # msg_text = quopri.decodestring(msg_text)
 
 
+    # My old way of doing this
+
+    # for part in message.walk():
+    #     content_type = part.get_content_type()
+    #     if content_type == "text/html":
+    #         msg_text = part.get_payload(decode=True)
+    #         break
+    #     if part.get_content_type() == 'text/plain':
+    #         continue
+    #         # break
+
+    if msg_text == None:
+        log.error("Couldn't find message text! %s" % msg)
+        return ""
+
+    msg_text = msg_text.decode('iso-8859-1').encode('utf8')
 
 
-def bodystructure_latest(self):
-    pass
+    # TODO: This doesn't always work right.
+    # This is so broken
+    # msg_text = trim_quoted_text(msg_text, content_type)
+
+    if content_type == 'text/plain':
+        msg_text = plaintext2html(msg_text)
+
+    msg_text = fix_links(msg_text)
+
+    new_msg.body_text = msg_text
+
+    return new_msg
 
 
-def gmail_url(self, UID):
-    return "https://mail.google.com/mail/u/0/#inbox/" + hex(UID)
+
 
 
 def fetch_all_udids(self):
     global server
-
     UIDs = server.search(['NOT DELETED'])
     return UIDs
 
 
 
-def fetch_latest_5(self):
-    global server
-
-    messages = server.search(['NOT DELETED'])
-    last_5 = messages[-5:]
-    response = server.fetch(last_5, ['RFC822', 'X-GM-THRID', 'X-GM-MSGID'])
-    return [ data['RFC822'] for (msgid, data) in response.iteritems() ]
-
-
 def fetch_thread(self, thread_id):
     global server
-
-    threads = server.search('X-GM-THRID ' + str(thread_id) )
+    threads = server.search('X-GM-THRID %s' % str(thread_id) )
     print threads
-
-
-def fetch_all_messages(self, folder_name):
-    pass
 
 
 
@@ -229,27 +347,24 @@ def fetch_headers(self, folder_name):
     return subjects
 
 
-        # BODY.PEEK[HEADER]
-         # X-GM-THRID
-         # X-GM-MSGID
-         # X-GM-LABELS
-        # BODY.PEEK[HEADER.FIELDS (Message-Id)]
-        # BODY.PEEK[HEADER.FIELDS (From)]
-        # ENVELOPE
-        # RFC822.SIZE
-        # UID
-        # FLAGS
-        # INTERNALDATE
-        # X-GM-THRID
-        # X-GM-MSGID
-        # X-GM-LABELS
 
 
+def main():
+
+    log.basicConfig(level=log.DEBUG)
 
 
-if __name__ == "__main__":
+    if not ( connect() ):
+        print "Couldn't connect. :("
+        return
 
-    connect()   
+    setup()
+    uid = latest_message_uid()
+    msg = fetch_msg(uid)
+
+    print msg.subject
+
+
     # select_info = m.select_folder(u'Awesome')
 
     # UIDs = m.fetch_all_udids()
@@ -261,41 +376,36 @@ if __name__ == "__main__":
 
     # m.create_draft("Test hello world")
 
-    # m.fetch_headers(u'Awesome')
-    folders =  list_folders()
-
-    other_folders = []
-    print '\nSpecial mailboxes:'
-    for f in folders:
-        if u'\\AllMail' in f['flags']:
-            print "    ALL MAIL --> ", f['name']
-        elif u'\\Drafts' in f['flags']:
-            print "    DRAFTS --> ", f['name']
-        elif u'\\Important' in f['flags']:
-            print "    IMPORTANT --> ", f['name']
-        elif u'\\Sent' in f['flags']:
-            print "    SENT --> ", f['name']
-        elif u'\\Starred' in f['flags']:
-            print "    STARRED --> ", f['name']
-        elif u'\\Trash' in f['flags']:
-            print "    TRASH --> ", f['name']
-        else:
-            other_folders.append(f)
-    print '\Other mailboxes:'
-    for f in other_folders:
-        print "   ", f['name']
+    # folders =  list_folders()
+    # other_folders = []
+    # print '\nSpecial mailboxes:'
+    # for f in folders:
+    #     if u'\\AllMail' in f['flags']:
+    #         print "    ALL MAIL --> ", f['name']
+    #     elif u'\\Drafts' in f['flags']:
+    #         print "    DRAFTS --> ", f['name']
+    #     elif u'\\Important' in f['flags']:
+    #         print "    IMPORTANT --> ", f['name']
+    #     elif u'\\Sent' in f['flags']:
+    #         print "    SENT --> ", f['name']
+    #     elif u'\\Starred' in f['flags']:
+    #         print "    STARRED --> ", f['name']
+    #     elif u'\\Trash' in f['flags']:
+    #         print "    TRASH --> ", f['name']
+    #     else:
+    #         other_folders.append(f)
+    # print '\Other mailboxes:'
+    # for f in other_folders:
+    #     print "   ", f['name']
         
-    print 'Unread counts:'
-    for f in folders:
-        if u'\\Noselect' in f['flags']: continue
-        print f['flags']
-        print "    " + f['name'] + '...', 
-        print str(message_count(f['name']))
+    # print 'Unread counts:'
+    # for f in folders:
+    #     if u'\\Noselect' in f['flags']: continue
+    #     print f['flags']
+    #     print "    " + f['name'] + '...', 
+    #     print str(message_count(f['name']))
 
 
-# Gmail IMAP    extensions
-#   X-GM-LABELS
-#   X-GM-MSGID
-#   X-GM-THRID
-#   X-GM-RAW
-#   XLIST
+
+if __name__ == "__main__":
+    main()

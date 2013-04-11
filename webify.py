@@ -1,7 +1,6 @@
-
-
 import re
 import cgi
+from bs4 import BeautifulSoup
 
 # Helpers
 
@@ -44,6 +43,53 @@ def fix_links(text):
         b.replace_with(new_tag)
     return str(soup)
 
+
+
+def trim_quoted_text(msg_text, content_type):
+
+    if len(msg_text) == 0:
+        log.error('No message recovered. Content-Type: %s'  % content_type)
+        return
+
+    # TODO add signature detection
+    #  r'^-{2}\s' or something
+
+    # TOFIX do this with from address?
+    if content_type == "text/plain":
+        regexes =  [r'-+original\s+message-+\s*$', 
+                    r'^.*On\ .*(\n|\r|\r\n)?wrote:(\r)*$',
+                    r'From:\s*' + re.escape(from_addr),
+                    r'<' + re.escape(from_addr) + r'>',
+                    re.escape(from_addr) + r'\s+wrote:',
+                    r'from:\s*$']
+
+    elif content_type == "text/html":
+        regexes =  [r'-+original\s+message-+\s*', 
+                    r'^.*On\ .*(\n|\r|\r\n)?wrote:(\r)*$',
+                    r'<div class="gmail_quote">',
+                    ]
+                    # r'On\ .*(\n|\r|\r\n)?wrote:(\r)*']
+    else :
+        log.error('Not sure how to trim quoted text from Content-Type: ' + str(content_type))
+        return
+
+    endpoint = len(msg_text) # long email
+
+    for r in regexes:
+        m = re.search(r, msg_text, re.IGNORECASE | re.MULTILINE)
+        if m == None: continue
+        e = m.start()
+        if m.start() < endpoint :
+            endpoint = e
+
+    msg_text = msg_text[: endpoint]
+
+    # TODO this whitespace trimming should be part of regex
+    while msg_text.endswith('\n') or msg_text.endswith('\r'):
+        msg_text = msg_text[:-2]
+        
+
+    return msg_text
 
 
 from urllib import urlencode
