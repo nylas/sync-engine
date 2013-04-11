@@ -1,60 +1,9 @@
-{% extends "base.html" %}
-
-{% block body %}
-
-  <div class="wrapper">
-    <div class="subject">{{ subject }}</div>
-    <div class="panel">
-        <div class="author">
-          <div class="gravatar_img" style="background:url({{ sender_gravatar_url }})"></div>
-          <div class="author_byline">{{ from_name }}</div>
-          <div class="message_date">{% raw sent_time %}</div>
-          <div class="clear"></div>
-        </div>
-
-        {% if content_type == 'text/plain' %}
-          <div class='fixedwidth'>{% raw raw_msg_data %}</div>
-        {% elif content_type == 'text/html' %}
-            <div class="regular_message">
-
-            <IFRAME SRC="/message_raw" width="100%" height="200px" id="iframe1" marginheight="0" frameborder="0" onLoad="autoResize('iframe1');"></iframe>
-
-            </div>
-        {% else %}
-            <div>Not sure how to display {{ content_type }}.</div>
-        {% end %}
-
-
-    </div>
-    <div class="panel_shadow"></div>
-
-  </div> <!-- /wrapper
-
-
-  <div class="wrapper">
-    <div class="subject">Reply:</div>
-    <div class="panel">
-
-        <div class="reply_box" contenteditable="true" hidefocus="true">Your message here...</div>
-
-    </div>
-    <div class="panel_shadow"></div>
-  </div> <!-- /wrapper -->
-
-  <div class="spacer"></div>
-
-
-
-  <div class="wrapper">
-    <div class="panel">
-      <p class="heading"><a href="#">Show/Hide Headers</a></p>
-      <div class="content">
-        {% for header in headers %}
-          <p class="fixedwidth"><strong>{{ header[0]}}:</strong> {{ header[1] }}<p>
-        {% end %}
-      </div>
-    </div>
-    <div class="panel_shadow"></div>
-  </div> <!-- /wrapper -->
-
-{% end %}
+<html>
+<head>
+<link rel="stylesheet" href="{{ static_url("message.css") }}" type="text/css"/>
+<link rel="stylesheet" href="{{ static_url("fonts.css") }}" type="text/css"/>
+</head>
+<body>
+{% raw raw_msg_data %}
+</body>
+</html>
