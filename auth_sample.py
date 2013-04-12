@@ -6,6 +6,8 @@ HOST = 'imap.gmail.com'
 OAUTH_TOKEN = 'YOUR_OAUTH_TOKEN'
 OAUTH_TOKEN_SECRET = 'YOUR_OAUTH_TOKEN_SECRET
 
+# Eventually need to register this app with Google
+# https://accounts.google.com/ManageDomains
 CONSUMER_KEY = 'anonymous'
 CONSUMER_SECRET = 'anonymous'
 
