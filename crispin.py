@@ -71,7 +71,9 @@ class Message():
 
     def gmail_url(self):
         if not self.uid: return
+        # http://mail.google.com/mail?account_id=ACCOUNT_ID_HERE&message_id=MESSAGE_ID_HERE&view=conv&extsrc=atom
         return "https://mail.google.com/mail/u/0/#inbox/" + hex(self.uid)
+
 
 
 
