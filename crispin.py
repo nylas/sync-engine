@@ -21,35 +21,35 @@ ssl = True
 server = None
 
 
-        # { 
-        # tos: [ <Contacts>, ... ]
-        # from: 
-        #     [ <Contact> name, address, ... ]
-        # headers:
-        #     { 'someheader', value}
+# { 
+# tos: [ <Contacts>, ... ]
+# from: 
+#     [ <Contact> name, address, ... ]
+# headers:
+#     { 'someheader', value}
 
-        # body-text { 'content-type', bodyvalue}
-        #     >>> somehow have resource keys in body-text
+# body-text { 'content-type', bodyvalue}
+#     >>> somehow have resource keys in body-text
 
-        # resources {'file-key', value}
+# resources {'file-key', value}
 
-        # }
+# }
 
 
-     # BODY.PEEK[HEADER]
-         # X-GM-THRID
-         # X-GM-MSGID
-         # X-GM-LABELS
-        # BODY.PEEK[HEADER.FIELDS (Message-Id)]
-        # BODY.PEEK[HEADER.FIELDS (From)]
-        # ENVELOPE
-        # RFC822.SIZE
-        # UID
-        # FLAGS
-        # INTERNALDATE
-        # X-GM-THRID
-        # X-GM-MSGID
-        # X-GM-LABELS
+# BODY.PEEK[HEADER]
+# X-GM-THRID
+# X-GM-MSGID
+# X-GM-LABELS
+# BODY.PEEK[HEADER.FIELDS (Message-Id)]
+# BODY.PEEK[HEADER.FIELDS (From)]
+# ENVELOPE
+# RFC822.SIZE
+# UID
+# FLAGS
+# INTERNALDATE
+# X-GM-THRID
+# X-GM-MSGID
+# X-GM-LABELS
 
 
 
@@ -161,23 +161,12 @@ def fetch_latest_message():
     return response[latest_email_uid]['RFC822']
 
 
-
-def fetch_msg(msg_uid):
-    global server
-    response = server.fetch(msg_uid, ['RFC822', 'X-GM-THRID', 'X-GM-MSGID'])
-    raw_response = response[msg_uid]['RFC822']
-
-
-    new_msg = Message()
-
-    parser = Parser()
-    msg = parser.parsestr(raw_response)
-
+def parse_main_headers(msg, new_msg = Message()):
+    # new_msg = Message()
 
     def make_uni(txt, default_encoding="ascii"):
         return u"".join([unicode(text, charset or default_encoding)
                    for text, charset in decode_header(txt)]) 
-
 
     def parse_contact(headers):
         # Works with both strings and lists
@@ -218,13 +207,9 @@ def fetch_msg(msg_uid):
     time_epoch = time.mktime( email_utils.parsedate_tz(msg["Date"])[:9] )
     new_msg.date = datetime.datetime.fromtimestamp(time_epoch)
 
-    log.info('To: %s' % new_msg.to_contacts)
-    log.info('From: %s' % new_msg.from_contacts)
-    log.info('Subject: %s' % new_msg.subject)
-    log.info('Date: %s' % new_msg.date.strftime('%b %m, %Y %I:%M %p') )
+    return new_msg
 
-    # log.info('Date: %s' % new_msg.date )
-
+def parse_body(msg, new_msg = Message()):
 
     msg_text = None
     content_type = None
@@ -241,19 +226,6 @@ def fetch_msg(msg_uid):
     else:
         log.error("Message doesn't have text Content-Type: %s" % msg)
 
-        # msg_text = quopri.decodestring(msg_text)
-
-
-    # My old way of doing this
-
-    # for part in message.walk():
-    #     content_type = part.get_content_type()
-    #     if content_type == "text/html":
-    #         msg_text = part.get_payload(decode=True)
-    #         break
-    #     if part.get_content_type() == 'text/plain':
-    #         continue
-    #         # break
 
     if msg_text == None:
         log.error("Couldn't find message text! %s" % msg)
@@ -261,9 +233,7 @@ def fetch_msg(msg_uid):
 
     msg_text = msg_text.decode('iso-8859-1').encode('utf8')
 
-
-    # TODO: This doesn't always work right.
-    # This is so broken
+    # TODO: This is so broken
     # msg_text = trim_quoted_text(msg_text, content_type)
 
     if content_type == 'text/plain':
@@ -277,13 +247,34 @@ def fetch_msg(msg_uid):
 
 
 
+def fetch_msg(msg_uid):
+    global server
+
+    log.info("Fetching message. UID: %i" % msg_uid)
+    response = server.fetch(msg_uid, ['RFC822', 'X-GM-THRID', 'X-GM-MSGID'])
+    raw_response = response[msg_uid]['RFC822']
+    log.info("Received response. Size: %i" % len(raw_response))
+
+    msg = Parser().parsestr(raw_response)
+
+    # headers
+    new_msg = parse_main_headers(msg)  # returns Message()
+
+    # body
+    new_msg = parse_body(msg, new_msg)
+
+    log.info('To: %s' % new_msg.to_contacts)
+    log.info('From: %s' % new_msg.from_contacts)
+    log.info('Subject: %s' % new_msg.subject)
+    log.info('Date: %s' % new_msg.date.strftime('%b %m, %Y %I:%M %p') )
+
+    return new_msg
 
 
-def fetch_all_udids(self):
+def fetch_all_udids():
     global server
     UIDs = server.search(['NOT DELETED'])
     return UIDs
-
 
 
 def fetch_thread(self, thread_id):
@@ -293,56 +284,34 @@ def fetch_thread(self, thread_id):
 
 
 
-def fetch_headers(self, folder_name):
+def fetch_headers(folder_name):
     global server
-
-    select_info = self.select_folder(folder_name)
-    UIDs = self.fetch_all_udids()
 
     query = 'BODY.PEEK[HEADER.FIELDS (TO CC FROM DATE SUBJECT)]'
     query_key = 'BODY[HEADER.FIELDS (TO CC FROM DATE SUBJECT)]'
 
-    print 'Fetching all message headers:', query
-    messages = server.fetch(UIDs, [query, 'X-GM-THRID'])
-    print "   found %i messages." % len( messages.values() )
+    log.info("Fetching message headers. Query: %s" % query)
+    select_info = select_folder(folder_name)
+    UIDs = fetch_all_udids()
 
+
+    log.info("Fetching message headers. Query: %s" % query)
+    messages = server.fetch(UIDs, [query, 'X-GM-THRID'])
+    log.info("found %i messages." % len(messages.values()))
 
     parser = Parser()
-
     subjects = []
 
     for message_dict in messages.values():
         raw_header = message_dict[query_key]
         thread_id = message_dict['X-GM-THRID']
 
-        message = parser.parsestr(raw_header)
+        msg = parser.parsestr(raw_header)
 
-        tos = message.get_all('to', [])
-        ccs = message.get_all('cc', [])
-        from_address = message.get_all('from', [])
-        # from_name_decoded = decode_header(from_name)
-        header_text = decode_header( message['Subject'] )
-        default_encoding="ascii"
-        header_sections = [unicode(text, charset or default_encoding)
-                           for text, charset in header_text]
+        # headers
+        new_msg = parse_main_headers(msg)  # returns Message()
+        subjects.append(new_msg.subject)
 
-        # Headers will wrap when longer than 78 lines per RFC822_2
-        subject = u"".join(header_sections).replace('\n\t', '').replace('\r\n', '')
-        
-        date_tuple = email_utils.parsedate_tz(message["Date"])
-        sent_time = time.strftime("%I:%M %p - %b %d, %Y", date_tuple[:9])
-
-        print 'From:', from_address[0]
-        print 'To:', tos
-        if len(ccs) > 0:
-            print 'CC:', ccs
-        print 'Date:', time.strftime("%c", date_tuple[:9])
-        print 'THRID', thread_id
-        print 'Subject', subject
-        print
-
-
-        subjects.append(subject)
     return subjects
 
 
@@ -352,12 +321,12 @@ def main():
 
     log.basicConfig(level=log.DEBUG)
 
-
     if not ( connect() ):
         print "Couldn't connect. :("
         return
 
     setup()
+
     uid = latest_message_uid()
     msg = fetch_msg(uid)
 
