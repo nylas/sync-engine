@@ -2,11 +2,15 @@
 
 {% block body %}
 
+  <div class="wrapper">
+    <div class="panel_flat">
 
-<ul>
-{% for subject in subjects %}
-     <li>{{ subject }}</li>
-{% end %}
-</ul>
+	{% for m in messages %}
+     <div class="message_line">{{ m.subject }}&nbsp;{{m.thread_id}}</div>
+	{% end %}
+
+    </div>
+    <div class="panel_shadow"></div>
+  </div>
 
 {% end %}

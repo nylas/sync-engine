@@ -11,7 +11,7 @@ import time
 import datetime
 import logging as log
 
-from webify import plaintext2html, fix_links, trim_quoted_text, gravatar_url
+from webify import plaintext2html, fix_links, trim_quoted_text, trim_subject, gravatar_url
 
 
 base_gmail_url = 'https://mail.google.com/mail/b/' + auth.ACCOUNT + '/imap/'
@@ -20,7 +20,6 @@ ssl = True
 
 
 server = None
-
 
 # { 
 # tos: [ <Contacts>, ... ]
@@ -60,6 +59,7 @@ class Message():
         self.to_contacts = []
         self.from_contacts = None
         self.subject = None
+
         self.date = None
         self.body_text = {}
 
@@ -75,6 +75,8 @@ class Message():
         # http://mail.google.com/mail?account_id=ACCOUNT_ID_HERE&message_id=MESSAGE_ID_HERE&view=conv&extsrc=atom
         return "https://mail.google.com/mail/u/0/#inbox/" + hex(self.uid)
 
+    def trimmed_subject(self):
+        return trim_subject(self.subject)
 
 
 
@@ -97,17 +99,12 @@ def connect():
                     auth.OAUTH_TOKEN_SECRET, 
                     auth.CONSUMER_KEY, 
                     auth.CONSUMER_SECRET)
-    except IMAPClient.Error, err:
-        log.error("Could not connect. %s", e)
+    except Exception, e:
+        log.error("IMAP connection error: %s", e)
         return False
 
     log.info('Connection successful.')
     return True
-
-
-def setup():
-    connect()
-    select_folder("Inbox")
 
 
 def list_folders():
@@ -164,8 +161,8 @@ def fetch_latest_message():
     return response[latest_email_uid]['RFC822']
 
 
-def parse_main_headers(msg, new_msg = Message()):
-    # new_msg = Message()
+def parse_main_headers(msg):
+    new_msg = Message()
 
     def make_uni(txt, default_encoding="ascii"):
         return u"".join([unicode(text, charset or default_encoding)
@@ -190,14 +187,7 @@ def parse_main_headers(msg, new_msg = Message()):
     new_msg.from_contacts = parse_contact(['from'])
 
     subject = make_uni(msg['subject'])
-    # Headers will wrap when longer than 78 lines per RFC822_2
-    subject = subject.replace('\n\t', '').replace('\r\n', '')
-
-    # Remove "RE" or whatever
-    if subject[:4] == u'RE: ' or subject[:4] == u'Re: ' :
-        subject = subject[4:]
-
-    new_msg.subject = subject
+    new_msg.subject = trim_subject(subject)
 
     # TODO : upgrade to python3?
     # new_msg.date = email_utils.parsedate_to_datetime(msg["Date"])
@@ -259,10 +249,17 @@ def parse_body(msg, new_msg = Message()):
 
 
 def fetch_msg(msg_uid):
+    msg_uid = long(msg_uid)
     global server
 
     log.info("Fetching message. UID: %i" % msg_uid)
-    response = server.fetch(msg_uid, ['RFC822', 'X-GM-THRID', 'X-GM-MSGID'])
+    
+    response = server.fetch(str(msg_uid), ['RFC822', 'X-GM-THRID', 'X-GM-MSGID'])
+    
+    if len(response.keys()) == 0:
+        log.error("No response for msg query. msg_id = %s", msg_uid)
+        return None
+
     raw_response = response[msg_uid]['RFC822']
     log.info("Received response. Size: %i" % len(raw_response))
 
@@ -288,10 +285,10 @@ def fetch_all_udids():
     return UIDs
 
 
-def fetch_thread(self, thread_id):
+def fetch_thread(thread_id):
     global server
-    threads = server.search('X-GM-THRID %s' % str(thread_id) )
-    print threads
+    threads_msg_ids = server.search('X-GM-THRID %s' % str(thread_id) )
+    return threads_msg_ids
 
 
 
@@ -305,26 +302,29 @@ def fetch_headers(folder_name):
     select_info = select_folder(folder_name)
     UIDs = fetch_all_udids()
 
-
     log.info("Fetching message headers. Query: %s" % query)
     messages = server.fetch(UIDs, [query, 'X-GM-THRID'])
     log.info("found %i messages." % len(messages.values()))
 
     parser = Parser()
-    subjects = []
+    new_messages = []
 
     for message_dict in messages.values():
         raw_header = message_dict[query_key]
-        thread_id = message_dict['X-GM-THRID']
-
         msg = parser.parsestr(raw_header)
 
         # headers
         new_msg = parse_main_headers(msg)  # returns Message()
-        subjects.append(new_msg.subject)
+        new_msg.thread_id = message_dict['X-GM-THRID']
 
-    return subjects
+        log.info("adding: %s" % new_msg.subject)
 
+        new_messages.append(new_msg)
+
+        new_msg = None
+
+
+    return new_messages
 
 
 
@@ -336,7 +336,8 @@ def main():
         print "Couldn't connect. :("
         return
 
-    setup()
+    connect()
+    select_folder("Inbox")
 
     uid = latest_message_uid()
     msg = fetch_msg(uid)

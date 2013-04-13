@@ -14,7 +14,8 @@ import crispin
 class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
-            (r"/", MessagePageHandler),
+            (r"/thread", MessageThreadHandler),
+            (r"/message", MessagePageHandler),
             (r"/message_raw", MessageRawHandler),
             (r"/mailbox", MailboxHandler)
             # (r"/(apple-touch-icon\.png)", tornado.web.StaticFileHandler,
@@ -47,7 +48,8 @@ class MessagePageHandler(BaseHandler):
 
     def get(self):
         try:
-            crispin.setup()
+            crispin.connect()
+            crispin.select_folder("Inbox")
         except Exception, e:
             self.send_error(500)
             raise e
@@ -58,7 +60,7 @@ class MessagePageHandler(BaseHandler):
         page_width = self.get_argument("page_width", '600')
         page_width = int(page_width)
 
-        self.render("thread.html",
+        self.render("singlethread.html",
                     to_name = msg.to_contacts[0]['name'],
                     to_addr = msg.to_contacts[0]['address'],
                     from_name = msg.from_contacts[0]['name'], 
@@ -68,15 +70,25 @@ class MessagePageHandler(BaseHandler):
                     headers = [],
                     sender_gravatar_url = msg.gravatar() )
 
-
 class MessageRawHandler(BaseHandler):
     def get(self):
-        crispin.setup()
-        uid = crispin.latest_message_uid()
-        msg = crispin.fetch_msg(uid)
+        crispin.connect()
+        crispin.select_folder("Inbox")
+
+        msg_id = self.get_argument("msg_id", default=None, strip=False)
+
+        if not msg_id:
+            msg_id = crispin.latest_message_uid()
+            log.warning("No msg_id passed in. Using latest message id: %s" % msg_id)
+        else:
+            log.info("Passed in msg_id %s", msg_id)
+        
+        msg = crispin.fetch_msg(msg_id)
+
         latest_message_raw = msg.body_text
         self.render("message.html", 
             raw_msg_data = latest_message_raw)
+
 
 
 class MailboxHandler(BaseHandler):
@@ -84,10 +96,48 @@ class MailboxHandler(BaseHandler):
 
         folder_name = self.get_argument("folder", default="Inbox", strip=False)
         log.info('Opening folder:' + str(folder_name))
-        crispin.setup()
-        subjects = crispin.fetch_headers(folder_name)
+        
+        # Todo: Do this for every setup somehow.
+        if not(crispin.connect()):
+            log.error("Couldn't connect. Proably offline right now.")
+            self.send_error(500)
+            return
+
+        crispin.select_folder("Inbox")
+
+        new_messages = crispin.fetch_headers(folder_name)
+
+        subjs = []
+        for m in new_messages:
+            s = m.trimmed_subject()
+            if not s in subjs:
+                subjs.append(s)
+
         self.render("mailbox.html", 
-                    subjects = subjects)
+                    subjects = subjs,
+                    messages = new_messages)
+
+
+
+class MessageThreadHandler(BaseHandler):
+    def get(self):
+
+        thread_id = self.get_argument("thread_id", default=None, strip=False)
+        if not thread_id:
+            self.send_error(500)
+            return
+
+        crispin.connect()
+        crispin.select_folder("Inbox")
+
+        msg_ids = crispin.fetch_thread(thread_id)
+
+        log.info("selected thread_id: %s which has msg_ids: %s" % (thread_id, msg_ids) )
+
+        self.render("thread.html", 
+            thread_ids = msg_ids)
+
+        
 
 
 def main():
