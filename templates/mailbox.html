@@ -6,7 +6,11 @@
     <div class="panel_flat">
 
 	{% for m in messages %}
-     <div class="message_line">{{ m.subject }}&nbsp;{{m.thread_id}}</div>
+     <div class="message_line">
+     	<a href="/thread?thread_id={{m.thread_id}}">
+     		{{ m.subject }}
+     	</a>
+     </div>
 	{% end %}
 
     </div>
