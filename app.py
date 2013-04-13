@@ -7,17 +7,17 @@ define("port", default=8888, help="run on the given port", type=int)
 import os.path as os_path
 import logging as log
 
-
 import crispin
 
 
 class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
+            (r"/", MailboxHandler),
+            (r"/mailbox", MailboxHandler),
             (r"/thread", MessageThreadHandler),
             (r"/message", MessagePageHandler),
             (r"/message_raw", MessageRawHandler),
-            (r"/mailbox", MailboxHandler)
             # (r"/(apple-touch-icon\.png)", tornado.web.StaticFileHandler,
             # (r"/(apple-touch-icon\.png)", tornado.web.StaticFileHandler,
         ]
