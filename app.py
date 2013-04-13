@@ -70,10 +70,11 @@ class MessagePageHandler(BaseHandler):
                     headers = [],
                     sender_gravatar_url = msg.gravatar() )
 
+
 class MessageRawHandler(BaseHandler):
     def get(self):
         crispin.connect()
-        crispin.select_folder("Inbox")
+        crispin.select_allmail_folder() # anywhere
 
         msg_id = self.get_argument("msg_id", default=None, strip=False)
 
@@ -105,17 +106,17 @@ class MailboxHandler(BaseHandler):
 
         crispin.select_folder("Inbox")
 
-        new_messages = crispin.fetch_headers(folder_name)
+        threads = crispin.fetch_threads(folder_name)
+        threads.sort(key=lambda t: t.most_recent_date(), reverse=True)
 
-        subjs = []
-        for m in new_messages:
-            s = m.trimmed_subject()
-            if not s in subjs:
-                subjs.append(s)
+        # subjs = []
+        # for m in new_messages:
+        #     s = m.trimmed_subject()
+        #     if not s in subjs:
+        #         subjs.append(s)
 
         self.render("mailbox.html", 
-                    subjects = subjs,
-                    messages = new_messages)
+                    threads = threads)
 
 
 
@@ -128,8 +129,8 @@ class MessageThreadHandler(BaseHandler):
             return
 
         crispin.connect()
-        crispin.select_folder("Inbox")
 
+        select_info = crispin.select_allmail_folder()
         msg_ids = crispin.fetch_thread(thread_id)
 
         log.info("selected thread_id: %s which has msg_ids: %s" % (thread_id, msg_ids) )

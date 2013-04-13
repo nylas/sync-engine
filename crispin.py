@@ -74,6 +74,24 @@ class Message():
         return trim_subject(self.subject)
 
 
+class Thread():
+    def __init__(self):
+        self.mesage_ids  = []
+        self.messages = []
+        self.thread_id = None
+        self.is_unread = True # True/False
+
+    def fetch_messages(self):
+        self.messages = [fetch_msg(uid) for uid in self.message_ids]
+
+    def get_subject(self):
+        return self.messages[0].subject
+
+    def most_recent_date(self):
+        dates = [m.date for m in self.messages]
+        dates.sort()
+        return dates[-1]
+
 
 # use decorators to make sure this happens? 
 def connect():
@@ -110,6 +128,13 @@ def list_folders():
         raise e
     return [dict(flags = f[0], delimiter = f[1], name = f[2]) for f in resp]
     
+
+def all_mail_folder_name():
+    folders =  list_folders()
+    for f in folders:
+        if u'\\AllMail' in f['flags']:
+            return f['name']
+
 
 def get_special_folder(special_folder):
     # TODO return folders for stuff like All Mail, Drafts, etc. which may
@@ -160,6 +185,9 @@ def select_folder(folder):
     # 'UIDVALIDITY': 196, 'READ-ONLY': [''], 'RECENT': 0}
     log.info('Selected folder %s with %d messages.' % (folder, select_info['EXISTS']) )
     return select_info
+
+def select_allmail_folder():
+    return select_folder(all_mail_folder_name())
 
 
 # TODO this shit is broken
@@ -314,6 +342,31 @@ def fetch_thread(thread_id):
     global server
     threads_msg_ids = server.search('X-GM-THRID %s' % str(thread_id) )
     return threads_msg_ids
+
+
+def fetch_threads(folder_name):
+
+    threads = {}
+    msgs = fetch_headers(folder_name)
+
+    for m in msgs:
+        if m.thread_id not in threads.keys():
+            new_thread = Thread()
+            new_thread.thread_id = m.thread_id
+            threads[m.thread_id] = new_thread
+
+        t = threads[m.thread_id]
+        t.messages.append(m) # not all, only messages in folder_name
+
+
+    select_info = select_folder( all_mail_folder_name() )
+    for t in threads.values():
+        log.info("Fetching thread with ID: %s" % t.thread_id)
+        t.message_ids = fetch_thread(t.thread_id) # all
+
+    return threads.values()
+
+
 
 def fetch_headers(folder_name):
     global server
