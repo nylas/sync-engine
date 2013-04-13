@@ -14,11 +14,11 @@ import crispin
 class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
-        (r"/", MessagePageHandler),
-        (r"/message_raw", MessageRawHandler),
-        (r"/mailbox", MailboxHandler)
+            (r"/", MessagePageHandler),
+            (r"/message_raw", MessageRawHandler),
+            (r"/mailbox", MailboxHandler)
             # (r"/(apple-touch-icon\.png)", tornado.web.StaticFileHandler,
-                # (r"/(apple-touch-icon\.png)", tornado.web.StaticFileHandler,
+            # (r"/(apple-touch-icon\.png)", tornado.web.StaticFileHandler,
         ]
         settings = dict(
             cookie_secret="awehofoiasdfhsadkfnwem42rwfubksfj",
@@ -35,18 +35,17 @@ class BaseHandler(tornado.web.RequestHandler):
     pass
 
 
-
 class MainHandler(BaseHandler):
-    def get(self):
 
+    def get(self):
         loader = tornado.template.Loader("templates/")
         home_template = loader.load("base.html")
-        self.write( home_template.generate(emails=[]))
+        self.write(home_template.generate(emails=[]))
 
 
 class MessagePageHandler(BaseHandler):
-    def get(self):
 
+    def get(self):
         try:
             crispin.setup()
         except Exception, e:
@@ -56,20 +55,18 @@ class MessagePageHandler(BaseHandler):
         uid = crispin.latest_message_uid()
         msg = crispin.fetch_msg(uid)
 
-
         page_width = self.get_argument("page_width", '600')
         page_width = int(page_width)
 
-        self.render("thread.html", 
-                    to_name =   msg.to_contacts[0]['name'],
-                    to_addr =   msg.to_contacts[0]['address'],
+        self.render("thread.html",
+                    to_name = msg.to_contacts[0]['name'],
+                    to_addr = msg.to_contacts[0]['address'],
                     from_name = msg.from_contacts[0]['name'], 
                     from_addr = msg.from_contacts[0]['address'],
                     sent_time = msg.date.strftime('%b %m, %Y &mdash; %I:%M %p'),
-                    subject =   msg.subject,
-                    headers =   [],
+                    subject = msg.subject,
+                    headers = [],
                     sender_gravatar_url = msg.gravatar() )
-
 
 
 class MessageRawHandler(BaseHandler):
@@ -87,14 +84,10 @@ class MailboxHandler(BaseHandler):
 
         folder_name = self.get_argument("folder", default="Inbox", strip=False)
         log.info('Opening folder:' + str(folder_name))
-
         crispin.setup()
         subjects = crispin.fetch_headers(folder_name)
-
         self.render("mailbox.html", 
                     subjects = subjects)
-
-
 
 
 def main():
@@ -102,7 +95,7 @@ def main():
     app = Application()
     app.listen(options.port)
 
-    if ( app.settings['debug'] ):
+    if (app.settings['debug']):
         tornado.autoreload.start()
 
     tornado.ioloop.IOLoop.instance().start()
