@@ -3,6 +3,10 @@ body {
   background-color: #F9F9F9;
   font-family: Helvetica Neue, Arial, sans-serif;
   color: #616566;
+
+
+  font-smooth:always;
+  -webkit-font-smoothing:antialiased;
 }
 
 
@@ -36,7 +40,6 @@ body {
 
 .panel_flat  
 {
-
   background: #fff;
   border-radius: 4px;
   -moz-border-radius: 4px;
@@ -52,7 +55,6 @@ body {
   position: relative;
   width: 570px;
   padding: 15px;
-
 }
 
 
@@ -65,9 +67,7 @@ body {
   font-variant: normal;
   font-weight: 700;
   line-height: 25px;
-
   padding: 15px;
-
   text-shadow: 1px 1px 0 white;
 }
 
@@ -76,18 +76,12 @@ body {
 .panel_shadow
 {
   bottom: 0;
-  height: 10px;
-
-/*      width: {{ page_width }}px;
-*/
+  height: 10px;  
   width: 600px;
-
   background-position-x: 0%;
   background-position-y: 50%;
-  
+  /* This can be moved to change shadow width*/
   background: url(/static/post_shadow.png) left center no-repeat;
-
-
   width: 100%;
   height: 10px;
   display: block;
@@ -95,17 +89,6 @@ body {
   left: 0;
   bottom: -10px;
   z-index: 2;
-
-}
-
-
-
-@font-face{
-  font-family:'MuseoSans';
-  src:url(/static/font/museosans/museosans-300-webfont.woff) format('woff');
-  font-style:normal;
-  font-weight:300;
-  font-stretch:normal;
 }
 
 
@@ -126,9 +109,6 @@ body {
   clear: both;
 }
 
-
-
-
 .regular_message
 {
   /*font: 300 15px/21px "MuseoSans",Arial,Helvetica,sans-serif;*/
@@ -140,10 +120,6 @@ body {
   line-height: 21px;
   margin-bottom: 1em;
 
-
-  font-smooth:always;
-  -webkit-font-smoothing:antialiased;
-
   font-family: proxima-nova, sans-serif;
   font-style: normal;
   font-weight: 200;
@@ -154,10 +130,10 @@ body {
   text-align:left;
   color:#333;
   text-shadow:1px 1px 1px white;
-
 }
 
-.reply_box {
+.reply_box 
+{
     /*font: 300 15px/21px "MuseoSans",Arial,Helvetica,sans-serif;*/
   /*font-family: MuseoSans, Arial, Helvetica, sans-serif;*/
   font-size: 15px;
@@ -166,10 +142,6 @@ body {
   font-weight: 300;
   line-height: 21px;
   margin-bottom: 1em;
-
-
-  font-smooth:always;
-  -webkit-font-smoothing:antialiased;
 
   font-family: proxima-nova, sans-serif;
   font-style: normal;
@@ -184,7 +156,6 @@ body {
 
   min-height: 80px;
   outline:0px solid transparent;
-
 }
 
 .gravatar_img {
@@ -231,6 +202,28 @@ body {
   border-bottom-color: #E6E8EA;
   margin-bottom: 20px;
   padding-bottom:8px;
+}
+
+
+.message_line
+{
+  width: 100%;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: #E6E8EA;
+  padding:8px;
+
+
+  font-family: proxima-nova, sans-serif;
+  font-style: normal;
+  font-weight: 200;
+
+  /*font:15px/1.5 proxima-nova, Courier, sans-serif;*/
+/*      font-weight:400;
+*/      
+  text-align:left;
+  color:#333;
+  text-shadow:1px 1px 1px white;
 }
 
 
