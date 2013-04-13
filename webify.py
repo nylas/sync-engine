@@ -56,12 +56,18 @@ def trim_quoted_text(msg_text, content_type):
 
     # TOFIX do this with from address?
     if content_type == "text/plain":
-        regexes =  [r'-+original\s+message-+\s*$', 
+        # regexes =  [r'-+original\s+message-+\s*$', 
+        #             r'^.*On\ .*(\n|\r|\r\n)?wrote:(\r)*$',
+        #             r'From:\s*' + re.escape(from_addr),
+        #             r'<' + re.escape(from_addr) + r'>',
+        #             re.escape(from_addr) + r'\s+wrote:',
+        #             r'from:\s*$']
+
+        regexes =  [r'from:\s*$',
+                    r'-+original\s+message-+\s*$', 
                     r'^.*On\ .*(\n|\r|\r\n)?wrote:(\r)*$',
-                    r'From:\s*' + re.escape(from_addr),
-                    r'<' + re.escape(from_addr) + r'>',
-                    re.escape(from_addr) + r'\s+wrote:',
-                    r'from:\s*$']
+                    r'\s+wrote:$',
+                    ]
 
     elif content_type == "text/html":
         regexes =  [r'-+original\s+message-+\s*', 
