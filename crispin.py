@@ -5,12 +5,13 @@ from email.Parser import Parser
 # import imaplib as imaplib_original
 import auth
 from email.header import decode_header
+from email.Iterators import typed_subpart_iterator
 from imapclient import IMAPClient
 import time
 import datetime
 import logging as log
 
-from webify import plaintext2html, fix_links, gravatar_url
+from webify import plaintext2html, fix_links, trim_quoted_text, gravatar_url
 
 
 base_gmail_url = 'https://mail.google.com/mail/b/' + auth.ACCOUNT + '/imap/'
@@ -111,7 +112,6 @@ def setup():
 
 def list_folders():
     global server
-
     try:
         resp = server.xlist_folders()
     except Exception, e:
@@ -130,6 +130,7 @@ def select_folder(folder):
 
     # TOFIX catch exception here
     select_info = server.select_folder(folder, readonly=True)
+
     # Format of select_info
     # {'EXISTS': 3597, 'PERMANENTFLAGS': (), 
     # 'UIDNEXT': 3719, 
@@ -185,14 +186,12 @@ def parse_main_headers(msg, new_msg = Message()):
         else:
             return [ dict(name = "undisclosed recipients", address = "") ]
 
-
     new_msg.to_contacts = parse_contact(['to', 'cc'])
     new_msg.from_contacts = parse_contact(['from'])
 
     subject = make_uni(msg['subject'])
     # Headers will wrap when longer than 78 lines per RFC822_2
-    subject = subject.replace('\n\t', '')
-    subject = subject.replace('\r\n', '')
+    subject = subject.replace('\n\t', '').replace('\r\n', '')
 
     # Remove "RE" or whatever
     if subject[:4] == u'RE: ' or subject[:4] == u'Re: ' :
@@ -213,38 +212,48 @@ def parse_main_headers(msg, new_msg = Message()):
 
 def parse_body(msg, new_msg = Message()):
 
-    msg_text = None
+    msg_text = ""
     content_type = None
 
-    maintype = msg.get_content_maintype()
-    if maintype == 'multipart':
-        for part in msg.get_payload():
-            if part.get_content_maintype() == 'text':
-                msg_text = part.get_payload(decode=True)
-                content_type = part.get_content_type()
-    elif maintype == 'text':
-        msg_text = msg.get_payload(decode=True)
+    def get_charset(message, default="ascii"):
+        if message.get_content_charset(): return message.get_content_charset()
+        if message.get_charset(): return message.get_charset()
+        return default
+
+    if msg.is_multipart():
+        #get the plain text version only
+        text_parts = [part for part in typed_subpart_iterator(msg, 'text', 'plain')]
+        body = []
+        for part in text_parts:
+            charset = get_charset(part, get_charset(msg))
+            body.append( unicode(part.get_payload(decode=True), charset, "replace") )
+            content_type = part.get_content_type()
+        msg_text = u"\n".join(body).strip()
+
+    else: # if it is not multipart, the payload will be a string
+          # representing the message body
+        body = unicode(msg.get_payload(decode=True), get_charset(msg), "replace")
         content_type = msg.get_content_type()
-    else:
-        log.error("Message doesn't have text Content-Type: %s" % msg)
+        msg_text = body.strip() # removes whitespace characters
+
+    if len(msg_text) == 0:
+        log.error("Couldn't find message text. Content-type: %s" % content_type)
 
 
-    if msg_text == None:
-        log.error("Couldn't find message text! %s" % msg)
-        return ""
+    # Don't think I need to do this anymore now that the above is creating
+    # unicode strings based on content encoding...
+    # msg_text = msg_text.decode('iso-8859-1').encode('utf8')
 
-    msg_text = msg_text.decode('iso-8859-1').encode('utf8')
-
-    # TODO: This is so broken
-    # msg_text = trim_quoted_text(msg_text, content_type)
+    # TODO: Fuck this is so broken for HTML mail
+    msg_text = trim_quoted_text(msg_text, content_type)
 
     if content_type == 'text/plain':
         msg_text = plaintext2html(msg_text)
 
     msg_text = fix_links(msg_text)
 
-    new_msg.body_text = msg_text
 
+    new_msg.body_text = msg_text
     return new_msg
 
 
