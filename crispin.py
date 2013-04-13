@@ -14,11 +14,6 @@ import logging as log
 from webify import plaintext2html, fix_links, trim_quoted_text, trim_subject, gravatar_url
 
 
-base_gmail_url = 'https://mail.google.com/mail/b/' + auth.ACCOUNT + '/imap/'
-HOST = 'imap.gmail.com'
-ssl = True
-
-
 server = None
 
 # { 
@@ -83,7 +78,7 @@ class Message():
 # use decorators to make sure this happens? 
 def connect():
     global server
-    log.info('Connecting to %s ...' % auth.HOST,)
+    log.info('Connecting to %s ...' % auth.IMAP_HOST,)
 
     try:
         server.noop()
@@ -93,8 +88,8 @@ def connect():
         log.info('No active connection. Opening connection...')
 
     try:
-        server = IMAPClient(HOST, use_uid=True, ssl=ssl)
-        server.oauth_login(base_gmail_url, 
+        server = IMAPClient(auth.IMAP_HOST, use_uid=True, ssl=auth.SSL)
+        server.oauth_login(auth.BASE_GMAIL_IMAP_URL, 
                     auth.OAUTH_TOKEN, 
                     auth.OAUTH_TOKEN_SECRET, 
                     auth.CONSUMER_KEY, 
@@ -115,6 +110,36 @@ def list_folders():
         raise e
     return [dict(flags = f[0], delimiter = f[1], name = f[2]) for f in resp]
     
+
+def get_special_folder(special_folder):
+    # TODO return folders for stuff like All Mail, Drafts, etc. which may
+    # be localized names. Use the flags, such as u'\\AllMail' or u'\\Important'
+
+    # Some old example code
+
+    # folders =  list_folders()
+    # other_folders = []
+    # print '\nSpecial mailboxes:'
+    # for f in folders:
+    #     if u'\\AllMail' in f['flags']:
+    #         print "    ALL MAIL --> ", f['name']
+    #     elif u'\\Drafts' in f['flags']:
+    #         print "    DRAFTS --> ", f['name']
+    #     elif u'\\Important' in f['flags']:
+    #         print "    IMPORTANT --> ", f['name']
+    #     elif u'\\Sent' in f['flags']:
+    #         print "    SENT --> ", f['name']
+    #     elif u'\\Starred' in f['flags']:
+    #         print "    STARRED --> ", f['name']
+    #     elif u'\\Trash' in f['flags']:
+    #         print "    TRASH --> ", f['name']
+    #     else:
+    #         other_folders.append(f)
+    # print '\Other mailboxes:'
+    # for f in other_folders:
+    #     print "   ", f['name']
+    pass
+
 
 def message_count(folder):
     global server
@@ -290,8 +315,6 @@ def fetch_thread(thread_id):
     threads_msg_ids = server.search('X-GM-THRID %s' % str(thread_id) )
     return threads_msg_ids
 
-
-
 def fetch_headers(folder_name):
     global server
 
@@ -323,9 +346,7 @@ def fetch_headers(folder_name):
 
         new_msg = None
 
-
     return new_messages
-
 
 
 def main():
@@ -336,56 +357,9 @@ def main():
         print "Couldn't connect. :("
         return
 
-    connect()
     select_folder("Inbox")
-
     uid = latest_message_uid()
     msg = fetch_msg(uid)
-
-    print msg.subject
-
-
-    # select_info = m.select_folder(u'Awesome')
-
-    # UIDs = m.fetch_all_udids()
-    # latest_email_uid = UIDs[-1]
-    # print '   Latest UID:', latest_email_uid
-    # print '   Total UIDs: ', len(UIDs)
-
-    # thread_id = message_dict['X-GM-THRID']
-
-    # m.create_draft("Test hello world")
-
-    # folders =  list_folders()
-    # other_folders = []
-    # print '\nSpecial mailboxes:'
-    # for f in folders:
-    #     if u'\\AllMail' in f['flags']:
-    #         print "    ALL MAIL --> ", f['name']
-    #     elif u'\\Drafts' in f['flags']:
-    #         print "    DRAFTS --> ", f['name']
-    #     elif u'\\Important' in f['flags']:
-    #         print "    IMPORTANT --> ", f['name']
-    #     elif u'\\Sent' in f['flags']:
-    #         print "    SENT --> ", f['name']
-    #     elif u'\\Starred' in f['flags']:
-    #         print "    STARRED --> ", f['name']
-    #     elif u'\\Trash' in f['flags']:
-    #         print "    TRASH --> ", f['name']
-    #     else:
-    #         other_folders.append(f)
-    # print '\Other mailboxes:'
-    # for f in other_folders:
-    #     print "   ", f['name']
-        
-    # print 'Unread counts:'
-    # for f in folders:
-    #     if u'\\Noselect' in f['flags']: continue
-    #     print f['flags']
-    #     print "    " + f['name'] + '...', 
-    #     print str(message_count(f['name']))
-
-
 
 if __name__ == "__main__":
     main()
