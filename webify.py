@@ -112,3 +112,12 @@ def gravatar_url(email):
 
     return gravatar_url
 
+
+def trim_subject(subject):
+    # Headers will wrap when longer than 78 lines per RFC822_2
+    subject = subject.replace('\n\t', '').replace('\r\n', '')
+    # Remove "RE" or whatever
+    if subject[:4] == u'RE: ' or subject[:4] == u'Re: ' :
+        subject = subject[4:]
+    return subject
+
