@@ -18,43 +18,69 @@ body {
   margin-top: 30px;
   margin-bottom: 30px;
 
-/*      width: {{ page_width }}px;
-*/
-    width: 600px;
+  width: 602px;
+=
 
+  /* Because this is a conatiner for shadows. */
+  position: relative;
+  z-index: 1;  /* prevent shadows falling behind containers with backgrounds */
+  /*overflow: hidden;*/
 }
 
-.panel {
-  background: white;
-  -webkit-box-shadow: 0 0 2px 4px rgba(0, 0, 0, 0.03), 0 0 0 1px rgba(0, 0, 0, 0.15);
-  -moz-box-shadow: 0 0 2px 4px rgba(0, 0, 0, 0.03), 0 0 0 1px rgba(0,0,0,0.15);
-  box-shadow: 0 0 4px 2px rgba(0, 0, 0, 0.03), 0 0 0 1px rgba(0, 0, 0, 0.15);
 
-  /*width: {{ page_width - 30 }};*/
-
-  text-align: left;
+.panel  
+{
   position: relative;
   width: 570px;
   padding: 15px;
-}
-
-.panel_flat  
-{
+  text-align: left;
+  margin: 0 30px 30px 0;
   background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.10);
   border-radius: 4px;
   -moz-border-radius: 4px;
   -webkit-border-radius: 4px;
   -moz-background-clip: padding;
   -webkit-background-clip: padding-box;
   background-clip: padding-box;
-  box-shadow: 0px 1px 4px rgba(0,0,0,.2);
-  -moz-box-shadow: 0px 1px 5px rgba(0,0,0,.2);
-  -webkit-box-shadow: 0px 1px 4px rgba(0,0,0,.2);
+}
 
-  text-align: left;
-  position: relative;
-  width: 570px;
-  padding: 15px;
+
+/* For shadows */
+.panel:before, .panel:after 
+{
+  content: '';
+  z-index: -1;
+  position: absolute;
+  left: 22px;
+  bottom: 10px;
+
+  width: 70%;
+  max-width: 300px; /* avoid rotation causing ugly appearance at large container widths */
+  max-height: 100px;
+  height: 55%;
+
+  -webkit-box-shadow: 0 11px 7px rgba(0, 0, 0, 0.40);
+  -moz-box-shadow: 0 11px 7px rgba(0, 0, 0, 0.40);
+  box-shadow: 0 11px 7px rgba(0, 0, 0, 0.40);
+
+  -webkit-transform: skew(-15deg) rotate(-2deg);
+  -moz-transform: skew(-15deg) rotate(-2deg);
+  -ms-transform: skew(-15deg) rotate(-2deg);
+  -o-transform: skew(-15deg) rotate(-2deg);
+  transform: skew(-15deg) rotate(-2deg); 
+}
+
+
+.panel:after 
+{
+  left: auto;
+  right: 22px;
+  -webkit-transform: skew(15deg) rotate(2deg);
+  -moz-transform: skew(15deg) rotate(2deg);
+  -ms-transform: skew(15deg) rotate(2deg);
+  -o-transform: skew(15deg) rotate(2deg);
+  transform: skew(15deg) rotate(2deg); 
 }
 
 
@@ -72,31 +98,10 @@ body {
 }
 
 
-
-.panel_shadow
-{
-  bottom: 0;
-  height: 10px;  
-  width: 600px;
-  background-position-x: 0%;
-  background-position-y: 50%;
-  /* This can be moved to change shadow width*/
-  background: url(/static/post_shadow.png) left center no-repeat;
-  width: 100%;
-  height: 10px;
-  display: block;
-  position: absolute;
-  left: 0;
-  bottom: -10px;
-  z-index: 2;
-}
-
-
 .author img
 {
   float: left;
 }
-
 
 
 .fixedwidth 
