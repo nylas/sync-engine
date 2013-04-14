@@ -11,5 +11,6 @@ ORGANIZATION:
     - initial mail download
     - other IMAP commands
     - IMAP IDLE
-- a socketio process that synchronizes data with the client
+- a websockets process that synchronizes data with the client
+  - brubeck / diesel?
 - app.py: temporary Tornado backend
