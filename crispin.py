@@ -74,7 +74,7 @@ class Message():
         return trim_subject(self.subject)
 
 
-class Thread():
+class MsgThread():
     def __init__(self):
         self.mesage_ids  = []
         self.messages = []
@@ -351,7 +351,7 @@ def fetch_threads(folder_name):
 
     for m in msgs:
         if m.thread_id not in threads.keys():
-            new_thread = Thread()
+            new_thread = MsgThread()
             new_thread.thread_id = m.thread_id
             threads[m.thread_id] = new_thread
 
