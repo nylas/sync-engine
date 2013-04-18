@@ -9,14 +9,16 @@ All of the todos are in [the Asana worksapce](https://app.asana.com/0/4983727800
 
 1. Install [virtualenv](http://www.virtualenv.org/en/latest/), which is just good in general.
 
-2. Clone this repo and `cd` into it
+2. `git clone --recursive git@github.com:grinich/crispin.git` to get the source and submodules.
 
-2. `virtualenv --no-site-packages .`
+2. `cd` into the source and call `virtualenv --no-site-packages .`
    If you're on a Mac, add the `--use-distribute` flag.
 
 3. `source bin/activate` to start virtualenv
 
 4. `pip install -r requirements.txt` to install required packages
+
+5. `pip install -e packages/imaplib2` to install imaplib2
 
 <!-- 
 
@@ -25,6 +27,8 @@ In the figure we might use this to add a custom package location, such as for im
 `pip install -r requirements.txt -f ./packages/imaplib2/dist/`
 
 after running `python setup.py sdist` in the imaplib2 directory
+
+development:  pip install -e packages/imaplib2/
 
  -->
 
@@ -46,13 +50,17 @@ This will end up being a very complicated system, so it's important to define re
 
 ### Browser / Client
 
+The client will be a [single page app](http://singlepageappbook.com/single-page.html) in the sense that view updates will not require reloading the page. All templating will be done client-side.
+
 ##### UI+view manipualtion
 
-Handled by Angular.JS. This will be (hopefully) pure DOM manipulation, and not require lots of javascript for things like animation. Try to do it with CSS transitions. Obviously some JS will be needed for text formatting, but keep this cleanly separated using Angular's defined abstractions.
+Handled by Angular.JS. This will be (hopefully) pure DOM manipulation, and not require lots of javascript for things like animation. Try to do it with [CSS transitions](http://daneden.me/animate/). Obviously some JS will be needed for text formatting, but keep this cleanly separated using Angular's defined abstractions.
 
 ##### Data model
 
-Probably native javascript. A lof of this will be heavily cached and take advantage of `localStorage` or the HTML5 file system APIs. Javascript is weird. 
+Probably native javascript. A lof of this will be heavily cached and take advantage of `localStorage` or the HTML5 file system APIs. Javascript is weird.
+
+Maybe use a framework like [breeze](http://www.breezejs.com/documentation/introduction) for this abstraction.
 
 ##### Data sync
 

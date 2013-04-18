@@ -1,0 +1,3 @@
+[submodule "imaplib2"]
+	path = packages/imaplib2
+	url = git@github.com:grinich/imaplib2.git
