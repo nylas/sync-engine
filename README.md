@@ -1,8 +1,8 @@
 # Crispin (working name...)
 
-Crisping is first step towards transcending email.
+Crispin is first step towards transcending email.
 
-All of the todos are in [the Asana worksapce](https://app.asana.com/0/4983727800919/4983727800919).
+All of the todos are in [the Asana workspace](https://app.asana.com/0/4983727800919/4983727800919).
 
 
 ## Setup
@@ -46,19 +46,19 @@ development:  pip install -e packages/imaplib2/
 
 ## High-level design
 
-This will end up being a very complicated system, so it's important to define reasonalble abstractions initially. In general, this will follow the MVC pattern.
+This will end up being a very complicated system, so it's important to define reasonable abstractions initially. In general, this will follow the MVC pattern.
 
 ### Browser / Client
 
 The client will be a [single page app](http://singlepageappbook.com/single-page.html) in the sense that view updates will not require reloading the page. All templating will be done client-side.
 
-##### UI+view manipualtion
+##### UI+view manipulation
 
 Handled by Angular.JS. This will be (hopefully) pure DOM manipulation, and not require lots of javascript for things like animation. Try to do it with [CSS transitions](http://daneden.me/animate/). Obviously some JS will be needed for text formatting, but keep this cleanly separated using Angular's defined abstractions.
 
 ##### Data model
 
-Probably native javascript. A lof of this will be heavily cached and take advantage of `localStorage` or the HTML5 file system APIs. Javascript is weird.
+Probably native javascript. A lot of this will be heavily cached and take advantage of `localStorage` or the HTML5 file system APIs. Javascript is weird.
 
 Maybe use a framework like [breeze](http://www.breezejs.com/documentation/introduction) for this abstraction.
 
@@ -98,7 +98,7 @@ A subsystem of this will handle keeping open IDLE messages and communicating new
 
 ##### Database
 
-IMAP is slow as balls so we need to cache pretty much everything. Actual message data rarely (never?) changes on the server, so we can prefetch and store it for super fast access. We probably dont' want to do that with attachments or super old messsages.
+IMAP is slow as balls so we need to cache pretty much everything. Actual message data rarely (never?) changes on the server, so we can prefetch and store it for super fast access. We probably don't want to do that with attachments or super old messsages.
 
 Pretty much everyone recommends against storing email body in a relational database. They all use flat files on disk and index metadata somewhere for quick access. (Fuck it, maybe Mongo?) 
 
