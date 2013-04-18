@@ -4,6 +4,11 @@
 # C extensions
 *.so
 
+# virtualenv
+activate/
+deactivate
+.Python
+
 # Packages
 *.egg
 *.egg-info
