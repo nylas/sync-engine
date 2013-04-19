@@ -433,10 +433,108 @@ def fetch_headers(folder_name):
 
 
 
+# ([
+#    ('text', 'html', ('charset', 'us-ascii'), None, None, 'quoted-printable', 55, 3),
+#    ('text', 'plain', ('charset', 'us-ascii'), None, None, '7bit', 26, 1) 
+#  ], 
+#  'mixed', ('boundary', '===============1534046211=='))
 
-def fetch_bodystructure(UIDs):
+# print 'Parts:', len(parts)
+# $ UID FETCH <uid> (BODY ENVELOPE)   # get structure and header info
+# $ UID FETCH <uid> (BODY[1])         # retrieving displayable body
+# $ UID FETCH <uid> (BODY[2])         # retrieving attachment on demand
+# FETCH 88 BODY.PEEK[1]
+# FETCH uid BODY.PEEK[1.2]
+# print 'Ending:', bodystructure[1]
+
+
+class MessageBodyPart(object):
+    """The parts of message's body content"""
+    def __init__(self, p, index='1'):
+        """p is tuple returned by the BODYSTRUCTURE command"""
+
+        self.index = "" # String describing body position, 1-indexed
+        # this describes how to retreive the content
+        # For parts at the top level, it will be something like "1"
+        # such that a call to requets it is BODY[1]
+        # For subparts, it follows the dot notation, so "1.1" is the 
+        # first subpart of the first part, fetched with BODY[1.1]
+
+        self.content_type_major = ''
+        self.content_type_minor = ''
+
+        # TODO check to see if this is the encoded or actual size
+        self.bytes = 0 # number of octets.
+
+        # for text
+        self.line_count = 0
+        self.charset = ''
+        self.encoding = ''
+
+        # for images
+        self.filename = ''
+
+
+
+        self.index = str(index)
+        self.content_type_major = p[0]
+        self.content_type_minor = p[1]
+
+        if self.content_type_major.lower() == 'text':
+            assert p[2][0].lower() == 'charset'
+            assert len(p) == 8 # TOFIX ?
+            self.charset = p[2][1]
+            self.encoding = p[5]
+            self.bytes = p[6]
+            self.line_count = p[7]
+
+        elif self.content_type_major.lower() == 'image':
+            assert p[2][0].lower() == 'name'
+            assert len(p) == 7 # TOFIX ?
+            self.filename = p[2][1]
+            self.encoding = p[5]
+            self.bytes = p[6]
+        else:
+            # Other random body section types here:
+            # ('APPLICATION', 'PKCS7-SIGNATURE', ('NAME', 'smime.p7s'), None, None, 'BASE64', 2176)
+
+            log.error('No idea what to do with this BODYSTRUCTURE: %s', p)
+
+
+    @property
+    def isImage():
+        return self.content_type_major.lower() == 'image'
+
+    def __repr__(self):
+        r = '<MessageBodyPart object> '
+        if self.content_type_major.lower() == 'text':
+            return r + 'BodySection %s: %s text (%i bytes, %i lines) with encoding: %s' % \
+                          (self.index, 
+                           self.content_type_minor.lower(), 
+                           self.bytes, 
+                           self.line_count,
+                           self.encoding)
+        elif self.content_type_major.lower() == 'image':
+            return r + 'BodySection %s: %s (%i byes) with Content-Type: %s/%s' % \
+                           (self.index,
+                            self.filename,
+                            self.bytes, 
+                            self.content_type_major.lower(), 
+                            self.content_type_minor.lower() )
+        else:
+            return r + ''
+
+        
+
+def fetch_MessageBodyPart(UIDs):
+
+    if isinstance(UIDs, int ):
+        UIDs = [str(UIDs)]
+    elif isinstance(UIDs, basestring):
+        UIDs = [UIDs]
+
+
     global server
-
     query = 'ENVELOPE BODY INTERNALDATE'
 
     # envelope gives relevant headers and is really fast in practice
@@ -448,40 +546,14 @@ def fetch_bodystructure(UIDs):
     messages = server.fetch(UIDs, [query, 'X-GM-THRID'])
     log.info("  ...found %i messages." % len(messages.values()))
 
+
+    bodystructure_parts = []
+
+
     for m in messages.keys():
         
         bodystructure = messages[m]['BODY']
-
-        def print_part(p, i=0):
-            content_type_major = p[0]
-            content_type_minor = p[1]
-            if content_type_major.lower() == 'text':
-                assert p[2][0].lower() == 'charset'
-                charset = p[2][1]
-                encoding = p[5]
-                file_size = p[6]
-                lines = p[7]
-                log.info('   Section %i: %s text (%i byes, %i lines) with encoding: %s' % (i+1, 
-                                                                   content_type_minor.lower(), 
-                                                                   file_size, 
-                                                                   lines,
-                                                                   encoding))
-            elif content_type_major.lower() == 'image':
-                assert p[2][0].lower() == 'name'
-                filename = p[2][1]
-                encoding = p[5]
-                file_size = p[6]
-                log.info('   Section %i: %s (%i byes) with Content-Type: %s/%s' % (i+1, filename, file_size, content_type_major.lower(), content_type_minor.lower()))
-
-            else:
-                log.info('   Body section %i has Content-Type: %s/%s' % \
-                          (i+1, content_type_major.lower(), content_type_minor.lower()))
-
-
-
         if bodystructure.is_multipart:
-
-            log.info("Message is multipart.")
 
             parts = bodystructure[0]
             for i in xrange(len(parts)):
@@ -491,43 +563,27 @@ def fetch_bodystructure(UIDs):
                 # individually. I think email.parser takes care of this when you fetch
                 # the actual body content, but I have to do it here for the BODYSTRUCTURE
                 # response. 
-                if not isinstance(part[0], basestring):
-                    log.info('This part is ... %s' % part[-1])
-                    all_subparts = [p for p in part[:-1]]
-                else:
-                    all_subparts = [part]
 
-                # Usually this will just iterate once.
-                # I have no idea how to fetch the subtype of subtypes...
-
-                for i in range(len(all_subparts)):
-                    print_part(all_subparts[i], i)
+                # recurisve creator since these might be nested
+                # pass the index so we can append subindicies
+                # Note: this shit might break but it works for now...
+                def make_obj(p, i):
+                    if not isinstance(p[0], basestring):
+                        for x in range(len(part) - 1): # The last one is the label
+                            if len(i) > 0: index = i+'.'+ str(x+1)
+                            else: index = str(x+1)
+                            make_obj(p[x], index)
+                    else:
+                        if len(i) > 0: index = i+'.1'
+                        else: index = '1'
+                        bodystructure_parts.append(MessageBodyPart(p,i))
+                make_obj(part, str(i+1))
 
         else:
-            log.info("Message is single part.")
-            print_part(bodystructure)
+            bodystructure_parts.append(MessageBodyPart(bodystructure, '1'))
 
-            
-
-
-
-  # ([
-  #    ('text', 'html', ('charset', 'us-ascii'), None, None, 'quoted-printable', 55, 3),
-  #    ('text', 'plain', ('charset', 'us-ascii'), None, None, '7bit', 26, 1) 
-  #  ], 
-  #  'mixed', ('boundary', '===============1534046211=='))
-
-        # print 'Parts:', len(parts)
-        # $ UID FETCH <uid> (BODY ENVELOPE)   # get structure and header info
-        # $ UID FETCH <uid> (BODY[1])         # retrieving displayable body
-        # $ UID FETCH <uid> (BODY[2])         # retrieving attachment on demand
-        # FETCH 88 BODY.PEEK[1]
-        # FETCH uid BODY.PEEK[1.2]
-        # print 'Ending:', bodystructure[1]
-
-
-
-
+    return bodystructure_parts
+    
 
 def main():
 
@@ -540,36 +596,23 @@ def main():
         print "Couldn't connect. :("
         return
 
-    # uid = latest_message_uid()
-    # msg = fetch_msg(uid)
-
-
-    select_info = select_folder("Inbox") 
-
-    # This is how you query bodystructure subsections
-    # each bodystructure object should have an index as well.
-    query = 'BODY[1.2]'
-    # query = 'ENVELOPE BODY INTERNALDATE'
-
-
-
-    sadie_msg_uid = '114164' # '394102' in All Mail 
-    # sadie_msg_uid = '395760' # regular thread
-    UIDs = [sadie_msg_uid]
-    # UIDs = fetch_all_udids()
-
-    messages = server.fetch(UIDs, [query, 'X-GM-THRID'])
-    log.info("  ...found %i messages." % len(messages.values()))
-
-    print messages
-    return
-
-
-
     select_info = select_folder("Inbox") 
     UIDs = fetch_all_udids()
-    b = fetch_bodystructure(UIDs)
 
+    # select_info = select_folder("Inbox") 
+    # sadie_msg_uid = '114164' # '394102' in All Mail 
+    # UIDs = [sadie_msg_uid]
+
+    # select_allmail_folder()
+    # regular_thread_uid = '395760'
+    # UIDs = [regular_thread_uid]
+
+
+    bodystructs = fetch_MessageBodyPart(UIDs)
+
+
+    for b in bodystructs:
+        print b
 
 
 if __name__ == "__main__":
