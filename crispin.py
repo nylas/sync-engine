@@ -402,17 +402,175 @@ def fetch_headers(folder_name):
     return new_messages
 
 
+
+
+# BODY is like BODYSTRUCTURE but without extension information
+# not sure what this means in practice. We can probably get by only
+# using BODY requests and just looking up the filetype based on filename 
+# extensions. Excerpts from a couple of Gmail responses:
+
+# snipped of BODY request of attachment
+# ('IMAGE', 'JPEG', ('NAME', 'breadSRSLY-5.jpg'), None, None, 'BASE64', 1611294), 
+
+# snippet of BODYSTRUCTURE
+# ('IMAGE', 'JPEG', ('NAME', 'breadSRSLY-5.jpg'), None, None, 'BASE64', 1611294, None, ('ATTACHMENT', ('FILENAME', 'breadSRSLY-5.jpg')), None), 
+
+
+# From the original spec...
+#
+# A body type of type TEXT contains, immediately after the basic 
+# fields, the size of the body in text lines.  Note that this 
+# size is the size in its content transfer encoding and not the 
+# resulting size after any decoding. 
+#
+# Extension data follows the basic fields and the type-specific 
+# fields listed above.  Extension data is never returned with the 
+# BODY fetch, but *CAN* be returned with a BODYSTRUCTURE fetch. 
+# Extension data, if present, MUST be in the defined order. 
+#
+# Also, BODY and BODYSTRUCTURE calls are kind of fucked
+# see here http://mailman2.u.washington.edu/pipermail/imap-protocol/2011-October/001528.html
+
+
+
+
+def fetch_bodystructure(UIDs):
+    global server
+
+    query = 'ENVELOPE BODY INTERNALDATE'
+
+    # envelope gives relevant headers and is really fast in practice
+    # RFC822.HEADER will give *all* of the headers, and is probably slower? // TODO 
+    # query = 'RFC822.HEADER BODY'
+    # query = 'FLAGS UID RFC822.SIZE INTERNALDATE BODY.PEEK[HEADER] BODY'
+
+    log.info("Fetching messages with query: %s" % query )
+    messages = server.fetch(UIDs, [query, 'X-GM-THRID'])
+    log.info("  ...found %i messages." % len(messages.values()))
+
+    for m in messages.keys():
+        
+        bodystructure = messages[m]['BODY']
+
+        def print_part(p, i=0):
+            content_type_major = p[0]
+            content_type_minor = p[1]
+            if content_type_major.lower() == 'text':
+                assert p[2][0].lower() == 'charset'
+                charset = p[2][1]
+                encoding = p[5]
+                file_size = p[6]
+                lines = p[7]
+                log.info('   Section %i: %s text (%i byes, %i lines) with encoding: %s' % (i+1, 
+                                                                   content_type_minor.lower(), 
+                                                                   file_size, 
+                                                                   lines,
+                                                                   encoding))
+            elif content_type_major.lower() == 'image':
+                assert p[2][0].lower() == 'name'
+                filename = p[2][1]
+                encoding = p[5]
+                file_size = p[6]
+                log.info('   Section %i: %s (%i byes) with Content-Type: %s/%s' % (i+1, filename, file_size, content_type_major.lower(), content_type_minor.lower()))
+
+            else:
+                log.info('   Body section %i has Content-Type: %s/%s' % \
+                          (i+1, content_type_major.lower(), content_type_minor.lower()))
+
+
+
+        if bodystructure.is_multipart:
+
+            log.info("Message is multipart.")
+
+            parts = bodystructure[0]
+            for i in xrange(len(parts)):
+                part = parts[i]
+                # Sometimes one of the body parts is actually something weird like 
+                # Content-Type: multipart/alternative, so you have to loop though them
+                # individually. I think email.parser takes care of this when you fetch
+                # the actual body content, but I have to do it here for the BODYSTRUCTURE
+                # response. 
+                if not isinstance(part[0], basestring):
+                    log.info('This part is ... %s' % part[-1])
+                    all_subparts = [p for p in part[:-1]]
+                else:
+                    all_subparts = [part]
+
+                # Usually this will just iterate once.
+                # I have no idea how to fetch the subtype of subtypes...
+
+                for i in range(len(all_subparts)):
+                    print_part(all_subparts[i], i)
+
+        else:
+            log.info("Message is single part.")
+            print_part(bodystructure)
+
+            
+
+
+
+  # ([
+  #    ('text', 'html', ('charset', 'us-ascii'), None, None, 'quoted-printable', 55, 3),
+  #    ('text', 'plain', ('charset', 'us-ascii'), None, None, '7bit', 26, 1) 
+  #  ], 
+  #  'mixed', ('boundary', '===============1534046211=='))
+
+        # print 'Parts:', len(parts)
+        # $ UID FETCH <uid> (BODY ENVELOPE)   # get structure and header info
+        # $ UID FETCH <uid> (BODY[1])         # retrieving displayable body
+        # $ UID FETCH <uid> (BODY[2])         # retrieving attachment on demand
+        # FETCH 88 BODY.PEEK[1]
+        # FETCH uid BODY.PEEK[1.2]
+        # print 'Ending:', bodystructure[1]
+
+
+
+
+
 def main():
 
-    log.basicConfig(level=log.DEBUG)
+
+    # log.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+    log.basicConfig(format='%(message)s', level=log.DEBUG)
+    # log.basicConfig(level=log.DEBUG)
 
     if not ( connect() ):
         print "Couldn't connect. :("
         return
 
-    select_folder("Inbox")
-    uid = latest_message_uid()
-    msg = fetch_msg(uid)
+    # uid = latest_message_uid()
+    # msg = fetch_msg(uid)
+
+
+    select_info = select_folder("Inbox") 
+
+    # This is how you query bodystructure subsections
+    # each bodystructure object should have an index as well.
+    query = 'BODY[1.2]'
+    # query = 'ENVELOPE BODY INTERNALDATE'
+
+
+
+    sadie_msg_uid = '114164' # '394102' in All Mail 
+    # sadie_msg_uid = '395760' # regular thread
+    UIDs = [sadie_msg_uid]
+    # UIDs = fetch_all_udids()
+
+    messages = server.fetch(UIDs, [query, 'X-GM-THRID'])
+    log.info("  ...found %i messages." % len(messages.values()))
+
+    print messages
+    return
+
+
+
+    select_info = select_folder("Inbox") 
+    UIDs = fetch_all_udids()
+    b = fetch_bodystructure(UIDs)
+
+
 
 if __name__ == "__main__":
     main()
