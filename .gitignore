@@ -44,3 +44,4 @@ nosetests.xml
 # virtualenv
 local
 include
+share
