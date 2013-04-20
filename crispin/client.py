@@ -33,7 +33,8 @@ from models import Message, MessageThread, MessageBodyPart
 # X-GM-LABELS
 
 class CrispinClient:
-    SERVER_TIMEOUT = 1200       # 20 minutes in seconds
+    # 20 minutes
+    SERVER_TIMEOUT = datetime.timedelta(seconds=1200)
 
     def __init__(self):
         self.imap_server = None
@@ -59,6 +60,7 @@ class CrispinClient:
             # a connected function did *something* with our connection, so
             # update the keepalive
             self.keepalive = datetime.datetime.utcnow()
+            return ret
         return connected_fn
 
     def _connect(self):
