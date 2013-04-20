@@ -12,10 +12,7 @@ from webify import plaintext2html, fix_links, trim_quoted_text, trim_subject
 
 from models import Message, MessageThread, MessageBodyPart
 
-
 server = None
-
-
 
 # BODY.PEEK[HEADER]
 # X-GM-THRID
@@ -32,9 +29,7 @@ server = None
 # X-GM-MSGID
 # X-GM-LABELS
 
-
-
-# use decorators to make sure this happens? 
+# use decorators to make sure this happens?
 def connect():
     global server
     log.info('Connecting to %s ...' % auth.IMAP_HOST,)
@@ -48,10 +43,10 @@ def connect():
 
     try:
         server = IMAPClient(auth.IMAP_HOST, use_uid=True, ssl=auth.SSL)
-        server.oauth_login(auth.BASE_GMAIL_IMAP_URL, 
-                    auth.OAUTH_TOKEN, 
-                    auth.OAUTH_TOKEN_SECRET, 
-                    auth.CONSUMER_KEY, 
+        server.oauth_login(auth.BASE_GMAIL_IMAP_URL,
+                    auth.OAUTH_TOKEN,
+                    auth.OAUTH_TOKEN_SECRET,
+                    auth.CONSUMER_KEY,
                     auth.CONSUMER_SECRET)
     except Exception, e:
         log.error("IMAP connection error: %s", e)
@@ -60,7 +55,6 @@ def connect():
     log.info('Connection successful.')
     return True
 
-
 def list_folders():
     global server
     try:
@@ -68,14 +62,12 @@ def list_folders():
     except Exception, e:
         raise e
     return [dict(flags = f[0], delimiter = f[1], name = f[2]) for f in resp]
-    
 
 def all_mail_folder_name():
     folders =  list_folders()
     for f in folders:
         if u'\\AllMail' in f['flags']:
             return f['name']
-
 
 def get_special_folder(special_folder):
     # TODO return folders for stuff like All Mail, Drafts, etc. which may
@@ -106,27 +98,24 @@ def get_special_folder(special_folder):
     #     print "   ", f['name']
     pass
 
-
 def message_count(folder):
     global server
     select_info = server.select_folder(folder, readonly=True)
     return int(select_info['EXISTS'])
 
-
 def select_folder(folder):
     global server
     select_info = server.select_folder(folder, readonly=True)
     # Format of select_info
-    # {'EXISTS': 3597, 'PERMANENTFLAGS': (), 
-    # 'UIDNEXT': 3719, 
-    # 'FLAGS': ('\\Answered', '\\Flagged', '\\Draft', '\\Deleted', '\\Seen', '$Pending', 'Junk', 'NonJunk', 'NotJunk', '$Junk', 'Forwarded', '$Forwarded', 'JunkRecorded', '$NotJunk'), 
+    # {'EXISTS': 3597, 'PERMANENTFLAGS': (),
+    # 'UIDNEXT': 3719,
+    # 'FLAGS': ('\\Answered', '\\Flagged', '\\Draft', '\\Deleted', '\\Seen', '$Pending', 'Junk', 'NonJunk', 'NotJunk', '$Junk', 'Forwarded', '$Forwarded', 'JunkRecorded', '$NotJunk'),
     # 'UIDVALIDITY': 196, 'READ-ONLY': [''], 'RECENT': 0}
     log.info('Selected folder %s with %d messages.' % (folder, select_info['EXISTS']) )
     return select_info
 
 def select_allmail_folder():
     return select_folder(all_mail_folder_name())
-
 
 # TODO this shit is broken
 def create_draft(message_string):
@@ -137,13 +126,10 @@ def create_draft(message_string):
                 str(email.message_from_string(message_string)))
     log.info("Done creating test draft.")
 
-
-
 def latest_message_uid():
     global server
     messages = server.search(['NOT DELETED'])
     return messages[-1]
-
 
 def fetch_latest_message():
     global server
@@ -151,22 +137,21 @@ def fetch_latest_message():
     response = server.fetch(latest_email_uid, ['RFC822', 'X-GM-THRID', 'X-GM-MSGID'])
     return response[latest_email_uid]['RFC822']
 
-
 def parse_main_headers(msg):
     new_msg = Message()
 
     def make_uni(txt, default_encoding="ascii"):
         return u"".join([unicode(text, charset or default_encoding)
-                   for text, charset in decode_header(txt)]) 
+                   for text, charset in decode_header(txt)])
 
     def parse_contact(headers):
         # Works with both strings and lists
         try: headers += []
-        except: headers = [headers] 
+        except: headers = [headers]
 
         # combine and flatten header values
         addrs = reduce(lambda x,y: x+y, [msg.get_all(a, []) for a in headers])
-        
+
         if len(addrs) > 0:
             return [ dict(name = make_uni(t[0]),
                           address=make_uni(t[1]))
@@ -186,7 +171,6 @@ def parse_main_headers(msg):
     return new_msg
 
 def parse_body(msg, new_msg = Message()):
-
     msg_text = ""
     content_type = None
 
@@ -214,7 +198,6 @@ def parse_body(msg, new_msg = Message()):
     if len(msg_text) == 0:
         log.error("Couldn't find message text. Content-type: %s" % content_type)
 
-
     # Don't think I need to do this anymore now that the above is creating
     # unicode strings based on content encoding...
     # msg_text = msg_text.decode('iso-8859-1').encode('utf8')
@@ -231,16 +214,14 @@ def parse_body(msg, new_msg = Message()):
     new_msg.body_text = msg_text
     return new_msg
 
-
-
 def fetch_msg(msg_uid):
     msg_uid = long(msg_uid)
     global server
 
     log.info("Fetching message. UID: %i" % msg_uid)
-    
+
     response = server.fetch(str(msg_uid), ['RFC822', 'X-GM-THRID', 'X-GM-MSGID'])
-    
+
     if len(response.keys()) == 0:
         log.error("No response for msg query. msg_id = %s", msg_uid)
         return None
@@ -263,21 +244,17 @@ def fetch_msg(msg_uid):
 
     return new_msg
 
-
 def fetch_all_udids():
     global server
     UIDs = server.search(['NOT DELETED'])
     return UIDs
-
 
 def fetch_thread(thread_id):
     global server
     threads_msg_ids = server.search('X-GM-THRID %s' % str(thread_id) )
     return threads_msg_ids
 
-
 def fetch_threads(folder_name):
-
     threads = {}
     msgs = fetch_headers(folder_name)
 
@@ -297,8 +274,6 @@ def fetch_threads(folder_name):
         t.message_ids = fetch_thread(t.thread_id) # all
 
     return threads.values()
-
-
 
 def fetch_headers(folder_name):
     global server
@@ -333,25 +308,17 @@ def fetch_headers(folder_name):
 
     return new_messages
 
-
-
-
-
-        
-
 def fetch_MessageBodyPart(UIDs):
-
     if isinstance(UIDs, int ):
         UIDs = [str(UIDs)]
     elif isinstance(UIDs, basestring):
         UIDs = [UIDs]
 
-
     global server
     query = 'ENVELOPE BODY INTERNALDATE'
 
     # envelope gives relevant headers and is really fast in practice
-    # RFC822.HEADER will give *all* of the headers, and is probably slower? // TODO 
+    # RFC822.HEADER will give *all* of the headers, and is probably slower? // TODO
     # query = 'RFC822.HEADER BODY'
     # query = 'FLAGS UID RFC822.SIZE INTERNALDATE BODY.PEEK[HEADER] BODY'
 
@@ -359,23 +326,21 @@ def fetch_MessageBodyPart(UIDs):
     messages = server.fetch(UIDs, [query, 'X-GM-THRID'])
     log.info("  ...found %i messages." % len(messages.values()))
 
-
     bodystructure_parts = []
 
-
     for m in messages.keys():
-        
+
         bodystructure = messages[m]['BODY']
         if bodystructure.is_multipart:
 
             parts = bodystructure[0]
             for i in xrange(len(parts)):
                 part = parts[i]
-                # Sometimes one of the body parts is actually something weird like 
+                # Sometimes one of the body parts is actually something weird like
                 # Content-Type: multipart/alternative, so you have to loop though them
                 # individually. I think email.parser takes care of this when you fetch
                 # the actual body content, but I have to do it here for the BODYSTRUCTURE
-                # response. 
+                # response.
 
                 # recurisve creator since these might be nested
                 # pass the index so we can append subindicies
@@ -396,11 +361,8 @@ def fetch_MessageBodyPart(UIDs):
             bodystructure_parts.append(MessageBodyPart(bodystructure, '1'))
 
     return bodystructure_parts
-    
 
 def main():
-
-
     # log.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
     log.basicConfig(format='%(message)s', level=log.DEBUG)
     # log.basicConfig(level=log.DEBUG)
@@ -409,24 +371,21 @@ def main():
         print "Couldn't connect. :("
         return
 
-    select_info = select_folder("Inbox") 
+    select_info = select_folder("Inbox")
     UIDs = fetch_all_udids()
 
-    # select_info = select_folder("Inbox") 
-    # sadie_msg_uid = '114164' # '394102' in All Mail 
+    # select_info = select_folder("Inbox")
+    # sadie_msg_uid = '114164' # '394102' in All Mail
     # UIDs = [sadie_msg_uid]
 
     # select_allmail_folder()
     # regular_thread_uid = '395760'
     # UIDs = [regular_thread_uid]
 
-
     bodystructs = fetch_MessageBodyPart(UIDs)
-
 
     for b in bodystructs:
         print b
-
 
 if __name__ == "__main__":
     main()
