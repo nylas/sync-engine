@@ -1,4 +1,3 @@
-from email import message_from_string
 import email.utils as email_utils
 from email.Parser import Parser
 from email.header import decode_header
@@ -9,7 +8,7 @@ import datetime
 import logging as log
 
 import auth
-from webify import plaintext2html, fix_links, trim_quoted_text, trim_subject, gravatar_url
+from webify import plaintext2html, fix_links, trim_quoted_text, trim_subject
 
 from models import Message, MessageThread, MessageBodyPart
 
