@@ -1,3 +1,8 @@
+# allow imports from the top-level dir (we will want to make the package
+# system better later)
+import sys
+sys.path.insert(0, "..")
+
 import email.utils as email_utils
 from email.Parser import Parser
 from email.header import decode_header
