@@ -43,6 +43,9 @@ development:  pip install -e packages/imaplib2/
 
 <hr/>
 
+## Style guide
+
+We'll just be using the [Google Python style guide](http://google-styleguide.googlecode.com/svn/trunk/pyguide.html). No need to reinvent the wheel.
 
 ## High-level design
 
