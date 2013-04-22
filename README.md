@@ -43,9 +43,11 @@ development:  pip install -e packages/imaplib2/
 
 <hr/>
 
-## Style guide
+## Style guide and git notes
 
 We'll just be using the [Google Python style guide](http://google-styleguide.googlecode.com/svn/trunk/pyguide.html). No need to reinvent the wheel.
+
+Also, do `git config branch.master.rebase true` in the repo to keep your history nice and clean. You can set this globally using `git config --global branch.autosetuprebase remote`. 
 
 ## High-level design
 
