@@ -20,8 +20,6 @@ All of the todos are in [the Asana workspace](https://app.asana.com/0/4983727800
 
 4. `pip install -r requirements.txt` to install required packages
 
-5. `pip install -e packages/imaplib2` to install imaplib2
-
 <!-- 
 
 In the figure we might use this to add a custom package location, such as for imaplib2
