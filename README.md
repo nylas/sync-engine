@@ -1,6 +1,8 @@
-# Crispin (working name...)
+# Inbox
 
-Crispin is first step towards transcending email.
+email, refined.
+
+[http://www.inboxapp.com](http://www.inboxapp.com)
 
 All of the todos are in [the Asana workspace](https://app.asana.com/0/4983727800919/4983727800919).
 
@@ -9,7 +11,7 @@ All of the todos are in [the Asana workspace](https://app.asana.com/0/4983727800
 
 1. Install [virtualenv](http://www.virtualenv.org/en/latest/), which is just good in general.
 
-2. `git clone --recursive git@github.com:grinich/crispin.git` to get the source and submodules.
+2. `git clone --recursive git@github.com:grinich/inbox.git` to get the source and submodules.
 
 2. `cd` into the source and call `virtualenv --no-site-packages .`
    If you're on a Mac, add the `--use-distribute` flag.
