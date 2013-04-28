@@ -1,5 +1,8 @@
 # allow imports from the top-level dir (we will want to make the package
 # system better later)
+
+from imapclient import IMAPClient
+
 import sys
 sys.path.insert(0, "..")
 
@@ -7,7 +10,6 @@ import email.utils as email_utils
 from email.Parser import Parser
 from email.header import decode_header
 from email.Iterators import typed_subpart_iterator
-from imapclient import IMAPClient
 import time
 import datetime
 import logging as log
