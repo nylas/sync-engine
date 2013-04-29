@@ -37,8 +37,8 @@ class Message():
         return gravatar_url(self.from_contacts[0]['address'])
 
     def gmail_url(self):
-        if not self.uid: return
-        # http://mail.google.com/mail?account_id=ACCOUNT_ID_HERE&message_id=MESSAGE_ID_HERE&view=conv&extsrc=atom
+        if not self.uid:
+            return
         return "https://mail.google.com/mail/u/0/#inbox/" + hex(self.uid)
 
     def trimmed_subject(self):
@@ -47,22 +47,27 @@ class Message():
 
 class MessageThread():
     def __init__(self):
-        self.mesage_ids  = []
         self.messages = []
         self.thread_id = None
         self.is_unread = True # True/False
 
-    def fetch_messages(self):
-        self.messages = [fetch_msg(uid) for uid in self.message_ids]
+    @property
+    def message_count(self):
+        return len(self.messages)
 
-    def get_subject(self):
+    @property
+    def subject(self):
         return self.messages[0].subject
 
+    @property
     def most_recent_date(self):
         dates = [m.date for m in self.messages]
         dates.sort()
         return dates[-1]
 
+    @property
+    def datestring(self):
+        return self.most_recent_date.strftime('%b %d, %Y &mdash; %I:%M %p')
 
 
 
@@ -166,7 +171,7 @@ class MessageBodyPart(object):
 
 
     @property
-    def isImage():
+    def isImage(self):
         return self.content_type_major.lower() == 'image'
 
     def __repr__(self):

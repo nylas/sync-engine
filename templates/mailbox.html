@@ -8,8 +8,8 @@
 	{% for t in threads %}
      <div class="message_line">
      	<a href="/thread?thread_id={{t.thread_id}}">
-     		{{ t.get_subject() }}
-     	</a>&nbsp;&nbsp;<strong>({{len(t.message_ids) }})<strong>
+     		{{ t.subject }}
+     	</a>&nbsp;&nbsp;({{ t.message_count }}) - {% raw t.datestring %}
      </div>
 	{% end %}
 
