@@ -202,9 +202,14 @@ class CrispinClient:
         subject = make_uni(msg['subject'])
         new_msg.subject = trim_subject(subject)
 
-        time_epoch = time.mktime( email_utils.parsedate_tz(msg["Date"])[:9] )
-        new_msg.date = datetime.datetime.fromtimestamp(time_epoch)
-
+        # TODO: Gmail's timezone is usually UTC-07:00
+        # see here. We need to figure out how to deal with timezones.
+        # http://stackoverflow.com/questions/11218727/what-timezone-does-gmail-use-for-internal-imap-mailstore
+        # TODO: Also, we should reallly be using INTERNALDATE instead of ENVELOPE data
+        date_tuple_with_tz = email_utils.parsedate_tz(msg["Date"])
+        utc_timestamp = email_utils.mktime_tz(date_tuple_with_tz)
+        time_epoch = time.mktime( date_tuple_with_tz[:9] )
+        new_msg.date = datetime.datetime.fromtimestamp(utc_timestamp)
         return new_msg
 
     def parse_body(self, msg, new_msg = Message()):
