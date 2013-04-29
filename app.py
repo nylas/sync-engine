@@ -97,8 +97,11 @@ class MailboxHandler(BaseHandler):
         """ Takes 'folder' as a query parameter """ 
         folder_name = self.get_argument("folder", default="Inbox", strip=False)        
         crispin_client.select_folder(folder_name)
-        threads = crispin_client.fetch_threads(folder_name)
 
+        threads = crispin_client.fetch_threads(folder_name)
+        threads.sort(key=lambda t: t.most_recent_date, reverse=True)
+
+        self.render("mailbox.html", 
                     threads = threads)
 
 
