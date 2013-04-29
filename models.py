@@ -19,7 +19,6 @@ from webify import trim_subject, gravatar_url
 # }
 
 
-
 class Message():
     def __init__(self):
         self.to_contacts = []
@@ -49,7 +48,7 @@ class MessageThread():
     def __init__(self):
         self.messages = []
         self.thread_id = None
-        self.is_unread = True # True/False
+        self.is_unread = True  # TODO: set this based on message unreads
 
     @property
     def message_count(self):
@@ -73,48 +72,48 @@ class MessageThread():
 
 ## MessageBodyPart (BODYSTRUCTURE)
 
-	# BODY is like BODYSTRUCTURE but without extension information
-	# not sure what this means in practice. We can probably get by only
-	# using BODY requests and just looking up the filetype based on filename 
-	# extensions. Excerpts from a couple of Gmail responses:
+    # BODY is like BODYSTRUCTURE but without extension information
+    # not sure what this means in practice. We can probably get by only
+    # using BODY requests and just looking up the filetype based on filename 
+    # extensions. Excerpts from a couple of Gmail responses:
 
-	# snipped of BODY request of attachment
-	# ('IMAGE', 'JPEG', ('NAME', 'breadSRSLY-5.jpg'), None, None, 'BASE64', 1611294), 
+    # snipped of BODY request of attachment
+    # ('IMAGE', 'JPEG', ('NAME', 'breadSRSLY-5.jpg'), None, None, 'BASE64', 1611294),
 
-	# snippet of BODYSTRUCTURE
-	# ('IMAGE', 'JPEG', ('NAME', 'breadSRSLY-5.jpg'), None, None, 'BASE64', 1611294, None, ('ATTACHMENT', ('FILENAME', 'breadSRSLY-5.jpg')), None), 
-
-
-	# From the original spec...
-	#
-	# A body type of type TEXT contains, immediately after the basic 
-	# fields, the size of the body in text lines.  Note that this 
-	# size is the size in its content transfer encoding and not the 
-	# resulting size after any decoding. 
-	#
-	# Extension data follows the basic fields and the type-specific 
-	# fields listed above.  Extension data is never returned with the 
-	# BODY fetch, but *CAN* be returned with a BODYSTRUCTURE fetch. 
-	# Extension data, if present, MUST be in the defined order. 
-	#
-	# Also, BODY and BODYSTRUCTURE calls are kind of fucked
-	# see here http://mailman2.u.washington.edu/pipermail/imap-protocol/2011-October/001528.html
+    # snippet of BODYSTRUCTURE
+    # ('IMAGE', 'JPEG', ('NAME', 'breadSRSLY-5.jpg'), None, None, 'BASE64', 1611294, None, ('ATTACHMENT', ('FILENAME', 'breadSRSLY-5.jpg')), None), 
 
 
+    # From the original spec...
+    #
+    # A body type of type TEXT contains, immediately after the basic 
+    # fields, the size of the body in text lines.  Note that this 
+    # size is the size in its content transfer encoding and not the 
+    # resulting size after any decoding. 
+    #
+    # Extension data follows the basic fields and the type-specific 
+    # fields listed above.  Extension data is never returned with the 
+    # BODY fetch, but *CAN* be returned with a BODYSTRUCTURE fetch. 
+    # Extension data, if present, MUST be in the defined order. 
+    #
+    # Also, BODY and BODYSTRUCTURE calls are kind of fucked
+    # see here http://mailman2.u.washington.edu/pipermail/imap-protocol/2011-October/001528.html
 
-	# ([
-	#    ('text', 'html', ('charset', 'us-ascii'), None, None, 'quoted-printable', 55, 3),
-	#    ('text', 'plain', ('charset', 'us-ascii'), None, None, '7bit', 26, 1) 
-	#  ], 
-	#  'mixed', ('boundary', '===============1534046211=='))
 
-	# print 'Parts:', len(parts)
-	# $ UID FETCH <uid> (BODY ENVELOPE)   # get structure and header info
-	# $ UID FETCH <uid> (BODY[1])         # retrieving displayable body
-	# $ UID FETCH <uid> (BODY[2])         # retrieving attachment on demand
-	# FETCH 88 BODY.PEEK[1]
-	# FETCH uid BODY.PEEK[1.2]
-	# print 'Ending:', bodystructure[1]
+
+    # ([
+    #    ('text', 'html', ('charset', 'us-ascii'), None, None, 'quoted-printable', 55, 3),
+    #    ('text', 'plain', ('charset', 'us-ascii'), None, None, '7bit', 26, 1) 
+    #  ], 
+    #  'mixed', ('boundary', '===============1534046211=='))
+
+    # print 'Parts:', len(parts)
+    # $ UID FETCH <uid> (BODY ENVELOPE)   # get structure and header info
+    # $ UID FETCH <uid> (BODY[1])         # retrieving displayable body
+    # $ UID FETCH <uid> (BODY[2])         # retrieving attachment on demand
+    # FETCH 88 BODY.PEEK[1]
+    # FETCH uid BODY.PEEK[1.2]
+    # print 'Ending:', bodystructure[1]
 
 
 class MessageBodyPart(object):
@@ -133,7 +132,7 @@ class MessageBodyPart(object):
         self.content_type_minor = ''
 
         # TODO check to see if this is the encoded or actual size
-        self.bytes = 0 # number of octets.
+        self.bytes = 0  # number of octets.
 
         # for text
         self.line_count = 0
@@ -143,15 +142,13 @@ class MessageBodyPart(object):
         # for images
         self.filename = ''
 
-
-
         self.index = str(index)
         self.content_type_major = p[0]
         self.content_type_minor = p[1]
 
         if self.content_type_major.lower() == 'text':
             assert p[2][0].lower() == 'charset'
-            assert len(p) == 8 # TOFIX ?
+            assert len(p) == 8  # TOFIX ?
             self.charset = p[2][1]
             self.encoding = p[5]
             self.bytes = p[6]
@@ -159,7 +156,7 @@ class MessageBodyPart(object):
 
         elif self.content_type_major.lower() == 'image':
             assert p[2][0].lower() == 'name'
-            assert len(p) == 7 # TOFIX ?
+            assert len(p) == 7  # TOFIX ?
             self.filename = p[2][1]
             self.encoding = p[5]
             self.bytes = p[6]
@@ -168,7 +165,6 @@ class MessageBodyPart(object):
             # ('APPLICATION', 'PKCS7-SIGNATURE', ('NAME', 'smime.p7s'), None, None, 'BASE64', 2176)
 
             log.error('No idea what to do with this BODYSTRUCTURE: %s', p)
-
 
     @property
     def isImage(self):
@@ -192,6 +188,3 @@ class MessageBodyPart(object):
                             self.content_type_minor.lower() )
         else:
             return r + ''
-
-
-
