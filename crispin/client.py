@@ -299,9 +299,12 @@ class CrispinClient:
     @connected
     def fetch_threads(self, folder_name):
 
+        # Cluster Messages by thread id. 
         # Returns a list of Threads.
         def messages_to_threads(messages):
+            threads = {}
             # Group by thread id
+            for m in messages:
                 if m.thread_id not in threads.keys():
                     new_thread = MessageThread()
                     new_thread.thread_id = m.thread_id
@@ -313,6 +316,7 @@ class CrispinClient:
         # Get messages in requested folder
         msgs = self.fetch_headers(folder_name)
 
+        threads = messages_to_threads(msgs)
 
         log.info("For %i messages, found %i threads total." % (len(msgs), len(threads)))
         self.select_allmail_folder() # going to fetch all messages in threads
@@ -325,6 +329,7 @@ class CrispinClient:
         if len(thread_ids) > 1:
             for t in thread_ids[1:]:
                 criteria = 'OR ' + criteria + ' X-GM-THRID %i' % t
+        all_msg_uids = self.imap_server.search(criteria)        
 
         log.info("Expanded to %i messages for %i thread IDs." % (len(all_msg_uids), len(thread_ids)))
 
