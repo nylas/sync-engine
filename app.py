@@ -94,6 +94,14 @@ class MessageRawHandler(BaseHandler):
 
 class MailboxHandler(BaseHandler):
     def get(self):
+        """ Takes 'folder' as a query parameter """ 
+        folder_name = self.get_argument("folder", default="Inbox", strip=False)        
+        crispin_client.select_folder(folder_name)
+        threads = crispin_client.fetch_threads(folder_name)
+
+                    threads = threads)
+
+
 
         folder_name = self.get_argument("folder", default="Inbox", strip=False)
         log.info('Opening folder:' + str(folder_name))

@@ -293,48 +293,71 @@ class CrispinClient:
 
     @connected
     def fetch_thread(self, thread_id):
-        threads_msg_ids = self.imap_server.search(
-                'X-GM-THRID %s' % str(thread_id) )
+        threads_msg_ids = self.imap_server.search('X-GM-THRID %s' % str(thread_id))
         return threads_msg_ids
 
     @connected
     def fetch_threads(self, folder_name):
-        threads = {}
+
+        # Returns a list of Threads.
+        def messages_to_threads(messages):
+            # Group by thread id
+                if m.thread_id not in threads.keys():
+                    new_thread = MessageThread()
+                    new_thread.thread_id = m.thread_id
+                    threads[m.thread_id] = new_thread
+                t = threads[m.thread_id]
+                t.messages.append(m)  # not all, only messages in folder_name
+            return threads.values()
+
+        # Get messages in requested folder
         msgs = self.fetch_headers(folder_name)
 
-        for m in msgs:
-            if m.thread_id not in threads.keys():
-                new_thread = MessageThread()
-                new_thread.thread_id = m.thread_id
-                threads[m.thread_id] = new_thread
 
-            t = threads[m.thread_id]
-            t.messages.append(m) # not all, only messages in folder_name
+        log.info("For %i messages, found %i threads total." % (len(msgs), len(threads)))
+        self.select_allmail_folder() # going to fetch all messages in threads
 
+        thread_ids = [t.thread_id for t in threads]
 
-        select_info = self.select_folder(self.all_mail_folder_name())
-        for t in threads.values():
-            log.info("Fetching thread with ID: %s" % t.thread_id)
-            t.message_ids = self.fetch_thread(t.thread_id) # all
+        # The boolean IMAP queries use reverse polish notation for
+        # the query parameters. imaplib automatically adds parenthesis 
+        criteria = 'X-GM-THRID %i' % thread_ids[0]
+        if len(thread_ids) > 1:
+            for t in thread_ids[1:]:
+                criteria = 'OR ' + criteria + ' X-GM-THRID %i' % t
 
-        return threads.values()
+        log.info("Expanded to %i messages for %i thread IDs." % (len(all_msg_uids), len(thread_ids)))
+
+        all_msgs = self.fetch_headers_for_uids(self.all_mail_folder_name(), all_msg_uids)
+        all_threads = messages_to_threads(all_msgs)
+
+        log.info("Returning %i threads with total of %i messages." % (len(all_threads), len(all_msgs)))
+
+        return all_threads
+
 
     @connected
     def fetch_headers(self, folder_name):
+        select_info = self.select_folder(folder_name)
+        UIDs = self.fetch_all_udids()
+        return self.fetch_headers_for_uids(folder_name, UIDs)
+
+
+    @connected
+    def fetch_headers_for_uids(self, folder_name, UIDs):
+
+        # TODO: keep track of current folder so we don't select twice
+        select_info = self.select_folder(folder_name)
+
         query = 'BODY.PEEK[HEADER.FIELDS (TO CC FROM DATE SUBJECT)]'
         query_key = 'BODY[HEADER.FIELDS (TO CC FROM DATE SUBJECT)]'
 
         log.info("Fetching message headers. Query: %s" % query)
-        select_info = self.select_folder(folder_name)
-        UIDs = self.fetch_all_udids()
-
-        log.info("Fetching message headers. Query: %s" % query)
         messages = self.imap_server.fetch(UIDs, [query, 'X-GM-THRID'])
-        log.info("found %i messages." % len(messages.values()))
+        log.info("Found %i messages." % len(messages.values()))
 
         parser = Parser()
         new_messages = []
-
         for message_dict in messages.values():
             raw_header = message_dict[query_key]
             msg = parser.parsestr(raw_header)
@@ -343,13 +366,11 @@ class CrispinClient:
             new_msg = self.parse_main_headers(msg)  # returns Message()
             new_msg.thread_id = message_dict['X-GM-THRID']
 
-            log.info("adding: %s" % new_msg.subject)
-
             new_messages.append(new_msg)
-
             new_msg = None
-
+        log.info("Fetched headers for %i messages" % len(new_messages))
         return new_messages
+
 
     @connected
     def fetch_MessageBodyPart(self, UIDs):
