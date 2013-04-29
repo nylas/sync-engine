@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en" ng-app='InboxApp'>
+<head>
+  <meta charset="utf-8">
+  <title>Inbox</title>
+  <link rel="stylesheet" href="css/app.css"/>
+
+  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="stylesheet" href="css/fonts.css"/>
+
+  <!-- TODO Remove this -->
+  <link href='http://fonts.googleapis.com/css?family=Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <!-- For what? -->
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+</head>
+
+
+<body>
+
+  <div class = "container" data-ng-controller="InboxController">
+    <h3>Messages</h3>
+
+
+    <div class="wrapper">
+      <div class="panel">
+        <div data-ng-repeat="message in messages">
+           <div class="message_line">
+            <a href="/thread?thread_id={{message.thread_id}}">
+              {{ message.subject }}
+            </a>
+           </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+
+
+  <div ng-view></div>
+
+
+  <div>Angular seed app: v<span app-version></span></div>
+
+  <!-- In production use:
+  <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.0.6/angular.min.js"></script>
+  -->
+  <script src="lib/angular/angular.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/services.js"></script>
+  <script src="js/controllers.js"></script>
+  <script src="js/filters.js"></script>
+  <script src="js/directives.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,17 @@
+<h1>This is the partial for Inbox.</h1>
+
+<div class="wrapper">
+<div class="panel">
+
+{% for t in threads %}
+ <div class="message_line">
+ 	<a href="/thread?thread_id={{t.thread_id}}">
+ 		{{ t.subject }}
+ 	</a>&nbsp;&nbsp;<strong>({{len(t.message_count) }})<strong>
+ </div>
+{% end %}
+
+</div>
+</div>
+
+

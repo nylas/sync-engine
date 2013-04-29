@@ -14,15 +14,7 @@ crispin_client = None
 
 class Application(tornado.web.Application):
     def __init__(self):
-        handlers = [
-            (r"/", MailboxHandler),
-            (r"/mailbox", MailboxHandler),
-            (r"/thread", MessageThreadHandler),
-            (r"/message", MessagePageHandler),
-            (r"/message_raw", MessageRawHandler),
-            # (r"/(apple-touch-icon\.png)", tornado.web.StaticFileHandler,
-            # (r"/(apple-touch-icon\.png)", tornado.web.StaticFileHandler,
-        ]
+
         settings = dict(
             cookie_secret="awehofoiasdfhsadkfnwem42rwfubksfj",
             login_url="/auth/login",
@@ -31,8 +23,20 @@ class Application(tornado.web.Application):
             xsrf_cookies=True,
             debug=True,
         )
-        tornado.web.Application.__init__(self, handlers, **settings)
 
+        handlers = [
+            (r"/", MailboxHandler),
+            (r"/mailbox", MailboxHandler),
+            (r"/mailbox_json", MailboxJSONHandler),
+            (r"/thread", MessageThreadHandler),
+            (r'/app/(.*)', tornado.web.StaticFileHandler, {'path': os_path.join(os_path.dirname(__file__), "angular")}),
+            (r"/message", MessagePageHandler),
+            (r"/message_raw", MessageRawHandler),
+            # (r"/(apple-touch-icon\.png)", tornado.web.StaticFileHandler,
+            # (r"/(apple-touch-icon\.png)", tornado.web.StaticFileHandler,
+        ]
+
+        tornado.web.Application.__init__(self, handlers, **settings)
 
 class BaseHandler(tornado.web.RequestHandler):
     pass
@@ -106,28 +110,29 @@ class MailboxHandler(BaseHandler):
 
 
 
+
+import json
+
+class MailboxJSONHandler(BaseHandler):
+    def get(self):
+
+
         folder_name = self.get_argument("folder", default="Inbox", strip=False)
         log.info('Opening folder:' + str(folder_name))
         
-        # Todo: Do this for every setup somehow.
-        # if not(crispin.connect()):
-        #     log.error("Couldn't connect. Proably offline right now.")
-        #     self.send_error(500)
-        #     return
-
         crispin_client.select_folder("Inbox")
 
         threads = crispin_client.fetch_threads(folder_name)
-        threads.sort(key=lambda t: t.most_recent_date(), reverse=True)
+        threads.sort(key=lambda t: t.most_recent_date, reverse=True)
 
-        # subjs = []
-        # for m in new_messages:
-        #     s = m.trimmed_subject()
-        #     if not s in subjs:
-        #         subjs.append(s)
+        ret = []
+        for t in threads:
+            ret.append(dict(
+                        subject = t.subject,
+                        thread_id = t.thread_id))
 
-        self.render("mailbox.html", 
-                    threads = threads)
+        self.write( tornado.escape.json_encode(ret) ) 
+
 
 
 
