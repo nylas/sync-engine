@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Inbox</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+	<meta name="author" content="Raj Ramamurthy">
+	<meta name="description" content="Interface and web design">
+
+	<style type="text/css">
+
+
+/* Reset */
+html, body, div, span,
+h1, h2, h3, h4, h5, h6,
+p, blockquote, code, img,
+ol, ul, li, form, input,
+select, button, article,
+aside, canvas, footer, header,
+hgroup, menu, nav, section,
+time, audio, video {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	outline: 0;
+	font: inherit;
+	font-size: 100%;
+	vertical-align: baseline;
+}
+input:focus, button:focus,
+select:focus {
+	outline: 0;
+}
+article, aside, footer,
+header, hgroup, menu,
+nav, section {
+	display: block;
+}
+.clear {
+	clear: both;
+}
+
+
+
+/* Main document stylesheet */
+
+/* @group Main */
+body {
+	background: #eee url('data:image/png;base64,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');
+
+	color: #333;
+	font: 13px/13px Helvetica, sans-serif;
+	text-rendering: optimizeLegibility;
+}
+	a{
+		color:#333;
+	}
+	
+	
+	#container{
+		position:absolute;
+		top: 50%;
+		left: 50%;
+		opacity: 0;
+
+		position: absolute;
+		text-align: center;
+		width: 160px;
+		height: 230px;
+		/*set to a negative number 1/2 of your width/height*/
+		margin: -115px 0px 0px -80px; 
+
+		border: 1px solid #ccc;
+		background-color: #f3f3f3;
+		
+		-webkit-border-radius: 10px;
+		-moz-border-radius: 10px;
+		-webkit-box-shadow: grey 0 2px 4px #777;
+		-moz-box-shadow: grey 0 2px 4px #777;;
+
+		-webkit-animation-name: pop;
+		-webkit-animation-duration: .6s;
+		-webkit-animation-iteration-count: 1;
+		-webkit-animation-timing-function: ease-in-out;
+		animation-delay:.3s;
+		-webkit-animation-delay:.3s; /* Safari and Chrome */
+
+
+		animation-fill-mode: forwards;  
+		-webkit-animation-fill-mode: forwards;
+
+	}
+
+	h1{
+		font-size:16px;
+	}
+	
+	@-webkit-keyframes pop {
+		from {
+			-webkit-transform: scale(.1);
+			opacity: 0;
+		}
+		85% {
+			opacity: 1;
+		}
+		to {
+			-webkit-transform: scale(1);
+			opacity: 1;
+		}
+	}
+
+}
+
+#logo {
+	border-radius: 6px 6px 0 0;
+	display: block;
+	width: 160;
+	height: 160px;
+	background-color: #C954CB;
+}
+
+
+/* @group Bio */
+a {
+	color: #777;
+	padding: 0px 2px;
+	text-decoration: none;
+}
+
+a:hover {
+	color: #38d;
+	text-decoration: underline;
+}
+
+article {
+	margin: 6px 0px 0px 0px;
+	padding: 10px;
+}
+
+ul {
+	margin: 14px 0px 0px 0px;
+	text-align: center;
+}
+
+ul li {
+	display: inline-block;
+	list-style: none;
+	margin: 0px 2px;
+}
+
+.middot {
+	color: #aaa;
+	font-weight: bold;
+}
+
+
+</style>
+</head>
+
+<body>
+	<div id="container">
+		<img id="logo" src="#" width="160" height="160" alt="Inbox App">
+		<article>
+			<p>Welcome to Inbox.</p>
+			<ul>
+				<li>
+					<a href="/app/">Go</a>
+				</li>
+				<li>
+					<span class="middot">&middot;</span>
+					&nbsp;<a href="#">About</a>
+				</li>
+			</ul>
+		</article>
+	</div>
+</body>
+
+</html>
