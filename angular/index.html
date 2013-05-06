@@ -25,7 +25,7 @@
     <div class="wrapper">
       <div class="panel">
         <div data-ng-repeat="message in messages">
-           <div class="message_line">
+           <div enter="message_line_hovered" leave class="message_line" ng-click="openThread(message.thread_id)">
             <a href="/thread?thread_id={{message.thread_id}}">
               {{ message.subject }}
             </a>
@@ -41,8 +41,6 @@
 
   <div ng-view></div>
 
-
-  <div>Angular seed app: v<span app-version></span></div>
 
   <!-- In production use:
   <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.0.6/angular.min.js"></script>

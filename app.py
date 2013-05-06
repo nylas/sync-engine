@@ -6,10 +6,12 @@ define("port", default=8888, help="run on the given port", type=int)
 
 import os.path as os_path
 import logging as log
+import email
 
 # static request handler
 import os
 import datetime
+import time
 import stat
 import mimetypes
 
@@ -31,20 +33,22 @@ class Application(tornado.web.Application):
         )
 
         handlers = [
+
             (r'/app/(.*)', AppStaticFileHandler),
             (r"/mailbox", MailboxHandler),
             (r"/mailbox_json", MailboxJSONHandler),
             (r"/thread", MessageThreadHandler),
             (r"/message", MessagePageHandler),
             (r"/message_raw", MessageRawHandler),
+
+            (r'/(.*)', tornado.web.StaticFileHandler, {'path': os_path.join(os_path.dirname(__file__), "static"), 
+                                                       'default_filename':'index.html'}),
             # (r"/(apple-touch-icon\.png)", tornado.web.StaticFileHandler,
             # (r"/(apple-touch-icon\.png)", tornado.web.StaticFileHandler,
-            (r'/(.*)', tornado.web.StaticFileHandler, {'path': os_path.join(os_path.dirname(__file__), "static"), 'default_filename':'index.html'}),
+            # (r'/(.*)', tornado.web.StaticFileHandler, {'path': os_path.join(os_path.dirname(__file__), "static"), 'default_filename':''}),
         ]
 
         tornado.web.Application.__init__(self, handlers, **settings)
-
-
 
 class BaseHandler(tornado.web.RequestHandler):
     pass
@@ -164,33 +168,22 @@ class MessageThreadHandler(BaseHandler):
 
 
 class AppStaticFileHandler(tornado.web.RequestHandler):
-    """A simple handler that can serve static content from a directory.
- 
-    To map a path to this handler for a static data directory /var/www,
-    you would add a line to your application like:
- 
-        application = web.Application([
-            (r"/static/(.*)", web.StaticFileHandler, {"path": "/var/www"}),
-        ])
- 
-    The local root directory of the content should be passed as the "path"
-    argument to the handler.
- 
+    """ Based on tornado.web.StaticFileHandler to serve Angular code
+
     To support aggressive browser caching, if the argument "v" is given
     with the path, we set an infinite HTTP expiration header. So, if you
     want browsers to cache a file indefinitely, send them to, e.g.,
     /static/images/myimage.png?v=xxx.
     """
-    def initialize(**kwargs):
-        
+    def initialize(self):
         path = os_path.join(os_path.dirname(__file__), "angular")
         default_filename = 'index.html'
         self.root = os.path.abspath(path) + os.path.sep
         self.default_filename = default_filename
- 
+
     def head(self, path):
         self.get(path, include_body=False)
- 
+
     def get(self, path, include_body=True):
         if os.path.sep != "/":
             path = path.replace("/", os.path.sep)
@@ -215,6 +208,7 @@ class AppStaticFileHandler(tornado.web.RequestHandler):
         stat_result = os.stat(abspath)
         modified = datetime.datetime.fromtimestamp(stat_result[stat.ST_MTIME])
  
+        # TODO set our own cache headers here to control
         self.set_header("Last-Modified", modified)
         if "v" in self.request.arguments:
             self.set_header("Expires", datetime.datetime.utcnow() + \
@@ -225,9 +219,10 @@ class AppStaticFileHandler(tornado.web.RequestHandler):
         mime_type, encoding = mimetypes.guess_type(abspath)
         if mime_type:
             self.set_header("Content-Type", mime_type)
- 
-        self.set_extra_headers(path)
- 
+
+
+        # self.set_extra_headers(path)  # if we want to
+
         # Check the If-Modified-Since, and don't send the result if the
         # content has not been modified
         ims_value = self.request.headers.get("If-Modified-Since")
@@ -237,7 +232,7 @@ class AppStaticFileHandler(tornado.web.RequestHandler):
             if if_since >= modified:
                 self.set_status(304)
                 return
- 
+
         if not include_body:
             return
         file = open(abspath, "rb")
@@ -245,13 +240,6 @@ class AppStaticFileHandler(tornado.web.RequestHandler):
             self.write(file.read())
         finally:
             file.close()
- 
-    def set_extra_headers(self, path):
-        """For subclass to add extra headers to the response"""
-        pass
-
-
-
 
 
 def main():

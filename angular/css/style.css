@@ -70,7 +70,6 @@ body {
   transform: skew(-15deg) rotate(-2deg); 
 }
 
-
 .panel:after 
 {
   left: auto;
@@ -83,7 +82,6 @@ body {
 }
 
 
-/*   font-family: "Segoe UI" , Helvetica, Sans-Serif; */
 
 .subject 
 {
@@ -230,6 +228,11 @@ body {
   text-align:left;
   color:#333;
   text-shadow:1px 1px 1px white;
+}
+
+.message_line_hovered
+{
+  background-color: red;
 }
 
 

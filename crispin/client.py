@@ -178,8 +178,13 @@ class CrispinClient:
         new_msg = Message()
 
         def make_uni(txt, default_encoding="ascii"):
-            return u"".join([unicode(text, charset or default_encoding)
-                    for text, charset in decode_header(txt)])
+            try:
+                return u"".join([unicode(text, charset or default_encoding, 'strict')
+                        for text, charset in decode_header(txt)])
+            except Exception, e:
+                log.error("Problem converting string to unicode: %s" % txt)
+                return u"".join([unicode(text, charset or default_encoding, 'replace')
+                        for text, charset in decode_header(txt)])
 
         def parse_contact(headers):
             # Works with both strings and lists

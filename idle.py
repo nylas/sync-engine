@@ -6,21 +6,25 @@ import oauth2 as oauth
 
 from imaplib2 import IMAP4_SSL
 
-ServerTimeout	  = 29 # Mins   		(leave if you're not sure)
 
+ServerTimeout	  = 29 # Mins   		(leave if you're not sure)
 
 class Idler(threading.Thread):
 		
-	imap = IMAP4_SSL("imap.gmail.com") # can be changed to another server if needed
+	imap = None
 	
 	stopWaitingEvent = threading.Event()
-	
+
 	knownAboutMail = [] # will be a list of IDs of messages in the inbox
 	killNow = False # stops execution of thread to allow propper closing of conns.
 	
 	def __init__(self):
 	
+		print 'Connecting to %s...' % auth.IMAP_HOST
 		try:
+			self.imap = IMAP4_SSL(auth.IMAP_HOST) # can be changed to another server if needed
+
+			#establish connection to IMAP Server
 			consumer = oauth.Consumer(auth.CONSUMER_KEY, auth.CONSUMER_SECRET)
 			token = oauth.Token(auth.OAUTH_TOKEN, auth.OAUTH_TOKEN_SECRET)
 			self.imap.authenticate(auth.BASE_GMAIL_IMAP_URL, consumer, token)
@@ -49,9 +53,8 @@ class Idler(threading.Thread):
 		print 'exited run()'
 						
 	
-
 	def getMessageHeaderFieldsById(self, id, fields_tuple):
-		print 'getMessageHeaderFieldsById() entered'
+		print 'getMessageHeaderFieldsById'
 		
 		typ, header = self.imap.FETCH(id, '(RFC822.HEADER)')
 		headerlines = header[0][1].splitlines()
@@ -62,7 +65,8 @@ class Idler(threading.Thread):
 			results[field] = ''
 			for line in headerlines:
 				if line.startswith(field):
-					results[field] = line					
+					results[field] = line
+					
 		return results
 		
 
@@ -88,7 +92,11 @@ class Idler(threading.Thread):
 		def _IDLECallback(args):
 			self.IDLEArgs = args
 			self.stopWaitingEvent.set()
-
+			#_IDLECallack() is entered when the IMAP server responds to the IDLE command when new
+			#mail is received. The self.stopWaitingEvent.set() allows the .wait() to return and
+			#therefore the rest of waitForServer().
+			
+		#attach callback function, and let server know it should tell us when new mail arrives	
 		self.imap.idle(timeout=60*ServerTimeout, callback=_IDLECallback)
 
 		#execution will stay here until either:
@@ -100,14 +108,17 @@ class Idler(threading.Thread):
 		# - Alternatively, the kill() method has been invoked.
 		self.stopWaitingEvent.wait()
 		
+		#self.IDLEArgs has now been filled (if not kill()ed)
 		
 		if not self.killNow: # skips a chunk of code to sys.exit() more quickly.
 			
+			print 'IDLE args:', self.IDLEArgs
+
 			if self.IDLEArgs[0][1][0] == ('IDLE terminated (Success)'):
-			# there has been a timeout (server sends); or new mail. 
+			# This (above) is sent when either: there has been a timeout (server sends); or, there
+			# is new mail. We have to check manually to see if there is new mail. 
 				
-				# unseen = unread
-				typ, data = self.imap.SEARCH(None, 'UNSEEN')
+				typ, data = self.imap.SEARCH(None, 'UNSEEN') # like before, get UNSEEN message IDs
 				
 				print 'Data: '
 				print data
@@ -124,7 +135,7 @@ class Idler(threading.Thread):
 				if data[0] == '': # no IDs, so it was a timeout (but no notified but UNSEEN mail)
 					self.timeout = True
 		
-
+			#now there has either been a timeout or a new message -- Do something...
 			if self.newMail:
 				print 'INFO: New Mail Received'
 		
@@ -157,6 +168,7 @@ class Idler(threading.Thread):
 							
 			elif self.timeout:
 				print 'INFO: A Timeout Occurred'
+
 			
 
 def main():
@@ -172,6 +184,7 @@ def main():
 	idler.kill()	
 	idler.imap.CLOSE()
 	idler.imap.LOGOUT()
+	sys.exit()
 
 
 if __name__ == '__main__':
