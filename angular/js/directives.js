@@ -2,27 +2,16 @@
 
 /* Directives */
 
+var app = angular.module('InboxApp.directives', []);
 
-
-var app = angular.module('InboxApp', []);
-
-
-
-app.directive("enter", function () {
+app.directive("hoverstate", function () {
 	return function (scope, element, attrs) {
 		element.bind("mouseenter", function () {
-			console.log("Inside box.");
-			element.addClass(attrs.enter);
-		})
-	}
-})
-
-app.directive("leave", function () {
-	return function (scope, element, attrs) {
+			element.addClass(attrs.hoverstate);
+		});
 		element.bind("mouseleave", function () {
-			console.log("Outside box.");
-			element.removeClass(attrs.enter);
-		})
+			element.removeClass(attrs.hoverstate);
+		});
 	}
 })
 

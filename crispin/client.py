@@ -302,6 +302,19 @@ class CrispinClient:
         return threads_msg_ids
 
     @connected
+    def fetch_messages_for_thread(self, thread_id):
+        """ Returns list of Message objects corresponding to thread_id """
+        threads_msg_ids = self.imap_server.search('X-GM-THRID %s' % str(thread_id))
+        log.info("Msg ids for thread: %s" % threads_msg_ids)
+        msgs = []
+        for msg_id in threads_msg_ids:
+            m = self.fetch_msg(msg_id)
+            msgs.append(m)
+        return msgs
+
+
+
+    @connected
     def fetch_threads(self, folder_name):
 
         # Cluster Messages by thread id. 

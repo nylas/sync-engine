@@ -9,3 +9,4 @@ wsgiref==0.1.2
 -e packages/imapclient
 #-e packages/imaplib
 -e packages/imaplib2
+tornadio2==0.0.3

@@ -3,6 +3,7 @@
 import logging as log
 
 from webify import trim_subject, gravatar_url
+import json
 
 # { 
 # tos: [ <Contacts>, ... ]
@@ -42,6 +43,23 @@ class Message():
 
     def trimmed_subject(self):
         return trim_subject(self.subject)
+
+    def encode(self):
+        return dict(
+            to_contacts = self.to_contacts,
+            from_contacts = self.from_contacts,
+            subject = self.subject,
+            body_text = self.body_text)
+
+
+class MessageEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Message):
+            return obj.encode()
+        # Let the base class default method raise the TypeError
+        return json.JSONEncoder.default(self, obj)
+
+
 
 
 class MessageThread():

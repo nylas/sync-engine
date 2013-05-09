@@ -1,3 +1,50 @@
+
+
+/* Sticky footer */
+* {margin:0;padding:0;} 
+html, body {height: 100%;}
+#bigwrap 
+{
+  min-height: 100%;
+}
+
+#main 
+{
+  overflow:auto;
+  padding-bottom: 24px;
+}  /* must be same height as the footer */
+
+#footer 
+{
+  position: relative;
+  margin-top: -24px; /* negative value of footer height */
+  height: 24px;
+  clear:both;
+
+  text-align:center;
+  text-shadow:1px 1px 1px white;
+  font-family: MuseoSans, Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  font-style: normal;
+  font-variant: normal;
+  text-shadow: 1px 1px 0 white;
+  color: #616566;
+}
+
+} 
+
+/* Opera Fix for sticky footer */
+body:before {
+content:"";
+height:100%;
+float:left;
+width:0;
+margin-top:-32767px;/* thank you Erik J - negate effect of float*/
+}
+
+
+
+
 body {
   /*background-color: #E6EBEA;*/
   background-color: #F9F9F9;
@@ -9,44 +56,174 @@ body {
 }
 
 
-.wrapper {
-
+.wrapper
+{
+  width: 840px; /*Width of main container*/
+  margin: 0 auto; /*Center container on page*/
+  height: 100%;
   position: relative;
-  margin-right: auto;
-  margin-left: auto;
-  margin-top: 30px;
-  margin-bottom: 30px;
 
-  width: 602px;
-=
-
-  /* Because this is a conatiner for shadows. */
-  position: relative;
-  z-index: 1;  /* prevent shadows falling behind containers with backgrounds */
-  /*overflow: hidden;*/
+  padding-top: 30px;
+  padding-bottom: 30px;
 }
 
 
-.panel  
+
+.container_left
+{
+  float:left;
+  width: 340px;
+  margin-bottom: 22px;
+}
+
+.container_right
+{
+  float:right;
+  width: 500px;
+  height:100%;
+  margin-bottom: 22px;
+}
+
+
+.basic_pane
 {
   position: relative;
-  width: 570px;
-  padding: 15px;
   text-align: left;
-  margin: 0 30px 30px 0;
   background: #fff;
+
   border: 1px solid rgba(0, 0, 0, 0.10);
   border-radius: 4px;
   -moz-border-radius: 4px;
   -webkit-border-radius: 4px;
+}
+
+
+.right_pane
+{
+  position: relative;
+  text-align: left;
+  height: 500px;
+  padding-left:20px;
+}
+
+.right_subject_box
+{
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  padding: 15px;
+  margin-bottom: 1em;
+
+  text-align:left;
+  color:#333;
+  text-shadow:1px 1px 1px white;
+
+  font-family: "Proxima Nova Condensed", courier, sans-serif;
+  font-size: 26px;
+  font-weight: 600; /* Bold */
+  line-height: 21px;
+}
+
+.right_message_bubble
+{
+  position: relative;
+  text-align: left;
+  background: #fff;
+
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  -moz-border-radius: 4px;
+  -webkit-border-radius: 4px;
+
+  padding: 1.45em;
+
+  font-family: "Proxima Nova", courier, sans-serif;
+  font-size: 15px;
+  font-style: normal;
+  font-variant: normal;
+  font-weight: 200;
+
+  line-height: 1.45em;
+  font-style: normal;
+
+  text-align:left;
+  color:#333;
+  text-shadow:1px 1px 1px white;
+
+  margin-bottom: 40px;
+}
+
+
+/* Quoted thing */
+
+div.right_message_bubble:before
+{
+  content: ' ';
+  position: absolute;
+  width: 0;
+  height: 0;
+  left: 30px;
+  bottom: -30px;
+  border: 15px solid;
+  border-color: rgba(0, 0, 0, 0.10) transparent transparent rgba(0, 0, 0, 0.15);
+}
+
+div.right_message_bubble:after
+{
+  content: ' ';
+  position: absolute;
+  width: 0;
+  height: 0;
+  left: 31px;
+  bottom: -28px;
+  border: 15px solid;
+  border-color: #fff transparent transparent #fff;
+}
+
+
+
+.reply_box 
+{
+
+  margin-top: 20px;
+  padding: 1.45em;
+
+
+  font-size: 15px;
+  font-style: normal;
+  font-variant: normal;
+  line-height: 21px;
+
+  font-family: "Proxima Nova", sans-serif;
+  font-style: normal;
+  font-weight: 300;
+
+  text-align:left;
+  color:#333;
+  text-shadow:1px 1px 1px white;
+
+  min-height: 80px;
+  outline:0px solid transparent;
+}
+
+
+
+/* Shadowed containers */
+
+/* Apply to parent of anything that is shadowed. */
+.shadowed_wrapper
+{
+  position: relative;
+  z-index: 1;  /* prevent shadows falling behind containers with backgrounds */
+}
+
+.shadowed
+{
   -moz-background-clip: padding;
   -webkit-background-clip: padding-box;
   background-clip: padding-box;
 }
 
-
-/* For shadows */
-.panel:before, .panel:after 
+.shadowed:before, .shadowed:after 
 {
   content: '';
   z-index: -1;
@@ -70,7 +247,7 @@ body {
   transform: skew(-15deg) rotate(-2deg); 
 }
 
-.panel:after 
+.shadowed:after 
 {
   left: auto;
   right: 22px;
@@ -83,176 +260,123 @@ body {
 
 
 
-.subject 
+.mailbox_name
 {
-  font: 700 19px/23px "MuseoSans",Arial,Helvetica,sans-serif;
-  font-family: MuseoSans, Arial, Helvetica, sans-serif;
-  font-size: 19px;
+  text-align:left;
+  text-shadow:1px 1px 1px white;
+  font-family: "Franchise", courier, sans-serif;
+  font-size: 28px;
   font-style: normal;
   font-variant: normal;
   font-weight: 700;
-  line-height: 25px;
-  padding: 15px;
   text-shadow: 1px 1px 0 white;
+  padding-bottom: 8px;
+  padding-left: 3px;
+
+  color: #616566;
 }
 
 
-.author img
+
+/* Left pane message cells */
+
+.message_cell
 {
-  float: left;
+  padding: 12px;
+  height: 50px;
+  background-color: #fff;
+
+  /* separator */
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: #E6E8EA;
+
+  /* Not sure about this cursor. */
+  cursor: hand; cursor: pointer;
 }
 
-
-.fixedwidth 
+.message_cell:first-of-type
 {
-  font-family: 'Inconsolata', sans-serif;
+  /* To clip for curved container */
+  border-top-left-radius: 3px;
+  -moz-border-top-left-radius: 3px;
+  -webkit-border-top-left-radius: 3px;
+  border-top-right-radius: 3px;
+  -moz-border-top-right-radius: 3px;
+  -webkit-border-top-right-radius: 3px;
 }
 
-.clear
+.message_cell:last-of-type
 {
-  clear: both;
+  border-bottom-width: 0px;
+  border-bottom-style: none;
+
+  /* To clip for curved container */
+  border-bottom-left-radius: 3px;
+  -moz-border-bottom-left-radius: 3px;
+  -webkit-border-bottom-left-radius: 3px;
+  border-bottom-right-radius: 3px;
+  -moz-border-bottom-right-radius: 3px;
+  -webkit-border-bottom-right-radius: 3px;
 }
 
-.regular_message
-{
-  /*font: 300 15px/21px "MuseoSans",Arial,Helvetica,sans-serif;*/
-  /*font-family: MuseoSans, Arial, Helvetica, sans-serif;*/
-  font-size: 15px;
-  font-style: normal;
-  font-variant: normal;
-  font-weight: 300;
-  line-height: 21px;
-  margin-bottom: 1em;
 
-  font-family: proxima-nova, sans-serif;
-  font-style: normal;
-  font-weight: 200;
+ .message_cell.selected
+ {
+  background-color: #edf5fd;
+ }
 
-  /*font:15px/1.5 proxima-nova, Courier, sans-serif;*/
-/*      font-weight:400;
-*/      
-  text-align:left;
-  color:#333;
-  text-shadow:1px 1px 1px white;
-}
 
-.reply_box 
-{
-    /*font: 300 15px/21px "MuseoSans",Arial,Helvetica,sans-serif;*/
-  /*font-family: MuseoSans, Arial, Helvetica, sans-serif;*/
-  font-size: 15px;
-  font-style: normal;
-  font-variant: normal;
-  font-weight: 300;
-  line-height: 21px;
-  margin-bottom: 1em;
-
-  font-family: proxima-nova, sans-serif;
-  font-style: normal;
-  font-weight: 200;
-
-  /*font:15px/1.5 proxima-nova, Courier, sans-serif;*/
-/*      font-weight:400;
-*/      
-  text-align:left;
-  color:#333;
-  text-shadow:1px 1px 1px white;
-
-  min-height: 80px;
-  outline:0px solid transparent;
-}
-
-.gravatar_img {
+.message_cell_image {
+  width:35px;
+  height:35px;
   border:1px solid #E6E8EA; 
   -moz-border-radius: 5px;
   border-radius: 5px;
-  width:25px;
-  height:25px;
   background: left center no-repeat;
   float:left;
  }
 
+ .message_subject_line {
 
-.author_byline {
-  margin-top: 5px;
-  margin-bottom: 5px;
+  line-height: 16px;
+    overflow: hidden;
 
-  display:block; 
-  padding-left: 8px;
-  float:left;
-
-  font: 500 15px/21px "MuseoSans",Arial,Helvetica,sans-serif;
-  font-family: MuseoSans, Arial, Helvetica, sans-serif;
-  font-size: 15px;
-  font-style: normal;
-  font-variant: normal;
-  font-weight: 500;
-  line-height: 21px;
-}
-
-.message_date {
-  margin-top: 6px;
-  text-align: right;
-  float:right;
-  font-size: 12px;
-  color: #ccc;
-}
+    height: 0.95em;
+  padding-bottom: .2em;
+    padding-left:10px;
 
 
-.author {
-  width: 100%;
-  border-bottom-width: 1px;
-  border-bottom-style: solid;
-  border-bottom-color: #E6E8EA;
-  margin-bottom: 20px;
-  padding-bottom:8px;
-}
-
-
-.message_line
-{
-  width: 100%;
-  border-bottom-width: 1px;
-  border-bottom-style: solid;
-  border-bottom-color: #E6E8EA;
-  padding:8px;
-
-
-  font-family: proxima-nova, sans-serif;
-  font-style: normal;
-  font-weight: 200;
-
-  /*font:15px/1.5 proxima-nova, Courier, sans-serif;*/
-/*      font-weight:400;
-*/      
   text-align:left;
   color:#333;
   text-shadow:1px 1px 1px white;
-}
 
-.message_line_hovered
-{
-  background-color: red;
-}
-
+  font-family: "Proxima Nova Condensed", courier, sans-serif;
+  font-size: 19px;
+  font-weight: 600; /* Bold */
+  line-height: 21px;
 
 
-hr {
-  border: 0;
-  color: #9E9E9E;
-  background-color: #E6E8EA;  
-  height: 1px;
-  width: 100%;
-}
+ }
 
-.spacer {
-  height:50px;
-}
+ .message_subhead_text
+ {
+    overflow: hidden;
+    height: 2.5em;
+
+    padding-left:10px;
+
+  font-style: italic;
+  font-size: 13px;
+  line-height: 1.2em;
+
+  font-variant: normal;
+  text-shadow: 1px 1px 0 white;
+ }
 
 
 
 /* Buttons */
-
 
 a.button, input[type=submit] {
     color: #6e6e6e;
@@ -285,6 +409,7 @@ a.button:active {
     color: #000;
     border-color: #444;
 }
+
 
 
 

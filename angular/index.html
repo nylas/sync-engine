@@ -8,24 +8,74 @@
   <link rel="stylesheet" href="css/style.css"/>
   <link rel="stylesheet" href="css/fonts.css"/>
 
-  <!-- TODO Remove this -->
-  <link href='http://fonts.googleapis.com/css?family=Inconsolata:400,700' rel='stylesheet' type='text/css'>
+<!-- Sticky footer  -->
+<!--[if !IE 7]>
+<style type="text/css">
+  #wrap {display:table;height:100%}
+</style>
+<![endif]-->
 
-  <!-- For what? -->
-  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
 </head>
 
-
 <body>
+<div id="bigwrap">
+<div id="main">
 
-  <div class = "container" data-ng-controller="InboxController">
-    <h3>Messages</h3>
+<div class="wrapper">
+  <div class="container_left" data-ng-controller="InboxController">
+
+  <div class="shadowed_wrapper">
+    <div class="mailbox_name">Inbox</div>
+
+    <a href="#" class="button">Do something!</a>
+
+    <div class="basic_pane shadowed">
+
+      <div class="message_cell" hoverstate="selected" data-ng-repeat="message in messages" ng-click="openThread( message.thread_id)">
+        <div class="message_cell_image"></div>
+        <div class="message_subject_line">{{message.subject}}</div>
+        <div class="message_subhead_text">
+          <strong>MG</strong>: Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+        tempor incididunt ut labore et dolore magna aliqua. 
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+  </div>
+
+  <div class="container_right" data-ng-controller="ThreadController">
+    <div class="right_pane">
+      <div class="right_subject_box">
+        Lorem ipsum subject goes here for messages 
+        <!-- Subject -->
+      </div>
+      <div class="right_message_bubble" data-ng-repeat="right_side_message in right_side_messages">
+
+        <div ng-bind-html-unsafe=right_side_message.body_text></div>
+
+      </div>
 
 
-    <div class="wrapper">
+        <div class="basic_pane reply_box" contenteditable="true" hidefocus="true">Reply text here...
+Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
+cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
+proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+        </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!--     <div class="wrapper">
       <div class="panel">
         <div data-ng-repeat="message in messages">
-           <div enter="message_line_hovered" leave class="message_line" ng-click="openThread(message.thread_id)">
+           <div enter="message_line_hovered" leave class="message_line" ng-click="openThread( message.thread_id)">
             <a href="/thread?thread_id={{message.thread_id}}">
               {{ message.subject }}
             </a>
@@ -34,18 +84,25 @@
         </div>
       </div>
     </div>
-
+ -->
   </div>
 
+</div> <!-- main -->
+</div> <!-- bigwrap -->
+
+<div id="footer">
+About&nbsp;&nbsp;|&nbsp;&nbsp;Legal&nbsp;&nbsp;|&nbsp;&nbsp;Some Shit
+</div>
 
 
-  <div ng-view></div>
+  <!-- <div ng-view></div> -->
 
 
   <!-- In production use:
   <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.0.6/angular.min.js"></script>
   -->
   <script src="lib/angular/angular.js"></script>
+  <script src="lib/socketio/socket.io.js"></script>
   <script src="js/app.js"></script>
   <script src="js/services.js"></script>
   <script src="js/controllers.js"></script>
