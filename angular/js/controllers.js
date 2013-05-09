@@ -12,19 +12,38 @@ function InboxController($scope, socket) {
     $scope.messages = data.messages;
     $scope.activeuser = data.activeuser;
     console.log("What's up we're online.")
+    
   });
+  
 
-	$scope.messages = 
-	[{"thread_id": "1427613584118279814", "subject": "Tracker list and question"}, 
-	{"thread_id": "1427613584118279814", "subject": "guest"}, 
-	{"thread_id": "1427613584118279814", "subject": "Meet next Wednesay?"}, 
-	{"thread_id": "1427613584118279814", "subject": "inboxapp.com domain?"}, 
-	{"thread_id": "1427613584118279814", "subject": "Confirming extending contract through May"}, 
-	{"thread_id": "1427613584118279814", "subject": "Update, remarks from call"}, 
-	{"thread_id": "1427613584118279814", "subject": "[Prometheus] Marc Andreessen v. Peter Thiel"}, 
-	{"thread_id": "1427613584118279814", "subject": "Asana"}, 
-	{"thread_id": "1427613584118279814", "subject": " User: Michael Grinich"}, 
-	{"thread_id": "1427613584118279814", "subject": "text for website"}];
+  // Kickoff listing of inbox
+  (function() 
+  {
+  	console.log("Listing inbox");
+  	socket.emit('list_inbox', {});
+  }());
+  
+
+	socket.on('inbox', function(data) {
+		console.log("Received messages.")
+
+		console.log(data);
+		$scope.messages = data;
+	});
+
+
+	// Testing 
+	// $scope.messages = 
+	// [{"thread_id": "1427613584118279814", "subject": "Tracker list and question"}, 
+	// {"thread_id": "1427613584118279814", "subject": "guest"}, 
+	// {"thread_id": "1427613584118279814", "subject": "Meet next Wednesay?"}, 
+	// {"thread_id": "1427613584118279814", "subject": "inboxapp.com domain?"}, 
+	// {"thread_id": "1427613584118279814", "subject": "Confirming extending contract through May"}, 
+	// {"thread_id": "1427613584118279814", "subject": "Update, remarks from call"}, 
+	// {"thread_id": "1427613584118279814", "subject": "[Prometheus] Marc Andreessen v. Peter Thiel"}, 
+	// {"thread_id": "1427613584118279814", "subject": "Asana"}, 
+	// {"thread_id": "1427613584118279814", "subject": " User: Michael Grinich"}, 
+	// {"thread_id": "1427613584118279814", "subject": "text for website"}];
 
 
 	$scope.openThread = function(thread_id) {

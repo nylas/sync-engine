@@ -28,10 +28,16 @@ I got sick of putting these in Asana.
 
 # about Angular.js
 
+- [AngularjS videos on YouTube](https://www.youtube.com/playlist?list=PLP6DbQBkn9ymGQh2qpk9ImLHdSH5T7yw7)
 - [Angular UI](http://angular-ui.github.io/)
 - [UI Bootstrap](http://angular-ui.github.io/bootstrap/)
 - [Lots of links here](http://blog.whydoifollow.com/post/angularjs-where-to-start)
 - [Stuff built with Angular.js](http://builtwith.angularjs.org/)
+- [Where to start](http://blog.whydoifollow.com/post/angularjs-where-to-start)
+- [Angular modules](http://ngmodules.org/)
+- [UI router](https://github.com/angular-ui/ui-router)
+- [Basic angular.js and socket.io app](http://briantford.com/blog/angular-socket-io.html)
+
 
 <hr/>
 
