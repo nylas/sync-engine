@@ -1,15 +1,43 @@
+#!/usr/bin/env python
 import argparse
-from server.app import start as startserver
+import signal
+import sys
+import os
+
+from server.app import startserver, stopserver
 
 def start(args):
     port = args.port
-    print "Starting server on port %s." % port
+    print """
+\033[94m     Welcome to... \033[0m\033[1;95m
+      _____       _               
+     |_   _|     | |              
+       | |  _ __ | |__   _____  __
+       | | | '_ \| '_ \ / _ \ \/ /
+      _| |_| | | | |_) | (_) >  < 
+     |_____|_| |_|_.__/ \___/_/\_\\  \033[0mv0.1
+"""
+    print "Starting server on port %s. Use CTRL-C to stop.\n" % port
     startserver(port)
   
 def stop(args):
-    pass
+    print """
+\033[91m     Cleaning up...
+\033[0m"""
+    stopserver()
+    print """
+\033[91m     Stopped.
+\033[0m"""
+    os.system("stty echo")
+    sys.exit(0)
+
+def signal_handler(signal, frame):
+    stop(None)
 
 def main():
+    os.system("stty -echo")
+    signal.signal(signal.SIGINT, signal_handler)
+
     parser = argparse.ArgumentParser(description="Inbox App")
     subparsers = parser.add_subparsers()
 
@@ -21,6 +49,7 @@ def main():
     parser_stop.set_defaults(func=stop)
     
     args = parser.parse_args()
+    args.func(args)
 
 if __name__=="__main__":
     main()

@@ -91,6 +91,11 @@ class CrispinClient:
         log.info('Connection successful.')
         return True
 
+    def stop(self):
+        log.info("Stopping crispin.")
+        if (self.imap_server):
+            self.imap_server.logout()
+
     @connected
     def list_folders(self):
         try:
@@ -283,12 +288,6 @@ class CrispinClient:
 
         # body
         new_msg = self.parse_body(msg, new_msg)
-
-        log.info('To: %s' % new_msg.to_contacts)
-        log.info('From: %s' % new_msg.from_contacts)
-        log.info('Subject: %s' % new_msg.subject)
-        log.info('Date: %s' % new_msg.date.strftime('%b %m, %Y %I:%M %p') )
-
         return new_msg
 
     @connected
