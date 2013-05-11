@@ -3,16 +3,48 @@
 /* Controllers */
 var app = angular.module('InboxApp.controllers', []);
 
+function AppContainerController($scope, growl) {
+
+	(function () {
+		console.log("checking permission");
+		window.webkitNotifications.checkPermission();
+	}());
+
+	$scope.notificationButtonClick = function() {
+
+		growl.requestPermission(
+			function success() {
+					console.log("Enabled notifications");
+
+			        setTimeout(function() { 
+
+					growl.post("Updates from Disconnect", "MG: Lorem ipsum dolor sit amet, consectetur adipisicing")
+			        }, 3000);
+
+
+
+			}, function failure() {
+					console.log("Failure Enabling notifications");
+			}
+		);
+	}
+}
+
+
+
 function InboxController($scope, socket) {
 	// $http.get('/mailbox_json').success(function (data) {
 	//  	$scope.messages = data;
 	// });
 
   socket.on('init', function (data) {
-    $scope.messages = data.messages;
-    $scope.activeuser = data.activeuser;
-    console.log("What's up we're online.")
-    
+    // $scope.messages = data.messages;
+    // $scope.activeuser = data.activeuser;
+    console.log("What's up we're online.");
+  });
+
+  socket.on('new_mail_notification', function(data) {
+  	console.log("new_mail_notificaiton");
   });
   
 
@@ -22,7 +54,7 @@ function InboxController($scope, socket) {
   	console.log("Listing inbox");
   	socket.emit('list_inbox', {});
   }());
-  
+
 
 	socket.on('inbox', function(data) {
 		console.log("Received messages.")

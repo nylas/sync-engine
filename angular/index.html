@@ -4,9 +4,21 @@
   <meta charset="utf-8">
   <title>Inbox</title>
   <link rel="stylesheet" href="css/app.css"/>
-
   <link rel="stylesheet" href="css/style.css"/>
   <link rel="stylesheet" href="/static/fonts.css"/>
+
+
+<!-- typekit -->
+<script type="text/javascript">
+  (function() {
+    var config = {
+      kitId: 'ccs3tld',
+      scriptTimeout: 3000
+    };
+    var h=document.getElementsByTagName("html")[0];h.className+=" wf-loading";var t=setTimeout(function(){h.className=h.className.replace(/(\s|^)wf-loading(\s|$)/g," ");h.className+=" wf-inactive"},config.scriptTimeout);var tk=document.createElement("script"),d=false;tk.src='//use.typekit.net/'+config.kitId+'.js';tk.type="text/javascript";tk.async="true";tk.onload=tk.onreadystatechange=function(){var a=this.readyState;if(d||a&&a!="complete"&&a!="loaded")return;d=true;clearTimeout(t);try{Typekit.load(config)}catch(b){}};var s=document.getElementsByTagName("script")[0];s.parentNode.insertBefore(tk,s)
+  })();
+</script>
+
 
 <!-- Sticky footer  -->
 <!--[if !IE 7]>
@@ -22,12 +34,17 @@
 <div id="main">
 
 <div class="wrapper">
+
+  <div class="top_banner" data-ng-controller="AppContainerController">
+
+    <a href="" class="button" data-ng-click="notificationButtonClick()">Activate notifications</a>
+
   <div class="container_left" ngCloak data-ng-controller="InboxController">
 
   <div class="shadowed_wrapper">
     <div class="mailbox_name">Inbox</div>
 
-    <a href="#" class="button">Do something!</a>
+    <a href="" class="button">Do something!</a>
 
     <div class="basic_pane shadowed">
 
@@ -56,6 +73,21 @@
         <div ng-bind-html-unsafe=right_side_message.body_text></div>
 
       </div>
+
+
+      <div class="right_message_bubble">
+
+        <div>Reply text here...
+Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
+cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
+proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</div>
+
+      </div>
+
+
 
 
         <div class="basic_pane reply_box" contenteditable="true" hidefocus="true">Reply text here...

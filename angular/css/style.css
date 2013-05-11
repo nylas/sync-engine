@@ -23,7 +23,7 @@ html, body {height: 100%;}
 
   text-align:center;
   text-shadow:1px 1px 1px white;
-  font-family: MuseoSans, Arial, Helvetica, sans-serif;
+  font-family: "Proxima Nova Condensed", courier, sans-serif;
   font-size: 12px;
   font-style: normal;
   font-variant: normal;
@@ -58,7 +58,7 @@ body {
 
 .wrapper
 {
-  width: 840px; /*Width of main container*/
+  width: 940px; /*Width of main container*/
   margin: 0 auto; /*Center container on page*/
   height: 100%;
   position: relative;
@@ -79,7 +79,7 @@ body {
 .container_right
 {
   float:right;
-  width: 500px;
+  width: 560px;
   height:100%;
   margin-bottom: 22px;
 }
@@ -137,10 +137,14 @@ body {
   padding: 1.45em;
 
   font-family: "Proxima Nova", courier, sans-serif;
+  font-weight: 400;
+
+  /*font-family: "museo-slab", courier, sans-serif;
+  font-weight: 300;
+*/
   font-size: 15px;
   font-style: normal;
   font-variant: normal;
-  font-weight: 200;
 
   line-height: 1.45em;
   font-style: normal;
@@ -166,6 +170,7 @@ div.right_message_bubble:before
   border: 15px solid;
   border-color: rgba(0, 0, 0, 0.10) transparent transparent rgba(0, 0, 0, 0.15);
 }
+
 
 div.right_message_bubble:after
 {
