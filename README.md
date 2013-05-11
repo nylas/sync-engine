@@ -22,7 +22,7 @@ All of the todos are in [the Asana workspace](https://app.asana.com/0/4983727800
 
  5. Right now getting Gmail oauth credentials is manual. Go figure it out and put them in `credentials.py`. 
 
- 6. `app.py`
+ 6. run `python inbox.py start`. This defaults to port 8888.
 
  7. Open your browser to [http://localhost:8888](http://localhost:8888)
  
