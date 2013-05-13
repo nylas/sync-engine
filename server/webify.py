@@ -97,27 +97,3 @@ def trim_quoted_text(msg_text, content_type):
 
     return msg_text
 
-
-from urllib import urlencode
-from hashlib import md5
-
-def gravatar_url(email):
-
-    default = "http://www.example.com/default.jpg"
-    size = 25
-
-    # construct the url
-    gravatar_url = "http://www.gravatar.com/avatar/" + md5(email.lower()).hexdigest() + "?"
-    gravatar_url += urlencode({'d':'mm', 's':str(size)})
-
-    return gravatar_url
-
-
-def trim_subject(subject):
-    # Headers will wrap when longer than 78 lines per RFC822_2
-    subject = subject.replace('\n\t', '').replace('\r\n', '')
-    # Remove "RE" or whatever
-    if subject[:4] == u'RE: ' or subject[:4] == u'Re: ' :
-        subject = subject[4:]
-    return subject
-

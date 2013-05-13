@@ -92,20 +92,14 @@ class WireConnection(SocketConnection):
 
 
     @event
-    def list_inbox(self, **kwargs):
+    def get_inbox_threads(self, **kwargs):
 
         folder_name = "Inbox"
         crispin_client.select_folder("Inbox")
 
         threads = crispin_client.fetch_threads(folder_name)
-        threads.sort(key=lambda t: t.most_recent_date, reverse=True)
 
-        ret = []
-        for t in threads:
-            ret.append(dict(subject=t.subject,
-                            thread_id=str(t.thread_id)))
-
-        self.emit('inbox', ret)
+        self.emit('get_inbox_threads_ret', [t.toJSON() for t in threads] )
 
     @event
     def get_thread(self, **kwargs):
@@ -116,9 +110,10 @@ class WireConnection(SocketConnection):
         thread_id = kwargs['thread_id']
         log.info("Fetching thread id: %s" % thread_id)
         crispin_client.select_allmail_folder()
+
         messages = crispin_client.fetch_messages_for_thread(thread_id)
-        encoded = [m.encode() for m in messages]
-        self.emit('messages', encoded)
+
+        self.emit('messages', [m.toJSON() for m in messages] )
 
 
 
@@ -146,6 +141,7 @@ def startserver(port):
 
     tornado.log.enable_pretty_logging()
     tornado.autoreload.start()
+    tornado.autoreload.add_reload_hook(stopsubmodules)
 
     loop = tornado.ioloop.IOLoop.instance()
     global idler
@@ -159,12 +155,14 @@ def startserver(port):
 
     loop.start()
 
-def stopserver():
+def stopsubmodules():
     idler.stop()
     crispin_client.stop()
 
+
+def stopserver():
+    stopsubmodules()
     # Kill IO loop next iteration
     log.info("Stopping Tornado.")
     ioloop = tornado.ioloop.IOLoop.instance()
     ioloop.add_callback(ioloop.stop)
-

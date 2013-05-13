@@ -1,40 +1,55 @@
-
-
 import logging as log
 
-from webify import trim_subject, gravatar_url
 import json
 
-# { 
-# tos: [ <Contacts>, ... ]
-# from: 
-#     [ <Contact> name, address, ... ]
-# headers:
-#     { 'someheader', value}
 
-# body-text { 'content-type', bodyvalue}
-#     >>> somehow have resource keys in body-text
-
-# resources {'file-key', value}
-
-# }
-
-
-class Message():
+class IBContact():
     def __init__(self):
+        self.firstname = ""
+        self.lastname = ""
+        self.email = ""
+
+    def gravatar(self):
+        return gravatar_url(self.email)
+
+    def toJSON(self):
+        return dict( firstname = self.firstname,
+                     lastname = self.lastname,
+                     email = self.email)
+
+
+
+class IBThread():
+    def __init__(self):
+        self.message_ids = []
+        self.thread_id = None
+        self.labels = []
+
+    def __repr__(self):
+        return '<IBThread object> thr_id: %s, msg_id: %s' \
+               % (self.thread_id, self.msg_id)
+
+    def toJSON(self):
+        return dict( message_ids = [str(s) for s in self.message_ids],
+                     thread_id = str(self.thread_id),
+                     labels = [str(s) for s in self.labels]
+                    )
+
+
+class IBMessage():
+    def __init__(self):
+        self.message_id = "foo message id"
+        self.thread_id = None
+        self.size = None
+        self.uid = None
+
         self.to_contacts = []
         self.from_contacts = None
         self.subject = None
 
         self.date = None
-        self.body_text = {}
+        self.body_text = None
 
-        self.thread_id = None
-        self.size = None
-        self.uid = None
-
-    def gravatar(self):
-        return gravatar_url(self.from_contacts[0]['address'])
 
     def gmail_url(self):
         if not self.uid:
@@ -44,7 +59,7 @@ class Message():
     def trimmed_subject(self):
         return trim_subject(self.subject)
 
-    def encode(self):
+    def toJSON(self):
         return dict(
             to_contacts = self.to_contacts,
             from_contacts = self.from_contacts,
@@ -52,89 +67,49 @@ class Message():
             body_text = self.body_text)
 
 
-class MessageEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, Message):
-            return obj.encode()
-        # Let the base class default method raise the TypeError
-        return json.JSONEncoder.default(self, obj)
+# BODY is like BODYSTRUCTURE but without extension information
+# not sure what this means in practice. We can probably get by only
+# using BODY requests and just looking up the filetype based on filename 
+# extensions. Excerpts from a couple of Gmail responses:
+
+# snipped of BODY request of attachment
+# ('IMAGE', 'JPEG', ('NAME', 'breadSRSLY-5.jpg'), None, None, 'BASE64', 1611294),
+
+# snippet of BODYSTRUCTURE
+# ('IMAGE', 'JPEG', ('NAME', 'breadSRSLY-5.jpg'), None, None, 'BASE64', 1611294, None, ('ATTACHMENT', ('FILENAME', 'breadSRSLY-5.jpg')), None), 
+
+# From the original spec...
+#
+# A body type of type TEXT contains, immediately after the basic 
+# fields, the size of the body in text lines.  Note that this 
+# size is the size in its content transfer encoding and not the 
+# resulting size after any decoding. 
+#
+# Extension data follows the basic fields and the type-specific 
+# fields listed above.  Extension data is never returned with the 
+# BODY fetch, but *CAN* be returned with a BODYSTRUCTURE fetch. 
+# Extension data, if present, MUST be in the defined order. 
+#
+# Also, BODY and BODYSTRUCTURE calls are kind of fucked
+# see here http://mailman2.u.washington.edu/pipermail/imap-protocol/2011-October/001528.html
 
 
+# ([
+#    ('text', 'html', ('charset', 'us-ascii'), None, None, 'quoted-printable', 55, 3),
+#    ('text', 'plain', ('charset', 'us-ascii'), None, None, '7bit', 26, 1) 
+#  ], 
+#  'mixed', ('boundary', '===============1534046211=='))
+
+# print 'Parts:', len(parts)
+# $ UID FETCH <uid> (BODY ENVELOPE)   # get structure and header info
+# $ UID FETCH <uid> (BODY[1])         # retrieving displayable body
+# $ UID FETCH <uid> (BODY[2])         # retrieving attachment on demand
+# FETCH 88 BODY.PEEK[1]
+# FETCH uid BODY.PEEK[1.2]
+# print 'Ending:', bodystructure[1]
 
 
-class MessageThread():
-    def __init__(self):
-        self.messages = []
-        self.thread_id = None
-        self.is_unread = True  # TODO: set this based on message unreads
-
-    @property
-    def message_count(self):
-        return len(self.messages)
-
-    @property
-    def subject(self):
-        return self.messages[0].subject
-
-    @property
-    def most_recent_date(self):
-        dates = [m.date for m in self.messages]
-        dates.sort()
-        return dates[-1]
-
-    @property
-    def datestring(self):
-        return self.most_recent_date.strftime('%b %d, %Y &mdash; %I:%M %p')
-
-
-
-## MessageBodyPart (BODYSTRUCTURE)
-
-    # BODY is like BODYSTRUCTURE but without extension information
-    # not sure what this means in practice. We can probably get by only
-    # using BODY requests and just looking up the filetype based on filename 
-    # extensions. Excerpts from a couple of Gmail responses:
-
-    # snipped of BODY request of attachment
-    # ('IMAGE', 'JPEG', ('NAME', 'breadSRSLY-5.jpg'), None, None, 'BASE64', 1611294),
-
-    # snippet of BODYSTRUCTURE
-    # ('IMAGE', 'JPEG', ('NAME', 'breadSRSLY-5.jpg'), None, None, 'BASE64', 1611294, None, ('ATTACHMENT', ('FILENAME', 'breadSRSLY-5.jpg')), None), 
-
-
-    # From the original spec...
-    #
-    # A body type of type TEXT contains, immediately after the basic 
-    # fields, the size of the body in text lines.  Note that this 
-    # size is the size in its content transfer encoding and not the 
-    # resulting size after any decoding. 
-    #
-    # Extension data follows the basic fields and the type-specific 
-    # fields listed above.  Extension data is never returned with the 
-    # BODY fetch, but *CAN* be returned with a BODYSTRUCTURE fetch. 
-    # Extension data, if present, MUST be in the defined order. 
-    #
-    # Also, BODY and BODYSTRUCTURE calls are kind of fucked
-    # see here http://mailman2.u.washington.edu/pipermail/imap-protocol/2011-October/001528.html
-
-
-
-    # ([
-    #    ('text', 'html', ('charset', 'us-ascii'), None, None, 'quoted-printable', 55, 3),
-    #    ('text', 'plain', ('charset', 'us-ascii'), None, None, '7bit', 26, 1) 
-    #  ], 
-    #  'mixed', ('boundary', '===============1534046211=='))
-
-    # print 'Parts:', len(parts)
-    # $ UID FETCH <uid> (BODY ENVELOPE)   # get structure and header info
-    # $ UID FETCH <uid> (BODY[1])         # retrieving displayable body
-    # $ UID FETCH <uid> (BODY[2])         # retrieving attachment on demand
-    # FETCH 88 BODY.PEEK[1]
-    # FETCH uid BODY.PEEK[1.2]
-    # print 'Ending:', bodystructure[1]
-
-
-class MessageBodyPart(object):
+class IBMessagePart(object):
     """The parts of message's body content"""
     def __init__(self, p, index='1'):
         """p is tuple returned by the BODYSTRUCTURE command"""
@@ -160,6 +135,7 @@ class MessageBodyPart(object):
         # for images
         self.filename = ''
 
+        # instantiate
         self.index = str(index)
         self.content_type_major = p[0]
         self.content_type_minor = p[1]
@@ -189,7 +165,7 @@ class MessageBodyPart(object):
         return self.content_type_major.lower() == 'image'
 
     def __repr__(self):
-        r = '<MessageBodyPart object> '
+        r = '<IBMessagePart object> '
         if self.content_type_major.lower() == 'text':
             return r + 'BodySection %s: %s text (%i bytes, %i lines) with encoding: %s' % \
                           (self.index, 

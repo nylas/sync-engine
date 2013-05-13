@@ -13,26 +13,12 @@ from email.Iterators import typed_subpart_iterator
 import time
 import datetime
 import logging as log
+import tornado
 
 import auth
-from webify import plaintext2html, fix_links, trim_quoted_text, trim_subject
 
-from models import Message, MessageThread, MessageBodyPart
+from models import IBMessage, IBThread, IBMessagePart
 
-# BODY.PEEK[HEADER]
-# X-GM-THRID
-# X-GM-MSGID
-# X-GM-LABELS
-# BODY.PEEK[HEADER.FIELDS (Message-Id)]
-# BODY.PEEK[HEADER.FIELDS (From)]
-# ENVELOPE
-# RFC822.SIZE
-# UID
-# FLAGS
-# INTERNALDATE
-# X-GM-THRID
-# X-GM-MSGID
-# X-GM-LABELS
 
 class CrispinClient:
     # 20 minutes
@@ -94,7 +80,12 @@ class CrispinClient:
     def stop(self):
         log.info("Stopping crispin.")
         if (self.imap_server):
-            self.imap_server.logout()
+            loop = tornado.ioloop.IOLoop.instance()
+            # For autoreload
+            try:
+                loop.add_callback(self.imap_server.logout)
+            except Exception, e:
+                self.imap_server.logout
 
     @connected
     def list_folders(self):
@@ -180,7 +171,7 @@ class CrispinClient:
         return response[latest_email_uid]['RFC822']
 
     def parse_main_headers(self, msg):
-        new_msg = Message()
+        new_msg = IBMessage()
 
         def make_uni(txt, default_encoding="ascii"):
             try:
@@ -209,8 +200,22 @@ class CrispinClient:
         new_msg.to_contacts = parse_contact(['to', 'cc'])
         new_msg.from_contacts = parse_contact(['from'])
 
+        new_msg.message_id = msg['X-GM-MSGID']
+        new_msg.thread_id = msg['X-GM-THRID']
+
+
         subject = make_uni(msg['subject'])
-        new_msg.subject = trim_subject(subject)
+        # Need to trim the subject.
+        # Headers will wrap when longer than 78 lines per RFC822_2
+        subject = subject.replace('\n\t', '').replace('\r\n', '')
+        new_msg.subject = subject
+
+        # TODO remove the subject headings here like RE: FWD: etc.
+        #     # Remove "RE" or whatever
+        #     if subject[:4] == u'RE: ' or subject[:4] == u'Re: ' :
+        #         subject = subject[4:]
+        #     return subject
+
 
         # TODO: Gmail's timezone is usually UTC-07:00
         # see here. We need to figure out how to deal with timezones.
@@ -220,9 +225,10 @@ class CrispinClient:
         utc_timestamp = email_utils.mktime_tz(date_tuple_with_tz)
         time_epoch = time.mktime( date_tuple_with_tz[:9] )
         new_msg.date = datetime.datetime.fromtimestamp(utc_timestamp)
+        
         return new_msg
 
-    def parse_body(self, msg, new_msg = Message()):
+    def parse_body(self, msg, new_msg = IBMessage()):
         msg_text = ""
         content_type = None
 
@@ -254,14 +260,14 @@ class CrispinClient:
         # unicode strings based on content encoding...
         # msg_text = msg_text.decode('iso-8859-1').encode('utf8')
 
-        # TODO: Fuck this is so broken for HTML mail
-        msg_text = trim_quoted_text(msg_text, content_type)
+        # TODO Run trim_quoted_text here for the message
+
 
         if content_type == 'text/plain':
-            msg_text = plaintext2html(msg_text)
+            pass
+            # TODO here convert plain text to HTML text somehow...
 
-        msg_text = fix_links(msg_text)
-
+        # TODO here run fix_links which converts links to HTML I think...
         new_msg.body_text = msg_text
         return new_msg
 
@@ -284,7 +290,7 @@ class CrispinClient:
         msg = Parser().parsestr(raw_response)
 
         # headers
-        new_msg = self.parse_main_headers(msg)  # returns Message()
+        new_msg = self.parse_main_headers(msg)  # returns IBMessage()
 
         # body
         new_msg = self.parse_body(msg, new_msg)
@@ -302,7 +308,7 @@ class CrispinClient:
 
     @connected
     def fetch_messages_for_thread(self, thread_id):
-        """ Returns list of Message objects corresponding to thread_id """
+        """ Returns list of IBMessage objects corresponding to thread_id """
         threads_msg_ids = self.imap_server.search('X-GM-THRID %s' % str(thread_id))
         log.info("Msg ids for thread: %s" % threads_msg_ids)
         msgs = []
@@ -316,24 +322,19 @@ class CrispinClient:
     @connected
     def fetch_threads(self, folder_name):
 
-        # Cluster Messages by thread id. 
-        # Returns a list of Threads.
-        def messages_to_threads(messages):
-            threads = {}
-            # Group by thread id
-            for m in messages:
-                if m.thread_id not in threads.keys():
-                    new_thread = MessageThread()
-                    new_thread.thread_id = m.thread_id
-                    threads[m.thread_id] = new_thread
-                t = threads[m.thread_id]
-                t.messages.append(m)  # not all, only messages in folder_name
-            return threads.values()
-
         # Get messages in requested folder
         msgs = self.fetch_headers(folder_name)
 
-        threads = messages_to_threads(msgs)
+        threads = {}
+        # Group by thread id
+        for m in msgs:
+            if m.thread_id not in threads.keys():
+                new_thread = IBThread()
+                new_thread.thread_id = m.thread_id
+                threads[m.thread_id] = new_thread
+            t = threads[m.thread_id]
+            t.message_ids.append(m.message_id)
+        threads = threads.values()
 
         log.info("For %i messages, found %i threads total." % (len(msgs), len(threads)))
         self.select_allmail_folder() # going to fetch all messages in threads
@@ -351,7 +352,18 @@ class CrispinClient:
         log.info("Expanded to %i messages for %i thread IDs." % (len(all_msg_uids), len(thread_ids)))
 
         all_msgs = self.fetch_headers_for_uids(self.all_mail_folder_name(), all_msg_uids)
-        all_threads = messages_to_threads(all_msgs)
+        
+
+        threads = {}
+        # Group by thread id
+        for m in msgs:
+            if m.thread_id not in threads.keys():
+                new_thread = IBThread()
+                new_thread.thread_id = m.thread_id
+                threads[m.thread_id] = new_thread
+            t = threads[m.thread_id]
+            t.message_ids.append(m.message_id)
+        all_threads = threads.values()
 
         log.info("Returning %i threads with total of %i messages." % (len(all_threads), len(all_msgs)))
 
@@ -375,7 +387,7 @@ class CrispinClient:
         query_key = 'BODY[HEADER.FIELDS (TO CC FROM DATE SUBJECT)]'
 
         log.info("Fetching message headers. Query: %s" % query)
-        messages = self.imap_server.fetch(UIDs, [query, 'X-GM-THRID'])
+        messages = self.imap_server.fetch(UIDs, [query, 'X-GM-THRID', 'X-GM-MSGID'])
         log.info("Found %i messages." % len(messages.values()))
 
         parser = Parser()
@@ -387,6 +399,7 @@ class CrispinClient:
             # headers
             new_msg = self.parse_main_headers(msg)  # returns Message()
             new_msg.thread_id = message_dict['X-GM-THRID']
+            new_msg.message_id = message_dict['X-GM-MSGID']
 
             new_messages.append(new_msg)
             new_msg = None
@@ -395,7 +408,7 @@ class CrispinClient:
 
 
     @connected
-    def fetch_MessageBodyPart(self, UIDs):
+    def fetch_IBMessagePart(self, UIDs):
         if isinstance(UIDs, int ):
             UIDs = [str(UIDs)]
         elif isinstance(UIDs, basestring):
@@ -441,10 +454,10 @@ class CrispinClient:
                         else:
                             if len(i) > 0: index = i+'.1'
                             else: index = '1'
-                            bodystructure_parts.append(MessageBodyPart(p,i))
+                            bodystructure_parts.append(IBMessageBodyPart(p,i))
                     make_obj(part, str(i+1))
 
             else:
-                bodystructure_parts.append(MessageBodyPart(bodystructure, '1'))
+                bodystructure_parts.append(IBMessagePart(bodystructure, '1'))
 
         return bodystructure_parts

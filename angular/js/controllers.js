@@ -5,23 +5,11 @@ var app = angular.module('InboxApp.controllers', []);
 
 function AppContainerController($scope, growl) {
 
-	(function () {
-		console.log("checking permission");
-		window.webkitNotifications.checkPermission();
-	}());
-
 	$scope.notificationButtonClick = function() {
-
 		growl.requestPermission(
 			function success() {
 					console.log("Enabled notifications");
-
-			        setTimeout(function() { 
-
-					growl.post("Updates from Disconnect", "MG: Lorem ipsum dolor sit amet, consectetur adipisicing")
-			        }, 3000);
-
-
+					growl.post("Updates from Disconnect", "MG: Lorem ipsum dolor sit amet, consectetur adipisicing");
 
 			}, function failure() {
 					console.log("Failure Enabling notifications");
@@ -32,69 +20,68 @@ function AppContainerController($scope, growl) {
 
 
 
-function InboxController($scope, socket) {
+function InboxController($scope, socket, IBThread) {
 	// $http.get('/mailbox_json').success(function (data) {
-	//  	$scope.messages = data;
+	//    $scope.messages = data;
 	// });
 
-  socket.on('init', function (data) {
-    // $scope.messages = data.messages;
-    // $scope.activeuser = data.activeuser;
-    console.log("What's up we're online.");
-  });
+	socket.on('init', function (data) {
+		// $scope.messages = data.messages;
+		// $scope.activeuser = data.activeuser;
+		console.log("What's up we're online.");
+	});
 
-  socket.on('new_mail_notification', function(data) {
-  	console.log("new_mail_notificaiton");
-  });
-  
+	socket.on('new_mail_notification', function(data) {
+		console.log("new_mail_notificaiton");
+	});
 
-  // Kickoff listing of inbox
-  (function() 
-  {
-  	console.log("Listing inbox");
-  	socket.emit('list_inbox', {});
-  }());
+	$scope.loadInbox = function() {
+		console.log("Loading inbox messages");
+		socket.emit('get_inbox_threads', {});
+	};
+	// This just kicks it off	
+	$scope.loadInbox();
 
 
-	socket.on('inbox', function(data) {
-		console.log("Received messages.")
 
+	socket.on('get_inbox_threads_ret', function(data) {
+		
+		console.log("Received messages:")
 		console.log(data);
-		$scope.messages = data;
+
+		var threads = []
+		for (var i = 0; i < data.length; i++) {
+			var newThread = new IBThread(data[i]);
+			threads.push(newThread);
+			console.log(newThread);
+			console.log(newThread.printableDateString());
+		}
+		$scope.threads = threads;
 	});
 
 
-	// Testing 
-	// $scope.messages = 
-	// [{"thread_id": "1427613584118279814", "subject": "Tracker list and question"}, 
-	// {"thread_id": "1427613584118279814", "subject": "guest"}, 
-	// {"thread_id": "1427613584118279814", "subject": "Meet next Wednesay?"}, 
-	// {"thread_id": "1427613584118279814", "subject": "inboxapp.com domain?"}, 
-	// {"thread_id": "1427613584118279814", "subject": "Confirming extending contract through May"}, 
-	// {"thread_id": "1427613584118279814", "subject": "Update, remarks from call"}, 
-	// {"thread_id": "1427613584118279814", "subject": "[Prometheus] Marc Andreessen v. Peter Thiel"}, 
-	// {"thread_id": "1427613584118279814", "subject": "Asana"}, 
-	// {"thread_id": "1427613584118279814", "subject": " User: Michael Grinich"}, 
-	// {"thread_id": "1427613584118279814", "subject": "text for website"}];
-
-
 	$scope.openThread = function(thread_id) {
-        console.log("Fetching thread_id: " + thread_id);
-        socket.emit('get_thread', {thread_id: thread_id} );
+				console.log("Fetching thread_id: " + thread_id);
+				socket.emit('get_thread', {thread_id: thread_id} );
 	};
 
 };
 app.controller('InboxController', InboxController);
 
 
-function ThreadController($scope, socket) {
+function ThreadController($scope, socket, IBMessage) {
 
-    socket.on('messages', function(data) {
-    	console.log("Received thread_data.")
+		socket.on('messages', function(data) {
+			console.log("Received messages.")
 
-    	console.log(data);
-    	$scope.right_side_messages = data;
-    });
+			var messages = []
+			for (var i = 0; i < data.length; i++) {
+				var newMessage = new IBMessage(data[i]);
+				messages.push(newMessage);
+				console.log(newMessage);
+			}
+			$scope.right_side_messages = messages;
+		});
 
 };
 app.controller('ThreadController', ThreadController);

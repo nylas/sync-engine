@@ -1,0 +1,26 @@
+Messaging is largely context based.
+
+This is why there are several apps like iMessages, FB, Path, WhatsApp, Line, OKCupid, and so on which have messaging components that are essentially identical aside from the visual treatment.
+
+Under the hood, they all have the same data model and mechanisms. To, from, send, receive, etc.
+
+Nerds want these to be "unified" but the separation of context is really important.
+
+Context-based messaging will only become more important as time goes on.
+
+Every app, every game, and every place should have a messaging component. 
+
+Communication makes everything better.
+
+
+INBOX KIT
+
+a framework for mobile devices that allows them to immediately add messaging capabilities, with support for authentication and push notification.
+
+These messages show up in the app with some mostly-unified view, but also can show up in the Inbox app. You can send from either. (Like FB messages and the FB app.)
+
+SDK contains: hook for push notifications, message composer, banner notifications, message list view, thread view. 
+
+Open API to get notifications as a web server. Streaming. Look into Twitter firehose api for this.
+
+APIs for adding payloads (images, videos) to messages. Add from your "library".

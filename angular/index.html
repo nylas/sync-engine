@@ -1,29 +1,29 @@
 <!doctype html>
 <html lang="en" ng-app='InboxApp'>
 <head>
-  <meta charset="utf-8">
-  <title>Inbox</title>
-  <link rel="stylesheet" href="css/app.css"/>
-  <link rel="stylesheet" href="css/style.css"/>
-  <link rel="stylesheet" href="/static/fonts.css"/>
+	<meta charset="utf-8">
+	<title>Inbox</title>
+	<link rel="stylesheet" href="css/app.css"/>
+	<link rel="stylesheet" href="css/style.css"/>
+	<link rel="stylesheet" href="/static/fonts.css"/>
 
 
 <!-- typekit -->
 <script type="text/javascript">
-  (function() {
-    var config = {
-      kitId: 'ccs3tld',
-      scriptTimeout: 3000
-    };
-    var h=document.getElementsByTagName("html")[0];h.className+=" wf-loading";var t=setTimeout(function(){h.className=h.className.replace(/(\s|^)wf-loading(\s|$)/g," ");h.className+=" wf-inactive"},config.scriptTimeout);var tk=document.createElement("script"),d=false;tk.src='//use.typekit.net/'+config.kitId+'.js';tk.type="text/javascript";tk.async="true";tk.onload=tk.onreadystatechange=function(){var a=this.readyState;if(d||a&&a!="complete"&&a!="loaded")return;d=true;clearTimeout(t);try{Typekit.load(config)}catch(b){}};var s=document.getElementsByTagName("script")[0];s.parentNode.insertBefore(tk,s)
-  })();
+	(function() {
+		var config = {
+			kitId: 'ccs3tld',
+			scriptTimeout: 3000
+		};
+		var h=document.getElementsByTagName("html")[0];h.className+=" wf-loading";var t=setTimeout(function(){h.className=h.className.replace(/(\s|^)wf-loading(\s|$)/g," ");h.className+=" wf-inactive"},config.scriptTimeout);var tk=document.createElement("script"),d=false;tk.src='//use.typekit.net/'+config.kitId+'.js';tk.type="text/javascript";tk.async="true";tk.onload=tk.onreadystatechange=function(){var a=this.readyState;if(d||a&&a!="complete"&&a!="loaded")return;d=true;clearTimeout(t);try{Typekit.load(config)}catch(b){}};var s=document.getElementsByTagName("script")[0];s.parentNode.insertBefore(tk,s)
+	})();
 </script>
 
 
 <!-- Sticky footer  -->
 <!--[if !IE 7]>
 <style type="text/css">
-  #wrap {display:table;height:100%}
+	#wrap {display:table;height:100%}
 </style>
 <![endif]-->
 
@@ -35,89 +35,87 @@
 
 <div class="wrapper">
 
-  <div class="top_banner" data-ng-controller="AppContainerController">
+	<div class="top_banner" data-ng-controller="AppContainerController">
 
-    <a href="" class="button" data-ng-click="notificationButtonClick()">Activate notifications</a>
+		<a href="" class="button" data-ng-click="notificationButtonClick()">Activate notifications</a>
 
-  <div class="container_left" ngCloak data-ng-controller="InboxController">
+	<div class="container_left" ngCloak data-ng-controller="InboxController">
 
-  <div class="shadowed_wrapper">
-    <div class="mailbox_name">Inbox</div>
+	<div class="shadowed_wrapper">
+		<div class="mailbox_name">Inbox</div>
 
-    <a href="" class="button">Do something!</a>
+		<a href="" class="button">Do something!</a>
 
-    <div class="basic_pane shadowed">
+		<div class="basic_pane shadowed">
 
-      <div class="message_cell" hoverstate="selected" data-ng-repeat="message in messages" ng-click="openThread( message.thread_id)">
-        <div class="message_cell_image"></div>
-        <div class="message_subject_line">{{message.subject}}</div>
-        <div class="message_subhead_text">
-          <strong>MG</strong>: Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
-        tempor incididunt ut labore et dolore magna aliqua. 
-        </div>
-      </div>
+			<div class="message_cell" hoverstate="selected" data-ng-repeat="thread in threads" ng-click="openThread( thread.thread_id)">
+				<div class="message_cell_image"></div>
+				<div class="message_subject_line">{{thread.thread_id}}</div>
+				<div class="message_subhead_text">
+					<strong>MG</strong>: {{thread.message_ids }} 
+				</div>
+			</div>
 
-    </div>
+		</div>
 
-  </div>
-  </div>
+	</div>
+	</div>
 
-  <div class="container_right" data-ng-controller="ThreadController">
-    <div class="right_pane">
-      <div class="right_subject_box">
-        Lorem ipsum subject goes here for messages 
-        <!-- Subject -->
-      </div>
-      <div class="right_message_bubble" data-ng-repeat="right_side_message in right_side_messages">
-
-        <div ng-bind-html-unsafe=right_side_message.body_text></div>
-
-      </div>
+	<div class="container_right" data-ng-controller="ThreadController">
+		<div class="right_pane">
+			<div class="right_subject_box">
+				Subject goes here for lorem ipsum 
+				<!-- Subject -->
+			</div>
 
 
-      <div class="right_message_bubble">
+			<div class="right_message_bubble green_glow">
+				<div class="right_message_bubble_container">
+				Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+				tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+				quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+				consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
+				cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
+				proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+			</div>
+			</div>
 
-        <div>Reply text here...
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
-tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
-quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
-consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
-cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
-proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</div>
-
-      </div>
+			<messageview data-ng-repeat="message in right_side_messages" />
 
 
 
 
-        <div class="basic_pane reply_box" contenteditable="true" hidefocus="true">Reply text here...
+
+
+
+				<div class="basic_pane reply_box" contenteditable="true" hidefocus="true">Reply text here...
 Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
 tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
 quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
 consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
 cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
 proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-        </div>
+				</div>
 
-    </div>
-  </div>
+		</div>
+	</div>
 
 </div>
 
 <!--     <div class="wrapper">
-      <div class="panel">
-        <div data-ng-repeat="message in messages">
-           <div enter="message_line_hovered" leave class="message_line" ng-click="openThread( message.thread_id)">
-            <a href="/thread?thread_id={{message.thread_id}}">
-              {{ message.subject }}
-            </a>
-           </div>
+			<div class="panel">
+				<div data-ng-repeat="message in messages">
+					 <div enter="message_line_hovered" leave class="message_line" ng-click="openThread( message.thread_id)">
+						<a href="/thread?thread_id={{message.thread_id}}">
+							{{ message.subject }}
+						</a>
+					 </div>
 
-        </div>
-      </div>
-    </div>
+				</div>
+			</div>
+		</div>
  -->
-  </div>
+	</div>
 
 </div> <!-- main -->
 </div> <!-- bigwrap -->
@@ -127,19 +125,19 @@ About&nbsp;&nbsp;|&nbsp;&nbsp;Legal&nbsp;&nbsp;|&nbsp;&nbsp;Some Shit
 </div>
 
 
-  <!-- <div ng-view></div> -->
-
-
-  <!-- In production use:
-  <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.0.6/angular.min.js"></script>
-  -->
-  <script src="lib/angular/angular.js"></script>
-  <script src="lib/socketio/socket.io.js"></script>
-  <script src="js/app.js"></script>
-  <script src="js/services.js"></script>
-  <script src="js/controllers.js"></script>
-  <script src="js/filters.js"></script>
-  <script src="js/directives.js"></script>
+	<!-- In production use:
+	<script src="//ajax.googleapis.com/ajax/libs/angularjs/1.0.6/angular.min.js"></script>
+	-->
+	<script src="lib/angular/angular.js"></script>
+	<script src="lib/angular/angular-sanitize.js"></script>
+	<script src="lib/utils/md5.js"></script>
+	<script src="lib/socketio/socket.io.js"></script>
+	<script src="js/app.js"></script>
+	<script src="js/models.js"></script>
+	<script src="js/services.js"></script>
+	<script src="js/controllers.js"></script>
+	<script src="js/filters.js"></script>
+	<script src="js/directives.js"></script>
 </body>
 </html>
 

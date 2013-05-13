@@ -62,6 +62,9 @@ class Idler():
     def stop(self):
         log.info("Stopping idler.")
         if self.imap:
-            self.ioloop.add_callback(self.imap.logout)
-            # self.imap.logout()
+            try:
+                self.ioloop.add_callback(self.imap.logout)
+            except Exception, e:
+                self.imap.logout
+
 

@@ -79,7 +79,7 @@ body {
 .container_right
 {
   float:right;
-  width: 560px;
+  width: 600px;
   height:100%;
   margin-bottom: 22px;
 }
@@ -121,6 +121,7 @@ body {
   font-size: 26px;
   font-weight: 600; /* Bold */
   line-height: 21px;
+
 }
 
 .right_message_bubble
@@ -134,55 +135,76 @@ body {
   -moz-border-radius: 4px;
   -webkit-border-radius: 4px;
 
+  margin-bottom: 40px;
+
+
+}
+
+/* New message glow */
+
+.green_glow {
+    box-shadow: 0 0 10px rgba(0, 200, 50, .8);
+  -webkit-box-shadow: 0 0 10px rgba(0, 200, 50, .8); 
+  -moz-box-shadow: 0 0 10px rgba(0, 200, 50, .8); 
+}
+.green_glow:before {
+    box-shadow: 0 0 10px rgba(0, 200, 50, .8);
+  -webkit-box-shadow: 0 0 10px rgba(0, 200, 50, .8); 
+  -moz-box-shadow: 0 0 10px rgba(0, 200, 50, .8); 
+}
+
+
+div.right_message_bubble:before
+{
+
+  background-color: white;
+  -webkit-transform: rotate(45deg);
+  content: ' ';
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  left: 30px;
+  bottom: -16px;
+  border: 1px solid;
+  border-color: transparent rgba(0, 0, 0, 0.15) rgba(0, 0, 0, 0.15) transparent;
+
+
+}
+
+
+
+
+.right_message_bubble_container {
+
+  background-color: white;
   padding: 1.45em;
 
+
+  border-radius: inherit;
+  -moz-border-radius: inherit;
+  -webkit-border-radius: inherit;
+
   font-family: "Proxima Nova", courier, sans-serif;
-  font-weight: 400;
+  font-size: 15px;
+  font-weight: 500;
+  color:#333;
+  font-style: normal;
+  font-variant: normal;
+  /*color: rgb(33, 47, 64);*/
+
+  line-height: 1.6em;
+  font-style: normal;
+
+  text-align:left;
+  text-shadow:1px 1px 1px white;
 
   /*font-family: "museo-slab", courier, sans-serif;
   font-weight: 300;
 */
-  font-size: 15px;
-  font-style: normal;
-  font-variant: normal;
-
-  line-height: 1.45em;
-  font-style: normal;
-
-  text-align:left;
-  color:#333;
-  text-shadow:1px 1px 1px white;
-
-  margin-bottom: 40px;
+  position: relative;
 }
 
 
-/* Quoted thing */
-
-div.right_message_bubble:before
-{
-  content: ' ';
-  position: absolute;
-  width: 0;
-  height: 0;
-  left: 30px;
-  bottom: -30px;
-  border: 15px solid;
-  border-color: rgba(0, 0, 0, 0.10) transparent transparent rgba(0, 0, 0, 0.15);
-}
-
-
-div.right_message_bubble:after
-{
-  content: ' ';
-  position: absolute;
-  width: 0;
-  height: 0;
-  left: 31px;
-  bottom: -28px;
-  border: 15px solid;
-  border-color: #fff transparent transparent #fff;
-}
 
 
 

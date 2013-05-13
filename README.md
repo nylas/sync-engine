@@ -13,20 +13,24 @@ All of the todos are in [the Asana workspace](https://app.asana.com/0/4983727800
 
 2. `git clone --recursive git@github.com:grinich/inbox.git` to get the source and submodules.
 
-2. `cd` into the source and call `virtualenv --no-site-packages .`
+3. Right now getting Gmail oauth credentials is manual. Go figure it out and put them in `credentials.py`. 
+
+<!-- 4. `cd` into the source and call `./inbox install`. This will also start the server. You can later start it using `./inbox start`.
+ -->
+
+4. `cd` into the source and call `virtualenv --no-site-packages .`
    If you're on a Mac, add the `--distribute` flag.
 
-3. `source bin/activate` to start virtualenv
+5. `source bin/activate` to start virtualenv
 
-4. `pip install -r requirements.txt` to install required packages
+6. `pip install -r requirements.txt` to install required packages
 
- 5. Right now getting Gmail oauth credentials is manual. Go figure it out and put them in `credentials.py`. 
 
- 6. run `python inbox.py start`. This defaults to port 8888.
+7. run `./inbox start`. This defaults to port 8888.
 
- 7. Open your browser to [http://localhost:8888](http://localhost:8888)
+7. Open your browser to [http://localhost:8888](http://localhost:8888)
  
- 8. Now make that better
+8. Now make that better
 
 
 <hr/>
