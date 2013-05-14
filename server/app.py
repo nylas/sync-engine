@@ -92,17 +92,21 @@ class WireConnection(SocketConnection):
 
 
     @event
-    def get_inbox_threads(self, **kwargs):
+    def load_threads_for_folder(self, **kwargs):
+
+        print 'Loading folder.'
+        print 'args:', kwargs
 
         folder_name = "Inbox"
         crispin_client.select_folder("Inbox")
 
         threads = crispin_client.fetch_threads(folder_name)
 
-        self.emit('get_inbox_threads_ret', [t.toJSON() for t in threads] )
+        self.emit('load_threads_for_folder_ack', [t.toJSON() for t in threads] )
+
 
     @event
-    def get_thread(self, **kwargs):
+    def load_messages_for_thread_id(self, **kwargs):
         if not 'thread_id' in kwargs:
             log.error("Call to get_thread without thread_id")
             self.send_error(500)
@@ -112,10 +116,8 @@ class WireConnection(SocketConnection):
         crispin_client.select_allmail_folder()
 
         messages = crispin_client.fetch_messages_for_thread(thread_id)
-
-        self.emit('messages', [m.toJSON() for m in messages] )
-
-
+        log.info("Returning messages: " + str(messages));
+        self.emit('load_messages_for_thread_id_ack', [m.toJSON() for m in messages] )
 
 
     def send_message_notification(self):
@@ -155,6 +157,7 @@ def startserver(port):
 
     loop.start()
 
+
 def stopsubmodules():
     idler.stop()
     crispin_client.stop()
@@ -163,6 +166,6 @@ def stopsubmodules():
 def stopserver():
     stopsubmodules()
     # Kill IO loop next iteration
-    log.info("Stopping Tornado.")
+    log.info("Stopping tornado")
     ioloop = tornado.ioloop.IOLoop.instance()
     ioloop.add_callback(ioloop.stop)

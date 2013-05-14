@@ -38,7 +38,7 @@ app.factory('IBThread', function ($injector) {
         // self.most_recent_date.strftime('%b %d, %Y &mdash; %I:%M %p'
           return "Foo date, 2013";
 
-    };    
+    };
     
     return function(data) { 
       return $injector.instantiate(

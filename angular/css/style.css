@@ -136,27 +136,14 @@ body {
   -webkit-border-radius: 4px;
 
   margin-bottom: 40px;
-
-
-}
-
-/* New message glow */
-
-.green_glow {
-    box-shadow: 0 0 10px rgba(0, 200, 50, .8);
-  -webkit-box-shadow: 0 0 10px rgba(0, 200, 50, .8); 
-  -moz-box-shadow: 0 0 10px rgba(0, 200, 50, .8); 
-}
-.green_glow:before {
-    box-shadow: 0 0 10px rgba(0, 200, 50, .8);
-  -webkit-box-shadow: 0 0 10px rgba(0, 200, 50, .8); 
-  -moz-box-shadow: 0 0 10px rgba(0, 200, 50, .8); 
 }
 
 
+
+/* Bottom chevron */
+/*
 div.right_message_bubble:before
 {
-
   background-color: white;
   -webkit-transform: rotate(45deg);
   content: ' ';
@@ -167,8 +154,27 @@ div.right_message_bubble:before
   bottom: -16px;
   border: 1px solid;
   border-color: transparent rgba(0, 0, 0, 0.15) rgba(0, 0, 0, 0.15) transparent;
+}
+*/
 
 
+
+/* New message glow 
+
+TODO apply multiple shadows somehow with SASS
+http://stackoverflow.com/questions/7965278/box-shadow-both-inset-and-outside-on-same-div
+
+*/
+
+.green_glow {
+    box-shadow: 0 0 10px rgba(0, 200, 50, .8);
+  -webkit-box-shadow: 0 0 10px rgba(0, 200, 50, .8); 
+  -moz-box-shadow: 0 0 10px rgba(0, 200, 50, .8); 
+}
+.green_glow:before {
+    box-shadow: 0 0 10px rgba(0, 200, 50, .8);
+  -webkit-box-shadow: 0 0 10px rgba(0, 200, 50, .8); 
+  -moz-box-shadow: 0 0 10px rgba(0, 200, 50, .8); 
 }
 
 

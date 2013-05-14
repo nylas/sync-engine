@@ -7,4 +7,9 @@ angular.module('InboxApp.filters', []).
     return function(text) {
       return String(text).replace(/\%VERSION\%/mg, version);
     }
+  }]).
+  filter('sanitizeEmail', [function() {
+  return function(input) {
+    return input.replace(/<[\w-]*\.[\w-]*>/g, '').replace(/<[\w\.\$-]+[\:@].*>/g, '');
+   }
   }]);

@@ -23,7 +23,7 @@ class Idler():
         self.event_callback = event_callback
 
     def connect(self):
-        log.info('Connecting idler to %s', self.folder)
+        log.info('Starting idler (%s)', self.folder)
         try:
             self.imap = IMAP4_SSL(auth.IMAP_HOST) # can be changed to another server if needed
 
@@ -46,7 +46,6 @@ class Idler():
     def idle(self):
 
         def goidle():
-            log.info("Idling...")
             self.imap.idle(timeout=60*ServerTimeout, callback=_IDLECallback)
 
         def _IDLECallback(args):
@@ -60,11 +59,11 @@ class Idler():
         self.ioloop.add_callback(goidle)
 
     def stop(self):
-        log.info("Stopping idler.")
+        log.info("Stopping idler")
         if self.imap:
             try:
                 self.ioloop.add_callback(self.imap.logout)
             except Exception, e:
-                self.imap.logout
+                self.imap.logout()
 
 

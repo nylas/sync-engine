@@ -9,17 +9,28 @@ var app = angular.module('InboxApp.services', []);
    TODO wrap the rest of the socket.io system
 */
 app.factory('socket', function ($rootScope) {
-	var socket = io.connect('/', {resource: 'wire'});
+	var socket = io.connect('/', 
+	  { resource: 'wire' ,
+	   'reconnect': true,
+	   'reconnection delay' : 300,  // defaults to 500, maybe set to 100
+	   'reconnection limit' : 100,  // defaults to Infinity
+		'max reconnection attempts': Infinity  // defaults to 10
+	  });
+
 	return {
 		on: function (eventName, callback) {
 			socket.on(eventName, function () {  
 				var args = arguments;
+				console.log("[socket <-] "+eventName);
+				// console.dir(args)
 				$rootScope.$apply(function () {
 					callback.apply(socket, args);
 				});
 			});
 		},
 		emit: function (eventName, data, callback) {
+			console.log("[socket ->] "+eventName);
+			// console.dir(data);
 			socket.emit(eventName, data, function () {
 				var args = arguments;
 				$rootScope.$apply(function () {
@@ -33,7 +44,9 @@ app.factory('socket', function ($rootScope) {
 });
 
 
-// For desktop-style notifications
+/* Socket.io service
+   Notification API servie
+*/
 app.factory('growl', function ($rootScope) {
  return {
 		supported: function() {
@@ -106,6 +119,9 @@ app.factory('growl', function ($rootScope) {
 
 	}
 });
+
+
+
 
 
 

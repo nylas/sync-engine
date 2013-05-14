@@ -42,10 +42,17 @@ app.directive("messageview", function() {
     restrict: 'E,A',
 	controller: ['$scope', '$element', '$attrs', '$transclude', 
 		function($scope, $element, $attrs, $transclude) { 
-			$scope.firstNames = function(contacts) {
-				var to_list = contacts[0].name;
+			$scope.contactDisplayName = function(contacts) {
+				var pickname = function(c) {
+					if (angular.isUndefined(c.name) || c.name.length == 0) {
+						return c.address;
+					} else {
+						return c.name;
+					}
+				}
+				var to_list = pickname(contacts[0]);
 				for (var i = 1; i< contacts.length; i++) {
-					to_list = to_list + ', ' + contacts[i].name;
+					to_list = to_list + ', ' + pickname(contacts[i]);
 				}
 				return to_list;
 			}
@@ -53,10 +60,10 @@ app.directive("messageview", function() {
 
     template: 	'<div class="right_message_bubble green_glow">' +
     			'<div class="right_message_bubble_container">' +
-	    		  	'<div class="to_contacts">To: {{ firstNames(message.to_contacts) }}</div>' +
-	    		  	'<div class="from_contacts">From: {{ firstNames(message.from_contacts) }}</div>' +
-	    		  	'<div class="subject">Subject: {{message.subject}}</div>' +
-	    		  	'<div class="body_html" ng-bind-html="message.body_text"></div>' + 
+	    		  	'<div class="to_contacts"><strong>To:</strong> {{ contactDisplayName(message.to_contacts) }}</div>' +
+	    		  	'<div class="from_contacts"><strong>From:</strong> {{ contactDisplayName(message.from_contacts) }}</div>' +
+	    		  	'<div class="subject"><strong>Subject:</strong> {{message.subject}}</div>' +
+	    		  	'<br/><div class="body_html" ng-bind-html="message.body_text | sanitizeEmail"></div>' + 
 					// '<div ng-bind-html="{message.body_text}""></div>' +
 				'</div>' +
 				'</div>',

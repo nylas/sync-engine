@@ -78,14 +78,14 @@ class CrispinClient:
         return True
 
     def stop(self):
-        log.info("Stopping crispin.")
+        log.info("Stopping crispin")
         if (self.imap_server):
             loop = tornado.ioloop.IOLoop.instance()
             # For autoreload
             try:
                 loop.add_callback(self.imap_server.logout)
             except Exception, e:
-                self.imap_server.logout
+                self.imap_server.logout()
 
     @connected
     def list_folders(self):

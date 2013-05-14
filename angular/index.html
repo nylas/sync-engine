@@ -37,14 +37,14 @@
 
 	<div class="top_banner" data-ng-controller="AppContainerController">
 
-		<a href="" class="button" data-ng-click="notificationButtonClick()">Activate notifications</a>
+	<a href="" class="button" data-ng-click="notificationButtonClick()">Activate notifications</a>
 
-	<div class="container_left" ngCloak data-ng-controller="InboxController">
+	<div class="container_left" ngCloak data-ng-controller="FolderController">
 
 	<div class="shadowed_wrapper">
 		<div class="mailbox_name">Inbox</div>
 
-		<a href="" class="button">Do something!</a>
+		<a class="button" ng-click="loadThreadsForFolder('Inbox')">Load threads</a>
 
 		<div class="basic_pane shadowed">
 
@@ -61,40 +61,18 @@
 	</div>
 	</div>
 
-	<div class="container_right" data-ng-controller="ThreadController">
+
+	<div class="container_right" data-ng-controller="MessagesController">
 		<div class="right_pane">
 			<div class="right_subject_box">
 				Subject goes here for lorem ipsum 
 				<!-- Subject -->
 			</div>
 
-
-			<div class="right_message_bubble green_glow">
-				<div class="right_message_bubble_container">
-				Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
-				tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
-				quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
-				consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
-				cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
-				proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-			</div>
-			</div>
-
-			<messageview data-ng-repeat="message in right_side_messages" />
-
-
-
-
-
+			<messageview data-ng-repeat="message in messages" />
 
 
 				<div class="basic_pane reply_box" contenteditable="true" hidefocus="true">Reply text here...
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
-tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
-quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
-consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
-cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
-proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 				</div>
 
 		</div>
