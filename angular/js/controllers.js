@@ -62,9 +62,10 @@ function FolderController($scope, socket, IBThread)
 		$scope.threads = freshThreads;
 
 
-		for (var i = 0; i < freshThreads.length; i++) {
-				socket.emit('load_messages_for_thread_id', {thread_id: freshThreads[i].thread_id});
-		}
+		// hoooo mygod
+		// for (var i = 0; i < freshThreads.length; i++) {
+		// 		socket.emit('load_messages_for_thread_id', {thread_id: freshThreads[i].thread_id});
+		// }
 
 	});
 

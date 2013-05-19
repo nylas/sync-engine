@@ -56,6 +56,17 @@ body {
 }
 
 
+
+::selection {
+  background: rgba(240,17,68,0.8);
+  color: #fff;
+  }
+::-moz-selection {
+  background: rgba(240,17,68,0.8);
+  color: #fff;
+}
+
+
 .wrapper
 {
   width: 940px; /*Width of main container*/
@@ -160,10 +171,8 @@ div.right_message_bubble:before
 
 
 /* New message glow 
-
 TODO apply multiple shadows somehow with SASS
 http://stackoverflow.com/questions/7965278/box-shadow-both-inset-and-outside-on-same-div
-
 */
 
 .green_glow {
@@ -180,35 +189,26 @@ http://stackoverflow.com/questions/7965278/box-shadow-both-inset-and-outside-on-
 
 
 
-.right_message_bubble_container {
-
+.right_message_bubble_container 
+{
   background-color: white;
   padding: 1.45em;
-
-
   border-radius: inherit;
   -moz-border-radius: inherit;
   -webkit-border-radius: inherit;
-
   font-family: "Proxima Nova", courier, sans-serif;
   font-size: 15px;
   font-weight: 500;
   color:#333;
   font-style: normal;
   font-variant: normal;
-  /*color: rgb(33, 47, 64);*/
-
   line-height: 1.6em;
   font-style: normal;
-
   text-align:left;
   text-shadow:1px 1px 1px white;
-
-  /*font-family: "museo-slab", courier, sans-serif;
-  font-weight: 300;
-*/
   position: relative;
 }
+
 
 
 
@@ -219,8 +219,6 @@ http://stackoverflow.com/questions/7965278/box-shadow-both-inset-and-outside-on-
 
   margin-top: 20px;
   padding: 1.45em;
-
-
   font-size: 15px;
   font-style: normal;
   font-variant: normal;

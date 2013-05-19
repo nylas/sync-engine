@@ -14,7 +14,18 @@ app.factory('socket', function ($rootScope) {
 	   'reconnect': true,
 	   'reconnection delay' : 300,  // defaults to 500, maybe set to 100
 	   'reconnection limit' : 100,  // defaults to Infinity
-		'max reconnection attempts': Infinity  // defaults to 10
+		'max reconnection attempts': Infinity,  // defaults to 10
+		'close timeout' : 90,
+
+/*
+            'connect timeout': 500,
+            'reconnect': true,
+            'reconnection delay': 500,
+            'reopen delay': 500,
+            'max reconnection attempts': 10
+*/
+
+
 	  });
 
 	return {

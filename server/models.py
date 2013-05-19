@@ -1,6 +1,9 @@
 import logging as log
-
 import json
+import email.utils as email_utils
+from email.header import decode_header
+import time
+import datetime
 
 
 class IBContact():
@@ -26,8 +29,11 @@ class IBThread():
         self.labels = []
 
     def __repr__(self):
-        return '<IBThread object> thr_id: %s, msg_id: %s' \
-               % (self.thread_id, self.msg_id)
+        return '<IBThread object> ' +\
+                '    thr_id: ' + str(self.thread_id) + \
+                '    message_ids: ' + str(self.message_ids) + \
+                '    labels: ' + str(self.labels)
+                
 
     def toJSON(self):
         return dict( message_ids = [str(s) for s in self.message_ids],
@@ -37,7 +43,7 @@ class IBThread():
 
 
 class IBMessage():
-    def __init__(self):
+    def __init__(self, email_message_object = None):
         self.message_id = "foo message id"
         self.thread_id = None
         self.size = None
@@ -49,6 +55,70 @@ class IBMessage():
 
         self.date = None
         self.body_text = None
+        self.labels = []
+
+        # Kickstart it using the headers from this object
+        if (email_message_object):
+
+            def make_uni(txt, default_encoding="ascii"):
+                try:
+                    return u"".join([unicode(text, charset or default_encoding, 'strict')
+                            for text, charset in decode_header(txt)])
+                except Exception, e:
+                    log.error("Problem converting string to unicode: %s" % txt)
+                    return u"".join([unicode(text, charset or default_encoding, 'replace')
+                            for text, charset in decode_header(txt)])
+
+            def parse_contact(headers):
+                # Works with both strings and lists
+                try: headers += []
+                except: headers = [headers]
+
+                # combine and flatten header values
+                addrs = reduce(lambda x,y: x+y, [email_message_object.get_all(a, []) for a in headers])
+
+                if len(addrs) > 0:
+                    return [ dict(name = make_uni(t[0]),
+                                address=make_uni(t[1]))
+                            for t in email_utils.getaddresses(addrs)]
+                else:
+                    return [ dict(name = "undisclosed recipients", address = "") ]
+
+            self.to_contacts = parse_contact(['to', 'cc'])
+            self.from_contacts = parse_contact(['from'])
+
+            self.message_id = email_message_object['X-GM-MSGID']
+            self.thread_id = email_message_object['X-GM-THRID']
+
+            subject = make_uni(email_message_object['subject'])
+            # Need to trim the subject.
+            # Headers will wrap when longer than 78 lines per RFC822_2
+            subject = subject.replace('\n\t', '').replace('\r\n', '')
+            self.subject = subject
+
+            # TODO remove the subject headings here like RE: FWD: etc.
+            #     # Remove "RE" or whatever
+            #     if subject[:4] == u'RE: ' or subject[:4] == u'Re: ' :
+            #         subject = subject[4:]
+            #     return subject
+
+
+            # TODO: Gmail's timezone is usually UTC-07:00
+            # see here. We need to figure out how to deal with timezones.
+            # http://stackoverflow.com/questions/11218727/what-timezone-does-gmail-use-for-internal-imap-mailstore
+            # TODO: Also, we should reallly be using INTERNALDATE instead of ENVELOPE data
+            date_tuple_with_tz = email_utils.parsedate_tz(email_message_object["Date"])
+            utc_timestamp = email_utils.mktime_tz(date_tuple_with_tz)
+            time_epoch = time.mktime( date_tuple_with_tz[:9] )
+            self.date = datetime.datetime.fromtimestamp(utc_timestamp)
+
+
+
+    def __repr__(self):
+        return '<IBMEssage object> ' + \
+                '\n    msg_id: ' + str(self.message_id) +\
+                '\n    thr_id: ' + str(self.thread_id) +\
+                '\n    subj: ' + str(self.subject)
 
 
     def gmail_url(self):
@@ -135,30 +205,53 @@ class IBMessagePart(object):
         # for images
         self.filename = ''
 
-        # instantiate
-        self.index = str(index)
-        self.content_type_major = p[0]
-        self.content_type_minor = p[1]
-
-        if self.content_type_major.lower() == 'text':
-            assert p[2][0].lower() == 'charset'
-            assert len(p) == 8  # TOFIX ?
-            self.charset = p[2][1]
-            self.encoding = p[5]
-            self.bytes = p[6]
-            self.line_count = p[7]
-
-        elif self.content_type_major.lower() == 'image':
-            assert p[2][0].lower() == 'name'
-            assert len(p) == 7  # TOFIX ?
-            self.filename = p[2][1]
-            self.encoding = p[5]
-            self.bytes = p[6]
+        if len(p) == 0:
+            return
+        elif len(p) == 1:
+            self.content_type_major = 'multipart'
+            self.content_type_minor = p[0]
+        elif len(p) == 2:
+            self.content_type_major = p[0]
+            self.content_type_minor = p[1]
         else:
-            # Other random body section types here:
-            # ('APPLICATION', 'PKCS7-SIGNATURE', ('NAME', 'smime.p7s'), None, None, 'BASE64', 2176)
 
-            log.error('No idea what to do with this BODYSTRUCTURE: %s', p)
+            try:
+
+                # instantiate
+                self.index = str(index)
+                self.content_type_major = p[0]
+                self.content_type_minor = p[1]
+
+                if self.content_type_major.lower() == 'text':
+                    assert len(p) == 8  # TOFIX ?
+                    if p[2]:  # charset
+                        try:
+                            assert p[2][0].lower() == 'charset'
+                            self.charset = p[2][1]
+                        except Exception, e:
+                            # raise e
+                            print 'What is here instead?', p[2]
+
+                    self.encoding = p[5]
+                    self.bytes = p[6]
+                    self.line_count = p[7]
+
+                elif self.content_type_major.lower() == 'image':
+                    assert p[2][0].lower() == 'name'
+                    assert len(p) == 7  # TOFIX ?
+                    self.filename = p[2][1]
+                    self.encoding = p[5]
+                    self.bytes = p[6]
+                else:
+                    # Other random body section types here:
+                    # ('APPLICATION', 'PKCS7-SIGNATURE', ('NAME', 'smime.p7s'), None, None, 'BASE64', 2176)
+
+                    log.error('No idea what to do with this BODYSTRUCTURE: %s', p)
+
+            except Exception, e:
+                print 'Goddammit bug', e, p
+                pass
+
 
     @property
     def isImage(self):

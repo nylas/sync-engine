@@ -25,6 +25,7 @@ All of the todos are in [the Asana workspace](https://app.asana.com/0/4983727800
 
 6. `pip install -r requirements.txt` to install required packages
 
+Also need to install libevent and then gevent.
 
 7. run `./inbox start`. This defaults to port 8888.
 

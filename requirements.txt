@@ -6,7 +6,8 @@ oauth2==1.5.211
 pytest==2.3.4
 tornado==3.0.1
 wsgiref==0.1.2
--e packages/imapclient
-#-e packages/imaplib
--e packages/imaplib2
 tornadio2==0.0.3
+
+# Our own versions of these
+-e packages/imapclient
+# -e packages/imaplib2

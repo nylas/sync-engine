@@ -47,9 +47,8 @@ def start(args=None):
         # os.system("stty -echo")
         startserver(port)
     except Exception, e:
-        stop(None)
         raise e
-    
+        stop(None)
   
 def stop(args):
     print """

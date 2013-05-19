@@ -5,9 +5,6 @@
 
 {% for t in threads %}
  <div class="message_line">
- 	<a href="/thread?thread_id={{t.thread_id}}">
- 		{{ t.subject }}
- 	</a>&nbsp;&nbsp;<strong>({{len(t.message_count) }})<strong>
  </div>
 {% end %}
 

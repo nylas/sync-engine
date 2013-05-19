@@ -6,11 +6,9 @@ from imapclient import IMAPClient
 import sys
 sys.path.insert(0, "..")
 
-import email.utils as email_utils
 from email.Parser import Parser
-from email.header import decode_header
+from email import message_from_string
 from email.Iterators import typed_subpart_iterator
-import time
 import datetime
 import logging as log
 import tornado
@@ -18,6 +16,10 @@ import tornado
 import auth
 
 from models import IBMessage, IBThread, IBMessagePart
+
+from datastore import DataStore
+
+from imaplib2 import Internaldate2Time
 
 
 class CrispinClient:
@@ -28,6 +30,7 @@ class CrispinClient:
         self.imap_server = None
         # last time the server checked in, in UTC
         self.keepalive = None
+        self.datastore = DataStore()
 
     def server_needs_refresh(self):
         """ Many IMAP servers have a default minimum "no activity" timeout
@@ -65,14 +68,19 @@ class CrispinClient:
         try:
             self.imap_server = IMAPClient(auth.IMAP_HOST, use_uid=True,
                     ssl=auth.SSL)
+            # self.imap_server.debug = 4  # todo
             self.imap_server.oauth_login(auth.BASE_GMAIL_IMAP_URL,
                         auth.OAUTH_TOKEN,
                         auth.OAUTH_TOKEN_SECRET,
                         auth.CONSUMER_KEY,
                         auth.CONSUMER_SECRET)
-        except Exception, e:
-            log.error("IMAP connection error: %s", e)
+        except Exception as e:
+            if str(e) == '[ALERT] Too many simultaneous connections. (Failure)':
+                log.error("Too many open IMAP connection.")
+            # raise e
             return False
+
+
 
         log.info('Connection successful.')
         return True
@@ -131,14 +139,17 @@ class CrispinClient:
         #     print "   ", f['name']
         pass
 
-    @connected
-    def message_count(self, folder):
-        select_info = self.imap_server.select_folder(folder, readonly=True)
-        return int(select_info['EXISTS'])
+
 
     @connected
     def select_folder(self, folder):
-        select_info = self.imap_server.select_folder(folder, readonly=True)
+        try:
+            select_info = self.imap_server.select_folder(folder, readonly=True)
+        except Exception, e:
+            log.error("<select_folder> %s" % e)
+            # raise e
+            return None
+            
         # Format of select_info
         # {'EXISTS': 3597, 'PERMANENTFLAGS': (),
         # 'UIDNEXT': 3719,
@@ -147,88 +158,38 @@ class CrispinClient:
         log.info('Selected folder %s with %d messages.' % (folder, select_info['EXISTS']) )
         return select_info
 
+
     def select_allmail_folder(self):
         return self.select_folder(self.all_mail_folder_name())
 
-    @connected
-    # TODO this shit is broken
-    def create_draft(self, message_string):
-        log.info('Adding test draft..')
-        self.imap_server.append("[Gmail]/Drafts",
-                    str(email.message_from_string(message_string)))
-        log.info("Done creating test draft.")
+
 
     @connected
-    def latest_message_uid(self):
-        messages = self.imap_server.search(['NOT DELETED'])
-        return messages[-1]
+    def fetch_msg(self, msg_uid):
+        msg_uid = long(msg_uid)  # sometimes comes as string
 
-    @connected
-    def fetch_latest_message(self):
-        latest_email_uid = self.latest_message_uid();
+        # m = self.datastore.message(msg_uid)
+        # if (m): return m
+
+        log.info("Fetching message. UID: %i" % msg_uid)
         response = self.imap_server.fetch(
-                latest_email_uid, ['RFC822', 'X-GM-THRID', 'X-GM-MSGID'])
-        return response[latest_email_uid]['RFC822']
+                str(msg_uid), ['RFC822', 'X-GM-THRID', 'X-GM-MSGID'])
 
-    def parse_main_headers(self, msg):
-        new_msg = IBMessage()
+        if len(response.keys()) == 0:
+            log.error("No response for msg query. msg_id = %s", msg_uid)
+            return None
 
-        def make_uni(txt, default_encoding="ascii"):
-            try:
-                return u"".join([unicode(text, charset or default_encoding, 'strict')
-                        for text, charset in decode_header(txt)])
-            except Exception, e:
-                log.error("Problem converting string to unicode: %s" % txt)
-                return u"".join([unicode(text, charset or default_encoding, 'replace')
-                        for text, charset in decode_header(txt)])
+        raw_response = response[msg_uid]['RFC822']
+        log.info("Received response. Size: %i" % len(raw_response))
 
-        def parse_contact(headers):
-            # Works with both strings and lists
-            try: headers += []
-            except: headers = [headers]
+        msg = Parser().parsestr(raw_response)
 
-            # combine and flatten header values
-            addrs = reduce(lambda x,y: x+y, [msg.get_all(a, []) for a in headers])
+        # headers
 
-            if len(addrs) > 0:
-                return [ dict(name = make_uni(t[0]),
-                            address=make_uni(t[1]))
-                        for t in email_utils.getaddresses(addrs)]
-            else:
-                return [ dict(name = "undisclosed recipients", address = "") ]
-
-        new_msg.to_contacts = parse_contact(['to', 'cc'])
-        new_msg.from_contacts = parse_contact(['from'])
-
-        new_msg.message_id = msg['X-GM-MSGID']
-        new_msg.thread_id = msg['X-GM-THRID']
+        new_msg = IBMessage(msg)
 
 
-        subject = make_uni(msg['subject'])
-        # Need to trim the subject.
-        # Headers will wrap when longer than 78 lines per RFC822_2
-        subject = subject.replace('\n\t', '').replace('\r\n', '')
-        new_msg.subject = subject
-
-        # TODO remove the subject headings here like RE: FWD: etc.
-        #     # Remove "RE" or whatever
-        #     if subject[:4] == u'RE: ' or subject[:4] == u'Re: ' :
-        #         subject = subject[4:]
-        #     return subject
-
-
-        # TODO: Gmail's timezone is usually UTC-07:00
-        # see here. We need to figure out how to deal with timezones.
-        # http://stackoverflow.com/questions/11218727/what-timezone-does-gmail-use-for-internal-imap-mailstore
-        # TODO: Also, we should reallly be using INTERNALDATE instead of ENVELOPE data
-        date_tuple_with_tz = email_utils.parsedate_tz(msg["Date"])
-        utc_timestamp = email_utils.mktime_tz(date_tuple_with_tz)
-        time_epoch = time.mktime( date_tuple_with_tz[:9] )
-        new_msg.date = datetime.datetime.fromtimestamp(utc_timestamp)
-        
-        return new_msg
-
-    def parse_body(self, msg, new_msg = IBMessage()):
+        # Parse the body here
         msg_text = ""
         content_type = None
 
@@ -262,38 +223,16 @@ class CrispinClient:
 
         # TODO Run trim_quoted_text here for the message
 
-
         if content_type == 'text/plain':
             pass
             # TODO here convert plain text to HTML text somehow...
 
         # TODO here run fix_links which converts links to HTML I think...
         new_msg.body_text = msg_text
-        return new_msg
 
-    @connected
-    def fetch_msg(self, msg_uid):
-        msg_uid = long(msg_uid)
 
-        log.info("Fetching message. UID: %i" % msg_uid)
+        m = self.datastore.addMessage(new_msg)
 
-        response = self.imap_server.fetch(
-                str(msg_uid), ['RFC822', 'X-GM-THRID', 'X-GM-MSGID'])
-
-        if len(response.keys()) == 0:
-            log.error("No response for msg query. msg_id = %s", msg_uid)
-            return None
-
-        raw_response = response[msg_uid]['RFC822']
-        log.info("Received response. Size: %i" % len(raw_response))
-
-        msg = Parser().parsestr(raw_response)
-
-        # headers
-        new_msg = self.parse_main_headers(msg)  # returns IBMessage()
-
-        # body
-        new_msg = self.parse_body(msg, new_msg)
         return new_msg
 
     @connected
@@ -318,12 +257,14 @@ class CrispinClient:
         return msgs
 
 
-
     @connected
     def fetch_threads(self, folder_name):
 
         # Get messages in requested folder
-        msgs = self.fetch_headers(folder_name)
+        select_info = self.select_folder(folder_name)
+        UIDs = self.fetch_all_udids()
+
+        msgs = self.fetch_headers_for_uids(folder_name, UIDs)
 
         threads = {}
         # Group by thread id
@@ -337,7 +278,16 @@ class CrispinClient:
         threads = threads.values()
 
         log.info("For %i messages, found %i threads total." % (len(msgs), len(threads)))
+
+
+        # TODO remove this
+        # return threads
+
+
+
+        # Below is where we expand the threads and fetch the rest of them
         self.select_allmail_folder() # going to fetch all messages in threads
+
 
         thread_ids = [t.thread_id for t in threads]
 
@@ -352,7 +302,7 @@ class CrispinClient:
         log.info("Expanded to %i messages for %i thread IDs." % (len(all_msg_uids), len(thread_ids)))
 
         all_msgs = self.fetch_headers_for_uids(self.all_mail_folder_name(), all_msg_uids)
-        
+
 
         threads = {}
         # Group by thread id
@@ -370,41 +320,152 @@ class CrispinClient:
         return all_threads
 
 
-    @connected
-    def fetch_headers(self, folder_name):
-        select_info = self.select_folder(folder_name)
-        UIDs = self.fetch_all_udids()
-        return self.fetch_headers_for_uids(folder_name, UIDs)
-
 
     @connected
     def fetch_headers_for_uids(self, folder_name, UIDs):
+        if isinstance(UIDs, int ):
+            UIDs = [str(UIDs)]
+        elif isinstance(UIDs, basestring):
+            UIDs = [UIDs]
 
         # TODO: keep track of current folder so we don't select twice
+
+        # print 'Lets do all mail instead'
+        # folder_name = self.all_mail_folder_name()
+        # print 'Select it'
+        # folder_name = 'Awesome'
+
         select_info = self.select_folder(folder_name)
+        # UIDs = self.fetch_all_udids()
+
+    #     to_grab = 200
+    #     i = 0
+
+    #     print 'doit now'
+    #     fetched_messages = []
+    #     while i+to_grab < len(UIDs):
+    #         search_this = UIDs[i:i+to_grab]
+    #         f = self.fetch_headers_block(search_this)
+    #         fetched_messages += f
+    #         print 'fetched %s' % len(search_this)
+    #         i+= to_grab
+
+    #     return fetched_messages
+
+
+
+
+    # def fetch_headers_block(self, UIDs):
+
+        query = 'ENVELOPE BODY INTERNALDATE'
+
+        log.info("Fetching message headers. Query: %s" % query)
+        messages = self.imap_server.fetch(UIDs, [query, 'X-GM-THRID', 'X-GM-MSGID', 'X-GM-LABELS'])
+        log.info("Found %i messages." % len(messages.values()))
+
+        new_messages = []
+        new_bodystructures = []
+
+
+        for message_uid, message_dict in messages.iteritems():
+            
+            # print 'ENVELOPE', message_dict['ENVELOPE']
+            # print 'BODY', message_dict['BODY']
+            # print
+
+            # unparsed_headers = message_dict[query_key]
+            # email_msg_object = message_from_string(unparsed_headers)
+            # new_msg = IBMessage(email_msg_object)
+
+            new_msg = IBMessage()
+
+            new_msg.date = message_dict['INTERNALDATE']
+            new_msg.thread_id = message_dict['X-GM-THRID']
+            new_msg.message_id = message_dict['X-GM-MSGID']
+            new_msg.labels = message_dict['X-GM-LABELS']
+
+
+            bodystructure = message_dict['BODY']
+
+
+            if bodystructure.is_multipart:
+
+                assert len(bodystructure) <= 2
+                # TODO look into the multipart grouping p[-1]. these fall under:
+                # MIXED
+                # ALTERNATIVE
+                # RELATED
+                # SIGNED
+
+                parts = bodystructure[0]
+
+                for i, part in enumerate(parts):
+                    # Sometimes one of the body parts is actually something
+                    # weird like Content-Type: multipart/alternative, so you
+                    # have to loop though them individually. I think
+                    # email.parser takes care of this when you fetch the actual
+                    # body content, but I have to do it here for the
+                    # BODYSTRUCTURE response.
+
+                    # recurisve creator since these might be nested
+                    # pass the index so we can append subindicies
+                    # Note: this shit might break but it works for now...
+                    def make_obj(p, i):
+                        if not isinstance(p[0], basestring):
+                            for x in range(len(p) - 1): # The last one is the label
+                                if len(i) > 0: index = i+'.'+ str(x+1)
+                                else: index = str(x+1)
+                                make_obj(p[x], index)
+                        else:
+                            if len(i) > 0: index = i+'.1'
+                            else: index = '1'
+                            new_bodystructures.append(IBMessagePart(p,i))
+                    make_obj(part, str(i+1))
+
+            else:
+                new_bodystructures.append(IBMessagePart(bodystructure, '1'))
+
+
+
+
+
+
+
+            new_messages.append(new_msg)
+
+        log.info("Fetched headers for %i messages" % len(new_messages))
+        
+        return new_messages
+
+
+
+######################
+
 
         query = 'BODY.PEEK[HEADER.FIELDS (TO CC FROM DATE SUBJECT)]'
         query_key = 'BODY[HEADER.FIELDS (TO CC FROM DATE SUBJECT)]'
 
         log.info("Fetching message headers. Query: %s" % query)
-        messages = self.imap_server.fetch(UIDs, [query, 'X-GM-THRID', 'X-GM-MSGID'])
+        messages = self.imap_server.fetch(UIDs, [query, 'X-GM-THRID', 'X-GM-MSGID', 'X-GM-LABELS'])
         log.info("Found %i messages." % len(messages.values()))
 
-        parser = Parser()
         new_messages = []
-        for message_dict in messages.values():
-            raw_header = message_dict[query_key]
-            msg = parser.parsestr(raw_header)
 
-            # headers
-            new_msg = self.parse_main_headers(msg)  # returns Message()
+        for message_uid, message_dict in messages.iteritems():
+            unparsed_headers = message_dict[query_key]
+            email_msg_object = message_from_string(unparsed_headers)
+
+            new_msg = IBMessage(email_msg_object)
             new_msg.thread_id = message_dict['X-GM-THRID']
             new_msg.message_id = message_dict['X-GM-MSGID']
+            new_msg.labels = message_dict['X-GM-LABELS']
 
             new_messages.append(new_msg)
-            new_msg = None
+
         log.info("Fetched headers for %i messages" % len(new_messages))
         return new_messages
+
+
 
 
     @connected
@@ -454,10 +515,11 @@ class CrispinClient:
                         else:
                             if len(i) > 0: index = i+'.1'
                             else: index = '1'
-                            bodystructure_parts.append(IBMessageBodyPart(p,i))
+                            bodystructure_parts.append(IBMessagePart(p,i))
                     make_obj(part, str(i+1))
 
             else:
                 bodystructure_parts.append(IBMessagePart(bodystructure, '1'))
 
         return bodystructure_parts
+
