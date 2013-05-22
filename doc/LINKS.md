@@ -24,6 +24,11 @@ I got sick of putting these in Asana.
 
 # about Python
 
+# maybe write it in go?
+
+https://code.google.com/p/go-imap/
+
+https://github.com/martine/go-imap
 
 
 # about Angular.js

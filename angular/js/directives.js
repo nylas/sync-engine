@@ -40,33 +40,48 @@ app.directive("messageview", function() {
 
 	var directiveDefinitionObject = {
     restrict: 'E,A',
+    transclude: true,
+
+    scope: { message: '=' }, // Two-way binding to message object
+
 	controller: ['$scope', '$element', '$attrs', '$transclude', 
 		function($scope, $element, $attrs, $transclude) { 
 			$scope.contactDisplayName = function(contacts) {
-				var pickname = function(c) {
-					if (angular.isUndefined(c.name) || c.name.length == 0) {
-						return c.address;
-					} else {
-						return c.name;
-					}
+
+				if (angular.isUndefined(contacts)) { 
+					return "";
 				}
+
 				var to_list = pickname(contacts[0]);
 				for (var i = 1; i< contacts.length; i++) {
-					to_list = to_list + ', ' + pickname(contacts[i]);
+
+					var c = contacts[i];
+					var nameToShow;
+					if (angular.isUndefined(c.name) || c.name.length == 0) {
+						nameToShow = c.address;
+					} else {
+						nameToShow = c.name;
+					}
+					to_list = to_list + ', ' + nameToShow;
 				}
 				return to_list;
 			}
 		}],
-
     template: 	'<div class="right_message_bubble green_glow">' +
     			'<div class="right_message_bubble_container">' +
-	    		  	'<div class="to_contacts"><strong>To:</strong> {{ contactDisplayName(message.to_contacts) }}</div>' +
-	    		  	'<div class="from_contacts"><strong>From:</strong> {{ contactDisplayName(message.from_contacts) }}</div>' +
+	    		  	'<div class="to_contacts"><strong>To:</strong> {{ message.to_contacts }}</div>' +
+	    		  	'<div class="from_contacts"><strong>From:</strong> {{ message.from_contacts }}</div>' +
 	    		  	'<div class="subject"><strong>Subject:</strong> {{message.subject}}</div>' +
-	    		  	'<br/><div class="body_html" ng-bind-html="message.body_text | sanitizeEmail"></div>' + 
+	    		  	'<br/><div class="body_html" ng-bind-html="message.body_text"></div>' + 
 					// '<div ng-bind-html="{message.body_text}""></div>' +
+					// in future use body text  | sanitizeEmail
 				'</div>' +
 				'</div>',
+  //   link: function(scope, element, attrs) {
+		// scope.$watch('message', function(message) {
+		//    console.log(scope.message, message);
+		// })
+		// }
   //   link: function(scope, element, attrs){
 	 //    	scope.contactList = function contactList() {
 		// 	}

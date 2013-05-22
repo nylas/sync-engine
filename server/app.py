@@ -45,7 +45,7 @@ class Application(tornado.web.Application):
         PingRouter = TornadioRouter(WireConnection, namespace='wire')
         
         handlers = PingRouter.apply_routes([
-            (r'/app/(.*)', tornado.web.StaticFileHandler, {'path': PATH_TO_ANGULAR, 
+            (r'/app/(.*)', NoCacheStaticFileHandler, {'path': PATH_TO_ANGULAR, 
                                            'default_filename':'index.html'}),
             (r'/app', AppRedirectHandler),
             # /wire is the route for messages.
@@ -62,6 +62,9 @@ class BaseHandler(tornado.web.RequestHandler):
     # TODO put authentication stuff here
     pass
 
+class NoCacheStaticFileHandler(tornado.web.StaticFileHandler):
+    def set_extra_headers(self, path):
+        self.set_header("Cache-control", "no-cache")
 
 class AppRedirectHandler(BaseHandler):
     # TODO put authentication stuff here
@@ -69,19 +72,20 @@ class AppRedirectHandler(BaseHandler):
         self.redirect('/app/')
 
 
+# Global, ugh.
+def dontblock(fn_to_call, *args, **kwargs):
+    callback = kwargs.pop('callback', None)
 
-# if __name__ == "__main__":
-#     tornado.options.parse_command_line()
-#     application = Application()
-#     application.listen(8888)
-#     tornado.ioloop.IOLoop.instance().start()
-
-
+    EXECUTOR.submit(
+        partial(fn_to_call, *args, **kwargs)
+    ).add_done_callback(
+        lambda future: tornado.ioloop.IOLoop.instance().add_callback(
+            partial(callback, future)))
 
 
 class WireConnection(SocketConnection):
-    """ 
-    This is the basic mechanism we use to send messages 
+    """
+    This is the basic mechanism we use to send messages
     to the client over websockets.
     """
 
@@ -97,6 +101,7 @@ class WireConnection(SocketConnection):
         log.info("Client connected.")
         self.clients.add(self)
 
+
     def on_close(self):
         log.info("Client disconnected")
         self.clients.remove(self)
@@ -104,7 +109,6 @@ class WireConnection(SocketConnection):
 
     def on_message(self, message):
         console.log("Socket msg: %s", message)
-
 
 
     @tornado.gen.engine
@@ -117,51 +121,28 @@ class WireConnection(SocketConnection):
         return super(WireConnection, self).on_event(name, *args, **kwargs)
 
 
+    @event
+    def load_messages_for_folder(self, **kwargs):
+
+        # Must say dontblock, then function name, then args
+        # future = yield tornado.gen.Task(dontblock, self.expensive_load_threads, 'Inbox')
+        # threads = future.result()
+
+        messages = self.expensive_load_threads('Inbox')
+        print messages
+        self.emit('load_messages_for_folder_ack', [m.toJSON() for m in messages] )
 
 
     def expensive_load_threads(self, folder_name):
         folder_name = "Inbox"
-        # TODO don't create new client
-        newclient = CrispinClient()
-        newclient.select_folder("Inbox")
-        threads = newclient.fetch_threads(folder_name)
-        return threads
-
-
-
-    @event
-    def load_threads_for_folder(self, **kwargs):
-
-        print 'Loading folder.'
-        print 'args:', kwargs
-
-
-        def dontblock(fn_to_call, *args, **kwargs):
-            callback = kwargs.pop('callback', None)
-
-            EXECUTOR.submit(
-                partial(fn_to_call, *args, **kwargs)
-            ).add_done_callback(
-                lambda future: tornado.ioloop.IOLoop.instance().add_callback(
-                    partial(callback, future)))
-     
-
-        # Must say dontblock, then function name, then args
-        future = yield tornado.gen.Task(dontblock, self.expensive_load_threads, 'Inbox')
-
-        threads = future.result()
- 
-        self.emit('load_threads_for_folder_ack', [t.toJSON() for t in threads] )
-
-        # self.write(future.result())
-        # self.finish()
-
-
-
-        # folder_name = "Inbox"
+        # TODO maybe create a new client to make things thread safe?
+        # newclient = CrispinClient()
         # crispin_client.select_folder("Inbox")
-        # threads = crispin_client.fetch_threads(folder_name)
-        # self.emit('load_threads_for_folder_ack', [t.toJSON() for t in threads] )
+        # UIDs = crispin_client.fetch_all_udids()
+        # msgs = crispin_client.fetch_headers_for_uids(folder_name, UIDs)
+
+        threads = crispin_client.fetch_messages(folder_name)
+        return threads
 
 
     @event
@@ -177,6 +158,7 @@ class WireConnection(SocketConnection):
         messages = crispin_client.fetch_messages_for_thread(thread_id)
         log.info("Returning messages: " + str(messages));
         self.emit('load_messages_for_thread_id_ack', [m.toJSON() for m in messages] )
+
 
 
     def send_message_notification(self):
@@ -206,10 +188,9 @@ def startserver(port):
 
     loop = tornado.ioloop.IOLoop.instance()
 
-
     global idler
-    idler = Idler(ioloop=loop, 
-                  event_callback=idler_callback, 
+    idler = Idler(ioloop=loop,
+                  event_callback=idler_callback,
                   # folder=crispin_client.all_mail_folder_name())
                   folder="Inbox")
     idler.connect()

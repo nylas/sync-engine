@@ -54,8 +54,9 @@ class IBMessage():
         self.subject = None
 
         self.date = None
-        self.body_text = None
+        self.message_parts = []  # list of indicies
         self.labels = []
+
 
         # Kickstart it using the headers from this object
         if (email_message_object):
@@ -115,10 +116,14 @@ class IBMessage():
 
 
     def __repr__(self):
-        return '<IBMEssage object> ' + \
+        return '<IBMessage object> ' + \
                 '\n    msg_id: ' + str(self.message_id) +\
                 '\n    thr_id: ' + str(self.thread_id) +\
-                '\n    subj: ' + str(self.subject)
+                '\n    to: %s ' + str(self.to_contacts) +\
+                '\n    from: %s' + str(self.from_contacts) +\
+                '\n    subj: ' + str(self.subject) +\
+                '\n    date epoch: ' + str( time.mktime(self.date.timetuple() )) +\
+                '\n    with %d parts.\n' % len(self.message_parts)
 
 
     def gmail_url(self):
@@ -134,7 +139,24 @@ class IBMessage():
             to_contacts = self.to_contacts,
             from_contacts = self.from_contacts,
             subject = self.subject,
-            body_text = self.body_text)
+            date = str( time.mktime(self.date.timetuple() )), # since poch
+            body_text =  "foo") # TODO Fix this
+
+
+        # self.message_id = "foo message id"
+        # self.thread_id = None
+        # self.size = None
+        # self.uid = None
+
+        # self.to_contacts = []
+        # self.from_contacts = None
+        # self.subject = None
+
+        # self.date = None
+        # self.message_parts = []  # list of indicies
+        # self.labels = []
+
+
 
 
 # BODY is like BODYSTRUCTURE but without extension information

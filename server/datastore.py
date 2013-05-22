@@ -2,9 +2,12 @@
 
 
 class DataStore():
+
+
 	def __init__(self):
 		self.messages = {}  # message_id -> message
 		self.threads = {}  # thread_id -> thread
+		self.bodies = {}  # (message_id, body_index) -> body part
 
 
 	def addMessage(self, message):

@@ -31,6 +31,11 @@ def start(args=None):
     else:
         port = args.port
     
+
+    import subprocess
+    commit = subprocess.check_output(["git", "describe"])
+
+
     print """
 \033[94m     Welcome to... \033[0m\033[1;95m
       _____       _               
@@ -38,8 +43,9 @@ def start(args=None):
        | |  _ __ | |__   _____  __
        | | | '_ \| '_ \ / _ \ \/ /
       _| |_| | | | |_) | (_) >  < 
-     |_____|_| |_|_.__/ \___/_/\_\\  \033[0mv0.1
-"""
+     |_____|_| |_|_.__/ \___/_/\_\\  \033[0m
+
+     """ + commit
     print "Starting server on port %s. Use CTRL-C to stop.\n" % port
     from server.app import startserver
     

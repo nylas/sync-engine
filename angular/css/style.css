@@ -368,39 +368,41 @@ http://stackoverflow.com/questions/7965278/box-shadow-both-inset-and-outside-on-
   float:left;
  }
 
- .message_subject_line {
+
+.message_subject_line {
 
   line-height: 16px;
-    overflow: hidden;
 
-    height: 0.95em;
+  height: 0.95em;
   padding-bottom: .2em;
-    padding-left:10px;
-
+  padding-left:10px;
 
   text-align:left;
   color:#333;
   text-shadow:1px 1px 1px white;
 
   font-family: "Proxima Nova Condensed", courier, sans-serif;
-  font-size: 19px;
+  font-size: 17px;
   font-weight: 600; /* Bold */
   line-height: 21px;
-
-
  }
 
- .message_subhead_text
+ .ellipsis {
+  overflow:hidden;
+  white-space:nowrap;
+  -ms-text-overflow:ellipsis;
+  text-overflow:ellipsis;
+ }
+
+
+.message_subhead_text
  {
-    overflow: hidden;
-    height: 2.5em;
+  padding-left:10px;
 
-    padding-left:10px;
-
+  height: 2.5em;
   font-style: italic;
   font-size: 13px;
   line-height: 1.2em;
-
   font-variant: normal;
   text-shadow: 1px 1px 0 white;
  }
@@ -429,6 +431,18 @@ a.button, input[type=submit] {
     -webkit-border-radius: 2px;
     -moz-border-radius: 2px;
     margin-right: 10px;
+
+    -webkit-user-select: none; /* Chrome/Safari */        
+-moz-user-select: none; /* Firefox */
+-ms-user-select: none; /* IE10+ */
+
+/* Rules below not implemented in browsers yet */
+-o-user-select: none;
+user-select: none;
+
+  /* Not sure about this cursor. */
+  cursor: hand; cursor: pointer;
+
 }
 a.button:hover {
     color: #333;

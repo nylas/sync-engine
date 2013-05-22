@@ -25,7 +25,7 @@ instance.whatever() will be one of the methods defined through prototype
 
 app.factory('IBThread', function ($injector) {
 
-     function IBThreadObject($rootScope, data) {
+    function IBThreadObject($rootScope, data) {
         this.$rootScope = $rootScope;
         // TODO handle default values here or when data=none
         this.message_ids = data.message_ids;
@@ -37,10 +37,9 @@ app.factory('IBThread', function ($injector) {
         // take this.date and return something like
         // self.most_recent_date.strftime('%b %d, %Y &mdash; %I:%M %p'
           return "Foo date, 2013";
-
     };
-    
-    return function(data) { 
+
+    return function(data) {
       return $injector.instantiate(
         IBThreadObject, {data:data});
     };
@@ -48,28 +47,48 @@ app.factory('IBThread', function ($injector) {
 
 
 
-
-
-
-app.factory('IBMessage', function ($injector) 
+app.factory('IBMessage', function ($injector)
 {
-     function IBMessageObject($rootScope, data) {
+    function IBMessageObject($rootScope, data) {
         this.$rootScope = $rootScope;
         // Do handle data=none values
         this.message_id = data.message_id;
         this.thread_id = data.thread_id;
         this.to_contacts = data.to_contacts;
-        this.from_contacts = data.from_contacts;
+        this.from_contacts = data.from_contacts[0];
         this.subject = data.subject;
-        this.date = data.date;
-        this.body_text = data.body_text
+
+        // the zero sets to epoch, then add seconds
+        // var d = new Date(0);
+
+        var d = new Date(data.date * 1000)
+        console.log(d)
+        this.date = d;
+
+        var size = typeof size !== 'undefined' ? size : 25; // Default size.
+        var theEmail = this.from_contacts[2] + '@' + this.from_contacts[3];
+        console.log(theEmail);
+        this.gravatar_url = "http://www.gravatar.com/avatar/" +
+                        md5( theEmail.toLowerCase() )+ "?" +
+                        'd=mm&' +
+                        's=' + encodeURIComponent(size);
+
+        // console.log(this.date.setUTCSeconds(9999999))
+        // this.date = d.setUTCSeconds(parseFloat(data.date)); 
+        this.body_text = data.body_text;
     }
 
-    IBMessageObject.prototype.gravatarURL = function () {
-         return "https://www.gravatar.com/somethingcrazy./craycray/";
-    };    
-  
-    return function(data) { 
+
+    IBMessageObject.prototype.printDate = function() {
+        // var curr_date = this.date.getDate();
+        // var curr_month = this.date.getMonth() + 1; //Months are zero based
+        // var curr_year = this.date.getFullYear();
+        // return curr_date + "-" + curr_month + "-" + curr_year;
+
+        return this.date.toLocaleString();
+    }
+
+    return function(data) {
       return $injector.instantiate(
         IBMessageObject, {data:data});
     };
@@ -91,13 +110,13 @@ app.factory('IBContact', function ($injector) {
     IBObject.prototype.gravatarURL = function (size) {
         // TODO pull this size into the css somewhere I think.
         size = typeof seize !== 'undefined' ? size : 25; // Default size.
-        var gravatar_url = "http://www.gravatar.com/avatar/" + 
+        var gravatar_url = "http://www.gravatar.com/avatar/" +
                         md5( this.email.toLowerCase() )+ "?" +
                         'd=mm&' +
-                        's=' + encodeURIComponent(gravatar_size);
+                        's=' + encodeURIComponent(size);
          return gravatar_url;
-    };    
-    return function(name) { 
+    };
+    return function(name) {
       return $injector.instantiate(
         IBObject, { data: data });
     };

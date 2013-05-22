@@ -35,41 +35,51 @@
 
 <div class="wrapper">
 
-	<div class="top_banner" data-ng-controller="AppContainerController">
+<div class="top_banner" ngCloak data-ng-controller="AppContainerController">
 
 	<a href="" class="button" data-ng-click="notificationButtonClick()">Activate notifications</a>
 
-	<div class="container_left" ngCloak data-ng-controller="FolderController">
+	<div class="container_left">
 
-	<div class="shadowed_wrapper">
-		<div class="mailbox_name">Inbox</div>
+		<div class="shadowed_wrapper">
+			<div class="mailbox_name">Inbox</div>
 
-		<a class="button" ng-click="loadThreadsForFolder('Inbox')">Load threads</a>
+			<a class="button" data-ng-click="loadMessagesForFolder('Inbox')">Load messages</a>
 
-		<div class="basic_pane shadowed">
+			<div class="basic_pane shadowed">
 
-			<div class="message_cell" hoverstate="selected" data-ng-repeat="thread in threads" ng-click="openThread( thread.thread_id)">
-				<div class="message_cell_image"></div>
-				<div class="message_subject_line">{{thread.thread_id}}</div>
-				<div class="message_subhead_text">
-					<strong>MG</strong>: {{thread.message_ids }} 
+				<div class="message_cell" hoverstate="selected" data-ng-repeat="m in messages" ng-click="openThread( m.message_id)">
+
+					<img  class="message_cell_image" ng-src="{{ m.gravatar_url }}"
+						 alt="{{ m.from_contacts[0] }}">
+
+					<div class="message_subject_line ellipsis">{{m.subject}}</div>
+					<div class="message_subhead_text ellipsis">
+						<strong>Date</strong>: {{m.date | date:'medium' }} <br/>
+						<strong>From</strong>: {{m.from_contacts[0]}}
+					</div>
 				</div>
+
 			</div>
 
 		</div>
 
 	</div>
-	</div>
 
 
-	<div class="container_right" data-ng-controller="MessagesController">
+	<div class="container_right">
 		<div class="right_pane">
 			<div class="right_subject_box">
 				Subject goes here for lorem ipsum 
 				<!-- Subject -->
 			</div>
 
-			<messageview data-ng-repeat="message in messages" />
+<!-- 			<messageview data-ng-repeat="message in messages" />
+ -->
+
+		<div ng-repeat="activeMessage in messages">
+			<messageview message="activeMessage" />
+		</div>
 
 
 				<div class="basic_pane reply_box" contenteditable="true" hidefocus="true">Reply text here...

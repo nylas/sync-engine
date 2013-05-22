@@ -22,6 +22,11 @@ from datastore import DataStore
 from imaplib2 import Internaldate2Time
 
 
+message_cache = {}  # (folder, UID) -> message (someday use message_id)
+thread_cache = {}  # thread_id -> thread
+bodypart_cache = {}  # (message_id, body_index) -> body part
+
+
 class CrispinClient:
     # 20 minutes
     SERVER_TIMEOUT = datetime.timedelta(seconds=1200)
@@ -165,6 +170,317 @@ class CrispinClient:
 
 
     @connected
+    def fetch_all_udids(self):
+        UIDs = self.imap_server.search(['NOT DELETED'])
+        return UIDs
+
+
+    @connected
+    def fetch_thread(self, thread_id):
+        threads_msg_ids = self.imap_server.search('X-GM-THRID %s' % str(thread_id))
+        return threads_msg_ids
+
+
+    @connected
+    def fetch_messages_for_thread(self, thread_id):
+        """ Returns list of IBMessage objects corresponding to thread_id """
+        threads_msg_ids = self.imap_server.search('X-GM-THRID %s' % str(thread_id))
+        log.info("Msg ids for thread: %s" % threads_msg_ids)
+
+        folder_name = self.all_mail_folder_name()
+        UIDs = threads_msg_ids
+        msgs = self.fetch_headers_for_uids(folder_name, UIDs)
+
+        return msgs
+
+
+    @connected
+    def fetch_messages(self, folder_name):
+
+        # Get messages in requested folder
+        select_info = self.select_folder(folder_name)
+        UIDs = self.fetch_all_udids()
+
+        msgs = self.fetch_headers_for_uids(folder_name, UIDs)
+
+
+        return msgs
+
+        # TODO Add expand the threads 
+
+        thread_ids = list(set([m.thread_id for m in msgs]))
+        log.info("For %i messages, found %i threads total." % (len(msgs), len(thread_ids)))
+
+
+        # Below is where we expand the threads and fetch the rest of them
+        self.select_allmail_folder() # going to fetch all messages in threads
+        all_msg_uids = self.msgids_for_thrids(thread_ids)
+
+        log.info("Expanded to %i messages for %i thread IDs." % (len(all_msg_uids), len(thread_ids)))
+
+        all_msgs = self.fetch_headers_for_uids(self.all_mail_folder_name(), all_msg_uids)
+
+        return all_msgs
+
+        # threads = {}
+        # # Group by thread id
+        # for m in all_msgs:
+        #     if m.thread_id not in threads.keys():
+        #         new_thread = IBThread()
+        #         new_thread.thread_id = m.thread_id
+        #         threads[m.thread_id] = new_thread
+        #     t = threads[m.thread_id]
+        #     t.message_ids.append(m.message_id)
+        # all_threads = threads.values()
+
+        # log.info("Returning %i threads with total of %i messages." % (len(all_threads), len(all_msgs)))
+
+        # return all_threads
+
+
+    @connected
+    def msgids_for_thrids(self, thread_ids):
+        self.select_allmail_folder() 
+        # The boolean IMAP queries use reverse polish notation for
+        # the query parameters. imaplib automatically adds parenthesis 
+        criteria = 'X-GM-THRID %i' % thread_ids[0]
+        if len(thread_ids) > 1:
+            for t in thread_ids[1:]:
+                criteria = 'OR ' + criteria + ' X-GM-THRID %i' % t
+        return self.imap_server.search(criteria)        
+
+
+
+
+    @connected
+    def fetch_headers_for_uids(self, folder_name, UIDs):
+        if isinstance(UIDs, int ):
+            UIDs = [str(UIDs)]
+        elif isinstance(UIDs, basestring):
+            UIDs = [UIDs]
+
+        # TODO: keep track of current folder so we don't select twice
+
+        # UIDs = self.fetch_all_udids()
+
+    #     to_grab = 200
+    #     i = 0
+
+    #     print 'doit now'
+    #     fetched_messages = []
+    #     while i+to_grab < len(UIDs):
+    #         search_this = UIDs[i:i+to_grab]
+    #         f = self.fetch_headers_block(search_this)
+    #         fetched_messages += f
+    #         print 'fetched %s' % len(search_this)
+    #         i+= to_grab
+
+    #     return fetched_messages
+
+
+    # def fetch_headers_block(self, UIDs):
+
+
+        UIDs = [str(s) for s in UIDs]
+
+        new_messages = []
+
+        print '%d UIDs' % len(UIDs)
+        # cacheit
+        tempUIDs = UIDs
+        for u in UIDs:
+            # key = (folder_name, str(u))
+            # print key
+            # print message_cache.keys()
+            try:
+                cached_msg = message_cache[u]
+                new_messages.append(cached_msg)
+                tempUIDs.remove(u)
+            except Exception, e:
+                pass
+
+            # for key in message_cache.keys():
+            #     if key == str(u):
+            #         cached_msg = message_cache[key]
+            #         new_messages.append(cached_msg)
+            #         tempUIDs.remove(u)
+
+
+            # if key in message_cache:
+            #     new_messages.append( message_cache[key] )
+            #     tempUIDs.remove(u)
+
+        print "Pulled %d messages from cache (%d)." % (len(new_messages), len(message_cache))
+        print 'Still have %d uids left' % len(tempUIDs)
+        # print 'tempUIDs', tempUIDs
+        # print 'UIDs', UIDs
+        UIDs = tempUIDs
+
+        if len(UIDs) == 0:
+            log.info("All messages already cached.")
+            return new_messages
+
+
+        select_info = self.select_folder(folder_name)
+
+        query = 'ENVELOPE BODY INTERNALDATE'
+        log.info("Fetching message headers. Query: %s" % query)
+        messages = self.imap_server.fetch(UIDs, [query, 'X-GM-THRID', 'X-GM-MSGID', 'X-GM-LABELS'])
+        log.info("Found %i messages." % len(messages.values()))
+
+
+        for message_uid, message_dict in messages.iteritems():
+            
+            # print 'ENVELOPE', message_dict['ENVELOPE']
+            # print 'BODY', message_dict['BODY']
+            # print
+
+
+
+            # unparsed_headers = message_dict[query_key]
+            # email_msg_object = message_from_string(unparsed_headers)
+            # new_msg = IBMessage(email_msg_object)
+
+            new_msg = IBMessage()
+
+
+            # TODO get stuff from ENVELOPE part of header
+            # A parsed representation of the [RFC-2822] header of the message.
+            msg_envelope = message_dict['ENVELOPE']
+
+
+            # ('Tue, 21 May 2013 08:41:20 -0700', 
+            #  '[SALT] De-extinction TONIGHT Tues. May 21', 
+            #  (('Stewart Brand', None, 'sb', 'longnow.org'),), 
+            #  ((None, None, 'salt-bounces', 'list.longnow.org'),), 
+            #  ((None, None, 'services', 'longnow.org'),), 
+            #  (('SALT list', None, 'salt', 'list.longnow.org'),), 
+            #  None, 
+            #  None, 
+            #  None, 
+            #  '<89ACAE66-4C10-4BBF-9B24-AC18A0FB2440@longnow.org>')
+
+            msg_envelope[0] # date
+            new_msg.subject = msg_envelope[1]
+            new_msg.from_contacts = msg_envelope[2]
+            # Errors-To: salt-bounces@list.longnow.org
+            # Sender: salt-bounces@list.longnow.org
+
+            # Reply-To: services@longnow.org
+            # new_msg.reply_to = msg_envelope[4]
+
+            new_msg.to_contacts = msg_envelope[5]
+
+
+
+
+            # print 'message_dict', message_dict
+
+            new_msg.date = message_dict['INTERNALDATE']
+            new_msg.thread_id = message_dict['X-GM-THRID']
+            new_msg.message_id = message_dict['X-GM-MSGID']
+            new_msg.labels = message_dict['X-GM-LABELS']
+
+
+            # This parses the BODYSTRUCTURE header which tells us
+            # about the content of the message itself. We store this in  
+
+            all_messageparts = []
+            bodystructure = message_dict['BODY']
+            if bodystructure.is_multipart:
+
+                assert len(bodystructure) <= 2
+                # TODO look into the multipart grouping p[-1]. these fall under:
+                # MIXED
+                # ALTERNATIVE
+                # RELATED
+                # SIGNED
+                parts = bodystructure[0]
+                for i, part in enumerate(parts):
+                    # Sometimes one of the body parts is actually something
+                    # weird like Content-Type: multipart/alternative, so you
+                    # have to loop though them individually. I think
+                    # email.parser takes care of this when you fetch the actual
+                    # body content, but I have to do it here for the
+                    # BODYSTRUCTURE response.
+
+                    # recurisve creator since these might be nested
+                    # pass the index so we can append subindicies
+                    # Note: this shit might break but it works for now...
+                    def make_obj(p, i):
+                        if not isinstance(p[0], basestring):
+                            for x in range(len(p) - 1): # The last one is the label
+                                if len(i) > 0: index = i+'.'+ str(x+1)
+                                else: index = str(x+1)
+                                make_obj(p[x], index)
+                        else:
+                            if len(i) > 0: index = i+'.1'
+                            else: index = '1'
+                            all_messageparts.append(IBMessagePart(p,i))
+                    make_obj(part, str(i+1))
+            else:
+                all_messageparts.append(IBMessagePart(bodystructure, '1'))
+            new_msg.message_parts= all_messageparts
+
+            new_messages.append(new_msg)
+
+            # cache it baby!
+            # key = (folder_name, str(message_uid))
+            key = str(message_uid)
+            # print 'Caching message.'
+            message_cache[key] = new_msg
+
+
+
+        # print 
+        # print 
+        # print 'UIDs'
+        # print UIDs
+        # print 
+        # print 'cache state'
+        # print message_cache.keys()
+        # print
+        # print
+
+
+
+        print 'cached %d messages' % len(message_cache)
+
+
+        log.info("Fetched headers for %i messages" % len(new_messages))
+        return new_messages
+
+
+
+######################
+
+        # query = 'BODY.PEEK[HEADER.FIELDS (TO CC FROM DATE SUBJECT)]'
+        # query_key = 'BODY[HEADER.FIELDS (TO CC FROM DATE SUBJECT)]'
+
+        # log.info("Fetching message headers. Query: %s" % query)
+        # messages = self.imap_server.fetch(UIDs, [query, 'X-GM-THRID', 'X-GM-MSGID', 'X-GM-LABELS'])
+        # log.info("Found %i messages." % len(messages.values()))
+
+        # new_messages = []
+
+        # for message_uid, message_dict in messages.iteritems():
+        #     unparsed_headers = message_dict[query_key]
+        #     email_msg_object = message_from_string(unparsed_headers)
+
+        #     new_msg = IBMessage(email_msg_object)
+        #     new_msg.thread_id = message_dict['X-GM-THRID']
+        #     new_msg.message_id = message_dict['X-GM-MSGID']
+        #     new_msg.labels = message_dict['X-GM-LABELS']
+
+        #     new_messages.append(new_msg)
+
+        # log.info("Fetched headers for %i messages" % len(new_messages))
+        # return new_messages
+
+
+
+
+    @connected
     def fetch_msg(self, msg_uid):
         msg_uid = long(msg_uid)  # sometimes comes as string
 
@@ -235,235 +551,8 @@ class CrispinClient:
 
         return new_msg
 
-    @connected
-    def fetch_all_udids(self):
-        UIDs = self.imap_server.search(['NOT DELETED'])
-        return UIDs
 
-    @connected
-    def fetch_thread(self, thread_id):
-        threads_msg_ids = self.imap_server.search('X-GM-THRID %s' % str(thread_id))
-        return threads_msg_ids
 
-    @connected
-    def fetch_messages_for_thread(self, thread_id):
-        """ Returns list of IBMessage objects corresponding to thread_id """
-        threads_msg_ids = self.imap_server.search('X-GM-THRID %s' % str(thread_id))
-        log.info("Msg ids for thread: %s" % threads_msg_ids)
-        msgs = []
-        for msg_id in threads_msg_ids:
-            m = self.fetch_msg(msg_id)
-            msgs.append(m)
-        return msgs
-
-
-    @connected
-    def fetch_threads(self, folder_name):
-
-        # Get messages in requested folder
-        select_info = self.select_folder(folder_name)
-        UIDs = self.fetch_all_udids()
-
-        msgs = self.fetch_headers_for_uids(folder_name, UIDs)
-
-        threads = {}
-        # Group by thread id
-        for m in msgs:
-            if m.thread_id not in threads.keys():
-                new_thread = IBThread()
-                new_thread.thread_id = m.thread_id
-                threads[m.thread_id] = new_thread
-            t = threads[m.thread_id]
-            t.message_ids.append(m.message_id)
-        threads = threads.values()
-
-        log.info("For %i messages, found %i threads total." % (len(msgs), len(threads)))
-
-
-        # TODO remove this
-        # return threads
-
-
-
-        # Below is where we expand the threads and fetch the rest of them
-        self.select_allmail_folder() # going to fetch all messages in threads
-
-
-        thread_ids = [t.thread_id for t in threads]
-
-        # The boolean IMAP queries use reverse polish notation for
-        # the query parameters. imaplib automatically adds parenthesis 
-        criteria = 'X-GM-THRID %i' % thread_ids[0]
-        if len(thread_ids) > 1:
-            for t in thread_ids[1:]:
-                criteria = 'OR ' + criteria + ' X-GM-THRID %i' % t
-        all_msg_uids = self.imap_server.search(criteria)        
-
-        log.info("Expanded to %i messages for %i thread IDs." % (len(all_msg_uids), len(thread_ids)))
-
-        all_msgs = self.fetch_headers_for_uids(self.all_mail_folder_name(), all_msg_uids)
-
-
-        threads = {}
-        # Group by thread id
-        for m in msgs:
-            if m.thread_id not in threads.keys():
-                new_thread = IBThread()
-                new_thread.thread_id = m.thread_id
-                threads[m.thread_id] = new_thread
-            t = threads[m.thread_id]
-            t.message_ids.append(m.message_id)
-        all_threads = threads.values()
-
-        log.info("Returning %i threads with total of %i messages." % (len(all_threads), len(all_msgs)))
-
-        return all_threads
-
-
-
-    @connected
-    def fetch_headers_for_uids(self, folder_name, UIDs):
-        if isinstance(UIDs, int ):
-            UIDs = [str(UIDs)]
-        elif isinstance(UIDs, basestring):
-            UIDs = [UIDs]
-
-        # TODO: keep track of current folder so we don't select twice
-
-        # print 'Lets do all mail instead'
-        # folder_name = self.all_mail_folder_name()
-        # print 'Select it'
-        # folder_name = 'Awesome'
-
-        select_info = self.select_folder(folder_name)
-        # UIDs = self.fetch_all_udids()
-
-    #     to_grab = 200
-    #     i = 0
-
-    #     print 'doit now'
-    #     fetched_messages = []
-    #     while i+to_grab < len(UIDs):
-    #         search_this = UIDs[i:i+to_grab]
-    #         f = self.fetch_headers_block(search_this)
-    #         fetched_messages += f
-    #         print 'fetched %s' % len(search_this)
-    #         i+= to_grab
-
-    #     return fetched_messages
-
-
-
-
-    # def fetch_headers_block(self, UIDs):
-
-        query = 'ENVELOPE BODY INTERNALDATE'
-
-        log.info("Fetching message headers. Query: %s" % query)
-        messages = self.imap_server.fetch(UIDs, [query, 'X-GM-THRID', 'X-GM-MSGID', 'X-GM-LABELS'])
-        log.info("Found %i messages." % len(messages.values()))
-
-        new_messages = []
-        new_bodystructures = []
-
-
-        for message_uid, message_dict in messages.iteritems():
-            
-            # print 'ENVELOPE', message_dict['ENVELOPE']
-            # print 'BODY', message_dict['BODY']
-            # print
-
-            # unparsed_headers = message_dict[query_key]
-            # email_msg_object = message_from_string(unparsed_headers)
-            # new_msg = IBMessage(email_msg_object)
-
-            new_msg = IBMessage()
-
-            new_msg.date = message_dict['INTERNALDATE']
-            new_msg.thread_id = message_dict['X-GM-THRID']
-            new_msg.message_id = message_dict['X-GM-MSGID']
-            new_msg.labels = message_dict['X-GM-LABELS']
-
-
-            bodystructure = message_dict['BODY']
-
-
-            if bodystructure.is_multipart:
-
-                assert len(bodystructure) <= 2
-                # TODO look into the multipart grouping p[-1]. these fall under:
-                # MIXED
-                # ALTERNATIVE
-                # RELATED
-                # SIGNED
-
-                parts = bodystructure[0]
-
-                for i, part in enumerate(parts):
-                    # Sometimes one of the body parts is actually something
-                    # weird like Content-Type: multipart/alternative, so you
-                    # have to loop though them individually. I think
-                    # email.parser takes care of this when you fetch the actual
-                    # body content, but I have to do it here for the
-                    # BODYSTRUCTURE response.
-
-                    # recurisve creator since these might be nested
-                    # pass the index so we can append subindicies
-                    # Note: this shit might break but it works for now...
-                    def make_obj(p, i):
-                        if not isinstance(p[0], basestring):
-                            for x in range(len(p) - 1): # The last one is the label
-                                if len(i) > 0: index = i+'.'+ str(x+1)
-                                else: index = str(x+1)
-                                make_obj(p[x], index)
-                        else:
-                            if len(i) > 0: index = i+'.1'
-                            else: index = '1'
-                            new_bodystructures.append(IBMessagePart(p,i))
-                    make_obj(part, str(i+1))
-
-            else:
-                new_bodystructures.append(IBMessagePart(bodystructure, '1'))
-
-
-
-
-
-
-
-            new_messages.append(new_msg)
-
-        log.info("Fetched headers for %i messages" % len(new_messages))
-        
-        return new_messages
-
-
-
-######################
-
-
-        query = 'BODY.PEEK[HEADER.FIELDS (TO CC FROM DATE SUBJECT)]'
-        query_key = 'BODY[HEADER.FIELDS (TO CC FROM DATE SUBJECT)]'
-
-        log.info("Fetching message headers. Query: %s" % query)
-        messages = self.imap_server.fetch(UIDs, [query, 'X-GM-THRID', 'X-GM-MSGID', 'X-GM-LABELS'])
-        log.info("Found %i messages." % len(messages.values()))
-
-        new_messages = []
-
-        for message_uid, message_dict in messages.iteritems():
-            unparsed_headers = message_dict[query_key]
-            email_msg_object = message_from_string(unparsed_headers)
-
-            new_msg = IBMessage(email_msg_object)
-            new_msg.thread_id = message_dict['X-GM-THRID']
-            new_msg.message_id = message_dict['X-GM-MSGID']
-            new_msg.labels = message_dict['X-GM-LABELS']
-
-            new_messages.append(new_msg)
-
-        log.info("Fetched headers for %i messages" % len(new_messages))
-        return new_messages
 
 
 
