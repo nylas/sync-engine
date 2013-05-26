@@ -129,7 +129,6 @@ class WireConnection(SocketConnection):
         # threads = future.result()
 
         messages = self.expensive_load_threads('Inbox')
-        print messages
         self.emit('load_messages_for_folder_ack', [m.toJSON() for m in messages] )
 
 
@@ -146,10 +145,25 @@ class WireConnection(SocketConnection):
 
 
     @event
+    def load_message_body_with_uid(self, **kwargs):
+        assert 'uid' in kwargs
+        assert 'section_index' in kwargs
+
+        msg_data = crispin_client.fetch_msg_body(kwargs['uid'], 
+                                                 kwargs['section_index'],
+                                                 folder='Inbox', )
+
+        print msg_data
+
+        self.emit('load_message_body_with_uid_ack', msg_data )
+
+
+
+
+    @event
     def load_messages_for_thread_id(self, **kwargs):
         if not 'thread_id' in kwargs:
             log.error("Call to get_thread without thread_id")
-            self.send_error(500)
             return
         thread_id = kwargs['thread_id']
         log.info("Fetching thread id: %s" % thread_id)

@@ -136,25 +136,15 @@ class IBMessage():
 
     def toJSON(self):
         return dict(
+            message_id = self.message_id,
+            thread_id = self.thread_id,
+            labels = self.labels,
+            uid = self.uid,
             to_contacts = self.to_contacts,
             from_contacts = self.from_contacts,
             subject = self.subject,
             date = str( time.mktime(self.date.timetuple() )), # since poch
-            body_text =  "foo") # TODO Fix this
-
-
-        # self.message_id = "foo message id"
-        # self.thread_id = None
-        # self.size = None
-        # self.uid = None
-
-        # self.to_contacts = []
-        # self.from_contacts = None
-        # self.subject = None
-
-        # self.date = None
-        # self.message_parts = []  # list of indicies
-        # self.labels = []
+            message_parts = [p.toJSON() for p in self.message_parts] )
 
 
 
@@ -297,3 +287,13 @@ class IBMessagePart(object):
                             self.content_type_minor.lower() )
         else:
             return r + ''
+
+
+    def toJSON(self):
+        return dict(
+            content_type = "%s/%s" % (self.content_type_major, self.content_type_minor),
+            bytes = self.bytes,
+            index = self.index
+        )
+
+

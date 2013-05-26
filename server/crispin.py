@@ -118,30 +118,12 @@ class CrispinClient:
     def get_special_folder(self, special_folder):
         # TODO return folders for stuff like All Mail, Drafts, etc. which may
         # be localized names. Use the flags, such as u'\\AllMail' or u'\\Important'
-
-        # Some old example code
-
-        # folders =  list_folders()
-        # other_folders = []
-        # print '\nSpecial mailboxes:'
-        # for f in folders:
-        #     if u'\\AllMail' in f['flags']:
-        #         print "    ALL MAIL --> ", f['name']
-        #     elif u'\\Drafts' in f['flags']:
-        #         print "    DRAFTS --> ", f['name']
-        #     elif u'\\Important' in f['flags']:
-        #         print "    IMPORTANT --> ", f['name']
-        #     elif u'\\Sent' in f['flags']:
-        #         print "    SENT --> ", f['name']
-        #     elif u'\\Starred' in f['flags']:
-        #         print "    STARRED --> ", f['name']
-        #     elif u'\\Trash' in f['flags']:
-        #         print "    TRASH --> ", f['name']
-        #     else:
-        #         other_folders.append(f)
-        # print '\Other mailboxes:'
-        # for f in other_folders:
-        #     print "   ", f['name']
+        # Folder names
+        # u'\\AllMail'
+        # u'\\Drafts'
+        # u'\\Sent'
+        # u'\\Starred'
+        # u'\\Trash' 
         pass
 
 
@@ -203,24 +185,25 @@ class CrispinClient:
 
         msgs = self.fetch_headers_for_uids(folder_name, UIDs)
 
-
         return msgs
+
+
 
         # TODO Add expand the threads 
 
-        thread_ids = list(set([m.thread_id for m in msgs]))
-        log.info("For %i messages, found %i threads total." % (len(msgs), len(thread_ids)))
+        # thread_ids = list(set([m.thread_id for m in msgs]))
+        # log.info("For %i messages, found %i threads total." % (len(msgs), len(thread_ids)))
 
 
-        # Below is where we expand the threads and fetch the rest of them
-        self.select_allmail_folder() # going to fetch all messages in threads
-        all_msg_uids = self.msgids_for_thrids(thread_ids)
+        # # Below is where we expand the threads and fetch the rest of them
+        # self.select_allmail_folder() # going to fetch all messages in threads
+        # all_msg_uids = self.msgids_for_thrids(thread_ids)
 
-        log.info("Expanded to %i messages for %i thread IDs." % (len(all_msg_uids), len(thread_ids)))
+        # log.info("Expanded to %i messages for %i thread IDs." % (len(all_msg_uids), len(thread_ids)))
 
-        all_msgs = self.fetch_headers_for_uids(self.all_mail_folder_name(), all_msg_uids)
+        # all_msgs = self.fetch_headers_for_uids(self.all_mail_folder_name(), all_msg_uids)
 
-        return all_msgs
+        # return all_msgs
 
         # threads = {}
         # # Group by thread id
@@ -259,71 +242,24 @@ class CrispinClient:
         elif isinstance(UIDs, basestring):
             UIDs = [UIDs]
 
-        # TODO: keep track of current folder so we don't select twice
-
-        # UIDs = self.fetch_all_udids()
-
-    #     to_grab = 200
-    #     i = 0
-
-    #     print 'doit now'
-    #     fetched_messages = []
-    #     while i+to_grab < len(UIDs):
-    #         search_this = UIDs[i:i+to_grab]
-    #         f = self.fetch_headers_block(search_this)
-    #         fetched_messages += f
-    #         print 'fetched %s' % len(search_this)
-    #         i+= to_grab
-
-    #     return fetched_messages
-
-
-    # def fetch_headers_block(self, UIDs):
-
 
         UIDs = [str(s) for s in UIDs]
 
         new_messages = []
 
-        print '%d UIDs' % len(UIDs)
-        # cacheit
-        tempUIDs = UIDs
-        for u in UIDs:
-            # key = (folder_name, str(u))
-            # print key
-            # print message_cache.keys()
-            try:
-                cached_msg = message_cache[u]
-                new_messages.append(cached_msg)
-                tempUIDs.remove(u)
-            except Exception, e:
-                pass
-
-            # for key in message_cache.keys():
-            #     if key == str(u):
-            #         cached_msg = message_cache[key]
-            #         new_messages.append(cached_msg)
-            #         tempUIDs.remove(u)
-
-
-            # if key in message_cache:
-            #     new_messages.append( message_cache[key] )
-            #     tempUIDs.remove(u)
-
-        print "Pulled %d messages from cache (%d)." % (len(new_messages), len(message_cache))
-        print 'Still have %d uids left' % len(tempUIDs)
-        # print 'tempUIDs', tempUIDs
-        # print 'UIDs', UIDs
-        UIDs = tempUIDs
-
-        if len(UIDs) == 0:
-            log.info("All messages already cached.")
-            return new_messages
-
-
         select_info = self.select_folder(folder_name)
 
+
+        # Right now we're using ENVELOPE which selects a subset of the 
+        # headers, usually cached. Selecting all of the headers requires
+        # the IMAP server to open and parse each file which is slow.
+        # In the future, we can do commands like 
+        # 'BODY.PEEK[HEADER.FIELDS (TO CC FROM DATE SUBJECT)]'
+        # to specify individual headers when we want DKIM signature info, etc.
+        # I'm not sure which of those Gmail caches for fast access
         query = 'ENVELOPE BODY INTERNALDATE'
+
+
         log.info("Fetching message headers. Query: %s" % query)
         messages = self.imap_server.fetch(UIDs, [query, 'X-GM-THRID', 'X-GM-MSGID', 'X-GM-LABELS'])
         log.info("Found %i messages." % len(messages.values()))
@@ -331,12 +267,6 @@ class CrispinClient:
 
         for message_uid, message_dict in messages.iteritems():
             
-            # print 'ENVELOPE', message_dict['ENVELOPE']
-            # print 'BODY', message_dict['BODY']
-            # print
-
-
-
             # unparsed_headers = message_dict[query_key]
             # email_msg_object = message_from_string(unparsed_headers)
             # new_msg = IBMessage(email_msg_object)
@@ -344,7 +274,7 @@ class CrispinClient:
             new_msg = IBMessage()
 
 
-            # TODO get stuff from ENVELOPE part of header
+            # ENVELOPE on
             # A parsed representation of the [RFC-2822] header of the message.
             msg_envelope = message_dict['ENVELOPE']
 
@@ -372,18 +302,16 @@ class CrispinClient:
             new_msg.to_contacts = msg_envelope[5]
 
 
-
-
-            # print 'message_dict', message_dict
-
             new_msg.date = message_dict['INTERNALDATE']
             new_msg.thread_id = message_dict['X-GM-THRID']
             new_msg.message_id = message_dict['X-GM-MSGID']
             new_msg.labels = message_dict['X-GM-LABELS']
 
+            # This is stupid because it's specific to the folder where we found it.
+            new_msg.uid = str(message_uid)
 
-            # This parses the BODYSTRUCTURE header which tells us
-            # about the content of the message itself. We store this in  
+
+            # BODYSTRUCTURE parsing 
 
             all_messageparts = []
             bodystructure = message_dict['BODY']
@@ -409,42 +337,34 @@ class CrispinClient:
                     # Note: this shit might break but it works for now...
                     def make_obj(p, i):
                         if not isinstance(p[0], basestring):
-                            for x in range(len(p) - 1): # The last one is the label
-                                if len(i) > 0: index = i+'.'+ str(x+1)
-                                else: index = str(x+1)
+                            for x in range(len(p) - 1):  # The last one is the label
+                                if len(i) > 0:
+                                    index = i+'.' + str(x+1)
+                                else: 
+                                    index = str(x+1)
                                 make_obj(p[x], index)
                         else:
                             if len(i) > 0: index = i+'.1'
                             else: index = '1'
-                            all_messageparts.append(IBMessagePart(p,i))
+                            all_messageparts.append(IBMessagePart(p, i))
                     make_obj(part, str(i+1))
             else:
                 all_messageparts.append(IBMessagePart(bodystructure, '1'))
-            new_msg.message_parts= all_messageparts
 
+
+            new_msg.message_parts = all_messageparts
+
+
+            # Done
             new_messages.append(new_msg)
 
-            # cache it baby!
-            # key = (folder_name, str(message_uid))
-            key = str(message_uid)
-            # print 'Caching message.'
-            message_cache[key] = new_msg
+
+
+            # For testing
+            # self.fetch_msg_body(message_uid, 1, folder_name)
 
 
 
-        # print 
-        # print 
-        # print 'UIDs'
-        # print UIDs
-        # print 
-        # print 'cache state'
-        # print message_cache.keys()
-        # print
-        # print
-
-
-
-        print 'cached %d messages' % len(message_cache)
 
 
         log.info("Fetched headers for %i messages" % len(new_messages))
@@ -552,63 +472,34 @@ class CrispinClient:
         return new_msg
 
 
-
-
-
-
-
     @connected
-    def fetch_IBMessagePart(self, UIDs):
-        if isinstance(UIDs, int ):
-            UIDs = [str(UIDs)]
-        elif isinstance(UIDs, basestring):
-            UIDs = [UIDs]
+    def fetch_msg_body(self, msg_uid, section_index='1', folder=None):
+        msg_uid = str(msg_uid)
+        if not folder:
+            folder = self.all_mail_folder_name()
 
-        query = 'ENVELOPE BODY INTERNALDATE'
+        section_index = '2'
 
-        # envelope gives relevant headers and is really fast in practice
-        # RFC822.HEADER will give *all* of the headers, and is probably slower? // TODO
-        # query = 'RFC822.HEADER BODY'
-        # query = 'FLAGS UID RFC822.SIZE INTERNALDATE BODY.PEEK[HEADER] BODY'
+        self.select_folder(folder)
+        log.info("Fetching in %s -- %s <%s>" % (folder, msg_uid, section_index))
+        query = 'BODY.PEEK[%s]' % section_index
+        query_key = 'BODY[%s]' % section_index
+        response = self.imap_server.fetch(msg_uid,
+                                    [query, 'X-GM-THRID', 'X-GM-MSGID'])
 
-        log.info("Fetching messages with query: %s" % query )
-        messages = self.imap_server.fetch(UIDs, [query, 'X-GM-THRID'])
-        log.info("  ...found %i messages." % len(messages.values()))
+        response_dict =  response[int(msg_uid)]
+        body_data = response_dict[query_key]
+        message_id = response_dict['X-GM-MSGID']
+        thread_id = response_dict['X-GM-THRID']
 
-        bodystructure_parts = []
+        return body_data
 
-        for msgid, data in messages.iteritems():
-            bodystructure = data['BODY']
+        # log.info("Received response. Size: %i" % len(raw_response))
 
-            if bodystructure.is_multipart:
-                # XXX only look at the first part for now
-                parts = bodystructure[0]
 
-                for i, part in enumerate(parts):
-                    # Sometimes one of the body parts is actually something
-                    # weird like Content-Type: multipart/alternative, so you
-                    # have to loop though them individually. I think
-                    # email.parser takes care of this when you fetch the actual
-                    # body content, but I have to do it here for the
-                    # BODYSTRUCTURE response.
 
-                    # recurisve creator since these might be nested
-                    # pass the index so we can append subindicies
-                    # Note: this shit might break but it works for now...
-                    def make_obj(p, i):
-                        if not isinstance(p[0], basestring):
-                            for x in range(len(part) - 1): # The last one is the label
-                                if len(i) > 0: index = i+'.'+ str(x+1)
-                                else: index = str(x+1)
-                                make_obj(p[x], index)
-                        else:
-                            if len(i) > 0: index = i+'.1'
-                            else: index = '1'
-                            bodystructure_parts.append(IBMessagePart(p,i))
-                    make_obj(part, str(i+1))
 
-            else:
-                bodystructure_parts.append(IBMessagePart(bodystructure, '1'))
 
-        return bodystructure_parts
+
+
 
