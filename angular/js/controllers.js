@@ -20,7 +20,7 @@ function AppContainerController($scope, socket, growl, IBMessage) {
 
 
     $scope.messages = [];
-    // $scope.activeMessage = undefined;
+    $scope.activeMessage = undefined;
 
 
     $scope.loadMessagesForFolder = function (folder) {
@@ -36,7 +36,6 @@ function AppContainerController($scope, socket, growl, IBMessage) {
             var newMessage = new IBMessage(data[i]);
             freshMessages.push(newMessage);
         }
-        console.log(freshMessages);
         $scope.messages = freshMessages;
     });
 
@@ -54,14 +53,23 @@ function AppContainerController($scope, socket, growl, IBMessage) {
 
 
 
+    $scope.openMessage = function(selectedMessage) {
+        console.log("Selected a message:")
+        console.log(selectedMessage);
+        $scope.activeMessage = selectedMessage;
 
-    $scope.openThread = function(thread_id) {
-        // Currently duplicated! Need to find a way to communicate between controllers
-        // TODO maybe use $broadcast http://docs.angularjs.org/api/ng.$rootScope.Scope#$broadcast
-        console.log("Fetching thread_id: " + thread_id);
-        if (typeof thread_id === 'undefined') { return; }
-        socket.emit('load_messages_for_thread_id', {thread_id: thread_id});
-    };
+        socket.emit('load_message_body_with_uid', 
+            {uid: selectedMessage.uid,
+             section_index: '1'});
+    }
+
+
+    socket.on('load_message_body_with_uid_ack', function(data) {
+        console.log("updating message")
+        $scope.activeMessage.body_text = data;
+        console.log("updated message");
+    });
+
 
 
 }

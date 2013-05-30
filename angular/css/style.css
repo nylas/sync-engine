@@ -48,6 +48,12 @@ margin-top:-32767px;/* thank you Erik J - negate effect of float*/
 body {
   /*background-color: #E6EBEA;*/
   background-color: #F9F9F9;
+ 
+/*  lighter blue bakcgroudn color */
+  /*background: #e7eef2;*/
+
+   color: #57676e;
+
   font-family: Helvetica Neue, Arial, sans-serif;
   color: #616566;
 
@@ -56,15 +62,15 @@ body {
 }
 
 
-
-::selection {
+::-moz-selection,
+::-webkit-selection,
+::selection
+ {
   background: rgba(240,17,68,0.8);
   color: #fff;
-  }
-::-moz-selection {
-  background: rgba(240,17,68,0.8);
-  color: #fff;
+  text-shadow: none;
 }
+
 
 
 .wrapper
@@ -130,8 +136,8 @@ body {
 
   font-family: "Proxima Nova Condensed", courier, sans-serif;
   font-size: 26px;
+  line-height: 1.2em;
   font-weight: 600; /* Bold */
-  line-height: 21px;
 
 }
 
@@ -141,12 +147,21 @@ body {
   text-align: left;
   background: #fff;
 
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  /* ligher border */
+  /*border: 1px solid rgba(0, 0, 0, 0.15);*/
+  /* darker border */
+  border: 1px solid #C3CCD0;
+
   border-radius: 4px;
   -moz-border-radius: 4px;
   -webkit-border-radius: 4px;
 
   margin-bottom: 40px;
+
+
+  /* Non-green shadow */
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0),0 0 10px rgba(0, 0, 0, 0.1);
+
 }
 
 
@@ -211,6 +226,9 @@ http://stackoverflow.com/questions/7965278/box-shadow-both-inset-and-outside-on-
 
 
 
+.body_html {
+  
+}
 
 
 

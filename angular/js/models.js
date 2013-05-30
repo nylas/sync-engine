@@ -33,11 +33,6 @@ app.factory('IBThread', function ($injector) {
         this.labels = data.labels;
     }
 
-    IBThreadObject.prototype.printableDateString = function () {
-        // take this.date and return something like
-        // self.most_recent_date.strftime('%b %d, %Y &mdash; %I:%M %p'
-          return "Foo date, 2013";
-    };
 
     return function(data) {
       return $injector.instantiate(
@@ -54,30 +49,32 @@ app.factory('IBMessage', function ($injector)
         // Do handle data=none values
         this.message_id = data.message_id;
         this.thread_id = data.thread_id;
+        this.labels = data.labels;
+        this.uid = data.uid;
         this.to_contacts = data.to_contacts;
         this.from_contacts = data.from_contacts[0];
         this.subject = data.subject;
+        this.message_parts = data.message_parts;
 
         // the zero sets to epoch, then add seconds
         // var d = new Date(0);
 
-        var d = new Date(data.date * 1000)
-        console.log(d)
-        this.date = d;
+        this.date = new Date(data.date * 1000)
 
-        var size = typeof size !== 'undefined' ? size : 25; // Default size.
+
+
+
+
+        var gravatar_size = 25;
         var theEmail = this.from_contacts[2] + '@' + this.from_contacts[3];
-        console.log(theEmail);
         this.gravatar_url = "http://www.gravatar.com/avatar/" +
                         md5( theEmail.toLowerCase() )+ "?" +
                         'd=mm&' +
-                        's=' + encodeURIComponent(size);
+                        's=' + encodeURIComponent(gravatar_size);
 
         // console.log(this.date.setUTCSeconds(9999999))
         // this.date = d.setUTCSeconds(parseFloat(data.date)); 
-        this.body_text = data.body_text;
     }
-
 
     IBMessageObject.prototype.printDate = function() {
         // var curr_date = this.date.getDate();

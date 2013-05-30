@@ -27,6 +27,7 @@ app.directive("clickable", function () {
 
 
 
+
 app.directive("messageview", function() {
 
 	function contactList() {
@@ -37,13 +38,10 @@ app.directive("messageview", function() {
 		return to_list;
 	}
 
-
 	var directiveDefinitionObject = {
-    restrict: 'E,A',
+    restrict: 'E',
     transclude: true,
-
     scope: { message: '=' }, // Two-way binding to message object
-
 	controller: ['$scope', '$element', '$attrs', '$transclude', 
 		function($scope, $element, $attrs, $transclude) { 
 			$scope.contactDisplayName = function(contacts) {
@@ -66,26 +64,52 @@ app.directive("messageview", function() {
 				}
 				return to_list;
 			}
-		}],
+
+
+		$scope.autoResize = function(){
+        	var iframe = $element.find('iframe')[0];
+		    if(iframe){
+		        var newheight = iframe.contentWindow.document.body.scrollHeight;
+		        var newwidth = iframe.contentWindow.document.body.scrollWidth;
+		        console.log("Resizing ("+iframe.width+" by "+iframe.height+")" +
+		        			 "("+newwidth+"px by "+newheight+"px)" );
+    		    iframe.height = (newheight) + "px";
+    		    // iframe.width = '100%';
+			    iframe.width = (newwidth) + "px";
+
+			    /* This is to fix a bug where the document scrolls to the 
+			       top of the iframe after setting its height. */
+			       // setTimeout(window.scroll(0, 0), 1);
+			    
+		    }
+		};
+
+		}], // add back green_glow class
     template: 	'<div class="right_message_bubble green_glow">' +
     			'<div class="right_message_bubble_container">' +
 	    		  	'<div class="to_contacts"><strong>To:</strong> {{ message.to_contacts }}</div>' +
 	    		  	'<div class="from_contacts"><strong>From:</strong> {{ message.from_contacts }}</div>' +
 	    		  	'<div class="subject"><strong>Subject:</strong> {{message.subject}}</div>' +
-	    		  	'<br/><div class="body_html" ng-bind-html="message.body_text"></div>' + 
-					// '<div ng-bind-html="{message.body_text}""></div>' +
-					// in future use body text  | sanitizeEmail
+	    		  	'<iframe width="100%" height="1" marginheight="0" marginwidth="0" frameborder="no" scrolling="no"' +
+	    		  	'onLoad="{{ autoResize() }}" '+
+	    		  	'src="about:blank"></iframe>' + 
 				'</div>' +
 				'</div>',
-  //   link: function(scope, element, attrs) {
-		// scope.$watch('message', function(message) {
-		//    console.log(scope.message, message);
-		// })
-		// }
-  //   link: function(scope, element, attrs){
-	 //    	scope.contactList = function contactList() {
-		// 	}
-		// }
+
+
+   link: function (scope, iElement, iAttrs) {
+
+            scope.$watch('message.body_text', function(val) {
+            	if (angular.isUndefined(val)) { return; }
+
+            	// Can't just write data as URI in src due to same-origin security
+            	var iframe = iElement.find('iframe')[0];
+            	var doc = iframe.contentWindow.document;
+            	doc.open();
+            	doc.write(scope.message.body_text);
+            	doc.close();
+             });
+     }
 	};
 	return directiveDefinitionObject;
 });

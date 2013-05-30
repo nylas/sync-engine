@@ -10,7 +10,7 @@ I got sick of putting these in Asana.
 - [Matrix of clients and IMAP compatibility](http://www.imapwiki.org/Specs)
 - [IMAP server compliancy matrix](http://www.imapwiki.org/ImapTest/ServerStatus)
 - [Mark Crispin's panda IMAP server source](https://github.com/jonabbey/panda-imap)
-
+- [Gabor Cselle: How to replace IMAP](http://blog.gaborcselle.com/2010/02/how-to-replace-imap.html)
 
 ## relevant mailing lists
 
@@ -43,6 +43,10 @@ https://github.com/martine/go-imap
 - [UI router](https://github.com/angular-ui/ui-router)
 - [Basic angular.js and socket.io app](http://briantford.com/blog/angular-socket-io.html)
 
+http://www.adobe.com/devnet/html5/articles/angularjs-directives-and-the-computer-science-of-javascript.html'
+
+- [Difference between factories and services](https://groups.google.com/forum/#!msg/angular/56sdORWEoqg/b8hdPskxZXsJ)
+- [Angualar service or factory?](http://iffycan.blogspot.com/2013/05/angular-service-or-factory.html)
 
 <hr/>
 
@@ -54,6 +58,8 @@ What is it with everyone's obsession with Inbox Zero?
 
 ## Email clients
 
+* [envelope](https://github.com/envelopeapp/envelope) RoR project
+* [sup](https://github.com/sup-heliotrope/sup) curses thread-with-tags client
 * [Sent - Gmail iPhone App (shut down)](http://andadinosaur.com)
 * [Evomail (iPad)](http://evomail.io/) [screenshots](https://www.dropbox.com/sh/q3wi96i4fhyx2un/Qw15c3Sj2k)
 * [Boxed (just design)](http://dribbble.com/shots/668085-Boxed-an-email-client)

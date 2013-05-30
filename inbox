@@ -33,7 +33,7 @@ def start(args=None):
     
 
     import subprocess
-    commit = subprocess.check_output(["git", "describe"])
+    commit = subprocess.check_output(["git", "describe", "--tags"])
 
 
     print """

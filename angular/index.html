@@ -48,7 +48,8 @@
 
 			<div class="basic_pane shadowed">
 
-				<div class="message_cell" hoverstate="selected" data-ng-repeat="m in messages" ng-click="openThread( m.message_id)">
+				<div class="message_cell" hoverstate="selected" 
+				     data-ng-repeat="m in messages | orderBy:'-date'" ng-click="openMessage(m)">
 
 					<img  class="message_cell_image" ng-src="{{ m.gravatar_url }}"
 						 alt="{{ m.from_contacts[0] }}">
@@ -69,17 +70,15 @@
 
 	<div class="container_right">
 		<div class="right_pane">
-			<div class="right_subject_box">
-				Subject goes here for lorem ipsum 
-				<!-- Subject -->
+			<div class="right_subject_box" ng-cloak ng-bind="activeMessage.subject">
 			</div>
 
 <!-- 			<messageview data-ng-repeat="message in messages" />
  -->
 
-		<div ng-repeat="activeMessage in messages">
+		<!-- <div ng-repeat="activeMessage in messages"> -->
 			<messageview message="activeMessage" />
-		</div>
+		<!-- </div> -->
 
 
 				<div class="basic_pane reply_box" contenteditable="true" hidefocus="true">Reply text here...
