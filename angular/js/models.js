@@ -56,12 +56,12 @@ app.factory('IBMessage', function ($injector)
         this.subject = data.subject;
         this.message_parts = data.message_parts;
 
+        console.log(this.message_parts);
+
         // the zero sets to epoch, then add seconds
         // var d = new Date(0);
 
         this.date = new Date(data.date * 1000)
-
-
 
 
 
@@ -72,8 +72,37 @@ app.factory('IBMessage', function ($injector)
                         'd=mm&' +
                         's=' + encodeURIComponent(gravatar_size);
 
-        // console.log(this.date.setUTCSeconds(9999999))
-        // this.date = d.setUTCSeconds(parseFloat(data.date)); 
+
+        console.log("to contacts");
+        console.log(data.to_contacts);
+
+        if (this.to_contacts && this.to_contacts.length > 0) {
+
+            var to_list;
+            if (this.to_contacts[0][0] ) {
+                to_list = this.to_contacts[0][0];
+            } else {
+                to_list = this.to_contacts[0][2] + '@' + this.to_contacts[0][3];
+            }
+
+            for (var i = 1; i< this.to_contacts.length; i++) {
+                var c = this.to_contacts[i];
+                var nameToShow;
+                if (c[0]) {
+                    nameToShow = c[0];
+                } else {
+                    nameToShow = c[2] + '@' + c[3];
+                }
+                to_list = to_list + ', ' + nameToShow;
+            }
+            this.contactDisplayList = to_list;
+        } else {
+            this.contactDisplayList = 'Unknown sender';
+        }
+
+
+
+
     }
 
     IBMessageObject.prototype.printDate = function() {

@@ -4,6 +4,7 @@ import tornado.template
 import tornado.log
 import tornado.options
 import tornado.gen
+import tornado.escape
 from tornadio2 import SocketConnection, TornadioRouter, event
 
 import tornadio2.gen
@@ -153,7 +154,73 @@ class WireConnection(SocketConnection):
                                                  kwargs['section_index'],
                                                  folder='Inbox', )
 
-        print msg_data
+        content_type = kwargs['content_type']
+       
+        import webify
+        import quopri
+        import bleach
+        from bs4 import BeautifulSoup
+
+
+        # Let's decode...
+
+        try:
+            encoding = kwargs['encoding']
+            print 'ENCODING %s' % encoding
+            if encoding.lower() == 'quoted-printable':
+                msg_data = quopri.decodestring(msg_data)
+
+            elif encoding.lower() == '7bit':
+                # This is just ASCII. Do nothing.
+                pass
+        except Exception, e:
+            print 'no encoding...'
+
+
+
+
+        if content_type == 'text/plain':
+
+            msg_data = webify.plaintext2html(msg_data)
+        elif content_type == 'text/html':
+
+            soup = BeautifulSoup(msg_data)
+
+            # Bad elements
+            for s in soup('head'): s.extract()
+            for s in soup('style'): s.extract()
+            for s in soup('script'): s.extract()
+            for m in soup('html'): m.replaceWithChildren()
+            for m in soup('body'): m.replaceWithChildren()
+
+            # for match in soup.findAll('body'):
+            #     print 'MATCHED!'
+            #     match.replaceWithChildren()
+            #     # new_tag = soup.new_tag('div')
+            #     # new_tag.contents = b.contents
+            #     # b.replace_with(new_tag)
+
+            msg_data = str(soup)
+
+            # msg_data = tornado.escape.linkify(msg_data, shorten=True)
+
+        msg_data = bleach.linkify(msg_data)
+        # msg_data = bleach.clean(msg_data, strip=True)
+        # msg_data = webify.fix_links(msg_data)
+
+
+        # Shorten URLs to 30 characters
+        soup = BeautifulSoup(msg_data)
+        for a in soup.findAll('a'):
+            a['target'] = "_blank"
+            try:
+                if a.contents[0] == a['href']:
+                    a.string = a['href'][:30] + '&hellip;'
+                a['title'] = a['href']
+            except Exception, e:
+                log.info("Found anchor without href. Contents: %s" % a)
+                pass
+        msg_data = str(soup)
 
         self.emit('load_message_body_with_uid_ack', msg_data )
 

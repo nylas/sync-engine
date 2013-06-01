@@ -1,5 +1,3 @@
-
-
 /* Sticky footer */
 * {margin:0;padding:0;} 
 html, body {height: 100%;}
@@ -48,6 +46,7 @@ margin-top:-32767px;/* thank you Erik J - negate effect of float*/
 body {
   /*background-color: #E6EBEA;*/
   background-color: #F9F9F9;
+  /*background-color: #dbdbdb;*/
  
 /*  lighter blue bakcgroudn color */
   /*background: #e7eef2;*/
@@ -125,10 +124,8 @@ body {
 
 .right_subject_box
 {
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  padding: 15px;
-  margin-bottom: 1em;
+  padding-top: 15px;
+  padding-left: 3px;
 
   text-align:left;
   color:#333;
@@ -139,6 +136,17 @@ body {
   line-height: 1.2em;
   font-weight: 600; /* Bold */
 
+}
+
+.to_contacts_list 
+{
+  padding-top: 10px;
+  padding-bottom: 15px;
+  padding-left: 3px;
+  font-weight: 600;
+  color: #999;
+  text-shadow:1px 1px 1px white;
+  font-size: 14px;
 }
 
 .right_message_bubble
@@ -161,7 +169,7 @@ body {
 
   /* Non-green shadow */
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0),0 0 10px rgba(0, 0, 0, 0.1);
-
+4
 }
 
 
@@ -212,7 +220,7 @@ http://stackoverflow.com/questions/7965278/box-shadow-both-inset-and-outside-on-
   -moz-border-radius: inherit;
   -webkit-border-radius: inherit;
   font-family: "Proxima Nova", courier, sans-serif;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 500;
   color:#333;
   font-style: normal;
@@ -224,17 +232,14 @@ http://stackoverflow.com/questions/7965278/box-shadow-both-inset-and-outside-on-
   position: relative;
 }
 
-
-
-.body_html {
-  
+.from_contacts
+{
+  text-shadow: none;
 }
-
 
 
 .reply_box 
 {
-
   margin-top: 20px;
   padding: 1.45em;
   font-size: 15px;
@@ -252,6 +257,49 @@ http://stackoverflow.com/questions/7965278/box-shadow-both-inset-and-outside-on-
 
   min-height: 80px;
   outline:0px solid transparent;
+}
+
+
+.message_byline {
+  margin-bottom:20px;
+  height:50px;
+
+    /* separator */
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: #E6E8EA;
+
+}
+
+.message_byline_gravatar {
+  margin-right:10px;
+  width:35px;
+  height:35px;
+  border:1px solid #E6E8EA; 
+  -moz-border-radius: 35px;
+  border-radius: 35px;
+  background: left center no-repeat;
+  float:left;
+
+
+}
+
+
+.message_byline_fromline {
+  display:inline-block;
+  line-height: 37px;
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.message_byline_date
+{
+  float:right;
+  display:inline-block;
+  line-height: 37px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #777;
 }
 
 
@@ -380,8 +428,8 @@ http://stackoverflow.com/questions/7965278/box-shadow-both-inset-and-outside-on-
   width:35px;
   height:35px;
   border:1px solid #E6E8EA; 
-  -moz-border-radius: 5px;
-  border-radius: 5px;
+  -moz-border-radius: 35px;
+  border-radius: 35px;
   background: left center no-repeat;
   float:left;
  }

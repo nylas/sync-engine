@@ -299,8 +299,22 @@ class CrispinClient:
             # Reply-To: services@longnow.org
             # new_msg.reply_to = msg_envelope[4]
 
-            new_msg.to_contacts = msg_envelope[5]
+            # TO, CC, BCC
 
+            all_recipients = []
+            if msg_envelope[5]: all_recipients += msg_envelope[5]  # TO
+            if msg_envelope[6]: all_recipients += msg_envelope[6]  # CC
+            if msg_envelope[7]: all_recipients += msg_envelope[7]  # BCC
+            new_msg.to_contacts = all_recipients
+
+
+            # Return-Path is somewhere between 2-4: ??? <z.daniel.shi@gmail.com>
+
+            # TO: = msg_evelope[5]
+            # CC = msg_envelope[6]
+            # BCC: = msg_envelope[7]
+            # In-Reply-To: = msg_envelope[8]
+            # Message-ID = msg_envelope[9]
 
             new_msg.date = message_dict['INTERNALDATE']
             new_msg.thread_id = message_dict['X-GM-THRID']
@@ -353,7 +367,6 @@ class CrispinClient:
 
 
             new_msg.message_parts = all_messageparts
-
 
             # Done
             new_messages.append(new_msg)
@@ -477,8 +490,6 @@ class CrispinClient:
         msg_uid = str(msg_uid)
         if not folder:
             folder = self.all_mail_folder_name()
-
-        section_index = '2'
 
         self.select_folder(folder)
         log.info("Fetching in %s -- %s <%s>" % (folder, msg_uid, section_index))

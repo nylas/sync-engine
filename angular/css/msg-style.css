@@ -1,0 +1,35 @@
+* {
+	margin:0;
+	padding:0;
+	background-color: white;
+	font-smooth:always;
+	-webkit-font-smoothing:antialiased;
+} 
+
+
+
+::-moz-selection,
+::-webkit-selection,
+::selection
+ {
+  background: rgba(240,17,68,0.8);
+  color: #fff;
+  text-shadow: none;
+}
+
+
+* { 
+  font-family: "Proxima Nova", courier, sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color:#333;
+  font-style: normal;
+  font-variant: normal;
+  line-height: 1.6em;
+  font-style: normal;
+  text-align:left;
+  text-shadow:1px 1px 1px white;
+  position: relative;
+}
+
+

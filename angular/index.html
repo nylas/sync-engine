@@ -3,10 +3,23 @@
 <head>
 	<meta charset="utf-8">
 	<title>Inbox</title>
+
+<!-- 	<link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+	<script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
+ -->
+ <link href="/static/bootstrap-combined.min.css" rel="stylesheet">
+ <script src="/static/bootstrap.min.js"></script>
+
 	<link rel="stylesheet" href="css/app.css"/>
 	<link rel="stylesheet" href="css/style.css"/>
 	<link rel="stylesheet" href="/static/fonts.css"/>
 
+<style type="text/css">
+	/* Hide while loading */
+	[ng\:cloak], [ng-cloak], .ng-cloak {
+	  display: none;
+	}
+</style>
 
 <!-- typekit -->
 <script type="text/javascript">
@@ -37,8 +50,8 @@
 
 <div class="top_banner" ngCloak data-ng-controller="AppContainerController">
 
-	<a href="" class="button" data-ng-click="notificationButtonClick()">Activate notifications</a>
-
+<!-- 	<a href="" class="button" data-ng-click="notificationButtonClick()">Activate notifications</a>
+ -->
 	<div class="container_left">
 
 		<div class="shadowed_wrapper">
@@ -46,7 +59,7 @@
 
 			<a class="button" data-ng-click="loadMessagesForFolder('Inbox')">Load messages</a>
 
-			<div class="basic_pane shadowed">
+			<div class="basic_pane shadowed" ng-show="messages.length > 0">
 
 				<div class="message_cell" hoverstate="selected" 
 				     data-ng-repeat="m in messages | orderBy:'-date'" ng-click="openMessage(m)">
@@ -69,16 +82,13 @@
 
 
 	<div class="container_right">
-		<div class="right_pane">
-			<div class="right_subject_box" ng-cloak ng-bind="activeMessage.subject">
-			</div>
+		<div class="right_pane" ng-show="activeMessage != null">
+			<div class="right_subject_box" ng-cloak ng-bind="activeMessage.subject"></div>
 
-<!-- 			<messageview data-ng-repeat="message in messages" />
- -->
 
-		<!-- <div ng-repeat="activeMessage in messages"> -->
+			<div class="to_contacts_list" ng-show="activeMessage != null">Sent to {{activeMessage.contactDisplayList}}</div>
+
 			<messageview message="activeMessage" />
-		<!-- </div> -->
 
 
 				<div class="basic_pane reply_box" contenteditable="true" hidefocus="true">Reply text here...
@@ -115,8 +125,10 @@ About&nbsp;&nbsp;|&nbsp;&nbsp;Legal&nbsp;&nbsp;|&nbsp;&nbsp;Some Shit
 	<!-- In production use:
 	<script src="//ajax.googleapis.com/ajax/libs/angularjs/1.0.6/angular.min.js"></script>
 	-->
+
 	<script src="lib/angular/angular.js"></script>
 	<script src="lib/angular/angular-sanitize.js"></script>
+	<script src="lib/bootstrap/ui-bootstrap-0.3.0.js"></script>
 	<script src="lib/utils/md5.js"></script>
 	<script src="lib/socketio/socket.io.js"></script>
 	<script src="js/app.js"></script>

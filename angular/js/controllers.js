@@ -58,9 +58,27 @@ function AppContainerController($scope, socket, growl, IBMessage) {
         console.log(selectedMessage);
         $scope.activeMessage = selectedMessage;
 
+        var partToUse = undefined;
+        console.log(selectedMessage.message_parts);
+        for (var i = 0; i < selectedMessage.message_parts.length; i++) {
+            var part = selectedMessage.message_parts[i];
+            console.log(part.content_type.toLowerCase());
+            if (part.content_type.toLowerCase() === 'text/html') {
+                partToUse = part;
+            }
+        }
+
+        // Whatever. Just pick one and it will probably be text/plain
+        if (angular.isUndefined(partToUse)) {
+            partToUse = selectedMessage.message_parts[0]
+        }
+
         socket.emit('load_message_body_with_uid', 
             {uid: selectedMessage.uid,
-             section_index: '1'});
+             section_index: partToUse.index,
+             encoding: partToUse.encoding,
+             content_type: partToUse.content_type.toLowerCase(),
+         });
     }
 
 

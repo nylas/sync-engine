@@ -28,7 +28,7 @@ app.directive("clickable", function () {
 
 
 
-app.directive("messageview", function() {
+app.directive("messageview", function($filter) {
 
 	function contactList() {
 		var to_list = message.to_contacts[0].name
@@ -74,8 +74,8 @@ app.directive("messageview", function() {
 		        console.log("Resizing ("+iframe.width+" by "+iframe.height+")" +
 		        			 "("+newwidth+"px by "+newheight+"px)" );
     		    iframe.height = (newheight) + "px";
-    		    // iframe.width = '100%';
-			    iframe.width = (newwidth) + "px";
+    		    iframe.width = '100%';
+			    // iframe.width = (newwidth) + "px";
 
 			    /* This is to fix a bug where the document scrolls to the 
 			       top of the iframe after setting its height. */
@@ -84,12 +84,16 @@ app.directive("messageview", function() {
 		    }
 		};
 
+// http://www.gravatar.com/avatar/a940d19b9b05914a10c64a791cfd9a7b?d=mm&s=25
+
 		}], // add back green_glow class
-    template: 	'<div class="right_message_bubble green_glow">' +
+    template: 	'<div class="right_message_bubble">' +
     			'<div class="right_message_bubble_container">' +
-	    		  	'<div class="to_contacts"><strong>To:</strong> {{ message.to_contacts }}</div>' +
-	    		  	'<div class="from_contacts"><strong>From:</strong> {{ message.from_contacts }}</div>' +
-	    		  	'<div class="subject"><strong>Subject:</strong> {{message.subject}}</div>' +
+	    		  	'<div class="message_byline">' +	  	
+	    		  	'<img class="message_byline_gravatar" ng-src="{{ message.gravatar_url }}" alt="{{ message.from_contacts[0] }}">' +
+					'<div class="message_byline_fromline" tooltip-placement="top" tooltip="{{message.from_contacts[2]}}@{{message.from_contacts[3]}}">{{message.from_contacts[0]}}</div>' +
+	    		  	'<div class="message_byline_date">{{ message.date | relativedate }}</div>' +
+	    		  	'</div>' +
 	    		  	'<iframe width="100%" height="1" marginheight="0" marginwidth="0" frameborder="no" scrolling="no"' +
 	    		  	'onLoad="{{ autoResize() }}" '+
 	    		  	'src="about:blank"></iframe>' + 
@@ -99,15 +103,62 @@ app.directive("messageview", function() {
 
    link: function (scope, iElement, iAttrs) {
 
-            scope.$watch('message.body_text', function(val) {
-            	if (angular.isUndefined(val)) { return; }
+   			function injectToIframe(textToInject) {
 
-            	// Can't just write data as URI in src due to same-origin security
             	var iframe = iElement.find('iframe')[0];
             	var doc = iframe.contentWindow.document;
-            	doc.open();
-            	doc.write(scope.message.body_text);
-            	doc.close();
+
+            	// Reset
+        		doc.removeChild(doc.documentElement);  
+        		iframe.width = '100%';
+        		iframe.height = '0px;';
+
+
+            	var toWrite = '<html><head>' +
+            		'<style rel="stylesheet" type="text/css">' +
+            		'* { background-color:#FFF; '+
+            		'font-smooth:always;' +
+            		' -webkit-font-smoothing:antialiased;'+
+            		' font-family:"Proxima Nova", courier, sans-serif;'+
+            		' font-size:16px;'+
+            		' font-weight:500;'+
+            		' color:#333;'+
+            		' font-variant:normal;'+
+            		' line-height:1.6em;'+
+            		' font-style:normal;'+
+            		' text-align:left;'+
+            		' text-shadow:1px 1px 1px #FFF;'+
+            		' position:relative;'+
+            		' margin:0; '+
+            		' padding:0; }' +
+            		' a { text-decoration: underline;}'+
+            		'a:hover {' +
+            		' border-radius:3px;; background-color: #E9E9E9;' +
+            		' }' + 
+					'</style></head><body>' + 
+					 textToInject +
+            	     '</body></html>';
+
+	            	doc.open();
+	            	doc.write(toWrite);
+	            	doc.close();
+   			}
+
+
+   			scope.$watch('message', function(val) {
+   				// Reset the iFrame anytime the current message changes...
+   				injectToIframe('');
+   			})
+
+            scope.$watch('message.body_text', function(val) {
+            	if (angular.isUndefined(val)) {
+	   				injectToIframe('Loading&hellip;');
+            	} else {
+	   				injectToIframe(scope.message.body_text);
+	            	// var toWrite = $filter('linky')(scope.message.body_text);
+	            	// toWrite = $filter('newlines')(toWrite);
+            	}
+
              });
      }
 	};

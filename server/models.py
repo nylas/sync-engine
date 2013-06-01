@@ -147,8 +147,6 @@ class IBMessage():
             message_parts = [p.toJSON() for p in self.message_parts] )
 
 
-
-
 # BODY is like BODYSTRUCTURE but without extension information
 # not sure what this means in practice. We can probably get by only
 # using BODY requests and just looking up the filetype based on filename 
@@ -293,7 +291,8 @@ class IBMessagePart(object):
         return dict(
             content_type = "%s/%s" % (self.content_type_major, self.content_type_minor),
             bytes = self.bytes,
-            index = self.index
+            index = self.index,
+            encoding = self.encoding,
         )
 
 

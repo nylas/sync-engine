@@ -6,4 +6,6 @@ var app = angular.module('InboxApp',
 	 'InboxApp.filters', 
 	 'InboxApp.directives', 
 	 'InboxApp.services', 
-	 'InboxApp.models']);
+	 'InboxApp.models',
+	 'ui.bootstrap',
+	 ]);
