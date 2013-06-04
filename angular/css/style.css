@@ -260,47 +260,6 @@ http://stackoverflow.com/questions/7965278/box-shadow-both-inset-and-outside-on-
 }
 
 
-.message_byline {
-  margin-bottom:20px;
-  height:50px;
-
-    /* separator */
-  border-bottom-width: 1px;
-  border-bottom-style: solid;
-  border-bottom-color: #E6E8EA;
-
-}
-
-.message_byline_gravatar {
-  margin-right:10px;
-  width:35px;
-  height:35px;
-  border:1px solid #E6E8EA; 
-  -moz-border-radius: 35px;
-  border-radius: 35px;
-  background: left center no-repeat;
-  float:left;
-
-
-}
-
-
-.message_byline_fromline {
-  display:inline-block;
-  line-height: 37px;
-  font-size: 19px;
-  font-weight: 600;
-}
-
-.message_byline_date
-{
-  float:right;
-  display:inline-block;
-  line-height: 37px;
-  font-size: 14px;
-  font-weight: 400;
-  color: #777;
-}
 
 
 
