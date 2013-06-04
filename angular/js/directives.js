@@ -166,6 +166,10 @@ app.directive("messageview", function($filter) {
 
 
 
+                // TODO move the CSS here into an object and create the <html><head>
+                // etc using jqlite elements.
+                // in the future we'll also wnat to inject javascript, so this 
+                // becomes even more important
 
                 var toWrite = '<html><head>' +
                     '<style rel="stylesheet" type="text/css">' +
