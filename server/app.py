@@ -204,7 +204,6 @@ class WireConnection(SocketConnection):
         # msgs = crispin_client.fetch_headers_for_uids(folder_name, UIDs)
 
         threads = crispin_client.fetch_messages(folder_name)
-        for t in threads: print t
         return threads
 
 

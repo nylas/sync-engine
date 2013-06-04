@@ -825,7 +825,12 @@ class CrispinClient:
         response = self.imap_server.fetch(msg_uid,
                                     [query, 'X-GM-THRID', 'X-GM-MSGID'])
 
-        response_dict =  response[int(msg_uid)]
+        try:
+            response_dict =  response[int(msg_uid)]
+        except KeyError, e:
+            print 'Response:', response_dict
+            return "Error fetching."
+        
         body_data = response_dict[query_key]
         message_id = response_dict['X-GM-MSGID']
         thread_id = response_dict['X-GM-THRID']
