@@ -43,5 +43,7 @@ angular.module('InboxApp.filters', []).
       day_diff < 31 && Math.ceil( day_diff / 7 ) + " weeks ago";
 
     }
+  }]).
+  filter('escape', [function() {
+    return window.escape;
   }]);
-

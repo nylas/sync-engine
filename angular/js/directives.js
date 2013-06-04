@@ -97,6 +97,14 @@ app.directive("messageview", function($filter) {
 	    		  	'<iframe width="100%" height="1" marginheight="0" marginwidth="0" frameborder="no" scrolling="no"' +
 	    		  	'onLoad="{{ autoResize() }}" '+
 	    		  	'src="about:blank"></iframe>' + 
+	    		  	
+	    		  	'<div class="message_attachments" ng-show="message.attachments.length > 0">' +
+    		  		'Attached: <span ng-repeat="attachment in message.attachments">' +
+    		  		'<a ng:href="/download_file?uid={{message.uid}}&section_index={{attachment.index}}&content_type={{attachment.content_type}}&encoding={{attachment.encoding}}&filename={{attachment.filename}}">' +
+    		  		'{{attachment.filename}}' +
+    		  		'</a>{{$last && " " || ", " }}</span>' +
+	    		  	'</div>' +
+
 				'</div>' +
 				'</div>',
 

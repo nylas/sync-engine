@@ -57,12 +57,14 @@
 		<div class="shadowed_wrapper">
 			<div class="mailbox_name">Inbox</div>
 
-			<a class="button" data-ng-click="loadMessagesForFolder('Inbox')">Load messages</a>
+			<a class="button" ng-click="loadMessagesForFolder('Inbox')">Load messages</a>
 
 			<div class="basic_pane shadowed" ng-show="messages.length > 0">
 
 				<div class="message_cell" hoverstate="selected" 
-				     data-ng-repeat="m in messages | orderBy:'-date'" ng-click="openMessage(m)">
+				     data-ng-repeat="m in messages | orderBy:'-date'" 
+				     ng-click="openMessage(m)"
+				     ng-dblclick="doubleClickedMessage(m)">
 
 					<img  class="message_cell_image" ng-src="{{ m.gravatar_url }}"
 						 alt="{{ m.from_contacts[0] }}">

@@ -81,6 +81,11 @@ function AppContainerController($scope, socket, growl, IBMessage) {
          });
     }
 
+    $scope.doubleClickedMessage = function(clickedMessage) {
+        console.log('Double clicked message:');
+        console.log(clickedMessage);
+    }
+
 
     socket.on('load_message_body_with_uid_ack', function(data) {
         console.log("updating message")

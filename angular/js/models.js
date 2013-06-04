@@ -55,6 +55,7 @@ app.factory('IBMessage', function ($injector)
         this.from_contacts = data.from_contacts[0];
         this.subject = data.subject;
         this.message_parts = data.message_parts;
+        this.attachments = data.attachments;
 
         console.log(this.message_parts);
 

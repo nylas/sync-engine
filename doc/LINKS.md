@@ -42,6 +42,7 @@ https://github.com/martine/go-imap
 - [Angular modules](http://ngmodules.org/)
 - [UI router](https://github.com/angular-ui/ui-router)
 - [Basic angular.js and socket.io app](http://briantford.com/blog/angular-socket-io.html)
+- [How to think in AngularJS from jQuery background](http://stackoverflow.com/questions/14994391/how-do-i-think-in-angularjs-if-i-have-a-jquery-background/15012542#15012542)
 
 http://www.adobe.com/devnet/html5/articles/angularjs-directives-and-the-computer-science-of-javascript.html'
 

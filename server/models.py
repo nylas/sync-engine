@@ -54,7 +54,9 @@ class IBMessage():
         self.subject = None
 
         self.date = None
-        self.message_parts = []  # list of indicies
+        self.message_parts = []
+        self.attachments = []
+        self.signatures = []
         self.labels = []
 
 
@@ -114,7 +116,6 @@ class IBMessage():
             self.date = datetime.datetime.fromtimestamp(utc_timestamp)
 
 
-
     def __repr__(self):
         return '<IBMessage object> ' + \
                 '\n    msg_id: ' + str(self.message_id) +\
@@ -123,7 +124,9 @@ class IBMessage():
                 '\n    from: %s' + str(self.from_contacts) +\
                 '\n    subj: ' + str(self.subject) +\
                 '\n    date epoch: ' + str( time.mktime(self.date.timetuple() )) +\
-                '\n    with %d parts.\n' % len(self.message_parts)
+                '\n    parts: ' + str(len(self.message_parts)) +\
+                '\n    attachments: ' + str(len(self.attachments)) +\
+                '\n    signatures: ' + str(len(self.signatures))
 
 
     def gmail_url(self):
@@ -144,7 +147,8 @@ class IBMessage():
             from_contacts = self.from_contacts,
             subject = self.subject,
             date = str( time.mktime(self.date.timetuple() )), # since poch
-            message_parts = [p.toJSON() for p in self.message_parts] )
+            message_parts = [p.toJSON() for p in self.message_parts],
+            attachments = [p.toJSON() for p in self.attachments] )
 
 
 # BODY is like BODYSTRUCTURE but without extension information
@@ -226,7 +230,6 @@ class IBMessagePart(object):
         else:
 
             try:
-
                 # instantiate
                 self.index = str(index)
                 self.content_type_major = p[0]
@@ -252,14 +255,17 @@ class IBMessagePart(object):
                     self.filename = p[2][1]
                     self.encoding = p[5]
                     self.bytes = p[6]
-                else:
-                    # Other random body section types here:
-                    # ('APPLICATION', 'PKCS7-SIGNATURE', ('NAME', 'smime.p7s'), None, None, 'BASE64', 2176)
 
-                    log.error('No idea what to do with this BODYSTRUCTURE: %s', p)
+                # just a regular file here
+                else:
+                    if p[2] and not isinstance(p[2], basestring):  # is there a filename?
+                        assert p[2][0].lower() == 'name'
+                        self.filename = p[2][1]
+                    self.encoding = p[5]
+                    self.bytes = p[6]
 
             except Exception, e:
-                print 'Goddammit bug', e, p
+                print e, 'Unparsable mine type thing', p
                 pass
 
 
@@ -276,23 +282,30 @@ class IBMessagePart(object):
                            self.bytes, 
                            self.line_count,
                            self.encoding)
-        elif self.content_type_major.lower() == 'image':
+        else:
             return r + 'BodySection %s: %s (%i byes) with Content-Type: %s/%s' % \
                            (self.index,
                             self.filename,
                             self.bytes, 
                             self.content_type_major.lower(), 
                             self.content_type_minor.lower() )
-        else:
-            return r + ''
 
 
     def toJSON(self):
-        return dict(
-            content_type = "%s/%s" % (self.content_type_major, self.content_type_minor),
-            bytes = self.bytes,
-            index = self.index,
-            encoding = self.encoding,
-        )
+        if self.content_type_major.lower() == 'text':
+            return dict(
+                content_type = "%s/%s" % (self.content_type_major, self.content_type_minor),
+                bytes = self.bytes,
+                index = self.index,
+                encoding = self.encoding,
+            )
+        else:
+            return dict(
+                content_type = "%s/%s" % (self.content_type_major, self.content_type_minor),
+                bytes = self.bytes,
+                index = self.index,
+                encoding = self.encoding,
+                filename = self.filename
+            )
 
 

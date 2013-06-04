@@ -19,8 +19,6 @@ from models import IBMessage, IBThread, IBMessagePart
 
 from datastore import DataStore
 
-from imaplib2 import Internaldate2Time
-
 
 message_cache = {}  # (folder, UID) -> message (someday use message_id)
 thread_cache = {}  # thread_id -> thread
@@ -328,47 +326,372 @@ class CrispinClient:
             # BODYSTRUCTURE parsing 
 
             all_messageparts = []
+            all_attachmentparts = []
+            all_signatures = []
+
             bodystructure = message_dict['BODY']
-            if bodystructure.is_multipart:
 
-                assert len(bodystructure) <= 2
-                # TODO look into the multipart grouping p[-1]. these fall under:
-                # MIXED
-                # ALTERNATIVE
-                # RELATED
-                # SIGNED
-                parts = bodystructure[0]
-                for i, part in enumerate(parts):
-                    # Sometimes one of the body parts is actually something
-                    # weird like Content-Type: multipart/alternative, so you
-                    # have to loop though them individually. I think
-                    # email.parser takes care of this when you fetch the actual
-                    # body content, but I have to do it here for the
-                    # BODYSTRUCTURE response.
 
-                    # recurisve creator since these might be nested
-                    # pass the index so we can append subindicies
-                    # Note: this shit might break but it works for now...
-                    def make_obj(p, i):
-                        if not isinstance(p[0], basestring):
-                            for x in range(len(p) - 1):  # The last one is the label
-                                if len(i) > 0:
-                                    index = i+'.' + str(x+1)
-                                else: 
-                                    index = str(x+1)
-                                make_obj(p[x], index)
-                        else:
-                            if len(i) > 0: index = i+'.1'
-                            else: index = '1'
-                            all_messageparts.append(IBMessagePart(p, i))
-                    make_obj(part, str(i+1))
-            else:
+            if not bodystructure.is_multipart:
                 all_messageparts.append(IBMessagePart(bodystructure, '1'))
+    
+            else:
+
+
+
+            # This recursively walks objects returned in bodystructure
+                def make_obj(p, i):
+                    if not isinstance(p[0], basestring):
+                        # if isinstance(p[-1], basestring):
+                        #     print 'Relation: %s' % p[-1]
+                        # else:
+                        #     print 'No relation var?', p[-1]
+
+
+                        if isinstance(p[-1], basestring):  # p[-1] is the mime relationship
+                            
+                            mime_relation = p[-1]
+
+                            # The objects before the mime relationship label can either be
+                            # in the main tuple, or contained in a sub-list
+
+                            if (len(p) == 2):
+
+                                # single object
+                                if isinstance(p[0][0], basestring):
+                                    toIterate = p[:-1]
+                                # Nested list
+                                else:
+                                    toIterate = p[0]
+
+                            # probably have multiple objects here
+                            else:
+                                toIterate = p[:-1]
+
+                        else:
+                            # No relationship var here
+                            log.error("NO MIME RELATION HERE.....")
+                            toIterate = p
+
+                        stragglers = []
+                        for x, part in enumerate(toIterate):  
+                            if len(i) > 0:
+                                index = i+'.' + str(x+1)
+                            else:
+                                index = str(x+1)
+
+                            ret = make_obj(part, index)
+                            if not ret: continue
+
+                            assert isinstance(ret, IBMessagePart)
+
+                            if mime_relation.lower() == 'alternative':
+                                all_messageparts.append(ret)
+                                
+                            elif mime_relation.lower() == 'mixed':
+                                if ret.content_type_major.lower() == 'text':
+                                    all_messageparts.append(ret)
+                                else:
+                                    all_attachmentparts.append(ret)
+
+                            elif mime_relation.lower() == 'signed':
+                                if ret.content_type_major.lower() == 'text':
+                                    all_messageparts.append(ret)
+                                else:
+                                    all_signatures.append(ret)
+
+                        return []
+
+                    else:
+                        if len(i) > 0: index = i+'.1'
+                        else: index = '1'
+                        return IBMessagePart(p, i)
+                
+
+                ret = make_obj(bodystructure, '')
+                if len(ret) > 0 and len(all_messageparts) == 0:
+                    all_messageparts = ret
 
 
             new_msg.message_parts = all_messageparts
+            new_msg.attachments = all_attachmentparts
+            new_msg.signatures = all_signatures
 
-            # Done
+            new_messages.append(new_msg)
+
+        log.info("Fetched headers for %i messages" % len(new_messages))
+        return new_messages
+
+
+
+
+
+
+    def fake():
+        if true:
+
+
+
+
+            current_index = '1'
+
+
+            print 'BODYSTRUCTURE:', bodystructure
+
+
+
+            # Not multipart. Single object. Usually just text/plain
+            if not isinstance(bodystructure[0], list):
+                all_messageparts.append(IBMessagePart(bodystructure, current_index))
+            else:
+                # The message is multipart, meaning it is formatted as 
+                # ( [some list of objects] , relationship between the two )
+                # assert that this much is true
+                assert isinstance(bodystructure[0], list)
+                assert isinstance(bodystructure[1], basestring)  # MIME relation
+                assert len(bodystructure) == 2
+                mime_relation = bodystructure[1]
+                parts = bodystructure[0]
+
+
+                # There are several options for the MIMEtype relationship
+
+                # These objects are alternative representations of the same content
+                # usually this means one is plaintext and the other html
+                if mime_relation.lower() == 'alternative':
+
+                    print "ALTERNATIVE HERE "
+
+                    assert len(parts) > 1  # should have multiple parts
+                    for p in parts: assert isinstance(p, tuple)  # all objects
+                    for p in parts: assert isinstance(p[0], basestring)  # not nested
+
+                    alternative_parts = []
+                    for i, part in enumerate(parts):
+                        newIndex = current_index + '.' + str(i+1)
+                        print 'MAKING MESSAGE PART OUT OF:', part
+                        partObject = IBMessagePart(part, newIndex)
+                        alternative_parts.append(partObject)
+                    print "ALTERNATIVE PARTS", alternative_parts
+                    # Pick the html one out of here later
+                    new_msg.message_parts = alternative_parts
+
+                # This has multiple objects. ie: attachments
+                elif mime_relation.lower() == 'mixed':
+                    print "MIXED HERE with %d parts" % len(parts)
+                    mixedparts = parts[0]
+
+                    # if parts[0] is a list, it means we need to iterate and check it
+                    if not isinstance(parts[-1], basestring):
+                        sub_alternate_maybe = parts[0]
+                        print 'parts', parts
+                        print 'sub_alternate_maybe', sub_alternate_maybe
+                        assert isinstance(sub_alternate_maybe[-1], basestring)
+                        # It's usually alternate when there are attachments
+                        if sub_alternate_maybe[-1].lower() == 'alternative':
+                            alternative_parts = []
+                            for i, part in enumerate(sub_alternate_maybe[:-1]):
+                                newIndex = current_index + '.' + str(i+1)
+                                partObject = IBMessagePart(part, newIndex)
+                                alternative_parts.append(partObject)
+                            # Pick the html one out of here later
+                            new_msg.message_parts = alternative_parts
+                        else:
+                            log.error("No idea what parts this might be...")
+
+
+                        # These are the attachments (probably...?)
+                        attachment_parts = []
+                        for i, part in enumerate(parts[1:]):
+                            newIndex = str( int(current_index) + i + 1 )
+                            partObject = IBMessagePart(part, newIndex)
+                            attachment_parts.append(partObject)
+                        # Pick the html one out of here later
+                        new_msg.attachments = attachment_parts
+
+
+                    # parts[0] IS a string, meaning there is no html+text parts. 
+                    # Need to iterate through parts to get attachments. 
+                    else:
+                        attachment_parts = []
+                        for i, part in enumerate(parts):
+                            newIndex = str( int(current_index) + i + 1 )
+                            partObject = IBMessagePart(part, newIndex)
+                            if partObject.content_type_major.lower() == 'text':
+                                new_msg.message_parts = [ partObject ]
+                            else:
+                                attachment_parts.append(partObject)
+                        # Pick the html one out of here later
+                        new_msg.attachments = attachment_parts
+
+
+
+                    pass
+
+
+                elif mime_relation.lower() == 'related':
+                    pass
+
+                # Message has some kind of signature with this data
+                elif mime_relation.lower() == 'signed':
+                    pass
+                else:
+                    log.error("Unknown relation type for bodystructure: %s" % relation)
+
+                print
+
+            # else:
+
+            #     
+            #     # TODO look into the multipart grouping p[-1]. these fall under:
+            #     # MIXED
+            #     # ALTERNATIVE
+            #     # RELATED
+            #     # SIGNED
+            #     # parts = bodystructure[0]
+
+
+            #     # for i, part in enumerate(parts):
+            #         # Sometimes one of the body parts is actually something
+            #         # weird like Content-Type: multipart/alternative, so you
+            #         # have to loop though them individually. I think
+            #         # email.parser takes care of this when you fetch the actual
+            #         # body content, but I have to do it here for the
+            #         # BODYSTRUCTURE response.
+
+            #         # recurisve creator since these might be nested
+            #         # pass the index so we can append subindicies
+            #         # Note: this shit might break but it works for now...
+            #     def make_obj(p, i):
+
+            #         # Still multiple objects here
+            #         if not isinstance(p[0], basestring):
+
+            #             # First index should be list of bodytypes
+            #             # second should be their relationship
+            #             if len(p) == 2 and isinstance(p[-1], basestring):
+            #                 partsToEnumerate = p[0]
+            #                 relation = p[1]
+
+            #                 for x, part2 in enumerate( partsToEnumerate ):
+            #                 # for x in range(len(p) - 1):  # The last one is the label
+            #                     index = i+'.' + str(x+1)
+            #                     make_obj(part2, index)
+
+            #             else:
+            #                 log.error("Some problem here with object: ", p)
+
+            #         else:
+            #             all_messageparts.append(IBMessagePart(p, i))
+
+
+            #     make_obj(bodystructure, '1')
+
+            #     print all_messageparts
+            #     print
+
+
+            # new_msg.message_parts = all_messageparts
+            
+
+
+
+
+
+            # # This part parses the nested BODYSTRUCTURE data structure
+
+            # current_index = '1'
+
+            # # Not multipart. Single object
+            # if not isinstance(bodystructure[0], list):
+            #     assert len(bodystructure) == 1
+            #     part = IBMessagePart(bodystructure[0], current_index)
+            #     all_messageparts = [ ('ALONE', part) ]
+
+
+
+            # parse_bodystucture('1', bodystructure)
+
+            # print bodystructure
+            # print 
+
+            # if bodystructure.is_multipart:
+
+            #     # This is always true for the top level
+            #     assert len(bodystructure) <= 2
+
+            #     # TODO look into the multipart grouping p[-1]. these fall under:
+            #     # MIXED
+            #     # ALTERNATIVE
+            #     # RELATED
+            #     # SIGNED
+
+
+
+            #     if not isinstance(p[0], basestring):
+
+
+            #     # going to run this on bodystructure
+            #     def make_obj(p, i):
+
+            #         # If it's a list/tuple, there are multiple parts
+            #         if not isinstance(p[0], basestring):
+
+            #             # This is how the parts are related 
+            #             groupingType = p[-1]
+
+
+            #             thePartsRaw = p[:-1]
+            #             thePartsProcessed = []
+
+            #             for j, thePart in enumerate( p[:-1] ):  # grouping marker is at -1
+            #                 if len(i) > 0:
+            #                     index = i+'.' + str(j+1)
+            #                 else: 
+            #                     index = str(j+1)
+
+            #                 print 'index, nesting?', index
+            #                 thePartsProcessed += make_obj(thePart, index)
+
+            #             # print 'Grouping %s,  Parts: %s' % (groupingType, thePartsProcessed)
+            #             return (groupingType, thePartsProcessed)
+
+            #         else:
+            #             if len(i) > 0: 
+            #                 index = i+'.1'
+            #             else: 
+            #                 index = '1'
+            #             return ('ALONE', IBMessagePart(p, i))
+
+
+
+            #     all_messageparts = make_obj(bodystructure, '1')  # needs to be 1-indexed
+
+            #     print all_messageparts
+            #     print
+
+            #     # for i, part in enumerate(parts):
+            #     #     # Sometimes one of the body parts is actually something
+            #     #     # weird like Content-Type: multipart/alternative, so you
+            #     #     # have to loop though them individually. I think
+            #     #     # email.parser takes care of this when you fetch the actual
+            #     #     # body content, but I have to do it here for the
+            #     #     # BODYSTRUCTURE response.
+
+            #     #     # recurisve creator since these might be nested
+            #     #     # pass the index so we can append subindicies
+            #     #     # Note: this shit might break but it works for now...
+
+
+            #     #     # all_messageparts.append(IBMessagePart(p, i))
+
+            #     #     all_messageparts = make_obj(part, str(i+1))  # needs to be 1-indexed
+            # else:
+            #     all_messageparts = ('ALONE',  IBMessagePart(bodystructure, '1') )
+
+
+
+            new_msg.message_parts = all_messageparts
             new_messages.append(new_msg)
 
 
@@ -412,6 +735,10 @@ class CrispinClient:
 
 
 
+
+
+    # TODO not really using this code below anymore to fetch then entire messabe,
+    # but we might use it again someday soon!
 
     @connected
     def fetch_msg(self, msg_uid):

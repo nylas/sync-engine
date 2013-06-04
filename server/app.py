@@ -49,9 +49,10 @@ class Application(tornado.web.Application):
             (r'/app/(.*)', NoCacheStaticFileHandler, {'path': PATH_TO_ANGULAR, 
                                            'default_filename':'index.html'}),
             (r'/app', AppRedirectHandler),
+            (r'/download_file', FileDownloadHandler),
             # /wire is the route for messages.
-            (r'/(?!wire|!app)(.*)', tornado.web.StaticFileHandler, {'path': PATH_TO_STATIC, 
-                                           'default_filename':'index.html'}),        
+            (r'/(?!wire|!app|download_file)(.*)', tornado.web.StaticFileHandler, {'path': PATH_TO_STATIC, 
+                                           'default_filename':'index.html'}),       
         ])
 
         tornado.web.Application.__init__(self, handlers, **settings)
@@ -71,6 +72,66 @@ class AppRedirectHandler(BaseHandler):
     # TODO put authentication stuff here
     def get(self):
         self.redirect('/app/')
+
+
+class FileDownloadHandler(BaseHandler):
+    def get(self):
+
+        args = self.request.arguments
+
+        uid = args['uid'][0]
+        section_index = args['section_index'][0]
+        content_type = args['content_type'][0]
+        encoding = args['encoding'][0]
+        filename = args['filename'][0]
+
+        self.set_header ('Content-Type', content_type)
+        self.set_header ('Content-Disposition', 'attachment; filename=' + filename)
+
+
+        # TODO Some notes about base64 downloading:
+
+        # Some b64 messages may have other additonal encodings
+        # Some example strings:
+
+        #     '=?Windows-1251?B?ICLRLcvu5Obo8fLo6iI?=',
+        #     '=?koi8-r?B?5tLPzM/XwSDtwdLJzsEg98nUwczYxdfOwQ?=',
+        #     '=?Windows-1251?B?1PDu6+7i4CDM4PDo7eAgwujy4Ov85eLt4A?='
+
+        # In these situations, we should split by '?' and then grab the encoding
+
+        # def decodeStr(s):
+        #     s = s.split('?')
+        #     enc = s[1]
+        #     dat = s[3]
+        #     return (dat+'===').decode('base-64').decode(enc)
+
+        # The reason for the '===' is that base64 works by regrouping bits; it turns 
+        # 3 8-bit chars into 4 6-bit chars (then refills the empty top bits with 0s). 
+        # To reverse this, it expects 4 chars at a time - the length of your string 
+        # must be a multiple of 4 characters. The '=' chars are recognized as padding; 
+        # three chars of padding is enough to make any string a multiple of 4 chars long
+
+
+
+        data = crispin_client.fetch_msg_body(uid, section_index, folder='Inbox', )
+       
+        try:
+            if encoding.lower() == 'quoted-printable':
+                log.info("Decoded Quoted-Printable")
+                data = quopri.decodestring(data)
+            elif encoding.lower() == '7bit':
+                pass  # This is just ASCII. Do nothing.
+            elif encoding.lower() == 'base64':
+                log.info("Decoded Base-64")
+                data = data.decode('base-64')
+            else:
+                log.error("Unknown encoding scheme:" + str(encoding))
+        except Exception, e:
+            print 'ENcoding not provided...'
+
+        self.write(data)
+
 
 
 # Global, ugh.
@@ -112,14 +173,15 @@ class WireConnection(SocketConnection):
         console.log("Socket msg: %s", message)
 
 
-    @tornado.gen.engine
-    def on_event(self, name, *args, **kwargs):
-        """Wrapped ``on_event`` handler, which will queue events and will allow usage
-        of the ``yield`` in the event handlers.
+    # Uncomment this and the call to yield tornado.gen.xxxxx to use multithreaded stuff
+    # @tornado.gen.engine
+    # def on_event(self, name, *args, **kwargs):
+    #     """Wrapped ``on_event`` handler, which will queue events and will allow usage
+    #     of the ``yield`` in the event handlers.
 
-        If you want to use non-queued version, just wrap ``on_event`` with ``gen.engine``.
-        """
-        return super(WireConnection, self).on_event(name, *args, **kwargs)
+    #     If you want to use non-queued version, just wrap ``on_event`` with ``gen.engine``.
+    #     """
+    #     return super(WireConnection, self).on_event(name, *args, **kwargs)
 
 
     @event
@@ -142,6 +204,7 @@ class WireConnection(SocketConnection):
         # msgs = crispin_client.fetch_headers_for_uids(folder_name, UIDs)
 
         threads = crispin_client.fetch_messages(folder_name)
+        for t in threads: print t
         return threads
 
 
@@ -166,13 +229,14 @@ class WireConnection(SocketConnection):
 
         try:
             encoding = kwargs['encoding']
-            print 'ENCODING %s' % encoding
             if encoding.lower() == 'quoted-printable':
                 msg_data = quopri.decodestring(msg_data)
 
             elif encoding.lower() == '7bit':
                 # This is just ASCII. Do nothing.
                 pass
+            else:
+                log.error("Couldn't figure out how to decode this:" + str(encoding))
         except Exception, e:
             print 'no encoding...'
 
