@@ -4,7 +4,7 @@
 var app = angular.module('InboxApp.controllers', []);
 
 
-function AppContainerController($scope, socket, growl, IBMessage) {
+app.controller('AppContainerController', function($scope, socket, growl, IBMessage) {
 
     $scope.notificationButtonClick = function() {
         growl.requestPermission(
@@ -95,8 +95,7 @@ function AppContainerController($scope, socket, growl, IBMessage) {
 
 
 
-}
-app.controller('AppContainerController', AppContainerController);
+});
 
 
 /* TODO move these declarations so they don't pollute the global namespace

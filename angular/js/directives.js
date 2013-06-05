@@ -28,60 +28,30 @@ app.directive("clickable", function () {
 
 
 
-app.directive("messageview", function($filter) {
-
-    function contactList() {
-        var to_list = message.to_contacts[0].name
-        for (var i = 1; i< message.to_contacts.length; i++) {
-            to_list = to_list + ', ' + message.to_contacts[i].name;
-        }
-        return to_list;
-    }
-
-    var directiveDefinitionObject = {
+app.directive("messageview", function($filter) { return {
     restrict: 'E',
     transclude: true,
     scope: { message: '=' }, // Two-way binding to message object
-    controller: ['$scope', '$element', '$attrs', '$transclude', 
-        function($scope, $element, $attrs, $transclude) { 
-            $scope.contactDisplayName = function(contacts) {
+    controller: function($scope, $element, $attrs, $transclude) { 
+        $scope.contactDisplayName = function(contacts) {
 
-                if (angular.isUndefined(contacts)) { 
-                    return "";
-                }
-
-                var to_list = pickname(contacts[0]);
-                for (var i = 1; i< contacts.length; i++) {
-
-                    var c = contacts[i];
-                    var nameToShow;
-                    if (angular.isUndefined(c.name) || c.name.length == 0) {
-                        nameToShow = c.address;
-                    } else {
-                        nameToShow = c.name;
-                    }
-                    to_list = to_list + ', ' + nameToShow;
-                }
-                return to_list;
+            if (angular.isUndefined(contacts)) { 
+                return "";
             }
 
+            var to_list = pickname(contacts[0]);
+            for (var i = 1; i< contacts.length; i++) {
 
-        $scope.autoResize = function(){
-            var iframe = $element.find('iframe')[0];
-            if(iframe){
-                var newheight = iframe.contentWindow.document.body.scrollHeight;
-                var newwidth = iframe.contentWindow.document.body.scrollWidth;
-                console.log("Resizing ("+iframe.width+" by "+iframe.height+")" +
-                             "("+newwidth+"px by "+newheight+"px)" );
-                iframe.height = (newheight) + "px";
-                iframe.width = '100%';
-                // iframe.width = (newwidth) + "px";
-
-                /* This is to fix a bug where the document scrolls to the 
-                   top of the iframe after setting its height. */
-                   // setTimeout(window.scroll(0, 0), 1);
-                
+                var c = contacts[i];
+                var nameToShow;
+                if (angular.isUndefined(c.name) || c.name.length == 0) {
+                    nameToShow = c.address;
+                } else {
+                    nameToShow = c.name;
+                }
+                to_list = to_list + ', ' + nameToShow;
             }
+            return to_list;
         };
 
 
@@ -121,9 +91,8 @@ app.directive("messageview", function($filter) {
             color: '#777'
         };
 
-// http://www.gravatar.com/avatar/a940d19b9b05914a10c64a791cfd9a7b?d=mm&s=25
-
-        }], // add back green_glow class
+    }, 
+    // add back green_glow class sometime
     template:   '<div class="right_message_bubble">' +
                 '<div class="right_message_bubble_container">' +
                     '<div ng-style="byline">' +        
@@ -131,106 +100,139 @@ app.directive("messageview", function($filter) {
                     '<div ng-style="byline_fromline" tooltip-placement="top" tooltip="{{message.from_contacts[2]}}@{{message.from_contacts[3]}}">{{message.from_contacts[0]}}</div>' +
                     '<div ng-style="byline_date">{{ message.date | relativedate }}</div>' +
                     '</div>' +
-                    '<iframe width="100%" height="1" marginheight="0" marginwidth="0" frameborder="no" scrolling="no"' +
-                        'onLoad="{{ autoResize() }}" src="about:blank"></iframe>' + 
-                    '<div ng-show="message.attachments.length > 0">' +
-                        'Attached: <span ng-repeat="attachment in message.attachments">' +
-                        '<a ng:href="/download_file?uid={{message.uid}}&section_index={{attachment.index}}&content_type={{attachment.content_type}}&encoding={{attachment.encoding}}&filename={{attachment.filename}}">' +
-                        '{{attachment.filename}}' +
-                        '</a>{{$last && " " || ", " }}</span>' +
-                    '</div>' +
+                    '<messageframe content="message.body_text" />' +
+                    '<attachmentlist attachments="message.attachments" message="message" />' +
                 '</div>' +
                 '</div>',
 
-
-   link: function (scope, iElement, iAttrs) {
-
-            function injectToIframe(textToInject) {
-
-                var iframe = iElement.find('iframe')[0];
-                var doc = iframe.contentWindow.document;
-
-                // Reset
-                doc.removeChild(doc.documentElement);  
-                iframe.width = '100%';
-                iframe.height = '0px;';
-
-
-// var ngStyleDirective = ngDirective(function(scope, element, attr) {
-//   scope.$watch(attr.ngStyle, function ngStyleWatchAction(newStyles, oldStyles) {
-//     if (oldStyles && (newStyles !== oldStyles)) {
-//       forEach(oldStyles, function(val, style) { element.css(style, '');});
-//     }
-//     if (newStyles) element.css(newStyles);
-//   }, true);
-
-
-
-                // TODO move the CSS here into an object and create the <html><head>
-                // etc using jqlite elements.
-                // in the future we'll also wnat to inject javascript, so this 
-                // becomes even more important
-
-                var toWrite = '<html><head>' +
-                    '<style rel="stylesheet" type="text/css">' +
-                    '* { background-color:#FFF; '+
-                    'font-smooth:always;' +
-                    ' -webkit-font-smoothing:antialiased;'+
-                    ' font-family:"Proxima Nova", courier, sans-serif;'+
-                    ' font-size:16px;'+
-                    ' font-weight:500;'+
-                    ' color:#333;'+
-                    ' font-variant:normal;'+
-                    ' line-height:1.6em;'+
-                    ' font-style:normal;'+
-                    ' text-align:left;'+
-                    ' text-shadow:1px 1px 1px #FFF;'+
-                    ' position:relative;'+
-                    ' margin:0; '+
-                    ' padding:0; }' +
-                    ' a { text-decoration: underline;}'+
-                    'a:hover {' +
-                    ' border-radius:3px;; background-color: #E9E9E9;' +
-                    ' }' + 
-                    '</style></head><body>' + 
-                     textToInject +
-                     '</body></html>';
-
-                    doc.open();
-                    doc.write(toWrite);
-                    doc.close();
-            }
-
-
-            scope.$watch('message', function(val) {
-                // Reset the iFrame anytime the current message changes...
-                injectToIframe('');
-            })
-
-            scope.$watch('message.body_text', function(val) {
-                if (angular.isUndefined(val)) {
-                    injectToIframe('Loading&hellip;');
-                } else {
-                    injectToIframe(scope.message.body_text);
-                    // var toWrite = $filter('linky')(scope.message.body_text);
-                    // toWrite = $filter('newlines')(toWrite);
-                }
-
-             });
-     }
     };
-    return directiveDefinitionObject;
 });
-        // function (scope, element, attrs) {
-        // attrs.thread_i
 
 
-            // <div class="message_cell" hoverstate="selected" data-ng-repeat="message in messages" ng-click="openThread( message.thread_id)">
-            //  <div class="message_cell_image"></div>
-            //  <div class="message_subject_line">{{message.subject}}</div>
-            //  <div class="message_subhead_text">
-            //      <strong>MG</strong>: Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
-            //  tempor incididunt ut labore et dolore magna aliqua. 
-            //  </div>
-            // </div>
+
+
+
+app.directive("attachmentlist", function($filter) { return {
+        restrict: 'E',
+        transclude: true,
+        scope: {
+            message: '=',
+            attachments: '='
+            },
+        template:
+            '<div ng-show="message.attachments.length > 0">' +
+                'Attached: <span ng-repeat="a in attachments">' +
+                '<a ng:href="/download_file?uid={{message.uid}}&section_index={{a.index}}&content_type={{a.content_type}}&encoding={{a.encoding}}&filename={{a.filename}}">' +
+                '{{a.filename}}' +
+                '</a>{{$last && " " || ", " }}</span>' +
+            '</div>'
+        };
+});
+
+
+
+
+
+
+app.directive("messageframe", function() { return {
+
+    restrict: 'E',
+    transclude: true,
+    scope: { content: '=' },
+    controller: function($scope, $element, $attrs, $transclude) { 
+        $scope.autoResize = function(){
+            var iframe = $element.find('iframe')[0];
+            if(iframe){
+                var newheight = iframe.contentWindow.document.body.scrollHeight;
+                var newwidth = iframe.contentWindow.document.body.scrollWidth;
+                console.log("Resizing ("+iframe.width+" by "+iframe.height+")" +
+                             "("+newwidth+"px by "+newheight+"px)" );
+                iframe.height = (newheight) + "px";
+                iframe.width = '100%';
+                // iframe.width = (newwidth) + "px";
+
+                /* This is to fix a bug where the document scrolls to the 
+                   top of the iframe after setting its height. */
+                   // setTimeout(window.scroll(0, 0), 1);
+            }
+        }
+    },
+    template:
+        '<iframe width="100%" height="1" marginheight="0" marginwidth="0" frameborder="no" scrolling="no"' +
+        'onLoad="{{ autoResize() }}" src="about:blank"></iframe>',
+
+    link: function (scope, iElement, iAttrs) {
+
+        function injectToIframe(textToInject) {
+            var iframe = iElement.find('iframe')[0];
+            var doc = iframe.contentWindow.document;
+
+            // Reset
+            doc.removeChild(doc.documentElement);  
+            iframe.width = '100%';
+            iframe.height = '0px;';
+
+
+            // TODO move the CSS here into an object and create the <html><head>
+            // etc using jqlite elements.
+            // in the future we'll also wnat to inject javascript, so this 
+            // becomes even more important
+
+            // var ngStyleDirective = ngDirective(function(scope, element, attr) {
+            //   scope.$watch(attr.ngStyle, function ngStyleWatchAction(newStyles, oldStyles) {
+            //     if (oldStyles && (newStyles !== oldStyles)) {
+            //       forEach(oldStyles, function(val, style) { element.css(style, '');});
+            //     }
+            //     if (newStyles) element.css(newStyles);
+            //   }, true);
+
+
+            var toWrite = '<html><head>' +
+                '<style rel="stylesheet" type="text/css">' +
+                '* { background-color:#FFF; '+
+                'font-smooth:always;' +
+                ' -webkit-font-smoothing:antialiased;'+
+                ' font-family:"Proxima Nova", courier, sans-serif;'+
+                ' font-size:16px;'+
+                ' font-weight:500;'+
+                ' color:#333;'+
+                ' font-variant:normal;'+
+                ' line-height:1.6em;'+
+                ' font-style:normal;'+
+                ' text-align:left;'+
+                ' text-shadow:1px 1px 1px #FFF;'+
+                ' position:relative;'+
+                ' margin:0; '+
+                ' padding:0; }' +
+                ' a { text-decoration: underline;}'+
+                'a:hover {' +
+                ' border-radius:3px;; background-color: #E9E9E9;' +
+                ' }' + 
+                '</style></head><body>' + 
+                 textToInject +
+                 '</body></html>';
+
+                doc.open();
+                doc.write(toWrite);
+                doc.close();
+        }
+
+
+        scope.$watch('content', function(val) {
+            // Reset the iFrame anytime the current message changes...
+            injectToIframe('');
+        })
+
+        scope.$watch('content', function(val) {
+            if (angular.isUndefined(val)) {
+                injectToIframe('Loading&hellip;');
+            } else {
+                injectToIframe(scope.content);
+            }
+         });
+
+    } // End of link function
+
+    };
+});
 
