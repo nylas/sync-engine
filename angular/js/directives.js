@@ -4,16 +4,6 @@
 
 var app = angular.module('InboxApp.directives', []);
 
-app.directive("hoverstate", function () {
-    return function (scope, element, attrs) {
-        element.bind("mouseenter", function () {
-            element.addClass(attrs.hoverstate);
-        });
-        element.bind("mouseleave", function () {
-            element.removeClass(attrs.hoverstate);
-        });
-    }
-})
 
 
 app.directive("clickable", function () {
@@ -26,16 +16,13 @@ app.directive("clickable", function () {
 
 
 
-
-
 app.directive("messageview", function($filter) { return {
     restrict: 'E',
     transclude: true,
     scope: { message: '=' }, // Two-way binding to message object
     controller: function($scope, $element, $attrs, $transclude) { 
         $scope.contactDisplayName = function(contacts) {
-
-            if (angular.isUndefined(contacts)) { 
+            if (angular.isUndefined(contacts)) {
                 return "";
             }
 
@@ -57,6 +44,30 @@ app.directive("messageview", function($filter) { return {
 
         /* STYLING */
 
+        $scope.message_bubble = {
+              textAlign : 'left',
+              border: '1px solid #D3D0D0;',
+              borderRadius: '4px',
+              marginBottom: '40px',
+              // 'box-shadow': '0px 1px 1px 0px rgba(0,0,0,0.29)',
+              // '-webkit-box-shadow:' : '0px 1px 1px 0px rgba(0,0,0,0.29)',
+              background: 'rgba(255,255,255,0.97)'
+        };
+
+        $scope.message_bubble_container = {
+            padding: '1.45em',
+            borderRadius: 'inherit',
+            fontFamily: '"Proxima Nova", courier, sans-serif',
+            fontSize: '16px',
+            fontWeight: '500',
+            color: '#333',
+            fontStyle: 'normal',
+            fontVariant: 'normal',
+            lineHeight: '1.6em',
+            textAlign: 'left',
+            textShadow: '1px 1px 1px white',
+        };
+
         $scope.byline = {
             marginBottom : '20px',
             height : '50px',
@@ -72,7 +83,7 @@ app.directive("messageview", function($filter) { return {
             border:         '1px solid #E6E8EA',
             borderRadius: 35 + 'px',
             background:     'left center no-repeat',
-            float:          'left',
+            float:          'left'
         };
 
         $scope.byline_fromline = {
@@ -91,21 +102,145 @@ app.directive("messageview", function($filter) { return {
             color: '#777'
         };
 
-    }, 
+    },
+
     // add back green_glow class sometime
-    template:   '<div class="right_message_bubble">' +
-                '<div class="right_message_bubble_container">' +
+    template:   '<div ng-style="message_bubble" class="card_with_shadow">' +
+                '<div ng-style="message_bubble_container">' +
                     '<div ng-style="byline">' +        
                     '<img ng-style="byline_gravatar" ng-src="{{ message.gravatar_url }}" alt="{{ message.from_contacts[0] }}">' +
                     '<div ng-style="byline_fromline" tooltip-placement="top" tooltip="{{message.from_contacts[2]}}@{{message.from_contacts[3]}}">{{message.from_contacts[0]}}</div>' +
                     '<div ng-style="byline_date">{{ message.date | relativedate }}</div>' +
                     '</div>' +
-                    '<messageframe content="message.body_text" />' +
-                    '<attachmentlist attachments="message.attachments" message="message" />' +
+                    '<attachmentlist attachments="message.attachments" message="message"></attachmentlist>' +
+                    '<messageframe content="message.body_text"></messageframe>' +
                 '</div>' +
                 '</div>',
 
     };
+});
+
+
+
+
+
+
+app.directive("itemcell", function($filter) { return {
+    restrict: 'E',
+    transclude: true,
+    scope: {
+        message: '=',
+        eventHandler: '&ngClick'
+            }, 
+    controller: function($scope, $element, $attrs, $transclude) {
+
+        /* STYLING */
+
+        $scope.email_item = {
+            padding: '12px',
+            height: '50px',
+            backgroundColor: '#fff',
+
+            /* separator */
+            borderBottomWidth: '1px',
+            borderBottomStyle: 'solid',
+            borderBottomColor: '#E6E8EA',
+            cursor: 'hand'
+        };
+
+
+        $scope.email_subject = {
+              height: '0.95em',
+              paddingBottom: '.2em',
+              paddingLeft: '10px',
+              textAlign: 'left',
+              color: '#333',
+              textShadow: '1px 1px 1px white',
+              fontFamily: '"Proxima Nova Condensed", courier, sans-serif',
+              fontSize: '17px',
+              fontWeight: 600,  /* Bold */
+              lineHeight: '21px',
+
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              '-ms-text-overflow': 'ellipsis',
+              textOverflow: 'ellipsis'
+        };
+
+        $scope.email_desc = {
+              height: '40px',
+              paddingBottom: '.2em',
+              paddingLeft: '10px',
+              textAlign: 'left',
+              color: '#333',
+              textShadow: '1px 1px 1px white',
+              fontFamily: '"Proxima Nova", courier, sans-serif',
+              fontSize: '13px',
+              lineHeight: '15px',
+
+              overflow: 'hidden',
+              whiteSpace: 'nowrap',
+              '-ms-text-overflow': 'ellipsis',
+              textOverflow: 'ellipsis'
+        };
+
+
+
+
+        $scope.selected = {
+            backgroundColor: '#edf5fd'
+        }
+
+
+
+        /*
+
+.email-item:first-of-type
+{
+  border-top-left-radius: 3px;
+  -moz-border-top-left-radius: 3px;
+  -webkit-border-top-left-radius: 3px;
+  border-top-right-radius: 3px;
+  -moz-border-top-right-radius: 3px;
+  -webkit-border-top-right-radius: 3px;
+}
+
+.email-item:last-of-type
+{
+  border-bottom-width: 0px;
+  border-bottom-style: none;
+
+  border-bottom-left-radius: 3px;
+  -moz-border-bottom-left-radius: 3px;
+  -webkit-border-bottom-left-radius: 3px;
+  border-bottom-right-radius: 3px;
+  -moz-border-bottom-right-radius: 3px;
+  -webkit-border-bottom-right-radius: 3px;
+}
+*/
+
+
+
+    },
+
+    template: '<div ng-style="email_item" data-ng-click="eventHandler()">' +
+                 '<img  class="email-avatar" ng-src="{{ message.gravatar_url }}"' +
+                 'alt="{{ message.from_contacts[0] }}">' +
+                '<div ng-style="email_subject">{{message.subject}}</div>' +
+                '<div ng-style="email_desc">' +
+                    '<em>Date</em>: {{message.date | date:"medium" }} <br/>' +
+                    '<em>From</em>: {{message.from_contacts[0]}}' +
+                '</div>' +
+            '</div>',
+
+    link: function (scope, element, attrs) {
+        element.bind("mouseenter", function () {
+            element.addClass('hoverstate');
+        });
+        element.bind("mouseleave", function () {
+            element.removeClass('hoverstate');
+        });
+    }};
 });
 
 

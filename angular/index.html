@@ -10,7 +10,6 @@
  <link href="/static/bootstrap-combined.min.css" rel="stylesheet">
  <script src="/static/bootstrap.min.js"></script>
 
-	<link rel="stylesheet" href="css/app.css"/>
 	<link rel="stylesheet" href="css/style.css"/>
 	<link rel="stylesheet" href="/static/fonts.css"/>
 
@@ -32,96 +31,76 @@
 	})();
 </script>
 
-
-<!-- Sticky footer  -->
-<!--[if !IE 7]>
-<style type="text/css">
-	#wrap {display:table;height:100%}
-</style>
-<![endif]-->
-
 </head>
 
 <body>
-<div id="bigwrap">
-<div id="main">
 
-<div class="wrapper">
 
-<div class="top_banner" ngCloak data-ng-controller="AppContainerController">
+<div class="layout" ngCloak data-ng-controller="AppContainerController">
 
-<!-- 	<a href="" class="button" data-ng-click="notificationButtonClick()">Activate notifications</a>
- -->
-	<div class="container_left">
-
-		<div class="shadowed_wrapper">
-			<div class="mailbox_name">Inbox</div>
-
-			<a class="button" ng-click="loadMessagesForFolder('Inbox')">Load messages</a>
-
-			<div class="basic_pane shadowed" ng-show="messages.length > 0">
-
-				<div class="message_cell" hoverstate="selected" 
-				     data-ng-repeat="m in messages | orderBy:'-date'" 
-				     ng-click="openMessage(m)"
-				     ng-dblclick="doubleClickedMessage(m)">
-
-					<img  class="message_cell_image" ng-src="{{ m.gravatar_url }}"
-						 alt="{{ m.from_contacts[0] }}">
-
-					<div class="message_subject_line ellipsis">{{m.subject}}</div>
-					<div class="message_subhead_text ellipsis">
-						<strong>Date</strong>: {{m.date | date:'medium' }} <br/>
-						<strong>From</strong>: {{m.from_contacts[0]}}
-					</div>
-				</div>
-
-			</div>
-
+	<div class="list-header">
+		<div class="searchbox" style="display:inline;">
+			<form class="form-search">
+			<input type="text" class="input-xlarge  mysearchbox" placeholder="Search Inbox...">
+			</form>
 		</div>
 
 	</div>
 
 
-	<div class="container_right">
-		<div class="right_pane" ng-show="activeMessage != null">
-			<div class="right_subject_box" ng-cloak ng-bind="activeMessage.subject"></div>
+
+	<div class="list card_with_shadow">
+		<itemcell data-ng-repeat="m in messages | orderBy:'-date'" message="m" data-ng-click="openMessage(m)"></itemcell>
+	</div>
 
 
-			<div class="to_contacts_list" ng-show="activeMessage != null">Sent to {{activeMessage.contactDisplayList}}</div>
+	<div class="footer card_with_shadow">
 
-			<messageview message="activeMessage" />
+    	<center><a class="button" href="#">Report a bug</a></center>
+	</div>
 
 
-				<div class="basic_pane reply_box" contenteditable="true" hidefocus="true">Reply text here...
+    <div class="main">
+
+            <div class="email-content" style="position:relative;" >
+
+            	<div class="email-background" style="position: absolute; top:0; left:0; background-color:#DAE2E2; height:650px; margin-left: 34px; margin-right: 34px; width:640px;">blahs</div>
+        
+                <div class="email-content-header card_with_shadow">
+                    <div class="email-content-title">
+	                    <span ng-bind="activeMessage.subject"></span>
+		                <span class="email-content-subtitle" ng-show="activeMessage != null">Sent to {{activeMessage.contactDisplayList}}</span>
+                    </div>
+
+
+                <div class="email-content-action">
+                	<a class="button_popout" href="#"><img src="/static/popout-arrow.png"/></a>
+                </div>
+
+	            <div class="clear"></div>
+
+            </div>
+
+
+
+
+
+                <div class="email-message-container">
+
+					<messageview message="activeMessage"></messageview>
+
+                 </div>
+
+				<div class="reply_box card_with_shadow" contenteditable="true" hidefocus="true">Reply text here&hellip;
 				</div>
 
-		</div>
-	</div>
+
+            </div>
+    </div>
 
 </div>
 
-<!--     <div class="wrapper">
-			<div class="panel">
-				<div data-ng-repeat="message in messages">
-					 <div enter="message_line_hovered" leave class="message_line" ng-click="openThread( message.thread_id)">
-						<a href="/thread?thread_id={{message.thread_id}}">
-							{{ message.subject }}
-						</a>
-					 </div>
 
-				</div>
-			</div>
-		</div>
- -->
-	</div>
-
-</div> <!-- main -->
-</div> <!-- bigwrap -->
-
-<div id="footer">
-About&nbsp;&nbsp;|&nbsp;&nbsp;Legal&nbsp;&nbsp;|&nbsp;&nbsp;Some Shit
-</div>
 
 
 	<!-- In production use:

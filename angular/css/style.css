@@ -1,63 +1,23 @@
-/* Sticky footer */
-* {margin:0;padding:0;} 
-html, body {height: 100%;}
-#bigwrap 
-{
-  min-height: 100%;
-}
-
-#main 
-{
-  overflow:auto;
-  padding-bottom: 24px;
-}  /* must be same height as the footer */
-
-#footer 
-{
-  position: relative;
-  margin-top: -24px; /* negative value of footer height */
-  height: 24px;
-  clear:both;
-
-  text-align:center;
-  text-shadow:1px 1px 1px white;
-  font-family: "Proxima Nova Condensed", courier, sans-serif;
-  font-size: 12px;
-  font-style: normal;
-  font-variant: normal;
-  text-shadow: 1px 1px 0 white;
-  color: #616566;
-}
-
-} 
-
-/* Opera Fix for sticky footer */
-body:before {
-content:"";
-height:100%;
-float:left;
-width:0;
-margin-top:-32767px;/* thank you Erik J - negate effect of float*/
-}
-
-
-
-
 body {
-  /*background-color: #E6EBEA;*/
-  background-color: #F9F9F9;
-  /*background-color: #dbdbdb;*/
- 
-/*  lighter blue bakcgroudn color */
-  /*background: #e7eef2;*/
+    color: #333;
+    padding: 15px;
 
-   color: #57676e;
+  /*background-color: #E6EBEA;*/
+  /*background-color: #F9F9F9;*/
+  /*background-color: #dbdbdb;*/
+  /*background: #e7eef2;*/
+  background-color: #EEF2F2;
+
+  color: #57676e;
 
   font-family: Helvetica Neue, Arial, sans-serif;
   color: #616566;
 
   font-smooth:always;
   -webkit-font-smoothing:antialiased;
+
+  position:relative;
+
 }
 
 
@@ -71,106 +31,335 @@ body {
 }
 
 
+a {
+    text-decoration: none;
+    color: #1b98f8;
 
-.wrapper
-{
-  width: 940px; /*Width of main container*/
-  margin: 0 auto; /*Center container on page*/
-  height: 100%;
-  position: relative;
-
-  padding-top: 30px;
-  padding-bottom: 30px;
 }
 
 
 
-.container_left
+.searchbox 
 {
+  display:block;
+  padding: 10px;
+}
+
+.searchbox input  {
+  background: white url("/static/magnifying.png") no-repeat 10px 8px;
+  padding-left: 29px;
+} 
+
+
+
+.layout {
+    padding-left:350px;
+    position: relative;
+}
+
+
+
+.list-header {
+    position: fixed;
+    top: 0px;
+    display:block;
+
+    margin-left: -350px;
+
+    min-width: 350px;
+    width:350px;
+}
+
+
+.list {
+    position: fixed;
+    top: 50px;
+    bottom: 80px;
+    overflow: auto;
+    margin-left: -350px;
+    width:350px;
+
+    text-align: left;
+}
+
+
+/* Let's get this party started */
+.list::-webkit-scrollbar {
+    width: 8px;
+}
+
+ 
+/* Track */
+.list::-webkit-scrollbar-track {
+    /*-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3); */
+    background-color: rgba(0,0,0,0.1);
+    
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+}
+
+ 
+.list::-webkit-scrollbar-thumb {
+
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+    border-top-left-radius: 0px;
+    border-bottom-left-radius: 0px;
+
+
+    background: rgba(0,0,0,0.15);
+    -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3); 
+}
+
+.list::-webkit-scrollbar-thumb:hover {
+    background: rgba(77, 127, 189, .5);
+}
+
+
+.list::-webkit-scrollbar-thumb:window-inactive {
+    background: rgba(0,0,0,0.15);
+    /*background: rgba(255,0,0,0.4); */
+}
+
+
+
+.footer
+{
+
+  position: fixed;
+  left: 15px;
+  right: 0;
+  bottom: 5px;
+  width:350px;
+  height:60px;
+
+  width:350px;
+
+  text-align: left;
+
+
+
+}
+
+
+
+.main {
+    width: 100%;
+}
+
+
+
+
+.hoverstate {
+    background-color: #edf5fd;
+}
+
+
+.email-avatar {
+/*border-radius: 3px;
+margin-right: 0.5em;
+*/
+ width:35px;
+  height:35px;
+  border: 1px solid #E6E8EA; 
+  -moz-border-radius: 35px;
+  border-radius: 35px;
+  background: left center no-repeat;
   float:left;
-  width: 340px;
-  margin-bottom: 22px;
+
+
 }
 
-.container_right
+
+ .ellipsis {
+  overflow:hidden;
+  white-space:nowrap;
+  -ms-text-overflow:ellipsis;
+  text-overflow:ellipsis;
+ }
+
+
+}
+
+.email-desc {
+    margin: 0.4em 0;
+
+    padding-left:10px;
+
+    height: 2.5em;
+    font-style: italic;
+    font-size: 13px;
+    line-height: 1.2em;
+    font-variant: normal;
+    text-shadow: 1px 1px 0 white;
+
+}
+
+
+.email-item-selected {
+    background: #eee;
+}
+.email-item-unread {
+    border-left: 6px solid #02a3c6;
+}
+
+
+
+/* Email Content Styles */
+
+.email-content 
 {
-  float:right;
-  width: 600px;
-  height:100%;
-  margin-bottom: 22px;
+    positon: relative;
+
+}
+
+.card_with_shadow {
+
+    border-radius: 4px;
+    background: rgba(255,255,255,0.97);
+    border: 1px solid #D3D0D0;
+    -moz-box-shadow:    0px 1px 1px 0px rgba(0,0,0,0.29);
+    -webkit-box-shadow: 0px 1px 1px 0px rgba(0,0,0,0.29);
+    box-shadow:         0px 1px 1px 0px rgba(0,0,0,0.29);
+
 }
 
 
-.basic_pane
+.email-content-header {
+    position: fixed;
+    top: 0px;
+    display:block;
+
+    margin-top: -5px;
+    margin-left: 15px;
+
+    padding-left: 15px;
+    padding-right: 15px;
+    padding-top: 15px;
+
+
+    width:650px;
+    min-width: 650px;
+    height:64px;
+    min-height:64px;
+
+  overflow:hidden;
+  white-space:nowrap;
+  -ms-text-overflow:ellipsis;
+  text-overflow:ellipsis;
+
+}
+
+.email-content-title 
 {
-  position: relative;
-  text-align: left;
-  background: #fff;
+    text-align:left;
+    color:#333;
+    text-shadow:1px 1px 1px white;
 
-  border: 1px solid rgba(0, 0, 0, 0.10);
-  border-radius: 4px;
-  -moz-border-radius: 4px;
-  -webkit-border-radius: 4px;
+    font-family: "Proxima Nova Condensed", courier, sans-serif;
+    font-size: 26px;
+    line-height: 1.2em;
+    font-weight: 600; /* Bold */
+
+    width:620px;
+    min-width: 620px;
+
+    float:left;
+
+    margin-right:-150px;
+
+    overflow:hidden;
+    white-space:nowrap;
+    -ms-text-overflow:ellipsis;
+    text-overflow:ellipsis;
+
 }
 
+.email-content-subtitle {
+    font-size: 1em;
+    margin: 0;
+    font-weight: normal;
 
-.right_pane
+    display:block;
+    font-weight: 600;
+    color: #999;
+    text-shadow:1px 1px 1px white;
+    font-size: 14px;
+
+    color: #999;
+}
+
+.email-content-action {
+    float: right;
+
+    text-decoration: none; 
+    padding: 3px 0px; 
+/*    position: relative; 
+    display: inline-block;
+*/}
+
+
+
+.clear
 {
-  position: relative;
-  text-align: left;
-  height: 500px;
-  padding-left:20px;
+    clear:both;
 }
 
-.right_subject_box
-{
-  padding-top: 15px;
-  padding-left: 3px;
 
-  text-align:left;
-  color:#333;
-  text-shadow:1px 1px 1px white;
+.email-message-container {
 
-  font-family: "Proxima Nova Condensed", courier, sans-serif;
-  font-size: 26px;
-  line-height: 1.2em;
-  font-weight: 600; /* Bold */
+    position: fixed;
+    top:75px;
+    bottom:100px;
+    overflow: auto;
 
+    display:block;
+
+    padding: 10px;
+    margin: 5px;
+
+    width:680px;
+    min-width: 680px;
 }
 
-.to_contacts_list 
-{
-  padding-top: 10px;
-  padding-bottom: 15px;
-  padding-left: 3px;
-  font-weight: 600;
-  color: #999;
-  text-shadow:1px 1px 1px white;
-  font-size: 14px;
+
+
+
+/* Let's get this party started */
+.email-message-container::-webkit-scrollbar {
+    width: 8px;
 }
 
-.right_message_bubble
-{
-  position: relative;
-  text-align: left;
-  background: #fff;
-
-  /* ligher border */
-  /*border: 1px solid rgba(0, 0, 0, 0.15);*/
-  /* darker border */
-  border: 1px solid #C3CCD0;
-
-  border-radius: 4px;
-  -moz-border-radius: 4px;
-  -webkit-border-radius: 4px;
-
-  margin-bottom: 40px;
-
-
-  /* Non-green shadow */
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0),0 0 10px rgba(0, 0, 0, 0.1);
-4
+ 
+/* Track */
+.email-message-container::-webkit-scrollbar-track {
+    /*-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3); */
+    background-color: rgba(0,0,0,0.1);
+    
+    border-radius: 3px;
 }
+
+ 
+.email-message-container::-webkit-scrollbar-thumb {
+
+    border-radius: 3px;
+    background: rgba(0,0,0,0.15);
+    -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3); 
+}
+
+.email-message-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(77, 127, 189, .5);
+}
+
+
+.email-message-container::-webkit-scrollbar-thumb:window-inactive {
+    background: rgba(0,0,0,0.15);
+    /*background: rgba(255,0,0,0.4); */
+}
+
+
 
 
 
@@ -191,14 +380,12 @@ div.right_message_bubble:before
 }
 */
 
-
-
 /* New message glow 
 TODO apply multiple shadows somehow with SASS
 http://stackoverflow.com/questions/7965278/box-shadow-both-inset-and-outside-on-same-div
 */
 
-.green_glow {
+/*.green_glow {
     box-shadow: 0 0 10px rgba(0, 200, 50, .8);
   -webkit-box-shadow: 0 0 10px rgba(0, 200, 50, .8); 
   -moz-box-shadow: 0 0 10px rgba(0, 200, 50, .8); 
@@ -208,40 +395,25 @@ http://stackoverflow.com/questions/7965278/box-shadow-both-inset-and-outside-on-
   -webkit-box-shadow: 0 0 10px rgba(0, 200, 50, .8); 
   -moz-box-shadow: 0 0 10px rgba(0, 200, 50, .8); 
 }
+*/
 
 
 
 
-.right_message_bubble_container 
-{
-  background-color: white;
-  padding: 1.45em;
-  border-radius: inherit;
-  -moz-border-radius: inherit;
-  -webkit-border-radius: inherit;
-  font-family: "Proxima Nova", courier, sans-serif;
-  font-size: 16px;
-  font-weight: 500;
-  color:#333;
-  font-style: normal;
-  font-variant: normal;
-  line-height: 1.6em;
-  font-style: normal;
-  text-align:left;
-  text-shadow:1px 1px 1px white;
-  position: relative;
+.email-content-controls {
+margin-top: 2em;
+text-align: right;
 }
 
-.from_contacts
-{
-  text-shadow: none;
+.email-content-controls .secondary-button {
+margin-bottom: 0.3em;
 }
+
 
 
 .reply_box 
 {
-  margin-top: 20px;
-  padding: 1.45em;
+
   font-size: 15px;
   font-style: normal;
   font-variant: normal;
@@ -254,22 +426,43 @@ http://stackoverflow.com/questions/7965278/box-shadow-both-inset-and-outside-on-
   text-align:left;
   color:#333;
   text-shadow:1px 1px 1px white;
+  outline:0 solid transparent;
 
-  min-height: 80px;
-  outline:0px solid transparent;
+
+    position: fixed;
+    bottom:0px;
+    overflow: auto;
+   
+
+    display:block;
+
+     height:90px;
+    padding: 10px;
+    margin-bottom: 5px;
+    margin-top: 5px;
+    margin-left: 15px;
+    margin-right: 15px;
+
+
+
+    width:650px;
+    min-width: 650px;
+    height:64px;
+    min-height:64px;
 }
 
 
 
 
 
-/* Shadowed containers */
 
-/* Apply to parent of anything that is shadowed. */
+/*
+
+
 .shadowed_wrapper
 {
   position: relative;
-  z-index: 1;  /* prevent shadows falling behind containers with backgrounds */
+  z-index: 1; 
 }
 
 .shadowed
@@ -288,7 +481,7 @@ http://stackoverflow.com/questions/7965278/box-shadow-both-inset-and-outside-on-
   bottom: 10px;
 
   width: 70%;
-  max-width: 300px; /* avoid rotation causing ugly appearance at large container widths */
+  max-width: 300px;
   max-height: 100px;
   height: 55%;
 
@@ -314,127 +507,12 @@ http://stackoverflow.com/questions/7965278/box-shadow-both-inset-and-outside-on-
   transform: skew(15deg) rotate(2deg); 
 }
 
-
-
-.mailbox_name
-{
-  text-align:left;
-  text-shadow:1px 1px 1px white;
-  font-family: "Franchise", courier, sans-serif;
-  font-size: 28px;
-  font-style: normal;
-  font-variant: normal;
-  font-weight: 700;
-  text-shadow: 1px 1px 0 white;
-  padding-bottom: 8px;
-  padding-left: 3px;
-
-  color: #616566;
-}
-
-
-
-/* Left pane message cells */
-
-.message_cell
-{
-  padding: 12px;
-  height: 50px;
-  background-color: #fff;
-
-  /* separator */
-  border-bottom-width: 1px;
-  border-bottom-style: solid;
-  border-bottom-color: #E6E8EA;
-
-  /* Not sure about this cursor. */
-  cursor: hand; cursor: pointer;
-}
-
-.message_cell:first-of-type
-{
-  /* To clip for curved container */
-  border-top-left-radius: 3px;
-  -moz-border-top-left-radius: 3px;
-  -webkit-border-top-left-radius: 3px;
-  border-top-right-radius: 3px;
-  -moz-border-top-right-radius: 3px;
-  -webkit-border-top-right-radius: 3px;
-}
-
-.message_cell:last-of-type
-{
-  border-bottom-width: 0px;
-  border-bottom-style: none;
-
-  /* To clip for curved container */
-  border-bottom-left-radius: 3px;
-  -moz-border-bottom-left-radius: 3px;
-  -webkit-border-bottom-left-radius: 3px;
-  border-bottom-right-radius: 3px;
-  -moz-border-bottom-right-radius: 3px;
-  -webkit-border-bottom-right-radius: 3px;
-}
-
-
- .message_cell.selected
- {
-  background-color: #edf5fd;
- }
-
-
-.message_cell_image {
-  width:35px;
-  height:35px;
-  border:1px solid #E6E8EA; 
-  -moz-border-radius: 35px;
-  border-radius: 35px;
-  background: left center no-repeat;
-  float:left;
- }
-
-
-.message_subject_line {
-
-  line-height: 16px;
-
-  height: 0.95em;
-  padding-bottom: .2em;
-  padding-left:10px;
-
-  text-align:left;
-  color:#333;
-  text-shadow:1px 1px 1px white;
-
-  font-family: "Proxima Nova Condensed", courier, sans-serif;
-  font-size: 17px;
-  font-weight: 600; /* Bold */
-  line-height: 21px;
- }
-
- .ellipsis {
-  overflow:hidden;
-  white-space:nowrap;
-  -ms-text-overflow:ellipsis;
-  text-overflow:ellipsis;
- }
-
-
-.message_subhead_text
- {
-  padding-left:10px;
-
-  height: 2.5em;
-  font-style: italic;
-  font-size: 13px;
-  line-height: 1.2em;
-  font-variant: normal;
-  text-shadow: 1px 1px 0 white;
- }
+*/
 
 
 
 /* Buttons */
+
 
 a.button, input[type=submit] {
     color: #6e6e6e;
@@ -456,18 +534,6 @@ a.button, input[type=submit] {
     -webkit-border-radius: 2px;
     -moz-border-radius: 2px;
     margin-right: 10px;
-
-    -webkit-user-select: none; /* Chrome/Safari */        
--moz-user-select: none; /* Firefox */
--ms-user-select: none; /* IE10+ */
-
-/* Rules below not implemented in browsers yet */
--o-user-select: none;
-user-select: none;
-
-  /* Not sure about this cursor. */
-  cursor: hand; cursor: pointer;
-
 }
 a.button:hover {
     color: #333;
@@ -479,8 +545,6 @@ a.button:active {
     color: #000;
     border-color: #444;
 }
-
-
 
 
 

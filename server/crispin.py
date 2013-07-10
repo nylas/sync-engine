@@ -828,7 +828,7 @@ class CrispinClient:
         try:
             response_dict =  response[int(msg_uid)]
         except KeyError, e:
-            print 'Response:', response_dict
+            print 'Response:', response
             return "Error fetching."
         
         body_data = response_dict[query_key]
@@ -836,9 +836,6 @@ class CrispinClient:
         thread_id = response_dict['X-GM-THRID']
 
         return body_data
-
-        # log.info("Received response. Size: %i" % len(raw_response))
-
 
 
 

@@ -59,6 +59,13 @@ What is it with everyone's obsession with Inbox Zero?
 
 ## Email clients
 
+* [Hazel](http://www.noodlesoft.com/hazel.php) mac app
+* [Openera](http://www.openera.com/) auto filter attachments
+* [Attachments.me](http://attachments.me) handle attachments
+* [Dispatch (iOS)](http://www.dispatchapp.net/index.html)
+* [Handle](https://www.handle.com/) - [blog post](http://blog.handle.com/post/49189541624/humans-need-an-operating-system-too)
+* ["Reinventing Email"](http://www.reinventingemail.com/)
+* [Balsa (for GNOME)](http://balsa.gnome.org/)
 * [envelope](https://github.com/envelopeapp/envelope) RoR project
 * [sup](https://github.com/sup-heliotrope/sup) curses thread-with-tags client
 * [Sent - Gmail iPhone App (shut down)](http://andadinosaur.com)

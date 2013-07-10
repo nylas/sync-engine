@@ -95,6 +95,11 @@ app.controller('AppContainerController', function($scope, socket, growl, IBMessa
 
 
 
+
+// Loaded. Load the messages.
+
+$scope.loadMessagesForFolder('Inbox');
+
 });
 
 

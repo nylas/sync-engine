@@ -128,7 +128,7 @@ class FileDownloadHandler(BaseHandler):
             else:
                 log.error("Unknown encoding scheme:" + str(encoding))
         except Exception, e:
-            print 'ENcoding not provided...'
+            print 'Encoding not provided...'
 
         self.write(data)
 
@@ -226,25 +226,38 @@ class WireConnection(SocketConnection):
 
         # Let's decode...
 
-        try:
-            encoding = kwargs['encoding']
-            if encoding.lower() == 'quoted-printable':
-                msg_data = quopri.decodestring(msg_data)
 
-            elif encoding.lower() == '7bit':
-                # This is just ASCII. Do nothing.
-                pass
-            else:
-                log.error("Couldn't figure out how to decode this:" + str(encoding))
-        except Exception, e:
-            print 'no encoding...'
+ 
+        # try:
+        #     if encoding.lower() == 'quoted-printable':
+        #         log.info("Decoded Quoted-Printable")
+        #         data = quopri.decodestring(data)
+        #     elif encoding.lower() == '7bit':
+        #         pass  # This is just ASCII. Do nothing.
+        #     elif encoding.lower() == 'base64':
+        #         log.info("Decoded Base-64")
+        #         data = data.decode('base-64')
+        #     else:
+        #         log.error("Unknown encoding scheme:" + str(encoding))
+        # except Exception, e:
+        #     print 'ENcoding not provided...'
 
 
+        encoding = kwargs['encoding']
+        if encoding.lower() == 'quoted-printable': 
+            log.info("Decoded Quoted-Printable")
+            msg_data = quopri.decodestring(msg_data)
+
+        elif encoding.lower() == '7bit':
+            # This is just ASCII. Do nothing.
+            pass
+        else:
+            log.error("Couldn't figure out how to decode this:" + str(encoding))
 
 
         if content_type == 'text/plain':
-
             msg_data = webify.plaintext2html(msg_data)
+
         elif content_type == 'text/html':
 
             soup = BeautifulSoup(msg_data)
@@ -265,12 +278,12 @@ class WireConnection(SocketConnection):
 
             msg_data = str(soup)
 
+
             # msg_data = tornado.escape.linkify(msg_data, shorten=True)
 
         msg_data = bleach.linkify(msg_data)
         # msg_data = bleach.clean(msg_data, strip=True)
         # msg_data = webify.fix_links(msg_data)
-
 
         # Shorten URLs to 30 characters
         soup = BeautifulSoup(msg_data)
