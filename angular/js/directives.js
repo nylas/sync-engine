@@ -145,7 +145,7 @@ app.directive("itemcell", function($filter) { return {
             borderBottomWidth: '1px',
             borderBottomStyle: 'solid',
             borderBottomColor: '#E6E8EA',
-            cursor: 'hand'
+            cursor: 'pointer'
         };
 
 

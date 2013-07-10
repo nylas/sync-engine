@@ -1,3 +1,10 @@
+/* Disables scrolling on the page. All scrollable element should be within a div */
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+
 body {
     color: #333;
     padding: 15px;

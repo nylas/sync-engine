@@ -11,7 +11,7 @@ All of the todos are in [the Asana workspace](https://app.asana.com/0/4983727800
 
 1. Install [virtualenv](http://www.virtualenv.org/en/latest/), which is just good in general.
 
-2. `git clone --recursive git@github.com:grinich/inbox.git` to get the source and submodules.
+2. `git clone --recursive git@github.com:inboxapp/inbox.git` to get the source and submodules.
 
 3. Right now getting Gmail oauth credentials is manual. Go figure it out and put them in `credentials.py`. 
 

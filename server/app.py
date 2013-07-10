@@ -24,6 +24,8 @@ crispin_client = None
 EXECUTOR = ThreadPoolExecutor(max_workers=20)
 
 
+import oauth2
+
 
 PATH_TO_ANGULAR = os_path.join(os_path.dirname(__file__), "../angular")
 PATH_TO_STATIC = os_path.join(os_path.dirname(__file__), "../static")
@@ -33,19 +35,33 @@ class Application(tornado.web.Application):
     def __init__(self):
 
         settings = dict(
-            cookie_secret="awehofoiasdfhsadkfnwem42rwfubksfj",
-            login_url="/auth/login",
+
             static_path=os_path.join(PATH_TO_STATIC),
             xsrf_cookies=True,
             debug=True,
             flash_policy_port = 843,
             flash_policy_file = os_path.join(PATH_TO_STATIC + "/flashpolicy.xml"),
-            socket_io_port = 8001
+            socket_io_port = 8001,
+
+
+
+            cookie_secret="32oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo=",
+            login_url="/auth/login",
+            redirect_uri="http://localhost:8888/auth/login",
+
+            google_consumer_key="786647191490.apps.googleusercontent.com",  # client ID
+            google_consumer_secret="0MnVfEYfFebShe9576RR8MCK",  # aka client secret
+
+
+
         )
 
         PingRouter = TornadioRouter(WireConnection, namespace='wire')
         
         handlers = PingRouter.apply_routes([
+            (r"/", MainHandler),
+            (r"/auth/login", AuthHandler),
+            (r"/auth/logout", LogoutHandler),
             (r'/app/(.*)', NoCacheStaticFileHandler, {'path': PATH_TO_ANGULAR, 
                                            'default_filename':'index.html'}),
             (r'/app', AppRedirectHandler),
@@ -62,7 +78,71 @@ class Application(tornado.web.Application):
 
 class BaseHandler(tornado.web.RequestHandler):
     # TODO put authentication stuff here
-    pass
+    def get_current_user(self):
+        user_json = self.get_secure_cookie("user")
+        if not user_json: return None
+        return tornado.escape.json_decode(user_json)
+
+
+class MainHandler(BaseHandler):
+    # @tornado.web.authenticated
+    def get(self):
+
+        if self.current_user:
+            name = tornado.escape.xhtml_escape(self.current_user["name"])
+            self.write("Hello, " + name)
+            self.write("<br><br><a href=\"/auth/logout\">Log out</a>")
+        else:
+            self.write("Go ahead and <a href=\"/auth/login\">login</a>")
+
+
+
+class AuthHandler(BaseHandler, oauth2.GoogleOAuth2Mixin):
+    @tornado.web.asynchronous
+    def get(self):
+        if self.get_argument("code", None):
+            authorization_code = self.get_argument("code", None)
+            self.get_authenticated_user(authorization_code, self.async_callback(self._on_auth))
+            return
+        self.authorize_redirect()
+    
+    def _on_auth(self, response):
+        print 'RESPONSE:', response
+        # print response.body
+        # print response.request.headers
+        # if response.error:
+        #     raise tornado.web.HTTPError(500, "Google auth failed")
+
+        user = response.read()
+        print user
+
+
+        global crispin_client
+        global idler
+
+        crispin_client = CrispinClient('mgrinich@gmail.com', oauth2.GoogleOAuth2Mixin.access_token)
+
+        # idler = Idler(ioloop=loop,
+        #               event_callback=idler_callback,
+        #               # folder=crispin_client.all_mail_folder_name())
+        #               folder="Inbox")
+        # idler.connect()
+        # idler.idle()
+
+
+
+        # self.set_secure_cookie("user", tornado.escape.json_encode(user))
+        self.set_secure_cookie("user", user)
+        self.redirect("/")
+
+
+class LogoutHandler(BaseHandler):
+    def get(self):
+        self.clear_cookie("user")
+        self.redirect("/")
+
+
+
 
 class NoCacheStaticFileHandler(tornado.web.StaticFileHandler):
     def set_extra_headers(self, path):
@@ -160,7 +240,7 @@ class WireConnection(SocketConnection):
 
         # if not self.user_id:
         #     return False
-        log.info("Client connected.")
+        log.info("Web client connected.")
         self.clients.add(self)
 
 
@@ -336,8 +416,6 @@ def startserver(port):
     app = Application()
     app.listen(port)
 
-    global crispin_client
-    crispin_client = CrispinClient()
 
     tornado.log.enable_pretty_logging()
     tornado.autoreload.start()
@@ -345,20 +423,15 @@ def startserver(port):
 
     loop = tornado.ioloop.IOLoop.instance()
 
-    global idler
-    idler = Idler(ioloop=loop,
-                  event_callback=idler_callback,
-                  # folder=crispin_client.all_mail_folder_name())
-                  folder="Inbox")
-    idler.connect()
-    idler.idle()
 
     loop.start()
 
 
 def stopsubmodules():
-    idler.stop()
-    crispin_client.stop()
+    if idler: 
+        idler.stop()
+    if crispin_client:
+        crispin_client.stop()
 
 
 def stopserver():

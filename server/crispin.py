@@ -29,7 +29,10 @@ class CrispinClient:
     # 20 minutes
     SERVER_TIMEOUT = datetime.timedelta(seconds=1200)
 
-    def __init__(self):
+    def __init__(self, email_address, oauth_token):
+
+        self.email_address = email_address
+        self.oauth_token = oauth_token
         self.imap_server = None
         # last time the server checked in, in UTC
         self.keepalive = None
@@ -71,12 +74,11 @@ class CrispinClient:
         try:
             self.imap_server = IMAPClient(auth.IMAP_HOST, use_uid=True,
                     ssl=auth.SSL)
+
             # self.imap_server.debug = 4  # todo
-            self.imap_server.oauth_login(auth.BASE_GMAIL_IMAP_URL,
-                        auth.OAUTH_TOKEN,
-                        auth.OAUTH_TOKEN_SECRET,
-                        auth.CONSUMER_KEY,
-                        auth.CONSUMER_SECRET)
+            self.imap_server.oauth2_login(self.email_address, self.oauth_token)
+
+
         except Exception as e:
             if str(e) == '[ALERT] Too many simultaneous connections. (Failure)':
                 log.error("Too many open IMAP connection.")
@@ -742,7 +744,15 @@ class CrispinClient:
 
     @connected
     def fetch_msg(self, msg_uid):
-        msg_uid = long(msg_uid)  # sometimes comes as string
+        msg_uid_long = long(msg_uid)  # sometimes comes as string
+
+
+        # Coerce to list
+        if isinstance(msg_uid, int ):
+            msg_uid = [str(msg_uid)]
+        elif isinstance(msg_uid, basestring):
+            msg_uid = [msg_uid]
+
 
         # m = self.datastore.message(msg_uid)
         # if (m): return m
@@ -755,7 +765,7 @@ class CrispinClient:
             log.error("No response for msg query. msg_id = %s", msg_uid)
             return None
 
-        raw_response = response[msg_uid]['RFC822']
+        raw_response = response[msg_uid_long]['RFC822']
         log.info("Received response. Size: %i" % len(raw_response))
 
         msg = Parser().parsestr(raw_response)
