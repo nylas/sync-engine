@@ -13,4 +13,3 @@ motor==0.1.1
 # Our own versions of these
 -e packages/imapclient
 -e packages/imaplib2
--e packages/xoauth
