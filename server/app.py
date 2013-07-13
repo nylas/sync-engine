@@ -21,12 +21,9 @@ from idler import Idler
 import oauth2
 import postel
 
-from concurrent.futures import ThreadPoolExecutor
 from functools import partial, wraps
 
 crispin_client = None
-EXECUTOR = ThreadPoolExecutor(max_workers=20)
-
 
 
 
@@ -242,16 +239,6 @@ class FileDownloadHandler(BaseHandler):
         self.write(data)
 
 
-# Global, ugh.
-def dontblock(fn_to_call, *args, **kwargs):
-    callback = kwargs.pop('callback', None)
-
-    EXECUTOR.submit(
-        partial(fn_to_call, *args, **kwargs)
-    ).add_done_callback(
-        lambda future: tornado.ioloop.IOLoop.instance().add_callback(
-            partial(callback, future)))
-
 
 # Websocket
 class WireConnection(SocketConnection):
@@ -299,40 +286,16 @@ class WireConnection(SocketConnection):
         console.log("Socket msg: %s", message)
 
 
-    # Uncomment this and the call to yield tornado.gen.xxxxx to use multithreaded stuff
-    # @tornado.gen.engine
-    # def on_event(self, name, *args, **kwargs):
-    #     """Wrapped ``on_event`` handler, which will queue events and will allow usage
-    #     of the ``yield`` in the event handlers.
-
-    #     If you want to use non-queued version, just wrap ``on_event`` with ``gen.engine``.
-    #     """
-    #     return super(WireConnection, self).on_event(name, *args, **kwargs)
-
-
     @event
     def load_messages_for_folder(self, **kwargs):
 
-        # Must say dontblock, then function name, then args
-        # future = yield tornado.gen.Task(dontblock, self.expensive_load_threads, 'Inbox')
-        # threads = future.result()
-
         folder_name = "Inbox"
-
-        # TODO maybe create a new client to make things thread safe?
-        # newclient = CrispinClient()
-        # crispin_client.select_folder("Inbox")
-        # UIDs = crispin_client.fetch_all_udids()
-        # msgs = crispin_client.fetch_headers_for_uids(folder_name, UIDs)
-        
-
         try:
             global crispin_client
             crispin_client = CrispinClient('mgrinich@gmail.com', oauth2.GoogleOAuth2Mixin.access_token)
 
             print 'fetching threads...'
             threads = crispin_client.fetch_messages(folder_name)
-
             self.emit('load_messages_for_folder_ack', [m.toJSON() for m in threads] )
 
         except AuthenticationError, e:
@@ -359,8 +322,6 @@ class WireConnection(SocketConnection):
 
 
         # Let's decode...
-
-
  
         # try:
         #     if encoding.lower() == 'quoted-printable':
