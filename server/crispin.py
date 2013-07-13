@@ -20,6 +20,20 @@ from models import IBMessage, IBThread, IBMessagePart
 from datastore import DataStore
 
 
+USE_SSL = True
+
+# BASE_GMAIL_IMAP_URL = 'https://mail.google.com/mail/b/' + ACCOUNT + '/imap/'
+# BASE_GMAIL_SMTP_UTL = 'https://mail.google.com/mail/b/' + ACCOUNT + '/smtp/'
+
+IMAP_HOST = 'imap.gmail.com'
+SMTP_HOST = 'smtp.gmail.com'
+
+
+class AuthenticationError(Exception): pass    # Logical errors - debug required
+
+
+
+
 message_cache = {}  # (folder, UID) -> message (someday use message_id)
 thread_cache = {}  # thread_id -> thread
 bodypart_cache = {}  # (message_id, body_index) -> body part
@@ -61,7 +75,7 @@ class CrispinClient:
         return connected_fn
 
     def _connect(self):
-        log.info('Connecting to %s ...' % auth.IMAP_HOST,)
+        log.info('Connecting to %s ...' % IMAP_HOST,)
 
         try:
             self.imap_server.noop()
@@ -72,17 +86,20 @@ class CrispinClient:
             log.info('No active connection. Opening connection...')
 
         try:
-            self.imap_server = IMAPClient(auth.IMAP_HOST, use_uid=True,
-                    ssl=auth.SSL)
-
+            self.imap_server = IMAPClient(IMAP_HOST, use_uid=True,
+                    ssl=USE_SSL)
             # self.imap_server.debug = 4  # todo
             self.imap_server.oauth2_login(self.email_address, self.oauth_token)
-
 
         except Exception as e:
             if str(e) == '[ALERT] Too many simultaneous connections. (Failure)':
                 log.error("Too many open IMAP connection.")
-            # raise e
+            elif str(e) == '[ALERT] Invalid credentials (Failure)':
+                raise AuthenticationError
+            else:
+                log.error(e)
+
+            self.imap_server = None
             return False
 
 

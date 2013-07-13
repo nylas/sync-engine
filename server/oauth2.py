@@ -3,6 +3,7 @@ from tornado import httpclient
 from tornado import httputil
 from tornado.httputil import url_concat
 from tornado import escape
+import tornado.gen
 import logging
 import urllib
 import urllib2
@@ -58,9 +59,8 @@ class GoogleOAuth2Mixin(tornado.auth.OAuth2Mixin):
         if kwargs: args.update(kwargs)
         self.redirect(url_concat(self._OAUTH_AUTHENTICATE_URL, args))
 
+    @tornado.gen.engine
     def get_authenticated_user(self, authorization_code, callback):
-
-        print 'get_authenticated_user'
 
         args = {
             "redirect_uri": self.settings['redirect_uri'],
@@ -72,12 +72,8 @@ class GoogleOAuth2Mixin(tornado.auth.OAuth2Mixin):
         
         request = httpclient.HTTPRequest(self._OAUTH_ACCESS_TOKEN_URL, method="POST", body=urllib.urlencode(args))
         
-        self.httpclient_instance.fetch(
-            request,
-            self.async_callback(self._on_access_token, callback)
-        )
+        response = yield tornado.gen.Task(self.httpclient_instance.fetch, request)
 
-    def _on_access_token(self, callback, response):
         print '_on_access_token', response
 
         if response.error:
@@ -86,9 +82,9 @@ class GoogleOAuth2Mixin(tornado.auth.OAuth2Mixin):
             return
 
         session = escape.json_decode(response.body)
-        print 'session: ', session
+
         GoogleOAuth2Mixin.access_token = session['access_token']
-        #callback(session)
+
         self.validate_token(session, callback)
     
     def validate_token(self, session, callback):

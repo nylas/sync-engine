@@ -56,15 +56,10 @@ app.factory('IBMessage', function ($injector)
         this.subject = data.subject;
         this.message_parts = data.message_parts;
         this.attachments = data.attachments;
-
-        console.log(this.message_parts);
-
+        
         // the zero sets to epoch, then add seconds
         // var d = new Date(0);
-
         this.date = new Date(data.date * 1000)
-
-
 
         var gravatar_size = 25;
         var theEmail = this.from_contacts[2] + '@' + this.from_contacts[3];
@@ -73,9 +68,6 @@ app.factory('IBMessage', function ($injector)
                         'd=mm&' +
                         's=' + encodeURIComponent(gravatar_size);
 
-
-        console.log("to contacts");
-        console.log(data.to_contacts);
 
         if (this.to_contacts && this.to_contacts.length > 0) {
 

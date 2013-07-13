@@ -6,6 +6,8 @@ import logging as log
 
 from imaplib2 import IMAP4_SSL
 
+IMAP_HOST = 'imap.gmail.com'
+
 
 ServerTimeout     = 29 # Mins           (leave if you're not sure)
 
@@ -16,8 +18,10 @@ class Idler():
     knownAboutMail = [] # will be a list of IDs of messages in the inbox
     killNow = False # stops execution of thread to allow propper closing of conns.
     
-    def __init__(self, ioloop=None, folder = "Inbox", event_callback = None):
-    
+    def __init__(self, email_address, oauth_token, ioloop=None, folder = "Inbox", event_callback = None):
+        self.email_address = email_address
+        self.oauth_token = oauth_token
+
         self.ioloop = ioloop
         self.folder = folder
         self.event_callback = event_callback
@@ -25,12 +29,23 @@ class Idler():
     def connect(self):
         log.info('Starting idler (%s)', self.folder)
         try:
-            self.imap = IMAP4_SSL(auth.IMAP_HOST) # can be changed to another server if needed
 
-            #establish connection to IMAP Server
-            consumer = oauth.Consumer(auth.CONSUMER_KEY, auth.CONSUMER_SECRET)
-            token = oauth.Token(auth.OAUTH_TOKEN, auth.OAUTH_TOKEN_SECRET)
-            self.imap.authenticate(auth.BASE_GMAIL_IMAP_URL, consumer, token)
+            if not self.email_address or not self.oauth_token:
+                log.error('Need login credentials', e)
+                return
+
+
+            self.imap = IMAP4_SSL(IMAP_HOST) # can be changed to another server if needed
+
+
+            # Authenticate using oauth2
+            auth_string = lambda x: 'user=%s\1auth=Bearer %s\1\1' % (self.email_address, self.oauth_token)
+            print auth_string
+            # return self._command_and_check('authenticate', 'XOAUTH2', auth_string)
+
+            # IMAP4.authenticate(self, 'XOAUTH2', auth_string)
+            self.imap.authenticate('XOAUTH2', auth_string)
+
 
             self.imap.SELECT(self.folder)
             

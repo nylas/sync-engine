@@ -164,7 +164,8 @@ app.directive("itemcell", function($filter) { return {
               overflow: 'hidden',
               whiteSpace: 'nowrap',
               '-ms-text-overflow': 'ellipsis',
-              textOverflow: 'ellipsis'
+              textOverflow: 'ellipsis',
+              cursor: 'inherit'
         };
 
         $scope.email_desc = {
@@ -181,49 +182,13 @@ app.directive("itemcell", function($filter) { return {
               overflow: 'hidden',
               whiteSpace: 'nowrap',
               '-ms-text-overflow': 'ellipsis',
-              textOverflow: 'ellipsis'
+              textOverflow: 'ellipsis',
+              cursor: 'inherit'
         };
 
+    },  
 
-
-
-        $scope.selected = {
-            backgroundColor: '#edf5fd'
-        }
-
-
-
-        /*
-
-.email-item:first-of-type
-{
-  border-top-left-radius: 3px;
-  -moz-border-top-left-radius: 3px;
-  -webkit-border-top-left-radius: 3px;
-  border-top-right-radius: 3px;
-  -moz-border-top-right-radius: 3px;
-  -webkit-border-top-right-radius: 3px;
-}
-
-.email-item:last-of-type
-{
-  border-bottom-width: 0px;
-  border-bottom-style: none;
-
-  border-bottom-left-radius: 3px;
-  -moz-border-bottom-left-radius: 3px;
-  -webkit-border-bottom-left-radius: 3px;
-  border-bottom-right-radius: 3px;
-  -moz-border-bottom-right-radius: 3px;
-  -webkit-border-bottom-right-radius: 3px;
-}
-*/
-
-
-
-    },
-
-    template: '<div ng-style="email_item" data-ng-click="eventHandler()">' +
+    template: '<div hover="#edf5fd" ng-style="email_item" data-ng-click="eventHandler()">' +
                  '<img  class="email-avatar" ng-src="{{ message.gravatar_url }}"' +
                  'alt="{{ message.from_contacts[0] }}">' +
                 '<div ng-style="email_subject">{{message.subject}}</div>' +
@@ -232,17 +197,23 @@ app.directive("itemcell", function($filter) { return {
                     '<em>From</em>: {{message.from_contacts[0]}}' +
                 '</div>' +
             '</div>',
-
-    link: function (scope, element, attrs) {
-        element.bind("mouseenter", function () {
-            element.addClass('hoverstate');
-        });
-        element.bind("mouseleave", function () {
-            element.removeClass('hoverstate');
-        });
-    }};
+  }
 });
 
+
+app.directive("hover", function() { return {
+
+  link: function(scope, element, attrs) {
+    element.bind("mouseenter", function() {
+      element.css('background-color', attrs.hover);
+    });
+    element.bind("mouseleave", function () {
+      element.css('background-color', '');
+    });
+  }
+
+
+}});
 
 
 
@@ -280,8 +251,6 @@ app.directive("messageframe", function() { return {
             if(iframe){
                 var newheight = iframe.contentWindow.document.body.scrollHeight;
                 var newwidth = iframe.contentWindow.document.body.scrollWidth;
-                console.log("Resizing ("+iframe.width+" by "+iframe.height+")" +
-                             "("+newwidth+"px by "+newheight+"px)" );
                 iframe.height = (newheight) + "px";
                 iframe.width = '100%';
                 // iframe.width = (newwidth) + "px";
@@ -328,7 +297,7 @@ app.directive("messageframe", function() { return {
                 'font-smooth:always;' +
                 ' -webkit-font-smoothing:antialiased;'+
                 ' font-family:"Proxima Nova", courier, sans-serif;'+
-                ' font-size:16px;'+
+                ' font-size:15px;'+
                 ' font-weight:500;'+
                 ' color:#333;'+
                 ' font-variant:normal;'+
@@ -370,4 +339,72 @@ app.directive("messageframe", function() { return {
 
     };
 });
+
+
+
+
+
+
+app.directive("replybox", function() { return {
+
+    restrict: 'E',
+    transclude: true,
+    scope: { },
+    controller: function($scope, $element, $attrs, $transclude) { 
+
+        $scope.reply_box_style = {
+          fontSize: '15px',
+          fontVariant: 'normal',
+          fontFamily: '"Proxima Nova", sans-serif',
+          fontStyle: 'normal',
+          fontWeight: 300,
+          lineHeight: '21px',
+          textAlign: 'left',
+
+          color: '#333',
+          textShadow: '1px 1px 1px white',
+          outline: '0 solid transparent',
+
+
+          position: 'fixed',
+          bottom: '0',
+          overflow: 'auto',
+
+          display: 'block',
+
+          padding: '10px',
+          marginBottom: '5px',
+          marginTop: '5px',
+          marginLeft: '15px',
+          marginRight: '15px',
+
+          width: '650px',
+          minWidth: '650px',
+          height: '64px',
+          minHeight: '64px',
+
+
+          // Enable selection
+          '-moz-user-select': 'text',
+           '-khtml-user-select': 'text',
+           '-webkit-user-select': 'text',
+           '-ms-user-select': 'text',
+           'user-select': 'text',
+          cursor: 'text'
+        };
+
+    },
+    template:
+        '<div ng-transclude ng-style="reply_box_style" class="card_with_shadow" contenteditable="true" hidefocus="true"></div>',
+
+    link: function (scope, iElement, iAttrs) {
+
+        // Do something when clicking into the box.
+
+    } // end link
+
+    };
+});
+
+
 

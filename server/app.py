@@ -1,3 +1,6 @@
+import os.path as os_path
+import logging as log
+
 import tornado.ioloop
 import tornado.web
 import tornado.template
@@ -9,13 +12,14 @@ from tornadio2 import SocketConnection, TornadioRouter, event
 
 import tornadio2.gen
 
-import os.path as os_path
-import logging as log
-
 from models import *
 
 from crispin import CrispinClient
+from crispin import AuthenticationError
+from securecookie import SecureCookieSerializer
 from idler import Idler
+import oauth2
+import postel
 
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial, wraps
@@ -24,35 +28,31 @@ crispin_client = None
 EXECUTOR = ThreadPoolExecutor(max_workers=20)
 
 
-import oauth2
 
 
 PATH_TO_ANGULAR = os_path.join(os_path.dirname(__file__), "../angular")
 PATH_TO_STATIC = os_path.join(os_path.dirname(__file__), "../static")
 
 
+
 class Application(tornado.web.Application):
     def __init__(self):
 
         settings = dict(
-
             static_path=os_path.join(PATH_TO_STATIC),
-            xsrf_cookies=True,
+            xsrf_cookies=True,  # debug
             debug=True,
             flash_policy_port = 843,
             flash_policy_file = os_path.join(PATH_TO_STATIC + "/flashpolicy.xml"),
             socket_io_port = 8001,
 
-
-
             cookie_secret="32oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo=",
             login_url="/auth/login",
-            redirect_uri="http://localhost:8888/auth/login",
+
+            redirect_uri="http://localhost:8888/auth/authdone",
 
             google_consumer_key="786647191490.apps.googleusercontent.com",  # client ID
             google_consumer_secret="0MnVfEYfFebShe9576RR8MCK",  # aka client secret
-
-
 
         )
 
@@ -60,9 +60,15 @@ class Application(tornado.web.Application):
         
         handlers = PingRouter.apply_routes([
             (r"/", MainHandler),
-            (r"/auth/login", AuthHandler),
+
+            (r"/testsend", TestSendHandler),
+
+            (r"/auth/authstart", AuthStartHandler),
+            (r"/auth/authdone", AuthDoneHandler),
+
             (r"/auth/logout", LogoutHandler),
-            (r'/app/(.*)', NoCacheStaticFileHandler, {'path': PATH_TO_ANGULAR, 
+
+            (r'/app/(.*)', AngularStaticFileHandler, {'path': PATH_TO_ANGULAR, 
                                            'default_filename':'index.html'}),
             (r'/app', AppRedirectHandler),
             (r'/download_file', FileDownloadHandler),
@@ -84,56 +90,69 @@ class BaseHandler(tornado.web.RequestHandler):
         return tornado.escape.json_decode(user_json)
 
 
+
 class MainHandler(BaseHandler):
-    # @tornado.web.authenticated
     def get(self):
+
+        logged_in = False
+        name = " "
 
         if self.current_user:
             name = tornado.escape.xhtml_escape(self.current_user["name"])
-            self.write("Hello, " + name)
-            self.write("<br><br><a href=\"/auth/logout\">Log out</a>")
-        else:
-            self.write("Go ahead and <a href=\"/auth/login\">login</a>")
+            logged_in = True
+
+        self.render("templates/index.html", name = name,
+                                            logged_in = logged_in )
 
 
 
-class AuthHandler(BaseHandler, oauth2.GoogleOAuth2Mixin):
+class TestSendHandler(BaseHandler):
+
+    def get(self):
+        s = postel.SMTP('mgrinich@gmail.com', oauth2.GoogleOAuth2Mixin.access_token)
+        s.setup()
+        s.send_mail("Test message", "Body content of test message!")
+        s.quit()
+
+
+
+class AuthStartHandler(BaseHandler, oauth2.GoogleOAuth2Mixin):
     @tornado.web.asynchronous
     def get(self):
-        if self.get_argument("code", None):
-            authorization_code = self.get_argument("code", None)
-            self.get_authenticated_user(authorization_code, self.async_callback(self._on_auth))
-            return
         self.authorize_redirect()
-    
-    def _on_auth(self, response):
-        print 'RESPONSE:', response
-        # print response.body
-        # print response.request.headers
-        # if response.error:
-        #     raise tornado.web.HTTPError(500, "Google auth failed")
 
+
+
+class AuthDoneHandler(BaseHandler, oauth2.GoogleOAuth2Mixin):
+    @tornado.web.asynchronous
+    @tornado.gen.engine
+    def get(self):
+        if not self.get_argument("code", None): self.fail()
+
+        authorization_code = self.get_argument("code", None)
+
+        response = yield tornado.gen.Task(self.get_authenticated_user, authorization_code)
+
+        if response is None: self.fail()
         user = response.read()
-        print user
-
+        log.info("Successful auth with token %s" % oauth2.GoogleOAuth2Mixin.access_token)
 
         global crispin_client
-        global idler
-
         crispin_client = CrispinClient('mgrinich@gmail.com', oauth2.GoogleOAuth2Mixin.access_token)
 
-        # idler = Idler(ioloop=loop,
-        #               event_callback=idler_callback,
-        #               # folder=crispin_client.all_mail_folder_name())
-        #               folder="Inbox")
-        # idler.connect()
-        # idler.idle()
-
-
-
-        # self.set_secure_cookie("user", tornado.escape.json_encode(user))
         self.set_secure_cookie("user", user)
-        self.redirect("/")
+
+        self.write("<script type='text/javascript'>parent.close();</script>")  # closes window
+        self.flush()
+        self.finish()
+
+    def fail(self):
+        self.write("There was an error authenticating with Google.")
+        self.flush()
+        log.error("Auth failed")
+        raise tornado.web.HTTPError(500, "Google auth failed")
+        self.finish()
+        return
 
 
 class LogoutHandler(BaseHandler):
@@ -143,10 +162,21 @@ class LogoutHandler(BaseHandler):
 
 
 
+class AngularStaticFileHandler(tornado.web.StaticFileHandler):
 
-class NoCacheStaticFileHandler(tornado.web.StaticFileHandler):
+    def get(self, path, **kwargs):
+        # If not authenticated, just redirect home.
+        if not self.get_secure_cookie("user"):
+            self.redirect(self.settings['login_url'])
+            return
+
+        super(AngularStaticFileHandler, self).get(path, **kwargs)
+
+    
+    # Don't cache anything right now
     def set_extra_headers(self, path):
         self.set_header("Cache-control", "no-cache")
+
 
 class AppRedirectHandler(BaseHandler):
     # TODO put authentication stuff here
@@ -193,7 +223,6 @@ class FileDownloadHandler(BaseHandler):
         # three chars of padding is enough to make any string a multiple of 4 chars long
 
 
-
         data = crispin_client.fetch_msg_body(uid, section_index, folder='Inbox', )
        
         try:
@@ -213,7 +242,6 @@ class FileDownloadHandler(BaseHandler):
         self.write(data)
 
 
-
 # Global, ugh.
 def dontblock(fn_to_call, *args, **kwargs):
     callback = kwargs.pop('callback', None)
@@ -225,18 +253,36 @@ def dontblock(fn_to_call, *args, **kwargs):
             partial(callback, future)))
 
 
+# Websocket
 class WireConnection(SocketConnection):
-    """
-    This is the basic mechanism we use to send messages
-    to the client over websockets.
-    """
 
     clients = set()
 
     def on_open(self, request):
 
+        # print request  ConnectionInfo
+
+        print 'IP:', request.ip
+        # print 'Cookies:', type(request.cookies)
+        print 'user_json:', request.cookies['user'].value
+        print 'Args:', request.arguments
+
+
+        global app
+        s = SecureCookieSerializer(app.settings["cookie_secret"])
+
+
+        des = s.deserialize('user', request.cookies['user'].value)
+
+        print 'deserialized:', des
+
         # Do some auth here
         # self.user_id = request.get_argument('id', None)
+
+        # `request`
+        #     ``ConnectionInfo`` object which contains caller IP address, query string
+        #     parameters and cookies associated with this request.
+
 
         # if not self.user_id:
         #     return False
@@ -271,20 +317,28 @@ class WireConnection(SocketConnection):
         # future = yield tornado.gen.Task(dontblock, self.expensive_load_threads, 'Inbox')
         # threads = future.result()
 
-        messages = self.expensive_load_threads('Inbox')
-        self.emit('load_messages_for_folder_ack', [m.toJSON() for m in messages] )
-
-
-    def expensive_load_threads(self, folder_name):
         folder_name = "Inbox"
+
         # TODO maybe create a new client to make things thread safe?
         # newclient = CrispinClient()
         # crispin_client.select_folder("Inbox")
         # UIDs = crispin_client.fetch_all_udids()
         # msgs = crispin_client.fetch_headers_for_uids(folder_name, UIDs)
+        
 
-        threads = crispin_client.fetch_messages(folder_name)
-        return threads
+        try:
+            global crispin_client
+            crispin_client = CrispinClient('mgrinich@gmail.com', oauth2.GoogleOAuth2Mixin.access_token)
+
+            print 'fetching threads...'
+            threads = crispin_client.fetch_messages(folder_name)
+
+            self.emit('load_messages_for_folder_ack', [m.toJSON() for m in threads] )
+
+        except AuthenticationError, e:
+            log.error("Couldn't authenticate with credentials.")
+
+
 
 
     @event
@@ -413,6 +467,7 @@ def idler_callback():
 
 def startserver(port):
 
+    global app
     app = Application()
     app.listen(port)
 
@@ -421,15 +476,34 @@ def startserver(port):
     tornado.autoreload.start()
     tornado.autoreload.add_reload_hook(stopsubmodules)
 
+
+    global crispin_client
+    global idler
+
+
+    # print 'creating client'
+    # crispin_client = CrispinClient(OAUTH_ACCOUNT, OAUTH_TOKEN)
+
+    # idler = Idler('mgrinich@gmail.com', 'ya29.AHES6ZSUdWE6lrGFZOFSXPTuKqu1cnWKwHnzlerRoL52UZA1m88B3oI', 
+    #               ioloop=loop,
+    #               event_callback=idler_callback,
+    #               # folder=crispin_client.all_mail_folder_name())
+    #               folder="Inbox")
+    # idler.connect()
+    # idler.idle()
+
+
+
+    # Must do this last
     loop = tornado.ioloop.IOLoop.instance()
-
-
     loop.start()
 
 
+
+
 def stopsubmodules():
-    if idler: 
-        idler.stop()
+    # if idler: 
+    #     idler.stop()
     if crispin_client:
         crispin_client.stop()
 

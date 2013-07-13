@@ -33,7 +33,19 @@
 
 </head>
 
-<body>
+<<!-- body ondragstart="return false" draggable="false"
+    ondragenter="event.dataTransfer.dropEffect='none'; event.stopPropagation(); event.preventDefault();"  
+    ondragover="event.dataTransfer.dropEffect='none';event.stopPropagation(); event.preventDefault();"  
+    ondrop="event.dataTransfer.dropEffect='none';event.stopPropagation(); event.preventDefault();"
+>
+ -->
+
+ <body>
+
+
+<div class="top_header" ng-controller="CookieController">
+	Cookie value: {{cookieValue}}
+</div>
 
 
 <div class="layout" ngCloak data-ng-controller="AppContainerController">
@@ -91,8 +103,11 @@
 
                  </div>
 
-				<div class="reply_box card_with_shadow" contenteditable="true" hidefocus="true">Reply text here&hellip;
+                 <replybox>Reply text here&hellip;</replybox>
+
+ 					
 				</div>
+
 
 
             </div>
@@ -109,6 +124,7 @@
 
 	<script src="lib/angular/angular.js"></script>
 	<script src="lib/angular/angular-sanitize.js"></script>
+	<script src="lib/angular/angular-cookies.js"></script>
 	<script src="lib/bootstrap/ui-bootstrap-0.3.0.js"></script>
 	<script src="lib/utils/md5.js"></script>
 	<script src="lib/socketio/socket.io.js"></script>

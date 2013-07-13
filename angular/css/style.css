@@ -2,6 +2,24 @@
 html, body {
   height: 100%;
   overflow: hidden;
+
+
+  /* Disable selection.
+  http://stackoverflow.com/questions/7327627/disable-hover-text-select-etc-when-dragging-an-element-in-jquery-plug-in
+
+   */
+   -moz-user-select: -moz-none;
+   -khtml-user-select: none;
+   -webkit-user-select: none;
+   -ms-user-select: none;
+   user-select: none;
+
+   /* User hand cursor on web. but not on desktop. */
+   cursor: default;
+}
+
+:hover {
+    cursor: default;
 }
 
 
@@ -415,51 +433,6 @@ text-align: right;
 .email-content-controls .secondary-button {
 margin-bottom: 0.3em;
 }
-
-
-
-.reply_box 
-{
-
-  font-size: 15px;
-  font-style: normal;
-  font-variant: normal;
-  line-height: 21px;
-
-  font-family: "Proxima Nova", sans-serif;
-  font-style: normal;
-  font-weight: 300;
-
-  text-align:left;
-  color:#333;
-  text-shadow:1px 1px 1px white;
-  outline:0 solid transparent;
-
-
-    position: fixed;
-    bottom:0px;
-    overflow: auto;
-   
-
-    display:block;
-
-     height:90px;
-    padding: 10px;
-    margin-bottom: 5px;
-    margin-top: 5px;
-    margin-left: 15px;
-    margin-right: 15px;
-
-
-
-    width:650px;
-    min-width: 650px;
-    height:64px;
-    min-height:64px;
-}
-
-
-
 
 
 
