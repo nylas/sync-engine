@@ -298,7 +298,6 @@ app.directive("messageframe", function() { return {
                 ' -webkit-font-smoothing:antialiased;'+
                 ' font-family:"Proxima Nova", courier, sans-serif;'+
                 ' font-size:15px;'+
-                ' font-weight:500;'+
                 ' color:#333;'+
                 ' font-variant:normal;'+
                 ' line-height:1.6em;'+
