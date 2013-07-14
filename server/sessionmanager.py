@@ -1,19 +1,57 @@
 import crispin
 import uuid
 
+import pymongo
+# from bson.objectid import ObjectId
+import logging as log
+import datetime
 
 class SessionManager():
 
-    session_to_user = {}
-    user_email_to_token = {}
+    db = None
+
+    # Memory cache for currently open crispin instances
     email_address_to_crispins = {}
+
+    @classmethod
+    def setup(cls):
+        
+        cls.db = pymongo.MongoClient().test
+
+        try:
+            cls.db.create_collection('session_to_user')
+            cls.db.create_collection('user_email_to_token')
+            log.info('Created collections in sessions DB"')
+        except pymongo.errors.CollectionInvalid, e:
+            if cls.db.create_collection and cls.db.create_collection:
+                log.info("DB exists already.")
+            else:
+                log.error("Error creating sessions DB collecitons. %s" % e)
 
 
     @classmethod
     def store_session(cls, email_address):
         session_uuid = str(uuid.uuid1())
-        cls.session_to_user[session_uuid] = email_address
+
+        session = {"email_address": email_address,
+                   "session_uuid": session_uuid,
+                   "date": datetime.datetime.utcnow()
+                   }
+        session_id = cls.db.session_to_user.insert(session)
         return session_uuid
+
+
+
+    @classmethod
+    def get_user(cls, session_uuid):
+
+        q = {"session_uuid": session_uuid}
+        session = cls.db.session_to_user.find_one(q)
+
+        if session:
+            return session['email_address']
+        return None
+
 
 
     @classmethod
@@ -23,25 +61,23 @@ class SessionManager():
         if email_address in cls.email_address_to_crispins:
             cls.mail_address_to_crispins[email_address].stop()
 
-        if email_address in cls.user_email_to_token:
-            log.info("Updating oauth token for user %s" % email_address)
-        cls.user_email_to_token[email_address] = access_token
+
+        token_doc = {"email_address": email_address,
+                    "access_token": access_token,
+                    "date": datetime.datetime.utcnow()
+                   }
+        session_id = cls.db.user_email_to_token.insert(token_doc)
 
 
     @classmethod
     def get_access_token(cls, email_address):
-        if email_address in cls.user_email_to_token:
-            return cls.user_email_to_token[email_address]
+
+        q = {"email_address": email_address}
+        token_doc = cls.db.user_email_to_token.find_one(q)
+
+        if token_doc:
+            return token_doc['access_token']
         return None
-
-
-
-    @classmethod
-    def get_user(cls, session):
-        try:
-            return cls.session_to_user[session]
-        except Exception, e:
-            return None
 
 
     @classmethod
@@ -59,7 +95,7 @@ class SessionManager():
         if email_address in cls.email_address_to_crispins:
             return cls.email_address_to_crispins[email_address]
         else:
-            access_token = cls.user_email_to_token[email_address]
+            access_token = SessionManager.get_access_token(email_address)
             return crispin.CrispinClient(email_address, access_token)
 
 

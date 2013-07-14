@@ -4,6 +4,8 @@ import subprocess
 import logging as log
 import os
 
+from time import sleep
+
 db_path = None
 
 def startmongo(PATH_TO_MONGO_DATABSE):
@@ -16,6 +18,7 @@ def startmongo(PATH_TO_MONGO_DATABSE):
     args = ['mongod', '--dbpath', PATH_TO_MONGO_DATABSE, '--fork']
     mongod_process = subprocess.Popen(args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.STDOUT)
     mongod_process.communicate()
+    sleep(1) # for mongo
 
 
 def stopmongo():

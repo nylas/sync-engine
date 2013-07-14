@@ -55,6 +55,9 @@ def start(args=None):
      """
 
 
+    # consider doing this to delete the database
+    # import shutil
+    # shutil.rmtree('/db')
 
 
     # Make logging prettified

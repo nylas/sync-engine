@@ -20,12 +20,6 @@ from idler import Idler
 import oauth2
 import postel
 
-# Datase
-import pymongo
-from bson.objectid import ObjectId
-import motor
-
-
 from sessionmanager import SessionManager
 
 
@@ -38,48 +32,24 @@ PATH_TO_STATIC = os_path.join(os_path.dirname(__file__), "../static")
 class Application(tornado.web.Application):
     def __init__(self):
 
-
-        sync_db = pymongo.Connection().test
-        try:
-            # sync_db.create_collection('session_to_user')
-            # sync_db.create_collection('user_to_token')
-            sync_db.create_collection('chirps', size=10000, capped=True)
-            log.info('Created capped collection "chirps" in database "test"')
-
-        except pymongo.errors.CollectionInvalid:
-            if 'capped' not in sync_db.chirps.options():
-                print >> sys.stderr, (
-                    'test.chirps exists and is not a capped collection,\n'
-                    'please drop the collection and start this example app again.'
-                )
-                sys.exit(1)
-
-
-
-        motor_client = motor.MotorClient()
-        motor_client.open_sync()
-        motor_db = motor_client.test
-
-        # cursor_manager = CursorManager(motor_db)
-        # cursor_manager.start()
+        from secrets import COOKIE_SECRET, GOOGLE_CONSUMER_KEY, GOOGLE_CONSUMER_SECRET
 
         settings = dict(
             static_path=os_path.join(PATH_TO_STATIC),
             xsrf_cookies=True,  # debug
+
             debug=True,
+
             flash_policy_port=843,
             flash_policy_file=os_path.join(PATH_TO_STATIC + "/flashpolicy.xml"),
             socket_io_port=8001,
 
-            cookie_secret="32oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo=",
-            login_url="/auth/login",
-
+            login_url="/",  # for now
             redirect_uri="http://localhost:8888/auth/authdone",
 
-            google_consumer_key="786647191490.apps.googleusercontent.com",  # client ID
-            google_consumer_secret="0MnVfEYfFebShe9576RR8MCK",  # aka client secret
-
-            motor_db=motor_db
+            cookie_secret=COOKIE_SECRET,
+            google_consumer_key=GOOGLE_CONSUMER_KEY,
+            google_consumer_secret=GOOGLE_CONSUMER_SECRET,
         )
 
         PingRouter = TornadioRouter(WireConnection, namespace='wire')
@@ -112,7 +82,6 @@ class BaseHandler(tornado.web.RequestHandler):
     # TODO put authentication stuff here
     def get_current_user(self):
         session_key = self.get_secure_cookie("session")
-
         return SessionManager.get_user(session_key)
 
 chirps = []
@@ -467,6 +436,10 @@ def idler_callback():
 
 
 def startserver(port):
+
+
+    SessionManager.setup()
+
 
     global app
     app = Application()
