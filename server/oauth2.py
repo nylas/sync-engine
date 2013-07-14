@@ -75,32 +75,43 @@ class GoogleOAuth2Mixin(tornado.auth.OAuth2Mixin):
         request = httpclient.HTTPRequest(OAUTH_ACCESS_TOKEN_URL, method="POST", body=urllib.urlencode(args))
         response = yield tornado.gen.Task(self.httpclient_instance.fetch, request)
 
+
         if response.error:
-            logging.warning('Google auth error: %s' % str(response))
+            error_dict = escape.json_decode(response.body)
+            logging.error('[%s] %s' % (error_dict['error'], error_dict['error_description']))
             callback(None)
             return
 
-        session = escape.json_decode(response.body)
-
-        GoogleOAuth2Mixin.access_token = session['access_token']
-
+        session_dict = escape.json_decode(response.body)
+        access_token = session_dict['access_token']
 
         # Validate token
-        request = httpclient.HTTPRequest(OAUTH_TOKEN_VALIDATION_URL+"?access_token="+session['access_token'])
+        request = httpclient.HTTPRequest(OAUTH_TOKEN_VALIDATION_URL + "?access_token=" + access_token)
         response = yield tornado.gen.Task(self.httpclient_instance.fetch, request)
 
 
-        # Get user info
-        GoogleOAuth2Mixin.access_token = session['access_token']
+        if response.error:
+            error_dict = escape.json_decode(response.body)
+            logging.error('[%s] %s' % (error_dict['error'], error_dict['error_description']))
+            callback(None)
+            return
+
+        validation_dict = escape.json_decode(response.body)
+        email_address = validation_dict["email"]
 
 
-        request = httpclient.HTTPRequest(USER_INFO_URL+"?access_token="+GoogleOAuth2Mixin.access_token, 
-                                         headers= { "Authorization": "Bearer "+GoogleOAuth2Mixin.access_token } )
-        response = yield tornado.gen.Task(self.httpclient_instance.fetch, request)
+        callback( dict(email_address=email_address, access_token=access_token) )
 
 
-        # TODO check for errors...
+        # TODO : get this data somwhere other than the auth module
 
-        callback(response)
+
+        # Get user info. Stuff like fullname, birthdate, profile picture, etc.
+        # request = httpclient.HTTPRequest(USER_INFO_URL+"?access_token="+GoogleOAuth2Mixin.access_token, 
+        #                                  headers= { "Authorization": "Bearer "+ access_token } )
+        # response = yield tornado.gen.Task(self.httpclient_instance.fetch, request)
+        # userinfo_dict = escape.json_decode(response.body)
+        # print userinfo_dict
+
 
         

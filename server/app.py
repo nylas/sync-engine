@@ -162,7 +162,7 @@ class MainHandler(BaseHandler):
         name = " "
 
         if self.current_user:
-            name = self.current_user["name"]
+            name = self.current_user["email"]
             logged_in = True
 
         self.render("templates/index.html", name = name,
@@ -196,14 +196,14 @@ class AuthDoneHandler(BaseHandler, oauth2.GoogleOAuth2Mixin):
         authorization_code = self.get_argument("code", None)
 
         response = yield tornado.gen.Task(self.get_authenticated_user, authorization_code)
+        try:
+            email_address = response['email_address']
+            access_token = response['access_token']
+        except Exception, e:
+            # TODO raise authentication error here
+            raise e
 
-        if response is None: self.fail()
-        user_json = response.body
-
-        user = tornado.escape.json_decode(user_json)
-
-        email_address = user['email']
-        oauth_token = oauth2.GoogleOAuth2Mixin.access_token
+        if (email_address is None) or (access_token is None): self.fail()
 
 
         # Shut down old session. Auth is not longer valid
@@ -212,7 +212,7 @@ class AuthDoneHandler(BaseHandler, oauth2.GoogleOAuth2Mixin):
 
 
         try:
-            crispin_client = CrispinClient(email_address, oauth_token)
+            crispin_client = CrispinClient(email_address, access_token)
             email_address_to_crispins[email_address] = crispin_client
         except Exception, e:
             raise e
@@ -221,11 +221,13 @@ class AuthDoneHandler(BaseHandler, oauth2.GoogleOAuth2Mixin):
         if email_address in user_email_to_token:
             log.info("Replacing oauth token for user %s" % email_address)
 
-        user_email_to_token[email_address] = oauth_token
+        user_email_to_token[email_address] = access_token
 
         # after auth
         session_uuid = str(uuid.uuid1())
-        session_to_user[session_uuid] = user
+
+        session_to_user[session_uuid] = dict( email=email_address )   # HACK
+
         self.set_secure_cookie("session", session_uuid)
 
         self.write("<script type='text/javascript'>parent.close();</script>")  # closes window
@@ -547,10 +549,6 @@ def startserver(port):
 
     global crispin_client
     global idler
-
-
-    # print 'creating client'
-    # crispin_client = CrispinClient(OAUTH_ACCOUNT, OAUTH_TOKEN)
 
     # idler = Idler('mgrinich@gmail.com', 'ya29.AHES6ZSUdWE6lrGFZOFSXPTuKqu1cnWKwHnzlerRoL52UZA1m88B3oI', 
     #               ioloop=loop,
