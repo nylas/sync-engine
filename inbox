@@ -9,7 +9,8 @@ import logging as log
 
 DEFAULT_PORT = 8888
 
-PATH_TO_MONGO_DATABSE = os.path.join(os.path.abspath(__file__), "db/mongodb/")
+PATH_TO_MONGO_DATABSE = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)), "db/mongo/")
 
 
 # Trying to get this to work
@@ -61,7 +62,7 @@ def start(args=None):
     tornado.options.parse_command_line()
 
     # Start Mongo
-    from mongomgr import startmongo
+    from server.mongomgr import startmongo
     try:
         startmongo(PATH_TO_MONGO_DATABSE)
     except Exception, e:
@@ -84,7 +85,7 @@ def stop(args):
     from server.app import stopserver
     stopserver()
 
-    from mongomgr import stopmongo
+    from server.mongomgr import stopmongo
     stopmongo()
 
 

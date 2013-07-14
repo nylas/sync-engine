@@ -1,6 +1,9 @@
 .DS_Store
 *.py[cod]
 
+# Mongo
+db
+
 # C extensions
 *.so
 
