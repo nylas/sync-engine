@@ -14,25 +14,19 @@ import tornadio2.gen
 
 from models import *
 
-from crispin import CrispinClient
 from crispin import AuthenticationError
 from securecookie import SecureCookieSerializer
 from idler import Idler
 import oauth2
 import postel
 
+# Datase
 import pymongo
 from bson.objectid import ObjectId
 import motor
-import uuid
 
 
-
-session_to_user = {}
-
-email_address_to_crispins = {}
-
-user_email_to_token = {}
+from sessionmanager import SessionManager
 
 
 PATH_TO_ANGULAR = os_path.join(os_path.dirname(__file__), "../angular")
@@ -47,6 +41,8 @@ class Application(tornado.web.Application):
 
         sync_db = pymongo.Connection().test
         try:
+            # sync_db.create_collection('session_to_user')
+            # sync_db.create_collection('user_to_token')
             sync_db.create_collection('chirps', size=10000, capped=True)
             log.info('Created capped collection "chirps" in database "test"')
 
@@ -116,9 +112,8 @@ class BaseHandler(tornado.web.RequestHandler):
     # TODO put authentication stuff here
     def get_current_user(self):
         session_key = self.get_secure_cookie("session")
-        if not session_key in session_to_user: return None
-        return session_to_user[session_key]
-        # return tornado.escape.json_decode(user_json)
+
+        return SessionManager.get_user(session_key)
 
 chirps = []
 
@@ -126,54 +121,16 @@ class MainHandler(BaseHandler):
 
     def get(self):
 
-
-        # motor.Op(self.settings['motor_db'].chirps.insert, {
-        #     'msg': 'somemsg',
-        #     'ts': datetime.datetime.utcnow(),
-        #     '_id': ObjectId() })
-
-
-        # if chirps:
-        #     last_chirp = chirps[-1]
-        #     query = {
-        #         'ts': {'$gte': last_chirp['ts']},
-        #         '_id': {'$ne': last_chirp['_id']}
-        #     }
-        # else:
-        #     query = {}
-
-
-        # def _on_response(response, error):
-        #     # memmory cache
-        #     chirps.extend([response])
-
-        #     # We have new data for the client.
-        #     log.debug('New data: ' + str(response)[:150])
-        #     print 'new chirp' + str(response)
-
-
-
-        # cursor = self.settings['motor_db'].chirps.find(query)
-        # cursor.tail(_on_response)
-
-
-
-        logged_in = False
-        name = " "
-
-        if self.current_user:
-            name = self.current_user["email"]
-            logged_in = True
-
-        self.render("templates/index.html", name = name,
-                                            logged_in = logged_in )
+        self.render("templates/index.html", name = self.current_user if self.current_user else " ",
+                                            logged_in = bool(self.current_user) )
 
 
 
 class TestSendHandler(BaseHandler):
 
     def get(self):
-        s = postel.SMTP('mgrinich@gmail.com', oauth2.GoogleOAuth2Mixin.access_token)
+
+        s = postel.SMTP('mgrinich@gmail.com', SessionManager.get_access_token("mgrinich@gmail.com"))
         s.setup()
         s.send_mail("Test message", "Body content of test message!")
         s.quit()
@@ -206,29 +163,11 @@ class AuthDoneHandler(BaseHandler, oauth2.GoogleOAuth2Mixin):
         if (email_address is None) or (access_token is None): self.fail()
 
 
-        # Shut down old session. Auth is not longer valid
-        if email_address in email_address_to_crispins:
-            email_address_to_crispins[email_address].stop()
+        SessionManager.store_access_token(email_address, access_token)
 
-
-        try:
-            crispin_client = CrispinClient(email_address, access_token)
-            email_address_to_crispins[email_address] = crispin_client
-        except Exception, e:
-            raise e
-
-
-        if email_address in user_email_to_token:
-            log.info("Replacing oauth token for user %s" % email_address)
-
-        user_email_to_token[email_address] = access_token
-
-        # after auth
-        session_uuid = str(uuid.uuid1())
-
-        session_to_user[session_uuid] = dict( email=email_address )   # HACK
-
+        session_uuid = SessionManager.store_session(email_address)
         self.set_secure_cookie("session", session_uuid)
+
 
         self.write("<script type='text/javascript'>parent.close();</script>")  # closes window
         self.flush()
@@ -313,6 +252,10 @@ class FileDownloadHandler(BaseHandler):
         # three chars of padding is enough to make any string a multiple of 4 chars long
 
 
+
+    
+        crispin_client = SessionManager.get_crispin()
+
         data = crispin_client.fetch_msg_body(uid, section_index, folder='Inbox', )
        
         try:
@@ -385,15 +328,9 @@ class WireConnection(SocketConnection):
         folder_name = "Inbox"
         try:
 
-            email_address = 'mgrinich@gmail.com'
-            if email_address in email_address_to_crispins:
-                crispin_client = email_address_to_crispins[email_address]
-            else:
-                access_token = user_email_to_token[email_address] 
-                crispin_client = CrispinClient(email_address, access_token)
+            crispin_client = SessionManager.get_crispin()
 
-
-            print 'fetching threads...'
+            log.info('fetching threads...')
             threads = crispin_client.fetch_messages(folder_name)
             self.emit('load_messages_for_folder_ack', [m.toJSON() for m in threads] )
 
@@ -408,6 +345,7 @@ class WireConnection(SocketConnection):
         assert 'uid' in kwargs
         assert 'section_index' in kwargs
 
+        crispin_client = SessionManager.get_crispin()
         msg_data = crispin_client.fetch_msg_body(kwargs['uid'], 
                                                  kwargs['section_index'],
                                                  folder='Inbox', )
@@ -506,14 +444,7 @@ class WireConnection(SocketConnection):
         log.info("Fetching thread id: %s" % thread_id)
 
 
-
-        email_address = 'mgrinich@gmail.com'
-        if email_address in email_address_to_crispins:
-            crispin_client = email_address_to_crispins[email_address]
-        else:
-            access_token = user_email_to_token[email_address] 
-            crispin_client = CrispinClient(email_address, access_token)
-
+        crispin_client = SessionManager.get_crispin()
 
         crispin_client.select_allmail_folder()
 
@@ -547,9 +478,7 @@ def startserver(port):
     tornado.autoreload.add_reload_hook(stopsubmodules)
 
 
-    global crispin_client
     global idler
-
     # idler = Idler('mgrinich@gmail.com', 'ya29.AHES6ZSUdWE6lrGFZOFSXPTuKqu1cnWKwHnzlerRoL52UZA1m88B3oI', 
     #               ioloop=loop,
     #               event_callback=idler_callback,
@@ -571,9 +500,9 @@ def startserver(port):
 def stopsubmodules():
     # if idler: 
     #     idler.stop()
+ 
+    SessionManager.stop_all_crispins()
 
-    for c in email_address_to_crispins.values():
-        c.stop()
 
 
 def stopserver():

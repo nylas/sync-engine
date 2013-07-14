@@ -7,6 +7,7 @@ import base64
 
 
 SMTP_HOST = 'smtp.gmail.com'
+SMTP_PORT = 587
 
 class SMTP(object):
 
@@ -17,11 +18,9 @@ class SMTP(object):
 
 
     def setup(self):
-        # self.conn = smtplib.SMTP('smtp.googlemail.com', 587)
-        self.conn = smtplib.SMTP(SMTP_HOST, 587)
+        self.conn = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
 
-        #conn.debug = 4 
-        self.conn.set_debuglevel(True)
+        # self.conn.set_debuglevel(4)
         self.conn.ehlo()
         self.conn.starttls()
         self.conn.ehlo()
@@ -74,18 +73,23 @@ class SMTP(object):
         headers['From'] = '"Testing from header field" <test_from_header@gmail.com>'
         headers['Subject'] = msg_subject
 
-
         headers['Mime-Version'] = '1.0'
         headers['User-Agent'] = 'InboxApp/0.1'
 
         # Not really sure about this one yet...
-
         # $headers .= "Content-Type: text/html; charset=ISO-8859-1\r\n";
 
         header = '\r\n'.join(['%s: %s' % (k,v) for k,v in headers.iteritems() ])
         msg = header + '\n' + msg_body + '\n\n'
 
-        self.conn.sendmail(from_addr, to_addr, msg)
+        try:
+            self.conn.sendmail(from_addr, to_addr, msg)
+            log.info("Sent msg %s -> %s" % (from_addr, ",".join(t for t in to_addr)))
+        except Exception, e:
+            raise e
+        
+
+
 
     def quit(self):
         self.conn.quit()

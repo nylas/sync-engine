@@ -17,8 +17,6 @@ import auth
 
 from models import IBMessage, IBThread, IBMessagePart
 
-from datastore import DataStore
-
 
 USE_SSL = True
 
@@ -32,6 +30,12 @@ SMTP_HOST = 'smtp.gmail.com'
 class AuthenticationError(Exception): pass    # Logical errors - debug required
 
 
+def clean_header(to_decode):
+    from email.header import decode_header
+    decoded = decode_header(to_decode)
+    parts = [w.decode(e or 'ascii') for w,e in decoded]
+    u = u' '.join(parts)
+    return u
 
 
 message_cache = {}  # (folder, UID) -> message (someday use message_id)
@@ -50,7 +54,6 @@ class CrispinClient:
         self.imap_server = None
         # last time the server checked in, in UTC
         self.keepalive = None
-        self.datastore = DataStore()
 
     def server_needs_refresh(self):
         """ Many IMAP servers have a default minimum "no activity" timeout
@@ -101,7 +104,6 @@ class CrispinClient:
 
             self.imap_server = None
             return False
-
 
 
         log.info('Connection successful.')
@@ -307,8 +309,11 @@ class CrispinClient:
             #  None, 
             #  '<89ACAE66-4C10-4BBF-9B24-AC18A0FB2440@longnow.org>')
 
-            msg_envelope[0] # date
-            new_msg.subject = msg_envelope[1]
+
+
+
+            # msg_envelope[0] # date
+            new_msg.subject = clean_header(msg_envelope[1])
             new_msg.from_contacts = msg_envelope[2]
             # Errors-To: salt-bounces@list.longnow.org
             # Sender: salt-bounces@list.longnow.org
@@ -770,10 +775,6 @@ class CrispinClient:
         elif isinstance(msg_uid, basestring):
             msg_uid = [msg_uid]
 
-
-        # m = self.datastore.message(msg_uid)
-        # if (m): return m
-
         log.info("Fetching message. UID: %i" % msg_uid)
         response = self.imap_server.fetch(
                 str(msg_uid), ['RFC822', 'X-GM-THRID', 'X-GM-MSGID'])
@@ -832,9 +833,6 @@ class CrispinClient:
 
         # TODO here run fix_links which converts links to HTML I think...
         new_msg.body_text = msg_text
-
-
-        m = self.datastore.addMessage(new_msg)
 
         return new_msg
 
