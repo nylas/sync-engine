@@ -5,7 +5,12 @@ import sys
 import os
 import subprocess
 
+import logging as log
+
 DEFAULT_PORT = 8888
+
+PATH_TO_MONGO_DATABSE = os.path.join(os.path.abspath(__file__), "db/mongodb/")
+
 
 # Trying to get this to work
 def install(args):
@@ -32,7 +37,6 @@ def start(args=None):
         port = args.port
     
 
-    import subprocess
     commit = subprocess.check_output(["git", "describe", "--tags"])
 
 
@@ -45,23 +49,46 @@ def start(args=None):
       _| |_| | | | |_) | (_) >  < 
      |_____|_| |_|_.__/ \___/_/\_\\  \033[0m
 
-     """ + commit
-    print "Starting server on port %s. Use CTRL-C to stop.\n" % port
-    from server.app import startserver
-    
+     """ + commit + """
+     Use CTRL-C to stop.
+     """
+
+
+
+
+    # Make logging prettified
+    import tornado.options
+    tornado.options.parse_command_line()
+
+    # Start Mongo
+    from mongomgr import startmongo
     try:
-        # os.system("stty -echo")
+        startmongo(PATH_TO_MONGO_DATABSE)
+    except Exception, e:
+        raise e
+        stop(None)
+
+    # Start Tornado 
+    from server.app import startserver
+    try:
         startserver(port)
     except Exception, e:
         raise e
         stop(None)
-  
+
+
 def stop(args):
     print """
 \033[91m     Cleaning up...
 \033[0m"""
     from server.app import stopserver
     stopserver()
+
+    from mongomgr import stopmongo
+    stopmongo()
+
+
+
     print """
 \033[91m     Stopped.
 \033[0m"""

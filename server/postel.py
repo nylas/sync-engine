@@ -66,7 +66,6 @@ class SMTP(object):
         # Lines: 26
 
 
-
         from_addr = 'mgrinich@gmail.com'
         to_addr = ['mgrinich@gmail.com']
 

@@ -228,7 +228,7 @@ app.directive("attachmentlist", function($filter) { return {
         template:
             '<div ng-show="message.attachments.length > 0">' +
                 'Attached: <span ng-repeat="a in attachments">' +
-                '<a ng:href="/download_file?uid={{message.uid}}&section_index={{a.index}}&content_type={{a.content_type}}&encoding={{a.encoding}}&filename={{a.filename}}">' +
+                '<a ng:href="/file?uid={{message.uid}}&section_index={{a.index}}&content_type={{a.content_type}}&encoding={{a.encoding}}&filename={{a.filename}}">' +
                 '{{a.filename}}' +
                 '</a>{{$last && " " || ", " }}</span>' +
             '</div>'

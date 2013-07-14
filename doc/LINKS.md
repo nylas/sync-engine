@@ -59,6 +59,7 @@ What is it with everyone's obsession with Inbox Zero?
 
 ## Email clients
 
+* [James](http://james.apache.org/) Apache project email server
 * [Hazel](http://www.noodlesoft.com/hazel.php) mac app
 * [Openera](http://www.openera.com/) auto filter attachments
 * [Attachments.me](http://attachments.me) handle attachments

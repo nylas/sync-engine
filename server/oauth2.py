@@ -22,13 +22,15 @@ scope = " ".join([
     ])
 
 
+OAUTH_AUTHENTICATE_URL = "https://accounts.google.com/o/oauth2/auth"
+OAUTH_ACCESS_TOKEN_URL = "https://accounts.google.com/o/oauth2/token"
+OAUTH_TOKEN_VALIDATION_URL = "https://www.googleapis.com/oauth2/v1/tokeninfo"
+USER_INFO_URL = "https://www.googleapis.com/oauth2/v1/userinfo"
+
+
 class GoogleOAuth2Mixin(tornado.auth.OAuth2Mixin):
 
     access_token = ""
-    _OAUTH_AUTHENTICATE_URL = "https://accounts.google.com/o/oauth2/auth"
-    _OAUTH_ACCESS_TOKEN_URL = "https://accounts.google.com/o/oauth2/token"
-    _OAUTH_TOKEN_VALIDATION_URL = "https://www.googleapis.com/oauth2/v1/tokeninfo"
-    _USER_INFO_URL = "https://www.googleapis.com/oauth2/v1/userinfo"
 
     @property
     def httpclient_instance(self):
@@ -54,10 +56,10 @@ class GoogleOAuth2Mixin(tornado.auth.OAuth2Mixin):
 
           "login_hint" : "mgrinich@gmail.com"
 
-
         }
         if kwargs: args.update(kwargs)
-        self.redirect(url_concat(self._OAUTH_AUTHENTICATE_URL, args))
+        self.redirect(url_concat(OAUTH_AUTHENTICATE_URL, args))
+        
 
     @tornado.gen.engine
     def get_authenticated_user(self, authorization_code, callback):
@@ -70,11 +72,8 @@ class GoogleOAuth2Mixin(tornado.auth.OAuth2Mixin):
             "grant_type": "authorization_code"
         }
         
-        request = httpclient.HTTPRequest(self._OAUTH_ACCESS_TOKEN_URL, method="POST", body=urllib.urlencode(args))
-        
+        request = httpclient.HTTPRequest(OAUTH_ACCESS_TOKEN_URL, method="POST", body=urllib.urlencode(args))
         response = yield tornado.gen.Task(self.httpclient_instance.fetch, request)
-
-        print '_on_access_token', response
 
         if response.error:
             logging.warning('Google auth error: %s' % str(response))
@@ -85,64 +84,23 @@ class GoogleOAuth2Mixin(tornado.auth.OAuth2Mixin):
 
         GoogleOAuth2Mixin.access_token = session['access_token']
 
-        self.validate_token(session, callback)
-    
-    def validate_token(self, session, callback):
 
-        print 'validate_token', session
-
-        self.httpclient_instance.fetch(
-            self._OAUTH_TOKEN_VALIDATION_URL+"?access_token="+session['access_token'],
-            self.async_callback(self.get_user_info, session, callback)
-        )
+        # Validate token
+        request = httpclient.HTTPRequest(OAUTH_TOKEN_VALIDATION_URL+"?access_token="+session['access_token'])
+        response = yield tornado.gen.Task(self.httpclient_instance.fetch, request)
 
 
-    def get_user_info(self, session, callback, response):
-
+        # Get user info
         GoogleOAuth2Mixin.access_token = session['access_token']
 
-        print 'Access token', GoogleOAuth2Mixin.access_token
 
-        additional_headers = {
-            "Authorization": "Bearer "+GoogleOAuth2Mixin.access_token
-        }
-
-        h = httputil.HTTPHeaders()
-        h.parse_line("Authorization: Bearer "+GoogleOAuth2Mixin.access_token)
-        conn = httplib.HTTPSConnection("www.googleapis.com")
-        conn.request("GET", "/oauth2/v1/userinfo?access_token="+GoogleOAuth2Mixin.access_token, "", additional_headers)
-
-        # https://www.googleapis.com/userinfo/email?alt=json
-
-        response = conn.getresponse()
+        request = httpclient.HTTPRequest(USER_INFO_URL+"?access_token="+GoogleOAuth2Mixin.access_token, 
+                                         headers= { "Authorization": "Bearer "+GoogleOAuth2Mixin.access_token } )
+        response = yield tornado.gen.Task(self.httpclient_instance.fetch, request)
 
 
-        # user_info = escape.json_decode(response.body)
-        # print 'user_info: ', user_info
+        # TODO check for errors...
+
         callback(response)
 
-
-        # r =  response.read()
-
-        # session['name'] = r['name']
-        # print 'printed response', r
-
-        #h.pop("Accept-Encoding")
-        '''request = httpclient.HTTPRequest(self._USER_INFO_URL+"?access_token="+GoogleOAuth2Mixin.access_token, method="GET", headers=h)
-        self.httpclient_instance.fetch(
-            request,
-            self.async_callback(callback)
-        )'''
-
-        # No error I guess? 
-        # callback(session)
         
-    def _on_response(self):
-        if response.error:
-            logging.warning('Google get user info error: %s' % str(response))
-            callback(None)
-            return
-
-        user_info = escape.json_decode(response.body)
-        print 'user_info: ', user_info
-        callback(user_info)

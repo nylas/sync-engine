@@ -21,10 +21,18 @@ from idler import Idler
 import oauth2
 import postel
 
-from functools import partial, wraps
+import pymongo
+from bson.objectid import ObjectId
+import motor
+import uuid
 
-crispin_client = None
 
+
+session_to_user = {}
+
+email_address_to_crispins = {}
+
+user_email_to_token = {}
 
 
 PATH_TO_ANGULAR = os_path.join(os_path.dirname(__file__), "../angular")
@@ -32,16 +40,40 @@ PATH_TO_STATIC = os_path.join(os_path.dirname(__file__), "../static")
 
 
 
+
 class Application(tornado.web.Application):
     def __init__(self):
+
+
+        sync_db = pymongo.Connection().test
+        try:
+            sync_db.create_collection('chirps', size=10000, capped=True)
+            log.info('Created capped collection "chirps" in database "test"')
+
+        except pymongo.errors.CollectionInvalid:
+            if 'capped' not in sync_db.chirps.options():
+                print >> sys.stderr, (
+                    'test.chirps exists and is not a capped collection,\n'
+                    'please drop the collection and start this example app again.'
+                )
+                sys.exit(1)
+
+
+
+        motor_client = motor.MotorClient()
+        motor_client.open_sync()
+        motor_db = motor_client.test
+
+        # cursor_manager = CursorManager(motor_db)
+        # cursor_manager.start()
 
         settings = dict(
             static_path=os_path.join(PATH_TO_STATIC),
             xsrf_cookies=True,  # debug
             debug=True,
-            flash_policy_port = 843,
-            flash_policy_file = os_path.join(PATH_TO_STATIC + "/flashpolicy.xml"),
-            socket_io_port = 8001,
+            flash_policy_port=843,
+            flash_policy_file=os_path.join(PATH_TO_STATIC + "/flashpolicy.xml"),
+            socket_io_port=8001,
 
             cookie_secret="32oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo=",
             login_url="/auth/login",
@@ -51,10 +83,11 @@ class Application(tornado.web.Application):
             google_consumer_key="786647191490.apps.googleusercontent.com",  # client ID
             google_consumer_secret="0MnVfEYfFebShe9576RR8MCK",  # aka client secret
 
+            motor_db=motor_db
         )
 
         PingRouter = TornadioRouter(WireConnection, namespace='wire')
-        
+
         handlers = PingRouter.apply_routes([
             (r"/", MainHandler),
 
@@ -68,9 +101,9 @@ class Application(tornado.web.Application):
             (r'/app/(.*)', AngularStaticFileHandler, {'path': PATH_TO_ANGULAR, 
                                            'default_filename':'index.html'}),
             (r'/app', AppRedirectHandler),
-            (r'/download_file', FileDownloadHandler),
+            (r'/file', FileDownloadHandler),
             # /wire is the route for messages.
-            (r'/(?!wire|!app|download_file)(.*)', tornado.web.StaticFileHandler, {'path': PATH_TO_STATIC, 
+            (r'/(?!wire|!app|file)(.*)', tornado.web.StaticFileHandler, {'path': PATH_TO_STATIC, 
                                            'default_filename':'index.html'}),       
         ])
 
@@ -82,20 +115,54 @@ class Application(tornado.web.Application):
 class BaseHandler(tornado.web.RequestHandler):
     # TODO put authentication stuff here
     def get_current_user(self):
-        user_json = self.get_secure_cookie("user")
-        if not user_json: return None
-        return tornado.escape.json_decode(user_json)
+        session_key = self.get_secure_cookie("session")
+        if not session_key in session_to_user: return None
+        return session_to_user[session_key]
+        # return tornado.escape.json_decode(user_json)
 
-
+chirps = []
 
 class MainHandler(BaseHandler):
+
     def get(self):
+
+
+        # motor.Op(self.settings['motor_db'].chirps.insert, {
+        #     'msg': 'somemsg',
+        #     'ts': datetime.datetime.utcnow(),
+        #     '_id': ObjectId() })
+
+
+        # if chirps:
+        #     last_chirp = chirps[-1]
+        #     query = {
+        #         'ts': {'$gte': last_chirp['ts']},
+        #         '_id': {'$ne': last_chirp['_id']}
+        #     }
+        # else:
+        #     query = {}
+
+
+        # def _on_response(response, error):
+        #     # memmory cache
+        #     chirps.extend([response])
+
+        #     # We have new data for the client.
+        #     log.debug('New data: ' + str(response)[:150])
+        #     print 'new chirp' + str(response)
+
+
+
+        # cursor = self.settings['motor_db'].chirps.find(query)
+        # cursor.tail(_on_response)
+
+
 
         logged_in = False
         name = " "
 
         if self.current_user:
-            name = tornado.escape.xhtml_escape(self.current_user["name"])
+            name = self.current_user["name"]
             logged_in = True
 
         self.render("templates/index.html", name = name,
@@ -131,13 +198,35 @@ class AuthDoneHandler(BaseHandler, oauth2.GoogleOAuth2Mixin):
         response = yield tornado.gen.Task(self.get_authenticated_user, authorization_code)
 
         if response is None: self.fail()
-        user = response.read()
-        log.info("Successful auth with token %s" % oauth2.GoogleOAuth2Mixin.access_token)
+        user_json = response.body
 
-        global crispin_client
-        crispin_client = CrispinClient('mgrinich@gmail.com', oauth2.GoogleOAuth2Mixin.access_token)
+        user = tornado.escape.json_decode(user_json)
 
-        self.set_secure_cookie("user", user)
+        email_address = user['email']
+        oauth_token = oauth2.GoogleOAuth2Mixin.access_token
+
+
+        # Shut down old session. Auth is not longer valid
+        if email_address in email_address_to_crispins:
+            email_address_to_crispins[email_address].stop()
+
+
+        try:
+            crispin_client = CrispinClient(email_address, oauth_token)
+            email_address_to_crispins[email_address] = crispin_client
+        except Exception, e:
+            raise e
+
+
+        if email_address in user_email_to_token:
+            log.info("Replacing oauth token for user %s" % email_address)
+
+        user_email_to_token[email_address] = oauth_token
+
+        # after auth
+        session_uuid = str(uuid.uuid1())
+        session_to_user[session_uuid] = user
+        self.set_secure_cookie("session", session_uuid)
 
         self.write("<script type='text/javascript'>parent.close();</script>")  # closes window
         self.flush()
@@ -152,9 +241,11 @@ class AuthDoneHandler(BaseHandler, oauth2.GoogleOAuth2Mixin):
         return
 
 
+
+
 class LogoutHandler(BaseHandler):
     def get(self):
-        self.clear_cookie("user")
+        self.clear_cookie("session")
         self.redirect("/")
 
 
@@ -162,15 +253,15 @@ class LogoutHandler(BaseHandler):
 class AngularStaticFileHandler(tornado.web.StaticFileHandler):
 
     def get(self, path, **kwargs):
-        # If not authenticated, just redirect home.
-        if not self.get_secure_cookie("user"):
+        # If not authenticated, redirect home.
+        if not self.get_secure_cookie("session"):
             self.redirect(self.settings['login_url'])
             return
 
         super(AngularStaticFileHandler, self).get(path, **kwargs)
 
     
-    # Don't cache anything right now
+    # Don't cache anything right now -- DEBUG
     def set_extra_headers(self, path):
         self.set_header("Cache-control", "no-cache")
 
@@ -249,19 +340,19 @@ class WireConnection(SocketConnection):
 
         # print request  ConnectionInfo
 
-        print 'IP:', request.ip
-        # print 'Cookies:', type(request.cookies)
-        print 'user_json:', request.cookies['user'].value
-        print 'Args:', request.arguments
+        # print 'IP:', request.ip
+        # # print 'Cookies:', type(request.cookies)
+        # print 'user_json:', request.cookies['user'].value
+        # print 'Args:', request.arguments
 
 
-        global app
-        s = SecureCookieSerializer(app.settings["cookie_secret"])
+        # global app
+        # s = SecureCookieSerializer(app.settings["cookie_secret"])
 
 
-        des = s.deserialize('user', request.cookies['user'].value)
+        # des = s.deserialize('user', request.cookies['user'].value)
 
-        print 'deserialized:', des
+        # print 'deserialized:', des
 
         # Do some auth here
         # self.user_id = request.get_argument('id', None)
@@ -291,8 +382,14 @@ class WireConnection(SocketConnection):
 
         folder_name = "Inbox"
         try:
-            global crispin_client
-            crispin_client = CrispinClient('mgrinich@gmail.com', oauth2.GoogleOAuth2Mixin.access_token)
+
+            email_address = 'mgrinich@gmail.com'
+            if email_address in email_address_to_crispins:
+                crispin_client = email_address_to_crispins[email_address]
+            else:
+                access_token = user_email_to_token[email_address] 
+                crispin_client = CrispinClient(email_address, access_token)
+
 
             print 'fetching threads...'
             threads = crispin_client.fetch_messages(folder_name)
@@ -405,12 +502,22 @@ class WireConnection(SocketConnection):
             return
         thread_id = kwargs['thread_id']
         log.info("Fetching thread id: %s" % thread_id)
+
+
+
+        email_address = 'mgrinich@gmail.com'
+        if email_address in email_address_to_crispins:
+            crispin_client = email_address_to_crispins[email_address]
+        else:
+            access_token = user_email_to_token[email_address] 
+            crispin_client = CrispinClient(email_address, access_token)
+
+
         crispin_client.select_allmail_folder()
 
         messages = crispin_client.fetch_messages_for_thread(thread_id)
         log.info("Returning messages: " + str(messages));
         self.emit('load_messages_for_thread_id_ack', [m.toJSON() for m in messages] )
-
 
 
     def send_message_notification(self):
@@ -453,11 +560,12 @@ def startserver(port):
     # idler.connect()
     # idler.idle()
 
-
-
     # Must do this last
     loop = tornado.ioloop.IOLoop.instance()
+    log.info('Starting Tornado on port %s' % str(port))
+
     loop.start()
+
 
 
 
@@ -465,13 +573,14 @@ def startserver(port):
 def stopsubmodules():
     # if idler: 
     #     idler.stop()
-    if crispin_client:
-        crispin_client.stop()
+
+    for c in email_address_to_crispins.values():
+        c.stop()
 
 
 def stopserver():
     stopsubmodules()
     # Kill IO loop next iteration
-    log.info("Stopping tornado")
+    log.info("Stopping Tornado")
     ioloop = tornado.ioloop.IOLoop.instance()
     ioloop.add_callback(ioloop.stop)
