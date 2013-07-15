@@ -7,10 +7,10 @@ tornado==3.0.1
 wsgiref==0.1.2
 tornadio2==0.0.3
 futures==2.1.3
-bleach==1.2.2
 pymongo==2.5.2
 lamson==1.3.4
 
 # Our own versions of these
 -e packages/imapclient
 -e packages/imaplib2
+-e packages/bleach

@@ -348,12 +348,15 @@ class WireConnection(SocketConnection):
         if encoding.lower() == 'quoted-printable': 
             log.info("Decoded Quoted-Printable")
             msg_data = quopri.decodestring(msg_data)
-
         elif encoding.lower() == '7bit':
-            # This is just ASCII. Do nothing.
-            pass
+            pass  # This is just ASCII. Do nothing.
+        elif encoding.lower() == 'base64':
+            log.info("Decoded Base-64")
+            msg_data = msg_data.decode('base-64')
         else:
-            log.error("Couldn't figure out how to decode this:" + str(encoding))
+            log.error("Unknown encoding scheme:" + str(encoding))
+
+
 
 
         if content_type == 'text/plain':

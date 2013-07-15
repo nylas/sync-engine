@@ -28,14 +28,9 @@ SMTP_HOST = 'smtp.gmail.com'
 
 
 class AuthenticationError(Exception): pass    # Logical errors - debug required
+from email.header import decode_header
 
 
-def clean_header(to_decode):
-    from email.header import decode_header
-    decoded = decode_header(to_decode)
-    parts = [w.decode(e or 'ascii') for w,e in decoded]
-    u = u' '.join(parts)
-    return u
 
 
 message_cache = {}  # (folder, UID) -> message (someday use message_id)
@@ -312,9 +307,43 @@ class CrispinClient:
 
 
 
+            def make_uni(txt, default_encoding="ascii"):
+                try:
+                    return u"".join([unicode(text, charset or default_encoding, 'strict')
+                except Exception, e:
+                    return u"".join([unicode(text, charset or default_encoding, 'replace')
+
+
+
+            # def clean_header(to_decode):
+            #     from email.header import decode_header
+            #     decoded = decode_header(to_decode)
+            #     parts = [w.decode(e or 'ascii') for w,e in decoded]
+            #     u = u' '.join(parts)
+            #     return u
+
+
+            def make_unicode_contacts(contact_list):
+                n = []
+                for c in contact_list:
+                    new_c = [None]*len(c)
+                    for i in range(len(c)):
+                        new_c[i] = make_uni(c[i])
+                    n.append(new_c)
+                return n
+
+
+
             # msg_envelope[0] # date
-            new_msg.subject = clean_header(msg_envelope[1])
-            new_msg.from_contacts = msg_envelope[2]
+
+
+            subject = make_uni(msg_envelope[1])
+            # Headers will wrap when longer than 78 lines per RFC822_2
+            subject = subject.replace('\n\t', '').replace('\r\n', '')
+            new_msg.subject = subject
+
+
+            new_msg.from_contacts = make_unicode_contacts(msg_envelope[2])
             # Errors-To: salt-bounces@list.longnow.org
             # Sender: salt-bounces@list.longnow.org
 
@@ -323,11 +352,12 @@ class CrispinClient:
 
             # TO, CC, BCC
 
+
             all_recipients = []
             if msg_envelope[5]: all_recipients += msg_envelope[5]  # TO
             if msg_envelope[6]: all_recipients += msg_envelope[6]  # CC
             if msg_envelope[7]: all_recipients += msg_envelope[7]  # BCC
-            new_msg.to_contacts = all_recipients
+            new_msg.to_contacts = make_unicode_contacts(all_recipients)
 
 
             # Return-Path is somewhere between 2-4: ??? <z.daniel.shi@gmail.com>

@@ -4,3 +4,6 @@
 [submodule "packages/imapclient"]
 	path = packages/imapclient
 	url = git@github.com:inboxapp/imapclient.git
+[submodule "packages/bleach"]
+	path = packages/bleach
+	url = git@github.com:grinich/bleach.git
