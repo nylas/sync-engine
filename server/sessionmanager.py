@@ -41,7 +41,6 @@ class SessionManager():
         return session_uuid
 
 
-
     @classmethod
     def get_user(cls, session_uuid):
 
@@ -59,7 +58,9 @@ class SessionManager():
 
         # Not valid anymore
         if email_address in cls.email_address_to_crispins:
-            cls.mail_address_to_crispins[email_address].stop()
+            crispin = cls.email_address_to_crispins[email_address]
+            crispin.stop()
+            del cls.email_address_to_crispins[email_address]
 
 
         token_doc = {"email_address": email_address,
@@ -71,13 +72,13 @@ class SessionManager():
 
     @classmethod
     def get_access_token(cls, email_address):
-
         q = {"email_address": email_address}
-        token_doc = cls.db.user_email_to_token.find_one(q)
-
-        if token_doc:
-            return token_doc['access_token']
-        return None
+        cursor = cls.db.user_email_to_token.find(q).sort([("date",-1)]).limit(1)
+        try:
+            entries = list(cursor)[0]
+            return entries['access_token']
+        except Exception, e:
+            return None
 
 
     @classmethod
@@ -96,7 +97,10 @@ class SessionManager():
             return cls.email_address_to_crispins[email_address]
         else:
             access_token = SessionManager.get_access_token(email_address)
-            return crispin.CrispinClient(email_address, access_token)
+            crispin_client =  crispin.CrispinClient(email_address, access_token)
+            cls.email_address_to_crispins[email_address] = crispin_client
+            return crispin_client
+
 
 
     @classmethod
@@ -104,3 +108,4 @@ class SessionManager():
 
         for c in cls.email_address_to_crispins.values():
             c.stop()
+        cls.email_address_to_crispins = {}

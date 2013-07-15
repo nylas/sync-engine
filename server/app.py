@@ -14,7 +14,7 @@ import tornadio2.gen
 
 from models import *
 
-from crispin import AuthenticationError
+from crispin import AuthFailure, TooManyConnectionsFailure
 from securecookie import SecureCookieSerializer
 from idler import Idler
 import oauth2
@@ -28,18 +28,18 @@ PATH_TO_STATIC = os_path.join(os_path.dirname(__file__), "../static")
 
 
 
+from secrets import COOKIE_SECRET, GOOGLE_CONSUMER_KEY, GOOGLE_CONSUMER_SECRET
+
 
 class Application(tornado.web.Application):
     def __init__(self):
 
-        from secrets import COOKIE_SECRET, GOOGLE_CONSUMER_KEY, GOOGLE_CONSUMER_SECRET
 
         settings = dict(
             static_path=os_path.join(PATH_TO_STATIC),
             xsrf_cookies=True,  # debug
 
             debug=True,
-
             flash_policy_port=843,
             flash_policy_file=os_path.join(PATH_TO_STATIC + "/flashpolicy.xml"),
             socket_io_port=8001,
@@ -123,8 +123,9 @@ class AuthDoneHandler(BaseHandler, oauth2.GoogleOAuth2Mixin):
 
         response = yield tornado.gen.Task(self.get_authenticated_user, authorization_code)
         try:
-            email_address = response['email_address']
+            email_address = response['email']
             access_token = response['access_token']
+            refresh_token = response['refresh_token']
         except Exception, e:
             # TODO raise authentication error here
             raise e
@@ -134,7 +135,15 @@ class AuthDoneHandler(BaseHandler, oauth2.GoogleOAuth2Mixin):
 
         SessionManager.store_access_token(email_address, access_token)
 
+
+        # How to get a new request_token once the old one expires
+        # response = yield tornado.gen.Task(self.get_new_token, refresh_token)        
+        # SessionManager.store_refresh_token(email_address, refresh_token)
+
+
         session_uuid = SessionManager.store_session(email_address)
+
+        log.info("Successful login. Setting cookie: %s" % session_uuid)
         self.set_secure_cookie("session", session_uuid)
 
 
@@ -156,6 +165,7 @@ class AuthDoneHandler(BaseHandler, oauth2.GoogleOAuth2Mixin):
 class LogoutHandler(BaseHandler):
     def get(self):
         self.clear_cookie("session")
+        SessionManager.stop_all_crispins()
         self.redirect("/")
 
 
@@ -252,38 +262,26 @@ class WireConnection(SocketConnection):
 
     def on_open(self, request):
 
-        # print request  ConnectionInfo
+        try:
+            s = SecureCookieSerializer(COOKIE_SECRET)
+            des = s.deserialize('session', request.cookies['session'].value)
 
-        # print 'IP:', request.ip
-        # # print 'Cookies:', type(request.cookies)
-        # print 'user_json:', request.cookies['user'].value
-        # print 'Args:', request.arguments
+            email_address = SessionManager.get_user(des)
+            if not email_address:
+                raise tornado.web.HTTPError(401)
 
-
-        # global app
-        # s = SecureCookieSerializer(app.settings["cookie_secret"])
-
-
-        # des = s.deserialize('user', request.cookies['user'].value)
-
-        # print 'deserialized:', des
-
-        # Do some auth here
-        # self.user_id = request.get_argument('id', None)
-
-        # `request`
-        #     ``ConnectionInfo`` object which contains caller IP address, query string
-        #     parameters and cookies associated with this request.
+        except Exception, e:
+            log.warning("Unauthenticated socket connection attempt")
+            raise tornado.web.HTTPError(401)
 
 
-        # if not self.user_id:
-        #     return False
+
         log.info("Web client connected.")
         self.clients.add(self)
 
 
     def on_close(self):
-        log.info("Client disconnected")
+        log.info("Web client disconnected")
         self.clients.remove(self)
 
 
@@ -303,8 +301,12 @@ class WireConnection(SocketConnection):
             threads = crispin_client.fetch_messages(folder_name)
             self.emit('load_messages_for_folder_ack', [m.toJSON() for m in threads] )
 
-        except AuthenticationError, e:
-            log.error("Couldn't authenticate with credentials.")
+        except AuthFailure, e:
+            log.error(e)
+
+        except TooManyConnectionsFailure, e:
+            log.error(e)
+
 
 
 
@@ -444,7 +446,6 @@ def startserver(port):
     SessionManager.setup()
 
 
-    global app
     app = Application()
     app.listen(port)
 

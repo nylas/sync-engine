@@ -1,7 +1,5 @@
 import logging as log
 import json
-import email.utils as email_utils
-from email.header import decode_header
 import time
 import datetime
 
@@ -59,74 +57,7 @@ class IBMessage():
         self.signatures = []
         self.labels = []
 
-
-        # Kickstart it using the headers from this object
-        if (email_message_object):
-
-            def make_uni(txt, default_encoding="ascii"):
-                try:
-                    return u"".join([unicode(text, charset or default_encoding, 'strict')
-                            for text, charset in decode_header(txt)])
-                except Exception, e:
-                    log.error("Problem converting string to unicode: %s" % txt)
-                    return u"".join([unicode(text, charset or default_encoding, 'replace')
-                            for text, charset in decode_header(txt)])
-
-            def parse_contact(headers):
-                # Works with both strings and lists
-                try: headers += []
-                except: headers = [headers]
-
-                # combine and flatten header values
-                addrs = reduce(lambda x,y: x+y, [email_message_object.get_all(a, []) for a in headers])
-
-                if len(addrs) > 0:
-                    return [ dict(name = make_uni(t[0]),
-                                address=make_uni(t[1]))
-                            for t in email_utils.getaddresses(addrs)]
-                else:
-                    return [ dict(name = "undisclosed recipients", address = "") ]
-
-            self.to_contacts = parse_contact(['to', 'cc'])
-            self.from_contacts = parse_contact(['from'])
-
-            self.message_id = email_message_object['X-GM-MSGID']
-            self.thread_id = email_message_object['X-GM-THRID']
-
-            subject = make_uni(email_message_object['subject'])
-            # Need to trim the subject.
-            # Headers will wrap when longer than 78 lines per RFC822_2
-            subject = subject.replace('\n\t', '').replace('\r\n', '')
-            self.subject = subject
-
-            # TODO remove the subject headings here like RE: FWD: etc.
-            #     # Remove "RE" or whatever
-            #     if subject[:4] == u'RE: ' or subject[:4] == u'Re: ' :
-            #         subject = subject[4:]
-            #     return subject
-
-
-            # TODO: Gmail's timezone is usually UTC-07:00
-            # see here. We need to figure out how to deal with timezones.
-            # http://stackoverflow.com/questions/11218727/what-timezone-does-gmail-use-for-internal-imap-mailstore
-            # TODO: Also, we should reallly be using INTERNALDATE instead of ENVELOPE data
-            date_tuple_with_tz = email_utils.parsedate_tz(email_message_object["Date"])
-            utc_timestamp = email_utils.mktime_tz(date_tuple_with_tz)
-            time_epoch = time.mktime( date_tuple_with_tz[:9] )
-            self.date = datetime.datetime.fromtimestamp(utc_timestamp)
-
-
-    def __repr__(self):
-        return '<IBMessage object> ' + \
-                '\n    msg_id: ' + str(self.message_id) +\
-                '\n    thr_id: ' + str(self.thread_id) +\
-                '\n    to: %s ' + str(self.to_contacts) +\
-                '\n    from: %s' + str(self.from_contacts) +\
-                '\n    subj: ' + str(self.subject) +\
-                '\n    date epoch: ' + str( time.mktime(self.date.timetuple() )) +\
-                '\n    parts: ' + str(len(self.message_parts)) +\
-                '\n    attachments: ' + str(len(self.attachments)) +\
-                '\n    signatures: ' + str(len(self.signatures))
+        self.envelope = None   # TOFIX store this too?
 
 
     def gmail_url(self):
@@ -134,8 +65,17 @@ class IBMessage():
             return
         return "https://mail.google.com/mail/u/0/#inbox/" + hex(self.uid)
 
+
     def trimmed_subject(self):
-        return trim_subject(self.subject)
+        s = self.subject
+        if s[:4] == u'RE: ' or s[:4] == u'Re: ' :
+            s = s[4:]
+        return s
+
+
+    @property
+    def time_since_epoch(self):
+        return time.mktime(self.date.timetuple()) if self.date else 0
 
     def toJSON(self):
         return dict(
@@ -146,43 +86,15 @@ class IBMessage():
             to_contacts = self.to_contacts,
             from_contacts = self.from_contacts,
             subject = self.subject,
-            date = str( time.mktime(self.date.timetuple() )), # since poch
+            date = str(self.time_since_epoch), # since poch
             message_parts = [p.toJSON() for p in self.message_parts],
-            attachments = [p.toJSON() for p in self.attachments] )
+            attachments = [p.toJSON() for p in self.attachments],
+            signatures = [p.toJSON() for p in self.signatures] )
 
 
-# BODY is like BODYSTRUCTURE but without extension information
-# not sure what this means in practice. We can probably get by only
-# using BODY requests and just looking up the filetype based on filename 
-# extensions. Excerpts from a couple of Gmail responses:
+    def __repr__(self):
+        return 'IBMessage object: \n\t%s' % self.toJSON()
 
-# snipped of BODY request of attachment
-# ('IMAGE', 'JPEG', ('NAME', 'breadSRSLY-5.jpg'), None, None, 'BASE64', 1611294),
-
-# snippet of BODYSTRUCTURE
-# ('IMAGE', 'JPEG', ('NAME', 'breadSRSLY-5.jpg'), None, None, 'BASE64', 1611294, None, ('ATTACHMENT', ('FILENAME', 'breadSRSLY-5.jpg')), None), 
-
-# From the original spec...
-#
-# A body type of type TEXT contains, immediately after the basic 
-# fields, the size of the body in text lines.  Note that this 
-# size is the size in its content transfer encoding and not the 
-# resulting size after any decoding. 
-#
-# Extension data follows the basic fields and the type-specific 
-# fields listed above.  Extension data is never returned with the 
-# BODY fetch, but *CAN* be returned with a BODYSTRUCTURE fetch. 
-# Extension data, if present, MUST be in the defined order. 
-#
-# Also, BODY and BODYSTRUCTURE calls are kind of fucked
-# see here http://mailman2.u.washington.edu/pipermail/imap-protocol/2011-October/001528.html
-
-
-# ([
-#    ('text', 'html', ('charset', 'us-ascii'), None, None, 'quoted-printable', 55, 3),
-#    ('text', 'plain', ('charset', 'us-ascii'), None, None, '7bit', 26, 1) 
-#  ], 
-#  'mixed', ('boundary', '===============1534046211=='))
 
 # print 'Parts:', len(parts)
 # $ UID FETCH <uid> (BODY ENVELOPE)   # get structure and header info
@@ -209,6 +121,7 @@ class IBMessagePart(object):
         self.content_type_minor = ''
 
         # TODO check to see if this is the encoded or actual size
+        # size in its content transfer encoding and not the resulting size after any decoding
         self.bytes = 0  # number of octets.
 
         # for text
@@ -264,6 +177,8 @@ class IBMessagePart(object):
                     self.encoding = p[5]
                     self.bytes = p[6]
 
+                    print 'file encoding:', self.encoding
+
             except Exception, e:
                 print e, 'Unparsable mine type thing', p
                 pass
@@ -273,22 +188,6 @@ class IBMessagePart(object):
     def isImage(self):
         return self.content_type_major.lower() == 'image'
 
-    def __repr__(self):
-        r = '<IBMessagePart object> '
-        if self.content_type_major.lower() == 'text':
-            return r + 'BodySection %s: %s text (%i bytes, %i lines) with encoding: %s' % \
-                          (self.index, 
-                           self.content_type_minor.lower(), 
-                           self.bytes, 
-                           self.line_count,
-                           self.encoding)
-        else:
-            return r + 'BodySection %s: %s (%i byes) with Content-Type: %s/%s' % \
-                           (self.index,
-                            self.filename,
-                            self.bytes, 
-                            self.content_type_major.lower(), 
-                            self.content_type_minor.lower() )
 
 
     def toJSON(self):
@@ -308,4 +207,6 @@ class IBMessagePart(object):
                 filename = self.filename
             )
 
+    def __repr__(self):
+        return '<IBMessagePart object> %s' % self.toJson()
 

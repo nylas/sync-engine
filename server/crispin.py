@@ -27,8 +27,13 @@ IMAP_HOST = 'imap.gmail.com'
 SMTP_HOST = 'smtp.gmail.com'
 
 
-class AuthenticationError(Exception): pass    # Logical errors - debug required
+
 from email.header import decode_header
+
+
+class AuthFailure(Exception): pass
+
+class TooManyConnectionsFailure(Exception): pass
 
 
 
@@ -77,6 +82,8 @@ class CrispinClient:
 
         try:
             self.imap_server.noop()
+            if self.imap_server.state == 'NONAUTH' or self.imap_server.state == 'LOGOUT':
+                raise Exception
             log.info('Already connected to host.')
             return True
         # XXX eventually we want to do stricter exception-checking here
@@ -86,15 +93,17 @@ class CrispinClient:
         try:
             self.imap_server = IMAPClient(IMAP_HOST, use_uid=True,
                     ssl=USE_SSL)
-            # self.imap_server.debug = 4  # todo
+            self.imap_server.debug = 4  # todo
+            log.info("Logging in: %s %s" % (self.email_address, self.oauth_token))
             self.imap_server.oauth2_login(self.email_address, self.oauth_token)
 
         except Exception as e:
             if str(e) == '[ALERT] Too many simultaneous connections. (Failure)':
-                log.error("Too many open IMAP connection.")
+                raise TooManyConnectionsFailure("Too many simultaneous connections.")
             elif str(e) == '[ALERT] Invalid credentials (Failure)':
-                raise AuthenticationError
+                raise AuthFailure("Invalid credentials")
             else:
+                raise e
                 log.error(e)
 
             self.imap_server = None
@@ -128,19 +137,6 @@ class CrispinClient:
             if u'\\AllMail' in f['flags']:
                 return f['name']
 
-    @connected
-    def get_special_folder(self, special_folder):
-        # TODO return folders for stuff like All Mail, Drafts, etc. which may
-        # be localized names. Use the flags, such as u'\\AllMail' or u'\\Important'
-        # Folder names
-        # u'\\AllMail'
-        # u'\\Drafts'
-        # u'\\Sent'
-        # u'\\Starred'
-        # u'\\Trash' 
-        pass
-
-
 
     @connected
     def select_folder(self, folder):
@@ -148,21 +144,13 @@ class CrispinClient:
             select_info = self.imap_server.select_folder(folder, readonly=True)
         except Exception, e:
             log.error("<select_folder> %s" % e)
-            # raise e
-            return None
-            
-        # Format of select_info
-        # {'EXISTS': 3597, 'PERMANENTFLAGS': (),
-        # 'UIDNEXT': 3719,
-        # 'FLAGS': ('\\Answered', '\\Flagged', '\\Draft', '\\Deleted', '\\Seen', '$Pending', 'Junk', 'NonJunk', 'NotJunk', '$Junk', 'Forwarded', '$Forwarded', 'JunkRecorded', '$NotJunk'),
-        # 'UIDVALIDITY': 196, 'READ-ONLY': [''], 'RECENT': 0}
+            raise e
+
+
+        # TODO make sure UIDVALIDITY is the same value here.
+        # If it's not, we can no longer use old UIDs.
         log.info('Selected folder %s with %d messages.' % (folder, select_info['EXISTS']) )
         return select_info
-
-
-    def select_allmail_folder(self):
-        return self.select_folder(self.all_mail_folder_name())
-
 
 
     @connected
@@ -235,19 +223,6 @@ class CrispinClient:
         # return all_threads
 
 
-    @connected
-    def msgids_for_thrids(self, thread_ids):
-        self.select_allmail_folder() 
-        # The boolean IMAP queries use reverse polish notation for
-        # the query parameters. imaplib automatically adds parenthesis 
-        criteria = 'X-GM-THRID %i' % thread_ids[0]
-        if len(thread_ids) > 1:
-            for t in thread_ids[1:]:
-                criteria = 'OR ' + criteria + ' X-GM-THRID %i' % t
-        return self.imap_server.search(criteria)        
-
-
-
 
     @connected
     def fetch_headers_for_uids(self, folder_name, UIDs):
@@ -310,10 +285,14 @@ class CrispinClient:
             def make_uni(txt, default_encoding="ascii"):
                 try:
                     return u"".join([unicode(text, charset or default_encoding, 'strict')
+                            for text, charset in decode_header(txt)])
                 except Exception, e:
+                    log.error("Problem converting string to unicode: %s" % txt)
                     return u"".join([unicode(text, charset or default_encoding, 'replace')
+                            for text, charset in decode_header(txt)])
 
 
+            # Older version
 
             # def clean_header(to_decode):
             #     from email.header import decode_header
@@ -321,6 +300,7 @@ class CrispinClient:
             #     parts = [w.decode(e or 'ascii') for w,e in decoded]
             #     u = u' '.join(parts)
             #     return u
+
 
 
             def make_unicode_contacts(contact_list):
@@ -368,7 +348,22 @@ class CrispinClient:
             # In-Reply-To: = msg_envelope[8]
             # Message-ID = msg_envelope[9]
 
+            
+
+            # This date seems to work since I'm in SF. 
             new_msg.date = message_dict['INTERNALDATE']
+
+
+            # Here's the previous code from when I was parsing rfc822 headers...
+            # Gmail's timezone is usually UTC-07:00
+            # http://stackoverflow.com/questions/11218727/what-timezone-does-gmail-use-for-internal-imap-mailstore
+
+            # date_tuple_with_tz = email_utils.parsedate_tz(email_message_object["Date"])
+            # utc_timestamp = email_utils.mktime_tz(date_tuple_with_tz)
+            # time_epoch = time.mktime( date_tuple_with_tz[:9] )
+            # self.date = datetime.datetime.fromtimestamp(utc_timestamp)
+
+
             new_msg.thread_id = message_dict['X-GM-THRID']
             new_msg.message_id = message_dict['X-GM-MSGID']
             new_msg.labels = message_dict['X-GM-LABELS']
@@ -453,6 +448,9 @@ class CrispinClient:
                                     all_messageparts.append(ret)
                                 else:
                                     all_signatures.append(ret)
+
+                            else:
+                                log.info("Not sure what to do with mime relation %s" % mime_relation.lower())
 
                         return []
 

@@ -44,9 +44,10 @@ class GoogleOAuth2Mixin(tornado.auth.OAuth2Mixin):
           "response_type": "code",
           "scope": scope,
 
+
           # 'state' should include the value of the anti-forgery unique session token, 
           # as well as any other information needed to recover the context when the 
-          # user returns to your application (e.g., the starting URL).
+          # user returns to your application (e.g., the starting URL). It's just passed through.
 
           # login_hint should be the email address of the user if you know it. 
           # If not provided and the user is currently logged in, the consent page 
@@ -54,12 +55,69 @@ class GoogleOAuth2Mixin(tornado.auth.OAuth2Mixin):
           # Providing the login_hint simplifies the consent screen and can also streamline 
           # the login experience for users that are using Google's multilogin feature.
 
-          "login_hint" : "mgrinich@gmail.com"
+          "login_hint" : "mgrinich@gmail.com",  # TODO add user email here
+
+          "access_type" : "offline",  # to get a refresh token
+
+
+          # If you need to re-prompt the user for consent, include the approval_prompt 
+          # parameter in the authorization code request, and set the value to force.
+          "approval_prompt" : "force"  # Debug
 
         }
         if kwargs: args.update(kwargs)
         self.redirect(url_concat(OAUTH_AUTHENTICATE_URL, args))
         
+
+
+
+    @tornado.gen.engine
+    def get_new_token(self, refresh_token, callback):
+
+        if not refresh_token:
+            callback(None)
+            return
+
+        args = {
+            "refresh_token": refresh_token,
+            "client_id": self.settings['google_consumer_key'],
+            "client_secret": self.settings['google_consumer_secret'],
+            'grant_type' : 'refresh_token'
+        }
+        
+        request = httpclient.HTTPRequest(OAUTH_ACCESS_TOKEN_URL, method="POST", body=urllib.urlencode(args))
+        response = yield tornado.gen.Task(self.httpclient_instance.fetch, request)
+
+        if response.error:
+            error_dict = escape.json_decode(response.body)
+            logging.error('[%s] %s' % (error_dict['error'], error_dict['error_description']))
+            callback(None)
+            return
+
+        session_dict = escape.json_decode(response.body)
+        access_token = session_dict['access_token']
+
+        # Validate token
+        request = httpclient.HTTPRequest(OAUTH_TOKEN_VALIDATION_URL + "?access_token=" + access_token)
+        response = yield tornado.gen.Task(self.httpclient_instance.fetch, request)
+
+        if response.error:
+            error_dict = escape.json_decode(response.body)
+            logging.error('[%s] %s' % (error_dict['error'], error_dict['error_description']))
+            callback(None)
+            return
+
+        validation_dict = escape.json_decode(response.body)
+
+        z = session_dict.copy()
+        z.update(validation_dict)
+        callback(z)
+
+
+
+
+
+
 
     @tornado.gen.engine
     def get_authenticated_user(self, authorization_code, callback):
@@ -74,7 +132,6 @@ class GoogleOAuth2Mixin(tornado.auth.OAuth2Mixin):
         
         request = httpclient.HTTPRequest(OAUTH_ACCESS_TOKEN_URL, method="POST", body=urllib.urlencode(args))
         response = yield tornado.gen.Task(self.httpclient_instance.fetch, request)
-
 
         if response.error:
             error_dict = escape.json_decode(response.body)
@@ -97,11 +154,10 @@ class GoogleOAuth2Mixin(tornado.auth.OAuth2Mixin):
             return
 
         validation_dict = escape.json_decode(response.body)
-        email_address = validation_dict["email"]
 
-
-        callback( dict(email_address=email_address, access_token=access_token) )
-
+        z = session_dict.copy()
+        z.update(validation_dict)
+        callback(z)
 
         # TODO : get this data somwhere other than the auth module
 
