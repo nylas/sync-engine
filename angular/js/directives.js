@@ -245,37 +245,21 @@ app.directive("messageframe", function() { return {
     restrict: 'E',
     transclude: true,
     scope: { content: '=' },
-    controller: function($scope, $element, $attrs, $transclude) { 
-        $scope.autoResize = function(){
-            var iframe = $element.find('iframe')[0];
-            if(iframe){
-                var newheight = iframe.contentWindow.document.body.scrollHeight;
-                var newwidth = iframe.contentWindow.document.body.scrollWidth;
-                iframe.height = (newheight) + "px";
-                iframe.width = '100%';
-                // iframe.width = (newwidth) + "px";
-
-                /* This is to fix a bug where the document scrolls to the 
-                   top of the iframe after setting its height. */
-                   // setTimeout(window.scroll(0, 0), 1);
-            }
-        }
-    },
     template:
         '<iframe width="100%" height="1" marginheight="0" marginwidth="0" frameborder="no" scrolling="no"' +
-        'onLoad="{{ autoResize() }}" src="about:blank"></iframe>',
+        ' src="about:blank"></iframe>',
 
     link: function (scope, iElement, iAttrs) {
 
+        var iframe = iElement.find('iframe')[0];
+
         function injectToIframe(textToInject) {
-            var iframe = iElement.find('iframe')[0];
             var doc = iframe.contentWindow.document;
 
             // Reset
             doc.removeChild(doc.documentElement);  
             iframe.width = '100%';
             iframe.height = '0px;';
-
 
             // TODO move the CSS here into an object and create the <html><head>
             // etc using jqlite elements.
@@ -333,6 +317,13 @@ app.directive("messageframe", function() { return {
                 injectToIframe(scope.content);
             }
          });
+
+        iframe.onload = function() {
+            var newheight = iframe.contentWindow.document.body.scrollHeight;
+            var newwidth = iframe.contentWindow.document.body.scrollWidth;
+            iframe.height = (newheight) + "px";
+            iframe.width = '100%';
+        };
 
     } // End of link function
 
