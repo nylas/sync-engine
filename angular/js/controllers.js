@@ -1,16 +1,13 @@
 'use strict';
 
 
-
-/* Controllers */
-var app = angular.module('InboxApp.controllers', []);
+var app = angular.module('InboxApp.controllers');
 
 
 app.controller('CookieController', function($scope, $cookies) {
     $scope.cookieValue = $cookies.text;
 
     // Secure cookies from Tornado are spit by a pipe |
-
     var rawUserCookie = $cookies.user;
     if (angular.isUndefined(rawUserCookie)) {
         console.log("Session cookie not set.");
@@ -20,16 +17,15 @@ app.controller('CookieController', function($scope, $cookies) {
     var userCookie = rawUserCookie.split("|")[0];
     userCookie = JSON.parse(atob(userCookie));
 
-    console.log($cookies.user);
-
-    console.log(userCookie);
+    // console.log($cookies.user);
+    console.log('userCookie: ' + userCookie);
 
 });
 
 
 
 
-app.controller('AppContainerController', function($scope, socket, growl, IBMessage) {
+app.controller('AppContainerController', function($scope, wire, growl, IBMessage) {
 
     $scope.notificationButtonClick = function() {
         growl.requestPermission(
@@ -50,11 +46,11 @@ app.controller('AppContainerController', function($scope, socket, growl, IBMessa
 
     $scope.loadMessagesForFolder = function (folder) {
         folder = typeof folder !== 'undefined' ? folder : 'Inbox'; // Default size.
-        socket.emit('load_messages_for_folder', {folder_name: folder});
+        wire.emit('load_messages_for_folder', {folder_name: folder});
     };
 
     // Callback function
-    socket.on('load_messages_for_folder_ack', function(data) {
+    wire.on('load_messages_for_folder_ack', function(data) {
         var freshMessages = [];
         for (var i = 0; i < data.length; i++) {
             var newMessage = new IBMessage(data[i]);
@@ -64,29 +60,20 @@ app.controller('AppContainerController', function($scope, socket, growl, IBMessa
     });
 
 
-    socket.on('new_mail_notification', function(data) {
+    wire.on('new_mail_notification', function(data) {
         console.log("new_mail_notificaiton");
         growl.post("New Message!", "Michael: Lorem ipsum dolor sit amet, consectetur adipisicing");
     });
 
-
-
-    socket.on('connect_failed', function () {
-        console.log("Connection failed.")
-    });
-
-
-
     $scope.openMessage = function(selectedMessage) {
-        console.log("Selected a message:")
-        console.log(selectedMessage);
+
         $scope.activeMessage = selectedMessage;
 
         var partToUse = undefined;
-        console.log(selectedMessage.message_parts);
+
         for (var i = 0; i < selectedMessage.message_parts.length; i++) {
             var part = selectedMessage.message_parts[i];
-            console.log(part.content_type.toLowerCase());
+
             if (part.content_type.toLowerCase() === 'text/html') {
                 partToUse = part;
             }
@@ -97,7 +84,7 @@ app.controller('AppContainerController', function($scope, socket, growl, IBMessa
             partToUse = selectedMessage.message_parts[0]
         }
 
-        socket.emit('load_message_body_with_uid', 
+        wire.emit('load_message_body_with_uid', 
             {uid: selectedMessage.uid,
              section_index: partToUse.index,
              encoding: partToUse.encoding,
@@ -111,7 +98,7 @@ app.controller('AppContainerController', function($scope, socket, growl, IBMessa
     }
 
 
-    socket.on('load_message_body_with_uid_ack', function(data) {
+    wire.on('load_message_body_with_uid_ack', function(data) {
         console.log("updating message")
         $scope.activeMessage.body_text = data;
         console.log("updated message");
