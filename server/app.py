@@ -21,19 +21,14 @@ import oauth2
 import postel
 
 from sessionmanager import SessionManager
-
-
-PATH_TO_ANGULAR = os_path.join(os_path.dirname(__file__), "../angular")
-PATH_TO_STATIC = os_path.join(os_path.dirname(__file__), "../static")
-
-
-
 from secrets import COOKIE_SECRET, GOOGLE_CONSUMER_KEY, GOOGLE_CONSUMER_SECRET
 
 
 class Application(tornado.web.Application):
     def __init__(self):
 
+        PATH_TO_ANGULAR = os_path.join(os_path.dirname(__file__), "../angular")
+        PATH_TO_STATIC = os_path.join(os_path.dirname(__file__), "../static")
 
         settings = dict(
             static_path=os_path.join(PATH_TO_STATIC),
@@ -76,29 +71,23 @@ class Application(tornado.web.Application):
         tornado.web.Application.__init__(self, handlers, **settings)
 
 
-
-
 class BaseHandler(tornado.web.RequestHandler):
     # TODO put authentication stuff here
     def get_current_user(self):
         session_key = self.get_secure_cookie("session")
         return SessionManager.get_user(session_key)
 
-chirps = []
 
 class MainHandler(BaseHandler):
 
     def get(self):
-
         self.render("templates/index.html", name = self.current_user if self.current_user else " ",
                                             logged_in = bool(self.current_user) )
 
 
 
 class TestSendHandler(BaseHandler):
-
     def get(self):
-
         s = postel.SMTP('mgrinich@gmail.com', SessionManager.get_access_token("mgrinich@gmail.com"))
         s.setup()
         s.send_mail("Test message", "Body content of test message!")
@@ -110,7 +99,6 @@ class AuthStartHandler(BaseHandler, oauth2.GoogleOAuth2Mixin):
     @tornado.web.asynchronous
     def get(self):
         self.authorize_redirect()
-
 
 
 class AuthDoneHandler(BaseHandler, oauth2.GoogleOAuth2Mixin):
@@ -130,36 +118,28 @@ class AuthDoneHandler(BaseHandler, oauth2.GoogleOAuth2Mixin):
             # TODO raise authentication error here
             raise e
 
-        if (email_address is None) or (access_token is None): self.fail()
+        if (email_address is None) or (access_token is None): 
+            self.write("There was an error authenticating with Google.")
+            self.flush()
+            log.error("Auth failed")
+            raise tornado.web.HTTPError(500, "Google auth failed")
+            self.finish()
+            return
 
 
         SessionManager.store_access_token(email_address, access_token)
-
 
         # How to get a new request_token once the old one expires
         # response = yield tornado.gen.Task(self.get_new_token, refresh_token)        
         # SessionManager.store_refresh_token(email_address, refresh_token)
 
-
         session_uuid = SessionManager.store_session(email_address)
-
         log.info("Successful login. Setting cookie: %s" % session_uuid)
         self.set_secure_cookie("session", session_uuid)
-
 
         self.write("<script type='text/javascript'>parent.close();</script>")  # closes window
         self.flush()
         self.finish()
-
-    def fail(self):
-        self.write("There was an error authenticating with Google.")
-        self.flush()
-        log.error("Auth failed")
-        raise tornado.web.HTTPError(500, "Google auth failed")
-        self.finish()
-        return
-
-
 
 
 class LogoutHandler(BaseHandler):
@@ -169,19 +149,15 @@ class LogoutHandler(BaseHandler):
         self.redirect("/")
 
 
-
 class AngularStaticFileHandler(tornado.web.StaticFileHandler):
-
     def get(self, path, **kwargs):
-        # If not authenticated, redirect home.
-        if not self.get_secure_cookie("session"):
+        if not self.get_secure_cookie("session"):  # check auth
             self.redirect(self.settings['login_url'])
             return
-
         super(AngularStaticFileHandler, self).get(path, **kwargs)
 
     
-    # Don't cache anything right now -- DEBUG
+    # DEBUG: Don't cache anything right now -- 
     def set_extra_headers(self, path):
         self.set_header("Cache-control", "no-cache")
 
@@ -230,11 +206,8 @@ class FileDownloadHandler(BaseHandler):
         # must be a multiple of 4 characters. The '=' chars are recognized as padding; 
         # three chars of padding is enough to make any string a multiple of 4 chars long
 
-
-
     
         crispin_client = SessionManager.get_crispin()
-
         data = crispin_client.fetch_msg_body(uid, section_index, folder='Inbox', )
        
         try:
@@ -255,27 +228,30 @@ class FileDownloadHandler(BaseHandler):
 
 
 
+# # Websocket
+# class WireConnection(SocketConnection):
+
+
+
+
+
+from socket_rpc import RPCConnection
+
 # Websocket
-class WireConnection(SocketConnection):
+class WireConnection(RPCConnection):
 
     clients = set()
 
     def on_open(self, request):
-
         try:
             s = SecureCookieSerializer(COOKIE_SECRET)
             des = s.deserialize('session', request.cookies['session'].value)
-
             email_address = SessionManager.get_user(des)
             if not email_address:
                 raise tornado.web.HTTPError(401)
-
         except Exception, e:
             log.warning("Unauthenticated socket connection attempt")
             raise tornado.web.HTTPError(401)
-
-
-
         log.info("Web client connected.")
         self.clients.add(self)
 
@@ -285,36 +261,20 @@ class WireConnection(SocketConnection):
         self.clients.remove(self)
 
 
-    def on_message(self, message):
-        console.log("Socket msg: %s", message)
-
-
-    @event
     def load_messages_for_folder(self, **kwargs):
-
         folder_name = "Inbox"
         try:
-
             crispin_client = SessionManager.get_crispin()
-
             log.info('fetching threads...')
             threads = crispin_client.fetch_messages(folder_name)
-            self.emit('load_messages_for_folder_ack', [m.toJSON() for m in threads] )
-
+            return [m.toJSON() for m in threads]
         except AuthFailure, e:
             log.error(e)
-
         except TooManyConnectionsFailure, e:
             log.error(e)
 
 
-
-
-
-    @event
     def load_message_body_with_uid(self, **kwargs):
-        assert 'uid' in kwargs
-        assert 'section_index' in kwargs
 
         crispin_client = SessionManager.get_crispin()
         msg_data = crispin_client.fetch_msg_body(kwargs['uid'], 
@@ -357,8 +317,6 @@ class WireConnection(SocketConnection):
             msg_data = msg_data.decode('base-64')
         else:
             log.error("Unknown encoding scheme:" + str(encoding))
-
-
 
 
         if content_type == 'text/plain':
@@ -404,32 +362,8 @@ class WireConnection(SocketConnection):
                 pass
         msg_data = str(soup)
 
-        self.emit('load_message_body_with_uid_ack', msg_data )
+        return msg_data 
 
-
-
-
-    @event
-    def load_messages_for_thread_id(self, **kwargs):
-        if not 'thread_id' in kwargs:
-            log.error("Call to get_thread without thread_id")
-            return
-        thread_id = kwargs['thread_id']
-        log.info("Fetching thread id: %s" % thread_id)
-
-
-        crispin_client = SessionManager.get_crispin()
-
-        crispin_client.select_allmail_folder()
-
-        messages = crispin_client.fetch_messages_for_thread(thread_id)
-        log.info("Returning messages: " + str(messages));
-        self.emit('load_messages_for_thread_id_ack', [m.toJSON() for m in messages] )
-
-
-    def send_message_notification(self):
-        log.info("Emitting notification")
-        self.emit('new_mail_notification', ['somemessagedata'])
 
 
 

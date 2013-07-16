@@ -14,3 +14,4 @@ lamson==1.3.4
 -e packages/imapclient
 -e packages/imaplib2
 -e packages/bleach
+-e packages/tornadorpc

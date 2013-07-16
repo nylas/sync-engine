@@ -7,3 +7,6 @@
 [submodule "packages/bleach"]
 	path = packages/bleach
 	url = git@github.com:grinich/bleach.git
+[submodule "packages/tornadorpc"]
+	path = packages/tornadorpc
+	url = https://github.com/joshmarshall/tornadorpc.git
