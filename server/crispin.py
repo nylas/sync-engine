@@ -93,7 +93,7 @@ class CrispinClient:
         try:
             self.imap_server = IMAPClient(IMAP_HOST, use_uid=True,
                     ssl=USE_SSL)
-            self.imap_server.debug = 4  # todo
+            # self.imap_server.debug = 4  # todo
             log.info("Logging in: %s %s" % (self.email_address, self.oauth_token))
             self.imap_server.oauth2_login(self.email_address, self.oauth_token)
 

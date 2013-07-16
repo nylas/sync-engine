@@ -177,8 +177,6 @@ class IBMessagePart(object):
                     self.encoding = p[5]
                     self.bytes = p[6]
 
-                    print 'file encoding:', self.encoding
-
             except Exception, e:
                 print e, 'Unparsable mine type thing', p
                 pass
