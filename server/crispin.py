@@ -14,6 +14,7 @@ import logging as log
 import tornado
 
 import auth
+import encoding
 
 from models import IBMessage, IBThread, IBMessagePart
 
@@ -28,19 +29,11 @@ SMTP_HOST = 'smtp.gmail.com'
 
 
 
-from email.header import decode_header
 
 
 class AuthFailure(Exception): pass
-
 class TooManyConnectionsFailure(Exception): pass
 
-
-
-
-message_cache = {}  # (folder, UID) -> message (someday use message_id)
-thread_cache = {}  # thread_id -> thread
-bodypart_cache = {}  # (message_id, body_index) -> body part
 
 
 class CrispinClient:
@@ -55,6 +48,7 @@ class CrispinClient:
         # last time the server checked in, in UTC
         self.keepalive = None
 
+
     def server_needs_refresh(self):
         """ Many IMAP servers have a default minimum "no activity" timeout
             of 30 minutes. Sending NOPs ALL the time is hells slow, but we
@@ -63,6 +57,7 @@ class CrispinClient:
         now = datetime.datetime.utcnow()
         return self.keepalive is None or \
                 (now - self.keepalive) > self.SERVER_TIMEOUT
+
 
     def connected(fn):
         """ A decorator for methods that can only be run on a logged-in client.
@@ -76,6 +71,7 @@ class CrispinClient:
             self.keepalive = datetime.datetime.utcnow()
             return ret
         return connected_fn
+
 
     def _connect(self):
         log.info('Connecting to %s ...' % IMAP_HOST,)
@@ -94,7 +90,7 @@ class CrispinClient:
             self.imap_server = IMAPClient(IMAP_HOST, use_uid=True,
                     ssl=USE_SSL)
             # self.imap_server.debug = 4  # todo
-            log.info("Logging in: %s %s" % (self.email_address, self.oauth_token))
+            log.info("Logging in: %s" % self.email_address)
             self.imap_server.oauth2_login(self.email_address, self.oauth_token)
 
         except Exception as e:
@@ -113,6 +109,7 @@ class CrispinClient:
         log.info('Connection successful.')
         return True
 
+
     def stop(self):
         log.info("Stopping crispin")
         if (self.imap_server):
@@ -122,6 +119,7 @@ class CrispinClient:
                 loop.add_callback(self.imap_server.logout)
             except Exception, e:
                 self.imap_server.logout()
+
 
     @connected
     def list_folders(self):
@@ -145,7 +143,6 @@ class CrispinClient:
         except Exception, e:
             log.error("<select_folder> %s" % e)
             raise e
-
 
         # TODO make sure UIDVALIDITY is the same value here.
         # If it's not, we can no longer use old UIDs.
@@ -238,16 +235,7 @@ class CrispinClient:
 
         select_info = self.select_folder(folder_name)
 
-
-        # Right now we're using ENVELOPE which selects a subset of the 
-        # headers, usually cached. Selecting all of the headers requires
-        # the IMAP server to open and parse each file which is slow.
-        # In the future, we can do commands like 
-        # 'BODY.PEEK[HEADER.FIELDS (TO CC FROM DATE SUBJECT)]'
-        # to specify individual headers when we want DKIM signature info, etc.
-        # I'm not sure which of those Gmail caches for fast access
         query = 'ENVELOPE BODY INTERNALDATE'
-
 
         log.info("Fetching message headers. Query: %s" % query)
         messages = self.imap_server.fetch(UIDs, [query, 'X-GM-THRID', 'X-GM-MSGID', 'X-GM-LABELS'])
@@ -267,7 +255,6 @@ class CrispinClient:
             # A parsed representation of the [RFC-2822] header of the message.
             msg_envelope = message_dict['ENVELOPE']
 
-
             # ('Tue, 21 May 2013 08:41:20 -0700', 
             #  '[SALT] De-extinction TONIGHT Tues. May 21', 
             #  (('Stewart Brand', None, 'sb', 'longnow.org'),), 
@@ -280,44 +267,19 @@ class CrispinClient:
             #  '<89ACAE66-4C10-4BBF-9B24-AC18A0FB2440@longnow.org>')
 
 
-
-
-            def make_uni(txt, default_encoding="ascii"):
-                try:
-                    return u"".join([unicode(text, charset or default_encoding, 'strict')
-                            for text, charset in decode_header(txt)])
-                except Exception, e:
-                    log.error("Problem converting string to unicode: %s" % txt)
-                    return u"".join([unicode(text, charset or default_encoding, 'replace')
-                            for text, charset in decode_header(txt)])
-
-
-            # Older version
-
-            # def clean_header(to_decode):
-            #     from email.header import decode_header
-            #     decoded = decode_header(to_decode)
-            #     parts = [w.decode(e or 'ascii') for w,e in decoded]
-            #     u = u' '.join(parts)
-            #     return u
-
-
-
             def make_unicode_contacts(contact_list):
                 n = []
                 for c in contact_list:
                     new_c = [None]*len(c)
                     for i in range(len(c)):
-                        new_c[i] = make_uni(c[i])
+                        new_c[i] = encoding.make_unicode(c[i])
                     n.append(new_c)
                 return n
-
-
 
             # msg_envelope[0] # date
 
 
-            subject = make_uni(msg_envelope[1])
+            subject = encoding.make_unicode(msg_envelope[1])
             # Headers will wrap when longer than 78 lines per RFC822_2
             subject = subject.replace('\n\t', '').replace('\r\n', '')
             new_msg.subject = subject
@@ -450,6 +412,10 @@ class CrispinClient:
                                     all_signatures.append(ret)
 
                             else:
+                                # MIXED
+                                # ALTERNATIVE
+                                # RELATED
+                                # SIGNED
                                 log.info("Not sure what to do with mime relation %s" % mime_relation.lower())
 
                         return []
@@ -474,395 +440,6 @@ class CrispinClient:
         log.info("Fetched headers for %i messages" % len(new_messages))
         return new_messages
 
-
-
-
-
-
-    def fake():
-        if true:
-
-
-
-
-            current_index = '1'
-
-
-            print 'BODYSTRUCTURE:', bodystructure
-
-
-
-            # Not multipart. Single object. Usually just text/plain
-            if not isinstance(bodystructure[0], list):
-                all_messageparts.append(IBMessagePart(bodystructure, current_index))
-            else:
-                # The message is multipart, meaning it is formatted as 
-                # ( [some list of objects] , relationship between the two )
-                # assert that this much is true
-                assert isinstance(bodystructure[0], list)
-                assert isinstance(bodystructure[1], basestring)  # MIME relation
-                assert len(bodystructure) == 2
-                mime_relation = bodystructure[1]
-                parts = bodystructure[0]
-
-
-                # There are several options for the MIMEtype relationship
-
-                # These objects are alternative representations of the same content
-                # usually this means one is plaintext and the other html
-                if mime_relation.lower() == 'alternative':
-
-                    print "ALTERNATIVE HERE "
-
-                    assert len(parts) > 1  # should have multiple parts
-                    for p in parts: assert isinstance(p, tuple)  # all objects
-                    for p in parts: assert isinstance(p[0], basestring)  # not nested
-
-                    alternative_parts = []
-                    for i, part in enumerate(parts):
-                        newIndex = current_index + '.' + str(i+1)
-                        print 'MAKING MESSAGE PART OUT OF:', part
-                        partObject = IBMessagePart(part, newIndex)
-                        alternative_parts.append(partObject)
-                    print "ALTERNATIVE PARTS", alternative_parts
-                    # Pick the html one out of here later
-                    new_msg.message_parts = alternative_parts
-
-                # This has multiple objects. ie: attachments
-                elif mime_relation.lower() == 'mixed':
-                    print "MIXED HERE with %d parts" % len(parts)
-                    mixedparts = parts[0]
-
-                    # if parts[0] is a list, it means we need to iterate and check it
-                    if not isinstance(parts[-1], basestring):
-                        sub_alternate_maybe = parts[0]
-                        print 'parts', parts
-                        print 'sub_alternate_maybe', sub_alternate_maybe
-                        assert isinstance(sub_alternate_maybe[-1], basestring)
-                        # It's usually alternate when there are attachments
-                        if sub_alternate_maybe[-1].lower() == 'alternative':
-                            alternative_parts = []
-                            for i, part in enumerate(sub_alternate_maybe[:-1]):
-                                newIndex = current_index + '.' + str(i+1)
-                                partObject = IBMessagePart(part, newIndex)
-                                alternative_parts.append(partObject)
-                            # Pick the html one out of here later
-                            new_msg.message_parts = alternative_parts
-                        else:
-                            log.error("No idea what parts this might be...")
-
-
-                        # These are the attachments (probably...?)
-                        attachment_parts = []
-                        for i, part in enumerate(parts[1:]):
-                            newIndex = str( int(current_index) + i + 1 )
-                            partObject = IBMessagePart(part, newIndex)
-                            attachment_parts.append(partObject)
-                        # Pick the html one out of here later
-                        new_msg.attachments = attachment_parts
-
-
-                    # parts[0] IS a string, meaning there is no html+text parts. 
-                    # Need to iterate through parts to get attachments. 
-                    else:
-                        attachment_parts = []
-                        for i, part in enumerate(parts):
-                            newIndex = str( int(current_index) + i + 1 )
-                            partObject = IBMessagePart(part, newIndex)
-                            if partObject.content_type_major.lower() == 'text':
-                                new_msg.message_parts = [ partObject ]
-                            else:
-                                attachment_parts.append(partObject)
-                        # Pick the html one out of here later
-                        new_msg.attachments = attachment_parts
-
-
-
-                    pass
-
-
-                elif mime_relation.lower() == 'related':
-                    pass
-
-                # Message has some kind of signature with this data
-                elif mime_relation.lower() == 'signed':
-                    pass
-                else:
-                    log.error("Unknown relation type for bodystructure: %s" % relation)
-
-                print
-
-            # else:
-
-            #     
-            #     # TODO look into the multipart grouping p[-1]. these fall under:
-            #     # MIXED
-            #     # ALTERNATIVE
-            #     # RELATED
-            #     # SIGNED
-            #     # parts = bodystructure[0]
-
-
-            #     # for i, part in enumerate(parts):
-            #         # Sometimes one of the body parts is actually something
-            #         # weird like Content-Type: multipart/alternative, so you
-            #         # have to loop though them individually. I think
-            #         # email.parser takes care of this when you fetch the actual
-            #         # body content, but I have to do it here for the
-            #         # BODYSTRUCTURE response.
-
-            #         # recurisve creator since these might be nested
-            #         # pass the index so we can append subindicies
-            #         # Note: this shit might break but it works for now...
-            #     def make_obj(p, i):
-
-            #         # Still multiple objects here
-            #         if not isinstance(p[0], basestring):
-
-            #             # First index should be list of bodytypes
-            #             # second should be their relationship
-            #             if len(p) == 2 and isinstance(p[-1], basestring):
-            #                 partsToEnumerate = p[0]
-            #                 relation = p[1]
-
-            #                 for x, part2 in enumerate( partsToEnumerate ):
-            #                 # for x in range(len(p) - 1):  # The last one is the label
-            #                     index = i+'.' + str(x+1)
-            #                     make_obj(part2, index)
-
-            #             else:
-            #                 log.error("Some problem here with object: ", p)
-
-            #         else:
-            #             all_messageparts.append(IBMessagePart(p, i))
-
-
-            #     make_obj(bodystructure, '1')
-
-            #     print all_messageparts
-            #     print
-
-
-            # new_msg.message_parts = all_messageparts
-            
-
-
-
-
-
-            # # This part parses the nested BODYSTRUCTURE data structure
-
-            # current_index = '1'
-
-            # # Not multipart. Single object
-            # if not isinstance(bodystructure[0], list):
-            #     assert len(bodystructure) == 1
-            #     part = IBMessagePart(bodystructure[0], current_index)
-            #     all_messageparts = [ ('ALONE', part) ]
-
-
-
-            # parse_bodystucture('1', bodystructure)
-
-            # print bodystructure
-            # print 
-
-            # if bodystructure.is_multipart:
-
-            #     # This is always true for the top level
-            #     assert len(bodystructure) <= 2
-
-            #     # TODO look into the multipart grouping p[-1]. these fall under:
-            #     # MIXED
-            #     # ALTERNATIVE
-            #     # RELATED
-            #     # SIGNED
-
-
-
-            #     if not isinstance(p[0], basestring):
-
-
-            #     # going to run this on bodystructure
-            #     def make_obj(p, i):
-
-            #         # If it's a list/tuple, there are multiple parts
-            #         if not isinstance(p[0], basestring):
-
-            #             # This is how the parts are related 
-            #             groupingType = p[-1]
-
-
-            #             thePartsRaw = p[:-1]
-            #             thePartsProcessed = []
-
-            #             for j, thePart in enumerate( p[:-1] ):  # grouping marker is at -1
-            #                 if len(i) > 0:
-            #                     index = i+'.' + str(j+1)
-            #                 else: 
-            #                     index = str(j+1)
-
-            #                 print 'index, nesting?', index
-            #                 thePartsProcessed += make_obj(thePart, index)
-
-            #             # print 'Grouping %s,  Parts: %s' % (groupingType, thePartsProcessed)
-            #             return (groupingType, thePartsProcessed)
-
-            #         else:
-            #             if len(i) > 0: 
-            #                 index = i+'.1'
-            #             else: 
-            #                 index = '1'
-            #             return ('ALONE', IBMessagePart(p, i))
-
-
-
-            #     all_messageparts = make_obj(bodystructure, '1')  # needs to be 1-indexed
-
-            #     print all_messageparts
-            #     print
-
-            #     # for i, part in enumerate(parts):
-            #     #     # Sometimes one of the body parts is actually something
-            #     #     # weird like Content-Type: multipart/alternative, so you
-            #     #     # have to loop though them individually. I think
-            #     #     # email.parser takes care of this when you fetch the actual
-            #     #     # body content, but I have to do it here for the
-            #     #     # BODYSTRUCTURE response.
-
-            #     #     # recurisve creator since these might be nested
-            #     #     # pass the index so we can append subindicies
-            #     #     # Note: this shit might break but it works for now...
-
-
-            #     #     # all_messageparts.append(IBMessagePart(p, i))
-
-            #     #     all_messageparts = make_obj(part, str(i+1))  # needs to be 1-indexed
-            # else:
-            #     all_messageparts = ('ALONE',  IBMessagePart(bodystructure, '1') )
-
-
-
-            new_msg.message_parts = all_messageparts
-            new_messages.append(new_msg)
-
-
-
-            # For testing
-            # self.fetch_msg_body(message_uid, 1, folder_name)
-
-
-
-
-
-        log.info("Fetched headers for %i messages" % len(new_messages))
-        return new_messages
-
-
-
-######################
-
-        # query = 'BODY.PEEK[HEADER.FIELDS (TO CC FROM DATE SUBJECT)]'
-        # query_key = 'BODY[HEADER.FIELDS (TO CC FROM DATE SUBJECT)]'
-
-        # log.info("Fetching message headers. Query: %s" % query)
-        # messages = self.imap_server.fetch(UIDs, [query, 'X-GM-THRID', 'X-GM-MSGID', 'X-GM-LABELS'])
-        # log.info("Found %i messages." % len(messages.values()))
-
-        # new_messages = []
-
-        # for message_uid, message_dict in messages.iteritems():
-        #     unparsed_headers = message_dict[query_key]
-        #     email_msg_object = message_from_string(unparsed_headers)
-
-        #     new_msg = IBMessage(email_msg_object)
-        #     new_msg.thread_id = message_dict['X-GM-THRID']
-        #     new_msg.message_id = message_dict['X-GM-MSGID']
-        #     new_msg.labels = message_dict['X-GM-LABELS']
-
-        #     new_messages.append(new_msg)
-
-        # log.info("Fetched headers for %i messages" % len(new_messages))
-        # return new_messages
-
-
-
-
-
-    # TODO not really using this code below anymore to fetch then entire messabe,
-    # but we might use it again someday soon!
-
-    @connected
-    def fetch_msg(self, msg_uid):
-        msg_uid_long = long(msg_uid)  # sometimes comes as string
-
-
-        # Coerce to list
-        if isinstance(msg_uid, int ):
-            msg_uid = [str(msg_uid)]
-        elif isinstance(msg_uid, basestring):
-            msg_uid = [msg_uid]
-
-        log.info("Fetching message. UID: %i" % msg_uid)
-        response = self.imap_server.fetch(
-                str(msg_uid), ['RFC822', 'X-GM-THRID', 'X-GM-MSGID'])
-
-        if len(response.keys()) == 0:
-            log.error("No response for msg query. msg_id = %s", msg_uid)
-            return None
-
-        raw_response = response[msg_uid_long]['RFC822']
-        log.info("Received response. Size: %i" % len(raw_response))
-
-        msg = Parser().parsestr(raw_response)
-
-        # headers
-
-        new_msg = IBMessage(msg)
-
-
-        # Parse the body here
-        msg_text = ""
-        content_type = None
-
-        def get_charset(message, default="ascii"):
-            if message.get_content_charset(): return message.get_content_charset()
-            if message.get_charset(): return message.get_charset()
-            return default
-
-        if msg.is_multipart():
-            #get the plain text version only
-            text_parts = [part for part in typed_subpart_iterator(msg, 'text', 'plain')]
-            body = []
-            for part in text_parts:
-                charset = get_charset(part, get_charset(msg))
-                body.append( unicode(part.get_payload(decode=True), charset, "replace") )
-                content_type = part.get_content_type()
-            msg_text = u"\n".join(body).strip()
-
-        else: # if it is not multipart, the payload will be a string
-            # representing the message body
-            body = unicode(msg.get_payload(decode=True), get_charset(msg), "replace")
-            content_type = msg.get_content_type()
-            msg_text = body.strip() # removes whitespace characters
-
-        if len(msg_text) == 0:
-            log.error("Couldn't find message text. Content-type: %s" % content_type)
-
-        # Don't think I need to do this anymore now that the above is creating
-        # unicode strings based on content encoding...
-        # msg_text = msg_text.decode('iso-8859-1').encode('utf8')
-
-        # TODO Run trim_quoted_text here for the message
-
-        if content_type == 'text/plain':
-            pass
-            # TODO here convert plain text to HTML text somehow...
-
-        # TODO here run fix_links which converts links to HTML I think...
-        new_msg.body_text = msg_text
-
-        return new_msg
 
 
     @connected

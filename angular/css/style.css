@@ -1,4 +1,4 @@
-/* Disables scrolling on the page. All scrollable element should be within a div */
+/* Disables scrolling on the page. */
 html, body {
   height: 100%;
   overflow: hidden;
@@ -27,11 +27,7 @@ body {
     color: #333;
     padding: 15px;
 
-  /*background-color: #E6EBEA;*/
-  /*background-color: #F9F9F9;*/
-  /*background-color: #dbdbdb;*/
-  /*background: #e7eef2;*/
-  background-color: #EEF2F2;
+  background-color: #DAE2E2;
 
   color: #57676e;
 
@@ -62,6 +58,38 @@ a {
 
 }
 
+.layout {
+    overflow: hidden;
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
+    top: 0px;
+}
+
+
+
+.sidebar
+{
+  position: absolute;
+  left: 0px;
+  top: 6px;
+  bottom: 32px; 
+  overflow: hidden;
+
+  width: 375px;
+  box-sizing: border-box;
+  border-right: 1px solid #dadfe5;
+}
+
+
+.header {
+  overflow: hidden;
+  height: 44px;
+  line-height: 44px;
+  background-color: #EEF2F2;
+  border-bottom: 1px solid #dadfe5;
+}
 
 
 .searchbox 
@@ -75,65 +103,70 @@ a {
   padding-left: 29px;
 } 
 
+.searchbutton
+{
+  background: transparent url("/static/search-icon.png");
+  width: 21px;
+  height: 24px;
+  float:left;
+  margin:12px;
+}
 
-
-.layout {
-    padding-left:350px;
-    position: relative;
+.composebutton
+{
+  background: transparent url("/static/compose.png");
+  width: 28px;
+  height: 28px;
+  float:right;
+  margin: 8px 8px 12px 12px;
 }
 
 
 
-.list-header {
-    position: fixed;
-    top: 0px;
-    display:block;
-
-    margin-left: -350px;
-
-    min-width: 350px;
-    width:350px;
+.clickable
+{
+  cursor: pointer;
 }
+
+.inboxlabel
+{
+  font-family: ProximaNovaCond-Semibold;
+  font-size: 24px;
+  color: rgba(7,7,7,0.52);
+  line-height: 50px;
+  text-shadow: 0px 1px 0px #FFFFFF;
+  text-align:center;
+  width:100px;
+
+  margin-left:auto;
+  margin-right:auto;
+}
+
 
 
 .list {
-    position: fixed;
-    top: 50px;
-    bottom: 80px;
-    overflow: auto;
-    margin-left: -350px;
-    width:350px;
 
-    text-align: left;
+  position: absolute;
+  top: 45px;
+  left: 0px;
+  right: 0px;
+  bottom: 45px;
+
+  overflow-y: auto;
 }
 
 
-/* Let's get this party started */
+
 .list::-webkit-scrollbar {
-    width: 8px;
+    width: 10px;
 }
-
  
-/* Track */
 .list::-webkit-scrollbar-track {
-    /*-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3); */
-    background-color: rgba(0,0,0,0.1);
-    
-    border-top-right-radius: 3px;
-    border-bottom-right-radius: 3px;
-    border-top-left-radius: 0px;
-    border-bottom-left-radius: 0px;
+    background-color: rgba(0,0,0,0.05); 
 }
 
- 
 .list::-webkit-scrollbar-thumb {
-
-    border-top-right-radius: 3px;
-    border-bottom-right-radius: 3px;
-    border-top-left-radius: 0px;
-    border-bottom-left-radius: 0px;
-
-
+    border-radius: 3px;
     background: rgba(0,0,0,0.15);
     -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3); 
 }
@@ -142,37 +175,61 @@ a {
     background: rgba(77, 127, 189, .5);
 }
 
-
 .list::-webkit-scrollbar-thumb:window-inactive {
     background: rgba(0,0,0,0.15);
-    /*background: rgba(255,0,0,0.4); */
 }
 
 
 
 .footer
-{
+{ 
+  background-color: #EEF2F2;
 
-  position: fixed;
-  left: 15px;
-  right: 0;
-  bottom: 5px;
-  width:350px;
-  height:60px;
+  position: absolute;
 
-  width:350px;
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
 
   text-align: left;
+  height:44px;
+
+    border-top: 1px solid #dadfe5;
+}
 
 
-
+.gearbutton
+{
+  background: transparent url("/static/gear.png");
+  width: 24px;
+  height: 25px;
+  float:left;
+  margin:12px;
 }
 
 
 
-.main {
-    width: 100%;
+.footerstatus
+{
+  font-family: ProximaNovaCond-Semibold;
+  font-size: 13px;
+  color: rgba(7,7,7,0.52);
+  line-height: 49px;
+  text-shadow: 0px 1px 0px #FFFFFF;
+
+/*  margin-left:auto;
+  margin-right:auto;
+*/  
+  width:300px;
+
+  margin-left: 102px;
+
+  background: transparent url("/static/spinner.gif") no-repeat 0px 15px;
+  padding-left: 22px;
+
 }
+
+
 
 
 
@@ -193,20 +250,16 @@ margin-right: 0.5em;
   border-radius: 35px;
   background: left center no-repeat;
   float:left;
-
-
 }
 
 
- .ellipsis {
+.ellipsis {
   overflow:hidden;
   white-space:nowrap;
   -ms-text-overflow:ellipsis;
   text-overflow:ellipsis;
  }
 
-
-}
 
 .email-desc {
     margin: 0.4em 0;
@@ -232,17 +285,66 @@ margin-right: 0.5em;
 
 
 
+
 /* Email Content Styles */
 
 .email-content 
 {
-    positon: relative;
 
+    position: absolute;
+    left: 375px;
+
+    top: 0px;
+    bottom: 80px;
+    right: 6px;
+    box-sizing: border-box;
+    overflow-y: auto;
+
+    overflow: auto;
 }
+
+
+
+/* Let's get this party started */
+.email-content::-webkit-scrollbar {
+    width: 10px;
+}
+ 
+/* Track */
+.email-content::-webkit-scrollbar-track {
+    /*-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3); */
+    background-color: rgba(0,0,0,0.1);
+    
+    border-radius: 3px;
+}
+
+.email-content::-webkit-scrollbar-thumb {
+
+    border-radius: 3px;
+    background: rgba(0,0,0,0.15);
+    -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3); 
+}
+
+.email-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(77, 127, 189, .5);
+}
+
+.email-content::-webkit-scrollbar-thumb:window-inactive {
+    background: rgba(0,0,0,0.15);
+    /*background: rgba(255,0,0,0.4); */
+}
+
+
+
+
+
+
+
+
 
 .card_with_shadow {
 
-    border-radius: 4px;
+    border-radius: 6px;
     background: rgba(255,255,255,0.97);
     border: 1px solid #D3D0D0;
     -moz-box-shadow:    0px 1px 1px 0px rgba(0,0,0,0.29);
@@ -253,44 +355,35 @@ margin-right: 0.5em;
 
 
 .email-content-header {
-    position: fixed;
-    top: 0px;
-    display:block;
-
-    margin-top: -5px;
-    margin-left: 15px;
 
     padding-left: 15px;
     padding-right: 15px;
     padding-top: 15px;
 
-
-    width:650px;
-    min-width: 650px;
     height:64px;
     min-height:64px;
 
-  overflow:hidden;
-  white-space:nowrap;
-  -ms-text-overflow:ellipsis;
-  text-overflow:ellipsis;
+    overflow:hidden;
+    white-space:nowrap;
+    -ms-text-overflow:ellipsis;
+    text-overflow:ellipsis;
 
 }
 
 .email-content-title 
 {
     text-align:left;
-    color:#333;
+    color:#4C4C4C;
     text-shadow:1px 1px 1px white;
 
     font-family: "Proxima Nova Condensed", courier, sans-serif;
     font-size: 26px;
     line-height: 1.2em;
-    font-weight: 600; /* Bold */
+    font-weight: 700; /* Semibold */
 
-    width:620px;
+/*    width:620px;
     min-width: 620px;
-
+*/
     float:left;
 
     margin-right:-150px;
@@ -318,13 +411,9 @@ margin-right: 0.5em;
 
 .email-content-action {
     float: right;
-
     text-decoration: none; 
     padding: 3px 0px; 
-/*    position: relative; 
-    display: inline-block;
-*/}
-
+}
 
 
 .clear
@@ -335,53 +424,10 @@ margin-right: 0.5em;
 
 .email-message-container {
 
-    position: fixed;
-    top:75px;
-    bottom:100px;
-    overflow: auto;
-
     display:block;
 
     padding: 10px;
     margin: 5px;
-
-    width:680px;
-    min-width: 680px;
-}
-
-
-
-
-/* Let's get this party started */
-.email-message-container::-webkit-scrollbar {
-    width: 8px;
-}
-
- 
-/* Track */
-.email-message-container::-webkit-scrollbar-track {
-    /*-webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3); */
-    background-color: rgba(0,0,0,0.1);
-    
-    border-radius: 3px;
-}
-
- 
-.email-message-container::-webkit-scrollbar-thumb {
-
-    border-radius: 3px;
-    background: rgba(0,0,0,0.15);
-    -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3); 
-}
-
-.email-message-container::-webkit-scrollbar-thumb:hover {
-    background: rgba(77, 127, 189, .5);
-}
-
-
-.email-message-container::-webkit-scrollbar-thumb:window-inactive {
-    background: rgba(0,0,0,0.15);
-    /*background: rgba(255,0,0,0.4); */
 }
 
 

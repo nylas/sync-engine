@@ -13,11 +13,13 @@ var myThread = new Thread(some_thread_id, array_of_msg_ids);
 
 This object type should only be accessible if it's injected. 
 
-Still unknown: is every object created this way still a singleton?
-They shouldn't be because the actual constructor is returning a new one. 
-
 Probably calling Thread.whatever() will be a class function, whereas 
 instance.whatever() will be one of the methods defined through prototype
+
+
+Here's an explanation of how all of this reduces to factories.
+
+https://groups.google.com/forum/#!msg/angular/56sdORWEoqg/b8hdPskxZXsJ
 
  */
 

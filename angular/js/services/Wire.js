@@ -178,7 +178,6 @@ app.factory('wire', function ($rootScope) {
 
         console.log(data)
 
-
         if (data.id && this.callbacksRPC[data.id]) {
             this.callbacksRPC[data.id].timerOut && clearTimeout(this.callbacksRPC[data.id].timerOut);
             data.result && typeof this.callbacksRPC[data.id].success == 'function' && this.callbacksRPC[data.id].success(data.result);
@@ -243,7 +242,6 @@ app.factory('wire', function ($rootScope) {
         }
 
         if (typeof data == 'object' && (data.result || data.error)) {
-            console.log('_onClientCallRPC');
             this._onClientCallRPC(data);
             break;
         }

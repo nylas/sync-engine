@@ -4,7 +4,7 @@
 var app = angular.module('InboxApp.controllers');
 
 
-app.controller('AppContainerController', function($scope, wire, growl, IBMessage) {
+app.controller('AppContainerController', function($scope, $rootScope, wire, growl, IBMessage, localStorageService) {
 
     $scope.notificationButtonClick = function() {
         growl.requestPermission(
@@ -19,6 +19,18 @@ app.controller('AppContainerController', function($scope, wire, growl, IBMessage
     }
 
 
+    $rootScope.$on('LocalStorageModule.notification.error', function(e) {
+        console.log(e);
+    })
+
+
+
+    Mousetrap.bind('command+shift+k', function(e) {
+        alert('command+shift+k');
+        return false;
+    });
+
+
     $scope.messages = [];
     $scope.activeMessage = undefined;
 
@@ -26,8 +38,12 @@ app.controller('AppContainerController', function($scope, wire, growl, IBMessage
 
     $scope.loadMessagesForFolder = function (folder) {
 
+    $scope.statustext = "Loading messages...";
+
         wire.rpc('load_messages_for_folder', {folder_name: folder} ,
             function(data) {
+
+                $scope.statustext = "";
 
                 var freshMessages = [];
                 for (var i = 0; i < data.length; i++) {
@@ -63,6 +79,13 @@ app.controller('AppContainerController', function($scope, wire, growl, IBMessage
         }
 
 
+      // Read that value back
+      var value = localStorageService.get(selectedMessage.uid);
+
+      if (value === null) {
+
+        $scope.activeMessage.body_text = 'Loading&hellip;';
+
         wire.rpc('load_message_body_with_uid', 
             {             uid: selectedMessage.uid,
                 section_index: partToUse.index,
@@ -70,11 +93,17 @@ app.controller('AppContainerController', function($scope, wire, growl, IBMessage
                  content_type: partToUse.content_type.toLowerCase(),
             },
             function(data) {
-                console.log("updating message")
+                localStorageService.set(selectedMessage.uid, data);
                 $scope.activeMessage.body_text = data;
-                console.log("updated message");
               }
-        ); 
+        );         
+
+      } else {
+        console.log("Message was cached in localstorage.")
+        $scope.activeMessage.body_text = value;
+      }
+
+     
 
     }
 

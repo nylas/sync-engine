@@ -33,6 +33,9 @@ https://github.com/martine/go-imap
 
 # about Angular.js
 
+- [Building larger apps with Angular](http://briantford.com/blog/huuuuuge-angular-apps.html)
+
+- [Angular JS learnings](https://github.com/jmcunningham/AngularJS-Learning)
 - [AngularjS videos on YouTube](https://www.youtube.com/playlist?list=PLP6DbQBkn9ymGQh2qpk9ImLHdSH5T7yw7)
 - [Angular UI](http://angular-ui.github.io/)
 - [UI Bootstrap](http://angular-ui.github.io/bootstrap/)
@@ -59,6 +62,8 @@ What is it with everyone's obsession with Inbox Zero?
 
 ## Email clients
 
+* Airseed
+* [Cannonball](https://angel.co/cannonball-1)
 * [James](http://james.apache.org/) Apache project email server
 * [Hazel](http://www.noodlesoft.com/hazel.php) mac app
 * [Openera](http://www.openera.com/) auto filter attachments

@@ -29,6 +29,7 @@
 		};
 		var h=document.getElementsByTagName("html")[0];h.className+=" wf-loading";var t=setTimeout(function(){h.className=h.className.replace(/(\s|^)wf-loading(\s|$)/g," ");h.className+=" wf-inactive"},config.scriptTimeout);var tk=document.createElement("script"),d=false;tk.src='//use.typekit.net/'+config.kitId+'.js';tk.type="text/javascript";tk.async="true";tk.onload=tk.onreadystatechange=function(){var a=this.readyState;if(d||a&&a!="complete"&&a!="loaded")return;d=true;clearTimeout(t);try{Typekit.load(config)}catch(b){}};var s=document.getElementsByTagName("script")[0];s.parentNode.insertBefore(tk,s)
 	})();
+
 </script>
 
 </head>
@@ -43,6 +44,7 @@
  <body>
 
 
+
 <div class="top_header" ng-controller="CookieController">
 	Cookie value: {{cookieValue}}
 </div>
@@ -50,35 +52,42 @@
 
 <div class="layout" ngCloak data-ng-controller="AppContainerController">
 
-	<div class="list-header">
-		<div class="searchbox" style="display:inline;">
+<div class="sidebar card_with_shadow" ui-keypress="{enter: 'foo()'}">
+
+	<div class="header">
+
+
+		<div class="searchbutton clickable"></div>
+		<div class="composebutton clickable"></div>
+		<div class="inboxlabel">Inbox</div>
+
+
+<!-- 		<div class="searchbox">
 			<form class="form-search">
-			<input type="text" class="input-xlarge  mysearchbox" placeholder="Search Inbox...">
+			<input type="text" class="input-xlarge  mysearchbox" placeholder="Search Inbox..." >
 			</form>
 		</div>
-
-	</div>
-
+ -->	</div>
 
 
-	<div class="list card_with_shadow">
+	<div class="list">
 		<itemcell data-ng-repeat="m in messages | orderBy:'-date'" message="m" data-ng-click="openMessage(m)"></itemcell>
 	</div>
 
 
-	<div class="footer card_with_shadow">
+	<div class="footer">
+		<div class="gearbutton clickable"></div>
+		<div class="footerstatus" ng-bind="statustext" ng-cloak></div>
 
-    	<center><a class="button" href="#">Report a bug</a></center>
 	</div>
 
+</div>
 
     <div class="main">
 
-            <div class="email-content" style="position:relative;" >
-
-            	<div class="email-background" style="position: absolute; top:0; left:0; background-color:#DAE2E2; height:650px; margin-left: 34px; margin-right: 34px; width:640px;">blahs</div>
+            <div class="email-content" >
         
-                <div class="email-content-header card_with_shadow">
+                <div class="email-content-header	">
                     <div class="email-content-title">
 	                    <span ng-bind="activeMessage.subject"></span>
 		                <span class="email-content-subtitle" ng-show="activeMessage != null">Sent to {{activeMessage.contactDisplayList}}</span>
@@ -91,16 +100,10 @@
 
 	            <div class="clear"></div>
 
-            </div>
-
-
-
-
+	            </div>
 
                 <div class="email-message-container">
-
 					<messageview message="activeMessage"></messageview>
-
                  </div>
 
                  <replybox>Reply text here&hellip;</replybox>
@@ -110,8 +113,7 @@
 
 
 
-            </div>
-    </div>
+        </div>
 
 </div>
 
@@ -125,6 +127,10 @@
 	<script src="lib/angular/angular.js"></script>
 	<script src="lib/angular/angular-sanitize.js"></script>
 	<script src="lib/angular/angular-cookies.js"></script>
+	<script src="lib/angular-modules/localStorageModule.js"></script>
+	
+	<script src="lib/mousetrap.min.js"></script>
+		
 	<script src="lib/bootstrap/ui-bootstrap-0.3.0.js"></script>
 	<script src="lib/utils/md5.js"></script>
 	<script src="lib/socketio/socket.io.js"></script>

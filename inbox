@@ -4,8 +4,11 @@ import signal
 import sys
 import os
 import subprocess
+from time import sleep
 
 import logging as log
+
+
 
 DEFAULT_PORT = 8888
 
@@ -67,10 +70,18 @@ def start(args=None):
     # Start Mongo
     from server.mongomgr import startmongo
     try:
-        startmongo(PATH_TO_MONGO_DATABSE)
+      log.info("Starting Mongo. DB at %s" % PATH_TO_MONGO_DATABSE)
+      if not os.path.exists(PATH_TO_MONGO_DATABSE):
+          os.makedirs(PATH_TO_MONGO_DATABSE)
+      args = ['mongod', '--dbpath', PATH_TO_MONGO_DATABSE, '--fork']
+      mongod_process = subprocess.Popen(args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.STDOUT)
+      mongod_process.communicate()
+      sleep(1) # for mongo
     except Exception, e:
         raise e
         stop(None)
+
+
 
     # Start Tornado 
     from server.app import startserver
@@ -88,8 +99,11 @@ def stop(args):
     from server.app import stopserver
     stopserver()
 
-    from server.mongomgr import stopmongo
-    stopmongo()
+    # Stop mongo
+    log.info("Stopping Mongo.")
+    os.system("kill $(ps aux | grep '[m]ongod' | awk '{print $2}')")
+
+
 
 
 
