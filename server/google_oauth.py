@@ -114,7 +114,7 @@ def get_new_token(refresh_token, callback):
 
 
 @tornado.gen.engine
-def validate_token(access_token, callback):
+def validate_token(access_token, callback=None):
 
     # Validate token
     request = httpclient.HTTPRequest(OAUTH_TOKEN_VALIDATION_URL + "?access_token=" + access_token)
@@ -128,6 +128,7 @@ def validate_token(access_token, callback):
 
     validation_dict = escape.json_decode(response.body)
     callback(validation_dict)
+    return
 
 
 

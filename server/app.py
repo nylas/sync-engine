@@ -11,8 +11,6 @@ from idler import Idler
 
 import google_oauth
 
-import postel
-
 import sessionmanager
 from secrets import COOKIE_SECRET
 
@@ -238,9 +236,6 @@ def idler_callback():
 
 
 def startserver(port):
-
-    sessionmanager.setup()
-
 
     app = Application()
     app.listen(port)

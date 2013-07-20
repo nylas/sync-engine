@@ -9,27 +9,22 @@ import google_oauth
 import tornado.gen
 from bson.objectid import ObjectId
 
-db = None
-
 # Memory cache for currently open crispin instances
 email_address_to_crispins = {}
 
-def setup():
-    global db
-    db = pymongo.MongoClient().test
-    try:
-        db.create_collection('session_to_user')
-        db.create_collection('user_email_to_token')
-        log.info('Created collections in sessions DB"')
-    except pymongo.errors.CollectionInvalid, e:
-        if db.create_collection and db.create_collection:
-            log.info("DB exists already.")
-        else:
-            log.error("Error creating sessions DB collecitons. %s" % e)
+db = pymongo.MongoClient().test
+try:
+    db.create_collection('session_to_user')
+    db.create_collection('user_email_to_token')
+    log.info('Created collections in sessions DB"')
+except pymongo.errors.CollectionInvalid, e:
+    if db.create_collection and db.create_collection:
+        log.info("DB exists already.")
+    else:
+        log.error("Error creating sessions DB collecitons. %s" % e)
 
 
 def store_session(email_address):
-    global db
     session_uuid = str(uuid.uuid1())
 
     session = {"email_address": email_address,
@@ -41,7 +36,6 @@ def store_session(email_address):
 
 
 def get_user_from_session(session_uuid):
-    global db
     q = {"session_uuid": session_uuid}
     session = db.session_to_user.find_one(q)
 
@@ -54,7 +48,6 @@ def store_access_token(access_token_dict):
 
     email_address = access_token_dict['email']
 
-    global db
 
     # Close old crispin connection
     if email_address in email_address_to_crispins:
@@ -69,8 +62,7 @@ def store_access_token(access_token_dict):
 
 
 @tornado.gen.engine
-def get_access_token(email_address, callback):
-    global db
+def get_access_token(email_address, callback=None):
     q = {"email": email_address}
     cursor = db.user_email_to_token.find(q).sort([("date",-1)]).limit(1)
     try:
@@ -81,14 +73,15 @@ def get_access_token(email_address, callback):
     issued_date = access_token_dict['date']
     expires_seconds = access_token_dict['expires_in']
 
-    buf = 60*5  # 5 minutes
-    expire_date = issued_date + datetime.timedelta(seconds=expires_seconds+buf)
+    expire_date = issued_date + datetime.timedelta(seconds=expires_seconds)
 
-    expire_in = expire_date - datetime.datetime.utcnow()
-    log.info("Oauth token expires in %s" % expire_in)
+    is_valid = yield tornado.gen.Task(google_oauth.validate_token, 
+            access_token_dict['access_token'])        
 
-    # We need to refresh the token
-    if (expire_date < datetime.datetime.utcnow() ):
+
+    # TODO refresh tokens based on date instead of checking?
+    # if not is_valid or expire_date > datetime.datetime.utcnow():
+    if not is_valid:
         log.error("Need to update access token!")
 
         assert 'refresh_token' in access_token_dict
@@ -104,6 +97,10 @@ def get_access_token(email_address, callback):
         access_token_dict = response
 
         log.info("Updated token for user %s" % access_token_dict['email'])
+
+    if callback is None:
+        yield access_token_dict['access_token']
+        return
 
     callback(access_token_dict['access_token'])
     return 

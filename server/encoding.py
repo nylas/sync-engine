@@ -1,4 +1,9 @@
 from email.header import decode_header
+import quopri
+from bs4 import BeautifulSoup
+import re
+import cgi
+import bleach
 
 
 def make_unicode(txt, default_encoding="ascii"):
@@ -55,13 +60,150 @@ def decode_data(data, data_encoding):
             data = quopri.decodestring(data)
         elif data_encoding == '7bit':
             pass  # This is just ASCII. Do nothing.
-        elif encoding.lower() == '8bit':
+        elif data_encoding == '8bit':
             pass  # .decode('8bit') does nothing.
         elif data_encoding == 'base64':
             data = data.decode('base-64')
         else:
             log.error("Unknown encoding scheme:" + str(encoding))
     except Exception, e:
-        print 'Encoding not provided...'
+        print 'Encoding not provided: %s' % e
 
     return data
+
+
+
+
+def clean_html(msg_data):
+    """ Removes tags: head, style, script, html, body """
+
+    soup = BeautifulSoup(msg_data)
+
+    # Bad elements
+    for s in soup('head'): s.extract()
+    for s in soup('style'): s.extract()
+    for s in soup('script'): s.extract()
+    for m in soup('html'): m.replaceWithChildren()
+    for m in soup('body'): m.replaceWithChildren()
+
+    # for match in soup.findAll('body'):
+    #     print 'MATCHED!'
+    #     match.replaceWithChildren()
+    #     # new_tag = soup.new_tag('div')
+    #     # new_tag.contents = b.contents
+    #     # b.replace_with(new_tag)
+    return str(soup)
+
+
+def webify_links(msg_data, max_chars=35):
+
+    msg_data = bleach.linkify(msg_data)
+
+    soup = BeautifulSoup(msg_data)
+    for a in soup.findAll('a'):
+        a['target'] = "_blank"
+        try:
+            if a.contents[0] == a['href']:
+                a.string = a['href'][:max_chars] + '&hellip;'
+            a['title'] = a['href']
+        except Exception, e:
+            log.info("Found anchor without href. Contents: %s" % a)
+            pass
+
+    return str(soup)
+
+
+
+
+re_string = re.compile(r'(?P<htmlchars>[<&>])|(?P<space>^[ \t]+)|(?P<lineend>\r\n|\r|\n)|(?P<protocal>(^|\s)((http|ftp)://.*?))(\s|$)', re.S|re.M|re.I)
+def plaintext2html(text, tabstop=4):
+    def do_sub(m):
+        c = m.groupdict()
+        if c['htmlchars']:
+            return cgi.escape(c['htmlchars'])
+        if c['lineend']:
+            return '<br/>'
+        elif c['space']:
+            t = m.group().replace('\t', '&nbsp;'*tabstop)
+            t = t.replace(' ', '&nbsp;')
+            return t
+        elif c['space'] == '\t':
+            return ' '*tabstop;
+        else:
+            url = m.group('protocal')
+            if url.startswith(' '):
+                prefix = ' '
+                url = url[1:]
+            else:
+                prefix = ''
+            last = m.groups()[-1]
+            if last in ['\n', '\r', '\r\n']:
+                last = '<br/>'
+            return '%s<a href="%s">%s</a>%s' % (prefix, url, url, last)
+    return re.sub(re_string, do_sub, text)
+
+
+
+
+
+# TODO this doesn't work.
+
+def trim_quoted_text(msg_text, content_type):
+    """ Given the text of a message, this separates the 
+        main content from the quoted messages 
+    """
+
+    if len(msg_text) == 0:
+        log.error('No message recovered. Content-Type: %s'  % content_type)
+        return
+
+    # TODO add signature detection
+    #  r'^-{2}\s' or something
+
+    # TOFIX do this with from address?
+    if content_type == "text/plain":
+        # regexes =  [r'-+original\s+message-+\s*$', 
+        #             r'^.*On\ .*(\n|\r|\r\n)?wrote:(\r)*$',
+        #             r'From:\s*' + re.escape(from_addr),
+        #             r'<' + re.escape(from_addr) + r'>',
+        #             re.escape(from_addr) + r'\s+wrote:',
+        #             r'from:\s*$']
+
+        regexes =  [r'from:\s*$',
+                    r'-+original\s+message-+\s*$', 
+                    r'^.*On\ .*(\n|\r|\r\n)?wrote:(\r)*$',
+                    r'\s+wrote:$',
+                    ]
+
+    elif content_type == "text/html":
+        regexes =  [r'-+original\s+message-+\s*', 
+                    r'^.*On\ .*(\n|\r|\r\n)?wrote:(\r)*$',
+                    r'<div class="gmail_quote">',
+                    ]
+                    # r'On\ .*(\n|\r|\r\n)?wrote:(\r)*']
+    else :
+        log.error('Not sure how to trim quoted text from Content-Type: ' + str(content_type))
+        return
+
+    endpoint = len(msg_text) # long email
+
+    for r in regexes:
+        m = re.search(r, msg_text, re.IGNORECASE | re.MULTILINE)
+        if m == None: continue
+        e = m.start()
+        if m.start() < endpoint :
+            endpoint = e
+
+    msg_text = msg_text[: endpoint]
+
+    # TODO this whitespace trimming should be part of regex
+    while msg_text.endswith('\n') or msg_text.endswith('\r'):
+        msg_text = msg_text[:-2]
+        
+
+    return msg_text
+
+
+
+
+
