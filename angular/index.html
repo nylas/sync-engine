@@ -88,6 +88,7 @@
             <div class="email-content" >
         
                 <div class="email-content-header	">
+
                     <div class="email-content-title">
 	                    <span ng-bind="activeMessage.subject"></span>
 		                <span class="email-content-subtitle" ng-show="activeMessage != null">Sent to {{activeMessage.contactDisplayList}}</span>
@@ -106,7 +107,16 @@
 					<messageview message="activeMessage"></messageview>
                  </div>
 
-                 <replybox>Reply text here&hellip;</replybox>
+                 <replybox>
+
+                <div ng-file-upload="/file_upload" 
+            	data-complete='uploadComplete()'
+   					 data-error="uploadError()"></div>
+
+
+
+
+                 	Reply text here&hellip;</replybox>
 
  					
 				</div>
@@ -123,6 +133,17 @@
 	<!-- In production use:
 	<script src="//ajax.googleapis.com/ajax/libs/angularjs/1.0.6/angular.min.js"></script>
 	-->
+
+
+	<!-- JavaScript Includes -->
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+	<script src="lib/jquery-utils/jquery.knob.js"></script>
+
+	<!-- jQuery File Upload Dependencies -->
+	<script src="lib/jquery-utils/jquery.ui.widget.js"></script>
+	<script src="lib/jquery-utils/jquery.iframe-transport.js"></script>
+	<script src="lib/jquery-utils/jquery.fileupload.js"></script>
+
 
 	<script src="lib/angular/angular.js"></script>
 	<script src="lib/angular/angular-sanitize.js"></script>
@@ -144,7 +165,9 @@
 	<script src="js/controllers/CookieController.js"></script>
 
 	<script src="js/filters.js"></script>
-	<script src="js/directives.js"></script>
+	<script src="js/directives/directives.js"></script>
+	<script src="js/directives/ngFileUpload.js"></script>
+
 </body>
 </html>
 

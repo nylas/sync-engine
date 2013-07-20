@@ -1,5 +1,6 @@
-import os.path as os_path
+import os.path
 import logging as log
+import time
 
 import tornado.ioloop
 import tornado.web
@@ -25,16 +26,16 @@ import api  # This is the handler for RPC calls
 class Application(tornado.web.Application):
     def __init__(self):
 
-        PATH_TO_ANGULAR = os_path.join(os_path.dirname(__file__), "../angular")
-        PATH_TO_STATIC = os_path.join(os_path.dirname(__file__), "../static")
+        PATH_TO_ANGULAR = os.path.join(os.path.dirname(__file__), "../angular")
+        PATH_TO_STATIC = os.path.join(os.path.dirname(__file__), "../static")
 
         settings = dict(
-            static_path=os_path.join(PATH_TO_STATIC),
-            xsrf_cookies=True,  # debug
+            static_path=os.path.join(PATH_TO_STATIC),
+            xsrf_cookies=False,  # debug
 
             debug=True,
             flash_policy_port=843,
-            flash_policy_file=os_path.join(PATH_TO_STATIC + "/flashpolicy.xml"),
+            flash_policy_file=os.path.join(PATH_TO_STATIC + "/flashpolicy.xml"),
             socket_io_port=8001,
 
             login_url="/",  # for now
@@ -56,7 +57,8 @@ class Application(tornado.web.Application):
             (r'/app/(.*)', AngularStaticFileHandler, {'path': PATH_TO_ANGULAR, 
                                            'default_filename':'index.html'}),
             (r'/app', AppRedirectHandler),
-            (r'/file', FileDownloadHandler),
+            (r'/file_download', FileDownloadHandler),
+            (r'/file_upload', FileUploadHandler),
 
             (r'/(?!wire|!app|file)(.*)', tornado.web.StaticFileHandler, {'path': PATH_TO_STATIC, 
                                            'default_filename':'index.html'}),       
@@ -177,6 +179,35 @@ class FileDownloadHandler(BaseHandler):
 
 
 
+class FileUploadHandler(BaseHandler):
+
+    def post(self):
+        if not self.current_user:
+            raise tornado.web.HTTPError(403, "access forbidden")
+
+        try:
+            uploaded_file = self.request.files['file'][0]  # wacky
+            
+            uploads_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../uploads/")
+            if not os.path.exists(uploads_path):
+                os.makedirs(uploads_path)
+            
+            write_filename = str(time.mktime(time.gmtime())) +'_' + uploaded_file.filename
+            write_path = os.path.join(uploads_path, write_filename)
+            
+            f = open(write_path, "w")
+            f.write(uploaded_file.body)
+            f.close()
+            
+            log.info("Uploaded file: %s (%s) to %s" % (uploaded_file.filename, uploaded_file.content_type, write_path))
+
+            # TODO 
+        except Exception, e:
+            log.error(e)
+            raise tornado.web.HTTPError(500)
+
+
+
 
 
 # Websocket
@@ -216,6 +247,7 @@ class WireConnection(SocketRPC):
 
 
 
+    # TODO add authentication thing here to check for session token
     @tornado.gen.engine
     def on_message(self, message_body):
         response_text = yield tornado.gen.Task(self.run,

@@ -16,3 +16,4 @@ var app = angular.module('InboxApp',
 // Need to do this with hard brackets, since we add stuff to it later
 angular.module('InboxApp.services', []);
 angular.module('InboxApp.controllers', []);
+angular.module('InboxApp.directives', []);
