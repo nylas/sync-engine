@@ -19,6 +19,10 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
     }
 
 
+    // DEBUG
+    localStorageService.clearAll();
+
+
     $rootScope.$on('LocalStorageModule.notification.error', function(e) {
         console.log(e);
     })
@@ -33,6 +37,7 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
 
     $scope.messages = [];
     $scope.activeMessage = undefined;
+
 
 
 

@@ -14,7 +14,6 @@ var app = angular.module('InboxApp.services');
 app.factory('wire', function ($rootScope) {
 
 
-
     /**
      * @var Client.registersRPC : stock all the method/callback of JSON-RPC
      */
