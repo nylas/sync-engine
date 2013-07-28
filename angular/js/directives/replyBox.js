@@ -20,6 +20,7 @@ app.directive("replybox", function() {
                 position: 'absolute',
                 bottom: 0,
                 left: 0,
+                minWidth: 415,
             }
 
             $scope.reply_box_style = {
@@ -139,31 +140,27 @@ app.directive("replybox", function() {
 
 
         template: '<div id="reply_box" ng-style="container_style">' +
-        '<div ng-style="reply_box_style" class="card_with_shadow">' +
+            '<div ng-style="reply_box_style" class="card_with_shadow">' +
 
-        '<div id="drop">' +
-        // '<textarea ng-style="reply_textarea">Placeholder text here</textarea>' +
+            '<div id="drop">' +
 
-        // '<textarea ng-style="textbox_style" ng-transclude  contenteditable="true" hidefocus="true">' +
-        // '</textarea>'+
+            '<div auto-resize class="resize_textbox" ng-style="text_box_style" contenteditable="true" hidefocus="true">' + 'Write a message...</div>' +
 
-        '<div auto-resize class="resize_textbox" ng-style="text_box_style" contenteditable="true" hidefocus="true">' + 'Write a message...</div>' +
+            '<form id="file-upload" style="display:none" method="post" action="/file_upload" enctype="multipart/form-data">' + '<input style="display:none" type="file" name="file" multiple />' + '</form>' +
 
-        '<form id="file-upload" style="display:none" method="post" action="/file_upload" enctype="multipart/form-data">' + '<input style="display:none" type="file" name="file" multiple />' + '</form>' +
+            '<div ng-style="bottom_button_bar" >' +
 
-        '<div ng-style="bottom_button_bar" >' +
+            '<div id="add_file_button" ng-style="add_file_button" hover="#E0E3E3">Add Files</div>' +
 
-        '<div id="add_file_button" ng-style="add_file_button" hover="#E0E3E3">Add Files</div>' +
+            '<div id="add_file_button" ng-style="add_photos_button" hover="#E0E3E3">Add Photos</div>' +
 
-        '<div id="add_file_button" ng-style="add_photos_button" hover="#E0E3E3">Add Photos</div>' +
+            '<div id="add_file_button" ng-style="add_event_button" hover="#E0E3E3">Add Event</div>' +
 
-        '<div id="add_file_button" ng-style="add_event_button" hover="#E0E3E3">Add Event</div>' +
+            '<div id="send_button" ng-style="send_button_style" hover="#E0E3E3">Send</div>' +
 
-        '<div id="send_button" ng-style="send_button_style" hover="#E0E3E3">Send</div>' +
-
-        '</div>' +
-        '</div>' +
-        '</div>' +
+            '</div>' +
+            '</div>' +
+            '</div>' +
         '</div>',
 
         link: function(scope, elem, attrs, ctrl) {

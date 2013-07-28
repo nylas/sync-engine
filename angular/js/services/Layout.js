@@ -29,7 +29,7 @@ app.factory('layout', function() {
 
 			windowSize.rightContentWidth = windowSize.width - $('.leftcol').width();
 
-			windowSize.contentBodyHeight = windowSize.mainHeight - $('.contentHead').outerHeight(true) - $('.contentFoot').outerHeight(true) - 10;
+			windowSize.contentBodyHeight = windowSize.mainHeight - $('.contentHead').outerHeight(true) - $('#reply_box').outerHeight(true);
 
 			windowSize.contentBodyWidth = $('.contentBody').width();
 

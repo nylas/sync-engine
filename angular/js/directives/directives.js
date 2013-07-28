@@ -390,8 +390,12 @@ app.directive('autoResize', function(layout) {
                 element.addClass('animate_change');
                 element.css( 'height' , newHeight);
                 // element.removeClass('animate_change');
-
                 layout.reflow();
+
+                element.on('webkitTransitionEnd', function( event ) {
+                    alert( "Finished transition!");
+                    layout.reflow();
+                }, false );
             };
 
             scope.$on('$destroy', function() {
