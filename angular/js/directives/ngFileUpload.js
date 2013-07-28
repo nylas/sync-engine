@@ -1,24 +1,8 @@
 var app = angular.module('InboxApp.directives');
 
 
-app.directive('ngFileUpload', function($cookies) {
+app.directive('ngFileUpload', function($cookies, $filter) {
   // Helper function that formats the file sizes
-  function formatFileSize(bytes) {
-    if (typeof bytes !== 'number') {
-      return '';
-    }
-
-    if (bytes >= 1000000000) {
-      return (bytes / 1000000000).toFixed(2) + ' GB';
-    }
-
-    if (bytes >= 1000000) {
-      return (bytes / 1000000).toFixed(2) + ' MB';
-    }
-
-    return (bytes / 1000).toFixed(2) + ' KB';
-  }
-
 
 
     var rawSessionCookie = $cookies.session;
@@ -31,7 +15,7 @@ app.directive('ngFileUpload', function($cookies) {
   return {
     restrict: 'A',
     link: function(scope, elem, attr, ctrl) {
-      var dragForm = "<form id='file-upload' method='post' action='" + attr.ngFileUpload + "' enctype='multipart/form-data'> \
+      var dragForm = "<form id='file-upload' method='post' action='/file_upload' enctype='multipart/form-data'> \
         <div id='drop'> \
           Drop Here<br> \
           <a>Browse</a> \
@@ -56,11 +40,6 @@ app.directive('ngFileUpload', function($cookies) {
         dropZone: $('#drop'),
 
 
-        headers: {
-          '_xsrf': rawSessionCookie
-        },
-
-
         // This function is called when a file is added to the queue;
         // either via the browse button, or via drag/drop:
         add: function (e, data) {
@@ -69,7 +48,7 @@ app.directive('ngFileUpload', function($cookies) {
 
           // Append the file name and file size
           tpl.find('p').text(data.files[0].name)
-            .append('<i>' + formatFileSize(data.files[0].size) + '</i>');
+            .append('<i>' + $filter.humanBytes(data.files[0].size) + '</i>');
 
           // Add the HTML to the UL element
           data.context = tpl.appendTo(ul);

@@ -4,9 +4,6 @@
 	<meta charset="utf-8">
 	<title>Inbox</title>
 
-<!-- 	<link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
-	<script src="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/js/bootstrap.min.js"></script>
- -->
  <link href="/static/bootstrap-combined.min.css" rel="stylesheet">
  <script src="/static/bootstrap.min.js"></script>
 
@@ -29,145 +26,116 @@
 		};
 		var h=document.getElementsByTagName("html")[0];h.className+=" wf-loading";var t=setTimeout(function(){h.className=h.className.replace(/(\s|^)wf-loading(\s|$)/g," ");h.className+=" wf-inactive"},config.scriptTimeout);var tk=document.createElement("script"),d=false;tk.src='//use.typekit.net/'+config.kitId+'.js';tk.type="text/javascript";tk.async="true";tk.onload=tk.onreadystatechange=function(){var a=this.readyState;if(d||a&&a!="complete"&&a!="loaded")return;d=true;clearTimeout(t);try{Typekit.load(config)}catch(b){}};var s=document.getElementsByTagName("script")[0];s.parentNode.insertBefore(tk,s)
 	})();
-
 </script>
+<!-- TOFIX DEBUG. This is evil, but will be removed in production -->
+<style type="text/css">
+#typekit-badge-akk8gpo {display:none !important;}
+.typekit-badge {display:none !important;}
+</style>
 
 </head>
+<body>
 
-<<!-- body ondragstart="return false" draggable="false"
-    ondragenter="event.dataTransfer.dropEffect='none'; event.stopPropagation(); event.preventDefault();"  
-    ondragover="event.dataTransfer.dropEffect='none';event.stopPropagation(); event.preventDefault();"  
-    ondrop="event.dataTransfer.dropEffect='none';event.stopPropagation(); event.preventDefault();"
->
- -->
+<div id="wrapper" ngCloak data-ng-controller="AppContainerController">
 
- <body>
+<!--  <div id="header">&nbsp;</div>  -->
+<div id="main">
+    <div class="leftcol card_with_shadow">
 
+    	<div class="leftHeader">
+			<div class="searchbutton clickable"></div>
+			<div class="composebutton clickable"></div>
+			<div class="inboxlabel">Inbox</div>
+	<!-- 		<div class="searchbox">
+				<form class="form-search">
+				<input type="text" class="input-xlarge  mysearchbox" placeholder="Search Inbox..." >
+				</form>
+			</div>
+-->
+    	</div>
 
+        <div class="messagelist">
+			<itemcell data-ng-repeat="m in messages | orderBy:'-date'" message="m" data-ng-click="openMessage(m)"></itemcell>
+        </div>
 
-<div class="top_header" ng-controller="CookieController">
-	Cookie value: {{cookieValue}}
-</div>
+        <div class="leftFooter">
+			<div class="gearbutton clickable"></div>
+			<div class="footerstatus" ng-bind="statustext" ng-cloak></div>
+        </div>
 
-
-<div class="layout" ngCloak data-ng-controller="AppContainerController">
-
-<div class="sidebar card_with_shadow" ui-keypress="{enter: 'foo()'}">
-
-	<div class="header">
-
-
-		<div class="searchbutton clickable"></div>
-		<div class="composebutton clickable"></div>
-		<div class="inboxlabel">Inbox</div>
-
-
-<!-- 		<div class="searchbox">
-			<form class="form-search">
-			<input type="text" class="input-xlarge  mysearchbox" placeholder="Search Inbox..." >
-			</form>
-		</div>
- -->	</div>
+    </div>
 
 
-	<div class="list">
-		<itemcell data-ng-repeat="m in messages | orderBy:'-date'" message="m" data-ng-click="openMessage(m)"></itemcell>
-	</div>
 
+    <div id="rightcol">
+        <div class="content">
 
-	<div class="footer">
-		<div class="gearbutton clickable"></div>
-		<div class="footerstatus" ng-bind="statustext" ng-cloak></div>
-
-	</div>
-
-</div>
-
-    <div class="main">
-
-            <div class="email-content" >
-        
-                <div class="email-content-header	">
-
-                    <div class="email-content-title">
-	                    <span ng-bind="activeMessage.subject"></span>
+            <div class="contentHead">
+					<div class="email-content-title">
+		                <span ng-bind="activeMessage.subject"></span>
 		                <span class="email-content-subtitle" ng-show="activeMessage != null">Sent to {{activeMessage.contactDisplayList}}</span>
-                    </div>
+		            </div>
+            </div>
 
-
-                <div class="email-content-action">
-                	<a class="button_popout" href="#"><img src="/static/popout-arrow.png"/></a>
-                </div>
-
-	            <div class="clear"></div>
-
-	            </div>
-
-                <div class="email-message-container">
+            <div class="contentBody">
+		        <div class="email-message-container">
 					<messageview message="activeMessage"></messageview>
-                 </div>
+		         </div>
+            </div>
 
-                 <replybox>
+            <div class="contentFoot">
 
-                <div ng-file-upload="/file_upload" 
-            	data-complete='uploadComplete()'
-   					 data-error="uploadError()"></div>
-
-
-
-
-                 	Reply text here&hellip;</replybox>
-
- 					
-				</div>
-
+		         <replybox>
+		         	Reply text here&hellip;
+		         </replybox>
+            </div>
 
 
         </div>
-
+    </div>
+</div>
 </div>
 
 
 
-
-	<!-- In production use:
-	<script src="//ajax.googleapis.com/ajax/libs/angularjs/1.0.6/angular.min.js"></script>
-	-->
-
-
-	<!-- JavaScript Includes -->
-	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-	<script src="lib/jquery-utils/jquery.knob.js"></script>
-
-	<!-- jQuery File Upload Dependencies -->
-	<script src="lib/jquery-utils/jquery.ui.widget.js"></script>
-	<script src="lib/jquery-utils/jquery.iframe-transport.js"></script>
-	<script src="lib/jquery-utils/jquery.fileupload.js"></script>
+<!-- In production use:
+<script src="//ajax.googleapis.com/ajax/libs/angularjs/1.0.6/angular.min.js"></script>
+-->
 
 
-	<script src="lib/angular/angular.js"></script>
-	<script src="lib/angular/angular-sanitize.js"></script>
-	<script src="lib/angular/angular-cookies.js"></script>
-	<script src="lib/angular-modules/localStorageModule.js"></script>
-	
-	<script src="lib/mousetrap.min.js"></script>
-		
-	<script src="lib/bootstrap/ui-bootstrap-0.3.0.js"></script>
-	<script src="lib/utils/md5.js"></script>
-	<script src="lib/socketio/socket.io.js"></script>
-	<script src="js/app.js"></script>
-	<script src="js/models.js"></script>
+<!-- JavaScript Includes -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 
-	<script src="js/services/Wire.js"></script>
-	<script src="js/services/Growl.js"></script>
+<!-- jQuery File Upload Dependencies -->
+<script src="lib/jquery-utils/jquery.ui.widget.js"></script>
+<script src="lib/jquery-utils/jquery.iframe-transport.js"></script>
+<script src="lib/jquery-utils/jquery.fileupload.js"></script>
 
-	<script src="js/controllers/AppContainerController.js"></script>
-	<script src="js/controllers/CookieController.js"></script>
 
-	<script src="js/filters.js"></script>
-	<script src="js/directives/directives.js"></script>
-	<script src="js/directives/ngFileUpload.js"></script>
+<script src="lib/angular/angular.js"></script>
+<script src="lib/angular/angular-sanitize.js"></script>
+<script src="lib/angular/angular-cookies.js"></script>
+<script src="lib/angular-modules/localStorageModule.js"></script>
+
+<script src="lib/mousetrap.min.js"></script>
+
+<script src="lib/bootstrap/ui-bootstrap-0.3.0.js"></script>
+<script src="lib/utils/md5.js"></script>
+<script src="lib/socketio/socket.io.js"></script>
+<script src="js/app.js"></script>
+<script src="js/models.js"></script>
+
+<script src="js/services/Wire.js"></script>
+<script src="js/services/Growl.js"></script>
+
+<script src="js/controllers/AppContainerController.js"></script>
+<script src="js/controllers/CookieController.js"></script>
+
+<script src="js/filters.js"></script>
+<script src="js/directives/directives.js"></script>
+<script src="js/directives/replyBox.js"></script>
+
+<script src="js/services/Layout.js"></script>
 
 </body>
 </html>
-

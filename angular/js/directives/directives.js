@@ -6,16 +6,6 @@ var app = angular.module('InboxApp.directives');
 
 
 
-app.directive("clickable", function () {
-    return function (scope, element, attrs) {
-        element.bind("onclick", function () {
-            window.location.href = "/thread?thread_id=" + scope.message.thread_id;
-        })
-    }
-})
-
-
-
 app.directive("messageview", function ($filter) {
     return {
         restrict: 'E',
@@ -58,7 +48,7 @@ app.directive("messageview", function ($filter) {
             };
 
             $scope.message_bubble_container = {
-                padding: '1.45em',
+                padding: '15px',
                 borderRadius: 'inherit',
                 fontFamily: '"Proxima Nova", courier, sans-serif',
                 fontSize: '16px',
@@ -108,16 +98,16 @@ app.directive("messageview", function ($filter) {
         },
 
         // add back green_glow class sometime
-        template: '<div ng-style="message_bubble" class="card_with_shadow">' + 
-                  '<div ng-style="message_bubble_container">' + 
-                  '<div ng-style="byline">' + 
-                  '<img ng-style="byline_gravatar" ng-src="{{ message.gravatar_url }}" alt="{{ message.from_contacts[0] }}">' + 
-                  '<div ng-style="byline_fromline" tooltip-placement="top" tooltip="{{message.from_contacts[2]}}@{{message.from_contacts[3]}}">{{message.from_contacts[0]}}</div>' + 
-                  '<div ng-style="byline_date">{{ message.date | relativedate }}</div>' + 
-                  '</div>' + 
-                  '<attachmentlist attachments="message.attachments" message="message"></attachmentlist>' + 
-                  '<messageframe content="message.body_text"></messageframe>' + 
-                  '</div>' + 
+        template: '<div ng-style="message_bubble" class="card_with_shadow">' +
+                  '<div ng-style="message_bubble_container">' +
+                  '<div ng-style="byline">' +
+                  '<img ng-style="byline_gravatar" ng-src="{{ message.gravatar_url }}" alt="{{ message.from_contacts[0] }}">' +
+                  '<div ng-style="byline_fromline" tooltip-placement="top" tooltip="{{message.from_contacts[2]}}@{{message.from_contacts[3]}}">{{message.from_contacts[0]}}</div>' +
+                  '<div ng-style="byline_date">{{ message.date | relativedate }}</div>' +
+                  '</div>' +
+                  '<attachmentlist attachments="message.attachments" message="message"></attachmentlist>' +
+                  '<messageframe content="message.body_text"></messageframe>' +
+                  '</div>' +
                   '</div>',
 
     };
@@ -191,14 +181,14 @@ app.directive("itemcell", function ($filter) {
 
         },
 
-        template: '<div hover="#edf5fd" ng-style="email_item" data-ng-click="eventHandler()">' + 
-                  '<img  class="email-avatar" ng-src="{{ message.gravatar_url }}"' + 
-                  'alt="{{ message.from_contacts[0] }}">' + 
-                  '<div ng-style="email_subject">{{message.subject}}</div>' + 
-                  '<div ng-style="email_desc">' + 
-                  '<em>Date</em>: {{message.date | date:"medium" }} <br/>' + 
-                  '<em>From</em>: {{message.from_contacts[0]}}' + 
-                  '</div>' + 
+        template: '<div ng-style="email_item" hover="#edf5fd" data-ng-click="eventHandler()">' +
+                  '<img  class="email-avatar" ng-src="{{ message.gravatar_url }}"' +
+                  'alt="{{ message.from_contacts[0] }}">' +
+                  '<div ng-style="email_subject">{{message.subject}}</div>' +
+                  '<div ng-style="email_desc">' +
+                  '<em>Date</em>: {{message.date | date:"medium" }} <br/>' +
+                  '<em>From</em>: {{message.from_contacts[0]}}' +
+                  '</div>' +
                   '</div>',
     }
 });
@@ -206,13 +196,16 @@ app.directive("itemcell", function ($filter) {
 
 app.directive("hover", function () {
     return {
-
+        restrict: 'A',
         link: function (scope, element, attrs) {
+
+            var initial_color;
             element.bind("mouseenter", function () {
+                initial_color = element.css('background-color');
                 element.css('background-color', attrs.hover);
             });
             element.bind("mouseleave", function () {
-                element.css('background-color', '');
+                element.css('background-color', initial_color);
             });
         }
 
@@ -231,11 +224,11 @@ app.directive("attachmentlist", function ($filter) {
             message: '=',
             attachments: '='
         },
-        template: '<div ng-show="message.attachments.length > 0">' + 
-                  'Attached: <span ng-repeat="a in attachments">' + 
-                  '<a ng:href="/file_download?uid={{message.uid}}&section_index={{a.index}}&content_type={{a.content_type}}&encoding={{a.encoding}}&filename={{a.filename}}">' + 
-                  '{{a.filename}}' + 
-                  '</a>{{$last && " " || ", " }}</span>' + 
+        template: '<div ng-show="message.attachments.length > 0">' +
+                  'Attached: <span ng-repeat="a in attachments">' +
+                  '<a ng:href="/file_download?uid={{message.uid}}&section_index={{a.index}}&content_type={{a.content_type}}&encoding={{a.encoding}}&filename={{a.filename}}">' +
+                  '{{a.filename}}' +
+                  '</a>{{$last && " " || ", " }}</span>' +
                   '</div>'
     };
 });
@@ -258,6 +251,7 @@ app.directive("messageframe", function () {
             var iframe = iElement.find('iframe')[0];
 
 
+
             function injectToIframe(textToInject) {
                 var doc = iframe.contentWindow.document;
 
@@ -268,7 +262,7 @@ app.directive("messageframe", function () {
 
                 // TODO move the CSS here into an object and create the <html><head>
                 // etc using jqlite elements.
-                // in the future we'll also wnat to inject javascript, so this 
+                // in the future we'll also wnat to inject javascript, so this
                 // becomes even more important
 
                 // var ngStyleDirective = ngDirective(function(scope, element, attr) {
@@ -313,23 +307,31 @@ app.directive("messageframe", function () {
             scope.$watch('content', function (val) {
                 // Reset the iFrame anytime the current message changes...
                 injectToIframe('');
-            })
+            });
+
+
+
+            var resizeHeight = function() {
+                var newheight = iframe.contentWindow.document.body.scrollHeight;
+                var newwidth = iframe.contentWindow.document.body.scrollWidth;
+                iframe.height = (newheight) + "px";
+                iframe.width = '100%';
+            };
+
 
             scope.$watch('content', function (val) {
                 if (angular.isUndefined(val)) {
                     injectToIframe('Loading&hellip;');
                 } else {
+
+                    setInterval(resizeHeight, 150);  // TOFIX TODO DEBUG this is a terrible hack.
                     injectToIframe(scope.content);
                 }
             });
 
 
-
             iframe.onload = function () {
-                var newheight = iframe.contentWindow.document.body.scrollHeight;
-                var newwidth = iframe.contentWindow.document.body.scrollWidth;
-                iframe.height = (newheight) + "px";
-                iframe.width = '100%';
+                // STOP THE RESIZING HERE
             };
 
 
@@ -342,63 +344,65 @@ app.directive("messageframe", function () {
 
 
 
-app.directive("replybox", function () {
+app.directive('autoResize', function(layout) {
     return {
+        restrict: 'A',
+        link: function( scope , element , attributes ) {
+            var threshold    = 15,
+                minHeight    = element[0].offsetHeight;
 
-        restrict: 'E',
-        transclude: true,
-        scope: {},
-        controller: function ($scope, $element, $attrs, $transclude) {
+            var $shadow = angular.element('<div></div>').css({
+                position:   'absolute',
+                top:        -10000,
+                left:       -10000,
+                width:      element[0].width,
+                fontSize:   element.css('fontSize'),
+                fontFamily: element.css('fontFamily'),
+                lineHeight: element.css('lineHeight'),
+                resize:     'none'
+            });
 
-            $scope.reply_box_style = {
-                fontSize: '15px',
-                fontVariant: 'normal',
-                fontFamily: '"Proxima Nova", sans-serif',
-                fontStyle: 'normal',
-                fontWeight: 300,
-                lineHeight: '21px',
-                textAlign: 'left',
+            angular.element( document.body ).append( $shadow );
 
-                color: '#333',
-                textShadow: '1px 1px 1px white',
-                outline: '0 solid transparent',
+            var update = function() {
+                var times = function(string, number) {
+                    for (var i = 0, r = ''; i < number; i++) {
+                        r += string;
+                    }
+                    return r;
+                };
 
+                var val = element.html();
+                // var val = element.html().replace(/</g, '&lt;') // used to be .val when doing textarea
+                //     .replace(/>/g, '&gt;')
+                //     .replace(/&/g, '&amp;')
+                //     .replace(/\n$/, '<br/>&nbsp;')
+                //     .replace(/\n/g, '<br/>')
+                //     .replace(/\s{2,}/g, function( space ) {
+                //         return times('&nbsp;', space.length - 1) + ' ';
+                //     });
+                $shadow.html( val );
 
-                position: 'fixed',
-                bottom: '0',
-                overflow: 'auto',
-
-                display: 'block',
-
-                padding: '10px',
-                marginBottom: '5px',
-                marginTop: '5px',
-                marginLeft: '15px',
-                marginRight: '15px',
-
-                width: '650px',
-                minWidth: '650px',
-                height: '64px',
-                minHeight: '64px',
+                var newHeight = Math.max( $shadow[0].offsetHeight + threshold , minHeight );
+                // var newHeight = Math.max( $shadow[0].offsetHeight + threshold )
 
 
-                // Enable selection
-                '-moz-user-select': 'text',
-                '-khtml-user-select': 'text',
-                '-webkit-user-select': 'text',
-                '-ms-user-select': 'text',
-                'user-select': 'text',
-                cursor: 'text'
+                element.addClass('animate_change');
+                element.css( 'height' , newHeight);
+                // element.removeClass('animate_change');
+
+                layout.reflow();
             };
 
-        },
-        template: '<div ng-transclude ng-style="reply_box_style" class="card_with_shadow" contenteditable="true" hidefocus="true"></div>',
+            scope.$on('$destroy', function() {
+                $shadow.remove();
+            });
 
-        link: function (scope, iElement, iAttrs) {
-
-            // Do something when clicking into the box.
-
-        } // end link
-
+            element.bind( 'keyup keydown keypress change' , update );
+            update();
+        }
     };
 });
+
+
+

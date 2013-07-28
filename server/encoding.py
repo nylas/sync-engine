@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 import re
 import cgi
 import bleach
+import logging as log
 
 
 def make_unicode(txt, default_encoding="ascii"):

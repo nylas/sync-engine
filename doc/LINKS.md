@@ -34,7 +34,7 @@ https://github.com/martine/go-imap
 # about Angular.js
 
 - [Building larger apps with Angular](http://briantford.com/blog/huuuuuge-angular-apps.html)
-
+- [d3 angular directives](http://www.fullscale.co/dangle/)
 - [Angular JS learnings](https://github.com/jmcunningham/AngularJS-Learning)
 - [AngularjS videos on YouTube](https://www.youtube.com/playlist?list=PLP6DbQBkn9ymGQh2qpk9ImLHdSH5T7yw7)
 - [Angular UI](http://angular-ui.github.io/)

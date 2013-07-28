@@ -9,14 +9,14 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
     $scope.notificationButtonClick = function() {
         growl.requestPermission(
             function success() {
-                    console.log("Enabled notifications");
-                    growl.post("Updates from Disconnect", "MG: Lorem ipsum dolor sit amet, consectetur adipisicing");
+                console.log("Enabled notifications");
+                growl.post("Updates from Disconnect", "MG: Lorem ipsum dolor sit amet, consectetur adipisicing");
 
             }, function failure() {
-                    console.log("Failure Enabling notifications");
+                console.log("Failure Enabling notifications");
             }
         );
-    }
+    };
 
 
     // DEBUG
@@ -26,7 +26,6 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
     $rootScope.$on('LocalStorageModule.notification.error', function(e) {
         console.log(e);
     })
-
 
 
     Mousetrap.bind('command+shift+k', function(e) {
@@ -39,13 +38,13 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
     $scope.activeMessage = undefined;
 
 
+    $scope.loadMessagesForFolder = function(folder) {
 
+        $scope.statustext = "Loading messages...";
 
-    $scope.loadMessagesForFolder = function (folder) {
-
-    $scope.statustext = "Loading messages...";
-
-        wire.rpc('load_messages_for_folder', {folder_name: folder} ,
+        wire.rpc('load_messages_for_folder', {
+                folder_name: folder
+            },
             function(data) {
 
                 $scope.statustext = "";
@@ -57,16 +56,13 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
                 }
                 $scope.messages = freshMessages;
 
-              }
-        ); 
+            }
+        );
 
     };
 
 
-
-
-
-  $scope.openMessage = function(selectedMessage) {
+    $scope.openMessage = function(selectedMessage) {
 
         $scope.activeMessage = selectedMessage;
         var partToUse = undefined;
@@ -84,35 +80,32 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
         }
 
 
-      // Read that value back
-      var value = localStorageService.get(selectedMessage.uid);
+        // Read that value back
+        var value = localStorageService.get(selectedMessage.uid);
 
-      if (value === null) {
+        if (value === null) {
 
-        $scope.activeMessage.body_text = 'Loading&hellip;';
+            $scope.activeMessage.body_text = 'Loading&hellip;';
 
-        wire.rpc('load_message_body_with_uid', 
-            {             uid: selectedMessage.uid,
-                section_index: partToUse.index,
-                     encoding: partToUse.encoding,
-                 content_type: partToUse.content_type.toLowerCase(),
-            },
-            function(data) {
-                localStorageService.set(selectedMessage.uid, data);
-                $scope.activeMessage.body_text = data;
-              }
-        );         
+            wire.rpc('load_message_body_with_uid', {
+                    uid: selectedMessage.uid,
+                    section_index: partToUse.index,
+                    encoding: partToUse.encoding,
+                    content_type: partToUse.content_type.toLowerCase(),
+                },
+                function(data) {
+                    localStorageService.set(selectedMessage.uid, data);
+                    $scope.activeMessage.body_text = data;
+                }
+            );
 
-      } else {
-        console.log("Message was cached in localstorage.")
-        $scope.activeMessage.body_text = value;
-      }
+        } else {
+            console.log("Message was cached in localstorage.")
+            $scope.activeMessage.body_text = value;
+        }
 
-     
 
     }
-
-
 
 
     wire.on('new_mail_notification', function(data) {
@@ -120,7 +113,6 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
         growl.post("New Message!", "Michael: Lorem ipsum dolor sit amet, consectetur adipisicing");
     });
 
-  
 
     $scope.doubleClickedMessage = function(clickedMessage) {
         console.log('Double clicked message:');
@@ -128,12 +120,9 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
     }
 
 
+    // Loaded. Load the messages.
 
-
-
-// Loaded. Load the messages.
-
-$scope.loadMessagesForFolder('Inbox');
+    $scope.loadMessagesForFolder('Inbox');
 
 });
 
@@ -141,11 +130,3 @@ $scope.loadMessagesForFolder('Inbox');
 /* TODO move these declarations so they don't pollute the global namespace
 http://stackoverflow.com/questions/14184656/angularjs-different-ways-to-create-controllers-and-services-why?rq=1
 */
-
-
-
-
-
-
-
-

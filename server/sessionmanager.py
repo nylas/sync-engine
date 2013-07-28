@@ -79,6 +79,7 @@ def get_access_token(email_address, callback=None):
             access_token_dict['access_token'])        
 
 
+
     # TODO refresh tokens based on date instead of checking?
     # if not is_valid or expire_date > datetime.datetime.utcnow():
     if not is_valid:
@@ -88,6 +89,18 @@ def get_access_token(email_address, callback=None):
         refresh_token = access_token_dict['refresh_token']
 
         response = yield tornado.gen.Task(google_oauth.get_new_token, refresh_token)        
+
+        # TODO handling errors here for when oauth has been revoked
+        if 'error' in response:
+            if access_token_dict['error'] == 'invalid_grant':
+                # Means we need to reset the entire oauth process.
+                log.error("Refresh token is invalid.")
+            if callback is None:
+                yield None
+                return
+            callback(None)
+            return
+
 
         # TODO Verify it and make sure it's valid. 
         assert 'access_token' in access_token_dict

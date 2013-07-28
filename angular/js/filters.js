@@ -18,6 +18,20 @@ angular.module('InboxApp.filters', []).
     return text.replace(/\n/g, '<br/>');
   }
   }]).
+  filter('humanBytes', [function() {
+    return function(bytes){
+    if (typeof bytes !== 'number') {
+      return '';
+    }
+    if (bytes >= 1000000000) {
+      return (bytes / 1000000000).toFixed(2) + ' GB';
+    }
+    if (bytes >= 1000000) {
+      return (bytes / 1000000).toFixed(2) + ' MB';
+    }
+    return (bytes / 1000).toFixed(2) + ' KB';
+  }
+  }]).
   filter('relativedate', [function() {
     return function(dateToFilter) {
     if (angular.isUndefined(dateToFilter)) { return undefined; };
@@ -28,10 +42,10 @@ angular.module('InboxApp.filters', []).
     // http://ejohn.org/blog/javascript-pretty-date/
     var  diff = (((new Date()).getTime() - dateToFilter.getTime()) / 1000);
     var day_diff = Math.floor(diff / 86400);
-        
+
     if ( isNaN(day_diff) || day_diff < 0 || day_diff >= 31 )
       return;
-        
+
     return day_diff == 0 && (
         diff < 60 && "just now" ||
         diff < 120 && "1 minute ago" ||
