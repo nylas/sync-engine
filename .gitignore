@@ -1,16 +1,17 @@
+# Project-specific
+/database
+/uploads
+
 .DS_Store
 *.py[cod]
-
-# Mongo
-db
-
-# C extensions
-*.so
 
 # virtualenv
 activate/
 deactivate
 .Python
+local
+include
+share
 
 # Packages
 *.egg
@@ -43,8 +44,3 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
-
-# virtualenv
-local
-include
-share

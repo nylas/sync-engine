@@ -13,7 +13,7 @@ import logging as log
 DEFAULT_PORT = 8888
 
 PATH_TO_MONGO_DATABSE = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), "db/mongo/")
+            os.path.dirname(os.path.realpath(__file__)), "database/mongo/")
 
 
 # Trying to get this to work
@@ -39,18 +39,18 @@ def start(args=None):
         port = DEFAULT_PORT
     else:
         port = args.port
-    
+
 
     commit = subprocess.check_output(["git", "describe", "--tags"])
 
 
     print """
 \033[94m     Welcome to... \033[0m\033[1;95m
-      _____       _               
-     |_   _|     | |              
+      _____       _
+     |_   _|     | |
        | |  _ __ | |__   _____  __
        | | | '_ \| '_ \ / _ \ \/ /
-      _| |_| | | | |_) | (_) >  < 
+      _| |_| | | | |_) | (_) >  <
      |_____|_| |_|_.__/ \___/_/\_\\  \033[0m
 
      """ + commit + """
@@ -83,7 +83,7 @@ def start(args=None):
 
 
 
-    # Start Tornado 
+    # Start Tornado
     from server.app import startserver
     try:
         startserver(port)
@@ -117,7 +117,7 @@ def signal_handler(signal, frame):
     stop(None)
 
 def main():
-    
+
   signal.signal(signal.SIGINT, signal_handler)
 
   parser = argparse.ArgumentParser(description="Inbox App")
@@ -132,10 +132,10 @@ def main():
 
   parser_stop = subparsers.add_parser('stop')
   parser_stop.set_defaults(func=stop)
-  
+
   args = parser.parse_args()
   args.func(args)
-    
+
 
 if __name__=="__main__":
     main()
