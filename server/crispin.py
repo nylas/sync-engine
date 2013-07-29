@@ -6,28 +6,16 @@ from imapclient import IMAPClient
 import sys
 sys.path.insert(0, "..")
 
-from email.Parser import Parser
-from email import message_from_string
-from email.Iterators import typed_subpart_iterator
 import datetime
 import logging as log
 import tornado
 
 import encoding
-
 from models import IBMessage, IBThread, IBMessagePart
 
 
-USE_SSL = True
-
-# BASE_GMAIL_IMAP_URL = 'https://mail.google.com/mail/b/' + ACCOUNT + '/imap/'
-# BASE_GMAIL_SMTP_UTL = 'https://mail.google.com/mail/b/' + ACCOUNT + '/smtp/'
-
 IMAP_HOST = 'imap.gmail.com'
 SMTP_HOST = 'smtp.gmail.com'
-
-
-
 
 
 class AuthFailure(Exception): pass
@@ -87,7 +75,7 @@ class CrispinClient:
 
         try:
             self.imap_server = IMAPClient(IMAP_HOST, use_uid=True,
-                    ssl=USE_SSL)
+                    ssl=True)
             # self.imap_server.debug = 4  # todo
             log.info("Logging in: %s" % self.email_address)
             self.imap_server.oauth2_login(self.email_address, self.oauth_token)
@@ -104,35 +92,14 @@ class CrispinClient:
             self.imap_server = None
             return False
 
-
         log.info('Connection successful.')
         return True
 
 
     def stop(self):
-        log.info("Stopping crispin")
+        log.info("Closing connection.")
         if (self.imap_server):
-            loop = tornado.ioloop.IOLoop.instance()
-            # For autoreload
-            try:
-                loop.add_callback(self.imap_server.logout)
-            except Exception, e:
-                self.imap_server.logout()
-
-
-    @connected
-    def list_folders(self):
-        try:
-            resp = self.imap_server.xlist_folders()
-        except Exception, e:
-            raise e
-        return [dict(flags = f[0], delimiter = f[1], name = f[2]) for f in resp]
-
-    def all_mail_folder_name(self):
-        folders = self.list_folders()
-        for f in folders:
-            if u'\\AllMail' in f['flags']:
-                return f['name']
+            self.imap_server.logout()
 
 
     @connected
@@ -140,99 +107,34 @@ class CrispinClient:
         try:
             select_info = self.imap_server.select_folder(folder, readonly=True)
         except Exception, e:
-            log.error("<select_folder> %s" % e)
             raise e
-
-        # TODO make sure UIDVALIDITY is the same value here.
-        # If it's not, we can no longer use old UIDs.
         log.info('Selected folder %s with %d messages.' % (folder, select_info['EXISTS']) )
         return select_info
 
 
     @connected
-    def fetch_all_udids(self):
-        UIDs = self.imap_server.search(['NOT DELETED'])
-        return UIDs
+    def msgids_for_thrids(self, thread_ids):
+        self.select_allmail_folder()
+        # The boolean IMAP queries use reverse polish notation for
+        # the query parameters. imaplib automatically adds parenthesis
+        criteria = 'X-GM-THRID %i' % thread_ids[0]
+        if len(thread_ids) > 1:
+            for t in thread_ids[1:]:
+                criteria = 'OR ' + criteria + ' X-GM-THRID %i' % t
+        return self.imap_server.search(criteria)
 
-
-    @connected
-    def fetch_thread(self, thread_id):
-        threads_msg_ids = self.imap_server.search('X-GM-THRID %s' % str(thread_id))
-        return threads_msg_ids
-
-
-    @connected
-    def fetch_messages_for_thread(self, thread_id):
-        """ Returns list of IBMessage objects corresponding to thread_id """
-        threads_msg_ids = self.imap_server.search('X-GM-THRID %s' % str(thread_id))
-        log.info("Msg ids for thread: %s" % threads_msg_ids)
-
-        folder_name = self.all_mail_folder_name()
-        UIDs = threads_msg_ids
-        msgs = self.fetch_headers_for_uids(folder_name, UIDs)
-
-        return msgs
 
 
     @connected
     def fetch_messages(self, folder_name):
-
-        # Get messages in requested folder
         select_info = self.select_folder(folder_name)
-        UIDs = self.fetch_all_udids()
+        log.info(select_info)
 
-        msgs = self.fetch_headers_for_uids(folder_name, UIDs)
-
-        return msgs
-
-
-
-        # TODO Add expand the threads
-
-        # thread_ids = list(set([m.thread_id for m in msgs]))
-        # log.info("For %i messages, found %i threads total." % (len(msgs), len(thread_ids)))
-
-
-        # # Below is where we expand the threads and fetch the rest of them
-        # self.select_allmail_folder() # going to fetch all messages in threads
-        # all_msg_uids = self.msgids_for_thrids(thread_ids)
-
-        # log.info("Expanded to %i messages for %i thread IDs." % (len(all_msg_uids), len(thread_ids)))
-
-        # all_msgs = self.fetch_headers_for_uids(self.all_mail_folder_name(), all_msg_uids)
-
-        # return all_msgs
-
-        # threads = {}
-        # # Group by thread id
-        # for m in all_msgs:
-        #     if m.thread_id not in threads.keys():
-        #         new_thread = IBThread()
-        #         new_thread.thread_id = m.thread_id
-        #         threads[m.thread_id] = new_thread
-        #     t = threads[m.thread_id]
-        #     t.message_ids.append(m.message_id)
-        # all_threads = threads.values()
-
-        # log.info("Returning %i threads with total of %i messages." % (len(all_threads), len(all_msgs)))
-
-        # return all_threads
-
-
-
-    @connected
-    def fetch_headers_for_uids(self, folder_name, UIDs):
-        if isinstance(UIDs, int ):
-            UIDs = [str(UIDs)]
-        elif isinstance(UIDs, basestring):
-            UIDs = [UIDs]
-
-
+        # TODO check and save UID validity
+        UIDs = self.imap_server.search(['NOT DELETED'])
         UIDs = [str(s) for s in UIDs]
 
         new_messages = []
-
-        select_info = self.select_folder(folder_name)
 
         query = 'ENVELOPE BODY INTERNALDATE'
 
@@ -242,29 +144,9 @@ class CrispinClient:
 
 
         for message_uid, message_dict in messages.iteritems():
-
-            # unparsed_headers = message_dict[query_key]
-            # email_msg_object = message_from_string(unparsed_headers)
-            # new_msg = IBMessage(email_msg_object)
-
             new_msg = IBMessage()
 
-
-            # ENVELOPE on
-            # A parsed representation of the [RFC-2822] header of the message.
-            msg_envelope = message_dict['ENVELOPE']
-
-            # ('Tue, 21 May 2013 08:41:20 -0700',
-            #  '[SALT] De-extinction TONIGHT Tues. May 21',
-            #  (('Stewart Brand', None, 'sb', 'longnow.org'),),
-            #  ((None, None, 'salt-bounces', 'list.longnow.org'),),
-            #  ((None, None, 'services', 'longnow.org'),),
-            #  (('SALT list', None, 'salt', 'list.longnow.org'),),
-            #  None,
-            #  None,
-            #  None,
-            #  '<89ACAE66-4C10-4BBF-9B24-AC18A0FB2440@longnow.org>')
-
+            msg_envelope = message_dict['ENVELOPE'] # ENVELOPE is parsed RFC-2822 headers
 
             def make_unicode_contacts(contact_list):
                 n = []
@@ -275,24 +157,14 @@ class CrispinClient:
                     n.append(new_c)
                 return n
 
-            # msg_envelope[0] # date
-
+            # msg_envelope[0] # we use INTERNALDATE instead of this
 
             subject = encoding.make_unicode(msg_envelope[1])
             # Headers will wrap when longer than 78 lines per RFC822_2
             subject = subject.replace('\n\t', '').replace('\r\n', '')
             new_msg.subject = subject
 
-
             new_msg.from_contacts = make_unicode_contacts(msg_envelope[2])
-            # Errors-To: salt-bounces@list.longnow.org
-            # Sender: salt-bounces@list.longnow.org
-
-            # Reply-To: services@longnow.org
-            # new_msg.reply_to = msg_envelope[4]
-
-            # TO, CC, BCC
-
 
             all_recipients = []
             if msg_envelope[5]: all_recipients += msg_envelope[5]  # TO
@@ -300,73 +172,35 @@ class CrispinClient:
             if msg_envelope[7]: all_recipients += msg_envelope[7]  # BCC
             new_msg.to_contacts = make_unicode_contacts(all_recipients)
 
-
-            # Return-Path is somewhere between 2-4: ??? <z.daniel.shi@gmail.com>
-
-            # TO: = msg_evelope[5]
-            # CC = msg_envelope[6]
-            # BCC: = msg_envelope[7]
-            # In-Reply-To: = msg_envelope[8]
-            # Message-ID = msg_envelope[9]
-
-
-
-            # This date seems to work since I'm in SF.
-            new_msg.date = message_dict['INTERNALDATE']
-
-
-            # Here's the previous code from when I was parsing rfc822 headers...
-            # Gmail's timezone is usually UTC-07:00
-            # http://stackoverflow.com/questions/11218727/what-timezone-does-gmail-use-for-internal-imap-mailstore
-
-            # date_tuple_with_tz = email_utils.parsedate_tz(email_message_object["Date"])
-            # utc_timestamp = email_utils.mktime_tz(date_tuple_with_tz)
-            # time_epoch = time.mktime( date_tuple_with_tz[:9] )
-            # self.date = datetime.datetime.fromtimestamp(utc_timestamp)
-
-
+            new_msg.date = message_dict['INTERNALDATE']  # TOFIX for PST only?
             new_msg.thread_id = message_dict['X-GM-THRID']
             new_msg.message_id = message_dict['X-GM-MSGID']
             new_msg.labels = message_dict['X-GM-LABELS']
+            new_msg.uid = str(message_uid)  # specific to folder
 
-            # This is stupid because it's specific to the folder where we found it.
-            new_msg.uid = str(message_uid)
+            bodystructure = message_dict['BODY']
 
-
-            # BODYSTRUCTURE parsing
+            # Parse Bodystructure
+            # """ This parses the response from bodystructure
+            #     and returns a tuple with messageparts, attachmentparts, signatureparts """
 
             all_messageparts = []
             all_attachmentparts = []
             all_signatures = []
 
-            bodystructure = message_dict['BODY']
-
 
             if not bodystructure.is_multipart:
-                all_messageparts.append(IBMessagePart(bodystructure, '1'))
+                part = create_messagepart(bodystructure)
+                all_messageparts.append(part)
 
             else:
 
-
-
-            # This recursively walks objects returned in bodystructure
+                # Recursively walk mime objects
                 def make_obj(p, i):
                     if not isinstance(p[0], basestring):
-                        # if isinstance(p[-1], basestring):
-                        #     print 'Relation: %s' % p[-1]
-                        # else:
-                        #     print 'No relation var?', p[-1]
-
-
-                        if isinstance(p[-1], basestring):  # p[-1] is the mime relationship
-
+                        if isinstance(p[-1], basestring):  # mime relation
                             mime_relation = p[-1]
-
-                            # The objects before the mime relationship label can either be
-                            # in the main tuple, or contained in a sub-list
-
                             if (len(p) == 2):
-
                                 # single object
                                 if isinstance(p[0][0], basestring):
                                     toIterate = p[:-1]
@@ -383,16 +217,14 @@ class CrispinClient:
                             log.error("NO MIME RELATION HERE.....")
                             toIterate = p
 
-                        stragglers = []
                         for x, part in enumerate(toIterate):
                             if len(i) > 0:
                                 index = i+'.' + str(x+1)
                             else:
                                 index = str(x+1)
 
-                            ret = make_obj(part, index)
+                            ret = make_obj(part, index)  # call recursively and add to lists
                             if not ret: continue
-
                             assert isinstance(ret, IBMessagePart)
 
                             if mime_relation.lower() == 'alternative':
@@ -411,24 +243,19 @@ class CrispinClient:
                                     all_signatures.append(ret)
 
                             else:
-                                # MIXED
-                                # ALTERNATIVE
+                                # TODO need to handle RELATED type ...
                                 # RELATED
-                                # SIGNED
                                 log.info("Not sure what to do with mime relation %s" % mime_relation.lower())
-
                         return []
-
                     else:
                         if len(i) > 0: index = i+'.1'
                         else: index = '1'
-                        return IBMessagePart(p, i)
+                        return create_messagepart(p, i)
 
 
                 ret = make_obj(bodystructure, '')
                 if len(ret) > 0 and len(all_messageparts) == 0:
                     all_messageparts = ret
-
 
             new_msg.message_parts = all_messageparts
             new_msg.attachments = all_attachmentparts
@@ -438,7 +265,6 @@ class CrispinClient:
 
         log.info("Fetched headers for %i messages" % len(new_messages))
         return new_messages
-
 
 
     @connected
@@ -467,6 +293,94 @@ class CrispinClient:
         return body_data
 
 
+
+def create_messagepart(p, index='1'):
+    assert len(p) > 0
+
+    part = IBMessagePart()
+    part.index = str(index)
+
+    if len(p) == 1:
+        part.content_type_major = 'multipart'
+        part.content_type_minor = p[0]
+        return part
+
+    if len(p) == 2:
+        part.content_type_major = p[0]
+        part.content_type_minor = p[1]
+        return part
+
+
+    # Everything else
+
+    part.content_type_major = p[0]
+    part.content_type_minor = p[1]
+
+    if part.content_type_major.lower() == 'text':
+        assert len(p) == 8  # TOFIX ?
+        if p[2]:  # charset
+            try:
+                assert p[2][0].lower() == 'charset'
+                part.charset = p[2][1]
+            except Exception, e:
+                log.error('What is here instead? %s' % p[2])
+                raise e
+        part.encoding = p[5]
+        part.bytes = p[6]
+        part.line_count = p[7]
+
+
+    elif part.content_type_major.lower() == 'image':
+        assert p[2][0].lower() == 'name'
+        assert len(p) == 7  # TOFIX ?
+        part.filename = p[2][1]
+        part.encoding = p[5]
+        part.bytes = p[6]
+
+    # Regular file
+    else:
+        if p[2] and not isinstance(p[2], basestring):  # is there a filename?
+            assert p[2][0].lower() == 'name'
+            part.filename = p[2][1]
+        part.encoding = p[5]
+        part.bytes = p[6]
+
+    return part
+
+
+
+
+
+# TODO Add expand the threads
+
+# thread_ids = list(set([m.thread_id for m in msgs]))
+# log.info("For %i messages, found %i threads total." % (len(msgs), len(thread_ids)))
+
+
+# # Below is where we expand the threads and fetch the rest of them
+# self.select_allmail_folder() # going to fetch all messages in threads
+# all_msg_uids = self.msgids_for_thrids(thread_ids)
+
+# log.info("Expanded to %i messages for %i thread IDs." % (len(all_msg_uids), len(thread_ids)))
+
+# all_msgs = self.fetch_headers_for_uids(self.all_mail_folder_name(), all_msg_uids)
+
+# return all_msgs
+
+# threads = {}
+# # Group by thread id
+# for m in all_msgs:
+#     if m.thread_id not in threads.keys():
+#         new_thread = IBThread()
+#         new_thread.thread_id = m.thread_id
+#         threads[m.thread_id] = new_thread
+#     t = threads[m.thread_id]
+#     t.message_ids.append(m.message_id)
+# all_threads = threads.values()
+
+# log.info("Returning %i threads with total of %i messages." % (len(all_threads), len(all_msgs)))
+
+# return all_threads
 
 
 
