@@ -1,6 +1,5 @@
 
 import sys
-import auth
 import oauth2 as oauth
 import logging as log
 
@@ -12,12 +11,12 @@ IMAP_HOST = 'imap.gmail.com'
 ServerTimeout     = 29 # Mins           (leave if you're not sure)
 
 class Idler():
-        
+
     imap = None
 
     knownAboutMail = [] # will be a list of IDs of messages in the inbox
     killNow = False # stops execution of thread to allow propper closing of conns.
-    
+
     def __init__(self, email_address, oauth_token, ioloop=None, folder = "Inbox", event_callback = None):
         self.email_address = email_address
         self.oauth_token = oauth_token
@@ -48,7 +47,7 @@ class Idler():
 
 
             self.imap.SELECT(self.folder)
-            
+
             #get the IDs of all messages in the inbox and put in knowAboutMail
             typ, data = self.imap.SEARCH(None, 'ALL')
             self.knownAboutMail = data[0].split()
@@ -59,10 +58,10 @@ class Idler():
             except Exception, e:
                 raise e
 
-            
+
         except Exception, e:
             log.error('Error connecting....', e)
-            pass    
+            pass
 
 
     def idle(self):
@@ -83,7 +82,7 @@ class Idler():
 
                 # Requests can either return untagged EXISTS or EXPUNGE
 
-                # Note that the ids returned here are not UDIs or X-GM-MSGIDs, 
+                # Note that the ids returned here are not UDIs or X-GM-MSGIDs,
                 # they are just regular message IDs, which sucks. We need to
                 # build a map between those and X-GM-MSGIDs to know what's changing.
 
@@ -91,7 +90,7 @@ class Idler():
 
                 # EXPUNGE tells you what message IDs have been deleted
                 # EXISTS tells you how many messages are now in the mailbox.
-                # A response here should probably warrant doing an entire header 
+                # A response here should probably warrant doing an entire header
                 # re-sync for the mailbox. fuuuuuuck
 
                 # When a new message arrives, all we get is the EXISTS response.

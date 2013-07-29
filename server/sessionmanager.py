@@ -12,11 +12,13 @@ from bson.objectid import ObjectId
 # Memory cache for currently open crispin instances
 email_address_to_crispins = {}
 
+
 db = pymongo.MongoClient().test
 try:
     db.create_collection('session_to_user')
     db.create_collection('user_email_to_token')
     log.info('Created collections in sessions DB"')
+
 except pymongo.errors.CollectionInvalid, e:
     if db.create_collection and db.create_collection:
         log.info("DB exists already.")
@@ -48,7 +50,6 @@ def store_access_token(access_token_dict):
 
     email_address = access_token_dict['email']
 
-
     # Close old crispin connection
     if email_address in email_address_to_crispins:
         crispin = email_address_to_crispins[email_address]
@@ -60,23 +61,29 @@ def store_access_token(access_token_dict):
 
     session_id = db.user_email_to_token.insert(access_token_dict)
 
+    log.info("Stored access token %s" % access_token_dict)
+
 
 @tornado.gen.engine
 def get_access_token(email_address, callback=None):
-    q = {"email": email_address}
+
+    q = {"email": email_address }
     cursor = db.user_email_to_token.find(q).sort([("date",-1)]).limit(1)
+
     try:
         access_token_dict = list(cursor)[0]
     except Exception, e:
+        log.error(e)
         access_token_dict = None
+
 
     issued_date = access_token_dict['date']
     expires_seconds = access_token_dict['expires_in']
 
     expire_date = issued_date + datetime.timedelta(seconds=expires_seconds)
 
-    is_valid = yield tornado.gen.Task(google_oauth.validate_token, 
-            access_token_dict['access_token'])        
+    is_valid = yield tornado.gen.Task(google_oauth.validate_token,
+            access_token_dict['access_token'])
 
 
 
@@ -88,7 +95,7 @@ def get_access_token(email_address, callback=None):
         assert 'refresh_token' in access_token_dict
         refresh_token = access_token_dict['refresh_token']
 
-        response = yield tornado.gen.Task(google_oauth.get_new_token, refresh_token)        
+        response = yield tornado.gen.Task(google_oauth.get_new_token, refresh_token)
 
         # TODO handling errors here for when oauth has been revoked
         if 'error' in response:
@@ -102,7 +109,7 @@ def get_access_token(email_address, callback=None):
             return
 
 
-        # TODO Verify it and make sure it's valid. 
+        # TODO Verify it and make sure it's valid.
         assert 'access_token' in access_token_dict
         response['refresh_token'] = refresh_token
 
@@ -116,7 +123,7 @@ def get_access_token(email_address, callback=None):
         return
 
     callback(access_token_dict['access_token'])
-    return 
+    return
 
 
 
@@ -127,16 +134,14 @@ def get_crispin_from_session(session, callback):
 
 
 @tornado.gen.engine
-def get_crispin_from_email(email_address, callback):
+def get_crispin_from_email(email_address='mgrinich@gmail.com', callback=None):
     # TOFIX DEBUG
-    if email_address is None: 
-        email_address = 'mgrinich@gmail.com'
 
     if email_address in email_address_to_crispins:
         callback(email_address_to_crispins[email_address])
     else:
-        access_token = yield tornado.gen.Task(get_access_token, email_address)        
-        
+        access_token = yield tornado.gen.Task(get_access_token, email_address)
+
         crispin_client =  crispin.CrispinClient(email_address, access_token)
         email_address_to_crispins[email_address] = crispin_client
         callback(crispin_client)

@@ -68,7 +68,6 @@ def start(args=None):
     tornado.options.parse_command_line()
 
     # Start Mongo
-    from server.mongomgr import startmongo
     try:
       log.info("Starting Mongo. DB at %s" % PATH_TO_MONGO_DATABSE)
       if not os.path.exists(PATH_TO_MONGO_DATABSE):

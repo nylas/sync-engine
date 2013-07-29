@@ -13,7 +13,6 @@ import datetime
 import logging as log
 import tornado
 
-import auth
 import encoding
 
 from models import IBMessage, IBThread, IBMessagePart
@@ -188,7 +187,7 @@ class CrispinClient:
 
 
 
-        # TODO Add expand the threads 
+        # TODO Add expand the threads
 
         # thread_ids = list(set([m.thread_id for m in msgs]))
         # log.info("For %i messages, found %i threads total." % (len(msgs), len(thread_ids)))
@@ -243,7 +242,7 @@ class CrispinClient:
 
 
         for message_uid, message_dict in messages.iteritems():
-            
+
             # unparsed_headers = message_dict[query_key]
             # email_msg_object = message_from_string(unparsed_headers)
             # new_msg = IBMessage(email_msg_object)
@@ -255,15 +254,15 @@ class CrispinClient:
             # A parsed representation of the [RFC-2822] header of the message.
             msg_envelope = message_dict['ENVELOPE']
 
-            # ('Tue, 21 May 2013 08:41:20 -0700', 
-            #  '[SALT] De-extinction TONIGHT Tues. May 21', 
-            #  (('Stewart Brand', None, 'sb', 'longnow.org'),), 
-            #  ((None, None, 'salt-bounces', 'list.longnow.org'),), 
-            #  ((None, None, 'services', 'longnow.org'),), 
-            #  (('SALT list', None, 'salt', 'list.longnow.org'),), 
-            #  None, 
-            #  None, 
-            #  None, 
+            # ('Tue, 21 May 2013 08:41:20 -0700',
+            #  '[SALT] De-extinction TONIGHT Tues. May 21',
+            #  (('Stewart Brand', None, 'sb', 'longnow.org'),),
+            #  ((None, None, 'salt-bounces', 'list.longnow.org'),),
+            #  ((None, None, 'services', 'longnow.org'),),
+            #  (('SALT list', None, 'salt', 'list.longnow.org'),),
+            #  None,
+            #  None,
+            #  None,
             #  '<89ACAE66-4C10-4BBF-9B24-AC18A0FB2440@longnow.org>')
 
 
@@ -310,9 +309,9 @@ class CrispinClient:
             # In-Reply-To: = msg_envelope[8]
             # Message-ID = msg_envelope[9]
 
-            
 
-            # This date seems to work since I'm in SF. 
+
+            # This date seems to work since I'm in SF.
             new_msg.date = message_dict['INTERNALDATE']
 
 
@@ -334,7 +333,7 @@ class CrispinClient:
             new_msg.uid = str(message_uid)
 
 
-            # BODYSTRUCTURE parsing 
+            # BODYSTRUCTURE parsing
 
             all_messageparts = []
             all_attachmentparts = []
@@ -345,7 +344,7 @@ class CrispinClient:
 
             if not bodystructure.is_multipart:
                 all_messageparts.append(IBMessagePart(bodystructure, '1'))
-    
+
             else:
 
 
@@ -360,7 +359,7 @@ class CrispinClient:
 
 
                         if isinstance(p[-1], basestring):  # p[-1] is the mime relationship
-                            
+
                             mime_relation = p[-1]
 
                             # The objects before the mime relationship label can either be
@@ -385,7 +384,7 @@ class CrispinClient:
                             toIterate = p
 
                         stragglers = []
-                        for x, part in enumerate(toIterate):  
+                        for x, part in enumerate(toIterate):
                             if len(i) > 0:
                                 index = i+'.' + str(x+1)
                             else:
@@ -398,7 +397,7 @@ class CrispinClient:
 
                             if mime_relation.lower() == 'alternative':
                                 all_messageparts.append(ret)
-                                
+
                             elif mime_relation.lower() == 'mixed':
                                 if ret.content_type_major.lower() == 'text':
                                     all_messageparts.append(ret)
@@ -424,7 +423,7 @@ class CrispinClient:
                         if len(i) > 0: index = i+'.1'
                         else: index = '1'
                         return IBMessagePart(p, i)
-                
+
 
                 ret = make_obj(bodystructure, '')
                 if len(ret) > 0 and len(all_messageparts) == 0:
@@ -460,7 +459,7 @@ class CrispinClient:
         except KeyError, e:
             print 'Response:', response
             return "Error fetching."
-        
+
         body_data = response_dict[query_key]
         message_id = response_dict['X-GM-MSGID']
         thread_id = response_dict['X-GM-THRID']
