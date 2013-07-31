@@ -1,6 +1,4 @@
 
-
-
 ::-webkit-scrollbar {
     width: 10px;
 }
@@ -22,8 +20,6 @@
 ::-webkit-scrollbar-thumb:window-inactive {
     background: rgba(0,0,0,0.15);
 }
-
-
 
 
 /* Disables scrolling on the page. */
@@ -52,6 +48,7 @@ html, body {
 :hover {
     cursor: default;
 }
+
 
 
 body {
@@ -113,6 +110,9 @@ a {
   height:100%;
   width:375px;
   float:left;
+  margin-left: 5px;
+  margin-top: 5px;
+  margin-bottom: 5px;
 }
 
 
@@ -136,7 +136,7 @@ a {
   background-color: #EEF2F2;
 
   text-align: left;
-  height:44px;
+  height:34px;
 
   border-top: 1px solid #dadfe5;
 
@@ -231,10 +231,10 @@ a {
 .gearbutton
 {
   background: transparent url("/static/gear.png");
-  width: 24px;
-  height: 25px;
+  width: 19px;
+  height: 20px;
   float:left;
-  margin:12px;
+  margin:8px;
 }
 
 
@@ -243,7 +243,7 @@ a {
   font-family: ProximaNovaCond-Semibold;
   font-size: 13px;
   color: rgba(7,7,7,0.52);
-  line-height: 49px;
+  line-height: 36px;
   text-shadow: 0px 1px 0px #FFFFFF;
 
 /*  margin-left:auto;
@@ -253,7 +253,7 @@ a {
 
   margin-left: 102px;
 
-  background: transparent url("/static/spinner.gif") no-repeat 0px 15px;
+  background: transparent url("/static/spinner.gif") no-repeat 0px 9px;
   padding-left: 22px;
 
 }
@@ -340,7 +340,7 @@ margin-right: 0.5em;
     -moz-box-shadow:    0px 1px 1px 0px rgba(0,0,0,0.29);
     -webkit-box-shadow: 0px 1px 1px 0px rgba(0,0,0,0.29);
     box-shadow:         0px 1px 1px 0px rgba(0,0,0,0.29);
-
+    overflow:hidden;
 }
 
 

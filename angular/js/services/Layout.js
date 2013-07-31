@@ -23,13 +23,14 @@ app.factory('layout', function() {
 			windowSize.headersHeight = $('#header').height();
 			windowSize.mainHeight = windowSize.height - windowSize.headersHeight;
 
+			windowSize.leftColHeight = windowSize.mainHeight - 15;
 			windowSize.leftMessageListHeight = windowSize.mainHeight
 												- $('.leftHeader').outerHeight(true)
-												- $('.leftFooter').outerHeight(true);
+												- $('.leftFooter').outerHeight(true) -15;
 
 			windowSize.rightContentWidth = windowSize.width - $('.leftcol').width();
 
-			windowSize.contentBodyHeight = windowSize.mainHeight - $('.contentHead').outerHeight(true) - $('#reply_box').outerHeight(true);
+			windowSize.contentBodyHeight = windowSize.mainHeight - $('.contentHead').outerHeight(true) - $('#reply_box').outerHeight(true) + 10;
 
 			windowSize.contentBodyWidth = $('.contentBody').width();
 
@@ -37,7 +38,7 @@ app.factory('layout', function() {
 		},
 		updateSizes: function() {
 			$('#main').css('height', windowSize.mainHeight + 'px');
-
+			$('.leftcol').css('height', windowSize.leftColHeight + 'px');
 			$('.messagelist').css('height', windowSize.leftMessageListHeight + 'px');
 
 			$('.content').css('width', windowSize.rightContentWidth + 'px');

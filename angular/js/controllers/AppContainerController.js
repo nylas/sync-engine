@@ -42,7 +42,7 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
 
         $scope.statustext = "Loading messages...";
 
-        wire.rpc('load_messages_for_folder', {
+        wire.rpc('messages_for_folder', {
                 folder_name: folder
             },
             function(data) {
@@ -90,12 +90,14 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
             wire.rpc('load_message_body_with_uid', {
                     uid: selectedMessage.uid,
                     section_index: partToUse.index,
-                    encoding: partToUse.encoding,
+                    data_encoding: partToUse.encoding,
                     content_type: partToUse.content_type.toLowerCase(),
                 },
                 function(data) {
-                    localStorageService.set(selectedMessage.uid, data);
-                    $scope.activeMessage.body_text = data;
+
+                    var decoded = atob(data)
+                    localStorageService.set(selectedMessage.uid, decoded);
+                    $scope.activeMessage.body_text = decoded;
                 }
             );
 

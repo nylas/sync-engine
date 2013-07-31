@@ -18,7 +18,7 @@ app.directive("replybox", function() {
                 paddingRight: '10px',
 
                 position: 'absolute',
-                bottom: 0,
+                bottom: 3,
                 left: 0,
                 minWidth: 415,
             }
@@ -32,6 +32,8 @@ app.directive("replybox", function() {
 
                 minHeight: '50px',
 
+
+                boxShadow: '0px -3px 5px 0px rgba(0,0,0,0.29)',
             };
 
             $scope.text_box_style = {
@@ -89,11 +91,20 @@ app.directive("replybox", function() {
 
 
             $scope.add_event_button = {
-                background: 'transparent url("/static/addevent_icon.png") no-repeat 11px 8px'
+                background: 'transparent url("/static/addevent_icon.png") no-repeat 12px 8px'
             };
             for (var attrname in button_styles) {
                 $scope.add_event_button[attrname] = button_styles[attrname];
             };
+
+            $scope.send_money_button = {
+                background: 'transparent url("/static/sendmoney_icon.png") no-repeat 9px 6px'
+            };
+            for (var attrname in button_styles) {
+                $scope.send_money_button[attrname] = button_styles[attrname];
+            };
+
+
 
 
 
@@ -155,6 +166,8 @@ app.directive("replybox", function() {
             '<div id="add_file_button" ng-style="add_photos_button" hover="#E0E3E3">Add Photos</div>' +
 
             '<div id="add_file_button" ng-style="add_event_button" hover="#E0E3E3">Add Event</div>' +
+
+            '<div id="add_file_button" ng-style="send_money_button" hover="#E0E3E3">Send Money</div>' +
 
             '<div id="send_button" ng-style="send_button_style" hover="#E0E3E3">Send</div>' +
 

@@ -11,9 +11,9 @@ var app = angular.module('InboxApp.models', []);
 
 var myThread = new Thread(some_thread_id, array_of_msg_ids);
 
-This object type should only be accessible if it's injected. 
+This object type should only be accessible if it's injected.
 
-Probably calling Thread.whatever() will be a class function, whereas 
+Probably calling Thread.whatever() will be a class function, whereas
 instance.whatever() will be one of the methods defined through prototype
 
 
@@ -58,7 +58,7 @@ app.factory('IBMessage', function ($injector)
         this.subject = data.subject;
         this.message_parts = data.message_parts;
         this.attachments = data.attachments;
-        
+
         // the zero sets to epoch, then add seconds
         // var d = new Date(0);
         this.date = new Date(data.date * 1000)
@@ -97,8 +97,28 @@ app.factory('IBMessage', function ($injector)
 
 
 
+        var partToUse = undefined;
+
+        for (var i = 0; i < this.message_parts.length; i++) {
+            var part = this.message_parts[i];
+            if (part.content_type.toLowerCase() === 'text/html') {
+                partToUse = part;
+            }
+        }
+
+        // Whatever. Just pick one and it will probably be text/plain
+        if (angular.isUndefined(partToUse)) {
+            partToUse = this.message_parts[0]
+        }
+
+        this.iframe_url =  "/message?uid=" + encodeURIComponent(this.uid) +
+                                "&section_index=" + encodeURIComponent(partToUse.index) +
+                                '&content_type=' + encodeURIComponent(partToUse.content_type.toLowerCase()) +
+                                '&encoding=' + encodeURIComponent(partToUse.encoding);
 
     }
+
+
 
     IBMessageObject.prototype.printDate = function() {
         // var curr_date = this.date.getDate();
