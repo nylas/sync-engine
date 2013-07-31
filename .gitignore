@@ -1,6 +1,9 @@
 # Project-specific
 /database
 /uploads
+/man
+/src
+
 
 .DS_Store
 *.py[cod]

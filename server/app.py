@@ -13,7 +13,6 @@ from idler import Idler
 import google_oauth
 
 import sessionmanager
-from secrets import COOKIE_SECRET
 
 from tornadio2 import SocketConnection, TornadioRouter, event
 from socket_rpc import SocketRPC
@@ -21,6 +20,9 @@ from tornadio2 import proto
 
 import encoding
 import api  # This is the handler for RPC calls
+
+
+COOKIE_SECRET = "32oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo="
 
 
 class Application(tornado.web.Application):

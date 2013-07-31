@@ -157,10 +157,7 @@ class CrispinClient:
                     n.append(new_c)
                 return n
 
-            # msg_envelope[0] # we use INTERNALDATE instead of this
-
-            print msg_envelope
-
+            # date = msg_envelope[0] # we use INTERNALDATE instead of this
             subject = encoding.make_unicode(msg_envelope[1])
             # Headers will wrap when longer than 78 lines per RFC822_2
             subject = subject.replace('\n\t', '').replace('\r\n', '')
@@ -268,8 +265,6 @@ class CrispinClient:
             new_msg.attachments = all_attachmentparts
             new_msg.signatures = all_signatures
 
-            print all_messageparts
-
             new_messages.append(new_msg)
 
         log.info("Fetched headers for %i messages" % len(new_messages))
@@ -292,7 +287,7 @@ class CrispinClient:
         try:
             response_dict =  response[int(msg_uid)]
         except KeyError, e:
-            print 'Response:', response
+            log.error('Response: %s' % response)
             return "Error fetching."
 
         body_data = response_dict[query_key]
