@@ -105,9 +105,6 @@ app.directive("replybox", function() {
             };
 
 
-
-
-
             $scope.send_button_style = {
                 fontFamily: 'ProximaNovaCond-Regular',
                 fontSize: '18px',

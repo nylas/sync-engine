@@ -122,6 +122,9 @@ a {
 
   border-top-right-radius: inherit;
   border-top-left-radius:inherit;
+
+    height:40px;
+
 }
 
 
@@ -164,15 +167,13 @@ a {
   width:100%;
 }
 .contentHead {
-  height:56px;
+  height:33px;
+
 }
+
 .contentBody {
     overflow: auto;
 }
-
-
-
-
 
 
 .searchbox
@@ -192,16 +193,18 @@ a {
   width: 21px;
   height: 24px;
   float:left;
-  margin:12px;
+  margin-top: 8px;
+  margin-left: 8px;
 }
 
 .composebutton
 {
   background: transparent url("/static/compose.png");
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   float:right;
-  margin: 8px 8px 12px 12px;
+  margin-top: 8px;
+  margin-right: 8px;
 }
 
 
@@ -214,13 +217,12 @@ a {
 .inboxlabel
 {
   font-family: ProximaNovaCond-Semibold;
-  font-size: 24px;
+  font-size: 22px;
   color: rgba(7,7,7,0.52);
-  line-height: 50px;
+  padding-top: 14px;
   text-shadow: 0px 1px 0px #FFFFFF;
   text-align:center;
   width:100px;
-
   margin-left:auto;
   margin-right:auto;
 }

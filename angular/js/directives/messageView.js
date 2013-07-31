@@ -267,20 +267,14 @@ app.directive("messageframe", function () {
                 var baseTag= doc.createElement('base');
                 baseTag.target = '_blank';
 
-            }
-// $(document).ready(function()
-// {
-//     var baseTag= document.createElement('base');
-//     baseTag.target = '_blank';
-//     $("iframe html head").append(baseTag);
-// });            }
+                doc.body.style.padding = '20px';
 
+            }
 
             scope.$watch('content', function (val) {
                 // Reset the iFrame anytime the current message changes...
                 injectToIframe('');
             });
-
 
 
             var resizeHeight = function() {
