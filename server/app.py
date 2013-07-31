@@ -54,14 +54,16 @@ class Application(tornado.web.Application):
 
             (r"/auth/logout", LogoutHandler),
 
-            (r'/app/(.*)', AngularStaticFileHandler, {'path': PATH_TO_ANGULAR, 
+            (r'/app/(.*)', AngularStaticFileHandler, {'path': PATH_TO_ANGULAR,
                                            'default_filename':'index.html'}),
             (r'/app', AppRedirectHandler),
             (r'/file_download', FileDownloadHandler),
             (r'/file_upload', FileUploadHandler),
 
-            (r'/(?!wire|!app|file)(.*)', tornado.web.StaticFileHandler, {'path': PATH_TO_STATIC, 
-                                           'default_filename':'index.html'}),       
+            (r'/message', MessageHandler),
+
+            (r'/(?!wire|!app|file)(.*)', tornado.web.StaticFileHandler, {'path': PATH_TO_STATIC,
+                                           'default_filename':'index.html'}),
         ])
 
         tornado.web.Application.__init__(self, handlers, **settings)
@@ -92,18 +94,16 @@ class AuthStartHandler(BaseHandler):
 
 class AuthDoneHandler(BaseHandler):
     @tornado.web.asynchronous
-    @tornado.gen.engine
     def get(self):
         if not self.get_argument("code", None): self.fail()
 
         authorization_code = self.get_argument("code", None)
 
-        response = yield tornado.gen.Task(
-                            google_oauth.get_authenticated_user, 
+        response = google_oauth.get_authenticated_user(
                             authorization_code,
                             redirect_uri=self.settings['redirect_uri'])
 
-        try:    
+        try:
             assert 'email' in response
             assert 'access_token' in response
             assert 'refresh_token' in response
@@ -140,8 +140,8 @@ class AngularStaticFileHandler(tornado.web.StaticFileHandler):
             return
         super(AngularStaticFileHandler, self).get(path, **kwargs)
 
-    
-    # DEBUG: Don't cache anything right now -- 
+
+    # DEBUG: Don't cache anything right now --
     def set_extra_headers(self, path):
         self.set_header("Cache-control", "no-cache")
 
@@ -154,7 +154,6 @@ class AppRedirectHandler(BaseHandler):
 
 class FileDownloadHandler(BaseHandler):
 
-    @tornado.gen.engine
     def get(self):
 
         args = self.request.arguments
@@ -168,11 +167,32 @@ class FileDownloadHandler(BaseHandler):
         self.set_header ('Content-Type', content_type)
         self.set_header ('Content-Disposition', 'attachment; filename=' + filename)
 
-        # Debug    
-        crispin_client = yield tornado.gen.Task(sessionmanager.get_crispin_from_email, 'mgrinich@gmail.com')
+        # Debug
+        crispin_client = sessionmanager.get_crispin_from_email('mgrinich@gmail.com')
         data = crispin_client.fetch_msg_body(uid, section_index, folder='Inbox', )
 
         decoded = encoding.decode_data(data, data_encoding)
+        self.write(decoded)
+
+
+
+
+
+class MessageHandler(BaseHandler):
+
+    def get(self):
+
+        args = self.request.arguments
+
+        uid = args['uid'][0]
+        section_index = args['section_index'][0]
+        content_type = args['content_type'][0]
+        data_encoding = args['encoding'][0]
+
+        data = api.load_message_body_with_uid(uid, section_index, data_encoding, content_type)
+
+        self.set_header ('Content-Type', 'text/html')
+        # self.set_header ('Content-Disposition', 'attachment; filename=' + filename)
 
 
         self.write(data)
@@ -187,21 +207,21 @@ class FileUploadHandler(BaseHandler):
 
         try:
             uploaded_file = self.request.files['file'][0]  # wacky
-            
+
             uploads_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../uploads/")
             if not os.path.exists(uploads_path):
                 os.makedirs(uploads_path)
-            
+
             write_filename = str(time.mktime(time.gmtime())) +'_' + uploaded_file.filename
             write_path = os.path.join(uploads_path, write_filename)
-            
+
             f = open(write_path, "w")
             f.write(uploaded_file.body)
             f.close()
-            
+
             log.info("Uploaded file: %s (%s) to %s" % (uploaded_file.filename, uploaded_file.content_type, write_path))
 
-            # TODO 
+            # TODO
         except Exception, e:
             log.error(e)
             raise tornado.web.HTTPError(500)
@@ -250,9 +270,7 @@ class WireConnection(SocketRPC):
     # TODO add authentication thing here to check for session token
     @tornado.gen.engine
     def on_message(self, message_body):
-        response_text = yield tornado.gen.Task(self.run,
-                                            api, 
-                                            message_body)
+        response_text = self.run(api, message_body)
 
         # Send the message
         msg = proto.message(self.endpoint, response_text)
@@ -279,7 +297,7 @@ def startserver(port):
 
 
     global idler
-    # idler = Idler('mgrinich@gmail.com', 'ya29.AHES6ZSUdWE6lrGFZOFSXPTuKqu1cnWKwHnzlerRoL52UZA1m88B3oI', 
+    # idler = Idler('mgrinich@gmail.com', 'ya29.AHES6ZSUdWE6lrGFZOFSXPTuKqu1cnWKwHnzlerRoL52UZA1m88B3oI',
     #               ioloop=loop,
     #               event_callback=idler_callback,
     #               # folder=crispin_client.all_mail_folder_name())
@@ -298,9 +316,9 @@ def startserver(port):
 
 
 def stopsubmodules():
-    # if idler: 
+    # if idler:
     #     idler.stop()
- 
+
     sessionmanager.stop_all_crispins()
 
 

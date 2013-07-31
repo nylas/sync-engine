@@ -19,7 +19,6 @@ class IBContact():
                      email = self.email)
 
 
-
 class IBThread():
     def __init__(self):
         self.message_ids = []

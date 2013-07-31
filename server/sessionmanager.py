@@ -6,7 +6,6 @@ import pymongo
 import logging as log
 import datetime
 import google_oauth
-import tornado.gen
 from bson.objectid import ObjectId
 
 # Memory cache for currently open crispin instances
@@ -64,7 +63,6 @@ def store_access_token(access_token_dict):
     log.info("Stored access token %s" % access_token_dict)
 
 
-@tornado.gen.engine
 def get_access_token(email_address, callback=None):
 
     q = {"email": email_address }
@@ -82,10 +80,7 @@ def get_access_token(email_address, callback=None):
 
     expire_date = issued_date + datetime.timedelta(seconds=expires_seconds)
 
-    is_valid = yield tornado.gen.Task(google_oauth.validate_token,
-            access_token_dict['access_token'])
-
-
+    is_valid = google_oauth.validate_token(access_token_dict['access_token'])
 
     # TODO refresh tokens based on date instead of checking?
     # if not is_valid or expire_date > datetime.datetime.utcnow():
@@ -95,18 +90,16 @@ def get_access_token(email_address, callback=None):
         assert 'refresh_token' in access_token_dict
         refresh_token = access_token_dict['refresh_token']
 
-        response = yield tornado.gen.Task(google_oauth.get_new_token, refresh_token)
+        log.error("Getting new access token...")
+        response = google_oauth.get_new_token(refresh_token)
 
         # TODO handling errors here for when oauth has been revoked
         if 'error' in response:
-            if access_token_dict['error'] == 'invalid_grant':
+            log.error(response['error'])
+            if response['error'] == 'invalid_grant':
                 # Means we need to reset the entire oauth process.
                 log.error("Refresh token is invalid.")
-            if callback is None:
-                yield None
-                return
-            callback(None)
-            return
+            return None
 
 
         # TODO Verify it and make sure it's valid.
@@ -118,33 +111,25 @@ def get_access_token(email_address, callback=None):
 
         log.info("Updated token for user %s" % access_token_dict['email'])
 
-    if callback is None:
-        yield access_token_dict['access_token']
-        return
-
-    callback(access_token_dict['access_token'])
-    return
+    return access_token_dict['access_token']
 
 
 
-def get_crispin_from_session(session, callback):
+def get_crispin_from_session(session):
     """ Get the running crispin instance, or make a new one """
     email_address = get_user_from_session(session)
     return get_crispin_from_email(email_address)
 
 
-@tornado.gen.engine
-def get_crispin_from_email(email_address='mgrinich@gmail.com', callback=None):
-    # TOFIX DEBUG
-
+def get_crispin_from_email(email_address='mgrinich@gmail.com'):
     if email_address in email_address_to_crispins:
-        callback(email_address_to_crispins[email_address])
+        return email_address_to_crispins[email_address]
     else:
-        access_token = yield tornado.gen.Task(get_access_token, email_address)
+        access_token = get_access_token(email_address)
 
         crispin_client =  crispin.CrispinClient(email_address, access_token)
         email_address_to_crispins[email_address] = crispin_client
-        callback(crispin_client)
+        return crispin_client
 
 
 def stop_all_crispins():

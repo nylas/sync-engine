@@ -17,8 +17,6 @@ from jsonrpclib.jsonrpc import isbatch, isnotification, Fault
 
 from tornado.web import RequestHandler
 
-import tornado.gen
-
 
 # Configuration element
 class Config(object):
@@ -45,16 +43,14 @@ class SocketRPC(object):
 
 
 
-    @tornado.gen.engine
-    def run(self, handler, request_body, callback):
+    def run(self, handler, request_body):
 
         self.handler = handler
         try:
             requests = self.parse_request(request_body)
         except:
             self.traceback()
-            callback(self.faults.parse_error())
-            return
+            return self.faults.parse_error()
 
         # We should only have one request at a time...
         assert len(requests) == 1
@@ -64,8 +60,7 @@ class SocketRPC(object):
 
         if method_name in dir(RequestHandler):
             # Pre-existing, not an implemented attribute
-            callback(self.faults.method_not_found() )
-            return
+            return self.faults.method_not_found()
 
         method = self.handler
         method_list = dir(method)
@@ -76,19 +71,16 @@ class SocketRPC(object):
             for attr_name in attr_tree:
                 method = self.check_method(attr_name, method)
         except AttributeError:
-            callback( self.faults.method_not_found() )
-            return
+            return self.faults.method_not_found()
 
         if not callable(method):
             # Not callable, so not a method
-            callback(self.faults.method_not_found())
-            return
+            return self.faults.method_not_found()
 
         if method_name.startswith('_') or \
                 ('private' in dir(method) and method.private is True):
             # No, no. That's private.
-            callback(self.faults.method_not_found())
-            return
+            return self.faults.method_not_found()
 
         args = []
         kwargs = {}
@@ -102,29 +94,23 @@ class SocketRPC(object):
             args = params
         else:
             # Bad argument formatting?
-            callback(self.faults.invalid_params())
-            rturn
+            return self.faults.invalid_params()
 
 
         # Validating call arguments
         try:
             final_kwargs, extra_args = getcallargs(method, *args, **kwargs)
         except TypeError:
-            callback(self.faults.invalid_params())
-            return
+            return self.faults.invalid_params()
 
 
         log.info("Running %s with %s" % (method, final_kwargs))
         try:
-            response = yield tornado.gen.Task(
-                                method, 
-                                *extra_args, 
-                                **final_kwargs)
+            response = method(*extra_args, **final_kwargs)
 
         except Exception:
             self.traceback(method_name, params)
-            callback(self.faults.internal_error())
-            return
+            return self.faults.internal_error()
 
 
         responses = [response]
@@ -134,7 +120,7 @@ class SocketRPC(object):
             # Likely a fault, or something messed up
             response_text = self.encode(response_text)
 
-        callback(response_text)
+        return response_text
 
 
 
@@ -158,8 +144,8 @@ class SocketRPC(object):
 
     def check_method(self, attr_name, obj):
         """
-        Just checks to see whether an attribute is private 
-        (by the decorator or by a leading underscore) and 
+        Just checks to see whether an attribute is private
+        (by the decorator or by a leading underscore) and
         returns boolean result.
         """
         if attr_name.startswith('_'):
@@ -255,16 +241,16 @@ class Faults(object):
     parser.faults query, and returns a FaultMethod to be called so
     that the message can be changed. If the 'dynamic' attribute is
     not a key in the codes list, then it will error.
-    
+
     USAGE:
         parser.fault.parse_error('Error parsing content.')
-        
+
     If no message is passed in, it will check the messages dictionary
     for the same key as the codes dict. Otherwise, it just prettifies
     the code 'key' from the codes dict.
-    
+
     """
-    codes = { 
+    codes = {
         'parse_error': -32700,
         'method_not_found': -32601,
         'invalid_request': -32600,
@@ -273,12 +259,12 @@ class Faults(object):
     }
 
     messages = {}
-  
+
     def __init__(self, parser):
         self.fault = Fault
         if not self.fault:
             self.fault = Fault
-            
+
     def __getattr__(self, attr):
         message = 'Error'
         if attr in self.messages.keys():

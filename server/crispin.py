@@ -159,6 +159,8 @@ class CrispinClient:
 
             # msg_envelope[0] # we use INTERNALDATE instead of this
 
+            print msg_envelope
+
             subject = encoding.make_unicode(msg_envelope[1])
             # Headers will wrap when longer than 78 lines per RFC822_2
             subject = subject.replace('\n\t', '').replace('\r\n', '')
@@ -167,9 +169,19 @@ class CrispinClient:
             new_msg.from_contacts = make_unicode_contacts(msg_envelope[2])
 
             all_recipients = []
+
+            sender = msg_envelope[3]
+            reply_to = msg_envelope[4]
+
             if msg_envelope[5]: all_recipients += msg_envelope[5]  # TO
             if msg_envelope[6]: all_recipients += msg_envelope[6]  # CC
             if msg_envelope[7]: all_recipients += msg_envelope[7]  # BCC
+
+            # Not storing yet. Useful for rebuilding threads
+            in_reply_to = msg_envelope[8]
+            message_id = msg_envelope[9]
+
+
             new_msg.to_contacts = make_unicode_contacts(all_recipients)
 
             new_msg.date = message_dict['INTERNALDATE']  # TOFIX for PST only?
@@ -181,20 +193,15 @@ class CrispinClient:
             bodystructure = message_dict['BODY']
 
             # Parse Bodystructure
-            # """ This parses the response from bodystructure
-            #     and returns a tuple with messageparts, attachmentparts, signatureparts """
-
             all_messageparts = []
             all_attachmentparts = []
             all_signatures = []
-
 
             if not bodystructure.is_multipart:
                 part = create_messagepart(bodystructure)
                 all_messageparts.append(part)
 
             else:
-
                 # Recursively walk mime objects
                 def make_obj(p, i):
                     if not isinstance(p[0], basestring):
@@ -261,6 +268,8 @@ class CrispinClient:
             new_msg.attachments = all_attachmentparts
             new_msg.signatures = all_signatures
 
+            print all_messageparts
+
             new_messages.append(new_msg)
 
         log.info("Fetched headers for %i messages" % len(new_messages))
@@ -291,7 +300,6 @@ class CrispinClient:
         thread_id = response_dict['X-GM-THRID']
 
         return body_data
-
 
 
 def create_messagepart(p, index='1'):
@@ -333,8 +341,8 @@ def create_messagepart(p, index='1'):
     elif part.content_type_major.lower() == 'image':
         assert p[2][0].lower() == 'name'
         assert len(p) == 7  # TOFIX ?
-        part.filename = p[2][1]
-        part.encoding = p[5]
+        part.filename = p[2][1]  # Content-Disposition
+        part.encoding = p[5]  # Content-Transfer-Encoding
         part.bytes = p[6]
 
     # Regular file

@@ -45,12 +45,14 @@ def make_unicode(txt, default_encoding="ascii"):
 #     dat = s[3]
 #     return (dat+'===').decode('base-64').decode(enc)
 
-# The reason for the '===' is that base64 works by regrouping bits; it turns 
-# 3 8-bit chars into 4 6-bit chars (then refills the empty top bits with 0s). 
-# To reverse this, it expects 4 chars at a time - the length of your string 
-# must be a multiple of 4 characters. The '=' chars are recognized as padding; 
+# The reason for the '===' is that base64 works by regrouping bits; it turns
+# 3 8-bit chars into 4 6-bit chars (then refills the empty top bits with 0s).
+# To reverse this, it expects 4 chars at a time - the length of your string
+# must be a multiple of 4 characters. The '=' chars are recognized as padding;
 # three chars of padding is enough to make any string a multiple of 4 chars long
 
+
+import base64
 
 
 def decode_data(data, data_encoding):
@@ -58,13 +60,18 @@ def decode_data(data, data_encoding):
 
     try:
         if data_encoding == 'quoted-printable':
+            log.info("Decoded with quoted printable")
             data = quopri.decodestring(data)
         elif data_encoding == '7bit':
+            log.info("7bit -- nothing")
             pass  # This is just ASCII. Do nothing.
         elif data_encoding == '8bit':
+            log.info("8bit -- nothing")
             pass  # .decode('8bit') does nothing.
         elif data_encoding == 'base64':
-            data = data.decode('base-64')
+            # data = data.decode('base-64')
+            data = base64.b64decode(data)
+            log.info("Decoded with base64")
         else:
             log.error("Unknown encoding scheme:" + str(encoding))
     except Exception, e:
@@ -80,12 +87,11 @@ def clean_html(msg_data):
 
     soup = BeautifulSoup(msg_data)
 
-    # Bad elements
-    for s in soup('head'): s.extract()
-    for s in soup('style'): s.extract()
-    for s in soup('script'): s.extract()
+    [tag.extract() for tag in soup.findAll(["script", "head", "style", "meta", "link"])]
+
     for m in soup('html'): m.replaceWithChildren()
     for m in soup('body'): m.replaceWithChildren()
+
 
     # for match in soup.findAll('body'):
     #     print 'MATCHED!'
@@ -98,18 +104,19 @@ def clean_html(msg_data):
 
 def webify_links(msg_data, max_chars=35):
 
-    msg_data = bleach.linkify(msg_data)
+    # This totally breaks a lot of stuff. :(
+    # msg_data = bleach.linkify(msg_data)
 
     soup = BeautifulSoup(msg_data)
     for a in soup.findAll('a'):
         a['target'] = "_blank"
-        try:
-            if a.contents[0] == a['href']:
-                a.string = a['href'][:max_chars] + '&hellip;'
-            a['title'] = a['href']
-        except Exception, e:
-            log.info("Found anchor without href. Contents: %s" % a)
-            pass
+        # try:
+        #     if a.contents[0] == a['href']:
+        #         a.string = a['href'][:max_chars] + '&hellip;'
+        #     a['title'] = a['href']
+        # except Exception, e:
+        #     log.info("Found anchor without href. Contents: %s" % a)
+        #     pass
 
     return str(soup)
 
@@ -150,8 +157,8 @@ def plaintext2html(text, tabstop=4):
 # TODO this doesn't work.
 
 def trim_quoted_text(msg_text, content_type):
-    """ Given the text of a message, this separates the 
-        main content from the quoted messages 
+    """ Given the text of a message, this separates the
+        main content from the quoted messages
     """
 
     if len(msg_text) == 0:
@@ -163,7 +170,7 @@ def trim_quoted_text(msg_text, content_type):
 
     # TOFIX do this with from address?
     if content_type == "text/plain":
-        # regexes =  [r'-+original\s+message-+\s*$', 
+        # regexes =  [r'-+original\s+message-+\s*$',
         #             r'^.*On\ .*(\n|\r|\r\n)?wrote:(\r)*$',
         #             r'From:\s*' + re.escape(from_addr),
         #             r'<' + re.escape(from_addr) + r'>',
@@ -171,13 +178,13 @@ def trim_quoted_text(msg_text, content_type):
         #             r'from:\s*$']
 
         regexes =  [r'from:\s*$',
-                    r'-+original\s+message-+\s*$', 
+                    r'-+original\s+message-+\s*$',
                     r'^.*On\ .*(\n|\r|\r\n)?wrote:(\r)*$',
                     r'\s+wrote:$',
                     ]
 
     elif content_type == "text/html":
-        regexes =  [r'-+original\s+message-+\s*', 
+        regexes =  [r'-+original\s+message-+\s*',
                     r'^.*On\ .*(\n|\r|\r\n)?wrote:(\r)*$',
                     r'<div class="gmail_quote">',
                     ]
@@ -200,7 +207,7 @@ def trim_quoted_text(msg_text, content_type):
     # TODO this whitespace trimming should be part of regex
     while msg_text.endswith('\n') or msg_text.endswith('\r'):
         msg_text = msg_text[:-2]
-        
+
 
     return msg_text
 
