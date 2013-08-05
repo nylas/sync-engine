@@ -49,6 +49,11 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
 
                 $scope.statustext = "";
 
+
+                console.log("returned data...");
+                var arr_from_json = JSON.parse(data);
+                console.log(arr_from_json);
+
                 var freshMessages = [];
                 for (var i = 0; i < data.length; i++) {
                     var newMessage = new IBMessage(data[i]);

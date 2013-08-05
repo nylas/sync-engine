@@ -3,6 +3,13 @@ import sessionmanager
 import logging as log
 import encoding
 
+import json
+
+
+from bson import json_util
+import json
+
+
 
 def messages_for_folder(folder_name="Inbox"):
     # folder_name= kwargs.get('folder_name', "Inbox")
@@ -12,7 +19,9 @@ def messages_for_folder(folder_name="Inbox"):
 
         threads = crispin_client.fetch_messages(folder_name)
 
-        return [m.toJSON() for m in threads]
+        # Fixes serializing date.datetime
+        return json.dumps(threads, default=json_util.default)
+
 
     except AuthFailure, e:
         log.error(e)

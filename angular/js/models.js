@@ -48,6 +48,8 @@ app.factory('IBMessage', function ($injector)
 {
     function IBMessageObject($rootScope, data) {
         this.$rootScope = $rootScope;
+
+
         // Do handle data=none values
         this.message_id = data.message_id;
         this.thread_id = data.thread_id;

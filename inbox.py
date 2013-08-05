@@ -8,6 +8,10 @@ from time import sleep
 
 import logging as log
 
+# Make logging prettified
+import tornado.options
+tornado.options.parse_command_line()
+
 
 
 DEFAULT_PORT = 8888
@@ -32,6 +36,19 @@ def install(args):
     print "\033[95mDone!\033[0m"
 
     start()
+
+
+def start_mongo():
+    # Start Mongo
+    log.info("Starting Mongo. DB at %s" % PATH_TO_MONGO_DATABSE)
+    if not os.path.exists(PATH_TO_MONGO_DATABSE):
+      os.makedirs(PATH_TO_MONGO_DATABSE)
+    args = ['mongod', '--dbpath', PATH_TO_MONGO_DATABSE, '--fork']
+    mongod_process = subprocess.Popen(args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.STDOUT)
+    mongod_process.communicate()
+    sleep(1) # for mongo
+
+
 
 
 def start(args=None):
@@ -62,25 +79,10 @@ def start(args=None):
     # import shutil
     # shutil.rmtree('/db')
 
-
-    # Make logging prettified
-    import tornado.options
-    tornado.options.parse_command_line()
-
-    # Start Mongo
-    try:
-      log.info("Starting Mongo. DB at %s" % PATH_TO_MONGO_DATABSE)
-      if not os.path.exists(PATH_TO_MONGO_DATABSE):
-          os.makedirs(PATH_TO_MONGO_DATABSE)
-      args = ['mongod', '--dbpath', PATH_TO_MONGO_DATABSE, '--fork']
-      mongod_process = subprocess.Popen(args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.STDOUT)
-      mongod_process.communicate()
-      sleep(1) # for mongo
+    try: start_mongo()
     except Exception, e:
         raise e
         stop(None)
-
-
 
     # Start Tornado
     from server.app import startserver
