@@ -46,7 +46,7 @@ app.directive("messageview", function ($filter) {
 
             $scope.message_bubble_container = {
                 borderRadius: 'inherit',
-                fontFamily: '"Proxima Nova", courier, sans-serif',
+                fontFamily: 'ProximaNova, sans-serif',
                 fontSize: '16px',
                 fontWeight: '500',
                 color: '#333',
@@ -75,7 +75,7 @@ app.directive("messageview", function ($filter) {
             $scope.byline_fromline = {
                 display: 'inline-block',
                 fontWeight: 600,
-                fontFamily: '"Proxima Nova", courier, sans-serif',
+                fontFamily: 'ProximaNova, sans-serif',
 				fontSize: '16px',
 				color: '#4C4C4C',
 				paddingTop: '10px',
@@ -144,7 +144,7 @@ app.directive("gravatar", function () {
             $scope.gravatar_image = {
                 display: 'inline-block',
                 fontWeight: 600,
-                fontFamily: '"Proxima Nova", courier, sans-serif',
+                fontFamily: 'ProximaNova, sans-serif',
 				fontSize: '15px',
 				color: '#708080',
 				paddingTop: '10px',
@@ -239,7 +239,7 @@ app.directive("messageframe", function () {
                 //     'body { background-color:#FFF; ' +
                 //     'font-smooth:always;' +
                 //     ' -webkit-font-smoothing:antialiased;' +
-                //     ' font-family:"Proxima Nova", courier, sans-serif;' +
+                //     ' font-family:ProximaNova, courier, sans-serif;' +
                 //     ' font-size:15px;' +
                 //     ' color:#333;' +
                 //     ' font-variant:normal;' +

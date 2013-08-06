@@ -216,7 +216,8 @@ a {
 
 .inboxlabel
 {
-  font-family: ProximaNovaCond-Semibold;
+  font-family: ProximaNovaCondensed, sans-serif;
+  font-weight: 500;
   font-size: 22px;
   color: rgba(7,7,7,0.52);
   padding-top: 14px;
@@ -242,22 +243,17 @@ a {
 
 .footerstatus
 {
-  font-family: ProximaNovaCond-Semibold;
+  font-family: ProximaNovaCondensed, sans-serif;
+  font-weight: 500;
   font-size: 13px;
   color: rgba(7,7,7,0.52);
   line-height: 36px;
   text-shadow: 0px 1px 0px #FFFFFF;
 
-/*  margin-left:auto;
-  margin-right:auto;
-*/
   width:300px;
-
   margin-left: 102px;
-
   background: transparent url("/static/spinner.gif") no-repeat 0px 9px;
   padding-left: 22px;
-
 }
 
 
@@ -352,7 +348,7 @@ margin-right: 0.5em;
     color:#4C4C4C;
     text-shadow:1px 1px 1px white;
 
-    font-family: "Proxima Nova Condensed", courier, sans-serif;
+    font-family: ProximaNovaCondensed, courier, sans-serif;
     font-size: 26px;
     line-height: 1.2em;
     font-weight: 700; /* Semibold */
@@ -559,7 +555,7 @@ a.button:active {
 
   font-size: 16px;
   font-variant: normal;
-  font-family: "Proxima Nova", sans-serif;
+  font-family: ProximaNova, sans-serif;
   font-style: normal;
   font-weight: 400;
   line-height: 21px;

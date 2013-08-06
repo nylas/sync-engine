@@ -57,12 +57,12 @@ app.directive("replybox", function() {
 
             // For all bottom buttons
             var button_styles = {
-                fontFamily: 'ProximaNova-Regular',
+                fontFamily: 'ProximaNova',
+                fontWeight: 500,
                 fontSize: '13px',
                 color: '#708080',
                 lineHeight: '16px',
                 paddingTop: '10px',
-                fontWeight: 600,
                 float: 'left',
                 height: '23px',
                 cursor: 'pointer',
@@ -106,13 +106,13 @@ app.directive("replybox", function() {
 
 
             $scope.send_button_style = {
-                fontFamily: 'ProximaNovaCond-Regular',
+                fontFamily: 'ProximaNovaCondensed',
+                fontWeight: 500,
                 fontSize: '18px',
                 color: '#4D7FBD',
 
                 lineHeight: '16px',
                 paddingTop: '10px',
-                fontWeight: 700,
 
                 float: 'right',
                 height: '23px',
