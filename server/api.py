@@ -11,10 +11,10 @@ import json
 
 
 
-def messages_for_folder(folder_name="Inbox"):
+def messages_for_folder(email_address, folder_name="Inbox"):
     # folder_name= kwargs.get('folder_name', "Inbox")
     try:
-        crispin_client = sessionmanager.get_crispin_from_email('mgrinich@gmail.com')
+        crispin_client = sessionmanager.get_crispin_from_email(email_address)
         log.info('fetching threads...')
 
         threads = crispin_client.fetch_messages(folder_name)
@@ -32,10 +32,10 @@ def messages_for_folder(folder_name="Inbox"):
 
 
 
-def send_mail(**kwargs):
+def send_mail(email_address, **kwargs):
 
-    s = postel.SMTP('mgrinich@gmail.com',
-                    sessionmanager.get_access_token("mgrinich@gmail.com") )
+    s = postel.SMTP(email_address,
+                    sessionmanager.get_access_token(email_address) )
     s.setup()
     s.send_mail("Test message", "Body content of test message!")
     s.quit()
@@ -43,9 +43,9 @@ def send_mail(**kwargs):
     return "OK"
 
 
-def load_message_body_with_uid(uid, section_index, data_encoding, content_type):
+def load_message_body_with_uid(uid, section_index, data_encoding, content_type, email_address):
 
-    crispin_client = sessionmanager.get_crispin_from_email('mgrinich@gmail.com')
+    crispin_client = sessionmanager.get_crispin_from_email(email_address)
 
     msg_data = crispin_client.fetch_msg_body(uid,
                                              section_index,

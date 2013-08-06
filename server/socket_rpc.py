@@ -96,6 +96,7 @@ class SocketRPC(object):
             # Bad argument formatting?
             return self.faults.invalid_params()
 
+        kwargs['email_address'] = self.email_address
 
         # Validating call arguments
         try:

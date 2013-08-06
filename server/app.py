@@ -241,6 +241,7 @@ class WireConnection(SocketRPC):
         self.session = session
         self.endpoint = endpoint
         self.is_closed = False
+        self.email_address = None
 
 
     def on_open(self, request):
@@ -250,6 +251,7 @@ class WireConnection(SocketRPC):
             email_address = sessionmanager.get_user_from_session(des)
             if not email_address:
                 raise tornado.web.HTTPError(401)
+            self.email_address = email_address
         except Exception, e:
             log.warning("Unauthenticated socket connection attempt")
             raise tornado.web.HTTPError(401)
