@@ -104,15 +104,21 @@ def stop(args):
     log.info("Stopping Mongo.")
     os.system("pkill mongod")
 
-
-
-
-
     print """
 \033[91m     Stopped.
 \033[0m"""
     # os.system("stty echo")
     sys.exit(0)
+
+
+def console(args):
+    import code
+    import pymongo
+    db = pymongo.MongoClient().test
+    code.interact(local={'db': db},
+                  banner='Python %s on %s\nInbox console'
+                         % (sys.version.replace('\n', ' '), sys.platform))
+
 
 def signal_handler(signal, frame):
     stop(None)
@@ -133,6 +139,9 @@ def main():
 
   parser_stop = subparsers.add_parser('stop')
   parser_stop.set_defaults(func=stop)
+
+  parser_console = subparsers.add_parser('console')
+  parser_console.set_defaults(func=console)
 
   args = parser.parse_args()
   args.func(args)
