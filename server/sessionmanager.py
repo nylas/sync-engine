@@ -127,7 +127,7 @@ def get_crispin_from_session(session):
     return get_crispin_from_email(email_address)
 
 
-def get_crispin_from_email(email_address='mgrinich@gmail.com'):
+def get_crispin_from_email(email_address):
     if email_address in email_address_to_crispins:
         return email_address_to_crispins[email_address]
     else:
