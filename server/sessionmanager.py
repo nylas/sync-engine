@@ -5,6 +5,7 @@ import pymongo
 # from bson.objectid import ObjectId
 import logging as log
 import datetime
+import traceback
 import google_oauth
 from bson.objectid import ObjectId
 
@@ -23,6 +24,11 @@ except pymongo.errors.CollectionInvalid, e:
         log.info("DB exists already.")
     else:
         log.error("Error creating sessions DB collecitons. %s" % e)
+
+
+def log_ignored(exc):
+    log.error('Ignoring error: %s\nOuter stack:\n%s%s'
+              % (exc, ''.join(traceback.format_stack()[:-2]), traceback.format_exc(exc)))
 
 
 def store_session(email_address):
@@ -71,7 +77,7 @@ def get_access_token(email_address, callback=None):
     try:
         access_token_dict = list(cursor)[0]
     except Exception, e:
-        log.error(e)
+        log_ignored(e)
         access_token_dict = None
 
 
