@@ -112,10 +112,21 @@ def stop(args):
 
 
 def console(args):
-    import code
     import pymongo
-    db = pymongo.MongoClient().test
-    code.interact(local={'db': db},
+    env = {'db': pymongo.MongoClient().test}
+
+    # Based on http://docs.python.org/2/tutorial/interactive.html
+    # except it's 2013 and we have closures.
+    import atexit
+    import readline
+    import rlcompleter
+    history_path = os.path.expanduser('~/.pyhistory.inbox')
+    if os.path.exists(history_path):
+        readline.read_history_file(history_path)
+    atexit.register(lambda: readline.write_history_file(history_path))
+
+    import code
+    code.interact(local=env,
                   banner='Python %s on %s\nInbox console'
                          % (sys.version.replace('\n', ' '), sys.platform))
 
