@@ -270,9 +270,7 @@ class WireConnection(SocketRPC):
         # TODO: Notify about unconfirmed messages?
 
 
-
     # TODO add authentication thing here to check for session token
-    @tornado.gen.engine
     def on_message(self, message_body):
         response_text = self.run(api, message_body)
 
