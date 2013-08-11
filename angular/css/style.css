@@ -307,10 +307,7 @@ margin-right: 0.5em;
 }
 
 
-
-
 /* Email Content Styles */
-
 .email-content
 {
 
@@ -327,9 +324,6 @@ margin-right: 0.5em;
 }
 
 
-
-
-
 .card_with_shadow
 {
     border-radius: 6px;
@@ -342,7 +336,6 @@ margin-right: 0.5em;
 }
 
 
-
 .email-content-title {
     text-align:left;
     color:#4C4C4C;
@@ -351,7 +344,7 @@ margin-right: 0.5em;
     font-family: ProximaNovaCondensed, courier, sans-serif;
     font-size: 26px;
     line-height: 1.2em;
-    font-weight: 700; /* Semibold */
+    font-weight: 500; /* Semibold */
 
     float:left;
 
@@ -359,8 +352,8 @@ margin-right: 0.5em;
     white-space:nowrap;
     -ms-text-overflow:ellipsis;
     text-overflow:ellipsis;
-
 }
+
 
 .email-content-subtitle {
     font-size: 1em;

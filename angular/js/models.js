@@ -49,41 +49,38 @@ app.factory('IBMessage', function ($injector)
     function IBMessageObject($rootScope, data) {
         this.$rootScope = $rootScope;
 
+        // Propogate fields to the object
+        for (var key in data) {
+            if (self.hasOwnProperty(key)) {
+                console.log(key + " -> " + p[key]);
+            }
+            this[key] = data[key];
+        }
 
-        // Do handle data=none values
-        this.message_id = data.message_id;
-        this.thread_id = data.thread_id;
-        this.labels = data.labels;
-        this.uid = data.uid;
-        this.to_contacts = data.to_contacts;
-        this.from_contacts = data.from_contacts[0];
-        this.subject = data.subject;
-        this.message_parts = data.message_parts;
-        this.attachments = data.attachments;
+        // Fix the date
+        this.date = new Date(data.date.$date * 1000);
 
-        // the zero sets to epoch, then add seconds
-        // var d = new Date(0);
-        this.date = new Date(data.date * 1000)
 
         var gravatar_size = 25;
-        var theEmail = this.from_contacts[2] + '@' + this.from_contacts[3];
+        var theEmail = this.from[0][2] + '@' + this.from[0][3];
         this.gravatar_url = "http://www.gravatar.com/avatar/" +
                         md5( theEmail.toLowerCase() )+ "?" +
                         'd=mm&' +
                         's=' + encodeURIComponent(gravatar_size);
 
 
-        if (this.to_contacts && this.to_contacts.length > 0) {
+        if (this.to && this.to.length > 0) {
 
             var to_list;
-            if (this.to_contacts[0][0] ) {
-                to_list = this.to_contacts[0][0];
+            if (this.to[0][0] ) {
+                to_list = this.to[0][0];
             } else {
-                to_list = this.to_contacts[0][2] + '@' + this.to_contacts[0][3];
+                to_list = this.to[0][2] + '@' + this.to[0][3];
             }
 
-            for (var i = 1; i< this.to_contacts.length; i++) {
-                var c = this.to_contacts[i];
+
+            for (var i = 1; i< this.to.length; i++) {
+                var c = this.to[i];
                 var nameToShow;
                 if (c[0]) {
                     nameToShow = c[0];
@@ -96,30 +93,7 @@ app.factory('IBMessage', function ($injector)
         } else {
             this.contactDisplayList = 'Unknown sender';
         }
-
-
-
-        var partToUse = undefined;
-
-        for (var i = 0; i < this.message_parts.length; i++) {
-            var part = this.message_parts[i];
-            if (part.content_type.toLowerCase() === 'text/html') {
-                partToUse = part;
-            }
-        }
-
-        // Whatever. Just pick one and it will probably be text/plain
-        if (angular.isUndefined(partToUse)) {
-            partToUse = this.message_parts[0]
-        }
-
-        this.iframe_url =  "/message?uid=" + encodeURIComponent(this.uid) +
-                                "&section_index=" + encodeURIComponent(partToUse.index) +
-                                '&content_type=' + encodeURIComponent(partToUse.content_type.toLowerCase()) +
-                                '&encoding=' + encodeURIComponent(partToUse.encoding);
-
     }
-
 
 
     IBMessageObject.prototype.printDate = function() {

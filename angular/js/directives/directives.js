@@ -40,7 +40,7 @@ app.directive("itemcell", function ($filter) {
                 textShadow: '1px 1px 1px white',
                 fontFamily: '"ProximaNovaCondensed", courier, sans-serif',
                 fontSize: '17px',
-                fontWeight: 600,
+                fontWeight: 500,
                 /* Bold */
                 lineHeight: '21px',
 
@@ -73,11 +73,11 @@ app.directive("itemcell", function ($filter) {
 
         template: '<div ng-style="email_item" hover="#edf5fd" data-ng-click="eventHandler()">' +
                   '<img  class="email-avatar" ng-src="{{ message.gravatar_url }}"' +
-                  'alt="{{ message.from_contacts[0] }}">' +
+                  'alt="{{ message.from[0] }}">' +
                   '<div ng-style="email_subject">{{message.subject}}</div>' +
                   '<div ng-style="email_desc">' +
                   '<em>Date</em>: {{message.date | date:"medium" }} <br/>' +
-                  '<em>From</em>: {{message.from_contacts[0]}}' +
+                  '<em>From</em>: {{message.from[0]}}' +
                   '</div>' +
                   '</div>',
     }

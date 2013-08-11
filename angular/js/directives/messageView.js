@@ -74,7 +74,7 @@ app.directive("messageview", function ($filter) {
 
             $scope.byline_fromline = {
                 display: 'inline-block',
-                fontWeight: 600,
+                fontWeight: 500,
                 fontFamily: 'ProximaNova, sans-serif',
 				fontSize: '16px',
 				color: '#4C4C4C',
@@ -143,7 +143,7 @@ app.directive("gravatar", function () {
 
             $scope.gravatar_image = {
                 display: 'inline-block',
-                fontWeight: 600,
+                fontWeight: 500,
                 fontFamily: 'ProximaNova, sans-serif',
 				fontSize: '15px',
 				color: '#708080',

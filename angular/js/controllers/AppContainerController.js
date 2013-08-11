@@ -49,18 +49,15 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
 
                 $scope.statustext = "";
 
-
                 console.log("returned data...");
                 var arr_from_json = JSON.parse(data);
-                console.log(arr_from_json);
 
                 var freshMessages = [];
-                for (var i = 0; i < data.length; i++) {
-                    var newMessage = new IBMessage(data[i]);
+                angular.forEach(arr_from_json, function(value, key){
+                    var newMessage = new IBMessage(value);
                     freshMessages.push(newMessage);
-                }
+                });
                 $scope.messages = freshMessages;
-
             }
         );
 
@@ -70,19 +67,9 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
     $scope.openMessage = function(selectedMessage) {
 
         $scope.activeMessage = selectedMessage;
-        var partToUse = undefined;
 
-        for (var i = 0; i < selectedMessage.message_parts.length; i++) {
-            var part = selectedMessage.message_parts[i];
-            if (part.content_type.toLowerCase() === 'text/html') {
-                partToUse = part;
-            }
-        }
+        var partToUse = selectedMessage.message_parts[0];
 
-        // Whatever. Just pick one and it will probably be text/plain
-        if (angular.isUndefined(partToUse)) {
-            partToUse = selectedMessage.message_parts[0]
-        }
 
 
         // Read that value back
