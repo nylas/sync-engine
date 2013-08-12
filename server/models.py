@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 
-from sqlalchemy.ext.serializer import loads, dumps
+# from sqlalchemy.ext.serializer import loads=, dumps
 from sqlalchemy import event
 from sqlalchemy.orm import reconstructor
 
@@ -59,6 +59,12 @@ class User(Base):
 
 
 
+import json
+import postel
+from bson import json_util
+
+
+
 class MessageMeta(Base):
     __tablename__ = 'messages'
 
@@ -99,16 +105,17 @@ class MessageMeta(Base):
         self.uid = None  # TODO remove this
 
 
+
     @reconstructor
     def init_on_load(self):
-        self.from_addr = loads(self._from_addr)
-        self.sender_addr = loads(self._sender_addr)
-        self.reply_to = loads(self._reply_to)
-        self.to_addr = loads(self._to_addr)
-        self.cc_addr = loads(self._cc_addr)
-        self.bcc_addr = loads(self._bcc_addr)
-        self.in_reply_to = loads(self._in_reply_to)
-        self.flags = loads(self._flags)
+        if self._from_addr: self.from_addr = json.loads(self._from_addr)
+        if self._sender_addr: self.sender_addr = json.loads(self._sender_addr)
+        if self._reply_to: self.reply_to = json.loads(self._reply_to)
+        if self._to_addr: self.to_addr = json.loads(self._to_addr)
+        if self._cc_addr: self.cc_addr = json.loads(self._cc_addr)
+        if self._bcc_addr: self.bcc_addr = json.loads(self._bcc_addr)
+        if self._in_reply_to: self.in_reply_to = json.loads(self._in_reply_to)
+        if self._flags: self.flags = json.loads(self._flags)
 
     def gmail_url(self):
         if not self.uid:
@@ -136,14 +143,14 @@ class MessageMeta(Base):
 
 @event.listens_for(MessageMeta, 'before_insert', propagate = True)
 def serialize_before_insert(mapper, connection, target):
-    target.__from_addr = dumps(target.from_addr)
-    target._sender_addr = dumps(target.sender_addr)
-    target._reply_to = dumps(target.reply_to)
-    target._to_addr = dumps(target.to_addr)
-    target._cc_addr = dumps(target.cc_addr)
-    target._bcc_addr = dumps(target.bcc_addr)
-    target._in_reply_to = dumps(target.in_reply_to)
-    target._flags = dumps(target.flags)
+    if target.from_addr: target._from_addr = json.dumps(target.from_addr, default=json_util.default)
+    if target.sender_addr: target._sender_addr = json.dumps(target.sender_addr, default=json_util.default)
+    if target.reply_to: target._reply_to = json.dumps(target.reply_to, default=json_util.default)
+    if target.to_addr: target._to_addr = json.dumps(target.to_addr, default=json_util.default)
+    if target.cc_addr: target._cc_addr = json.dumps(target.cc_addr, default=json_util.default)
+    if target.bcc_addr: target._bcc_addr = json.dumps(target.bcc_addr, default=json_util.default)
+    if target.in_reply_to: target._in_reply_to = json.dumps(target.in_reply_to, default=json_util.default)
+    if target.flags: target._flags = json.dumps(target.flags, default=json_util.default)
 
 
 
