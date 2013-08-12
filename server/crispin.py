@@ -11,7 +11,8 @@ import logging as log
 import tornado
 
 import encoding
-from models import IBMessage, IBThread, IBMessagePart
+from models import MessageMeta
+import time
 
 
 IMAP_HOST = 'imap.gmail.com'
@@ -34,6 +35,18 @@ class CrispinClient:
         self.imap_server = None
         # last time the server checked in, in UTC
         self.keepalive = None
+
+
+
+    def print_duration(fn):
+        """ A decorator for methods that can only be run on a logged-in client.
+        """
+        def connected_fn(self, *args, **kwargs):
+            start_time = time.time()
+            ret = fn(self, *args, **kwargs)
+            log.info("\t\tTook %s seconds" %  str(time.time() - start_time))
+            return ret
+        return connected_fn
 
 
     def server_needs_refresh(self):
@@ -103,6 +116,7 @@ class CrispinClient:
 
 
     @connected
+    @print_duration
     def select_folder(self, folder):
         try:
             select_info = self.imap_server.select_folder(folder, readonly=True)
@@ -114,16 +128,17 @@ class CrispinClient:
 
 
 
-
-
-
     @connected
+    @print_duration
     def fetch_folder(self, folder_name):
-        select_info = self.select_folder(folder_name)
+        log.info("Fetching messages in %s" % folder_name)
 
+        select_info = self.select_folder(folder_name)
         # TODO check and save UID validity
         UIDs = self.imap_server.search(['NOT DELETED'])
         UIDs = [str(s) for s in UIDs]
+
+        log.info("\n%i UIDs" % len(UIDs)  )
 
         return self.fetch_uids(UIDs)
 
@@ -135,22 +150,21 @@ class CrispinClient:
         new_messages = []
         new_parts = []
 
-
-        query = 'ENVELOPE BODY INTERNALDATE'
+        query = 'ENVELOPE BODY INTERNALDATE FLAGS'
 
         log.info("Fetching message headers. Query: %s" % query)
         messages = self.imap_server.fetch(UIDs, [query, 'X-GM-THRID', 'X-GM-MSGID', 'X-GM-LABELS'])
         log.info("Found %i messages." % len(messages.values()))
 
-
         for message_uid, message_dict in messages.iteritems():
 
-            new_msg = {}  # store the attributes here.
-            new_msg['uid'] = str(message_uid)
+
+            new_msg = MessageMeta()
+
+            new_msg.uid = str(message_uid)
 
 
             msg_envelope = message_dict['ENVELOPE'] # ENVELOPE is parsed RFC-2822 headers
-
             def make_unicode_contacts(contact_list):
                 n = []
                 for c in contact_list:
@@ -161,25 +175,35 @@ class CrispinClient:
                 return n
 
 
+            new_msg.date = msg_envelope[0] # we use INTERNALDATE instead of this
+
             tempSubject = encoding.make_unicode(msg_envelope[1])
             # Headers will wrap when longer than 78 lines per RFC822_2
             tempSubject = tempSubject.replace('\n\t', '').replace('\r\n', '')
-            new_msg['subject'] = tempSubject
+            new_msg.subject = tempSubject
 
-            # date = msg_envelope[0] # we use INTERNALDATE instead of this
-            new_msg['from'] = make_unicode_contacts(msg_envelope[2])
-            new_msg['sender'] = msg_envelope[3]
-            new_msg['reply-to'] = msg_envelope[4]
-            new_msg['to'] = msg_envelope[5]
-            new_msg['cc'] = msg_envelope[6]
-            new_msg['bcc'] = msg_envelope[7]
-            new_msg['in-reply-to'] = msg_envelope[8]
-            new_msg['message-id'] = msg_envelope[9]
+            new_msg.from_addr = make_unicode_contacts(msg_envelope[2])
+            new_msg.sender = msg_envelope[3]
+            new_msg.reply_to = msg_envelope[4]
+            new_msg.to_addr = msg_envelope[5]
+            new_msg.cc_addr = msg_envelope[6]
+            new_msg.bcc_addr = msg_envelope[7]
+            new_msg.in_reply_to = msg_envelope[8]
+            new_msg.message_id = msg_envelope[9]
 
-            new_msg['date'] = message_dict['INTERNALDATE']
-            new_msg['x-gm-thrid'] = str(message_dict['X-GM-THRID'])
-            new_msg['x-gm-msgid'] = str(message_dict['X-GM-MSGID'])
-            new_msg['x-gm-labels'] = message_dict['X-GM-LABELS']
+            new_msg.internaldate = message_dict['INTERNALDATE']
+            new_msg.g_thrid = str(message_dict['X-GM-THRID'])
+            new_msg.g_msgid = str(message_dict['X-GM-MSGID'])
+            new_msg.g_labels = str(message_dict['X-GM-LABELS'])
+            new_msg.flags = message_dict['FLAGS']
+
+            # \Seen  Message has been read
+            # \Answered  Message has been answered
+            # \Flagged  Message is "flagged" for urgent/special attention
+            # \Deleted  Message is "deleted" for removal by later EXPUNGE
+            # \Draft  Message has not completed composition (marked as a draft).
+            # \Recent   session is the first session to have been notified about this message
+
 
 
             bodystructure = message_dict['BODY']
@@ -188,12 +212,18 @@ class CrispinClient:
                 assert len(p) > 0
                 part = {}
                 part['section'] = str(section)
-                part['uid'] = new_msg['uid']
+
+                part['uid'] = new_msg.uid
 
 
                 if len(p) == 1:
-                    log.error("Why is there only one content-type part? Should it be multipart/%s ??" % p[0])
-                    return part
+                    if p[0].lower() == "appledouble":
+                        log.error("Content-type: appledouble")
+                        # print p
+                        return None
+                    else:
+                        log.error("Why is there only one content-type part? Should it be multipart/%s ??" % p[0])
+                        return part
 
                 content_type_major = p[0].lower()
                 content_type_minor = p[1].lower()
@@ -202,7 +232,7 @@ class CrispinClient:
 
                 if len(p) == 2: return part
 
-                assert len(p) >= 7
+                assert len(p) >= 7, p
                 part['encoding'] = p[5]  # Content-Transfer-Encoding
                 part['bytes'] = p[6]
 
@@ -217,12 +247,13 @@ class CrispinClient:
                 if content_type_major == 'text':
                     assert len(p) == 8
                     part['lines'] = p[7]
-
                 return part
 
             def make_obj(p, i=''):
                 if not isinstance(p[0], basestring):
+
                     # This part removes the mime relation
+                    # print 'p here...', p
                     if isinstance(p[-1], basestring):
                         mime_relation = p[-1]
                         if (len(p) == 2):
@@ -237,13 +268,23 @@ class CrispinClient:
                         log.error("NO MIME RELATION HERE.....")
                         toIterate = p
 
+
                     for x, part in enumerate(toIterate):
+
+                        if isinstance(part, basestring):
+                            log.error("Multiple-nested content type? %s" % part)
+                            continue
+
+
                         if len(i) > 0:
                             section = i+'.' + str(x+1)
                         else:
                             section = str(x+1)
 
+                        # print 'calling make_obj', part
+
                         ret = make_obj(part, section)  # call recursively and add to lists
+
                         if not ret:
                             continue
                         # Relations are alternative, mixed, signed, related
@@ -253,6 +294,7 @@ class CrispinClient:
                 else:
                     if len(i) > 0: index = i+'.1'  ## is this a lie? TODO
                     else: index = '1'
+                    # print 'NOT BASESTRING', p, type(p)
                     return create_messagepart(p, i)
 
 
@@ -268,19 +310,20 @@ class CrispinClient:
         return new_messages, new_parts
 
 
+
     @connected
     def fetch_messages(self, folder_name):
         new_messages, new_parts = self.fetch_folder(folder_name)
         return new_messages
 
 
+
+
     @connected
-    def fetch_msg_body(self, folder, msg_uid, section_index, readonly=True):
+    def fetch_msg_body(self, msg_uid, section_index, readonly=True):
         msg_uid = str(msg_uid)
-        self.select_folder(folder)
 
-        log.info("Fetching in %s -- %s <%s>" % (folder, msg_uid, section_index))
-
+        log.info("Fetching %s <%s>" % (msg_uid, section_index))
 
         query = query_key = 'BODY[%s]' % section_index
         if readonly:
@@ -304,6 +347,48 @@ class CrispinClient:
 
 
 
+
+    @connected
+    def fetch_msg_headers(self, folder, msg_uid, readonly=True):
+
+        if isinstance(msg_uid, basestring):
+            msg_uid = [msg_uid]
+        msg_uid = [str(s) for s in msg_uid]
+
+        self.select_folder(folder)
+
+        log.info("Fetching headers in %s -- %s" % (folder, msg_uid))
+
+        query = query_key = 'BODY[HEADER]'
+        if readonly:
+            query = 'BODY.PEEK[HEADER]'
+        query_key = 'BODY[HEADER]'
+        response = self.imap_server.fetch(msg_uid,
+                                    [query, 'X-GM-THRID', 'X-GM-MSGID'])
+
+        return response
+
+
+    @connected
+    def fetch_entire_msg(self, folder, msg_uid, readonly=True):
+
+        if isinstance(msg_uid, basestring):
+            msg_uid = [msg_uid]
+        msg_uid = [str(s) for s in msg_uid]
+
+        query = query_key = 'BODY[]'
+        if readonly:
+            query = 'BODY.PEEK[]'
+        query_key = 'BODY[]'
+        response = self.imap_server.fetch(msg_uid,
+                                    [query])
+
+        return response
+
+
+
+
+    @connected
     def all_mail_folder_name(self):
         resp = self.imap_server.xlist_folders()
         folders =  [dict(flags = f[0], delimiter = f[1], name = f[2]) for f in resp]
@@ -311,8 +396,6 @@ class CrispinClient:
             if u'\\AllMail' in f['flags']:
                 return f['name']
         return None
-
-
 
 
     @connected

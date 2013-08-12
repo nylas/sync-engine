@@ -74,14 +74,14 @@ class Application(tornado.web.Application):
 class BaseHandler(tornado.web.RequestHandler):
     # TODO put authentication stuff here
     def get_current_user(self):
-        session_key = self.get_secure_cookie("session")
-        return sessionmanager.get_user_from_session(session_key)
+        session_token = self.get_secure_cookie("session")
+        return sessionmanager.get_session(session_token)
 
 
 class MainHandler(BaseHandler):
 
     def get(self):
-        self.render("templates/index.html", name = self.current_user if self.current_user else " ",
+        self.render("templates/index.html", name = self.current_user.email_address if self.current_user else " ",
                                             logged_in = bool(self.current_user) )
 
 
@@ -115,13 +115,14 @@ class AuthDoneHandler(BaseHandler):
             self.finish()
             return
 
-        sessionmanager.store_access_token(response)
-        email_address = response['email']
 
-        session_uuid = sessionmanager.store_session(email_address)
+        new_user_object = sessionmanager.store_access_token(response)
+        email_address = new_user_object.g_email
 
-        log.info("Successful login. Setting cookie: %s" % session_uuid)
-        self.set_secure_cookie("session", session_uuid)
+        new_session = sessionmanager.create_session(email_address)
+
+        log.info("Successful login. Setting cookie: %s" % new_session.session_token)
+        self.set_secure_cookie("session", new_session.session_token)
 
         self.write("<script type='text/javascript'>parent.close();</script>")  # closes window
         self.flush()
@@ -248,10 +249,10 @@ class WireConnection(SocketRPC):
         try:
             s = SecureCookieSerializer(COOKIE_SECRET)
             des = s.deserialize('session', request.cookies['session'].value)
-            email_address = sessionmanager.get_user_from_session(des)
-            if not email_address:
+            s = sessionmanager.get_session(des)
+            if not s:
                 raise tornado.web.HTTPError(401)
-            self.email_address = email_address
+            self.email_address = s.email_address
         except Exception, e:
             log.warning("Unauthenticated socket connection attempt")
             raise tornado.web.HTTPError(401)

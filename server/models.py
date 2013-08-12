@@ -1,69 +1,119 @@
-import logging as log
-import json
-import time
-import datetime
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
+from sqlalchemy.ext.declarative import declarative_base
+Base = declarative_base()
+
+from sqlalchemy.ext.serializer import loads, dumps
+from sqlalchemy import event
+from sqlalchemy.orm import reconstructor
 
 
-class IBContact():
+class UserSession(Base):
+    __tablename__ = 'user_sessions'
+
+    session_token = Column(String, primary_key=True)
+    email_address = Column(String)
+
     def __init__(self):
-        self.firstname = ""
-        self.lastname = ""
-        self.email = ""
-
-    def gravatar(self):
-        return gravatar_url(self.email)
-
-    def toJSON(self):
-        return dict( firstname = self.firstname,
-                     lastname = self.lastname,
-                     email = self.email)
+        self.session_token = None
+        self.email_address  = None
 
 
-class IBThread():
+class User(Base):
+    __tablename__ = 'users'
+
+    # Not from google
+    name = Column(String)
+    date = Column(DateTime)
+
+    g_token_issued_to = Column(String)
+    g_user_id = Column(String)
+
+    g_access_token = Column(String)
+    g_id_token = Column(String)
+    g_expires_in = Column(Integer)
+    g_access_type = Column(String)
+    g_token_type = Column(String)
+    g_audience = Column(String)
+    g_scope = Column(String)
+    g_email = Column(String, primary_key=True)
+    g_refresh_token = Column(String)
+    g_verified_email = Column(Boolean)
+
     def __init__(self):
-        self.message_ids = []
-        self.thread_id = None
-        self.labels = []
+        self.name = None
 
-    def __repr__(self):
-        return '<IBThread object> ' +\
-                '    thr_id: ' + str(self.thread_id) + \
-                '    message_ids: ' + str(self.message_ids) + \
-                '    labels: ' + str(self.labels)
+        self.g_token_issued_to = None
+        self.g_user_id = None
 
-
-    def toJSON(self):
-        return dict( message_ids = [str(s) for s in self.message_ids],
-                     thread_id = str(self.thread_id),
-                     labels = [str(s) for s in self.labels]
-                    )
-
-
-class IBMessage():
-    def __init__(self, email_message_object = None):
-        self.message_id = "foo message id"
-        self.thread_id = None
-        self.size = None
-        self.uid = None
-
-        self.to_contacts = None
-        self.from_contacts = None
-        self.subject = None
-
+        self.g_access_token =None
+        self.g_id_token = None
+        self.g_expires_in = None
+        self.g_access_type = None
+        self.g_token_type = None
+        self.g_audience = None
         self.date = None
-        self.message_parts = []
-        self.attachments = []
-        self.signatures = []
-        self.labels = []
+        self.g_scope = None
+        self.g_email = None
+        self.g_refresh_token = None
+        self.g_verified_email = None
 
-        self.envelope = None   # TOFIX store this too?
 
+
+class MessageMeta(Base):
+    __tablename__ = 'messages'
+
+    _from_addr = Column(String)
+    _sender_addr = Column(String)
+    _reply_to = Column(String)
+    _to_addr = Column(String)
+    _cc_addr = Column(String)
+    _bcc_addr = Column(String)
+    _in_reply_to = Column(String)
+    message_id = Column(String)
+    date = Column(String)  # The date header
+    subject = Column(String)
+    internaldate = Column(DateTime)
+    _flags = Column(String)
+    uid = Column(String)
+
+    g_msgid = Column(String, primary_key=True)
+    g_thrid = Column(String)
+    g_labels = Column(String)
+
+    def __init__(self):
+        self.from_addr = None
+        self.sender_addr = None
+        self.reply_to = None
+        self.to_addr = None
+        self.cc_addr = None
+        self.bcc_addr = None
+        self.in_reply_to = None
+        self.message_id = None
+        self.date = None
+        self.internaldate = None
+        self.g_msgid = None
+        self.g_thrid = None
+        self.g_labels = None
+        self.flags = None
+        self.subject = None
+        self.uid = None  # TODO remove this
+
+
+    @reconstructor
+    def init_on_load(self):
+        self.from_addr = loads(self._from_addr)
+        self.sender_addr = loads(self._sender_addr)
+        self.reply_to = loads(self._reply_to)
+        self.to_addr = loads(self._to_addr)
+        self.cc_addr = loads(self._cc_addr)
+        self.bcc_addr = loads(self._bcc_addr)
+        self.in_reply_to = loads(self._in_reply_to)
+        self.flags = loads(self._flags)
 
     def gmail_url(self):
         if not self.uid:
             return
         return "https://mail.google.com/mail/u/0/#inbox/" + hex(self.uid)
-
 
     def trimmed_subject(self):
         s = self.subject
@@ -72,63 +122,83 @@ class IBMessage():
         return s
 
 
-    @property
-    def time_since_epoch(self):
-        return time.mktime(self.date.timetuple()) if self.date else 0
-
-    def toJSON(self):
-        return dict(
-            message_id = self.message_id,
-            thread_id = self.thread_id,
-            labels = self.labels,
-            uid = self.uid,
-            to_contacts = self.to_contacts,
-            from_contacts = self.from_contacts,
-            subject = self.subject,
-            date = str(self.time_since_epoch), # since poch
-            message_parts = [p.toJSON() for p in self.message_parts],
-            attachments = [p.toJSON() for p in self.attachments],
-            signatures = [p.toJSON() for p in self.signatures] )
-
+    def client_json(self):
+        d = {}
+        d['from'] = self.from_addr
+        d['to'] = self.to_addr
+        d['date'] = self.internaldate
+        d['subject'] = self.subject
+        return d
 
     def __repr__(self):
-        return 'IBMessage object: \n\t%s' % self.toJSON()
+        return 'MessageMeta object: \n\t%s' % self.__dict__
+
+
+@event.listens_for(MessageMeta, 'before_insert', propagate = True)
+def serialize_before_insert(mapper, connection, target):
+    target.__from_addr = dumps(target.from_addr)
+    target._sender_addr = dumps(target.sender_addr)
+    target._reply_to = dumps(target.reply_to)
+    target._to_addr = dumps(target.to_addr)
+    target._cc_addr = dumps(target.cc_addr)
+    target._bcc_addr = dumps(target.bcc_addr)
+    target._in_reply_to = dumps(target.in_reply_to)
+    target._flags = dumps(target.flags)
 
 
 
-class IBMessagePart(object):
-    """The parts of message's body content"""
+
+class MessagePart(Base):
+    __tablename__ = 'parts'
+
+    g_msgid = Column(String, ForeignKey(MessageMeta.g_msgid), primary_key=True)
+    section = Column(String, primary_key=True)
+
+    content_type = Column(String)
+    charset = Column(String)
+    bytes = Column(Integer)
+    line_count = Column(Integer)
+    filename = Column(String)
+
+    s3_id = Column(String)
+    host_id = Column(String)  # Which server holds onto this part
+
 
     def __init__(self):
-        self.index = None
-        self.content_type_major = None
-        self.content_type_minor = None
-
+        self.g_msgid = None
+        self.section = None
+        self.content_type = None
         self.charset = None
-        self.encoding = None
-        self.bytes = None  # number of octets TODO is this encoded (transfer)?
+        self.bytes = None
         self.line_count = None
         self.filename = None
+        self.s3_id = None
+        self.host_id = None
 
 
-    def toJSON(self):
-        if self.content_type_major.lower() == 'text':
-            return dict(
-                content_type = "%s/%s" % (self.content_type_major, self.content_type_minor),
-                bytes = self.bytes,
-                index = self.index,
-                encoding = self.encoding,
-            )
-        else:
-            return dict(
-                content_type = "%s/%s" % (self.content_type_major, self.content_type_minor),
-                bytes = self.bytes,
-                index = self.index,
-                encoding = self.encoding,
-                filename = self.filename
-            )
 
     def __repr__(self):
-        return '<IBMessagePart object> %s' % self.toJSON()
+        return '<IBMessagePart object> %s' % self.__dict__
 
 
+
+## Make the tables
+
+from sqlalchemy import create_engine
+
+# engine = create_engine('sqlite:///:memory:', echo=True)
+
+# sqlite://<nohostname>/<path>
+# where <path> is relative:
+
+# PATH_TO_DATABSE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "database.db")
+engine = create_engine('sqlite:///database.db')
+
+Base.metadata.create_all(engine)
+
+from sqlalchemy.orm import sessionmaker
+Session = sessionmaker()
+Session.configure(bind=engine)
+
+
+db_session = Session()

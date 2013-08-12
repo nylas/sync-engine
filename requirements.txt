@@ -7,9 +7,13 @@ tornado==3.0.1
 wsgiref==0.1.2
 tornadio2==0.0.3
 futures==2.1.3
-pymongo==2.5.2
 lamson==1.3.4
 jsonrpclib==0.1.3
+SQLAlchemy==0.8.2
+pymongo==2.5.2  # For json_util in bson
+
+gevent-socketio==0.3.5-rc2
+
 
 # Our own versions of these
 -e packages/imapclient
@@ -22,3 +26,4 @@ Cython==0.19.1
 -e git+git://github.com/dotcloud/zerorpc-python.git#egg=zerorpc
 # v13.1.0
 -e git+git://github.com/zeromq/pyzmq.git@v13.1.0#egg=zmq
+

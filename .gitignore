@@ -1,5 +1,5 @@
 # Project-specific
-/database
+/database.db
 /uploads
 /man
 /src

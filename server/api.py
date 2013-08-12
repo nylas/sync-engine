@@ -4,11 +4,8 @@ import logging as log
 import encoding
 
 import json
-
-
+import postel
 from bson import json_util
-import json
-
 
 
 def messages_for_folder(email_address, folder_name="Inbox"):
@@ -20,8 +17,8 @@ def messages_for_folder(email_address, folder_name="Inbox"):
         threads = crispin_client.fetch_messages(folder_name)
 
         # Fixes serializing date.datetime
-        return json.dumps(threads, default=json_util.default)
-
+        return json.dumps([t.client_json() for t in threads],
+                           default=json_util.default)
 
     except AuthFailure, e:
         log.error(e)
@@ -30,16 +27,15 @@ def messages_for_folder(email_address, folder_name="Inbox"):
         return None
 
 
-
-
 def send_mail(email_address, **kwargs):
 
-    s = postel.SMTP(email_address,
-                    sessionmanager.get_access_token(email_address) )
+    user_obj = sessionmanager.get_user(email_address)
+    s = postel.SMTP(user_obj.g_email,
+                    user_obj.g_access_token)
+
     s.setup()
     s.send_mail("Test message", "Body content of test message!")
     s.quit()
-
     return "OK"
 
 

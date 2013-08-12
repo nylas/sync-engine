@@ -25,7 +25,7 @@ OAUTH_SCOPE = " ".join([
     ])
 
 
-async_client = httpclient.HTTPClient()  # Todo make async?
+sync_client = httpclient.HTTPClient()  # Todo make async?
 
 
 def authorize_redirect_url(redirect_uri, email_address=None):
@@ -58,7 +58,7 @@ def get_authenticated_user(authorization_code, redirect_uri):
     }
 
     request = httpclient.HTTPRequest(OAUTH_ACCESS_TOKEN_URL, method="POST", body=urllib.urlencode(args))
-    response = async_client.fetch( request)
+    response = sync_client.fetch( request)
 
     if response.error:
         error_dict = escape.json_decode(response.body)
@@ -90,7 +90,7 @@ def get_new_token(refresh_token):
 
     request = httpclient.HTTPRequest(OAUTH_ACCESS_TOKEN_URL, method="POST", body=urllib.urlencode(args))
 
-    response = async_client.fetch(request)
+    response = sync_client.fetch(request)
 
     if response.error:
         error_dict = escape.json_decode(response.body)
@@ -111,9 +111,8 @@ def get_new_token(refresh_token):
 def validate_token(access_token):
     # Validate token
     request = httpclient.HTTPRequest(OAUTH_TOKEN_VALIDATION_URL + "?access_token=" + access_token)
-
     try:
-        response = async_client.fetch(request)
+        response = sync_client.fetch(request)
     except httpclient.HTTPError, e:
         response = e.response
         pass  # handle below
@@ -128,8 +127,6 @@ def validate_token(access_token):
         log.error("%s - %s" % (validation_dict['error'], validation_dict['error_description']))
         return None
 
-
-    validation_dict = escape.json_decode(response.body)
     return validation_dict
 
 
@@ -138,7 +135,7 @@ def get_user_info(access_token, redirect_uri, callback):
     """ Get user info. Stuff like fullname, birthdate, profile picture, etc. """
 
     request = httpclient.HTTPRequest(OAUTH_ACCESS_TOKEN_URL, method="POST", body=urllib.urlencode(args))
-    response = async_client.fetch(request)
+    response = sync_client.fetch(request)
 
     if response.error:
         error_dict = escape.json_decode(response.body)

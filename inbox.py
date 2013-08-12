@@ -4,20 +4,12 @@ import signal
 import sys
 import os
 import subprocess
-from time import sleep
-
-import logging as log
 
 # Make logging prettified
 import tornado.options
 tornado.options.parse_command_line()
 
-
-
 DEFAULT_PORT = 8888
-
-PATH_TO_MONGO_DATABSE = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)), "database/mongo/")
 
 
 # Trying to get this to work
@@ -36,18 +28,6 @@ def install(args):
     print "\033[95mDone!\033[0m"
 
     start()
-
-
-def start_mongo():
-    # Start Mongo
-    log.info("Starting Mongo. DB at %s" % PATH_TO_MONGO_DATABSE)
-    if not os.path.exists(PATH_TO_MONGO_DATABSE):
-      os.makedirs(PATH_TO_MONGO_DATABSE)
-    args = ['mongod', '--dbpath', PATH_TO_MONGO_DATABSE, '--fork', '--logpath=/tmp/inbox-mongo.log']
-    mongod_process = subprocess.Popen(args, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.STDOUT)
-    mongod_process.communicate()
-    sleep(1) # for mongo
-
 
 
 
@@ -75,15 +55,6 @@ def start(args=None):
      """
 
 
-    # consider doing this to delete the database
-    # import shutil
-    # shutil.rmtree('/db')
-
-    try: start_mongo()
-    except Exception, e:
-        raise e
-        stop(None)
-
     # Start Tornado
     from server.app import startserver
     try:
@@ -100,10 +71,6 @@ def stop(args):
     from server.app import stopserver
     stopserver()
 
-    # Stop mongo
-    log.info("Stopping Mongo.")
-    os.system("pkill mongod")
-
     print """
 \033[91m     Stopped.
 \033[0m"""
@@ -112,8 +79,8 @@ def stop(args):
 
 
 def console(args):
-    import pymongo
-    env = {'db': pymongo.MongoClient().test}
+    import models
+    env = {'db': models.db_session}
 
     # Based on http://docs.python.org/2/tutorial/interactive.html
     # except it's 2013 and we have closures.

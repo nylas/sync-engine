@@ -1,29 +1,15 @@
 import crispin
 import uuid
 
-import pymongo
-# from bson.objectid import ObjectId
 import logging as log
 import datetime
 import traceback
 import google_oauth
-from bson.objectid import ObjectId
+from models import db_session, User, UserSession
 
 # Memory cache for currently open crispin instances
 email_address_to_crispins = {}
 
-
-db = pymongo.MongoClient().test
-try:
-    db.create_collection('session_to_user')
-    db.create_collection('user_email_to_token')
-    log.info('Created collections in sessions DB"')
-
-except pymongo.errors.CollectionInvalid, e:
-    if db.create_collection and db.create_collection:
-        log.info("DB exists already.")
-    else:
-        log.error("Error creating sessions DB collecitons. %s" % e)
 
 
 def log_ignored(exc):
@@ -31,73 +17,82 @@ def log_ignored(exc):
               % (exc, ''.join(traceback.format_stack()[:-2]), traceback.format_exc(exc)))
 
 
-def store_session(email_address):
-    session_uuid = str(uuid.uuid1())
 
-    session = {"email_address": email_address,
-               "session_uuid": session_uuid,
-               "date": datetime.datetime.utcnow()
-               }
-    session_id = db.session_to_user.insert(session)
-    return session_uuid
+def create_session(email_address):
+    new_session = UserSession()
+    new_session.email_address = email_address
+    new_session.session_token = str(uuid.uuid1())
+    db_session.add(new_session)
+    db_session.commit()
+    return new_session
 
 
-def get_user_from_session(session_uuid):
-    q = {"session_uuid": session_uuid}
-    session = db.session_to_user.find_one(q)
 
-    if session:
-        return session['email_address']
-    return None
+def get_session(session_token):
+    session_obj = db_session.query(UserSession).filter_by(session_token=session_token).first()
+    if not session_obj:
+        log.error("No record for session with token: %s" % session_token)
+    return session_obj
+
+
 
 
 def store_access_token(access_token_dict):
+    new_user = User()
+    # new_user.name = None
+    new_user.g_token_issued_to = access_token_dict['issued_to']
+    new_user.g_user_id = access_token_dict['user_id']
+    new_user.g_access_token = access_token_dict['access_token']
+    new_user.g_id_token = access_token_dict['id_token']
+    new_user.g_expires_in = access_token_dict['expires_in']
+    new_user.g_access_type = access_token_dict['access_type']
+    new_user.g_token_type = access_token_dict['token_type']
+    new_user.g_audience = access_token_dict['audience']
+    new_user.g_scope = access_token_dict['scope']
+    new_user.g_email = access_token_dict['email']
+    new_user.g_refresh_token = access_token_dict['refresh_token']
+    new_user.g_verified_email = access_token_dict['verified_email']
+    new_user.date = datetime.datetime.utcnow()  # Used to verify key lifespan
 
-    email_address = access_token_dict['email']
+    db_session.add(new_user)
+    db_session.commit()
 
     # Close old crispin connection
-    if email_address in email_address_to_crispins:
-        crispin = email_address_to_crispins[email_address]
-        crispin.stop()
-        del email_address_to_crispins[email_address]
+    if new_user.g_email in email_address_to_crispins:
+        old_crispin = email_address_to_crispins[new_user.g_email]
+        old_crispin.stop()
+        del email_address_to_crispins[new_user.g_email]
 
-    access_token_dict["date"] = datetime.datetime.utcnow()
-    access_token_dict['_id'] = ObjectId()
-
-    session_id = db.user_email_to_token.insert(access_token_dict)
-
-    log.info("Stored access token %s" % access_token_dict)
+    log.info("Stored new user object %s" % new_user)
+    return new_user
 
 
-def get_access_token(email_address, callback=None):
 
-    q = {"email": email_address }
-    cursor = db.user_email_to_token.find(q).sort([("date",-1)]).limit(1)
+def get_user(email_address, callback=None):
 
-    try:
-        access_token_dict = list(cursor)[0]
-    except Exception, e:
-        log_ignored(e)
-        access_token_dict = None
+    user_obj = db_session.query(User).filter_by(g_email=email_address).first()
+    if not user_obj:
+        log.error("Should already have a user object...")
+        return None
 
 
-    issued_date = access_token_dict['date']
-    expires_seconds = access_token_dict['expires_in']
+    issued_date = user_obj.date
+    expires_seconds = user_obj.g_expires_in
 
+    # TODO check with expire date first
     expire_date = issued_date + datetime.timedelta(seconds=expires_seconds)
 
-    is_valid = google_oauth.validate_token(access_token_dict['access_token'])
+    is_valid = google_oauth.validate_token(user_obj.g_access_token)
 
     # TODO refresh tokens based on date instead of checking?
     # if not is_valid or expire_date > datetime.datetime.utcnow():
     if not is_valid:
         log.error("Need to update access token!")
 
-        assert 'refresh_token' in access_token_dict
-        refresh_token = access_token_dict['refresh_token']
+        refresh_token = user_obj.g_refresh_token
 
         log.error("Getting new access token...")
-        response = google_oauth.get_new_token(refresh_token)
+        response = google_oauth.get_new_token(refresh_token)  # TOFIX blocks
 
         # TODO handling errors here for when oauth has been revoked
         if 'error' in response:
@@ -107,33 +102,30 @@ def get_access_token(email_address, callback=None):
                 log.error("Refresh token is invalid.")
             return None
 
-
         # TODO Verify it and make sure it's valid.
-        assert 'access_token' in access_token_dict
-        response['refresh_token'] = refresh_token
+        assert 'access_token' in response
+        user_obj = store_access_token(response)
+        log.info("Updated token for user %s" % user_obj.g_email)
 
-        store_access_token(response)
-        access_token_dict = response
-
-        log.info("Updated token for user %s" % access_token_dict['email'])
-
-    return access_token_dict['access_token']
+    log.info("Returing user object: %s" % user_obj)
+    return user_obj
 
 
 
-def get_crispin_from_session(session):
+def get_crispin_from_session(session_token):
     """ Get the running crispin instance, or make a new one """
-    email_address = get_user_from_session(session)
-    return get_crispin_from_email(email_address)
+    s = get_session(session_token)
+    return get_crispin_from_email(s.email_address)
 
 
 def get_crispin_from_email(email_address):
     if email_address in email_address_to_crispins:
         return email_address_to_crispins[email_address]
     else:
-        access_token = get_access_token(email_address)
+        user_obj = get_user(email_address)
 
-        crispin_client =  crispin.CrispinClient(email_address, access_token)
+        crispin_client =  crispin.CrispinClient(user_obj.g_email, user_obj.g_access_token)
+
         email_address_to_crispins[email_address] = crispin_client
         return crispin_client
 
