@@ -22,7 +22,7 @@ app.directive("replybox", function() {
                 position: 'absolute',
                 bottom: 3,
                 left: 0,
-                minWidth: 415,
+                minWidth: 538,  // Depends on the number of buttons
             }
 
             $scope.reply_box_style = {
@@ -31,11 +31,7 @@ app.directive("replybox", function() {
 
                 marginBottom: '5px',
                 marginTop: '5px',
-
                 minHeight: '50px',
-
-
-                boxShadow: '0px -3px 5px 0px rgba(0,0,0,0.29)',
             };
 
             $scope.text_box_style = {
