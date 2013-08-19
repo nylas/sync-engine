@@ -4,7 +4,7 @@
 var app = angular.module('InboxApp.controllers');
 
 
-app.controller('AppContainerController', function($scope, $rootScope, wire, growl, IBMessage, localStorageService) {
+app.controller('AppContainerController', function($scope, $rootScope, wire, growl, IBMessage, protocolhandler) {
 
     $scope.notificationButtonClick = function() {
         growl.requestPermission(
@@ -19,8 +19,7 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
     };
 
 
-    // DEBUG
-    localStorageService.clearAll();
+    protocolhandler.register();
 
 
     $rootScope.$on('LocalStorageModule.notification.error', function(e) {
@@ -88,7 +87,6 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
                 data_id: selectedMessage.data_id
             }, function(data) {
                 // var data = atob(data)
-                localStorageService.set(selectedMessage.uid, data);
                 $scope.activeMessage.body_text = data;
             }
         );
