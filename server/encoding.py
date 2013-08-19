@@ -76,6 +76,39 @@ def decode_data(data, data_encoding):
     return data
 
 
+import chardet
+
+def decode_part(data, part):
+    data_encoding = part.encoding.lower()
+
+    if data_encoding == 'quoted-printable':
+        data = quopri.decodestring(data)
+
+        charset = part.charset
+        if not charset:
+            result = chardet.detect(data)
+            log.info("Detected charset %s with confidence %s" % ( result['encoding'], str(result['confidence']) ) )
+            charset = result['encoding']
+
+        if not isinstance(data, unicode):
+            data = unicode(data, charset or "ascii", 'strict')
+
+    elif data_encoding == '7bit':
+        pass  # This is just ASCII. Do nothing.
+    elif data_encoding == '8bit':
+        pass  # .decode('8bit') does nothing.
+    elif data_encoding == 'base64':
+        # data = data.decode('base-64')
+        data = base64.b64decode(data)
+    else:
+        log.error("Unknown encoding scheme:" + str(encoding))
+        raise Exception("No encoding type recognized")
+
+    return data
+
+
+
+
 
 
 def clean_html(msg_data):

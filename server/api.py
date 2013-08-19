@@ -77,10 +77,8 @@ def data_with_id(data_id, user=None):
 
     crispin_client = sessionmanager.get_crispin_from_email('mgrinich@gmail.com')
 
-    msg_data = crispin_client.fetch_msg_body(m.uid, host_id.section)
-
-
-    msg_data = encoding.decode_data(msg_data, to_fetch.)
+    msg_data = crispin_client.fetch_msg_body(m.uid, to_fetch.section)
+    msg_data = encoding.decode_part(msg_data, to_fetch)
 
 
     # TODO need to decode it here

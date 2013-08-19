@@ -16,10 +16,10 @@ tornado.options.parse_command_line()
 # from lamson import encoding
 
 from sqlalchemy import *
-from models import db_session, Base, MessageMeta
+from models import db_session, Base, MessageMeta, MessagePart
 from sqlalchemy.orm import defer
 
-def main():
+def sync_meta():
 
     crispin_client = sessionmanager.get_crispin_from_email('mgrinich@gmail.com')
 
@@ -86,19 +86,67 @@ def main():
 
         count += len(new_messages)
 
-        # Do this later on a job server for syncing actual msg data
-        # for part in new_parts:
-        #     print 'part:', part.encoding, part.charset
-        #     msg_data = crispin_client.fetch_msg_body(part.allmail_uid,
-        #                                              part.section)
-        #     msg_data = encoding.decode_data(msg_data, part.encoding)
-
         log.info("Fetched metadata for %i messages and %i parts. (total: %i)" % ( len(new_messages), len(new_parts), count ) )
 
     log.info("Finished.")
 
 
-    return
+
+
+def sync_parts():
+
+    crispin_client = sessionmanager.get_crispin_from_email('mgrinich@gmail.com')
+    # folder_name = crispin_client.all_mail_folder_name()
+    # select_info = crispin_client.select_folder(folder_name)
+
+    log.info("Loading parts from DB")
+    parts = db_session.query(MessagePart).all()
+    log.info("We have %i parts to downlod" % len(parts))
+
+    for part in parts:
+        print 'part:', part.encoding, part.charset
+
+        messages_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../messageparts/")
+        write_dir = os.path.join(messages_path,
+                                  part.g_msgid[0],
+                                  part.g_msgid[1],
+                                  part.g_msgid[2],
+                                  part.g_msgid[3])
+        if not os.path.exists(write_dir):
+            os.makedirs(write_dir)
+
+        write_path = os.path.join(write_dir, part.g_msgid + '-' + part.section)
+
+        if os.path.exists(write_path):
+            log.info("Already have file %s" % write_path)
+            continue
+
+
+        log.info("Fetching...")
+        msg_data = crispin_client.fetch_msg_body(part.allmail_uid, part.section)
+
+        if not msg_data:
+            log.error("Message has no body %s" % part)
+            continue
+
+
+        try:
+            msg_data = encoding.decode_part(msg_data, part)
+        except UnicodeDecodeError, e:
+            print 'msg_data', msg_data
+            raise e
+
+
+        log.info("Writing to %s" % write_path)
+
+        if isinstance(msg_data, unicode):
+            msg_data = msg_data.encode("utf-8")
+        f = open(write_path, 'w')
+        f.write(msg_data)
+        f.close()
+
+
+    log.info("Finished.")
 
 
 
@@ -222,4 +270,5 @@ def main():
     #     print msg_data
 
 if __name__ == '__main__':
-    main()
+    # sync_meta()
+    sync_parts()
