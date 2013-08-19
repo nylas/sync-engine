@@ -90,7 +90,6 @@ class MainHandler(BaseHandler):
 
 
 class AuthStartHandler(BaseHandler):
-
     @tornado.web.asynchronous
     def get(self):
         url = google_oauth.authorize_redirect_url(
@@ -137,20 +136,22 @@ class AngularStaticFileHandler(tornado.web.StaticFileHandler):
             return
         super(AngularStaticFileHandler, self).get(path, **kwargs)
 
-
     # DEBUG: Don't cache anything right now --
     def set_extra_headers(self, path):
         self.set_header("Cache-control", "no-cache")
 
 
+
 class AppRedirectHandler(BaseHandler):
     # TODO put authentication stuff here
+    @tornado.web.authenticated
     def get(self):
         self.redirect('/app/')
 
 
-class FileDownloadHandler(BaseHandler):
 
+class FileDownloadHandler(BaseHandler):
+    @tornado.web.authenticated
     def get(self):
 
         args = self.request.arguments
@@ -164,9 +165,8 @@ class FileDownloadHandler(BaseHandler):
         self.set_header ('Content-Type', content_type)
         self.set_header ('Content-Disposition', 'attachment; filename=' + filename)
 
-        # Debug
-        crispin_client = sessionmanager.get_crispin_from_email('mgrinich@gmail.com')
-        data = crispin_client.fetch_msg_body(uid, section_index, folder='Inbox', )
+        crispin_client = sessionmanager.get_crispin_from_email(self.get_current_user().g_email)
+        data = crispin_client.fetch_msg_body(uid, section_index)
 
         decoded = encoding.decode_data(data, data_encoding)
         self.write(decoded)
@@ -176,9 +176,8 @@ class FileDownloadHandler(BaseHandler):
 
 class FileUploadHandler(BaseHandler):
 
+    @tornado.web.authenticated
     def post(self):
-        if not self.current_user:
-            raise tornado.web.HTTPError(403, "access forbidden")
 
         try:
             uploaded_file = self.request.files['file'][0]  # wacky
@@ -200,8 +199,6 @@ class FileUploadHandler(BaseHandler):
         except Exception, e:
             log.error(e)
             raise tornado.web.HTTPError(500)
-
-
 
 
 
@@ -258,6 +255,8 @@ class WireConnection(SocketRPC):
 
 
 
+
+
 def idler_callback():
     log.info("Received idler callback.")
     for connection in WireConnection.clients:
@@ -293,14 +292,11 @@ def startserver(port):
 
 
 
-
-
 def stopsubmodules():
     # if idler:
     #     idler.stop()
 
     sessionmanager.stop_all_crispins()
-
 
 
 def stopserver():

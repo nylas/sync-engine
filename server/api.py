@@ -20,7 +20,6 @@ def messages_for_folder(folder_name="Inbox", user=None):
     try:
         # crispin_client = sessionmanager.get_crispin_from_email(email_address)
         # log.info('fetching threads...')
-
         # threads = crispin_client.fetch_messages(folder_name)
 
         existing_msgs = db_session.query(MessageMeta).filter(MessageMeta.in_inbox == True).all()
@@ -35,14 +34,17 @@ def messages_for_folder(folder_name="Inbox", user=None):
         return None
 
 
-def send_mail(email_address, **kwargs):
+def send_mail(message_to_send, user=None):
 
-    user_obj = sessionmanager.get_user(email_address)
-    s = postel.SMTP(user_obj.g_email,
-                    user_obj.g_access_token)
+    print message_to_send
+    user = sessionmanager.verify_user(user)
+
+    s = postel.SMTP(user.g_email,
+                    user.g_access_token)
 
     s.setup()
-    s.send_mail("Test message", "Body content of test message!")
+
+    s.send_mail(message_to_send)
     s.quit()
     return "OK"
 
@@ -50,6 +52,7 @@ def send_mail(email_address, **kwargs):
 
 
 def data_with_id(data_id, user=None):
+    assert user, "Must have user object."
 
     log.info('in data_with_id')
 
@@ -75,14 +78,13 @@ def data_with_id(data_id, user=None):
     to_fetch = html_part if html_part else plain_part
 
 
-    crispin_client = sessionmanager.get_crispin_from_email('mgrinich@gmail.com')
+    crispin_client = sessionmanager.get_crispin_from_email(user.g_email)
 
     msg_data = crispin_client.fetch_msg_body(m.uid, to_fetch.section)
     msg_data = encoding.decode_part(msg_data, to_fetch)
 
 
     # TODO need to decode it here
-
     return msg_data
 
 

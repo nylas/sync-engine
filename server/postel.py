@@ -25,11 +25,13 @@ class SMTP(object):
         self.conn.starttls()
         self.conn.ehlo()
 
-        # Format for oauth2 authentication 
+        # Format for oauth2 authentication
         auth_string = 'user=%s\1auth=Bearer %s\1\1' % (self.email_address, self.oauth_token)
         self.conn.docmd('AUTH', 'XOAUTH2 %s' % base64.b64encode(auth_string))
 
-    def send_mail(self, msg_subject, msg_body):
+
+
+    def send_mail(self, msg_to_send):
 
         # Sample header
 
@@ -46,6 +48,7 @@ class SMTP(object):
         # Delivered-To: mailing list forensics@securityfocus.com
         # Delivered-To: moderator for forensics@securityfocus.com
         # Received: (qmail 20564 invoked from network); 5 Jan 2006 16:11:57 -0000
+
         # From: YJesus <yjesus@security-projects.com>
         # To: forensics@securityfocus.com
         # Subject: New Tool : Unhide
@@ -66,12 +69,13 @@ class SMTP(object):
 
 
         from_addr = 'mgrinich@gmail.com'
-        to_addr = ['mgrinich@gmail.com']
+        to_addr = msg_to_send['to']
 
         headers = {}
-        headers['To'] = '"Testing to header field" <test_to_header@gmail.com>'
-        headers['From'] = '"Testing from header field" <test_from_header@gmail.com>'
-        headers['Subject'] = msg_subject
+        headers['To'] = msg_to_send['to']
+
+        headers['From'] = '"Testing send mail from Inbox" <test_from_header@gmail.com>'
+        headers['Subject'] = msg_to_send['subject']
 
         headers['Mime-Version'] = '1.0'
         headers['User-Agent'] = 'InboxApp/0.1'
@@ -80,14 +84,14 @@ class SMTP(object):
         # $headers .= "Content-Type: text/html; charset=ISO-8859-1\r\n";
 
         header = '\r\n'.join(['%s: %s' % (k,v) for k,v in headers.iteritems() ])
-        msg = header + '\n' + msg_body + '\n\n'
+        msg = header + '\n' + msg_to_send['body'] + '\n\n'
 
         try:
             self.conn.sendmail(from_addr, to_addr, msg)
             log.info("Sent msg %s -> %s" % (from_addr, ",".join(t for t in to_addr)))
         except Exception, e:
             raise e
-        
+
 
 
 

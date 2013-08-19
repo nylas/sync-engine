@@ -67,6 +67,11 @@ def get_user(email_address, callback=None):
     if not user_obj:
         log.error("Should already have a user object...")
         return None
+    return verify_user(user_obj)
+
+
+
+def verify_user(user_obj):
 
     issued_date = user_obj.date
     expires_seconds = user_obj.g_expires_in
@@ -102,6 +107,9 @@ def get_user(email_address, callback=None):
 
     log.info("Returing user object: %s" % user_obj)
     return user_obj
+
+
+
 
 
 def get_crispin_from_session(session_token):
