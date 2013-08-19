@@ -6,7 +6,9 @@ app.directive("replybox", function() {
 
         restrict: 'E',
         transclude: true,
-        scope: {},
+        scope: {
+            sendButtonAction : '&sendButtonAction'
+        }, // Two-way binding to message object
         controller: function($scope, $element, $attrs, $transclude) {
 
             var myBorderColor = '#E1E8E7';
@@ -123,7 +125,15 @@ app.directive("replybox", function() {
                 borderLeftWidth: '1px',
                 borderLeftStyle: 'solid',
                 borderLeftColor: myBorderColor
-            }
+            };
+
+            $scope.internalSendButtonAction = function() {
+                alert("Getting here at least");
+            };
+
+
+            $scope.messageText = "Hello world this is my message";
+
         },
 
 
@@ -152,7 +162,7 @@ app.directive("replybox", function() {
 
             '<div id="drop">' +
 
-            '<div auto-resize class="resize_textbox" ng-style="text_box_style" contenteditable="true" hidefocus="true">' + 'Write a message...</div>' +
+            '<div auto-resize id="reply_textbox" class="resize_textbox" ng-style="text_box_style" contenteditable="true" hidefocus="true">' + 'Write a message...</div>' +
 
             '<form id="file-upload" style="display:none" method="post" action="/file_upload" enctype="multipart/form-data">' + '<input style="display:none" type="file" name="file" multiple />' + '</form>' +
 
@@ -166,7 +176,7 @@ app.directive("replybox", function() {
 
             '<div id="add_file_button" ng-style="send_money_button" hover="#E0E3E3">Send Money</div>' +
 
-            '<div id="send_button" ng-style="send_button_style" hover="#E0E3E3">Send</div>' +
+            '<div id="send_button" ng-click="sendButtonHandler()" ng-style="send_button_style" hover="#E0E3E3">Send</div>' +
 
             '</div>' +
             '</div>' +
@@ -174,6 +184,13 @@ app.directive("replybox", function() {
         '</div>',
 
         link: function(scope, elem, attrs, ctrl) {
+
+            scope.sendButtonHandler = function() {
+                var textbox = elem.find('#reply_textbox');
+
+                scope.sendButtonAction( { message_text : textbox.html() });
+            };
+
 
             var upload_file_button = elem.find('#add_file_button');
             upload_file_button.bind('click', function() {

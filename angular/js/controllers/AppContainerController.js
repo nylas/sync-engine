@@ -41,15 +41,12 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
     $scope.loadMessagesForFolder = function(folder) {
 
         $scope.statustext = "Loading messages...";
-
         wire.rpc('messages_for_folder', {
                 folder_name: folder
             },
             function(data) {
 
                 $scope.statustext = "";
-
-                console.log("returned data...");
                 var arr_from_json = JSON.parse(data);
 
                 var freshMessages = [];
@@ -60,14 +57,32 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
                 $scope.messages = freshMessages;
             }
         );
-
     };
+
+
+    $scope.sendMessage = function(message_string) {
+
+        wire.rpc('send_mail', {
+                message_to_send: {'subject' : 'Hello world',
+                                  'body' : message_string,
+                                  'to' : 'christine@spang.cc' }
+            },
+            function(data) {
+
+                alert('Sent mail!');
+
+            }
+        );
+
+    }
 
 
     $scope.openMessage = function(selectedMessage) {
 
         $scope.activeMessage = selectedMessage;
         $scope.activeMessage.body_text = 'Loading&hellip;';
+
+        console.log(selectedMessage);
 
         wire.rpc('data_with_id', {
                 data_id: selectedMessage.data_id

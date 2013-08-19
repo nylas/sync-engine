@@ -11,26 +11,6 @@ app.directive("messageview", function ($filter) {
             message: '='
         }, // Two-way binding to message object
         controller: function ($scope, $element, $attrs, $transclude) {
-            $scope.contactDisplayName = function (contacts) {
-                if (angular.isUndefined(contacts)) {
-                    return "";
-                }
-
-                var to_list = pickname(contacts[0]);
-                for (var i = 1; i < contacts.length; i++) {
-
-                    var c = contacts[i];
-                    var nameToShow;
-                    if (angular.isUndefined(c.name) || c.name.length == 0) {
-                        nameToShow = c.address;
-                    } else {
-                        nameToShow = c.name;
-                    }
-                    to_list = to_list + ', ' + nameToShow;
-                }
-                return to_list;
-            };
-
 
             /* STYLING */
 
@@ -104,7 +84,10 @@ app.directive("messageview", function ($filter) {
 
 	                  '<div ng-style="byline_fromline" ">'+
 
-		                  	'<span ng-style="indent" tooltip-placement="top" tooltip="{{message.from_contacts[2]}}@{{message.from_contacts[3]}}"> '+
+		                  	'<span ng-style="indent"> '+
+
+                            '<span ng-repeat="c in message.from"> {{c[0] + "&nbsp;<" + c[2] + "@"+ c[3] + ">" }} <span>' +
+
 		                  	'{{message.from_contacts[0]}}' +
 		                  	'</span>' +
 	                  '</div>' +
@@ -221,10 +204,10 @@ app.directive("messageframe", function () {
         },
         template: '<iframe width="100%" style="overflow:hidden" height="1" marginheight="0" marginwidth="0" frameborder="no" scrolling="no" src="about:blank"></iframe>',
 
-        link: function (scope, iElement, iAttrs) {
 
-            var iframe = iElement.find('iframe')[0];
+        link: function(scope, elem, attrs, ctrl) {
 
+            var iframe = elem.find('iframe')[0];
 
             function injectToIframe(textToInject) {
                 var doc = iframe.contentWindow.document;
@@ -234,31 +217,35 @@ app.directive("messageframe", function () {
                 iframe.width = '100%';
                 iframe.height = '0px;';
 
-                // var toWrite = '<html><head>' +
-                //     '<style rel="stylesheet" type="text/css">' +
-                //     'body { background-color:#FFF; ' +
-                //     'font-smooth:always;' +
-                //     ' -webkit-font-smoothing:antialiased;' +
-                //     ' font-family:ProximaNova, courier, sans-serif;' +
-                //     ' font-size:15px;' +
-                //     ' color:#333;' +
-                //     ' font-variant:normal;' +
-                //     ' line-height:1.6em;' +
-                //     ' font-style:normal;' +
-                //     ' text-align:left;' +
-                //     ' text-shadow:1px 1px 1px #FFF;' +
-                //     ' position:relative;' +
-                //     ' margin:0; ' +
-                //     ' padding:0; }' +
-                //     ' a { text-decoration: underline;}' +
-                //     'a:hover {' +
-                //     ' border-radius:3px;; background-color: #E9E9E9;' +
-                //     ' }' +
-                //     '</style></head><body>' +
-                //     textToInject +
-                //     '</body></html>';
+                // TODO detect if there's significat styling in this mail.
+                // If so, don't add the CSS
 
-                var toWrite = textToInject;
+                var toWrite = '<html><head>' +
+                    '<link rel="stylesheet" href="/static/fonts/fonts.css"/>' +
+                    '<style rel="stylesheet" type="text/css">' +
+                    'body { background-color:#FFF; ' +
+                    'font-smooth:always;' +
+                    ' -webkit-font-smoothing:antialiased;' +
+                    ' font-family:ProximaNova, courier, sans-serif;' +
+                    ' font-size:15px;' +
+                    ' color:#333;' +
+                    ' font-variant:normal;' +
+                    ' line-height:1.6em;' +
+                    ' font-style:normal;' +
+                    ' text-align:left;' +
+                    ' text-shadow:1px 1px 1px #FFF;' +
+                    ' position:relative;' +
+                    ' margin:0; ' +
+                    ' padding:0; }' +
+                    ' a { text-decoration: underline;}' +
+                    'a:hover {' +
+                    ' border-radius:3px;; background-color: #E9E9E9;' +
+                    ' }' +
+                    '</style></head><body>' +
+                    textToInject +
+                    '</body></html>';
+
+                // var toWrite = textToInject;
 
                 doc.open();
                 doc.write(toWrite);
