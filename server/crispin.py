@@ -248,12 +248,14 @@ class CrispinClient:
 
                         if key == 'charset':
                             part.charset = val
+                        elif key == 'name':
+                            part.filename = val
                         else:
                             m[key] = val
                     part.misc_keyval = m
                 if content_type_major == 'text':
                     assert len(p) == 8
-                    part.lines = p[7]
+                    part.line_count = p[7]
                 return part
 
 

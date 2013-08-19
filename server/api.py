@@ -10,7 +10,7 @@ from bson import json_util
 
 
 from sqlalchemy import *
-from models import db_session, Base, MessageMeta
+from models import db_session, Base, MessageMeta, MessagePart
 
 
 def messages_for_folder(folder_name="Inbox", user=None):
@@ -54,21 +54,33 @@ def data_with_id(data_id, user=None):
     log.info('in data_with_id')
 
     existing_msgs_query = db_session.query(MessageMeta).filter(MessageMeta.g_msgid == data_id)
-
     log.info(existing_msgs_query)
-
     meta = existing_msgs_query.all()
-
-    print 'meta', meta
-
     assert len(meta) == 1
     m = meta[0]
 
-    print m
+
+    existing_parts_query = db_session.query(MessagePart).filter(MessagePart.g_msgid == data_id)
+    parts = existing_parts_query.all()
+    print 'parts', parts
+
+    plain_part = None
+    html_part = None
+    for part in parts:
+        if part.content_type == 'text/html':
+            html_part = part
+        if part.content_type == 'text/plain':
+            plain_part = part
+
+    to_fetch = html_part if html_part else plain_part
+
 
     crispin_client = sessionmanager.get_crispin_from_email('mgrinich@gmail.com')
 
-    msg_data = crispin_client.fetch_msg_body(m.uid, '1')
+    msg_data = crispin_client.fetch_msg_body(m.uid, host_id.section)
+
+
+    msg_data = encoding.decode_data(msg_data, to_fetch.)
 
 
     # TODO need to decode it here

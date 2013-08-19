@@ -22,6 +22,8 @@ import encoding
 import api  # This is the handler for RPC calls
 
 
+from models import db_session, UserSession, User
+
 COOKIE_SECRET = "32oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo="
 
 
@@ -62,8 +64,6 @@ class Application(tornado.web.Application):
             (r'/file_download', FileDownloadHandler),
             (r'/file_upload', FileUploadHandler),
 
-            (r'/message', MessageHandler),
-
             (r'/(?!wire|!app|file)(.*)', tornado.web.StaticFileHandler, {'path': PATH_TO_STATIC,
                                            'default_filename':'index.html'}),
         ])
@@ -75,13 +75,17 @@ class BaseHandler(tornado.web.RequestHandler):
     # TODO put authentication stuff here
     def get_current_user(self):
         session_token = self.get_secure_cookie("session")
-        return sessionmanager.get_session(session_token)
+        user_session  = sessionmanager.get_session(session_token)
+        if not user_session: return None
+        query = db_session.query(User).filter(User.g_email == user_session.email_address)
+        user = query.all()[0]
+        return user
 
 
 class MainHandler(BaseHandler):
 
     def get(self):
-        self.render("templates/index.html", name = self.current_user.email_address if self.current_user else " ",
+        self.render("templates/index.html", name = self.current_user.g_email if self.current_user else " ",
                                             logged_in = bool(self.current_user) )
 
 
@@ -170,28 +174,6 @@ class FileDownloadHandler(BaseHandler):
 
 
 
-
-class MessageHandler(BaseHandler):
-
-    def get(self):
-
-        args = self.request.arguments
-
-        uid = args['uid'][0]
-        section_index = args['section_index'][0]
-        content_type = args['content_type'][0]
-        data_encoding = args['encoding'][0]
-
-        data = api.load_message_body_with_uid(uid, section_index, data_encoding, content_type)
-
-        self.set_header ('Content-Type', 'text/html')
-        # self.set_header ('Content-Disposition', 'attachment; filename=' + filename)
-
-
-        self.write(data)
-
-
-
 class FileUploadHandler(BaseHandler):
 
     def post(self):
@@ -238,11 +220,15 @@ class WireConnection(SocketRPC):
     def on_open(self, request):
         try:
             s = SecureCookieSerializer(COOKIE_SECRET)
-            des = s.deserialize('session', request.cookies['session'].value)
-            u = sessionmanager.get_session(des)
-            if not u:
+            session_token = s.deserialize('session', request.cookies['session'].value)
+            user_session  = sessionmanager.get_session(session_token)
+            if not user_session:
+                log.warning("Unauthenticated socket connection attempt")
                 raise tornado.web.HTTPError(401)
-            self.user = u
+            query = db_session.query(User).filter(User.g_email == user_session.email_address)
+            res = query.all()
+            assert len(res) == 1
+            self.user = res[0]
 
         except Exception, e:
             log.warning("Unauthenticated socket connection attempt")
@@ -264,9 +250,6 @@ class WireConnection(SocketRPC):
 
     # TODO add authentication thing here to check for session token
     def on_message(self, message_body):
-
-        print message_body
-
         response_text = self.run(api, message_body)
 
         # Send the message

@@ -45,9 +45,6 @@ def main():
                     defer(MessageMeta.subject),
                     )
 
-    # query.options(defer('summary')).all()
-    # query.options(undefer('excerpt')).all()
-
     existing_msgs = query.all()
     existing_uids = [m.uid for m in existing_msgs]
 
@@ -67,7 +64,8 @@ def main():
     log.info("%i uids left to fetch" % len(unknown_UIDs))
 
 
-    allmsgs = []
+    count = 0
+
     batch_fetch_amount = 1000
 
     for i in reversed((xrange(0, len(unknown_UIDs), batch_fetch_amount))):
@@ -79,11 +77,14 @@ def main():
 
         new_messages, new_parts = crispin_client.fetch_uids(to_fetch)
 
+
         db_session.add_all(new_messages)
         db_session.commit()
 
-        allmsgs += new_messages
+        db_session.add_all(new_parts)
+        db_session.commit()
 
+        count += len(new_messages)
 
         # Do this later on a job server for syncing actual msg data
         # for part in new_parts:
@@ -92,10 +93,9 @@ def main():
         #                                              part.section)
         #     msg_data = encoding.decode_data(msg_data, part.encoding)
 
+        log.info("Fetched metadata for %i messages and %i parts. (total: %i)" % ( len(new_messages), len(new_parts), count ) )
 
-
-        log.info("Fetched metadata for %i messages and %i parts. (%i total)" % ( len(new_messages), len(new_parts), len(allmsgs) ) )
-    log.info("Finished. Fetched %i items." % len(allmsgs))
+    log.info("Finished.")
 
 
     return

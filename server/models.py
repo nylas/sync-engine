@@ -63,7 +63,7 @@ class User(Base):
 
 
 class MessageMeta(Base):
-    __tablename__ = 'messages'
+    __tablename__ = 'messagemeta'
 
 
     in_inbox = Column(Boolean)
@@ -175,11 +175,11 @@ def serialize_before_insert(mapper, connection, target):
 
 
 class MessagePart(Base):
-    __tablename__ = 'parts'
+    __tablename__ = 'messagepart'
 
     g_msgid = Column(String, ForeignKey(MessageMeta.g_msgid), primary_key=True)
     section = Column(String, primary_key=True)
-
+    encoding = Column(String)
     content_type = Column(String)
     charset = Column(String)
     bytes = Column(Integer)
@@ -196,6 +196,7 @@ class MessagePart(Base):
         self.g_msgid = None
         self.section = None
         self.content_type = None
+        self.encoding = None
         self.charset = None
         self.bytes = None
         self.line_count = None
@@ -206,7 +207,7 @@ class MessagePart(Base):
         self.allmail_uid = None
 
     def __repr__(self):
-        return '<IBMessagePart object> %s' % self.__dict__
+        return 'MessagePart: %s' % self.__dict__
 
     @reconstructor
     def init_on_load(self):

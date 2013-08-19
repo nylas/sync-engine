@@ -88,8 +88,12 @@ class SocketRPC(object):
         else:
             raise Exception("Invalid params: %s", params)
 
+
+
+        assert not 'user' in kwargs
         assert self.user, "Need user object to do any operation"
         kwargs['user'] = self.user
+
 
         # Validating call arguments
         try:
@@ -102,7 +106,7 @@ class SocketRPC(object):
 
         log.info("Running %s with %s" % (method, final_kwargs))
 
-        # THis used to be in a try/catch block
+        # This used to be in a try/catch block
         response = method(*extra_args, **final_kwargs)
 
 
