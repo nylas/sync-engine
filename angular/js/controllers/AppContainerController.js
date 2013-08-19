@@ -67,37 +67,16 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
     $scope.openMessage = function(selectedMessage) {
 
         $scope.activeMessage = selectedMessage;
+        $scope.activeMessage.body_text = 'Loading&hellip;';
 
-        var partToUse = selectedMessage.message_parts[0];
-
-
-
-        // Read that value back
-        var value = localStorageService.get(selectedMessage.uid);
-
-        if (value === null) {
-
-            $scope.activeMessage.body_text = 'Loading&hellip;';
-
-            wire.rpc('load_message_body_with_uid', {
-                    uid: selectedMessage.uid,
-                    section_index: partToUse.index,
-                    data_encoding: partToUse.encoding,
-                    content_type: partToUse.content_type.toLowerCase(),
-                },
-                function(data) {
-
-                    var decoded = atob(data)
-                    localStorageService.set(selectedMessage.uid, decoded);
-                    $scope.activeMessage.body_text = decoded;
-                }
-            );
-
-        } else {
-            console.log("Message was cached in localstorage.")
-            $scope.activeMessage.body_text = value;
-        }
-
+        wire.rpc('data_with_id', {
+                data_id: selectedMessage.data_id
+            }, function(data) {
+                // var data = atob(data)
+                localStorageService.set(selectedMessage.uid, data);
+                $scope.activeMessage.body_text = data;
+            }
+        );
 
     }
 

@@ -15,26 +15,40 @@ tornado.options.parse_command_line()
 
 # from lamson import encoding
 
-
 from sqlalchemy import *
-
 from models import db_session, Base, MessageMeta
+from sqlalchemy.orm import defer
 
 def main():
 
-
     crispin_client = sessionmanager.get_crispin_from_email('mgrinich@gmail.com')
-    log.info('fetching threads...')
 
     folder_name = crispin_client.all_mail_folder_name()
-    select_info = crispin_client.select_folder(folder_name)
+    # folder_name = 'Inbox'
 
+    log.info('Syncing metadata for %s' % folder_name)
+    select_info = crispin_client.select_folder(folder_name)
 
     UIDs = crispin_client.imap_server.search(['NOT DELETED'])
     UIDs = [str(s) for s in UIDs]
     log.info("Found %i UIDs" % len(UIDs) )
 
-    existing_msgs = db_session.query(MessageMeta).all()
+    query = db_session.query(MessageMeta).options(
+                    defer(MessageMeta._from_addr),
+                    defer(MessageMeta._sender_addr),
+                    defer(MessageMeta._reply_to),
+                    defer(MessageMeta._to_addr),
+                    defer(MessageMeta._cc_addr),
+                    defer(MessageMeta._bcc_addr),
+                    defer(MessageMeta._in_reply_to),
+                    defer(MessageMeta.g_labels),
+                    defer(MessageMeta.subject),
+                    )
+
+    # query.options(defer('summary')).all()
+    # query.options(undefer('excerpt')).all()
+
+    existing_msgs = query.all()
     existing_uids = [m.uid for m in existing_msgs]
 
     log.info("Already have %i items" % len(existing_uids))
@@ -54,14 +68,15 @@ def main():
 
 
     allmsgs = []
-    batch_fetch_amount = 100
+    batch_fetch_amount = 1000
 
-    for i in reversed((xrange(0, len(unknown_UIDs) -1, batch_fetch_amount))):
+    for i in reversed((xrange(0, len(unknown_UIDs), batch_fetch_amount))):
 
-        start, end = i, min(len(unknown_UIDs) -1, i+batch_fetch_amount)
+        start, end = i, min(len(unknown_UIDs), i+batch_fetch_amount)
+        log.info("Fetching from %s to %s" % (start, end) )
 
-        log.info("Fetching from UIDs %s to %s" % (unknown_UIDs[start], unknown_UIDs[end]) )
         to_fetch = unknown_UIDs[start:end]
+
         new_messages, new_parts = crispin_client.fetch_uids(to_fetch)
 
         db_session.add_all(new_messages)
@@ -69,14 +84,13 @@ def main():
 
         allmsgs += new_messages
 
+
+        # Do this later on a job server for syncing actual msg data
         # for part in new_parts:
-        #     print part['encoding'],
-        #     if 'charset' in part:
-        #         print part['charset'],
-        #     print
-        #     msg_data = crispin_client.fetch_msg_body(part['uid'],
-        #                                              part['section'])
-        #     msg_data = encoding.decode_data(msg_data, part['encoding'])
+        #     print 'part:', part.encoding, part.charset
+        #     msg_data = crispin_client.fetch_msg_body(part.allmail_uid,
+        #                                              part.section)
+        #     msg_data = encoding.decode_data(msg_data, part.encoding)
 
 
 

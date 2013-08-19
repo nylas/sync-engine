@@ -11,7 +11,7 @@ import logging as log
 import tornado
 
 import encoding
-from models import MessageMeta
+from models import MessageMeta, MessagePart
 import time
 
 
@@ -28,10 +28,11 @@ class CrispinClient:
     # 20 minutes
     SERVER_TIMEOUT = datetime.timedelta(seconds=1200)
 
-    def __init__(self, email_address, oauth_token):
+    def __init__(self, user_obj):
 
-        self.email_address = email_address
-        self.oauth_token = oauth_token
+        self.user_obj = user_obj
+        self.email_address = user_obj.g_email
+        self.oauth_token = user_obj.g_access_token
         self.imap_server = None
         # last time the server checked in, in UTC
         self.keepalive = None
@@ -158,11 +159,8 @@ class CrispinClient:
 
         for message_uid, message_dict in messages.iteritems():
 
-
             new_msg = MessageMeta()
-
             new_msg.uid = str(message_uid)
-
 
             msg_envelope = message_dict['ENVELOPE'] # ENVELOPE is parsed RFC-2822 headers
             def make_unicode_contacts(contact_list):
@@ -173,7 +171,6 @@ class CrispinClient:
                         new_c[i] = encoding.make_unicode(c[i])
                     n.append(new_c)
                 return n
-
 
             new_msg.date = msg_envelope[0] # we use INTERNALDATE instead of this
 
@@ -195,7 +192,14 @@ class CrispinClient:
             new_msg.g_thrid = str(message_dict['X-GM-THRID'])
             new_msg.g_msgid = str(message_dict['X-GM-MSGID'])
             new_msg.g_labels = str(message_dict['X-GM-LABELS'])
+
+            new_msg.in_inbox = bool('\Inbox' in new_msg.g_labels)
+            if new_msg.in_inbox:
+                print 'Message is in the inbox!'
+
             new_msg.flags = message_dict['FLAGS']
+
+            new_msg.g_user_id = self.user_obj.g_user_id
 
             # \Seen  Message has been read
             # \Answered  Message has been answered
@@ -204,17 +208,15 @@ class CrispinClient:
             # \Draft  Message has not completed composition (marked as a draft).
             # \Recent   session is the first session to have been notified about this message
 
-
-
             bodystructure = message_dict['BODY']
 
             def create_messagepart(p, section='1'):
                 assert len(p) > 0
-                part = {}
-                part['section'] = str(section)
 
-                part['uid'] = new_msg.uid
-
+                part = MessagePart()
+                part.section = str(section)
+                part.g_msgid = new_msg.g_msgid
+                part.allmail_uid = str(message_uid)
 
                 if len(p) == 1:
                     if p[0].lower() == "appledouble":
@@ -228,26 +230,32 @@ class CrispinClient:
                 content_type_major = p[0].lower()
                 content_type_minor = p[1].lower()
 
-                part['content-type'] = "%s/%s" % (content_type_major, content_type_minor)
+                part.content_type = "%s/%s" % (content_type_major, content_type_minor)
 
                 if len(p) == 2: return part
 
                 assert len(p) >= 7, p
-                part['encoding'] = p[5]  # Content-Transfer-Encoding
-                part['bytes'] = p[6]
+                part.encoding = p[5]  # Content-Transfer-Encoding
+                part.bytes = p[6]
 
                 # Example for p[2] is ("CHARSET" "ISO-8859-1" "FORMAT" "flowed")  or  ("NAME" "voicemail.wav")
                 if p[2] and not isinstance(p[2], basestring):
                     assert len(p[2]) % 2 == 0  # key/value pairs
+                    m = {}
                     for i in range(0 , len(p[2]) ,2):  # other optional arguments.
                         key = p[2][i].lower()
                         val = p[2][i+1]
-                        part[key] = val
 
+                        if key == 'charset':
+                            part.charset = val
+                        else:
+                            m[key] = val
+                    part.misc_keyval = m
                 if content_type_major == 'text':
                     assert len(p) == 8
-                    part['lines'] = p[7]
+                    part.lines = p[7]
                 return part
+
 
             def make_obj(p, i=''):
                 if not isinstance(p[0], basestring):

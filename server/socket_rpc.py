@@ -7,7 +7,6 @@
 import logging as log
 
 import types
-import traceback
 from tornadorpc.utils import getcallargs
 
 import jsonrpclib
@@ -28,7 +27,6 @@ config = Config()
 
 class SocketRPC(object):
 
-
     def __init__(self, encode=None, decode=None):
         # Attaches the RPC library and encode / decode functions.
         self.encode = dumps
@@ -42,15 +40,10 @@ class SocketRPC(object):
         return Faults(self)
 
 
-
     def run(self, handler, request_body):
 
         self.handler = handler
-        try:
-            requests = self.parse_request(request_body)
-        except:
-            self.traceback()
-            return self.faults.parse_error()
+        requests = self.parse_request(request_body)
 
         # We should only have one request at a time...
         assert len(requests) == 1
@@ -93,25 +86,24 @@ class SocketRPC(object):
             # The parameters are positional
             args = params
         else:
-            # Bad argument formatting?
-            return self.faults.invalid_params()
+            raise Exception("Invalid params: %s", params)
 
-        kwargs['email_address'] = self.email_address
+        assert self.user, "Need user object to do any operation"
+        kwargs['user'] = self.user
 
         # Validating call arguments
         try:
             final_kwargs, extra_args = getcallargs(method, *args, **kwargs)
-        except TypeError:
-            return self.faults.invalid_params()
+        except TypeError, e:
+            log.error("Invalid params? %s" % e)
+            print method, args, kwargs
+            raise e
 
 
         log.info("Running %s with %s" % (method, final_kwargs))
-        try:
-            response = method(*extra_args, **final_kwargs)
 
-        except Exception:
-            self.traceback(method_name, params)
-            return self.faults.internal_error()
+        # THis used to be in a try/catch block
+        response = method(*extra_args, **final_kwargs)
 
 
         responses = [response]
@@ -122,25 +114,6 @@ class SocketRPC(object):
             response_text = self.encode(response_text)
 
         return response_text
-
-
-
-    def traceback(self, method_name='REQUEST', params=[]):
-        err_lines = traceback.format_exc().splitlines()
-        err_title = "ERROR IN %s" % method_name
-        if len(params) > 0:
-            err_title = '%s - (PARAMS: %s)' % (err_title, repr(params))
-        err_sep = ('-'*len(err_title))[:79]
-        err_lines = [err_sep, err_title, err_sep]+err_lines
-        if config.verbose == True:
-            if len(err_lines) >= 7 and config.short_errors:
-                # Minimum number of lines to see what happened
-                # Plus title and separators
-                print '\n'.join(err_lines[0:4]+err_lines[-3:])
-            else:
-                print '\n'.join(err_lines)
-        # Log here
-        return
 
 
     def check_method(self, attr_name, obj):
@@ -160,12 +133,8 @@ class SocketRPC(object):
     # JSON RPC Parsing below
 
     def parse_request(self, request_body):
-        try:
-            request = loads(request_body)
-        except:
-            # Bad request formatting. Bad.
-            self.traceback()
-            return self.faults.parse_error()
+        request = loads(request_body)
+
         self._requests = request
         self._batch = False
         request_list = []

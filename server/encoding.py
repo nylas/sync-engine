@@ -60,18 +60,14 @@ def decode_data(data, data_encoding):
 
     try:
         if data_encoding == 'quoted-printable':
-            log.info("Decoded with quoted printable")
             data = quopri.decodestring(data)
         elif data_encoding == '7bit':
-            log.info("7bit -- nothing")
             pass  # This is just ASCII. Do nothing.
         elif data_encoding == '8bit':
-            log.info("8bit -- nothing")
             pass  # .decode('8bit') does nothing.
         elif data_encoding == 'base64':
             # data = data.decode('base-64')
             data = base64.b64decode(data)
-            log.info("Decoded with base64")
         else:
             log.error("Unknown encoding scheme:" + str(encoding))
     except Exception, e:

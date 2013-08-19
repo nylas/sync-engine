@@ -95,35 +95,25 @@ class AuthStartHandler(BaseHandler):
 
 
 class AuthDoneHandler(BaseHandler):
-    @tornado.web.asynchronous
     def get(self):
-        if not self.get_argument("code", None): self.fail()
-
         authorization_code = self.get_argument("code", None)
+        if not authorization_code:
+            raise tornado.web.HTTPError(500, "Google auth failed")
 
         response = google_oauth.get_authenticated_user(
                             authorization_code,
                             redirect_uri=self.settings['redirect_uri'])
-
         try:
             assert 'email' in response
             assert 'access_token' in response
             assert 'refresh_token' in response
         except AssertionError, e:
-            log.error("Auth failed")
             raise tornado.web.HTTPError(500, "Google auth failed")
-            self.finish()
-            return
 
-
-        new_user_object = sessionmanager.store_access_token(response)
-        email_address = new_user_object.g_email
-
-        new_session = sessionmanager.create_session(email_address)
-
+        new_user_object = sessionmanager.make_user(response)
+        new_session = sessionmanager.create_session(new_user_object.g_email)
         log.info("Successful login. Setting cookie: %s" % new_session.session_token)
         self.set_secure_cookie("session", new_session.session_token)
-
         self.write("<script type='text/javascript'>parent.close();</script>")  # closes window
         self.flush()
         self.finish()
@@ -242,17 +232,18 @@ class WireConnection(SocketRPC):
         self.session = session
         self.endpoint = endpoint
         self.is_closed = False
-        self.email_address = None
+        self.user = None
 
 
     def on_open(self, request):
         try:
             s = SecureCookieSerializer(COOKIE_SECRET)
             des = s.deserialize('session', request.cookies['session'].value)
-            s = sessionmanager.get_session(des)
-            if not s:
+            u = sessionmanager.get_session(des)
+            if not u:
                 raise tornado.web.HTTPError(401)
-            self.email_address = s.email_address
+            self.user = u
+
         except Exception, e:
             log.warning("Unauthenticated socket connection attempt")
             raise tornado.web.HTTPError(401)
@@ -273,6 +264,9 @@ class WireConnection(SocketRPC):
 
     # TODO add authentication thing here to check for session token
     def on_message(self, message_body):
+
+        print message_body
+
         response_text = self.run(api, message_body)
 
         # Send the message

@@ -17,7 +17,6 @@ def log_ignored(exc):
               % (exc, ''.join(traceback.format_stack()[:-2]), traceback.format_exc(exc)))
 
 
-
 def create_session(email_address):
     new_session = UserSession()
     new_session.email_address = email_address
@@ -25,7 +24,6 @@ def create_session(email_address):
     db_session.add(new_session)
     db_session.commit()
     return new_session
-
 
 
 def get_session(session_token):
@@ -36,8 +34,7 @@ def get_session(session_token):
 
 
 
-
-def store_access_token(access_token_dict):
+def make_user(access_token_dict):
     new_user = User()
     # new_user.name = None
     new_user.g_token_issued_to = access_token_dict['issued_to']
@@ -53,28 +50,23 @@ def store_access_token(access_token_dict):
     new_user.g_refresh_token = access_token_dict['refresh_token']
     new_user.g_verified_email = access_token_dict['verified_email']
     new_user.date = datetime.datetime.utcnow()  # Used to verify key lifespan
-
-    db_session.add(new_user)
+    new_user = db_session.merge(new_user)
     db_session.commit()
 
-    # Close old crispin connection
+    # Close old crispin connection, since we've likely probably modified oauth tokens.
     if new_user.g_email in email_address_to_crispins:
         old_crispin = email_address_to_crispins[new_user.g_email]
         old_crispin.stop()
         del email_address_to_crispins[new_user.g_email]
-
     log.info("Stored new user object %s" % new_user)
     return new_user
 
 
-
 def get_user(email_address, callback=None):
-
     user_obj = db_session.query(User).filter_by(g_email=email_address).first()
     if not user_obj:
         log.error("Should already have a user object...")
         return None
-
 
     issued_date = user_obj.date
     expires_seconds = user_obj.g_expires_in
@@ -93,6 +85,7 @@ def get_user(email_address, callback=None):
 
         log.error("Getting new access token...")
         response = google_oauth.get_new_token(refresh_token)  # TOFIX blocks
+        response['refresh_token'] = refresh_token  # Propogate it through
 
         # TODO handling errors here for when oauth has been revoked
         if 'error' in response:
@@ -104,12 +97,11 @@ def get_user(email_address, callback=None):
 
         # TODO Verify it and make sure it's valid.
         assert 'access_token' in response
-        user_obj = store_access_token(response)
+        user_obj = make_user(response)
         log.info("Updated token for user %s" % user_obj.g_email)
 
     log.info("Returing user object: %s" % user_obj)
     return user_obj
-
 
 
 def get_crispin_from_session(session_token):
@@ -123,8 +115,12 @@ def get_crispin_from_email(email_address):
         return email_address_to_crispins[email_address]
     else:
         user_obj = get_user(email_address)
+        assert user_obj is not None
+        crispin_client =  crispin.CrispinClient(user_obj)
 
-        crispin_client =  crispin.CrispinClient(user_obj.g_email, user_obj.g_access_token)
+        # Always use All Mail
+        folder_name = crispin_client.all_mail_folder_name()
+        select_info = crispin_client.select_folder(folder_name)
 
         email_address_to_crispins[email_address] = crispin_client
         return crispin_client

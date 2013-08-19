@@ -2,9 +2,12 @@ from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 
-# from sqlalchemy.ext.serializer import loads=, dumps
 from sqlalchemy import event
 from sqlalchemy.orm import reconstructor
+
+# from sqlalchemy.ext.serializer import loads=, dumps
+import json
+from bson import json_util
 
 
 class UserSession(Base):
@@ -59,14 +62,11 @@ class User(Base):
 
 
 
-import json
-import postel
-from bson import json_util
-
-
-
 class MessageMeta(Base):
     __tablename__ = 'messages'
+
+
+    in_inbox = Column(Boolean)
 
     _from_addr = Column(String)
     _sender_addr = Column(String)
@@ -80,13 +80,18 @@ class MessageMeta(Base):
     subject = Column(String)
     internaldate = Column(DateTime)
     _flags = Column(String)
-    uid = Column(String)
+
+
+    uid = Column(String)  # This is only for all_mail
 
     g_msgid = Column(String, primary_key=True)
+    g_user_id = Column(String, ForeignKey(User.g_user_id), primary_key=True)
+
     g_thrid = Column(String)
     g_labels = Column(String)
 
     def __init__(self):
+        self.in_inbox = None
         self.from_addr = None
         self.sender_addr = None
         self.reply_to = None
@@ -103,19 +108,33 @@ class MessageMeta(Base):
         self.flags = None
         self.subject = None
         self.uid = None  # TODO remove this
-
+        self.g_user_id = None
 
 
     @reconstructor
     def init_on_load(self):
-        if self._from_addr: self.from_addr = json.loads(self._from_addr)
-        if self._sender_addr: self.sender_addr = json.loads(self._sender_addr)
-        if self._reply_to: self.reply_to = json.loads(self._reply_to)
-        if self._to_addr: self.to_addr = json.loads(self._to_addr)
-        if self._cc_addr: self.cc_addr = json.loads(self._cc_addr)
-        if self._bcc_addr: self.bcc_addr = json.loads(self._bcc_addr)
-        if self._in_reply_to: self.in_reply_to = json.loads(self._in_reply_to)
-        if self._flags: self.flags = json.loads(self._flags)
+
+        def d(name):  # deseralize
+            try:
+                if self.__dict__['_'+name]:
+                    self.__dict__[name] = json.loads(self.__dict__['_'+name])
+                else:
+                    self.__dict__[name] = None
+            except KeyError, e:
+                # Deferred
+                pass
+
+        names = ['from_addr',
+                'sender_addr',
+                'reply_to',
+                'to_addr',
+                'cc_addr',
+                'bcc_addr',
+                'in_reply_to',
+                'flags']
+        for n in names: d(n)
+
+
 
     def gmail_url(self):
         if not self.uid:
@@ -128,13 +147,14 @@ class MessageMeta(Base):
             s = s[4:]
         return s
 
-
     def client_json(self):
+        # TODO serialize more here for client API
         d = {}
         d['from'] = self.from_addr
         d['to'] = self.to_addr
         d['date'] = self.internaldate
         d['subject'] = self.subject
+        d['data_id'] = self.g_msgid
         return d
 
     def __repr__(self):
@@ -154,7 +174,6 @@ def serialize_before_insert(mapper, connection, target):
 
 
 
-
 class MessagePart(Base):
     __tablename__ = 'parts'
 
@@ -166,6 +185,8 @@ class MessagePart(Base):
     bytes = Column(Integer)
     line_count = Column(Integer)
     filename = Column(String)
+    _misc_keyval = Column(String)
+    allmail_uid = Column(String, primary_key=True)
 
     s3_id = Column(String)
     host_id = Column(String)  # Which server holds onto this part
@@ -181,16 +202,25 @@ class MessagePart(Base):
         self.filename = None
         self.s3_id = None
         self.host_id = None
-
-
+        self.misc_keyval = None
+        self.allmail_uid = None
 
     def __repr__(self):
         return '<IBMessagePart object> %s' % self.__dict__
 
+    @reconstructor
+    def init_on_load(self):
+        if self._misc_keyval: self.misc_keyval = json.loads(self._misc_keyval)
+
+
+@event.listens_for(MessagePart, 'before_insert', propagate = True)
+def serialize_before_insert(mapper, connection, target):
+    if target.misc_keyval: target._misc_keyval = json.dumps(target.misc_keyval, default=json_util.default)
+
+
 
 
 ## Make the tables
-
 from sqlalchemy import create_engine
 
 # engine = create_engine('sqlite:///:memory:', echo=True)
