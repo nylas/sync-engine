@@ -1,0 +1,41 @@
+<h1><code ng:non-bindable="">ngCsp</code>
+<span class="hint">(directive in module <code ng:non-bindable="">ng</code>
+)</span>
+</h1>
+<div><a href="http://github.com/angular/angular.js/edit/master/src/ng/directive/ngCsp.js" class="improve-docs btn btn-primary">Improve this doc</a><h2 id="Description">Description</h2>
+<div class="description"><p>Enables <a href="https://developer.mozilla.org/en/Security/CSP">CSP (Content Security Policy)</a> support.</p>
+
+<p>This is necessary when developing things like Google Chrome Extensions.</p>
+
+<p>CSP forbids apps to use <code>eval</code> or <code>Function(string)</code> generated functions (among other things).
+For us to be compatible, we just need to implement the "getterFn" in $parse without violating
+any of these restrictions.</p>
+
+<p>AngularJS uses <code>Function(string)</code> generated functions as a speed optimization. By applying <code>ngCsp</code>
+it is be possible to opt into the CSP compatible mode. When this mode is on AngularJS will
+evaluate all expressions up to 30% slower than in non-CSP mode, but no security violations will
+be raised.</p>
+
+<p>In order to use this feature put <code>ngCsp</code> directive on the root element of the application.</p></div>
+<h2 id="Usage">Usage</h2>
+<div class="usage">as attribute<pre class="prettyprint linenums">&lt;html ng-csp&gt;
+   ...
+&lt;/html&gt;</pre>
+as class<pre class="prettyprint linenums">&lt;html class="ng-csp"&gt;
+   ...
+&lt;/html&gt;</pre>
+<h3 id="Directive.info">Directive info</h3>
+<div class="directive-info"><ul><li>This directive executes at priority level 1000.</li>
+</ul>
+</div>
+</div>
+<h2 id="Example">Example</h2>
+<div class="example"><p>This example shows how to apply the <code>ngCsp</code> directive to the <code>html</code> tag.
+<pre class="prettyprint linenums">
+  &lt;!doctype html&gt;
+  &lt;html ng-app ng-csp&gt;
+  ...
+  ...
+  &lt;/html&gt;
+</pre></div>
+</div>
