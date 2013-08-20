@@ -81,6 +81,7 @@ app.factory('wire', function ($rootScope) {
             if (options.cleanCallbacksOnTimeout) {
                 r.timerOut = setTimeout(function () {
                     // TODO This is broken error code!
+                    alert("RPC timed out. Perhaps server disconnected.")
                     this.onMessage({
                         error: {
                             code: 'CALLRPCTIMEOUT',
@@ -146,7 +147,6 @@ app.factory('wire', function ($rootScope) {
     }
 
     io.SocketNamespace.prototype._onClientReturnRPC = function (data) {
-
 
         var res, id = data.id || null;
         try {
