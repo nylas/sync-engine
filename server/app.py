@@ -30,7 +30,7 @@ COOKIE_SECRET = "32oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo="
 class Application(tornado.web.Application):
     def __init__(self):
 
-        PATH_TO_ANGULAR = os.path.join(os.path.dirname(__file__), "../angular")
+        PATH_TO_WEB_CLIENT = os.path.join(os.path.dirname(__file__), "../web_client")
         PATH_TO_STATIC = os.path.join(os.path.dirname(__file__), "../static")
 
         settings = dict(
@@ -58,7 +58,7 @@ class Application(tornado.web.Application):
 
             (r"/auth/logout", LogoutHandler),
 
-            (r'/app/(.*)', AngularStaticFileHandler, {'path': PATH_TO_ANGULAR,
+            (r'/app/(.*)', AngularStaticFileHandler, {'path': PATH_TO_WEB_CLIENT,
                                            'default_filename':'index.html'}),
             (r'/app', AppRedirectHandler),
             (r'/file_download', FileDownloadHandler),
