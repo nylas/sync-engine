@@ -131,26 +131,6 @@ def clean_html(msg_data):
     return str(soup)
 
 
-def webify_links(msg_data, max_chars=35):
-
-    # This totally breaks a lot of stuff. :(
-    # msg_data = bleach.linkify(msg_data)
-
-    soup = BeautifulSoup(msg_data)
-    for a in soup.findAll('a'):
-        a['target'] = "_blank"
-        # try:
-        #     if a.contents[0] == a['href']:
-        #         a.string = a['href'][:max_chars] + '&hellip;'
-        #     a['title'] = a['href']
-        # except Exception, e:
-        #     log.info("Found anchor without href. Contents: %s" % a)
-        #     pass
-
-    return str(soup)
-
-
-
 
 re_string = re.compile(r'(?P<htmlchars>[<&>])|(?P<space>^[ \t]+)|(?P<lineend>\r\n|\r|\n)|(?P<protocal>(^|\s)((http|ftp)://.*?))(\s|$)', re.S|re.M|re.I)
 def plaintext2html(text, tabstop=4):

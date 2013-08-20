@@ -59,7 +59,7 @@ def data_with_id(data_id, user=None):
     existing_msgs_query = db_session.query(MessageMeta).filter(MessageMeta.g_msgid == data_id)
     log.info(existing_msgs_query)
     meta = existing_msgs_query.all()
-    assert len(meta) == 1
+    assert len(meta) == 1, "We haven't synced metadata for this message..."
     m = meta[0]
 
 
@@ -77,37 +77,15 @@ def data_with_id(data_id, user=None):
 
     to_fetch = html_part if html_part else plain_part
 
-
     crispin_client = sessionmanager.get_crispin_from_email(user.g_email)
 
     msg_data = crispin_client.fetch_msg_body(m.uid, to_fetch.section)
     msg_data = encoding.decode_part(msg_data, to_fetch)
 
 
-    # TODO need to decode it here
-    return msg_data
-
-
-
-def load_message_body_with_uid(uid, section_index, data_encoding, content_type, email_address):
-
-    crispin_client = sessionmanager.get_crispin_from_email(email_address)
-
-    msg_data = crispin_client.fetch_msg_body(uid,
-                                             section_index,
-                                             folder='Inbox', )
-
-    msg_data = encoding.decode_data(msg_data, data_encoding)
-
-    if content_type == 'text/plain':
+    if to_fetch == plain_part:
         msg_data = encoding.plaintext2html(msg_data)
     # elif content_type == 'text/html':
         # msg_data = encoding.clean_html(msg_data)
 
-
-    msg_data = encoding.webify_links(msg_data)
-
-
-    import base64
-
-    return base64.b64encode(msg_data)
+    return msg_data
