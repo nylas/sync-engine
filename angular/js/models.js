@@ -6,19 +6,13 @@ var app = angular.module('InboxApp.models', []);
   http://stackoverflow.com/questions/13762228/confused-about-service-vs-factory
   */
 
-
 /* Thread factory that provides a constructor so we can do something like:
-
 var myThread = new Thread(some_thread_id, array_of_msg_ids);
-
 This object type should only be accessible if it's injected.
-
 Probably calling Thread.whatever() will be a class function, whereas
 instance.whatever() will be one of the methods defined through prototype
 
-
 Here's an explanation of how all of this reduces to factories.
-
 https://groups.google.com/forum/#!msg/angular/56sdORWEoqg/b8hdPskxZXsJ
 
  */
@@ -58,7 +52,7 @@ app.factory('IBMessage', function ($injector)
         }
 
         // Fix the date
-        this.date = new Date(data.date.$date * 1000);
+        this.date = new Date(data.date.$date);
 
 
         var gravatar_size = 25;
