@@ -41,6 +41,7 @@ class User(Base):
     g_email = Column(String, primary_key=True)
     g_refresh_token = Column(String)
     g_verified_email = Column(Boolean)
+    g_allmail_uidvalidity = Column(Integer)
 
     def __init__(self):
         self.name = None
@@ -59,6 +60,7 @@ class User(Base):
         self.g_email = None
         self.g_refresh_token = None
         self.g_verified_email = None
+        self.g_allmail_uidvalidity = None
 
 
 

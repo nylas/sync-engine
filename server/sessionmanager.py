@@ -130,6 +130,21 @@ def get_crispin_from_email(email_address):
         folder_name = crispin_client.all_mail_folder_name()
         select_info = crispin_client.select_folder(folder_name)
 
+        try:
+            if user_obj.g_allmail_uidvalidity is None:
+                user_obj.g_allmail_uidvalidity = select_info['UIDVALIDITY']
+                db_session.commit()
+            else:
+                assert select_info['UIDVALIDITY'] == user_obj.g_allmail_uidvalidity
+                log.info("UIDVALIDITY unchanged.")
+        except AssertionError:
+            log.error("""The user's UIDVALIDITY value has changed.
+                      This means we need to do a full metasync refresh to get new UIDs.
+                      However, any X-GM-MSGIDs should still be the same, so we don't need to
+                      sync the message parts again.""")
+            return None
+
+
         email_address_to_crispins[email_address] = crispin_client
         return crispin_client
 
