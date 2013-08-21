@@ -180,7 +180,7 @@ class CrispinClient:
             new_msg.subject = tempSubject
 
             new_msg.from_addr = make_unicode_contacts(msg_envelope[2])
-            new_msg.sender = msg_envelope[3]
+            new_msg.sender_addr = msg_envelope[3]
             new_msg.reply_to = msg_envelope[4]
             new_msg.to_addr = msg_envelope[5]
             new_msg.cc_addr = msg_envelope[6]
