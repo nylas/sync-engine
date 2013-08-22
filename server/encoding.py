@@ -1,3 +1,4 @@
+import email
 from email.header import decode_header
 import quopri
 from bs4 import BeautifulSoup
@@ -6,6 +7,7 @@ import cgi
 import bleach
 import logging as log
 
+from lamson.encoding import from_string
 
 def make_unicode(txt, default_encoding="ascii"):
     try:
@@ -219,8 +221,3 @@ def trim_quoted_text(msg_text, content_type):
 
 
     return msg_text
-
-
-
-
-

@@ -1,9 +1,5 @@
 import sys, os;  sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..')))
 
-
-import crispin
-import uuid
-
 import logging as log
 import sessionmanager
 
@@ -13,89 +9,64 @@ import encoding
 import tornado.options
 tornado.options.parse_command_line()
 
-# from lamson import encoding
+from models import db_session, MessageMeta, MessagePart
 
-from sqlalchemy import *
-from models import db_session, Base, MessageMeta, MessagePart
-from sqlalchemy.orm import defer
+from server.util import chunk
 
-def sync_meta():
-
-    crispin_client = sessionmanager.get_crispin_from_email('mgrinich@gmail.com')
+def bootstrap_user():
+    """ Downloads entire messages and
+    (1) creates the metadata database
+    (2) stores message parts to the block store
+    """
+    crispin_client = sessionmanager.get_crispin_from_email(
+            'christine.spang@gmail.com')
 
     folder_name = crispin_client.all_mail_folder_name()
-    # folder_name = 'Inbox'
 
     log.info('Syncing metadata for %s' % folder_name)
+    # NOTE: this select info contains the MODSEQUENCE we need for later
+    # syncing
     select_info = crispin_client.select_folder(folder_name)
 
-    UIDs = crispin_client.imap_server.search(['NOT DELETED'])
-    UIDs = [str(s) for s in UIDs]
-    log.info("Found %i UIDs" % len(UIDs) )
+    server_uids = [unicode(s) for s in
+            crispin_client.imap_server.search(['NOT DELETED'])]
+    log.info("Found {0} UIDs".format(len(server_uids)))
 
-    query = db_session.query(MessageMeta).options(
-                    defer(MessageMeta._from_addr),
-                    defer(MessageMeta._sender_addr),
-                    defer(MessageMeta._reply_to),
-                    defer(MessageMeta._to_addr),
-                    defer(MessageMeta._cc_addr),
-                    defer(MessageMeta._bcc_addr),
-                    defer(MessageMeta._in_reply_to),
-                    defer(MessageMeta.g_labels),
-                    defer(MessageMeta.subject),
-                    )
+    existing_uids = [uid for uid, in db_session.query(MessageMeta.uid)]
 
-    existing_msgs = query.all()
-    existing_uids = [m.uid for m in existing_msgs]
+    log.info("Already have {0} items".format(len(existing_uids)))
 
-    log.info("Already have %i items" % len(existing_uids))
-    uids_dict = {}
-    for u in UIDs:
-        uids_dict[u] = True
+    warn_uids = set(existing_uids).difference(set(server_uids))
+    unknown_uids = set(server_uids).difference(set(existing_uids))
 
-    for u in existing_uids:
-        try:
-            del uids_dict[u]
-        except Exception, e:
-            log.error('UID not in dict: %s' % u)
-            continue
-    unknown_UIDs = uids_dict.keys()
+    for uid in warn_uids:
+        log.error("Msg {0} doesn't exist on server".format(uid))
 
-    log.info("%i uids left to fetch" % len(unknown_UIDs))
+    log.info("{0} uids left to fetch".format(len(unknown_uids)))
 
+    total_messages = len(existing_uids)
+    chunk_size = 500
+    for uids in chunk(sorted(unknown_uids, reverse=True), chunk_size):
+        log.info("Fetching from {0} to {1}".format(uids[0], uids[-1]))
 
-    count = 0
-
-    batch_fetch_amount = 1000
-
-    for i in reversed((xrange(0, len(unknown_UIDs), batch_fetch_amount))):
-
-        start, end = i, min(len(unknown_UIDs), i+batch_fetch_amount)
-        log.info("Fetching from %s to %s" % (start, end) )
-
-        to_fetch = unknown_UIDs[start:end]
-
-        new_messages, new_parts = crispin_client.fetch_uids(to_fetch)
-
+        new_messages, new_parts = crispin_client.fetch_uids(uids)
 
         db_session.add_all(new_messages)
-        db_session.commit()
-
         db_session.add_all(new_parts)
         db_session.commit()
 
-        count += len(new_messages)
+        total_messages += len(new_messages)
 
-        log.info("Fetched metadata for %i messages and %i parts. (total: %i)" % ( len(new_messages), len(new_parts), count ) )
+        log.info("Fetched metadata for {0} messages and {1} parts. (total: {2})"
+                .format(len(new_messages), len(new_parts), total_messages))
 
     log.info("Finished.")
 
-
-
+    return 0
 
 def sync_parts():
 
-    crispin_client = sessionmanager.get_crispin_from_email('mgrinich@gmail.com')
+    crispin_client = sessionmanager.get_crispin_from_email('christine.spang@gmail.com')
     # folder_name = crispin_client.all_mail_folder_name()
     # select_info = crispin_client.select_folder(folder_name)
 
@@ -103,6 +74,7 @@ def sync_parts():
     parts = db_session.query(MessagePart).all()
     log.info("We have %i parts to downlod" % len(parts))
 
+    # write parts to file structure locally (for now)
     for part in parts:
         print 'part:', part.encoding, part.charset
 
@@ -112,6 +84,8 @@ def sync_parts():
                                   part.g_msgid[1],
                                   part.g_msgid[2],
                                   part.g_msgid[3])
+
+        # XXX deal with races?
         if not os.path.exists(write_dir):
             os.makedirs(write_dir)
 
@@ -139,16 +113,10 @@ def sync_parts():
 
         log.info("Writing to %s" % write_path)
 
-        if isinstance(msg_data, unicode):
-            msg_data = msg_data.encode("utf-8")
-        f = open(write_path, 'w')
-        f.write(msg_data)
-        f.close()
-
+        with open(write_path, 'w') as f:
+            f.write(msg_data.encode('utf-8'))
 
     log.info("Finished.")
-
-
 
 
     # import codecs
@@ -270,5 +238,4 @@ def sync_parts():
     #     print msg_data
 
 if __name__ == '__main__':
-    # sync_meta()
-    sync_parts()
+    sys.exit(bootstrap_user())

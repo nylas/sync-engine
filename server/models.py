@@ -66,7 +66,8 @@ class User(Base):
 
 class MessageMeta(Base):
     __tablename__ = 'messagemeta'
-
+    # XXX clean this up a lot - make a better constructor, maybe taking
+    # a mailbase as an argument to prefill a lot of attributes
 
     in_inbox = Column(Boolean)
 
@@ -78,7 +79,6 @@ class MessageMeta(Base):
     _bcc_addr = Column(String)
     _in_reply_to = Column(String)
     message_id = Column(String)
-    date = Column(String)  # The date header
     subject = Column(String)
     internaldate = Column(DateTime)
     _flags = Column(String)
@@ -178,6 +178,7 @@ def serialize_before_insert(mapper, connection, target):
 
 class MessagePart(Base):
     __tablename__ = 'messagepart'
+    """ Metadata for message parts stored in s3 """
 
     g_msgid = Column(String, ForeignKey(MessageMeta.g_msgid), primary_key=True)
     section = Column(String, primary_key=True)
@@ -232,6 +233,7 @@ from sqlalchemy import create_engine
 # where <path> is relative:
 
 # PATH_TO_DATABSE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "database.db")
+# engine = create_engine('sqlite:///database.db', echo=True)
 engine = create_engine('sqlite:///database.db')
 
 Base.metadata.create_all(engine)

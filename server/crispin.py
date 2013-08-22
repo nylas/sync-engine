@@ -146,60 +146,63 @@ class CrispinClient:
 
 
     def fetch_uids(self, UIDs):
+        """
+        """
 
-        # To fill up
-        new_messages = []
-        new_parts = []
-
-        query = 'ENVELOPE BODY INTERNALDATE FLAGS'
+        query = 'BODY.PEEK[] INTERNALDATE FLAGS'
 
         log.info("Fetching message headers. Query: %s" % query)
-        messages = self.imap_server.fetch(UIDs, [query, 'X-GM-THRID', 'X-GM-MSGID', 'X-GM-LABELS'])
-        log.info("Found %i messages." % len(messages.values()))
+        raw_messages = self.imap_server.fetch(UIDs,
+                [query, 'X-GM-THRID', 'X-GM-MSGID', 'X-GM-LABELS'])
+        log.info("Found %i messages." % len(raw_messages))
 
-        for message_uid, message_dict in messages.iteritems():
+        messages = []
+        # NOTE: this processes messages in an unknown order
+        for uid, msg in raw_messages.iteritems():
+            log.info("processing uid {0}".format(uid))
+            messages.append((uid, msg['INTERNALDATE'], msg['FLAGS'],
+                # python's email package (which lamson uses directly) needs
+                # encoded bytestrings as its input, since to deal properly
+                # with MIME-encoded email you need to do part decoding based on
+                # message / MIME part headers anyway. imapclient tries to abstract
+                # away bytes and decodes all bytes received from the wire as
+                # _latin-1_, which is wrong in any case where 8bit MIME is
+                # used. so we have to reverse the damage before we proceed.
+                encoding.from_string(msg['BODY[]'].encode('latin-1')),
+                msg['X-GM-THRID'], msg['X-GM-MSGID'], msg['X-GM-LABELS']))
+        # messages = [(uid, msg['INTERNALDATE'], msg['FLAGS'],
+        #     encoding.from_string(msg['BODY[]']), msg['X-GM-THRID'],
+        #     msg['X-GM-MSGID'], msg['X-GM-LABELS'])
+        #         for uid, msg in raw_messages.iteritems()]
 
+        new_messages, new_parts = [], []
+        for uid, internaldate, flags, mailbase, \
+                x_gm_thrid, x_gm_msgid, x_gm_labels in messages:
             new_msg = MessageMeta()
-            new_msg.uid = str(message_uid)
 
-            msg_envelope = message_dict['ENVELOPE'] # ENVELOPE is parsed RFC-2822 headers
-            def make_unicode_contacts(contact_list):
-                n = []
-                for c in contact_list:
-                    new_c = [None]*len(c)
-                    for i in range(len(c)):
-                        new_c[i] = encoding.make_unicode(c[i])
-                    n.append(new_c)
-                return n
+            new_msg.uid = unicode(uid)
+            new_msg.subject = mailbase.headers.get('Subject')
+            new_msg.from_addr = mailbase.headers.get('From')
+            new_msg.sender_addr = mailbase.headers.get('Sender')
+            new_msg.reply_to = mailbase.headers.get('Reply-To')
+            new_msg.to_addr = mailbase.headers.get('To')
+            new_msg.cc_addr = mailbase.headers.get('Cc')
+            new_msg.bcc_addr = mailbase.headers.get('Bcc')
+            new_msg.in_reply_to = mailbase.headers.get('In-Reply-To')
+            new_msg.message_id = mailbase.headers.get('Message-Id')
 
-            new_msg.date = msg_envelope[0] # we use INTERNALDATE instead of this
-
-            tempSubject = encoding.make_unicode(msg_envelope[1])
-            # Headers will wrap when longer than 78 lines per RFC822_2
-            tempSubject = tempSubject.replace('\n\t', '').replace('\r\n', '')
-            new_msg.subject = tempSubject
-
-            new_msg.from_addr = make_unicode_contacts(msg_envelope[2])
-            new_msg.sender_addr = msg_envelope[3]
-            new_msg.reply_to = msg_envelope[4]
-            new_msg.to_addr = msg_envelope[5]
-            new_msg.cc_addr = msg_envelope[6]
-            new_msg.bcc_addr = msg_envelope[7]
-            new_msg.in_reply_to = msg_envelope[8]
-            new_msg.message_id = msg_envelope[9]
-
-            new_msg.internaldate = message_dict['INTERNALDATE']
-            new_msg.g_thrid = str(message_dict['X-GM-THRID'])
-            new_msg.g_msgid = str(message_dict['X-GM-MSGID'])
-            new_msg.g_labels = str(message_dict['X-GM-LABELS'])
+            new_msg.internaldate = internaldate
+            new_msg.g_thrid = unicode(x_gm_thrid)
+            new_msg.g_msgid = unicode(x_gm_msgid)
+            new_msg.g_labels = unicode(x_gm_labels)
 
             new_msg.in_inbox = bool('\Inbox' in new_msg.g_labels)
-            if new_msg.in_inbox:
-                print 'Message is in the inbox!'
 
-            new_msg.flags = message_dict['FLAGS']
+            new_msg.flags = unicode(flags)
 
             new_msg.g_user_id = self.user_obj.g_user_id
+
+            new_messages.append(new_msg)
 
             # \Seen  Message has been read
             # \Answered  Message has been answered
@@ -208,113 +211,113 @@ class CrispinClient:
             # \Draft  Message has not completed composition (marked as a draft).
             # \Recent   session is the first session to have been notified about this message
 
-            bodystructure = message_dict['BODY']
+            # bodystructure = message_dict['BODY']
 
-            def create_messagepart(p, section='1'):
-                assert len(p) > 0
+            # def create_messagepart(p, section='1'):
+            #     assert len(p) > 0
 
-                part = MessagePart()
-                part.section = str(section)
-                part.g_msgid = new_msg.g_msgid
-                part.allmail_uid = str(message_uid)
+            #     part = MessagePart()
+            #     part.section = str(section)
+            #     part.g_msgid = new_msg.g_msgid
+            #     part.allmail_uid = str(message_uid)
 
-                if len(p) == 1:
-                    if p[0].lower() == "appledouble":
-                        log.error("Content-type: appledouble")
-                        # print p
-                        return None
-                    else:
-                        log.error("Why is there only one content-type part? Should it be multipart/%s ??" % p[0])
-                        return part
+            #     if len(p) == 1:
+            #         if p[0].lower() == "appledouble":
+            #             log.error("Content-type: appledouble")
+            #             # print p
+            #             return None
+            #         else:
+            #             log.error("Why is there only one content-type part? Should it be multipart/%s ??" % p[0])
+            #             return part
 
-                content_type_major = p[0].lower()
-                content_type_minor = p[1].lower()
+            #     content_type_major = p[0].lower()
+            #     content_type_minor = p[1].lower()
 
-                part.content_type = "%s/%s" % (content_type_major, content_type_minor)
+            #     part.content_type = "%s/%s" % (content_type_major, content_type_minor)
 
-                if len(p) == 2: return part
+            #     if len(p) == 2: return part
 
-                assert len(p) >= 7, p
-                part.encoding = p[5]  # Content-Transfer-Encoding
-                part.bytes = p[6]
+            #     assert len(p) >= 7, p
+            #     part.encoding = p[5]  # Content-Transfer-Encoding
+            #     part.bytes = p[6]
 
-                # Example for p[2] is ("CHARSET" "ISO-8859-1" "FORMAT" "flowed")  or  ("NAME" "voicemail.wav")
-                if p[2] and not isinstance(p[2], basestring):
-                    assert len(p[2]) % 2 == 0  # key/value pairs
-                    m = {}
-                    for i in range(0 , len(p[2]) ,2):  # other optional arguments.
-                        key = p[2][i].lower()
-                        val = p[2][i+1]
+            #     # Example for p[2] is ("CHARSET" "ISO-8859-1" "FORMAT" "flowed")  or  ("NAME" "voicemail.wav")
+            #     if p[2] and not isinstance(p[2], basestring):
+            #         assert len(p[2]) % 2 == 0  # key/value pairs
+            #         m = {}
+            #         for i in range(0 , len(p[2]) ,2):  # other optional arguments.
+            #             key = p[2][i].lower()
+            #             val = p[2][i+1]
 
-                        if key == 'charset':
-                            part.charset = val
-                        elif key == 'name':
-                            part.filename = val
-                        else:
-                            m[key] = val
-                    part.misc_keyval = m
-                if content_type_major == 'text':
-                    assert len(p) == 8
-                    part.line_count = p[7]
-                return part
-
-
-            def make_obj(p, i=''):
-                if not isinstance(p[0], basestring):
-
-                    # This part removes the mime relation
-                    # print 'p here...', p
-                    if isinstance(p[-1], basestring):
-                        mime_relation = p[-1]
-                        if (len(p) == 2):
-                            if isinstance(p[0][0], basestring):  # single object
-                                toIterate = p[:-1]
-                            else:  # Nested list
-                                toIterate = p[0]
-                        else:  # probably have multiple objects here
-                            toIterate = p[:-1]
-                    else:
-                        # No relationship var here
-                        log.error("NO MIME RELATION HERE.....")
-                        toIterate = p
+            #             if key == 'charset':
+            #                 part.charset = val
+            #             elif key == 'name':
+            #                 part.filename = val
+            #             else:
+            #                 m[key] = val
+            #         part.misc_keyval = m
+            #     if content_type_major == 'text':
+            #         assert len(p) == 8
+            #         part.line_count = p[7]
+            #     return part
 
 
-                    for x, part in enumerate(toIterate):
+            # def make_obj(p, i=''):
+            #     if not isinstance(p[0], basestring):
 
-                        if isinstance(part, basestring):
-                            log.error("Multiple-nested content type? %s" % part)
-                            continue
-
-
-                        if len(i) > 0:
-                            section = i+'.' + str(x+1)
-                        else:
-                            section = str(x+1)
-
-                        # print 'calling make_obj', part
-
-                        ret = make_obj(part, section)  # call recursively and add to lists
-
-                        if not ret:
-                            continue
-                        # Relations are alternative, mixed, signed, related
-                        new_parts.append(ret)
-                    return
-
-                else:
-                    if len(i) > 0: index = i+'.1'  ## is this a lie? TODO
-                    else: index = '1'
-                    # print 'NOT BASESTRING', p, type(p)
-                    return create_messagepart(p, i)
+            #         # This part removes the mime relation
+            #         # print 'p here...', p
+            #         if isinstance(p[-1], basestring):
+            #             mime_relation = p[-1]
+            #             if (len(p) == 2):
+            #                 if isinstance(p[0][0], basestring):  # single object
+            #                     toIterate = p[:-1]
+            #                 else:  # Nested list
+            #                     toIterate = p[0]
+            #             else:  # probably have multiple objects here
+            #                 toIterate = p[:-1]
+            #         else:
+            #             # No relationship var here
+            #             log.error("NO MIME RELATION HERE.....")
+            #             toIterate = p
 
 
-            if not bodystructure.is_multipart:
-                part = create_messagepart(bodystructure)
-                new_parts.append(part)
-            else:
-                make_obj(bodystructure)
+            #         for x, part in enumerate(toIterate):
 
-            new_messages.append(new_msg)
+            #             if isinstance(part, basestring):
+            #                 log.error("Multiple-nested content type? %s" % part)
+            #                 continue
+
+
+            #             if len(i) > 0:
+            #                 section = i+'.' + str(x+1)
+            #             else:
+            #                 section = str(x+1)
+
+            #             # print 'calling make_obj', part
+
+            #             ret = make_obj(part, section)  # call recursively and add to lists
+
+            #             if not ret:
+            #                 continue
+            #             # Relations are alternative, mixed, signed, related
+            #             new_parts.append(ret)
+            #         return
+
+            #     else:
+            #         if len(i) > 0: index = i+'.1'  ## is this a lie? TODO
+            #         else: index = '1'
+            #         # print 'NOT BASESTRING', p, type(p)
+            #         return create_messagepart(p, i)
+
+
+            # if not bodystructure.is_multipart:
+            #     part = create_messagepart(bodystructure)
+            #     new_parts.append(part)
+            # else:
+            #     make_obj(bodystructure)
+
+            # new_messages.append(new_msg)
 
         log.info("Fetched headers for %i messages" % len(new_messages))
         return new_messages, new_parts
@@ -446,8 +449,3 @@ class CrispinClient:
 # log.info("Returning %i threads with total of %i messages." % (len(all_threads), len(all_msgs)))
 
 # return all_threads
-
-
-
-
-
