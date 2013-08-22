@@ -55,7 +55,7 @@ app.factory('wire', function ($rootScope) {
      */
     io.SocketNamespace.prototype.callRPC = function (method, params, callback) {
         var options = {
-                timeout: 8000,
+                timeout: 10000,
                 cleanCallbacksOnTimeout: true,
                 success: null,
                 error: null,
