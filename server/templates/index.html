@@ -4,238 +4,216 @@
 <title>Inbox</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-<link rel="stylesheet" href="/static/fonts/fonts.css"/>
-<style type="text/css">
 
-/* Reset */
-html, body, div, span,
-h1, h2, h3, h4, h5, h6,
-p, blockquote, code, img,
-ol, ul, li, form, input,
-select, button, article,
-aside, canvas, footer, header,
-hgroup, menu, nav, section,
-time, audio, video {
-  margin: 0;
-  padding: 0;
-  border: 0;
-  outline: 0;
-  font: inherit;
-  font-size: 100%;
-  vertical-align: baseline;
-}
-input:focus, button:focus,
-select:focus {
-  outline: 0;
-}
-article, aside, footer,
-header, hgroup, menu,
-nav, section {
-  display: block;
-}
-.clear {
-  clear: both;
-}
-
-/* Begin style */
-
-
-body {
-  text-rendering: optimizeLegibility;
-  font-smooth:always;
-  background: #dbdbdb;
-}
-
-#container{
-  position:absolute;
-  top: 50%;
-  left: 50%;
-  opacity: 0;
-
-  position: absolute;
-  text-align: center;
-  width: 300px;
-  height: 200px;
-  /*set to a negative number 1/2 of your width/height*/
-  margin: -100px 0px 0px -150px;
-
-  animation: fadein 1.0s ease-out;
-  -webkit-animation: fadein 1.0s ease-out;
-  -moz-animation: fadein 1.0s ease-out;
-
-
-  animation-fill-mode: forwards;
-  -webkit-animation-fill-mode: forwards;
-  -moz-animation-fill-mode: forwards;
-}
-
-
-@keyframes fadein {
-  0% {
-    opacity: 0;
-    transform: scale(.8);
-  }
-  35% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-
-@-webkit-keyframes fadein {
-  0% {
-    opacity: 0;
-    -webkit-transform: scale(.8);
-  }
-  35% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-    -webkit-transform: scale(1);
-  }
-}
-
-@-moz-keyframes fadein {
-  0% {
-    opacity: 0;
-    -moz-transform: scale(.8);
-  }
-  35% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-    -moz-transform: scale(1);
-  }
-}
-
-
-
-
-a {
-  padding: 0px 2px;
-  text-decoration: none;
-  top: 0px;
-}
-
-a:hover {
-  color: rgba(51, 136, 221, 1);
-  text-decoration: underline;
-}
-
-a:active {
-  position: relative;
-  top: 2px;
-}
-
-h1 {
-  font-family: ProximaNova, sans-serif;
-  font-style: normal;
-  font-weight: 500;
-  font-size:16px;
-  color: #777;
-  text-shadow:1px 1px 1px white;
-}
-
-.subhead
-{
-  padding-top: 35px;
-  padding-bottom: 30px;
-
-  font-family: ProximaNova, sans-serif;
-  font-style: normal;
-  font-weight: 400;
-  font-size:13px;
-
-  text-align: center;
-}
-
-
-
-
-a.button, input[type=submit] {
-  margin-top: 30px;
-
-    color: #6e6e6e;
-/*    font: bold 12px Helvetica, Arial, sans-serif;
-*/    text-decoration: none;
-    padding: 7px 12px;
-    position: relative;
-    display: inline-block;
-    text-shadow: 0 1px 0 #fff;
-    -webkit-transition: border-color .218s;
-    -moz-transition: border .218s;
-    -o-transition: border-color .218s;
-    transition: border-color .218s;
-    background: #f3f3f3;
-    background: -webkit-gradient(linear,0% 40%,0% 70%,from(#F5F5F5),to(#F1F1F1));
-    background: -moz-linear-gradient(linear,0% 40%,0% 70%,from(#F5F5F5),to(#F1F1F1));
-    border: solid 1px #dcdcdc !important;
-    border-radius: 2px;
-    -webkit-border-radius: 2px;
-    -moz-border-radius: 2px;
-}
-
-a.button:hover {
-    text-decoration: none;
-    color: #333;
-    box-shadow: 0 0 6px 0px rgba(51, 136, 221, .5);
-
-}
-a.button:active {
-    color: #000;
-    border-color: #444;
-}
-
-
-
-a {
-  padding: 0px 2px;
-  text-decoration: none;
-  top: 0px;
-}
-
-a:hover {
-  color: rgba(51, 136, 221, 1);
-  text-decoration: underline
-}
-</style>
+<link rel="stylesheet" href="/static/home_style.css"/>
+<script type="text/javascript" src="//use.typekit.net/ccs3tld.js"></script>
+<script type="text/javascript">try{Typekit.load();}catch(e){}</script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 
 
 <script type='text/javascript'>
 
-    function openAuth() {
-        var leftPosition = window.screenX + (window.outerWidth/2-300);
-        var topPosition = window.screenY + (window.outerHeight/2-300);
-        var windowOptions = 'toolbar=no, location=no, directories=no, status=no,' +
-                            'menubar=no, scrollbars=no, resizable=no, copyhistory=no,' +
-                            'width=600, height=600,' +
-                            'left=' + leftPosition + ', top=' + topPosition;
-        console.log(windowOptions);
-        var authWindow = window.open( '/auth/authstart','Authenticate with Google', windowOptions);
-        var timer = setInterval(function() {
-            if(authWindow.closed) {
-                clearInterval(timer);
-                window.location.reload();
+  function openAuth(email_address) {
+      var leftPosition = window.screenX + (window.outerWidth/2-300);
+      var topPosition = window.screenY + (window.outerHeight/2-300);
+      var windowOptions = 'toolbar=no, location=no, directories=no, status=no,' +
+                          'menubar=no, scrollbars=no, resizable=no, copyhistory=no,' +
+                          'width=600, height=600,' +
+                          'left=' + leftPosition + ', top=' + topPosition;
+      var authWindow = window.open( '/auth/authstart?email_address='+email_address,'Authenticate with Google', windowOptions);
+      var timer = setInterval(function() {
+          if(authWindow.closed) {
+              clearInterval(timer);
+                if (document.cookie.indexOf("session") >= 0) {
+                // window.location.reload();
+                  window.location.replace("/app/");
+                } else {
+                  alert("You didn't authenticate correctly...")
+                }
+          }
+      }, 250);
+  };
+
+
+function run_validator(address_text, options) {
+    if (!address_text) { return; }
+
+    // length check
+    if (address_text.length > 512) {
+        error_message = 'Stream exceeds maxiumum allowable length of 512.';
+        if (options && options.error) {
+            options.error(error_message);
+        }
+        return;
+    }
+
+    // validator is in progress
+    if (options && options.in_progress) {
+        options.in_progress();
+    }
+
+    var success = false;
+    $.ajax({
+        type: "GET",
+        url: '/auth/validate?',
+        data: { email_address: address_text },
+        dataType: "json",
+        crossDomain: false,
+
+        success: function(data, status_text) {
+            success = true;
+            if (options && options.success) {
+                options.success(data);
             }
-        }, 1000);
-    };
+        },
+
+        error: function(request, status_text, error) {
+            success = true;
+            error_message = 'Error occured, unable to validate address.';
+            if (options && options.error) {
+                options.error(error_message);
+            }
+            else {
+                console.log(error_message);
+            }
+        }
+    });
+
+    // internal server error
+    setTimeout(function() {
+        error_message = 'Error occured, unable to validate address.';
+        if (!success) {
+            if (options && options.error) {
+                options.error(error_message);
+            }
+            else {
+                console.log(error_message);
+            }
+        }
+    }, 15000);
+
+}
+
+
+  $(function() {  // document ready
+
+      $("#start_auth").click(function() {
+        if (!valid_address_to_auth) {
+          console.log("Don't yet have valid email address...");
+          return;
+        }
+          openAuth(valid_address_to_auth);
+      });
+
+    // Placeholder text
+    $('#login_username').data('holder',$('#login_username').attr('placeholder'));
+    $('#login_username').focusin(function(){
+        $(this).attr('placeholder','');
+    });
+    $('#login_username').focusout(function(){
+        $(this).attr('placeholder',$(this).data('holder'));
+    });
+    $('#login_username').val('');
+
+
+    var validate = function() {
+      run_validator($('#login_username').val(), {
+        in_progress: validation_in_progress,
+        success: validation_success,
+        error: validation_error,
+        });
+    }
+    var timer;
+    var pushtimer = function() {
+      clearInterval(timer);
+      timer = setInterval(function() {
+        clearInterval(timer);
+        validate();
+      }, 1000);
+    }
+
+    $('#login_username').bind('input', function(){
+      pushtimer();
+    });
+
+    $('#login_username').keypress(function(e) {
+      pushtimer();
+      if(e.which == 13) {
+        e.preventDefault();
+        $('#login_username').blur();
+        validate();
+        return false;
+      }
+
+    });
+
+  }); // End onload
+
+
+
+  function validation_in_progress() {
+      rdiv = $('#status')
+      // empty out anything we had before
+      rdiv.empty()
+      // show in progress
+      rdiv.append("Validating...");
+  }
+
+
+  var valid_address_to_auth = undefined;
+
+  function validation_success(data) {
+      rdiv = $('#status')
+      var is_valid = data['valid_for_inbox'];
+      if (is_valid) {}
+
+      // get icon and suggestion strings
+      sugg_str = get_suggestion_str(is_valid, data['did_you_mean'])
+
+      // clear out any previous text
+      rdiv.empty()
+      rdiv.append(sugg_str);
+
+      if (data['did_you_mean']) {
+        console.log("did you mean!!!");
+        return;
+      }
+
+      if (is_valid) {
+        // Set valid here
+        valid_address_to_auth = data['valid_address'];
+      }
+  }
+
+
+  function validation_error(error_message) {
+      rdiv = $('#status')
+      rdiv.empty()
+      rdiv.append(error_message);
+  }
+
+
+  function get_suggestion_str(is_valid, alternate) {
+      if (alternate) {
+          return 'Did you mean: ' +
+                 '<em>' +  alternate + '</em>';
+      }
+
+      if (is_valid) {
+          return "&#x2713;&nbsp;&nbsp;address is valid";
+      }
+      return "&#x2717;&nbsp;&nbsp;address is invalid"
+  }
+
+
 </script>
-
 </head>
-
 <body>
   <div id="container">
 
     <img src="letter.png"/>
 
-    <h1>Inbox<h1>
-
-    <div class="subhead">
+  <div class="subhead">
      {% if logged_in %}
           You are logged in as {{ name }}.
         <br/>
@@ -244,7 +222,14 @@ a:hover {
          <a class="button" href="/auth/logout">Logout</a>
 
       {% else %}
-        <a class="button" onclick="openAuth()">Connect to Gmail</a>
+
+
+      <form>
+        <input type="text" name="login_username" id="login_username" placeholder="ben.bitdiddle@gmail.com" autocomplete="off" spellcheck="false">
+      </form>
+
+      <div id="status"></div>
+        <a class="button" id="start_auth">Connect</a>
       {% end %}
   </div>
 

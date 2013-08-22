@@ -6,6 +6,11 @@ import tornado.ioloop
 import tornado.web
 import tornado.log
 import tornado.gen
+import tornado.httpclient
+
+from tornado import escape
+
+from urllib import urlencode
 
 from securecookie import SecureCookieSerializer
 from idler import Idler
@@ -17,6 +22,7 @@ import sessionmanager
 from tornadio2 import SocketConnection, TornadioRouter, event
 from socket_rpc import SocketRPC
 from tornadio2 import proto
+import dns.resolver
 
 import encoding
 import api  # This is the handler for RPC calls
@@ -25,7 +31,7 @@ import api  # This is the handler for RPC calls
 from models import db_session, UserSession, User
 
 COOKIE_SECRET = "32oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo="
-
+MAILGUN_API_PUBLIC_KEY = "pubkey-8nre-3dq2qn8-jjopmq9wiwu4pk480p2"
 
 class Application(tornado.web.Application):
     def __init__(self):
@@ -53,6 +59,7 @@ class Application(tornado.web.Application):
         handlers = PingRouter.apply_routes([
             (r"/", MainHandler),
 
+            (r"/auth/validate", ValidateEmailHandler),
             (r"/auth/authstart", AuthStartHandler),
             (r"/auth/authdone", AuthDoneHandler),
 
@@ -83,43 +90,120 @@ class BaseHandler(tornado.web.RequestHandler):
 
 
 class MainHandler(BaseHandler):
-
     def get(self):
         self.render("templates/index.html", name = self.current_user.g_email if self.current_user else " ",
                                             logged_in = bool(self.current_user) )
+
+
+class ValidateEmailHandler(BaseHandler):
+
+    def get(self):
+        address_text = self.get_argument('email_address', default=None)
+        if not address_text:
+            raise tornado.web.HTTPError(500, "email_address is required")
+
+        args = {
+            "address": address_text,
+        }
+        MAILGUN_VALIDATE_API_URL = "https://api.mailgun.net/v2/address/validate?" + urlencode(args)
+
+        request = tornado.httpclient.HTTPRequest(MAILGUN_VALIDATE_API_URL)
+        request.auth_username = 'api'
+        request.auth_password = MAILGUN_API_PUBLIC_KEY
+
+        try:
+            sync_client = tornado.httpclient.HTTPClient()  # Todo make async?
+            response = sync_client.fetch(request)
+        except tornado.httpclient.HTTPError, e:
+            response = e.response
+            pass  # handle below
+        except Exception, e:
+            log.error(e)
+            raise tornado.web.HTTPError(500, "Internal email validation error.")
+        if response.error:
+            error_dict = escape.json_decode(response.body)
+            log.error(error_dict)
+            raise tornado.web.HTTPError(500, "Internal email validation error.")
+
+        body = escape.json_decode(response.body)
+
+        is_valid = body['is_valid']
+        if is_valid:
+            # Must have Gmail or Google Apps MX records
+            domain = body['parts']['domain']
+            answers = dns.resolver.query(domain, 'MX')
+
+
+            gmail_mx_servers = [
+                    # Google apps for your domain
+                    'aspmx.l.google.com.',
+                    'aspmx2.googlemail.com.',
+                    'aspmx3.googlemail.com.',
+                    'aspmx4.googlemail.com.',
+                    'aspmx5.googlemail.com.',
+                    'alt1.aspmx.l.google.com.',
+                    'alt2.aspmx.l.google.com.',
+                    'alt3.aspmx.l.google.com.',
+                    'alt4.aspmx.l.google.com.',
+
+                    # Gmail
+                    'gmail-smtp-in.l.google.com.',
+                    'alt1.gmail-smtp-in.l.google.com.',
+                    'alt2.gmail-smtp-in.l.google.com.',
+                    'alt3.gmail-smtp-in.l.google.com.',
+                    'alt4.gmail-smtp-in.l.google.com.'
+                     ]
+
+            # All relay servers must be gmail
+            for rdata in answers:
+                if not str(rdata.exchange) in gmail_mx_servers:
+                    is_valid = False
+                    log.error("Non-Google MX record: %s" % str(rdata.exchange))
+
+        ret = dict(
+            valid_for_inbox = is_valid,
+            did_you_mean = body['did_you_mean'],
+            valid_address = body['address']
+        )
+        data_json = tornado.escape.json_encode(ret)
+        self.write(data_json)
 
 
 class AuthStartHandler(BaseHandler):
     @tornado.web.asynchronous
     def get(self):
         url = google_oauth.authorize_redirect_url(
-                        self.settings['redirect_uri'])
+                        self.settings['redirect_uri'],
+                        email_address = self.get_argument('email_address', default=None))
         self.redirect(url)
 
 
 class AuthDoneHandler(BaseHandler):
     def get(self):
         authorization_code = self.get_argument("code", None)
-        if not authorization_code:
-            raise tornado.web.HTTPError(500, "Google auth failed")
+        error = self.get_argument("error", None)
 
-        response = google_oauth.get_authenticated_user(
-                            authorization_code,
-                            redirect_uri=self.settings['redirect_uri'])
         try:
+            assert authorization_code
+            response = google_oauth.get_authenticated_user(
+                                authorization_code,
+                                redirect_uri=self.settings['redirect_uri'])
             assert 'email' in response
             assert 'access_token' in response
             assert 'refresh_token' in response
-        except AssertionError, e:
-            raise tornado.web.HTTPError(500, "Google auth failed")
+            new_user_object = sessionmanager.make_user(response)
+            new_session = sessionmanager.create_session(new_user_object.g_email)
+            log.info("Successful login. Setting cookie: %s" % new_session.session_token)
+            self.set_secure_cookie("session", new_session.session_token)
 
-        new_user_object = sessionmanager.make_user(response)
-        new_session = sessionmanager.create_session(new_user_object.g_email)
-        log.info("Successful login. Setting cookie: %s" % new_session.session_token)
-        self.set_secure_cookie("session", new_session.session_token)
-        self.write("<script type='text/javascript'>parent.close();</script>")  # closes window
-        self.flush()
-        self.finish()
+        except Exception, e:
+            # TODO handler error better here. Write an error page to user.
+            log.error("Google auth failed: %s" % error)
+        finally:
+            # Closes the window
+            self.write("<script type='text/javascript'>parent.close();</script>")  # closes window
+            self.flush()
+            self.finish()
 
 
 class LogoutHandler(BaseHandler):
