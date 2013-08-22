@@ -216,8 +216,8 @@ a {
 
 .inboxlabel
 {
-  font-family: ProximaNovaCondensed, sans-serif;
-  font-weight: 500;
+  font-family: "proxima-nova-alt-condensed", sans-serif;
+  font-weight: 600;
   font-size: 22px;
   color: rgba(7,7,7,0.52);
   padding-top: 14px;
@@ -243,8 +243,8 @@ a {
 
 .footerstatus
 {
-  font-family: ProximaNovaCondensed, sans-serif;
-  font-weight: 500;
+  font-family: "proxima-nova-alt-condensed", sans-serif;
+  font-weight: 600;
   font-size: 13px;
   color: rgba(7,7,7,0.52);
   line-height: 36px;
@@ -341,11 +341,10 @@ margin-right: 0.5em;
     color:#4C4C4C;
     text-shadow:1px 1px 1px white;
 
-    font-family: ProximaNovaCondensed, courier, sans-serif;
+    font-family: "proxima-nova-alt-condensed", courier, sans-serif;
     font-size: 26px;
     line-height: 1.2em;
-    font-weight: 500; /* Semibold */
-
+    font-weight: 600;
     float:left;
 
     overflow:hidden;
@@ -361,7 +360,7 @@ margin-right: 0.5em;
     font-weight: normal;
 
     display:block;
-    font-weight: 500;
+    font-weight: 600;
     color: #999;
     text-shadow:1px 1px 1px white;
     font-size: 14px;
@@ -548,7 +547,7 @@ a.button:active {
 
   font-size: 16px;
   font-variant: normal;
-  font-family: ProximaNova, sans-serif;
+  font-family: "proxima-nova-alt", sans-serif;
   font-style: normal;
   font-weight: 400;
   line-height: 21px;

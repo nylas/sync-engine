@@ -55,8 +55,8 @@ app.directive("replybox", function() {
 
             // For all bottom buttons
             var button_styles = {
-                fontFamily: 'ProximaNova',
-                fontWeight: 500,
+                fontFamily: '"proxima-nova-alt"',
+                fontWeight: 600,
                 fontSize: '13px',
                 color: '#708080',
                 lineHeight: '16px',
@@ -104,8 +104,8 @@ app.directive("replybox", function() {
 
 
             $scope.send_button_style = {
-                fontFamily: 'ProximaNovaCondensed',
-                fontWeight: 500,
+                fontFamily: '"proxima-nova-alt-condensed"',
+                fontWeight: 600,
                 fontSize: '18px',
                 color: '#4D7FBD',
 

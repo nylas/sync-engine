@@ -26,9 +26,9 @@ app.directive("messageview", function ($filter) {
 
             $scope.message_bubble_container = {
                 borderRadius: 'inherit',
-                fontFamily: 'ProximaNova, sans-serif',
+                fontFamily: '"proxima-nova-alt", sans-serif',
                 fontSize: '16px',
-                fontWeight: '500',
+                fontWeight: '600',
                 color: '#333',
                 fontStyle: 'normal',
                 fontVariant: 'normal',
@@ -54,8 +54,8 @@ app.directive("messageview", function ($filter) {
 
             $scope.byline_fromline = {
                 display: 'inline-block',
-                fontWeight: 500,
-                fontFamily: 'ProximaNova, sans-serif',
+                fontWeight: 600,
+                fontFamily: '"proxima-nova-alt", sans-serif',
 				fontSize: '16px',
 				color: '#4C4C4C',
 				paddingTop: '10px',
@@ -110,11 +110,6 @@ app.directive("messageview", function ($filter) {
 
 
 
-
-
-
-
-
 app.directive("gravatar", function () {
     return {
         restrict: 'E',
@@ -126,8 +121,8 @@ app.directive("gravatar", function () {
 
             $scope.gravatar_image = {
                 display: 'inline-block',
-                fontWeight: 500,
-                fontFamily: 'ProximaNova, sans-serif',
+                fontWeight: 600,
+                fontFamily: '"proxima-nova-alt", sans-serif',
 				fontSize: '15px',
 				color: '#708080',
 				paddingTop: '10px',
@@ -221,12 +216,13 @@ app.directive("messageframe", function () {
                 // If so, don't add the CSS
 
                 var toWrite = '<html><head>' +
-                    '<link rel="stylesheet" href="/static/fonts/fonts.css"/>' +
+                    '<script type="text/javascript" src="//use.typekit.net/ccs3tld.js"></script>' +
+                    '<script type="text/javascript">try{Typekit.load();}catch(e){}</script>' +
                     '<style rel="stylesheet" type="text/css">' +
                     'body { background-color:#FFF; ' +
                     'font-smooth:always;' +
                     ' -webkit-font-smoothing:antialiased;' +
-                    ' font-family:ProximaNova, courier, sans-serif;' +
+                    ' font-family:"proxima-nova-alt", courier, sans-serif;' +
                     ' font-size:15px;' +
                     ' color:#333;' +
                     ' font-variant:normal;' +

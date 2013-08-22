@@ -38,9 +38,9 @@ app.directive("itemcell", function ($filter) {
                 textAlign: 'left',
                 color: '#333',
                 textShadow: '1px 1px 1px white',
-                fontFamily: '"ProximaNovaCondensed", courier, sans-serif',
+                fontFamily: '"proxima-nova-alt-condensed", courier, sans-serif',
                 fontSize: '17px',
-                fontWeight: 500,
+                fontWeight: 600,
                 /* Bold */
                 lineHeight: '21px',
 
@@ -58,7 +58,7 @@ app.directive("itemcell", function ($filter) {
                 textAlign: 'left',
                 color: '#333',
                 textShadow: '1px 1px 1px white',
-                fontFamily: 'ProximaNova, sans-serif',
+                fontFamily: '"proxima-nova-alt", sans-serif',
                 fontSize: '13px',
                 lineHeight: '15px',
 
