@@ -6,8 +6,8 @@ import sessionmanager
 import encoding
 
 # Make logging prettified
-import tornado.options
-tornado.options.parse_command_line()
+from tornado.options import define, options
+define("USER_EMAIL", default=None, help="email address to sync", type=str)
 
 from models import db_session, MessageMeta, MessagePart
 
@@ -18,8 +18,9 @@ def bootstrap_user():
     (1) creates the metadata database
     (2) stores message parts to the block store
     """
+    assert options.USER_EMAIL, "Need email address to sync"
     crispin_client = sessionmanager.get_crispin_from_email(
-            'christine.spang@gmail.com')
+            options.USER_EMAIL)
 
     folder_name = crispin_client.all_mail_folder_name()
 
@@ -238,4 +239,5 @@ def sync_parts():
     #     print msg_data
 
 if __name__ == '__main__':
+    options.parse_command_line()
     sys.exit(bootstrap_user())
