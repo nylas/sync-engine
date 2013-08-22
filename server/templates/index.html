@@ -215,7 +215,8 @@ function run_validator(address_text, options) {
 
   <div class="subhead">
      {% if logged_in %}
-          You are logged in as {{ name }}.
+           <div id="status">You are logged in as:</div>
+           {{ name }}
         <br/>
          <a class="button" href="/app/">Launch Inbox</a>
           <br/><br/>
