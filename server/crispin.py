@@ -14,6 +14,10 @@ import encoding
 from models import MessageMeta, MessagePart
 import time
 
+from quopri import decodestring as quopri_decodestring
+from base64 import b64decode
+from chardet import detect as detect_charset
+
 
 IMAP_HOST = 'imap.gmail.com'
 SMTP_HOST = 'smtp.gmail.com'
@@ -159,7 +163,7 @@ class CrispinClient:
         messages = []
         # NOTE: this processes messages in an unknown order
         for uid, msg in raw_messages.iteritems():
-            log.info("processing uid {0}".format(uid))
+            # log.info("processing uid {0}".format(uid))
             messages.append((uid, msg['INTERNALDATE'], msg['FLAGS'],
                 # python's email package (which lamson uses directly) needs
                 # encoded bytestrings as its input, since to deal properly
@@ -178,7 +182,7 @@ class CrispinClient:
 
             new_msg.uid = unicode(uid)
             # XXX maybe eventually we want to use these, but for
-            # backcompat for now let's keep in the 
+            # backcompat for now let's keep in the
             # new_msg.subject = mailbase.headers.get('Subject')
             # new_msg.from_addr = mailbase.headers.get('From')
             # new_msg.sender_addr = mailbase.headers.get('Sender')
@@ -225,6 +229,124 @@ class CrispinClient:
             new_msg.g_user_id = self.user_obj.g_user_id
 
             new_messages.append(new_msg)
+
+
+            # new_parts.append
+
+            section_index = 0  # TODO fuck this
+            for part in mailbase.walk():
+                section_index += 1
+
+                mimepart = encoding.to_message(part)
+                if mimepart.is_multipart(): continue
+
+                # MIME-Version 1.0
+
+                new_part = MessagePart()
+                new_part.g_msgid = new_msg.g_msgid
+                new_part.allmail_uid = new_msg.uid
+
+                new_part.section = str(section_index)  # TODO fuck this
+
+
+                new_part.content_type = mimepart.get_content_type()
+
+
+                # Better have the same content types!!
+                assert mimepart.get_content_type() == mimepart.get_params()[0][0],\
+                    "Content-Types not equal: %s and %s" (mimepart.get_content_type(), mimepart.get_params()[0][0])
+
+
+                # We need these to decode, but not to persist
+                # new_part.charset = unicode(mimepart.get_charset())
+                # new_part.encoding = mimepart.get('Content-Transfer-Encoding', None)
+
+
+                # part.bytes  ## TODO
+                # part.line_count  ## TODO maybe?
+                new_part.filename = mimepart.get_filename(failobj=None)
+
+                if new_part.filename:
+                    print 'Filename:', new_part.filename
+
+                # TODO all of this should be decoded using some header shit
+
+                # Content-Disposition: ATTACHMENT;
+                #           filename*0="=?KOI8-R?B?5tXOy8PJz87BzNjO2cUg1NLFws/Xwc7J0SDLIObv8CAtINfZws/ SI";
+                #           filename*1="NA=?= =?KOI8-R?B?0s/E1cvUwSDJINDPzNEgy8/Uz9LZxSDP09TBwNTT0V92NC0";
+                #           filename*2="xLmRvY3g=?="
+                # Content-Type: APPLICATION/VND.OPENXMLFORMATS-OFFICEDOCUMENT.WORDPROCESSINGML.DOCUMENT;
+                #           name*0="=?KOI8-R?B?5tXOy8PJz87BzNjO2cUg1NLFws/Xwc7J0SDLIObv8CAtINfZws/SI";
+                #           name*1="NA=?= =?KOI8-R?B?0s/E1cvUwSDJINDPzNEgy8/Uz9LZxSDP09TBwNTT0V92NC0";
+                #           name*2="xLmRvY3g=?="
+                # Content-Transfer-Encoding: BASE64
+
+
+
+                # new_part.misc_keyval =
+                print 'all params!', mimepart.get_params()
+
+                # Need to save this stuff to find the object from another body part
+                # or figure out how to display it using content-disposition
+                # Content-Id <ii_14016150f0696a11>
+                # X-Attachment-Id ii_14016150f0696a11
+                # Content-Disposition attachment; filename="floorplan.gif"
+
+                if mimepart.preamble:
+                    log.warning("Found a preamble! " + mimepart.preamble)
+                if mimepart.epilogue:
+                    log.warning("Found an epilogue! " + mimepart.epilogue)
+
+
+                payload_data = mimepart.get_payload(decode=False)  # decode ourselves
+
+                data_encoding = mimepart.get('Content-Transfer-Encoding', None).lower()
+                if data_encoding == 'quoted-printable':
+                    payload_data = quopri_decodestring(payload_data)
+                elif data_encoding == 'base64':
+                    # data = data.decode('base-64')
+                    payload_data = b64decode(payload_data)
+                elif data_encoding == '7bit' or data_encoding == '8bit':
+                    pass  # This can be considered utf-8
+                else:
+                    log.error("Unknown encoding scheme:" + str(encoding))
+
+
+                detected_charset = detect_charset(payload_data)
+                charset = str(mimepart.get_charset())
+                if charset == 'None': charset = None
+                detected_charset_encoding = detected_charset['encoding']
+
+
+                # TODO for application/pkcs7-signature we should just assume base64
+                # instead chardet returns ISO-8859-2 which can't possibly be right
+                # Content-Type: application/pkcs7-signature; name=smime.p7s
+
+                if charset or detected_charset_encoding:
+                    try:
+                        payload_data = encoding.attempt_decoding(charset, payload_data)
+                    except Exception, e:
+                        log.error("Failed decoding with %s. Now trying %s" % (charset , detected_charset_encoding))
+                        try:
+                            payload_data = encoding.attempt_decoding(detected_charset_encoding, payload_data)
+                        except Exception, e:
+                            log.error("That failed too. Hmph")
+                            raise e
+                        log.info("Success!")
+                    new_part.size = len(payload_data.encode('utf-8'))
+
+                else:
+                    # This is b64 data, I think...
+                    new_part.size = len(payload_data)
+
+                new_parts.append(new_part)
+                print new_part
+
+                # for k, v in mimepart.items():
+                #     print k, v
+
+
+
 
             # \Seen  Message has been read
             # \Answered  Message has been answered
