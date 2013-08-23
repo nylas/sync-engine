@@ -149,7 +149,7 @@ class CrispinClient:
         """
         """
 
-        query = 'BODY.PEEK[] INTERNALDATE FLAGS'
+        query = 'BODY.PEEK[] ENVELOPE INTERNALDATE FLAGS'
 
         log.info("Fetching message headers. Query: %s" % query)
         raw_messages = self.imap_server.fetch(UIDs,
@@ -170,10 +170,6 @@ class CrispinClient:
                 # used. so we have to reverse the damage before we proceed.
                 encoding.from_string(msg['BODY[]'].encode('latin-1')),
                 msg['X-GM-THRID'], msg['X-GM-MSGID'], msg['X-GM-LABELS']))
-        # messages = [(uid, msg['INTERNALDATE'], msg['FLAGS'],
-        #     encoding.from_string(msg['BODY[]']), msg['X-GM-THRID'],
-        #     msg['X-GM-MSGID'], msg['X-GM-LABELS'])
-        #         for uid, msg in raw_messages.iteritems()]
 
         new_messages, new_parts = [], []
         for uid, internaldate, flags, mailbase, \
@@ -181,15 +177,41 @@ class CrispinClient:
             new_msg = MessageMeta()
 
             new_msg.uid = unicode(uid)
-            new_msg.subject = mailbase.headers.get('Subject')
-            new_msg.from_addr = mailbase.headers.get('From')
-            new_msg.sender_addr = mailbase.headers.get('Sender')
-            new_msg.reply_to = mailbase.headers.get('Reply-To')
-            new_msg.to_addr = mailbase.headers.get('To')
-            new_msg.cc_addr = mailbase.headers.get('Cc')
-            new_msg.bcc_addr = mailbase.headers.get('Bcc')
-            new_msg.in_reply_to = mailbase.headers.get('In-Reply-To')
-            new_msg.message_id = mailbase.headers.get('Message-Id')
+            # XXX maybe eventually we want to use these, but for
+            # backcompat for now let's keep in the 
+            # new_msg.subject = mailbase.headers.get('Subject')
+            # new_msg.from_addr = mailbase.headers.get('From')
+            # new_msg.sender_addr = mailbase.headers.get('Sender')
+            # new_msg.reply_to = mailbase.headers.get('Reply-To')
+            # new_msg.to_addr = mailbase.headers.get('To')
+            # new_msg.cc_addr = mailbase.headers.get('Cc')
+            # new_msg.bcc_addr = mailbase.headers.get('Bcc')
+            # new_msg.in_reply_to = mailbase.headers.get('In-Reply-To')
+            # new_msg.message_id = mailbase.headers.get('Message-Id')
+
+            msg_envelope = msg['ENVELOPE'] # ENVELOPE is parsed RFC-2822 headers
+
+            def make_unicode_contacts(contact_list):
+                n = []
+                for c in contact_list:
+                    new_c = [None]*len(c)
+                    for i in range(len(c)):
+                        new_c[i] = encoding.make_unicode(c[i])
+                    n.append(new_c)
+                return n
+
+            tempSubject = encoding.make_unicode(msg_envelope[1])
+            # Headers will wrap when longer than 78 lines per RFC822_2
+            tempSubject = tempSubject.replace('\n\t', '').replace('\r\n', '')
+            new_msg.subject = tempSubject
+
+            new_msg.sender_addr = msg_envelope[3]
+            new_msg.reply_to = msg_envelope[4]
+            new_msg.to_addr = msg_envelope[5]
+            new_msg.cc_addr = msg_envelope[6]
+            new_msg.bcc_addr = msg_envelope[7]
+            new_msg.in_reply_to = msg_envelope[8]
+            new_msg.message_id = msg_envelope[9]
 
             new_msg.internaldate = internaldate
             new_msg.g_thrid = unicode(x_gm_thrid)
