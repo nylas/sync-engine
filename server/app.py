@@ -4,31 +4,27 @@ import time
 
 import tornado.ioloop
 import tornado.web
-import tornado.log
-import tornado.gen
 import tornado.httpclient
-
 from tornado import escape
 
-from urllib import urlencode
+from tornado.log import enable_pretty_logging
+enable_pretty_logging()
 
+
+from urllib import urlencode
 from securecookie import SecureCookieSerializer
-from idler import Idler
 
 import google_oauth
-
 import sessionmanager
 
-from tornadio2 import SocketConnection, TornadioRouter, event
+from tornadio2 import TornadioRouter
 from socket_rpc import SocketRPC
 from tornadio2 import proto
 import dns.resolver
 
 import encoding
-import api  # This is the handler for RPC calls
-
-
-from models import db_session, UserSession, User
+import api
+from models import db_session, User
 
 COOKIE_SECRET = "32oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo="
 MAILGUN_API_PUBLIC_KEY = "pubkey-8nre-3dq2qn8-jjopmq9wiwu4pk480p2"
@@ -134,6 +130,7 @@ class ValidateEmailHandler(BaseHandler):
             answers = dns.resolver.query(domain, 'MX')
 
 
+
             gmail_mx_servers = [
                     # Google apps for your domain
                     'aspmx.l.google.com.',
@@ -156,7 +153,7 @@ class ValidateEmailHandler(BaseHandler):
 
             # All relay servers must be gmail
             for rdata in answers:
-                if not str(rdata.exchange) in gmail_mx_servers:
+                if not str(rdata.exchange).lower() in gmail_mx_servers:
                     is_valid = False
                     log.error("Non-Google MX record: %s" % str(rdata.exchange))
 
