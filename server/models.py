@@ -10,6 +10,8 @@ from sqlalchemy.orm import reconstructor
 # from sqlalchemy.ext.serializer import loads=, dumps
 import json
 from bson import json_util
+from hashlib import sha256
+import os
 
 
 class UserSession(Base):
@@ -162,7 +164,7 @@ class MessagePart(Base):
 
     content_disposition = Column(Enum('inline', 'attachment'))
     content_id = Column(String)  # For attachments
-    bytes = Column(Integer)
+    size = Column(Integer)
     filename = Column(String)
     misc_keyval = Column(PickleType)
     s3_id = Column(String)
@@ -173,7 +175,7 @@ class MessagePart(Base):
         self.walk_index = None
         self.content_type = None
         self.content_disposition = None
-        self.bytes = None
+        self.size = None
         self.filename = None
         self.s3_id = None
         self.misc_keyval = None
@@ -181,6 +183,47 @@ class MessagePart(Base):
 
     def __repr__(self):
         return 'MessagePart: %s' % self.__dict__
+
+
+
+    @property
+    def _data_file_directory(self):
+        assert self.data_sha256
+        # Nest it 6 items deep so we dont have huge folders
+        h = str(self.data_sha256)
+        return 'parts/'+ h[0]+'/'+h[1]+'/'+h[2]+'/'+h[3]+'/'+h[4]+'/' +\
+            h[5]+'/'
+
+    @property
+    def _data_file_path(self):
+        return self._data_file_directory + str(self.data_sha256)
+
+
+    def set_data(self, new_data, write=True):
+        self.del_data()
+        self.size = len(new_data)
+        self.data_sha256 = sha256(new_data).hexdigest()
+
+        if write:
+            try: os.makedirs(self._data_file_directory)
+            except: pass
+            f = open(self._data_file_path, 'w')
+            f.write(new_data)
+            f.close()
+
+    def get_data(self):
+        f = open(self._data_file_path, 'r')
+        return f.read()
+
+    def del_data(self):
+        try: os.remove(self._data_file_path)
+        except: pass
+        self.size = None
+        self.data_sha256 = None
+
+
+    data = property(get_data, set_data, del_data, "the message part payload")
+
 
 
     @reconstructor

@@ -18,7 +18,6 @@ import json
 from quopri import decodestring as quopri_decodestring
 from base64 import b64decode
 from chardet import detect as detect_charset
-from hashlib import sha256
 
 
 IMAP_HOST = 'imap.gmail.com'
@@ -261,18 +260,9 @@ class CrispinClient:
             headers_part = MessagePart()
             headers_part.g_msgid = new_msg.g_msgid
             headers_part.walk_index = i
-
-            data_to_write = json.dumps(mailbase.headers)
-            headers_part.size = len(data_to_write)
-            headers_part.data_sha256 = sha256(data_to_write).hexdigest()
+            headers_part.data = json.dumps(mailbase.headers)
 
             new_parts.append(headers_part)
-
-            # DEBUG Writes it to disk right now.
-            f = open('parts/header-'+str(headers_part.data_sha256)+'.txt', 'w')
-            f.write(data_to_write)
-            f.close()
-
 
 
 
@@ -352,21 +342,9 @@ class CrispinClient:
                 else:
                     raise Exception("Unknown encoding scheme:" + str(encoding))
 
-                new_part.size = len(data_to_write)
-                new_part.data_sha256 = sha256(data_to_write).hexdigest()
 
+                new_part.data = data_to_write
                 new_parts.append(new_part)
-
-
-
-                # DEBUG Writes it to disk right now.
-                if new_part.filename:
-                    f = open('parts/' + new_part.filename, 'w')
-                else:
-                    f = open('parts/'+str(new_part.data_sha256)+'.txt', 'w')
-                f.write(data_to_write)
-                f.close()
-
 
 
 
