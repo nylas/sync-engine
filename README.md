@@ -14,7 +14,6 @@ All of the todos are in [the Asana workspace](https://app.asana.com/0/4983727800
 2. `git clone --recursive git@github.com:inboxapp/inbox.git` to get the source and submodules.
 
 3. `cd` into the source and call `virtualenv --no-site-packages .`
-   If you're on a Mac, add the `--distribute` flag.
 
 4. `source bin/activate` to start virtualenv
 
