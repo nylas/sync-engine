@@ -191,8 +191,7 @@ class MessagePart(Base):
         assert self.data_sha256
         # Nest it 6 items deep so we dont have huge folders
         h = str(self.data_sha256)
-        return 'parts/'+ h[0]+'/'+h[1]+'/'+h[2]+'/'+h[3]+'/'+h[4]+'/' +\
-            h[5]+'/'
+        return 'parts/'+ h[0]+'/'+h[1]+'/'+h[2]+'/'
 
     @property
     def _data_file_path(self):
