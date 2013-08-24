@@ -1,6 +1,8 @@
+from __future__ import division
 import sys, os;  sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..')))
 
 import logging as log
+import sys
 import sessionmanager
 
 import encoding
@@ -37,7 +39,6 @@ def bootstrap_user():
     uid_generator = query.filter(FolderMeta.g_email == options.USER_EMAIL)\
                          .filter(FolderMeta.folder_name == crispin_client.all_mail_folder_name() )
 
-
     existing_uids = [uid for uid, in uid_generator]
 
     log.info("Already have {0} items".format(len(existing_uids)))
@@ -54,9 +55,11 @@ def bootstrap_user():
     unknown_uids = list(unknown_uids)
     unknown_uids.sort(key=int, reverse=True)  # sort as integers, not strings
 
-    chunk_size = 500
+    i = 0
+    chunk_size = 5
+    log.info("Starting metadata sync with chuncks of size %i" % chunk_size)
     for uids in chunk(unknown_uids, chunk_size):
-        log.info("Fetching from {0} to {1}".format(uids[0], uids[-1]))
+        # log.info("Fetching from {0} to {1}".format(uids[0], uids[-1]))
 
         try:
             new_messagemeta, new_messagepart, new_foldermeta = crispin_client.fetch_uids(uids)
@@ -70,10 +73,23 @@ def bootstrap_user():
         db_session.add_all(new_messagepart)
         db_session.commit()
 
-        total_messages += len(new_messagemeta)
-        log.info("Fetched metadata for {0} messages and {1} parts. (total: {2})"
-                .format(len(new_messagemeta), len(new_messagepart), total_messages))
+        total_messages += len(uids)
 
+
+        # percent_done =  "{0:.4%}".format(total_messages / len(server_uids) )
+        # print percent_done + " percent complete         \r",
+
+        pct = total_messages / len(server_uids) * 100
+        sys.stdout.write("\r|%-73s| %.4f%%" % ('#' * int(pct*.73), pct) ),
+        # sys.stdout.write("|%-73s| %.4f%%" % ('#' * int(pct*.73), pct) + '\n')
+        sys.stdout.flush()
+
+        # log.info("Fetched metadata for {0} messages and {1} parts. ({2:.4%} done)"
+        #         .format(len(new_messagemeta),
+        #                 len(new_messagepart),
+        #                 (total_messages / len(server_uids)) ))
+
+    print ""
     log.info("Finished.")
 
     return 0
