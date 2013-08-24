@@ -97,6 +97,14 @@ function run_validator(address_text, options) {
 
   $(function() {  // document ready
 
+
+      $("#start_auth").keypress(function(e) {
+          if ((e.keyCode || e.which) == 13) {
+              // Enter key pressed
+              $("#start_auth").trigger('click');
+          }
+      });
+
       $("#start_auth").click(function() {
         if (!valid_address_to_auth) {
           console.log("Don't yet have valid email address...");
@@ -226,11 +234,11 @@ function run_validator(address_text, options) {
 
 
       <form>
-        <input type="text" name="login_username" id="login_username" placeholder="ben.bitdiddle@gmail.com" autocomplete="off" spellcheck="false">
+        <input type="text" name="login_username" id="login_username" placeholder="ben.bitdiddle@gmail.com" autocomplete="off" spellcheck="false" tabindex=1>
       </form>
 
       <div id="status"></div>
-        <a class="button" id="start_auth">Connect</a>
+        <a class="button" id="start_auth" tabindex=2>Connect</a>
       {% end %}
   </div>
 

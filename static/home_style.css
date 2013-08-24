@@ -193,6 +193,15 @@ a.button:hover {
 }
 
 
+a.button:focus {
+    outline:0;
+    text-decoration: none;
+    /*color: #333;*/
+    color: #1A7A93;
+    border: solid 1px  #1A7A93 !important;
+}
+
+
 a {
   padding: 0px 2px;
   text-decoration: none;
@@ -203,6 +212,9 @@ a:hover {
   color: rgba(51, 136, 221, 1);
   text-decoration: underline
 }
+
+
+
 
 #login_username {
 
