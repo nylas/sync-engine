@@ -105,10 +105,9 @@ class SocketRPC(object):
 
 
         log.info("Running %s with %s" % (method, final_kwargs))
-
         # This used to be in a try/catch block
         response = method(*extra_args, **final_kwargs)
-
+        log.info("Sending response...")
 
         responses = [response]
         response_text = self.parse_responses(responses)

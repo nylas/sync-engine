@@ -14,7 +14,10 @@ import logging as log
 
 # This tries to decode using strict, and then gives up and uses replace.
 # TODOD We should probably try to use chardet here as well
-def make_unicode(txt, default_encoding="ascii"):
+
+# This decodes stuff like this filename:
+# =?ISO-8859-1?Q?G=F6del_Escher_Bach_=2D_An_Eternal_Golden_Braid=2Epdf?=
+def make_unicode_header(txt, default_encoding="ascii"):
     try:
         return u"".join([unicode(text, charset or default_encoding, 'strict')
                 for text, charset in decode_header(txt)])
@@ -22,6 +25,8 @@ def make_unicode(txt, default_encoding="ascii"):
         log.error("Problem converting string to unicode: %s" % txt)
         return u"".join([unicode(text, charset or default_encoding, 'replace')
                 for text, charset in decode_header(txt)])
+
+
 
 
 
@@ -36,7 +41,6 @@ def make_unicode(txt, default_encoding="ascii"):
 
 # # In these situations, we should split by '?' and then grab the encoding
 
-
 # # def decodeStr(s):
 # #     s = s.split('?')
 # #     enc = s[1]
@@ -50,76 +54,14 @@ def make_unicode(txt, default_encoding="ascii"):
 # # three chars of padding is enough to make any string a multiple of 4 chars long
 
 
-# import base64
-
-
-# def decode_data(data, data_encoding):
-#     data_encoding = data_encoding.lower()
-
-#     try:
-#         if data_encoding == 'quoted-printable':
-#             data = quopri.decodestring(data)
-#         elif data_encoding == '7bit':
-#             pass  # This is just ASCII. Do nothing.
-#         elif data_encoding == '8bit':
-#             pass  # .decode('8bit') does nothing.
-#         elif data_encoding == 'base64':
-#             # data = data.decode('base-64')
-#             data = base64.b64decode(data)
-#         else:
-#             log.error("Unknown encoding scheme:" + str(encoding))
-#     except Exception, e:
-#         print 'Encoding not provided: %s' % e
-
-#     return data
-
-
-# import chardet
-
-# def decode_part(data, part):
-#     data_encoding = part.encoding.lower()
-
-#     if data_encoding == 'quoted-printable':
-#         data = quopri.decodestring(data)
-
-#         charset = part.charset
-#         if not charset:
-#             result = chardet.detect(data)
-#             log.info("Detected charset %s with confidence %s" % ( result['encoding'], str(result['confidence']) ) )
-#             charset = result['encoding']
-
-#         if not isinstance(data, unicode):
-#             data = unicode(data, charset or "ascii", 'strict')
-
-#     elif data_encoding == '7bit':
-#         pass  # This is just ASCII. Do nothing.
-#     elif data_encoding == '8bit':
-#         pass  # .decode('8bit') does nothing.
-#     elif data_encoding == 'base64':
-#         # data = data.decode('base-64')
-#         data = base64.b64decode(data)
-#     else:
-#         log.error("Unknown encoding scheme:" + str(encoding))
-#         raise Exception("No encoding type recognized")
-
-#     return data
-
-
-
-
 
 
 # def clean_html(msg_data):
 #     """ Removes tags: head, style, script, html, body """
-
 #     soup = BeautifulSoup(msg_data)
-
 #     [tag.extract() for tag in soup.findAll(["script", "head", "style", "meta", "link"])]
-
 #     for m in soup('html'): m.replaceWithChildren()
 #     for m in soup('body'): m.replaceWithChildren()
-
-
 #     # for match in soup.findAll('body'):
 #     #     print 'MATCHED!'
 #     #     match.replaceWithChildren()
@@ -127,7 +69,6 @@ def make_unicode(txt, default_encoding="ascii"):
 #     #     # new_tag.contents = b.contents
 #     #     # b.replace_with(new_tag)
 #     return str(soup)
-
 
 
 # re_string = re.compile(r'(?P<htmlchars>[<&>])|(?P<space>^[ \t]+)|(?P<lineend>\r\n|\r|\n)|(?P<protocal>(^|\s)((http|ftp)://.*?))(\s|$)', re.S|re.M|re.I)
@@ -634,7 +575,7 @@ def attempt_decoding(charset, dec):
         try:
             return guess_encoding_and_decode(charset, dec)
         except EncodingError, e:
-            log.error("%e (probably corrupted) Replacing errors with unicode replacement character...")
+            log.error("%s (probably corrupted) Replacing errors with unicode replacement character..." % e)
             # If chardet fails above, let's decode using the original
             # encoding but replace errors. If this fails, maybe we
             # can do it with 'ignore' for total fuckage

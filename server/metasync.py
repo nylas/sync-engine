@@ -9,7 +9,7 @@ import encoding
 from tornado.options import define, options
 define("USER_EMAIL", default=None, help="email address to sync", type=str)
 
-from models import db_session, MessageMeta, MessagePart
+from models import db_session, MessageMeta, MessagePart, FolderMeta
 
 from server.util import chunk
 
@@ -19,21 +19,26 @@ def bootstrap_user():
     (2) stores message parts to the block store
     """
     assert options.USER_EMAIL, "Need email address to sync"
-    crispin_client = sessionmanager.get_crispin_from_email(
+
+    def refresh_crispin():
+        return sessionmanager.get_crispin_from_email(
             options.USER_EMAIL)
 
-    folder_name = crispin_client.all_mail_folder_name()
+    crispin_client = refresh_crispin()
 
-    log.info('Syncing metadata for %s' % folder_name)
-    # NOTE: this select info contains the MODSEQUENCE we need for later
-    # syncing
-    select_info = crispin_client.select_folder(folder_name)
+    log.info('Syncing metadata')
 
     server_uids = [unicode(s) for s in
             crispin_client.imap_server.search(['NOT DELETED'])]
     log.info("Found {0} UIDs".format(len(server_uids)))
 
-    existing_uids = [uid for uid, in db_session.query(MessageMeta.uid)]
+
+    query = db_session.query(FolderMeta.msg_uid)
+    uid_generator = query.filter(FolderMeta.g_email == options.USER_EMAIL)\
+                         .filter(FolderMeta.folder_name == crispin_client.all_mail_folder_name() )
+
+
+    existing_uids = [uid for uid, in uid_generator]
 
     log.info("Already have {0} items".format(len(existing_uids)))
 
@@ -50,16 +55,21 @@ def bootstrap_user():
     for uids in chunk(sorted(unknown_uids, reverse=True), chunk_size):
         log.info("Fetching from {0} to {1}".format(uids[0], uids[-1]))
 
-        new_messages, new_parts = crispin_client.fetch_uids(uids)
+        try:
+            new_messagemeta, new_messagepart, new_foldermeta = crispin_client.fetch_uids(uids)
+        except Exception, e:
+            log.error("Crispin fetch failusre: %s. Reconnecting..." % e)
+            crispin_client = refresh_crispin()
+            new_messagemeta, new_messagepart, new_foldermeta = crispin_client.fetch_uids(uids)
 
-        db_session.add_all(new_messages)
-        db_session.add_all(new_parts)
+        db_session.add_all(new_foldermeta)
+        db_session.add_all(new_messagemeta)
+        db_session.add_all(new_messagepart)
         db_session.commit()
 
-        total_messages += len(new_messages)
-
+        total_messages += len(new_messagemeta)
         log.info("Fetched metadata for {0} messages and {1} parts. (total: {2})"
-                .format(len(new_messages), len(new_parts), total_messages))
+                .format(len(new_messagemeta), len(new_messagepart), total_messages))
 
     log.info("Finished.")
 

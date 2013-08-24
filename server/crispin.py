@@ -11,12 +11,13 @@ import logging as log
 import tornado
 
 import encoding
-from models import MessageMeta, MessagePart
+from models import MessageMeta, MessagePart, FolderMeta
 import time
 
 from quopri import decodestring as quopri_decodestring
 from base64 import b64decode
 from chardet import detect as detect_charset
+from hashlib import sha256
 
 
 IMAP_HOST = 'imap.gmail.com'
@@ -154,11 +155,10 @@ class CrispinClient:
         """
 
         query = 'BODY.PEEK[] ENVELOPE INTERNALDATE FLAGS'
-
-        log.info("Fetching message headers. Query: %s" % query)
+        # log.info("Fetching message headers. Query: %s" % query)
         raw_messages = self.imap_server.fetch(UIDs,
                 [query, 'X-GM-THRID', 'X-GM-MSGID', 'X-GM-LABELS'])
-        log.info("Found %i messages." % len(raw_messages))
+        # log.info("Found %i messages." % len(raw_messages))
 
         messages = []
         # NOTE: this processes messages in an unknown order
@@ -175,7 +175,7 @@ class CrispinClient:
                 encoding.from_string(msg['BODY[]'].encode('latin-1')),
                 msg['X-GM-THRID'], msg['X-GM-MSGID'], msg['X-GM-LABELS']))
 
-        new_messages, new_parts = [], []
+        new_messages, new_parts, new_foldermeta = [], [], []
         for uid, internaldate, flags, mailbase, \
                 x_gm_thrid, x_gm_msgid, x_gm_labels in messages:
             new_msg = MessageMeta()
@@ -200,15 +200,15 @@ class CrispinClient:
                 for c in contact_list:
                     new_c = [None]*len(c)
                     for i in range(len(c)):
-                        new_c[i] = encoding.make_unicode(c[i])
+                        new_c[i] = encoding.make_unicode_header(c[i])
                     n.append(new_c)
                 return n
 
-            tempSubject = encoding.make_unicode(msg_envelope[1])
+            tempSubject = encoding.make_unicode_header(msg_envelope[1])
             # Headers will wrap when longer than 78 lines per RFC822_2
             tempSubject = tempSubject.replace('\n\t', '').replace('\r\n', '')
             new_msg.subject = tempSubject
-
+            new_msg.from_addr = msg_envelope[2]
             new_msg.sender_addr = msg_envelope[3]
             new_msg.reply_to = msg_envelope[4]
             new_msg.to_addr = msg_envelope[5]
@@ -220,9 +220,29 @@ class CrispinClient:
             new_msg.internaldate = internaldate
             new_msg.g_thrid = unicode(x_gm_thrid)
             new_msg.g_msgid = unicode(x_gm_msgid)
-            new_msg.g_labels = unicode(x_gm_labels)
 
-            new_msg.in_inbox = bool('\Inbox' in new_msg.g_labels)
+
+            for label in x_gm_labels:
+                fm = FolderMeta()
+                fm.g_email = self.email_address
+                fm.g_msgid = new_msg.g_msgid
+                fm.folder_name = label
+                fm.msg_uid = new_msg.uid
+                new_foldermeta.append(fm)
+
+
+            # Need to manually create one for All Mail
+            fm = FolderMeta()
+            fm.g_email = self.email_address
+            fm.g_msgid = new_msg.g_msgid
+            fm.folder_name = self.all_mail_folder_name()
+            fm.msg_uid = new_msg.uid
+            new_foldermeta.append(fm)
+
+
+
+
+
 
             new_msg.flags = unicode(flags)
 
@@ -234,6 +254,12 @@ class CrispinClient:
             # new_parts.append
 
             section_index = 0  # TODO fuck this
+
+            # TODO store these
+            # print 'Message headers:', mailbase.headers
+
+
+
             for part in mailbase.walk():
                 section_index += 1
 
@@ -252,45 +278,35 @@ class CrispinClient:
                 new_part.content_type = mimepart.get_content_type()
 
 
-                # Better have the same content types!!
                 assert mimepart.get_content_type() == mimepart.get_params()[0][0],\
-                    "Content-Types not equal: %s and %s" (mimepart.get_content_type(), mimepart.get_params()[0][0])
+                    "Content-Types not equal!  %s and %s" (mimepart.get_content_type(), mimepart.get_params()[0][0])
 
-
-                # We need these to decode, but not to persist
-                # new_part.charset = unicode(mimepart.get_charset())
-                # new_part.encoding = mimepart.get('Content-Transfer-Encoding', None)
-
-
-                # part.bytes  ## TODO
-                # part.line_count  ## TODO maybe?
-                new_part.filename = mimepart.get_filename(failobj=None)
-
-                if new_part.filename:
-                    print 'Filename:', new_part.filename
+                filename = mimepart.get_filename(failobj=None)
+                if filename: encoding.make_unicode_header(filename)
+                new_part.filename = filename
 
                 # TODO all of this should be decoded using some header shit
-
-                # Content-Disposition: ATTACHMENT;
-                #           filename*0="=?KOI8-R?B?5tXOy8PJz87BzNjO2cUg1NLFws/Xwc7J0SDLIObv8CAtINfZws/ SI";
-                #           filename*1="NA=?= =?KOI8-R?B?0s/E1cvUwSDJINDPzNEgy8/Uz9LZxSDP09TBwNTT0V92NC0";
-                #           filename*2="xLmRvY3g=?="
-                # Content-Type: APPLICATION/VND.OPENXMLFORMATS-OFFICEDOCUMENT.WORDPROCESSINGML.DOCUMENT;
-                #           name*0="=?KOI8-R?B?5tXOy8PJz87BzNjO2cUg1NLFws/Xwc7J0SDLIObv8CAtINfZws/SI";
-                #           name*1="NA=?= =?KOI8-R?B?0s/E1cvUwSDJINDPzNEgy8/Uz9LZxSDP09TBwNTT0V92NC0";
-                #           name*2="xLmRvY3g=?="
-                # Content-Transfer-Encoding: BASE64
 
 
 
                 # new_part.misc_keyval =
-                print 'all params!', mimepart.get_params()
+                # print 'all params!', mimepart.get_params()
 
-                # Need to save this stuff to find the object from another body part
-                # or figure out how to display it using content-disposition
+
+
                 # Content-Id <ii_14016150f0696a11>
                 # X-Attachment-Id ii_14016150f0696a11
+                new_part.content_id = mimepart.get('Content-Id', None)
+
+
                 # Content-Disposition attachment; filename="floorplan.gif"
+                content_disposition = mimepart.get('Content-Disposition', None)
+                if content_disposition:
+                    content_disposition = content_disposition.split(';')[0].lower()
+                    assert content_disposition in ['inline', 'attachment'], "Unknown Content Disposition: %s" % content_disposition
+                new_part.content_disposition = content_disposition
+
+
 
                 if mimepart.preamble:
                     log.warning("Found a preamble! " + mimepart.preamble)
@@ -302,45 +318,56 @@ class CrispinClient:
 
                 data_encoding = mimepart.get('Content-Transfer-Encoding', None).lower()
                 if data_encoding == 'quoted-printable':
-                    payload_data = quopri_decodestring(payload_data)
+                    raise Exception("Quoted printable!")
+                    data_to_write = quopri_decodestring(payload_data)
+
                 elif data_encoding == 'base64':
                     # data = data.decode('base-64')
-                    payload_data = b64decode(payload_data)
+                    data_to_write = b64decode(payload_data)
+
                 elif data_encoding == '7bit' or data_encoding == '8bit':
-                    pass  # This can be considered utf-8
-                else:
-                    log.error("Unknown encoding scheme:" + str(encoding))
+                    # Need to get charset and decode with that too.
 
+                    charset = str(mimepart.get_charset())
+                    if charset == 'None': charset = None
 
-                detected_charset = detect_charset(payload_data)
-                charset = str(mimepart.get_charset())
-                if charset == 'None': charset = None
-                detected_charset_encoding = detected_charset['encoding']
-
-
-                # TODO for application/pkcs7-signature we should just assume base64
-                # instead chardet returns ISO-8859-2 which can't possibly be right
-                # Content-Type: application/pkcs7-signature; name=smime.p7s
-
-                if charset or detected_charset_encoding:
                     try:
+                        assert charset
                         payload_data = encoding.attempt_decoding(charset, payload_data)
                     except Exception, e:
-                        log.error("Failed decoding with %s. Now trying %s" % (charset , detected_charset_encoding))
+                        # TODO for application/pkcs7-signature we should just assume base64
+                        # instead chardet returns ISO-8859-2 which can't possibly be right
+                        # Content-Type: application/pkcs7-signature; name=smime.p7s
+                        detected_charset = detect_charset(payload_data)
+                        detected_charset_encoding = detected_charset['encoding']
+                        log.error("%s Failed decoding with %s. Now trying %s" % (e, charset , detected_charset_encoding))
                         try:
                             payload_data = encoding.attempt_decoding(detected_charset_encoding, payload_data)
                         except Exception, e:
-                            log.error("That failed too. Hmph")
+                            log.error("That failed too. Hmph. Not sure how to recover here")
                             raise e
                         log.info("Success!")
-                    new_part.size = len(payload_data.encode('utf-8'))
 
+                    data_to_write = payload_data.encode('utf-8')
                 else:
-                    # This is b64 data, I think...
-                    new_part.size = len(payload_data)
+                    raise Exception("Unknown encoding scheme:" + str(encoding))
+
+
+                new_part.size = len(data_to_write)
+
+                data_hash = sha256(data_to_write).hexdigest()
+
+
+                if new_part.filename:
+                    f = open('parts/' + new_part.filename, 'w')
+                else:
+                    f = open('parts/'+str(data_hash)+'.txt', 'w')
+                f.write(data_to_write)
+                f.close()
+
+
 
                 new_parts.append(new_part)
-                print new_part
 
                 # for k, v in mimepart.items():
                 #     print k, v
@@ -463,8 +490,7 @@ class CrispinClient:
 
             # new_messages.append(new_msg)
 
-        log.info("Fetched headers for %i messages" % len(new_messages))
-        return new_messages, new_parts
+        return new_messages, new_parts, new_foldermeta
 
 
 

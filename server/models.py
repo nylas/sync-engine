@@ -1,4 +1,6 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum
+from sqlalchemy.types import PickleType
+
 from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 
@@ -41,7 +43,6 @@ class User(Base):
     g_email = Column(String, primary_key=True)
     g_refresh_token = Column(String)
     g_verified_email = Column(Boolean)
-    g_allmail_uidvalidity = Column(Integer)
 
     def __init__(self):
         self.name = None
@@ -69,31 +70,25 @@ class MessageMeta(Base):
     # XXX clean this up a lot - make a better constructor, maybe taking
     # a mailbase as an argument to prefill a lot of attributes
 
-    in_inbox = Column(Boolean)
-
-    _from_addr = Column(String)
-    _sender_addr = Column(String)
-    _reply_to = Column(String)
-    _to_addr = Column(String)
-    _cc_addr = Column(String)
-    _bcc_addr = Column(String)
-    _in_reply_to = Column(String)
+    # TODO probably want to store some of these headers in a better
+    # non-pickled way to provide indexing
+    from_addr = Column(PickleType)
+    sender_addr = Column(PickleType)
+    reply_to = Column(PickleType)
+    to_addr = Column(PickleType)
+    cc_addr = Column(PickleType)
+    bcc_addr = Column(PickleType)
+    in_reply_to = Column(PickleType)
     message_id = Column(String)
     subject = Column(String)
     internaldate = Column(DateTime)
-    _flags = Column(String)
-
-
-    uid = Column(String)  # This is only for all_mail
+    flags = Column(PickleType)
 
     g_msgid = Column(String, primary_key=True)
-    g_user_id = Column(String, ForeignKey(User.g_user_id), primary_key=True)
-
+    g_user_id = Column(String, primary_key=True)
     g_thrid = Column(String)
-    g_labels = Column(String)
 
     def __init__(self):
-        self.in_inbox = None
         self.from_addr = None
         self.sender_addr = None
         self.reply_to = None
@@ -106,48 +101,23 @@ class MessageMeta(Base):
         self.internaldate = None
         self.g_msgid = None
         self.g_thrid = None
-        self.g_labels = None
         self.flags = None
         self.subject = None
-        self.uid = None  # TODO remove this
         self.g_user_id = None
 
 
-    @reconstructor
-    def init_on_load(self):
+    # def gmail_url(self):
+    #     if not self.uid:
+    #         return
+    #     return "https://mail.google.com/mail/u/0/#inbox/" + hex(self.uid)
 
-        def d(name):  # deseralize
-            try:
-                if self.__dict__['_'+name]:
-                    self.__dict__[name] = json.loads(self.__dict__['_'+name])
-                else:
-                    self.__dict__[name] = None
-            except KeyError, e:
-                # Deferred
-                pass
-
-        names = ['from_addr',
-                'sender_addr',
-                'reply_to',
-                'to_addr',
-                'cc_addr',
-                'bcc_addr',
-                'in_reply_to',
-                'flags']
-        for n in names: d(n)
-
-
-
-    def gmail_url(self):
-        if not self.uid:
-            return
-        return "https://mail.google.com/mail/u/0/#inbox/" + hex(self.uid)
 
     def trimmed_subject(self):
         s = self.subject
         if s[:4] == u'RE: ' or s[:4] == u'Re: ' :
             s = s[4:]
         return s
+
 
     def client_json(self):
         # TODO serialize more here for client API
@@ -159,67 +129,134 @@ class MessageMeta(Base):
         d['data_id'] = self.g_msgid
         return d
 
-    def __repr__(self):
-        return 'MessageMeta object: \n\t%s' % self.__dict__
 
-
-@event.listens_for(MessageMeta, 'before_insert', propagate = True)
-def serialize_before_insert(mapper, connection, target):
-    if target.from_addr: target._from_addr = json.dumps(target.from_addr, default=json_util.default)
-    if target.sender_addr: target._sender_addr = json.dumps(target.sender_addr, default=json_util.default)
-    if target.reply_to: target._reply_to = json.dumps(target.reply_to, default=json_util.default)
-    if target.to_addr: target._to_addr = json.dumps(target.to_addr, default=json_util.default)
-    if target.cc_addr: target._cc_addr = json.dumps(target.cc_addr, default=json_util.default)
-    if target.bcc_addr: target._bcc_addr = json.dumps(target.bcc_addr, default=json_util.default)
-    if target.in_reply_to: target._in_reply_to = json.dumps(target.in_reply_to, default=json_util.default)
-    if target.flags: target._flags = json.dumps(target.flags, default=json_util.default)
-
-
+# These are the top 15 most common Content-Type headers
+# in my personal mail archive. --mg
+common_content_types = ['text/plain',
+                        'text/html',
+                        'multipart/alternative',
+                        'multipart/mixed',
+                        'image/jpeg',
+                        'multipart/related',
+                        'application/pdf',
+                        'image/png',
+                        'image/gif',
+                        'application/octet-stream',
+                        'multipart/signed',
+                        'application/msword',
+                        'application/pkcs7-signature',
+                        'message/rfc822',
+                        'image/jpg']
 
 class MessagePart(Base):
     __tablename__ = 'messagepart'
     """ Metadata for message parts stored in s3 """
 
-    g_msgid = Column(String, ForeignKey(MessageMeta.g_msgid), primary_key=True)
+    g_msgid = Column(String, primary_key=True)
     section = Column(String, primary_key=True)
-    encoding = Column(String)
-    content_type = Column(String)
-    charset = Column(String)
+
+
+    # Save some space with common content types
+    _content_type_common = Column(Enum(*common_content_types))
+    _content_type_other = Column(String)
+
+    content_disposition = Column(Enum('inline', 'attachment'))
+    content_id = Column(String)  # For attachments
     bytes = Column(Integer)
-    line_count = Column(Integer)
     filename = Column(String)
-    _misc_keyval = Column(String)
-    allmail_uid = Column(String, primary_key=True)
-
+    misc_keyval = Column(PickleType)
     s3_id = Column(String)
-    host_id = Column(String)  # Which server holds onto this part
-
 
     def __init__(self):
         self.g_msgid = None
         self.section = None
         self.content_type = None
-        self.encoding = None
-        self.charset = None
+        self.content_disposition = None
         self.bytes = None
-        self.line_count = None
         self.filename = None
         self.s3_id = None
-        self.host_id = None
         self.misc_keyval = None
-        self.allmail_uid = None
 
     def __repr__(self):
         return 'MessagePart: %s' % self.__dict__
 
+
     @reconstructor
     def init_on_load(self):
-        if self._misc_keyval: self.misc_keyval = json.loads(self._misc_keyval)
-
+        if self._content_type_common:
+            self.content_type = self._content_type_common
+        else:
+            self.content_type = self._content_type_other
 
 @event.listens_for(MessagePart, 'before_insert', propagate = True)
 def serialize_before_insert(mapper, connection, target):
-    if target.misc_keyval: target._misc_keyval = json.dumps(target.misc_keyval, default=json_util.default)
+    if target.content_type in common_content_types:
+        target._content_type_common = target.content_type
+        target._content_type_other = None
+    else:
+        target._content_type_common = None
+        target._content_type_other = target.content_type
+
+
+
+class AttachmentParts(Base):
+    __tablename__ = 'attachmentpart'
+    """ These are objects which are attached to mail messages, but
+        represented as links to external files
+    """
+
+    # This is a unique identifier that is used in the content URL
+    content_id = Column(String, primary_key=True)  # For attachments
+
+    content_type = Column(String)
+    bytes = Column(Integer)
+    filename = Column(String)
+    _misc_keyval = Column(String)
+
+    s3_id = Column(String)
+
+    def __init__(self):
+        self.content_type = None
+        self.bytes = None
+        self.filename = None
+        self.s3_id = None
+        self.misc_keyval = None
+
+
+
+
+class FolderMeta(Base):
+    __tablename__ = 'foldermeta'
+    """ This maps folder names to UIDs """
+
+    g_email = Column(String)
+    g_msgid = Column(String)
+    folder_name = Column(String, primary_key=True)  # All Mail, Inbox, etc. (i.e. Labels)
+    msg_uid = Column(String, primary_key=True)
+
+    def __init__(self):
+        self.g_email = None
+        self.g_msgid = None
+        self.folder_name = None
+        self.msg_uid = None
+
+
+class UIDValidity(Base):
+    __tablename__ = 'uidvalidity'
+    """ UIDValidity has a per-folder value. If it changes, we need to
+        re-map g_msgid to UID for that folder.
+    """
+
+    g_email = Column(String, primary_key=True)
+    folder_name = Column(String, primary_key=True)
+    uid_validity = Column(Integer)
+
+    def __init__(self):
+        self.g_email = None
+        self.folder_name = None
+        self.uid_validity = None
+
+
 
 
 

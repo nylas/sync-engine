@@ -5,7 +5,7 @@ import logging as log
 import datetime
 import traceback
 import google_oauth
-from models import db_session, User, UserSession
+from models import db_session, User, UserSession, UIDValidity
 
 # Memory cache for currently open crispin instances
 email_address_to_crispins = {}
@@ -129,13 +129,23 @@ def get_crispin_from_email(email_address):
         # Always use All Mail
         folder_name = crispin_client.all_mail_folder_name()
         select_info = crispin_client.select_folder(folder_name)
+        # NOTE: this select info contains the MODSEQUENCE we need for later
+        # syncing
 
         try:
-            if user_obj.g_allmail_uidvalidity is None:
-                user_obj.g_allmail_uidvalidity = select_info['UIDVALIDITY']
+
+            uidvalidity_obj = db_session.query(UIDValidity).filter_by(g_email=email_address).first()
+            if uidvalidity_obj is None:
+
+                uidvalidity_obj = UIDValidity()
+                uidvalidity_obj.g_email = email_address
+                uidvalidity_obj.folder_name = folder_name
+                uidvalidity_obj.uid_validity = select_info['UIDVALIDITY']
+                db_session.add(uidvalidity_obj)
                 db_session.commit()
+                log.info("Saved new UIDValidity with value %i" % uidvalidity_obj.uid_validity)
             else:
-                assert select_info['UIDVALIDITY'] == user_obj.g_allmail_uidvalidity
+                assert select_info['UIDVALIDITY'] == uidvalidity_obj.uid_validity
                 log.info("UIDVALIDITY unchanged.")
         except AssertionError:
             log.error("""The user's UIDVALIDITY value has changed.

@@ -10,22 +10,25 @@ from bson import json_util
 
 
 from sqlalchemy import *
-from models import db_session, Base, MessageMeta, MessagePart
+from models import db_session, Base, MessageMeta, MessagePart, FolderMeta
 
 
-def messages_for_folder(folder_name="Inbox", user=None):
+def messages_for_folder(folder_name="\Inbox", user=None):
     assert user, "Must have user for operation"
-
 
     try:
         # crispin_client = sessionmanager.get_crispin_from_email(email_address)
         # log.info('fetching threads...')
         # threads = crispin_client.fetch_messages(folder_name)
 
-        existing_msgs = db_session.query(MessageMeta).filter(MessageMeta.in_inbox == True).all()
-        # Fixes serializing date.datetime
-        return json.dumps([m.client_json() for m in existing_msgs],
-                           default=json_util.default)
+        query = db_session.query(FolderMeta.g_msgid)
+        all_g_msgids = query.filter(FolderMeta.folder_name == folder_name).all()
+        all_g_msgids = [s[0] for s in all_g_msgids]
+        if not all_g_msgids: return
+        inbox_msgs = db_session.query(MessageMeta).filter(MessageMeta.g_msgid.in_(all_g_msgids)).all()
+
+        return json.dumps([m.client_json() for m in inbox_msgs],
+                           default=json_util.default)  # Fixes serializing date.datetime
 
     except AuthFailure, e:
         log.error(e)
