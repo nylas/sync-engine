@@ -51,8 +51,11 @@ def bootstrap_user():
     log.info("{0} uids left to fetch".format(len(unknown_uids)))
 
     total_messages = len(existing_uids)
+    unknown_uids = list(unknown_uids)
+    unknown_uids.sort(key=int, reverse=True)  # sort as integers, not strings
+
     chunk_size = 500
-    for uids in chunk(sorted(unknown_uids, reverse=True), chunk_size):
+    for uids in chunk(unknown_uids, chunk_size):
         log.info("Fetching from {0} to {1}".format(uids[0], uids[-1]))
 
         try:
