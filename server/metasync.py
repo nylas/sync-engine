@@ -56,7 +56,7 @@ def bootstrap_user():
     unknown_uids.sort(key=int, reverse=True)  # sort as integers, not strings
 
     i = 0
-    chunk_size = 5
+    chunk_size = 500
     log.info("Starting metadata sync with chuncks of size %i" % chunk_size)
     for uids in chunk(unknown_uids, chunk_size):
         # log.info("Fetching from {0} to {1}".format(uids[0], uids[-1]))
