@@ -153,7 +153,7 @@ class MessagePart(Base):
     """ Metadata for message parts stored in s3 """
 
     g_msgid = Column(String, primary_key=True)
-    section = Column(String, primary_key=True)
+    walk_index = Column(Integer, primary_key=True)
 
 
     # Save some space with common content types
@@ -166,16 +166,18 @@ class MessagePart(Base):
     filename = Column(String)
     misc_keyval = Column(PickleType)
     s3_id = Column(String)
+    data_sha256 = Column(String)
 
     def __init__(self):
         self.g_msgid = None
-        self.section = None
+        self.walk_index = None
         self.content_type = None
         self.content_disposition = None
         self.bytes = None
         self.filename = None
         self.s3_id = None
         self.misc_keyval = None
+        self.data_sha256 = None
 
     def __repr__(self):
         return 'MessagePart: %s' % self.__dict__

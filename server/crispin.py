@@ -13,6 +13,7 @@ import tornado
 import encoding
 from models import MessageMeta, MessagePart, FolderMeta
 import time
+import json
 
 from quopri import decodestring as quopri_decodestring
 from base64 import b64decode
@@ -180,6 +181,7 @@ class CrispinClient:
                 x_gm_thrid, x_gm_msgid, x_gm_labels in messages:
             new_msg = MessageMeta()
 
+            new_msg.g_user_id = self.user_obj.g_user_id
             new_msg.uid = unicode(uid)
             # XXX maybe eventually we want to use these, but for
             # backcompat for now let's keep in the
@@ -222,81 +224,86 @@ class CrispinClient:
             new_msg.g_msgid = unicode(x_gm_msgid)
 
 
-            for label in x_gm_labels:
+            def make_fm(label):
                 fm = FolderMeta()
                 fm.g_email = self.email_address
                 fm.g_msgid = new_msg.g_msgid
                 fm.folder_name = label
                 fm.msg_uid = new_msg.uid
-                new_foldermeta.append(fm)
+                return fm
 
-
+            for label in x_gm_labels:
+                new_foldermeta.append(make_fm(label))
             # Need to manually create one for All Mail
-            fm = FolderMeta()
-            fm.g_email = self.email_address
-            fm.g_msgid = new_msg.g_msgid
-            fm.folder_name = self.all_mail_folder_name()
-            fm.msg_uid = new_msg.uid
+            fm = make_fm(self.all_mail_folder_name())
             new_foldermeta.append(fm)
 
 
-
-
-
-
+            # TODO parse out flags and store as enum instead of string
+            # \Seen  Message has been read
+            # \Answered  Message has been answered
+            # \Flagged  Message is "flagged" for urgent/special attention
+            # \Deleted  Message is "deleted" for removal by later EXPUNGE
+            # \Draft  Message has not completed composition (marked as a draft).
+            # \Recent   session is the first session to have been notified about this message
             new_msg.flags = unicode(flags)
-
-            new_msg.g_user_id = self.user_obj.g_user_id
 
             new_messages.append(new_msg)
 
 
             # new_parts.append
 
-            section_index = 0  # TODO fuck this
 
             # TODO store these
-            # print 'Message headers:', mailbase.headers
+            i = 0  # for walk_index
+
+            # # Store all message headers as object with index 0
+            headers_part = MessagePart()
+            headers_part.g_msgid = new_msg.g_msgid
+            headers_part.walk_index = i
+
+            data_to_write = json.dumps(mailbase.headers)
+            headers_part.size = len(data_to_write)
+            headers_part.data_sha256 = sha256(data_to_write).hexdigest()
+
+            new_parts.append(headers_part)
+
+            # DEBUG Writes it to disk right now.
+            f = open('parts/header-'+str(headers_part.data_sha256)+'.txt', 'w')
+            f.write(data_to_write)
+            f.close()
+
 
 
 
             for part in mailbase.walk():
-                section_index += 1
-
+                i += 1
                 mimepart = encoding.to_message(part)
-                if mimepart.is_multipart(): continue
-
-                # MIME-Version 1.0
+                if mimepart.is_multipart(): continue  # TODO should we store relations?
 
                 new_part = MessagePart()
                 new_part.g_msgid = new_msg.g_msgid
-                new_part.allmail_uid = new_msg.uid
+                new_part.walk_index = i
 
-                new_part.section = str(section_index)  # TODO fuck this
+                new_part.misc_keyval = mimepart.items()  # everything
 
-
+                # Content-Type
+                assert mimepart.get_content_type() == mimepart.get_params()[0][0],\
+                    "Content-Types not equal!  %s and %s" (mimepart.get_content_type(), mimepart.get_params()[0][0])
                 new_part.content_type = mimepart.get_content_type()
 
 
-                assert mimepart.get_content_type() == mimepart.get_params()[0][0],\
-                    "Content-Types not equal!  %s and %s" (mimepart.get_content_type(), mimepart.get_params()[0][0])
-
+                # File attachments
                 filename = mimepart.get_filename(failobj=None)
                 if filename: encoding.make_unicode_header(filename)
                 new_part.filename = filename
 
-                # TODO all of this should be decoded using some header shit
+                # Make sure MIME-Version is 1.0
+                mime_version = mimepart.get('MIME-Version', failobj=None)
+                if mime_version and mime_version != '1.0':
+                    log.error("Unexpected MIME-Version: %s" % mime_version)
 
 
-
-                # new_part.misc_keyval =
-                # print 'all params!', mimepart.get_params()
-
-
-
-                # Content-Id <ii_14016150f0696a11>
-                # X-Attachment-Id ii_14016150f0696a11
-                new_part.content_id = mimepart.get('Content-Id', None)
 
 
                 # Content-Disposition attachment; filename="floorplan.gif"
@@ -305,9 +312,10 @@ class CrispinClient:
                     content_disposition = content_disposition.split(';')[0].lower()
                     assert content_disposition in ['inline', 'attachment'], "Unknown Content Disposition: %s" % content_disposition
                 new_part.content_disposition = content_disposition
+                new_part.content_id = mimepart.get('Content-Id', None)
 
 
-
+                # DEBUG -- not sure if these are ever really used in emails
                 if mimepart.preamble:
                     log.warning("Found a preamble! " + mimepart.preamble)
                 if mimepart.epilogue:
@@ -315,29 +323,22 @@ class CrispinClient:
 
 
                 payload_data = mimepart.get_payload(decode=False)  # decode ourselves
-
                 data_encoding = mimepart.get('Content-Transfer-Encoding', None).lower()
+
                 if data_encoding == 'quoted-printable':
-                    raise Exception("Quoted printable!")
                     data_to_write = quopri_decodestring(payload_data)
 
                 elif data_encoding == 'base64':
-                    # data = data.decode('base-64')
                     data_to_write = b64decode(payload_data)
 
                 elif data_encoding == '7bit' or data_encoding == '8bit':
                     # Need to get charset and decode with that too.
-
                     charset = str(mimepart.get_charset())
-                    if charset == 'None': charset = None
-
+                    if charset == 'None': charset = None  # bug
                     try:
                         assert charset
                         payload_data = encoding.attempt_decoding(charset, payload_data)
                     except Exception, e:
-                        # TODO for application/pkcs7-signature we should just assume base64
-                        # instead chardet returns ISO-8859-2 which can't possibly be right
-                        # Content-Type: application/pkcs7-signature; name=smime.p7s
                         detected_charset = detect_charset(payload_data)
                         detected_charset_encoding = detected_charset['encoding']
                         log.error("%s Failed decoding with %s. Now trying %s" % (e, charset , detected_charset_encoding))
@@ -347,40 +348,27 @@ class CrispinClient:
                             log.error("That failed too. Hmph. Not sure how to recover here")
                             raise e
                         log.info("Success!")
-
                     data_to_write = payload_data.encode('utf-8')
                 else:
                     raise Exception("Unknown encoding scheme:" + str(encoding))
 
-
                 new_part.size = len(data_to_write)
+                new_part.data_sha256 = sha256(data_to_write).hexdigest()
 
-                data_hash = sha256(data_to_write).hexdigest()
+                new_parts.append(new_part)
 
 
+
+                # DEBUG Writes it to disk right now.
                 if new_part.filename:
                     f = open('parts/' + new_part.filename, 'w')
                 else:
-                    f = open('parts/'+str(data_hash)+'.txt', 'w')
+                    f = open('parts/'+str(new_part.data_sha256)+'.txt', 'w')
                 f.write(data_to_write)
                 f.close()
 
 
 
-                new_parts.append(new_part)
-
-                # for k, v in mimepart.items():
-                #     print k, v
-
-
-
-
-            # \Seen  Message has been read
-            # \Answered  Message has been answered
-            # \Flagged  Message is "flagged" for urgent/special attention
-            # \Deleted  Message is "deleted" for removal by later EXPUNGE
-            # \Draft  Message has not completed composition (marked as a draft).
-            # \Recent   session is the first session to have been notified about this message
 
             # bodystructure = message_dict['BODY']
 
