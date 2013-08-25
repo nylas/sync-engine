@@ -544,7 +544,9 @@ class CrispinClient:
             If the user's inbox is localized to a different language, it will return
             the proper localized string.
 
+            An example response with some other flags:
 
+            # * LIST (\HasNoChildren) "/" "INBOX"
             # * LIST (\Noselect \HasChildren) "/" "[Gmail]"
             # * LIST (\HasNoChildren \All) "/" "[Gmail]/All Mail"
             # * LIST (\HasNoChildren \Drafts) "/" "[Gmail]/Drafts"
