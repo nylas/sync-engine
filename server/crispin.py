@@ -536,15 +536,30 @@ class CrispinClient:
 
 
 
-
     @connected
     def all_mail_folder_name(self):
-        resp = self.imap_server.xlist_folders()
+        """ Note: XLIST is deprecated, so we just use LIST
+
+            This finds the Gmail "All Mail" folder name by using a flag.
+            If the user's inbox is localized to a different language, it will return
+            the proper localized string.
+
+
+            # * LIST (\Noselect \HasChildren) "/" "[Gmail]"
+            # * LIST (\HasNoChildren \All) "/" "[Gmail]/All Mail"
+            # * LIST (\HasNoChildren \Drafts) "/" "[Gmail]/Drafts"
+            # * LIST (\HasNoChildren \Important) "/" "[Gmail]/Important"
+            # * LIST (\HasNoChildren \Sent) "/" "[Gmail]/Sent Mail"
+            # * LIST (\HasNoChildren \Junk) "/" "[Gmail]/Spam"
+            # * LIST (\HasNoChildren \Flagged) "/" "[Gmail]/Starred"
+            # * LIST (\HasNoChildren \Trash) "/" "[Gmail]/Trash"
+        """
+        resp = self.imap_server.list_folders()
         folders =  [dict(flags = f[0], delimiter = f[1], name = f[2]) for f in resp]
         for f in folders:
-            if u'\\AllMail' in f['flags']:
+            if u'\\All' in f['flags']:
                 return f['name']
-        return None
+        raise Exception("Couldn't find All Mail folder")
 
 
     @connected
