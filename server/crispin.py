@@ -42,6 +42,8 @@ class CrispinClient:
         # last time the server checked in, in UTC
         self.keepalive = None
 
+        self._connect()
+
 
 
     def print_duration(fn):
