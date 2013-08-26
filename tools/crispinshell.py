@@ -10,8 +10,14 @@ import IPython
 # $ python -m imapclient.interact -H <host> -u <user> ...
 # but we want to use our sessionmanager and crispin so we're not.
 
-c = sessionmanager.get_crispin_from_email(
-                'christine.spang@gmail.com')
+c = None
+
+def refresh_crispin():
+    global c
+    c = sessionmanager.get_crispin_from_email(
+                    'christine.spang@gmail.com')
+
+refresh_crispin()
 
 all_mail = c.all_mail_folder_name()
 select_info = c.select_folder(all_mail)
@@ -21,6 +27,7 @@ server_uids = [unicode(s) for s in c.imap_server.search(['NOT DELETED'])]
 banner = """
 You can access the crispin instance with the 'c' variable.
 AllMail message UIDs are in 'server_uids'.
+You can refresh the session with 'refresh_crispin()'.
 
 IMAPClient docs are at:
 
