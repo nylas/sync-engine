@@ -13,6 +13,8 @@ import logging as log
 import more_codecs
 
 
+import more_codecs  # Go look at it...
+
 # This tries to decode using strict, and then gives up and uses replace.
 # TODOD We should probably try to use chardet here as well
 
@@ -565,6 +567,7 @@ def guess_encoding_and_decode(original, data, errors=DEFAULT_ERROR_HANDLING):
 
         if not charset['encoding']:
             raise EncodingError("Header claimed %r charset, but detection found none.  Decoding failed." % original)
+        log.info("Detected %s with %s confidence. Trying that..." % (charset['encoding'], str(charset['confidence'])))
         return data.decode(charset["encoding"], errors)
     except UnicodeError, exc:
         raise EncodingError("Header lied and claimed %r charset, guessing said "
@@ -579,8 +582,9 @@ def attempt_decoding(charset, dec):
             return dec
         else:
             return dec.decode(charset)
-    except UnicodeError:
+    except UnicodeError, e:
         # looks like the charset lies, try to detect it
+        log.error("Failed to decode with %s -- %s" % (charset, e))
         try:
             return guess_encoding_and_decode(charset, dec)
         except EncodingError, e:
@@ -594,8 +598,23 @@ def attempt_decoding(charset, dec):
             log.error("General exception. %s Bailing out" % e)
             raise e
 
-    except LookupError:
+    except LookupError, e:
         # they gave a crap encoding
+        log.error("Charset lookup error for %s -- %s" % (charset, e))
+
+        # payload_data.encode('utf-8')
+        directory ='../errors/'
+        try: os.makedirs(directory)  # TOFIX broken
+        except: pass
+        from hashlib import sha256
+        filename = charset + '-' + sha256(dec).hexdigest() + '.txt'
+
+        log.error("Writing to file..." + directory+filename)
+
+        f = open(directory+filename, 'w')
+        f.write(dec)
+        f.close()
+
         return guess_encoding_and_decode(charset, dec)
 
 
