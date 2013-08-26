@@ -175,7 +175,7 @@ class MessagePart(Base):
         self.walk_index = None
         self.content_type = None
         self.content_disposition = None
-        self.size = None
+        self.size = 0
         self.filename = None
         self.s3_id = None
         self.misc_keyval = None
@@ -191,7 +191,7 @@ class MessagePart(Base):
         assert self.data_sha256
         # Nest it 6 items deep so we dont have huge folders
         h = str(self.data_sha256)
-        return 'parts/'+ h[0]+'/'+h[1]+'/'+h[2]+'/'
+        return '../parts/'+ h[0]+'/'+h[1]+'/'+h[2]+'/'
 
     @property
     def _data_file_path(self):
@@ -267,8 +267,6 @@ class AttachmentParts(Base):
         self.misc_keyval = None
 
 
-
-
 class FolderMeta(Base):
     __tablename__ = 'foldermeta'
     """ This maps folder names to UIDs """
@@ -299,9 +297,6 @@ class UIDValidity(Base):
         self.g_email = None
         self.folder_name = None
         self.uid_validity = None
-
-
-
 
 
 
