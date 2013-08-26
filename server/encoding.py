@@ -17,15 +17,19 @@ import logging as log
 
 # This decodes stuff like this filename:
 # =?ISO-8859-1?Q?G=F6del_Escher_Bach_=2D_An_Eternal_Golden_Braid=2Epdf?=
-def make_unicode_header(txt, default_encoding="ascii"):
+def make_unicode_header(txt, default_encoding="utf-8"):
     try:
         return u"".join([unicode(text, charset or default_encoding, 'strict')
                 for text, charset in decode_header(txt)])
     except UnicodeError:
-        log.error("Problem converting string to unicode: %s" % txt)
-        return u"".join([unicode(text, charset or default_encoding, 'replace')
-                for text, charset in decode_header(txt)])
-
+        detected_encoding = chardet.detect(txt)['encoding']
+        log.info("Failed to decode with %s. Going to try %s instead" % (default_encoding, detected_encoding))
+        try:
+            return u"".join([unicode(text, charset or detected_encoding, 'replace')
+                    for text, charset in decode_header(txt)])
+        except Exception, e:
+            log.error("That didn't work either! bailing %s" % e)
+            return 'DecodingFailed'
 
 
 
@@ -339,7 +343,11 @@ class MIMEPart(MIMEBase):
     encode what you ask it.
     """
     def __init__(self, type_, **params):
-        self.maintype, self.subtype = type_.split('/')
+        try:
+            self.maintype, self.subtype = type_.split('/')
+        except Exception, e:
+            log.error("Only one content-type? %s" % type_)
+            self.maintype, self.subtype = type_, None
         MIMEBase.__init__(self, self.maintype, self.subtype, **params)
 
     def add_text(self, content):
