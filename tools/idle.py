@@ -13,7 +13,7 @@ def refresh_crispin():
 
 refresh_crispin()
 
-folder = c.all_mail_folder_name()
+folder = 'Inbox'
 select_info = c.select_folder(folder)
 
 c.imap_server.idle()
