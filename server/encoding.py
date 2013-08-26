@@ -584,7 +584,7 @@ def attempt_decoding(charset, dec):
             return dec.decode(charset)
     except UnicodeError, e:
         # looks like the charset lies, try to detect it
-        log.error("Failed to decode with %s -- %s" % (charset, e))
+        # log.error("Failed to decode with %s -- %s" % (charset, e))
         try:
             return guess_encoding_and_decode(charset, dec)
         except EncodingError, e:
