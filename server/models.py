@@ -85,6 +85,7 @@ class MessageMeta(Base):
     subject = Column(String)
     internaldate = Column(DateTime)
     flags = Column(PickleType)
+    size = Column(Integer)
 
     g_msgid = Column(String, primary_key=True)
     g_user_id = Column(String, primary_key=True)
@@ -106,6 +107,7 @@ class MessageMeta(Base):
         self.flags = None
         self.subject = None
         self.g_user_id = None
+        self.size = 0
 
 
     # def gmail_url(self):

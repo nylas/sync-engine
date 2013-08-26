@@ -174,12 +174,14 @@ class CrispinClient:
                 # away bytes and decodes all bytes received from the wire as
                 # _latin-1_, which is wrong in any case where 8bit MIME is
                 # used. so we have to reverse the damage before we proceed.
-                encoding.from_string(msg['BODY[]'].encode('latin-1')),
+                msg['BODY[]'].encode('latin-1'),
                 msg['X-GM-THRID'], msg['X-GM-MSGID'], msg['X-GM-LABELS']))
 
         new_messages, new_parts, new_foldermeta = [], [], []
-        for uid, internaldate, flags, mailbase, \
+        for uid, internaldate, flags, body, \
                 x_gm_thrid, x_gm_msgid, x_gm_labels in messages:
+
+            mailbase = encoding.from_string(body)
             new_msg = MessageMeta()
 
             new_msg.g_user_id = self.user_obj.g_user_id
@@ -249,11 +251,13 @@ class CrispinClient:
             # \Recent   session is the first session to have been notified about this message
             new_msg.flags = unicode(flags)
 
+            new_msg.size = len(body)  # includes headers text
+
+
             new_messages.append(new_msg)
 
 
             # new_parts.append
-
 
             # TODO store these
             i = 0  # for walk_index
@@ -265,8 +269,6 @@ class CrispinClient:
             headers_part.data = json.dumps(mailbase.headers)
 
             new_parts.append(headers_part)
-
-
 
             for part in mailbase.walk():
                 i += 1
