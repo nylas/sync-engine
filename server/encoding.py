@@ -10,6 +10,7 @@ from email.header import decode_header
 # import cgi
 # import bleach
 import logging as log
+import more_codecs
 
 
 # This tries to decode using strict, and then gives up and uses replace.
