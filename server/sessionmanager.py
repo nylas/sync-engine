@@ -126,6 +126,9 @@ def get_crispin_from_email(email_address):
         assert user_obj is not None
         crispin_client =  crispin.CrispinClient(user_obj)
 
+        assert 'X-GM-EXT-1' in crispin_client.imap_server.capabilities(), "This must not be Gmail..."
+
+
         # Always use All Mail
         folder_name = crispin_client.all_mail_folder_name()
         select_info = crispin_client.select_folder(folder_name)
