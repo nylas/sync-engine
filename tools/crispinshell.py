@@ -6,6 +6,13 @@ import sessionmanager
 
 import IPython
 
+
+# Make logging prettified
+from tornado.options import define, options
+define("USER_EMAIL", default=None, help="email address", type=str)
+options.parse_command_line()
+
+
 # You can also do this with
 # $ python -m imapclient.interact -H <host> -u <user> ...
 # but we want to use our sessionmanager and crispin so we're not.
@@ -14,13 +21,9 @@ c = None
 
 def refresh_crispin():
     global c
-    c = sessionmanager.get_crispin_from_email(
-                    'christine.spang@gmail.com')
+    c = sessionmanager.get_crispin_from_email(options.USER_EMAIL)
 
 refresh_crispin()
-
-all_mail = c.all_mail_folder_name()
-select_info = c.select_folder(all_mail)
 
 server_uids = [unicode(s) for s in c.imap_server.search(['NOT DELETED'])]
 
