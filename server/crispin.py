@@ -278,8 +278,12 @@ class CrispinClient:
                 new_part.misc_keyval = mimepart.items()  # everything
 
                 # Content-Type
-                assert mimepart.get_content_type() == mimepart.get_params()[0][0],\
+                try:
+                    assert mimepart.get_content_type() == mimepart.get_params()[0][0],\
                     "Content-Types not equal!  %s and %s" (mimepart.get_content_type(), mimepart.get_params()[0][0])
+                except Exception, e:
+                    log.error("Content-Types not equal: %s" % mimepart.get_params())
+
                 new_part.content_type = mimepart.get_content_type()
 
 
