@@ -20,11 +20,9 @@ def bootstrap_user():
     """
     assert options.USER_EMAIL, "Need email address to sync"
 
-    def refresh_crispin():
-        return sessionmanager.get_crispin_from_email(
-            options.USER_EMAIL)
 
-    crispin_client = refresh_crispin()
+
+    crispin_client = sessionmanager.get_crispin_from_email(options.USER_EMAIL)
 
     log.info('Syncing metadata')
 
@@ -54,17 +52,24 @@ def bootstrap_user():
     unknown_uids.sort(key=int, reverse=True)  # sort as integers, not strings
 
     i = 0
-    chunk_size = 500
+    chunk_size = 5
     log.info("Starting metadata sync with chuncks of size %i" % chunk_size)
     for uids in chunk(unknown_uids, chunk_size):
         # log.info("Fetching from {0} to {1}".format(uids[0], uids[-1]))
 
-        try:
-            new_messagemeta, new_messagepart, new_foldermeta = crispin_client.fetch_uids(uids)
-        except Exception, e:
-            log.error("Crispin fetch failusre: %s. Reconnecting..." % e)
-            crispin_client = refresh_crispin()
-            new_messagemeta, new_messagepart, new_foldermeta = crispin_client.fetch_uids(uids)
+
+        # Crude retry logic
+        def fetch_uids_withretry(uids):
+            while True:
+                try:
+                    crispin_client = sessionmanager.get_crispin_from_email(options.USER_EMAIL)
+                    return crispin_client.fetch_uids(uids)
+                except Exception, e:
+                    log.error("Crispin fetch failure: %s. Reconnecting..." % e)
+                    pass
+
+
+        new_messagemeta, new_messagepart, new_foldermeta = fetch_uids_withretry(uids)
 
         db_session.add_all(new_foldermeta)
         db_session.add_all(new_messagemeta)
@@ -77,15 +82,15 @@ def bootstrap_user():
         # percent_done =  "{0:.4%}".format(total_messages / len(server_uids) )
         # print percent_done + " percent complete         \r",
 
-        pct = total_messages / len(server_uids) * 100
-        sys.stdout.write("\r|%-73s| %.4f%%" % ('#' * int(pct*.73), pct) ),
-        # sys.stdout.write("|%-73s| %.4f%%" % ('#' * int(pct*.73), pct) + '\n')
-        sys.stdout.flush()
+        # pct = total_messages / len(server_uids) * 100
+        # sys.stdout.write("\r|%-73s| %.4f%%" % ('#' * int(pct*.73), pct) ),
+        # # sys.stdout.write("|%-73s| %.4f%%" % ('#' * int(pct*.73), pct) + '\n')
+        # sys.stdout.flush()
 
-        # log.info("Fetched metadata for {0} messages and {1} parts. ({2:.4%} done)"
-        #         .format(len(new_messagemeta),
-        #                 len(new_messagepart),
-        #                 (total_messages / len(server_uids)) ))
+        log.info("Fetched metadata for {0} messages and {1} parts. ({2:.4%} done)"
+                .format(len(new_messagemeta),
+                        len(new_messagepart),
+                        (total_messages / len(server_uids)) ))
 
     print ""
     log.info("Finished.")
