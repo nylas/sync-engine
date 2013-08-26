@@ -7,6 +7,7 @@ import json
 import postel
 from bson import json_util
 
+from util import chunk
 
 
 from sqlalchemy import *
@@ -16,19 +17,40 @@ from models import db_session, Base, MessageMeta, MessagePart, FolderMeta
 def messages_for_folder(folder_name="\Inbox", user=None):
     assert user, "Must have user for operation"
 
+    folder_name = "MITERS"
+
     try:
         # crispin_client = sessionmanager.get_crispin_from_email(email_address)
         # log.info('fetching threads...')
         # threads = crispin_client.fetch_messages(folder_name)
 
-        query = db_session.query(FolderMeta.g_msgid)
-        all_g_msgids = query.filter(FolderMeta.folder_name == folder_name).all()
-        all_g_msgids = [s[0] for s in all_g_msgids]
-        if not all_g_msgids: return
-        inbox_msgs = db_session.query(MessageMeta).filter(MessageMeta.g_msgid.in_(all_g_msgids)).all()
+        def chunk_fetch(query, chunk_size):
+            i = 0
+            total_messages = query.count()
+            all_items = []
+            while i < total_messages - chunk_size:
+                result = query.limit(chunk_size).offset( i ).all()
+                all_items += [s[0] for s in result]
+                i += chunk_size
+            return all_items
 
-        return json.dumps([m.client_json() for m in inbox_msgs],
+
+        rows = db_session.query(FolderMeta.g_msgid).filter(FolderMeta.folder_name == folder_name)
+        all_g_msgids = chunk_fetch(rows, 200)
+
+
+        all_msgs = []
+        chunk_size = 200
+        for g_msgids in chunk(all_g_msgids, chunk_size):
+            all_msgs_query = db_session.query(MessageMeta).filter(MessageMeta.g_msgid.in_(g_msgids))
+            result = all_msgs_query.all()
+            all_msgs += result
+
+
+        return json.dumps([m.client_json() for m in all_msgs],
                            default=json_util.default)  # Fixes serializing date.datetime
+
+
 
     except AuthFailure, e:
         log.error(e)
