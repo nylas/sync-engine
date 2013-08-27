@@ -37,7 +37,7 @@ def messages_from_raw(raw_messages):
         # decodes all bytes received from the wire as _latin-1_, which is wrong
         # in any case where 8bit MIME is used. so we have to reverse the damage
         # before we proceed.
-        yield (int(uid), msg['INTERNALDATE'], msg['FLAGS'],
+        yield (int(uid), msg['INTERNALDATE'], msg['FLAGS'], msg['ENVELOPE'],
                 msg['BODY[]'].encode('latin-1'),
                 msg['X-GM-THRID'], msg['X-GM-MSGID'],
                 msg['X-GM-LABELS'])
@@ -226,7 +226,7 @@ class CrispinClient:
                 [query, 'X-GM-THRID', 'X-GM-MSGID', 'X-GM-LABELS'])
 
         new_messages, new_parts, new_foldermeta = [], [], []
-        for uid, internaldate, flags, body, x_gm_thrid, x_gm_msgid, \
+        for uid, internaldate, flags, envelope, body, x_gm_thrid, x_gm_msgid, \
                 x_gm_labels in messages_from_raw(raw_messages):
             mailbase = encoding.from_string(body)
             new_msg = MessageMeta()
@@ -245,8 +245,6 @@ class CrispinClient:
             # new_msg.in_reply_to = mailbase.headers.get('In-Reply-To')
             # new_msg.message_id = mailbase.headers.get('Message-Id')
 
-            msg_envelope = msg['ENVELOPE'] # ENVELOPE is parsed RFC-2822 headers
-
             def make_unicode_contacts(contact_list):
                 n = []
                 for c in contact_list:
@@ -256,18 +254,18 @@ class CrispinClient:
                     n.append(new_c)
                 return n
 
-            tempSubject = encoding.make_unicode_header(msg_envelope[1])
+            tempSubject = encoding.make_unicode_header(envelope[1])
             # Headers will wrap when longer than 78 lines per RFC822_2
             tempSubject = tempSubject.replace('\n\t', '').replace('\r\n', '')
             new_msg.subject = tempSubject
-            new_msg.from_addr = msg_envelope[2]
-            new_msg.sender_addr = msg_envelope[3]
-            new_msg.reply_to = msg_envelope[4]
-            new_msg.to_addr = msg_envelope[5]
-            new_msg.cc_addr = msg_envelope[6]
-            new_msg.bcc_addr = msg_envelope[7]
-            new_msg.in_reply_to = msg_envelope[8]
-            new_msg.message_id = msg_envelope[9]
+            new_msg.from_addr = envelope[2]
+            new_msg.sender_addr = envelope[3]
+            new_msg.reply_to = envelope[4]
+            new_msg.to_addr = envelope[5]
+            new_msg.cc_addr = envelope[6]
+            new_msg.bcc_addr = envelope[7]
+            new_msg.in_reply_to = envelope[8]
+            new_msg.message_id = envelope[9]
 
             new_msg.internaldate = internaldate
             new_msg.g_thrid = unicode(x_gm_thrid)
