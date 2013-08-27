@@ -123,7 +123,6 @@ class CrispinClient:
             return ret
         return connected_fn
 
-
     def server_needs_refresh(self):
         """ Many IMAP servers have a default minimum "no activity" timeout
             of 30 minutes. Sending NOPs ALL the time is hells slow, but we
@@ -132,7 +131,6 @@ class CrispinClient:
         now = datetime.datetime.utcnow()
         return self.keepalive is None or \
                 (now - self.keepalive) > self.SERVER_TIMEOUT
-
 
     def connected(fn):
         """ A decorator for methods that can only be run on a logged-in client.
@@ -146,7 +144,6 @@ class CrispinClient:
             self.keepalive = datetime.datetime.utcnow()
             return ret
         return connected_fn
-
 
     def _connect(self):
         log.info('Connecting to %s ...' % IMAP_HOST,)
@@ -183,12 +180,10 @@ class CrispinClient:
         log.info('Connection successful.')
         return True
 
-
     def stop(self):
         log.info("Closing connection.")
         if (self.imap_server):
             self.imap_server.logout()
-
 
     @connected
     @print_duration
@@ -220,8 +215,6 @@ class CrispinClient:
         log.info("\n%i UIDs" % len(UIDs)  )
 
         return self.fetch_uids(UIDs)
-
-
 
     def fetch_uids(self, UIDs):
         """ Downloads entire messages for the given UIDs, parses them,
@@ -507,15 +500,10 @@ class CrispinClient:
 
         return new_messages, new_parts, new_foldermeta
 
-
-
     @connected
     def fetch_messages(self, folder_name):
         new_messages, new_parts = self.fetch_folder(folder_name)
         return new_messages
-
-
-
 
     @connected
     def fetch_msg_body(self, msg_uid, section_index, readonly=True):
@@ -543,9 +531,6 @@ class CrispinClient:
 
         return body_data
 
-
-
-
     @connected
     def fetch_msg_headers(self, folder, msg_uid, readonly=True):
 
@@ -566,7 +551,6 @@ class CrispinClient:
 
         return response
 
-
     @connected
     def fetch_entire_msg(self, folder, msg_uid, readonly=True):
 
@@ -582,8 +566,6 @@ class CrispinClient:
                                     [query])
 
         return response
-
-
 
     @connected
     def all_mail_folder_name(self):
@@ -619,7 +601,6 @@ class CrispinClient:
                     return f['name']
             raise Exception("Couldn't find All Mail folder")
 
-
     @connected
     def msgids_for_thrids(self, thread_ids):
         """ Batch fetch to get all X-GM-THRIDs for a group of UIDs """
@@ -631,12 +612,6 @@ class CrispinClient:
             for t in thread_ids[1:]:
                 criteria = 'OR ' + criteria + ' X-GM-THRID %s' % str(t)
         return self.imap_server.search(criteria)
-
-
-
-
-
-
 
 # log.info("Expanded to %i messages for %i thread IDs." % (len(all_msg_uids), len(thread_ids)))
 
