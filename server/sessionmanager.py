@@ -5,17 +5,14 @@ import logging as log
 import datetime
 import traceback
 import google_oauth
-from models import db_session, User, UserSession, UIDValidity
+from models import db_session, User, UserSession
 
 # Memory cache for currently open crispin instances
 email_address_to_crispins = {}
 
-
-
 def log_ignored(exc):
     log.error('Ignoring error: %s\nOuter stack:\n%s%s'
               % (exc, ''.join(traceback.format_stack()[:-2]), traceback.format_exc(exc)))
-
 
 def create_session(email_address):
     new_session = UserSession()
@@ -25,14 +22,11 @@ def create_session(email_address):
     db_session.commit()
     return new_session
 
-
 def get_session(session_token):
     session_obj = db_session.query(UserSession).filter_by(session_token=session_token).first()
     if not session_obj:
         log.error("No record for session with token: %s" % session_token)
     return session_obj
-
-
 
 def make_user(access_token_dict):
     new_user = User()
@@ -61,15 +55,12 @@ def make_user(access_token_dict):
     log.info("Stored new user object %s" % new_user)
     return new_user
 
-
 def get_user(email_address, callback=None):
     user_obj = db_session.query(User).filter_by(g_email=email_address).first()
     if not user_obj:
         log.error("Should already have a user object...")
         return None
     return verify_user(user_obj)
-
-
 
 def verify_user(user_obj):
 
@@ -108,17 +99,12 @@ def verify_user(user_obj):
     log.info("Returing user object: %s" % user_obj)
     return user_obj
 
-
-
-
-
 def get_crispin_from_session(session_token):
     """ Get the running crispin instance, or make a new one """
     s = get_session(session_token)
     return get_crispin_from_email(s.email_address)
 
-
-def get_crispin_from_email(email_address):
+def get_crispin_from_email(email_address, initial=False):
     if email_address in email_address_to_crispins:
         return email_address_to_crispins[email_address]
     else:
@@ -128,42 +114,19 @@ def get_crispin_from_email(email_address):
 
         assert 'X-GM-EXT-1' in crispin_client.imap_server.capabilities(), "This must not be Gmail..."
 
-
         # Always use All Mail
-        folder_name = crispin_client.all_mail_folder_name()
-        select_info = crispin_client.select_folder(folder_name)
+        crispin_client.select_folder(
+                crispin_client.all_mail_folder_name())
         # NOTE: this select info contains the MODSEQUENCE we need for later
-        # syncing
-
-        try:
-
-            uidvalidity_obj = db_session.query(UIDValidity).filter_by(g_email=email_address).first()
-            if uidvalidity_obj is None:
-
-                uidvalidity_obj = UIDValidity()
-                uidvalidity_obj.g_email = email_address
-                uidvalidity_obj.folder_name = folder_name
-                uidvalidity_obj.uid_validity = select_info['UIDVALIDITY']
-                db_session.add(uidvalidity_obj)
-                db_session.commit()
-                log.info("Saved new UIDValidity with value %i" % uidvalidity_obj.uid_validity)
-            else:
-                assert select_info['UIDVALIDITY'] == uidvalidity_obj.uid_validity
-                log.info("UIDVALIDITY unchanged.")
-        except AssertionError:
-            log.error("""The user's UIDVALIDITY value has changed.
-                      This means we need to do a full metasync refresh to get new UIDs.
-                      However, any X-GM-MSGIDs should still be the same, so we don't need to
-                      sync the message parts again.""")
-            return None
-
+        # syncing; it's possible at some point in the future we may want
+        # to cache it as soon as we have it instead of making a STATUS query
+        # again later. (We still have to do STATUS queries for folders we've
+        # never SELECTed.)
 
         email_address_to_crispins[email_address] = crispin_client
         return crispin_client
-
 
 def stop_all_crispins():
     if not email_address_to_crispins: return
     for e,c in email_address_to_crispins.iteritems():
         c.stop()
-

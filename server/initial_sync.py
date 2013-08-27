@@ -36,7 +36,21 @@ def load_validity_cache(crispin_client, email, SYNC_FOLDERS):
 
     return cache_validity
 
+def uidvalidity_valid(crispin_client):
+    """ Validate UIDVALIDITY on currently selected folder. """
+    cached_validity = db_session.query(UIDValidity.uid_validity).filter_by(
+            g_gmail=crispin_client.email_address,
+            folder_name=crispin_client.selected_folder_name).one()[0]
+    return crispin_client.selected_uidvalidity > cached_validity
+
 def modseq_update(email):
+    # XXX TODO: from this point on, we need to start checking UIDVALIDITY
+    if not uidvalidity_valid(crispin_client):
+        log.error(
+        """The user's UIDVALIDITY value has changed. We need to do a UID
+           refresh matching on X-GM-MSGIDs for existing messages and updating
+           the MessageMeta tables. (No need to download messages all over
+           again.""")
     cache_validity = load_validity_cache(crispin_client, email, SYNC_FOLDERS)
     # needs_update = []
     # for folder in SYNC_FOLDERS:
@@ -140,8 +154,8 @@ def initial_sync(email):
             sys.stdout.write("\r|%-73s| %.4f%%" % ('#' * int(pct*.73), pct) ),
             sys.stdout.flush()
 
-        # this COMMITS this folder! now we know what modsequence we have a
-        # full set of messages and metadata up to.
+        # transaction commit
+        log.info("Saved all messages and metadata on {0} to UIDVALIDITY {1} / HIGHESTMODSEQ {2}".format(folder, uidvalidity, highestmodseq))
         db_session.add(UIDValidity(
                 g_email=email, folder_name=folder, uid_validity=uidvalidity,
                 highestmodseq=highestmodseq))
