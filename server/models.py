@@ -275,13 +275,6 @@ class FolderMeta(Base):
     folder_name = Column(String, primary_key=True)  # All Mail, Inbox, etc. (i.e. Labels)
     msg_uid = Column(String, primary_key=True)
 
-    def __init__(self):
-        self.g_email = None
-        self.g_msgid = None
-        self.folder_name = None
-        self.msg_uid = None
-
-
 class UIDValidity(Base):
     __tablename__ = 'uidvalidity'
     """ UIDValidity has a per-folder value. If it changes, we need to
