@@ -13,8 +13,6 @@ def chunk(iterable, size):
             break
         yield group
 
-
-
 def human_readable_filesize(size_bytes, suffixes=None):
     """
     format a size in bytes into a 'human' file size, e.g. bytes, KB, MB, GB, TB, PB
@@ -40,3 +38,15 @@ def human_readable_filesize(size_bytes, suffixes=None):
         formatted_size = str(round(num, ndigits=precision))
 
     return "%s %s" % (formatted_size, suffix)
+
+def or_none(value, selector):
+    if value is None:
+        return None
+    else:
+        return selector(value)
+
+def partition(pred, iterable):
+    'Use a predicate to partition entries into false entries and true entries'
+    # partition(is_odd, range(10)) --> 0 2 4 6 8   and  1 3 5 7 9
+    t1, t2 = itertools.tee(iterable)
+    return itertools.ifilterfalse(pred, t1), filter(pred, t2)
