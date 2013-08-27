@@ -18,6 +18,7 @@ from quopri import decodestring as quopri_decodestring
 from base64 import b64decode
 from chardet import detect as detect_charset
 
+from util import or_none
 
 IMAP_HOST = 'imap.gmail.com'
 SMTP_HOST = 'smtp.gmail.com'
@@ -33,17 +34,72 @@ class CrispinClient:
     SERVER_TIMEOUT = datetime.timedelta(seconds=1200)
 
     def __init__(self, user_obj):
-
         self.user_obj = user_obj
         self.email_address = user_obj.g_email
         self.oauth_token = user_obj.g_access_token
         self.imap_server = None
         # last time the server checked in, in UTC
         self.keepalive = None
+        # IMAP isn't stateless :(
+        self.selected_folder = None
+        self._all_mail_folder_name = None
 
         self._connect()
 
+    @property
+    def selected_folder_name(self):
+        return or_none(self.selected_folder, lambda f: f[0])
 
+    @property
+    def selected_folder_info(self):
+        return or_none(self.selected_folder, lambda f: f[1])
+
+    @property
+    def selected_highestmodseq(self):
+        return or_none(self.selected_folder_info,
+                lambda i: i['HIGHESTMODSEQ'])
+
+    @property
+    def selected_uidvalidity(self):
+        return or_none(self.selected_folder_info,
+                lambda i: i['UIDVALIDITY'])
+
+    def with_folder(self, folder, action):
+        if folder != self.selected_folder[0]:
+            old_folder = self.selected_folder
+            self.select_folder(folder)
+            ret = action()
+            self.select_folder(old_folder[0])
+        else:
+            ret = action()
+        return ret
+
+    def make_fm(self, g_msgid, label, uid):
+        return FolderMeta(
+                g_email=self.email_address,
+                g_msgid=g_msgid,
+                folder_name=label,
+                msg_uid=uid)
+
+    def fetch_g_msgids(self, uids=None):
+        """ Download Gmail MSGIDs for the given messages, or all messages in
+            the currently selected folder if no UIDs specified.
+
+            The mapping must be uid->g_msgid and not vice-versa because a
+            UID is unique (to a folder), but a g_msgid is not necessarily
+            (it can legitimately appear twice in the folder).
+        """
+        if uids is None:
+            uids = self.all_uids()
+        return dict([(uid, g_msgid) for uid, g_msgid in \
+                self.imap_server.fetch(uids, ['X-GM-MSGID'])])
+
+    def all_uids(self):
+        """ Get all UIDs associated with the currently selected folder as
+            a list of integers.
+        """
+        return [int(s) for s in self.imap_server.search(['NOT DELETED'])]
+>>>>>>> Rewrite initial sync.
 
     def print_duration(fn):
         """ A decorator for methods that can only be run on a logged-in client.
@@ -125,15 +181,19 @@ class CrispinClient:
     @connected
     @print_duration
     def select_folder(self, folder):
+        # XXX TODO: whenever you do a SELECT you need to validate
+        # UIDVALIDITY
         try:
             select_info = self.imap_server.select_folder(folder, readonly=True)
+            self.selected_folder = (folder, select_info)
         except Exception, e:
             log.error(e)
             raise e
         log.info('Selected folder %s with %d messages.' % (folder, select_info['EXISTS']) )
         return select_info
 
-
+    def select_all_mail(self):
+        return self.select_folder(self.all_mail_folder_name())
 
     @connected
     @print_duration
@@ -152,9 +212,10 @@ class CrispinClient:
 
 
     def fetch_uids(self, UIDs):
+        """ Downloads entire messages for the given UIDs, parses them,
+            and creates metadata database entries and writes mail parts
+            to disk.
         """
-        """
-
         query = 'BODY.PEEK[] ENVELOPE INTERNALDATE FLAGS'
         # log.info("Fetching message headers. Query: %s" % query)
         raw_messages = self.imap_server.fetch(UIDs,
@@ -226,18 +287,10 @@ class CrispinClient:
             new_msg.g_msgid = unicode(x_gm_msgid)
 
 
-            def make_fm(label):
-                fm = FolderMeta()
-                fm.g_email = self.email_address
-                fm.g_msgid = new_msg.g_msgid
-                fm.folder_name = label
-                fm.msg_uid = new_msg.uid
-                return fm
-
             for label in x_gm_labels:
-                new_foldermeta.append(make_fm(label))
+                new_foldermeta.append(self.make_fm(new_msg, label))
             # Need to manually create one for All Mail
-            fm = make_fm(self.all_mail_folder_name())
+            fm = self.make_fm(new_msg, self.all_mail_folder_name())
             new_foldermeta.append(fm)
 
 
@@ -562,13 +615,20 @@ class CrispinClient:
             # * LIST (\HasNoChildren \Junk) "/" "[Gmail]/Spam"
             # * LIST (\HasNoChildren \Flagged) "/" "[Gmail]/Starred"
             # * LIST (\HasNoChildren \Trash) "/" "[Gmail]/Trash"
+
+            Caches the call since we use it all over the place and the
+            folder is never going to change names on an open session
         """
-        resp = self.imap_server.list_folders()
-        folders =  [dict(flags = f[0], delimiter = f[1], name = f[2]) for f in resp]
-        for f in folders:
-            if u'\\All' in f['flags']:
-                return f['name']
-        raise Exception("Couldn't find All Mail folder")
+        if self._all_mail_folder_name is not None:
+            return self._all_mail_folder_name
+        else:
+            resp = self.imap_server.list_folders()
+            folders =  [dict(flags = f[0], delimiter = f[1],
+                name = f[2]) for f in resp]
+            for f in folders:
+                if u'\\All' in f['flags']:
+                    return f['name']
+            raise Exception("Couldn't find All Mail folder")
 
 
     @connected
