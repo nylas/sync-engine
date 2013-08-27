@@ -290,17 +290,10 @@ class UIDValidity(Base):
     """ UIDValidity has a per-folder value. If it changes, we need to
         re-map g_msgid to UID for that folder.
     """
-
     g_email = Column(String, primary_key=True)
     folder_name = Column(String, primary_key=True)
     uid_validity = Column(Integer)
-
-    def __init__(self):
-        self.g_email = None
-        self.folder_name = None
-        self.uid_validity = None
-
-
+    highestmodseq = Column(Integer)
 
 ## Make the tables
 from sqlalchemy import create_engine
