@@ -8,7 +8,6 @@ sys.path.insert(0, "..")
 
 import datetime
 import logging as log
-import tornado
 
 import encoding
 from models import MessageMeta, MessagePart, FolderMeta
