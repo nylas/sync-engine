@@ -110,6 +110,8 @@ def initial_sync(email):
         warn_uids = set(existing_uids).difference(set(server_uids))
         unknown_uids = set(server_uids).difference(set(existing_uids))
 
+        # these will be dealt with later in HIGHESTMODSEQ updates, which
+        # also checks for deleted messages
         for uid in warn_uids:
             log.error("{1} msg {0} doesn't exist on server".format(uid, folder))
 
@@ -155,11 +157,28 @@ def initial_sync(email):
             sys.stdout.flush()
 
         # transaction commit
-        log.info("Saved all messages and metadata on {0} to UIDVALIDITY {1} / HIGHESTMODSEQ {2}".format(folder, uidvalidity, highestmodseq))
-        db_session.add(UIDValidity(
+        # if we've done a restart on the initial sync, we may have already
+        # saved a UIDValidity row for any given folder, so we need to update
+        # it instead. BUT, we first need to check for updated metadata since
+        # the recorded UIDValidity, in case things like flags have changed.
+        cached_validity = db_session.query(UIDValidity).filter_by(
+                g_email=email, folder_name=folder).first()
+        if cached_validity:
+            # XXX TODO: do a HIGHESTMODSEQ update here to check for updated
+            # metadata since the recorded UIDValidity.
+            # XXX remove this UIDValidity update once we've finished the
+            # above, since doing that update should also update the recorded
+            # UIDValidity
+            cached_validity.uid_validity = uidvalidity
+            cached_validity.highestmodseq = highestmodseq
+            db_session.add(cached_validity)
+            db_session.commit()
+        else:
+            db_session.add(UIDValidity(
                 g_email=email, folder_name=folder, uid_validity=uidvalidity,
                 highestmodseq=highestmodseq))
-        db_session.commit()
+            db_session.commit()
+        log.info("Saved all messages and metadata on {0} to UIDVALIDITY {1} / HIGHESTMODSEQ {2}".format(folder, uidvalidity, highestmodseq))
 
     print
     log.info("Finished.")
