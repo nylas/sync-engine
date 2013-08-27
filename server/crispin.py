@@ -27,7 +27,20 @@ SMTP_HOST = 'smtp.gmail.com'
 class AuthFailure(Exception): pass
 class TooManyConnectionsFailure(Exception): pass
 
-
+def messages_from_raw(raw_messages):
+    for uid in sorted(raw_messages.iterkeys(), key=int):
+        msg = raw_messages[uid]
+        # NOTE: python's email package (which lamson uses directly) needs
+        # encoded bytestrings as its input, since to deal properly with
+        # MIME-encoded email you need to do part decoding based on message /
+        # MIME part headers anyway. imapclient tries to abstract away bytes and
+        # decodes all bytes received from the wire as _latin-1_, which is wrong
+        # in any case where 8bit MIME is used. so we have to reverse the damage
+        # before we proceed.
+        yield (int(uid), msg['INTERNALDATE'], msg['FLAGS'],
+                msg['BODY[]'].encode('latin-1'),
+                msg['X-GM-THRID'], msg['X-GM-MSGID'],
+                msg['X-GM-LABELS'])
 
 class CrispinClient:
     # 20 minutes
@@ -216,30 +229,12 @@ class CrispinClient:
             to disk.
         """
         query = 'BODY.PEEK[] ENVELOPE INTERNALDATE FLAGS'
-        # log.info("Fetching message headers. Query: %s" % query)
         raw_messages = self.imap_server.fetch(UIDs,
                 [query, 'X-GM-THRID', 'X-GM-MSGID', 'X-GM-LABELS'])
-        # log.info("Found %i messages." % len(raw_messages))
-
-        messages = []
-        # NOTE: this processes messages in an unknown order
-        for uid, msg in raw_messages.iteritems():
-            # log.info("processing uid {0}".format(uid))
-            messages.append((uid, msg['INTERNALDATE'], msg['FLAGS'],
-                # python's email package (which lamson uses directly) needs
-                # encoded bytestrings as its input, since to deal properly
-                # with MIME-encoded email you need to do part decoding based on
-                # message / MIME part headers anyway. imapclient tries to abstract
-                # away bytes and decodes all bytes received from the wire as
-                # _latin-1_, which is wrong in any case where 8bit MIME is
-                # used. so we have to reverse the damage before we proceed.
-                msg['BODY[]'].encode('latin-1'),
-                msg['X-GM-THRID'], msg['X-GM-MSGID'], msg['X-GM-LABELS']))
 
         new_messages, new_parts, new_foldermeta = [], [], []
-        for uid, internaldate, flags, body, \
-                x_gm_thrid, x_gm_msgid, x_gm_labels in messages:
-
+        for uid, internaldate, flags, body, x_gm_thrid, x_gm_msgid, \
+                x_gm_labels in messages_from_raw(raw_messages):
             mailbase = encoding.from_string(body)
             new_msg = MessageMeta()
 
