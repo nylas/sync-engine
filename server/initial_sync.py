@@ -37,6 +37,7 @@ def load_validity_cache(crispin_client, email, SYNC_FOLDERS):
     return cache_validity
 
 def modseq_update(email):
+    cache_validity = load_validity_cache(crispin_client, email, SYNC_FOLDERS)
     # needs_update = []
     # for folder in SYNC_FOLDERS:
     #     # XXX eventually we might want to be holding a cache of this stuff
@@ -47,6 +48,7 @@ def modseq_update(email):
     #     if status['HIGHESTMODSEQ'] > cache_validity[folder]['HIGHESTMODSEQ']:
     #         needs_update.append(folder)
     # XXX finish this
+
     for folder in SYNC_FOLDERS:
         crispin_client.select_folder(folder)
         server_uids = crispin_client.all_uids()
@@ -67,24 +69,23 @@ def initial_sync(email):
 
     # message download for messages from SYNC_FOLDERS is prioritized before
     # AllMail in the order of appearance in this list
+    # XXX At some point we may want to query for a user's labels and sync
+    # _all_ of them here. You can query gmail labels with
+    # crispin_client.imap_server.list_folders() and filter out the [Gmail]
+    # folders
     SYNC_FOLDERS = ['Inbox', crispin_client.all_mail_folder_name()]
-
-    cache_validity = load_validity_cache(crispin_client, email, SYNC_FOLDERS)
 
     for folder in SYNC_FOLDERS:
         # for each folder, compare what's on the server to what we have.
         # this allows restarts of the initial sync script in the case of
         # total failure.
         crispin_client.select_folder(folder)
-        highestmodseq = crispin_client.selected_highestmodseq()
-        uidvalidity = crispin_client.selected_uidvalidity()
+        highestmodseq = crispin_client.selected_highestmodseq
+        uidvalidity = crispin_client.selected_uidvalidity
         server_uids = crispin_client.all_uids()
         server_g_msgids = crispin_client.fetch_g_msgids(server_uids)
         g_msgids = set([g_msgid for g_msgid, in
             db_session.query(distinct(FolderMeta.g_msgid))])
-
-        skip = [sum([1 for g_msgid, uid in server_g_msgids if g_msgid in g_msgids])]
-        log.info("Will skip message download for {0} UIDs that we already have".format(skip))
 
         log.info("Found {0} UIDs for folder {1}".format(
             len(server_uids), folder))
@@ -106,10 +107,11 @@ def initial_sync(email):
 
         log.info("skipping {0} uids that we already have".format(
             len(foldermeta_only)))
-        db_session.add(
-                [crispin_client.make_fm(email, server_g_msgids[uid], folder,
-                    uid) for uid in foldermeta_only])
-        db_session.commit()
+        if len(foldermeta_only) > 0:
+            db_session.add(
+                    [crispin_client.make_fm(server_g_msgids[uid], folder,
+                        uid) for uid in foldermeta_only])
+            db_session.commit()
 
         total_messages = len(existing_uids)
 
@@ -155,7 +157,7 @@ def initial_sync(email):
 def main():
     options.parse_command_line()
     assert options.USER_EMAIL, "Need email address to sync"
-    return initial_sync()
+    return initial_sync(options.USER_EMAIL)
 
 if __name__ == '__main__':
     sys.exit(main())

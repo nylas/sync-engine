@@ -91,15 +91,14 @@ class CrispinClient:
         """
         if uids is None:
             uids = self.all_uids()
-        return dict([(uid, g_msgid) for uid, g_msgid in \
-                self.imap_server.fetch(uids, ['X-GM-MSGID'])])
+        return dict([(uid, ret['X-GM-MSGID']) for uid, ret in \
+                self.imap_server.fetch(uids, ['X-GM-MSGID']).iteritems()])
 
     def all_uids(self):
         """ Get all UIDs associated with the currently selected folder as
             a list of integers.
         """
         return [int(s) for s in self.imap_server.search(['NOT DELETED'])]
->>>>>>> Rewrite initial sync.
 
     def print_duration(fn):
         """ A decorator for methods that can only be run on a logged-in client.
@@ -286,13 +285,8 @@ class CrispinClient:
             new_msg.g_thrid = unicode(x_gm_thrid)
             new_msg.g_msgid = unicode(x_gm_msgid)
 
-
-            for label in x_gm_labels:
-                new_foldermeta.append(self.make_fm(new_msg, label))
-            # Need to manually create one for All Mail
-            fm = self.make_fm(new_msg, self.all_mail_folder_name())
+            fm = self.make_fm(x_gm_msgid, self.selected_folder_name, uid)
             new_foldermeta.append(fm)
-
 
             # TODO parse out flags and store as enum instead of string
             # \Seen  Message has been read
