@@ -183,13 +183,13 @@ a {
 }
 
 .searchbox input  {
-  background: white url("/static/magnifying.png") no-repeat 10px 8px;
+  background: white url("/img/magnifying.png") no-repeat 10px 8px;
   padding-left: 29px;
 }
 
 .searchbutton
 {
-  background: transparent url("/static/search-icon.png");
+  background: transparent url("/img/search-icon.png");
   width: 21px;
   height: 24px;
   float:left;
@@ -199,7 +199,7 @@ a {
 
 .composebutton
 {
-  background: transparent url("/static/compose.png");
+  background: transparent url("/img/compose.png");
   width: 22px;
   height: 22px;
   float:right;
@@ -233,7 +233,7 @@ a {
 
 .gearbutton
 {
-  background: transparent url("/static/gear.png");
+  background: transparent url("/img/gear.png");
   width: 19px;
   height: 20px;
   float:left;
@@ -252,7 +252,7 @@ a {
 
   width:300px;
   margin-left: 102px;
-  background: transparent url("/static/spinner.gif") no-repeat 0px 9px;
+  background: transparent url("/img/spinner.gif") no-repeat 0px 9px;
   padding-left: 22px;
 }
 

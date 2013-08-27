@@ -73,7 +73,7 @@ app.directive("replybox", function() {
 
 
             $scope.add_file_button = {
-                background: 'transparent url("/static/addfiles_icon.png") no-repeat 13px 6px'
+                background: 'transparent url("img/addfiles_icon.png") no-repeat 13px 6px'
             };
             for (var attrname in button_styles) {
                 $scope.add_file_button[attrname] = button_styles[attrname];
@@ -81,7 +81,7 @@ app.directive("replybox", function() {
 
 
             $scope.add_photos_button = {
-                background: 'transparent url("/static/addphotos_icon.png") no-repeat 11px 8px'
+                background: 'transparent url("img/addphotos_icon.png") no-repeat 11px 8px'
             };
             for (var attrname in button_styles) {
                 $scope.add_photos_button[attrname] = button_styles[attrname];
@@ -89,14 +89,14 @@ app.directive("replybox", function() {
 
 
             $scope.add_event_button = {
-                background: 'transparent url("/static/addevent_icon.png") no-repeat 12px 8px'
+                background: 'transparent url("img/addevent_icon.png") no-repeat 12px 8px'
             };
             for (var attrname in button_styles) {
                 $scope.add_event_button[attrname] = button_styles[attrname];
             };
 
             $scope.send_money_button = {
-                background: 'transparent url("/static/sendmoney_icon.png") no-repeat 9px 6px'
+                background: 'transparent url("img/sendmoney_icon.png") no-repeat 9px 6px'
             };
             for (var attrname in button_styles) {
                 $scope.send_money_button[attrname] = button_styles[attrname];
