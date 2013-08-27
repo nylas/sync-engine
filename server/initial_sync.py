@@ -145,14 +145,17 @@ def initial_sync(email):
                 highestmodseq=highestmodseq))
         db_session.commit()
 
-    print ""
+    print
     log.info("Finished.")
 
     # TODO: immediately start doing a HIGHESTMODSEQ search
 
     return 0
 
-if __name__ == '__main__':
+def main():
     options.parse_command_line()
     assert options.USER_EMAIL, "Need email address to sync"
-    sys.exit(initial_sync(options.USER_EMAIL))
+    return initial_sync()
+
+if __name__ == '__main__':
+    sys.exit(main())
