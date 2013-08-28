@@ -30,7 +30,7 @@ app.factory('wire', function ($rootScope) {
     io.SocketNamespace.prototype.uid = 0;
 
     /**
-     * Used to give a uniq JSON-RPC request id (garanted uniq by Listener)
+     * Used to give a uniq JSON-RPC request id (guaranteed uniq by Listener)
      */
     io.SocketNamespace.prototype.uniqId = function () {
         return this.socket.sessionid + '#' + this.uid++;
