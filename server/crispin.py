@@ -232,7 +232,7 @@ class CrispinClient:
             new_msg = MessageMeta()
 
             new_msg.g_user_id = self.user_obj.g_user_id
-            new_msg.uid = unicode(uid)
+            new_msg.uid = uid
             # XXX maybe eventually we want to use these, but for
             # backcompat for now let's keep in the
             # new_msg.subject = mailbase.headers.get('Subject')
@@ -255,7 +255,7 @@ class CrispinClient:
                 return n
 
             tempSubject = encoding.make_unicode_header(envelope[1])
-            # Headers will wrap when longer than 78 lines per RFC822_2
+            # Headers will wrap when longer than 78 chars per RFC822_2
             tempSubject = tempSubject.replace('\n\t', '').replace('\r\n', '')
             new_msg.subject = tempSubject
             new_msg.from_addr = envelope[2]
@@ -339,8 +339,17 @@ class CrispinClient:
                 # Content-Disposition attachment; filename="floorplan.gif"
                 content_disposition = mimepart.get('Content-Disposition', None)
                 if content_disposition:
-                    content_disposition = content_disposition.split(';')[0].lower()
-                    assert content_disposition in ['inline', 'attachment'], "Unknown Content Disposition: %s" % content_disposition
+                    parsed_content_disposition = content_disposition.split(';')[0].lower()
+                    if parsed_content_disposition not in ['inline', 'attachment']:
+                        errmsg = """
+Unknown Content-Disposition on message {0} found in {1}.
+Original Content-Disposition was: '{2}'
+Parsed Content-Disposition was: '{3}'""".format(uid, self.selected_folder_name,
+                            content_disposition, parsed_content_disposition)
+                        log.error(errmsg)
+                    else:
+                        content_disposition = parsed_content_disposition
+
                 new_part.content_disposition = content_disposition
                 new_part.content_id = mimepart.get('Content-Id', None)
 

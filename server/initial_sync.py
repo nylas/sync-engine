@@ -13,6 +13,8 @@ from models import db_session, FolderMeta, UIDValidity
 
 from sqlalchemy import distinct
 
+from encoding import EncodingError
+
 from server.util import chunk, partition
 
 def refresh_crispin():
@@ -112,6 +114,7 @@ def initial_sync(email):
 
         # these will be dealt with later in HIGHESTMODSEQ updates, which
         # also checks for deleted messages
+        # XXX TODO:  might as well delete these now? will save work later.
         for uid in warn_uids:
             log.error("{1} msg {0} doesn't exist on server".format(uid, folder))
 
@@ -139,6 +142,9 @@ def initial_sync(email):
             try:
                 new_messagemeta, new_messagepart, new_foldermeta = \
                         crispin_client.fetch_uids(uids)
+            except EncodingError, e:
+                raise
+            # XXX make this catch more specific
             except Exception, e:
                 log.error("Crispin fetch failure: %s. Reconnecting..." % e)
                 crispin_client = refresh_crispin()
