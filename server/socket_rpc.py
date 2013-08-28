@@ -40,7 +40,7 @@ class SocketRPC(object):
         return Faults(self)
 
 
-    def run(self, handler, request_body):
+    def run(self, handler, request_body, user=None):
 
         self.handler = handler
         requests = self.parse_request(request_body)
@@ -90,10 +90,10 @@ class SocketRPC(object):
 
 
 
+        # pass user object on to API
         assert not 'user' in kwargs
-        assert self.user, "Need user object to do any operation"
-        kwargs['user'] = self.user
-
+        assert user, "Need user object to do any operation"
+        kwargs['user'] = user
 
         # Validating call arguments
         try:

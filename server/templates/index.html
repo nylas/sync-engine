@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
 
-<link rel="stylesheet" href="/static/home_style.css"/>
+<link rel="stylesheet" href="/css/home_style.css"/>
 <script type="text/javascript" src="//use.typekit.net/ccs3tld.js"></script>
 <script type="text/javascript">try{Typekit.load();}catch(e){}</script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
@@ -219,7 +219,7 @@ function run_validator(address_text, options) {
 <body>
   <div id="container">
 
-    <img src="letter.png"/>
+    <img src="/img/letter.png"/>
 
   <div class="subhead">
      {% if logged_in %}
@@ -239,7 +239,7 @@ function run_validator(address_text, options) {
 
       <div id="status"></div>
         <a class="button" id="start_auth" tabindex=2>Connect</a>
-      {% end %}
+      {% endif %}
   </div>
 
 

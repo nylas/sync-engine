@@ -68,8 +68,8 @@ def stop(args):
     print """
 \033[91m     Cleaning up...
 \033[0m"""
-    from server.app import stopserver
-    stopserver()
+    # from server.app import stopserver
+    # stopserver()
 
     print """
 \033[91m     Stopped.
