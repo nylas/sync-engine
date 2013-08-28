@@ -105,7 +105,7 @@ def initial_sync(email):
 
         log.info("Found {0} UIDs for folder {1}".format(
             len(server_uids), folder))
-        existing_uids = [int(uid) for uid, in
+        existing_uids = [uid for uid, in
                 db_session.query(FolderMeta.msg_uid).filter_by(
                     g_email=email, folder_name=folder)]
         log.info("Already have {0} items".format(len(existing_uids)))
@@ -120,14 +120,14 @@ def initial_sync(email):
 
         full_download, foldermeta_only = partition(
                 lambda uid: server_g_msgids[uid] in g_msgids,
-                sorted(unknown_uids))
+                sorted(unknown_uids, key=int))
 
         log.info("{0} uids left to fetch".format(len(full_download)))
 
         log.info("skipping {0} uids that we already have".format(
             len(foldermeta_only)))
         if len(foldermeta_only) > 0:
-            db_session.add(
+            db_session.add_all(
                     [crispin_client.make_fm(server_g_msgids[uid], folder,
                         uid) for uid in foldermeta_only])
             db_session.commit()
@@ -184,6 +184,7 @@ def initial_sync(email):
                 g_email=email, folder_name=folder, uid_validity=uidvalidity,
                 highestmodseq=highestmodseq))
             db_session.commit()
+        print
         log.info("Saved all messages and metadata on {0} to UIDVALIDITY {1} / HIGHESTMODSEQ {2}".format(folder, uidvalidity, highestmodseq))
 
     print

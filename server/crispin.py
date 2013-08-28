@@ -104,14 +104,15 @@ class CrispinClient:
         """
         if uids is None:
             uids = self.all_uids()
-        return dict([(uid, ret['X-GM-MSGID']) for uid, ret in \
+        return dict([(unicode(uid), unicode(ret['X-GM-MSGID'])) for uid, ret in \
                 self.imap_server.fetch(uids, ['X-GM-MSGID']).iteritems()])
 
     def all_uids(self):
         """ Get all UIDs associated with the currently selected folder as
-            a list of integers.
+            a list of strings in ascending integer order.
         """
-        return [int(s) for s in self.imap_server.search(['NOT DELETED'])]
+        return sorted([unicode(s) for s in self.imap_server.search(['NOT DELETED'])],
+                key=int)
 
     def print_duration(fn):
         """ A decorator for methods that can only be run on a logged-in client.
@@ -348,11 +349,9 @@ Parsed Content-Disposition was: '{3}'""".format(uid, self.selected_folder_name,
                             content_disposition, parsed_content_disposition)
                         log.error(errmsg)
                     else:
-                        content_disposition = parsed_content_disposition
+                        new_part.content_disposition = parsed_content_disposition
 
-                new_part.content_disposition = content_disposition
                 new_part.content_id = mimepart.get('Content-Id', None)
-
 
                 # DEBUG -- not sure if these are ever really used in emails
                 if mimepart.preamble:
