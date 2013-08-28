@@ -3,6 +3,7 @@
 /uploads
 /man
 /src
+/errors
 
 
 .DS_Store
