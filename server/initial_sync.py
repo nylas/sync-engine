@@ -124,7 +124,7 @@ def initial_sync(email):
 
         log.info("{0} uids left to fetch".format(len(full_download)))
 
-        log.info("skipping {0} uids that we already have".format(
+        log.info("skipping {0} uids downloaded via other folders".format(
             len(foldermeta_only)))
         if len(foldermeta_only) > 0:
             db_session.add_all(
