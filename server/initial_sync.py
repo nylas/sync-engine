@@ -5,9 +5,7 @@ import sys, os;  sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname
 import sys
 import sessionmanager
 
-# Make logging prettified
-from tornado.options import define, options
-define("USER_EMAIL", default=None, help="email address to sync", type=str)
+import argparse
 
 from models import db_session, FolderMeta, UIDValidity
 
@@ -17,9 +15,11 @@ from encoding import EncodingError
 
 from server.util import chunk, partition
 
-def refresh_crispin():
-    return sessionmanager.get_crispin_from_email(
-        options.USER_EMAIL)
+from util.log import configure_logging
+log = configure_logging()
+
+def refresh_crispin(email):
+    return sessionmanager.get_crispin_from_email(email)
 
 def load_validity_cache(crispin_client, email, SYNC_FOLDERS):
     # in practice UIDVALIDITY and HIGHESTMODSEQ are always positive
@@ -79,7 +79,9 @@ def initial_sync(email):
     (1) creates the metadata database
     (2) stores message parts to the block store
     """
-    crispin_client = refresh_crispin()
+    crispin_client = refresh_crispin(email)
+    # XXX TODO: need to check UIDVALIDITY here, for the case of initial sync
+    # restarts
 
     log.info('Syncing mail for {0}'.format(email))
 
@@ -147,7 +149,7 @@ def initial_sync(email):
             # XXX make this catch more specific
             except Exception, e:
                 log.error("Crispin fetch failure: %s. Reconnecting..." % e)
-                crispin_client = refresh_crispin()
+                crispin_client = refresh_crispin(email)
                 new_messagemeta, new_messagepart, new_foldermeta = \
                         crispin_client.fetch_uids(uids)
 
@@ -195,9 +197,11 @@ def initial_sync(email):
     return 0
 
 def main():
-    options.parse_command_line()
-    assert options.USER_EMAIL, "Need email address to sync"
-    return initial_sync(options.USER_EMAIL)
+    parser = argparse.ArgumentParser(
+            description="Download initial mail metadata and parts.")
+    parser.add_argument('-u', '--user-email', dest='user_email', required=True)
+    args = parser.parse_args()
+    return initial_sync(args.user_email)
 
 if __name__ == '__main__':
     sys.exit(main())
