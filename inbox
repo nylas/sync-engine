@@ -1,15 +1,22 @@
 #!/usr/bin/env python
+from gevent import monkey; monkey.patch_all()
+
 import argparse
 import signal
 import sys
 import os
+from os import environ
 import subprocess
+import ConfigParser
+
+# Zero RCP Services
+from server.util import make_zerorpc
+import server.api
+
 
 # Make logging prettified
 import tornado.options
 tornado.options.parse_command_line()
-
-DEFAULT_PORT = 8888
 
 
 # Trying to get this to work
@@ -31,16 +38,11 @@ def install(args):
 
 
 
+from werkzeug.serving import run_with_reloader
+@run_with_reloader
 def start(args=None):
-    if not args:
-        port = DEFAULT_PORT
-    else:
-        port = args.port
-
 
     commit = subprocess.check_output(["git", "describe", "--tags"])
-
-
     print """
 \033[94m     Welcome to... \033[0m\033[1;95m
       _____       _
@@ -55,10 +57,30 @@ def start(args=None):
      """
 
 
-    # Start Tornado
+    filename = 'default-config.cfg'  # TODO pass this in via command line args
+
+    # Set environment variables from config file
+    parser=ConfigParser.SafeConfigParser()
+    parser.read([filename])
+    for item in parser.items('development'):
+        k,v = item[0].upper(), item[1]  # All env vars uppercase
+        environ[k] = v
+
+
+    # Haven't set this yet in the config file...
+    # Default port for app server
+    port = environ.get('THIS_SERVER_PORT', 8888)
+
+
+    # Start ZeroRPC api server service
+    api_srv_loc = environ.get('API_SERVER_LOC', None)
+    make_zerorpc(server.api.API, api_srv_loc)
+
+
+    # Start web server
     from server.app import startserver
     try:
-        startserver(port)
+        startserver('inboxapp.com', port)
     except Exception, e:
         raise e
         stop(None)
@@ -76,6 +98,7 @@ def stop(args):
 \033[0m"""
     # os.system("stty echo")
     sys.exit(0)
+
 
 
 def console(args):
@@ -103,26 +126,25 @@ def signal_handler(signal, frame):
 
 def main():
 
-  signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGINT, signal_handler)
 
-  parser = argparse.ArgumentParser(description="Inbox App")
-  subparsers = parser.add_subparsers()
+    parser = argparse.ArgumentParser(description="Inbox App")
+    subparsers = parser.add_subparsers()
 
-  parser_install = subparsers.add_parser('install')
-  parser_install.set_defaults(func=install)
+    parser_install = subparsers.add_parser('install')
+    parser_install.set_defaults(func=install)
 
-  parser_start = subparsers.add_parser('start')
-  parser_start.add_argument('--port', help='Port to run the server', required=False, default=DEFAULT_PORT)
-  parser_start.set_defaults(func=start)
+    parser_start = subparsers.add_parser('start')
+    parser_start.set_defaults(func=start)
 
-  parser_stop = subparsers.add_parser('stop')
-  parser_stop.set_defaults(func=stop)
+    parser_stop = subparsers.add_parser('stop')
+    parser_stop.set_defaults(func=stop)
 
-  parser_console = subparsers.add_parser('console')
-  parser_console.set_defaults(func=console)
+    parser_console = subparsers.add_parser('console')
+    parser_console.set_defaults(func=console)
 
-  args = parser.parse_args()
-  args.func(args)
+    args = parser.parse_args()
+    args.func(args)
 
 
 if __name__=="__main__":

@@ -48,7 +48,7 @@ app.directive("messageview", function ($filter) {
             };
 
             $scope.indent = {
-            	marginLeft: '40px'
+                marginLeft: '40px'
             };
 
 
@@ -56,11 +56,11 @@ app.directive("messageview", function ($filter) {
                 display: 'inline-block',
                 fontWeight: 600,
                 fontFamily: '"proxima-nova-alt", sans-serif',
-				fontSize: '16px',
-				color: '#4C4C4C',
-				paddingTop: '10px',
-				float: 'left',
-				// lineHeight: '17px',
+                fontSize: '16px',
+                color: '#4C4C4C',
+                paddingTop: '10px',
+                float: 'left',
+                // lineHeight: '17px',
             };
 
             $scope.byline_date = {
@@ -80,92 +80,119 @@ app.directive("messageview", function ($filter) {
 
                   '<div ng-style="byline">' +
 
-	                  '<gravatar message="message"></gravatar>' +
+                      '<gravatar message="message"></gravatar>' +
 
-	                  '<div ng-style="byline_fromline" ">'+
+                      '<div ng-style="byline_fromline" ">'+
 
-		                  	'<span ng-style="indent"> '+
+                            '<span ng-style="indent"> '+
 
                             '<span ng-repeat="c in message.from"> {{c[0] + "&nbsp;<" + c[2] + "@"+ c[3] + ">" }} <span>' +
 
-		                  	'{{message.from_contacts[0]}}' +
-		                  	'</span>' +
-	                  '</div>' +
+                            '{{message.from_contacts[0]}}' +
+                            '</span>' +
+                      '</div>' +
 
-	                  '<div ng-style="byline_date">{{ message.date | relativedate }}</div>' +
+                      '<div ng-style="byline_date">{{ message.date | relativedate }}</div>' +
                   '</div>' +
                   '<div style="clear:both"></div>' +
 
                   '<div class="card_with_shadow">' +
-	                  '<messageframe content="message.body_text"></messageframe>' +
-	                  '<attachmentlist attachments="message.attachments" message="message"></attachmentlist>' +
+
+                      '<message-part-view ng-repeat="part in message.parts" part="parts"></messageframe>' +
+
+                      '<attachmentlist attachments="message.attachments" message="message"></attachmentlist>' +
                   '</div>' +
 
                   '</div>' +
                   '</div>',
 
+
+
+    link: function(scope, elem, attrs, ctrl) {
+
+            scope.$watch('message', function (val)
+            {
+                if (angular.isUndefined(val)) {
+                    return;
+                }
+
+                console.log("Message changed:")
+                console.log(val.parts)
+            });
+
+
+        } // End of link function
+
     };
 });
 
 
 
 
-app.directive("gravatar", function () {
+
+
+app.directive('messagePartView', ['$compile', function ($compile) {
     return {
         restrict: 'E',
-        transclude: true,
-        scope: {
-            message: '='
-        }, // Two-way binding to message object
-        controller: function ($scope, $element, $attrs, $transclude) {
-
-            $scope.gravatar_image = {
-                display: 'inline-block',
-                fontWeight: 600,
-                fontFamily: '"proxima-nova-alt", sans-serif',
-				fontSize: '15px',
-				color: '#708080',
-				paddingTop: '10px',
-				// lineHeight: '17px',
-            };
-
+        scope : {
+            part: '='
         },
 
-        // add back green_glow class sometime
-        template: '<div ng-style="gravatar_image"></div>',
+        compile: function(element, attrs) {
+          return function(scope, element, attrs) {
+            // var tmpl = template_for(scope.component.type);
+            var tmpl = '<messageframe content="scope.part"></messageframe>';
+            element.html($("#"+tmpl).html()).show();
 
-	    link: function (scope, iElement, iAttrs) {
-            scope.$watch('message.gravatar_url', function (val) {
-                if (angular.isUndefined(val)) {
-                	// Set to a default
-                    console.log('Unknown gravatar url');
-                } else {
 
-			        iElement.css({
-			            position: 'absolute',
-			            left: '10px',
-			            top: '10px',
-			        	// marginTop: '10px',
-			         //    marginRight: 10 + 'px',
-			         //    marginLeft: '-5px',
-			            width: 34 + 'px',
-			            height: 34 + 'px',
-			            borderRadius: 34 + 'px',
-			            borderWidth: '1px',
-			            borderStyle: 'solid',
-			            borderColor: '#E6E8EA',
+            console.log('Compiling...');
+            $compile(element.contents())(scope);
+          };
+        }
 
-			            // background: 'left center no-repeat',
-			            backgroundImage: 'url(' + scope.message.gravatar_url +')',
-			            backgroundSize : 'cover',
-		                overflow:'visible',
-					});
-                }
-            });
-        },
+
+
+        link: {
+            post: function(scope, element, attrs){
+                // if (!element.attr('ng-bind')) {
+                //     element.attr('ng-bind', 'content');
+                //     var compiledElement = $compile(element)(scope);
+                // }
+
+                var compiledElement = $compile(element)(scope);
+
+                elem.html('<messageframe content="content"></messageframe>');
+
+                console.log('Linking...');
+                scope.content = "Content!";
+            }
+        }
     };
-});
+}]);
 
+
+
+
+
+app.directive("messagePartView", function() {
+    return {
+        restrict: 'E',
+        scope : {
+            part: '='
+        },
+
+        link: function(scope, elem, attrs, ctlr) {
+
+            // elem.html("let me set the html mofo");
+
+            elem.html('<messageframe content="part.g_msgid"></messageframe>');
+
+        }
+
+
+    }
+
+})
 
 
 
@@ -188,7 +215,6 @@ app.directive("attachmentlist", function ($filter) {
 
 
 
-
 app.directive("messageframe", function () {
     return {
 
@@ -199,9 +225,7 @@ app.directive("messageframe", function () {
         },
         template: '<iframe width="100%" style="overflow:hidden" height="1" marginheight="0" marginwidth="0" frameborder="no" scrolling="no" src="about:blank"></iframe>',
 
-
         link: function(scope, elem, attrs, ctrl) {
-
             var iframe = elem.find('iframe')[0];
 
             function injectToIframe(textToInject) {
@@ -248,16 +272,14 @@ app.directive("messageframe", function () {
                 doc.close();
 
                 var baseTag= doc.createElement('base');
+                baseTag.href="http://inboxapp.com";
                 baseTag.target = '_blank';
 
-                doc.body.style.padding = '20px';
+                if (doc.body) {
+                    doc.body.style.padding = '20px';
+                }
 
             }
-
-            scope.$watch('content', function (val) {
-                // Reset the iFrame anytime the current message changes...
-                injectToIframe('');
-            });
 
 
             var resizeHeight = function() {
@@ -269,12 +291,26 @@ app.directive("messageframe", function () {
 
 
             scope.$watch('content', function (val) {
+
+                // Reset the iFrame anytime the current message changes...
+
+                console.log("Content changed!");
+                console.log(val);
+                // injectToIframe('');
+
                 if (angular.isUndefined(val)) {
                     injectToIframe('Loading&hellip;');
                 } else {
 
-                    setInterval(resizeHeight, 150);  // TOFIX TODO DEBUG this is a terrible hack.
-                    injectToIframe(scope.content);
+                    angular.forEach(val, function(value, key) {
+                        console.log("NEW!" + key);
+                        console.log(value);
+                    });
+
+                    injectToIframe("Welp, loaded something...");
+
+                    // setInterval(resizeHeight, 150);  // TOFIX TODO DEBUG this is a terrible hack.
+                    // injectToIframe(scope.content);
                 }
             });
 
@@ -288,6 +324,66 @@ app.directive("messageframe", function () {
 
         } // End of link function
 
+    };
+});
+
+
+
+
+
+app.directive("gravatar", function () {
+    return {
+        restrict: 'E',
+        transclude: true,
+        scope: {
+            message: '='
+        }, // Two-way binding to message object
+        controller: function ($scope, $element, $attrs, $transclude) {
+
+            $scope.gravatar_image = {
+                display: 'inline-block',
+                fontWeight: 600,
+                fontFamily: '"proxima-nova-alt", sans-serif',
+                fontSize: '15px',
+                color: '#708080',
+                paddingTop: '10px',
+                // lineHeight: '17px',
+            };
+
+        },
+
+        // add back green_glow class sometime
+        template: '<div ng-style="gravatar_image"></div>',
+
+        link: function (scope, iElement, iAttrs) {
+            scope.$watch('message.gravatar_url', function (val) {
+                if (angular.isUndefined(val)) {
+                    // Set to a default
+                    console.log('Unknown gravatar url');
+                } else {
+
+                    iElement.css({
+                        position: 'absolute',
+                        left: '10px',
+                        top: '10px',
+                        // marginTop: '10px',
+                     //    marginRight: 10 + 'px',
+                     //    marginLeft: '-5px',
+                        width: 34 + 'px',
+                        height: 34 + 'px',
+                        borderRadius: 34 + 'px',
+                        borderWidth: '1px',
+                        borderStyle: 'solid',
+                        borderColor: '#E6E8EA',
+
+                        // background: 'left center no-repeat',
+                        backgroundImage: 'url(' + scope.message.gravatar_url +')',
+                        backgroundSize : 'cover',
+                        overflow:'visible',
+                    });
+                }
+            });
+        },
     };
 });
 

@@ -16,7 +16,7 @@ def log_ignored(exc):
 
 def create_session(email_address):
     new_session = UserSession()
-    new_session.email_address = email_address
+    new_session.g_email = email_address
     new_session.session_token = str(uuid.uuid1())
     db_session.add(new_session)
     db_session.commit()
@@ -102,7 +102,7 @@ def verify_user(user_obj):
 def get_crispin_from_session(session_token):
     """ Get the running crispin instance, or make a new one """
     s = get_session(session_token)
-    return get_crispin_from_email(s.email_address)
+    return get_crispin_from_email(s.g_email)
 
 def get_crispin_from_email(email_address, initial=False):
     if email_address in email_address_to_crispins:

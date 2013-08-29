@@ -74,6 +74,9 @@ app.factory('wire', function ($rootScope) {
             io.util.merge(options, callback);
 
 
+        // TODO put status callbacks here
+
+
         // TOFIX there are some bugs in here for setting any function parameters
 
         var r = {};
@@ -289,7 +292,7 @@ app.factory('wire', function ($rootScope) {
 
 
 
-    var mySocket = io.connect('/', {
+    var mySocket = io.connect('/wire_namespace', {
         'resource': 'wire',
         'reconnect': true,
         'connect timeout': 1000,
@@ -342,7 +345,7 @@ app.factory('wire', function ($rootScope) {
     return {
 
         rpc: function (method, params, callback) {
-            console.log("[socket_rpc ->] " + method + params);
+            console.log("[socket_rpc ->] " + method);
             // console.dir(data);
             mySocket.callRPC(method, params, function() {
                 var args = arguments;

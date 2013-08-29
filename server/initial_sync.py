@@ -10,6 +10,7 @@ import argparse
 from models import db_session, FolderMeta, UIDValidity
 
 from sqlalchemy import distinct
+import sqlalchemy.exc
 
 from encoding import EncodingError
 
@@ -156,7 +157,16 @@ def initial_sync(email):
             db_session.add_all(new_foldermeta)
             db_session.add_all(new_messagemeta)
             db_session.add_all(new_messagepart)
-            db_session.commit()
+
+            for m in new_messagepart:
+                m.g_email = options.USER_EMAIL
+
+            try:
+                db_session.commit()
+            except sqlalchemy.exc.SQLAlchemyError, e:
+                log.error(e.orig.args)
+            except Exception, e:
+                log.error("Unknown exception: %s" % e)
 
             total_messages += len(uids)
 

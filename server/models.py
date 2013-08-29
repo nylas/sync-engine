@@ -9,21 +9,31 @@ from sqlalchemy.orm import reconstructor
 
 from hashlib import sha256
 import os
+import logging as log
+
+class JSONSerializable(object):
+    def client_json(self):
+        """ Override this and return a string of the object serialized for
+            the web client.
+        """
+        pass
 
 
-class UserSession(Base):
+class UserSession(JSONSerializable, Base):
     __tablename__ = 'user_sessions'
 
     session_token = Column(String, primary_key=True)
-    email_address = Column(String)
+    g_email = Column(String)
 
     def __init__(self):
         self.session_token = None
         self.email_address  = None
 
 
-class User(Base):
+class User(JSONSerializable, Base):
     __tablename__ = 'users'
+
+    g_email = Column(String, primary_key=True)
 
     # Not from google
     name = Column(String)
@@ -39,7 +49,6 @@ class User(Base):
     g_token_type = Column(String)
     g_audience = Column(String)
     g_scope = Column(String)
-    g_email = Column(String, primary_key=True)
     g_refresh_token = Column(String)
     g_verified_email = Column(Boolean)
 
@@ -64,13 +73,14 @@ class User(Base):
 
 
 
-class MessageMeta(Base):
+class MessageMeta(JSONSerializable, Base):
     __tablename__ = 'messagemeta'
     # XXX clean this up a lot - make a better constructor, maybe taking
     # a mailbase as an argument to prefill a lot of attributes
 
     # TODO probably want to store some of these headers in a better
     # non-pickled way to provide indexing
+    g_email = Column(String)
     from_addr = Column(PickleType)
     sender_addr = Column(PickleType)
     reply_to = Column(PickleType)
@@ -89,6 +99,7 @@ class MessageMeta(Base):
     g_thrid = Column(String)
 
     def __init__(self):
+        self.g_email = None
         self.from_addr = None
         self.sender_addr = None
         self.reply_to = None
@@ -98,13 +109,13 @@ class MessageMeta(Base):
         self.in_reply_to = None
         self.message_id = None
         self.date = None
+        self.size = 0
         self.internaldate = None
         self.g_msgid = None
         self.g_thrid = None
         self.flags = None
         self.subject = None
         self.g_user_id = None
-        self.size = 0
 
 
     # def gmail_url(self):
@@ -127,7 +138,7 @@ class MessageMeta(Base):
         d['to'] = self.to_addr
         d['date'] = self.internaldate
         d['subject'] = self.subject
-        d['data_id'] = self.g_msgid
+        d['g_id'] = self.g_msgid
         return d
 
 
@@ -149,14 +160,14 @@ common_content_types = ['text/plain',
                         'message/rfc822',
                         'image/jpg']
 
-class MessagePart(Base):
+class MessagePart(JSONSerializable, Base):
     __tablename__ = 'messagepart'
     """ Metadata for message parts stored in s3 """
 
+    g_email = Column(String, primary_key=True)
+
     g_msgid = Column(String, primary_key=True)
     walk_index = Column(Integer, primary_key=True)
-
-
     # Save some space with common content types
     _content_type_common = Column(Enum(*common_content_types))
     _content_type_other = Column(String)
@@ -170,6 +181,7 @@ class MessagePart(Base):
     data_sha256 = Column(String)
 
     def __init__(self):
+        self.g_email = None
         self.g_msgid = None
         self.walk_index = None
         self.content_type = None
@@ -184,6 +196,15 @@ class MessagePart(Base):
         return 'MessagePart: %s' % self.__dict__
 
 
+    def client_json(self):
+        d = {}
+        d['g_id'] = self.g_msgid
+        d['g_index'] = self.walk_index
+        d['content_type'] = self.content_type
+        d['content_disposition'] = self.content_disposition
+        d['size'] = self.size
+        d['filename'] = self.filename
+        return d
 
     @property
     def _data_file_directory(self):
@@ -198,7 +219,9 @@ class MessagePart(Base):
 
 
     def set_data(self, new_data, write=True):
-        self.del_data()
+        # TODO handle deleting old values?
+        # self.del_data()
+
         self.size = len(new_data)
         self.data_sha256 = sha256(new_data).hexdigest()
 
@@ -209,16 +232,18 @@ class MessagePart(Base):
             f.write(new_data)
             f.close()
 
+
     def get_data(self):
+        pass
         f = open(self._data_file_path, 'r')
         return f.read()
 
     def del_data(self):
+        pass
         try: os.remove(self._data_file_path)
         except: pass
         self.size = None
         self.data_sha256 = None
-
 
     data = property(get_data, set_data, del_data, "the message part payload")
 
@@ -248,6 +273,8 @@ class AttachmentParts(Base):
         represented as links to external files
     """
 
+    g_email = Column(String, primary_key=True)
+
     # This is a unique identifier that is used in the content URL
     content_id = Column(String, primary_key=True)  # For attachments
 
@@ -259,6 +286,7 @@ class AttachmentParts(Base):
     s3_id = Column(String)
 
     def __init__(self):
+        self.g_email = None
         self.content_type = None
         self.bytes = None
         self.filename = None
@@ -266,7 +294,7 @@ class AttachmentParts(Base):
         self.misc_keyval = None
 
 
-class FolderMeta(Base):
+class FolderMeta(JSONSerializable, Base):
     __tablename__ = 'foldermeta'
     """ This maps folder names to UIDs """
 
@@ -275,7 +303,7 @@ class FolderMeta(Base):
     folder_name = Column(String, primary_key=True)  # All Mail, Inbox, etc. (i.e. Labels)
     msg_uid = Column(String, primary_key=True)
 
-class UIDValidity(Base):
+class UIDValidity(JSONSerializable, Base):
     __tablename__ = 'uidvalidity'
     """ UIDValidity has a per-folder value. If it changes, we need to
         re-map g_msgid to UID for that folder.

@@ -34,11 +34,6 @@ class SocketRPC(object):
         self.requests_in_progress = 0
         self.responses = []
 
-    @property
-    def faults(self):
-        # Grabs the fault tree on request
-        return Faults(self)
-
 
     def run(self, handler, request_body, user=None):
 
@@ -53,61 +48,94 @@ class SocketRPC(object):
 
         if method_name in dir(RequestHandler):
             # Pre-existing, not an implemented attribute
-            return self.faults.method_not_found()
+            raise Exception("Method not found. Pre-existing, not an implemented attribute")
 
         method = self.handler
         method_list = dir(method)
         method_list.sort()
         attr_tree = method_name.split('.')
 
+
         try:
             for attr_name in attr_tree:
                 method = self.check_method(attr_name, method)
-        except AttributeError:
-            return self.faults.method_not_found()
+        except AttributeError, e:
+            raise Exception("Method not found. Pre-existing, not an implemented attribute" + str(e))
 
         if not callable(method):
             # Not callable, so not a method
-            return self.faults.method_not_found()
+            raise Exception("Method not callable.")
 
         if method_name.startswith('_') or \
                 ('private' in dir(method) and method.private is True):
             # No, no. That's private.
-            return self.faults.method_not_found()
+            raise Exception("Method is private.")
 
         args = []
         kwargs = {}
 
 
-        if type(params) is types.DictType:
-            # The parameters are keyword-based
-            kwargs = params
-        elif type(params) in (list, tuple):
-            # The parameters are positional
-            args = params
-        else:
-            raise Exception("Invalid params: %s", params)
+
+        print 'method list', method_list
+        print handler, method
+
+
+                # args, varargs, varkw, defaults = inspect.getargspec(func)
+
+# <zerorpc.core.Client object at 0x104cc8390> <zerorpc.core.Client object at 0x104cc8390>
+
+
+
+
+        # if type(params) is types.DictType:
+        #     # The parameters are keyword-based
+        #     kwargs = params
+        # elif type(params) in (list, tuple):
+        #     # The parameters are positional
+        #     args = params
+        # else:
+        #     raise Exception("Invalid params: %s", params)
+
+        # zerorpc only supports positional arguments
+
+
+        # TOFIX this is actually dangerous because the items can be in the wrong order.
+        # need to somehow map them to the function parameter names exposed by zeromq
+        # import inspect
+        # print inspect.getargspec(method)
+
+
+        args = [v for k,v in params.iteritems()]
+
+        assert type(args) in (list, tuple)
+        args.insert(0, user.g_user_id)  # user email address is always first object
+
+        # args, varargs, varkw, defaults = inspect.getargspec(func)
+        # fname = func.__name__
 
 
 
         # pass user object on to API
-        assert not 'user' in kwargs
-        assert user, "Need user object to do any operation"
-        kwargs['user'] = user
-
-        # Validating call arguments
-        try:
-            final_kwargs, extra_args = getcallargs(method, *args, **kwargs)
-        except TypeError, e:
-            log.error("Invalid params? %s" % e)
-            print method, args, kwargs
-            raise e
+        # assert not 'user' in kwargs
+        # assert user, "Need user object to do any operation"
+        # kwargs['user'] = user
 
 
-        log.info("Running %s with %s" % (method, final_kwargs))
-        # This used to be in a try/catch block
-        response = method(*extra_args, **final_kwargs)
-        log.info("Sending response...")
+        # # Validating call arguments
+        # try:
+        #     final_kwargs, extra_args = getcallargs(method, *args, **kwargs)
+        # except TypeError, e:
+        #     log.error("Invalid params? %s" % e)
+        #     print method, args, kwargs
+        #     raise e
+
+
+        log.info("Running %s with %s" % (method.__name__, args))
+
+        # TODO exception handling on this
+        response = method(*args)  # Automatically wrapped in a Greenlet
+
+        log.info("Sending response of length %i." % len(response))
 
         responses = [response]
         response_text = self.parse_responses(responses)
@@ -149,13 +177,13 @@ class SocketRPC(object):
 
 
     def parse_responses(self, responses):
-        if isinstance(responses, Fault):
-            return dumps(responses)
 
+        # if isinstance(responses, Fault):
+        #     return dumps(responses)
 
         if len(responses) != len(self._requests):
-            return dumps(self.faults.internal_error())
-
+            raise Exception("Need to send internal error here..... uehilsdfnjkasdf")
+            # return dumps(self.faults.internal_error())
 
         response_list = []
         for i in range(0, len(responses)):
@@ -175,10 +203,11 @@ class SocketRPC(object):
                     rpcid=rpcid, methodresponse=True
                 )
             except TypeError:
-                return dumps(
-                    self.faults.server_error(),
-                    rpcid=rpcid, version=version
-                )
+                raise Exception("A type error here need to send fault to client with error state...")
+                # return dumps(
+                #     self.faults.server_error(),
+                #     rpcid=rpcid, version=version
+                # )
             response_list.append(response_json)
         if not self._batch:
             # Ensure it wasn't a batch to begin with, then
@@ -190,60 +219,4 @@ class SocketRPC(object):
         # Batch, return list
         return '[ %s ]' % ', '.join(response_list)
 
-
-
-class FaultMethod(object):
-    """
-    This is the 'dynamic' fault method so that the message can
-    be changed on request from the parser.faults call.
-    """
-    def __init__(self, fault, code, message):
-        self.fault = fault
-        self.code = code
-        self.message = message
-
-    def __call__(self, message=None):
-        if message:
-            self.message = message
-        return self.fault(self.code, self.message)
-
-class Faults(object):
-    """
-    This holds the codes and messages for the RPC implementation.
-    It is attached (dynamically) to the Parser when called via the
-    parser.faults query, and returns a FaultMethod to be called so
-    that the message can be changed. If the 'dynamic' attribute is
-    not a key in the codes list, then it will error.
-
-    USAGE:
-        parser.fault.parse_error('Error parsing content.')
-
-    If no message is passed in, it will check the messages dictionary
-    for the same key as the codes dict. Otherwise, it just prettifies
-    the code 'key' from the codes dict.
-
-    """
-    codes = {
-        'parse_error': -32700,
-        'method_not_found': -32601,
-        'invalid_request': -32600,
-        'invalid_params': -32602,
-        'internal_error': -32603
-    }
-
-    messages = {}
-
-    def __init__(self, parser):
-        self.fault = Fault
-        if not self.fault:
-            self.fault = Fault
-
-    def __getattr__(self, attr):
-        message = 'Error'
-        if attr in self.messages.keys():
-            message = self.messages[attr]
-        else:
-            message = ' '.join(map(str.capitalize, attr.split('_')))
-        fault = FaultMethod(self.fault, self.codes[attr], message)
-        return fault
 

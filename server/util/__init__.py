@@ -1,5 +1,12 @@
 import itertools
 import string
+from dns.resolver import query as dns_query
+from urllib import urlencode
+import tornado.httpclient
+from tornado import escape
+import logging as log
+import zerorpc
+from gevent import Greenlet
 
 def chunk(iterable, size):
     """ Yield chunks of an iterable.
@@ -59,13 +66,6 @@ def safe_filename(filename):
     valid_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
     return ''.join(c for c in filename if c in valid_chars)
 
-
-import dns.resolver
-from urllib import urlencode
-import tornado.httpclient
-from tornado import escape
-
-
 def validate_email(address_text):
 
     args = {
@@ -74,7 +74,6 @@ def validate_email(address_text):
 
     MAILGUN_API_PUBLIC_KEY = "pubkey-8nre-3dq2qn8-jjopmq9wiwu4pk480p2"
     MAILGUN_VALIDATE_API_URL = "https://api.mailgun.net/v2/address/validate?" + urlencode(args)
-
 
     request = tornado.httpclient.HTTPRequest(MAILGUN_VALIDATE_API_URL)
     request.auth_username = 'api'
@@ -100,7 +99,7 @@ def validate_email(address_text):
     if is_valid:
         # Must have Gmail or Google Apps MX records
         domain = body['parts']['domain']
-        answers = dns.resolver.query(domain, 'MX')
+        answers = dns_query(domain, 'MX')
 
         gmail_mx_servers = [
                 # Google apps for your domain
@@ -128,9 +127,22 @@ def validate_email(address_text):
                 is_valid = False
                 log.error("Non-Google MX record: %s" % str(rdata.exchange))
 
-
     return dict(
         valid_for_inbox = is_valid,
         did_you_mean = body['did_you_mean'],
         valid_address = body['address']
     )
+
+
+
+
+
+
+def make_zerorpc(cls, location):
+    def m():
+        """ Exposes the given class as a ZeroRPC server on the given address+port """
+        s = zerorpc.Server(cls())
+        s.bind(location)
+        log.info("ZeroRPC: Starting %s at %s" % (cls.__name__, location))
+        s.run()
+    Greenlet.spawn(m)

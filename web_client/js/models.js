@@ -38,9 +38,9 @@ app.factory('IBThread', function ($injector) {
 
 
 
-app.factory('IBMessage', function ($injector)
+app.factory('IBMessageMeta', function ($injector)
 {
-    function IBMessageObject($rootScope, data) {
+    function IBMessageMetaObject($rootScope, data) {
         this.$rootScope = $rootScope;
 
         // Propogate fields to the object
@@ -50,9 +50,10 @@ app.factory('IBMessage', function ($injector)
             }
             this[key] = data[key];
         }
-
         // Fix the date
         this.date = new Date(data.date.$date);
+
+        this.parts = {};
 
 
         var gravatar_size = 25;
@@ -90,20 +91,79 @@ app.factory('IBMessage', function ($injector)
     }
 
 
-    IBMessageObject.prototype.printDate = function() {
+    IBMessageMetaObject.prototype.printDate = function() {
         // var curr_date = this.date.getDate();
         // var curr_month = this.date.getMonth() + 1; //Months are zero based
         // var curr_year = this.date.getFullYear();
         // return curr_date + "-" + curr_month + "-" + curr_year;
 
         return this.date.toLocaleString();
-    }
+    };
+
 
     return function(data) {
-      return $injector.instantiate(
-        IBMessageObject, {data:data});
+        // This is based on $injector.instantiate
+        var Type = IBMessageMetaObject;
+        var locals = {data:data};
+
+        var IBMessageMeta = function() {};
+        var instance;
+        var returnedValue;
+
+        // Check if Type is annotated and use just the given function at n-1 as parameter
+        // e.g. someModule.factory('greeter', ['$window', function(renamed$window) {}]);
+        IBMessageMeta.prototype = (angular.isArray(Type) ? Type[Type.length - 1] : Type).prototype;
+        instance = new IBMessageMeta();
+
+        returnedValue = $injector.invoke(Type, instance, locals);
+        return angular.isObject(returnedValue) ? returnedValue : instance;
+
     };
 });
+
+
+
+app.factory('IBMessagePart', function ($injector)
+{
+    function IBMessagePartObject($rootScope, data) {
+        this.$rootScope = $rootScope;
+
+        // Propogate fields to the object
+        for (var key in data) {
+            if (self.hasOwnProperty(key)) {
+                console.log(key + " -> " + p[key]);
+            }
+            this[key] = data[key];
+        }
+    }
+
+    IBMessagePartObject.prototype.toString = function() {
+        return 'some string mame...';
+    };
+
+
+
+    return function(data) {
+        // This is based on $injector.instantiate
+        var Type = IBMessagePartObject;
+        var locals = {data:data};
+
+        var IBMessagePart = function() {};
+        var instance;
+        var returnedValue;
+
+        // Check if Type is annotated and use just the given function at n-1 as parameter
+        // e.g. someModule.factory('greeter', ['$window', function(renamed$window) {}]);
+        IBMessagePart.prototype = (angular.isArray(Type) ? Type[Type.length - 1] : Type).prototype;
+        instance = new IBMessagePart();
+
+        returnedValue = $injector.invoke(Type, instance, locals);
+        return angular.isObject(returnedValue) ? returnedValue : instance;
+
+    };
+});
+
+
 
 
 

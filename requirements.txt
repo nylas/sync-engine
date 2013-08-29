@@ -26,8 +26,10 @@ colorlog==1.8
 -e packages/bleach
 -e packages/tornadorpc
 
+
 # For ZeroRPC
-#Cython==0.19.1
-#-e git+git://github.com/dotcloud/zerorpc-python.git#egg=zerorpc
+Cython==0.19.1
+-e git+git://github.com/dotcloud/zerorpc-python.git#egg=zerorpc
+
 # v13.1.0
-#-e git+git://github.com/zeromq/pyzmq.git@v13.1.0#egg=zmq
+-e git+git://github.com/zeromq/pyzmq.git@v13.1.0#egg=zmq
