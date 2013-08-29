@@ -1,4 +1,5 @@
 import itertools
+import string
 
 def chunk(iterable, size):
     """ Yield chunks of an iterable.
@@ -51,7 +52,12 @@ def partition(pred, iterable):
     t1, t2 = itertools.tee(iterable)
     return list(itertools.ifilterfalse(pred, t1)), filter(pred, t2)
 
-
+def safe_filename(filename):
+    """ Strip potentially bad characters from a filename so it is safe to
+        write to disk.
+    """
+    valid_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
+    return ''.join(c for c in filename if c in valid_chars)
 
 
 import dns.resolver

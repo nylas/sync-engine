@@ -12,6 +12,8 @@ from email.header import decode_header
 import logging as log
 import more_codecs
 
+from util import safe_filename
+
 import os
 
 
@@ -606,11 +608,11 @@ def attempt_decoding(charset, dec):
 
         # payload_data.encode('utf-8')
         directory = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                '..', 'errors')
+                '..', '..', 'errors')
         # XXX remove this race condition in python 3.2+ using 'exist_ok=True'
         if not os.path.exists(directory): os.makedirs(directory)
         from hashlib import sha256
-        filename = charset + '-' + sha256(dec).hexdigest() + '.txt'
+        filename = safe_filename(charset + '-' + sha256(dec).hexdigest() + '.txt')
 
         log.error("Writing to file..." + directory+filename)
 
