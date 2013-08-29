@@ -17,6 +17,7 @@ ipython==1.0.0
 Flask==0.10.1
 gevent-socketio==0.3.5-rc2
 gunicorn==17.5
+colorlog==1.8
 
 
 # Our own versions of these
