@@ -43,7 +43,7 @@ def authorize_redirect_url(redirect_uri, email_address=None):
 
 
 def get_authenticated_user(authorization_code, redirect_uri):
-
+    log.info("Getting oauth authentiated user...")
     args = {
         "client_id": GOOGLE_CONSUMER_KEY,
         "code": authorization_code,
@@ -79,7 +79,7 @@ def get_authenticated_user(authorization_code, redirect_uri):
 
 def get_new_token(refresh_token):
     if not refresh_token: return None
-
+    log.info("Getting new oauth token...")
     args = {
         "refresh_token": refresh_token,
         "client_id": GOOGLE_CONSUMER_KEY,
@@ -112,7 +112,7 @@ def get_new_token(refresh_token):
 
 
 def validate_token(access_token):
-
+    log.info("Validating oauth token...")
     try:
         response = requests.get(OAUTH_TOKEN_VALIDATION_URL + "?access_token=" + access_token )
     except Exception, e:
@@ -120,7 +120,6 @@ def validate_token(access_token):
         return None  # TODO better error handling here
 
     validation_dict = response.json()
-
 
     if 'error' in validation_dict:
         assert validation_dict['error'] == 'invalid_token'
