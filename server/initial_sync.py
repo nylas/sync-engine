@@ -75,16 +75,16 @@ def modseq_update(email):
             # XXX needs update
             pass
 
-def initial_sync(email):
+def initial_sync(user_email_address):
     """ Downloads entire messages and
     (1) creates the metadata database
     (2) stores message parts to the block store
     """
-    crispin_client = refresh_crispin(email)
+    crispin_client = refresh_crispin(user_email_address)
     # XXX TODO: need to check UIDVALIDITY here, for the case of initial sync
     # restarts
 
-    log.info('Syncing mail for {0}'.format(email))
+    log.info('Syncing mail for {0}'.format(user_email_address))
 
     # message download for messages from SYNC_FOLDERS is prioritized before
     # AllMail in the order of appearance in this list
@@ -110,7 +110,7 @@ def initial_sync(email):
             len(server_uids), folder))
         existing_uids = [uid for uid, in
                 db_session.query(FolderMeta.msg_uid).filter_by(
-                    g_email=email, folder_name=folder)]
+                    g_email=user_email_address, folder_name=folder)]
         log.info("Already have {0} items".format(len(existing_uids)))
         warn_uids = set(existing_uids).difference(set(server_uids))
         unknown_uids = set(server_uids).difference(set(existing_uids))
@@ -150,7 +150,7 @@ def initial_sync(email):
             # XXX make this catch more specific
             except Exception, e:
                 log.error("Crispin fetch failure: %s. Reconnecting..." % e)
-                crispin_client = refresh_crispin(email)
+                crispin_client = refresh_crispin(user_email_address)
                 new_messagemeta, new_messagepart, new_foldermeta = \
                         crispin_client.fetch_uids(uids)
 
@@ -158,8 +158,9 @@ def initial_sync(email):
             db_session.add_all(new_messagemeta)
             db_session.add_all(new_messagepart)
 
-            for m in new_messagepart:
-                m.g_email = options.USER_EMAIL
+
+            for m in new_messagepart:  # TODO do this via MessageMeta constructor?
+                m.g_email = user_email_address
 
             try:
                 db_session.commit()
@@ -180,7 +181,7 @@ def initial_sync(email):
         # it instead. BUT, we first need to check for updated metadata since
         # the recorded UIDValidity, in case things like flags have changed.
         cached_validity = db_session.query(UIDValidity).filter_by(
-                g_email=email, folder_name=folder).first()
+                g_email=user_email_address, folder_name=folder).first()
         if cached_validity:
             # XXX TODO: do a HIGHESTMODSEQ update here to check for updated
             # metadata since the recorded UIDValidity.
@@ -193,7 +194,7 @@ def initial_sync(email):
             db_session.commit()
         else:
             db_session.add(UIDValidity(
-                g_email=email, folder_name=folder, uid_validity=uidvalidity,
+                g_email=user_email_address, folder_name=folder, uid_validity=uidvalidity,
                 highestmodseq=highestmodseq))
             db_session.commit()
         print
