@@ -93,7 +93,7 @@ class MessageMeta(JSONSerializable, Base):
     internaldate = Column(DateTime)
     flags = Column(PickleType)
     size = Column(Integer)
-
+    data_sha256 = Column(String)
     g_msgid = Column(String, primary_key=True)
     g_user_id = Column(String, primary_key=True)
     g_thrid = Column(String)
@@ -116,6 +116,7 @@ class MessageMeta(JSONSerializable, Base):
         self.flags = None
         self.subject = None
         self.g_user_id = None
+        self.data_sha256 = None
 
 
     # def gmail_url(self):

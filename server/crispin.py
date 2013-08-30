@@ -19,6 +19,7 @@ from base64 import b64decode
 from chardet import detect as detect_charset
 
 from util import or_none
+from hashlib import sha256
 
 IMAP_HOST = 'imap.gmail.com'
 SMTP_HOST = 'smtp.gmail.com'
@@ -231,7 +232,7 @@ class CrispinClient:
                 x_gm_labels in messages_from_raw(raw_messages):
             mailbase = encoding.from_string(body)
             new_msg = MessageMeta()
-
+            new_msg.data_sha256 = sha256(body).hexdigest()
             new_msg.g_user_id = self.user_obj.g_user_id
             new_msg.uid = uid
             # XXX maybe eventually we want to use these, but for
@@ -333,8 +334,6 @@ class CrispinClient:
                 mime_version = mimepart.get('MIME-Version', failobj=None)
                 if mime_version and mime_version != '1.0':
                     log.error("Unexpected MIME-Version: %s" % mime_version)
-
-
 
 
                 # Content-Disposition attachment; filename="floorplan.gif"
