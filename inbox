@@ -10,6 +10,8 @@ import ConfigParser
 # Don't import the app yet, as we need to set env vars first.
 
 
+from server.util.log import configure_logging
+log = configure_logging()
 
 def setup_env(config_filename = 'default-config.cfg'):
     # Set environment variables from config file
