@@ -7,7 +7,7 @@ def configure_logging():
     logger.setLevel(logging.DEBUG)
 
     formatter = ColoredFormatter(
-            "[%(log_color)s%(levelname)-.1s %(asctime)s %(module)s:%(lineno)s]%(reset)s %(message)s",
+            "%(log_color)s[%(levelname)-.1s %(asctime)s %(module)s:%(lineno)s]%(reset)s %(message)s",
             reset=True,
             log_colors={
                     'DEBUG':    'cyan',
