@@ -10,8 +10,6 @@ import ConfigParser
 # Don't import the app yet, as we need to set env vars first.
 
 
-from server.util.log import configure_logging
-log = configure_logging()
 
 def setup_env(config_filename = 'default-config.cfg'):
     # Set environment variables from config file
@@ -72,9 +70,9 @@ def start(args=None):
     # Start ZeroRPC api server service
     # Zero RCP Services
     from server.util import make_zerorpc
-    import server.api
+    from server.api import API
     api_srv_loc = environ.get('API_SERVER_LOC', None)
-    make_zerorpc(server.api.API, api_srv_loc)
+    make_zerorpc(API, api_srv_loc)
 
 
     # Start web server
