@@ -2,22 +2,14 @@
 from __future__ import division
 import sys, os;  sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..')))
 
-import sys
 import sessionmanager
-
-import argparse
-
 from models import db_session, FolderMeta, UIDValidity
-
 from sqlalchemy import distinct
 import sqlalchemy.exc
 
 from encoding import EncodingError
-
 from server.util import chunk, partition
-
-from util.log import configure_logging
-log = configure_logging()
+import logging as log
 
 def refresh_crispin(email):
     return sessionmanager.get_crispin_from_email(email)
@@ -171,9 +163,10 @@ def initial_sync(user_email_address):
 
             total_messages += len(uids)
 
-            pct = total_messages / len(server_uids) * 100
-            sys.stdout.write("\r|%-73s| %.4f%%" % ('#' * int(pct*.73), pct) ),
-            sys.stdout.flush()
+            log.info("Synced %i of %i (%.4f%%)" % (total_messages,
+                                                   len(server_uids),
+                                                    total_messages / len(server_uids) * 100))
+
 
         # transaction commit
         # if we've done a restart on the initial sync, we may have already
@@ -197,22 +190,12 @@ def initial_sync(user_email_address):
                 g_email=user_email_address, folder_name=folder, uid_validity=uidvalidity,
                 highestmodseq=highestmodseq))
             db_session.commit()
-        print
+
         log.info("Saved all messages and metadata on {0} to UIDVALIDITY {1} / HIGHESTMODSEQ {2}".format(folder, uidvalidity, highestmodseq))
 
-    print
     log.info("Finished.")
 
     # TODO: immediately start doing a HIGHESTMODSEQ search
 
     return 0
 
-def main():
-    parser = argparse.ArgumentParser(
-            description="Download initial mail metadata and parts.")
-    parser.add_argument('-u', '--user-email', dest='user_email', required=True)
-    args = parser.parse_args()
-    return initial_sync(args.user_email)
-
-if __name__ == '__main__':
-    sys.exit(main())
