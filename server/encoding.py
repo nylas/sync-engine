@@ -586,9 +586,12 @@ def attempt_decoding(charset, dec):
             return dec
         else:
             return dec.decode(charset)
-    except UnicodeError, e:
+    except (UnicodeError, LookupError) as e:
         # looks like the charset lies, try to detect it
         # log.error("Failed to decode with %s -- %s" % (charset, e))
+        if isinstance(e, LookupError):
+            log.warning("Charset lookup error for %s -- %s" % (charset, e))
+
         try:
             return guess_encoding_and_decode(charset, dec)
         except EncodingError, e:
@@ -599,28 +602,28 @@ def attempt_decoding(charset, dec):
             # For now, this inserts U+FFFD, 'REPLACEMENT CHARACTER'
             return dec.decode(charset, 'replace')
         except Exception, e:
-            log.error("General exception. %s Bailing out" % e)
+            log.error("Both original encoding and decoding failed. Bailing out now. ")
+
+            # payload_data.encode('utf-8')
+            directory = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                    '..', '..', 'errors')
+            # XXX remove this race condition in python 3.2+ using 'exist_ok=True'
+            if not os.path.exists(directory): os.makedirs(directory)
+            from hashlib import sha256
+            filename = safe_filename(charset + '-' + sha256(dec).hexdigest() + '.txt')
+
+            log.error("Writing to file..." + directory+filename)
+
+            f = open(os.path.join(directory,filename), 'w')
+            f.write(dec)
+            f.close()
+
             raise e
 
-    except LookupError, e:
-        # they gave a crap encoding
-        log.error("Charset lookup error for %s -- %s" % (charset, e))
+    except Exception, e:
+        log.error("Unknown exception: %s" % e)
+        raise e
 
-        # payload_data.encode('utf-8')
-        directory = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                '..', '..', 'errors')
-        # XXX remove this race condition in python 3.2+ using 'exist_ok=True'
-        if not os.path.exists(directory): os.makedirs(directory)
-        from hashlib import sha256
-        filename = safe_filename(charset + '-' + sha256(dec).hexdigest() + '.txt')
-
-        log.error("Writing to file..." + directory+filename)
-
-        f = open(os.path.join(directory,filename), 'w')
-        f.write(dec)
-        f.close()
-
-        return guess_encoding_and_decode(charset, dec)
 
 def apply_charset_to_header(charset, encoding, data):
     if encoding == 'b' or encoding == 'B':
