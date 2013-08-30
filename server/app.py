@@ -227,9 +227,9 @@ class WireNamespace(BaseNamespace):
         return True
 
     def disconnect(self, *args, **kwargs):
-        if self.ctx:
-            self.ctx.pop()
-        super(BaseNamespace, self).disconnect(*args, **kwargs)
+        # if self.ctx:
+        #     self.ctx.pop()   # Not sure why this causes an exception
+        super(WireNamespace, self).disconnect(*args, **kwargs)
 
 
 
