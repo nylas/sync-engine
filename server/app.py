@@ -2,7 +2,7 @@ from gevent import monkey; monkey.patch_all()
 
 import logging as log
 from tornado.log import enable_pretty_logging; enable_pretty_logging()
-from flask import Flask, request, redirect, make_response, render_template
+from flask import Flask, request, redirect, make_response, render_template, Response
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
 from socket_rpc import SocketRPC
@@ -21,17 +21,8 @@ from os import environ
 import os
 from urlparse import urlparse, urlunparse
 
-
-
 COOKIE_SECRET = "32oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo="
-
-
-
-
 sc = SecureCookieSerializer(COOKIE_SECRET)
-
-
-
 
 
 # TODO switch to regular flask user login stuff
@@ -146,19 +137,22 @@ def logout():
 
 
 
+
 @app.route("/wire/<path:path>", subdomain="www")
 def run_socketio(path):
     # TODO authenticate user session
-
+    real_request = request._get_current_object()
     user = get_user(request)
     if user:
         log.info('Successful socket auth for %s' % user.g_email)
-        socketio_manage(request.environ, {'/wire_namespace': WireNamespace})
+        socketio_manage(request.environ, {
+                        '/wire_namespace': WireNamespace},
+                        request=real_request)
     else:
         log.error("No user object for request: %s" % request)
 
 
-    return make_response('', 200)  # Flask needs this
+    return Response()
 
 
 
@@ -168,6 +162,17 @@ active_sockets = {}
 
 # The socket.io namespace
 class WireNamespace(BaseNamespace):
+
+    def __init__(self, *args, **kwargs):
+        request = kwargs.get('request', None)
+        self.ctx = None
+        if request:   # Save request context for other ws msgs
+            self.ctx = app.request_context(request.environ)
+            self.ctx.push()
+            app.preprocess_request()
+            del kwargs['request']
+        super(WireNamespace, self).__init__(*args, **kwargs)
+
 
     def initialize(self):
         self.user = None
@@ -181,7 +186,6 @@ class WireNamespace(BaseNamespace):
         active_sockets[id(self)] = self
         log.info("%i active socket%s" % (len(active_sockets),
                                 '' if len(active_sockets) == 1 else 's'))
-
 
     def recv_message(self, message):
         # TODO check auth everytime?
@@ -222,7 +226,10 @@ class WireNamespace(BaseNamespace):
                                 '' if len(active_sockets) == 1 else 's'))
         return True
 
-
+    def disconnect(self, *args, **kwargs):
+        if self.ctx:
+            self.ctx.pop()
+        super(BaseNamespace, self).disconnect(*args, **kwargs)
 
 
 
@@ -330,6 +337,7 @@ def startserver(app_url, app_port):
         app_port = int(app_port)
 
 
+
     log.info("Starting Flask...")
     app.debug = True
 
@@ -339,11 +347,6 @@ def startserver(app_url, app_port):
     app.config['SESSION_COOKIE_SECURE'] = True
     app.config['SESSION_COOKIE_NAME'] = 'inbox_session'
     app.config['GOOGLE_REDIRECT_URI'] ="http://%s/auth/authdone" % app.config['SERVER_NAME']
-
-
-    # APP_URL = 'inboxapp.com'
-    # APP_PORT = 8888
-
 
 
     # app.config['PREFERRED_URL_SCHEME'] = 'https'
