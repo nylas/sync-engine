@@ -31,6 +31,8 @@ Also need to install libevent and then gevent.
     127.0.0.1   inboxapp.com
     127.0.0.1   msg-store.inboxapp.com
 
+On my mac I had to run `dscacheutil -flushcache` afterward.
+
 8. run `./inbox start`. This defaults to port 8888.
 
 9. Open your browser to [http://localhost:8888](http://localhost:8888)
