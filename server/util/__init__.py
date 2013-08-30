@@ -134,6 +134,19 @@ def validate_email(address_text):
     )
 
 
+# From tornado.httputil
+def url_concat(url, args):
+    """Concatenate url and argument dictionary regardless of whether
+    url has existing query parameters.
+
+    >>> url_concat("http://example.com/foo?a=b", dict(c="d"))
+    'http://example.com/foo?a=b&c=d'
+    """
+    if not args:
+        return url
+    if url[-1] not in ('?', '&'):
+        url += '&' if ('?' in url) else '?'
+    return url + urlencode(args)
 
 
 

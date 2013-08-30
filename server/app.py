@@ -21,7 +21,9 @@ from os import environ
 import os
 from urlparse import urlparse, urlunparse
 
-COOKIE_SECRET = "32oETzKXQAGaYdkL5gEmGeJJFuYh7EQnp2XdTP1o/Vo="
+
+COOKIE_SECRET = environ.get("COOKIE_SECRET", None)
+assert COOKIE_SECRET, "Missing secret for secure cookie generation"
 sc = SecureCookieSerializer(COOKIE_SECRET)
 
 

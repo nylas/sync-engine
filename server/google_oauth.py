@@ -1,20 +1,18 @@
-from tornado import httpclient
-from tornado import httputil
-from tornado.httputil import url_concat
-from tornado import escape
+from util import url_concat
 import logging as log
 import urllib
+from os import environ
+import requests
 
-# You can manage (ie: reset) these in the Google API Console at https://code.google.com/apis/console
-# The account is admin@inboxapp.com
-GOOGLE_CONSUMER_KEY = "786647191490.apps.googleusercontent.com"
-GOOGLE_CONSUMER_SECRET = "0MnVfEYfFebShe9576RR8MCK"
+GOOGLE_CONSUMER_KEY = environ.get("GOOGLE_CONSUMER_KEY", None)
+GOOGLE_CONSUMER_SECRET = environ.get("GOOGLE_CONSUMER_SECRET", None)
+assert GOOGLE_CONSUMER_KEY, "Missing Google OAuth Consumer Key"
+assert GOOGLE_CONSUMER_SECRET, "Missing Google OAuth Consumer Secret"
 
 OAUTH_AUTHENTICATE_URL = "https://accounts.google.com/o/oauth2/auth"
 OAUTH_ACCESS_TOKEN_URL = "https://accounts.google.com/o/oauth2/token"
 OAUTH_TOKEN_VALIDATION_URL = "https://www.googleapis.com/oauth2/v1/tokeninfo"
 USER_INFO_URL = "https://www.googleapis.com/oauth2/v1/userinfo"
-
 
 OAUTH_SCOPE = " ".join([
     'https://www.googleapis.com/auth/userinfo.email',  # email address
@@ -23,9 +21,6 @@ OAUTH_SCOPE = " ".join([
     'https://www.google.com/m8/feeds',  # contacts
     'https://www.googleapis.com/auth/calendar'  # calendar
     ])
-
-
-sync_client = httpclient.HTTPClient()  # Todo make async?
 
 
 def authorize_redirect_url(redirect_uri, email_address=None):
@@ -57,17 +52,22 @@ def get_authenticated_user(authorization_code, redirect_uri):
         "redirect_uri" : redirect_uri
     }
 
-    request = httpclient.HTTPRequest(OAUTH_ACCESS_TOKEN_URL, method="POST", body=urllib.urlencode(args))
-    response = sync_client.fetch( request)
+    try:
+        headers = {'Content-type': 'application/x-www-form-urlencoded', 'Accept': 'text/plain'}
+        data = urllib.urlencode(args)
+        response = requests.post(OAUTH_ACCESS_TOKEN_URL, data=data, headers=headers )
+    except Exception, e:
+        log.error(e)
+        return None  # TODO better error handling here
 
-    if response.error:
-        error_dict = escape.json_decode(response.body)
-        log.error(error_dict)
+    session_dict = response.json()
+
+    if u'error' in session_dict:
+        log.error("Error when getting authenticated user: %s" % session_dict['error'])
         return None
 
-    session_dict = escape.json_decode(response.body)
-    access_token = session_dict['access_token']
 
+    access_token = session_dict['access_token']
     validation_dict = validate_token(access_token)
 
     z = session_dict.copy()
@@ -87,17 +87,20 @@ def get_new_token(refresh_token):
         'grant_type' : 'refresh_token'
     }
 
+    try:
+        headers = {'Content-type': 'application/x-www-form-urlencoded', 'Accept': 'text/plain'}
+        data = urllib.urlencode(args)
+        response = requests.post(OAUTH_ACCESS_TOKEN_URL, data=data, headers=headers )
+    except Exception, e:
+        log.error(e)
+        return None  # TODO better error handling here
 
-    request = httpclient.HTTPRequest(OAUTH_ACCESS_TOKEN_URL, method="POST", body=urllib.urlencode(args))
-
-    response = sync_client.fetch(request)
-
-    if response.error:
-        error_dict = escape.json_decode(response.body)
-        log.error(error_dict)
+    session_dict = response.json()
+    if u'error' in session_dict:
+        log.error("Error when getting authenticated user: %s" % session_dict['error'])
         return None
 
-    session_dict = escape.json_decode(response.body)
+
     access_token = session_dict['access_token']
 
     # Validate token
@@ -109,18 +112,15 @@ def get_new_token(refresh_token):
 
 
 def validate_token(access_token):
-    # Validate token
-    request = httpclient.HTTPRequest(OAUTH_TOKEN_VALIDATION_URL + "?access_token=" + access_token)
+
     try:
-        response = sync_client.fetch(request)
-    except httpclient.HTTPError, e:
-        response = e.response
-        pass  # handle below
+        response = requests.get(OAUTH_TOKEN_VALIDATION_URL + "?access_token=" + access_token )
     except Exception, e:
         log.error(e)
-        raise e
+        return None  # TODO better error handling here
 
-    validation_dict = escape.json_decode(response.body)
+    validation_dict = response.json()
+
 
     if 'error' in validation_dict:
         assert validation_dict['error'] == 'invalid_token'
@@ -128,19 +128,3 @@ def validate_token(access_token):
         return None
 
     return validation_dict
-
-
-
-def get_user_info(access_token, redirect_uri, callback):
-    """ Get user info. Stuff like fullname, birthdate, profile picture, etc. """
-
-    request = httpclient.HTTPRequest(OAUTH_ACCESS_TOKEN_URL, method="POST", body=urllib.urlencode(args))
-    response = sync_client.fetch(request)
-
-    if response.error:
-        error_dict = escape.json_decode(response.body)
-        log.error(error_dict)
-        return None
-
-    return userinfo_dict
-

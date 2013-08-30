@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 from gevent import monkey; monkey.patch_all()
-
 import argparse
 import signal
 import sys
@@ -9,10 +8,7 @@ from os import environ
 import subprocess
 import ConfigParser
 
-# Zero RCP Services
-from server.util import make_zerorpc
-import server.api
-
+# Don't import the app yet, as we need to set env vars first.
 
 # Make logging prettified
 import tornado.options
@@ -72,7 +68,23 @@ def start(args=None):
     port = environ.get('THIS_SERVER_PORT', 8888)
 
 
+    # This Greenlet prints dots to the console which is useful for making
+    # sure that other greenlets are properly not blocking.
+    # from time import sleep
+    # from gevent import Greenlet
+    # def m():
+    #     while True:
+    #         sys.stdout.write("."),
+    #         sys.stdout.flush()
+    #         sleep(.02)
+    # Greenlet.spawn(m)
+
+
+
     # Start ZeroRPC api server service
+    # Zero RCP Services
+    from server.util import make_zerorpc
+    import server.api
     api_srv_loc = environ.get('API_SERVER_LOC', None)
     make_zerorpc(server.api.API, api_srv_loc)
 
