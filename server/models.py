@@ -8,6 +8,7 @@ from sqlalchemy import event
 from sqlalchemy.orm import reconstructor
 
 from hashlib import sha256
+from os import environ
 import os
 import logging as log
 
@@ -22,8 +23,8 @@ class JSONSerializable(object):
 class UserSession(JSONSerializable, Base):
     __tablename__ = 'user_sessions'
 
-    session_token = Column(String, primary_key=True)
-    g_email = Column(String)
+    session_token = Column(String(255), primary_key=True)
+    g_email = Column(String(255))
 
     def __init__(self):
         self.session_token = None
@@ -33,23 +34,23 @@ class UserSession(JSONSerializable, Base):
 class User(JSONSerializable, Base):
     __tablename__ = 'users'
 
-    g_email = Column(String, primary_key=True)
+    g_email = Column(String(255), primary_key=True)  # Should add index=true?
 
     # Not from google
-    name = Column(String)
+    name = Column(String(255))
     date = Column(DateTime)
 
-    g_token_issued_to = Column(String)
-    g_user_id = Column(String)
+    g_token_issued_to = Column(String(512))
+    g_user_id = Column(String(512))
 
-    g_access_token = Column(String)
-    g_id_token = Column(String)
+    g_access_token = Column(String(1024))
+    g_id_token = Column(String(1024))
     g_expires_in = Column(Integer)
-    g_access_type = Column(String)
-    g_token_type = Column(String)
-    g_audience = Column(String)
-    g_scope = Column(String)
-    g_refresh_token = Column(String)
+    g_access_type = Column(String(512))
+    g_token_type = Column(String(512))
+    g_audience = Column(String(512))
+    g_scope = Column(String(512))
+    g_refresh_token = Column(String(512))
     g_verified_email = Column(Boolean)
 
     def __init__(self):
@@ -75,12 +76,15 @@ class User(JSONSerializable, Base):
 
 class MessageMeta(JSONSerializable, Base):
     __tablename__ = 'messagemeta'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
     # XXX clean this up a lot - make a better constructor, maybe taking
     # a mailbase as an argument to prefill a lot of attributes
 
     # TODO probably want to store some of these headers in a better
     # non-pickled way to provide indexing
-    g_email = Column(String)
+    g_email = Column(String(255))
     from_addr = Column(PickleType)
     sender_addr = Column(PickleType)
     reply_to = Column(PickleType)
@@ -88,15 +92,15 @@ class MessageMeta(JSONSerializable, Base):
     cc_addr = Column(PickleType)
     bcc_addr = Column(PickleType)
     in_reply_to = Column(PickleType)
-    message_id = Column(String)
-    subject = Column(String)
+    message_id = Column(String(255))
+    subject = Column(String(255))
     internaldate = Column(DateTime)
     flags = Column(PickleType)
     size = Column(Integer)
-    data_sha256 = Column(String)
-    g_msgid = Column(String, primary_key=True)
-    g_user_id = Column(String, primary_key=True)
-    g_thrid = Column(String)
+    data_sha256 = Column(String(255))
+    g_msgid = Column(String(255), primary_key=True)
+    g_user_id = Column(String(255), primary_key=True)
+    g_thrid = Column(String(255))
 
     def __init__(self):
         self.g_email = None
@@ -165,21 +169,23 @@ class MessagePart(JSONSerializable, Base):
     __tablename__ = 'messagepart'
     """ Metadata for message parts stored in s3 """
 
-    g_email = Column(String, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
 
-    g_msgid = Column(String, primary_key=True)
+    g_email = Column(String(255), primary_key=True)  # Should add index=true?
+
+    g_msgid = Column(String(255), primary_key=True)
     walk_index = Column(Integer, primary_key=True)
     # Save some space with common content types
     _content_type_common = Column(Enum(*common_content_types))
-    _content_type_other = Column(String)
+    _content_type_other = Column(String(255))
 
     content_disposition = Column(Enum('inline', 'attachment'))
-    content_id = Column(String)  # For attachments
+    content_id = Column(String(255))  # For attachments
     size = Column(Integer)
-    filename = Column(String)
+    filename = Column(String(255))
     misc_keyval = Column(PickleType)
-    s3_id = Column(String)
-    data_sha256 = Column(String)
+    s3_id = Column(String(255))
+    data_sha256 = Column(String(255))
 
     def __init__(self):
         self.g_email = None
@@ -274,17 +280,17 @@ class AttachmentParts(Base):
         represented as links to external files
     """
 
-    g_email = Column(String, primary_key=True)
+    g_email = Column(String(255), primary_key=True)  # Should add index=true?
+
 
     # This is a unique identifier that is used in the content URL
-    content_id = Column(String, primary_key=True)  # For attachments
+    content_id = Column(String(255), primary_key=True)  # For attachments
 
-    content_type = Column(String)
+    content_type = Column(String(255))
     bytes = Column(Integer)
-    filename = Column(String)
-    _misc_keyval = Column(String)
-
-    s3_id = Column(String)
+    filename = Column(String(255))
+    _misc_keyval = Column(String(255))
+    s3_id = Column(String(255))
 
     def __init__(self):
         self.g_email = None
@@ -299,32 +305,53 @@ class FolderMeta(JSONSerializable, Base):
     __tablename__ = 'foldermeta'
     """ This maps folder names to UIDs """
 
-    g_email = Column(String)
-    g_msgid = Column(String)
-    folder_name = Column(String, primary_key=True)  # All Mail, Inbox, etc. (i.e. Labels)
-    msg_uid = Column(String, primary_key=True)
+    g_email = Column(String(255))
+    g_msgid = Column(String(255))
+    folder_name = Column(String(255), primary_key=True)  # All Mail, Inbox, etc. (i.e. Labels)
+    msg_uid = Column(String(255), primary_key=True)
 
 class UIDValidity(JSONSerializable, Base):
     __tablename__ = 'uidvalidity'
     """ UIDValidity has a per-folder value. If it changes, we need to
         re-map g_msgid to UID for that folder.
     """
-    g_email = Column(String, primary_key=True)
-    folder_name = Column(String, primary_key=True)
+
+    g_email = Column(String(255), primary_key=True)  # Should add index=true?
+    folder_name = Column(String(255), primary_key=True)
     uid_validity = Column(Integer)
     highestmodseq = Column(Integer)
 
+
+
+
 ## Make the tables
 from sqlalchemy import create_engine
+DB_URI = "mysql://{username}:{password}@{host}:{port}/{database}"
 
-# engine = create_engine('sqlite:///:memory:', echo=True)
+if 'RDS_HOSTNAME' in environ:
+    # Amazon RDS settings for production
+    engine = create_engine(DB_URI.format(
+        username = os.environ['RDS_USER'],
+        password = os.environ['RDS_PASSWORD'],
+        host = os.environ['RDS_HOSTNAME'],
+        port = os.environ['RDS_PORT'],
+        database = os.environ['RDS_DB_NAME']
+    ))
 
-# sqlite://<nohostname>/<path>
-# where <path> is relative:
+else:
 
-# PATH_TO_DATABSE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "database.db")
-# engine = create_engine('sqlite:///database.db', echo=True)
-engine = create_engine('sqlite:///database.db')
+    if os.environ['MYSQL_USER'] == 'XXXXXXX':
+        log.error("Go setup MySQL settings in config file!")
+        raise Exception()
+
+    engine = create_engine(DB_URI.format(
+        username = os.environ['MYSQL_USER'],
+        password = os.environ['MYSQL_PASSWORD'],
+        host = os.environ['MYSQL_HOSTNAME'],
+        port = os.environ['MYSQL_PORT'],
+        database = os.environ['MYSQL_DATABASE']
+    ))
+
 
 Base.metadata.create_all(engine)
 
