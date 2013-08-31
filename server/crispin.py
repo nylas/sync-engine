@@ -234,6 +234,7 @@ class CrispinClient:
             new_msg = MessageMeta()
             new_msg.data_sha256 = sha256(body).hexdigest()
             new_msg.g_user_id = self.user_obj.g_user_id
+            new_msg.g_email = self.user_obj.g_email
             new_msg.uid = uid
             # XXX maybe eventually we want to use these, but for
             # backcompat for now let's keep in the
@@ -298,6 +299,7 @@ class CrispinClient:
 
             # # Store all message headers as object with index 0
             headers_part = MessagePart()
+            new_msg.g_email = self.user_obj.g_email
             headers_part.g_msgid = new_msg.g_msgid
             headers_part.walk_index = i
             headers_part.data = json.dumps(mailbase.headers)
