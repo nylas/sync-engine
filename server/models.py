@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum, Text
 from sqlalchemy.types import PickleType
 
 from sqlalchemy.ext.declarative import declarative_base
@@ -43,6 +43,7 @@ class User(JSONSerializable, Base):
     g_token_issued_to = Column(String(512))
     g_user_id = Column(String(512))
 
+    # TODO figure out the actual lengths of these
     g_access_token = Column(String(1024))
     g_id_token = Column(String(1024))
     g_expires_in = Column(Integer)
@@ -93,7 +94,7 @@ class MessageMeta(JSONSerializable, Base):
     bcc_addr = Column(PickleType)
     in_reply_to = Column(PickleType)
     message_id = Column(String(255))
-    subject = Column(String(255))
+    subject = Column(Text)
     internaldate = Column(DateTime)
     flags = Column(PickleType)
     size = Column(Integer)
