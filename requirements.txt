@@ -24,8 +24,6 @@ MySQL-python==1.2.4
 -e packages/imapclient
 -e packages/imaplib2
 -e packages/bleach
--e packages/tornadorpc
-
 
 # For ZeroRPC
 Cython==0.19.1

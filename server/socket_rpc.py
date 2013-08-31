@@ -1,21 +1,12 @@
-
 # SocketIO subclass that works with JSON-RPC
 # Bastardized from https://githubself.com/joshmarshall/tornadorpc.git
-# still buggy. ugh.
-
+# probably still kind of buggy and half broken :/
 
 import logging as log
-
 import types
-from tornadorpc.utils import getcallargs
-
 import jsonrpclib
-from jsonrpclib.jsonrpc import Fault
 from jsonrpclib.jsonrpc import dumps, loads
-from jsonrpclib.jsonrpc import isbatch, isnotification, Fault
-
-from tornado.web import RequestHandler
-
+from jsonrpclib.jsonrpc import isnotification
 
 # Configuration element
 class Config(object):
@@ -46,9 +37,10 @@ class SocketRPC(object):
 
         method_name, params = request[0], request[1]
 
-        if method_name in dir(RequestHandler):
-            # Pre-existing, not an implemented attribute
-            raise Exception("Method not found. Pre-existing, not an implemented attribute")
+        # TODO used to do this with tornado
+        # if method_name in dir(RequestHandler):
+        #     # Pre-existing, not an implemented attribute
+        #     raise Exception("Method not found. Pre-existing, not an implemented attribute")
 
         method = self.handler
         method_list = dir(method)
