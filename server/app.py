@@ -2,7 +2,7 @@ from gevent import monkey; monkey.patch_all()
 
 import logging as log
 from tornado.log import enable_pretty_logging; enable_pretty_logging()
-from flask import Flask, request, redirect, make_response, render_template, Response
+from flask import Flask, request, redirect, make_response, render_template, Response, jsonify
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
 from socket_rpc import SocketRPC
@@ -56,6 +56,8 @@ def index():
                             name = user.g_email if user else " ",
                             logged_in = bool(user))
 
+
+
 @app.before_request
 def redirect_nonwww():
     """Redirect non-www requests to www.
@@ -86,16 +88,23 @@ def validate_email_handler():
     return json.dumps(is_valid_dict)
 
 
-@app.route('/auth/authstart', subdomain="www")
-def auth_start_handler():
-    """ Creates oauth URL and redirects to Google """
-    assert 'email_address' in request.args
+@app.route('/auth/redirect_url', subdomain="www")
+def auth_redirect_url():
     email_address = request.args.get('email_address')
     log.info("Starting auth with email %s" % email_address)
     url = google_oauth.authorize_redirect_url(
                     app.config['GOOGLE_REDIRECT_URI'],
                     email_address = email_address)
-    return redirect(url)
+    return jsonify(url=url)
+
+
+@app.route('/auth/authstart', subdomain="www")
+def auth_start_handler():
+    """ Creates oauth URL and redirects to Google """
+    assert 'email_address' in request.args
+
+    return render_template('to_gmail.html')
+                            # redirect_url=url)
 
 
 @app.route('/auth/authdone', subdomain="www")
@@ -193,6 +202,7 @@ class WireNamespace(BaseNamespace):
         # TODO check auth everytime?
         log.info(message)
 
+        # TODO MG FIX THIS NAO
         query = db_session.query(User).filter(User.g_email == 'mgrinich@gmail.com')
         res = query.all()
         assert len(res) == 1

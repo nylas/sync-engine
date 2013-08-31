@@ -62,6 +62,21 @@ body {
 }
 
 
+#container-noanimate{
+  position:absolute;
+  top: 50%;
+  left: 50%;
+  opacity: 1;
+
+  position: absolute;
+  text-align: center;
+  width: 300px;
+  height: 200px;
+  /*set to a negative number 1/2 of your width/height*/
+  margin: -100px 0px 0px -150px;
+}
+
+
 @keyframes fadein {
   0% {
     opacity: 0;
