@@ -48,3 +48,4 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+.elasticbeanstalk/

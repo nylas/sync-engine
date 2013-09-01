@@ -94,7 +94,7 @@ class MessageMeta(JSONSerializable, Base):
     bcc_addr = Column(PickleType)
     in_reply_to = Column(PickleType)
     message_id = Column(String(255))
-    subject = Column(Text)
+    subject = Column(Text(collation='utf8_unicode_ci'))
     internaldate = Column(DateTime)
     flags = Column(PickleType)
     size = Column(Integer)
@@ -327,7 +327,7 @@ class UIDValidity(JSONSerializable, Base):
 
 ## Make the tables
 from sqlalchemy import create_engine
-DB_URI = "mysql://{username}:{password}@{host}:{port}/{database}"
+DB_URI = "mysql://{username}:{password}@{host}:{port}/{database}?charset=utf8mb4"
 
 if 'RDS_HOSTNAME' in environ:
     # Amazon RDS settings for production

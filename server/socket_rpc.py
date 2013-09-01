@@ -72,13 +72,20 @@ class SocketRPC(object):
         print handler, method
 
 
-                # args, varargs, varkw, defaults = inspect.getargspec(func)
-
-# <zerorpc.core.Client object at 0x104cc8390> <zerorpc.core.Client object at 0x104cc8390>
-
+        # args, varargs, varkw, defaults = inspect.getargspec(func)
+        # <zerorpc.core.Client object at 0x104cc8390> <zerorpc.core.Client object at 0x104cc8390>
 
 
+        # Right now ZeroRPC doesn't support keyword arguments.
 
+        print params
+        print type(params)
+
+        if type(params) is basestring:
+            log.warning("Single string param should be in list.")
+            params = [params]
+
+        assert type(params) in (list, tuple), "Only positional args supported"
         # if type(params) is types.DictType:
         #     # The parameters are keyword-based
         #     kwargs = params
@@ -88,29 +95,8 @@ class SocketRPC(object):
         # else:
         #     raise Exception("Invalid params: %s", params)
 
-        # zerorpc only supports positional arguments
-
-
-        # TOFIX this is actually dangerous because the items can be in the wrong order.
-        # need to somehow map them to the function parameter names exposed by zeromq
-        # import inspect
-        # print inspect.getargspec(method)
-
-
-        args = [v for k,v in params.iteritems()]
-
-        assert type(args) in (list, tuple)
-        args.insert(0, user.g_user_id)  # user email address is always first object
-
-        # args, varargs, varkw, defaults = inspect.getargspec(func)
-        # fname = func.__name__
-
-
-
-        # pass user object on to API
-        # assert not 'user' in kwargs
-        # assert user, "Need user object to do any operation"
-        # kwargs['user'] = user
+        # Insert user identifier as first object
+        args.insert(0, user.g_user_id)
 
 
         # # Validating call arguments

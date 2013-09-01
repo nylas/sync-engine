@@ -35,37 +35,34 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
     $scope.activeMessage = undefined;
 
 
-    $scope.loadMessagesForFolder = function(folder) {
+    $scope.loadMessagesForFolder = function(folder_name) {
 
         $scope.statustext = "Loading messages...";
-        wire.rpc('messages_for_folder', {
-                folder_name: folder
-            },
-            function(data) {
+        wire.rpc('messages_for_folder', folder_name, function(data) {
 
-                $scope.statustext = "";
-                var arr_from_json = JSON.parse(data);
-                var freshMessages = [];
-                angular.forEach(arr_from_json, function(value, key) {
-                    var newMessage = new IBMessageMeta(value);
-                    $scope.message_map[newMessage.g_id] = newMessage;
+            $scope.statustext = "";
+            var arr_from_json = JSON.parse(data);
+            var freshMessages = [];
+            angular.forEach(arr_from_json, function(value, key) {
+                var newMessage = new IBMessageMeta(value);
+                $scope.message_map[newMessage.g_id] = newMessage;
 
-                    freshMessages.push(newMessage);
-                });
+                freshMessages.push(newMessage);
+            });
 
-                $scope.messages = freshMessages;
-            }
-        );
+            $scope.messages = freshMessages;
+        });
     };
 
 
 
-    $scope.sendMessage = function(message_string)
-    {
+    $scope.sendMessage = function(message_string) {
         wire.rpc('send_mail', {
-                message_to_send: {'subject' : 'Hello world',
-                                  'body' : message_string,
-                                  'to' : 'christine@spang.cc' }
+                message_to_send: {
+                    'subject': 'Hello world',
+                    'body': message_string,
+                    'to': 'christine@spang.cc'
+                }
             },
             function(data) {
 
@@ -83,27 +80,24 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
 
         console.log(selectedMessage);
 
-        wire.rpc('data_with_id', {
-                data_id: selectedMessage.g_id
-            }, function(data) {
+        wire.rpc('meta_with_id', selectedMessage.g_id, function(data) {
 
-                var arr_from_json = JSON.parse(data);
+            var arr_from_json = JSON.parse(data);
 
-                angular.forEach(arr_from_json, function(value, key) {
-                    var new_part = new IBMessagePart(value);
+            angular.forEach(arr_from_json, function(value, key) {
+                var new_part = new IBMessagePart(value);
 
-                    var the_message = $scope.message_map[new_part.g_id];
-                    the_message.parts[new_part.g_index] = new_part;
+                var the_message = $scope.message_map[new_part.g_id];
+                the_message.parts[new_part.g_index] = new_part;
 
-                    console.log(the_message);
-                });
+                console.log(the_message);
+            });
 
-                // $scope.messages = freshParts;
-                // var data = atob(data)
-                // $scope.activeMessage.body_text = data;
+            // $scope.messages = freshParts;
+            // var data = atob(data)
+            // $scope.activeMessage.body_text = data;
 
-            }
-        );
+        });
 
     }
 

@@ -18,14 +18,18 @@ Flask==0.10.1
 gevent-socketio==0.3.5-rc2
 gunicorn==17.5
 colorlog==1.8
-MySQL-python==1.2.4
+# MySQL-python==1.2.4
 requests==1.2.3
 
 
 # Our own versions of these
--e packages/imapclient
--e packages/imaplib2
--e packages/bleach
+# -e packages/imapclient
+# -e packages/imaplib2
+# -e packages/bleach
+-e git+git://github.com/inboxapp/imapclient#egg=imapclient
+-e git+git://github.com/inboxapp/imaplib2#egg=imaplib2
+-e git+git://github.com/inboxapp/bleach#egg=bleach
+
 
 # For ZeroRPC
 Cython==0.19.1
