@@ -11,6 +11,8 @@ from hashlib import sha256
 from os import environ
 import os
 import logging as log
+# from sqlalchemy.databases.mysql import MSMediumBlob
+from sqlalchemy.dialects import mysql
 
 class JSONSerializable(object):
     def client_json(self):
@@ -18,6 +20,10 @@ class JSONSerializable(object):
             the web client.
         """
         pass
+
+
+class MediumPickle(PickleType):
+    impl = mysql.MEDIUMBLOB
 
 
 class UserSession(JSONSerializable, Base):
@@ -86,17 +92,17 @@ class MessageMeta(JSONSerializable, Base):
     # TODO probably want to store some of these headers in a better
     # non-pickled way to provide indexing
     g_email = Column(String(255))
-    from_addr = Column(PickleType)
-    sender_addr = Column(PickleType)
-    reply_to = Column(PickleType)
-    to_addr = Column(PickleType)
-    cc_addr = Column(PickleType)
-    bcc_addr = Column(PickleType)
-    in_reply_to = Column(PickleType)
+    from_addr = Column(MediumPickle)
+    sender_addr = Column(MediumPickle)
+    reply_to = Column(MediumPickle)
+    to_addr = Column(MediumPickle)
+    cc_addr = Column(MediumPickle)
+    bcc_addr = Column(MediumPickle)
+    in_reply_to = Column(MediumPickle)
     message_id = Column(String(255))
     subject = Column(Text(collation='utf8_unicode_ci'))
     internaldate = Column(DateTime)
-    flags = Column(PickleType)
+    flags = Column(MediumPickle)
     size = Column(Integer)
     data_sha256 = Column(String(255))
     g_msgid = Column(String(255), primary_key=True)
@@ -184,7 +190,7 @@ class MessagePart(JSONSerializable, Base):
     content_id = Column(String(255))  # For attachments
     size = Column(Integer)
     filename = Column(String(255))
-    misc_keyval = Column(PickleType)
+    misc_keyval = Column(MediumPickle)
     s3_id = Column(String(255))
     data_sha256 = Column(String(255))
 
