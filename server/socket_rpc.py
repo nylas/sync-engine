@@ -78,14 +78,14 @@ class SocketRPC(object):
 
         # Right now ZeroRPC doesn't support keyword arguments.
 
-        print params
-        print type(params)
 
-        if type(params) is basestring:
+
+        if isinstance(params, basestring):
             log.warning("Single string param should be in list.")
             params = [params]
-
         assert type(params) in (list, tuple), "Only positional args supported"
+        args = params
+
         # if type(params) is types.DictType:
         #     # The parameters are keyword-based
         #     kwargs = params
@@ -99,17 +99,7 @@ class SocketRPC(object):
         args.insert(0, user.g_user_id)
 
 
-        # # Validating call arguments
-        # try:
-        #     final_kwargs, extra_args = getcallargs(method, *args, **kwargs)
-        # except TypeError, e:
-        #     log.error("Invalid params? %s" % e)
-        #     print method, args, kwargs
-        #     raise e
-
-
         log.info("Running %s with %s" % (method.__name__, args))
-
         # TODO exception handling on this
         response = method(*args)  # Automatically wrapped in a Greenlet
 
