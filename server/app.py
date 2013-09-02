@@ -20,7 +20,6 @@ import zerorpc
 from os import environ
 import os
 from urlparse import urlparse, urlunparse
-from socketio.server import SocketIOServer  # WSGIServer
 
 
 COOKIE_SECRET = environ.get("COOKIE_SECRET", None)
@@ -59,16 +58,16 @@ def index():
 
 
 
-# @app.before_request
-# def redirect_nonwww():
-#     """Redirect non-www requests to www.
-#        Let's just stay way from apex domains. """
-#     urlparts = urlparse(request.url)
+@app.before_request
+def redirect_nonwww():
+    """Redirect non-www requests to www.
+       Let's just stay way from apex domains. """
+    urlparts = urlparse(request.url)
 
-#     if urlparts.netloc == app.config['SERVER_NAME']:
-#         urlparts_list = list(urlparts)
-#         urlparts_list[1] = "www.%s" % app.config['SERVER_NAME']
-#         return redirect(urlunparse(urlparts_list), code=301)
+    if urlparts.netloc == app.config['SERVER_NAME']:
+        urlparts_list = list(urlparts)
+        urlparts_list[1] = "www.%s" % app.config['SERVER_NAME']
+        return redirect(urlunparse(urlparts_list), code=301)
 
 
 @app.route('/app', subdomain="www")
@@ -342,51 +341,41 @@ def page_not_found(e):
     return app.send_static_file('404.html')
 
 
-
-
-app.debug = True
-
-# TODO remove port from this for production
-
-app_url = environ.get("PUBLIC_HOSTNAME", "inboxapp.com")
-
- # TOFIX set to localhost?
-app.config['SERVER_NAME'] = app_url # '%s' % (app_url, app_port)
-
-# app.config['SESSION_COOKIE_DOMAIN'] = '.inboxapp.com'
-app.config['SESSION_COOKIE_SECURE'] = True
-app.config['SESSION_COOKIE_NAME'] = 'inbox_session'
-app.config['GOOGLE_REDIRECT_URI'] ="http://%s/auth/authdone" % app.config['SERVER_NAME']
-
-
-# app.config['PREFERRED_URL_SCHEME'] = 'https'
-app.config['SECRET_KEY'] = 'asdfhouh32ouhwlnsfdoslnsa;hdof'
-
-ws_app = SharedDataMiddleware(app, {
-        '/app/': os.path.join(os.path.dirname(__file__), '../web_client')
-    })
-
-
-# application.run(host='0.0.0.0', debug=True)
-application = SocketIOServer((app_url, 8888), ws_app, host=app_url,
-    resource="wire", policy_server=True)
-# application = SocketIOServer((app_url, app_port), ws_app,
-    # resource="wire", policy_server=True)
-
-
 # TODO do reloading with gunicorn
 def startserver(app_url, app_port):
-
-    log.info("Starting Flask...")
 
     if not isinstance(app_port, int):
         log.warning("Specified port to listen should be an integer")
         app_port = int(app_port)
 
+
+
+    log.info("Starting Flask...")
+    app.debug = True
+
+    # TODO remove port from this for production
+    app.config['SERVER_NAME'] = '%s:%i' % (app_url, app_port)
+    app.config['SESSION_COOKIE_DOMAIN'] = '.inboxapp.com'
+    app.config['SESSION_COOKIE_SECURE'] = True
+    app.config['SESSION_COOKIE_NAME'] = 'inbox_session'
+    app.config['GOOGLE_REDIRECT_URI'] ="http://%s/auth/authdone" % app.config['SERVER_NAME']
+
+
+    # app.config['PREFERRED_URL_SCHEME'] = 'https'
+    app.config['SECRET_KEY'] = 'asdfhouh32ouhwlnsfdoslnsa;hdof'
+
+
+    ws_app = SharedDataMiddleware(app, {
+            '/app/': os.path.join(os.path.dirname(__file__), '../web_client')
+        })
+
+
     log.info('Listening on http://'+app_url+':'+str(app_port)+"/")
 
-    application.serve_forever()
 
+    from socketio.server import SocketIOServer  # inherits gevent.pywsgi.WSGIServer
+    SocketIOServer((app_url, app_port), ws_app,
+        resource="wire", policy_server=True).serve_forever()
 
 
 # Need to do something like this to close existing socket connections gracefully
