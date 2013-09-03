@@ -2,7 +2,7 @@ import itertools
 import string
 from dns.resolver import query as dns_query
 from urllib import urlencode
-import tornado.httpclient
+import requests
 from tornado import escape
 import logging as log
 import zerorpc
@@ -77,25 +77,17 @@ def validate_email(address_text):
     MAILGUN_API_PUBLIC_KEY = "pubkey-8nre-3dq2qn8-jjopmq9wiwu4pk480p2"
     MAILGUN_VALIDATE_API_URL = "https://api.mailgun.net/v2/address/validate?" + urlencode(args)
 
-    request = tornado.httpclient.HTTPRequest(MAILGUN_VALIDATE_API_URL)
-    request.auth_username = 'api'
-    request.auth_password = MAILGUN_API_PUBLIC_KEY
+
 
     try:
-        sync_client = tornado.httpclient.HTTPClient()  # Todo make async?
-        response = sync_client.fetch(request)
-    except tornado.httpclient.HTTPError, e:
-        response = e.response
-        pass  # handle below
+        response = requests.get(MAILGUN_VALIDATE_API_URL,
+                    auth=('api', MAILGUN_API_PUBLIC_KEY))
     except Exception, e:
         log.error(e)
-        raise tornado.web.HTTPError(500, "Internal email validation error.")
-    if response.error:
-        error_dict = escape.json_decode(response.body)
-        log.error(error_dict)
-        raise tornado.web.HTTPError(500, "Internal email validation error.")
+        return None  # TODO better error handling here
 
-    body = escape.json_decode(response.body)
+    body = response.json()
+
 
     is_valid = body['is_valid']
     if is_valid:
