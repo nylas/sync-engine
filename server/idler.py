@@ -1,6 +1,3 @@
-
-import sys
-import oauth2 as oauth
 import logging as log
 
 from imaplib2 import IMAP4_SSL
@@ -30,7 +27,7 @@ class Idler():
         try:
 
             if not self.email_address or not self.oauth_token:
-                log.error('Need login credentials', e)
+                log.error('Need login credentials')
                 return
 
 
