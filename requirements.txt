@@ -4,9 +4,7 @@ httplib2==0.8
 pytest==2.3.4
 tornado==3.0.1
 wsgiref==0.1.2
-tornadio2==0.0.3
 futures==2.1.3
-lamson==1.3.4
 jsonrpclib==0.1.3
 SQLAlchemy==0.8.2
 pymongo==2.5.2  # For json_util in bson
@@ -19,6 +17,7 @@ gunicorn==17.5
 colorlog==1.8
 # MySQL-python==1.2.4
 requests==1.2.3
+Fabric==1.7.0
 
 # Our own versions of these
 -e git+git://github.com/inboxapp/imapclient#egg=imapclient
