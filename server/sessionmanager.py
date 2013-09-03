@@ -115,15 +115,6 @@ def get_crispin_from_email(email_address, initial=False):
 
         assert 'X-GM-EXT-1' in crispin_client.imap_server.capabilities(), "This must not be Gmail..."
 
-        # Always use All Mail
-        crispin_client.select_folder(
-                crispin_client.all_mail_folder_name())
-        # NOTE: this select info contains the MODSEQUENCE we need for later
-        # syncing; it's possible at some point in the future we may want
-        # to cache it as soon as we have it instead of making a STATUS query
-        # again later. (We still have to do STATUS queries for folders we've
-        # never SELECTed.)
-
         email_address_to_crispins[email_address] = crispin_client
         return crispin_client
 

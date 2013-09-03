@@ -44,6 +44,7 @@ class Idler():
 
 
             self.imap.SELECT(self.folder)
+            # XXX TODO: we MUST check uidvalidity here!
 
             #get the IDs of all messages in the inbox and put in knowAboutMail
             typ, data = self.imap.SEARCH(None, 'ALL')

@@ -44,8 +44,23 @@ def messages_from_raw(raw_messages):
                 msg['X-GM-LABELS'])
 
 class CrispinClient:
+    """
+    One thing to note about crispin clients is that *all* calls operate on
+    the currently selected folder.
+
+    Crispin will NEVER implicitly select a folder for you.
+
+    This is very important! IMAP only guarantees that folder message UIDs
+    are valid for a "session", which is defined as from the time you
+    SELECT a folder until the connection is closed or another folder is
+    selected.
+
+    XXX: can we make it even harder to fuck this up?
+    """
     # 20 minutes
     SERVER_TIMEOUT = datetime.timedelta(seconds=1200)
+    # how many messages to download at a time
+    CHUNK_SIZE = 20
 
     def __init__(self, user_obj):
         self.user_obj = user_obj
@@ -59,6 +74,13 @@ class CrispinClient:
         self._all_mail_folder_name = None
 
         self._connect()
+
+    # XXX At some point we may want to query for a user's labels and sync
+    # _all_ of them here. You can query gmail labels with
+    # self.imap_server.list_folders() and filter out the [Gmail] folders
+    @property
+    def sync_folders(self):
+        return ['Inbox', self.all_mail_folder_name()]
 
     @property
     def selected_folder_name(self):
@@ -76,7 +98,7 @@ class CrispinClient:
     @property
     def selected_uidvalidity(self):
         return or_none(self.selected_folder_info,
-                lambda i: i['UIDVALIDITY'])
+                lambda i: long(i['UIDVALIDITY']))
 
     def with_folder(self, folder, action):
         if folder != self.selected_folder[0]:
@@ -190,8 +212,10 @@ class CrispinClient:
     @connected
     @print_duration
     def select_folder(self, folder):
-        # XXX TODO: whenever you do a SELECT you need to validate
-        # UIDVALIDITY
+        """ NOTE: The caller must ALWAYS validate UIDVALIDITY after calling
+            this function. We don't do this here because this module
+            deliberately doesn't deal with the database layer.
+        """
         try:
             select_info = self.imap_server.select_folder(folder, readonly=True)
             self.selected_folder = (folder, select_info)
@@ -207,6 +231,7 @@ class CrispinClient:
     @connected
     @print_duration
     def fetch_folder(self, folder_name):
+        """ You probably don't actually want to fetch an entire folder at once. """
         log.info("Fetching messages in %s" % folder_name)
 
         select_info = self.select_folder(folder_name)
@@ -218,6 +243,12 @@ class CrispinClient:
 
         return self.fetch_uids(UIDs)
 
+    @connected
+    def fetch_metadata(self, uids):
+        raw_messages = self.imap_server.fetch(uids, ['FLAGS'])
+        return dict([(uid, msg['FLAGS']) for uid, msg in raw_messages.iteritems()])
+
+    @connected
     def fetch_uids(self, UIDs):
         """ Downloads entire messages for the given UIDs, parses them,
             and creates metadata database entries and writes mail parts
@@ -507,7 +538,6 @@ Parsed Content-Disposition was: '{3}'""".format(uid, self.selected_folder_name,
 
         return new_messages, new_parts, new_foldermeta
 
-    @connected
     def fetch_messages(self, folder_name):
         new_messages, new_parts = self.fetch_folder(folder_name)
         return new_messages
@@ -539,38 +569,23 @@ Parsed Content-Disposition was: '{3}'""".format(uid, self.selected_folder_name,
         return body_data
 
     @connected
-    def fetch_msg_headers(self, folder, msg_uid, readonly=True):
+    def fetch_msg_headers(self, uids, readonly=True):
+        log.info("Fetching headers in {0}".format(self.selected_folder_name))
 
-        if isinstance(msg_uid, basestring):
-            msg_uid = [msg_uid]
-        msg_uid = [str(s) for s in msg_uid]
-
-        self.select_folder(folder)
-
-        log.info("Fetching headers in %s -- %s" % (folder, msg_uid))
-
-        query = query_key = 'BODY[HEADER]'
+        query = 'BODY[HEADER]'
         if readonly:
             query = 'BODY.PEEK[HEADER]'
-        query_key = 'BODY[HEADER]'
-        response = self.imap_server.fetch(msg_uid,
+        response = self.imap_server.fetch(uids,
                                     [query, 'X-GM-THRID', 'X-GM-MSGID'])
 
         return response
 
     @connected
-    def fetch_entire_msg(self, folder, msg_uid, readonly=True):
-
-        if isinstance(msg_uid, basestring):
-            msg_uid = [msg_uid]
-        msg_uid = [str(s) for s in msg_uid]
-
-        query = query_key = 'BODY[]'
+    def fetch_entire_msg(self, folder, uids, readonly=True):
+        query = 'BODY[]'
         if readonly:
             query = 'BODY.PEEK[]'
-        query_key = 'BODY[]'
-        response = self.imap_server.fetch(msg_uid,
-                                    [query])
+        response = self.imap_server.fetch(uids, [query])
 
         return response
 
@@ -611,7 +626,6 @@ Parsed Content-Disposition was: '{3}'""".format(uid, self.selected_folder_name,
     @connected
     def msgids_for_thrids(self, thread_ids):
         """ Batch fetch to get all X-GM-THRIDs for a group of UIDs """
-        self.imap_server.select_folder(self.all_mail_folder_name())
         # The boolean IMAP queries use reverse polish notation for
         # the query parameters. imaplib automatically adds parenthesis
         criteria = 'X-GM-THRID %s' % str(thread_ids[0])

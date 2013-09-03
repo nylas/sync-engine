@@ -101,7 +101,7 @@ def start(args=None):
 def sync(args):
     assert args.email_address, "Need email address to sync"
     setup_env()
-    from server.initial_sync import initial_sync
+    from server.sync import initial_sync
     from server.util.log import configure_logging
     log = configure_logging()
     initial_sync(args.email_address)

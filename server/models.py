@@ -45,6 +45,8 @@ class User(JSONSerializable, Base):
     # Not from google
     name = Column(String(255))
     date = Column(DateTime)
+    # extra flags
+    initial_sync_done = Column(Boolean)
 
     g_token_issued_to = Column(String(512))
     g_user_id = Column(String(512))
@@ -152,7 +154,6 @@ class MessageMeta(JSONSerializable, Base):
         d['subject'] = self.subject
         d['g_id'] = self.g_msgid
         return d
-
 
 # These are the top 15 most common Content-Type headers
 # in my personal mail archive. --mg
