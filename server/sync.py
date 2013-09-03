@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 from __future__ import division
 import sys, os;  sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..')))
 
@@ -198,4 +197,3 @@ def initial_sync(user_email_address):
     # TODO: immediately start doing a HIGHESTMODSEQ search
 
     return 0
-
