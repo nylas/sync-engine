@@ -61,10 +61,6 @@ def start(args=None):
 
     setup_env()
 
-    # Haven't set this yet in the config file...
-    # Default port for app server
-    port = environ.get('THIS_SERVER_PORT', 8888)
-
 
     # Start ZeroRPC api server service
     # Zero RCP Services
@@ -73,11 +69,13 @@ def start(args=None):
     api_srv_loc = environ.get('API_SERVER_LOC', None)
     make_zerorpc(API, api_srv_loc)
 
+    # Start nginx like this. Restart with `-s reload` flags.
+    # sudo nginx -c nginx.conf -p ./
 
     # Start web server
     from server.app import startserver
     try:
-        startserver('inboxapp.com', port)
+        startserver('127.0.0.1', 5000)
     except Exception, e:
         raise e
         stop(None)

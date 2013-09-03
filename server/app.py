@@ -42,14 +42,8 @@ def get_user(request):
 
 app = Flask(__name__, static_folder='../web_client', static_url_path='', template_folder='templates')
 
-# app.config['STATIC_ROOT'] = 'www..inboxapp.com:8888'
 
-
-app.add_url_rule('/<path:filename>', endpoint='static',
-                 view_func=app.send_static_file, subdomain='www')
-
-
-@app.route('/', subdomain="www")
+@app.route('/')
 def index():
     user = get_user(request)
     return render_template('index.html',
@@ -58,20 +52,8 @@ def index():
 
 
 
-@app.before_request
-def redirect_nonwww():
-    """Redirect non-www requests to www.
-       Let's just stay way from apex domains. """
-    urlparts = urlparse(request.url)
-
-    if urlparts.netloc == app.config['SERVER_NAME']:
-        urlparts_list = list(urlparts)
-        urlparts_list[1] = "www.%s" % app.config['SERVER_NAME']
-        return redirect(urlunparse(urlparts_list), code=301)
-
-
-@app.route('/app', subdomain="www")
-@app.route('/app/', subdomain="www")  # TOFIX not sure I need to do both
+@app.route('/app')
+@app.route('/app/')  # TOFIX not sure I need to do both
 def static_app_handler():
     """ Just returns the static app files """
 
@@ -80,7 +62,7 @@ def static_app_handler():
     return app.send_static_file('index.html')
 
 
-@app.route('/auth/validate', subdomain="www")
+@app.route('/auth/validate')
 def validate_email_handler():
     """ Validate's the email to google MX records """
     email_address = request.args.get('email_address')
@@ -88,7 +70,7 @@ def validate_email_handler():
     return json.dumps(is_valid_dict)
 
 
-@app.route('/auth/redirect_url', subdomain="www")
+@app.route('/auth/redirect_url')
 def auth_redirect_url():
     email_address = request.args.get('email_address')
     log.info("Starting auth with email %s" % email_address)
@@ -98,7 +80,7 @@ def auth_redirect_url():
     return jsonify(url=url)
 
 
-@app.route('/auth/authstart', subdomain="www")
+@app.route('/auth/authstart')
 def auth_start_handler():
     """ Creates oauth URL and redirects to Google """
     assert 'email_address' in request.args
@@ -107,7 +89,7 @@ def auth_start_handler():
                             # redirect_url=url)
 
 
-@app.route('/auth/authdone', subdomain="www")
+@app.route('/auth/authdone')
 def auth_done_handler():
     """ Callback from google oauth. Verify and close popup """
     # Closes the popup
@@ -126,7 +108,7 @@ def auth_done_handler():
         log.info("Successful login. Setting cookie: %s" % new_session.session_token)
 
         secure_cookie = sc.serialize('session', new_session.session_token )
-        response.set_cookie('session', secure_cookie, domain=".inboxapp.com")  # TODO when to expire?
+        response.set_cookie('session', secure_cookie, app.config['SESSION_COOKIE_DOMAIN'])  # TODO when to expire?
 
     except Exception, e:
         # TODO handler error better here. Write an error page to user.
@@ -138,30 +120,29 @@ def auth_done_handler():
 
 
 
-@app.route("/auth/logout", subdomain="www")
+@app.route("/auth/logout")
 def logout():
     """ Delete session cookie and reload """
     response = make_response(redirect('/'))
-    response.set_cookie('session', '', expires=0, domain=".inboxapp.com")
+    response.set_cookie('session', '', expires=0, domain=app.config['SESSION_COOKIE_DOMAIN'])
     return response
 
 
 
 
 
-@app.route("/wire/<path:path>", subdomain="www")
+@app.route("/wire/<path:path>")
 def run_socketio(path):
-    # TODO authenticate user session
+
     real_request = request._get_current_object()
     user = get_user(request)
     if user:
         log.info('Successful socket auth for %s' % user.g_email)
         socketio_manage(request.environ, {
-                        '/wire_namespace': WireNamespace},
+                        '/wire': WireNamespace},
                         request=real_request)
     else:
         log.error("No user object for request: %s" % request)
-
 
     return Response()
 
@@ -321,7 +302,6 @@ def block_retrieval(blockhash):
     if not part: return None
     part = part[0]
 
-
     s = []
     for k,v in part.__dict__.iteritems():
         try:
@@ -348,26 +328,15 @@ def startserver(app_url, app_port):
         log.warning("Specified port to listen should be an integer")
         app_port = int(app_port)
 
-
-
     log.info("Starting Flask...")
     app.debug = True
 
-    # TODO remove port from this for production
-    app.config['SERVER_NAME'] = '%s:%i' % (app_url, app_port)
-    app.config['SESSION_COOKIE_DOMAIN'] = '.inboxapp.com'
-    app.config['SESSION_COOKIE_SECURE'] = True
-    app.config['SESSION_COOKIE_NAME'] = 'inbox_session'
-    app.config['GOOGLE_REDIRECT_URI'] ="http://%s/auth/authdone" % app.config['SERVER_NAME']
-
-
-    # app.config['PREFERRED_URL_SCHEME'] = 'https'
-    app.config['SECRET_KEY'] = 'asdfhouh32ouhwlnsfdoslnsa;hdof'
+    app.config['GOOGLE_REDIRECT_URI'] ="http://www.inboxapp.com/auth/authdone"
 
 
     ws_app = SharedDataMiddleware(app, {
             '/app/': os.path.join(os.path.dirname(__file__), '../web_client')
-        })
+    })
 
 
     log.info('Listening on http://'+app_url+':'+str(app_port)+"/")

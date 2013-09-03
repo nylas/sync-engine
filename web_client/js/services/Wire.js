@@ -291,8 +291,7 @@ app.factory('wire', function ($rootScope) {
     ////////////////////////////////////////////////////////////////////////////////
 
 
-
-    var mySocket = io.connect('/wire_namespace', {
+    var mySocket = io.connect('/wire', {
         'resource': 'wire',
         'reconnect': true,
         'connect timeout': 1000,
@@ -304,13 +303,24 @@ app.factory('wire', function ($rootScope) {
         'close timeout': 90,
         'sync disconnect on unload': true,
 
+        'transports' : ['websocket'], // DEBUG only support websockets
+
     });
+
 
 
     /* Log all */
     mySocket.on('connecting', function (e) {
-        console.log("connecting: " + e)
+        console.log("connecting with " + e);
+
     });
+
+     mySocket.on('reconnect', function(transport, attempt) {
+            console.log('reconnecting by transport ['+transport+'] trycount: '+attempt);
+    });
+
+
+
     mySocket.on('disconnect', function () {
         console.log("disconnect");
     });

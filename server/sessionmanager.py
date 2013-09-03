@@ -20,6 +20,7 @@ def create_session(email_address):
     new_session.session_token = str(uuid.uuid1())
     db_session.add(new_session)
     db_session.commit()
+    log.error("Created new session with token: %s" % str(new_session.session_token))
     return new_session
 
 def get_session(session_token):
