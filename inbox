@@ -49,8 +49,8 @@ def start(args=None):
     setup_env()
 
     # Start ZeroRPC api server service
-    # Zero RCP Services
-    from server.util import make_zerorpc
+    # Zero RPC Services
+    from server.util.concurrency import make_zerorpc
     from server.api import API
     api_srv_loc = os.environ.get('API_SERVER_LOC', None)
     make_zerorpc(API, api_srv_loc)
