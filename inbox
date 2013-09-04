@@ -4,7 +4,6 @@ import argparse
 import signal
 import sys
 import os
-import subprocess
 from config import setup_env
 
 # Trying to get this to work
