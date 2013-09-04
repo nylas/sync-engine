@@ -32,7 +32,7 @@ def debug(args=None):
 
 
 def start(args=None):
-    commit = subprocess.check_output(["git", "describe", "--tags"])
+    # commit = subprocess.check_output(["git", "describe", "--tags"])
     print """
 \033[94m     Welcome to... \033[0m\033[1;95m
       _____       _
@@ -42,7 +42,6 @@ def start(args=None):
       _| |_| | | | |_) | (_) >  <
      |_____|_| |_|_.__/ \___/_/\_\\  \033[0m
 
-     """ + commit + """
      Use CTRL-C to stop.
      """
 
