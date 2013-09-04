@@ -4,6 +4,7 @@
 /man
 /src
 /errors
+/local-config.cfg
 
 
 .DS_Store

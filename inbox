@@ -4,37 +4,8 @@ import argparse
 import signal
 import sys
 import os
-from os import environ
 import subprocess
-import ConfigParser
-import logging as log
-# Don't import the app yet, as we need to set env vars first.
-
-
-def setup_env():
-
-    config_filename = 'default-config.cfg'
-
-    # Set environment variables from config file
-    parser=ConfigParser.SafeConfigParser()
-    parser.read([config_filename])
-    for item in parser.items('development'):
-        k,v = item[0].upper(), item[1]  # All env vars uppercase
-        environ[k] = v
-
-
-    try:
-        config_filename = 'local-config.cfg'
-        # Set environment variables from config file
-        parser=ConfigParser.SafeConfigParser()
-        parser.read([config_filename])
-        for item in parser.items('development'):
-            k,v = item[0].upper(), item[1]  # All env vars uppercase
-            environ[k] = v
-    except Exception, e:
-        log.info("No local config file")
-
-
+from config import setup_env
 
 # Trying to get this to work
 def install(args):
@@ -78,12 +49,11 @@ def start(args=None):
 
     setup_env()
 
-
     # Start ZeroRPC api server service
     # Zero RCP Services
     from server.util import make_zerorpc
     from server.api import API
-    api_srv_loc = environ.get('API_SERVER_LOC', None)
+    api_srv_loc = os.environ.get('API_SERVER_LOC', None)
     make_zerorpc(API, api_srv_loc)
 
     # Start nginx like this. Restart with `-s reload` flags.
