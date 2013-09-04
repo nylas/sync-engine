@@ -100,16 +100,6 @@ class CrispinClient:
         return or_none(self.selected_folder_info,
                 lambda i: long(i['UIDVALIDITY']))
 
-    def with_folder(self, folder, action):
-        if folder != self.selected_folder[0]:
-            old_folder = self.selected_folder
-            self.select_folder(folder)
-            ret = action()
-            self.select_folder(old_folder[0])
-        else:
-            ret = action()
-        return ret
-
     def make_fm(self, g_msgid, label, uid):
         return FolderMeta(
                 g_email=self.email_address,
@@ -227,21 +217,6 @@ class CrispinClient:
 
     def select_all_mail(self):
         return self.select_folder(self.all_mail_folder_name())
-
-    @connected
-    @print_duration
-    def fetch_folder(self, folder_name):
-        """ You probably don't actually want to fetch an entire folder at once. """
-        log.info("Fetching messages in %s" % folder_name)
-
-        select_info = self.select_folder(folder_name)
-        # TODO check and save UID validity
-        UIDs = self.imap_server.search(['NOT DELETED'])
-        UIDs = [str(s) for s in UIDs]
-
-        log.info("\n%i UIDs" % len(UIDs)  )
-
-        return self.fetch_uids(UIDs)
 
     @connected
     def fetch_metadata(self, uids):
@@ -537,10 +512,6 @@ Parsed Content-Disposition was: '{3}'""".format(uid, self.selected_folder_name,
             # new_messages.append(new_msg)
 
         return new_messages, new_parts, new_foldermeta
-
-    def fetch_messages(self, folder_name):
-        new_messages, new_parts = self.fetch_folder(folder_name)
-        return new_messages
 
     @connected
     def fetch_msg_body(self, msg_uid, section_index, readonly=True):
