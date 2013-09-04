@@ -104,7 +104,6 @@ class MessageMeta(JSONSerializable, Base):
     message_id = Column(String(255))
     subject = Column(Text(collation='utf8_unicode_ci'))
     internaldate = Column(DateTime)
-    flags = Column(MediumPickle)
     size = Column(Integer)
     data_sha256 = Column(String(255))
     g_msgid = Column(String(255), primary_key=True)
@@ -126,7 +125,6 @@ class MessageMeta(JSONSerializable, Base):
         self.internaldate = None
         self.g_msgid = None
         self.g_thrid = None
-        self.flags = None
         self.subject = None
         self.g_user_id = None
         self.data_sha256 = None
@@ -317,6 +315,7 @@ class FolderMeta(JSONSerializable, Base):
     g_msgid = Column(String(255))
     folder_name = Column(String(255), primary_key=True)  # All Mail, Inbox, etc. (i.e. Labels)
     msg_uid = Column(String(255), primary_key=True)
+    flags = Column(MediumPickle)
 
 class UIDValidity(JSONSerializable, Base):
     __tablename__ = 'uidvalidity'

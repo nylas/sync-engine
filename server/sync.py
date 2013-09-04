@@ -192,11 +192,12 @@ def safe_commit():
 def update_metadata(uids, crispin_client):
     """ Update flags (the only metadata that can change). """
     new_metadata = crispin_client.fetch_metadata(uids)
-    for msg in db_session.query(MessageMeta).filter(
-            MessageMeta.uid.in_(uids)):
-        if msg.flags != new_metadata[msg.uid]:
-            msg.flags = new_metadata[msg.uid]
-            db_session.add(msg)
+    for fm in db_session.query(FolderMeta).filter(
+            FolderMeta.msg_uid.in_(uids),
+            FolderMeta.folder_name==crispin_client.selected_folder_name):
+        if fm.flags != new_metadata[fm.uid]:
+            fm.flags = new_metadata[fm.uid]
+            db_session.add(fm)
 
 def initial_sync(user_email_address):
     """ Downloads entire messages and
