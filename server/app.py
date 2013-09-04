@@ -331,7 +331,9 @@ def startserver(app_url, app_port):
     log.info("Starting Flask...")
     app.debug = True
 
-    app.config['GOOGLE_REDIRECT_URI'] ="http://www.inboxapp.com/auth/authdone"
+    domain_name = environ.get("SERVER_DOMAIN_NAME", None)
+    assert domain_name, "Need domain name for Google oauth callback"
+    app.config['GOOGLE_REDIRECT_URI'] ="https://%s/auth/authdone" % domain_name
 
 
     ws_app = SharedDataMiddleware(app, {
