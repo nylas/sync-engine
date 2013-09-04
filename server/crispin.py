@@ -191,6 +191,7 @@ class CrispinClient:
             self.imap_server = None
             return False
 
+        self.keepalive = datetime.datetime.utcnow()
         log.info('Connection successful.')
         return True
 
