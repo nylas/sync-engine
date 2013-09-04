@@ -52,7 +52,7 @@ def resync_uids(crispin_client):
     them with X-GM-MSGIDs and sub in the new UIDs for the old. No messages
     are re-downloaded.
     """
-    pass
+    raise Exception("Unimplemented")
 
 def delete_messages(uids, folder):
     # delete these UIDs from this folder
