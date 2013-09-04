@@ -97,7 +97,7 @@ def verify_user(user_obj):
         user_obj = make_user(response)
         log.info("Updated token for user %s" % user_obj.g_email)
 
-    log.info("Returing user object: %s" % user_obj)
+    log.info("Returning user object: %s" % user_obj)
     return user_obj
 
 def get_crispin_from_session(session_token):
