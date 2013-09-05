@@ -335,6 +335,7 @@ def startserver(app_url, app_port):
     assert domain_name, "Need domain name for Google oauth callback"
     app.config['GOOGLE_REDIRECT_URI'] ="https://%s/auth/authdone" % domain_name
 
+    app.config['SESSION_COOKIE_DOMAIN'] = 'inboxapp.com'
 
     ws_app = SharedDataMiddleware(app, {
             '/app/': os.path.join(os.path.dirname(__file__), '../web_client')
