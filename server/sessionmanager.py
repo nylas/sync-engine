@@ -29,8 +29,11 @@ def get_session(session_token):
         log.error("No record for session with token: %s" % session_token)
     return session_obj
 
-def make_user(access_token_dict):
-    new_user = User()
+def make_user(access_token_dict, existing=None):
+    if existing is None:
+        new_user = User()
+    else:
+        new_user = existing
     # new_user.name = None
     new_user.g_token_issued_to = access_token_dict['issued_to']
     new_user.g_user_id = access_token_dict['user_id']
@@ -45,7 +48,7 @@ def make_user(access_token_dict):
     new_user.g_refresh_token = access_token_dict['refresh_token']
     new_user.g_verified_email = access_token_dict['verified_email']
     new_user.date = datetime.datetime.utcnow()  # Used to verify key lifespan
-    new_user = db_session.merge(new_user)
+    new_user = db_session.add(new_user)
     db_session.commit()
 
     # Close old crispin connection, since we've likely probably modified oauth tokens.
@@ -94,7 +97,7 @@ def verify_user(user_obj):
 
         # TODO Verify it and make sure it's valid.
         assert 'access_token' in response
-        user_obj = make_user(response)
+        user_obj = make_user(response, existing=user_obj)
         log.info("Updated token for user %s" % user_obj.g_email)
 
     return user_obj
