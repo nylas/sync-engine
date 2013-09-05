@@ -146,7 +146,7 @@ MYSQL_PORT = 3306
 MYSQL_DATABASE = %s
 """ % (master_password, database_name)
 
-    sudo(""" echo '%s' >> %s/local-config.cfg """ % (config_data, remote_code_dir) , pty=False)
+    sudo(""" echo '%s' >> %s/config.cfg """ % (config_data, remote_code_dir) , pty=False)
 
     # /usr/bin/mysqladmin -u root password 'new-password'
     # /usr/bin/mysqladmin -u root -h hostname password 'new-password'
@@ -178,7 +178,7 @@ def install_inbox_src(git_src_repo):
 
     config_data = """[development]
 """
-    sudo(""" echo '%s' >> %s/local-config.cfg """ % (config_data, remote_code_dir) , pty=False)
+    sudo(""" echo '%s' >> %s/config.cfg """ % (config_data, remote_code_dir) , pty=False)
 
 
 def update_code():
@@ -197,8 +197,8 @@ def install_nginx():
 
 def copy_ssl_keys():
     sudo('mkdir -p /etc/nginx/certs')
-    put('../certs/inboxapp-combined.crt', '/etc/nginx/certs/', use_sudo=True)
-    put('../certs/server.key', '/etc/nginx/certs/', use_sudo=True)
+    put('certs/inboxapp-combined.crt', '/etc/nginx/certs/', use_sudo=True)
+    put('certs/server.key', '/etc/nginx/certs/', use_sudo=True)
 
 
 def create_dns_record():
@@ -235,7 +235,7 @@ def create_dns_record():
     config_data = """
 SERVER_DOMAIN_NAME      =       %s
 """  % server_domain_name
-    sudo(""" echo '%s' >> %s/local-config.cfg """ % (config_data, remote_code_dir) , pty=False)
+    sudo(""" echo '%s' >> %s/config.cfg """ % (config_data, remote_code_dir) , pty=False)
 
     return server_domain_name
 
