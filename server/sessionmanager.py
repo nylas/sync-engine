@@ -51,11 +51,6 @@ def make_user(access_token_dict, existing=None):
     new_user = db_session.add(new_user)
     db_session.commit()
 
-    # Close old crispin connection, since we've likely probably modified oauth tokens.
-    if new_user.g_email in email_address_to_crispins:
-        old_crispin = email_address_to_crispins[new_user.g_email]
-        old_crispin.stop()
-        del email_address_to_crispins[new_user.g_email]
     log.info("Stored new user object %s" % new_user)
     return new_user
 
