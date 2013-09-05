@@ -39,9 +39,13 @@ def check_uidvalidity(crispin_client):
 
 def uidvalidity_valid(crispin_client):
     """ Validate UIDVALIDITY on currently selected folder. """
-    cached_validity = db_session.query(UIDValidity.uid_validity).filter_by(
-            g_email=crispin_client.email_address,
-            folder_name=crispin_client.selected_folder_name).one()[0]
+    try:
+        cached_validity = db_session.query(UIDValidity.uid_validity).filter_by(
+                g_email=crispin_client.email_address,
+                folder_name=crispin_client.selected_folder_name).one()[0]
+    except sqlalchemy.orm.exc.NoResultFound:
+        # No entry? No problem!
+        return True
     assert type(cached_validity) == type(crispin_client.selected_uidvalidity)
     return crispin_client.selected_uidvalidity >= cached_validity
 
