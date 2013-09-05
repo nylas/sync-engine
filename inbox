@@ -6,22 +6,9 @@ import sys
 import os
 from config import setup_env
 
-# Trying to get this to work
-def install(args):
+from server.util.log import configure_logging
+log = configure_logging()
 
-    print "\033[95mCreating virtualenv...\033[0m"
-    os.system('virtualenv --clear .')
-    os.system('virtualenv --distribute --no-site-packages .')
-
-    print "\033[95mActivating virtualenv...\033[0m"
-    os.system('source bin/activate')
-
-    print "\033[95mInstalling dependencies...\033[0m"
-    os.system('pip install -r requirements.txt')
-
-    print "\033[95mDone!\033[0m"
-
-    start()
 
 
 def debug(args=None):
@@ -43,14 +30,13 @@ def start(args=None):
 
      Use CTRL-C to stop.
      """
-
-
     setup_env()
 
     # Start ZeroRPC api server service
     # Zero RPC Services
     from server.util.concurrency import make_zerorpc
     from server.api import API
+
     api_srv_loc = os.environ.get('API_SERVER_LOC', None)
     make_zerorpc(API, api_srv_loc)
 
@@ -70,8 +56,6 @@ def sync(args):
     assert args.email_address, "Need email address to sync"
     setup_env()
     from server.sync import initial_sync
-    from server.util.log import configure_logging
-    log = configure_logging()
     initial_sync(args.email_address)
 
 
@@ -127,9 +111,6 @@ def main():
 
     parser = argparse.ArgumentParser(description="Inbox App")
     subparsers = parser.add_subparsers()
-
-    parser_install = subparsers.add_parser('install')
-    parser_install.set_defaults(func=install)
 
     parser_start = subparsers.add_parser('start')
     parser_start.set_defaults(func=start)
