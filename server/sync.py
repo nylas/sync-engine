@@ -2,13 +2,18 @@ from __future__ import division
 import sys, os;  sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..')))
 
 import sessionmanager
-from models import db_session, FolderMeta, UIDValidity, MessageMeta, MessagePart
-from sqlalchemy import distinct, func
+from models import db_session, FolderMeta, UIDValidity, User
+from sqlalchemy import distinct
 import sqlalchemy.exc
 
 from encoding import EncodingError
 from server.util import chunk, partition
 import logging as log
+
+from datetime import datetime
+
+from gevent import Greenlet, sleep, joinall
+from gevent.queue import Queue, Empty
 
 def refresh_crispin(email):
     return sessionmanager.get_crispin_from_email(email)
@@ -108,7 +113,7 @@ def new_or_updated(uids, folder):
             FolderMeta.msg_uid.in_(uids))])
     return partition(lambda x: x not in local_uids, uids)
 
-def incremental_sync(user_email_address):
+def incremental_sync(user):
     """ Poll this every N seconds for active (logged-in) users and every
         N minutes for logged-out users. It checks for changed message metadata
         and new messages using CONDSTORE / HIGHESTMODSEQ and also checks for
@@ -117,8 +122,8 @@ def incremental_sync(user_email_address):
         We may also wish to frob update frequencies based on which folder
         a user has visible in the UI as well.
     """
-    crispin_client = refresh_crispin(user_email_address)
-    cache_validity = load_validity_cache(crispin_client, user_email_address)
+    crispin_client = refresh_crispin(user.g_email)
+    cache_validity = load_validity_cache(crispin_client, user.g_email)
     needs_update = []
     for folder in crispin_client.sync_folders:
         # eventually we might want to be holding a cache of this stuff from any
@@ -199,21 +204,26 @@ def update_metadata(uids, crispin_client):
     for fm in db_session.query(FolderMeta).filter(
             FolderMeta.msg_uid.in_(uids),
             FolderMeta.folder_name==crispin_client.selected_folder_name):
-        if fm.flags != new_metadata[fm.uid]:
-            fm.flags = new_metadata[fm.uid]
+        if fm.flags != new_metadata[fm.msg_uid]:
+            fm.flags = new_metadata[fm.msg_uid]
             db_session.add(fm)
 
-def initial_sync(user_email_address):
+def initial_sync(user, updates):
     """ Downloads entire messages and
     (1) creates the metadata database
     (2) stores message parts to the block store
-    """
-    crispin_client = refresh_crispin(user_email_address)
 
-    log.info('Syncing mail for {0}'.format(user_email_address))
+    Percent-done and completion messages are sent to the 'updates' queue.
+    """
+    crispin_client = refresh_crispin(user.g_email)
+
+    log.info('Syncing mail for {0}'.format(user.g_email))
 
     # message download for messages from sync_folders is prioritized before
     # AllMail in the order of appearance in this list
+
+    folder_sync_percent_done = dict([(folder, 0) \
+            for folder in crispin_client.sync_folders])
 
     for folder in crispin_client.sync_folders:
         # for each folder, compare what's on the server to what we have.
@@ -230,7 +240,7 @@ def initial_sync(user_email_address):
             len(server_uids), folder))
         existing_uids = [uid for uid, in
                 db_session.query(FolderMeta.msg_uid).filter_by(
-                    g_email=user_email_address, folder_name=folder)]
+                    g_email=user.g_email, folder_name=folder)]
         log.info("Already have {0} items".format(len(existing_uids)))
         warn_uids = set(existing_uids).difference(set(server_uids))
         unknown_uids = set(server_uids).difference(set(existing_uids))
@@ -268,14 +278,17 @@ def initial_sync(user_email_address):
 
             total_messages += len(uids)
 
+            percent_done = (total_messages / len(server_uids)) * 100
+            folder_sync_percent_done[folder] = percent_done
+            updates.put(folder_sync_percent_done)
             log.info("Synced %i of %i (%.4f%%)" % (total_messages,
                                                    len(server_uids),
-                                                    total_messages / len(server_uids) * 100))
+                                                   percent_done))
 
         # transaction commit
         try:
             cached_validity = db_session.query(UIDValidity).filter_by(
-                    g_email=user_email_address, folder_name=folder).one()
+                    g_email=user.g_email, folder_name=folder).one()
             if cached_validity.highestmodseq < crispin_client.selected_highestmodseq:
                 # if we've done a restart on the initial sync, we may have already
                 # saved a UIDValidity row for any given folder, so we need to
@@ -290,7 +303,7 @@ def initial_sync(user_email_address):
                 pass
         except sqlalchemy.orm.exc.NoResultFound:
             db_session.add(UIDValidity(
-                g_email=user_email_address, folder_name=folder,
+                g_email=user.g_email, folder_name=folder,
                 uid_validity=crispin_client.selected_uidvalidity,
                 highestmodseq=crispin_client.selected_highestmodseq))
             db_session.commit()
@@ -299,8 +312,114 @@ def initial_sync(user_email_address):
 
     log.info("Finished.")
 
-    crispin_client.user_obj.initial_sync_done = True
-    db_session.add(crispin_client.user_obj)
-    db_session.commit()
+    # signal completion
+    updates.put('done')
 
-    return 0
+class SyncException(Exception): pass
+
+def notify(user, mtype, message):
+    """ Pass a message on to the notification dispatcher which deals with
+        pubsub stuff.
+    """
+    # log.info("message from {0}: [{1}] {2}".format(user.g_email, mtype, message))
+
+class SyncMonitor(Greenlet):
+    def __init__(self, user, status_callback, n=5):
+        self.user = user
+        self.n = n
+        self.status_callback = status_callback
+        self.inbox = Queue()
+        Greenlet.__init__(self)
+
+    def _run(self):
+        running = True
+        while running:
+            try:
+                cmd = self.inbox.get_nowait()
+                self.process_command(cmd)
+            except Empty:
+                pass
+            self.action()
+
+    def process_command(self, cmd):
+        log.info("processing command {0}".format(cmd))
+        if cmd == 'shutdown':
+            pass
+        else:
+            pass
+
+    def action(self):
+        # XXX add some intermediate checks on the command queue in here
+        user = self.user
+        updates = Queue()
+        # babysit initial sync
+        while not user.initial_sync_done:
+            process = Greenlet.spawn(initial_sync, user, updates)
+            progress = 0
+            while not process.ready() and progress != 'done':
+                self.status_callback(user, 'initial sync', progress)
+                notify(user, 'intial_sync_progress', progress)
+                # XXX TODO wrap this in a Timeout in case the process crashes
+                progress = updates.get()
+            if process.successful():
+                # we don't do this in initial_sync() to avoid confusion
+                # with refreshing the user sqlalchemy object
+                user.initial_sync_done = True
+                db_session.add(user)
+                db_session.commit()
+            else:
+                log.warning("initial sync for {0} failed: {1}".format(
+                    user.g_email, process.exception))
+        assert updates.empty(), \
+            "message queue must be empty after initial sync completes"
+        self.status_callback(user, 'poll', None)
+        # babysit polling FOREVER
+        polling = True
+        while polling:
+            log.info("polling {0}".format(user.g_email))
+            process = Greenlet.spawn(incremental_sync, user)
+            joinall([process])
+            if process.successful():
+                self.status_callback(user, 'poll', datetime.utcnow().isoformat())
+            else:
+                log.warning("incremental update for {0} failed: {1}".format(
+                    user.g_email, process.exception))
+            sleep(self.n)
+
+class SyncService:
+    """ ZeroRPC interface to syncing. """
+    def __init__(self):
+        # {'christine.spang@gmail.com': Synclet()}
+        self.monitors = dict()
+        # READ ONLY from API calls, writes happen from callbacks from monitor
+        # greenlets.
+        # { 'g_email': ('initial_sync', 0) }
+        # 'state' can be ['initial_sync', 'poll']
+        # all data in here ought to be msgpack-serializable!
+        self.user_statuses = dict()
+
+    def _update_user_status(self, user, state, status):
+        # XXX is it possible to mark this function as not remote-callable?
+        self.user_statuses[user.g_email] = (state, status)
+
+    def start_sync(self, user_email_address):
+        try:
+            user = db_session.query(User).filter_by(g_email=user_email_address).one()
+            if user.g_email not in self.monitors:
+                monitor = SyncMonitor(user, lambda u, s, st: \
+                        self._update_user_status(u, s, st))
+                self.monitors[user.g_email] = monitor
+                monitor.start()
+                return "OK sync started"
+            else:
+                return "OK sync already started"
+        except sqlalchemy.orm.exc.NoResultFound:
+            raise SyncException("No such user")
+
+    def sync_status(self, user_email_address):
+        return self.user_statuses.get(user_email_address)
+
+    # XXX this should require some sort of auth or something, used from the
+    # admin panel
+    def status(self):
+        return self.user_statuses

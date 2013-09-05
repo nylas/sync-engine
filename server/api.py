@@ -1,11 +1,9 @@
-import sessionmanager
 import logging as log
 
 import json
 import postel
 from bson import json_util
 from util import chunk
-from sqlalchemy import *
 from models import db_session, MessageMeta, MessagePart, FolderMeta
 
 
@@ -72,3 +70,10 @@ class API(object):
         # elif content_type == 'text/html':
             # msg_data = encoding.clean_html(msg_data)
 
+    def start_sync(self, user_id):
+        """ Talk to the Sync service and have it launch a sync. """
+        pass
+
+    def sync_status(self, user_id):
+        """ Query Sync service for progress. """
+        pass

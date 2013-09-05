@@ -56,11 +56,17 @@ def start(args=None):
         stop(None)
 
 def sync(args):
-    setup_env()
-    from server.sync import initial_sync
-    initial_sync(args.email_address)
+    import zerorpc
 
+    c = zerorpc.Client(timeout=5)
+    c.connect("tcp://127.0.0.1:9997")
+    try:
+        c.start_sync(args.email_address)
+    except zerorpc.exceptions.TimeoutExpired:
+        print >>sys.stderr, "Can't connect. Is the sync server running? (./inbox start)"
+        sys.exit(1)
 
+    print "Sync started. See logs wherever you started the sync server."
 
 def stop(args):
     print """
