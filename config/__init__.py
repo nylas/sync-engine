@@ -23,3 +23,15 @@ def setup_env(config_filename = 'default-config.cfg'):
     except Exception, e:
         log.info("No local config file")
 
+    print environ
+
+
+
+# Expose these as environment variables
+AWS_ACCESS_KEY_ID = 'AKIAJCPMVLGARHTALPRQ'
+AWS_SECRET_ACCESS_KEY = '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'
+
+MESSAGE_STORE_BUCKET_NAME = 'inboxapp-msgstore'
+
+
+

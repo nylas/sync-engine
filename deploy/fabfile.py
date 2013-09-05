@@ -9,10 +9,16 @@ from boto.route53.record import ResourceRecordSets
 
 
 
-aws_key = 'XXXXXXXXXXXXXXXXXXXXXXXX'
-aws_secret = 'XXXXXXXXXXXXXXXXXXXXXXXX'
-aws_key_path = '/path/to/key/pair'
-aws_key_pair = 'keypairname'
+# aws_key = 'XXXXXXXXXXXXXXXXXXXXXXXX'
+# aws_secret = 'XXXXXXXXXXXXXXXXXXXXXXXX'
+# aws_key_path = '/path/to/key/pair'
+# aws_key_pair = 'keypairname'
+
+aws_key = 'AKIAJCPMVLGARHTALPRQ'
+aws_secret = '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'
+aws_key_path = '/Users/mg/mgkey.pem'
+aws_key_pair = 'mgkey'
+
 
 
 aws_security_group = 'quick-start-1'  # opens 22, 80, 3306
@@ -186,7 +192,7 @@ def install_nginx():
     sudo('apt-get -y update')
     sudo('apt-get -y install nginx')
     put('nginx.conf', '/etc/nginx/nginx.conf', use_sudo=True)
-    put('nginx-mime.types', '/etc/nginx/mime.types', use_sudo=True)
+    put('mime.types', '/etc/nginx/mime.types', use_sudo=True)
 
 
 def copy_ssl_keys():
