@@ -1,0 +1,3 @@
+Host github.com
+User git
+IdentityFile /home/ubuntu/.ssh/server_deploy_private.key

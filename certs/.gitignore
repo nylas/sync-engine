@@ -1,0 +1,9 @@
+# This is the directory for SSL certs
+# The deployment script looks for:
+#    server.key  -- the private key
+#    inboxapp-combined.crt  -- the public key, combined with CA chain
+
+# Ignore everything in this directory
+*
+# Except this file
+!.gitignore
