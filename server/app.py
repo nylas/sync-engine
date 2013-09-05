@@ -103,12 +103,14 @@ def auth_done_handler():
         assert 'email' in oauth_response
         assert 'access_token' in oauth_response
         assert 'refresh_token' in oauth_response
+
         new_user_object = sessionmanager.make_user(oauth_response)
+
         new_session = sessionmanager.create_session(new_user_object.g_email)
         log.info("Successful login. Setting cookie: %s" % new_session.session_token)
 
         secure_cookie = sc.serialize('session', new_session.session_token )
-        response.set_cookie('session', secure_cookie, app.config['SESSION_COOKIE_DOMAIN'])  # TODO when to expire?
+        response.set_cookie('session', secure_cookie, domain=app.config['SESSION_COOKIE_DOMAIN'])
 
     except Exception, e:
         # TODO handler error better here. Write an error page to user.
@@ -335,7 +337,7 @@ def startserver(app_url, app_port):
     assert domain_name, "Need domain name for Google oauth callback"
     app.config['GOOGLE_REDIRECT_URI'] ="https://%s/auth/authdone" % domain_name
 
-    app.config['SESSION_COOKIE_DOMAIN'] = 'inboxapp.com'
+    app.config['SESSION_COOKIE_DOMAIN'] = '.inboxapp.com'
 
     ws_app = SharedDataMiddleware(app, {
             '/app/': os.path.join(os.path.dirname(__file__), '../web_client')
