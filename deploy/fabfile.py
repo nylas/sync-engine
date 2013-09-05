@@ -175,6 +175,10 @@ def install_inbox_src(git_src_repo):
     sudo(""" echo '%s' >> %s/local-config.cfg """ % (config_data, remote_code_dir) , pty=False)
 
 
+def update_code():
+    with cd(remote_code_dir):
+        run('git pull origin master')
+
 def install_nginx():
     sudo('apt-get -y update')
     sudo('apt-get -y install python-software-properties -y')
