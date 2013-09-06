@@ -404,17 +404,16 @@ class SyncService:
         # all data in here ought to be msgpack-serializable!
         self.user_statuses = dict()
 
-    def _update_user_status(self, user, state, status):
-        # XXX is it possible to mark this function as not remote-callable?
-        self.user_statuses[user.g_email] = (state, status)
-        notify(user, state, status)
-
     def start_sync(self, user_email_address):
         try:
             user = db_session.query(User).filter_by(g_email=user_email_address).one()
             if user.g_email not in self.monitors:
-                monitor = SyncMonitor(user, lambda u, s, st: \
-                        self._update_user_status(u, s, st))
+                def update_user_status(user, state, status):
+                    """ I really really wish I were a lambda """
+                    self.user_statuses[user.g_email] = (state, status)
+                    notify(user, state, status)
+
+                monitor = SyncMonitor(user, update_user_status)
                 self.monitors[user.g_email] = monitor
                 monitor.start()
                 return "OK sync started"
