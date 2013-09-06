@@ -312,9 +312,6 @@ def initial_sync(user, updates):
 
     log.info("Finished.")
 
-    # signal completion
-    updates.put('done')
-
 class SyncException(Exception): pass
 
 def notify(user, mtype, message):
@@ -356,11 +353,15 @@ class SyncMonitor(Greenlet):
         while not user.initial_sync_done:
             process = Greenlet.spawn(initial_sync, user, updates)
             progress = 0
-            while not process.ready() and progress != 'done':
+            while not process.ready():
                 self.status_callback(user, 'initial sync', progress)
-                notify(user, 'intial_sync_progress', progress)
                 # XXX TODO wrap this in a Timeout in case the process crashes
                 progress = updates.get()
+            # process may have finished with some progress left to
+            # report; only report the last update
+            remaining = [updates.get() for i in xrange(updates.qsize())]
+            if remaining:
+                self.status_callback(user, 'initial sync', remaining[-1])
             if process.successful():
                 # we don't do this in initial_sync() to avoid confusion
                 # with refreshing the user sqlalchemy object
@@ -370,8 +371,7 @@ class SyncMonitor(Greenlet):
             else:
                 log.warning("initial sync for {0} failed: {1}".format(
                     user.g_email, process.exception))
-        assert updates.empty(), \
-            "message queue must be empty after initial sync completes"
+        assert updates.empty(), "initial sync completed for {0} with {1} progress items left to report: {2}".format(user.g_email, updates.qsize(), [updates.get() for i in xrange(updates.qsize())])
         self.status_callback(user, 'poll', None)
         # babysit polling FOREVER
         polling = True
@@ -401,6 +401,7 @@ class SyncService:
     def _update_user_status(self, user, state, status):
         # XXX is it possible to mark this function as not remote-callable?
         self.user_statuses[user.g_email] = (state, status)
+        notify(user, state, status)
 
     def start_sync(self, user_email_address):
         try:
