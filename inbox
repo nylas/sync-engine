@@ -55,7 +55,6 @@ def start(args=None):
         raise e
         stop(None)
 
-
 def sync(args):
     setup_env()
     from server.sync import initial_sync
