@@ -6,9 +6,7 @@ from flask import Flask, request, redirect, make_response, render_template, Resp
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
 from socket_rpc import SocketRPC
-import api
 from models import db_session, User, MessagePart
-import werkzeug.serving
 from werkzeug.wsgi import SharedDataMiddleware
 
 import google_oauth
@@ -19,7 +17,6 @@ from securecookie import SecureCookieSerializer
 import zerorpc
 from os import environ
 import os
-from urlparse import urlparse, urlunparse
 
 
 COOKIE_SECRET = environ.get("COOKIE_SECRET", None)
@@ -316,11 +313,6 @@ def block_retrieval(blockhash):
 
     # return "MSG-STORE RETREIVE BLOCK WITH HASH %s" % blockhash
 
-
-
-@app.errorhandler(404)
-def page_not_found(e):
-    return app.send_static_file('404.html')
 
 
 # TODO do reloading with gunicorn
