@@ -389,7 +389,7 @@ class SyncMonitor(Greenlet):
 class SyncService:
     """ ZeroRPC interface to syncing. """
     def __init__(self):
-        # {'christine.spang@gmail.com': Synclet()}
+        # {'christine.spang@gmail.com': SyncMonitor()}
         self.monitors = dict()
         # READ ONLY from API calls, writes happen from callbacks from monitor
         # greenlets.
