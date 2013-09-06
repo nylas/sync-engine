@@ -347,44 +347,50 @@ class SyncMonitor(Greenlet):
 
     def action(self):
         # XXX add some intermediate checks on the command queue in here
-        user = self.user
-        updates = Queue()
         # babysit initial sync
-        while not user.initial_sync_done:
-            process = Greenlet.spawn(initial_sync, user, updates)
-            progress = 0
-            while not process.ready():
-                self.status_callback(user, 'initial sync', progress)
-                # XXX TODO wrap this in a Timeout in case the process crashes
-                progress = updates.get()
-            # process may have finished with some progress left to
-            # report; only report the last update
-            remaining = [updates.get() for i in xrange(updates.qsize())]
-            if remaining:
-                self.status_callback(user, 'initial sync', remaining[-1])
-            if process.successful():
-                # we don't do this in initial_sync() to avoid confusion
-                # with refreshing the user sqlalchemy object
-                user.initial_sync_done = True
-                db_session.add(user)
-                db_session.commit()
-            else:
-                log.warning("initial sync for {0} failed: {1}".format(
-                    user.g_email, process.exception))
-        assert updates.empty(), "initial sync completed for {0} with {1} progress items left to report: {2}".format(user.g_email, updates.qsize(), [updates.get() for i in xrange(updates.qsize())])
-        self.status_callback(user, 'poll', None)
+        while not self.user.initial_sync_done:
+            self.initial_sync()
+
+        self.status_callback(self.user, 'poll', None)
         # babysit polling FOREVER
         polling = True
         while polling:
-            log.info("polling {0}".format(user.g_email))
-            process = Greenlet.spawn(incremental_sync, user)
-            joinall([process])
-            if process.successful():
-                self.status_callback(user, 'poll', datetime.utcnow().isoformat())
-            else:
-                log.warning("incremental update for {0} failed: {1}".format(
-                    user.g_email, process.exception))
-            sleep(self.n)
+            self.poll()
+
+    def initial_sync(self):
+        updates = Queue()
+        process = Greenlet.spawn(initial_sync, self.user, updates)
+        progress = 0
+        while not process.ready():
+            self.status_callback(self.user, 'initial sync', progress)
+            # XXX TODO wrap this in a Timeout in case the process crashes
+            progress = updates.get()
+        # process may have finished with some progress left to
+        # report; only report the last update
+        remaining = [updates.get() for i in xrange(updates.qsize())]
+        if remaining:
+            self.status_callback(self.user, 'initial sync', remaining[-1])
+        if process.successful():
+            # we don't do this in initial_sync() to avoid confusion
+            # with refreshing the self.user sqlalchemy object
+            self.user.initial_sync_done = True
+            db_session.add(self.user)
+            db_session.commit()
+        else:
+            log.warning("initial sync for {0} failed: {1}".format(
+                self.user.g_email, process.exception))
+        assert updates.empty(), "initial sync completed for {0} with {1} progress items left to report: {2}".format(self.user.g_email, updates.qsize(), [updates.get() for i in xrange(updates.qsize())])
+
+    def poll(self):
+        log.info("polling {0}".format(self.user.g_email))
+        process = Greenlet.spawn(incremental_sync, self.user)
+        joinall([process])
+        if process.successful():
+            self.status_callback(self.user, 'poll', datetime.utcnow().isoformat())
+        else:
+            log.warning("incremental update for {0} failed: {1}".format(
+                self.user.g_email, process.exception))
+        sleep(self.n)
 
 class SyncService:
     """ ZeroRPC interface to syncing. """
