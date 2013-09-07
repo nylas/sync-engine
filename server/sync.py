@@ -184,7 +184,8 @@ def safe_download(uids, folder, crispin_client):
         new_messagemeta, new_messagepart, new_foldermeta = \
                 crispin_client.fetch_uids(uids)
     except EncodingError, e:
-        raise
+        log.error(e)
+        raise e
     # XXX make this catch more specific
     except Exception, e:
         log.error("Crispin fetch failure: %s. Reconnecting..." % e)
