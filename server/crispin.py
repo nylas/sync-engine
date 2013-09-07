@@ -310,7 +310,7 @@ class CrispinClient:
             headers_part.g_msgid = new_msg.g_msgid
             headers_part.walk_index = i
             headers_part.data = json.dumps(mailbase.headers)
-
+            headers_part.data_sha256 = sha256(headers_part.data).hexdigest()
             new_parts.append(headers_part)
 
             for part in mailbase.walk():
@@ -321,7 +321,6 @@ class CrispinClient:
                 new_part = MessagePart()
                 new_part.g_msgid = new_msg.g_msgid
                 new_part.walk_index = i
-
                 new_part.misc_keyval = mimepart.items()  # everything
 
                 # Content-Type
@@ -399,6 +398,7 @@ Parsed Content-Disposition was: '{3}'""".format(uid, self.selected_folder_name,
                     raise Exception("Unknown encoding scheme:" + str(encoding))
 
 
+                new_part.data_sha256 = sha256(data_to_write).hexdigest()
                 new_part.data = data_to_write
                 new_parts.append(new_part)
 

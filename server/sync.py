@@ -162,6 +162,10 @@ def highestmodseq_update(folder, crispin_client, cached_validity=None):
             db_session.add_all(new_foldermeta)
             db_session.add_all(new_messagemeta)
             db_session.add_all(new_messagepart)
+
+            # save message data to s3 before committing changes to db
+            joinall([Greenlet.spawn(part.save_to_s3) for part in new_messagepart])
+
             safe_commit()
         # bigger chunk because the data being fetched here is very small
         for uids in chunk(updated, 5*crispin_client.CHUNK_SIZE):
@@ -273,6 +277,9 @@ def initial_sync(user, updates):
             db_session.add_all(new_foldermeta)
             db_session.add_all(new_messagemeta)
             db_session.add_all(new_messagepart)
+
+            # save message data to s3 before committing changes to db
+            joinall([Greenlet.spawn(part.save_to_s3) for part in new_messagepart])
 
             safe_commit()
 

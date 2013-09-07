@@ -14,6 +14,8 @@ import os
 import logging as log
 # from sqlalchemy.databases.mysql import MSMediumBlob
 from sqlalchemy.dialects import mysql
+from boto.s3.connection import S3Connection
+from boto.s3.key import Key
 
 class JSONSerializable(object):
     def client_json(self):
@@ -212,6 +214,7 @@ class MessagePart(JSONSerializable, Base):
         self.s3_id = None
         self.misc_keyval = None
         self.data_sha256 = None
+        self.data = None
 
     def __repr__(self):
         return 'MessagePart: %s' % self.__dict__
@@ -227,46 +230,95 @@ class MessagePart(JSONSerializable, Base):
         d['filename'] = self.filename
         return d
 
-    @property
-    def _data_file_directory(self):
+    # @property
+    # def _data_file_directory(self):
+    #     assert self.data_sha256
+    #     # Nest it 6 items deep so we dont have huge folders
+    #     h = str(self.data_sha256)
+    #     return '../parts/'+ h[0]+'/'+h[1]+'/'+h[2]+'/'
+
+    # @property
+    # def _data_file_path(self):
+    #     return self._data_file_directory + str(self.data_sha256)
+
+
+    # def set_data(self, new_data, write=True):
+    #     # TODO handle deleting old values?
+    #     # self.del_data()
+
+    #     self.size = len(new_data)
+    #     self.data_sha256 = sha256(new_data).hexdigest()
+
+    #     if write:
+    #         try: os.makedirs(self._data_file_directory)
+    #         except: pass
+    #         f = open(self._data_file_path, 'w')
+    #         f.write(new_data)
+    #         f.close()
+
+
+    # def get_data(self):
+    #     pass
+    #     f = open(self._data_file_path, 'r')
+    #     return f.read()
+
+    # def del_data(self):
+    #     pass
+    #     try: os.remove(self._data_file_path)
+    #     except: pass
+    #     self.size = None
+    #     self.data_sha256 = None
+
+    # data = property(get_data, set_data, del_data, "the message part payload")
+
+    def save_to_s3(self, metadata=None):
+        assert self.data, "Need something to save to S3!"
         assert self.data_sha256
-        # Nest it 6 items deep so we dont have huge folders
-        h = str(self.data_sha256)
-        return '../parts/'+ h[0]+'/'+h[1]+'/'+h[2]+'/'
+        assert self.data_sha256 == sha256(self.data).hexdigest(), "Hashes don't match..."
 
-    @property
-    def _data_file_path(self):
-        return self._data_file_directory + str(self.data_sha256)
+        assert 'AWS_ACCESS_KEY_ID' in environ, "Need AWS key!"
+        assert 'AWS_SECRET_ACCESS_KEY' in environ, "Need AWS secret!"
+        assert 'MESSAGE_STORE_BUCKET_NAME' in environ, "Need bucket name to store message data!"
+
+        # Boto pools connections at the class level
+        conn = S3Connection(environ.get('AWS_ACCESS_KEY_ID'),
+                            environ.get('AWS_SECRET_ACCESS_KEY'))
+        bucket = conn.get_bucket(environ.get('MESSAGE_STORE_BUCKET_NAME'))
+
+        # See if it alreays exists and has the same hash
+        data_obj = bucket.get_key(self.data_sha256)
+        if data_obj:
+            assert data_obj.get_metadata('data_sha256') == self.data_sha256, \
+                "MessagePart hash doesn't match what we previously stored on s3 !"
+            log.info("MessagePart already exists on S3.")
+            return
+
+        data_obj = Key(bucket)
+        if metadata:
+            assert type(metadata) is dict
+            for k, v in metadata.iteritems():
+                data_obj.set_metadata(k, v)
 
 
-    def set_data(self, new_data, write=True):
-        # TODO handle deleting old values?
-        # self.del_data()
-
-        self.size = len(new_data)
-        self.data_sha256 = sha256(new_data).hexdigest()
-
-        if write:
-            try: os.makedirs(self._data_file_directory)
-            except: pass
-            f = open(self._data_file_path, 'w')
-            f.write(new_data)
-            f.close()
+        data_obj.set_metadata('data_sha256', self.data_sha256)
+        # data_obj.content_type = self.content_type  # Experimental
+        data_obj.key = self.data_sha256
+        log.info("Writing data to S3 with hash %s" % self.data_sha256)
+        # def progress(done, total):
+        #     log.info("%.2f%% done" % (done/total * 100) )
+        # data_obj.set_contents_from_string(data, cb=progress)
+        data_obj.set_contents_from_string(self.data)
 
 
-    def get_data(self):
-        pass
-        f = open(self._data_file_path, 'r')
-        return f.read()
-
-    def del_data(self):
-        pass
-        try: os.remove(self._data_file_path)
-        except: pass
-        self.size = None
-        self.data_sha256 = None
-
-    data = property(get_data, set_data, del_data, "the message part payload")
+    def get_from_s3(self):
+        assert self.data_sha256
+        # Boto pools connections at the class level
+        conn = S3Connection(environ.get('AWS_ACCESS_KEY_ID'),
+                            environ.get('AWS_SECRET_ACCESS_KEY'))
+        bucket = conn.get_bucket(environ.get('MESSAGE_STORE_BUCKET_NAME'))
+        data_obj = bucket.get_key(self.data_sha256)
+        assert data_obj
+        self.data = bucket.get_contents_as_string(data_obj)
 
 
 
@@ -356,11 +408,11 @@ DB_URI = "mysql://{username}:{password}@{host}:{port}/{database}?charset=utf8mb4
 if 'RDS_HOSTNAME' in environ:
     # Amazon RDS settings for production
     engine = create_engine(DB_URI.format(
-        username = os.environ['RDS_USER'],
-        password = os.environ['RDS_PASSWORD'],
-        host = os.environ['RDS_HOSTNAME'],
-        port = os.environ['RDS_PORT'],
-        database = os.environ['RDS_DB_NAME']
+        username = environ.get('RDS_USER'),
+        password = environ.get('RDS_PASSWORD'),
+        host = environ.get('RDS_HOSTNAME'),
+        port = environ.get('RDS_PORT'),
+        database = environ.get('RDS_DB_NAME')
     ))
 
 else:
@@ -370,12 +422,45 @@ else:
         raise Exception()
 
     engine = create_engine(DB_URI.format(
-        username = os.environ['MYSQL_USER'],
-        password = os.environ['MYSQL_PASSWORD'],
-        host = os.environ['MYSQL_HOSTNAME'],
-        port = os.environ['MYSQL_PORT'],
-        database = os.environ['MYSQL_DATABASE']
+        username = environ.get('MYSQL_USER'),
+        password = environ.get('MYSQL_PASSWORD'),
+        host = environ.get('MYSQL_HOSTNAME'),
+        port = environ.get('MYSQL_PORT'),
+        database = environ.get('MYSQL_DATABASE')
     ))
+
+
+# ## Make the tables
+# from sqlalchemy import create_engine
+# DB_URI = "mysql+pymysql://{username}:{password}@{host}:{port}/{database}"
+
+
+# if 'RDS_HOSTNAME' in environ:
+#     # Amazon RDS settings for production
+#     engine = create_engine(DB_URI.format(
+#         username = environ.get('RDS_USER'),
+#         password = environ.get('RDS_PASSWORD'),
+#         host = environ.get('RDS_HOSTNAME'),
+#         port = environ.get('RDS_PORT'),
+#         database = environ.get('RDS_DB_NAME')
+#     ), connect_args = {'charset': 'utf8mb4'} )
+
+# else:
+
+#     if os.environ['MYSQL_USER'] == 'XXXXXXX':
+#         log.error("Go setup MySQL settings in config file!")
+#         raise Exception()
+
+#     engine = create_engine(DB_URI.format(
+#         username = environ.get('MYSQL_USER'),
+#         password = environ.get('MYSQL_PASSWORD'),
+#         host = environ.get('MYSQL_HOSTNAME'),
+#         port = environ.get('MYSQL_PORT'),
+#         database = environ.get('MYSQL_DATABASE')
+#     ), connect_args = {'charset': 'utf8mb4'} )
+
+
+
 
 
 Base.metadata.create_all(engine)
