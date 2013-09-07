@@ -13,5 +13,5 @@ def setup_env():
             environ[k] = v
         log.info("Loaded configuration from %s" % config_filename)
     except Exception, e:
-        log.error("Error loading configuration from %s. %e" (config_filename, e))
+        log.error("Error loading configuration from %s. %e" % (config_filename, e))
         raise e
