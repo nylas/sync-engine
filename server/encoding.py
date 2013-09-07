@@ -604,21 +604,24 @@ def attempt_decoding(charset, dec):
         except Exception, e:
             log.error("Both original encoding and decoding failed. Bailing out now. ")
 
+
+            # TOFIX handle error better here.
+
             # payload_data.encode('utf-8')
-            directory = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                    '..', '..', 'errors')
-            # XXX remove this race condition in python 3.2+ using 'exist_ok=True'
-            if not os.path.exists(directory): os.makedirs(directory)
-            from hashlib import sha256
-            filename = safe_filename(charset + '-' + sha256(dec).hexdigest() + '.txt')
+            # directory = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+            #         '..', '..', 'errors')
+            # # XXX remove this race condition in python 3.2+ using 'exist_ok=True'
+            # if not os.path.exists(directory): os.makedirs(directory)
+            # from hashlib import sha256
+            # filename = safe_filename(charset + '-' + sha256(dec).hexdigest() + '.txt')
 
-            log.error("Writing to file..." + directory+filename)
+            # log.error("Writing to file..." + directory+filename)
 
-            f = open(os.path.join(directory,filename), 'w')
-            f.write(dec)
-            f.close()
+            # f = open(os.path.join(directory,filename), 'w')
+            # f.write(dec)
+            # f.close()
 
-            raise e
+            # raise e
 
     except Exception, e:
         log.error("Unknown exception: %s" % e)
