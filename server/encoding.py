@@ -10,7 +10,7 @@ from email.header import decode_header
 # import cgi
 # import bleach
 import logging as log
-import more_codecs
+#import more_codecs  # disable for now
 
 from util import safe_filename
 

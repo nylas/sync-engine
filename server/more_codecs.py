@@ -223,19 +223,13 @@ codecs_dict = [
 codecs_dict = dict(zip(codecs_dict, codecs_dict))
 
 
-# We create this object at import because under the hood, Python is calling fork()
-# which allocates the same memory footprint as the main Python process.
-# Maybe later we can switch to a custom subprocess module that uses vfork or posix_spawn
-# See more here: http://stackoverflow.com/questions/1367373/python-subprocess-popen-oserror-errno-12-cannot-allocate-memory/13329386#13329386
-cmd = [COMMAND, '--list']
-iconv = subprocess.Popen(cmd, env={'LANG': 'C'},
-                         stdout=subprocess.PIPE,
-                         stdin=open(os.devnull, 'w+'),
-                         stderr=open(os.devnull, 'w+'))
-
-
 def get_supported_codecs():
     """Returns a list of the codec names that iconv supports."""
+    cmd = [COMMAND, '--list']
+    iconv = subprocess.Popen(cmd, env={'LANG': 'C'},
+                             stdout=subprocess.PIPE,
+                             stdin=open(os.devnull, 'w+'),
+                             stderr=open(os.devnull, 'w+'))
     return [line.strip('/').lower() for line in
             iconv.communicate()[0].splitlines()]
 
@@ -356,15 +350,13 @@ additional_codecs = [c for c in supported_codecs \
 '''
 
 
-# Same hack as above
-cmd2 = [COMMAND, '-f', from_codec, '-t', to_codec, '-s']  # -s is silent
-if extra_params:
-    cmd.extend(extra_params)
-iconv2 = subprocess.Popen(cmd2, env={'LANG': 'C'}, stdout=subprocess.PIPE,
-                         stdin=subprocess.PIPE, stderr=subprocess.PIPE)
-
 def _run_iconv(from_codec, to_codec, extra_params=None):
-    return iconv2
+    cmd = [COMMAND, '-f', from_codec, '-t', to_codec, '-s']  # -s is silent
+    if extra_params:
+        cmd.extend(extra_params)
+    iconv = subprocess.Popen(cmd, env={'LANG': 'C'}, stdout=subprocess.PIPE,
+                             stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+    return iconv
 
 
 def _iconv_factory(codec_name):

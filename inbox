@@ -9,8 +9,6 @@ from config import setup_env
 from server.util.log import configure_logging
 log = configure_logging()
 
-# create subprocess object before memory footprint grows
-import server.more_codecs
 
 
 def debug(args=None):
