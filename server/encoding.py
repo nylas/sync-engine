@@ -622,6 +622,7 @@ def attempt_decoding(charset, dec):
             # f.close()
 
             # raise e
+            return ""
 
     except Exception, e:
         log.error("Unknown exception: %s" % e)
