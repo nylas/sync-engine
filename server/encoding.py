@@ -16,9 +16,6 @@ from util import safe_filename
 
 import os
 
-
-import more_codecs  # Go look at it...
-
 # This tries to decode using strict, and then gives up and uses replace.
 # TODOD We should probably try to use chardet here as well
 
