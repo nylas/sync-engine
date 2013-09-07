@@ -60,7 +60,7 @@ class CrispinClient:
     # 20 minutes
     SERVER_TIMEOUT = datetime.timedelta(seconds=1200)
     # how many messages to download at a time
-    CHUNK_SIZE = 1 # 20
+    CHUNK_SIZE = 20
 
     def __init__(self, user_obj):
         self.user_obj = user_obj

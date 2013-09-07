@@ -223,13 +223,19 @@ codecs_dict = [
 codecs_dict = dict(zip(codecs_dict, codecs_dict))
 
 
+# We create this object at import because under the hood, Python is calling fork()
+# which allocates the same memory footprint as the main Python process.
+# Maybe later we can switch to a custom subprocess module that uses vfork or posix_spawn
+# See more here: http://stackoverflow.com/questions/1367373/python-subprocess-popen-oserror-errno-12-cannot-allocate-memory/13329386#13329386
+iconv = subprocess.Popen(cmd, env={'LANG': 'C'},
+                         stdout=subprocess.PIPE,
+                         stdin=open(os.devnull, 'w+'),
+                         stderr=open(os.devnull, 'w+'))
+
+
 def get_supported_codecs():
     """Returns a list of the codec names that iconv supports."""
     cmd = [COMMAND, '--list']
-    iconv = subprocess.Popen(cmd, env={'LANG': 'C'},
-                             stdout=subprocess.PIPE,
-                             stdin=open(os.devnull, 'w+'),
-                             stderr=open(os.devnull, 'w+'))
     return [line.strip('/').lower() for line in
             iconv.communicate()[0].splitlines()]
 
