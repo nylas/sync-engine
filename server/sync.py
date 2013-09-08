@@ -9,7 +9,7 @@ import sqlalchemy.exc
 from encoding import EncodingError
 from server.util import chunk, partition
 import logging as log
-
+from gc import collect as garbge_collect
 from datetime import datetime
 
 from gevent import Greenlet, sleep, joinall
@@ -165,6 +165,11 @@ def highestmodseq_update(folder, crispin_client, cached_validity=None):
 
             # save message data to s3 before committing changes to db
             joinall([Greenlet.spawn(part.save_to_s3) for part in new_messagepart])
+            # Clear data stored on MessagePart objects here. Hopefully this will
+            # help with memory issues.
+            for part in new_messagepart:
+                part.data = None
+            garbge_collect()
 
             safe_commit()
         # bigger chunk because the data being fetched here is very small
@@ -185,6 +190,9 @@ def safe_download(uids, folder, crispin_client):
                 crispin_client.fetch_uids(uids)
     except EncodingError, e:
         log.error(e)
+        raise e
+    except MemoryError, e:
+        log.error("Ran out of memory while fetching UIDs %s" % uids)
         raise e
     # XXX make this catch more specific
     except Exception, e:
@@ -281,6 +289,11 @@ def initial_sync(user, updates):
 
             # save message data to s3 before committing changes to db
             joinall([Greenlet.spawn(part.save_to_s3) for part in new_messagepart])
+            # Clear data stored on MessagePart objects here. Hopefully this will
+            # help with memory issues.
+            for part in new_messagepart:
+                part.data = None
+            garbge_collect()
 
             safe_commit()
 
