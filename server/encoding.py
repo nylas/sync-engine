@@ -1,5 +1,7 @@
 """
-This is a fork of the encoding file from Zed Shaw's lampson library. Thanks Zed!
+This is a fork of the encoding file from Zed Shaw's lamson library. Thanks Zed!
+
+Lamson is dual-licensed under the GPL and BSD license.
 """
 
 # import email
