@@ -7,10 +7,8 @@ Lamson is dual-licensed under the GPL and BSD license.
 # import email
 from email.header import decode_header
 import logging as log
-#import more_codecs  # disable for now because it's causting memory issues
-
-from util import safe_filename
-import os
+# registers iconv as another codec lookup backend
+import iconvcodec
 
 # This tries to decode using strict, and then gives up and uses replace.
 # TODOD We should probably try to use chardet here as well
