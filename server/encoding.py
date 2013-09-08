@@ -4,16 +4,10 @@ This is a fork of the encoding file from Zed Shaw's lampson library. Thanks Zed!
 
 # import email
 from email.header import decode_header
-# import quopri
-# from bs4 import BeautifulSoup
-# import re
-# import cgi
-# import bleach
 import logging as log
-#import more_codecs  # disable for now
+#import more_codecs  # disable for now because it's causting memory issues
 
 from util import safe_filename
-
 import os
 
 # This tries to decode using strict, and then gives up and uses replace.
@@ -597,7 +591,11 @@ def attempt_decoding(charset, dec):
             # encoding but replace errors. If this fails, maybe we
             # can do it with 'ignore' for total fuckage
             # For now, this inserts U+FFFD, 'REPLACEMENT CHARACTER'
-            return dec.decode(charset, 'replace')
+            try:
+                return dec.decode(charset, 'replace')
+            except LookupError, e:
+                log.error("Dont' know encoding: %s" % charset)
+                return ""
         except Exception, e:
             log.error("Both original encoding and decoding failed. Bailing out now. ")
 
