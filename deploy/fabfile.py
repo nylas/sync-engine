@@ -33,7 +33,8 @@ AWS = {
             'defaults' : {
                     'image_id' : 'ami-70f96e40',  #  Ubuntu Cloud Guest AMI ID ami-70f96e40 (x86_64)
                     # 'image_id' : 'ami-2231bf12',       # Amazon Linux AMI i386 EBS
-                    'instance_type' : 't1.micro',      # Micro Instance
+                    # 'instance_type' : 't1.micro',      # Micro Instance
+                    'instance_type' : 'm1.small',      # Micro Instance
                     'security_groups': [aws_security_group],
                     'key_name': aws_key_pair,
             }
@@ -44,6 +45,8 @@ region = 'us-west-2'  # Oregon
 env.key_filename = AWS['secrets']['aws_key_path']
 # env.forward_agent = True
 env.user = "ubuntu"
+
+env.password = "password"
 
 
 def deploy_server():
@@ -175,7 +178,7 @@ def install_inbox_src(git_src_repo):
     put('keys/server_deploy_private.key', '.ssh/', mode=0600)
     run('git clone %s %s' % (git_src_repo, remote_code_dir))
 
-    config_data = """[development]
+    config_data = """[inboxserver]
 """
     sudo(""" echo '%s' >> %s/config.cfg """ % (config_data, remote_code_dir) , pty=False)
 
@@ -195,9 +198,9 @@ def install_nginx():
 
 
 def copy_ssl_keys():
-    sudo('mkdir -p /etc/nginx/certs')
-    put('certs/inboxapp-combined.crt', '/etc/nginx/certs/', use_sudo=True)
-    put('certs/server.key', '/etc/nginx/certs/', use_sudo=True)
+    sudo('mkdir -p %s/deploy/certs/' % remote_code_dir)
+    put('certs/inboxapp-combined.crt', '%s/certs/' % remote_code_dir, use_sudo=True)
+    put('certs/server.key', '%s/deploy/certs/' % remote_code_dir, use_sudo=True)
 
 
 def create_dns_record():
@@ -253,7 +256,7 @@ def start_webserver():
     with cd(remote_dir):
         # sudo unlink /tmp/supervisor.sock
         put('supervisord.conf', remote_dir)
-        sudo('supervisord -c supervisord.conf')
+        # sudo('supervisord -c supervisord.conf')
         # run('nohup ./inbox start >& ./app_log.log < /dev/null', pty=False)
         sudo('service nginx restart -p ./code')
 
