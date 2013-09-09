@@ -12,13 +12,12 @@ def start_console(user_email_address):
 	# $ python -m imapclient.interact -H <host> -u <user> ...
 	# but we want to use our sessionmanager and crispin so we're not.
 
-	c = None
 
 	def refresh_crispin():
-	    global c
-	    c = sessionmanager.get_crispin_from_email(user_email_address)
+	    return sessionmanager.get_crispin_from_email(user_email_address)
 
-	refresh_crispin()
+	c = refresh_crispin()
+	c.select_folder(c.all_mail_folder_name())
 
 	server_uids = [unicode(s) for s in c.imap_server.search(['NOT DELETED'])]
 
