@@ -58,7 +58,7 @@ app.factory('IBMessageMeta', function ($injector)
 
         var gravatar_size = 25;
         var theEmail = this.from[0][2] + '@' + this.from[0][3];
-        this.gravatar_url = "http://www.gravatar.com/avatar/" +
+        this.gravatar_url = "https://www.gravatar.com/avatar/" +
                         md5( theEmail.toLowerCase() )+ "?" +
                         'd=mm&' +
                         's=' + encodeURIComponent(gravatar_size);
