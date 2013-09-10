@@ -78,10 +78,9 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
         $scope.activeMessage = selectedMessage;
         $scope.activeMessage.body_text = 'Loading&hellip;';
 
-        console.log(selectedMessage);
+        console.log("Fetching message.")
 
         wire.rpc('meta_with_id', selectedMessage.g_id, function(data) {
-
             var arr_from_json = JSON.parse(data);
 
             angular.forEach(arr_from_json, function(value, key) {
@@ -90,8 +89,10 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
                 var the_message = $scope.message_map[new_part.g_id];
                 the_message.parts[new_part.g_index] = new_part;
 
-                console.log(the_message);
             });
+
+            console.log("Fetched parts:");
+            console.log($scope.message_map[selectedMessage.g_id]);
 
             // $scope.messages = freshParts;
             // var data = atob(data)
@@ -106,12 +107,6 @@ app.controller('AppContainerController', function($scope, $rootScope, wire, grow
         console.log("new_mail_notificaiton");
         growl.post("New Message!", "Michael: Lorem ipsum dolor sit amet, consectetur adipisicing");
     });
-
-
-    $scope.doubleClickedMessage = function(clickedMessage) {
-        console.log('Double clicked message:');
-        console.log(clickedMessage);
-    }
 
 
     // Loaded. Load the messages.
