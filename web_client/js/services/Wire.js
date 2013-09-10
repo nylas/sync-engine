@@ -176,10 +176,8 @@ app.factory('wire', function ($rootScope) {
         return;
     };
 
-    io.SocketNamespace.prototype._onClientCallRPC = function (data) {
-
-        console.log(data)
-
+    io.SocketNamespace.prototype._onClientCallRPC = function (data)
+    {
         if (data.id && this.callbacksRPC[data.id]) {
             this.callbacksRPC[data.id].timerOut && clearTimeout(this.callbacksRPC[data.id].timerOut);
             data.result && typeof this.callbacksRPC[data.id].success == 'function' && this.callbacksRPC[data.id].success(data.result);
@@ -196,10 +194,7 @@ app.factory('wire', function ($rootScope) {
 
 
 
-    /**
-     * Overloading of onPacket to catch RPC call or RPC responses
-     */
-
+/* Overloading of onPacket to catch RPC call or RPC responses */
   io.SocketNamespace.prototype.onPacket = function (packet) {
     var self = this;
 
@@ -316,7 +311,7 @@ app.factory('wire', function ($rootScope) {
     });
 
      mySocket.on('reconnect', function(transport, attempt) {
-            console.log('reconnecting by transport ['+transport+'] trycount: '+attempt);
+        console.log('reconnecting by transport ['+transport+'] trycount: '+attempt);
     });
 
 
