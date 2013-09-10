@@ -2,7 +2,7 @@ from gevent import monkey; monkey.patch_all()
 
 import logging as log
 from tornado.log import enable_pretty_logging; enable_pretty_logging()
-from flask import Flask, request, redirect, make_response, render_template, Response, jsonify
+from flask import Flask, request, redirect, make_response, render_template, Response, jsonify, abort
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
 from socket_rpc import SocketRPC
@@ -225,9 +225,36 @@ class WireNamespace(BaseNamespace):
 
 
 
+@app.route('/file_upload', methods=['GET', 'POST'])
+def upload_file_handler():
+    user = get_user(request)
+    if not user:
+        log.error("No user session for upload attempt")
+        abort(401)
+        return
 
+    if request.method == 'POST' and 'file' in request.files:
+        uploaded_file = request.files['file']
 
-# TODO downloader and uploaders.
+        mp = MessagePart()
+        mp.is_inboxapp_attachment = True
+        mp.g_email = user.g_email
+        mp.content_type = uploaded_file.content_type
+        mp.filename = uploaded_file.filename
+        mp.save(uploaded_file.read())  # TODO consider sending the stream object
+        log.info("Saved upload to S3")
+
+        # Return content_id for upload
+        # TODO right now the content_id is just the upload's hash
+        # later we should salt this with something
+        mp.content_id = mp.data_sha256
+        db_session.add(mp)
+        db_session.commit()
+        return mp.data_sha256
+
+    log.error("What are we trying to upload?")
+    return Response()
+
 
 # class FileDownloadHandler(BaseHandler):
 #     @tornado.web.authenticated
@@ -253,31 +280,6 @@ class WireNamespace(BaseNamespace):
 
 
 
-# class FileUploadHandler(BaseHandler):
-
-#     @tornado.web.authenticated
-#     def post(self):
-
-#         try:
-#             uploaded_file = self.request.files['file'][0]  # wacky
-
-#             uploads_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "../uploads/")
-#             if not os.path.exists(uploads_path):
-#                 os.makedirs(uploads_path)
-
-#             write_filename = str(time.mktime(time.gmtime())) +'_' + uploaded_file.filename
-#             write_path = os.path.join(uploads_path, write_filename)
-
-#             f = open(write_path, "w")
-#             f.write(uploaded_file.body)
-#             f.close()
-
-#             log.info("Uploaded file: %s (%s) to %s" % (uploaded_file.filename, uploaded_file.content_type, write_path))
-
-#             # TODO
-#         except Exception, e:
-#             log.error(e)
-#             raise tornado.web.HTTPError(500)
 
 # Catchall
 # @app.route('/', defaults={'path': ''})
@@ -330,6 +332,9 @@ def startserver(app_url, app_port):
     app.config['GOOGLE_REDIRECT_URI'] ="https://%s/auth/authdone" % domain_name
 
     app.config['SESSION_COOKIE_DOMAIN'] = '.inboxapp.com'
+
+    app.config['MAX_CONTENT_LENGTH'] = 300 * 1024 * 1024  # 300 MB
+
 
     ws_app = SharedDataMiddleware(app, {
             '/app/': os.path.join(os.path.dirname(__file__), '../web_client')

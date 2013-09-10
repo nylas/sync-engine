@@ -201,7 +201,6 @@ app.directive("replybox", function() {
                 // This element will accept file drag/drop uploading
                 dropZone: $('#drop'),
 
-
                 // This function is called when a file is added to the queue;
                 // either via the browse button, or via drag/drop:
                 add: function(e, data) {
@@ -234,8 +233,14 @@ app.directive("replybox", function() {
                 },
 
                 done: function(e, data) {
+
                     scope.$apply(function(s) {
+
+                        // Completion function handler
                         s.$eval(attrs.complete);
+
+                        console.log("Done! With hash: " + data.result)
+
                     });
                 },
 
@@ -245,19 +250,29 @@ app.directive("replybox", function() {
 
                     // Update the hidden input field and trigger a change
                     // so that the jQuery knob plugin knows to update the dial
-                    data.context.find('input').val(progress).change();
 
-                    if (progress == 100) {
-                        data.context.removeClass('working');
-                    }
+                    // data.context.find('input').val(progress).change();
+
+                    console.log("Uploaded: " + progress)
+
+                    // if (progress == 100) {
+                    //     data.context.removeClass('working');
+                    // }
+
+                    console.log("Working...")
                 },
 
                 fail: function(e, data) {
                     scope.$apply(function(s) {
+
+                        console.log("Error uploading...")
+                        console.log(e)
+                        console.log(data)
+
                         s.$eval(attrs.error);
                     });
 
-                    data.context.addClass('error');
+                    // data.context.addClass('error');
                 }
             });
 

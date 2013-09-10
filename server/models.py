@@ -178,6 +178,7 @@ common_content_types = ['text/plain',
                         'message/rfc822',
                         'image/jpg']
 
+
 class MessagePart(JSONSerializable, Base):
     __tablename__ = 'messagepart'
     """ Metadata for message parts stored in s3 """
@@ -200,6 +201,9 @@ class MessagePart(JSONSerializable, Base):
     s3_id = Column(String(255))
     data_sha256 = Column(String(255))
 
+    is_inboxapp_attachment = Column(Boolean)
+
+
     __table_args__ = (UniqueConstraint('g_email', 'g_msgid', 'walk_index',
         name='_email_msgid_walkindex_uc'),)
 
@@ -215,6 +219,7 @@ class MessagePart(JSONSerializable, Base):
         self.misc_keyval = None
         self.data_sha256 = None
         self.data = None
+        is_inboxapp_attachment = False
 
     def __repr__(self):
         return 'MessagePart: %s' % self.__dict__
@@ -271,10 +276,19 @@ class MessagePart(JSONSerializable, Base):
 
     # data = property(get_data, set_data, del_data, "the message part payload")
 
-    def save_to_s3(self, metadata=None):
+    def save_to_s3(self):
         assert self.data, "Need something to save to S3!"
-        assert self.data_sha256
-        assert self.data_sha256 == sha256(self.data).hexdigest(), "Hashes don't match..."
+        self.save(self.data)
+
+
+    def save(self, data, to_s3=True):
+        if not to_s3:
+            log.error("Where do you want to save it instead? ...")
+            return
+
+        assert data, "Need something to save to S3!"
+        self.bytes = len(data)
+        self.data_sha256 = sha256(data).hexdigest()
 
         assert 'AWS_ACCESS_KEY_ID' in environ, "Need AWS key!"
         assert 'AWS_SECRET_ACCESS_KEY' in environ, "Need AWS secret!"
@@ -294,12 +308,10 @@ class MessagePart(JSONSerializable, Base):
             return
 
         data_obj = Key(bucket)
-        if metadata:
-            assert type(metadata) is dict
-            for k, v in metadata.iteritems():
-                data_obj.set_metadata(k, v)
-
-
+        # if metadata:
+        #     assert type(metadata) is dict
+        #     for k, v in metadata.iteritems():
+        #         data_obj.set_metadata(k, v)
         data_obj.set_metadata('data_sha256', self.data_sha256)
         # data_obj.content_type = self.content_type  # Experimental
         data_obj.key = self.data_sha256
@@ -307,7 +319,7 @@ class MessagePart(JSONSerializable, Base):
         # def progress(done, total):
         #     log.info("%.2f%% done" % (done/total * 100) )
         # data_obj.set_contents_from_string(data, cb=progress)
-        data_obj.set_contents_from_string(self.data)
+        data_obj.set_contents_from_string(data)
 
 
     def get_from_s3(self):
@@ -339,33 +351,6 @@ def serialize_before_insert(mapper, connection, target):
         target._content_type_other = target.content_type
 
 
-
-class AttachmentParts(Base):
-    __tablename__ = 'attachmentpart'
-    """ These are objects which are attached to mail messages, but
-        represented as links to external files
-    """
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    g_email = Column(String(255))  # Should add index=true?
-
-
-    # This is a unique identifier that is used in the content URL
-    content_id = Column(String(255), unique=True)  # For attachments
-
-    content_type = Column(String(255))
-    bytes = Column(Integer)
-    filename = Column(String(255))
-    _misc_keyval = Column(String(255))
-    s3_id = Column(String(255))
-
-    def __init__(self):
-        self.g_email = None
-        self.content_type = None
-        self.bytes = None
-        self.filename = None
-        self.s3_id = None
-        self.misc_keyval = None
 
 
 class FolderMeta(JSONSerializable, Base):
