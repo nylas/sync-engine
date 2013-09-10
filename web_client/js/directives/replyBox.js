@@ -235,11 +235,10 @@ app.directive("replybox", function() {
                 done: function(e, data) {
 
                     scope.$apply(function(s) {
-
                         // Completion function handler
                         s.$eval(attrs.complete);
 
-                        console.log("Done! With hash: " + data.result)
+                        console.log("Done! With hash: " + data.result);
 
                     });
                 },
@@ -255,11 +254,11 @@ app.directive("replybox", function() {
 
                     console.log("Uploaded: " + progress)
 
-                    // if (progress == 100) {
-                    //     data.context.removeClass('working');
-                    // }
+                    if (progress == 100) {
+                        // data.context.removeClass('working');
+                        console.log("Working...")
+                    }
 
-                    console.log("Working...")
                 },
 
                 fail: function(e, data) {

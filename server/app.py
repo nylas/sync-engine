@@ -241,6 +241,7 @@ def upload_file_handler():
         mp.g_email = user.g_email
         mp.content_type = uploaded_file.content_type
         mp.filename = uploaded_file.filename
+        log.info("New uploaded file %s" % mp.filename)
         mp.save(uploaded_file.read())  # TODO consider sending the stream object
         log.info("Saved upload to S3")
 
