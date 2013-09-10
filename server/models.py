@@ -223,46 +223,51 @@ class MessagePart(JSONSerializable, Base):
         d['filename'] = self.filename
         return d
 
-    # @property
-    # def _data_file_directory(self):
-    #     assert self.data_sha256
-    #     # Nest it 6 items deep so we dont have huge folders
-    #     h = str(self.data_sha256)
-    #     return '../parts/'+ h[0]+'/'+h[1]+'/'+h[2]+'/'
+    @property
+    def _data_file_directory(self):
+        assert self.data_sha256
+        # Nest it 6 items deep so we dont have huge folders
+        h = str(self.data_sha256)
+        return '../parts/'+ h[0]+'/'+h[1]+'/'+h[2]+'/'
 
-    # @property
-    # def _data_file_path(self):
-    #     return self._data_file_directory + str(self.data_sha256)
-
-
-    # def set_data(self, new_data, write=True):
-    #     # TODO handle deleting old values?
-    #     # self.del_data()
-
-    #     self.size = len(new_data)
-    #     self.data_sha256 = sha256(new_data).hexdigest()
-
-    #     if write:
-    #         try: os.makedirs(self._data_file_directory)
-    #         except: pass
-    #         f = open(self._data_file_path, 'w')
-    #         f.write(new_data)
-    #         f.close()
+    @property
+    def _data_file_path(self):
+        return self._data_file_directory + str(self.data_sha256)
 
 
-    # def get_data(self):
-    #     pass
-    #     f = open(self._data_file_path, 'r')
-    #     return f.read()
+    def set_data(self, new_data, write=True):
+        # TODO handle deleting old values?
+        # self.del_data()
 
-    # def del_data(self):
-    #     pass
-    #     try: os.remove(self._data_file_path)
-    #     except: pass
-    #     self.size = None
-    #     self.data_sha256 = None
+        self.size = len(new_data)
+        self.data_sha256 = sha256(new_data).hexdigest()
 
-    # data = property(get_data, set_data, del_data, "the message part payload")
+        if write:
+            try: os.makedirs(self._data_file_directory)
+            except: pass
+            f = open(self._data_file_path, 'w')
+            f.write(new_data)
+            f.close()
+
+
+    def get_data(self):
+        try:
+            with open(self._data_file_path, 'r') as f:
+                return f.read()
+        except IOError:
+            # doesn't exist on disk; fetch from S3 and write to disk
+            log.warning("data doesn't exist on disk; fetching from S3")
+            data = self.get_from_s3()
+            self.set_data(data)
+            return data
+
+    def del_data(self):
+        try: os.remove(self._data_file_path)
+        except: pass
+        self.size = None
+        self.data_sha256 = None
+
+    data = property(get_data, set_data, del_data, "the message part payload")
 
     def save_to_s3(self):
         assert self.data, "Need something to save to S3!"
