@@ -1,11 +1,12 @@
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum, Text
+from sqlalchemy import ForeignKey
 from sqlalchemy.types import PickleType
 
 from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 
 from sqlalchemy import event
-from sqlalchemy.orm import reconstructor
+from sqlalchemy.orm import reconstructor, relationship
 from sqlalchemy.schema import UniqueConstraint
 
 from hashlib import sha256
@@ -184,10 +185,9 @@ class MessagePart(JSONSerializable, Base):
     """ Metadata for message parts stored in s3 """
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    messagemeta_id = Column(Integer, ForeignKey('messagemeta.id'), nullable=False)
+    messagemeta = relationship('MessageMeta', backref="parts")
 
-    g_email = Column(String(255))  # Should add index=true?
-
-    g_msgid = Column(String(255))
     walk_index = Column(Integer)
     # Save some space with common content types
     _content_type_common = Column(Enum(*common_content_types))
@@ -195,35 +195,23 @@ class MessagePart(JSONSerializable, Base):
 
     content_disposition = Column(Enum('inline', 'attachment'))
     content_id = Column(String(255))  # For attachments
-    size = Column(Integer)
-    filename = Column(String(255))
+    size = Column(Integer, default=0)
     misc_keyval = Column(MediumPickle)
     s3_id = Column(String(255))
     data_sha256 = Column(String(255))
 
-    is_inboxapp_attachment = Column(Boolean)
+    is_inboxapp_attachment = Column(Boolean, default=False)
 
+    __table_args__ = (UniqueConstraint('messagemeta_id', 'walk_index', 'data_sha256',
+        name='_messagepart_uc'),)
 
-    __table_args__ = (UniqueConstraint('g_email', 'g_msgid', 'walk_index',
-        name='_email_msgid_walkindex_uc'),)
-
-    def __init__(self):
-        self.g_email = None
-        self.g_msgid = None
-        self.walk_index = None
+    def __init__(self, *args, **kwargs):
         self.content_type = None
-        self.content_disposition = None
         self.size = 0
-        self.filename = None
-        self.s3_id = None
-        self.misc_keyval = None
-        self.data_sha256 = None
-        self.data = None
-        is_inboxapp_attachment = False
+        Base.__init__(self, *args, **kwargs)
 
     def __repr__(self):
         return 'MessagePart: %s' % self.__dict__
-
 
     def client_json(self):
         d = {}
@@ -350,19 +338,18 @@ def serialize_before_insert(mapper, connection, target):
         target._content_type_common = None
         target._content_type_other = target.content_type
 
-
-
-
 class FolderMeta(JSONSerializable, Base):
     __tablename__ = 'foldermeta'
     """ This maps folder names to UIDs """
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
+    # XXX ForeignKey into Users table instead?
     g_email = Column(String(255))
+    # XXX ForeignKey into MessageMeta table instead?
     g_msgid = Column(String(255))
-    folder_name = Column(String(255))  # All Mail, Inbox, etc. (i.e. Labels)
     msg_uid = Column(String(255))
+    folder_name = Column(String(255))  # All Mail, Inbox, etc. (i.e. Labels)
     flags = Column(MediumPickle)
 
     __table_args__ = (UniqueConstraint('folder_name', 'msg_uid', 'g_email',
