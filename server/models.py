@@ -192,6 +192,7 @@ class MessagePart(JSONSerializable, Base):
     # Save some space with common content types
     _content_type_common = Column(Enum(*common_content_types))
     _content_type_other = Column(String(255))
+    filename = Column(String(255))
 
     content_disposition = Column(Enum('inline', 'attachment'))
     content_id = Column(String(255))  # For attachments
@@ -215,7 +216,7 @@ class MessagePart(JSONSerializable, Base):
 
     def client_json(self):
         d = {}
-        d['g_id'] = self.g_msgid
+        d['g_id'] = self.messagemeta.g_msgid
         d['g_index'] = self.walk_index
         d['content_type'] = self.content_type
         d['content_disposition'] = self.content_disposition

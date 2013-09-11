@@ -6,6 +6,8 @@ from bson import json_util
 from util import chunk
 from models import db_session, MessageMeta, MessagePart, FolderMeta
 
+from sqlalchemy.orm import joinedload
+
 
 
 class API(object):
@@ -50,17 +52,14 @@ class API(object):
 
     def meta_with_id(self, user_id, data_id):
 
-        existing_msgs_query = db_session.query(MessageMeta).filter(MessageMeta.g_msgid == data_id)
+        existing_msgs_query = db_session.query(MessageMeta).filter(MessageMeta.g_msgid == data_id).options(joinedload("parts"))
         log.info(existing_msgs_query)
         meta = existing_msgs_query.all()
         assert len(meta) == 1, "Incorrect messagemeta response"
         m = meta[0]
 
-        existing_parts_query = db_session.query(MessagePart).filter(MessagePart.g_msgid == data_id)
-        parts = existing_parts_query.all()
-
+        parts = m.parts
         print 'parts', parts
-
 
         return json.dumps([p.client_json() for p in parts],
                            default=json_util.default)
