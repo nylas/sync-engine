@@ -186,8 +186,7 @@ def highestmodseq_update(folder, crispin_client, cached_validity=None):
 
 def safe_download(uids, folder, crispin_client):
     try:
-        new_messagemeta, new_messagepart, new_foldermeta = \
-                crispin_client.fetch_uids(uids)
+        new_messages, new_foldermeta = crispin_client.fetch_uids(uids)
     except EncodingError, e:
         log.error(e)
         raise e
@@ -198,10 +197,9 @@ def safe_download(uids, folder, crispin_client):
     except Exception, e:
         log.error("Crispin fetch failure: %s. Reconnecting..." % e)
         crispin_client = refresh_crispin(crispin_client.email_address)
-        new_messagemeta, new_messagepart, new_foldermeta = \
-                crispin_client.fetch_uids(uids)
+        new_messages, new_foldermeta = crispin_client.fetch_uids(uids)
 
-    return new_messagemeta, new_messagepart, new_foldermeta
+    return new_messages, new_foldermeta
 
 def safe_commit():
     try:
@@ -281,18 +279,21 @@ def initial_sync(user, updates):
         log.info("Starting sync for {0} with chunks of size {1}".format(
             folder, crispin_client.CHUNK_SIZE))
         for uids in chunk(full_download, crispin_client.CHUNK_SIZE):
-            new_messagemeta, new_messagepart, new_foldermeta = \
-                    safe_download(uids, folder, crispin_client)
+            new_messages, new_foldermeta = safe_download(
+                    uids, folder, crispin_client)
             db_session.add_all(new_foldermeta)
-            db_session.add_all(new_messagemeta)
-            db_session.add_all(new_messagepart)
+            db_session.add_all([msg['meta'] for msg in new_messages.values()])
+            # populates 'id' field on messagemeta objects
+            # db_session.flush()
+            for msg in new_messages.values():
+                db_session.add_all(msg['parts'])
+                # save message data to s3 before committing changes to db
+                joinall([Greenlet.spawn(part.save_to_s3) for part in msg['parts']])
 
-            # save message data to s3 before committing changes to db
-            joinall([Greenlet.spawn(part.save_to_s3) for part in new_messagepart])
             # Clear data stored on MessagePart objects here. Hopefully this will
             # help with memory issues.
-            for part in new_messagepart:
-                part.data = None
+            # for part in new_messagepart:
+            #     part.data = None
             garbge_collect()
 
             safe_commit()

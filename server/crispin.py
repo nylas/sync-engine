@@ -234,7 +234,9 @@ class CrispinClient:
         raw_messages = self.imap_server.fetch(UIDs,
                 [query, 'X-GM-THRID', 'X-GM-MSGID', 'X-GM-LABELS'])
 
-        new_messages, new_parts, new_foldermeta = [], [], []
+        # { 'msgid': { 'meta': MessageMeta, 'parts': [MessagePart, ...] } }
+        messages = dict()
+        new_foldermeta = []
         for uid, internaldate, flags, envelope, body, x_gm_thrid, x_gm_msgid, \
                 x_gm_labels in messages_from_raw(raw_messages):
             mailbase = encoding.from_string(body)
@@ -296,22 +298,17 @@ class CrispinClient:
             new_msg.size = len(body)  # includes headers text
 
 
-            new_messages.append(new_msg)
+            messages.setdefault(new_msg.g_msgid, dict())['meta'] = new_msg
 
-
-            # new_parts.append
-
-            # TODO store these
             i = 0  # for walk_index
 
-            # # Store all message headers as object with index 0
+            # Store all message headers as object with index 0
             headers_part = MessagePart()
-            new_msg.g_email = self.user_obj.g_email
-            headers_part.g_msgid = new_msg.g_msgid
+            headers_part.messagemeta = new_msg
             headers_part.walk_index = i
             headers_part.data = json.dumps(mailbase.headers)
             headers_part.data_sha256 = sha256(headers_part.data).hexdigest()
-            new_parts.append(headers_part)
+            messages[new_msg.g_msgid].setdefault('parts', []).append(headers_part)
 
             for part in mailbase.walk():
                 i += 1
@@ -320,6 +317,7 @@ class CrispinClient:
 
                 new_part = MessagePart()
                 new_part.g_msgid = new_msg.g_msgid
+                new_part.messagemeta = new_msg
                 new_part.walk_index = i
                 new_part.misc_keyval = mimepart.items()  # everything
 
@@ -366,7 +364,6 @@ Parsed Content-Disposition was: '{3}'""".format(uid, self.selected_folder_name,
                 if mimepart.epilogue:
                     log.warning("Found an epilogue! " + mimepart.epilogue)
 
-
                 payload_data = mimepart.get_payload(decode=False)  # decode ourselves
                 data_encoding = mimepart.get('Content-Transfer-Encoding', None).lower()
 
@@ -400,119 +397,9 @@ Parsed Content-Disposition was: '{3}'""".format(uid, self.selected_folder_name,
 
                 new_part.data_sha256 = sha256(data_to_write).hexdigest()
                 new_part.data = data_to_write
-                new_parts.append(new_part)
+                messages[new_msg.g_msgid]['parts'].append(new_part)
 
-
-
-            # bodystructure = message_dict['BODY']
-
-            # def create_messagepart(p, section='1'):
-            #     assert len(p) > 0
-
-            #     part = MessagePart()
-            #     part.section = str(section)
-            #     part.g_msgid = new_msg.g_msgid
-            #     part.allmail_uid = str(message_uid)
-
-            #     if len(p) == 1:
-            #         if p[0].lower() == "appledouble":
-            #             log.error("Content-type: appledouble")
-            #             # print p
-            #             return None
-            #         else:
-            #             log.error("Why is there only one content-type part? Should it be multipart/%s ??" % p[0])
-            #             return part
-
-            #     content_type_major = p[0].lower()
-            #     content_type_minor = p[1].lower()
-
-            #     part.content_type = "%s/%s" % (content_type_major, content_type_minor)
-
-            #     if len(p) == 2: return part
-
-            #     assert len(p) >= 7, p
-            #     part.encoding = p[5]  # Content-Transfer-Encoding
-            #     part.bytes = p[6]
-
-            #     # Example for p[2] is ("CHARSET" "ISO-8859-1" "FORMAT" "flowed")  or  ("NAME" "voicemail.wav")
-            #     if p[2] and not isinstance(p[2], basestring):
-            #         assert len(p[2]) % 2 == 0  # key/value pairs
-            #         m = {}
-            #         for i in range(0 , len(p[2]) ,2):  # other optional arguments.
-            #             key = p[2][i].lower()
-            #             val = p[2][i+1]
-
-            #             if key == 'charset':
-            #                 part.charset = val
-            #             elif key == 'name':
-            #                 part.filename = val
-            #             else:
-            #                 m[key] = val
-            #         part.misc_keyval = m
-            #     if content_type_major == 'text':
-            #         assert len(p) == 8
-            #         part.line_count = p[7]
-            #     return part
-
-
-            # def make_obj(p, i=''):
-            #     if not isinstance(p[0], basestring):
-
-            #         # This part removes the mime relation
-            #         # print 'p here...', p
-            #         if isinstance(p[-1], basestring):
-            #             mime_relation = p[-1]
-            #             if (len(p) == 2):
-            #                 if isinstance(p[0][0], basestring):  # single object
-            #                     toIterate = p[:-1]
-            #                 else:  # Nested list
-            #                     toIterate = p[0]
-            #             else:  # probably have multiple objects here
-            #                 toIterate = p[:-1]
-            #         else:
-            #             # No relationship var here
-            #             log.error("NO MIME RELATION HERE.....")
-            #             toIterate = p
-
-
-            #         for x, part in enumerate(toIterate):
-
-            #             if isinstance(part, basestring):
-            #                 log.error("Multiple-nested content type? %s" % part)
-            #                 continue
-
-
-            #             if len(i) > 0:
-            #                 section = i+'.' + str(x+1)
-            #             else:
-            #                 section = str(x+1)
-
-            #             # print 'calling make_obj', part
-
-            #             ret = make_obj(part, section)  # call recursively and add to lists
-
-            #             if not ret:
-            #                 continue
-            #             # Relations are alternative, mixed, signed, related
-            #             new_parts.append(ret)
-            #         return
-
-            #     else:
-            #         if len(i) > 0: index = i+'.1'  ## is this a lie? TODO
-            #         else: index = '1'
-            #         # print 'NOT BASESTRING', p, type(p)
-            #         return create_messagepart(p, i)
-
-
-            # if not bodystructure.is_multipart:
-            #     part = create_messagepart(bodystructure)
-            #     new_parts.append(part)
-            # else:
-            #     make_obj(bodystructure)
-
-            # new_messages.append(new_msg)
-
-        return new_messages, new_parts, new_foldermeta
+        return messages, new_foldermeta
 
     @connected
     def fetch_msg_body(self, msg_uid, section_index, readonly=True):
