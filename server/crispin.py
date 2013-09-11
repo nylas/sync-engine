@@ -14,6 +14,8 @@ from models import MessageMeta, MessagePart, FolderMeta
 import time
 import json
 
+from itertools import chain
+
 from quopri import decodestring as quopri_decodestring
 from base64 import b64decode
 from chardet import detect as detect_charset
@@ -310,13 +312,18 @@ class CrispinClient:
             headers_part.data_sha256 = sha256(headers_part.data).hexdigest()
             messages[new_msg.g_msgid].setdefault('parts', []).append(headers_part)
 
-            for part in mailbase.walk():
+            extra_parts = []
+
+            if mailbase.body:
+                # single-part message?
+                extra_parts.append(mailbase)
+
+            for part in chain(extra_parts, mailbase.walk()):
                 i += 1
                 mimepart = encoding.to_message(part)
                 if mimepart.is_multipart(): continue  # TODO should we store relations?
 
                 new_part = MessagePart()
-                new_part.g_msgid = new_msg.g_msgid
                 new_part.messagemeta = new_msg
                 new_part.walk_index = i
                 new_part.misc_keyval = mimepart.items()  # everything
