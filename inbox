@@ -44,6 +44,11 @@ def start(args=None):
     sync_srv_loc = os.environ.get('CRISPIN_SERVER_LOC', None)
     make_zerorpc(SyncService, sync_srv_loc)
 
+    # start ZeroRPC search server service
+    from server.search import SearchService
+    search_srv_loc = os.environ.get('SEARCH_SERVER_LOC', None)
+    make_zerorpc(SearchService, search_srv_loc)
+
     # Start nginx like this. Restart with `-s reload` flags.
     # sudo nginx -c nginx.conf -p ./
 
