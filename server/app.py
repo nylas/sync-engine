@@ -179,15 +179,11 @@ class WireNamespace(BaseNamespace):
                                 '' if len(active_sockets) == 1 else 's'))
 
     def recv_message(self, message):
-        # TODO check auth everytime?
         log.info(message)
 
-        # TODO MG FIX THIS NAO
-        query = db_session.query(User).filter(User.g_email == 'mgrinich@gmail.com')
-        res = query.all()
-        assert len(res) == 1
-        user = res[0]
-
+        # Make this an @authenticated decorator someday
+        user = get_user(request)
+        assert user
 
         api_srv_loc = environ.get('API_SERVER_LOC', None)
         assert api_srv_loc
