@@ -7,7 +7,7 @@ class SearchService:
         log.info("Searching for {0} on behalf of {1}".format(query_string,
             user_email_address))
         # Open the database for searching.
-        database = xapian.Database("parts.db")
+        database = xapian.Database("../parts.db")
 
         # Start an enquire session.
         enquire = xapian.Enquire(database)
