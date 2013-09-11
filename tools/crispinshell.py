@@ -7,30 +7,29 @@ import IPython
 
 def start_console(user_email_address):
 
+    # You can also do this with
+    # $ python -m imapclient.interact -H <host> -u <user> ...
+    # but we want to use our sessionmanager and crispin so we're not.
 
-	# You can also do this with
-	# $ python -m imapclient.interact -H <host> -u <user> ...
-	# but we want to use our sessionmanager and crispin so we're not.
 
+    def refresh_crispin():
+        return sessionmanager.get_crispin_from_email(user_email_address)
 
-	def refresh_crispin():
-	    return sessionmanager.get_crispin_from_email(user_email_address)
+    c = refresh_crispin()
+    c.select_folder(c.all_mail_folder_name())
 
-	c = refresh_crispin()
-	c.select_folder(c.all_mail_folder_name())
+    server_uids = [unicode(s) for s in c.imap_server.search(['NOT DELETED'])]
 
-	server_uids = [unicode(s) for s in c.imap_server.search(['NOT DELETED'])]
+    banner = """
+    You can access the crispin instance with the 'c' variable.
+    AllMail message UIDs are in 'server_uids'.
+    You can refresh the session with 'refresh_crispin()'.
 
-	banner = """
-	You can access the crispin instance with the 'c' variable.
-	AllMail message UIDs are in 'server_uids'.
-	You can refresh the session with 'refresh_crispin()'.
+    IMAPClient docs are at:
 
-	IMAPClient docs are at:
+        http://imapclient.readthedocs.org/en/latest/#imapclient-class-reference
+    """
 
-	    http://imapclient.readthedocs.org/en/latest/#imapclient-class-reference
-	"""
+    IPython.embed(banner1=banner)
 
-	IPython.embed(banner1=banner)
-
-	# XXX Any cleanup?
+    # XXX Any cleanup?
