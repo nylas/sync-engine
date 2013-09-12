@@ -135,11 +135,11 @@ def main():
     parser_stop.set_defaults(func=stop)
 
     parser_console = subparsers.add_parser('console', description="REPL for crispin")
-    parser_console.add_argument('--email_address', help='Email address of user to sync', required=True)
+    parser_console.add_argument('email_address', help='Email address of user to sync')
     parser_console.set_defaults(func=console)
 
     parser_sync = subparsers.add_parser('sync', description="Download initial mail metadata and parts.")
-    parser_sync.add_argument('--email_address', help='Email address of user to sync', required=True)
+    parser_sync.add_argument('email_address', help='Email address of user to sync')
     parser_sync.set_defaults(func=sync)
 
     args = parser.parse_args()
