@@ -35,7 +35,7 @@ nav, section {
 body {
   text-rendering: optimizeLegibility;
   font-smooth:always;
-  background: #dbdbdb;
+  background: #DAE2E2;
 }
 
 #container{
@@ -225,7 +225,7 @@ a {
 
 a:hover {
   color: rgba(51, 136, 221, 1);
-  text-decoration: underline
+  text-decoration: underline;
 }
 
 
