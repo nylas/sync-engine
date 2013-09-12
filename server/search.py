@@ -4,7 +4,7 @@ import xapian
 class SearchService:
     """ ZeroRPC interface to searching. """
     def search(self, user_email_address, query_string, limit=10):
-        """ returns [(g_msgid, relevancerank, fulltext)] """
+        """ returns [(messagemeta.id, relevancerank, fulltext)] """
         # treat all searches like wildcard searches unless the wildcard is
         # used elsewhere
         # XXX we might also want to let queries _start_ with a * and still
