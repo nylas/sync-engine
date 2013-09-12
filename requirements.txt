@@ -20,6 +20,7 @@ requests==1.2.3
 Fabric==1.7.0
 supervisor==3.0
 iconv==1.0
+chardet==2.1.1
 
 # Our own versions of these
 -e git+git://github.com/inboxapp/imapclient#egg=imapclient
