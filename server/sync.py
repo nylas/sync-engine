@@ -8,6 +8,7 @@ import sqlalchemy.exc
 
 from encoding import EncodingError
 from server.util import chunk, partition
+from server.util.cache import set_cache, get_cache
 import logging as log
 from gc import collect as garbge_collect
 from datetime import datetime
@@ -36,23 +37,33 @@ def load_validity_cache(crispin_client, email):
 
     return cache_validity
 
-def check_uidvalidity(crispin_client):
-    if not uidvalidity_valid(crispin_client):
+def check_uidvalidity(crispin_client, cached_uidvalidity=None):
+    valid = uidvalidity_valid(crispin_client, cached_uidvalidity)
+    if not valid:
         log.info("UIDVALIDITY for {0} has changed; resyncing UIDs".format(
             crispin_client.selected_folder_name))
         resync_uids(crispin_client)
+    return valid
 
-def uidvalidity_valid(crispin_client):
-    """ Validate UIDVALIDITY on currently selected folder. """
+def fetch_uidvalidity(user_email_address, folder_name):
     try:
-        cached_validity = db_session.query(UIDValidity.uid_validity).filter_by(
-                g_email=crispin_client.email_address,
-                folder_name=crispin_client.selected_folder_name).one()[0]
+        # using .one() here may catch duplication bugs
+        return db_session.query(UIDValidity).filter_by(
+                g_email=user_email_address, folder_name=folder_name).one()
     except sqlalchemy.orm.exc.NoResultFound:
-        # No entry? No problem!
+        return None
+
+def uidvalidity_valid(crispin_client, cached_uidvalidity=False):
+    """ Validate UIDVALIDITY on currently selected folder. """
+    if cached_uidvalidity is None:
+        cached_validity = fetch_uidvalidity(crispin_client.email_address,
+                crispin_client.selected_folder_name).uid_validity
+        assert type(cached_validity) == type(crispin_client.selected_uidvalidity), "cached_validity: {0} / selected_uidvalidity: {1}".format(type(cached_validity), type(crispin_client.selected_uidvalidity))
+
+    if cached_validity is None:
         return True
-    assert type(cached_validity) == type(crispin_client.selected_uidvalidity)
-    return crispin_client.selected_uidvalidity >= cached_validity
+    else:
+        return crispin_client.selected_uidvalidity >= cached_validity
 
 def resync_uids(crispin_client):
     """ Call this when UIDVALIDITY is invalid to fix up the database.
@@ -106,11 +117,12 @@ def remove_deleted_messages(crispin_client):
     if to_delete:
         delete_messages(to_delete, crispin_client.selected_folder_name)
 
-def new_or_updated(uids, folder):
-    local_uids = set([unicode(uid) for uid, in \
-            db_session.query(FolderMeta.msg_uid).filter(
-            FolderMeta.folder_name==folder,
-            FolderMeta.msg_uid.in_(uids))])
+def new_or_updated(uids, folder, local_uids=None):
+    if local_uids is None:
+        local_uids = set([unicode(uid) for uid, in \
+                db_session.query(FolderMeta.msg_uid).filter(
+                FolderMeta.folder_name==folder,
+                FolderMeta.msg_uid.in_(uids))])
     return partition(lambda x: x not in local_uids, uids)
 
 def incremental_sync(user):
@@ -136,6 +148,8 @@ def incremental_sync(user):
             needs_update.append((folder, cached_highestmodseq))
 
     for folder, highestmodseq in needs_update:
+        crispin_client.select_folder(folder)
+        check_uidvalidity(crispin_client)
         highestmodseq_update(folder, crispin_client)
 
     return 0
@@ -148,8 +162,6 @@ def update_cached_highestmodseq(folder, crispin_client, cached_validity=None):
     db_session.add(cached_validity)
 
 def highestmodseq_update(folder, crispin_client, cached_validity=None):
-    crispin_client.select_folder(folder)
-    check_uidvalidity(crispin_client)
     uids = crispin_client.imap_server.search(
             ['NOT DELETED', 'MODSEQ {0}'.format(
                 crispin_client.selected_highestmodseq)])
@@ -174,7 +186,7 @@ def highestmodseq_update(folder, crispin_client, cached_validity=None):
             safe_commit()
         # bigger chunk because the data being fetched here is very small
         for uids in chunk(updated, 5*crispin_client.CHUNK_SIZE):
-            update_metadata(updated, crispin_client)
+            update_metadata(uids, crispin_client)
             safe_commit()
     remove_deleted_messages(crispin_client)
     # not sure if this one is actually needed - does delete() automatically
@@ -219,6 +231,9 @@ def update_metadata(uids, crispin_client):
             fm.flags = new_metadata[fm.msg_uid]
             db_session.add(fm)
 
+def get_server_g_msgids(crispin_client):
+    pass
+
 def initial_sync(user, updates):
     """ Downloads entire messages and
     (1) creates the metadata database
@@ -240,21 +255,54 @@ def initial_sync(user, updates):
         # for each folder, compare what's on the server to what we have.
         # this allows restarts of the initial sync script in the case of
         # total failure.
+        local_uids = [uid for uid, in
+                db_session.query(FolderMeta.msg_uid).filter_by(
+                    g_email=user.g_email, folder_name=folder)]
         crispin_client.select_folder(folder)
-        check_uidvalidity(crispin_client)
-        server_uids = crispin_client.all_uids()
-        server_g_msgids = crispin_client.fetch_g_msgids(server_uids)
+
+        server_g_msgids = None
+        cached_validity = fetch_uidvalidity(user.g_email, folder)
+        if cached_validity is not None:
+            check_uidvalidity(crispin_client, cached_validity.uid_validity)
+            log.info("Attempting to retrieve server_uids and server_g_msgids from cache")
+            server_g_msgids = get_cache("_".join([user.g_email, folder,
+                "server_g_msgids"]))
+            # check for updates since last HIGHESTMODSEQ
+            cached_highestmodseq = cached_validity.highestmodseq
+            if crispin_client.selected_highestmodseq > cached_highestmodseq:
+                # any uids we don't already have will be downloaded correctly
+                # as usual, but updated uids need to be updated manually
+                modified = crispin_client.imap_server.search(
+                    ['NOT DELETED', 'MODSEQ {0}'.format(
+                        crispin_client.selected_highestmodseq)])
+                new, updated = new_or_updated(modified, folder, local_uids)
+                # for new, query g_msgids and update cache
+                server_g_msgids.update(crispin_client.fetch_g_msgids(new))
+                set_cache("_".join([crispin_client.user_obj.g_email, folder,
+                    "server_g_msgids"]), server_g_msgids)
+                # for updated, update them now
+                # bigger chunk because the data being fetched here is very small
+                for uids in chunk(updated, 5*crispin_client.CHUNK_SIZE):
+                    update_metadata(uids, crispin_client)
+                    db_session.commit()
+        else:
+            server_g_msgids = crispin_client.fetch_g_msgids()
+            set_cache("_".join([crispin_client.user_obj.g_email, folder,
+                "server_g_msgids"]), server_g_msgids)
+            db_session.add(UIDValidity(
+                g_email=user.g_email, folder_name=folder,
+                uid_validity=crispin_client.selected_uidvalidity,
+                highestmodseq=crispin_client.selected_highestmodseq))
+            db_session.commit()
+        server_uids = sorted(server_g_msgids.keys())
         g_msgids = set([g_msgid for g_msgid, in
             db_session.query(distinct(FolderMeta.g_msgid))])
 
         log.info("Found {0} UIDs for folder {1}".format(
             len(server_uids), folder))
-        existing_uids = [uid for uid, in
-                db_session.query(FolderMeta.msg_uid).filter_by(
-                    g_email=user.g_email, folder_name=folder)]
-        log.info("Already have {0} items".format(len(existing_uids)))
-        warn_uids = set(existing_uids).difference(set(server_uids))
-        unknown_uids = set(server_uids).difference(set(existing_uids))
+        log.info("Already have {0} items".format(len(local_uids)))
+        warn_uids = set(local_uids).difference(set(server_uids))
+        unknown_uids = set(server_uids).difference(set(local_uids))
 
         if warn_uids:
             delete_messages(warn_uids, folder)
@@ -274,7 +322,7 @@ def initial_sync(user, updates):
                         uid) for uid in foldermeta_only])
             db_session.commit()
 
-        total_messages = len(existing_uids)
+        total_messages = len(local_uids)
 
         log.info("Starting sync for {0} with chunks of size {1}".format(
             folder, crispin_client.CHUNK_SIZE))
@@ -308,6 +356,10 @@ def initial_sync(user, updates):
                                                    percent_done))
 
         # transaction commit
+        # XXX TODO: check for consistency with datastore here before
+        # committing state: download any missing messages, delete any
+        # messages that we have that the server doesn't. that way, worst case
+        # if sync engine bugs trickle through is we lose some flags.
         try:
             cached_validity = db_session.query(UIDValidity).filter_by(
                     g_email=user.g_email, folder_name=folder).one()

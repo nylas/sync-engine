@@ -232,6 +232,8 @@ class CrispinClient:
             and creates metadata database entries and writes mail parts
             to disk.
         """
+        UIDs = [u for u in UIDs if int(u) != 6372]
+        log.info("downloading {0}".format(UIDs))
         query = 'BODY.PEEK[] ENVELOPE INTERNALDATE FLAGS'
         raw_messages = self.imap_server.fetch(UIDs,
                 [query, 'X-GM-THRID', 'X-GM-MSGID', 'X-GM-LABELS'])
