@@ -25,6 +25,7 @@ class JSONSerializable(object):
         """
         pass
 
+STORE_MSG_ON_S3 = False
 
 class MediumPickle(PickleType):
     impl = mysql.MEDIUMBLOB
@@ -224,70 +225,43 @@ class MessagePart(JSONSerializable, Base):
         d['filename'] = self.filename
         return d
 
-    @property
-    def _data_file_directory(self):
-        assert self.data_sha256
-        # Nest it 6 items deep so we dont have huge folders
-        h = str(self.data_sha256)
-        return '../parts/'+ h[0]+'/'+h[1]+'/'+h[2]+'/'
-
-    @property
-    def _data_file_path(self):
-        return self._data_file_directory + str(self.data_sha256)
 
 
-    def set_data(self, new_data, write=True):
-        # TODO handle deleting old values?
-        # self.del_data()
 
-        self.size = len(new_data)
-        self.data_sha256 = sha256(new_data).hexdigest()
-
-        if write:
-            try: os.makedirs(self._data_file_directory)
-            except: pass
-            f = open(self._data_file_path, 'w')
-            f.write(new_data)
-            f.close()
+    def save(self, data):
+        assert data, "Need something to save to S3!"
+        self.size = len(data)
+        self.data_sha256 = sha256(data).hexdigest()
+        if STORE_MSG_ON_S3:
+            self._save_to_s3(data)
+        else:
+            self._save_to_disk(data)
 
 
     def get_data(self):
-        try:
-            with open(self._data_file_path, 'r') as f:
-                return f.read()
-        except IOError:
-            # doesn't exist on disk; fetch from S3 and write to disk
-            log.warning("data doesn't exist on disk; fetching from S3")
-            data = self.get_from_s3()
-            self.set_data(data)
-            return data
-
-    def del_data(self):
-        try: os.remove(self._data_file_path)
-        except: pass
-        self.size = None
-        self.data_sha256 = None
-
-    data = property(get_data, set_data, del_data, "the message part payload")
-
-    def save_to_s3(self):
-        assert self.data, "Need something to save to S3!"
-        self.save(self.data)
+        if STORE_MSG_ON_S3:
+            data = self._get_from_s3()
+        else:
+            data = self._get_from_disk()
+        assert self.data_sha256 == sha256(data).hexdigest(), "Returned data doesn't match stored hash!"
+        return data
 
 
-    def save(self, data, to_s3=True):
-        if not to_s3:
-            log.error("Where do you want to save it instead? ...")
-            return
+    def delete_data(self):
+        if STORE_MSG_ON_S3:
+            self._delete_from_s3()
+        else:
+            self._delete_from_disk()
+        # TODO should we clear these fields?
+        # self.size = None
+        # self.data_sha256 = None
 
-        assert data, "Need something to save to S3!"
-        self.bytes = len(data)
-        self.data_sha256 = sha256(data).hexdigest()
 
+    def _save_to_s3(self, data):
+        assert len(data) > 0, "Need data to save!"
         assert 'AWS_ACCESS_KEY_ID' in environ, "Need AWS key!"
         assert 'AWS_SECRET_ACCESS_KEY' in environ, "Need AWS secret!"
         assert 'MESSAGE_STORE_BUCKET_NAME' in environ, "Need bucket name to store message data!"
-
         # Boto pools connections at the class level
         conn = S3Connection(environ.get('AWS_ACCESS_KEY_ID'),
                             environ.get('AWS_SECRET_ACCESS_KEY'))
@@ -316,7 +290,7 @@ class MessagePart(JSONSerializable, Base):
         data_obj.set_contents_from_string(data)
 
 
-    def get_from_s3(self):
+    def _get_from_s3(self):
         assert self.data_sha256
         # Boto pools connections at the class level
         conn = S3Connection(environ.get('AWS_ACCESS_KEY_ID'),
@@ -324,9 +298,45 @@ class MessagePart(JSONSerializable, Base):
         bucket = conn.get_bucket(environ.get('MESSAGE_STORE_BUCKET_NAME'))
         data_obj = bucket.get_key(self.data_sha256)
         assert data_obj
-        self.data = bucket.get_contents_as_string(data_obj)
+        return bucket.get_contents_as_string(data_obj)
 
 
+    def _delete_from_s3(self):
+        # TODO
+        pass
+
+
+    # Helpers
+    @property
+    def _data_file_directory(self):
+        assert self.data_sha256
+        # Nest it 6 items deep so we dont have folders with too many files
+        h = str(self.data_sha256)
+        return '../parts/'+ h[0]+'/'+h[1]+'/'+h[2]+'/'+h[3]+'/'+h[4]+'/'+h[5]+'/'
+
+    @property
+    def _data_file_path(self):
+        return self._data_file_directory + str(self.data_sha256)
+
+
+    def _save_to_disk(self, data):
+        try: os.makedirs(self._data_file_directory)
+        except: pass
+        f = open(self._data_file_path, 'w')
+        f.write(data)
+        f.close()
+
+    def _get_from_disk(self):
+        try:
+            f = open(self._data_file_path, 'r')
+            return f.read()
+        except Exception:
+            log.error("No data for hash %s" % self.data_sha256)
+            return None
+
+    def _delete_from_disk(self):
+        try: os.remove(self._data_file_path)
+        except: pass
 
     @reconstructor
     def init_on_load(self):

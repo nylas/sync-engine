@@ -4,7 +4,7 @@ import json
 import postel
 from bson import json_util
 from util import chunk
-from models import db_session, MessageMeta, MessagePart, FolderMeta
+from models import db_session, MessageMeta, MessagePart, FolderMeta, User
 
 from sqlalchemy.orm import joinedload
 
@@ -39,8 +39,8 @@ class API(object):
     def send_mail(self, user_id, message_to_send):
         """ Sends a message with the given objects """
 
-        # user = sessionmanager.verify_user(user)
-
+        # TODO have postel take user_id instead of email/token
+        user = db_session.query(User).filter(User.user_id == user_id).all()[0]
         s = postel.SMTP(user.g_email,
                         user.g_access_token)
 
@@ -52,7 +52,7 @@ class API(object):
 
     def meta_with_id(self, user_id, data_id):
 
-        existing_msgs_query = db_session.query(MessageMeta).filter(MessageMeta.g_msgid == data_id).options(joinedload("parts"))
+        existing_msgs_query = db_session.query(MessageMeta).filter(MessageMeta.g_msgid == data_id).filter(MessageMeta.g_user_id == user_id).options(joinedload("parts"))
         log.info(existing_msgs_query)
         meta = existing_msgs_query.all()
         assert len(meta) == 1, "Incorrect messagemeta response"
@@ -64,10 +64,38 @@ class API(object):
         return json.dumps([p.client_json() for p in parts],
                            default=json_util.default)
 
+    def part_with_id(self, user_id, message_id, walk_index):
+
+        print 'user_id:', user_id
+        print 'message_id', message_id
+        print 'walk_index', walk_index
+
+        # TODO store MessageParts rows by user_id instead of email address
+        # user = db_session.query(User).filter(User.user_id == user_id).all()[0]
+
+
+        q = db_session.query(MessagePart).join(MessagePart.messagemeta)\
+                .filter(MessageMeta.g_msgid==message_id, MessagePart.walk_index == walk_index)
+        parts = q.all()
+        print 'parts', parts
+
+        assert len(parts) == 1
+        part = parts[0]
+
+
+        data = part.get_data()
+
         # if to_fetch == plain_part:
         #     msg_data = encoding.plaintext2html(msg_data)  # Do this on the client
         # elif content_type == 'text/html':
             # msg_data = encoding.clean_html(msg_data)
+        print data
+
+        return data
+
+        # existing_message_part = db_session.query(MessageMeta).filter(MessageMeta.g_msgid == data_id).filter(MessageMeta.g_user_id == user_id)
+
+
 
     def start_sync(self, user_id):
         """ Talk to the Sync service and have it launch a sync. """
