@@ -7,6 +7,7 @@ from gevent import Greenlet
 import logging as log
 
 def make_zerorpc(cls, location):
+    assert location, "Location to bind for %s cannot be none!" % cls
     def m():
         """ Exposes the given class as a ZeroRPC server on the given address+port """
         s = zerorpc.Server(cls())
