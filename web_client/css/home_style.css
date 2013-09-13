@@ -216,6 +216,19 @@ a.button:focus {
     border: solid 1px  #1A7A93 !important;
 }
 
+a.button.working {
+  /*margin-left: 102px;*/
+  background: #f3f3f3 url("/app/img/spinner.gif") no-repeat 6px 10px;
+  padding-left: 28px;
+  color: rgba(51, 136, 221, 1);
+  border: solid 1px  #1A7A93 !important;
+}
+
+a.button.working:after
+{
+content: "Verifying";
+}
+
 
 a {
   padding: 0px 2px;

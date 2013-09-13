@@ -47,6 +47,14 @@ app.controller('AppContainerController',
 
         $scope.loadMessagesForFolder = function(folder_name) {
 
+            // Debug
+            wire.rpc('threads_for_folder', folder_name, function(data) {
+
+            });
+
+
+
+
             $scope.statustext = "Loading messages...";
             wire.rpc('messages_for_folder', folder_name, function(data) {
 
@@ -104,16 +112,6 @@ app.controller('AppContainerController',
                     var the_message = $scope.message_map[new_part.g_id];
                     the_message.parts[new_part.g_index] = new_part;
 
-                    // Fetch the body of the messages.
-                    wire.rpc('part_with_id', [new_part.g_id, new_part.g_index],
-                        function(data) {
-                            var data_dict = JSON.parse(data);
-
-                            console.log("Fetched part.");
-                            console.log(data_dict);
-                            new_part.content_body = data_dict.message_data;
-                            // console.log(data);
-                        });
 
                 });
 

@@ -119,7 +119,9 @@ app.directive("threadview", function($filter) {
 
 
 
-app.directive("messagecontainer", function(wire) {
+app.directive("messagecontainer", function($compile, wire) {
+
+
     return {
 
         restrict: 'E',
@@ -129,50 +131,58 @@ app.directive("messagecontainer", function(wire) {
 
         controller: function($scope, $element, $attrs, $transclude) {
 
-            $scope.get_display_part = function(message_parts) {
-                var to_return;
-
-                angular.forEach(message_parts, function(value, key) {
-                    var message_part = value;
-                    if (message_part.content_type == 'text/plain') {
-                        to_return = message_part.content_body;
-                    }
-                });
-                console.log("Didn't find plain text.");
-
-
-                angular.forEach(message_parts, function(value, key) {
-                    var message_part = value;
-                    if (message_part.content_type == 'text/html') {
-                        to_return = message_part.content_body;
-                    }
-                });
-
-                console.log(to_return);
-
-                return to_return;
-            };
+            $scope.body_content = undefined;
 
         },
 
         // add back green_glow class sometime
         // template: '<messageframe ng-repeat="p in message.parts" message_part="p"></messageframe>',
-        //
-
-        template: '<message-part-view ng-repeat="p in message.parts" part="p"></message-part-view>',
+        template: '<messageframe content="body_content"></messageframe>',
 
 
-        link: function(scope, elem, attrs, ctlr) {
+        link: function($scope, $elem, attrs, ctlr) {
             // elem.html("let me set the html mofo");
 
-            scope.$watch('message', function(val) {
+            $scope.$watch('message', function(val) {
 
                 console.log("new message obj");
                 console.log(val);
 
-                // scope.message_content = get_display_part(val.parts);
-            });
+                if (angular.isUndefined(val)) return;
+                if (angular.isUndefined(val.parts)) return;
 
+                var find_part;
+                angular.forEach(val.parts, function(part, key) {
+                    if (part.content_type == 'text/html') {
+                        find_part = part;
+                    }
+                    if (!find_part && part.content_type == 'text/plain') {
+                        find_part = part;
+                    }
+                });
+
+                if (!find_part) return;
+                console.log("Lets show this:");
+
+                // Fetch the body of the messages.
+                wire.rpc('part_with_id', [find_part.g_id, find_part.g_index],
+                    function(data) {
+                        var data_dict = JSON.parse(data);
+
+                        console.log("Fetched part.");
+                        console.log(data_dict);
+                        find_part.content_body = data_dict.message_data;
+                        // console.log(data);
+
+                        $scope.body_content = data_dict.message_data;
+                        console.log($scope);
+                        // message.parts[part_id].content_body
+                    });
+
+
+
+                console.log("Done setting:");
+            });
 
         },
 
@@ -202,79 +212,6 @@ app.directive("messagecontainer", function(wire) {
     };
 });
 
-
-
-
-
-app.directive("messagePartView", function() {
-
-    return {
-        restrict: 'E',
-        scope: {
-            part: '=',
-            message_contents: '@',
-        },
-
-        template: '<messageframe content="message_contents"></messageframe>',
-
-        link: function(scope, elem, attrs, ctlr) {
-
-
-            scope.$watch('part', function(val) {
-                console.log("part has changed");
-                console.log(val);
-                console.log(val.content_body);
-                // scope.message_content = get_display_part(val.parts);
-            });
-
-
-            scope.$watch('part.content_body', function(val) {
-
-                var body_data = val;
-
-                // Wrap non-html in style
-                if (scope.part.content_type != 'text/html') {
-                    body_data = '<html><head>' +
-                        '<script type="text/javascript" src="//use.typekit.net/ccs3tld.js"></script>' +
-                        '<script type="text/javascript">try{Typekit.load();}catch(e){}</script>' +
-                        '<style rel="stylesheet" type="text/css">' +
-                        'body { background-color:#FFF; ' +
-                        'font-smooth:always;' +
-                        ' -webkit-font-smoothing:antialiased;' +
-                        ' font-family:"proxima-nova-alt", courier, sans-serif;' +
-                        ' font-size:15px;' +
-                        ' color:#333;' +
-                        ' font-variant:normal;' +
-                        ' line-height:1.6em;' +
-                        ' font-style:normal;' +
-                        ' text-align:left;' +
-                        ' text-shadow:1px 1px 1px #FFF;' +
-                        ' position:relative;' +
-                        ' margin:0; ' +
-                        ' padding:0; }' +
-                        ' a { text-decoration: underline;}' +
-                        'a:hover {' +
-                        ' border-radius:3px;; background-color: #E9E9E9;' +
-                        ' }' +
-                        '</style></head><body>' +
-                        body_data +
-                        '</body></html>';
-                }
-
-
-                console.log("body of part has changed..." + scope.part.content_type);
-                scope.message_contents = body_data;
-                // message_contents = val;
-                // console.log(val);
-                // scope.message_content = get_display_part(val.parts);
-            });
-
-
-
-
-        },
-    };
-});
 
 
 
@@ -326,9 +263,10 @@ app.directive("messageframe", function() {
                 // TOFIX This is a dirty hack. We need to stop after the page has
                 // finished loading.
 
-                if (resizing_internal) {
-                    window.clearInterval(resizing_internal);
-                }
+                // if (resizing_internal) {
+                //     window.clearInterval(resizing_internal);
+                // }
+
                 resizing_internal = setInterval(resizeHeight, 150); // TOFIX TODO DEBUG this is a terrible hack.
 
             }
@@ -336,7 +274,7 @@ app.directive("messageframe", function() {
             // Stop the resizing timer
             iframe.onload = function() {
                 console.log("iFrame finished resizing!")
-                window.clearInterval(resizing_internal);
+                // window.clearInterval(resizing_internal);
             };
 
 
@@ -352,11 +290,12 @@ app.directive("messageframe", function() {
             scope.$watch('content', function(val) {
                 // Reset the iFrame anytime the current message changes...
                 if (angular.isUndefined(val)) {
+                    console.log("Content is undefined for messageframe.")
                     injectToIframe('Loading&hellip;');
                     return;
                 }
-                // injectToIframe(val);
-                injectToIframe(scope.content);
+                injectToIframe(val);
+                // injectToIframe(scope.content);
             });
 
 
