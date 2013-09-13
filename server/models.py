@@ -229,11 +229,9 @@ class MessagePart(JSONSerializable, Base):
         d['filename'] = self.filename
         return d
 
-
-
-
     def save(self, data):
-        assert data, "Need something to save to S3!"
+        assert data is not None, \
+                "MessagePart can't have NoneType body (can be zero-length, though!)"
         self.size = len(data)
         self.data_sha256 = sha256(data).hexdigest()
         if STORE_MSG_ON_S3:
@@ -241,8 +239,9 @@ class MessagePart(JSONSerializable, Base):
         else:
             self._save_to_disk(data)
 
-
     def get_data(self):
+        # NOTE: if we were to optimize out fetching blank MIME parts, it would
+        # go here.
         if STORE_MSG_ON_S3:
             data = self._get_from_s3()
         else:
