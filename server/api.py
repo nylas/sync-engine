@@ -59,7 +59,6 @@ class API(object):
         m = meta[0]
 
         parts = m.parts
-        print 'parts', parts
 
         return json.dumps([p.client_json() for p in parts],
                            default=json_util.default)
@@ -83,15 +82,19 @@ class API(object):
         part = parts[0]
 
 
-        data = part.get_data()
+        print 'type:', type(part.get_data())
+
+        data = {'message_data': part.get_data() }
 
         # if to_fetch == plain_part:
         #     msg_data = encoding.plaintext2html(msg_data)  # Do this on the client
         # elif content_type == 'text/html':
             # msg_data = encoding.clean_html(msg_data)
-        print data
 
-        return data
+
+
+        return json.dumps(data,
+                           default=json_util.default)  # Fixes serializing date.datetime
 
         # existing_message_part = db_session.query(MessageMeta).filter(MessageMeta.g_msgid == data_id).filter(MessageMeta.g_user_id == user_id)
 
