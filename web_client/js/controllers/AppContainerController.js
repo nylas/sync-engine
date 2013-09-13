@@ -49,13 +49,59 @@ app.controller('AppContainerController',
         $scope.activeThread = undefined; // Points to the current active mssage
 
 
+        $scope.performSearch = function(query) {
+            if (query.length === 0) {
+                $scope.clearSearch();
+                return;
+            }
+
+            console.log("Calling search for: " + query);
+
+            wire.rpc('search_folder', [query], function(data) {
+                console.log("Got response");
+                var msg_ids = JSON.parse(data);
+                console.log(msg_ids);
+
+                wire.rpc('messages_with_ids', [msg_ids], function(data) {
+                    console.log("Got response for msgids");
+
+                    var arr_from_json = JSON.parse(data);
+                    var freshMessages = [];
+
+                    angular.forEach(arr_from_json, function(value, key) {
+
+                        var newMessage = new IBMessageMeta(value);
+                        // $scope.message_map[newMessage.g_id] = newMessage;
+
+                        // if (!thread_dict[newMessage.g_thrid]) {
+                        //     thread_dict[newMessage.g_thrid] = [];
+                        // }
+                        // thread_dict[newMessage.g_thrid].push(newMessage);
+                        freshMessages.push([newMessage]);
+                    });
+
+                    console.log(freshMessages);
+                    $scope.threads = freshMessages;
+
+                });
+
+
+            });
+
+
+        };
+
+        $scope.clearSearch = function() {
+            console.log("We should clear the search filtering!");
+        };
+
 
         $scope.loadMessagesForFolder = function(folder_name) {
 
             // Debug
 
-
             $scope.statustext = "Loading messages...";
+
             wire.rpc('messages_for_folder', folder_name, function(data) {
 
                 $scope.statustext = "";

@@ -10,15 +10,41 @@ from sqlalchemy.orm import joinedload
 
 db_chunk_size = 100
 
+import zerorpc
+import os
+
 
 class API(object):
+
+    _zmq_search = None
+    @property
+    def z_search(self):
+        """ Proxy function for the ZeroMQ search service. """
+        if not self._zmq_search:
+            self._zmq_search = zerorpc.Client(os.environ.get('SEARCH_SERVER_LOC', None))
+        return self._zmq_search.search
+
+
+    def search_folder(self, user_id, search_query):
+
+        # TODO use actual user_id here
+        results = self.z_search('XXXXXX@gmail.com', search_query)
+
+        meta_ids = []
+        if len(results) > 0:
+            database_id, relevance, fulltext = results[0]
+            meta_ids = [r[0] for r in results]
+
+        return json.dumps(meta_ids,
+                           default=json_util.default)
+
+
 
     def messages_for_folder(self, user_id, folder_name):
         """ Returns all messages in a given folder.
             Noe that this may be more messages than included in the IMAP folder, since
             we fetch the full thread if one of the messages is in the requested folder.
         """
-
 
         all_g_msgids = db_session.query(FolderMeta.g_msgid).filter(FolderMeta.folder_name == folder_name).all()
         all_g_msgids = [s[0] for s in all_g_msgids]
@@ -42,6 +68,19 @@ class API(object):
         log.info('found %i messages IDs' % len(all_msgs))
         return json.dumps([m.client_json() for m in all_msgs],
                            default=json_util.default)  # Fixes serializing date.datetime
+
+
+
+    def messages_with_ids(self, user_id, msg_ids):
+        """ Returns MessageMeta objects for the given msg_ids """
+        all_msgs_query = db_session.query(MessageMeta).filter(MessageMeta.id.in_(msg_ids))
+        all_msgs = all_msgs_query.all()
+
+        log.info('found %i messages IDs' % len(all_msgs))
+        return json.dumps([m.client_json() for m in all_msgs],
+                           default=json_util.default)  # Fixes serializing date.datetime
+
+
 
 
     # TODO actually make this send mail with stuff etc.

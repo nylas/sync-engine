@@ -5,6 +5,21 @@
 var app = angular.module('InboxApp.directives');
 
 
+app.directive("headersearchbox", function() {
+    return {
+        restrict: 'E',
+        scope: {
+            handler: '='
+        },
+        template: '<div class="searchbox"><form class="form-search"><input ng-model="query" ng-change="update()" type="text" class="mysearchbox" placeholder="Search Inbox..." ></form></div>',
+        controller: function($scope, $element, $attrs, $transclude) {
+            $scope.update = function() {
+                $scope.handler($scope.query);
+            };
+        },
+    };
+});
+
 
 app.directive("itemcell", function($filter) {
     return {
