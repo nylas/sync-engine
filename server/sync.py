@@ -278,7 +278,7 @@ def initial_sync(user, updates):
 
         log.info("Starting sync for {0} with chunks of size {1}".format(
             folder, crispin_client.CHUNK_SIZE))
-        for uids in chunk(full_download, crispin_client.CHUNK_SIZE):
+        for uids in chunk(reversed(full_download), crispin_client.CHUNK_SIZE):
             new_messages, new_foldermeta = safe_download(
                     uids, folder, crispin_client)
             db_session.add_all(new_foldermeta)
