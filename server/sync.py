@@ -267,6 +267,8 @@ def initial_sync(user, updates):
             log.info("Attempting to retrieve server_uids and server_g_msgids from cache")
             server_g_msgids = get_cache("_".join([user.g_email, folder,
                 "server_g_msgids"]))
+
+        if server_g_msgids is not None:
             # check for updates since last HIGHESTMODSEQ
             cached_highestmodseq = cached_validity.highestmodseq
             if crispin_client.selected_highestmodseq > cached_highestmodseq:
@@ -289,11 +291,18 @@ def initial_sync(user, updates):
             server_g_msgids = crispin_client.fetch_g_msgids()
             set_cache("_".join([crispin_client.user_obj.g_email, folder,
                 "server_g_msgids"]), server_g_msgids)
-            db_session.add(UIDValidity(
-                g_email=user.g_email, folder_name=folder,
-                uid_validity=crispin_client.selected_uidvalidity,
-                highestmodseq=crispin_client.selected_highestmodseq))
-            db_session.commit()
+            cached_validity = fetch_uidvalidity(user.g_email, folder)
+            if cached_validity is None:
+                db_session.add(UIDValidity(
+                    g_email=user.g_email, folder_name=folder,
+                    uid_validity=crispin_client.selected_uidvalidity,
+                    highestmodseq=crispin_client.selected_highestmodseq))
+                db_session.commit()
+            else:
+                cached_validity.uid_validity = crispin_client.selected_uidvalidity
+                cached_validity.highestmodseq = crispin_client.selected_highestmodseq
+                db_session.add(cached_validity)
+                db_session.commit()
         server_uids = sorted(server_g_msgids.keys())
         g_msgids = set([g_msgid for g_msgid, in
             db_session.query(distinct(FolderMeta.g_msgid))])

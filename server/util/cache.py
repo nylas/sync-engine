@@ -23,7 +23,7 @@ def _unless_dne(fn, *args, **kwargs):
         else: raise
 
 def get_cache(key):
-    return _unless_dne(pickle.load, file(_path_from_key(key)))
+    return _unless_dne(lambda: pickle.load(file(_path_from_key(key))))
 
 def rm_cache(key):
     _unless_dne(os.remove, _path_from_key(key))
