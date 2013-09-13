@@ -355,32 +355,10 @@ def initial_sync(user, updates):
                                                    len(server_uids),
                                                    percent_done))
 
-        # transaction commit
         # XXX TODO: check for consistency with datastore here before
         # committing state: download any missing messages, delete any
         # messages that we have that the server doesn't. that way, worst case
         # if sync engine bugs trickle through is we lose some flags.
-        try:
-            cached_validity = db_session.query(UIDValidity).filter_by(
-                    g_email=user.g_email, folder_name=folder).one()
-            if cached_validity.highestmodseq < crispin_client.selected_highestmodseq:
-                # if we've done a restart on the initial sync, we may have already
-                # saved a UIDValidity row for any given folder, so we need to
-                # update it instead. BUT, we first need to check for updated
-                # metadata since the recorded HIGHESTMODSEQ. (Yes, some messages
-                # here may have already been downloaded in the UID query above;
-                # the modseq update will properly skip those messages that already
-                # exist locally.)
-                highestmodseq_update(folder, crispin_client, cached_validity)
-            else:
-                # nothing to do here
-                pass
-        except sqlalchemy.orm.exc.NoResultFound:
-            db_session.add(UIDValidity(
-                g_email=user.g_email, folder_name=folder,
-                uid_validity=crispin_client.selected_uidvalidity,
-                highestmodseq=crispin_client.selected_highestmodseq))
-            db_session.commit()
         log.info("Saved all messages and metadata on {0} to UIDVALIDITY {1} / HIGHESTMODSEQ {2}".format(folder, crispin_client.selected_uidvalidity,
             crispin_client.selected_highestmodseq))
 
