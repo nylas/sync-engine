@@ -37,8 +37,8 @@ def load_validity_cache(crispin_client, email):
 
     return cache_validity
 
-def check_uidvalidity(crispin_client, cached_uidvalidity=None):
-    valid = uidvalidity_valid(crispin_client, cached_uidvalidity)
+def check_uidvalidity(crispin_client, cached_validity=None):
+    valid = uidvalidity_valid(crispin_client, cached_validity)
     if not valid:
         log.info("UIDVALIDITY for {0} has changed; resyncing UIDs".format(
             crispin_client.selected_folder_name))
@@ -55,7 +55,7 @@ def fetch_uidvalidity(user_email_address, folder_name):
 
 def uidvalidity_valid(crispin_client, cached_validity=False):
     """ Validate UIDVALIDITY on currently selected folder. """
-    if cached_uidvalidity is None:
+    if cached_validity is None:
         cached_validity = fetch_uidvalidity(crispin_client.email_address,
                 crispin_client.selected_folder_name).uid_validity
         assert type(cached_validity) == type(crispin_client.selected_uidvalidity), "cached_validity: {0} / selected_uidvalidity: {1}".format(type(cached_validity), type(crispin_client.selected_uidvalidity))
