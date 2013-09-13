@@ -53,7 +53,7 @@ def fetch_uidvalidity(user_email_address, folder_name):
     except sqlalchemy.orm.exc.NoResultFound:
         return None
 
-def uidvalidity_valid(crispin_client, cached_uidvalidity=False):
+def uidvalidity_valid(crispin_client, cached_validity=False):
     """ Validate UIDVALIDITY on currently selected folder. """
     if cached_uidvalidity is None:
         cached_validity = fetch_uidvalidity(crispin_client.email_address,
