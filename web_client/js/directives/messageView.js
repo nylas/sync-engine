@@ -174,7 +174,38 @@ app.directive("messagecontainer", function($compile, wire) {
                         find_part.content_body = data_dict.message_data;
                         // console.log(data);
 
-                        $scope.body_content = data_dict.message_data;
+                        if (find_part.content_type != 'text/html') {
+                            var wrapped_html = '<html><head>' +
+                                '<script type="text/javascript" src="//use.typekit.net/ccs3tld.js"></script>' +
+                                '<script type="text/javascript">try{Typekit.load();}catch(e){}</script>' +
+                                '<style rel="stylesheet" type="text/css">' +
+                                'body { background-color:#FFF; ' +
+                                'font-smooth:always;' +
+                                ' -webkit-font-smoothing:antialiased;' +
+                                ' font-family:"proxima-nova-alt", courier, sans-serif;' +
+                                ' font-size:15px;' +
+                                ' color:#333;' +
+                                ' font-variant:normal;' +
+                                ' line-height:1.6em;' +
+                                ' font-style:normal;' +
+                                ' text-align:left;' +
+                                ' text-shadow:1px 1px 1px #FFF;' +
+                                ' position:relative;' +
+                                ' margin:0; ' +
+                                ' padding:0; }' +
+                                ' a { text-decoration: underline;}' +
+                                'a:hover {' +
+                                ' border-radius:3px;; background-color: #E9E9E9;' +
+                                ' }' +
+                                '</style></head><body>' +
+                                data_dict.message_data.replace(/\n/g, '<br />') +
+                                '</body></html>';
+                            $scope.body_content = wrapped_html;
+
+                        } else {
+                            $scope.body_content = data_dict.message_data;
+                        }
+
                         console.log($scope);
                         // message.parts[part_id].content_body
                     });
