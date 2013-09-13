@@ -310,8 +310,8 @@ class CrispinClient:
             headers_part = MessagePart()
             headers_part.messagemeta = new_msg
             headers_part.walk_index = i
-            headers_part.data = json.dumps(mailbase.headers)
-            headers_part.data_sha256 = sha256(headers_part.data).hexdigest()
+            headers_part._data = json.dumps(mailbase.headers)
+            headers_part.data_sha256 = sha256(headers_part._data).hexdigest()
             messages[new_msg.g_msgid].setdefault('parts', []).append(headers_part)
 
             extra_parts = []
@@ -403,9 +403,8 @@ Parsed Content-Disposition was: '{3}'""".format(uid, self.selected_folder_name,
                 else:
                     raise Exception("Unknown encoding scheme:" + str(encoding))
 
-
                 new_part.data_sha256 = sha256(data_to_write).hexdigest()
-                new_part.data = data_to_write
+                new_part._data = data_to_write
                 messages[new_msg.g_msgid]['parts'].append(new_part)
 
         return messages, new_foldermeta

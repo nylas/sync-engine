@@ -250,7 +250,6 @@ class MessagePart(JSONSerializable, Base):
         assert self.data_sha256 == sha256(data).hexdigest(), "Returned data doesn't match stored hash!"
         return data
 
-
     def delete_data(self):
         if STORE_MSG_ON_S3:
             self._delete_from_s3()
@@ -259,7 +258,6 @@ class MessagePart(JSONSerializable, Base):
         # TODO should we clear these fields?
         # self.size = None
         # self.data_sha256 = None
-
 
     def _save_to_s3(self, data):
         assert len(data) > 0, "Need data to save!"

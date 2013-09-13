@@ -176,11 +176,11 @@ def highestmodseq_update(folder, crispin_client, cached_validity=None):
             db_session.add_all(new_messagepart)
 
             # save message data to s3 before committing changes to db
-            joinall([Greenlet.spawn(part.save, part.data) for part in new_messagepart])
+            joinall([Greenlet.spawn(part.save, part._data) for part in new_messagepart])
             # Clear data stored on MessagePart objects here. Hopefully this will
             # help with memory issues.
             for part in new_messagepart:
-                part.data = None
+                part._data = None
             garbge_collect()
 
             safe_commit()
@@ -336,12 +336,12 @@ def initial_sync(user, updates):
             for msg in new_messages.values():
                 db_session.add_all(msg['parts'])
                 # save message data to s3 before committing changes to db
-                joinall([Greenlet.spawn(part.save, part.data) for part in msg['parts']])
+                joinall([Greenlet.spawn(part.save, part._data) for part in msg['parts']])
+                # Clear data stored on MessagePart objects here. Hopefully this
+                # will help with memory issues.
+                for part in msg['parts']:
+                    part._data = None
 
-            # Clear data stored on MessagePart objects here. Hopefully this will
-            # help with memory issues.
-            # for part in new_messagepart:
-            #     part.data = None
             garbge_collect()
 
             safe_commit()
