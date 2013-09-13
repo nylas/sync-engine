@@ -3,16 +3,19 @@ import xapian
 
 class SearchService:
     """ ZeroRPC interface to searching. """
-    def search(self, user_email_address, query_string, limit=10):
-        """ returns [(messagemeta.id, relevancerank, fulltext)] """
+    def search(self, user_id, query_string, limit=10):
+        """ returns [(messagemeta.id, relevancerank, fulltext)]
+
+            fulltext is fulltext of the matching *part*, not the entire
+            message.
+        """
         # treat all searches like wildcard searches unless the wildcard is
         # used elsewhere
         # XXX we might also want to let queries _start_ with a * and still
         # append a * to the end
         if '*' not in query_string:
             query_string += '*'
-        log.info("Searching for {0} on behalf of {1}".format(query_string,
-            user_email_address))
+        log.info("query '{0}' for user '{1}'".format(query_string, user_id))
         # Open the database for searching.
         database = xapian.Database("parts.db")
 
