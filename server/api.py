@@ -8,29 +8,38 @@ from models import db_session, MessageMeta, MessagePart, FolderMeta, User
 
 from sqlalchemy.orm import joinedload
 
+db_chunk_size = 100
 
 
 class API(object):
 
     def messages_for_folder(self, user_id, folder_name):
-        """ Load messages for folder. Returns JSON string which can be serialized to websocket """
-        log.info('running messages_for_folder')
+        """ Returns all messages in a given folder.
+            Noe that this may be more messages than included in the IMAP folder, since
+            we fetch the full thread if one of the messages is in the requested folder.
+        """
+
 
         all_g_msgids = db_session.query(FolderMeta.g_msgid).filter(FolderMeta.folder_name == folder_name).all()
         all_g_msgids = [s[0] for s in all_g_msgids]
 
 
-        # TODO database calls should somehow be automatically wrapped in a greenlet
+        # Get all thread IDs
+        all_thrids = set()
+        for g_msgids in chunk(all_g_msgids, db_chunk_size):
+            all_msgs_query = db_session.query(MessageMeta.g_thrid).filter(MessageMeta.g_msgid.in_(g_msgids))
+            result = all_msgs_query.all()
+            [all_thrids.add(s[0]) for s in result]
 
+
+        # Get all messages for those thread IDs
         all_msgs = []
-        chunk_size = 100
-        for g_msgids in chunk(all_g_msgids, chunk_size):
-            all_msgs_query = db_session.query(MessageMeta).filter(MessageMeta.g_msgid.in_(g_msgids))
+        for g_thrids in chunk(list(all_thrids), db_chunk_size):
+            all_msgs_query = db_session.query(MessageMeta).filter(MessageMeta.g_thrid.in_(g_thrids))
             result = all_msgs_query.all()
             all_msgs += result
 
-        log.info('found %i messages' % len(all_msgs))
-
+        log.info('found %i messages IDs' % len(all_msgs))
         return json.dumps([m.client_json() for m in all_msgs],
                            default=json_util.default)  # Fixes serializing date.datetime
 

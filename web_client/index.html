@@ -15,9 +15,9 @@
 </style>
 
 <!-- typekit -->
+
 <script type="text/javascript" src="//use.typekit.net/ccs3tld.js"></script>
 <script type="text/javascript">try{Typekit.load();}catch(e){}</script>
-
 
 
 </head>
@@ -30,19 +30,21 @@
     <div class="leftcol card_with_shadow">
 
     	<div class="leftHeader">
-			<div class="searchbutton clickable"></div>
-			<div class="composebutton clickable"></div>
-			<div class="inboxlabel">Inbox</div>
-	<!-- 		<div class="searchbox">
+	 		<div class="searchbox">
 				<form class="form-search">
 				<input type="text" class="input-xlarge  mysearchbox" placeholder="Search Inbox..." >
 				</form>
 			</div>
--->
+
+			<div class="composebutton clickable"></div>
+
+
+
+
     	</div>
 
         <div class="messagelist">
-			<itemcell data-ng-repeat="m in messages | orderBy:'-date'" message="m" data-ng-click="openMessage(m)"></itemcell>
+			<itemcell data-ng-repeat="t in threads" thread="t" data-ng-click="openThread(t)" selected="t == activeThread"></itemcell>
         </div>
 
         <div class="leftFooter">
@@ -59,14 +61,14 @@
 
             <div class="contentHead">
 					<div class="email-content-title">
-		                <span ng-bind="activeMessage.subject"></span>
-		                <span class="email-content-subtitle" ng-show="activeMessage != null">Sent to {{activeMessage.contactDisplayList}}</span>
+		                <span ng-bind="activeThread[0].subject"></span>
+		                <span class="email-content-subtitle" ng-show="activeThread[0] != null">Sent to {{activeThread[0].contactDisplayList}}</span>
 		            </div>
             </div>
 
             <div class="contentBody">
-		        <div class="email-message-container">
-					<threadview message="activeMessage"></threadview>
+		        <div class="email-message-container"  ng-repeat="message in activeThread">
+					<threadview message="message"></threadview>
 		         </div>
             </div>
 

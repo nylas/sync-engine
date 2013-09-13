@@ -7,7 +7,7 @@ var angular = angular;
 
 
 
-app.directive("threadview", function($filter) {
+app.directive("threadview", function($filter, wire, IBMessagePart) {
     return {
         restrict: 'E',
         transclude: true,
@@ -103,12 +103,38 @@ app.directive("threadview", function($filter) {
 
 
 
-        link: function(scope, elem, attrs, ctrl) {
+        link: function($scope, elem, attrs, ctrl) {
 
-            scope.$watch('message', function(val) {
+            $scope.$watch('message', function(val) {
                 console.log("Message changed:");
                 console.log(val);
+
+                console.log("Fetching metadata for parts...")
+
+                // Get message parts metadata
+                wire.rpc('meta_with_id', $scope.message.g_id, function(data) {
+                    var arr_from_json = JSON.parse(data);
+
+                    angular.forEach(arr_from_json, function(value, key) {
+                        var new_part = new IBMessagePart(value);
+
+                        var new_parts_to_set = {};
+                        new_parts_to_set[new_part.g_index] = new_part;
+                        $scope.message.parts = new_parts_to_set;
+
+
+                    });
+
+                    console.log("Set new metadata for ");
+                    console.log($scope.message);
+                    // console.log("Fetched meta for msg " + message_in_thread.g_id);
+                });
+
+
             }); // True watches value not just reference
+
+
+
 
 
         } // End of link function
@@ -143,26 +169,57 @@ app.directive("messagecontainer", function($compile, wire) {
         link: function($scope, $elem, attrs, ctlr) {
             // elem.html("let me set the html mofo");
 
-            $scope.$watch('message', function(val) {
+            console.log("Linking messageContainer")
+
+
+            $scope.$watch('message.parts', function(val) {
+
+
+                console.log("message.parts watcher fired!")
 
                 console.log("new message obj");
-                console.log(val);
+                console.log($scope.message);
+                if (angular.isUndefined($scope.message.parts)) {
+                    console.log("No message parts :(")
+                    return;
+                }
 
-                if (angular.isUndefined(val)) return;
-                if (angular.isUndefined(val.parts)) return;
+                console.log("The parts:")
+                console.log($scope.message.parts);
 
-                var find_part;
-                angular.forEach(val.parts, function(part, key) {
-                    if (part.content_type == 'text/html') {
+
+                // Here we just grab the first message part which has text/html or text/plain
+                // Note that angular's forEach doesn't have 'break' support.
+                var find_part = null;
+                var keepGoing = true;
+                angular.forEach($scope.message.parts, function(part, key) {
+                    if (!keepGoing) {
+                        return;
+                    };
+
+                    console.log(part);
+                    console.log(key);
+                    console.log(find_part);
+                    console.log('>>' + part.content_type + '<<');
+
+                    if (part.content_type === 'text/html') {
                         find_part = part;
+                        keepGoing = false;
                     }
-                    if (!find_part && part.content_type == 'text/plain') {
+
+                    if (!find_part && part.content_type === 'text/plain') {
                         find_part = part;
+                        keepGoing = false;
                     }
                 });
 
-                if (!find_part) return;
-                console.log("Lets show this:");
+
+                if (!find_part) {
+                    console.log("Is there a part?!!!!:");
+                    return;
+                }
+
+
 
                 // Fetch the body of the messages.
                 wire.rpc('part_with_id', [find_part.g_id, find_part.g_index],
@@ -183,6 +240,7 @@ app.directive("messagecontainer", function($compile, wire) {
                                 'font-smooth:always;' +
                                 ' -webkit-font-smoothing:antialiased;' +
                                 ' font-family:"proxima-nova-alt", courier, sans-serif;' +
+                                ' font-weight: 500' +
                                 ' font-size:15px;' +
                                 ' color:#333;' +
                                 ' font-variant:normal;' +
@@ -192,7 +250,7 @@ app.directive("messagecontainer", function($compile, wire) {
                                 ' text-shadow:1px 1px 1px #FFF;' +
                                 ' position:relative;' +
                                 ' margin:0; ' +
-                                ' padding:0; }' +
+                                ' padding:20px; }' +
                                 ' a { text-decoration: underline;}' +
                                 'a:hover {' +
                                 ' border-radius:3px;; background-color: #E9E9E9;' +
@@ -209,7 +267,6 @@ app.directive("messagecontainer", function($compile, wire) {
                         console.log($scope);
                         // message.parts[part_id].content_body
                     });
-
 
 
                 console.log("Done setting:");

@@ -160,6 +160,7 @@ class MessageMeta(JSONSerializable, Base):
         d['date'] = self.internaldate
         d['subject'] = self.subject
         d['g_id'] = self.g_msgid
+        d['g_thrid'] = self.g_thrid
         return d
 
 # These are the top 15 most common Content-Type headers

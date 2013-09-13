@@ -1,7 +1,12 @@
 'use strict';
 
-var app = angular.module('InboxApp.controllers');
+// Stupid fucking linting warnings
+var console = console;
+var angular = angular;
+var alert = alert;
 
+
+var app = angular.module('InboxApp.controllers');
 
 app.controller('AppContainerController',
     function($scope,
@@ -10,7 +15,8 @@ app.controller('AppContainerController',
         growl,
         IBMessageMeta,
         IBMessagePart,
-        protocolhandler) {
+        protocolhandler,
+        $filter) {
 
         // $scope.notificationButtonClick = function() {
         //     growl.requestPermission(
@@ -37,22 +43,16 @@ app.controller('AppContainerController',
         // });
 
 
-        $scope.messages = []; // For UI element
+        $scope.threads = []; // For UI element
 
-        $scope.message_map = {} // Actual message cache
-
-        $scope.activeMessage = undefined; // Points to the current active mssage
+        $scope.message_map = {}; // Actual message cache
+        $scope.activeThread = undefined; // Points to the current active mssage
 
 
 
         $scope.loadMessagesForFolder = function(folder_name) {
 
             // Debug
-            wire.rpc('threads_for_folder', folder_name, function(data) {
-
-            });
-
-
 
 
             $scope.statustext = "Loading messages...";
@@ -61,17 +61,56 @@ app.controller('AppContainerController',
                 $scope.statustext = "";
                 var arr_from_json = JSON.parse(data);
                 var freshMessages = [];
+
+                var thread_dict = {};
+
                 angular.forEach(arr_from_json, function(value, key) {
+
                     var newMessage = new IBMessageMeta(value);
                     $scope.message_map[newMessage.g_id] = newMessage;
+
+                    if (!thread_dict[newMessage.g_thrid]) {
+                        thread_dict[newMessage.g_thrid] = [];
+                    }
+                    thread_dict[newMessage.g_thrid].push(newMessage);
 
                     freshMessages.push(newMessage);
                 });
 
 
-                $scope.messages = Object.keys($scope.message_map).map(function(key) {
-                    return $scope.message_map[key];
+                /* Below we sort the messages into threads.
+                   TODO: This needs to be tested much better.
+                 */
+
+
+                // Sort individual threads in ascending order
+                angular.forEach(thread_dict, function(thread_messages, key) {
+                    thread_messages = thread_messages.sort(
+                        function sortDates(msg1, msg2) {
+                            if (msg1.date > msg2.date) return 1;
+                            if (msg1.date < msg2.date) return -1;
+                            return 0;
+                        });
                 });
+
+                // Turn dict to array
+                var all_threads = Object.keys(thread_dict).map(function(key) {
+                    return thread_dict[key];
+                });
+
+                // Sort threads based on last object (most recent) in descending order
+                all_threads = all_threads.sort(
+                    function sortDates(msg_array1, msg_array2) {
+                        if (msg_array1[msg_array1.length - 1].date > msg_array2[msg_array2.length - 1].date) return -1;
+                        if (msg_array1[msg_array1.length - 1].date < msg_array2[msg_array2.length - 1].date) return 1;
+                        return 0;
+                    });
+
+                console.log(all_threads);
+
+                $scope.threads = all_threads;
+
+
 
             });
         };
@@ -87,46 +126,20 @@ app.controller('AppContainerController',
                     }
                 },
                 function(data) {
-
                     alert('Sent mail!');
                 }
             );
 
-        }
+        };
 
 
-        $scope.openMessage = function(selectedMessage) {
+        $scope.openThread = function(selectedThread) {
 
-            // This might be redundant
-            var msg_to_fetch = $scope.message_map[selectedMessage.g_id];
+            console.log("SelectedThread:");
+            console.log(selectedThread);
 
-
-            console.log("Fetching message.")
-
-            wire.rpc('meta_with_id', msg_to_fetch.g_id, function(data) {
-                var arr_from_json = JSON.parse(data);
-
-                angular.forEach(arr_from_json, function(value, key) {
-                    var new_part = new IBMessagePart(value);
-
-                    var the_message = $scope.message_map[new_part.g_id];
-                    the_message.parts[new_part.g_index] = new_part;
-
-
-                });
-
-                $scope.activeMessage = msg_to_fetch;
-
-                console.log("Fetched meta.");
-                // console.log($scope.message_map[selectedMessage.g_id]);
-
-                // $scope.messages = freshParts;
-                // var data = atob(data)
-                // $scope.activeMessage.body_text = data;
-
-            });
-
-        }
+            $scope.activeThread = selectedThread;
+        };
 
 
         wire.on('new_mail_notification', function(data) {
