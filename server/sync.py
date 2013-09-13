@@ -8,7 +8,7 @@ import sqlalchemy.exc
 
 from encoding import EncodingError
 from server.util import chunk, partition
-from server.util.cache import set_cache, get_cache
+from server.util.cache import set_cache, get_cache, rm_cache
 import logging as log
 from gc import collect as garbge_collect
 from datetime import datetime
@@ -355,6 +355,8 @@ def initial_sync(user, updates):
                                                    len(server_uids),
                                                    percent_done))
 
+        # complete X-GM-MSGID mapping is no longer needed after initial sync
+        rm_cache("_".join([user.g_email, folder, "server_g_msgids"]))
         # XXX TODO: check for consistency with datastore here before
         # committing state: download any missing messages, delete any
         # messages that we have that the server doesn't. that way, worst case
