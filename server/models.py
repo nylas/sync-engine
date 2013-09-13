@@ -1,3 +1,5 @@
+import os
+
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum, Text
 from sqlalchemy import ForeignKey
 from sqlalchemy.types import PickleType
@@ -11,7 +13,8 @@ from sqlalchemy.schema import UniqueConstraint
 
 from hashlib import sha256
 from os import environ
-import os
+from server.util import mkdirp
+
 import logging as log
 # from sqlalchemy.databases.mysql import MSMediumBlob
 from sqlalchemy.dialects import mysql
@@ -321,8 +324,7 @@ class MessagePart(JSONSerializable, Base):
 
 
     def _save_to_disk(self, data):
-        try: os.makedirs(self._data_file_directory)
-        except: pass
+        mkdirp(self._data_file_directory)
         f = open(self._data_file_path, 'w')
         f.write(data)
         f.close()

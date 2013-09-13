@@ -1,3 +1,4 @@
+import os, errno
 import itertools
 import string
 from dns.resolver import query as dns_query
@@ -63,6 +64,17 @@ def safe_filename(filename):
     """
     valid_chars = "-_.() %s%s" % (string.ascii_letters, string.digits)
     return ''.join(c for c in filename if c in valid_chars)
+
+def mkdirp(path):
+    """ An equivalent to mkdir -p. This can go away in Python 3.2;
+        just use exists_ok=True.
+    """
+    try:
+        os.makedirs(path)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else: raise
 
 def validate_email(address_text):
 
