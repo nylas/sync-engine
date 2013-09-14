@@ -45,6 +45,8 @@ app.controller('AppContainerController',
 
         $scope.threads = []; // For UI element
 
+        $scope.displayedThreads = []; // currently displayed
+
         $scope.message_map = {}; // Actual message cache
         $scope.activeThread = undefined; // Points to the current active mssage
 
@@ -81,7 +83,8 @@ app.controller('AppContainerController',
                     });
 
                     console.log(freshMessages);
-                    $scope.threads = freshMessages;
+
+                    $scope.displayedThreads = freshMessages
 
                 });
 
@@ -93,6 +96,7 @@ app.controller('AppContainerController',
 
         $scope.clearSearch = function() {
             console.log("We should clear the search filtering!");
+            $scope.displayedThreads = $scope.threads;
         };
 
 
@@ -155,8 +159,7 @@ app.controller('AppContainerController',
                 console.log(all_threads);
 
                 $scope.threads = all_threads;
-
-
+                $scope.displayedThreads = all_threads;
 
             });
         };
