@@ -24,11 +24,8 @@ class API(object):
             self._zmq_search = zerorpc.Client(os.environ.get('SEARCH_SERVER_LOC', None))
         return self._zmq_search.search
 
-
     def search_folder(self, user_id, search_query):
-
-        # TODO use actual user_id here
-        results = self.z_search('XXXXXX@gmail.com', search_query)
+        results = self.z_search(user_id, search_query)
 
         meta_ids = []
         if len(results) > 0:
@@ -37,8 +34,6 @@ class API(object):
 
         return json.dumps(meta_ids,
                            default=json_util.default)
-
-
 
     def messages_for_folder(self, user_id, folder_name):
         """ Returns all messages in a given folder.

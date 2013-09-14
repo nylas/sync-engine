@@ -3,7 +3,7 @@ import logging as log
 
 import xapian
 
-from server.models import db_session, MessageMeta, User
+from server.models import db_session, MessageMeta
 from server.util import mkdirp
 
 from sqlalchemy.orm import joinedload
