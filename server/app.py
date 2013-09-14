@@ -2,11 +2,11 @@ from gevent import monkey; monkey.patch_all()
 
 import logging as log
 from tornado.log import enable_pretty_logging; enable_pretty_logging()
-from flask import Flask, request, redirect, make_response, render_template, Response, jsonify, abort
+from flask import Flask, request, redirect, make_response, render_template, Response, jsonify, abort, send_file
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
 from socket_rpc import SocketRPC
-from models import db_session, User, MessageMeta, MessagePart
+from models import db_session, User, MessageMeta, MessagePart, Collection
 from werkzeug.wsgi import SharedDataMiddleware
 
 import google_oauth
@@ -16,8 +16,10 @@ from util import validate_email
 from securecookie import SecureCookieSerializer
 import zerorpc
 from os import environ
+from StringIO import StringIO
 import os
 
+from server.util.img import generate_thumbnail
 
 COOKIE_SECRET = environ.get("COOKIE_SECRET", None)
 assert COOKIE_SECRET, "Missing secret for secure cookie generation"
@@ -221,19 +223,28 @@ def upload_file_handler():
         abort(401)
         return
 
+    log.info(request.files)
+    # XXX TODO pull the collection ID out of the POST request
+    collection_id = 1
+    collection = db_session.query(Collection).filter_by(id=collection_id).first()
+    if not collection:
+        # XXX not actually sure what 'type' field is for yet
+        collection = Collection(id=1, type="gallery")
+        db_session.add(collection)
+        db_session.commit()
     if request.method == 'POST' and 'file' in request.files:
         uploaded_file = request.files['file']
 
-        meta = MessageMeta()
+        meta = MessageMeta(user_id=user.id, g_email=user.g_email)
         part = MessagePart(
                 messagemeta=meta,
-                content_type=uploaded_file.content_type,
                 filename=uploaded_file.filename,
-                g_email=user.g_email,
-                is_inboxapp_attachment=True)
+                is_inboxapp_attachment=True,
+                collection=collection)
+        part.content_type = uploaded_file.content_type
         log.info("New uploaded file %s" % part.filename)
         part.save(uploaded_file.read())  # TODO consider sending the stream object
-        log.info("Saved upload to S3")
+        log.info("Saved upload to S3 with hash {0}".format(part.data_sha256))
 
         # Return content_id for upload
         # TODO right now the content_id is just the upload's hash
@@ -247,6 +258,41 @@ def upload_file_handler():
     log.error("What are we trying to upload?")
     return Response()
 
+# XXX TODO don't download unsalted hashes here
+@app.route('/<email>/img/<sha256>', methods=['GET'])
+def download_handler(email, sha256):
+    # grab image from S3 and pass it on
+    part = db_session.query(MessagePart).join(MessageMeta).filter(
+            MessageMeta.g_email==email,
+            MessagePart.data_sha256==sha256).first()
+    if not part:
+        abort(404)
+        return
+    # XXX don't hardcode MIMEtype
+    return send_file(StringIO(part.get_data()), mimetype='image/jpeg')
+
+@app.route('/<email>/img/<sha256>/thumb', methods=['GET'])
+def thumb_download_handler(email, sha256):
+    # grab image from S3 and pass it on
+    part = db_session.query(MessagePart).join(MessageMeta).filter(
+            MessageMeta.g_email==email,
+            MessagePart.data_sha256==sha256).first()
+    if not part:
+        abort(404)
+        return
+    # XXX don't hardcode MIMEtype
+    thumb_blob = generate_thumbnail(part.get_data())
+    return send_file(StringIO(thumb_blob), mimetype='image/jpeg')
+
+# XXX need to mangle the URL somehow
+@app.route('/<email>/gallery/<id>', methods=['GET'])
+def gallery_handler(email, id):
+    log.info("email: '{0}' / id: '{1}'".format(email, id))
+    # no auth required to view galleries
+    # XXX limit by type
+    images = db_session.query(MessagePart).filter_by(
+            collection_id=id).all()
+    return render_template('gallery.html', images=images, email=email)
 
 # class FileDownloadHandler(BaseHandler):
 #     @tornado.web.authenticated

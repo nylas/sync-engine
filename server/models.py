@@ -185,6 +185,10 @@ class MessagePart(JSONSerializable, Base):
     data_sha256 = Column(String(255))
 
     is_inboxapp_attachment = Column(Boolean, default=False)
+    collection_id = Column(Integer, ForeignKey("collections.id"), nullable=True)
+    collection = relationship('Collection', backref="parts")
+
+    # XXX create a constructor that allows the 'content_type' keyword
 
     __table_args__ = (UniqueConstraint('messagemeta_id', 'walk_index', 'data_sha256',
         name='_messagepart_uc'),)
@@ -364,8 +368,10 @@ class UIDValidity(JSONSerializable, Base):
     __table_args__ = (UniqueConstraint('g_email', 'folder_name',
         name='_folder_email_uc'),)
 
-
-
+class Collection(Base):
+    __tablename__ = 'collections'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    type = Column(String(32), nullable=True)
 
 ## Make the tables
 from sqlalchemy import create_engine
@@ -425,10 +431,10 @@ else:
 #         database = environ.get('MYSQL_DATABASE')
 #     ), connect_args = {'charset': 'utf8mb4'} )
 
-
-
-
-
+# XXX TODO put this in a function.
+# putting it here b0rks up alembic autogeneration for new tables
+# since this will auto-create new tables when anything from models
+# is imported.
 Base.metadata.create_all(engine)
 
 from sqlalchemy.orm import sessionmaker
