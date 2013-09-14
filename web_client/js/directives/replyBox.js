@@ -7,7 +7,7 @@ app.directive("replybox", function() {
         restrict: 'E',
         transclude: true,
         scope: {
-            sendButtonAction : '&sendButtonAction'
+            sendButtonAction: '&sendButtonAction'
         }, // Two-way binding to message object
         controller: function($scope, $element, $attrs, $transclude) {
 
@@ -17,12 +17,14 @@ app.directive("replybox", function() {
 
                 paddingTop: '5px',
                 paddingLeft: '10px',
-                paddingRight: '10px',
+                // paddingRight: '10px',
 
-                position: 'absolute',
-                bottom: 3,
-                left: 0,
-                minWidth: 538,  // Depends on the number of buttons
+                paddingBottom: '10px',
+
+                // position: 'absolute',
+                // bottom: 3,
+                // left: 0,
+                minWidth: 538, // Depends on the number of buttons
             }
 
             $scope.reply_box_style = {
@@ -153,38 +155,61 @@ app.directive("replybox", function() {
         // * }
 
 
-        template: '<div id="reply_box" ng-style="container_style">' +
-            '<div ng-style="reply_box_style" class="card_with_shadow">' +
+        template: '<div id="reply_box" ng-style="container_style">' + '<div ng-style="reply_box_style" class="card_with_shadow">' +
 
-            '<div id="drop">' +
+        '<div id="drop">' +
 
-            '<div auto-resize id="reply_textbox" class="resize_textbox" ng-style="text_box_style" contenteditable="true" hidefocus="true">' + 'Write a message...</div>' +
+        '<div auto-resize id="reply_textbox" class="resize_textbox" ng-style="text_box_style" contenteditable="true" hidefocus="true">' + 'Write a message&hellip;</div>' +
 
-            '<form id="file-upload" style="display:none" method="post" action="/file_upload" enctype="multipart/form-data">' + '<input style="display:none" type="file" name="file" multiple />' + '</form>' +
+        '<form id="file-upload" style="display:none" method="post" action="/file_upload" enctype="multipart/form-data">' + '<input style="display:none" type="file" name="file" multiple />' + '</form>' +
 
-            '<div ng-style="bottom_button_bar" >' +
+        '<div ng-style="bottom_button_bar" >' +
 
-            '<div id="add_file_button" ng-style="add_file_button" hover="#E0E3E3">Add Files</div>' +
+        '<div id="add_file_button" ng-style="add_file_button" hover="#E0E3E3">Add Files</div>' +
 
-            '<div id="add_file_button" ng-style="add_photos_button" hover="#E0E3E3">Add Photos</div>' +
+        '<div id="add_file_button" ng-style="add_photos_button" hover="#E0E3E3">Add Photos</div>' +
 
-            '<div id="add_file_button" ng-style="add_event_button" hover="#E0E3E3">Add Event</div>' +
+        '<div id="add_file_button" ng-style="add_event_button" hover="#E0E3E3">Add Event</div>' +
 
-            '<div id="add_file_button" ng-style="send_money_button" hover="#E0E3E3">Send Money</div>' +
+        '<div id="add_file_button" ng-style="send_money_button" hover="#E0E3E3">Send Money</div>' +
 
-            '<div id="send_button" ng-click="sendButtonHandler()" ng-style="send_button_style" hover="#E0E3E3">Send</div>' +
+        '<div id="send_button" ng-click="sendButtonHandler()" ng-style="send_button_style" hover="#E0E3E3">Send</div>' +
 
-            '</div>' +
-            '</div>' +
-            '</div>' +
-        '</div>',
+        '</div>' + '</div>' + '</div>' + '</div>',
 
         link: function(scope, elem, attrs, ctrl) {
+
+
+            // TODO resize reply box as you type stuff in it
+            // var obj = elem.find('#reply_textbox');
+            // var update = function() {
+            //     var scrollable = $('#right-scrollable');
+
+            //     // scrollable.animate({
+            //     //     scrollTop: 9999999
+            //     // }, 'slow');
+
+
+            //     scrollable.scrollTop = 9999999;
+            //     // x = 0; //horizontal coord
+            //     // y = document.height; //vertical coord
+            //     // window.scroll(x, y);
+            // };
+            // obj.bind('keyup keydown keypress change', update);
+            // // update();
+
+
+
+
+
+
 
             scope.sendButtonHandler = function() {
                 var textbox = elem.find('#reply_textbox');
 
-                scope.sendButtonAction( { message_text : textbox.html() });
+                scope.sendButtonAction({
+                    message_text: textbox.html()
+                });
             };
 
 

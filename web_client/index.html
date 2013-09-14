@@ -4,8 +4,11 @@
 	<meta charset="utf-8">
 	<title>Inbox</title>
 
+<link rel="stylesheet" href="css/bootstrap.min.css"/>
+
 
 <link rel="stylesheet" href="css/style.css"/>
+<!-- <link rel="stylesheet" href="css/bootstrap-responsive.min.css"/> -->
 
 <style type="text/css">
 	/* Hide while loading */
@@ -50,25 +53,49 @@
     <div id="rightcol">
         <div class="content">
 
-            <div class="contentHead">
-					<div class="email-content-title">
-		                <span ng-bind="activeThread[0].subject"></span>
-		                <span class="email-content-subtitle" ng-show="activeThread[0] != null">Sent to {{activeThread[0].contactDisplayList}}</span>
-		            </div>
-            </div>
 
-            <div class="contentBody">
+            <div class="contentBody" id="right-scrollable">
+
+
+	            <div class="contentHead" ng-show="activeThread">
+						<div class="email-content-title">
+			                <span ng-bind="activeThread[0].subject"></span>
+			            </div>
+
+			                <span class="email-content-subtitle" ng-show="activeThread[0] != null">Sent to {{activeThread[0].contactDisplayList}}</span>
+
+
+						<div class="btn-group" style="float:right">
+			                <button class="btn primary" data-ng-click="archiveButtonHandler()">Archive</button>
+			                <button class="btn primary dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button>
+			                <ul class="dropdown-menu pull-right">
+			                  <li><a href="#" data-ng-click="archiveButtonHandler()">Send to&nbsp;<img src="img/asana-icon.png"/></a></li>
+			                  <li><a href="#" data-ng-click="archiveButtonHandler()">Send to Salesforce</a></li>
+			                  <li class="divider"></li>
+			                  <li><a href="#" data-ng-click="archiveButtonHandler()">Delete</a></li>
+			                </ul>
+			              </div>
+
+
+	            </div>
+
+	            <div style="clear:both"></div>
+
+
 		        <div class="email-message-container"  ng-repeat="message in activeThread">
 					<threadview message="message"></threadview>
 		         </div>
+
+
+
+	            <div class="contentFoot" ng-show="activeThread">>
+
+			         <replybox send-button-action="sendMessage(message_text)">
+			         </replybox>
+	            </div>
+
             </div>
 
-            <div class="contentFoot">
-
-		         <replybox send-button-action="sendMessage(message_text)">
-		         	Reply text here&hellip;
-		         </replybox>
-            </div>
 
 
         </div>
@@ -79,6 +106,9 @@
 
 
 <!-- JavaScript Includes -->
+
+<script src="js/bootstrap.js"></script>
+
 
 <script src="lib/jquery.min.js"></script>
 <script src="lib/jquery-utils/jquery.ui.widget.js"></script>

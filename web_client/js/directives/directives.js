@@ -11,7 +11,7 @@ app.directive("headersearchbox", function() {
         scope: {
             handler: '='
         },
-        template: '<div class="searchbox"><form class="form-search"><input ng-model="query" ng-change="update()" type="text" class="mysearchbox" placeholder="Search Inbox..." ></form></div>',
+        template: '<div class="mg_searchbox"><form><input ng-model="query" ng-change="update()" type="text" class="mysearchbox" placeholder="Search Inbox..." ></form></div>',
         controller: function($scope, $element, $attrs, $transclude) {
             $scope.update = function() {
                 $scope.handler($scope.query);
@@ -82,7 +82,7 @@ app.directive("itemcell", function($filter) {
 
         },
 
-        template: '<div class="normalCell" ng-style="email_item" hover ng-class="{activeCell: selected}" data-ng-click="eventHandler()">' + '<div ng-style="email_subject">{{thread[0].subject}}</div>' + '<div ng-style="email_desc">' + '<em>Date</em>: {{thread[0].date | date:"medium" }} <br/>' + '<em>From</em>: {{thread[0].from[0]}}' + '</div>' + '</div>',
+        template: '<div class="normalCell" ng-style="email_item" hover ng-class="{activeCell: selected}" data-ng-click="eventHandler()">' + '<div ng-style="email_subject">{{thread[0].subject}}</div>' + '<div ng-style="email_desc">' + '<em>Date</em>: {{thread[0].date | relativedate }} <br/>' + '<strong>{{  thread[0].from[0][0] }}</strong>&nbsp;{{"<" + thread[0].from[0][2] + "@"+ thread[0].from[0][3] + ">"  }}' + '</div>' + '</div>',
     }
 });
 

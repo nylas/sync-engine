@@ -68,23 +68,60 @@ app.controller('AppContainerController',
                     console.log("Got response for msgids");
 
                     var arr_from_json = JSON.parse(data);
+
+
+                    // THIS IS SHIIIIITY COPYING FROM BELOW
+
+
+                    var thread_dict = {};
                     var freshMessages = [];
-
                     angular.forEach(arr_from_json, function(value, key) {
-
                         var newMessage = new IBMessageMeta(value);
-                        // $scope.message_map[newMessage.g_id] = newMessage;
+                        $scope.message_map[newMessage.g_id] = newMessage;
 
-                        // if (!thread_dict[newMessage.g_thrid]) {
-                        //     thread_dict[newMessage.g_thrid] = [];
-                        // }
-                        // thread_dict[newMessage.g_thrid].push(newMessage);
-                        freshMessages.push([newMessage]);
+                        if (!thread_dict[newMessage.g_thrid]) {
+                            thread_dict[newMessage.g_thrid] = [];
+                        }
+                        thread_dict[newMessage.g_thrid].push(newMessage);
+
+                        freshMessages.push(newMessage);
                     });
 
-                    console.log(freshMessages);
 
-                    $scope.displayedThreads = freshMessages
+                    /* Below we sort the messages into threads.
+                       TODO: This needs to be tested much better.
+                     */
+
+                    // Sort individual threads in ascending order
+                    angular.forEach(thread_dict, function(thread_messages, key) {
+                        thread_messages = thread_messages.sort(
+                            function sortDates(msg1, msg2) {
+                                if (msg1.date > msg2.date) return 1;
+                                if (msg1.date < msg2.date) return -1;
+                                return 0;
+                            });
+                    });
+
+                    // Turn dict to array
+                    var all_threads = Object.keys(thread_dict).map(function(key) {
+                        return thread_dict[key];
+                    });
+
+                    // Sort threads based on last object (most recent) in descending order
+                    all_threads = all_threads.sort(
+                        function sortDates(msg_array1, msg_array2) {
+                            if (msg_array1[msg_array1.length - 1].date > msg_array2[msg_array2.length - 1].date) return -1;
+                            if (msg_array1[msg_array1.length - 1].date < msg_array2[msg_array2.length - 1].date) return 1;
+                            return 0;
+                        });
+
+                    console.log(all_threads);
+
+
+                    $scope.displayedThreads = all_threads;
+
+
+
 
                 });
 
@@ -93,6 +130,23 @@ app.controller('AppContainerController',
 
 
         };
+
+
+        $scope.archiveButtonHandler = function() {
+            console.log("Should archive message!");
+
+            var index = $scope.displayedThreads.indexOf($scope.activeThread);
+            if (index > -1) {
+                console.log("Deleting!");
+                $scope.displayedThreads.splice(index, 1);
+
+                $scope.activeThread = null;
+            }
+
+            // $scope.displayedThreads = all_threads;
+
+        }
+
 
         $scope.clearSearch = function() {
             console.log("We should clear the search filtering!");
