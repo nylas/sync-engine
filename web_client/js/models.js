@@ -175,7 +175,7 @@ app.factory('IBContact', function ($injector) {
         // Break serialized data out into object
         this.firstname = data.firstname;
         this.lastname = data.lastname;
-        this.emai = data.email;
+        this.email = data.email;
     };
 
     IBObject.prototype.gravatarURL = function (size) {

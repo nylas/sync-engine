@@ -248,6 +248,7 @@ class CrispinClient:
             new_msg = MessageMeta()
             new_msg.data_sha256 = sha256(body).hexdigest()
             new_msg.g_user_id = self.user_obj.g_user_id
+            new_msg.user_id = self.user_obj.id
             new_msg.g_email = self.user_obj.g_email
             new_msg.uid = uid
             # XXX maybe eventually we want to use these, but for

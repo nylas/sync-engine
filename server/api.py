@@ -28,13 +28,9 @@ class API(object):
     def search_folder(self, user_id, search_query):
         results = self.z_search(user_id, search_query)
 
-        meta_ids = []
-        if len(results) > 0:
-            database_id, relevance, fulltext = results[0]
-            meta_ids = [r[0] for r in results]
+        meta_ids = [r[0] for r in results]
 
-        return json.dumps(meta_ids,
-                           default=json_util.default)
+        return json.dumps(meta_ids, default=json_util.default)
 
     def messages_for_folder(self, user_id, folder_name):
         """ Returns all messages in a given folder.
@@ -84,7 +80,7 @@ class API(object):
         """ Sends a message with the given objects """
 
         # TODO have postel take user_id instead of email/token
-        user = db_session.query(User).filter(User.user_id == user_id).all()[0]
+        user = db_session.query(User).filter(User.id == user_id).all()[0]
         s = postel.SMTP(user.g_email,
                         user.g_access_token)
 
@@ -96,7 +92,9 @@ class API(object):
 
     def meta_with_id(self, user_id, data_id):
 
-        existing_msgs_query = db_session.query(MessageMeta).filter(MessageMeta.g_msgid == data_id).filter(MessageMeta.g_user_id == user_id).options(joinedload("parts"))
+        existing_msgs_query = db_session.query(MessageMeta).join(User)\
+                .filter(MessageMeta.g_msgid == data_id, User.id == user_id)\
+                .options(joinedload("parts"))
         log.info(existing_msgs_query)
         meta = existing_msgs_query.all()
         assert len(meta) == 1, "Incorrect messagemeta response"
@@ -117,8 +115,9 @@ class API(object):
         # user = db_session.query(User).filter(User.user_id == user_id).all()[0]
 
 
-        q = db_session.query(MessagePart).join(MessagePart.messagemeta)\
-                .filter(MessageMeta.g_msgid==message_id, MessagePart.walk_index == walk_index)
+        q = db_session.query(MessagePart).join(MessageMeta)\
+                .filter(MessageMeta.g_msgid==message_id,
+                        MessagePart.walk_index == walk_index)
         parts = q.all()
         print 'parts', parts
 

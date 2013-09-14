@@ -181,7 +181,7 @@ class WireNamespace(BaseNamespace):
     def recv_message(self, message):
         log.info(message)
 
-        # Make this an @authenticated decorator someday
+        # TODO: Make this an @authenticated decorator someday
         user = get_user(request)
         assert user
 
