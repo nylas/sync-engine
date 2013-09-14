@@ -9,13 +9,10 @@ from config import setup_env
 from server.util.log import configure_logging
 log = configure_logging()
 
-
-
 def debug(args=None):
     """ Run the server with autoreload. TODO add debug flag to startup."""
     from werkzeug.serving import run_with_reloader
     run_with_reloader(start)
-
 
 def start(args=None):
     # commit = subprocess.check_output(["git", "describe", "--tags"])
@@ -86,8 +83,6 @@ def stop(args):
     # os.system("stty echo")
     sys.exit(0)
 
-
-
 def console(args):
 
     # import models
@@ -118,7 +113,6 @@ def console(args):
 def signal_handler(signal, frame):
     stop(None)
 
-
 def main():
     signal.signal(signal.SIGINT, signal_handler)
 
@@ -144,7 +138,6 @@ def main():
 
     args = parser.parse_args()
     args.func(args)
-
 
 if __name__=="__main__":
     main()
