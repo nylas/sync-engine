@@ -21,7 +21,8 @@ class API(object):
     def z_search(self):
         """ Proxy function for the ZeroMQ search service. """
         if not self._zmq_search:
-            self._zmq_search = zerorpc.Client(os.environ.get('SEARCH_SERVER_LOC', None))
+            self._zmq_search = zerorpc.Client(
+                    os.environ.get('SEARCH_SERVER_LOC', None))
         return self._zmq_search.search
 
     def search_folder(self, user_id, search_query):

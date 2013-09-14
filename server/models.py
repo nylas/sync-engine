@@ -103,9 +103,10 @@ class MessageMeta(JSONSerializable, Base):
     # XXX clean this up a lot - make a better constructor, maybe taking
     # a mailbase as an argument to prefill a lot of attributes
 
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    user = relationship('User', backref="messages")
     # TODO probably want to store some of these headers in a better
     # non-pickled way to provide indexing
-    g_email = Column(String(255))
     from_addr = Column(MediumPickle)
     sender_addr = Column(MediumPickle)
     reply_to = Column(MediumPickle)
@@ -116,44 +117,20 @@ class MessageMeta(JSONSerializable, Base):
     message_id = Column(String(255))
     subject = Column(Text(collation='utf8_unicode_ci'))
     internaldate = Column(DateTime)
-    size = Column(Integer)
+    size = Column(Integer, default=0)
     data_sha256 = Column(String(255))
-    g_msgid = Column(String(255), primary_key=True)
-    g_user_id = Column(String(255), primary_key=True)
+    # TODO kill these later once we're sure it won't break anything
+    # (duplicated on User; access from relationship/join instead)
+    g_email = Column(String(255))
+    g_msgid = Column(String(255))
+    g_user_id = Column(String(255))
     g_thrid = Column(String(255))
-
-    def __init__(self):
-        self.g_email = None
-        self.from_addr = None
-        self.sender_addr = None
-        self.reply_to = None
-        self.to_addr = None
-        self.cc_addr = None
-        self.bcc_addr = None
-        self.in_reply_to = None
-        self.message_id = None
-        self.date = None
-        self.size = 0
-        self.internaldate = None
-        self.g_msgid = None
-        self.g_thrid = None
-        self.subject = None
-        self.g_user_id = None
-        self.data_sha256 = None
-
-
-    # def gmail_url(self):
-    #     if not self.uid:
-    #         return
-    #     return "https://mail.google.com/mail/u/0/#inbox/" + hex(self.uid)
-
 
     def trimmed_subject(self):
         s = self.subject
         if s[:4] == u'RE: ' or s[:4] == u'Re: ' :
             s = s[4:]
         return s
-
 
     def client_json(self):
         # TODO serialize more here for client API
@@ -164,6 +141,7 @@ class MessageMeta(JSONSerializable, Base):
         d['subject'] = self.subject
         d['g_id'] = self.g_msgid
         d['g_thrid'] = self.g_thrid
+        d['user_id'] = self.user_id
         return d
 
 # These are the top 15 most common Content-Type headers
