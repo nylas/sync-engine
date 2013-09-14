@@ -36,9 +36,6 @@ class SearchService:
         enquire.set_query(query)
         matches = enquire.get_mset(0, limit)
 
-        # Clean up.
-        database.close()
-
         # Display the results.
         log.info("%i results found." % matches.get_matches_estimated())
         log.info("Results 1-%i:" % matches.size())
@@ -46,4 +43,8 @@ class SearchService:
         # XXX I think xapian also allows to apply highlights, can we do that?
 
         results = [(m.docid, m.rank, m.document.get_data()) for m in matches]
+
+        # Clean up.
+        database.close()
+
         return results
