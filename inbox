@@ -88,6 +88,25 @@ def console(args):
     from tools.crispinshell import start_console
     start_console(args.email_address)
 
+def search(args):
+    setup_env()
+
+    import zerorpc
+    from server.models import db_session, User
+
+    user = db_session.query(User).filter_by(g_email=args.email_address).one()
+
+    try:
+        c = zerorpc.Client(timeout=5)
+        c.connect("tcp://127.0.0.1:9995")
+
+        # XXX print something more useful here, like Subject: To: <snippet>
+        # or something
+        print c.search(user.id, args.query)
+    except zerorpc.exceptions.TimeoutExpired:
+        print >>sys.stderr, "Can't connect. Is the sync server running? (./inbox start)"
+        sys.exit(1)
+
 def index(args):
     setup_env()
     from server.search import gen_search_index
@@ -129,6 +148,12 @@ def main():
     parser_sync.add_argument('--email-address', dest='email_address',
             help='Email address of user to index mail')
     parser_sync.set_defaults(func=index)
+
+    parser_sync = subparsers.add_parser('search', description="Search mail")
+    parser_sync.add_argument('email_address',
+            help='Email address of user to search mail')
+    parser_sync.add_argument('query', help='Term(s) to search for')
+    parser_sync.set_defaults(func=search)
 
     args = parser.parse_args()
     args.func(args)
