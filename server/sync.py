@@ -280,7 +280,7 @@ def initial_sync(user, updates):
                 new, updated = new_or_updated(modified, folder, local_uids)
                 # for new, query g_msgids and update cache
                 server_g_msgids.update(crispin_client.fetch_g_msgids(new))
-                set_cache("_".join([crispin_client.user_obj.g_email, folder,
+                set_cache("_".join([user.g_email, folder,
                     "server_g_msgids"]), server_g_msgids)
                 # for updated, update them now
                 # bigger chunk because the data being fetched here is very small
@@ -289,7 +289,7 @@ def initial_sync(user, updates):
                     db_session.commit()
         else:
             server_g_msgids = crispin_client.fetch_g_msgids()
-            set_cache("_".join([crispin_client.user_obj.g_email, folder,
+            set_cache("_".join([user.g_email, folder,
                 "server_g_msgids"]), server_g_msgids)
             cached_validity = fetch_uidvalidity(user.g_email, folder)
             if cached_validity is None:

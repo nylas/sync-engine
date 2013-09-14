@@ -1,5 +1,6 @@
 import os, errno
 import cPickle as pickle
+import logging as log
 
 from server.util import safe_filename, mkdirp
 
@@ -18,6 +19,7 @@ def _unless_dne(fn, *args, **kwargs):
     try:
         return fn(*args, **kwargs)
     except IOError as e:
+        log.warning("Cache file does not exist.")
         if e.errno == errno.ENOENT:
             return None
         else: raise
