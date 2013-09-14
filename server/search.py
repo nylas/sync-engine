@@ -41,7 +41,7 @@ def gen_search_index(user):
 
     last_docid = database.get_lastdocid()
     msg_query = db_session.query(MessageMeta).filter(
-            MessageMeta.g_email == user.g_email,
+            MessageMeta.user_id == user.id,
             MessageMeta.id > last_docid).options(joinedload('parts'))
     log.info("Have {0} messages to process".format(msg_query.count()))
 
