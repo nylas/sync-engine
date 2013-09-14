@@ -6,7 +6,7 @@ from flask import Flask, request, redirect, make_response, render_template, Resp
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
 from socket_rpc import SocketRPC
-from models import db_session, User, MessagePart
+from models import db_session, User, MessageMeta, MessagePart
 from werkzeug.wsgi import SharedDataMiddleware
 
 import google_oauth
@@ -126,10 +126,6 @@ def logout():
     response.set_cookie('session', '', expires=0, domain=app.config['SESSION_COOKIE_DOMAIN'])
     return response
 
-
-
-
-
 @app.route("/wire/<path:path>")
 def run_socketio(path):
 
@@ -144,10 +140,6 @@ def run_socketio(path):
         log.error("No user object for request: %s" % request)
 
     return Response()
-
-
-
-
 
 active_sockets = {}
 
@@ -232,22 +224,24 @@ def upload_file_handler():
     if request.method == 'POST' and 'file' in request.files:
         uploaded_file = request.files['file']
 
-        mp = MessagePart()
-        mp.is_inboxapp_attachment = True
-        mp.g_email = user.g_email
-        mp.content_type = uploaded_file.content_type
-        mp.filename = uploaded_file.filename
-        log.info("New uploaded file %s" % mp.filename)
-        mp.save(uploaded_file.read())  # TODO consider sending the stream object
+        meta = MessageMeta()
+        part = MessagePart(
+                messagemeta=meta,
+                content_type=uploaded_file.content_type,
+                filename=uploaded_file.filename,
+                g_email=user.g_email,
+                is_inboxapp_attachment=True)
+        log.info("New uploaded file %s" % part.filename)
+        part.save(uploaded_file.read())  # TODO consider sending the stream object
         log.info("Saved upload to S3")
 
         # Return content_id for upload
         # TODO right now the content_id is just the upload's hash
         # later we should salt this with something
-        mp.content_id = mp.data_sha256
-        db_session.add(mp)
+        part.content_id = part.data_sha256
+        db_session.add(part)
         db_session.commit()
-        return mp.data_sha256
+        return part.data_sha256
 
     log.error("What are we trying to upload?")
     return Response()
