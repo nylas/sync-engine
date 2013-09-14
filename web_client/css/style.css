@@ -228,6 +228,26 @@ a {
 
 }
 
+.compose_addressbox {
+
+  display:block;
+  /*padding: 10px;*/
+
+
+  color: rgba(7,7,7,0.52);
+/*  padding-top: 14px;*/
+  text-shadow: 0px 1px 0px #FFFFFF;
+/*  width:100px;
+  margin-left:auto;
+  margin-right:auto;
+*/
+  padding-top: 5px;
+  padding-left: 8px;
+  float:left;
+
+}
+
+
 
 input:focus, button:focus,
 select:focus {
@@ -275,6 +295,63 @@ input[type="text"]{
 
 
 }
+
+
+
+.compose_addressbox input  {
+
+  font-family: "proxima-nova-alt-condensed", sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+
+/*  border-radius: 5px 0px 0px 5px;
+  -moz-border-radius: 5px 0px 0px 5px;
+  -webkit-border-radius: 5px 0px 0px 5px;
+*/
+
+  border-radius: 5px;
+  -moz-border-radius: 5px;
+  -webkit-border-radius: 5px;
+
+/*
+  -webkit-box-shadow: 0px 1px 0px 0px rgba(255,255,255,.4), inset 0px 6px 5px -6px rgba(0,0,0,0.5);
+  -moz-box-shadow: 0px 1px 0px 0px rgba(255,255,255,.4), inset 0px 6px 5px -6px rgba(0,0,0,0.5);
+  box-shadow: 0px 1px 0px 0px rgba(255,255,255,.4), inset 0px 6px 5px -6px rgba(0,0,0,0.5);
+*/  color: #333;
+
+
+  /*background:  #fff url("/app/img/magnifying.png") no-repeat 8px 8px;*/
+
+  padding-top: 6px;
+  padding-bottom: 4px;
+  padding-left: 6px;
+
+  /*height: 22px;*/
+  width: 296px;
+
+
+  border: 1px solid #959595;
+
+
+}
+
+
+
+.compose_addressbox input:focus  {
+
+    /*color: ;*/
+
+/*  -webkit-box-shadow: 0px 1px 0px 0px rgba(255,255,255,.4), inset 0px 6px px -6px rgba(77, 127, 189, 0.5);
+  -moz-box-shadow: 0px 1px 0px 0px rgba(255,255,255,.4), inset 0px 6px 5px -6px rgba(77, 127, 189, 0.5);
+*/  box-shadow: 0px 1px 0px 0px rgba(255,255,255,.4), inset 0px 6px 5px -6px rgba(77, 127, 189, 0.9);
+  color: #ccc;
+
+    outline:0;
+    border: solid 1px  #1A7A93 !important;
+    color: #1A7A93;
+}
+
+
 
 form {
   margin: 0px;
@@ -786,6 +863,31 @@ a.button:active {
   cursor: text;
 }
 
+
+.resize_textbox_compose {
+   word-wrap: break-word;
+
+   -moz-box-shadow:none;
+   resize: none;
+
+  font-size: 16px;
+  font-variant: normal;
+  font-family: "proxima-nova-alt", sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 21px;
+  text-align: left;
+
+  -moz-user-select: text;
+  -khtml-user-select: text;
+  -webkit-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+
+  cursor: text;
+}
+
+
 .animate_change
 {
    transition: 0.3s;
@@ -797,7 +899,7 @@ a.button:active {
 
 
 .active {
-  background-color: blue;
+  background-color: rgba(94, 182, 6, 0.3);
 }
 
 .resize_textbox:focus {

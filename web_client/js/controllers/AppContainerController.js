@@ -131,6 +131,15 @@ app.controller('AppContainerController',
 
         };
 
+        $scope.composerActive = false;
+
+
+        $scope.composeButtonHandler = function() {
+
+            $scope.activeThread = null;
+            $scope.composerActive = true;
+
+        }
 
         $scope.archiveButtonHandler = function() {
             console.log("Should archive message!");
@@ -241,6 +250,8 @@ app.controller('AppContainerController',
             console.log("SelectedThread:");
             console.log(selectedThread);
 
+
+            $scope.composerActive = false;
             $scope.activeThread = selectedThread;
         };
 
