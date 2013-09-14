@@ -239,6 +239,7 @@ def upload_file_handler():
         # TODO right now the content_id is just the upload's hash
         # later we should salt this with something
         part.content_id = part.data_sha256
+        db_session.add(meta)
         db_session.add(part)
         db_session.commit()
         return part.data_sha256
