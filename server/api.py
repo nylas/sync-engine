@@ -27,9 +27,7 @@ class API(object):
 
     def search_folder(self, user_id, search_query):
         results = self.z_search(user_id, search_query)
-
         meta_ids = [r[0] for r in results]
-
         return json.dumps(meta_ids, default=json_util.default)
 
     def messages_for_folder(self, user_id, folder_name):
