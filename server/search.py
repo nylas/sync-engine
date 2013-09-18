@@ -54,12 +54,15 @@ def gen_search_index(user):
                 if part._content_type_common == 'text/html']
         log.info("{0}: {1} text/plain, {2} text/html".format(
                 msg.g_msgid, len(plain_parts), len(html_parts)))
-        # XXX do we really always want the first part only?
+        # XXX some emails have useless plaintext that says "view this in
+        # an email client that supports HTML"; how to avoid indexing that
+        # and fall back to the HTML?
         text = None
         if plain_parts:
-            text = plain_parts[0].get_data()
+            text = '\n'.join([part.get_data() for part in plain_parts])
         elif html_parts:
-            text = strip_tags(html_parts[0].get_data())
+            text = strip_tags('\n'.join([part.get_data() \
+                    for part in html_parts]))
 
         # XXX also index attachments (add a 'type' field or something to
         # differentiate)
