@@ -462,15 +462,12 @@ else:
 #         database = environ.get('MYSQL_DATABASE')
 #     ), connect_args = {'charset': 'utf8mb4'} )
 
-# XXX TODO put this in a function.
-# putting it here b0rks up alembic autogeneration for new tables
-# since this will auto-create new tables when anything from models
-# is imported.
-Base.metadata.create_all(engine)
+def init_db():
+    Base.metadata.create_all(engine)
 
 from sqlalchemy.orm import sessionmaker
 Session = sessionmaker()
 Session.configure(bind=engine)
 
-
+# A single global database session per Inbox instance is good enough for now.
 db_session = Session()

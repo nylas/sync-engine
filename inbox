@@ -28,6 +28,8 @@ def start(args=None):
      Use CTRL-C to stop.
      """
     setup_env()
+    from server.models import init_db
+    init_db()
 
     # Start ZeroRPC api server service
     from server.util.concurrency import make_zerorpc
