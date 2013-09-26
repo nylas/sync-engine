@@ -56,6 +56,9 @@ def gen_search_index(user):
         # differentiate)
 
         if text is not None:
+            date = msg.internaldate
+            from_ = ' '.join(msg.from_addr)
+            to_ = ' '.join(msg.to_addr)
             doc = xapian.Document()
             doc.set_data(text)
 
