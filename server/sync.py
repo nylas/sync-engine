@@ -125,6 +125,18 @@ def new_or_updated(uids, folder, local_uids=None):
                 FolderMeta.msg_uid.in_(uids))])
     return partition(lambda x: x not in local_uids, uids)
 
+def g_check_join(threads, errmsg):
+    """ Block until all threads have completed and throw an error if threads
+        are not successful.
+    """
+    joinall(threads)
+    errors = [thread.exception for thread in threads if not thread.successful()]
+    if errors:
+        log.error(errmsg)
+        for error in errors:
+            log.error(error)
+        raise SyncException("Fatal error encountered")
+
 def incremental_sync(user):
     """ Poll this every N seconds for active (logged-in) users and every
         N minutes for logged-out users. It checks for changed message metadata
@@ -176,7 +188,10 @@ def highestmodseq_update(folder, crispin_client, cached_validity=None):
             db_session.add_all(new_messagepart)
 
             # save message data to s3 before committing changes to db
-            joinall([Greenlet.spawn(part.save, part._data) for part in new_messagepart])
+            threads = [Greenlet.spawn(part.save, part._data) \
+                    for part in new_messagepart]
+            # Fatally abort if part save fails.
+            g_check_join(threads, "Could not save message parts to blob store!")
             # Clear data stored on MessagePart objects here. Hopefully this will
             # help with memory issues.
             for part in new_messagepart:
@@ -340,12 +355,14 @@ def initial_sync(user, updates):
                     uids, folder, crispin_client)
             db_session.add_all(new_foldermeta)
             db_session.add_all([msg['meta'] for msg in new_messages.values()])
-            # populates 'id' field on messagemeta objects
-            # db_session.flush()
             for msg in new_messages.values():
                 db_session.add_all(msg['parts'])
-                # save message data to s3 before committing changes to db
-                joinall([Greenlet.spawn(part.save, part._data) for part in msg['parts']])
+                # Save message part blobs before committing changes to db.
+                threads = [Greenlet.spawn(part.save, part._data) \
+                        for part in msg['parts']]
+                # Fatally abort if part saves error out. Messages in this
+                # chunk will be retried when the sync is restarted.
+                g_check_join(threads, "Could not save message parts to blob store!")
                 # Clear data stored on MessagePart objects here. Hopefully this
                 # will help with memory issues.
                 for part in msg['parts']:
@@ -353,7 +370,7 @@ def initial_sync(user, updates):
 
             garbge_collect()
 
-            safe_commit()
+            db_session.commit()
 
             total_messages += len(uids)
 
