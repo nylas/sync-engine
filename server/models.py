@@ -167,10 +167,6 @@ class UserSession(JSONSerializable, Base):
     session_token = Column(String(255))
     g_email = Column(String(255))
 
-    def __init__(self):
-        self.session_token = None
-        self.email_address  = None
-
 class User(JSONSerializable, Base):
     __tablename__ = 'users'
 
@@ -197,25 +193,6 @@ class User(JSONSerializable, Base):
     g_scope = Column(String(512))
     g_refresh_token = Column(String(512))
     g_verified_email = Column(Boolean)
-
-    def __init__(self):
-        self.name = None
-
-        self.g_token_issued_to = None
-        self.g_user_id = None
-
-        self.g_access_token =None
-        self.g_id_token = None
-        self.g_expires_in = None
-        self.g_access_type = None
-        self.g_token_type = None
-        self.g_audience = None
-        self.date = None
-        self.g_scope = None
-        self.g_email = None
-        self.g_refresh_token = None
-        self.g_verified_email = None
-        self.g_allmail_uidvalidity = None
 
 class MessageMeta(JSONSerializable, Base):
     __tablename__ = 'messagemeta'
