@@ -179,6 +179,7 @@ class User(JSONSerializable, Base):
     date = Column(DateTime)
     # extra flags
     initial_sync_done = Column(Boolean)
+    sync_active = Column(Boolean, default=False)
 
     g_token_issued_to = Column(String(512))
     g_user_id = Column(String(512))
