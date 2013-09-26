@@ -172,7 +172,7 @@ class User(JSONSerializable, Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    g_email = Column(String(255), unique=True)  # Should add index=true?
+    g_email = Column(String(255), unique=True, index=True)
 
     # Not from google
     name = Column(String(255))
