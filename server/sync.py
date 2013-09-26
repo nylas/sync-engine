@@ -484,6 +484,14 @@ class SyncService:
         # all data in here ought to be msgpack-serializable!
         self.user_statuses = dict()
 
+        # Restart existing active syncs. (Later we will want to partition
+        # these across different machines, probably.)
+        user_email_addresses = [r[0] for r in \
+                db_session.query(User.g_email).filter_by(sync_active=True)]
+        for user_email_address in user_email_addresses:
+            log.info("Restarting sync for {0}".format(user_email_address))
+            self.start_sync(user_email_address)
+
     def start_sync(self, user_email_address):
         try:
             user = db_session.query(User).filter_by(g_email=user_email_address).one()
@@ -496,6 +504,9 @@ class SyncService:
                 monitor = SyncMonitor(user, update_user_status)
                 self.monitors[user.g_email] = monitor
                 monitor.start()
+                user.sync_active = True
+                db_session.add(user)
+                db_session.commit()
                 return "OK sync started"
             else:
                 return "OK sync already started"
