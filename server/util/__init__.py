@@ -76,6 +76,14 @@ def mkdirp(path):
             pass
         else: raise
 
+# http://stackoverflow.com/questions/10840533/most-pythonic-way-to-delete-a-file-which-may-not-exist
+def remove_file(filename):
+    try:
+        os.remove(filename)
+    except OSError, e:
+        if e.errno != errno.ENOENT:
+            raise
+
 def validate_email(address_text):
 
     args = {

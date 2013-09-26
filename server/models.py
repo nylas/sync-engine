@@ -13,13 +13,15 @@ from sqlalchemy.schema import UniqueConstraint
 
 from hashlib import sha256
 from os import environ
-from server.util import mkdirp
+from server.util import mkdirp, remove_file
 
 import logging as log
 # from sqlalchemy.databases.mysql import MSMediumBlob
 from sqlalchemy.dialects import mysql
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
+
+### Roles
 
 class JSONSerializable(object):
     def client_json(self):
@@ -30,9 +32,132 @@ class JSONSerializable(object):
 
 STORE_MSG_ON_S3 = False
 
+class Blob(object):
+    """ A blob of data that can be saved to local or remote (S3) disk. """
+    size = Column(Integer, default=0)
+    data_sha256 = Column(String(255))
+    def save(self, data):
+        assert data is not None, \
+                "Blob can't have NoneType data (can be zero-length, though!)"
+        assert type(data) is not unicode, "Blob bytes must be encoded"
+        self.size = len(data)
+        self.data_sha256 = sha256(data).hexdigest()
+        if self.size > 0:
+            if STORE_MSG_ON_S3:
+                self._save_to_s3(data)
+            else:
+                self._save_to_disk(data)
+        else:
+            log.warning("Not saving 0-length {1} {0}".format(
+                self.id, self.__class__.__name__))
+
+    def get_data(self):
+        if self.size == 0:
+            # NOTE: This is a placeholder for "empty bytes". If this doesn't
+            # work as intended, it will trigger the hash assertion later.
+            data = ""
+        elif STORE_MSG_ON_S3:
+            data = self._get_from_s3()
+        else:
+            data = self._get_from_disk()
+        assert self.data_sha256 == sha256(data).hexdigest(), \
+                "Returned data doesn't match stored hash!"
+        return data
+
+    def delete_data(self):
+        if self.size == 0:
+            # nothing to do here
+            return
+        if STORE_MSG_ON_S3:
+            self._delete_from_s3()
+        else:
+            self._delete_from_disk()
+        # TODO should we clear these fields?
+        # self.size = None
+        # self.data_sha256 = None
+
+    def _save_to_s3(self, data):
+        assert len(data) > 0, "Need data to save!"
+        # TODO: store AWS credentials in a better way.
+        assert 'AWS_ACCESS_KEY_ID' in environ, "Need AWS key!"
+        assert 'AWS_SECRET_ACCESS_KEY' in environ, "Need AWS secret!"
+        assert 'MESSAGE_STORE_BUCKET_NAME' in environ, "Need bucket name to store message data!"
+        # Boto pools connections at the class level
+        conn = S3Connection(environ.get('AWS_ACCESS_KEY_ID'),
+                            environ.get('AWS_SECRET_ACCESS_KEY'))
+        bucket = conn.get_bucket(environ.get('MESSAGE_STORE_BUCKET_NAME'))
+
+        # See if it alreays exists and has the same hash
+        data_obj = bucket.get_key(self.data_sha256)
+        if data_obj:
+            assert data_obj.get_metadata('data_sha256') == self.data_sha256, \
+                "MessagePart hash doesn't match what we previously stored on s3!"
+            log.info("MessagePart already exists on S3.")
+            return
+
+        data_obj = Key(bucket)
+        # if metadata:
+        #     assert type(metadata) is dict
+        #     for k, v in metadata.iteritems():
+        #         data_obj.set_metadata(k, v)
+        data_obj.set_metadata('data_sha256', self.data_sha256)
+        # data_obj.content_type = self.content_type  # Experimental
+        data_obj.key = self.data_sha256
+        log.info("Writing data to S3 with hash {0}".format(self.data_sha256))
+        # def progress(done, total):
+        #     log.info("%.2f%% done" % (done/total * 100) )
+        # data_obj.set_contents_from_string(data, cb=progress)
+        data_obj.set_contents_from_string(data)
+
+    def _get_from_s3(self):
+        assert self.data_sha256, "Can't get data with no hash!"
+        # Boto pools connections at the class level
+        conn = S3Connection(environ.get('AWS_ACCESS_KEY_ID'),
+                            environ.get('AWS_SECRET_ACCESS_KEY'))
+        bucket = conn.get_bucket(environ.get('MESSAGE_STORE_BUCKET_NAME'))
+        data_obj = bucket.get_key(self.data_sha256)
+        assert data_obj, "No data returned!"
+        return bucket.get_contents_as_string(data_obj)
+
+    def _delete_from_s3(self):
+        # TODO
+        pass
+
+    # Helpers
+    @property
+    def _data_file_directory(self):
+        assert self.data_sha256
+        # Nest it 6 items deep so we don't have folders with too many files.
+        h = self.data_sha256
+        return os.path.join('..', 'parts', h[0], h[1], h[2], h[3], h[4], h[5])
+
+    @property
+    def _data_file_path(self):
+        return os.path.join(self._data_file_directory, self.data_sha256)
+
+    def _save_to_disk(self, data):
+        mkdirp(self._data_file_directory)
+        with open(self._data_file_path, 'wb') as f:
+            f.write(data)
+
+    def _get_from_disk(self):
+        try:
+            with open(self._data_file_path, 'rb') as f:
+                return f.read()
+        except Exception:
+            log.error("No data for hash {0}".format(self.data_sha256))
+            # XXX should this instead be empty bytes?
+            return None
+
+    def _delete_from_disk(self):
+        remove_file(self._data_file_path)
+
+### Column Types
+
 class MediumPickle(PickleType):
     impl = mysql.MEDIUMBLOB
 
+### Tables
 
 class UserSession(JSONSerializable, Base):
     __tablename__ = 'user_sessions'
@@ -45,7 +170,6 @@ class UserSession(JSONSerializable, Base):
     def __init__(self):
         self.session_token = None
         self.email_address  = None
-
 
 class User(JSONSerializable, Base):
     __tablename__ = 'users'
@@ -92,8 +216,6 @@ class User(JSONSerializable, Base):
         self.g_refresh_token = None
         self.g_verified_email = None
         self.g_allmail_uidvalidity = None
-
-
 
 class MessageMeta(JSONSerializable, Base):
     __tablename__ = 'messagemeta'
@@ -162,8 +284,29 @@ common_content_types = ['text/plain',
                         'message/rfc822',
                         'image/jpg']
 
+class RawMessage(JSONSerializable, Blob, Base):
+    __tablename__ = 'rawmessage'
+    """ Metadata for raw messages (used for allowing the mail ingester
+        to change over time without having to re-download all messages).
 
-class MessagePart(JSONSerializable, Base):
+        This table should not depend on any table other than the User table.
+        (No other foreign keys!)
+    """
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+
+    # Save data other than BODY[] that we query for when downloading messages
+    # from the IMAP backend.
+    internaldate = Column(DateTime)
+    g_msgid = Column(String(255))
+    g_thrid = Column(String(255))
+
+    folder_name = Column(String(255))
+    msg_uid = Column(String(255))
+
+    flags = Column(MediumPickle)
+
+class MessagePart(JSONSerializable, Blob, Base):
     __tablename__ = 'messagepart'
     """ Metadata for message parts stored in s3 """
 
@@ -179,19 +322,16 @@ class MessagePart(JSONSerializable, Base):
 
     content_disposition = Column(Enum('inline', 'attachment'))
     content_id = Column(String(255))  # For attachments
-    size = Column(Integer, default=0)
     misc_keyval = Column(MediumPickle)
-    s3_id = Column(String(255))
-    data_sha256 = Column(String(255))
 
     is_inboxapp_attachment = Column(Boolean, default=False)
     collection_id = Column(Integer, ForeignKey("collections.id"), nullable=True)
     collection = relationship('Collection', backref="parts")
 
-    # XXX create a constructor that allows the 'content_type' keyword
+    # TODO: create a constructor that allows the 'content_type' keyword
 
-    __table_args__ = (UniqueConstraint('messagemeta_id', 'walk_index', 'data_sha256',
-        name='_messagepart_uc'),)
+    __table_args__ = (UniqueConstraint('messagemeta_id', 'walk_index',
+        'data_sha256', name='_messagepart_uc'),)
 
     def __init__(self, *args, **kwargs):
         self.content_type = None
@@ -210,115 +350,6 @@ class MessagePart(JSONSerializable, Base):
         d['size'] = self.size
         d['filename'] = self.filename
         return d
-
-    def save(self, data):
-        assert data is not None, \
-                "MessagePart can't have NoneType body (can be zero-length, though!)"
-        self.size = len(data)
-        self.data_sha256 = sha256(data).hexdigest()
-        if STORE_MSG_ON_S3:
-            self._save_to_s3(data)
-        else:
-            self._save_to_disk(data)
-
-    def get_data(self):
-        # NOTE: if we were to optimize out fetching blank MIME parts, it would
-        # go here.
-        if STORE_MSG_ON_S3:
-            data = self._get_from_s3()
-        else:
-            data = self._get_from_disk()
-        assert self.data_sha256 == sha256(data).hexdigest(), "Returned data doesn't match stored hash!"
-        return data
-
-    def delete_data(self):
-        if STORE_MSG_ON_S3:
-            self._delete_from_s3()
-        else:
-            self._delete_from_disk()
-        # TODO should we clear these fields?
-        # self.size = None
-        # self.data_sha256 = None
-
-    def _save_to_s3(self, data):
-        assert len(data) > 0, "Need data to save!"
-        assert 'AWS_ACCESS_KEY_ID' in environ, "Need AWS key!"
-        assert 'AWS_SECRET_ACCESS_KEY' in environ, "Need AWS secret!"
-        assert 'MESSAGE_STORE_BUCKET_NAME' in environ, "Need bucket name to store message data!"
-        # Boto pools connections at the class level
-        conn = S3Connection(environ.get('AWS_ACCESS_KEY_ID'),
-                            environ.get('AWS_SECRET_ACCESS_KEY'))
-        bucket = conn.get_bucket(environ.get('MESSAGE_STORE_BUCKET_NAME'))
-
-        # See if it alreays exists and has the same hash
-        data_obj = bucket.get_key(self.data_sha256)
-        if data_obj:
-            assert data_obj.get_metadata('data_sha256') == self.data_sha256, \
-                "MessagePart hash doesn't match what we previously stored on s3 !"
-            log.info("MessagePart already exists on S3.")
-            return
-
-        data_obj = Key(bucket)
-        # if metadata:
-        #     assert type(metadata) is dict
-        #     for k, v in metadata.iteritems():
-        #         data_obj.set_metadata(k, v)
-        data_obj.set_metadata('data_sha256', self.data_sha256)
-        # data_obj.content_type = self.content_type  # Experimental
-        data_obj.key = self.data_sha256
-        log.info("Writing data to S3 with hash %s" % self.data_sha256)
-        # def progress(done, total):
-        #     log.info("%.2f%% done" % (done/total * 100) )
-        # data_obj.set_contents_from_string(data, cb=progress)
-        data_obj.set_contents_from_string(data)
-
-
-    def _get_from_s3(self):
-        assert self.data_sha256
-        # Boto pools connections at the class level
-        conn = S3Connection(environ.get('AWS_ACCESS_KEY_ID'),
-                            environ.get('AWS_SECRET_ACCESS_KEY'))
-        bucket = conn.get_bucket(environ.get('MESSAGE_STORE_BUCKET_NAME'))
-        data_obj = bucket.get_key(self.data_sha256)
-        assert data_obj
-        return bucket.get_contents_as_string(data_obj)
-
-
-    def _delete_from_s3(self):
-        # TODO
-        pass
-
-
-    # Helpers
-    @property
-    def _data_file_directory(self):
-        assert self.data_sha256
-        # Nest it 6 items deep so we dont have folders with too many files
-        h = str(self.data_sha256)
-        return '../parts/'+ h[0]+'/'+h[1]+'/'+h[2]+'/'+h[3]+'/'+h[4]+'/'+h[5]+'/'
-
-    @property
-    def _data_file_path(self):
-        return self._data_file_directory + str(self.data_sha256)
-
-
-    def _save_to_disk(self, data):
-        mkdirp(self._data_file_directory)
-        f = open(self._data_file_path, 'w')
-        f.write(data)
-        f.close()
-
-    def _get_from_disk(self):
-        try:
-            f = open(self._data_file_path, 'r')
-            return f.read()
-        except Exception:
-            log.error("No data for hash %s" % self.data_sha256)
-            return None
-
-    def _delete_from_disk(self):
-        try: os.remove(self._data_file_path)
-        except: pass
 
     @reconstructor
     def init_on_load(self):
