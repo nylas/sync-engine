@@ -180,6 +180,7 @@ class User(JSONSerializable, Base):
     # extra flags
     initial_sync_done = Column(Boolean)
     sync_active = Column(Boolean, default=False)
+    save_raw_messages = Column(Boolean, default=True)
 
     sync_host = Column(String(255), nullable=True)
 
