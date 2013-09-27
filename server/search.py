@@ -5,24 +5,9 @@ import xapian
 
 from server.models import db_session, MessageMeta
 from server.util.file import mkdirp
+from server.util.html import strip_tags
 
 from sqlalchemy.orm import joinedload
-
-from HTMLParser import HTMLParser
-
-class MLStripper(HTMLParser):
-    def __init__(self):
-        self.reset()
-        self.fed = []
-    def handle_data(self, d):
-        self.fed.append(d)
-    def get_data(self):
-        return ''.join(self.fed)
-
-def strip_tags(html):
-    s = MLStripper()
-    s.feed(html)
-    return s.get_data()
 
 INDEX_BASEPATH = os.path.join("cache", "index")
 
