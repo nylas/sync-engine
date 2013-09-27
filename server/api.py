@@ -3,7 +3,7 @@ import logging as log
 import json
 import postel
 from bson import json_util
-from util import chunk
+from util.itert import chunk
 from models import db_session, MessageMeta, MessagePart, FolderMeta, User
 
 from sqlalchemy.orm import joinedload

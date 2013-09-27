@@ -4,7 +4,7 @@ import logging as log
 import xapian
 
 from server.models import db_session, MessageMeta
-from server.util import mkdirp
+from server.util.file import mkdirp
 
 from sqlalchemy.orm import joinedload
 

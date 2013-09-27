@@ -20,7 +20,7 @@ from quopri import decodestring as quopri_decodestring
 from base64 import b64decode
 from chardet import detect as detect_charset
 
-from util import or_none
+from util.misc import or_none
 from hashlib import sha256
 
 IMAP_HOST = 'imap.gmail.com'
