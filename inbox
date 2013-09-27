@@ -65,12 +65,16 @@ def sync(args):
     c = zerorpc.Client(timeout=5)
     c.connect("tcp://127.0.0.1:9997")
     try:
-        c.start_sync(args.email_address)
+        if args.cmd == 'start':
+            c.start_sync(args.email_address)
+            print "Sync started. See logs wherever you started the sync server."
+        elif args.cmd == 'stop':
+            c.stop_sync(args.email_address)
+            print "Sync stopped."
     except zerorpc.exceptions.TimeoutExpired:
         print >>sys.stderr, "Can't connect. Is the sync server running? (./inbox start)"
         sys.exit(1)
 
-    print "Sync started. See logs wherever you started the sync server."
 
 def stop(args):
     print """
@@ -143,6 +147,7 @@ def main():
     parser_console.set_defaults(func=console)
 
     parser_sync = subparsers.add_parser('sync', description="Download initial mail metadata and parts.")
+    parser_sync.add_argument('cmd', help='start or stop')
     parser_sync.add_argument('email_address', help='Email address of user to sync')
     parser_sync.set_defaults(func=sync)
 

@@ -197,6 +197,20 @@ class User(JSONSerializable, Base):
     g_refresh_token = Column(String(512))
     g_verified_email = Column(Boolean)
 
+    @property
+    def _sync_lockfile_name(self):
+        return "/var/lock/inbox_sync/{0}.lock".format(self.id)
+
+    @property
+    def _sync_lock(self):
+        return Lock(self._lockfile_name, block=False)
+
+    def sync_lock(self):
+        self._sync_lock.acquire()
+
+    def sync_unlock(self):
+        self._sync_lock.release()
+
 class MessageMeta(JSONSerializable, Base):
     __tablename__ = 'messagemeta'
 

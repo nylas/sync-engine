@@ -1,5 +1,6 @@
 from __future__ import division
 import sys, os;  sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..')))
+import socket
 
 import sessionmanager
 from models import db_session, FolderMeta, UIDValidity, User
@@ -7,13 +8,13 @@ from sqlalchemy import distinct
 import sqlalchemy.exc
 
 from encoding import EncodingError
-from server.util import chunk, partition
+from server.util.itert import chunk, partition
 from server.util.cache import set_cache, get_cache, rm_cache
 import logging as log
 from gc import collect as garbge_collect
 from datetime import datetime
 
-from gevent import Greenlet, sleep, joinall
+from gevent import Greenlet, sleep, joinall, kill
 from gevent.queue import Queue, Empty
 
 def refresh_crispin(email):
@@ -409,33 +410,30 @@ class SyncMonitor(Greenlet):
         Greenlet.__init__(self)
 
     def _run(self):
-        running = True
-        while running:
+        action = Greenlet.spawn(self.action)
+        while not action.ready():
             try:
                 cmd = self.inbox.get_nowait()
-                self.process_command(cmd)
-            except Empty:
-                pass
-            self.action()
+                if not self.process_command(cmd):
+                    kill(action)
+                    return
+            except Empty: pass
 
     def process_command(self, cmd):
+        """ Returns True if successful, or False if process should abort. """
         log.info("processing command {0}".format(cmd))
-        if cmd == 'shutdown':
-            pass
-        else:
-            pass
+        return cmd == 'shutdown'
 
     def action(self):
-        # XXX add some intermediate checks on the command queue in here
-        # babysit initial sync
         while not self.user.initial_sync_done:
             self.initial_sync()
 
         self.status_callback(self.user, 'poll', None)
-        # babysit polling FOREVER
-        polling = True
+
+        polling = True  # FOREVER
         while polling:
             self.poll()
+            sleep(0)
 
     def initial_sync(self):
         updates = Queue()
@@ -445,6 +443,8 @@ class SyncMonitor(Greenlet):
             self.status_callback(self.user, 'initial sync', progress)
             # XXX TODO wrap this in a Timeout in case the process crashes
             progress = updates.get()
+            # let monitor accept commands
+            sleep(0)
         # process may have finished with some progress left to
         # report; only report the last update
         remaining = [updates.get() for i in xrange(updates.qsize())]
@@ -495,7 +495,11 @@ class SyncService:
     def start_sync(self, user_email_address):
         try:
             user = db_session.query(User).filter_by(g_email=user_email_address).one()
+            fqdn = socket.getfqdn()
+            if user.sync_host is not None and user.sync_host != fqdn:
+                return "WARNING syncing on different host"
             if user.g_email not in self.monitors:
+                user.sync_lock()
                 def update_user_status(user, state, status):
                     """ I really really wish I were a lambda """
                     self.user_statuses[user.g_email] = (state, status)
@@ -505,11 +509,30 @@ class SyncService:
                 self.monitors[user.g_email] = monitor
                 monitor.start()
                 user.sync_active = True
+                user.sync_host = socket.getfqdn()
                 db_session.add(user)
                 db_session.commit()
                 return "OK sync started"
             else:
                 return "OK sync already started"
+        except sqlalchemy.orm.exc.NoResultFound:
+            raise SyncException("No such user")
+
+    def stop_sync(self, user_email_address):
+        try:
+            user = db_session.query(User).filter_by(g_email=user_email_address).one()
+            if not user.sync_active:
+                return "OK sync stopped already"
+            fqdn = socket.getfqdn()
+            assert user.sync_host == fqdn, "sync host FQDN doesn't match"
+            # XXX Can processing this command fail in some way?
+            self.monitors[user_email_address].inbox.add("shutdown")
+            user.sync_active = False
+            user.sync_host = None
+            db_session.add(user)
+            db_session.commit()
+            user.sync_unlock()
+            return "OK sync stopped"
         except sqlalchemy.orm.exc.NoResultFound:
             raise SyncException("No such user")
 
