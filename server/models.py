@@ -181,6 +181,8 @@ class User(JSONSerializable, Base):
     initial_sync_done = Column(Boolean)
     sync_active = Column(Boolean, default=False)
 
+    sync_host = Column(String(255), nullable=True)
+
     g_token_issued_to = Column(String(512))
     g_user_id = Column(String(512))
 
