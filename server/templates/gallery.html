@@ -1,0 +1,29 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Inbox photo gallery</title>
+  <link rel="stylesheet" href="/css/home_style.css">
+  <link rel="stylesheet" href="/css/photobox.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+  <script src='/js/photobox.js'></script>
+</head>
+<body>
+  <div id='gallery'>
+  {% for img in images %}
+  {# each img is a MessagePart #}
+  <a href="/{{ email }}/img/{{ img.data_sha256 }}">
+    <img src="/{{ email }}/img/{{ img.data_sha256 }}/thumb">
+  </a>
+  {% endfor %}
+  </div>
+  <script>
+    $('#gallery').photobox('a');
+    // or with a fancier selector and some settings, and a callback:
+    $('#gallery').photobox('a:first', { thumbs:false, time:0 }, imageLoaded);
+    function imageLoaded(){
+      console.log('photobox loaded');
+    }
+  </script>
+</body> 
+</html>
