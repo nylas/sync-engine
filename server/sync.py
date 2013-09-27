@@ -415,6 +415,7 @@ class SyncMonitor(Greenlet):
             try:
                 cmd = self.inbox.get_nowait()
                 if not self.process_command(cmd):
+                    log.info("Stopping sync for {0}".format(self.user.g_email))
                     kill(action)
                     return
             except Empty: sleep(0)
@@ -422,7 +423,7 @@ class SyncMonitor(Greenlet):
     def process_command(self, cmd):
         """ Returns True if successful, or False if process should abort. """
         log.info("processing command {0}".format(cmd))
-        return cmd == 'shutdown'
+        return cmd != 'shutdown'
 
     def action(self):
         while not self.user.initial_sync_done:
@@ -526,7 +527,7 @@ class SyncService:
             fqdn = socket.getfqdn()
             assert user.sync_host == fqdn, "sync host FQDN doesn't match"
             # XXX Can processing this command fail in some way?
-            self.monitors[user_email_address].inbox.add("shutdown")
+            self.monitors[user_email_address].inbox.put_nowait("shutdown")
             user.sync_active = False
             user.sync_host = None
             db_session.add(user)
