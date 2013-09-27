@@ -17,8 +17,8 @@ from datetime import datetime
 from gevent import Greenlet, sleep, joinall, kill
 from gevent.queue import Queue, Empty
 
-def refresh_crispin(email):
-    return sessionmanager.get_crispin_from_email(email)
+def refresh_crispin(email, dummy=False):
+    return sessionmanager.get_crispin_from_email(email, dummy)
 
 def load_validity_cache(crispin_client, email):
     # in practice UIDVALIDITY and HIGHESTMODSEQ are always positive
@@ -138,7 +138,7 @@ def g_check_join(threads, errmsg):
             log.error(error)
         raise SyncException("Fatal error encountered")
 
-def incremental_sync(user):
+def incremental_sync(user, dummy=False):
     """ Poll this every N seconds for active (logged-in) users and every
         N minutes for logged-out users. It checks for changed message metadata
         and new messages using CONDSTORE / HIGHESTMODSEQ and also checks for
@@ -147,7 +147,7 @@ def incremental_sync(user):
         We may also wish to frob update frequencies based on which folder
         a user has visible in the UI as well.
     """
-    crispin_client = refresh_crispin(user.g_email)
+    crispin_client = refresh_crispin(user.g_email, dummy)
     cache_validity = load_validity_cache(crispin_client, user.g_email)
     needs_update = []
     for folder in crispin_client.sync_folders:
@@ -222,10 +222,10 @@ def safe_download(uids, folder, crispin_client):
         log.error("Ran out of memory while fetching UIDs %s" % uids)
         raise e
     # XXX make this catch more specific
-    except Exception, e:
-        log.error("Crispin fetch failure: %s. Reconnecting..." % e)
-        crispin_client = refresh_crispin(crispin_client.email_address)
-        new_messages, new_foldermeta = crispin_client.fetch_uids(uids)
+    # except Exception, e:
+    #     log.error("Crispin fetch failure: %s. Reconnecting..." % e)
+    #     crispin_client = refresh_crispin(crispin_client.email_address)
+    #     new_messages, new_foldermeta = crispin_client.fetch_uids(uids)
 
     return new_messages, new_foldermeta
 
@@ -250,14 +250,14 @@ def update_metadata(uids, crispin_client):
 def get_server_g_msgids(crispin_client):
     pass
 
-def initial_sync(user, updates):
+def initial_sync(user, updates, dummy=False):
     """ Downloads entire messages and
     (1) creates the metadata database
     (2) stores message parts to the block store
 
     Percent-done and completion messages are sent to the 'updates' queue.
     """
-    crispin_client = refresh_crispin(user.g_email)
+    crispin_client = refresh_crispin(user.g_email, dummy)
 
     log.info('Syncing mail for {0}'.format(user.g_email))
 

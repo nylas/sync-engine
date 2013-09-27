@@ -102,13 +102,14 @@ def get_crispin_from_session(session_token):
     s = get_session(session_token)
     return get_crispin_from_email(s.g_email)
 
-def get_crispin_from_email(email_address, initial=False):
+def get_crispin_from_email(email_address, initial=False, dummy=False):
+    cls = crispin.DummyCrispinClient if dummy else crispin.CrispinClient
     if email_address in email_address_to_crispins:
         return email_address_to_crispins[email_address]
     else:
         user_obj = get_user(email_address)
         assert user_obj is not None
-        crispin_client =  crispin.CrispinClient(user_obj)
+        crispin_client =  cls(user_obj)
 
         assert 'X-GM-EXT-1' in crispin_client.imap_server.capabilities(), "This must not be Gmail..."
 
