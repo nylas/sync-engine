@@ -417,7 +417,7 @@ class SyncMonitor(Greenlet):
                 if not self.process_command(cmd):
                     kill(action)
                     return
-            except Empty: pass
+            except Empty: sleep(0)
 
     def process_command(self, cmd):
         """ Returns True if successful, or False if process should abort. """
