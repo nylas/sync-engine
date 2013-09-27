@@ -203,7 +203,7 @@ class User(JSONSerializable, Base):
 
     @property
     def _sync_lock(self):
-        return Lock(self._lockfile_name, block=False)
+        return Lock(self._sync_lockfile_name, block=False)
 
     def sync_lock(self):
         self._sync_lock.acquire()
