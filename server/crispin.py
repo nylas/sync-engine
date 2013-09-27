@@ -412,53 +412,6 @@ Parsed Content-Disposition was: '{3}'""".format(uid, self.selected_folder_name,
         return messages, new_foldermeta
 
     @connected
-    def fetch_msg_body(self, msg_uid, section_index, readonly=True):
-        msg_uid = str(msg_uid)
-
-        log.info("Fetching %s <%s>" % (msg_uid, section_index))
-
-        query = query_key = 'BODY[%s]' % section_index
-        if readonly:
-            query = 'BODY.PEEK[%s]' % section_index
-
-        query_key = 'BODY[%s]' % section_index
-        response = self.imap_server.fetch(msg_uid,
-                                    [query, 'X-GM-THRID', 'X-GM-MSGID'])
-
-        try:
-            response_dict =  response[int(msg_uid)]
-        except KeyError, e:
-            log.error('Response: %s' % response)
-            return "Error fetching."
-
-        body_data = response_dict[query_key]
-        message_id = response_dict['X-GM-MSGID']
-        thread_id = response_dict['X-GM-THRID']
-
-        return body_data
-
-    @connected
-    def fetch_msg_headers(self, uids, readonly=True):
-        log.info("Fetching headers in {0}".format(self.selected_folder_name))
-
-        query = 'BODY[HEADER]'
-        if readonly:
-            query = 'BODY.PEEK[HEADER]'
-        response = self.imap_server.fetch(uids,
-                                    [query, 'X-GM-THRID', 'X-GM-MSGID'])
-
-        return response
-
-    @connected
-    def fetch_entire_msg(self, folder, uids, readonly=True):
-        query = 'BODY[]'
-        if readonly:
-            query = 'BODY.PEEK[]'
-        response = self.imap_server.fetch(uids, [query])
-
-        return response
-
-    @connected
     def all_mail_folder_name(self):
         """ Note: XLIST is deprecated, so we just use LIST
 
@@ -491,35 +444,3 @@ Parsed Content-Disposition was: '{3}'""".format(uid, self.selected_folder_name,
                 if u'\\All' in f['flags']:
                     return f['name']
             raise Exception("Couldn't find All Mail folder")
-
-    @connected
-    def msgids_for_thrids(self, thread_ids):
-        """ Batch fetch to get all X-GM-THRIDs for a group of UIDs """
-        # The boolean IMAP queries use reverse polish notation for
-        # the query parameters. imaplib automatically adds parenthesis
-        criteria = 'X-GM-THRID %s' % str(thread_ids[0])
-        if len(thread_ids) > 1:
-            for t in thread_ids[1:]:
-                criteria = 'OR ' + criteria + ' X-GM-THRID %s' % str(t)
-        return self.imap_server.search(criteria)
-
-# log.info("Expanded to %i messages for %i thread IDs." % (len(all_msg_uids), len(thread_ids)))
-
-# all_msgs = self.fetch_headers_for_uids(self.all_mail_folder_name(), all_msg_uids)
-
-# return all_msgs
-
-# threads = {}
-# # Group by thread id
-# for m in all_msgs:
-#     if m.thread_id not in threads.keys():
-#         new_thread = IBThread()
-#         new_thread.thread_id = m.thread_id
-#         threads[m.thread_id] = new_thread
-#     t = threads[m.thread_id]
-#     t.message_ids.append(m.message_id)
-# all_threads = threads.values()
-
-# log.info("Returning %i threads with total of %i messages." % (len(all_threads), len(all_msgs)))
-
-# return all_threads

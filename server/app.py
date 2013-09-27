@@ -294,38 +294,11 @@ def gallery_handler(email, id):
             collection_id=id).all()
     return render_template('gallery.html', images=images, email=email)
 
-# class FileDownloadHandler(BaseHandler):
-#     @tornado.web.authenticated
-#     def get(self):
-
-#         args = self.request.arguments
-
-#         uid = args['uid'][0]
-#         section_index = args['section_index'][0]
-#         content_type = args['content_type'][0]
-#         data_encoding = args['encoding'][0]
-#         filename = args['filename'][0]
-
-#         self.set_header ('Content-Type', content_type)
-#         self.set_header ('Content-Disposition', 'attachment; filename=' + filename)
-
-#         crispin_client = sessionmanager.get_crispin_from_email(self.get_current_user().g_email)
-#         data = crispin_client.fetch_msg_body(uid, section_index)
-
-#         decoded = encoding.decode_data(data, data_encoding)
-#         self.write(decoded)
-
-
-
-
-
 # Catchall
 # @app.route('/', defaults={'path': ''})
 # @app.route('/<path:path>')
 # def catch_all(path):
 #     return 'You want path: %s' % path
-
-
 
 @app.route("/<blockhash>", subdomain="msg-store")
 def block_retrieval(blockhash):
