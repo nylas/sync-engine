@@ -66,7 +66,7 @@ def sync(args):
     c.connect("tcp://127.0.0.1:9997")
     try:
         if args.cmd == 'start':
-            c.start_sync(args.email_address)
+            c.start_sync(args.email_address, dummy=args.dummy)
             print "Sync started. See logs wherever you started the sync server."
         elif args.cmd == 'stop':
             c.stop_sync(args.email_address)
@@ -149,6 +149,8 @@ def main():
     parser_sync = subparsers.add_parser('sync', description="Download initial mail metadata and parts.")
     parser_sync.add_argument('cmd', help='start or stop')
     parser_sync.add_argument('email_address', help='Email address of user to sync')
+    parser_sync.add_argument('--dummy', action='store_true',
+            help="Don't connect to IMAP backend.", default=False)
     parser_sync.set_defaults(func=sync)
 
     parser_sync = subparsers.add_parser('index', description="Index mail")
