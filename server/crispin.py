@@ -3,9 +3,6 @@
 
 from imapclient import IMAPClient
 
-import sys
-sys.path.insert(0, "..")
-
 import datetime
 import logging as log
 
@@ -20,15 +17,16 @@ from quopri import decodestring as quopri_decodestring
 from base64 import b64decode
 from chardet import detect as detect_charset
 
-from util.misc import or_none
+from .util.misc import or_none
 from hashlib import sha256
 
 IMAP_HOST = 'imap.gmail.com'
 SMTP_HOST = 'smtp.gmail.com'
 
-
 class AuthFailure(Exception): pass
 class TooManyConnectionsFailure(Exception): pass
+
+### generators
 
 def messages_from_raw(raw_messages):
     for uid in sorted(raw_messages.iterkeys(), key=int):
@@ -45,25 +43,33 @@ def messages_from_raw(raw_messages):
                 msg['X-GM-THRID'], msg['X-GM-MSGID'],
                 msg['X-GM-LABELS'])
 
-class CrispinClient:
+### decorators
+
+def print_duration(fn):
+    """ A decorator for timing methods. """
+    def connected_fn(self, *args, **kwargs):
+        start_time = time.time()
+        ret = fn(self, *args, **kwargs)
+        log.info("\t\tTook %s seconds" %  str(time.time() - start_time))
+        return ret
+    return connected_fn
+
+def connected(fn):
+    """ A decorator for methods that can only be run on a logged-in client.
     """
-    One thing to note about crispin clients is that *all* calls operate on
-    the currently selected folder.
+    def connected_fn(self, *args, **kwargs):
+        if self.server_needs_refresh():
+            self._connect()
+        ret = fn(self, *args, **kwargs)
+        # a connected function did *something* with our connection, so
+        # update the keepalive
+        self.keepalive = datetime.datetime.utcnow()
+        return ret
+    return connected_fn
 
-    Crispin will NEVER implicitly select a folder for you.
+### main stuff
 
-    This is very important! IMAP only guarantees that folder message UIDs
-    are valid for a "session", which is defined as from the time you
-    SELECT a folder until the connection is closed or another folder is
-    selected.
-
-    XXX: can we make it even harder to fuck this up?
-    """
-    # 20 minutes
-    SERVER_TIMEOUT = datetime.timedelta(seconds=1200)
-    # how many messages to download at a time
-    CHUNK_SIZE = 20
-
+class CrispinClientBase(object):
     def __init__(self, user_obj):
         self.user_obj = user_obj
         self.email_address = user_obj.g_email
@@ -110,6 +116,69 @@ class CrispinClient:
                 msg_uid=uid)
 
     def fetch_g_msgids(self, uids=None):
+        raise Exception("Subclass must implement")
+
+    def all_uids(self):
+        raise Exception("Subclass must implement")
+
+    def server_needs_refresh(self):
+        raise Exception("Subclass must implement")
+
+    def _connect(self):
+        raise Exception("Subclass must implement")
+
+    def stop(self):
+        raise Exception("Subclass must implement")
+
+    def select_folder(self):
+        """ Selects a given folder and makes sure to set the 'folder_info'
+            attribute to a (folder_name, select_info) pair.
+        """
+        raise Exception("Subclass must implement")
+
+    def select_all_mail(self):
+        return self.select_folder(self.all_mail_folder_name())
+
+    def fetch_metadata(self, uids):
+        raise Exception("Subclass must implement")
+
+    def fetch_uids(self, uids):
+        raise Exception("Subclass must implement")
+
+    def all_mail_folder_name(self):
+        raise Exception("Subclass must implement")
+
+class DummyCrispinClient(CrispinClientBase):
+    """ A crispin client that doesn't actually use IMAP at all. Instead, it
+        retrieves RawMessage objects from either local disk or a remote block
+        store (S3).
+
+        This allows us to rapidly iterate and debug the message ingester
+        without hosing the IMAP API for test accounts.
+    """
+    def server_needs_refresh(self):
+        return False
+
+class CrispinClient(CrispinClientBase):
+    """
+    One thing to note about crispin clients is that *all* calls operate on
+    the currently selected folder.
+
+    Crispin will NEVER implicitly select a folder for you.
+
+    This is very important! IMAP only guarantees that folder message UIDs
+    are valid for a "session", which is defined as from the time you
+    SELECT a folder until the connection is closed or another folder is
+    selected.
+
+    XXX: can we make it even harder to fuck this up?
+    """
+    # 20 minutes
+    SERVER_TIMEOUT = datetime.timedelta(seconds=1200)
+    # how many messages to download at a time
+    CHUNK_SIZE = 20
+
+    def fetch_g_msgids(self, uids=None):
         """ Download Gmail MSGIDs for the given messages, or all messages in
             the currently selected folder if no UIDs specified.
 
@@ -130,16 +199,6 @@ class CrispinClient:
         return sorted([unicode(s) for s in self.imap_server.search(['NOT DELETED'])],
                 key=int)
 
-    def print_duration(fn):
-        """ A decorator for methods that can only be run on a logged-in client.
-        """
-        def connected_fn(self, *args, **kwargs):
-            start_time = time.time()
-            ret = fn(self, *args, **kwargs)
-            log.info("\t\tTook %s seconds" %  str(time.time() - start_time))
-            return ret
-        return connected_fn
-
     def server_needs_refresh(self):
         """ Many IMAP servers have a default minimum "no activity" timeout
             of 30 minutes. Sending NOPs ALL the time is hells slow, but we
@@ -148,19 +207,6 @@ class CrispinClient:
         now = datetime.datetime.utcnow()
         return self.keepalive is None or \
                 (now - self.keepalive) > self.SERVER_TIMEOUT
-
-    def connected(fn):
-        """ A decorator for methods that can only be run on a logged-in client.
-        """
-        def connected_fn(self, *args, **kwargs):
-            if self.server_needs_refresh():
-                self._connect()
-            ret = fn(self, *args, **kwargs)
-            # a connected function did *something* with our connection, so
-            # update the keepalive
-            self.keepalive = datetime.datetime.utcnow()
-            return ret
-        return connected_fn
 
     def _connect(self):
         log.info('Connecting to %s ...' % IMAP_HOST,)
@@ -218,9 +264,6 @@ class CrispinClient:
             raise e
         log.info('Selected folder %s with %d messages.' % (folder, select_info['EXISTS']) )
         return select_info
-
-    def select_all_mail(self):
-        return self.select_folder(self.all_mail_folder_name())
 
     @connected
     def fetch_metadata(self, uids):
