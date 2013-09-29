@@ -1,3 +1,4 @@
+from __future__ import division
 import os
 import logging as log
 
@@ -32,13 +33,15 @@ def gen_search_index(user):
 
     # for each message part, create unprocessed documents with date/subject/to/from
     # metadata and the plaintext part, and then process them!
-    for msg in msg_query:
+    total = msg_query.count()
+    done = 0
+    for msg in msg_query.yield_per(1000):
         plain_parts = [part for part in msg.parts \
                 if part._content_type_common == 'text/plain']
         html_parts = [part for part in msg.parts \
                 if part._content_type_common == 'text/html']
-        log.info("{0}: {1} text/plain, {2} text/html".format(
-                msg.g_msgid, len(plain_parts), len(html_parts)))
+        # log.info("{0}: {1} text/plain, {2} text/html".format(
+        #         msg.g_msgid, len(plain_parts), len(html_parts)))
         # XXX some emails have useless plaintext that says "view this in
         # an email client that supports HTML"; how to avoid indexing that
         # and fall back to the HTML?
@@ -62,6 +65,14 @@ def gen_search_index(user):
             indexer.set_document(doc)
             indexer.index_text(text)
             database.replace_document(msg.id, doc)
+
+        done += 1
+        log.info("Indexed %i of %i (%.4f%%)" % (done,
+                                               total,
+                                               done/total))
+
+
+    log.info("Now we are here.")
 
     indexed_msgs = set([k for k in database.metadata_keys()])
     msgs =  set([id for id, in db_session.query(MessageMeta.id).filter_by(
