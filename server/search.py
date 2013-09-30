@@ -10,10 +10,21 @@ from server.util.html import strip_tags
 
 from sqlalchemy.orm import joinedload
 
+from calendar import timegm
+
 INDEX_BASEPATH = os.path.join("cache", "index")
 
 def db_path_for(user_id):
     return os.path.join(INDEX_BASEPATH, unicode(user_id))
+
+def to_indexable(parsed_addr):
+    """ Takes a parsed envelope To/From/Cc/Bcc address and returns a string
+        version for indexing.
+    """
+    addr = '@'.join([parsed_addr[2], parsed_addr[3]])
+    # e.g. 'Christine Spang spang@inboxapp.com'
+    name = parsed_addr[0] if parsed_addr[0] is not None else ''
+    return ' '.join([name, addr])
 
 def gen_search_index(user):
     log.info("Generating search index for {0}".format(user.g_email))
@@ -28,7 +39,8 @@ def gen_search_index(user):
     last_docid = database.get_lastdocid()
     msg_query = db_session.query(MessageMeta).filter(
             MessageMeta.user_id == user.id,
-            MessageMeta.id > last_docid).options(joinedload('parts'))
+            MessageMeta.id > last_docid).options(joinedload('parts')) \
+                    .order_by(MessageMeta.id.desc())
     log.info("Have {0} messages to process".format(msg_query.count()))
 
     # for each message part, create unprocessed documents with date/subject/to/from
@@ -56,17 +68,35 @@ def gen_search_index(user):
         # differentiate)
 
         if text is not None:
-            date = msg.internaldate
-            from_ = ' '.join(msg.from_addr)
-            to_ = ' '.join(msg.to_addr)
             doc = xapian.Document()
             doc.set_data(text)
 
-            # XXX add to, cc, bcc, subject, date (perhaps weight more than
-            # fulltext?)
-
             indexer.set_document(doc)
-            indexer.index_text(text)
+
+            # NOTE: the integer here is a multiplier on the term frequency
+            # (used for calculating relevance). We add terms with and without
+            # a field prefix, so documents are returned on a generic search
+            # *and* when fields are specifically searched for, e.g. to:mg@mit.edu
+            if msg.from_addr is not None:
+                from_ = ' '.join([to_indexable(parsed_addr) for parsed_addr in msg.from_addr])
+                indexer.index_text(from_, 1)
+                indexer.index_text(from_, 1, 'XFROM')
+            if msg.to_addr is not None:
+                to = ' '.join([to_indexable(parsed_addr) for parsed_addr in msg.to_addr])
+                indexer.index_text(to, 5)
+                indexer.index_text(to, 5, 'XTO')
+            if msg.cc_addr is not None:
+                cc = ' '.join([to_indexable(parsed_addr) for parsed_addr in msg.cc_addr])
+                indexer.index_text(cc, 3)
+                indexer.index_text(cc, 3, 'XCC')
+            if msg.bcc_addr is not None:
+                bcc = ' '.join([to_indexable(parsed_addr) for parsed_addr in msg.bcc_addr])
+                indexer.index_text(bcc, 3)
+                indexer.index_text(bcc, 3, 'XBCC')
+            # "Values" are other data that you can use for e.g. sorting by
+            # date
+            doc.add_value(0, xapian.sortable_serialise(
+                timegm(msg.internaldate.utctimetuple())))
             database.replace_document(msg.id, doc)
 
         done += 1
@@ -116,6 +146,12 @@ class SearchService:
         qp.set_stemmer(stemmer)
         qp.set_database(database)
         qp.set_stemming_strategy(xapian.QueryParser.STEM_SOME)
+
+        # Set up custom prefixes.
+        qp.add_prefix("from", "XFROM")
+        qp.add_prefix("to", "XTO")
+        qp.add_prefix("cc", "XCC")
+        qp.add_prefix("bcc", "XBCC")
 
         query = qp.parse_query(query_string, xapian.QueryParser.FLAG_WILDCARD)
         log.info("Parsed query is: %s" % str(query))
