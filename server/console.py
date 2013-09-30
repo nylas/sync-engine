@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
-import sys, os;  sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'server')))
-
-import sessionmanager
+from .sessionmanager import get_crispin_from_email
 import IPython
 
 def start_console(user_email_address):
@@ -13,7 +11,7 @@ def start_console(user_email_address):
 
 
     def refresh_crispin():
-        return sessionmanager.get_crispin_from_email(user_email_address)
+        return get_crispin_from_email(user_email_address)
 
     c = refresh_crispin()
     c.select_folder(c.all_mail_folder_name())

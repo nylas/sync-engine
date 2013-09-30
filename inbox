@@ -91,7 +91,7 @@ def stop(args):
 
 def console(args):
     setup_env()
-    from tools.crispinshell import start_console
+    from server.console import start_console
     start_console(args.email_address)
 
 def search(args):

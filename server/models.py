@@ -13,7 +13,7 @@ from sqlalchemy.schema import UniqueConstraint
 
 from hashlib import sha256
 from os import environ
-from server.util.file import mkdirp, remove_file, Lock
+from .util.file import mkdirp, remove_file, Lock
 
 import logging as log
 # from sqlalchemy.databases.mysql import MSMediumBlob
