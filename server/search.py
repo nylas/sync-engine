@@ -108,8 +108,6 @@ def gen_search_index(user):
                                                done/total))
 
 
-    log.info("Now we are here.")
-
     indexed_msgs = set([k for k in database.metadata_keys()])
     msgs =  set([id for id, in db_session.query(MessageMeta.id).filter_by(
             g_email=user.g_email).all()])
