@@ -154,7 +154,7 @@ def main():
     parser_sync.set_defaults(func=sync)
 
     parser_sync = subparsers.add_parser('index', description="Index mail")
-    parser_sync.add_argument('--email-address', dest='email_address',
+    parser_sync.add_argument('email_address',
             help='Email address of user to index mail')
     parser_sync.set_defaults(func=index)
 
