@@ -1,8 +1,9 @@
 from __future__ import division
 import os
+import re
 import logging as log
 
-import xapian
+import xapian as x_
 
 from server.models import db_session, MessageMeta
 from server.util.file import mkdirp
@@ -30,10 +31,10 @@ def gen_search_index(user):
     log.info("Generating search index for {0}".format(user.g_email))
     dbpath = db_path_for(user.id)
     mkdirp(dbpath)
-    database = xapian.WritableDatabase(dbpath, xapian.DB_CREATE_OR_OPEN)
+    database = x_.WritableDatabase(dbpath, x_.DB_CREATE_OR_OPEN)
 
-    indexer = xapian.TermGenerator()
-    stemmer = xapian.Stem("english")
+    indexer = x_.TermGenerator()
+    stemmer = x_.Stem("english")
     indexer.set_stemmer(stemmer)
 
     last_docid = database.get_lastdocid()
@@ -68,7 +69,7 @@ def gen_search_index(user):
         # differentiate)
 
         if text is not None:
-            doc = xapian.Document()
+            doc = x_.Document()
             doc.set_data(text)
 
             indexer.set_document(doc)
@@ -98,7 +99,7 @@ def gen_search_index(user):
                 indexer.index_text(bcc, 3, 'XBCC')
             # "Values" are other data that you can use for e.g. sorting by
             # date
-            doc.add_value(0, xapian.sortable_serialise(
+            doc.add_value(0, x_.sortable_serialise(
                 timegm(msg.internaldate.utctimetuple())))
             database.replace_document(msg.id, doc)
 
@@ -128,25 +129,19 @@ class SearchService:
             fulltext is fulltext of the matching *part*, not the entire
             message.
         """
-        # Treat all searches like wildcard searches unless the wildcard is
-        # used elsewhere.
-        # XXX we might also want to let queries _start_ with a * and still
-        # append a * to the end
-        if '*' not in query_string:
-            query_string += '*'
         log.info("query '{0}' for user '{1}'".format(query_string, user_id))
         # Open the database for searching.
-        database = xapian.Database(db_path_for(user_id))
+        database = x_.Database(db_path_for(user_id))
 
         # Start an enquire session.
-        enquire = xapian.Enquire(database)
+        enquire = x_.Enquire(database)
 
         # Parse the query string to produce a Xapian::Query object.
-        qp = xapian.QueryParser()
-        stemmer = xapian.Stem("english")
+        qp = x_.QueryParser()
+        stemmer = x_.Stem("english")
         qp.set_stemmer(stemmer)
         qp.set_database(database)
-        qp.set_stemming_strategy(xapian.QueryParser.STEM_SOME)
+        qp.set_stemming_strategy(x_.QueryParser.STEM_SOME)
 
         # Set up custom prefixes.
         qp.add_prefix("subject", "XSUBJECT")
@@ -155,7 +150,14 @@ class SearchService:
         qp.add_prefix("cc", "XCC")
         qp.add_prefix("bcc", "XBCC")
 
-        query = qp.parse_query(query_string, xapian.QueryParser.FLAG_WILDCARD)
+        # see http://xapian.org/docs/queryparser.html "Partially entered query
+        # matching" and
+        # http://xapian.org/docs/apidoc/html/classXapian_1_1QueryParser.html
+        flags =  x_.QueryParser.FLAG_WILDCARD \
+                | x_.QueryParser.FLAG_PARTIAL | x_.QueryParser.FLAG_PHRASE \
+                | x_.QueryParser.FLAG_LOVEHATE | x_.QueryParser.FLAG_BOOLEAN \
+                | x_.QueryParser.FLAG_SYNONYM
+        query = qp.parse_query(query_string, flags)
         log.info("Parsed query is: %s" % str(query))
 
         # Find the top N results for the query.
