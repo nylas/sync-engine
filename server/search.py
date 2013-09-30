@@ -77,6 +77,9 @@ def gen_search_index(user):
             # (used for calculating relevance). We add terms with and without
             # a field prefix, so documents are returned on a generic search
             # *and* when fields are specifically searched for, e.g. to:mg@mit.edu
+            if msg.subject is not None:
+                indexer.index_text(msg.subject, 10)
+                indexer.index_text(msg.subject, 10, 'XSUBJECT')
             if msg.from_addr is not None:
                 from_ = ' '.join([to_indexable(parsed_addr) for parsed_addr in msg.from_addr])
                 indexer.index_text(from_, 1)
@@ -148,6 +151,7 @@ class SearchService:
         qp.set_stemming_strategy(xapian.QueryParser.STEM_SOME)
 
         # Set up custom prefixes.
+        qp.add_prefix("subject", "XSUBJECT")
         qp.add_prefix("from", "XFROM")
         qp.add_prefix("to", "XTO")
         qp.add_prefix("cc", "XCC")
