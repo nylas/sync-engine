@@ -25,7 +25,6 @@ PIL==1.1.7
 
 # Our own versions of these
 -e git+git://github.com/inboxapp/imapclient#egg=imapclient
--e git+git://github.com/inboxapp/imaplib2#egg=imaplib2
 -e git+git://github.com/inboxapp/bleach#egg=bleach
 
 # For ZeroRPC
