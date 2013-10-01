@@ -199,15 +199,15 @@ def highestmodseq_update(folder, crispin_client, cached_validity=None):
                 part._data = None
             garbge_collect()
 
-            safe_commit()
+            db_session.commit()
         # bigger chunk because the data being fetched here is very small
         for uids in chunk(updated, 5*crispin_client.CHUNK_SIZE):
             update_metadata(uids, crispin_client)
-            safe_commit()
+            db_session.commit()
     remove_deleted_messages(crispin_client)
     # not sure if this one is actually needed - does delete() automatically
     # commit?
-    safe_commit()
+    db_session.commit()
 
     update_cached_highestmodseq(folder, crispin_client, cached_validity)
     db_session.commit()
@@ -228,14 +228,6 @@ def safe_download(uids, folder, crispin_client):
     #     new_messages, new_foldermeta = crispin_client.fetch_uids(uids)
 
     return new_messages, new_foldermeta
-
-def safe_commit():
-    try:
-        db_session.commit()
-    except sqlalchemy.exc.SQLAlchemyError, e:
-        log.error(e.orig.args)
-    except Exception, e:
-        log.error("Unknown exception: %s" % e)
 
 def update_metadata(uids, crispin_client):
     """ Update flags (the only metadata that can change). """
