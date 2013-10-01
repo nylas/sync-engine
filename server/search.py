@@ -1,6 +1,5 @@
 from __future__ import division
 import os
-import re
 import logging as log
 
 import xapian as x_
@@ -14,6 +13,17 @@ from sqlalchemy.orm import joinedload
 from calendar import timegm
 
 INDEX_BASEPATH = os.path.join("cache", "index")
+
+# see http://xapian.org/docs/queryparser.html "Partially entered query
+# matching" and
+# http://xapian.org/docs/apidoc/html/classXapian_1_1QueryParser.html
+QUERY_FLAGS =  x_.QueryParser.FLAG_WILDCARD \
+        | x_.QueryParser.FLAG_LOVEHATE | x_.QueryParser.FLAG_BOOLEAN \
+        | x_.QueryParser.FLAG_SYNONYM \
+        | x_.QueryParser.FLAG_SPELLING_CORRECTION \
+        | x_.QueryParser.FLAG_PHRASE
+        # XXX conflicts with spelling correction somehow
+        # | x_.QueryParser.FLAG_PARTIAL
 
 def db_path_for(user_id):
     return os.path.join(INDEX_BASEPATH, unicode(user_id))
@@ -36,6 +46,8 @@ def gen_search_index(user):
     indexer = x_.TermGenerator()
     stemmer = x_.Stem("english")
     indexer.set_stemmer(stemmer)
+    indexer.set_database(database)
+    indexer.set_flags(indexer.FLAG_SPELLING)
 
     last_docid = database.get_lastdocid()
     msg_query = db_session.query(MessageMeta).filter(
@@ -150,27 +162,33 @@ class SearchService:
         qp.add_prefix("cc", "XCC")
         qp.add_prefix("bcc", "XBCC")
 
-        # see http://xapian.org/docs/queryparser.html "Partially entered query
-        # matching" and
-        # http://xapian.org/docs/apidoc/html/classXapian_1_1QueryParser.html
-        flags =  x_.QueryParser.FLAG_WILDCARD \
-                | x_.QueryParser.FLAG_PARTIAL | x_.QueryParser.FLAG_PHRASE \
-                | x_.QueryParser.FLAG_LOVEHATE | x_.QueryParser.FLAG_BOOLEAN \
-                | x_.QueryParser.FLAG_SYNONYM
-        query = qp.parse_query(query_string, flags)
-        log.info("Parsed query is: %s" % str(query))
+        results = get_results(qp, enquire, query_string, limit)
 
-        # Find the top N results for the query.
-        enquire.set_query(query)
-        matches = enquire.get_mset(0, limit)
-
-        # Display the results.
-        log.info("%i results found." % matches.get_matches_estimated())
-        log.info("Results 1-%i:" % matches.size())
-
-        results = [(m.docid, m.rank) for m in matches]
+        if not results:
+            log.info("No results found; trying spelling correction.")
+            # XXX somehow signify to the user that their query was corrected?
+            # unless, of course, we also get nothing back with the corrected
+            # query
+            log.info("Corrected query string: {0}".format(
+                    qp.get_corrected_query_string()))
+            results = get_results(qp, enquire,
+                    qp.get_corrected_query_string(), limit)
 
         # Clean up.
         database.close()
 
         return results
+
+def get_results(qp, enquire, query_string, limit):
+    query = qp.parse_query(query_string, QUERY_FLAGS)
+    log.info("Parsed query is: %s" % str(query))
+
+    # Find the top N results for the query.
+    enquire.set_query(query)
+    matches = enquire.get_mset(0, limit)
+
+    # Display the results.
+    log.info("%i results found." % matches.get_matches_estimated())
+    log.info("Results 1-%i:" % matches.size())
+
+    return [(m.docid, m.rank) for m in matches]
