@@ -386,13 +386,14 @@ class UIDValidity(JSONSerializable, Base):
     """
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    g_email = Column(String(255))  # Should add index=true?
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    user = relationship('User')
     folder_name = Column(String(255))
     uid_validity = Column(Integer)
     highestmodseq = Column(Integer)
 
-    __table_args__ = (UniqueConstraint('g_email', 'folder_name',
-        name='_folder_email_uc'),)
+    __table_args__ = (UniqueConstraint('user_id', 'folder_name',
+        name='_folder_user_uc'),)
 
 class Collection(Base):
     __tablename__ = 'collections'
