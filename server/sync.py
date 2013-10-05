@@ -175,9 +175,7 @@ def update_cached_highestmodseq(folder, crispin_client, cached_validity=None):
     db_session.add(cached_validity)
 
 def highestmodseq_update(folder, crispin_client, cached_validity=None):
-    uids = crispin_client.imap_server.search(
-            ['NOT DELETED', 'MODSEQ {0}'.format(
-                crispin_client.selected_highestmodseq)])
+    uids = crispin_client.get_changed_uids(crispin_client.selected_highestmodseq)
     log.info("Starting highestmodseq update on {0} (current HIGHESTMODSEQ: {1})".format(folder, crispin_client.selected_highestmodseq))
     if uids:
         new, updated = new_or_updated(uids, folder)
@@ -281,21 +279,23 @@ def initial_sync(user, updates, dummy=False):
             # check for updates since last HIGHESTMODSEQ
             cached_highestmodseq = cached_validity.highestmodseq
             if crispin_client.selected_highestmodseq > cached_highestmodseq:
+                log.info("Updating cache with latest changes")
                 # any uids we don't already have will be downloaded correctly
                 # as usual, but updated uids need to be updated manually
-                modified = crispin_client.imap_server.search(
-                    ['NOT DELETED', 'MODSEQ {0}'.format(
-                        crispin_client.selected_highestmodseq)])
+                modified = crispin_client.get_changed_uids(crispin_client.selected_highestmodseq)
                 new, updated = new_or_updated(modified, folder, local_uids)
+                log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
                 # for new, query g_msgids and update cache
                 server_g_msgids.update(crispin_client.fetch_g_msgids(new))
                 set_cache("_".join([user.g_email, folder,
                     "server_g_msgids"]), server_g_msgids)
+                log.info("Updated cache with new messages")
                 # for updated, update them now
                 # bigger chunk because the data being fetched here is very small
                 for uids in chunk(updated, 5*crispin_client.CHUNK_SIZE):
                     update_metadata(uids, crispin_client)
                     db_session.commit()
+                log.info("Updated metadata for modified messages")
         else:
             log.info("No cached data found")
             server_g_msgids = crispin_client.fetch_g_msgids()

@@ -249,6 +249,12 @@ class CrispinClient(CrispinClientBase):
         if (self.imap_server):
             self.imap_server.logout()
 
+
+    @connected
+    @print_duration
+    def get_changed_uids(self, modseq):
+        return self.imap_server.search(['NOT DELETED', "MODSEQ {0}".format(modseq)])
+
     @connected
     @print_duration
     def select_folder(self, folder):
