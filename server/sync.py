@@ -74,11 +74,12 @@ def resync_uids(crispin_client):
     """
     raise Exception("Unimplemented")
 
-def delete_messages(uids, folder):
+def delete_messages(uids, folder, user_email_address):
     # delete these UIDs from this folder
     fm_query = db_session.query(FolderMeta).filter(
             FolderMeta.msg_uid.in_(uids),
-            FolderMeta.folder_name==folder)
+            FolderMeta.folder_name==folder,
+            FolderMeta.g_email==user_email_address)
     # g_msgids = [fm.g_msgid for fm in fm_query]
     fm_query.delete(synchronize_session='fetch')
 
@@ -109,13 +110,15 @@ def remove_deleted_messages(crispin_client):
     server_uids = crispin_client.all_uids()
     local_uids = [uid for uid, in
             db_session.query(FolderMeta.msg_uid).filter_by(
-                folder_name=crispin_client.selected_folder_name)]
+                folder_name=crispin_client.selected_folder_name,
+                g_email=crispin_client.email_address)]
     if len(server_uids) > 0 and len(local_uids) > 0:
         assert type(server_uids[0]) == type(local_uids[0])
 
     to_delete = set(local_uids).difference(set(server_uids))
     if to_delete:
-        delete_messages(to_delete, crispin_client.selected_folder_name)
+        delete_messages(to_delete, crispin_client.selected_folder_name,
+                crispin_client.email_address)
         log.info("Deleted {0} removed messages".format(len(to_delete)))
 
 def new_or_updated(uids, folder, local_uids=None):
