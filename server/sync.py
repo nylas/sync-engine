@@ -277,6 +277,7 @@ def initial_sync(user, updates, dummy=False):
                 "server_g_msgids"]))
 
         if server_g_msgids is not None:
+            log.info("Successfully retrieved cache")
             # check for updates since last HIGHESTMODSEQ
             cached_highestmodseq = cached_validity.highestmodseq
             if crispin_client.selected_highestmodseq > cached_highestmodseq:
@@ -296,6 +297,7 @@ def initial_sync(user, updates, dummy=False):
                     update_metadata(uids, crispin_client)
                     db_session.commit()
         else:
+            log.info("No cached data found")
             server_g_msgids = crispin_client.fetch_g_msgids()
             set_cache("_".join([user.g_email, folder,
                 "server_g_msgids"]), server_g_msgids)
