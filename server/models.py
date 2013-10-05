@@ -368,16 +368,16 @@ class FolderMeta(JSONSerializable, Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    # XXX ForeignKey into Users table instead?
-    g_email = Column(String(255))
-    # XXX ForeignKey into MessageMeta table instead?
-    g_msgid = Column(String(255))
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    user = relationship('User')
+    messagemeta_id = Column(Integer, ForeignKey('messagemeta.id'), nullable=False)
+    messagemeta = relationship('MessageMeta')
     msg_uid = Column(String(255))
     folder_name = Column(String(255))  # All Mail, Inbox, etc. (i.e. Labels)
     flags = Column(MediumPickle)
 
-    __table_args__ = (UniqueConstraint('folder_name', 'msg_uid', 'g_email',
-        name='_folder_msg_email_uc'),)
+    __table_args__ = (UniqueConstraint('folder_name', 'msg_uid', 'user_id',
+        name='_folder_msg_user_uc'),)
 
 class UIDValidity(JSONSerializable, Base):
     __tablename__ = 'uidvalidity'
