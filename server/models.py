@@ -129,7 +129,7 @@ class Blob(object):
         assert self.data_sha256
         # Nest it 6 items deep so we don't have folders with too many files.
         h = self.data_sha256
-        return os.path.join('..', 'parts', h[0], h[1], h[2], h[3], h[4], h[5])
+        return os.path.join('/mnt', 'parts', h[0], h[1], h[2], h[3], h[4], h[5])
 
     @property
     def _data_file_path(self):
