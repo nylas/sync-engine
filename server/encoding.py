@@ -20,9 +20,9 @@ def make_unicode_header(txt, default_encoding="utf-8"):
         return u"".join([unicode(text, charset or default_encoding, 'strict')
                 for text, charset in decode_header(txt)])
     except UnicodeError:
-        detected_encoding = chardet.detect(txt)['encoding']
-        log.info("Failed to decode with %s. Going to try %s instead" % (default_encoding, detected_encoding))
         try:
+            detected_encoding = chardet.detect(txt)['encoding']
+            log.info("Failed to decode with %s. Going to try %s instead" % (default_encoding, detected_encoding))
             return u"".join([unicode(text, charset or detected_encoding, 'replace')
                     for text, charset in decode_header(txt)])
         except Exception, e:
