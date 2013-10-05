@@ -31,8 +31,7 @@ def load_validity_cache(crispin_client, email):
     for folder, uid_validity, highestmodseq in db_session.query(
             UIDValidity.folder_name,
             UIDValidity.uid_validity,
-            UIDValidity.highestmodseq).filter_by(
-                    g_email=email, folder_name=folder):
+            UIDValidity.highestmodseq).filter_by(g_email=email):
         cache_validity[folder] = dict(UIDVALIDITY=uid_validity,
                 HIGHESTMODSEQ=highestmodseq)
 
@@ -117,6 +116,7 @@ def remove_deleted_messages(crispin_client):
     to_delete = set(local_uids).difference(set(server_uids))
     if to_delete:
         delete_messages(to_delete, crispin_client.selected_folder_name)
+        log.info("Deleted {0} removed messages".format(len(to_delete)))
 
 def new_or_updated(uids, folder, local_uids=None):
     if local_uids is None:
@@ -163,7 +163,7 @@ def incremental_sync(user, dummy=False):
     for folder, highestmodseq in needs_update:
         crispin_client.select_folder(folder)
         check_uidvalidity(crispin_client)
-        highestmodseq_update(folder, crispin_client)
+        highestmodseq_update(folder, crispin_client, highestmodseq)
 
     return 0
 
@@ -174,11 +174,16 @@ def update_cached_highestmodseq(folder, crispin_client, cached_validity=None):
     cached_validity.highestmodseq = crispin_client.selected_highestmodseq
     db_session.add(cached_validity)
 
-def highestmodseq_update(folder, crispin_client, cached_validity=None):
-    uids = crispin_client.get_changed_uids(crispin_client.selected_highestmodseq)
+def highestmodseq_update(folder, crispin_client, highestmodseq=None):
+    if highestmodseq is None:
+        highestmodseq = db_session.query(UIDValidity).filter_by(
+                g_email=crispin_client.email_address, folder_name=folder
+                ).one().highestmodseq
+    uids = crispin_client.get_changed_uids(highestmodseq)
     log.info("Starting highestmodseq update on {0} (current HIGHESTMODSEQ: {1})".format(folder, crispin_client.selected_highestmodseq))
     if uids:
         new, updated = new_or_updated(uids, folder)
+        log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
         for uids in chunk(new, crispin_client.CHUNK_SIZE):
             new_messagemeta, new_messagepart, new_foldermeta = safe_download(new,
                     folder, crispin_client)
@@ -202,12 +207,15 @@ def highestmodseq_update(folder, crispin_client, cached_validity=None):
         for uids in chunk(updated, 5*crispin_client.CHUNK_SIZE):
             update_metadata(uids, crispin_client)
             db_session.commit()
+    else:
+        log.info("No changes")
+
     remove_deleted_messages(crispin_client)
     # not sure if this one is actually needed - does delete() automatically
     # commit?
     db_session.commit()
 
-    update_cached_highestmodseq(folder, crispin_client, cached_validity)
+    update_cached_highestmodseq(folder, crispin_client)
     db_session.commit()
 
 def safe_download(uids, folder, crispin_client):
@@ -230,12 +238,15 @@ def safe_download(uids, folder, crispin_client):
 def update_metadata(uids, crispin_client):
     """ Update flags (the only metadata that can change). """
     new_metadata = crispin_client.fetch_metadata(uids)
+    log.info(new_metadata)
     for fm in db_session.query(FolderMeta).filter(
             FolderMeta.msg_uid.in_(uids),
             FolderMeta.folder_name==crispin_client.selected_folder_name):
+        log.info("msg: {0}, flags: {1}".format(fm.msg_uid, fm.flags))
         if fm.flags != new_metadata[fm.msg_uid]:
             fm.flags = new_metadata[fm.msg_uid]
             db_session.add(fm)
+    # XXX TODO: assert that server uids == local uids?
 
 def get_server_g_msgids(crispin_client):
     pass
