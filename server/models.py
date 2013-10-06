@@ -117,7 +117,7 @@ class Blob(object):
         bucket = conn.get_bucket(environ.get('MESSAGE_STORE_BUCKET_NAME'))
         data_obj = bucket.get_key(self.data_sha256)
         assert data_obj, "No data returned!"
-        return bucket.get_contents_as_string(data_obj)
+        return data_obj.get_contents_as_string()
 
     def _delete_from_s3(self):
         # TODO
