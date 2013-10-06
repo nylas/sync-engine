@@ -3,7 +3,7 @@ import sys, os;  sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname
 import socket
 
 import sessionmanager
-from models import db_session, FolderMeta, UIDValidity, User
+from models import db_session, FolderMeta, MessageMeta, UIDValidity, User
 from sqlalchemy import distinct
 import sqlalchemy.exc
 
@@ -74,12 +74,12 @@ def resync_uids(crispin_client):
     """
     raise Exception("Unimplemented")
 
-def delete_messages(uids, folder, user_email_address):
+def delete_messages(uids, folder, user_id):
     # delete these UIDs from this folder
     fm_query = db_session.query(FolderMeta).filter(
             FolderMeta.msg_uid.in_(uids),
             FolderMeta.folder_name==folder,
-            FolderMeta.g_email==user_email_address)
+            FolderMeta.user_id==user_id)
     # g_msgids = [fm.g_msgid for fm in fm_query]
     fm_query.delete(synchronize_session='fetch')
 
@@ -111,21 +111,22 @@ def remove_deleted_messages(crispin_client):
     local_uids = [uid for uid, in
             db_session.query(FolderMeta.msg_uid).filter_by(
                 folder_name=crispin_client.selected_folder_name,
-                g_email=crispin_client.email_address)]
+                user_id=crispin_client.user_obj.id)]
     if len(server_uids) > 0 and len(local_uids) > 0:
         assert type(server_uids[0]) == type(local_uids[0])
 
     to_delete = set(local_uids).difference(set(server_uids))
     if to_delete:
         delete_messages(to_delete, crispin_client.selected_folder_name,
-                crispin_client.email_address)
+                crispin_client.user_obj.id)
         log.info("Deleted {0} removed messages".format(len(to_delete)))
 
-def new_or_updated(uids, folder, local_uids=None):
+def new_or_updated(uids, folder, user_id, local_uids=None):
     if local_uids is None:
         local_uids = set([unicode(uid) for uid, in \
                 db_session.query(FolderMeta.msg_uid).filter(
                 FolderMeta.folder_name==folder,
+                FolderMeta.user_id==user_id,
                 FolderMeta.msg_uid.in_(uids))])
     return partition(lambda x: x not in local_uids, uids)
 
@@ -185,7 +186,7 @@ def highestmodseq_update(folder, crispin_client, highestmodseq=None):
     uids = crispin_client.get_changed_uids(highestmodseq)
     log.info("Starting highestmodseq update on {0} (current HIGHESTMODSEQ: {1})".format(folder, crispin_client.selected_highestmodseq))
     if uids:
-        new, updated = new_or_updated(uids, folder)
+        new, updated = new_or_updated(uids, folder, crispin_client.user_obj.id)
         log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
         for uids in chunk(new, crispin_client.CHUNK_SIZE):
             new_messagemeta, new_messagepart, new_foldermeta = safe_download(new,
@@ -241,9 +242,9 @@ def safe_download(uids, folder, crispin_client):
 def update_metadata(uids, crispin_client):
     """ Update flags (the only metadata that can change). """
     new_metadata = crispin_client.fetch_metadata(uids)
-    log.info(new_metadata)
     for fm in db_session.query(FolderMeta).filter(
             FolderMeta.msg_uid.in_(uids),
+            FolderMeta.user_id==crispin_client.user_obj.id,
             FolderMeta.folder_name==crispin_client.selected_folder_name):
         log.info("msg: {0}, flags: {1}".format(fm.msg_uid, fm.flags))
         if fm.flags != new_metadata[fm.msg_uid]:
@@ -277,7 +278,7 @@ def initial_sync(user, updates, dummy=False):
         # total failure.
         local_uids = [uid for uid, in
                 db_session.query(FolderMeta.msg_uid).filter_by(
-                    g_email=user.g_email, folder_name=folder)]
+                    user_id=crispin_client.user_obj.id, folder_name=folder)]
         crispin_client.select_folder(folder)
 
         server_g_msgids = None
@@ -297,7 +298,9 @@ def initial_sync(user, updates, dummy=False):
                 # any uids we don't already have will be downloaded correctly
                 # as usual, but updated uids need to be updated manually
                 modified = crispin_client.get_changed_uids(crispin_client.selected_highestmodseq)
-                new, updated = new_or_updated(modified, folder, local_uids)
+                new, updated = new_or_updated(modified, folder,
+                                              crispin_client.user_obj.id,
+                                              local_uids)
                 log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
                 # for new, query g_msgids and update cache
                 server_g_msgids.update(crispin_client.fetch_g_msgids(new))
@@ -328,8 +331,11 @@ def initial_sync(user, updates, dummy=False):
                 db_session.add(cached_validity)
                 db_session.commit()
         server_uids = sorted(server_g_msgids.keys())
+        # get all g_msgids we've already downloaded for this user
         g_msgids = set([g_msgid for g_msgid, in
-            db_session.query(distinct(FolderMeta.g_msgid))])
+            db_session.query(distinct(MessageMeta.g_msgid)).join(FolderMeta).filter(
+                FolderMeta.folder_name==folder,
+                FolderMeta.user==crispin_client.user_obj)])
 
         log.info("Found {0} UIDs for folder {1}".format(
             len(server_uids), folder))
@@ -338,7 +344,7 @@ def initial_sync(user, updates, dummy=False):
         unknown_uids = set(server_uids).difference(set(local_uids))
 
         if warn_uids:
-            delete_messages(warn_uids, folder)
+            delete_messages(warn_uids, folder, crispin_client.user_obj.id)
             log.info("Deleted the following UIDs that no longer exist on the server: {0}".format(' '.join(sorted(warn_uids, key=int))))
 
         full_download, foldermeta_only = partition(
@@ -350,9 +356,14 @@ def initial_sync(user, updates, dummy=False):
         log.info("skipping {0} uids downloaded via other folders".format(
             len(foldermeta_only)))
         if len(foldermeta_only) > 0:
+            foldermeta_uid_for = [server_g_msgids[uid] for uid in foldermeta_only]
+            messagemeta_for = dict([(foldermeta_uid_for[mm.g_msgid], mm) for \
+                     mm in db_session.query(MessageMeta).filter( \
+                         MessageMeta.g_msgid.in_(foldermeta_uid_for.values()))])
             db_session.add_all(
-                    [crispin_client.make_fm(server_g_msgids[uid], folder,
-                        uid) for uid in foldermeta_only])
+                    [FolderMeta(user=user, folder_name=folder,
+                        msg_uid=uid, messagemeta=messagemeta_for[uid]) \
+                                for uid in foldermeta_only])
             db_session.commit()
 
         total_messages = len(local_uids)

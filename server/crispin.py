@@ -108,13 +108,6 @@ class CrispinClientBase(object):
         return or_none(self.selected_folder_info,
                 lambda i: long(i['UIDVALIDITY']))
 
-    def make_fm(self, g_msgid, label, uid):
-        return FolderMeta(
-                g_email=self.email_address,
-                g_msgid=g_msgid,
-                folder_name=label,
-                msg_uid=uid)
-
     def fetch_g_msgids(self, uids=None):
         raise Exception("Subclass must implement")
 
@@ -338,7 +331,9 @@ class CrispinClient(CrispinClientBase):
             new_msg.g_thrid = unicode(x_gm_thrid)
             new_msg.g_msgid = unicode(x_gm_msgid)
 
-            fm = self.make_fm(x_gm_msgid, self.selected_folder_name, uid)
+            fm = FolderMeta(user=self.user_obj,
+                    folder_name=self.selected_folder_name,
+                    msg_uid=uid, messagemeta=new_msg)
             new_foldermeta.append(fm)
 
             # TODO parse out flags and store as enum instead of string
