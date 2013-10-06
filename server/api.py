@@ -36,14 +36,16 @@ class API(object):
             we fetch the full thread if one of the messages is in the requested folder.
         """
 
-        all_g_msgids = db_session.query(FolderMeta.g_msgid).filter(FolderMeta.folder_name == folder_name).all()
-        all_g_msgids = [s[0] for s in all_g_msgids]
+        all_msgids = db_session.query(FolderMeta.messagemeta_id)\
+              .filter(FolderMeta.folder_name == folder_name,
+                      FolderMeta.user_id == user_id).all()
+        all_msgids = [s[0] for s in all_msgids]
 
 
         # Get all thread IDs
         all_thrids = set()
-        for g_msgids in chunk(all_g_msgids, db_chunk_size):
-            all_msgs_query = db_session.query(MessageMeta.g_thrid).filter(MessageMeta.g_msgid.in_(g_msgids))
+        for msgids in chunk(all_msgids, db_chunk_size):
+            all_msgs_query = db_session.query(MessageMeta.g_thrid).filter(MessageMeta.id.in_(msgids))
             result = all_msgs_query.all()
             [all_thrids.add(s[0]) for s in result]
 
@@ -60,10 +62,11 @@ class API(object):
                            default=json_util.default)  # Fixes serializing date.datetime
 
 
-
     def messages_with_ids(self, user_id, msg_ids):
         """ Returns MessageMeta objects for the given msg_ids """
-        all_msgs_query = db_session.query(MessageMeta).filter(MessageMeta.id.in_(msg_ids))
+        all_msgs_query = db_session.query(MessageMeta)\
+            .filter(MessageMeta.id.in_(msg_ids), 
+                    MessageMeta.user_id == user_id)
         all_msgs = all_msgs_query.all()
 
         log.info('found %i messages IDs' % len(all_msgs))
@@ -93,9 +96,10 @@ class API(object):
         existing_msgs_query = db_session.query(MessageMeta).join(User)\
                 .filter(MessageMeta.g_msgid == data_id, User.id == user_id)\
                 .options(joinedload("parts"))
-        log.info(existing_msgs_query)
         meta = existing_msgs_query.all()
-        assert len(meta) == 1, "Incorrect messagemeta response"
+        if not len(meta) == 1:
+            log.error("messagemeta query returned %i results" % len(meta))
+        if len(meta) == 0: return []
         m = meta[0]
 
         parts = m.parts
@@ -105,34 +109,28 @@ class API(object):
 
     def part_with_id(self, user_id, message_id, walk_index):
 
-        print 'user_id:', user_id
-        print 'message_id', message_id
-        print 'walk_index', walk_index
-
         # TODO store MessageParts rows by user_id instead of email address
         # user = db_session.query(User).filter(User.user_id == user_id).all()[0]
 
-
         q = db_session.query(MessagePart).join(MessageMeta)\
                 .filter(MessageMeta.g_msgid==message_id,
-                        MessagePart.walk_index == walk_index)
+                        MessagePart.walk_index == walk_index,
+                        MessageMeta.user_id == user_id)
         parts = q.all()
-        print 'parts', parts
-
-        assert len(parts) == 1
-        part = parts[0]
-
-
-        print 'type:', type(part.get_data())
-
-        data = {'message_data': part.get_data() }
+        print 'parts', len(parts)
+        if not len(parts) > 0:
+            log.error("No part to return... should have some data!")
+            data = {'message_data' : '' }
+        else:
+            if len(parts) > 1:
+                log.info("This part is in multiple folders")
+            part = parts[0]
+            data = {'message_data': part.get_data() }
 
         # if to_fetch == plain_part:
         #     msg_data = encoding.plaintext2html(msg_data)  # Do this on the client
         # elif content_type == 'text/html':
             # msg_data = encoding.clean_html(msg_data)
-
-
 
         return json.dumps(data,
                            default=json_util.default)  # Fixes serializing date.datetime
