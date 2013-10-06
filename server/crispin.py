@@ -182,7 +182,7 @@ class CrispinClient(CrispinClientBase):
         log.info("Fetching X-GM-MSGID mapping from server.")
         if uids is None:
             uids = self.all_uids()
-        return dict([(unicode(uid), unicode(ret['X-GM-MSGID'])) for uid, ret in \
+        return dict([(int(uid), unicode(ret['X-GM-MSGID'])) for uid, ret in \
                 self.imap_server.fetch(uids, ['X-GM-MSGID']).iteritems()])
 
     def all_uids(self):

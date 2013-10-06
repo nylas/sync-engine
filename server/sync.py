@@ -345,7 +345,7 @@ def initial_sync(user, updates, dummy=False):
 
         if warn_uids:
             delete_messages(warn_uids, folder, crispin_client.user_obj.id)
-            log.info("Deleted the following UIDs that no longer exist on the server: {0}".format(' '.join(sorted(warn_uids))))
+            log.info("Deleted the following UIDs that no longer exist on the server: {0}".format(' '.join([str(u) for u in sorted(warn_uids)])))
 
         full_download, foldermeta_only = partition(
                 lambda uid: server_g_msgids[uid] in g_msgids,
