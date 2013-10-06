@@ -437,7 +437,7 @@ class SyncMonitor(Greenlet):
                     log.info("Stopping sync for {0}".format(self.user.g_email))
                     kill(action)
                     return
-            except Empty: sleep(0)
+            except Empty: sleep(1)
 
     def process_command(self, cmd):
         """ Returns True if successful, or False if process should abort. """
@@ -484,7 +484,8 @@ class SyncMonitor(Greenlet):
     def poll(self):
         log.info("polling {0}".format(self.user.g_email))
         process = Greenlet.spawn(incremental_sync, self.user)
-        joinall([process])
+        while not process.ready():
+            sleep(0)
         if process.successful():
             self.status_callback(self.user, 'poll', datetime.utcnow().isoformat())
         else:
