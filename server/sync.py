@@ -20,7 +20,7 @@ from gevent.queue import Queue, Empty
 def refresh_crispin(email, dummy=False):
     return sessionmanager.get_crispin_from_email(email, dummy)
 
-def load_validity_cache(crispin_client, email):
+def load_validity_cache(crispin_client):
     # in practice UIDVALIDITY and HIGHESTMODSEQ are always positive
     # integers with gmail, but let's not take chances on our default.
     defaults = dict(UIDVALIDITY=float('-inf'), HIGHESTMODSEQ=float('-inf'))
@@ -31,7 +31,7 @@ def load_validity_cache(crispin_client, email):
     for folder, uid_validity, highestmodseq in db_session.query(
             UIDValidity.folder_name,
             UIDValidity.uid_validity,
-            UIDValidity.highestmodseq).filter_by(g_email=email):
+            UIDValidity.highestmodseq).filter_by(user=crispin_client.user_obj):
         cache_validity[folder] = dict(UIDVALIDITY=uid_validity,
                 HIGHESTMODSEQ=highestmodseq)
 
@@ -45,18 +45,18 @@ def check_uidvalidity(crispin_client, cached_validity=None):
         resync_uids(crispin_client)
     return valid
 
-def fetch_uidvalidity(user_email_address, folder_name):
+def fetch_uidvalidity(user, folder_name):
     try:
         # using .one() here may catch duplication bugs
         return db_session.query(UIDValidity).filter_by(
-                g_email=user_email_address, folder_name=folder_name).one()
+                user=user, folder_name=folder_name).one()
     except sqlalchemy.orm.exc.NoResultFound:
         return None
 
 def uidvalidity_valid(crispin_client, cached_validity=False):
     """ Validate UIDVALIDITY on currently selected folder. """
     if cached_validity is None:
-        cached_validity = fetch_uidvalidity(crispin_client.email_address,
+        cached_validity = fetch_uidvalidity(crispin_client.user_obj,
                 crispin_client.selected_folder_name).uid_validity
         assert type(cached_validity) == type(crispin_client.selected_uidvalidity), "cached_validity: {0} / selected_uidvalidity: {1}".format(type(cached_validity), type(crispin_client.selected_uidvalidity))
 
@@ -152,7 +152,7 @@ def incremental_sync(user, dummy=False):
         a user has visible in the UI as well.
     """
     crispin_client = refresh_crispin(user.g_email, dummy)
-    cache_validity = load_validity_cache(crispin_client, user.g_email)
+    cache_validity = load_validity_cache(crispin_client)
     needs_update = []
     for folder in crispin_client.sync_folders:
         # eventually we might want to be holding a cache of this stuff from any
@@ -174,14 +174,14 @@ def incremental_sync(user, dummy=False):
 def update_cached_highestmodseq(folder, crispin_client, cached_validity=None):
     if cached_validity is None:
         cached_validity = db_session.query(UIDValidity).filter_by(
-                g_email=crispin_client.email_address, folder_name=folder).one()
+                user=crispin_client.user_obj, folder_name=folder).one()
     cached_validity.highestmodseq = crispin_client.selected_highestmodseq
     db_session.add(cached_validity)
 
 def highestmodseq_update(folder, crispin_client, highestmodseq=None):
     if highestmodseq is None:
         highestmodseq = db_session.query(UIDValidity).filter_by(
-                g_email=crispin_client.email_address, folder_name=folder
+                user=crispin_client.user_obj, folder_name=folder
                 ).one().highestmodseq
     uids = crispin_client.get_changed_uids(highestmodseq)
     log.info("Starting highestmodseq update on {0} (current HIGHESTMODSEQ: {1})".format(folder, crispin_client.selected_highestmodseq))
@@ -282,7 +282,7 @@ def initial_sync(user, updates, dummy=False):
         crispin_client.select_folder(folder)
 
         server_g_msgids = None
-        cached_validity = fetch_uidvalidity(user.g_email, folder)
+        cached_validity = fetch_uidvalidity(user, folder)
         if cached_validity is not None:
             check_uidvalidity(crispin_client, cached_validity.uid_validity)
             log.info("Attempting to retrieve server_uids and server_g_msgids from cache")
@@ -318,10 +318,10 @@ def initial_sync(user, updates, dummy=False):
             server_g_msgids = crispin_client.fetch_g_msgids()
             set_cache("_".join([user.g_email, folder,
                 "server_g_msgids"]), server_g_msgids)
-            cached_validity = fetch_uidvalidity(user.g_email, folder)
+            cached_validity = fetch_uidvalidity(user, folder)
             if cached_validity is None:
                 db_session.add(UIDValidity(
-                    g_email=user.g_email, folder_name=folder,
+                    user=crispin_client.user_obj, folder_name=folder,
                     uid_validity=crispin_client.selected_uidvalidity,
                     highestmodseq=crispin_client.selected_highestmodseq))
                 db_session.commit()
