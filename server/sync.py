@@ -500,8 +500,9 @@ class SyncService:
         self.monitors = dict()
         # READ ONLY from API calls, writes happen from callbacks from monitor
         # greenlets.
-        # { 'g_email': ('initial_sync', 0) }
-        # 'state' can be ['initial_sync', 'poll']
+        # { 'user_id': { 'state': 'initial sync', 'status': '0'} }
+        # 'state' can be ['initial sync', 'poll']
+        # 'status' is the percent-done for initial sync, polling start time otherwise
         # all data in here ought to be msgpack-serializable!
         self.user_statuses = dict()
 
@@ -523,7 +524,8 @@ class SyncService:
                 user.sync_lock()
                 def update_user_status(user, state, status):
                     """ I really really wish I were a lambda """
-                    self.user_statuses[user.g_email] = (state, status)
+                    self.user_statuses[user.id] = dict(
+                            state=state, status=status)
                     notify(user, state, status)
 
                 monitor = SyncMonitor(user, update_user_status)
