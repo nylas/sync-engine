@@ -30,7 +30,7 @@ class JSONSerializable(object):
         """
         pass
 
-STORE_MSG_ON_S3 = False
+STORE_MSG_ON_S3 = True
 
 class Blob(object):
     """ A blob of data that can be saved to local or remote (S3) disk. """
@@ -92,7 +92,7 @@ class Blob(object):
         if data_obj:
             assert data_obj.get_metadata('data_sha256') == self.data_sha256, \
                 "MessagePart hash doesn't match what we previously stored on s3!"
-            log.info("MessagePart already exists on S3.")
+            # log.info("MessagePart already exists on S3.")
             return
 
         data_obj = Key(bucket)
@@ -103,7 +103,7 @@ class Blob(object):
         data_obj.set_metadata('data_sha256', self.data_sha256)
         # data_obj.content_type = self.content_type  # Experimental
         data_obj.key = self.data_sha256
-        log.info("Writing data to S3 with hash {0}".format(self.data_sha256))
+        # log.info("Writing data to S3 with hash {0}".format(self.data_sha256))
         # def progress(done, total):
         #     log.info("%.2f%% done" % (done/total * 100) )
         # data_obj.set_contents_from_string(data, cb=progress)

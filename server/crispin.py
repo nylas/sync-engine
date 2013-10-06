@@ -275,7 +275,7 @@ class CrispinClient(CrispinClientBase):
             to disk.
         """
         UIDs = [u for u in UIDs if int(u) != 6372]
-        log.info("downloading {0}".format(UIDs))
+        log.info("{0} downloading {1}".format(self.user_obj.g_email, UIDs))
         query = 'BODY.PEEK[] ENVELOPE INTERNALDATE FLAGS'
         raw_messages = self.imap_server.fetch(UIDs,
                 [query, 'X-GM-THRID', 'X-GM-MSGID', 'X-GM-LABELS'])

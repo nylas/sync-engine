@@ -242,6 +242,7 @@ def safe_download(uids, folder, crispin_client):
 def update_metadata(uids, crispin_client):
     """ Update flags (the only metadata that can change). """
     new_metadata = crispin_client.fetch_metadata(uids)
+    log.info("new metadata: {0}".format(new_metadata))
     for fm in db_session.query(FolderMeta).filter(
             FolderMeta.msg_uid.in_(uids),
             FolderMeta.user_id==crispin_client.user_obj.id,
@@ -397,9 +398,10 @@ def initial_sync(user, updates, dummy=False):
             percent_done = (total_messages / len(server_uids)) * 100
             folder_sync_percent_done[folder] = percent_done
             updates.put(folder_sync_percent_done)
-            log.info("Synced %i of %i (%.4f%%)" % (total_messages,
-                                                   len(server_uids),
-                                                   percent_done))
+            log.info("Syncing %s -- %.4f%% (%i/%i)" % (crispin_client.user_obj.g_email,
+                                                   percent_done,
+                                                   total_messages,
+                                                   len(server_uids)))
 
         # complete X-GM-MSGID mapping is no longer needed after initial sync
         rm_cache("_".join([user.g_email, folder, "server_g_msgids"]))
