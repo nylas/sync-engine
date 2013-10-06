@@ -113,7 +113,7 @@ def remove_deleted_messages(crispin_client):
                 folder_name=crispin_client.selected_folder_name,
                 user_id=crispin_client.user_obj.id)]
     if len(server_uids) > 0 and len(local_uids) > 0:
-        assert type(server_uids[0]) == type(local_uids[0])
+        assert type(server_uids[0]) != type('')
 
     to_delete = set(local_uids).difference(set(server_uids))
     if to_delete:

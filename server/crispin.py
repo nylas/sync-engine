@@ -187,10 +187,9 @@ class CrispinClient(CrispinClientBase):
 
     def all_uids(self):
         """ Get all UIDs associated with the currently selected folder as
-            a list of strings in ascending integer order.
+            a list of integers sorted in ascending order.
         """
-        return sorted([unicode(s) for s in self.imap_server.search(['NOT DELETED'])],
-                key=int)
+        return sorted([int(s) for s in self.imap_server.search(['NOT DELETED'])])
 
     def server_needs_refresh(self):
         """ Many IMAP servers have a default minimum "no activity" timeout
