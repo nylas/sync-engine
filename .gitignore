@@ -5,6 +5,7 @@
 /src
 /errors
 /config.cfg
+/cache
 
 .DS_Store
 *.py[cod]
