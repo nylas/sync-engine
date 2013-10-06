@@ -7,12 +7,12 @@ from util.itert import chunk
 from models import db_session, MessageMeta, MessagePart, FolderMeta, User
 
 from sqlalchemy.orm import joinedload
+from sqlalchemy import func
 
 db_chunk_size = 100
 
 import zerorpc
 import os
-
 
 class API(object):
 
@@ -24,6 +24,36 @@ class API(object):
             self._zmq_search = zerorpc.Client(
                     os.environ.get('SEARCH_SERVER_LOC', None))
         return self._zmq_search.search
+
+    def sync_status(self):
+        """ Returns data representing the status of all syncing users, like:
+
+            user_id: {
+                state: 'initial sync',
+                stored_data: '12127227',
+                stored_messages: '50000',
+                status: '56%',
+            }
+            user_id: {
+                state: 'poll',
+                stored_data: '1000000000',
+                stored_messages: '200000',
+                status: '2013-06-08 14:00',
+            }
+        """
+        if not self._sync:
+            self._sync = zerorpc.Client(os.environ.get('CRISPIN_SERVER_LOC', None))
+        status = self._sync.status()
+        for user_id in status.keys():
+            total_stored_data = db_session.query(func.sum(MessagePart.size)) \
+                    .join(MessagePart.messagemeta).join(MessageMeta.user) \
+                    .filter(User.id==user_id).one()
+            total_stored_messages = db_session.query(MessageMeta).join(
+                    MessageMeta.user).filter(User.id==user_id).count()
+            status[user_id]['stored_data'] = total_stored_data
+            status[user_id]['stored_messages'] = total_stored_messages
+        # TODO: now annotate the results with total stored data
+        return json.dumps(status, default=json_util.default)
 
     def search_folder(self, user_id, search_query):
         results = self.z_search(user_id, search_query)
