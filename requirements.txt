@@ -22,6 +22,7 @@ supervisor==3.0
 iconv==1.0
 chardet==2.1.1
 PIL==1.1.7
+setproctitle==1.1.7
 
 # Our own versions of these
 -e git+git://github.com/inboxapp/imapclient#egg=imapclient

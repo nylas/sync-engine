@@ -4,6 +4,7 @@ import argparse
 import signal
 import sys
 import os
+from setproctitle import setproctitle; setproctitle('inboxapp-srv')
 from config import setup_env
 
 from server.util.log import configure_logging
