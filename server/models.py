@@ -372,8 +372,8 @@ class FolderMeta(JSONSerializable, Base):
     user = relationship('User')
     messagemeta_id = Column(Integer, ForeignKey('messagemeta.id'), nullable=False)
     messagemeta = relationship('MessageMeta')
-    msg_uid = Column(Integer)
-    folder_name = Column(String(255))  # All Mail, Inbox, etc. (i.e. Labels)
+    msg_uid = Column(Integer, nullable=False)
+    folder_name = Column(String(255), nullable=False)  # All Mail, Inbox, etc. (i.e. Labels)
     flags = Column(MediumPickle)
 
     __table_args__ = (UniqueConstraint('folder_name', 'msg_uid', 'user_id',
