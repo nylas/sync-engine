@@ -10,6 +10,7 @@ import encoding
 from models import MessageMeta, MessagePart, FolderMeta
 import time
 import json
+import sessionmanager
 
 from itertools import chain
 
@@ -224,6 +225,7 @@ class CrispinClient(CrispinClientBase):
             if str(e) == '[ALERT] Too many simultaneous connections. (Failure)':
                 raise TooManyConnectionsFailure("Too many simultaneous connections.")
             elif str(e) == '[ALERT] Invalid credentials (Failure)':
+                sessionmanager.verify_user(self.user_obj)
                 raise AuthFailure("Invalid credentials")
             else:
                 raise e
@@ -275,7 +277,7 @@ class CrispinClient(CrispinClientBase):
             to disk.
         """
         UIDs = [u for u in UIDs if int(u) != 6372]
-        log.info("{0} downloading {1}".format(self.user_obj.g_email, UIDs))
+        # log.info("{0} downloading {1}".format(self.user_obj.g_email, UIDs))
         query = 'BODY.PEEK[] ENVELOPE INTERNALDATE FLAGS'
         raw_messages = self.imap_server.fetch(UIDs,
                 [query, 'X-GM-THRID', 'X-GM-MSGID', 'X-GM-LABELS'])
