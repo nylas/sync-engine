@@ -69,6 +69,9 @@ def sync(args):
         if args.cmd == 'start':
             c.start_sync(args.email_address, dummy=args.dummy)
             print "Sync started. See logs wherever you started the sync server."
+        elif args.cmd == 'startall':
+            c.start_sync_all()
+            print "All syncs started."
         elif args.cmd == 'stop':
             c.stop_sync(args.email_address)
             print "Sync stopped."

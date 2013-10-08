@@ -543,6 +543,38 @@ class SyncService:
         except sqlalchemy.orm.exc.NoResultFound:
             raise SyncException("No such user")
 
+
+    def start_sync_all(self):
+        try:
+            users = db_session.query(User).all()
+            fqdn = socket.getfqdn()
+            for user in users:
+                if user.sync_host is not None and user.sync_host != fqdn:
+                    print 'User {0} is syncing on host {1}'.format(user.g_email, user.sync_host)
+                    continue
+                if user.g_email not in self.monitors:
+                    user.sync_lock()
+                    def update_user_status(user, state, status):
+                        """ I really really wish I were a lambda """
+                        self.user_statuses[user.id] = dict(
+                                state=state, status=status)
+                        notify(user, state, status)
+
+                    monitor = SyncMonitor(user, update_user_status)
+                    self.monitors[user.g_email] = monitor
+                    monitor.start()
+                    user.sync_active = True
+                    user.sync_host = fqdn
+                    db_session.add(user)
+                    db_session.commit()
+                    print "OK sync started"
+                else:
+                    print "OK sync already started"
+        except sqlalchemy.orm.exc.NoResultFound:
+            raise SyncException("No users to start sync")
+
+
+
     def stop_sync(self, user_email_address):
         try:
             user = db_session.query(User).filter_by(g_email=user_email_address).one()
@@ -563,7 +595,7 @@ class SyncService:
 
     def stop_sync_all(self):
         try:
-            users = db_session.query(User).filter_by().all()
+            users = db_session.query(User).all()
             count = 0
             for user in users:
                 if not user.sync_active:
