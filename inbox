@@ -72,6 +72,9 @@ def sync(args):
         elif args.cmd == 'stop':
             c.stop_sync(args.email_address)
             print "Sync stopped."
+        elif args.cmd == 'stopall':
+            c.stop_sync_all()
+            print "All syncs stopped."
     except zerorpc.exceptions.TimeoutExpired:
         print >>sys.stderr, "Can't connect. Is the sync server running? (./inbox start)"
         sys.exit(1)

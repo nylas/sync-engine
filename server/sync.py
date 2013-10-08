@@ -561,6 +561,30 @@ class SyncService:
         except sqlalchemy.orm.exc.NoResultFound:
             raise SyncException("No such user")
 
+    def stop_sync_all(self):
+        try:
+            users = db_session.query(User).filter_by().all()
+            count = 0
+            for user in users:
+                if not user.sync_active:
+                    print "Already stopped for {0}".format(user.g_email)
+                    continue
+                fqdn = socket.getfqdn()
+                if not (user.sync_host == fqdn):
+                    print 'User {0} is syncing on host {1}'.format(user.g_email, user.sync_host)
+                    continue
+                # XXX Can processing this command fail in some way?
+                self.monitors[user.g_email].inbox.put_nowait("shutdown")
+                user.sync_active = False
+                user.sync_host = None
+                db_session.add(user)
+                db_session.commit()
+                user.sync_unlock()
+                count += 1
+            return "Sync stopped for {0} of {1} users.".format(count, len(users))
+        except sqlalchemy.orm.exc.NoResultFound:
+            raise SyncException("No current syncing users")
+
     def sync_status(self, user_email_address):
         return self.user_statuses.get(user_email_address)
 
