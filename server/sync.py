@@ -360,7 +360,7 @@ def initial_sync(user, updates, dummy=False):
             foldermeta_uid_for = [server_g_msgids[uid] for uid in foldermeta_only]
             messagemeta_for = dict([(foldermeta_uid_for[mm.g_msgid], mm) for \
                      mm in db_session.query(MessageMeta).filter( \
-                         MessageMeta.g_msgid.in_(foldermeta_uid_for.values()))])
+                         MessageMeta.g_msgid.in_(foldermeta_uid_for))])
             db_session.add_all(
                     [FolderMeta(user=user, folder_name=folder,
                         msg_uid=uid, messagemeta=messagemeta_for[uid]) \
