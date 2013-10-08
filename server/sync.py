@@ -513,7 +513,6 @@ class SyncService:
         user_email_addresses = [r[0] for r in \
                 db_session.query(User.g_email).filter_by(sync_active=True)]
         for user_email_address in user_email_addresses:
-            log.info("Restarting sync for {0}".format(user_email_address))
             self.start_sync(user_email_address)
 
     def start_sync(self, user_email_address):
@@ -537,6 +536,7 @@ class SyncService:
                 user.sync_host = socket.getfqdn()
                 db_session.add(user)
                 db_session.commit()
+                log.info("Restarting sync for {0}".format(user.g_email))
                 return "OK sync started"
             else:
                 return "OK sync already started"
