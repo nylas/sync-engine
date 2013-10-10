@@ -23,8 +23,8 @@ app.factory('layout', function() {
             windowSize.headersHeight = $('#header').height();
             windowSize.mainHeight = windowSize.height - windowSize.headersHeight;
 
-            windowSize.leftColHeight = windowSize.mainHeight - 15;
-            windowSize.leftMessageListHeight = windowSize.mainHeight - $('.leftHeader').outerHeight(true) - $('.leftFooter').outerHeight(true) - 15;
+            windowSize.leftColHeight = windowSize.mainHeight;
+            windowSize.leftMessageListHeight = windowSize.mainHeight - $('.header_left').outerHeight(true) - $('.footer_left').outerHeight(true);
 
             windowSize.rightContentWidth = windowSize.width - $('.leftcol').width();
 

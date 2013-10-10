@@ -1,20 +1,21 @@
 <!doctype html>
 <html lang="en" ng-app='InboxApp'>
 <head>
-	<meta charset="utf-8">
-	<title>Inbox</title>
+    <meta charset="utf-8">
+    <title>Inbox</title>
 
 <link rel="stylesheet" href="css/bootstrap.min.css"/>
 
 
 <link rel="stylesheet" href="css/style.css"/>
+
 <!-- <link rel="stylesheet" href="css/bootstrap-responsive.min.css"/> -->
 
 <style type="text/css">
-	/* Hide while loading */
-	[ng\:cloak], [ng-cloak], .ng-cloak {
-	  display: none;
-	}
+    /* Hide while loading */
+    [ng\:cloak], [ng-cloak], .ng-cloak {
+      display: none;
+    }
 </style>
 
 <!-- typekit -->
@@ -30,20 +31,27 @@
 
 <!--  <div id="header">&nbsp;</div>  -->
 <div id="main">
-    <div class="leftcol card_with_shadow">
+    <div class="leftcol">
 
-    	<div class="leftHeader">
-    		<headersearchbox handler="performSearch"></headersearchbox>
-			<div class="composebutton clickable" data-ng-click="composeButtonHandler()"></div>
-    	</div>
+        <div class="header_left">
+            <div class="header_inboxicon_small clickable">
+            </div>
 
-        <div class="messagelist">
-			<itemcell data-ng-repeat="t in displayedThreads" thread="t" data-ng-click="openThread(t)" selected="t == activeThread"></itemcell>
+            <headersearchbox handler="performSearch"></headersearchbox>
+            <div class="header_composebutton clickable" data-ng-click="composeButtonHandler()"></div>
         </div>
 
-        <div class="leftFooter">
-			<div class="gearbutton clickable"></div>
-			<div class="footerstatus" ng-bind="statustext" ng-cloak></div>
+        <div class="messagelist">
+            <itemcell data-ng-repeat="t in displayedThreads"
+                      thread="t"
+                      data-ng-click="openThread(t)"
+                      selected="t == activeThread">
+            </itemcell>
+        </div>
+
+        <div class="footer_left">
+            <div class="gearbutton clickable"></div>
+            <div class="footerstatus" ng-bind="statustext" ng-cloak></div>
         </div>
 
     </div>
@@ -54,59 +62,45 @@
         <div class="content">
 
 
-<!--         	<div class="contentBoy" ng-show="composerActive">
-        		Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
-        		tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
-        		quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
-        		consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
-        		cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
-        		proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-
-		         <composebox send-button-action="sendMessage(message_text)">
-		         </composebox>
-
-        	</div>
- -->
-
             <div class="contentBody" id="right-scrollable">
 
 
-	            <div class="contentHead" ng-show="activeThread">
-						<div class="email-content-title">
-			                <span ng-bind="activeThread[0].subject"></span>
-			            </div>
+                <div class="contentHead" ng-show="activeThread">
+                        <div class="email-content-title">
+                            <span ng-bind="activeThread[0].subject"></span>
+                        </div>
 
-			                <span class="email-content-subtitle" ng-show="activeThread[0] != null">Sent to {{activeThread[0].contactDisplayList}}</span>
-
-
-						<div class="btn-group" style="float:right">
-			                <button class="btn primary" data-ng-click="archiveButtonHandler()">Archive</button>
-			                <button class="btn primary dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button>
-			                <ul class="dropdown-menu pull-right">
-			                  <li><a href="#" data-ng-click="archiveButtonHandler()">Send to&nbsp;<img src="img/asana-icon.png"/></a></li>
-			                  <li><a href="#" data-ng-click="archiveButtonHandler()">Send to Salesforce</a></li>
-			                  <li class="divider"></li>
-			                  <li><a href="#" data-ng-click="archiveButtonHandler()">Delete</a></li>
-			                </ul>
-			              </div>
+                            <span class="email-content-subtitle" ng-show="activeThread[0] != null">Sent to {{activeThread[0].contactDisplayList}}</span>
 
 
-	            </div>
+                        <div class="btn-group" style="float:right">
+                            <button class="btn primary" data-ng-click="archiveButtonHandler()">Archive</button>
+                            <button class="btn primary dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button>
+                            <ul class="dropdown-menu pull-right">
+                              <li><a href="#" data-ng-click="archiveButtonHandler()">Send to&nbsp;<img src="img/asana-icon.png"/></a></li>
+                              <li><a href="#" data-ng-click="archiveButtonHandler()">Send to Salesforce</a></li>
+                              <li class="divider"></li>
+                              <li><a href="#" data-ng-click="archiveButtonHandler()">Delete</a></li>
+                            </ul>
+                          </div>
 
-	            <div style="clear:both"></div>
+
+                </div>
+
+                <div style="clear:both"></div>
 
 
-		        <div class="email-message-container"  ng-repeat="message in activeThread">
-					<threadview message="message"></threadview>
-		         </div>
+                <div class="email-message-container"  ng-repeat="message in activeThread">
+                    <threadview message="message"></threadview>
+                 </div>
 
 
 
-	            <div class="contentFoot" ng-show="activeThread">>
+                <div class="contentFoot" ng-show="activeThread">>
 
-			         <replybox send-button-action="sendMessage(message_text)">
-			         </replybox>
-	            </div>
+                     <replybox send-button-action="sendMessage(message_text)">
+                     </replybox>
+                </div>
 
             </div>
 

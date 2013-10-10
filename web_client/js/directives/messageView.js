@@ -14,93 +14,9 @@ app.directive("threadview", function($filter, wire, IBMessagePart) {
         scope: {
             message: '='
         }, // Two-way binding to message object
-        controller: function($scope, $element, $attrs, $transclude) {
-
-            /* STYLING */
-
-            $scope.message_bubble = {
-                textAlign: 'left',
-                border: '1px solid #D3D0D0;',
-                borderRadius: '4px',
-                marginBottom: '40px',
-                // 'box-shadow': '0px 1px 1px 0px rgba(0,0,0,0.29)',
-                // '-webkit-box-shadow:' : '0px 1px 1px 0px rgba(0,0,0,0.29)',
-                background: 'rgba(255,255,255,0.25)'
-            };
-
-            $scope.message_bubble_container = {
-                borderRadius: 'inherit',
-                fontFamily: '"proxima-nova-alt", sans-serif',
-                fontSize: '16px',
-                fontWeight: '600',
-                color: '#333',
-                fontStyle: 'normal',
-                fontVariant: 'normal',
-                textAlign: 'left',
-                textShadow: '1px 1px 1px white',
-                position: 'relative'
-            };
-
-            $scope.byline = {
-                marginLeft: '15px',
-                marginRight: '15px',
-                height: '34px',
-                borderBottomWidth: '1px',
-                borderBottomStyle: 'solid',
-                borderBottomColor: '#E6E8EA',
-                overflow: 'hidden',
-            };
-
-            $scope.indent = {
-                marginLeft: '40px'
-            };
-
-
-            $scope.byline_fromline = {
-                display: 'inline-block',
-                fontWeight: 600,
-                fontFamily: '"proxima-nova-alt", sans-serif',
-                fontSize: '16px',
-                color: '#4C4C4C',
-                paddingTop: '10px',
-                float: 'left',
-                // lineHeight: '17px',
-            };
-
-            $scope.byline_date = {
-                float: 'right',
-                display: 'inline-block',
-                lineHeight: 37 + 'px',
-                fontSize: 14 + 'px',
-                fontWeight: 400,
-                color: '#777'
-            };
-
-        },
 
         // add back green_glow class sometime
-        template: '<div ng-style="message_bubble">' + '<div ng-style="message_bubble_container">' +
-
-        '<div ng-style="byline">' +
-
-        '<gravatar message="message"></gravatar>' +
-
-        '<div ng-style="byline_fromline" ">' +
-
-        '<span ng-style="indent"> ' +
-
-        '<span ng-repeat="c in message.from"> {{c[0] + "&nbsp;<" + c[2] + "@"+ c[3] + ">" }} <span>' +
-
-        '{{message.from_contacts[0]}}' + '</span>' + '</div>' +
-
-        '<div ng-style="byline_date">{{ message.date | relativedate }}</div>' + '</div>' + '<div style="clear:both"></div>' + '<div class="card_with_shadow">' +
-
-        '<messagecontainer message="message"></messagecontainer>' +
-
-        '</div>' +
-
-        '</div>' + '</div>',
-
+        templateUrl: 'views/messageView.html',
 
 
         link: function($scope, elem, attrs, ctrl) {
@@ -351,7 +267,7 @@ app.directive("messageframe", function() {
                 doc.close();
 
                 var baseTag = doc.createElement('base');
-                baseTag.href = "http://inboxapp.com";
+                baseTag.href = "https://inboxapp.com";
                 baseTag.target = '_blank';
 
                 if (doc.body) {
@@ -387,8 +303,11 @@ app.directive("messageframe", function() {
 
             scope.$watch('content', function(val) {
                 // Reset the iFrame anytime the current message changes...
+                var to_wrap = val;
                 if (angular.isUndefined(val)) {
                     console.log("Content is undefined for messageframe.")
+                    to_wrap = 'Loading&hellip;';
+                }
 
                     var wrapped_html = '<html><head>' +
                         '<script type="text/javascript" src="//use.typekit.net/ccs3tld.js"></script>' +
@@ -414,13 +333,13 @@ app.directive("messageframe", function() {
                         ' border-radius:3px;; background-color: #E9E9E9;' +
                         ' }' +
                         '</style></head><body>' +
-                        'Loading&hellip;' +
+                        to_wrap +
                         '</body></html>';
 
                     injectToIframe(wrapped_html);
                     return;
-                }
-                injectToIframe(val);
+                // }
+                // injectToIframe(val);
                 // injectToIframe(scope.content);
             });
 

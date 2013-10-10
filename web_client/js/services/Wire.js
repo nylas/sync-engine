@@ -286,7 +286,7 @@ app.factory('wire', function ($rootScope) {
     ////////////////////////////////////////////////////////////////////////////////
 
 
-    var mySocket = io.connect('/wire', {
+    var mySocket = io.connect('https://dev-localhost.inboxapp.com/wire', {
         'resource': 'wire',
         'reconnect': true,
         'connect timeout': 1000,

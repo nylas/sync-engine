@@ -8,7 +8,7 @@
 }
 
 ::-webkit-scrollbar-thumb {
-    border-radius: 3px;
+    border-radius: 1px;
     background: rgba(0,0,0,0.15);
     -webkit-box-shadow: inset 0 0 6px rgba(0,0,0,0.3);
 }
@@ -51,17 +51,20 @@ html, body {
 
 
 
-body {
 
-  font-smooth:always;
-  -webkit-font-smoothing:antialiased;
 
-  background-color: #DAE2E2;
+body
+{
+    font-smoothing:always;
+    -webkit-font-smoothing:antialiased;
+    font-family: "proxima-nova-alt", sans-serif;
 
-  color: #616566;
+    background-color: #DAE2E2;
 
-  margin: 0;
-  padding: 0;
+    color: #616566;
+
+    margin: 0;
+    padding: 0;
 }
 
 
@@ -74,11 +77,32 @@ body {
   text-shadow: none;
 }
 
-
 a {
     text-decoration: none;
     color: #1b98f8;
 }
+
+
+
+/* Generally useful helpers */
+.clickable
+{
+    cursor: pointer;
+}
+
+.ellipsis
+{
+    overflow:hidden;
+    white-space:nowrap;
+    -ms-text-overflow:ellipsis;
+    text-overflow:ellipsis;
+ }
+
+ .clear
+ {
+    clear:both;
+ }
+
 
 
 /*
@@ -100,89 +124,225 @@ a {
   overflow:hidden;
 }
 
-#main {
+#main
+{
   position:relative;
   width:200%; /* prevent flickering when resizing */
   overflow:hidden;
 }
 
-.leftcol {
+
+.leftcol
+{
   height:100%;
   width:375px;
   float:left;
-  margin-left: 5px;
-  margin-top: 5px;
-  margin-bottom: 5px;
+  background: #FFFFFF;
+
+  -moz-box-shadow:    3px 0px 6px 0px rgba(0,0,0,0.09);
+  -webkit-box-shadow: 3px 0px 6px 0px rgba(0,0,0,0.09);
+  box-shadow:         3px 0px 6px 0px rgba(0,0,0,0.09);
+}
+
+
+.messagelist
+{
+    padding:0px;
+    margin:0px;
+    overflow-y: auto;
+}
+
+
+.footer_left
+{
+    border-top: 1px solid #959595;
+    height:28px;
+    background: #EEF2F2;
+    -webkit-box-shadow: inset 0px -1px 0px 0px rgba(255,255,255,1);
+    -moz-box-shadow: inset 0px -1px 0px 0px rgba(255,255,255,1);
+    box-shadow: inset 0px -1px 0px 0px rgba(255,255,255,1);
 }
 
 
 
-.leftHeader {
+
+
+input:focus, button:focus,
+select:focus
+{
+    outline: 0;
+}
+
+input[type="text"]
+{
+    padding: 0px;
+    margin: 0px;
+}
+
+
+
+
+
+.header_left
+{
   border-bottom: 1px solid #959595;
-
-  border-top-right-radius: inherit;
-  border-top-left-radius:inherit;
-
   height:40px;
 
-/*  border-radius: 5px 5px 5px 5px;
-  -moz-border-radius: 5px 5px 5px 5px;
-  -webkit-border-radius: 5px 5px 5px 5px;
-*/
-  background: rgba(227,227,227,1);
-  background: -moz-linear-gradient(top, rgba(227,227,227,1) 0%, rgba(207,207,207,1) 100%);
-  background: -webkit-gradient(left top, left bottom, color-stop(0%, rgba(227,227,227,1)), color-stop(100%, rgba(207,207,207,1)));
-  background: -webkit-linear-gradient(top, rgba(227,227,227,1) 0%, rgba(207,207,207,1) 100%);
-  background: -o-linear-gradient(top, rgba(227,227,227,1) 0%, rgba(207,207,207,1) 100%);
-  background: -ms-linear-gradient(top, rgba(227,227,227,1) 0%, rgba(207,207,207,1) 100%);
-  background: linear-gradient(to bottom, rgba(227,227,227,1) 0%, rgba(207,207,207,1) 100%);
-  filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#e3e3e3', endColorstr='#cfcfcf', GradientType=0 );
+  background: #EEF2F2;
   -webkit-box-shadow: inset 0px 1px 0px 0px rgba(255,255,255,1);
   -moz-box-shadow: inset 0px 1px 0px 0px rgba(255,255,255,1);
   box-shadow: inset 0px 1px 0px 0px rgba(255,255,255,1);
-
 }
 
 
-.messagelist {
-  padding:0px;
-  margin:0px;
-  overflow-y: auto;
-
-  /* Not sure why this fixes a bootstrap bug... */
-  margin-left:-1px;
-  margin-right:-1px;
-}
-
-.leftFooter
+.header_inboxicon_small
 {
-  text-align: left;
-  height:34px;
+    width: 40px;
+    background-color: green;
+    height:40px;
+    float:left;
 
-  border-bottom-right-radius: inherit;
-  border-bottom-left-radius:inherit;
+    background: transparent url("../img/header_inboxicon_small.png") no-repeat 10px 11px;
+}
 
-  border-top: 1px solid #959595;
+.header_searchbox
+{
+    color: rgba(7,7,7,0.52);
+    text-shadow: 0px 1px 0px #FFFFFF;
+    padding-left: 12px;
+    float:left;
+    height:40px;
+}
 
 
+.header_searchbox input
+{
+    font-family: "proxima-nova-alt-condensed", sans-serif;
+    font-weight: 400;
+    font-size: 14px;
 
-  background: rgba(227,227,227,1);
-  background: -moz-linear-gradient(top, rgba(227,227,227,1) 0%, rgba(207,207,207,1) 100%);
-  background: -webkit-gradient(left top, left bottom, color-stop(0%, rgba(227,227,227,1)), color-stop(100%, rgba(207,207,207,1)));
-  background: -webkit-linear-gradient(top, rgba(227,227,227,1) 0%, rgba(207,207,207,1) 100%);
-  background: -o-linear-gradient(top, rgba(227,227,227,1) 0%, rgba(207,207,207,1) 100%);
-  background: -ms-linear-gradient(top, rgba(227,227,227,1) 0%, rgba(207,207,207,1) 100%);
-  background: linear-gradient(to bottom, rgba(227,227,227,1) 0%, rgba(207,207,207,1) 100%);
-  filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#e3e3e3', endColorstr='#cfcfcf', GradientType=0 );
-  -webkit-box-shadow: inset 0px 1px 0px 0px rgba(255,255,255,1);
-  -moz-box-shadow: inset 0px 1px 0px 0px rgba(255,255,255,1);
-  box-shadow: inset 0px 1px 0px 0px rgba(255,255,255,1);
+    border-radius: 6px;
+    -moz-border-radius: 6px;
+    -webkit-border-radius: 6px;
 
+    -webkit-box-shadow: 0px 1px 0px 0px rgba(255,255,255,.4), inset 0px 6px 2px -6px rgba(0,0,0,0.5);
+    -moz-box-shadow: 0px 1px 0px 0px rgba(255,255,255,.4), inset 0px 6px 2px -6px rgba(0,0,0,0.5);
+    box-shadow: 0px 1px 0px 0px rgba(255,255,255,.4), inset 0px 6px 2px -6px rgba(0,0,0,0.5);
+    color: #a8a8a8;
+
+    background:  #fff url("../img/magnifying.png") no-repeat 8px 6px;
+
+    /*margin-top: 2px;*/
+    margin-top: 8px;
+    padding-top: 4px;
+    padding-bottom: 1px;
+    padding-left: 25px;
+
+    width: 240px;
+    border: 1px solid #959595;
+}
+
+
+.header_searchbox input:focus
+{
+    box-shadow: 0px 1px 0px 0px rgba(255,255,255,.4), inset 0px 6px 2px -6px rgba(77, 127, 189, 0.9);
+    outline:0;
+    border: solid 1px  #1A7A93 !important;
+    color: #1A7A93;
+}
+
+
+.header_composebutton
+{
+    background: transparent url("../img/header_composebutton.png") no-repeat 16px 7px;
+    float:left;
+    padding-left: 12px;
+    width: 34px;
+    height:40px;
 }
 
 
 
+.itemcell_email_item {
 
+    padding-top: 10px;
+    padding-bottom: 8px;
+
+    padding-left: 10px;
+    padding-right: 6px;
+
+    height: 78px;
+
+    color: #333;
+    border-bottom-width: 1px;
+    border-bottom-style: solid;
+    border-bottom-color: #C3CDCD;
+}
+
+.itemcell_email_item_unread
+{
+    border-left-width: 5px;
+    border-left-style: solid;
+    border-left-color: #79AFFF;
+}
+
+.itemcell_byline
+{
+    font-family: "proxima-nova-alt-condensed", sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #708080;
+    line-height: 18px;
+    padding-bottom:2px;
+    float:left;
+    width: 250px;
+}
+
+.itemcell_date
+{
+    font-family: "proxima-nova-alt-condensed", sans-serif;
+    font-weight:400;
+    font-size: 13px;
+    color: #708080;
+    line-height: 16px;
+    float:right;
+}
+
+
+.itemcell_email_subject
+{
+    font-family: "proxima-nova-alt-condensed", sans-serif;
+    font-size: 16px;
+    color: #333333;
+    font-weight: 600;
+    line-height: 19px;
+}
+
+.itemcell_email_subject {
+    color: #446DAC;
+}
+
+.itemcell_email_item_hover {
+  background-color: #F1F4F6; !important;
+}
+
+
+.itemcell_email_item_active {
+  color: #1A7A93;
+  background-color: #edf5fd;
+}
+
+
+.itemcell_email_summary {
+    font-family: "proxima-nova-alt", sans-serif;
+    font-size: 13px;
+    font-weight:400;
+    padding-top: 2px;
+    color: #333;
+    line-height: 18px;
+}
+
+/********************************************************/
 
 
 #rightcol {
@@ -204,275 +364,70 @@ a {
 
 }
 
-.contentBody {
+.contentBody
+{
     overflow: auto;
 }
 
-
-.mg_searchbox
+.messageview_bubble
 {
-  display:block;
-  /*padding: 10px;*/
-
-
-  color: rgba(7,7,7,0.52);
-/*  padding-top: 14px;*/
-  text-shadow: 0px 1px 0px #FFFFFF;
-/*  width:100px;
-  margin-left:auto;
-  margin-right:auto;
-*/
-  padding-top: 5px;
-  padding-left: 8px;
-  float:left;
-
+    text-align: left;
+    border: 1px solid #D3D0D0;
+    border-radius: 4px;
+    margin-bottom: 40px;
+    background: #FFF;
 }
 
-.compose_addressbox {
-
-  display:block;
-  /*padding: 10px;*/
-
-
-  color: rgba(7,7,7,0.52);
-/*  padding-top: 14px;*/
-  text-shadow: 0px 1px 0px #FFFFFF;
-/*  width:100px;
-  margin-left:auto;
-  margin-right:auto;
-*/
-  padding-top: 5px;
-  padding-left: 8px;
-  float:left;
-
-}
-
-
-
-input:focus, button:focus,
-select:focus {
-  outline: 0;
-}
-
-input[type="text"]{
-  padding: 0px;
-  margin: 0px;
-}
-
-.mg_searchbox input  {
-
-  font-family: "proxima-nova-alt-condensed", sans-serif;
-  font-weight: 600;
-  font-size: 14px;
-
-/*  border-radius: 5px 0px 0px 5px;
-  -moz-border-radius: 5px 0px 0px 5px;
-  -webkit-border-radius: 5px 0px 0px 5px;
-*/
-
-  border-radius: 5px;
-  -moz-border-radius: 5px;
-  -webkit-border-radius: 5px;
-
-
-  -webkit-box-shadow: 0px 1px 0px 0px rgba(255,255,255,.4), inset 0px 6px 5px -6px rgba(0,0,0,0.5);
-  -moz-box-shadow: 0px 1px 0px 0px rgba(255,255,255,.4), inset 0px 6px 5px -6px rgba(0,0,0,0.5);
-  box-shadow: 0px 1px 0px 0px rgba(255,255,255,.4), inset 0px 6px 5px -6px rgba(0,0,0,0.5);
-  color: #a8a8a8;
-
-
-  background:  #fff url("/app/img/magnifying.png") no-repeat 8px 8px;
-
-  padding-top: 6px;
-  padding-bottom: 4px;
-  padding-left: 25px;
-
-  /*height: 22px;*/
-  width: 296px;
-
-
-  border: 1px solid #959595;
-
-
-}
-
-
-
-.compose_addressbox input  {
-
-  font-family: "proxima-nova-alt-condensed", sans-serif;
-  font-weight: 600;
-  font-size: 14px;
-
-/*  border-radius: 5px 0px 0px 5px;
-  -moz-border-radius: 5px 0px 0px 5px;
-  -webkit-border-radius: 5px 0px 0px 5px;
-*/
-
-  border-radius: 5px;
-  -moz-border-radius: 5px;
-  -webkit-border-radius: 5px;
-
-/*
-  -webkit-box-shadow: 0px 1px 0px 0px rgba(255,255,255,.4), inset 0px 6px 5px -6px rgba(0,0,0,0.5);
-  -moz-box-shadow: 0px 1px 0px 0px rgba(255,255,255,.4), inset 0px 6px 5px -6px rgba(0,0,0,0.5);
-  box-shadow: 0px 1px 0px 0px rgba(255,255,255,.4), inset 0px 6px 5px -6px rgba(0,0,0,0.5);
-*/  color: #333;
-
-
-  /*background:  #fff url("/app/img/magnifying.png") no-repeat 8px 8px;*/
-
-  padding-top: 6px;
-  padding-bottom: 4px;
-  padding-left: 6px;
-
-  /*height: 22px;*/
-  width: 296px;
-
-
-  border: 1px solid #959595;
-
-
-}
-
-
-
-.compose_addressbox input:focus  {
-
-    /*color: ;*/
-
-/*  -webkit-box-shadow: 0px 1px 0px 0px rgba(255,255,255,.4), inset 0px 6px px -6px rgba(77, 127, 189, 0.5);
-  -moz-box-shadow: 0px 1px 0px 0px rgba(255,255,255,.4), inset 0px 6px 5px -6px rgba(77, 127, 189, 0.5);
-*/  box-shadow: 0px 1px 0px 0px rgba(255,255,255,.4), inset 0px 6px 5px -6px rgba(77, 127, 189, 0.9);
-  color: #ccc;
-
-    outline:0;
-    border: solid 1px  #1A7A93 !important;
-    color: #1A7A93;
-}
-
-
-
-form {
-  margin: 0px;
-}
-
-input {
-  padding: 0px;
-  margin: 0px;
-}
-
-
-
-.mg_searchbox input:focus  {
-
-    /*color: ;*/
-
-/*  -webkit-box-shadow: 0px 1px 0px 0px rgba(255,255,255,.4), inset 0px 6px px -6px rgba(77, 127, 189, 0.5);
-  -moz-box-shadow: 0px 1px 0px 0px rgba(255,255,255,.4), inset 0px 6px 5px -6px rgba(77, 127, 189, 0.5);
-*/  box-shadow: 0px 1px 0px 0px rgba(255,255,255,.4), inset 0px 6px 5px -6px rgba(77, 127, 189, 0.9);
-  color: #a8a8a8;
-
-
-
-    outline:0;
-    border: solid 1px  #1A7A93 !important;
-    color: #1A7A93;
-}
-
-
-
-.normalCell {
-  color: #333;
-}
-
-.activeCell {
-  color: #1A7A93;
-  background-color: #edf5fd
-  /*background-color: blue;*/
-}
-
-
-.hoverCell {
-
-  background-color: rgba(234, 234, 232, 0.65); !important;
-}
-
-
-
-
-.searchbutton
+.messageview_bubble_container
 {
-  background: transparent url("/app/img/search-icon.png");
-  width: 21px;
-  height: 24px;
-  float:left;
-  margin-top: 8px;
-  margin-left: 8px;
+    border-radius: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    font-style: normal;
+    font-variant: normal;
+    text-align: left;
+    text-shadow: 1px 1px 1px white;
+    position: relative;
 }
 
-.composebutton
+.messageview_byline
 {
-  background: transparent url("/app/img/compose.png");
-  width: 22px;
-  height: 22px;
-  float:right;
-  margin-top: 10px;
-  margin-right: 10px;
+    margin-left: 15px;
+    margin-right: 15px;
+    height: 34px;
+    border-bottom-width: 1px;
+    border-bottom-style: solid;
+    border-bottom-color: #E6E8EA;
+    overflow: hidden;
 }
 
-
-
-.clickable
+.messageview_byline_fromline
 {
-  cursor: pointer;
+    display: inline-block;
+    font-weight: 600;
+    font-family: "proxima-nova-alt-condensed", sans-serif;
+    font-size: 16px;
+    color: #4C4C4C;
+    padding-top: 12px;
+    float: left;
 }
 
-.inboxlabel
+.messageview_indent
 {
-  font-family: "proxima-nova-alt-condensed", sans-serif;
-  font-weight: 600;
-  font-size: 18px;
-  color: rgba(7,7,7,0.52);
-  padding-top: 14px;
-  text-shadow: 0px 1px 0px #FFFFFF;
-  text-align:center;
-  width:100px;
-  margin-left:auto;
-  margin-right:auto;
+    margin-left: 40px;
 }
 
-
-
-
-.gearbutton
+.messageview_byline_date
 {
-  background: transparent url("/app/img/gear.png");
-  width: 19px;
-  height: 20px;
-  float:left;
-  margin:8px;
+    float: right;
+    padding-top: 4px;
+    line-height: 37px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #777;
+    font-family: "proxima-nova-alt-condensed", sans-serif;
 }
-
-
-.footerstatus
-{
-  font-family: "proxima-nova-alt-condensed", sans-serif;
-  font-weight: 600;
-  font-size: 13px;
-  color: rgba(7,7,7,0.52);
-  line-height: 36px;
-  text-shadow: 0px 1px 0px #FFFFFF;
-
-  width:300px;
-  margin-left: 102px;
-  background: transparent url("/app/img/spinner.gif") no-repeat 0px 9px;
-  padding-left: 22px;
-}
-
-
-
-
 
 
 
@@ -480,22 +435,16 @@ input {
 /*border-radius: 3px;
 margin-right: 0.5em;
 */
- width:35px;
-  height:35px;
-  border: 1px solid #E6E8EA;
-  -moz-border-radius: 35px;
-  border-radius: 35px;
-  background: left center no-repeat;
-  float:left;
+    width:35px;
+    height:35px;
+    border: 1px solid #E6E8EA;
+    -moz-border-radius: 35px;
+    border-radius: 35px;
+    background: left center no-repeat;
+    float:left;
 }
 
 
-.ellipsis {
-  overflow:hidden;
-  white-space:nowrap;
-  -ms-text-overflow:ellipsis;
-  text-overflow:ellipsis;
- }
 
 
 .email-desc {
@@ -524,7 +473,6 @@ margin-right: 0.5em;
 /* Email Content Styles */
 .email-content
 {
-
     position: absolute;
     left: 375px;
 
@@ -535,22 +483,6 @@ margin-right: 0.5em;
     overflow-y: auto;
 
     overflow: auto;
-}
-
-
-.card_with_shadow
-{
-    border-radius: 6px;
-    background: rgba(255,255,255,0.97);
-    border: 1px solid #D3D0D0;
-
-    border: 1px solid #959595;
-
-
-    -moz-box-shadow:    0px 1px 1px 0px rgba(0,0,0,0.29);
-    -webkit-box-shadow: 0px 1px 1px 0px rgba(0,0,0,0.29);
-    box-shadow:         0px 1px 1px 0px rgba(0,0,0,0.29);
-    overflow:hidden;
 }
 
 
@@ -605,41 +537,10 @@ margin-right: 0.5em;
 
 
 
-/* Bottom chevron */
-/*
-div.right_message_bubble:before
-{
-  background-color: white;
-  -webkit-transform: rotate(45deg);
-  content: ' ';
-  position: absolute;
-  width: 50px;
-  height: 50px;
-  left: 30px;
-  bottom: -16px;
-  border: 1px solid;
-  border-color: transparent rgba(0, 0, 0, 0.15) rgba(0, 0, 0, 0.15) transparent;
-}
-*/
-
-/* New message glow
-TODO apply multiple shadows somehow with SASS
-http://stackoverflow.com/questions/7965278/box-shadow-both-inset-and-outside-on-same-div
-*/
-
-/*.green_glow {
-    box-shadow: 0 0 10px rgba(0, 200, 50, .8);
-  -webkit-box-shadow: 0 0 10px rgba(0, 200, 50, .8);
-  -moz-box-shadow: 0 0 10px rgba(0, 200, 50, .8);
-}
-.green_glow:before {
-    box-shadow: 0 0 10px rgba(0, 200, 50, .8);
-  -webkit-box-shadow: 0 0 10px rgba(0, 200, 50, .8);
-  -moz-box-shadow: 0 0 10px rgba(0, 200, 50, .8);
-}
-*/
 
 
+
+/********************************************************/
 
 
 .email-content-controls {
@@ -740,58 +641,41 @@ margin-bottom: 0.3em;
 }
 
 
-/*
 
 
-.shadowed_wrapper
+
+/********************************************************/
+
+.gearbutton
 {
-  position: relative;
-  z-index: 1;
+  background: transparent url("/app/img/gear.png");
+  width: 19px;
+  height: 20px;
+  float:left;
+  margin:8px;
 }
 
-.shadowed
+
+.footerstatus
 {
-  -moz-background-clip: padding;
-  -webkit-background-clip: padding-box;
-  background-clip: padding-box;
+  font-family: "proxima-nova-alt-condensed", sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  color: rgba(7,7,7,0.52);
+  line-height: 36px;
+  text-shadow: 0px 1px 0px #FFFFFF;
+
+  width:300px;
+  margin-left: 102px;
+  background: transparent url("/app/img/spinner.gif") no-repeat 0px 9px;
+  padding-left: 22px;
 }
 
-.shadowed:before, .shadowed:after
-{
-  content: '';
-  z-index: -1;
-  position: absolute;
-  left: 22px;
-  bottom: 10px;
 
-  width: 70%;
-  max-width: 300px;
-  max-height: 100px;
-  height: 55%;
 
-  -webkit-box-shadow: 0 11px 7px rgba(0, 0, 0, 0.40);
-  -moz-box-shadow: 0 11px 7px rgba(0, 0, 0, 0.40);
-  box-shadow: 0 11px 7px rgba(0, 0, 0, 0.40);
 
-  -webkit-transform: skew(-15deg) rotate(-2deg);
-  -moz-transform: skew(-15deg) rotate(-2deg);
-  -ms-transform: skew(-15deg) rotate(-2deg);
-  -o-transform: skew(-15deg) rotate(-2deg);
-  transform: skew(-15deg) rotate(-2deg);
-}
+/********************************************************/
 
-.shadowed:after
-{
-  left: auto;
-  right: 22px;
-  -webkit-transform: skew(15deg) rotate(2deg);
-  -moz-transform: skew(15deg) rotate(2deg);
-  -ms-transform: skew(15deg) rotate(2deg);
-  -o-transform: skew(15deg) rotate(2deg);
-  transform: skew(15deg) rotate(2deg);
-}
-
-*/
 
 
 
@@ -898,10 +782,10 @@ a.button:active {
 
 
 
-.active {
+/*.active {
   background-color: rgba(94, 182, 6, 0.3);
 }
-
+*/
 .resize_textbox:focus {
     outline: none;
 }

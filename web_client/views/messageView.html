@@ -1,0 +1,23 @@
+<div class="messageview_bubble">
+    <div class="messageview_bubble_container">
+        <div class="messageview_byline">
+            <gravatar message="message"></gravatar>
+            <div class="messageview_byline_fromline">
+                <span class="messageview_indent">
+
+                <span ng-repeat="c in message.from">
+                    {{c[0] + "&nbsp;<" + c[2] + "@"+ c[3] + ">" }}
+                <span>
+                    {{message.from_contacts[0]}}
+                </span>
+            </div>
+            <div class="messageview_byline_date">
+                {{ message.date | relativedate }}
+            </div>
+        </div>
+        <div class="clear"></div>
+        <div class="card_with_shadow">
+            <messagecontainer message="message"></messagecontainer>
+        </div>
+    </div>
+</div>
