@@ -156,7 +156,7 @@ app.directive("messagecontainer", function($compile, wire) {
                                 ' -webkit-font-smoothing:antialiased;' +
                                 ' font-family:"proxima-nova-alt", courier, sans-serif;' +
                                 ' font-weight: 500' +
-                                ' font-size:15px;' +
+                                ' font-size:14px;' +
                                 ' color:#333;' +
                                 ' font-variant:normal;' +
                                 ' line-height:1.6em;' +
@@ -170,7 +170,9 @@ app.directive("messagecontainer", function($compile, wire) {
                                 'a:hover {' +
                                 ' border-radius:3px;; background-color: #E9E9E9;' +
                                 ' }' +
-                                '</style></head><body>' +
+                                '</style>' +
+                                '<base target="_blank" />'+
+                                '</head><body>' +
                                 data_dict.message_data.replace(/\n/g, '<br />') +
                                 '</body></html>';
                             $scope.body_content = wrapped_html;
@@ -318,7 +320,7 @@ app.directive("messageframe", function() {
                         ' -webkit-font-smoothing:antialiased;' +
                         ' font-family:"proxima-nova-alt", courier, sans-serif;' +
                         ' font-weight: 500' +
-                        ' font-size:15px;' +
+                        ' font-size:14px;' +
                         ' color:#333;' +
                         ' font-variant:normal;' +
                         ' line-height:1.6em;' +
@@ -332,7 +334,9 @@ app.directive("messageframe", function() {
                         'a:hover {' +
                         ' border-radius:3px;; background-color: #E9E9E9;' +
                         ' }' +
-                        '</style></head><body>' +
+                        '</style>' +
+                        '<base target="_blank" />'+
+                        '</head><body>' +
                         to_wrap +
                         '</body></html>';
 
