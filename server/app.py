@@ -181,7 +181,7 @@ class WireNamespace(BaseNamespace):
 
         api_srv_loc = environ.get('API_SERVER_LOC', None)
         assert api_srv_loc
-        c = zerorpc.Client()
+        c = zerorpc.Client(timeout=3000)
         c.connect(api_srv_loc)
 
 

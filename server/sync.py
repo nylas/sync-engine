@@ -17,8 +17,15 @@ from datetime import datetime
 from gevent import Greenlet, sleep, joinall, kill
 from gevent.queue import Queue, Empty
 
+from google_oauth import InvalidOauthGrantException
+
 def refresh_crispin(email, dummy=False):
-    return sessionmanager.get_crispin_from_email(email, dummy)
+    try:
+        return sessionmanager.get_crispin_from_email(email, dummy)
+    except InvalidOauthGrantException, e:
+        log.error("Error refreshing crispin on {0} because {1}".format(email, e))
+        raise e
+        
 
 def load_validity_cache(crispin_client):
     # in practice UIDVALIDITY and HIGHESTMODSEQ are always positive

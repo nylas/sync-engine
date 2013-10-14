@@ -22,6 +22,12 @@ OAUTH_SCOPE = " ".join([
     'https://www.googleapis.com/auth/calendar'  # calendar
     ])
 
+class InvalidOauthGrantException(Exception):
+    pass
+
+class UnknownOauthException(Exception):
+    pass
+
 
 def authorize_redirect_url(redirect_uri, email_address=None):
     """ Create the URL to redirect for Google oauth2 """
@@ -91,14 +97,16 @@ def get_new_token(refresh_token):
         headers = {'Content-type': 'application/x-www-form-urlencoded', 'Accept': 'text/plain'}
         data = urllib.urlencode(args)
         response = requests.post(OAUTH_ACCESS_TOKEN_URL, data=data, headers=headers )
-    except Exception, e:
-        log.error(e)
-        return None  # TODO better error handling here
+    except requests.exceptions.HTTPError, e:
+        log.error(e)  # TODO better error handling here
+        raise e
 
     session_dict = response.json()
     if u'error' in session_dict:
-        log.error("Error when getting authenticated user: %s" % session_dict['error'])
-        return None
+        if session_dict['error'] == 'invalid_grant':
+            raise InvalidOauthGrantException('Could not get new token')
+        else:
+            raise UnknownOauthException(session_dict['error'])
 
 
     access_token = session_dict['access_token']
