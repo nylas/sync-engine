@@ -232,11 +232,11 @@ class User(JSONSerializable, Base):
     def total_stored_data(self):
         return db_session.query(func.sum(BlockMeta.size)) \
                 .join(BlockMeta.messagemeta, MessageMeta.namespace) \
-                .filter(Namespace.id==self.namespace_id).one()
+                .filter(Namespace.id==self.root_namespace_id).one()
 
     def total_stored_messages(self):
         return db_session.query(MessageMeta).join(MessageMeta.namespace) \
-                .filter(MessageMeta.namespace.id == self.namespace_id).count()
+                .filter(MessageMeta.namespace.id == self.root_namespace_id).count()
 
 # sharded
 
@@ -251,6 +251,7 @@ class MessageMeta(JSONSerializable, Base):
     # TODO Figure out how this cross-shard foreign key works with
     # SQLAlchemy's sharding support.
     namespace_id = Column(ForeignKey('namespace.id'), nullable=False)
+    namespace = relationship("Namespace")
     # TODO probably want to store some of these headers in a better
     # non-pickled way to provide indexing
     from_addr = Column(MediumPickle)
@@ -317,7 +318,8 @@ class RawMessage(JSONSerializable, Blob, Base):
         (No other foreign keys!)
     """
     id = Column(Integer, primary_key=True, autoincrement=True)
-    namespace_id = Column(Integer, nullable=False)
+    namespace_id = Column(ForeignKey('namespace.id'), nullable=False)
+    namespace = relationship("Namespace")
 
     # Save data other than BODY[] that we query for when downloading messages
     # from the IMAP backend.
@@ -397,7 +399,8 @@ class FolderMeta(JSONSerializable, Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    namespace_id = Column(Integer, nullable=False)
+    namespace_id = Column(ForeignKey('namespace.id'), nullable=False)
+    namespace = relationship("Namespace")
     messagemeta_id = Column(Integer, ForeignKey('messagemeta.id'), nullable=False)
     messagemeta = relationship('MessageMeta')
     msg_uid = Column(Integer, nullable=False)
@@ -414,7 +417,8 @@ class UIDValidity(JSONSerializable, Base):
     """
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    namespace_id = Column(Integer, nullable=False)
+    namespace_id = Column(ForeignKey('namespace.id'), nullable=False)
+    namespace = relationship("Namespace")
     folder_name = Column(String(255))
     uid_validity = Column(Integer)
     highestmodseq = Column(Integer)

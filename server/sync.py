@@ -38,7 +38,8 @@ def load_validity_cache(crispin_client):
     for folder, uid_validity, highestmodseq in db_session.query(
             UIDValidity.folder_name,
             UIDValidity.uid_validity,
-            UIDValidity.highestmodseq).filter_by(user=crispin_client.user_obj):
+            UIDValidity.highestmodseq).filter_by(
+                    namespace_id=crispin_client.user_obj.root_namespace_id):
         cache_validity[folder] = dict(UIDVALIDITY=uid_validity,
                 HIGHESTMODSEQ=highestmodseq)
 
@@ -56,7 +57,8 @@ def fetch_uidvalidity(user, folder_name):
     try:
         # using .one() here may catch duplication bugs
         return db_session.query(UIDValidity).filter_by(
-                user=user, folder_name=folder_name).one()
+                namespace_id=user.root_namespace_id,
+                folder_name=folder_name).one()
     except sqlalchemy.orm.exc.NoResultFound:
         return None
 
@@ -181,7 +183,8 @@ def incremental_sync(user, dummy=False):
 def update_cached_highestmodseq(folder, crispin_client, cached_validity=None):
     if cached_validity is None:
         cached_validity = db_session.query(UIDValidity).filter_by(
-                user=crispin_client.user_obj, folder_name=folder).one()
+                namespace_id=crispin_client.user_obj.root_namespace_id,
+                folder_name=folder).one()
     cached_validity.highestmodseq = crispin_client.selected_highestmodseq
     db_session.add(cached_validity)
 
@@ -330,7 +333,8 @@ def initial_sync(user, updates, dummy=False):
             cached_validity = fetch_uidvalidity(user, folder)
             if cached_validity is None:
                 db_session.add(UIDValidity(
-                    user=crispin_client.user_obj, folder_name=folder,
+                    namespace_id=crispin_client.user_obj.root_namespace_id,
+                    folder_name=folder,
                     uid_validity=crispin_client.selected_uidvalidity,
                     highestmodseq=crispin_client.selected_highestmodseq))
                 db_session.commit()
@@ -344,7 +348,7 @@ def initial_sync(user, updates, dummy=False):
         g_msgids = set([g_msgid for g_msgid, in
             db_session.query(distinct(MessageMeta.g_msgid)).join(FolderMeta).filter(
                 FolderMeta.folder_name==folder,
-                FolderMeta.user==crispin_client.user_obj)])
+                FolderMeta.namespace_id==crispin_client.user_obj.root_namespace_id)])
 
         log.info("Found {0} UIDs for folder {1}".format(
             len(server_uids), folder))
