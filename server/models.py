@@ -334,7 +334,7 @@ class BlockMeta(JSONSerializable, Blob, Base):
     # TODO: create a constructor that allows the 'content_type' keyword
 
     __table_args__ = (UniqueConstraint('messagemeta_id', 'walk_index',
-        'data_sha256', name='_messagepart_uc'),) # messagepart is old name
+        'data_sha256', name='_blockmeta_uc'),)
 
     def __init__(self, *args, **kwargs):
         self.content_type = None
