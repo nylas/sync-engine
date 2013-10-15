@@ -176,3 +176,4 @@ class API(object):
     def sync_status(self, user_id):
         """ Query Sync service for progress. """
         pass
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

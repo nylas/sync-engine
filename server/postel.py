@@ -165,3 +165,4 @@ def send_email(sender, recipient, subject, body):
 
     def quit(self):
         self.conn.quit()
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

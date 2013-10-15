@@ -38,3 +38,4 @@ def downgrade():
     mysql_engine=u'InnoDB'
     )
     ### end Alembic commands ###
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

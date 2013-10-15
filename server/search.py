@@ -192,3 +192,4 @@ def get_results(qp, enquire, query_string, limit):
     log.info("Results 1-%i:" % matches.size())
 
     return [(m.docid, m.rank) for m in matches]
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

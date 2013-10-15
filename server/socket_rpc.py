@@ -188,3 +188,4 @@ class SocketRPC(object):
         return '[ %s ]' % ', '.join(response_list)
 
 
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

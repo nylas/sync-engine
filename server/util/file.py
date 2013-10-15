@@ -87,3 +87,4 @@ def human_readable_filesize(size_bytes, suffixes=None):
         formatted_size = str(round(num, ndigits=precision))
 
     return "%s %s" % (formatted_size, suffix)
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

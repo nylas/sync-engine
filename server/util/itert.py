@@ -18,3 +18,4 @@ def partition(pred, iterable):
     # partition(is_odd, range(10)) --> 0 2 4 6 8   and  1 3 5 7 9
     t1, t2 = itertools.tee(iterable)
     return list(itertools.ifilterfalse(pred, t1)), filter(pred, t2)
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

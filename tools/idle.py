@@ -23,3 +23,4 @@ print "Waiting for IDLE messages on {0}...".format(folder)
 while True:
     for msg in c.imap_server.idle_check():
         print msg
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

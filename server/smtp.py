@@ -146,4 +146,4 @@ if __name__ == '__main__':
 Just a test
     """
     client.send('foo@example.com', ['recipient@example.com'], body)
-    ioloop.IOLoop.instance().start()
+    ioloop.IOLoop.instance().start()# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

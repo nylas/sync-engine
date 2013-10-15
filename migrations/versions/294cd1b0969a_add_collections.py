@@ -30,3 +30,4 @@ def downgrade():
     op.drop_column(u'messagepart', 'collection_id')
     op.drop_table('collections')
     ### end Alembic commands ###
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

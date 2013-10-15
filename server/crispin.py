@@ -489,3 +489,4 @@ Parsed Content-Disposition was: '{3}'""".format(uid, self.selected_folder_name,
                 if u'\\All' in f['flags']:
                     return f['name']
             raise Exception("Couldn't find All Mail folder")
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

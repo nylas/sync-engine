@@ -631,3 +631,4 @@ class SyncService:
     # admin panel
     def status(self):
         return self.user_statuses
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

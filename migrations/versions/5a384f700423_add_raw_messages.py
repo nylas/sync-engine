@@ -39,3 +39,4 @@ def downgrade():
     op.add_column(u'messagepart', sa.Column(u's3_id', mysql.VARCHAR(length=255), nullable=True))
     op.drop_table('rawmessage')
     ### end Alembic commands ###
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

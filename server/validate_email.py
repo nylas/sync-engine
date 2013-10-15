@@ -76,3 +76,4 @@ def validate_email(address_text):
         valid_address = body['address']
     )
 
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

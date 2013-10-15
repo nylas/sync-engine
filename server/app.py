@@ -364,3 +364,4 @@ def startserver(app_url, app_port):
 # def stopsubmodules():
 #     sessionmanager.stop_all_crispins()
 #     # also stop idler if necessary
+# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
