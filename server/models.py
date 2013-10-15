@@ -167,12 +167,21 @@ class UserSession(JSONSerializable, Base):
     session_token = Column(String(255))
     g_email = Column(String(255))
 
+class Namespace(JSONSerializable, Base):
+    __tablename__ = 'namespaces'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    # not a ForeignKey for sharding purposes
+    user_id = Column(Integer, nullable=False)
+
 class User(JSONSerializable, Base):
     __tablename__ = 'users'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     g_email = Column(String(255), unique=True, index=True)
+
+    root_namespace = Column(Integer, nullable=False)
 
     # Not from google
     name = Column(String(255))
@@ -220,8 +229,8 @@ class MessageMeta(JSONSerializable, Base):
     # XXX clean this up a lot - make a better constructor, maybe taking
     # a mailbase as an argument to prefill a lot of attributes
 
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    user = relationship('User', backref="messages")
+    # not a ForeignKey for sharding purposes
+    namespace_id = Column(Integer, nullable=False)
     # TODO probably want to store some of these headers in a better
     # non-pickled way to provide indexing
     from_addr = Column(MediumPickle)
@@ -288,7 +297,7 @@ class RawMessage(JSONSerializable, Blob, Base):
         (No other foreign keys!)
     """
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    namespace_id = Column(Integer, nullable=False)
 
     # Save data other than BODY[] that we query for when downloading messages
     # from the IMAP backend.
@@ -368,15 +377,14 @@ class FolderMeta(JSONSerializable, Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    user = relationship('User')
+    namespace_id = Column(Integer, nullable=False)
     messagemeta_id = Column(Integer, ForeignKey('messagemeta.id'), nullable=False)
     messagemeta = relationship('MessageMeta')
     msg_uid = Column(Integer, nullable=False)
     folder_name = Column(String(255), nullable=False)  # All Mail, Inbox, etc. (i.e. Labels)
     flags = Column(MediumPickle)
 
-    __table_args__ = (UniqueConstraint('folder_name', 'msg_uid', 'user_id',
+    __table_args__ = (UniqueConstraint('folder_name', 'msg_uid', 'namespace_id',
         name='_folder_msg_user_uc'),)
 
 class UIDValidity(JSONSerializable, Base):
@@ -386,13 +394,12 @@ class UIDValidity(JSONSerializable, Base):
     """
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    user = relationship('User')
+    namespace_id = Column(Integer, nullable=False)
     folder_name = Column(String(255))
     uid_validity = Column(Integer)
     highestmodseq = Column(Integer)
 
-    __table_args__ = (UniqueConstraint('user_id', 'folder_name',
+    __table_args__ = (UniqueConstraint('namespace_id', 'folder_name',
         name='_folder_user_uc'),)
 
 class Collection(Base):
