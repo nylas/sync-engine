@@ -4,10 +4,9 @@ import json
 import postel
 from bson import json_util
 from util.itert import chunk
-from models import db_session, MessageMeta, BlockMeta, FolderMeta, Namespace
+from models import db_session, MessageMeta, BlockMeta, FolderMeta, Namespace, User
 
 from sqlalchemy.orm import joinedload
-from sqlalchemy import func
 
 db_chunk_size = 100
 
@@ -28,13 +27,13 @@ class API(object):
     def sync_status(self):
         """ Returns data representing the status of all syncing users, like:
 
-            namespace_id: {
+            user_id: {
                 state: 'initial sync',
                 stored_data: '12127227',
                 stored_messages: '50000',
                 status: '56%',
             }
-            namespace_id: {
+            user_id: {
                 state: 'poll',
                 stored_data: '1000000000',
                 stored_messages: '200000',
@@ -44,15 +43,11 @@ class API(object):
         if not self._sync:
             self._sync = zerorpc.Client(os.environ.get('CRISPIN_SERVER_LOC', None))
         status = self._sync.status()
-        for namespace_id in status.keys():
-            total_stored_data = db_session.query(func.sum(BlockMeta.size)) \
-                    .join(BlockMeta.messagemeta).join(Namespace) \
-                    .filter(Namespace.id==namespace_id).one()
-            total_stored_messages = db_session.query(MessageMeta).join(
-                    Namespace).filter(Namespace.id==namespace_id).count()
-            status[namespace_id]['stored_data'] = total_stored_data
-            status[namespace_id]['stored_messages'] = total_stored_messages
-        # TODO: now annotate the results with total stored data
+        user_ids = status.keys()
+        users = db_session.query(User).filter(User.id.in_(user_ids))
+        for user in users:
+            status[user.id]['stored_data'] = user.total_stored_data()
+            status[user.id]['stored_messages'] = user.total_stored_messages()
         return json.dumps(status, default=json_util.default)
 
     def search_folder(self, namespace_id, search_query):

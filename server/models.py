@@ -1,7 +1,7 @@
 import os
 
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum, Text
-from sqlalchemy import ForeignKey, Table
+from sqlalchemy import ForeignKey, Table, func
 from sqlalchemy.types import PickleType
 
 from sqlalchemy.ext.declarative import declarative_base
@@ -229,6 +229,15 @@ class User(JSONSerializable, Base):
     def sync_unlock(self):
         self._sync_lock.release()
 
+    def total_stored_data(self):
+        return db_session.query(func.sum(BlockMeta.size)) \
+                .join(BlockMeta.messagemeta, MessageMeta.namespace) \
+                .filter(Namespace.id==self.namespace_id).one()
+
+    def total_stored_messages(self):
+        return db_session.query(MessageMeta).join(MessageMeta.namespace) \
+                .filter(MessageMeta.namespace.id == self.namespace_id).count()
+
 # sharded
 
 class MessageMeta(JSONSerializable, Base):
@@ -239,8 +248,9 @@ class MessageMeta(JSONSerializable, Base):
     # XXX clean this up a lot - make a better constructor, maybe taking
     # a mailbase as an argument to prefill a lot of attributes
 
-    # not a ForeignKey for sharding purposes
-    namespace_id = Column(Integer, nullable=False)
+    # TODO Figure out how this cross-shard foreign key works with
+    # SQLAlchemy's sharding support.
+    namespace_id = Column(ForeignKey('namespace.id'), nullable=False)
     # TODO probably want to store some of these headers in a better
     # non-pickled way to provide indexing
     from_addr = Column(MediumPickle)
