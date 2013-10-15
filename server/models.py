@@ -1,7 +1,7 @@
 import os
 
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum, Text
-from sqlalchemy import ForeignKey
+from sqlalchemy import ForeignKey, Table
 from sqlalchemy.types import PickleType
 
 from sqlalchemy.ext.declarative import declarative_base
@@ -158,6 +158,17 @@ class MediumPickle(PickleType):
 
 ### Tables
 
+# global
+
+class Namespace(Base):
+    """ A way to do grouping / permissions, basically. """
+    __tablename__ = 'namespace'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+namespace_association = Table('namespace_user_association', Base.metadata,
+        Column('namespace_id', Integer, ForeignKey('namespace.id')),
+        Column('user_id', Integer, ForeignKey('user.id')))
+
 class UserSession(JSONSerializable, Base):
     __tablename__ = 'user_session'
 
@@ -166,13 +177,6 @@ class UserSession(JSONSerializable, Base):
     session_token = Column(String(255))
     g_email = Column(String(255))
 
-class Namespace(JSONSerializable, Base):
-    __tablename__ = 'namespace'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    # not a ForeignKey for sharding purposes
-    user_id = Column(Integer, nullable=False)
-
 class User(JSONSerializable, Base):
     __tablename__ = 'user'
 
@@ -180,7 +184,12 @@ class User(JSONSerializable, Base):
 
     g_email = Column(String(255), unique=True, index=True)
 
-    root_namespace = Column(Integer, nullable=False)
+    root_namespace_id = Column(Integer, ForeignKey('namespace.id'),
+            nullable=False)
+    root_namespace = relationship('Namespace', backref='user')
+
+    namespaces = relationship("Namespace", secondary=namespace_association,
+            backref="users")
 
     # Not from google
     name = Column(String(255))
@@ -219,6 +228,8 @@ class User(JSONSerializable, Base):
 
     def sync_unlock(self):
         self._sync_lock.release()
+
+# sharded
 
 class MessageMeta(JSONSerializable, Base):
     __tablename__ = 'messagemeta'

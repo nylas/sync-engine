@@ -5,7 +5,9 @@ import logging as log
 import datetime
 import traceback
 import google_oauth
-from models import db_session, User, UserSession
+from models import db_session, User, UserSession, Namespace
+
+import sqlalchemy.orm.exc
 
 # Memory cache for currently open crispin instances
 email_address_to_crispins = {}
@@ -30,12 +32,11 @@ def get_session(session_token):
     return session_obj
 
 def make_user(access_token_dict):
-    user_obj = db_session.query(User).filter_by(g_email=access_token_dict['email']).first()
-    if user_obj is None:
+    try:
+        new_user = db_session.query(User).filter_by(
+                g_email=access_token_dict['email']).one()
+    except sqlalchemy.orm.exc.NoResultFound:
         new_user = User()
-    else:
-        new_user = user_obj
-    # new_user.name = None
     new_user.g_token_issued_to = access_token_dict['issued_to']
     new_user.g_user_id = access_token_dict['user_id']
     new_user.g_access_token = access_token_dict['access_token']
@@ -49,6 +50,13 @@ def make_user(access_token_dict):
     new_user.g_refresh_token = access_token_dict['refresh_token']
     new_user.g_verified_email = access_token_dict['verified_email']
     new_user.date = datetime.datetime.utcnow()  # Used to verify key lifespan
+
+    # default namespace is generated with a new user
+    if new_user.root_namespace is None:
+        root_namespace = Namespace()
+        new_user.root_namespace = root_namespace
+        new_user.namespaces = [root_namespace]
+
     db_session.add(new_user)
     db_session.commit()
     log.info("Stored new user object %s" % new_user)
