@@ -16,7 +16,6 @@ from os import environ
 from .util.file import mkdirp, remove_file, Lock
 
 import logging as log
-# from sqlalchemy.databases.mysql import MSMediumBlob
 from sqlalchemy.dialects import mysql
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
