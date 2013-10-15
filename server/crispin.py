@@ -7,7 +7,7 @@ import datetime
 import logging as log
 
 import encoding
-from models import MessageMeta, MessagePart, FolderMeta
+from models import MessageMeta, BlockMeta, FolderMeta
 import time
 import json
 import sessionmanager
@@ -282,7 +282,7 @@ class CrispinClient(CrispinClientBase):
         raw_messages = self.imap_server.fetch(UIDs,
                 [query, 'X-GM-THRID', 'X-GM-MSGID', 'X-GM-LABELS'])
 
-        # { 'msgid': { 'meta': MessageMeta, 'parts': [MessagePart, ...] } }
+        # { 'msgid': { 'meta': MessageMeta, 'parts': [BlockMeta, ...] } }
         messages = dict()
         new_foldermeta = []
         for uid, internaldate, flags, envelope, body, x_gm_thrid, x_gm_msgid, \
@@ -354,7 +354,7 @@ class CrispinClient(CrispinClientBase):
             i = 0  # for walk_index
 
             # Store all message headers as object with index 0
-            headers_part = MessagePart()
+            headers_part = BlockMeta()
             headers_part.messagemeta = new_msg
             headers_part.walk_index = i
             headers_part._data = json.dumps(mailbase.headers)
@@ -372,7 +372,7 @@ class CrispinClient(CrispinClientBase):
                 mimepart = encoding.to_message(part)
                 if mimepart.is_multipart(): continue  # TODO should we store relations?
 
-                new_part = MessagePart()
+                new_part = BlockMeta()
                 new_part.messagemeta = new_msg
                 new_part.walk_index = i
                 new_part.misc_keyval = mimepart.items()  # everything

@@ -6,7 +6,7 @@ from flask import Flask, request, redirect, make_response, render_template, Resp
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
 from socket_rpc import SocketRPC
-from models import db_session, User, MessageMeta, MessagePart, Collection
+from models import db_session, User, MessageMeta, BlockMeta, Collection
 from werkzeug.wsgi import SharedDataMiddleware
 
 import google_oauth
@@ -236,7 +236,7 @@ def upload_file_handler():
         uploaded_file = request.files['file']
 
         meta = MessageMeta(user_id=user.id, g_email=user.g_email)
-        part = MessagePart(
+        part = BlockMeta(
                 messagemeta=meta,
                 filename=uploaded_file.filename,
                 is_inboxapp_attachment=True,
@@ -262,9 +262,9 @@ def upload_file_handler():
 @app.route('/<email>/img/<sha256>', methods=['GET'])
 def download_handler(email, sha256):
     # grab image from S3 and pass it on
-    part = db_session.query(MessagePart).join(MessageMeta).filter(
+    part = db_session.query(BlockMeta).join(MessageMeta).filter(
             MessageMeta.g_email==email,
-            MessagePart.data_sha256==sha256).first()
+            BlockMeta.data_sha256==sha256).first()
     if not part:
         abort(404)
         return
@@ -274,9 +274,9 @@ def download_handler(email, sha256):
 @app.route('/<email>/img/<sha256>/thumb', methods=['GET'])
 def thumb_download_handler(email, sha256):
     # grab image from S3 and pass it on
-    part = db_session.query(MessagePart).join(MessageMeta).filter(
+    part = db_session.query(BlockMeta).join(MessageMeta).filter(
             MessageMeta.g_email==email,
-            MessagePart.data_sha256==sha256).first()
+            BlockMeta.data_sha256==sha256).first()
     if not part:
         abort(404)
         return
@@ -290,7 +290,7 @@ def gallery_handler(email, id):
     log.info("email: '{0}' / id: '{1}'".format(email, id))
     # no auth required to view galleries
     # XXX limit by type
-    images = db_session.query(MessagePart).filter_by(
+    images = db_session.query(BlockMeta).filter_by(
             collection_id=id).all()
     return render_template('gallery.html', images=images, email=email)
 
@@ -308,7 +308,7 @@ def block_retrieval(blockhash):
 
     return get_user(request).g_email
 
-    query = db_session.query(MessagePart).filter(MessagePart.data_sha256 == blockhash)
+    query = db_session.query(BlockMeta).filter(BlockMeta.data_sha256 == blockhash)
 
     part = query.all()
     if not part: return None

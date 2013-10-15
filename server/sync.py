@@ -102,8 +102,8 @@ def delete_messages(uids, folder, user_id):
     # #
     # db_session.query(MessageMeta).filter(
     #         MessageMeta.g_msgids.in_(dangling_g_msgids)).delete()
-    # db_session.query(MessagePart).filter(
-    #         MessagePart.g_msgids.in_(dangling_g_msgids)).delete()
+    # db_session.query(BlockMeta).filter(
+    #         BlockMeta.g_msgids.in_(dangling_g_msgids)).delete()
     # XXX also delete message parts from the block store
     db_session.commit()
 
@@ -196,20 +196,20 @@ def highestmodseq_update(folder, crispin_client, highestmodseq=None):
         new, updated = new_or_updated(uids, folder, crispin_client.user_obj.id)
         log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
         for uids in chunk(new, crispin_client.CHUNK_SIZE):
-            new_messagemeta, new_messagepart, new_foldermeta = safe_download(new,
+            new_messagemeta, new_blockmeta, new_foldermeta = safe_download(new,
                     folder, crispin_client)
             db_session.add_all(new_foldermeta)
             db_session.add_all(new_messagemeta)
-            db_session.add_all(new_messagepart)
+            db_session.add_all(new_blockmeta)
 
             # save message data to s3 before committing changes to db
             threads = [Greenlet.spawn(part.save, part._data) \
-                    for part in new_messagepart]
+                    for part in new_blockmeta]
             # Fatally abort if part save fails.
             g_check_join(threads, "Could not save message parts to blob store!")
-            # Clear data stored on MessagePart objects here. Hopefully this will
+            # Clear data stored on BlockMeta objects here. Hopefully this will
             # help with memory issues.
-            for part in new_messagepart:
+            for part in new_blockmeta:
                 part._data = None
             garbge_collect()
 
@@ -391,7 +391,7 @@ def initial_sync(user, updates, dummy=False):
                 # Fatally abort if part saves error out. Messages in this
                 # chunk will be retried when the sync is restarted.
                 g_check_join(threads, "Could not save message parts to blob store!")
-                # Clear data stored on MessagePart objects here. Hopefully this
+                # Clear data stored on BlockMeta objects here. Hopefully this
                 # will help with memory issues.
                 for part in msg['parts']:
                     part._data = None

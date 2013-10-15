@@ -11,7 +11,7 @@
 <body>
   <div id='gallery'>
   {% for img in images %}
-  {# each img is a MessagePart #}
+  {# each img is a BlockMeta #}
   <a href="/{{ email }}/img/{{ img.data_sha256 }}">
     <img src="/{{ email }}/img/{{ img.data_sha256 }}/thumb">
   </a>

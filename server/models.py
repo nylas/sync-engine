@@ -90,8 +90,8 @@ class Blob(object):
         data_obj = bucket.get_key(self.data_sha256)
         if data_obj:
             assert data_obj.get_metadata('data_sha256') == self.data_sha256, \
-                "MessagePart hash doesn't match what we previously stored on s3!"
-            # log.info("MessagePart already exists on S3.")
+                "BlockMeta hash doesn't match what we previously stored on s3!"
+            # log.info("BlockMeta already exists on S3.")
             return
 
         data_obj = Key(bucket)
@@ -159,7 +159,7 @@ class MediumPickle(PickleType):
 ### Tables
 
 class UserSession(JSONSerializable, Base):
-    __tablename__ = 'user_sessions'
+    __tablename__ = 'user_session'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
@@ -167,14 +167,14 @@ class UserSession(JSONSerializable, Base):
     g_email = Column(String(255))
 
 class Namespace(JSONSerializable, Base):
-    __tablename__ = 'namespaces'
+    __tablename__ = 'namespace'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     # not a ForeignKey for sharding purposes
     user_id = Column(Integer, nullable=False)
 
 class User(JSONSerializable, Base):
-    __tablename__ = 'users'
+    __tablename__ = 'user'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
@@ -309,8 +309,8 @@ class RawMessage(JSONSerializable, Blob, Base):
 
     flags = Column(MediumPickle)
 
-class MessagePart(JSONSerializable, Blob, Base):
-    __tablename__ = 'messagepart'
+class BlockMeta(JSONSerializable, Blob, Base):
+    __tablename__ = 'blockmeta'
     """ Metadata for message parts stored in s3 """
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -334,7 +334,7 @@ class MessagePart(JSONSerializable, Blob, Base):
     # TODO: create a constructor that allows the 'content_type' keyword
 
     __table_args__ = (UniqueConstraint('messagemeta_id', 'walk_index',
-        'data_sha256', name='_messagepart_uc'),)
+        'data_sha256', name='_messagepart_uc'),) # messagepart is old name
 
     def __init__(self, *args, **kwargs):
         self.content_type = None
@@ -342,7 +342,7 @@ class MessagePart(JSONSerializable, Blob, Base):
         Base.__init__(self, *args, **kwargs)
 
     def __repr__(self):
-        return 'MessagePart: %s' % self.__dict__
+        return 'BlockMeta: %s' % self.__dict__
 
     def client_json(self):
         d = {}
@@ -361,7 +361,7 @@ class MessagePart(JSONSerializable, Blob, Base):
         else:
             self.content_type = self._content_type_other
 
-@event.listens_for(MessagePart, 'before_insert', propagate = True)
+@event.listens_for(BlockMeta, 'before_insert', propagate = True)
 def serialize_before_insert(mapper, connection, target):
     if target.content_type in common_content_types:
         target._content_type_common = target.content_type

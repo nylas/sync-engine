@@ -4,7 +4,7 @@ import json
 import postel
 from bson import json_util
 from util.itert import chunk
-from models import db_session, MessageMeta, MessagePart, FolderMeta, User
+from models import db_session, MessageMeta, BlockMeta, FolderMeta, User
 
 from sqlalchemy.orm import joinedload
 from sqlalchemy import func
@@ -45,8 +45,8 @@ class API(object):
             self._sync = zerorpc.Client(os.environ.get('CRISPIN_SERVER_LOC', None))
         status = self._sync.status()
         for user_id in status.keys():
-            total_stored_data = db_session.query(func.sum(MessagePart.size)) \
-                    .join(MessagePart.messagemeta).join(MessageMeta.user) \
+            total_stored_data = db_session.query(func.sum(BlockMeta.size)) \
+                    .join(BlockMeta.messagemeta).join(MessageMeta.user) \
                     .filter(User.id==user_id).one()
             total_stored_messages = db_session.query(MessageMeta).join(
                     MessageMeta.user).filter(User.id==user_id).count()
@@ -139,12 +139,12 @@ class API(object):
 
     def part_with_id(self, user_id, message_id, walk_index):
 
-        # TODO store MessageParts rows by user_id instead of email address
+        # TODO store BlockMetas rows by user_id instead of email address
         # user = db_session.query(User).filter(User.user_id == user_id).all()[0]
 
-        q = db_session.query(MessagePart).join(MessageMeta)\
+        q = db_session.query(BlockMeta).join(MessageMeta)\
                 .filter(MessageMeta.g_msgid==message_id,
-                        MessagePart.walk_index == walk_index,
+                        BlockMeta.walk_index == walk_index,
                         MessageMeta.user_id == user_id)
         parts = q.all()
         print 'parts', len(parts)
