@@ -95,8 +95,8 @@ class SocketRPC(object):
         # else:
         #     raise Exception("Invalid params: %s", params)
 
-        # Insert user identifier as first object
-        args.insert(0, user.id)
+        # Insert namespace identifier as first object
+        args.insert(0, user.root_namespace_id)
 
 
         log.info("Running %s with %s" % (method.__name__, args))
