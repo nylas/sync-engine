@@ -160,60 +160,61 @@ class MediumPickle(PickleType):
 
 # global
 
-class Namespace(Base):
-    """ A way to do grouping / permissions, basically. """
-    __tablename__ = 'namespace'
+class Credentials(Base):
+    __tablename__ = 'credentials'
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-namespace_association = Table('namespace_user_association', Base.metadata,
-        Column('namespace_id', Integer, ForeignKey('namespace.id')),
-        Column('user_id', Integer, ForeignKey('user.id')))
+    # oauth stuff (most providers support oauth at this point, shockingly)
+    # TODO figure out the actual lengths of these
+    # XXX we probably don't actually need to save all of this crap
+    # XXX encrypt some of this crap?
+    o_token_issued_to = Column(String(512))
+    o_user_id = Column(String(512))
+    o_access_token = Column(String(1024))
+    o_id_token = Column(String(1024))
+    o_expires_in = Column(Integer)
+    o_access_type = Column(String(512))
+    o_token_type = Column(String(512))
+    o_audience = Column(String(512))
+    o_scope = Column(String(512))
+    o_refresh_token = Column(String(512))
+    o_verified_email = Column(Boolean)
 
-class UserSession(JSONSerializable, Base):
+    # used to verify key lifespan
+    date = Column(DateTime)
+
+class UserSession(Base):
+    """ Inbox-specific sessions. """
     __tablename__ = 'user_session'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    session_token = Column(String(255))
-    g_email = Column(String(255))
-
-class User(JSONSerializable, Base):
-    __tablename__ = 'user'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
-    g_email = Column(String(255), unique=True, index=True)
-
-    root_namespace_id = Column(Integer, ForeignKey('namespace.id'),
+    token = Column(String(40))
+    # sessions have a many-to-one relationship with users
+    user_id = Column(Integer, ForeignKey('user.id'),
             nullable=False)
-    root_namespace = relationship('Namespace', backref='user')
+    user = relationship('User', backref='sessions')
 
-    namespaces = relationship("Namespace", secondary=namespace_association,
-            backref="users")
+    @property
+    def email_address(self):
+        return self.user.root_namespace.email_address
 
-    # Not from google
-    name = Column(String(255))
-    date = Column(DateTime)
-    # extra flags
+class Namespace(Base):
+    """ A way to do grouping / permissions, basically. """
+    __tablename__ = 'namespace'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    # NOTE: only root namespaces have email addresses and credentials
+    # http://stackoverflow.com/questions/386294/what-is-the-maximum-length-of-a-valid-email-address
+    email_address = Column(String(254), nullable=True, index=True)
+    email_provider = Enum('Gmail', 'Outlook', 'Yahoo', 'Inbox')
+    credentials_id = Column(Integer, ForeignKey('credentials.id'),
+            nullable=True)
+    credentials = relationship('Credentials', backref='namespace')
+
     initial_sync_done = Column(Boolean)
     sync_active = Column(Boolean, default=False)
     save_raw_messages = Column(Boolean, default=True)
-
     sync_host = Column(String(255), nullable=True)
-
-    g_token_issued_to = Column(String(512))
-    g_user_id = Column(String(512))
-
-    # TODO figure out the actual lengths of these
-    g_access_token = Column(String(1024))
-    g_id_token = Column(String(1024))
-    g_expires_in = Column(Integer)
-    g_access_type = Column(String(512))
-    g_token_type = Column(String(512))
-    g_audience = Column(String(512))
-    g_scope = Column(String(512))
-    g_refresh_token = Column(String(512))
-    g_verified_email = Column(Boolean)
 
     @property
     def _sync_lockfile_name(self):
@@ -237,6 +238,29 @@ class User(JSONSerializable, Base):
     def total_stored_messages(self):
         return db_session.query(MessageMeta).join(MessageMeta.namespace) \
                 .filter(MessageMeta.namespace.id == self.root_namespace_id).count()
+
+
+namespace_association = Table('namespace_user_association', Base.metadata,
+        Column('namespace_id', Integer, ForeignKey('namespace.id')),
+        Column('user_id', Integer, ForeignKey('user.id')))
+
+class User(JSONSerializable, Base):
+    __tablename__ = 'user'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    root_namespace_id = Column(Integer, ForeignKey('namespace.id'),
+            nullable=False)
+    root_namespace = relationship('Namespace', backref='user')
+
+    namespaces = relationship("Namespace", secondary=namespace_association,
+            backref="users")
+
+    name = Column(String(255))
+
+    @property
+    def email_address(self):
+        return self.root_namespace.email_address
 
 # sharded
 
@@ -266,11 +290,8 @@ class MessageMeta(JSONSerializable, Base):
     internaldate = Column(DateTime)
     size = Column(Integer, default=0)
     data_sha256 = Column(String(255))
-    # TODO kill these later once we're sure it won't break anything
-    # (duplicated on User; access from relationship/join instead)
-    g_email = Column(String(255))
+
     g_msgid = Column(String(255))
-    g_user_id = Column(String(255))
     g_thrid = Column(String(255))
 
     def trimmed_subject(self):

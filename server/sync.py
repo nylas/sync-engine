@@ -3,7 +3,7 @@ import sys, os;  sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname
 import socket
 
 import sessionmanager
-from models import db_session, FolderMeta, MessageMeta, UIDValidity, User
+from models import db_session, FolderMeta, MessageMeta, UIDValidity, Namespace
 from sqlalchemy import distinct
 import sqlalchemy.exc
 
@@ -274,9 +274,9 @@ def initial_sync(user, updates, dummy=False):
 
     Percent-done and completion messages are sent to the 'updates' queue.
     """
-    crispin_client = refresh_crispin(user.g_email, dummy)
+    crispin_client = refresh_crispin(user.email_address, dummy)
 
-    log.info('Syncing mail for {0}'.format(user.g_email))
+    log.info('Syncing mail for {0}'.format(user.email_address))
 
     # message download for messages from sync_folders is prioritized before
     # AllMail in the order of appearance in this list
@@ -298,7 +298,7 @@ def initial_sync(user, updates, dummy=False):
         if cached_validity is not None:
             check_uidvalidity(crispin_client, cached_validity.uid_validity)
             log.info("Attempting to retrieve server_uids and server_g_msgids from cache")
-            server_g_msgids = get_cache("_".join([user.g_email, folder,
+            server_g_msgids = get_cache("_".join([user.email_address, folder,
                 "server_g_msgids"]))
 
         if server_g_msgids is not None:
@@ -316,7 +316,7 @@ def initial_sync(user, updates, dummy=False):
                 log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
                 # for new, query g_msgids and update cache
                 server_g_msgids.update(crispin_client.fetch_g_msgids(new))
-                set_cache("_".join([user.g_email, folder,
+                set_cache("_".join([user.email_address, folder,
                     "server_g_msgids"]), server_g_msgids)
                 log.info("Updated cache with new messages")
                 # for updated, update them now
@@ -328,7 +328,7 @@ def initial_sync(user, updates, dummy=False):
         else:
             log.info("No cached data found")
             server_g_msgids = crispin_client.fetch_g_msgids()
-            set_cache("_".join([user.g_email, folder,
+            set_cache("_".join([user.email_address, folder,
                 "server_g_msgids"]), server_g_msgids)
             cached_validity = fetch_uidvalidity(user, folder)
             if cached_validity is None:
@@ -413,13 +413,14 @@ def initial_sync(user, updates, dummy=False):
             percent_done = (total_messages / len(server_uids)) * 100
             folder_sync_percent_done[folder] = percent_done
             updates.put(folder_sync_percent_done)
-            log.info("Syncing %s -- %.4f%% (%i/%i)" % (crispin_client.user.g_email,
-                                                   percent_done,
-                                                   total_messages,
-                                                   len(server_uids)))
+            log.info("Syncing %s -- %.4f%% (%i/%i)" % (
+                crispin_client.user.email_address,
+                percent_done,
+                total_messages,
+                len(server_uids)))
 
         # complete X-GM-MSGID mapping is no longer needed after initial sync
-        rm_cache("_".join([user.g_email, folder, "server_g_msgids"]))
+        rm_cache("_".join([user.email_address, folder, "server_g_msgids"]))
         # XXX TODO: check for consistency with datastore here before
         # committing state: download any missing messages, delete any
         # messages that we have that the server doesn't. that way, worst case
@@ -451,7 +452,7 @@ class SyncMonitor(Greenlet):
             try:
                 cmd = self.inbox.get_nowait()
                 if not self.process_command(cmd):
-                    log.info("Stopping sync for {0}".format(self.user.g_email))
+                    log.info("Stopping sync for {0}".format(self.user.email_address))
                     kill(action)
                     return
             except Empty: sleep(1)
@@ -495,11 +496,11 @@ class SyncMonitor(Greenlet):
             db_session.commit()
         else:
             log.warning("initial sync for {0} failed: {1}".format(
-                self.user.g_email, process.exception))
-        assert updates.empty(), "initial sync completed for {0} with {1} progress items left to report: {2}".format(self.user.g_email, updates.qsize(), [updates.get() for i in xrange(updates.qsize())])
+                self.user.email_address, process.exception))
+        assert updates.empty(), "initial sync completed for {0} with {1} progress items left to report: {2}".format(self.user.email_address, updates.qsize(), [updates.get() for i in xrange(updates.qsize())])
 
     def poll(self):
-        log.info("polling {0}".format(self.user.g_email))
+        log.info("polling {0}".format(self.user.email_address))
         process = Greenlet.spawn(incremental_sync, self.user)
         while not process.ready():
             sleep(0)
@@ -507,7 +508,7 @@ class SyncMonitor(Greenlet):
             self.status_callback(self.user, 'poll', datetime.utcnow().isoformat())
         else:
             log.warning("incremental update for {0} failed: {1}".format(
-                self.user.g_email, process.exception))
+                self.user.email_address, process.exception))
         sleep(self.n)
 
 class SyncService:
@@ -521,122 +522,87 @@ class SyncService:
         # 'state' can be ['initial sync', 'poll']
         # 'status' is the percent-done for initial sync, polling start time otherwise
         # all data in here ought to be msgpack-serializable!
-        self.user_statuses = dict()
+        self.statuses = dict()
 
         # Restart existing active syncs. (Later we will want to partition
         # these across different machines, probably.)
-        user_email_addresses = [r[0] for r in \
-                db_session.query(User.g_email).filter_by(sync_active=True)]
-        for user_email_address in user_email_addresses:
-            self.start_sync(user_email_address)
+        email_addresses = [r[0] for r in \
+                db_session.query(Namespace.email_address).filter_by(sync_active=True)]
+        for email in email_addresses:
+            self.start_sync(email)
 
-    def start_sync(self, user_email_address):
-        try:
-            user = db_session.query(User).filter_by(g_email=user_email_address).one()
-            fqdn = socket.getfqdn()
-            if user.sync_host is not None and user.sync_host != fqdn:
-                return "WARNING syncing on different host"
-            if user.g_email not in self.monitors:
-                user.sync_lock()
-                def update_user_status(user, state, status):
-                    """ I really really wish I were a lambda """
-                    self.user_statuses[user.id] = dict(
-                            state=state, status=status)
-                    notify(user, state, status)
-
-                monitor = SyncMonitor(user, update_user_status)
-                self.monitors[user.g_email] = monitor
-                monitor.start()
-                user.sync_active = True
-                user.sync_host = socket.getfqdn()
-                db_session.add(user)
-                db_session.commit()
-                log.info("Restarting sync for {0}".format(user.g_email))
-                return "OK sync started"
-            else:
-                return "OK sync already started"
-        except sqlalchemy.orm.exc.NoResultFound:
-            raise SyncException("No such user")
-
-
-    def start_sync_all(self):
-        try:
-            users = db_session.query(User).all()
-            fqdn = socket.getfqdn()
-            for user in users:
-                if user.sync_host is not None and user.sync_host != fqdn:
-                    print 'User {0} is syncing on host {1}'.format(user.g_email, user.sync_host)
-                    continue
-                if user.g_email not in self.monitors:
-                    user.sync_lock()
-                    def update_user_status(user, state, status):
+    def start_sync(self, email_address=None):
+        """ Starts all syncs if email_address not specified.
+            If email_address doesn't exist, does nothing.
+        """
+        results = {}
+        query = db_session.query(Namespace)
+        if email_address is not None:
+            query = query.filter_by(email_address=email_address)
+        fqdn = socket.getfqdn()
+        for namespace in query:
+            if namespace.sync_host is not None and namespace.sync_host != fqdn:
+                results[namespace.email_address] = 'User {0} is syncing on host {1}'.format(
+                        namespace.email_address, namespace.sync_host)
+            elif namespace.id not in self.monitors:
+                try:
+                    namespace.sync_lock()
+                    def update_status(namespace, state, status):
                         """ I really really wish I were a lambda """
-                        self.user_statuses[user.id] = dict(
+                        self.statuses[namespace.id] = dict(
                                 state=state, status=status)
-                        notify(user, state, status)
+                        notify(namespace, state, status)
 
-                    monitor = SyncMonitor(user, update_user_status)
-                    self.monitors[user.g_email] = monitor
+                    monitor = SyncMonitor(namespace, update_status)
+                    self.monitors[namespace.id] = monitor
                     monitor.start()
-                    user.sync_active = True
-                    user.sync_host = fqdn
-                    db_session.add(user)
+                    namespace.sync_active = True
+                    namespace.sync_host = fqdn
+                    db_session.add(namespace)
                     db_session.commit()
-                    print "OK sync started"
-                else:
-                    print "OK sync already started"
-        except sqlalchemy.orm.exc.NoResultFound:
-            raise SyncException("No users to start sync")
+                    results[namespace.email_address] = "OK sync started"
+                except:
+                    results[namespace.email_address] = "ERROR error encountered"
+            else:
+                results[namespace.email_address] =  "OK sync already started"
+        if email_address:
+            return results[email_address]
+        return results
 
-
-
-    def stop_sync(self, user_email_address):
-        try:
-            user = db_session.query(User).filter_by(g_email=user_email_address).one()
-            if not user.sync_active:
-                return "OK sync stopped already"
-            fqdn = socket.getfqdn()
-            assert user.sync_host == fqdn, "sync host FQDN doesn't match"
-            # XXX Can processing this command fail in some way?
-            self.monitors[user_email_address].inbox.put_nowait("shutdown")
-            user.sync_active = False
-            user.sync_host = None
-            db_session.add(user)
-            db_session.commit()
-            user.sync_unlock()
-            return "OK sync stopped"
-        except sqlalchemy.orm.exc.NoResultFound:
-            raise SyncException("No such user")
-
-    def stop_sync_all(self):
-        try:
-            users = db_session.query(User).all()
-            count = 0
-            for user in users:
-                if not user.sync_active:
-                    print "Already stopped for {0}".format(user.g_email)
-                    continue
-                fqdn = socket.getfqdn()
-                if not (user.sync_host == fqdn):
-                    print 'User {0} is syncing on host {1}'.format(user.g_email, user.sync_host)
-                    continue
+    def stop_sync(self, email_address=None):
+        """ Stops all syncs if email_address not specified.
+            If email_address doesn't exist, does nothing.
+        """
+        results = {}
+        query = db_session.query(Namespace)
+        if email_address is not None:
+            query = query.filter_by(email_address=email_address)
+        fqdn = socket.getfqdn()
+        for namespace in query:
+            if not namespace.sync_active:
+                results[namespace.email_address] = "OK sync stopped already"
+            try:
+                assert namespace.sync_host == fqdn, "sync host FQDN doesn't match"
                 # XXX Can processing this command fail in some way?
-                self.monitors[user.g_email].inbox.put_nowait("shutdown")
-                user.sync_active = False
-                user.sync_host = None
-                db_session.add(user)
+                self.monitors[namespace.id].inbox.put_nowait("shutdown")
+                namespace.sync_active = False
+                namespace.sync_host = None
+                db_session.add(namespace)
                 db_session.commit()
-                user.sync_unlock()
-                count += 1
-            return "Sync stopped for {0} of {1} users.".format(count, len(users))
-        except sqlalchemy.orm.exc.NoResultFound:
-            raise SyncException("No current syncing users")
+                namespace.sync_unlock()
+                results[namespace.email_address] = "OK sync stopped"
+            except:
+                results[namespace.email_address] = "ERROR error encountered"
+        if email_address:
+            return results[email_address]
+        return results
 
-    def sync_status(self, user_email_address):
-        return self.user_statuses.get(user_email_address)
+    def sync_status(self, namespace_id):
+        return self.statuses.get(namespace_id)
 
     # XXX this should require some sort of auth or something, used from the
     # admin panel
     def status(self):
-        return self.user_statuses
+        return self.statuses
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

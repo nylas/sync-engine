@@ -6,7 +6,7 @@ from flask import Flask, request, redirect, make_response, render_template, Resp
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
 from socket_rpc import SocketRPC
-from models import db_session, User, MessageMeta, BlockMeta, Collection
+from models import db_session, MessageMeta, BlockMeta, Collection
 from werkzeug.wsgi import SharedDataMiddleware
 
 import google_oauth
@@ -28,35 +28,30 @@ sc = SecureCookieSerializer(COOKIE_SECRET)
 
 # TODO switch to regular flask user login stuff
 # https://flask-login.readthedocs.org/en/latest/#how-it-works
-def get_user(request):
+def get_namespace(request):
     """ Gets a user object for the current request """
     session_token = sc.deserialize('session', request.cookies.get('session') )
     if not session_token: return None
     user_session  = sessionmanager.get_session(session_token)
     if not user_session: return None
-    query = db_session.query(User).filter(User.g_email == user_session.g_email)
-    user = query.all()[0]
-    return user
-
+    return user_session.user.root_namespace
 
 app = Flask(__name__, static_folder='../web_client', static_url_path='', template_folder='templates')
 
 
 @app.route('/')
 def index():
-    user = get_user(request)
+    namespace = get_namespace(request)
     return render_template('index.html',
-                            name = user.g_email if user else " ",
-                            logged_in = bool(user))
-
-
+                            name = namespace.email_address if namespace else " ",
+                            logged_in = bool(namespace))
 
 @app.route('/app')
 @app.route('/app/')  # TOFIX not sure I need to do both
 def static_app_handler():
     """ Just returns the static app files """
 
-    if not get_user(request):
+    if not get_namespace(request):
         return redirect('/')
     return app.send_static_file('index.html')
 
@@ -103,13 +98,14 @@ def auth_done_handler():
         assert 'access_token' in oauth_response
         assert 'refresh_token' in oauth_response
 
-        new_user_object = sessionmanager.make_user(oauth_response)
+        new_namespace, new_user = sessionmanager.make_namespace(oauth_response)
+        new_session = sessionmanager.create_session(new_user)
 
-        new_session = sessionmanager.create_session(new_user_object.g_email)
-        log.info("Successful login. Setting cookie: %s" % new_session.session_token)
+        log.info("Successful login. Setting cookie: %s" % new_session.token)
 
-        secure_cookie = sc.serialize('session', new_session.session_token )
-        response.set_cookie('session', secure_cookie, domain=app.config['SESSION_COOKIE_DOMAIN'])
+        secure_cookie = sc.serialize('session', new_session.token )
+        response.set_cookie('session', secure_cookie,
+                domain=app.config['SESSION_COOKIE_DOMAIN'])
 
     except Exception, e:
         # TODO handler error better here. Write an error page to user.
@@ -132,9 +128,9 @@ def logout():
 def run_socketio(path):
 
     real_request = request._get_current_object()
-    user = get_user(request)
-    if user:
-        log.info('Successful socket auth for %s' % user.g_email)
+    namespace = get_namespace(request)
+    if namespace:
+        log.info('Successful socket auth for %s' % namespace.email_address)
         socketio_manage(request.environ, {
                         '/wire': WireNamespace},
                         request=real_request)
@@ -176,19 +172,17 @@ class WireNamespace(BaseNamespace):
         log.info(message)
 
         # TODO: Make this an @authenticated decorator someday
-        user = get_user(request)
-        assert user
+        namespace = get_namespace(request)
+        assert namespace
 
         api_srv_loc = environ.get('API_SERVER_LOC', None)
         assert api_srv_loc
         c = zerorpc.Client(timeout=3000)
         c.connect(api_srv_loc)
 
-
         print 'Calling on', c
         print message
-        response_text = self.rpc.run(c, message, user)
-
+        response_text = self.rpc.run(c, message, namespace)
 
         # Send response
         self.send(response_text, json=True)
@@ -197,7 +191,6 @@ class WireNamespace(BaseNamespace):
     def recv_error(self):
         log.error("recv_error %s" % self)
         return True
-
 
     def recv_disconnect(self):
         log.warning("WS Disconnected")
@@ -213,12 +206,10 @@ class WireNamespace(BaseNamespace):
         #     self.ctx.pop()   # Not sure why this causes an exception
         super(WireNamespace, self).disconnect(*args, **kwargs)
 
-
-
 @app.route('/file_upload', methods=['GET', 'POST'])
 def upload_file_handler():
-    user = get_user(request)
-    if not user:
+    namespace = get_namespace(request)
+    if not namespace:
         log.error("No user session for upload attempt")
         abort(401)
         return
@@ -235,7 +226,7 @@ def upload_file_handler():
     if request.method == 'POST' and 'file' in request.files:
         uploaded_file = request.files['file']
 
-        meta = MessageMeta(user_id=user.id, g_email=user.g_email)
+        meta = MessageMeta(namespace_id=namespace.id)
         part = BlockMeta(
                 messagemeta=meta,
                 filename=uploaded_file.filename,
@@ -304,9 +295,9 @@ def gallery_handler(email, id):
 def block_retrieval(blockhash):
     if not blockhash: return None
 
-    if not get_user(request): return None
+    if not get_namespace(request): return None
 
-    return get_user(request).g_email
+    return get_namespace(request).email_address
 
     query = db_session.query(BlockMeta).filter(BlockMeta.data_sha256 == blockhash)
 

@@ -26,7 +26,7 @@ class SocketRPC(object):
         self.responses = []
 
 
-    def run(self, handler, request_body, user=None):
+    def run(self, handler, request_body, namespace=None):
 
         self.handler = handler
         requests = self.parse_request(request_body)
@@ -96,7 +96,7 @@ class SocketRPC(object):
         #     raise Exception("Invalid params: %s", params)
 
         # Insert namespace identifier as first object
-        args.insert(0, user.root_namespace_id)
+        args.insert(0, namespace.id)
 
 
         log.info("Running %s with %s" % (method.__name__, args))

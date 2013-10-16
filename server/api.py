@@ -101,23 +101,13 @@ class API(object):
                            default=json_util.default)  # Fixes serializing date.datetime
 
 
-
-
-    # TODO actually make this send mail with stuff etc.
-    def send_mail(self, namespace_id, message_to_send):
+    def send_mail(self, namespace_id, recipients, subject, body):
         """ Sends a message with the given objects """
 
-        # TODO have postel take namespace_id instead of email/token
-        user = db_session.query(Namespace).filter(
-                Namespace.id == namespace_id).all()[0]
-        s = postel.SMTP(user.g_email,
-                        user.g_access_token)
-
-        s.setup()
-        s.send_mail(message_to_send)
-        s.quit()
+        namespace = db_session.query(Namespace).filter_by(id=namespace_id).one()
+        with postel.SMTP(namespace) as s:
+            s.send_mail(recipients, subject, body)
         return "OK"
-
 
     def meta_with_id(self, namespace_id, data_id):
         existing_msgs_query = db_session.query(MessageMeta).join(Namespace)\

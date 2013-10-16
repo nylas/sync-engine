@@ -5,24 +5,30 @@ import smtplib
 import logging as log
 import base64
 
-
-from smtplib import SMTP
 from email.MIMEText import MIMEText
-from email.Header import Header
-from email.Utils import parseaddr, formataddr
 
-
+__version__ = '0.1'
 
 SMTP_HOST = 'smtp.gmail.com'
 SMTP_PORT = 587
 
 class SMTP(object):
 
-    def __init__(self, email_address, oauth_token):
+    def __init__(self, namespace):
+        """ NOTE: You may wish to have pre-loaded namespace.user to prevent
+            another database query.
+        """
         self.conn = None
-        self.email_address = email_address
-        self.oauth_token = oauth_token
+        self.namespace = namespace
+        self.email_address = namespace.g_email
+        self.oauth_token = namespace.g_access_token
+        self._setup()
 
+    def __enter__(self):
+        self.setup()
+
+    def __exit__(self, type, value, traceback):
+        self.quit()
 
     def setup(self):
         self.conn = smtplib.SMTP(SMTP_HOST, SMTP_PORT)
@@ -33,12 +39,16 @@ class SMTP(object):
         self.conn.ehlo()
 
         # Format for oauth2 authentication
-        auth_string = 'user=%s\1auth=Bearer %s\1\1' % (self.email_address, self.oauth_token)
-        self.conn.docmd('AUTH', 'XOAUTH2 %s' % base64.b64encode(auth_string))
+        auth_string = 'user={0}\1auth=Bearer {1}\1\1'.format(
+                self.email_address, self.oauth_token)
+        self.conn.docmd('AUTH', 'XOAUTH2 {0}'.format(
+            base64.b64encode(auth_string)))
 
-
-
-    def send_mail(self, msg_to_send):
+    def send_mail(self, recipients, subject, body):
+        """
+        recipients: a list of utf-8 encoded strings
+        body: a utf-8 encoded string
+        """
 
         # Sample header
 
@@ -74,95 +84,20 @@ class SMTP(object):
         # Content-Length: 586
         # Lines: 26
 
+        from_addr = self.email_address
 
-        from_addr = 'foo_from_address@gmail.com'
-        to_addr = msg_to_send['to']
+        msg = MIMEText(body)
+        # TODO: Have a way of specifying "real name" on a user.
+        msg['From'] = self.email_address
+        msg['To'] = ', '.join(recipients)
+        msg['Subject'] = subject
+        msg['X-Mailer'] = 'InboxApp Mailer [version {0}]'.format(__version__)
 
-
-
-        headers = {}
-        headers['To'] = msg_to_send['to']
-
-        headers['From'] = '"Testing send mail from Inbox" <test_from_header@gmail.com>'
-        headers['Subject'] = msg_to_send['subject']
-
-        headers['Mime-Version'] = '1.0'
-        headers['User-Agent'] = 'InboxApp/0.1'
-
-        # Not really sure about this one yet...
-        # $headers .= "Content-Type: text/html; charset=ISO-8859-1\r\n";
-
-        header = '\r\n'.join(['%s: %s' % (k,v) for k,v in headers.iteritems() ])
-        msg = header + '\n' + msg_to_send['body'] + '\n\n'
-
-        try:
-            self.conn.sendmail(from_addr, to_addr, msg)
-            log.info("Sent msg %s -> %s" % (from_addr, ",".join(t for t in to_addr)))
-        except Exception, e:
-            raise e
-
-
-
-
-def send_email(sender, recipient, subject, body):
-    """Send an email.
-
-    All arguments should be Unicode strings (plain ASCII works as well).
-
-    Only the real name part of sender and recipient addresses may contain
-    non-ASCII characters.
-
-    The email will be properly MIME encoded and delivered though SMTP to
-    localhost port 25.  This is easy to change if you want something different.
-
-    The charset of the email will be the first one out of US-ASCII, ISO-8859-1
-    and UTF-8 that can represent all the characters occurring in the email.
-    """
-
-    # Header class is smart enough to try US-ASCII, then the charset we
-    # provide, then fall back to UTF-8.
-    header_charset = 'ISO-8859-1'
-
-    # We must choose the body charset manually
-    for body_charset in 'US-ASCII', 'ISO-8859-1', 'UTF-8':
-        try:
-            body.encode(body_charset)
-        except UnicodeError:
-            pass
-        else:
-            break
-
-    # Split real name (which is optional) and email address parts
-    sender_name, sender_addr = parseaddr(sender)
-    recipient_name, recipient_addr = parseaddr(recipient)
-
-    # We must always pass Unicode strings to Header, otherwise it will
-    # use RFC 2047 encoding even on plain ASCII strings.
-    sender_name = str(Header(unicode(sender_name), header_charset))
-    recipient_name = str(Header(unicode(recipient_name), header_charset))
-
-    # Make sure email addresses do not contain non-ASCII characters
-    sender_addr = sender_addr.encode('ascii')
-    recipient_addr = recipient_addr.encode('ascii')
-
-    # Create the message ('plain' stands for Content-Type: text/plain)
-    msg = MIMEText(body.encode(body_charset), 'plain', body_charset)
-    msg['From'] = formataddr((sender_name, sender_addr))
-    msg['To'] = formataddr((recipient_name, recipient_addr))
-    msg['Subject'] = Header(unicode(subject), header_charset)
-
-
-    try:
-        self.conn.sendmail(sender, recipient, msg.as_string())
-        log.info("Sent msg %s -> %s" % (from_addr, ",".join(t for t in to_addr)))
-    except Exception, e:
-        raise e
-
-
-
-
-
+        self.conn.sendmail(from_addr, recipients, msg.as_string())
+        log.info("Sent msg %s -> %s" % (from_addr, ",".join(
+            t for t in recipients)))
 
     def quit(self):
         self.conn.quit()
+
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
