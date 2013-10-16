@@ -288,7 +288,7 @@ class MessageMeta(JSONSerializable, Base):
         d['subject'] = self.subject
         d['g_id'] = self.g_msgid
         d['g_thrid'] = self.g_thrid
-        d['user_id'] = self.user_id
+        d['namespace_id'] = self.namespace_id
         return d
 
 # These are the top 15 most common Content-Type headers
