@@ -63,28 +63,27 @@ def make_user(access_token_dict):
     return new_user
 
 def get_user(email_address, callback=None):
-    user_obj = db_session.query(User).filter_by(g_email=email_address).first()
-    if not user_obj:
+    user = db_session.query(User).filter_by(g_email=email_address).first()
+    if not user:
         log.error("Should already have a user object...")
         return None
-    return verify_user(user_obj)
+    return verify_user(user)
 
-def verify_user(user_obj):
-
-    issued_date = user_obj.date
-    expires_seconds = user_obj.g_expires_in
+def verify_user(user):
+    issued_date = user.date
+    expires_seconds = user.g_expires_in
 
     # TODO check with expire date first
     expire_date = issued_date + datetime.timedelta(seconds=expires_seconds)
 
-    is_valid = google_oauth.validate_token(user_obj.g_access_token)
+    is_valid = google_oauth.validate_token(user.g_access_token)
 
     # TODO refresh tokens based on date instead of checking?
     # if not is_valid or expire_date > datetime.datetime.utcnow():
     if not is_valid:
         log.error("Need to update access token!")
 
-        refresh_token = user_obj.g_refresh_token
+        refresh_token = user.g_refresh_token
 
         log.error("Getting new access token...")
         response = google_oauth.get_new_token(refresh_token)  # TOFIX blocks
@@ -100,10 +99,10 @@ def verify_user(user_obj):
 
         # TODO Verify it and make sure it's valid.
         assert 'access_token' in response
-        user_obj = make_user(response)
-        log.info("Updated token for user %s" % user_obj.g_email)
+        user = make_user(response)
+        log.info("Updated token for user %s" % user.g_email)
 
-    return user_obj
+    return user
 
 def get_crispin_from_session(session_token):
     """ Get the running crispin instance, or make a new one """
@@ -115,9 +114,9 @@ def get_crispin_from_email(email_address, initial=False, dummy=False):
     if email_address in email_address_to_crispins:
         return email_address_to_crispins[email_address]
     else:
-        user_obj = get_user(email_address)
-        assert user_obj is not None
-        crispin_client =  cls(user_obj)
+        user = get_user(email_address)
+        assert user is not None
+        crispin_client =  cls(user)
 
         assert 'X-GM-EXT-1' in crispin_client.imap_server.capabilities(), "This must not be Gmail..."
 

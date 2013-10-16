@@ -39,7 +39,7 @@ def load_validity_cache(crispin_client):
             UIDValidity.folder_name,
             UIDValidity.uid_validity,
             UIDValidity.highestmodseq).filter_by(
-                    namespace_id=crispin_client.user_obj.root_namespace_id):
+                    namespace_id=crispin_client.user.root_namespace_id):
         cache_validity[folder] = dict(UIDVALIDITY=uid_validity,
                 HIGHESTMODSEQ=highestmodseq)
 
@@ -65,7 +65,7 @@ def fetch_uidvalidity(user, folder_name):
 def uidvalidity_valid(crispin_client, cached_validity=False):
     """ Validate UIDVALIDITY on currently selected folder. """
     if cached_validity is None:
-        cached_validity = fetch_uidvalidity(crispin_client.user_obj,
+        cached_validity = fetch_uidvalidity(crispin_client.user,
                 crispin_client.selected_folder_name).uid_validity
         assert type(cached_validity) == type(crispin_client.selected_uidvalidity), "cached_validity: {0} / selected_uidvalidity: {1}".format(type(cached_validity), type(crispin_client.selected_uidvalidity))
 
@@ -120,14 +120,14 @@ def remove_deleted_messages(crispin_client):
     local_uids = [uid for uid, in
             db_session.query(FolderMeta.msg_uid).filter_by(
                 folder_name=crispin_client.selected_folder_name,
-                namespace_id=crispin_client.user_obj.root_namespace_id)]
+                namespace_id=crispin_client.user.root_namespace_id)]
     if len(server_uids) > 0 and len(local_uids) > 0:
         assert type(server_uids[0]) != type('')
 
     to_delete = set(local_uids).difference(set(server_uids))
     if to_delete:
         delete_messages(to_delete, crispin_client.selected_folder_name,
-                crispin_client.user_obj.root_namespace_id)
+                crispin_client.user.root_namespace_id)
         log.info("Deleted {0} removed messages".format(len(to_delete)))
 
 def new_or_updated(uids, folder, namespace_id, local_uids=None):
@@ -183,7 +183,7 @@ def incremental_sync(user, dummy=False):
 def update_cached_highestmodseq(folder, crispin_client, cached_validity=None):
     if cached_validity is None:
         cached_validity = db_session.query(UIDValidity).filter_by(
-                namespace_id=crispin_client.user_obj.root_namespace_id,
+                namespace_id=crispin_client.user.root_namespace_id,
                 folder_name=folder).one()
     cached_validity.highestmodseq = crispin_client.selected_highestmodseq
     db_session.add(cached_validity)
@@ -191,13 +191,13 @@ def update_cached_highestmodseq(folder, crispin_client, cached_validity=None):
 def highestmodseq_update(folder, crispin_client, highestmodseq=None):
     if highestmodseq is None:
         highestmodseq = db_session.query(UIDValidity).filter_by(
-                user=crispin_client.user_obj, folder_name=folder
+                user=crispin_client.user, folder_name=folder
                 ).one().highestmodseq
     uids = crispin_client.get_changed_uids(highestmodseq)
     log.info("Starting highestmodseq update on {0} (current HIGHESTMODSEQ: {1})".format(folder, crispin_client.selected_highestmodseq))
     if uids:
         new, updated = new_or_updated(uids, folder,
-                crispin_client.user_obj.root_namespace_id)
+                crispin_client.user.root_namespace_id)
         log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
         for uids in chunk(new, crispin_client.CHUNK_SIZE):
             new_messagemeta, new_blockmeta, new_foldermeta = safe_download(new,
@@ -256,7 +256,7 @@ def update_metadata(uids, crispin_client):
     log.info("new metadata: {0}".format(new_metadata))
     for fm in db_session.query(FolderMeta).filter(
             FolderMeta.msg_uid.in_(uids),
-            FolderMeta.namespace_id==crispin_client.user_obj.root_namespace_id,
+            FolderMeta.namespace_id==crispin_client.user.root_namespace_id,
             FolderMeta.folder_name==crispin_client.selected_folder_name):
         log.info("msg: {0}, flags: {1}".format(fm.msg_uid, fm.flags))
         if fm.flags != new_metadata[fm.msg_uid]:
@@ -290,7 +290,7 @@ def initial_sync(user, updates, dummy=False):
         # total failure.
         local_uids = [uid for uid, in
                 db_session.query(FolderMeta.msg_uid).filter_by(
-                    namespace_id=crispin_client.user_obj.root_namespace_id, folder_name=folder)]
+                    namespace_id=crispin_client.user.root_namespace_id, folder_name=folder)]
         crispin_client.select_folder(folder)
 
         server_g_msgids = None
@@ -311,7 +311,7 @@ def initial_sync(user, updates, dummy=False):
                 # as usual, but updated uids need to be updated manually
                 modified = crispin_client.get_changed_uids(crispin_client.selected_highestmodseq)
                 new, updated = new_or_updated(modified, folder,
-                                              crispin_client.user_obj.root_namespace_id,
+                                              crispin_client.user.root_namespace_id,
                                               local_uids)
                 log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
                 # for new, query g_msgids and update cache
@@ -333,7 +333,7 @@ def initial_sync(user, updates, dummy=False):
             cached_validity = fetch_uidvalidity(user, folder)
             if cached_validity is None:
                 db_session.add(UIDValidity(
-                    namespace_id=crispin_client.user_obj.root_namespace_id,
+                    namespace_id=crispin_client.user.root_namespace_id,
                     folder_name=folder,
                     uid_validity=crispin_client.selected_uidvalidity,
                     highestmodseq=crispin_client.selected_highestmodseq))
@@ -347,7 +347,7 @@ def initial_sync(user, updates, dummy=False):
         # get all g_msgids we've already downloaded for this user
         g_msgids = set([g_msgid for g_msgid, in
             db_session.query(distinct(MessageMeta.g_msgid)).join(FolderMeta).filter(
-                FolderMeta.namespace_id==crispin_client.user_obj.root_namespace_id)])
+                FolderMeta.namespace_id==crispin_client.user.root_namespace_id)])
 
         log.info("Found {0} UIDs for folder {1}".format(
             len(server_uids), folder))
@@ -357,7 +357,7 @@ def initial_sync(user, updates, dummy=False):
 
         if warn_uids:
             delete_messages(warn_uids, folder,
-                    crispin_client.user_obj.root_namespace_id)
+                    crispin_client.user.root_namespace_id)
             log.info("Deleted the following UIDs that no longer exist on the server: {0}".format(' '.join([str(u) for u in sorted(warn_uids)])))
 
         full_download, foldermeta_only = partition(
@@ -413,7 +413,7 @@ def initial_sync(user, updates, dummy=False):
             percent_done = (total_messages / len(server_uids)) * 100
             folder_sync_percent_done[folder] = percent_done
             updates.put(folder_sync_percent_done)
-            log.info("Syncing %s -- %.4f%% (%i/%i)" % (crispin_client.user_obj.g_email,
+            log.info("Syncing %s -- %.4f%% (%i/%i)" % (crispin_client.user.g_email,
                                                    percent_done,
                                                    total_messages,
                                                    len(server_uids)))
