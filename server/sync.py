@@ -347,7 +347,6 @@ def initial_sync(user, updates, dummy=False):
         # get all g_msgids we've already downloaded for this user
         g_msgids = set([g_msgid for g_msgid, in
             db_session.query(distinct(MessageMeta.g_msgid)).join(FolderMeta).filter(
-                FolderMeta.folder_name==folder,
                 FolderMeta.namespace_id==crispin_client.user_obj.root_namespace_id)])
 
         log.info("Found {0} UIDs for folder {1}".format(
@@ -370,13 +369,16 @@ def initial_sync(user, updates, dummy=False):
         log.info("skipping {0} uids downloaded via other folders".format(
             len(foldermeta_only)))
         if len(foldermeta_only) > 0:
-            foldermeta_uid_for = [server_g_msgids[uid] for uid in foldermeta_only]
+            foldermeta_uid_for = dict([(g_msgid, uid) for (uid, g_msgid) \
+                    in server_g_msgids.items() if uid in foldermeta_only])
+            foldermeta_g_msgids = [server_g_msgids[uid] for uid in foldermeta_only]
             messagemeta_for = dict([(foldermeta_uid_for[mm.g_msgid], mm) for \
                      mm in db_session.query(MessageMeta).filter( \
-                         MessageMeta.g_msgid.in_(foldermeta_uid_for))])
+                         MessageMeta.g_msgid.in_(foldermeta_g_msgids))])
             db_session.add_all(
-                    [FolderMeta(user=user, folder_name=folder,
-                        msg_uid=uid, messagemeta=messagemeta_for[uid]) \
+                    [FolderMeta(namespace_id=user.root_namespace_id,
+                        folder_name=folder, msg_uid=uid, \
+                        messagemeta=messagemeta_for[uid]) \
                                 for uid in foldermeta_only])
             db_session.commit()
 
