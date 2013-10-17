@@ -1,15 +1,15 @@
 from __future__ import division
-import sys, os;  sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..')))
 import socket
 
-import sessionmanager
-from models import db_session, FolderMeta, MessageMeta, UIDValidity, Namespace
+from .sessionmanager import get_crispin_from_email
+from .models import db_session, FolderMeta, MessageMeta, UIDValidity, IMAPAccount
 from sqlalchemy import distinct
 import sqlalchemy.exc
 
-from encoding import EncodingError
-from server.util.itert import chunk, partition
-from server.util.cache import set_cache, get_cache, rm_cache
+from .encoding import EncodingError
+from .util.itert import chunk, partition
+from .util.cache import set_cache, get_cache, rm_cache
+
 import logging as log
 from gc import collect as garbge_collect
 from datetime import datetime
@@ -17,15 +17,14 @@ from datetime import datetime
 from gevent import Greenlet, sleep, joinall, kill
 from gevent.queue import Queue, Empty
 
-from google_oauth import InvalidOauthGrantException
+from .google_oauth import InvalidOauthGrantException
 
 def refresh_crispin(email, dummy=False):
     try:
-        return sessionmanager.get_crispin_from_email(email, dummy)
+        return get_crispin_from_email(email, dummy)
     except InvalidOauthGrantException, e:
         log.error("Error refreshing crispin on {0} because {1}".format(email, e))
         raise e
-        
 
 def load_validity_cache(crispin_client):
     # in practice UIDVALIDITY and HIGHESTMODSEQ are always positive
@@ -39,7 +38,7 @@ def load_validity_cache(crispin_client):
             UIDValidity.folder_name,
             UIDValidity.uid_validity,
             UIDValidity.highestmodseq).filter_by(
-                    namespace_id=crispin_client.user.root_namespace_id):
+                    account_id=crispin_client.account.id):
         cache_validity[folder] = dict(UIDVALIDITY=uid_validity,
                 HIGHESTMODSEQ=highestmodseq)
 
@@ -53,19 +52,18 @@ def check_uidvalidity(crispin_client, cached_validity=None):
         resync_uids(crispin_client)
     return valid
 
-def fetch_uidvalidity(user, folder_name):
+def fetch_uidvalidity(account, folder_name):
     try:
         # using .one() here may catch duplication bugs
         return db_session.query(UIDValidity).filter_by(
-                namespace_id=user.root_namespace_id,
-                folder_name=folder_name).one()
+                account=account, folder_name=folder_name).one()
     except sqlalchemy.orm.exc.NoResultFound:
         return None
 
 def uidvalidity_valid(crispin_client, cached_validity=False):
     """ Validate UIDVALIDITY on currently selected folder. """
     if cached_validity is None:
-        cached_validity = fetch_uidvalidity(crispin_client.user,
+        cached_validity = fetch_uidvalidity(crispin_client.account,
                 crispin_client.selected_folder_name).uid_validity
         assert type(cached_validity) == type(crispin_client.selected_uidvalidity), "cached_validity: {0} / selected_uidvalidity: {1}".format(type(cached_validity), type(crispin_client.selected_uidvalidity))
 
@@ -120,14 +118,14 @@ def remove_deleted_messages(crispin_client):
     local_uids = [uid for uid, in
             db_session.query(FolderMeta.msg_uid).filter_by(
                 folder_name=crispin_client.selected_folder_name,
-                namespace_id=crispin_client.user.root_namespace_id)]
+                namespace_id=crispin_client.account.namespace.id)]
     if len(server_uids) > 0 and len(local_uids) > 0:
         assert type(server_uids[0]) != type('')
 
     to_delete = set(local_uids).difference(set(server_uids))
     if to_delete:
         delete_messages(to_delete, crispin_client.selected_folder_name,
-                crispin_client.user.root_namespace_id)
+                crispin_client.account.namespace.id)
         log.info("Deleted {0} removed messages".format(len(to_delete)))
 
 def new_or_updated(uids, folder, namespace_id, local_uids=None):
@@ -151,7 +149,7 @@ def g_check_join(threads, errmsg):
             log.error(error)
         raise SyncException("Fatal error encountered")
 
-def incremental_sync(user, dummy=False):
+def incremental_sync(account, dummy=False):
     """ Poll this every N seconds for active (logged-in) users and every
         N minutes for logged-out users. It checks for changed message metadata
         and new messages using CONDSTORE / HIGHESTMODSEQ and also checks for
@@ -160,7 +158,7 @@ def incremental_sync(user, dummy=False):
         We may also wish to frob update frequencies based on which folder
         a user has visible in the UI as well.
     """
-    crispin_client = refresh_crispin(user.g_email, dummy)
+    crispin_client = refresh_crispin(account.email_address, dummy)
     cache_validity = load_validity_cache(crispin_client)
     needs_update = []
     for folder in crispin_client.sync_folders:
@@ -183,7 +181,7 @@ def incremental_sync(user, dummy=False):
 def update_cached_highestmodseq(folder, crispin_client, cached_validity=None):
     if cached_validity is None:
         cached_validity = db_session.query(UIDValidity).filter_by(
-                namespace_id=crispin_client.user.root_namespace_id,
+                account_id=crispin_client.account.id,
                 folder_name=folder).one()
     cached_validity.highestmodseq = crispin_client.selected_highestmodseq
     db_session.add(cached_validity)
@@ -191,13 +189,13 @@ def update_cached_highestmodseq(folder, crispin_client, cached_validity=None):
 def highestmodseq_update(folder, crispin_client, highestmodseq=None):
     if highestmodseq is None:
         highestmodseq = db_session.query(UIDValidity).filter_by(
-                user=crispin_client.user, folder_name=folder
+                account=crispin_client.account, folder_name=folder
                 ).one().highestmodseq
     uids = crispin_client.get_changed_uids(highestmodseq)
     log.info("Starting highestmodseq update on {0} (current HIGHESTMODSEQ: {1})".format(folder, crispin_client.selected_highestmodseq))
     if uids:
         new, updated = new_or_updated(uids, folder,
-                crispin_client.user.root_namespace_id)
+                crispin_client.account.namespace.id)
         log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
         for uids in chunk(new, crispin_client.CHUNK_SIZE):
             new_messagemeta, new_blockmeta, new_foldermeta = safe_download(new,
@@ -256,7 +254,7 @@ def update_metadata(uids, crispin_client):
     log.info("new metadata: {0}".format(new_metadata))
     for fm in db_session.query(FolderMeta).filter(
             FolderMeta.msg_uid.in_(uids),
-            FolderMeta.namespace_id==crispin_client.user.root_namespace_id,
+            FolderMeta.namespace_id==crispin_client.account.namespace.id,
             FolderMeta.folder_name==crispin_client.selected_folder_name):
         log.info("msg: {0}, flags: {1}".format(fm.msg_uid, fm.flags))
         if fm.flags != new_metadata[fm.msg_uid]:
@@ -267,16 +265,16 @@ def update_metadata(uids, crispin_client):
 def get_server_g_msgids(crispin_client):
     pass
 
-def initial_sync(user, updates, dummy=False):
+def initial_sync(account, updates, dummy=False):
     """ Downloads entire messages and
     (1) creates the metadata database
     (2) stores message parts to the block store
 
     Percent-done and completion messages are sent to the 'updates' queue.
     """
-    crispin_client = refresh_crispin(user.email_address, dummy)
+    crispin_client = refresh_crispin(account.email_address, dummy)
 
-    log.info('Syncing mail for {0}'.format(user.email_address))
+    log.info('Syncing mail for {0}'.format(account.email_address))
 
     # message download for messages from sync_folders is prioritized before
     # AllMail in the order of appearance in this list
@@ -290,15 +288,16 @@ def initial_sync(user, updates, dummy=False):
         # total failure.
         local_uids = [uid for uid, in
                 db_session.query(FolderMeta.msg_uid).filter_by(
-                    namespace_id=crispin_client.user.root_namespace_id, folder_name=folder)]
+                    namespace_id=crispin_client.account.namespace.id,
+                    folder_name=folder)]
         crispin_client.select_folder(folder)
 
         server_g_msgids = None
-        cached_validity = fetch_uidvalidity(user, folder)
+        cached_validity = fetch_uidvalidity(account, folder)
         if cached_validity is not None:
             check_uidvalidity(crispin_client, cached_validity.uid_validity)
             log.info("Attempting to retrieve server_uids and server_g_msgids from cache")
-            server_g_msgids = get_cache("_".join([user.email_address, folder,
+            server_g_msgids = get_cache("_".join([account.email_address, folder,
                 "server_g_msgids"]))
 
         if server_g_msgids is not None:
@@ -311,12 +310,11 @@ def initial_sync(user, updates, dummy=False):
                 # as usual, but updated uids need to be updated manually
                 modified = crispin_client.get_changed_uids(crispin_client.selected_highestmodseq)
                 new, updated = new_or_updated(modified, folder,
-                                              crispin_client.user.root_namespace_id,
-                                              local_uids)
+                        account.namespace.id, local_uids)
                 log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
                 # for new, query g_msgids and update cache
                 server_g_msgids.update(crispin_client.fetch_g_msgids(new))
-                set_cache("_".join([user.email_address, folder,
+                set_cache("_".join([account.email_address, folder,
                     "server_g_msgids"]), server_g_msgids)
                 log.info("Updated cache with new messages")
                 # for updated, update them now
@@ -328,12 +326,12 @@ def initial_sync(user, updates, dummy=False):
         else:
             log.info("No cached data found")
             server_g_msgids = crispin_client.fetch_g_msgids()
-            set_cache("_".join([user.email_address, folder,
+            set_cache("_".join([account.email_address, folder,
                 "server_g_msgids"]), server_g_msgids)
-            cached_validity = fetch_uidvalidity(user, folder)
+            cached_validity = fetch_uidvalidity(account, folder)
             if cached_validity is None:
                 db_session.add(UIDValidity(
-                    namespace_id=crispin_client.user.root_namespace_id,
+                    account=account,
                     folder_name=folder,
                     uid_validity=crispin_client.selected_uidvalidity,
                     highestmodseq=crispin_client.selected_highestmodseq))
@@ -344,10 +342,10 @@ def initial_sync(user, updates, dummy=False):
                 db_session.add(cached_validity)
                 db_session.commit()
         server_uids = sorted(server_g_msgids.keys())
-        # get all g_msgids we've already downloaded for this user
+        # get all g_msgids we've already downloaded for this account
         g_msgids = set([g_msgid for g_msgid, in
             db_session.query(distinct(MessageMeta.g_msgid)).join(FolderMeta).filter(
-                FolderMeta.namespace_id==crispin_client.user.root_namespace_id)])
+                FolderMeta.namespace_id==account.namespace.id)])
 
         log.info("Found {0} UIDs for folder {1}".format(
             len(server_uids), folder))
@@ -356,8 +354,7 @@ def initial_sync(user, updates, dummy=False):
         unknown_uids = set(server_uids).difference(set(local_uids))
 
         if warn_uids:
-            delete_messages(warn_uids, folder,
-                    crispin_client.user.root_namespace_id)
+            delete_messages(warn_uids, folder, account.namespace.id)
             log.info("Deleted the following UIDs that no longer exist on the server: {0}".format(' '.join([str(u) for u in sorted(warn_uids)])))
 
         full_download, foldermeta_only = partition(
@@ -376,7 +373,7 @@ def initial_sync(user, updates, dummy=False):
                      mm in db_session.query(MessageMeta).filter( \
                          MessageMeta.g_msgid.in_(foldermeta_g_msgids))])
             db_session.add_all(
-                    [FolderMeta(namespace_id=user.root_namespace_id,
+                    [FolderMeta(namespace_id=account.namespace.id,
                         folder_name=folder, msg_uid=uid, \
                         messagemeta=messagemeta_for[uid]) \
                                 for uid in foldermeta_only])
@@ -414,13 +411,13 @@ def initial_sync(user, updates, dummy=False):
             folder_sync_percent_done[folder] = percent_done
             updates.put(folder_sync_percent_done)
             log.info("Syncing %s -- %.4f%% (%i/%i)" % (
-                crispin_client.user.email_address,
+                account.email_address,
                 percent_done,
                 total_messages,
                 len(server_uids)))
 
         # complete X-GM-MSGID mapping is no longer needed after initial sync
-        rm_cache("_".join([user.email_address, folder, "server_g_msgids"]))
+        rm_cache("_".join([account.email_address, folder, "server_g_msgids"]))
         # XXX TODO: check for consistency with datastore here before
         # committing state: download any missing messages, delete any
         # messages that we have that the server doesn't. that way, worst case
@@ -432,15 +429,15 @@ def initial_sync(user, updates, dummy=False):
 
 class SyncException(Exception): pass
 
-def notify(user, mtype, message):
+def notify(account, mtype, message):
     """ Pass a message on to the notification dispatcher which deals with
         pubsub stuff.
     """
     # log.info("message from {0}: [{1}] {2}".format(user.g_email, mtype, message))
 
 class SyncMonitor(Greenlet):
-    def __init__(self, user, status_callback, n=5):
-        self.user = user
+    def __init__(self, account, status_callback, n=5):
+        self.account = account
         self.n = n
         self.status_callback = status_callback
         self.inbox = Queue()
@@ -452,7 +449,8 @@ class SyncMonitor(Greenlet):
             try:
                 cmd = self.inbox.get_nowait()
                 if not self.process_command(cmd):
-                    log.info("Stopping sync for {0}".format(self.user.email_address))
+                    log.info("Stopping sync for {0}".format(
+                        self.account.email_address))
                     kill(action)
                     return
             except Empty: sleep(1)
@@ -463,10 +461,10 @@ class SyncMonitor(Greenlet):
         return cmd != 'shutdown'
 
     def action(self):
-        while not self.user.initial_sync_done:
+        while not self.account.initial_sync_done:
             self.initial_sync()
 
-        self.status_callback(self.user, 'poll', None)
+        self.status_callback(self.account, 'poll', None)
 
         polling = True  # FOREVER
         while polling:
@@ -475,10 +473,10 @@ class SyncMonitor(Greenlet):
 
     def initial_sync(self):
         updates = Queue()
-        process = Greenlet.spawn(initial_sync, self.user, updates)
+        process = Greenlet.spawn(initial_sync, self.account, updates)
         progress = 0
         while not process.ready():
-            self.status_callback(self.user, 'initial sync', progress)
+            self.status_callback(self.account, 'initial sync', progress)
             # XXX TODO wrap this in a Timeout in case the process crashes
             progress = updates.get()
             # let monitor accept commands
@@ -487,28 +485,28 @@ class SyncMonitor(Greenlet):
         # report; only report the last update
         remaining = [updates.get() for i in xrange(updates.qsize())]
         if remaining:
-            self.status_callback(self.user, 'initial sync', remaining[-1])
+            self.status_callback(self.account, 'initial sync', remaining[-1])
         if process.successful():
             # we don't do this in initial_sync() to avoid confusion
-            # with refreshing the self.user sqlalchemy object
-            self.user.initial_sync_done = True
-            db_session.add(self.user)
+            # with refreshing the account sqlalchemy object
+            self.account.initial_sync_done = True
+            db_session.add(self.account)
             db_session.commit()
         else:
             log.warning("initial sync for {0} failed: {1}".format(
-                self.user.email_address, process.exception))
-        assert updates.empty(), "initial sync completed for {0} with {1} progress items left to report: {2}".format(self.user.email_address, updates.qsize(), [updates.get() for i in xrange(updates.qsize())])
+                self.account.email_address, process.exception))
+        assert updates.empty(), "initial sync completed for {0} with {1} progress items left to report: {2}".format(self.account.email_address, updates.qsize(), [updates.get() for i in xrange(updates.qsize())])
 
     def poll(self):
-        log.info("polling {0}".format(self.user.email_address))
-        process = Greenlet.spawn(incremental_sync, self.user)
+        log.info("polling {0}".format(self.account.email_address))
+        process = Greenlet.spawn(incremental_sync, self.account)
         while not process.ready():
             sleep(0)
         if process.successful():
-            self.status_callback(self.user, 'poll', datetime.utcnow().isoformat())
+            self.status_callback(self.account, 'poll', datetime.utcnow().isoformat())
         else:
             log.warning("incremental update for {0} failed: {1}".format(
-                self.user.email_address, process.exception))
+                self.account.email_address, process.exception))
         sleep(self.n)
 
 class SyncService:
@@ -518,7 +516,7 @@ class SyncService:
         self.monitors = dict()
         # READ ONLY from API calls, writes happen from callbacks from monitor
         # greenlets.
-        # { 'user_id': { 'state': 'initial sync', 'status': '0'} }
+        # { 'account_id': { 'state': 'initial sync', 'status': '0'} }
         # 'state' can be ['initial sync', 'poll']
         # 'status' is the percent-done for initial sync, polling start time otherwise
         # all data in here ought to be msgpack-serializable!
@@ -526,9 +524,8 @@ class SyncService:
 
         # Restart existing active syncs. (Later we will want to partition
         # these across different machines, probably.)
-        email_addresses = [r[0] for r in \
-                db_session.query(Namespace.email_address).filter_by(sync_active=True)]
-        for email in email_addresses:
+        for email, in db_session.query(IMAPAccount.email_address).filter_by(
+                sync_active=True):
             self.start_sync(email)
 
     def start_sync(self, email_address=None):
@@ -536,35 +533,35 @@ class SyncService:
             If email_address doesn't exist, does nothing.
         """
         results = {}
-        query = db_session.query(Namespace)
+        query = db_session.query(IMAPAccount)
         if email_address is not None:
             query = query.filter_by(email_address=email_address)
         fqdn = socket.getfqdn()
-        for namespace in query:
-            if namespace.sync_host is not None and namespace.sync_host != fqdn:
-                results[namespace.email_address] = 'User {0} is syncing on host {1}'.format(
-                        namespace.email_address, namespace.sync_host)
-            elif namespace.id not in self.monitors:
+        for account in query:
+            if account.sync_host is not None and account.sync_host != fqdn:
+                results[account.email_address] = 'Account {0} is syncing on host {1}'.format(
+                        account.email_address, account.sync_host)
+            elif account.id not in self.monitors:
                 try:
-                    namespace.sync_lock()
-                    def update_status(namespace, state, status):
+                    account.sync_lock()
+                    def update_status(account, state, status):
                         """ I really really wish I were a lambda """
-                        self.statuses[namespace.id] = dict(
+                        self.statuses[account.id] = dict(
                                 state=state, status=status)
-                        notify(namespace, state, status)
+                        notify(account, state, status)
 
-                    monitor = SyncMonitor(namespace, update_status)
-                    self.monitors[namespace.id] = monitor
+                    monitor = SyncMonitor(account, update_status)
+                    self.monitors[account.id] = monitor
                     monitor.start()
-                    namespace.sync_active = True
-                    namespace.sync_host = fqdn
-                    db_session.add(namespace)
+                    account.sync_active = True
+                    account.sync_host = fqdn
+                    db_session.add(account)
                     db_session.commit()
-                    results[namespace.email_address] = "OK sync started"
+                    results[account.email_address] = "OK sync started"
                 except:
-                    results[namespace.email_address] = "ERROR error encountered"
+                    results[account.email_address] = "ERROR error encountered"
             else:
-                results[namespace.email_address] =  "OK sync already started"
+                results[account.email_address] =  "OK sync already started"
         if email_address:
             return results[email_address]
         return results
@@ -574,25 +571,25 @@ class SyncService:
             If email_address doesn't exist, does nothing.
         """
         results = {}
-        query = db_session.query(Namespace)
+        query = db_session.query(IMAPAccount)
         if email_address is not None:
             query = query.filter_by(email_address=email_address)
         fqdn = socket.getfqdn()
-        for namespace in query:
-            if not namespace.sync_active:
-                results[namespace.email_address] = "OK sync stopped already"
+        for account in query:
+            if not account.sync_active:
+                results[account.email_address] = "OK sync stopped already"
             try:
-                assert namespace.sync_host == fqdn, "sync host FQDN doesn't match"
+                assert account.sync_host == fqdn, "sync host FQDN doesn't match"
                 # XXX Can processing this command fail in some way?
-                self.monitors[namespace.id].inbox.put_nowait("shutdown")
-                namespace.sync_active = False
-                namespace.sync_host = None
-                db_session.add(namespace)
+                self.monitors[account.id].inbox.put_nowait("shutdown")
+                account.sync_active = False
+                account.sync_host = None
+                db_session.add(account)
                 db_session.commit()
-                namespace.sync_unlock()
-                results[namespace.email_address] = "OK sync stopped"
+                account.sync_unlock()
+                results[account.email_address] = "OK sync stopped"
             except:
-                results[namespace.email_address] = "ERROR error encountered"
+                results[account.email_address] = "ERROR error encountered"
         if email_address:
             return results[email_address]
         return results

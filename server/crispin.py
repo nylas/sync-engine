@@ -71,10 +71,10 @@ def connected(fn):
 ### main stuff
 
 class CrispinClientBase(object):
-    def __init__(self, user):
-        self.user = user
-        self.email_address = user.g_email
-        self.oauth_token = user.g_access_token
+    def __init__(self, account):
+        self.account = account
+        self.email_address = account.email_address
+        self.oauth_token = account.o_access_token
         self.imap_server = None
         # last time the server checked in, in UTC
         self.keepalive = None
@@ -225,7 +225,7 @@ class CrispinClient(CrispinClientBase):
             if str(e) == '[ALERT] Too many simultaneous connections. (Failure)':
                 raise TooManyConnectionsFailure("Too many simultaneous connections.")
             elif str(e) == '[ALERT] Invalid credentials (Failure)':
-                sessionmanager.verify_user(self.user)
+                sessionmanager.verify_imap_account(self.account)
                 raise AuthFailure("Invalid credentials")
             else:
                 raise e
@@ -242,7 +242,6 @@ class CrispinClient(CrispinClientBase):
         log.info("Closing connection.")
         if (self.imap_server):
             self.imap_server.logout()
-
 
     @connected
     @print_duration
@@ -290,9 +289,7 @@ class CrispinClient(CrispinClientBase):
             mailbase = encoding.from_string(body)
             new_msg = MessageMeta()
             new_msg.data_sha256 = sha256(body).hexdigest()
-            new_msg.g_user_id = self.user.g_user_id
-            new_msg.namespace_id = self.user.root_namespace_id
-            new_msg.g_email = self.user.g_email
+            new_msg.namespace_id = self.account.namespace.id
             new_msg.uid = uid
             # XXX maybe eventually we want to use these, but for
             # backcompat for now let's keep in the
@@ -332,7 +329,7 @@ class CrispinClient(CrispinClientBase):
             new_msg.g_thrid = unicode(x_gm_thrid)
             new_msg.g_msgid = unicode(x_gm_msgid)
 
-            fm = FolderMeta(namespace_id=self.user.root_namespace_id,
+            fm = FolderMeta(namespace_id=self.account.namespace.id,
                     folder_name=self.selected_folder_name,
                     msg_uid=uid, messagemeta=new_msg)
             new_foldermeta.append(fm)

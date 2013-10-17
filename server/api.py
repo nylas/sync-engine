@@ -3,12 +3,9 @@ import logging as log
 import json
 import postel
 from bson import json_util
-from util.itert import chunk
-from models import db_session, MessageMeta, BlockMeta, FolderMeta, Namespace, User
+from models import db_session, MessageMeta, BlockMeta, Namespace, User
 
 from sqlalchemy.orm import joinedload
-
-db_chunk_size = 100
 
 import zerorpc
 import os
@@ -62,32 +59,12 @@ class API(object):
             folder, since we fetch the full thread if one of the messages is in
             the requested folder.
         """
+        # save a database call by just creating a new namespace object and
+        # not committing it to the db
+        messages = Namespace(id=namespace_id).get_messages(folder_name)
 
-        all_msgids = db_session.query(FolderMeta.messagemeta_id)\
-              .filter(FolderMeta.folder_name == folder_name,
-                      FolderMeta.namespace_id == namespace_id).all()
-        all_msgids = [s[0] for s in all_msgids]
-
-        # Get all thread IDs
-        all_thrids = set()
-        for msgids in chunk(all_msgids, db_chunk_size):
-            all_msgs_query = db_session.query(MessageMeta.g_thrid).filter(
-                    MessageMeta.namespace_id == namespace_id,
-                    MessageMeta.id.in_(msgids))
-            result = all_msgs_query.all()
-            [all_thrids.add(s[0]) for s in result]
-
-        # Get all messages for those thread IDs
-        all_msgs = []
-        for g_thrids in chunk(list(all_thrids), db_chunk_size):
-            all_msgs_query = db_session.query(MessageMeta).filter(
-                    MessageMeta.namespace_id == namespace_id,
-                    MessageMeta.g_thrid.in_(g_thrids))
-            result = all_msgs_query.all()
-            all_msgs += result
-
-        log.info('found %i messages IDs' % len(all_msgs))
-        return json.dumps([m.client_json() for m in all_msgs],
+        log.info('found {0} message IDs'.format(len(messages)))
+        return json.dumps([m.client_json() for m in messages],
                            default=json_util.default)  # Fixes serializing date.datetime
 
     def messages_with_ids(self, namespace_id, msg_ids):

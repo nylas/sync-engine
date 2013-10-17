@@ -28,30 +28,30 @@ sc = SecureCookieSerializer(COOKIE_SECRET)
 
 # TODO switch to regular flask user login stuff
 # https://flask-login.readthedocs.org/en/latest/#how-it-works
-def get_namespace(request):
+def get_user(request):
     """ Gets a user object for the current request """
     session_token = sc.deserialize('session', request.cookies.get('session') )
     if not session_token: return None
     user_session  = sessionmanager.get_session(session_token)
     if not user_session: return None
-    return user_session.user.root_namespace
+    return user_session.user
 
 app = Flask(__name__, static_folder='../web_client', static_url_path='', template_folder='templates')
 
 
 @app.route('/')
 def index():
-    namespace = get_namespace(request)
+    user = get_user(request)
     return render_template('index.html',
-                            name = namespace.email_address if namespace else " ",
-                            logged_in = bool(namespace))
+                            name = user.email_address if user else "",
+                            logged_in = bool(user))
 
 @app.route('/app')
 @app.route('/app/')  # TOFIX not sure I need to do both
 def static_app_handler():
     """ Just returns the static app files """
 
-    if not get_namespace(request):
+    if not get_user(request):
         return redirect('/')
     return app.send_static_file('index.html')
 
@@ -88,32 +88,32 @@ def auth_done_handler():
     """ Callback from google oauth. Verify and close popup """
     # Closes the popup
     response = make_response("<script type='text/javascript'>parent.close();</script>")
-    try:
-        assert 'code' in request.args
-        authorization_code = request.args['code']
-        oauth_response = google_oauth.get_authenticated_user(
-                            authorization_code,
-                            redirect_uri=app.config['GOOGLE_REDIRECT_URI'])
-        assert 'email' in oauth_response
-        assert 'access_token' in oauth_response
-        assert 'refresh_token' in oauth_response
+    assert 'code' in request.args
+    authorization_code = request.args['code']
+    oauth_response = google_oauth.get_authenticated_user(
+                        authorization_code,
+                        redirect_uri=app.config['GOOGLE_REDIRECT_URI'])
+    print oauth_response
+    assert 'email' in oauth_response
+    assert 'access_token' in oauth_response
+    assert 'refresh_token' in oauth_response
 
-        new_namespace, new_user = sessionmanager.make_namespace(oauth_response)
-        new_session = sessionmanager.create_session(new_user)
+    new_account = sessionmanager.make_account(oauth_response)
+    new_session = sessionmanager.create_session(new_account.namespace.root_user)
 
-        log.info("Successful login. Setting cookie: %s" % new_session.token)
+    log.info("Successful login. Setting cookie: %s" % new_session.token)
 
-        secure_cookie = sc.serialize('session', new_session.token )
-        response.set_cookie('session', secure_cookie,
-                domain=app.config['SESSION_COOKIE_DOMAIN'])
+    secure_cookie = sc.serialize('session', new_session.token )
+    response.set_cookie('session', secure_cookie,
+            domain=app.config['SESSION_COOKIE_DOMAIN'])
 
-    except Exception, e:
-        # TODO handler error better here. Write an error page to user.
-        log.error(e)
-        error_str = request.args['error']
-        log.error("Google auth failed: %s" % error_str)
-    finally:
-        return response
+    # except Exception, e:
+    #     # TODO handler error better here. Write an error page to user.
+    #     log.error(e)
+    #     error_str = request.args['error']
+    #     log.error("Google auth failed: %s" % error_str)
+    # finally:
+    return response
 
 
 
@@ -128,9 +128,9 @@ def logout():
 def run_socketio(path):
 
     real_request = request._get_current_object()
-    namespace = get_namespace(request)
-    if namespace:
-        log.info('Successful socket auth for %s' % namespace.email_address)
+    user = get_user(request)
+    if get_user:
+        log.info('Successful socket auth for {0}'.format(user.email_address))
         socketio_manage(request.environ, {
                         '/wire': WireNamespace},
                         request=real_request)
@@ -172,8 +172,8 @@ class WireNamespace(BaseNamespace):
         log.info(message)
 
         # TODO: Make this an @authenticated decorator someday
-        namespace = get_namespace(request)
-        assert namespace
+        user = get_user(request)
+        assert user
 
         api_srv_loc = environ.get('API_SERVER_LOC', None)
         assert api_srv_loc
@@ -182,7 +182,7 @@ class WireNamespace(BaseNamespace):
 
         print 'Calling on', c
         print message
-        response_text = self.rpc.run(c, message, namespace)
+        response_text = self.rpc.run(c, message, user.root_namespace)
 
         # Send response
         self.send(response_text, json=True)
@@ -208,8 +208,8 @@ class WireNamespace(BaseNamespace):
 
 @app.route('/file_upload', methods=['GET', 'POST'])
 def upload_file_handler():
-    namespace = get_namespace(request)
-    if not namespace:
+    user = get_user(request)
+    if not user:
         log.error("No user session for upload attempt")
         abort(401)
         return
@@ -226,7 +226,7 @@ def upload_file_handler():
     if request.method == 'POST' and 'file' in request.files:
         uploaded_file = request.files['file']
 
-        meta = MessageMeta(namespace_id=namespace.id)
+        meta = MessageMeta(namespace_id=user.root_namespace_id)
         part = BlockMeta(
                 messagemeta=meta,
                 filename=uploaded_file.filename,
@@ -295,9 +295,9 @@ def gallery_handler(email, id):
 def block_retrieval(blockhash):
     if not blockhash: return None
 
-    if not get_namespace(request): return None
+    if not get_user(request): return None
 
-    return get_namespace(request).email_address
+    return get_user(request).email_address
 
     query = db_session.query(BlockMeta).filter(BlockMeta.data_sha256 == blockhash)
 

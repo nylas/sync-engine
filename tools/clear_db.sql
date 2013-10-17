@@ -8,4 +8,4 @@ drop table if exists namespace_user_association;
 drop table if exists user_session;
 drop table if exists user;
 drop table if exists namespace;
-drop table if exists credentials;
+drop table if exists imapaccount;

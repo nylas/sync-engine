@@ -8,12 +8,13 @@ from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 
 from sqlalchemy import event
-from sqlalchemy.orm import reconstructor, relationship
+from sqlalchemy.orm import reconstructor, relationship, backref
 from sqlalchemy.schema import UniqueConstraint
 
 from hashlib import sha256
 from os import environ
 from .util.file import mkdirp, remove_file, Lock
+from .util.itert import chunk
 
 import logging as log
 from sqlalchemy.dialects import mysql
@@ -30,6 +31,7 @@ class JSONSerializable(object):
         pass
 
 STORE_MSG_ON_S3 = True
+DB_CHUNK_SIZE = 100
 
 class Blob(object):
     """ A blob of data that can be saved to local or remote (S3) disk. """
@@ -160,9 +162,18 @@ class MediumPickle(PickleType):
 
 # global
 
-class Credentials(Base):
-    __tablename__ = 'credentials'
+class IMAPAccount(Base):
+    __tablename__ = 'imapaccount'
     id = Column(Integer, primary_key=True, autoincrement=True)
+
+    email_address = Column(String(254), nullable=True, index=True)
+    provider = Enum('Gmail', 'Outlook', 'Yahoo', 'Inbox')
+
+    # local flags & data
+    initial_sync_done = Column(Boolean)
+    sync_active = Column(Boolean, default=False)
+    save_raw_messages = Column(Boolean, default=True)
+    sync_host = Column(String(255), nullable=True)
 
     # oauth stuff (most providers support oauth at this point, shockingly)
     # TODO figure out the actual lengths of these
@@ -183,39 +194,6 @@ class Credentials(Base):
     # used to verify key lifespan
     date = Column(DateTime)
 
-class UserSession(Base):
-    """ Inbox-specific sessions. """
-    __tablename__ = 'user_session'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
-    token = Column(String(40))
-    # sessions have a many-to-one relationship with users
-    user_id = Column(Integer, ForeignKey('user.id'),
-            nullable=False)
-    user = relationship('User', backref='sessions')
-
-    @property
-    def email_address(self):
-        return self.user.root_namespace.email_address
-
-class Namespace(Base):
-    """ A way to do grouping / permissions, basically. """
-    __tablename__ = 'namespace'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    # NOTE: only root namespaces have email addresses and credentials
-    # http://stackoverflow.com/questions/386294/what-is-the-maximum-length-of-a-valid-email-address
-    email_address = Column(String(254), nullable=True, index=True)
-    email_provider = Enum('Gmail', 'Outlook', 'Yahoo', 'Inbox')
-    credentials_id = Column(Integer, ForeignKey('credentials.id'),
-            nullable=True)
-    credentials = relationship('Credentials', backref='namespace')
-
-    initial_sync_done = Column(Boolean)
-    sync_active = Column(Boolean, default=False)
-    save_raw_messages = Column(Boolean, default=True)
-    sync_host = Column(String(255), nullable=True)
-
     @property
     def _sync_lockfile_name(self):
         return "/var/lock/inbox_sync/{0}.lock".format(self.id)
@@ -230,6 +208,42 @@ class Namespace(Base):
     def sync_unlock(self):
         self._sync_lock.release()
 
+class UserSession(Base):
+    """ Inbox-specific sessions. """
+    __tablename__ = 'user_session'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    token = Column(String(40))
+    # sessions have a many-to-one relationship with users
+    user_id = Column(Integer, ForeignKey('user.id'),
+            nullable=False)
+    user = relationship('User', backref='sessions')
+
+    @property
+    def email_address(self):
+        return self.user.root_namespace.imapaccount.email_address
+
+class Namespace(Base):
+    """ A way to do grouping / permissions, basically. """
+    __tablename__ = 'namespace'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    # NOTE: only root namespaces have IMAP accounts
+    # http://stackoverflow.com/questions/386294/what-is-the-maximum-length-of-a-valid-email-address
+    imapaccount_id = Column(Integer, ForeignKey('imapaccount.id'),
+            nullable=True)
+    imapaccount = relationship('IMAPAccount', backref=backref('namespace',
+        uselist=False))
+
+    @property
+    def email_address(self):
+        if self.imapaccount is not None:
+            return self.imapaccount.email_address
+
+    @property
+    def is_root(self):
+        return self.imapaccount_id is not None
+
     def total_stored_data(self):
         return db_session.query(func.sum(BlockMeta.size)) \
                 .join(BlockMeta.messagemeta, MessageMeta.namespace) \
@@ -239,6 +253,32 @@ class Namespace(Base):
         return db_session.query(MessageMeta).join(MessageMeta.namespace) \
                 .filter(MessageMeta.namespace.id == self.root_namespace_id).count()
 
+    def get_messages(self, folder_name):
+        """ Returns all messages in a given folder.
+
+            Note that this may be more messages than included in the IMAP
+            folder, since we fetch the full thread if one of the messages is in
+            the requested folder.
+        """
+        # Get all thread IDs for all messages in this folder.
+        all_msgids = db_session.query(FolderMeta.messagemeta_id)\
+              .filter(FolderMeta.folder_name == folder_name,
+                      FolderMeta.namespace_id == self.id)
+        all_thrids = set()
+        for thrid, in db_session.query(MessageMeta.g_thrid).filter(
+                MessageMeta.namespace_id == self.id,
+                MessageMeta.id.in_(all_msgids)):
+            all_thrids.add(thrid)
+
+        # Get all messages for those thread IDs
+        all_msgs = []
+        for g_thrids in chunk(list(all_thrids), DB_CHUNK_SIZE):
+            all_msgs_query = db_session.query(MessageMeta).filter(
+                    MessageMeta.namespace_id == self.id,
+                    MessageMeta.g_thrid.in_(g_thrids))
+            all_msgs += all_msgs_query.all()
+
+        return all_msgs
 
 namespace_association = Table('namespace_user_association', Base.metadata,
         Column('namespace_id', Integer, ForeignKey('namespace.id')),
@@ -251,7 +291,8 @@ class User(JSONSerializable, Base):
 
     root_namespace_id = Column(Integer, ForeignKey('namespace.id'),
             nullable=False)
-    root_namespace = relationship('Namespace', backref='user')
+    root_namespace = relationship('Namespace',
+            backref=backref('root_user', uselist=False))
 
     namespaces = relationship("Namespace", secondary=namespace_association,
             backref="users")
@@ -260,7 +301,7 @@ class User(JSONSerializable, Base):
 
     @property
     def email_address(self):
-        return self.root_namespace.email_address
+        return self.root_namespace.imapaccount.email_address
 
 # sharded
 
@@ -348,7 +389,7 @@ class RawMessage(JSONSerializable, Blob, Base):
     namespace = relationship("Namespace")
 
     # Save data other than BODY[] that we query for when downloading messages
-    # from the IMAP backend.
+    # from the IMAP account.
     internaldate = Column(DateTime)
     g_msgid = Column(String(255))
     g_thrid = Column(String(255))
@@ -447,14 +488,14 @@ class UIDValidity(JSONSerializable, Base):
     """
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    namespace_id = Column(ForeignKey('namespace.id'), nullable=False)
-    namespace = relationship("Namespace")
+    account_id = Column(ForeignKey('imapaccount.id'), nullable=False)
+    account = relationship("IMAPAccount")
     folder_name = Column(String(255))
     uid_validity = Column(Integer)
     highestmodseq = Column(Integer)
 
-    __table_args__ = (UniqueConstraint('namespace_id', 'folder_name',
-        name='_folder_user_uc'),)
+    __table_args__ = (UniqueConstraint('account_id', 'folder_name',
+        name='_folder_account_uc'),)
 
 class Collection(Base):
     __tablename__ = 'collections'
