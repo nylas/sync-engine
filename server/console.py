@@ -3,32 +3,32 @@
 from .sessionmanager import get_crispin_from_email
 import IPython
 
-def start_console(user_email_address):
+def start_console(user_email_address=None):
 
     # You can also do this with
     # $ python -m imapclient.interact -H <host> -u <user> ...
     # but we want to use our sessionmanager and crispin so we're not.
+    if user_email_address:
+        def refresh_crispin():
+            return get_crispin_from_email(user_email_address)
 
+        c = refresh_crispin()
+        c.select_folder(c.all_mail_folder_name())
 
-    def refresh_crispin():
-        return get_crispin_from_email(user_email_address)
+        server_uids = [unicode(s) for s in c.imap_server.search(['NOT DELETED'])]
 
-    c = refresh_crispin()
-    c.select_folder(c.all_mail_folder_name())
+        banner = """
+        You can access the crispin instance with the 'c' variable.
+        AllMail message UIDs are in 'server_uids'.
+        You can refresh the session with 'refresh_crispin()'.
 
-    server_uids = [unicode(s) for s in c.imap_server.search(['NOT DELETED'])]
+        IMAPClient docs are at:
 
-    banner = """
-    You can access the crispin instance with the 'c' variable.
-    AllMail message UIDs are in 'server_uids'.
-    You can refresh the session with 'refresh_crispin()'.
+            http://imapclient.readthedocs.org/en/latest/#imapclient-class-reference
+        """
 
-    IMAPClient docs are at:
+        IPython.embed(banner1=banner)
+    else:
+        IPython.embed()
 
-        http://imapclient.readthedocs.org/en/latest/#imapclient-class-reference
-    """
-
-    IPython.embed(banner1=banner)
-
-    # XXX Any cleanup?
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
