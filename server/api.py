@@ -68,26 +68,27 @@ class API(object):
                       FolderMeta.namespace_id == namespace_id).all()
         all_msgids = [s[0] for s in all_msgids]
 
-
         # Get all thread IDs
         all_thrids = set()
         for msgids in chunk(all_msgids, db_chunk_size):
-            all_msgs_query = db_session.query(MessageMeta.g_thrid).filter(MessageMeta.id.in_(msgids))
+            all_msgs_query = db_session.query(MessageMeta.g_thrid).filter(
+                    MessageMeta.namespace_id == namespace_id,
+                    MessageMeta.id.in_(msgids))
             result = all_msgs_query.all()
             [all_thrids.add(s[0]) for s in result]
-
 
         # Get all messages for those thread IDs
         all_msgs = []
         for g_thrids in chunk(list(all_thrids), db_chunk_size):
-            all_msgs_query = db_session.query(MessageMeta).filter(MessageMeta.g_thrid.in_(g_thrids))
+            all_msgs_query = db_session.query(MessageMeta).filter(
+                    MessageMeta.namespace_id == namespace_id,
+                    MessageMeta.g_thrid.in_(g_thrids))
             result = all_msgs_query.all()
             all_msgs += result
 
         log.info('found %i messages IDs' % len(all_msgs))
         return json.dumps([m.client_json() for m in all_msgs],
                            default=json_util.default)  # Fixes serializing date.datetime
-
 
     def messages_with_ids(self, namespace_id, msg_ids):
         """ Returns MessageMeta objects for the given msg_ids """

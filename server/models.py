@@ -1,7 +1,7 @@
 import os
 
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum, Text
-from sqlalchemy import ForeignKey, Table, func
+from sqlalchemy import ForeignKey, Table, Index, func
 from sqlalchemy.types import PickleType
 
 from sqlalchemy.ext.declarative import declarative_base
@@ -291,6 +291,7 @@ class MessageMeta(JSONSerializable, Base):
     size = Column(Integer, default=0)
     data_sha256 = Column(String(255))
 
+    # TODO genericize these
     g_msgid = Column(String(255))
     g_thrid = Column(String(255))
 
@@ -311,6 +312,10 @@ class MessageMeta(JSONSerializable, Base):
         d['g_thrid'] = self.g_thrid
         d['namespace_id'] = self.namespace_id
         return d
+
+# make pulling up all messages in a given thread fast
+Index('messagemeta_namespace_id_g_thrid', MessageMeta.namespace_id,
+        MessageMeta.g_thrid)
 
 # These are the top 15 most common Content-Type headers
 # in my personal mail archive. --mg
@@ -430,6 +435,10 @@ class FolderMeta(JSONSerializable, Base):
 
     __table_args__ = (UniqueConstraint('folder_name', 'msg_uid', 'namespace_id',
         name='_folder_msg_user_uc'),)
+
+# make pulling up all messages in a given folder fast
+Index('foldermeta_namespace_id_folder_name', FolderMeta.namespace_id,
+        FolderMeta.folder_name)
 
 class UIDValidity(JSONSerializable, Base):
     __tablename__ = 'uidvalidity'
