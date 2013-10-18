@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en" ng-app='InboxApp'>
+<head>
+    <meta charset="utf-8">
+    <title>Contacts Sync</title>
+
+
+<link rel="stylesheet" href="css/style.css"/>
+
+<!-- typekit -->
+<script type="text/javascript" src="//use.typekit.net/ccs3tld.js"></script>
+<script type="text/javascript">try{Typekit.load();}catch(e){}</script>
+
+</head>
+
+<body>
+
+
+<body>
+
+<div id="container" ngCloak data-ng-controller="AppContainerController">
+
+  <h1>Contacts</h1>
+
+
+
+  <div class="subhead">
+
+      <a class="button" id="create_contact" tabindex=1>Create</a>
+      <br/><br/>
+
+      <form>
+        <input type="text" name="search_contacts" id="search_contacts" placeholder="Search&hellip;" autocomplete="off" spellcheck="false" tabindex=1>
+      </form>
+
+  </div>
+
+</div>
+
+
+
+
+
+
+<!-- JavaScript Includes -->
+<script src="lib/jquery.min.js"></script>
+<script src="lib/jquery-utils/jquery.ui.widget.js"></script>
+<script src="lib/jquery-utils/jquery.iframe-transport.js"></script>
+<script src="lib/jquery-utils/jquery.fileupload.js"></script>
+
+<!-- Aaaaaaaangular -->
+<script src="lib/angular/angular.js"></script>
+<script src="lib/angular/angular-sanitize.js"></script>
+<script src="lib/angular/angular-cookies.js"></script>
+<script src="lib/angular-modules/localStorageModule.js"></script>
+
+<!-- Libraries-->
+<script src="lib/bootstrap/ui-bootstrap-0.3.0.js"></script>
+<script src="lib/utils/md5.js"></script>
+<script src="lib/socketio/socket.io.js"></script>
+
+<!-- Our App -->
+<script src="js/app.js"></script>
+<script src="js/models.js"></script>
+<script src="js/controllers.js"></script>
+
+<script src="js/services.js"></script>
+<script src="js/services/Wire.js"></script>
+
+<script src="js/filters.js"></script>
+<script src="js/directives.js"></script>
+
+
+</body>
+</html>

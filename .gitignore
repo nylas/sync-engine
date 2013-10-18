@@ -1,1 +1,8 @@
 *.db
+*.pyc
+
+.DS_Store
+.Python
+/bin
+/include
+/lib
