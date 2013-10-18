@@ -100,7 +100,7 @@ def verify_imap_account(account):
         # TODO Verify it and make sure it's valid.
         assert 'access_token' in response
         account = make_account(response)
-        log.info("Updated token for imap account {0}" % account.email_address)
+        log.info("Updated token for imap account {0}".format(account.email_address))
 
     return account
 
