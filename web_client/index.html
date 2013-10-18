@@ -31,92 +31,102 @@
 
 <!--  <div id="header">&nbsp;</div>  -->
 <div id="main">
-    <div class="leftcol">
-
-        <div class="header_left">
-            <div class="header_inboxicon_small clickable">
-            </div>
-
-            <headersearchbox handler="performSearch"></headersearchbox>
-            <div class="header_composebutton clickable" data-ng-click="composeButtonHandler()"></div>
-        </div>
-
-        <div class="messagelist">
-            <itemcell data-ng-repeat="t in displayedThreads"
-                      thread="t"
-                      data-ng-click="openThread(t)"
-                      selected="t == activeThread">
-            </itemcell>
-        </div>
-
-        <div class="footer_left">
-            <div class="gearbutton clickable"></div>
-            <div class="footerstatus" ng-bind="statustext" ng-cloak></div>
-        </div>
-
-    </div>
 
 
-
-    <div id="rightcol">
-        <div class="content">
-
-
-            <div class="contentBody" id="right-scrollable">
-
-
-                <div class="contentHead" ng-show="activeThread">
-                        <div class="email-content-title">
-                            <span ng-bind="activeThread[0].subject"></span>
-                        </div>
-
-                            <span class="email-content-subtitle" ng-show="activeThread[0] != null">Sent to {{activeThread[0].contactDisplayList}}</span>
+  <div class="sidebar">
+    <div class="sidebar_icon search clickable"></div>
+    <div class="sidebar_icon mail clickable"></div>
+    <div class="sidebar_icon todo clickable"></div>
+    <div class="sidebar_icon stacks clickable"></div>
+    <div class="sidebar_icon people clickable active"></div>
+    <div class="sidebar_icon groups clickable"></div>
+    <div class="sidebar_icon settings clickable"></div>
+  </div>
 
 
-                        <div class="btn-group" style="float:right">
-                            <button class="btn primary" data-ng-click="archiveButtonHandler()">Archive</button>
-                            <button class="btn primary dropdown-toggle" data-toggle="dropdown"><span class="caret"></span></button>
-                            <ul class="dropdown-menu pull-right">
-                              <li><a href="#" data-ng-click="archiveButtonHandler()">Send to&nbsp;<img src="img/asana-icon.png"/></a></li>
-                              <li><a href="#" data-ng-click="archiveButtonHandler()">Send to Salesforce</a></li>
-                              <li class="divider"></li>
-                              <li><a href="#" data-ng-click="archiveButtonHandler()">Delete</a></li>
-                            </ul>
-                          </div>
+  <div class="left_side">
 
+    <div class="header_left">
+        <div class="header_pane_container">
 
-                </div>
-
-                <div style="clear:both"></div>
-
-
-                <div class="email-message-container"  ng-repeat="message in activeThread">
-                    <threadview message="message"></threadview>
-                 </div>
-
-
-
-                <div class="contentFoot" ng-show="activeThread">>
-
-                     <replybox send-button-action="sendMessage(message_text)">
-                     </replybox>
-                </div>
-
-            </div>
-
-
+          <headersearchbox handler="performSearch"></headersearchbox>
+          <div style="float:right">
+            <div class="action_button clickable compose" data-ng-click="composeButtonHandler()">New</div>
+            <div class="action_button_sep"></div>
+          </div>
 
         </div>
     </div>
+
+    <div class="left_pane">
+      <div class="messagelist">
+        <itemcell data-ng-repeat="t in displayedThreads"
+                  thread="t"
+                  data-ng-click="openThread(t)"
+                  selected="t == activeThread">
+        </itemcell>
+      </div>
+    </div>
+
+  </div>
+  <!-- End left side -->
+
+
+
+  <!-- Begin right side -->
+  <div class="panel_right">
+      <div class="action_bar_top">
+
+        <div class="action_button clickable archive" data-ng-click="archiveButtonHandler()">Archive</div>
+          <div class="action_button_sep"></div>
+        <div class="action_button clickable todo">Todo</div>
+          <div class="action_button_sep"></div>
+
+        <div class="action_button clickable snooze">Snooze</div>
+          <div class="action_button_sep"></div>
+        <div class="action_button clickable move">Move</div>
+          <div class="action_button_sep"></div>
+        <div class="action_button clickable group">Group</div>
+          <div class="action_button_sep"></div>
+        <div class="action_button clickable more">&nbsp</div>
+
+      </div>
+
+
+    <div class="panel_right_content">
+
+      <div class="contentBody">
+        <div class="contentHead" ng-show="activeThread">
+          <div class="email-content-title" ng-bind="activeThread[0].subject">
+          </div>
+
+          <span class="email-content-subtitle" ng-show="activeThread[0] != null">Sent to {{activeThread[0].contactDisplayList}}</span>
+
+        </div>
+
+        <div style="clear:both"></div>
+
+        <div class="email-message-container"  ng-repeat="message in activeThread">
+            <threadview message="message"></threadview>
+        </div>
+
+
+        <div class="contentFoot" ng-show="activeThread">>
+          <replybox send-button-action="sendMessage(message_text)"></replybox>
+        </div>
+
+      </div>
+
+
+    </div>
+  </div>
 </div>
 </div>
 
 
 
 <!-- JavaScript Includes -->
-
 <script src="js/bootstrap.js"></script>
-
 
 <script src="lib/jquery.min.js"></script>
 <script src="lib/jquery-utils/jquery.ui.widget.js"></script>

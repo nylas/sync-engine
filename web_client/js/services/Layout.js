@@ -23,12 +23,12 @@ app.factory('layout', function() {
             windowSize.headersHeight = $('#header').height();
             windowSize.mainHeight = windowSize.height - windowSize.headersHeight;
 
-            windowSize.leftColHeight = windowSize.mainHeight;
+            windowSize.leftPaneHeight = windowSize.mainHeight;
             windowSize.leftMessageListHeight = windowSize.mainHeight - $('.header_left').outerHeight(true) - $('.footer_left').outerHeight(true);
 
-            windowSize.rightContentWidth = windowSize.width - $('.leftcol').width();
+            windowSize.rightContentWidth = windowSize.width - $('.sidebar').width() - $('.left_pane').width();
 
-            windowSize.contentBodyHeight = windowSize.mainHeight; //  - $('.contentHead').outerHeight(true) - $('#reply_box').outerHeight(true) + 10;
+            windowSize.contentBodyHeight = windowSize.mainHeight  - $('.action_bar_top').outerHeight(true);
 
             windowSize.contentBodyWidth = $('.contentBody').width();
 
@@ -36,12 +36,13 @@ app.factory('layout', function() {
         },
         updateSizes: function() {
             $('#main').css('height', windowSize.mainHeight + 'px');
-            $('.leftcol').css('height', windowSize.leftColHeight + 'px');
+            $('.left_pane').css('height', windowSize.leftPaneHeight + 'px');
             $('.messagelist').css('height', windowSize.leftMessageListHeight + 'px');
 
-            $('.content').css('width', windowSize.rightContentWidth + 'px');
+            $('.panel_right_content').css('width', windowSize.rightContentWidth + 'px');
 
-            $('#reply_box').css('width', windowSize.rightContentWidth - 20.0 + 'px'); // TOFIX DEBUG HACK
+            $('.panel_right').css('width', windowSize.rightContentWidth + 'px');
+
 
             $('.contentBody').css('width', windowSize.rightContentWidth + 'px');
             $('.contentBody').css('height', (windowSize.contentBodyHeight) + 'px');

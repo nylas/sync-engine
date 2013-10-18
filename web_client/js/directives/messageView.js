@@ -179,26 +179,14 @@ app.directive("messagecontainer", function($compile, wire) {
 
                         } else {
 
-                            // var wrapped_html = '<html><head>' +
-                            //     '<script type="text/javascript" src="//use.typekit.net/ccs3tld.js"></script>' +
-                            //     '<script type="text/javascript">try{Typekit.load();}catch(e){}</script>' +
-                            //     '<style rel="stylesheet" type="text/css">' +
-                            //     'body { font-family:"proxima-nova-alt", courier, sans-serif;' +
-                            //     ' }' +
-                            //     '</style></head><body>' +
-                            //     data_dict.message_data.replace(/\n/g, '<br />') +
-                            //     '</body></html>';
                             $scope.body_content = wrapped_html;
                             $scope.body_content = data_dict.message_data;
-
 
                         }
                         console.log($scope);
                         // message.parts[part_id].content_body
                     });
 
-
-                console.log("Done setting:");
             });
 
         },
@@ -311,6 +299,7 @@ app.directive("messageframe", function() {
                     to_wrap = 'Loading&hellip;';
                 }
 
+
                     var wrapped_html = '<html><head>' +
                         '<script type="text/javascript" src="//use.typekit.net/ccs3tld.js"></script>' +
                         '<script type="text/javascript">try{Typekit.load();}catch(e){}</script>' +
@@ -318,10 +307,10 @@ app.directive("messageframe", function() {
                         'body { background-color:#FFF; ' +
                         'font-smooth:always;' +
                         ' -webkit-font-smoothing:antialiased;' +
-                        ' font-family:"proxima-nova-alt", courier, sans-serif;' +
-                        ' font-weight: 500' +
-                        ' font-size:14px;' +
-                        ' color:#333;' +
+                        ' font-family:HelveticaNeue, sans-serif, sans-serif;' +
+                        ' font-weight: 500;' +
+                        ' font-size:15px;' +
+                        ' color:#5F5F5F;' +
                         ' font-variant:normal;' +
                         ' line-height:1.6em;' +
                         ' font-style:normal;' +
@@ -342,16 +331,8 @@ app.directive("messageframe", function() {
 
                     injectToIframe(wrapped_html);
                     return;
-                // }
-                // injectToIframe(val);
-                // injectToIframe(scope.content);
             });
-
-
-
-
-
-        } // End of link function
+        } // end link fn
 
     };
 });
@@ -366,49 +347,14 @@ app.directive("gravatar", function() {
         transclude: true,
         scope: {
             message: '='
-        }, // Two-way binding to message object
-        controller: function($scope, $element, $attrs, $transclude) {
-
-            $scope.gravatar_image = {
-                display: 'inline-block',
-                fontWeight: 600,
-                fontFamily: '"proxima-nova-alt", sans-serif',
-                fontSize: '15px',
-                color: '#708080',
-                paddingTop: '10px',
-                // lineHeight: '17px',
-            };
-
         },
-
-        // add back green_glow class sometime
-        template: '<div ng-style="gravatar_image"></div>',
-
+        template: '<div class="gravatar_image" style="background-image: url({{message.gravatar_url}})"></div>',
         link: function(scope, iElement, iAttrs) {
             scope.$watch('message.gravatar_url', function(val) {
-                if (angular.isUndefined(val)) {
-                    // Set to a default
-                    console.log('Unknown gravatar url');
-                } else {
-
-                    iElement.css({
-                        position: 'absolute',
-                        left: '10px',
-                        top: '10px',
-                        // marginTop: '10px',
-                        //    marginRight: 10 + 'px',
-                        //    marginLeft: '-5px',
-                        width: 34 + 'px',
-                        height: 34 + 'px',
-                        borderRadius: 34 + 'px',
-                        borderWidth: '1px',
-                        borderStyle: 'solid',
-                        borderColor: '#E6E8EA',
-
-                        // background: 'left center no-repeat',
-                        backgroundImage: 'url(' + scope.message.gravatar_url + ')',
-                        backgroundSize: 'cover',
-                        overflow: 'visible',
+                if (!angular.isUndefined(val)) {
+                    console.log(iElement);
+                    iElement.css({backgroundImage:
+                                  'url(' + scope.message.gravatar_url + ')',
                     });
                 }
             });
