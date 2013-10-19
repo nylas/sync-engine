@@ -11,6 +11,7 @@ app.controller('AppContainerController',
     function($scope,
         $rootScope,
         wire,
+        IBContact,
         $filter)
 {
 
@@ -25,10 +26,21 @@ app.controller('AppContainerController',
             }
 
             console.log(["Calling search", query]);
-            wire.rpc('search', [query], function(data) {
 
-                console.log(["Got response", data]);
-                // var msg_ids = JSON.parse(data);
+            wire.rpc('search', [query], function(rpc_data) {
+
+                console.log(["Got response", rpc_data]);
+                var fresh_contacts = [];
+
+                angular.forEach(rpc_data, function(value, key) {
+                    console.log(value);
+                    var new_contact = new IBContact(value);
+
+                    fresh_contacts.push(new_contact);
+                });
+
+                console.log(fresh_contacts);
+
             });
         };
 

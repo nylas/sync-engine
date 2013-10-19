@@ -3,6 +3,7 @@ import os
 import sys
 import datetime
 import dateutil.parser
+import json
 
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum, Text
 from sqlalchemy import ForeignKey, Table, Index, func
@@ -39,6 +40,11 @@ class Contact(Base):
 
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.current_timestamp())
     created_at = Column(DateTime, server_default=func.now())
+
+    def cereal(self):
+        return dict(email=self.email,
+                    name=self.name,
+                    google_id=self.google_id)
 
 def connect_to_db():
 ## Make the tables
@@ -102,36 +108,35 @@ def main():
     print dir(gd_client)
     db_session = connect_to_db()
     contacts = []
-   
-   
+
     try:
-        user = db_session.query(User).filter_by(email = user_email).one()    
+        user = db_session.query(User).filter_by(email = user_email).one()
     except sqlalchemy.orm.exc.NoResultFound:
         user = User()
         user.email = user_email
         user.last_synced = datetime.datetime.fromtimestamp(0)
-        
+
     recent_uri = "https://www.google.com/m8/feeds/contacts/default/full?updated-min=" + user.last_synced.isoformat()
 
     for contact in gd_client.GetContacts(uri = recent_uri).entry:
         c = Contact()
         emails = filter(lambda email: email.primary, contact.email)
-        
+
         c.name = contact.name.full_name.text
         c.google_id = contact.id.text
 
         if emails:
             c.email = emails[0].address
-        
+
         google_updated_at = dateutil.parser.parse(contact.updated.text)
 
         contacts.append(c)
-    
+
     user.last_synced = datetime.datetime.now()
     db_session.add(user)
     db_session.add_all(contacts)
     db_session.commit()
-     
+
     print db_session.query(Contact).all()
 
 if __name__ == "__main__":
