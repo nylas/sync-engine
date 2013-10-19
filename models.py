@@ -6,6 +6,7 @@ import dateutil.parser
 
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum, Text
 from sqlalchemy import ForeignKey, Table, Index, func
+import sqlalchemy.orm
 
 from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
@@ -21,6 +22,7 @@ import gdata.contacts.client
 
 
 class User(Base):
+    __tablename__ = "user"
     email = Column(String(64), primary_key=True)
 
     last_synced = Column(DateTime)
@@ -89,20 +91,27 @@ def get_gd_client():
         print 'Invalid user credentials given.'
         return
 
-    return gd_client
+    return user, gd_client
 
 def sync_contacts():
     db_session.add_all(contacts_to_commit)
     db_session.commit()
 
 def main():
-    gd_client = get_gd_client()
+    user_email, gd_client = get_gd_client()
+    print dir(gd_client)
     db_session = connect_to_db()
     contacts = []
-    
-    
-
-    recent_uri = "https://www.google.com/m8/feeds/contacts/default/full?updated-min=2007-03-16T00:00:00"
+   
+   
+    try:
+        user = db_session.query(User).filter_by(email = user_email).one()    
+    except sqlalchemy.orm.exc.NoResultFound:
+        user = User()
+        user.email = user_email
+        user.last_synced = datetime.datetime.fromtimestamp(0)
+        
+    recent_uri = "https://www.google.com/m8/feeds/contacts/default/full?updated-min=" + user.last_synced.isoformat()
 
     for contact in gd_client.GetContacts(uri = recent_uri).entry:
         c = Contact()
@@ -117,6 +126,9 @@ def main():
         google_updated_at = dateutil.parser.parse(contact.updated.text)
 
         contacts.append(c)
+    
+    user.last_synced = datetime.datetime.now()
+    db_session.add(user)
     db_session.add_all(contacts)
     db_session.commit()
      
