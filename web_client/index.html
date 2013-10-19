@@ -97,16 +97,16 @@
 
       <div class="contentBody">
         <div class="contentHead" ng-show="activeThread">
-          <div class="email-content-title" ng-bind="activeThread[0].subject">
+          <div class="email-content-title" ng-bind="activeThread.subject()">
           </div>
 
-          <span class="email-content-subtitle" ng-show="activeThread[0] != null">Sent to {{activeThread[0].contactDisplayList}}</span>
+          <span class="email-content-subtitle" ng-show="activeThread.recentMessage() != null">Sent to {{activeThread.recentMessage().contactDisplayList}}</span>
 
         </div>
 
         <div style="clear:both"></div>
 
-        <div class="email-message-container"  ng-repeat="message in activeThread">
+        <div class="email-message-container"  ng-repeat="message in activeThread.messages">
             <threadview message="message"></threadview>
         </div>
 

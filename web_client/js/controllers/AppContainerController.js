@@ -13,6 +13,7 @@ app.controller('AppContainerController',
         $rootScope,
         wire,
         growl,
+        IBThread,
         IBMessageMeta,
         IBMessagePart,
         protocolhandler,
@@ -173,21 +174,17 @@ app.controller('AppContainerController',
 
                 $scope.statustext = "";
                 var arr_from_json = JSON.parse(data);
-                var freshMessages = [];
 
                 var thread_dict = {};
-
                 angular.forEach(arr_from_json, function(value, key) {
 
                     var newMessage = new IBMessageMeta(value);
                     $scope.message_map[newMessage.g_id] = newMessage;
 
                     if (!thread_dict[newMessage.g_thrid]) {
-                        thread_dict[newMessage.g_thrid] = [];
+                        thread_dict[newMessage.g_thrid] = new IBThread();
                     }
-                    thread_dict[newMessage.g_thrid].push(newMessage);
-
-                    freshMessages.push(newMessage);
+                    thread_dict[newMessage.g_thrid].messages.push(newMessage);
                 });
 
 
@@ -197,8 +194,8 @@ app.controller('AppContainerController',
 
 
                 // Sort individual threads in ascending order
-                angular.forEach(thread_dict, function(thread_messages, key) {
-                    thread_messages = thread_messages.sort(
+                angular.forEach(thread_dict, function(thread, key) {
+                    thread.messages.sort(
                         function sortDates(msg1, msg2) {
                             if (msg1.date > msg2.date) return 1;
                             if (msg1.date < msg2.date) return -1;
@@ -213,11 +210,11 @@ app.controller('AppContainerController',
 
                 // Sort threads based on last object (most recent) in descending order
                 all_threads = all_threads.sort(
-                    function sortDates(msg_array1, msg_array2) {
-                        if (msg_array1[msg_array1.length - 1].date > msg_array2[msg_array2.length - 1].date) return -1;
-                        if (msg_array1[msg_array1.length - 1].date < msg_array2[msg_array2.length - 1].date) return 1;
+                    function sortDates(thread1, thread2) {
+                        if (thread2.recentMessage().date > thread1.recentMessage().date.date) return -1;
+                        if (thread1.recentMessage().date < thread2.recentMessage().date) return 1;
                         return 0;
-                    });
+                });
 
                 console.log(all_threads);
 

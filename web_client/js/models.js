@@ -21,19 +21,45 @@ https://groups.google.com/forum/#!msg/angular/56sdORWEoqg/b8hdPskxZXsJ
 
 app.factory('IBThread', function ($injector) {
 
-    function IBThreadObject($rootScope, data) {
+    function IBThreadObject($rootScope) {
+        // TODO assert that these are the right message object types
+        this.messages = [];
         this.$rootScope = $rootScope;
-        // TODO handle default values here or when data=none
-        this.message_ids = data.message_ids;
-        this.thread_id = data.thread_id;
-        this.labels = data.labels;
     }
 
 
-    return function(data) {
-      return $injector.instantiate(
-        IBThreadObject, {data:data});
+
+
+    IBThreadObject.prototype.recentMessage = function() {
+        return this.messages[this.messages.length - 1];
     };
+
+    IBThreadObject.prototype.subject = function() {
+        return this.messages[0].subject;
+    };
+
+
+
+    return function(messages) {
+        // This is based on $injector.instantiate
+        var Type = IBThreadObject;
+        // var locals = {messages:messages};
+        var locals = {};
+
+        var IBThread = function() {};
+        var instance;
+        var returnedValue;
+
+        // Check if Type is annotated and use just the given function at n-1 as parameter
+        // e.g. someModule.factory('greeter', ['$window', function(renamed$window) {}]);
+        IBThread.prototype = (angular.isArray(Type) ? Type[Type.length - 1] : Type).prototype;
+        instance = new IBThreadObject();
+
+        returnedValue = $injector.invoke(Type, instance, locals);
+        return angular.isObject(returnedValue) ? returnedValue : instance;
+
+    };
+
 });
 
 
@@ -88,6 +114,15 @@ app.factory('IBMessageMeta', function ($injector)
         } else {
             this.contactDisplayList = 'Unknown sender';
         }
+    }
+
+
+    IBMessageMetaObject.prototype.fromName = function() {
+        return this.from[0][0];
+    }
+
+    IBMessageMetaObject.prototype.fromEmail = function() {
+        return this.from[0][2] + '@' + this.from[3];
     }
 
 

@@ -50,34 +50,19 @@ select:focus
   outline: 0;
 }
 
-input[type="text"]
-{
-  padding: 0px;
-  margin: 0px;
+input[type="text"] {
+  padding: 0;
+  margin: 0;
 }
-
-
 
 :hover {
   cursor: default;
 }
 
 
-
-
-
 body
 {
-
-/*
--webkit-font-smoothing: subpixel-antialiased;
--webkit-text-stroke: .10pt black;
-  font-smoothing:always;
-  -webkit-font-smoothing:antialiased;
-*/
-
   font-family: HelveticaNeue-Light, sans-serif;
-
 
   background-color: #E1E4E6;
   color: #616566;
@@ -147,8 +132,7 @@ a {
   overflow:hidden;
 }
 
-#main
-{
+#main {
   position:relative;
   width:200%; /* prevent flickering when resizing */
   overflow:hidden;
@@ -156,11 +140,7 @@ a {
 
 
 
-
-
-
-.sidebar
-{
+.sidebar {
   height:100%;
   width: 44px;
   float:left;
@@ -341,25 +321,26 @@ input[type="text"] { border: none }
 
 .itemcell_email_item {
   padding-top: 8px;
-  padding-bottom: 6px;
+  padding-bottom: 10px;
 
   padding-left: 10px;
   padding-right: 6px;
 
-  display:block;
-  height: 58px;
-  min-height: 58px;
-  max-height: 58px;
-  overflow: hidden;
-
-  color: #333;
   border-bottom-width: 1px;
   border-bottom-style: solid;
   border-bottom-color: #C3CDCD;
 
   color: #333333;
+  font-size: 12px;
+}
 
-  font-size: 12.5px;
+
+.itemcell_email_container {
+  display:block;
+  height: 58px;
+  min-height: 58px;
+  max-height: 58px;
+  overflow: hidden;
 }
 
 .itemcell_email_item_unread
@@ -369,43 +350,43 @@ input[type="text"] { border: none }
   border-left-color: #79AFFF;
 }
 
-.itemcell_byline
-{
+.itemcell_byline {
+  font-weight: 500;
+  font-family: HelveticaNeue, sans-serif;
+  color: #333;
+  font-size: 14px;
+  line-height: 13px;
+  padding-top: 6px;
+  padding-bottom:4px;
+  /*letter-spacing: 0.2px;*/
+}
 
+.itemcell_date {
   font-family: HelveticaNeue-Light, sans-serif;
+  color: #708080;
   font-size: 12px;
   line-height: 13px;
   padding-top: 4px;
   padding-bottom:4px;
-  float:left;
-  width: 250px;
+  letter-spacing: 0.2px;
 }
 
 
-.itemcell_date
-{
+.itemcell_summary {
+  font-size: 12px;
   font-family: HelveticaNeue-Light, sans-serif;
-  font-size: 11px;
-  font-weight:200;
-  line-height: 16px;
-  float:right;
-}
-
-.itemcell_sumary {
-  font-family: HelveticaNeue, sans-serif;
-  font-weight:200;
-  letter-spacing:2px;
-  color: #708080;
+  line-height: 18px;
+  letter-spacing: 0.3px;
+  color: #666;
 }
 
 .itemcell_summary_subject {
+  color: #333;
   font-family: HelveticaNeue-Medium, sans-serif;
 }
 
-
-
 .itemcell_email_item_hover {
-  background-color: #f1f1f1; !important;
+  background-color: #f3f3f3; !important;
 }
 
 .itemcell_email_item_active {
@@ -453,6 +434,10 @@ input[type="text"] { border: none }
 
   margin-left: 0px;
   min-height: 30px;
+}
+
+.action_button:hover {
+    background-color: #f8f8f8 !important;
 }
 
 .action_button.compose {

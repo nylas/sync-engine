@@ -25,7 +25,6 @@ app.directive("headersearchbox", function() {
 app.directive("itemcell", function($filter) {
     return {
         restrict: 'E',
-        transclude: true,
         scope: {
             selected: '=',
             thread: '=',
