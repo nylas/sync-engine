@@ -5,8 +5,7 @@ import datetime
 import dateutil.parser
 import json
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum, Text
-from sqlalchemy import ForeignKey, Table, Index, func
+from sqlalchemy import *
 import sqlalchemy.orm
 
 from sqlalchemy.ext.declarative import declarative_base
@@ -36,15 +35,21 @@ class Contact(Base):
     email = Column(String(64))
     name = Column(String(64))
 
-    google_id = Column(String(64), unique=True, index=True)
+    google_id = Column("google_id", String(64))
 
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.current_timestamp())
     created_at = Column(DateTime, server_default=func.now())
 
+    source = Column("source", Enum("local", "remote")) 
+
+    UniqueConstraint("google_id", "source")
     def cereal(self):
         return dict(email=self.email,
                     name=self.name,
                     google_id=self.google_id)
+
+    def __repr__(self):
+        return str(self.name) + ", " + str(self.email) + ", " + str(self.source)
 
 def connect_to_db():
 ## Make the tables
@@ -105,10 +110,8 @@ def sync_contacts():
 
 def main():
     user_email, gd_client = get_gd_client()
-    print dir(gd_client)
     db_session = connect_to_db()
     contacts = []
-
     try:
         user = db_session.query(User).filter_by(email = user_email).one()
     except sqlalchemy.orm.exc.NoResultFound:
@@ -116,28 +119,64 @@ def main():
         user.email = user_email
         user.last_synced = datetime.datetime.fromtimestamp(0)
 
-    recent_uri = "https://www.google.com/m8/feeds/contacts/default/full?updated-min=" + user.last_synced.isoformat()
+    updated_min = user.last_synced.isoformat()
+    query = gdata.contacts.client.ContactsQuery()
+    query.updated_min = updated_min
+    feed = gd_client.GetContacts(q = query) 
 
-    for contact in gd_client.GetContacts(uri = recent_uri).entry:
-        c = Contact()
+    existing_contacts = db_session.query(Contact).filter_by(source = "local").all()
+    cached_contacts = db_session.query(Contact).filter_by(source = "remote").all()
+
+    contact_dict = {}
+    for contact in existing_contacts:
+        contact_dict[contact.google_id] = contact
+    
+    cached_dict = {}
+    for contact in cached_contacts:
+        cached_dict[contact.google_id] = contact
+
+    for contact in gd_client.GetContacts(q = query).entry:
         emails = filter(lambda email: email.primary, contact.email)
-
-        c.name = contact.name.full_name.text
-        c.google_id = contact.id.text
+        
+        google_result = {
+            "name": contact.name.full_name.text,
+            "google_id": contact.id.text,
+            "updated_at": dateutil.parser.parse(contact.updated.text)
+        }
 
         if emails:
-            c.email = emails[0].address
+            google_result["email"] = emails[0].address
+        
+        # make an object out of the google result
+        c = Contact(source='local', **google_result)
 
-        google_updated_at = dateutil.parser.parse(contact.updated.text)
+        if c.google_id in contact_dict:
+            existing = contact_dict[c.google_id]
+            if c.google_id in cached_dict:
+                # now we can get a diff and merge
+                cached = cached_dict[c.google_id]
 
-        contacts.append(c)
+                if cached.name != c.name:
+                    existing.name = c.name
+                if cached.email != c.email:
+                    existing.email = c.email
+            
+            else:
+                # no diff, just overwrite it
+                existing = contact_dict[c.google_id]
+                existing.name = c.name
+                existing.email = c.email
+            
+        else:
+            # doesn't exist yet, add both remote and local
+            db_session.add(c)
+            cached = Contact(**google_result)
+            cached.source = "remote"
+            db_session.add(cached)
 
     user.last_synced = datetime.datetime.now()
     db_session.add(user)
-    db_session.add_all(contacts)
     db_session.commit()
-
-    print db_session.query(Contact).all()
 
 if __name__ == "__main__":
     main()
