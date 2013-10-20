@@ -40,7 +40,7 @@ class Contact(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.current_timestamp())
     created_at = Column(DateTime, server_default=func.now())
 
-    source = Column("source", Enum("local", "remote")) 
+    source = Column("source", Enum("local", "remote"))
 
     UniqueConstraint("google_id", "source")
     def cereal(self):
@@ -104,11 +104,8 @@ def get_gd_client():
 
     return user, gd_client
 
-def sync_contacts():
-    db_session.add_all(contacts_to_commit)
-    db_session.commit()
 
-def main():
+def sync_contacts():
     user_email, gd_client = get_gd_client()
     db_session = connect_to_db()
     contacts = []
@@ -122,7 +119,7 @@ def main():
     updated_min = user.last_synced.isoformat()
     query = gdata.contacts.client.ContactsQuery()
     query.updated_min = updated_min
-    feed = gd_client.GetContacts(q = query) 
+    query.max_results = 25000  # TODO should probably fetch in batches instead of at once
 
     existing_contacts = db_session.query(Contact).filter_by(source = "local").all()
     cached_contacts = db_session.query(Contact).filter_by(source = "remote").all()
@@ -130,23 +127,28 @@ def main():
     contact_dict = {}
     for contact in existing_contacts:
         contact_dict[contact.google_id] = contact
-    
+
     cached_dict = {}
     for contact in cached_contacts:
         cached_dict[contact.google_id] = contact
 
+
     for contact in gd_client.GetContacts(q = query).entry:
         emails = filter(lambda email: email.primary, contact.email)
-        
-        google_result = {
-            "name": contact.name.full_name.text,
-            "google_id": contact.id.text,
-            "updated_at": dateutil.parser.parse(contact.updated.text)
-        }
+
+        try:
+            google_result = {
+                "name": contact.name.full_name.text if (contact.name and contact.name.full_name) else None,
+                "google_id": contact.id.text if contact.id else None,
+                "updated_at": dateutil.parser.parse(contact.updated.text) if contact.updated else None,
+            }
+        except AttributeError, e:
+            print "Something weird with contact:", contact
+            raise e
 
         if emails:
             google_result["email"] = emails[0].address
-        
+
         # make an object out of the google result
         c = Contact(source='local', **google_result)
 
@@ -160,23 +162,29 @@ def main():
                     existing.name = c.name
                 if cached.email != c.email:
                     existing.email = c.email
-            
+
             else:
                 # no diff, just overwrite it
                 existing = contact_dict[c.google_id]
                 existing.name = c.name
                 existing.email = c.email
-            
+
         else:
             # doesn't exist yet, add both remote and local
             db_session.add(c)
             cached = Contact(**google_result)
             cached.source = "remote"
             db_session.add(cached)
+            print "Added new contact."
+
 
     user.last_synced = datetime.datetime.now()
     db_session.add(user)
     db_session.commit()
+
+
+def main():
+    sync_contacts()
 
 if __name__ == "__main__":
     main()
