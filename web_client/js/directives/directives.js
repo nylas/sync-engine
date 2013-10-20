@@ -22,6 +22,41 @@ app.directive("headersearchbox", function() {
 });
 
 
+
+app.directive("sidebaricon", function() {
+    return {
+        restrict: 'E',
+        replace: true,
+        scope: {
+            category: '='
+        },
+        controller: function($scope, $element, $attrs, $transclude) {
+
+            $scope.is_active = false;
+            $scope.icon_class = function() {
+                return 'sidebar_icon_' + $attrs.view;
+            };
+
+            $scope.icon_class_active = function() {
+                return $scope.icon_class() + '_active';
+            };
+
+            $scope.make_active = function() {
+                $scope.is_active = ! $scope.is_active;
+
+                if ($scope.is_active) {
+                    $element.addClass($scope.icon_class_active());
+                } else {
+                    $element.removeClass($scope.icon_class_active());
+                }
+            };
+
+        },
+        template: '<div ng-class="icon_class()" ng-click="make_active()" class="sidebar_icon clickable"></div>',
+    };
+});
+
+
 app.directive("itemcell", function($filter) {
     return {
         restrict: 'E',

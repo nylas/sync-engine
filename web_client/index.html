@@ -4,8 +4,7 @@
     <meta charset="utf-8">
     <title>Inbox</title>
 
-<link rel="stylesheet" href="css/bootstrap.min.css"/>
-
+<!-- <link rel="stylesheet" href="css/bootstrap.min.css"/> -->
 
 <link rel="stylesheet" href="css/style.css"/>
 
@@ -34,13 +33,13 @@
 
 
   <div class="sidebar">
-    <div class="sidebar_icon search clickable"></div>
-    <div class="sidebar_icon mail clickable"></div>
-    <div class="sidebar_icon todo clickable"></div>
-    <div class="sidebar_icon stacks clickable"></div>
-    <div class="sidebar_icon people clickable active"></div>
-    <div class="sidebar_icon groups clickable"></div>
-    <div class="sidebar_icon settings clickable"></div>
+    <sidebaricon view="search"></sidebaricon>
+    <sidebaricon view="mail"></sidebaricon>
+    <sidebaricon view="todo"></sidebaricon>
+    <sidebaricon view="stacks"></sidebaricon>
+    <sidebaricon view="people"></sidebaricon>
+    <sidebaricon view="groups"></sidebaricon>
+    <sidebaricon view="settings"></sidebaricon>
   </div>
 
 
@@ -95,30 +94,37 @@
 
     <div class="panel_right_content">
 
-      <div class="contentBody">
-        <div class="contentHead" ng-show="activeThread">
-          <div class="email-content-title" ng-bind="activeThread.subject()">
+      <div class="right_panel_container">
+
+        <div class="message_container"
+             ng-show="activeThread">
+
+          <div class="content_head">
+            <div class="email_content_title"
+                 ng-bind="activeThread.subject()">
+            </div>
           </div>
-
-          <span class="email-content-subtitle" ng-show="activeThread.recentMessage() != null">Sent to {{activeThread.recentMessage().contactDisplayList}}</span>
-
         </div>
 
-        <div style="clear:both"></div>
+        <div class="message_container"
+             ng-repeat="message in activeThread.messages">
+            <view:message message="message"></view:message>
+        </div>
 
-        <div class="email-message-container"  ng-repeat="message in activeThread.messages">
-            <threadview message="message"></threadview>
+        <div class="message_container">
+          <div class="contentFoot" ng-show="activeThread">
+            <replybox send-button-action="sendMessage(message_text)"></replybox>
+          </div>
         </div>
 
 
-        <div class="contentFoot" ng-show="activeThread">>
-          <replybox send-button-action="sendMessage(message_text)"></replybox>
-        </div>
-
-      </div>
-
+      </div> <!-- right panel container -->
 
     </div>
+
+    </div>
+
+  </div>
   </div>
 </div>
 </div>

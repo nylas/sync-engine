@@ -2,11 +2,9 @@
 var app = angular.module('InboxApp.services');
 
 
-/*  Notification API servie  */
 app.factory('layout', function() {
 
     // This should all be done on doc load
-
     var windowSize = {
         height: 0,
         width: 0,
@@ -30,7 +28,7 @@ app.factory('layout', function() {
 
             windowSize.contentBodyHeight = windowSize.mainHeight  - $('.action_bar_top').outerHeight(true);
 
-            windowSize.contentBodyWidth = $('.contentBody').width();
+            windowSize.contentBodyWidth = $('.right_panel_container').width();
 
             windowSize.updateSizes();
         },
@@ -44,8 +42,8 @@ app.factory('layout', function() {
             $('.panel_right').css('width', windowSize.rightContentWidth + 'px');
 
 
-            $('.contentBody').css('width', windowSize.rightContentWidth + 'px');
-            $('.contentBody').css('height', (windowSize.contentBodyHeight) + 'px');
+            $('.right_panel_container').css('width', windowSize.rightContentWidth + 'px');
+            $('.right_panel_container').css('height', (windowSize.contentBodyHeight) + 'px');
 
         },
         init: function() {

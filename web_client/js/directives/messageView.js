@@ -7,7 +7,7 @@ var angular = angular;
 
 
 
-app.directive("threadview", function($filter, wire, IBMessagePart) {
+app.directive("viewMessage", function($filter, wire, IBMessagePart) {
     return {
         restrict: 'E',
         transclude: true,
@@ -17,7 +17,6 @@ app.directive("threadview", function($filter, wire, IBMessagePart) {
 
         // add back green_glow class sometime
         templateUrl: 'views/messageView.html',
-
 
         link: function($scope, elem, attrs, ctrl) {
 
@@ -152,21 +151,17 @@ app.directive("messagecontainer", function($compile, wire) {
                                 '<script type="text/javascript">try{Typekit.load();}catch(e){}</script>' +
                                 '<style rel="stylesheet" type="text/css">' +
                                 'body { background-color:#FFF; ' +
-                                'font-smooth:always;' +
-                                ' -webkit-font-smoothing:antialiased;' +
-                                ' font-family:"proxima-nova-alt", courier, sans-serif;' +
-                                ' font-weight: 500' +
-                                ' font-size:14px;' +
-                                ' color:#333;' +
-                                ' font-variant:normal;' +
-                                ' line-height:1.6em;' +
-                                ' font-style:normal;' +
-                                ' text-align:left;' +
-                                ' text-shadow:1px 1px 1px #FFF;' +
-                                ' position:relative;' +
-                                ' margin:0; ' +
-                                ' padding:20px; }' +
-                                ' a { text-decoration: underline;}' +
+                                'font-family: HelveticaNeue, courier, sans-serif;' +
+                                'font-size: 14px;' +
+                                'color:#333;' +
+                                'font-variant:normal;' +
+                                'line-height:1.6em;' +
+                                'font-style:normal;' +
+                                'text-align:left;' +
+                                'position:relative;' +
+                                'margin:0; ' +
+                                'padding:20px; }' +
+                                'a { text-decoration: underline;}' +
                                 'a:hover {' +
                                 ' border-radius:3px;; background-color: #E9E9E9;' +
                                 ' }' +
@@ -298,28 +293,22 @@ app.directive("messageframe", function() {
                     console.log("Content is undefined for messageframe.")
                     to_wrap = 'Loading&hellip;';
                 }
-
-
                     var wrapped_html = '<html><head>' +
                         '<script type="text/javascript" src="//use.typekit.net/ccs3tld.js"></script>' +
                         '<script type="text/javascript">try{Typekit.load();}catch(e){}</script>' +
                         '<style rel="stylesheet" type="text/css">' +
                         'body { background-color:#FFF; ' +
-                        'font-smooth:always;' +
-                        ' -webkit-font-smoothing:antialiased;' +
-                        ' font-family:HelveticaNeue, sans-serif, sans-serif;' +
-                        ' font-weight: 500;' +
-                        ' font-size:15px;' +
-                        ' color:#5F5F5F;' +
-                        ' font-variant:normal;' +
-                        ' line-height:1.6em;' +
-                        ' font-style:normal;' +
-                        ' text-align:left;' +
-                        ' text-shadow:1px 1px 1px #FFF;' +
-                        ' position:relative;' +
-                        ' margin:0; ' +
-                        ' padding:20px; }' +
-                        ' a { text-decoration: underline;}' +
+                        'font-family: HelveticaNeue, courier, sans-serif;' +
+                        'font-size: 14px;' +
+                        'color:#333;' +
+                        'font-variant:normal;' +
+                        'line-height:1.6em;' +
+                        'font-style:normal;' +
+                        'text-align:left;' +
+                        'position:relative;' +
+                        'margin:0; ' +
+                        'padding:20px; }' +
+                        'a { text-decoration: underline;}' +
                         'a:hover {' +
                         ' border-radius:3px;; background-color: #E9E9E9;' +
                         ' }' +

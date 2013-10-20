@@ -1,0 +1,51 @@
+<div id="reply_box" class="replybox_container_style">
+  <div class="replybox_content_style">
+    <div id="drop">
+
+      <div auto-resize
+           id="reply_textbox"
+           class="resize_textbox"
+           ng-style="text_box_style"
+           contenteditable="true"
+           hidefocus="true">
+
+           Write a message&hellip;
+      </div>
+
+      <form id="file-upload"
+            style="display:none"
+            method="post"
+            action="/file_upload"
+            enctype="multipart/form-data">
+        <input style="display:none"
+               type="file"
+               name="file"
+               multiple />
+      </form>
+
+      <div class="replybox_bottom_button_bar">
+
+        <div id="add_file_button" class="replybox_bottom_button add_file" hover="#E0E3E3">
+          Add Files
+        </div>
+
+        <div id="add_file_button" class="replybox_bottom_button add_photo" hover="#E0E3E3">
+          Add Photos
+        </div>
+
+        <div id="add_file_button" class="replybox_bottom_button add_event" hover="#E0E3E3">
+          Add Event
+        </div>
+
+        <div id="add_file_button" class="replybox_bottom_button add_money" hover="#E0E3E3">
+          Send Money
+        </div>
+
+        <div id="send_button" class="replybox_bottom_button send"  wng-click="sendButtonHandler()" hover="#E0E3E3">
+          Send
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

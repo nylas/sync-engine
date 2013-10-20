@@ -40,6 +40,8 @@ app.factory('IBThread', function ($injector) {
 
 
 
+
+
     return function(messages) {
         // This is based on $injector.instantiate
         var Type = IBThreadObject;
