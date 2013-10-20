@@ -104,6 +104,9 @@ def get_gd_client():
 
     return user, gd_client
 
+def get_contacts(query):
+    db_session = connect_to_db()
+    return db_session.query(Contact).filter(Contact.name.like("%" + query + "%")).filter_by(source = "local").all()
 
 def sync_contacts():
     user_email, gd_client = get_gd_client()
@@ -141,13 +144,11 @@ def sync_contacts():
                 "name": contact.name.full_name.text if (contact.name and contact.name.full_name) else None,
                 "google_id": contact.id.text if contact.id else None,
                 "updated_at": dateutil.parser.parse(contact.updated.text) if contact.updated else None,
+                "email": emails[0].address if emails else None
             }
         except AttributeError, e:
             print "Something weird with contact:", contact
             raise e
-
-        if emails:
-            google_result["email"] = emails[0].address
 
         # make an object out of the google result
         c = Contact(source='local', **google_result)

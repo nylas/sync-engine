@@ -2,6 +2,7 @@ import logging as log
 import json
 
 from models import Contact
+import models
 
 class API(object):
 
@@ -22,14 +23,7 @@ class API(object):
 
 
     def search(self, query):
-        # Return a dummy contact
-        c = Contact()
-        c.name = "John Smith"
-        c.email = "john.smth@gmail.com"
-        c.google_id  = '01962490143'
-
-        return [c.cereal()]
-
+        return models.get_contacts(query)
 
     def create_contact(self, contact_dict):
 

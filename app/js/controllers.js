@@ -1,9 +1,5 @@
+// global console: false, angular: false, alert: false
 'use strict';
-
-// Stupid fucking linting warnings
-var console = console;
-var angular = angular;
-var alert = alert;
 
 
 var app = angular.module('InboxApp.controllers');
@@ -13,7 +9,7 @@ app.controller('AppContainerController',
         wire,
         IBContact,
         $filter)
-{
+    {
 
         $scope.contacts = []; // For UI element
         $scope.visible_contacts = [];
@@ -28,14 +24,10 @@ app.controller('AppContainerController',
             console.log(["Calling search", query]);
 
             wire.rpc('search', [query], function(rpc_data) {
-
-                console.log(["Got response", rpc_data]);
                 var fresh_contacts = [];
 
                 angular.forEach(rpc_data, function(value, key) {
-                    console.log(value);
                     var new_contact = new IBContact(value);
-
                     fresh_contacts.push(new_contact);
                 });
 
