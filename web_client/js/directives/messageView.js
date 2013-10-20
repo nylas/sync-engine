@@ -6,7 +6,6 @@ var console = console;
 var angular = angular;
 
 
-
 app.directive("viewMessage", function($filter, wire, IBMessagePart) {
     return {
         restrict: 'E',
@@ -21,11 +20,6 @@ app.directive("viewMessage", function($filter, wire, IBMessagePart) {
         link: function($scope, elem, attrs, ctrl) {
 
             $scope.$watch('message', function(val) {
-                console.log("Message changed:");
-                console.log(val);
-
-                console.log("Fetching metadata for parts...")
-
                 // Get message parts metadata
                 wire.rpc('meta_with_id', $scope.message.g_id, function(data) {
                     var arr_from_json = JSON.parse(data);
@@ -36,22 +30,12 @@ app.directive("viewMessage", function($filter, wire, IBMessagePart) {
                         var new_parts_to_set = {};
                         new_parts_to_set[new_part.g_index] = new_part;
                         $scope.message.parts = new_parts_to_set;
-
-
                     });
 
-                    console.log("Set new metadata for ");
-                    console.log($scope.message);
-                    // console.log("Fetched meta for msg " + message_in_thread.g_id);
                 });
 
 
-            }); // True watches value not just reference
-
-
-
-
-
+            });
         } // End of link function
 
     };
@@ -61,31 +45,55 @@ app.directive("viewMessage", function($filter, wire, IBMessagePart) {
 
 
 app.directive("messagecontainer", function($compile, wire) {
-
-
     return {
-
         restrict: 'E',
         scope: {
             message: '=',
         },
-
         controller: function($scope, $element, $attrs, $transclude) {
-
             $scope.body_content = undefined;
+
+
+            var body_start = '<html><head>' +
+                        '<script type="text/javascript" src="//use.typekit.net/ccs3tld.js"></script>' +
+                        '<script type="text/javascript">try{Typekit.load();}catch(e){}</script>' +
+                        '<style rel="stylesheet" type="text/css">' +
+                        'body { background-color:#FFF; ' +
+                        'font-family: HelveticaNeue, courier, sans-serif;' +
+                        'font-size: 15px;' +
+                        'color:#333;' +
+                        'font-variant:normal;' +
+                        'line-height:1.6em;' +
+                        'font-style:normal;' +
+                        'text-align:left;' +
+                        'position:relative;' +
+                        'margin:0; ' +
+                        'padding:20px; }' +
+                        'a { text-decoration: underline;}' +
+                        'a:hover {' +
+                        ' border-radius:3px;; background-color: #E9E9E9;' +
+                        ' }' +
+                        '</style>' +
+                        '<base target="_blank" />'+
+                        '</head><body>';
+            var body_end = '</body></html>';
+
+
+            $scope.updateBody = function(new_body) {
+                if (angular.isUndefined(new_body)) {
+                    new_body = 'Loading&hellip;';
+                }
+                $scope.body_content = body_start + new_body + body_end;
+            }
+
 
         },
 
-        // add back green_glow class sometime
-        // template: '<messageframe ng-repeat="p in message.parts" message_part="p"></messageframe>',
         template: '<messageframe content="body_content"></messageframe>',
 
 
         link: function($scope, $elem, attrs, ctlr) {
             // elem.html("let me set the html mofo");
-
-            console.log("Linking messageContainer")
-
 
             $scope.$watch('message.parts', function(val) {
 
@@ -101,7 +109,6 @@ app.directive("messagecontainer", function($compile, wire) {
 
                 console.log("The parts:")
                 console.log($scope.message.parts);
-
 
                 // Here we just grab the first message part which has text/html or text/plain
                 // Note that angular's forEach doesn't have 'break' support.
@@ -134,81 +141,24 @@ app.directive("messagecontainer", function($compile, wire) {
                 }
 
 
-
                 // Fetch the body of the messages.
+                // This is a hack for now, should be loading elsewhere.
+
                 wire.rpc('part_with_id', [find_part.g_id, find_part.g_index],
                     function(data) {
                         var data_dict = JSON.parse(data);
 
-                        console.log("Fetched part.");
-                        console.log(data_dict);
                         find_part.content_body = data_dict.message_data;
-                        // console.log(data);
 
+                        var msg_body = data_dict.message_data;
                         if (find_part.content_type != 'text/html') {
-                            var wrapped_html = '<html><head>' +
-                                '<script type="text/javascript" src="//use.typekit.net/ccs3tld.js"></script>' +
-                                '<script type="text/javascript">try{Typekit.load();}catch(e){}</script>' +
-                                '<style rel="stylesheet" type="text/css">' +
-                                'body { background-color:#FFF; ' +
-                                'font-family: HelveticaNeue, courier, sans-serif;' +
-                                'font-size: 14px;' +
-                                'color:#333;' +
-                                'font-variant:normal;' +
-                                'line-height:1.6em;' +
-                                'font-style:normal;' +
-                                'text-align:left;' +
-                                'position:relative;' +
-                                'margin:0; ' +
-                                'padding:20px; }' +
-                                'a { text-decoration: underline;}' +
-                                'a:hover {' +
-                                ' border-radius:3px;; background-color: #E9E9E9;' +
-                                ' }' +
-                                '</style>' +
-                                '<base target="_blank" />'+
-                                '</head><body>' +
-                                data_dict.message_data.replace(/\n/g, '<br />') +
-                                '</body></html>';
-                            $scope.body_content = wrapped_html;
-
-                        } else {
-
-                            $scope.body_content = wrapped_html;
-                            $scope.body_content = data_dict.message_data;
-
+                            msg_body = msg_body.replace(/\n/g, '<br />');
                         }
-                        console.log($scope);
-                        // message.parts[part_id].content_body
+                        $scope.updateBody(msg_body);
                     });
 
             });
-
         },
-
-
-
-        // link: {
-        //     post: function(scope, element, attrs) {
-        //         // if (!element.attr('ng-bind')) {
-        //         //     element.attr('ng-bind', 'content');
-        //         //     var compiledElement = $compile(element)(scope);
-        //         // }
-
-        //         console.log("Scope:")
-        //         console.log(scope);
-        //         console.log(scope.message);
-
-        //         // var compiledElement = $compile(element)(scope);
-
-        //         // elem.html('<messageframe content="content"></messageframe>');
-
-        //         // console.log('Linking...');
-        //         // scope.content = "Content!";
-        //     }
-        // }
-
-
     };
 });
 
@@ -216,11 +166,9 @@ app.directive("messagecontainer", function($compile, wire) {
 
 
 app.directive("messageframe", function() {
-
     var resizing_internal;
 
     return {
-
         restrict: 'E',
         scope: {
             content: '='
@@ -236,7 +184,6 @@ app.directive("messageframe", function() {
                     console.log("Why is the doc null?");
                     return;
                 }
-
                 // Reset
                 doc.removeChild(doc.documentElement);
                 iframe.width = '100%';
@@ -244,8 +191,6 @@ app.directive("messageframe", function() {
 
                 // TODO detect if there's significat styling in this mail.
                 // If so, don't add the CSS
-
-                // var toWrite = textToInject;
 
                 doc.open();
                 doc.write(textToInject);
@@ -288,38 +233,9 @@ app.directive("messageframe", function() {
 
             scope.$watch('content', function(val) {
                 // Reset the iFrame anytime the current message changes...
-                var to_wrap = val;
-                if (angular.isUndefined(val)) {
-                    console.log("Content is undefined for messageframe.")
-                    to_wrap = 'Loading&hellip;';
+                if (!angular.isUndefined(val)) {
+                    injectToIframe(val);
                 }
-                    var wrapped_html = '<html><head>' +
-                        '<script type="text/javascript" src="//use.typekit.net/ccs3tld.js"></script>' +
-                        '<script type="text/javascript">try{Typekit.load();}catch(e){}</script>' +
-                        '<style rel="stylesheet" type="text/css">' +
-                        'body { background-color:#FFF; ' +
-                        'font-family: HelveticaNeue, courier, sans-serif;' +
-                        'font-size: 14px;' +
-                        'color:#333;' +
-                        'font-variant:normal;' +
-                        'line-height:1.6em;' +
-                        'font-style:normal;' +
-                        'text-align:left;' +
-                        'position:relative;' +
-                        'margin:0; ' +
-                        'padding:20px; }' +
-                        'a { text-decoration: underline;}' +
-                        'a:hover {' +
-                        ' border-radius:3px;; background-color: #E9E9E9;' +
-                        ' }' +
-                        '</style>' +
-                        '<base target="_blank" />'+
-                        '</head><body>' +
-                        to_wrap +
-                        '</body></html>';
-
-                    injectToIframe(wrapped_html);
-                    return;
             });
         } // end link fn
 

@@ -435,11 +435,10 @@ input[type="text"] { border: none }
   color: #4C4C4C;
   float: left;
 
-  padding-top: 10px;
+  padding-top: 12px;
 
   padding-left: 40px;
   padding-right: 18px;
-
   margin-left: 0px;
   min-height: 30px;
 }
@@ -469,6 +468,11 @@ input[type="text"] { border: none }
 }
 .action_button.more {
   background: #FFF url("../img/action_button_more.png") no-repeat 15px 18px;
+
+  padding-left: 5px;
+  padding-right: 36px;
+  margin-left: 0px;
+  min-height: 30px;
 }
 
 
