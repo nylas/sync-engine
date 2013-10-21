@@ -2,10 +2,11 @@ from __future__ import with_statement
 from alembic import context
 from sqlalchemy import create_engine, pool
 
+import os
+
 from logging.config import fileConfig
 
-import sys, os;  sys.path.insert(1, os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..')))
-from config import setup_env
+from inbox.server.config import setup_env
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -20,7 +21,7 @@ setup_env()
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
-from server import models
+from inbox.server import models
 target_metadata = models.Base.metadata
 
 # other values from the config, defined by the needs of env.py,

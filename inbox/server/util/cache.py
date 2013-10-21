@@ -2,7 +2,7 @@ import os, errno
 import cPickle as pickle
 import logging as log
 
-from server.util.file import safe_filename, mkdirp
+from .file import safe_filename, mkdirp
 
 # A quick hack of a key-value cache of arbitrary data structures. Stores on disk.
 CACHE_BASEDIR='cache'

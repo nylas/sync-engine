@@ -19,7 +19,7 @@ All of the todos are in [the Asana workspace](https://app.asana.com/0/4983727800
 
 5. `source bin/activate` to start virtualenv
 
-6. `pip install -r requirements.txt` to install required packages
+6. `python setup.py develop` to install required packages
 
 Also need to install libevent and then gevent.
 

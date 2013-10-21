@@ -19,7 +19,7 @@ from os import environ
 from StringIO import StringIO
 import os
 
-from server.util.img import generate_thumbnail
+from .util.img import generate_thumbnail
 
 COOKIE_SECRET = environ.get("COOKIE_SECRET", None)
 assert COOKIE_SECRET, "Missing secret for secure cookie generation"

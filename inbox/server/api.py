@@ -3,7 +3,7 @@ import logging as log
 import json
 import postel
 from bson import json_util
-from models import db_session, MessageMeta, BlockMeta, Namespace, User
+from models import db_session, MessageMeta, BlockMeta, Namespace, User, IMAPAccount
 
 from sqlalchemy.orm import joinedload
 
@@ -82,9 +82,10 @@ class API(object):
     def send_mail(self, namespace_id, recipients, subject, body):
         """ Sends a message with the given objects """
 
-        namespace = db_session.query(Namespace).filter_by(id=namespace_id).one()
-        with postel.SMTP(namespace) as s:
-            s.send_mail(recipients, subject, body)
+        account = db_session.query(IMAPAccount).join(Namespace).filter(
+                Namespace.id==namespace_id).one()
+        with postel.SMTP(account) as smtp:
+            smtp.send_mail(recipients, subject, body)
         return "OK"
 
     def meta_with_id(self, namespace_id, data_id):
@@ -103,10 +104,6 @@ class API(object):
                            default=json_util.default)
 
     def part_with_id(self, namespace_id, message_id, walk_index):
-
-        # TODO store BlockMetas rows by namespace_id instead of email address
-        # user = db_session.query(User).filter(User.namespace_id == user_id).all()[0]
-
         q = db_session.query(BlockMeta).join(MessageMeta)\
                 .filter(MessageMeta.g_msgid==message_id,
                         BlockMeta.walk_index == walk_index,
@@ -131,8 +128,6 @@ class API(object):
                            default=json_util.default)  # Fixes serializing date.datetime
 
         # existing_message_part = db_session.query(MessageMeta).filter(MessageMeta.g_msgid == data_id).filter(MessageMeta.g_namespace_id == user_id)
-
-
 
     def start_sync(self, namespace_id):
         """ Talk to the Sync service and have it launch a sync. """

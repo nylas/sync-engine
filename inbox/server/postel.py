@@ -14,14 +14,11 @@ SMTP_PORT = 587
 
 class SMTP(object):
 
-    def __init__(self, namespace):
-        """ NOTE: You may wish to have pre-loaded namespace.user to prevent
-            another database query.
-        """
+    def __init__(self, account):
         self.conn = None
-        self.namespace = namespace
-        self.email_address = namespace.g_email
-        self.oauth_token = namespace.g_access_token
+        self.account = account
+        self.email_address = account.email_address
+        self.oauth_token = account.o_access_token
         self._setup()
 
     def __enter__(self):

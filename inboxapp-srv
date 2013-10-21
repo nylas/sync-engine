@@ -5,9 +5,9 @@ import signal
 import sys
 import os
 from setproctitle import setproctitle; setproctitle('inboxapp-srv')
-from config import setup_env
 
-from server.util.log import configure_logging
+from inbox.server.config import setup_env
+from inbox.server.util.log import configure_logging
 log = configure_logging()
 
 def debug(args=None):
@@ -29,23 +29,23 @@ def start(args=None):
      Use CTRL-C to stop.
      """
     setup_env()
-    from server.models import init_db
+    from inbox.server.models import init_db
     init_db()
 
     # Start ZeroRPC api server service
-    from server.util.concurrency import make_zerorpc
-    from server.api import API
+    from inbox.server.util.concurrency import make_zerorpc
+    from inbox.server.api import API
 
     api_srv_loc = os.environ.get('API_SERVER_LOC', None)
     make_zerorpc(API, api_srv_loc)
 
     # Start ZeroRPC sync server service
-    from server.sync import SyncService
+    from inbox.server.sync import SyncService
     sync_srv_loc = os.environ.get('CRISPIN_SERVER_LOC', None)
     make_zerorpc(SyncService, sync_srv_loc)
 
     # start ZeroRPC search server service
-    from server.search import SearchService
+    from inbox.server.search import SearchService
     search_srv_loc = os.environ.get('SEARCH_SERVER_LOC', None)
     make_zerorpc(SearchService, search_srv_loc)
 
@@ -53,7 +53,7 @@ def start(args=None):
     # sudo nginx -c nginx.conf -p ./
 
     # Start web server
-    from server.app import startserver
+    from inbox.server.app import startserver
     try:
         startserver('127.0.0.1', 5000)
     except Exception, e:
@@ -87,7 +87,7 @@ def stop(args):
     print """
 \033[91m     Cleaning up...
 \033[0m"""
-    # from server.app import stopserver
+    # from inbox.server.app import stopserver
     # stopserver()
 
     print """
@@ -98,14 +98,14 @@ def stop(args):
 
 def console(args):
     setup_env()
-    from server.console import start_console
+    from inbox.server.console import start_console
     start_console(args.email_address)
 
 def search(args):
     setup_env()
 
     import zerorpc
-    from server.models import db_session, User
+    from inbox.server.models import db_session, User
 
     user = db_session.query(User).filter_by(g_email=args.email_address).one()
 
@@ -122,8 +122,8 @@ def search(args):
 
 def index(args):
     setup_env()
-    from server.search import gen_search_index
-    from server.models import db_session, User
+    from inbox.server.search import gen_search_index
+    from inbox.server.models import db_session, User
     if args.email_address:
         gen_search_index(db_session.query(User).filter_by(
             g_email=args.email_address).one())
