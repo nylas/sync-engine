@@ -290,4 +290,3 @@ def what_is_my_name():
 def what_is_sudos_name():
     sudo('whoami')
 
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

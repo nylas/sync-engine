@@ -133,4 +133,3 @@ class API(object):
         """ Talk to the Sync service and have it launch a sync. """
         pass
 
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

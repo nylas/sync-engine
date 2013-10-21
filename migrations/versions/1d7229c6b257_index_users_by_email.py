@@ -17,4 +17,3 @@ def upgrade():
 
 def downgrade():
     op.drop_index('users_by_email', 'users')
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

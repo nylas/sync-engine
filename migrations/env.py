@@ -77,4 +77,3 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

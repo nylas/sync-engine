@@ -24,4 +24,3 @@ def configure_logging():
     # XXX TODO add another handler here to output log to a file
 
     return logger
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

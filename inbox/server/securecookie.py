@@ -117,4 +117,3 @@ class SecureCookieSerializer(object):
         for part in parts:
             hash.update(utf8(part))
         return utf8(hash.hexdigest())
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

@@ -25,4 +25,3 @@ def print_dots():
             sys.stdout.flush()
             sleep(.02)
     Greenlet.spawn(m)
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

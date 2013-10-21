@@ -602,4 +602,3 @@ class SyncService:
     def status(self):
         return self.statuses
 
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

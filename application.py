@@ -11,5 +11,4 @@ def hello_world():
     return "Hello world! Testing EB."
 
 if __name__ == '__main__':
-    application.run(host='0.0.0.0', debug=True)# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
+    application.run(host='0.0.0.0', debug=True)

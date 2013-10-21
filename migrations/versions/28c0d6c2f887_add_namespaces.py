@@ -58,5 +58,3 @@ def downgrade():
     op.drop_column(u'foldermeta', 'namespace_id')
     op.drop_table('namespaces')
     ### end Alembic commands ###
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

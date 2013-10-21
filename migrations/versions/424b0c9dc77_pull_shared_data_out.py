@@ -30,4 +30,3 @@ def downgrade():
     op.drop_column('foldermeta', 'user_id')
     op.drop_column('foldermeta', 'messagemeta_id')
     ### end Alembic commands ###
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

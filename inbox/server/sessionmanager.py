@@ -129,4 +129,3 @@ def stop_all_crispins():
     for e,c in email_address_to_crispins.iteritems():
         c.stop()
 
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

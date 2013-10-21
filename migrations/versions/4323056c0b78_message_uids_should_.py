@@ -20,4 +20,3 @@ def upgrade():
 
 def downgrade():
     op.alter_column('foldermeta', 'msg_uid', type_=sa.String(255))
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

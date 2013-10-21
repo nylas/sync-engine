@@ -19,10 +19,10 @@ class SMTP(object):
         self.account = account
         self.email_address = account.email_address
         self.oauth_token = account.o_access_token
-        self._setup()
 
     def __enter__(self):
         self.setup()
+        return self
 
     def __exit__(self, type, value, traceback):
         self.quit()
@@ -97,4 +97,3 @@ class SMTP(object):
     def quit(self):
         self.conn.quit()
 
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

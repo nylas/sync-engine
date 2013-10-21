@@ -12,4 +12,3 @@ def generate_thumbnails(images):
         # proper orientation.
         # rotation = img.metadata.get('exif:Orientation')
         yield "_".join(['thumb', filename], generate_thumbnail(img_bytes))
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

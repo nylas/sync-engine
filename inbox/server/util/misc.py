@@ -3,4 +3,3 @@ def or_none(value, selector):
         return None
     else:
         return selector(value)
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

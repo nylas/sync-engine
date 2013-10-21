@@ -31,4 +31,3 @@ def start_console(user_email_address=None):
     else:
         IPython.embed()
 
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

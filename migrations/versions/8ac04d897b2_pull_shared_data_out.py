@@ -26,4 +26,3 @@ def downgrade():
     op.add_column('uidvalidity', sa.Column(u'g_email', mysql.VARCHAR(length=255), nullable=True))
     op.drop_column('uidvalidity', 'user_id')
     ### end Alembic commands ###
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

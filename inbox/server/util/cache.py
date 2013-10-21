@@ -30,4 +30,3 @@ def get_cache(key):
 
 def rm_cache(key):
     _unless_dne(os.remove, _path_from_key(key))
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

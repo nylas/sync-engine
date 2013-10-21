@@ -73,4 +73,3 @@ def url_concat(url, args):
     if url[-1] not in ('?', '&'):
         url += '&' if ('?' in url) else '?'
     return url + urlencode(args)
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

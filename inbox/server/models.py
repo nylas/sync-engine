@@ -569,4 +569,3 @@ Session.configure(bind=engine)
 
 # A single global database session per Inbox instance is good enough for now.
 db_session = Session()
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4

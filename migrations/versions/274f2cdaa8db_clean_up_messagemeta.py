@@ -37,4 +37,3 @@ def downgrade():
                nullable=False)
     op.drop_column('messagemeta', 'user_id')
     ### end Alembic commands ###
-# vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
