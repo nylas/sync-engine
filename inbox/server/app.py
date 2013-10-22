@@ -36,7 +36,7 @@ def get_user(request):
     if not user_session: return None
     return user_session.user
 
-app = Flask(__name__, static_folder='../web_client', static_url_path='', template_folder='templates')
+app = Flask(__name__, static_folder='../../web_client', static_url_path='', template_folder='templates')
 
 
 @app.route('/')
