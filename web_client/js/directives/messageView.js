@@ -55,8 +55,6 @@ app.directive("messagecontainer", function($compile, Wire) {
 
 
             var body_start = '<html><head>' +
-                        '<script type="text/javascript" src="//use.typekit.net/ccs3tld.js"></script>' +
-                        '<script type="text/javascript">try{Typekit.load();}catch(e){}</script>' +
                         '<style rel="stylesheet" type="text/css">' +
                         'body { background-color:#FFF; ' +
                         'font-family: HelveticaNeue, courier, sans-serif;' +
@@ -97,18 +95,14 @@ app.directive("messagecontainer", function($compile, Wire) {
 
             $scope.$watch('message.parts', function(val) {
 
-
-                console.log("message.parts watcher fired!")
-
-                console.log("new message obj");
-                console.log($scope.message);
+                console.log(["message.parts watcher fired. new message obj", $scope.message])
+                ;
                 if (angular.isUndefined($scope.message.parts)) {
                     console.log("No message parts :(")
                     return;
                 }
 
-                console.log("The parts:")
-                console.log($scope.message.parts);
+                console.log(["The parts:", $scope.message.parts]);
 
                 // Here we just grab the first message part which has text/html or text/plain
                 // Note that angular's forEach doesn't have 'break' support.
@@ -119,10 +113,7 @@ app.directive("messagecontainer", function($compile, Wire) {
                         return;
                     };
 
-                    console.log(part);
-                    console.log(key);
-                    console.log(find_part);
-                    console.log('>>' + part.content_type + '<<');
+                    console.log(["Loading part:", part, key, find_part, part.content_type])
 
                     if (part.content_type === 'text/html') {
                         find_part = part;
@@ -257,7 +248,6 @@ app.directive("gravatar", function() {
         link: function(scope, iElement, iAttrs) {
             scope.$watch('message.gravatar_url', function(val) {
                 if (!angular.isUndefined(val)) {
-                    console.log(iElement);
                     iElement.css({backgroundImage:
                                   'url(' + scope.message.gravatar_url + ')',
                     });
