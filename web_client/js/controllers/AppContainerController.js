@@ -11,8 +11,9 @@ var app = angular.module('InboxApp.controllers');
 app.controller('AppContainerController',
     function($scope,
         $rootScope,
-        wire,
+        Wire,
         growl,
+        Layout, // Needed to initialize
         IBThread,
         IBMessageMeta,
         IBMessagePart,
@@ -60,12 +61,12 @@ app.controller('AppContainerController',
 
             console.log("Calling search for: " + query);
 
-            wire.rpc('search_folder', [query], function(data) {
+            Wire.rpc('search_folder', [query], function(data) {
                 console.log("Got response");
                 var msg_ids = JSON.parse(data);
                 console.log(msg_ids);
 
-                wire.rpc('messages_with_ids', [msg_ids], function(data) {
+                Wire.rpc('messages_with_ids', [msg_ids], function(data) {
                     console.log("Got response for msgids");
 
                     var arr_from_json = JSON.parse(data);
@@ -170,7 +171,7 @@ app.controller('AppContainerController',
 
             $scope.statustext = "Loading messages...";
 
-            wire.rpc('messages_for_folder', folder_name, function(data) {
+            Wire.rpc('messages_for_folder', folder_name, function(data) {
 
                 $scope.statustext = "";
                 var arr_from_json = JSON.parse(data);
@@ -227,7 +228,7 @@ app.controller('AppContainerController',
 
 
         $scope.sendMessage = function(message_string) {
-            wire.rpc('send_mail', {
+            Wire.rpc('send_mail', {
                     message_to_send: {
                         'subject': 'Hello world',
                         'body': message_string,
@@ -253,7 +254,7 @@ app.controller('AppContainerController',
         };
 
 
-        wire.on('new_mail_notification', function(data) {
+        Wire.on('new_mail_notification', function(data) {
             console.log("new_mail_notificaiton");
             growl.post("New Message!", "Michael: Lorem ipsum dolor sit amet, consectetur adipisicing");
         });

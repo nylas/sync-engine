@@ -8,7 +8,6 @@ var app = angular.module('InboxApp',
      'InboxApp.directives',
      'InboxApp.services',
      'InboxApp.models',
-     'ui.bootstrap',
      'LocalStorageModule',
      ]);
 

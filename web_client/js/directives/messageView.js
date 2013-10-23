@@ -6,7 +6,7 @@ var console = console;
 var angular = angular;
 
 
-app.directive("viewMessage", function($filter, wire, IBMessagePart) {
+app.directive("viewMessage", function($filter, Wire, IBMessagePart) {
     return {
         restrict: 'E',
         transclude: true,
@@ -21,7 +21,7 @@ app.directive("viewMessage", function($filter, wire, IBMessagePart) {
 
             $scope.$watch('message', function(val) {
                 // Get message parts metadata
-                wire.rpc('meta_with_id', $scope.message.g_id, function(data) {
+                Wire.rpc('meta_with_id', $scope.message.g_id, function(data) {
                     var arr_from_json = JSON.parse(data);
 
                     angular.forEach(arr_from_json, function(value, key) {
@@ -44,7 +44,7 @@ app.directive("viewMessage", function($filter, wire, IBMessagePart) {
 
 
 
-app.directive("messagecontainer", function($compile, wire) {
+app.directive("messagecontainer", function($compile, Wire) {
     return {
         restrict: 'E',
         scope: {
@@ -144,7 +144,7 @@ app.directive("messagecontainer", function($compile, wire) {
                 // Fetch the body of the messages.
                 // This is a hack for now, should be loading elsewhere.
 
-                wire.rpc('part_with_id', [find_part.g_id, find_part.g_index],
+                Wire.rpc('part_with_id', [find_part.g_id, find_part.g_index],
                     function(data) {
                         var data_dict = JSON.parse(data);
 

@@ -10,18 +10,10 @@
 
 <!-- <link rel="stylesheet" href="css/bootstrap-responsive.min.css"/> -->
 
-<style type="text/css">
-    /* Hide while loading */
-    [ng\:cloak], [ng-cloak], .ng-cloak {
-      display: none;
-    }
-</style>
-
 <!-- typekit -->
-
-<script type="text/javascript" src="//use.typekit.net/ccs3tld.js"></script>
+<!-- <script type="text/javascript" src="//use.typekit.net/ccs3tld.js"></script>
 <script type="text/javascript">try{Typekit.load();}catch(e){}</script>
-
+ -->
 
 </head>
 <body>
@@ -31,9 +23,39 @@
 <!--  <div id="header">&nbsp;</div>  -->
 <div id="main">
 
+  <div class="header">
 
-  <div class="sidebar">
     <sidebaricon view="search"></sidebaricon>
+
+    <div class="header_left">
+      <headersearchbox handler="performSearch"></headersearchbox>
+      <div style="float:right">
+        <div class="action_button clickable compose" data-ng-click="composeButtonHandler()">New</div>
+        <div class="action_button_sep"></div>
+      </div>
+    </div>
+
+
+    <div class="header_right">
+      <div class="action_button clickable archive" data-ng-click="archiveButtonHandler()">Archive</div>
+        <div class="action_button_sep"></div>
+      <div class="action_button clickable todo">Todo</div>
+        <div class="action_button_sep"></div>
+
+      <div class="action_button clickable snooze">Snooze</div>
+        <div class="action_button_sep"></div>
+      <div class="action_button clickable move">Move</div>
+        <div class="action_button_sep"></div>
+      <div class="action_button clickable group">Group</div>
+        <div class="action_button_sep"></div>
+      <div class="action_button clickable more">&nbsp;</div>
+    </div>
+
+  </div>
+
+  <div class="clear"></div>
+
+  <div class="sidebar height_main">
     <sidebaricon view="mail"></sidebaricon>
     <sidebaricon view="todo"></sidebaricon>
     <sidebaricon view="stacks"></sidebaricon>
@@ -43,58 +65,28 @@
   </div>
 
 
-  <div class="left_side">
-
-    <div class="header_left">
-        <div class="header_pane_container">
-
-          <headersearchbox handler="performSearch"></headersearchbox>
-          <div style="float:right">
-            <div class="action_button clickable compose" data-ng-click="composeButtonHandler()">New</div>
-            <div class="action_button_sep"></div>
-          </div>
-
-        </div>
+  <div class="master_pane height_main">
+    <div class="category_bar">
+        <span class="category_bar_active">Inbox</span>
+        <span>Drafts</span>
+        <span>Sent</span>
+        <span>Label&nbsp;<span style="font-size: 9px; display:inline;">&#x25BC;</span></span>
+        <span>Snoozed</span>
+        <span>All</span>
     </div>
+    <div class="clear"></div>
 
-    <div class="left_pane">
-      <div class="messagelist">
-        <itemcell data-ng-repeat="t in displayedThreads"
-                  thread="t"
-                  data-ng-click="openThread(t)"
-                  selected="t == activeThread">
-        </itemcell>
-      </div>
+    <div class="messagelist">
+      <itemcell data-ng-repeat="t in displayedThreads"
+                thread="t"
+                data-ng-click="openThread(t)"
+                selected="t == activeThread">
+      </itemcell>
     </div>
-
   </div>
-  <!-- End left side -->
 
 
-
-  <!-- Begin right side -->
-  <div class="panel_right">
-      <div class="action_bar_top">
-
-        <div class="action_button clickable archive" data-ng-click="archiveButtonHandler()">Archive</div>
-          <div class="action_button_sep"></div>
-        <div class="action_button clickable todo">Todo</div>
-          <div class="action_button_sep"></div>
-
-        <div class="action_button clickable snooze">Snooze</div>
-          <div class="action_button_sep"></div>
-        <div class="action_button clickable move">Move</div>
-          <div class="action_button_sep"></div>
-        <div class="action_button clickable group">Group</div>
-          <div class="action_button_sep"></div>
-        <div class="action_button clickable more">&nbsp</div>
-
-      </div>
-
-
-    <div class="panel_right_content">
-
-      <div class="right_panel_container">
+  <div class="detail_pane height_main">
 
         <div class="message_container"
              ng-show="activeThread">
@@ -118,9 +110,11 @@
         </div>
 
 
-      </div> <!-- right panel container -->
+  </div>
 
-    </div>
+
+</div>
+  </div>
 
     </div>
 
@@ -153,6 +147,7 @@
 <script src="js/app.js"></script>
 <script src="js/models.js"></script>
 
+<script src="js/services/Layout.js"></script>
 <script src="js/services/Wire.js"></script>
 <script src="js/services/Growl.js"></script>
 <script src="js/services/ProtocolHandler.js"></script>
@@ -165,7 +160,6 @@
 <script src="js/directives/messageView.js"></script>
 <script src="js/directives/replyBox.js"></script>
 
-<script src="js/services/Layout.js"></script>
 
 </body>
 </html>

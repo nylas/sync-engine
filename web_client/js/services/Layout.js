@@ -1,8 +1,13 @@
 'use strict';
-var app = angular.module('InboxApp.services');
+
+// fucking linter
+var angular = angular,
+    $ = $,
+    console = console;
 
 
-app.factory('layout', function() {
+angular.module('InboxApp.services')
+.factory('Layout', function() {
 
     // This should all be done on doc load
     var windowSize = {
@@ -18,29 +23,40 @@ app.factory('layout', function() {
             windowSize.height = $('body').height();
             windowSize.width = $('body').width();
 
-            windowSize.headersHeight = $('#header').height();
-            windowSize.mainHeight = windowSize.height - windowSize.headersHeight;
+            windowSize.headerHeight = $('.header').outerHeight(true);
+
+            windowSize.mainHeight = windowSize.height - windowSize.headerHeight;
 
             windowSize.leftPaneHeight = windowSize.mainHeight;
             windowSize.leftMessageListHeight = windowSize.mainHeight - $('.header_left').outerHeight(true) - $('.footer_left').outerHeight(true);
 
-            windowSize.rightContentWidth = windowSize.width - $('.sidebar').width() - $('.left_pane').width();
+            windowSize.rightContentWidth = windowSize.width - $('.sidebar').outerWidth(true);
 
             windowSize.contentBodyHeight = windowSize.mainHeight  - $('.action_bar_top').outerHeight(true);
 
             windowSize.contentBodyWidth = $('.right_panel_container').width();
 
+
+            windowSize.sidebarWidth = $('.sidebar').outerWidth(true);
+            windowSize.masterPaneWidth = $('.master_pane').outerWidth(true);
+            windowSize.detailPaneWidth = windowSize.width - windowSize.sidebarWidth - windowSize.masterPaneWidth;
+
+
             windowSize.updateSizes();
         },
         updateSizes: function() {
-            $('#main').css('height', windowSize.mainHeight + 'px');
-            $('.left_pane').css('height', windowSize.leftPaneHeight + 'px');
-            $('.messagelist').css('height', windowSize.leftMessageListHeight + 'px');
+            $('#main').css('height', windowSize.height + 'px');
 
-            $('.panel_right_content').css('width', windowSize.rightContentWidth + 'px');
+            $('.header').css('width', windowSize.width + 'px');
 
-            $('.panel_right').css('width', windowSize.rightContentWidth + 'px');
+            $('.height_main').css('height', windowSize.mainHeight + 'px');
 
+            var messagelist_height = windowSize.mainHeight - $('.category_bar').outerHeight(true);
+            $('.messagelist').css('height', messagelist_height + 'px');
+
+            $('.detail_pane').css('width', windowSize.detailPaneWidth + 'px');
+
+            // $('.panel_right_content').css('width', windowSize.rightContentWidth + 'px');
 
             $('.right_panel_container').css('width', windowSize.rightContentWidth + 'px');
             $('.right_panel_container').css('height', (windowSize.contentBodyHeight) + 'px');

@@ -89,7 +89,7 @@ app.directive("hover", function() {
 
 
 
-app.directive('autoResize', function(layout) {
+app.directive('autoResize', function(Layout) {
     return {
         restrict: 'A',
         link: function(scope, element, attributes) {
@@ -124,11 +124,11 @@ app.directive('autoResize', function(layout) {
                 element.addClass('animate_change');
                 element.css('height', newHeight);
                 // element.removeClass('animate_change');
-                layout.reflow();
+                Layout.reflow();
 
                 element.on('webkitTransitionEnd', function(event) {
                     alert("Finished transition!");
-                    layout.reflow();
+                    Layout.reflow();
                 }, false);
             };
 
