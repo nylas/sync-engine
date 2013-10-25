@@ -18,7 +18,7 @@ setup(
     name = "inbox",
     version = "0.1",
     packages = find_packages(),
-    scripts = ['inboxapp-srv'],
+    scripts = ['inbox-appserver'],
 
     install_requires = [
         "argparse==1.2.1",
@@ -50,7 +50,6 @@ setup(
         # For ZeroRPC
         "Cython==0.19.1",
         "zerorpc==0.4.3",
-        # TODO add xapian (for search)
         ],
     dependency_links = [
         # Our own versions of these
