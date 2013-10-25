@@ -18,7 +18,7 @@ setup(
     name = "inbox",
     version = "0.1",
     packages = find_packages(),
-    scripts = ['inbox-appserver'],
+    scripts = ['inboxapp-srv'],
 
     install_requires = [
         "argparse==1.2.1",
@@ -49,6 +49,9 @@ setup(
         "setproctitle==1.1.7",
         # For ZeroRPC
         "Cython==0.19.1",
+        "colorlog==2.0.0",
+        "sqlalchemy==0.8.2",
+        "boto==2.15.0",
         ],
     dependency_links = [
         # Our own versions of these
