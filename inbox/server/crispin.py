@@ -329,7 +329,7 @@ class CrispinClient(CrispinClientBase):
             new_msg.g_thrid = unicode(x_gm_thrid)
             new_msg.g_msgid = unicode(x_gm_msgid)
 
-            fm = FolderMeta(namespace_id=self.account.namespace.id,
+            fm = FolderMeta(imapaccount_id=self.account.id,
                     folder_name=self.selected_folder_name,
                     msg_uid=uid, messagemeta=new_msg)
             new_foldermeta.append(fm)

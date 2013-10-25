@@ -36,15 +36,22 @@ def get_user(request):
     if not user_session: return None
     return user_session.user
 
+# TODO this is a HACK and needs to be changed before multiaccount support
+def get_account(request):
+    user = get_user(request)
+    if user is None or len(user.accounts) == 0:
+        return None
+    return user.accounts[0]
+
 app = Flask(__name__, static_folder='../../web_client', static_url_path='', template_folder='templates')
 
 
 @app.route('/')
 def index():
-    user = get_user(request)
+    account = get_account(request)
     return render_template('index.html',
-                            name = user.email_address if user else "",
-                            logged_in = bool(user))
+                            name = account.email_address if account else "",
+                            logged_in = bool(account))
 
 @app.route('/app')
 @app.route('/app/')  # TOFIX not sure I need to do both
@@ -99,7 +106,7 @@ def auth_done_handler():
     assert 'refresh_token' in oauth_response
 
     new_account = sessionmanager.make_account(oauth_response)
-    new_session = sessionmanager.create_session(new_account.namespace.root_user)
+    new_session = sessionmanager.create_session(new_account.user)
 
     log.info("Successful login. Setting cookie: %s" % new_session.token)
 
@@ -128,9 +135,9 @@ def logout():
 def run_socketio(path):
 
     real_request = request._get_current_object()
-    user = get_user(request)
-    if get_user:
-        log.info('Successful socket auth for {0}'.format(user.email_address))
+    account = get_account(request)
+    if account:
+        log.info('Successful socket auth for {0}'.format(account.email_address))
         socketio_manage(request.environ, {
                         '/wire': WireNamespace},
                         request=real_request)
@@ -182,7 +189,7 @@ class WireNamespace(BaseNamespace):
 
         print 'Calling on', c
         print message
-        response_text = self.rpc.run(c, message, user.root_namespace)
+        response_text = self.rpc.run(c, message, user.id)
 
         # Send response
         self.send(response_text, json=True)
@@ -208,8 +215,8 @@ class WireNamespace(BaseNamespace):
 
 @app.route('/file_upload', methods=['GET', 'POST'])
 def upload_file_handler():
-    user = get_user(request)
-    if not user:
+    account = get_account(request)
+    if not account:
         log.error("No user session for upload attempt")
         abort(401)
         return
@@ -226,7 +233,7 @@ def upload_file_handler():
     if request.method == 'POST' and 'file' in request.files:
         uploaded_file = request.files['file']
 
-        meta = MessageMeta(namespace_id=user.root_namespace_id)
+        meta = MessageMeta(namespace_id=account.namespace.id)
         part = BlockMeta(
                 messagemeta=meta,
                 filename=uploaded_file.filename,
@@ -295,9 +302,10 @@ def gallery_handler(email, id):
 def block_retrieval(blockhash):
     if not blockhash: return None
 
-    if not get_user(request): return None
+    account = get_account(request)
+    if not account: return None
 
-    return get_user(request).email_address
+    return account.email_address
 
     query = db_session.query(BlockMeta).filter(BlockMeta.data_sha256 == blockhash)
 

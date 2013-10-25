@@ -9,3 +9,4 @@ drop table if exists user_session;
 drop table if exists user;
 drop table if exists namespace;
 drop table if exists imapaccount;
+drop table if exists sharedfoldernsmeta;

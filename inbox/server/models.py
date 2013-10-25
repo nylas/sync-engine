@@ -165,6 +165,9 @@ class MediumPickle(PickleType):
 class IMAPAccount(Base):
     __tablename__ = 'imapaccount'
     id = Column(Integer, primary_key=True, autoincrement=True)
+    # user_id refers to Inbox's user id
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    user = relationship("User", backref="accounts")
 
     email_address = Column(String(254), nullable=True, index=True)
     provider = Enum('Gmail', 'Outlook', 'Yahoo', 'Inbox')
@@ -208,6 +211,18 @@ class IMAPAccount(Base):
     def sync_unlock(self):
         self._sync_lock.release()
 
+    """
+    def total_stored_data(self):
+        return db_session.query(func.sum(BlockMeta.size)) \
+                .join(BlockMeta.messagemeta, MessageMeta.namespace) \
+                .filter(Namespace.id==self.root_namespace_id).one()
+
+    def total_stored_messages(self):
+        return db_session.query(MessageMeta).join(MessageMeta.namespace) \
+                .filter(MessageMeta.namespace.id == self.root_namespace_id).count()
+    """
+
+
 class UserSession(Base):
     """ Inbox-specific sessions. """
     __tablename__ = 'user_session'
@@ -219,10 +234,6 @@ class UserSession(Base):
     user_id = Column(Integer, ForeignKey('user.id'),
             nullable=False)
     user = relationship('User', backref='sessions')
-
-    @property
-    def email_address(self):
-        return self.user.root_namespace.imapaccount.email_address
 
 class Namespace(Base):
     """ A way to do grouping / permissions, basically. """
@@ -244,26 +255,23 @@ class Namespace(Base):
     def is_root(self):
         return self.imapaccount_id is not None
 
-    def total_stored_data(self):
-        return db_session.query(func.sum(BlockMeta.size)) \
-                .join(BlockMeta.messagemeta, MessageMeta.namespace) \
-                .filter(Namespace.id==self.root_namespace_id).one()
-
-    def total_stored_messages(self):
-        return db_session.query(MessageMeta).join(MessageMeta.namespace) \
-                .filter(MessageMeta.namespace.id == self.root_namespace_id).count()
-
     def get_messages(self, folder_name):
         """ Returns all messages in a given folder.
 
             Note that this may be more messages than included in the IMAP
             folder, since we fetch the full thread if one of the messages is in
             the requested folder.
+
+            NOTE: this assumes that the namespace is a "root"
+            namespace and not a shared folder.
         """
+    
+        assert self.is_root, "get_messages is only defined on root namespaces"
+
         # Get all thread IDs for all messages in this folder.
         all_msgids = db_session.query(FolderMeta.messagemeta_id)\
               .filter(FolderMeta.folder_name == folder_name,
-                      FolderMeta.namespace_id == self.id)
+                      FolderMeta.imapaccount_id == self.imapaccount_id)
         all_thrids = set()
         for thrid, in db_session.query(MessageMeta.g_thrid).filter(
                 MessageMeta.namespace_id == self.id,
@@ -280,28 +288,24 @@ class Namespace(Base):
 
         return all_msgs
 
-namespace_association = Table('namespace_user_association', Base.metadata,
-        Column('namespace_id', Integer, ForeignKey('namespace.id')),
-        Column('user_id', Integer, ForeignKey('user.id')))
+class SharedFolderNSMeta(Base):
+    __tablename__ = 'sharedfoldernsmeta'
 
-class User(JSONSerializable, Base):
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    namespace = relationship('Namespace', backref='sharedfoldernsmetas')
+    namespace_id = Column(Integer, ForeignKey('namespace.id'), nullable=False)
+    user = relationship('User', backref='sharedfoldernsmetas')
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+
+    display_name = Column(String(40))
+
+class User(Base):
     __tablename__ = 'user'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    root_namespace_id = Column(Integer, ForeignKey('namespace.id'),
-            nullable=False)
-    root_namespace = relationship('Namespace',
-            backref=backref('root_user', uselist=False))
-
-    namespaces = relationship("Namespace", secondary=namespace_association,
-            backref="users")
-
     name = Column(String(255))
-
-    @property
-    def email_address(self):
-        return self.root_namespace.imapaccount.email_address
 
 # sharded
 
@@ -316,7 +320,7 @@ class MessageMeta(JSONSerializable, Base):
     # TODO Figure out how this cross-shard foreign key works with
     # SQLAlchemy's sharding support.
     namespace_id = Column(ForeignKey('namespace.id'), nullable=False)
-    namespace = relationship("Namespace")
+    namespace = relationship("Namespace", backref="messagemetas")
     # TODO probably want to store some of these headers in a better
     # non-pickled way to provide indexing
     from_addr = Column(MediumPickle)
@@ -466,19 +470,19 @@ class FolderMeta(JSONSerializable, Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    namespace_id = Column(ForeignKey('namespace.id'), nullable=False)
-    namespace = relationship("Namespace")
+    imapaccount_id = Column(ForeignKey('imapaccount.id'), nullable=False)
+    imapaccount = relationship("IMAPAccount")
     messagemeta_id = Column(Integer, ForeignKey('messagemeta.id'), nullable=False)
     messagemeta = relationship('MessageMeta')
     msg_uid = Column(Integer, nullable=False)
     folder_name = Column(String(255), nullable=False)  # All Mail, Inbox, etc. (i.e. Labels)
     flags = Column(MediumPickle)
 
-    __table_args__ = (UniqueConstraint('folder_name', 'msg_uid', 'namespace_id',
+    __table_args__ = (UniqueConstraint('folder_name', 'msg_uid', 'imapaccount_id',
         name='_folder_msg_user_uc'),)
 
 # make pulling up all messages in a given folder fast
-Index('foldermeta_namespace_id_folder_name', FolderMeta.namespace_id,
+Index('foldermeta_imapaccount_id_folder_name', FolderMeta.imapaccount_id,
         FolderMeta.folder_name)
 
 class UIDValidity(JSONSerializable, Base):

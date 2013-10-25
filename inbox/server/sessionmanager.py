@@ -28,8 +28,8 @@ def get_session(session_token):
     # XXX doesn't deal with multiple sessions
     try:
         return db_session.query(UserSession
-                ).filter_by(token=session_token).join(User, Namespace,
-                        IMAPAccount).one()
+                ).filter_by(token=session_token).join(User, IMAPAccount, Namespace
+                        ).one()
     except sqlalchemy.orm.exc.NoResultFound:
         log.error("No record for session with token: %s" % session_token)
         return None
@@ -39,11 +39,11 @@ def get_session(session_token):
 def make_account(access_token_dict):
     try:
         account = db_session.query(IMAPAccount).filter_by(
-                email_address=access_token_dict['email']).join(
-                        IMAPAccount.namespace, Namespace.root_user).one()
+                email_address=access_token_dict['email']).one()
     except sqlalchemy.orm.exc.NoResultFound:
-        namespace = Namespace(root_user=User())
-        account = IMAPAccount(namespace=namespace)
+        user = User()
+        namespace = Namespace()
+        account = IMAPAccount(user=user, namespace=namespace)
     account.email_address = access_token_dict['email']
     account.o_token_issued_to = access_token_dict['issued_to']
     account.o_user_id = access_token_dict['user_id']
