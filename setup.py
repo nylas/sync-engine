@@ -50,6 +50,7 @@ setup(
         # For ZeroRPC
         "Cython==0.19.1",
         "zerorpc==0.4.3",
+        # TODO add xapian (for search)
         ],
     dependency_links = [
         # Our own versions of these
