@@ -132,6 +132,7 @@ app.directive("messagecontainer", function($compile, Wire) {
                 }
 
 
+                $scope.updateBody("Loading&hellip;");
                 // Fetch the body of the messages.
                 // This is a hack for now, should be loading elsewhere.
 
@@ -157,7 +158,6 @@ app.directive("messagecontainer", function($compile, Wire) {
 
 
 app.directive("messageframe", function() {
-    var resizing_internal;
 
     return {
         restrict: 'E',
@@ -170,15 +170,16 @@ app.directive("messageframe", function() {
             var iframe = elem.find('iframe')[0];
             var doc = iframe.contentWindow.document;
 
+            var resizing_internal;
             function injectToIframe(textToInject) {
                 if (doc === null) {
-                    console.log("Why is the doc null?");
+                    console.log("Why is iframe.doc null?");
                     return;
                 }
                 // Reset
                 doc.removeChild(doc.documentElement);
                 iframe.width = '100%';
-                iframe.height = '0px;';
+                iframe.height = 'px;';
 
                 // TODO detect if there's significat styling in this mail.
                 // If so, don't add the CSS
@@ -209,9 +210,8 @@ app.directive("messageframe", function() {
             // Stop the resizing timer
             iframe.onload = function() {
                 console.log("iFrame finished resizing!")
-                // window.clearInterval(resizing_internal);
+                window.clearInterval(resizing_internal);
             };
-
 
             var resizeHeight = function() {
                 if (doc.body === null) return;

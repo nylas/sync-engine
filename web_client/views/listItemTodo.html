@@ -1,0 +1,17 @@
+<div class="list_item_todo"
+	 ng-class="{true: 'list_item_todo_complete', false: 'list_item_todo_incomplete' }[todo.complete == true]"
+	 ng-click="clickRow()">
+
+    <span class="checkbox clickable"
+    	  ng-click="$event.stopPropagation();
+    	  			clickCheckbox()">
+    </span>
+
+	<span class="title"
+		  ng-bind="todo.title">
+	</span>
+
+	<span class="move clickable"></span>
+
+
+</div>

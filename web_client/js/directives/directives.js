@@ -26,33 +26,25 @@ app.directive("headersearchbox", function() {
 app.directive("sidebaricon", function() {
     return {
         restrict: 'E',
-        replace: true,
+        // replace: true,
         scope: {
-            category: '='
+            active: '=',
+            category: '=',
         },
         controller: function($scope, $element, $attrs, $transclude) {
 
             $scope.is_active = false;
+
             $scope.icon_class = function() {
-                return 'sidebar_icon_' + $attrs.view;
-            };
 
-            $scope.icon_class_active = function() {
-                return $scope.icon_class() + '_active';
-            };
-
-            $scope.make_active = function() {
-                $scope.is_active = ! $scope.is_active;
-
-                if ($scope.is_active) {
-                    $element.addClass($scope.icon_class_active());
+                if ($scope.active) {
+                    return 'sidebar_icon_' + $attrs.view + '_active';
                 } else {
-                    $element.removeClass($scope.icon_class_active());
+                    return 'sidebar_icon_' + $attrs.view;
                 }
             };
-
         },
-        template: '<div ng-class="icon_class()" ng-click="make_active()" class="sidebar_icon clickable"></div>',
+        template: '<div ng-class="icon_class()" class="sidebar_icon clickable"></div>',
     };
 });
 
@@ -83,8 +75,25 @@ app.directive("hover", function() {
                 element.removeClass('itemcell_email_item_hover');
             });
         }
-    }
+    };
 });
+
+
+
+
+app.directive("listItemTodo", function() {
+    return {
+        restrict: 'E',
+        scope : {
+            todo : '=',
+            clickCheckbox: '&',
+            clickRow: '&'
+        },
+
+        templateUrl: 'views/listItemTodo.html',
+    };
+});
+
 
 
 

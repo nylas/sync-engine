@@ -36,7 +36,8 @@
     </div>
 
 
-    <div class="header_right">
+  <!-- Mail view actions -->
+    <div class="header_right" ng-show="isMailViewActive">
       <div class="action_button clickable archive" data-ng-click="archiveButtonHandler()">Archive</div>
         <div class="action_button_sep"></div>
       <div class="action_button clickable todo">Todo</div>
@@ -51,21 +52,35 @@
       <div class="action_button clickable more">&nbsp;</div>
     </div>
 
+
+  <!-- Todo view actions -->
+    <div class="header_right" ng-show="isTodoViewActive">
+      <div class="action_button clickable todo">Complete</div>
+
+      <div class="action_button clickable more">&nbsp;</div>
+    </div>
+
+
+
   </div>
 
   <div class="clear"></div>
 
+
+
   <div class="sidebar height_main">
-    <sidebaricon view="mail"></sidebaricon>
-    <sidebaricon view="todo"></sidebaricon>
-    <sidebaricon view="stacks"></sidebaricon>
-    <sidebaricon view="people"></sidebaricon>
-    <sidebaricon view="groups"></sidebaricon>
-    <sidebaricon view="settings"></sidebaricon>
+    <sidebaricon view="mail" active="isMailViewActive"></sidebaricon>
+    <sidebaricon view="todo" active="isTodoViewActive"></sidebaricon>
+    <sidebaricon view="stacks" active="isStacksViewActive"></sidebaricon>
+    <sidebaricon view="people" active="isPeopleViewActive"></sidebaricon>
+    <sidebaricon view="groups" active="isGroupsViewActive"></sidebaricon>
+    <sidebaricon view="settings" active="isSettingsViewActive"></sidebaricon>
   </div>
 
 
-  <div class="master_pane height_main">
+
+<!-- MAIL VIEW -->
+  <div class="master_pane height_main" ng-show="isMailViewActive">
     <div class="category_bar">
         <span class="category_bar_active">Inbox</span>
         <span>Drafts</span>
@@ -86,7 +101,37 @@
   </div>
 
 
-  <div class="detail_pane height_main">
+<!-- TODO VIEW -->
+  <div class="master_pane height_main" ng-show="isTodoViewActive">
+
+    <div class="container_scrollable">
+
+      <div class="list_item_todo_category">
+          Today
+      </div>
+
+      <div class="clear"></div>
+
+      <div class="todolist">
+        <list:item:todo
+          data-ng-repeat="todo in displayTodos"
+          todo="todo"
+          click-checkbox="todoCheckboxClickHandler(todo)"
+          click-row="todoRowClickHandler(todo)">
+        </listitem:todo>
+      </div>
+
+    </div>
+  </div>
+
+  </div>
+
+
+
+
+<!-- Mail detail pane -->
+  <div class="detail_pane height_main"
+       ng-show="isMailViewActive">
 
         <div class="message_container"
              ng-show="activeThread">
@@ -108,9 +153,43 @@
             <replybox send-button-action="sendMessage(message_text)"></replybox>
           </div>
         </div>
-
-
   </div>
+
+
+
+<!-- Todo detail view -->
+  <div class="detail_pane height_main"
+       ng-show="isTodoViewActive">
+
+       Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
+       tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+       quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+       consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
+       cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
+       proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+        <div class="message_container"
+             ng-show="activeThread">
+
+          <div class="content_head">
+            <div class="email_content_title"
+                 ng-bind="activeThread.subject()">
+            </div>
+          </div>
+        </div>
+
+
+        <div class="message_container">
+          <div class="contentFoot" ng-show="activeThread">
+            <replybox send-button-action="sendMessage(message_text)"></replybox>
+          </div>
+        </div>
+  </div>
+
+
+
+
+
 
 
 </div>

@@ -262,10 +262,49 @@ app.controller('AppContainerController',
 
         // Loaded. Load the messages.
         // TOFIX we should load these once we know the socket has actually connected
-        setTimeout(function() {
-            $scope.loadMessagesForFolder('Inbox');
-        }, 2000);
+        // setTimeout(function() {
+        //     $scope.loadMessagesForFolder('Inbox');
+        // }, 2000);
 
+
+
+
+        $scope.isMailViewActive = false;
+        $scope.isTodoViewActive = true;
+        $scope.isStacksViewActive = false;
+        $scope.isPeopleViewActive = false;
+        $scope.isGroupsViewActive = false;
+        $scope.isSettingsViewActive = false;
+
+
+        $scope.makeActive = function() {
+            console.log("Sidebar button clicked!");
+        };
+
+        $scope.todoCheckboxClickHandler = function(t) {
+            console.log(['Clicked checkbox:', t]);
+        }
+
+        $scope.todoRowClickHandler = function(t) {
+            console.log(['Clicked row:', t]);
+        }
+
+
+
+        $scope.displayTodos = [{title: 'Russ: send book recommendation', complete: false},
+                               {title: 'Cinjon: What do you think of this article?', complete: true},
+                               {title: 'Alex: Can you introduce me to Sasha?', complete: true},
+                               {title: 'Linden: Send IFTT app feedback', complete: false},
+                               {title: 'Alex: Can you introduce me to Sasha?', complete: false},
+                               {title: 'Christine: Questions about Mission Cliffs', complete: false},
+                               {title: 'Charles: Debug alpha testing account', complete: false},
+                               {title: 'Send Mom & Dad photos from vacation', complete: false},
+                               {title: 'Josh: What do you think about this article?', complete: false},
+                               {title: 'Frank: Who\'s on first?', complete: false},
+                               {title: 'Sophia: Need design assets for next week', complete: false},
+                               {title: 'Chen-Li: Feedback for my new venture', complete: false},
+                               {title: 'Elizabeth: Intro to folks at PDQ Bank?', complete: false},
+                               {title: 'Draft: Product updates from October', complete: false}];
 
     });
 

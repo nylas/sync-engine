@@ -24,11 +24,7 @@ angular.module('InboxApp.services')
             windowSize.width = $('body').width();
 
             windowSize.headerHeight = $('.header').outerHeight(true);
-
             windowSize.mainHeight = windowSize.height - windowSize.headerHeight;
-
-            windowSize.leftPaneHeight = windowSize.mainHeight;
-            windowSize.leftMessageListHeight = windowSize.mainHeight - $('.header_left').outerHeight(true) - $('.footer_left').outerHeight(true);
 
             windowSize.rightContentWidth = windowSize.width - $('.sidebar').outerWidth(true);
 
@@ -53,6 +49,11 @@ angular.module('InboxApp.services')
 
             var messagelist_height = windowSize.mainHeight - $('.category_bar').outerHeight(true);
             $('.messagelist').css('height', messagelist_height + 'px');
+
+
+            var container_scrollable_height = windowSize.mainHeight - parseInt($('.master_pane').css('margin-top'));
+            $('.container_scrollable').css('height', container_scrollable_height + 'px');
+
 
             $('.detail_pane').css('width', windowSize.detailPaneWidth + 'px');
 
