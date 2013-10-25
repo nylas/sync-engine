@@ -33,6 +33,8 @@ On my mac I had to run `dscacheutil -flushcache` afterward.
 
 8. Install nginx > 1.4 and start it using `sudo nginx -c deploy/nginx.conf -p ./`
 
+8.5 Install xapian using `sudo packages/install_xapian.sh`
+
 9. run `./inbox start`. This defaults to port 8888.
 
 10. Open your browser to [http://localhost:8888](http://localhost:8888)

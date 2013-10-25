@@ -49,9 +49,8 @@ setup(
         "setproctitle==1.1.7",
         # For ZeroRPC
         "Cython==0.19.1",
-        "colorlog==2.0.0",
-        "sqlalchemy==0.8.2",
-        "boto==2.15.0",
+        "zerorpc==0.4.3",
+        # TODO add xapian (for search)
         ],
     dependency_links = [
         # Our own versions of these
