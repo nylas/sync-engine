@@ -245,10 +245,9 @@ app.controller('AppContainerController',
 
         // Loaded. Load the messages.
         // TOFIX we should load these once we know the socket has actually connected
-        setTimeout(function() {
-            $scope.loadMessagesForFolder('Inbox');
-        }, 2000);
-
+         setTimeout(function() {
+             $scope.loadMessagesForFolder('Inbox');
+         }, 2000);
 
 
         $scope.isMailViewActive = true;
