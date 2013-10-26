@@ -251,8 +251,8 @@ app.controller('AppContainerController',
 
 
 
-        $scope.isMailViewActive = false;
-        $scope.isTodoViewActive = true;
+        $scope.isMailViewActive = true;
+        $scope.isTodoViewActive = false;
         $scope.isStacksViewActive = false;
         $scope.isPeopleViewActive = false;
         $scope.isGroupsViewActive = false;
@@ -263,7 +263,7 @@ app.controller('AppContainerController',
         $scope.displayTodos = MockData.todos;
 
 
-
+        // For todo sorting
       $scope.sortableOptions = {
         revert: false,
         axis: "y",
