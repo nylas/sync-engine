@@ -20,5 +20,4 @@ angular.module('InboxApp.controllers', []);
 angular.module('InboxApp.directives', []);
 
 // Some configuration
-app.constant('WIRE_ENDPOINT_URL', 'https://dev-localhost.inboxapp.com/wire');
-
+app.constant('WIRE_ENDPOINT_URL', '/wire');
