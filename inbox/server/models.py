@@ -211,12 +211,17 @@ class IMAPAccount(Base):
     def sync_unlock(self):
         self._sync_lock.release()
 
-    """
     def total_stored_data(self):
-        return db_session.query(func.sum(BlockMeta.size)) \
-                .join(BlockMeta.messagemeta, MessageMeta.namespace) \
-                .filter(Namespace.id==self.root_namespace_id).one()
+        """ Computes the total size of the block data of emails in your
+            account's IMAP folders
+        """
+        subq = db_session.query(BlockMeta) \
+                .join(BlockMeta.messagemeta, MessageMeta.foldermetas) \
+                .filter(FolderMeta.imapaccount_id==self.id) \
+                .group_by(MessageMeta.id, BlockMeta.id)
+        return db_session.query(func.sum(subq.subquery().columns.size)).scalar()
 
+    """
     def total_stored_messages(self):
         return db_session.query(MessageMeta).join(MessageMeta.namespace) \
                 .filter(MessageMeta.namespace.id == self.root_namespace_id).count()
