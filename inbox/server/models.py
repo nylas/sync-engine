@@ -221,11 +221,12 @@ class IMAPAccount(Base):
                 .group_by(MessageMeta.id, BlockMeta.id)
         return db_session.query(func.sum(subq.subquery().columns.size)).scalar()
 
-    """
     def total_stored_messages(self):
-        return db_session.query(MessageMeta).join(MessageMeta.namespace) \
-                .filter(MessageMeta.namespace.id == self.root_namespace_id).count()
-    """
+        """ Computes the number of emails in your account's IMAP folders """
+        return db_session.query(MessageMeta) \
+                .join(MessageMeta.foldermetas) \
+                .filter(FolderMeta.imapaccount_id==self.id) \
+                .group_by(MessageMeta.id).count()
 
 
 class UserSession(Base):
