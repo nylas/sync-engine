@@ -3,7 +3,7 @@ import logging as log
 import json
 import postel
 from bson import json_util
-from models import db_session, MessageMeta, BlockMeta, Namespace, User, IMAPAccount
+from models import db_session, MessageMeta, FolderMeta, SharedFolderNSMeta, BlockMeta, Namespace, User, IMAPAccount
 
 from sqlalchemy.orm import joinedload
 
@@ -128,6 +128,24 @@ class API(object):
                            default=json_util.default)  # Fixes serializing date.datetime
 
         # existing_message_part = db_session.query(MessageMeta).filter(MessageMeta.g_msgid == data_id).filter(MessageMeta.g_namespace_id == user_id)
+
+    def top_level_namespaces(self, user_id):
+        """for the user, get the namespaces for all the accounts associated as well as all the shared folder metas
+        returns a list of tuples of display name, type, and id"""
+        nses = {'private': {}, 'shared': {}}
+
+        accounts = db_session.query(IMAPAccount).filter(IMAPAccount.user_id == user_id)
+        for account in accounts:
+            account_ns = account.namespace
+            nses['private'][account_ns.id] = 'Gmail'
+
+        shared_nses = db_session.query(SharedFolderNSMeta)\
+                .filter(SharedFolderNSMeta.user_id == user_id)
+        for shared_ns in shared_nses:
+            nses['shared'][shared_ns.id] = shared_ns.display_name
+
+        print nses
+        return json.dumps(nses, default=json_util.default)
 
     def start_sync(self, namespace_id):
         """ Talk to the Sync service and have it launch a sync. """

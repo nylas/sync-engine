@@ -176,11 +176,12 @@ class WireNamespace(BaseNamespace):
                                 '' if len(active_sockets) == 1 else 's'))
 
     def recv_message(self, message):
+        message = """{"method":"top_level_namespaces","params":[],"id":"778247733429#0"}"""
         log.info(message)
 
         # TODO: Make this an @authenticated decorator someday
-        user = get_user(request)
-        assert user
+        user_id = get_user(request)
+        assert user_id
 
         api_srv_loc = environ.get('API_SERVER_LOC', None)
         assert api_srv_loc
@@ -189,7 +190,7 @@ class WireNamespace(BaseNamespace):
 
         print 'Calling on', c
         print message
-        response_text = self.rpc.run(c, message, user.id)
+        response_text = self.rpc.run(c, message, user_id)
 
         # Send response
         self.send(response_text, json=True)
