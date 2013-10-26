@@ -81,13 +81,22 @@ app.directive("hover", function() {
 
 
 
+
 app.directive("listItemTodo", function() {
     return {
         restrict: 'E',
+        // Note: shit will break with reordering if we don't replace the <list:item:todo>
+        replace: true,
         scope : {
             todo : '=',
-            clickCheckbox: '&',
             clickRow: '&'
+        },
+        controller: function($scope, $element, $attrs, $transclude) {
+
+          $scope.clickCheckbox = function() {
+            console.log("Toggling!");
+            $scope.todo.complete = !$scope.todo.complete;
+          };
         },
 
         templateUrl: 'views/listItemTodo.html',

@@ -4,16 +4,13 @@
     <meta charset="utf-8">
     <title>Inbox</title>
 
-<!-- <link rel="stylesheet" href="css/bootstrap.min.css"/> -->
-
 <link rel="stylesheet" href="css/style.css"/>
-
-<!-- <link rel="stylesheet" href="css/bootstrap-responsive.min.css"/> -->
 
 <!-- typekit -->
 <!-- <script type="text/javascript" src="//use.typekit.net/ccs3tld.js"></script>
 <script type="text/javascript">try{Typekit.load();}catch(e){}</script>
  -->
+
 
 </head>
 <body>
@@ -61,11 +58,9 @@
     </div>
 
 
-
   </div>
 
   <div class="clear"></div>
-
 
 
   <div class="sidebar height_main">
@@ -79,7 +74,7 @@
 
 
 
-<!-- MAIL VIEW -->
+<!-- MAIL MASTER VIEW -->
   <div class="master_pane height_main" ng-show="isMailViewActive">
     <div class="category_bar">
         <span class="category_bar_active">Inbox</span>
@@ -101,35 +96,28 @@
   </div>
 
 
-<!-- TODO VIEW -->
+<!-- TODO MASTER VIEW -->
   <div class="master_pane height_main" ng-show="isTodoViewActive">
 
     <div class="container_scrollable">
 
-      <div class="list_item_todo_category">
-          Today
-      </div>
-
+      <div class="list_item_todo_category">Today</div>
       <div class="clear"></div>
 
-      <div class="todolist">
+      <div ui-sortable="sortableOptions" ng-model="displayTodos" class="list">
         <list:item:todo
-          data-ng-repeat="todo in displayTodos"
+          ng-repeat="todo in displayTodos"
           todo="todo"
-          click-checkbox="todoCheckboxClickHandler(todo)"
-          click-row="todoRowClickHandler(todo)">
-        </listitem:todo>
+          click:row="todoRowClickHandler(todo)">
+        </list:item:todo>
       </div>
 
     </div>
   </div>
 
-  </div>
 
 
-
-
-<!-- Mail detail pane -->
+<!-- MAIL DETAIL VIEW -->
   <div class="detail_pane height_main"
        ng-show="isMailViewActive">
 
@@ -161,13 +149,6 @@
   <div class="detail_pane height_main"
        ng-show="isTodoViewActive">
 
-       Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod
-       tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
-       quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
-       consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
-       cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non
-       proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-
         <div class="message_container"
              ng-show="activeThread">
 
@@ -177,7 +158,6 @@
             </div>
           </div>
         </div>
-
 
         <div class="message_container">
           <div class="contentFoot" ng-show="activeThread">
@@ -204,41 +184,62 @@
 
 
 
-<!-- JavaScript Includes -->
-<script src="js/bootstrap.js"></script>
+<!--
+
+  JavaScript Includes
+
+-->
 
 <script src="lib/jquery.min.js"></script>
+<script src="lib/jquery-ui.min.js"></script>
+
+<script type="text/javascript">
+  // Patch jQuery because $.browser was removed in 1.9
+  // TODO add jQuery Browser plugin
+  jQuery.browser={};(function(){jQuery.browser.msie=false;
+  jQuery.browser.version=0;if(navigator.userAgent.match(/MSIE ([0-9]+)\./)){
+  jQuery.browser.msie=true;jQuery.browser.version=RegExp.$1;}})();
+</script>
+
+
 <script src="lib/jquery-utils/jquery.ui.widget.js"></script>
 <script src="lib/jquery-utils/jquery.iframe-transport.js"></script>
 <script src="lib/jquery-utils/jquery.fileupload.js"></script>
+
 
 <!-- Aaaaaaaangular -->
 <script src="lib/angular/angular.js"></script>
 <script src="lib/angular/angular-sanitize.js"></script>
 <script src="lib/angular/angular-cookies.js"></script>
+
+<script src="lib/angular-modules/angular-ui.js"></script>
 <script src="lib/angular-modules/localStorageModule.js"></script>
-
+<script src="lib/angular-modules/sortable.js"></script>
 <script src="lib/mousetrap.min.js"></script>
-
-<script src="lib/bootstrap/ui-bootstrap-0.3.0.js"></script>
 <script src="lib/utils/md5.js"></script>
 <script src="lib/socketio/socket.io.js"></script>
+
+
+<!-- InboxApp files -->
 <script src="js/app.js"></script>
+
+<script src="js/controllers/AppContainerController.js"></script>
+<script src="js/controllers/CookieController.js"></script>
+
 <script src="js/models.js"></script>
 
 <script src="js/services/Layout.js"></script>
 <script src="js/services/Wire.js"></script>
 <script src="js/services/Growl.js"></script>
 <script src="js/services/ProtocolHandler.js"></script>
+<script src="js/services/MockData.js"></script>
 
-<script src="js/controllers/AppContainerController.js"></script>
-<script src="js/controllers/CookieController.js"></script>
-
-<script src="js/filters.js"></script>
 <script src="js/directives/directives.js"></script>
 <script src="js/directives/messageView.js"></script>
 <script src="js/directives/replyBox.js"></script>
+<script src="js/directives/dragReorder.js"></script>
 
+<script src="js/filters.js"></script>
 
 </body>
 </html>

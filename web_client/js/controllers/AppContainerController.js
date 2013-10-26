@@ -18,7 +18,10 @@ app.controller('AppContainerController',
         IBMessageMeta,
         IBMessagePart,
         protocolhandler,
-        $filter) {
+        $filter,
+        $timeout,
+        $log,
+        MockData) {
 
         // $scope.notificationButtonClick = function() {
         //     growl.requestPermission(
@@ -59,22 +62,17 @@ app.controller('AppContainerController',
                 return;
             }
 
-            console.log("Calling search for: " + query);
-
+            $log.info("Calling search for: " + query);
             Wire.rpc('search_folder', [query], function(data) {
-                console.log("Got response");
-                var msg_ids = JSON.parse(data);
-                console.log(msg_ids);
 
+                var msg_ids = JSON.parse(data);
+                $log.info(["Received msg_ids:", msg_ids]);
                 Wire.rpc('messages_with_ids', [msg_ids], function(data) {
-                    console.log("Got response for msgids");
 
                     var arr_from_json = JSON.parse(data);
 
 
                     // THIS IS SHIIIIITY COPYING FROM BELOW
-
-
                     var thread_dict = {};
                     var freshMessages = [];
                     angular.forEach(arr_from_json, function(value, key) {
@@ -117,14 +115,8 @@ app.controller('AppContainerController',
                             return 0;
                         });
 
-                    console.log(all_threads);
-
-
+                    $log.info(["All threads:", all_threads]);
                     $scope.displayedThreads = all_threads;
-
-
-
-
                 });
 
 
@@ -133,15 +125,6 @@ app.controller('AppContainerController',
 
         };
 
-        $scope.composerActive = false;
-
-
-        $scope.composeButtonHandler = function() {
-
-            $scope.activeThread = null;
-            $scope.composerActive = true;
-
-        }
 
         $scope.archiveButtonHandler = function() {
             console.log("Should archive message!");
@@ -155,8 +138,8 @@ app.controller('AppContainerController',
             }
 
             // $scope.displayedThreads = all_threads;
-
         }
+
 
 
         $scope.clearSearch = function() {
@@ -168,7 +151,6 @@ app.controller('AppContainerController',
         $scope.loadMessagesForFolder = function(folder_name) {
 
             // Debug
-
             $scope.statustext = "Loading messages...";
 
             Wire.rpc('messages_for_folder', folder_name, function(data) {
@@ -192,7 +174,6 @@ app.controller('AppContainerController',
                 /* Below we sort the messages into threads.
                    TODO: This needs to be tested much better.
                  */
-
 
                 // Sort individual threads in ascending order
                 angular.forEach(thread_dict, function(thread, key) {
@@ -245,6 +226,8 @@ app.controller('AppContainerController',
 
         $scope.openThread = function(selectedThread) {
 
+
+
             console.log("SelectedThread:");
             console.log(selectedThread);
 
@@ -262,10 +245,9 @@ app.controller('AppContainerController',
 
         // Loaded. Load the messages.
         // TOFIX we should load these once we know the socket has actually connected
-        // setTimeout(function() {
-        //     $scope.loadMessagesForFolder('Inbox');
-        // }, 2000);
-
+        setTimeout(function() {
+            $scope.loadMessagesForFolder('Inbox');
+        }, 2000);
 
 
 
@@ -277,34 +259,49 @@ app.controller('AppContainerController',
         $scope.isSettingsViewActive = false;
 
 
-        $scope.makeActive = function() {
-            console.log("Sidebar button clicked!");
-        };
 
-        $scope.todoCheckboxClickHandler = function(t) {
-            console.log(['Clicked checkbox:', t]);
-        }
-
-        $scope.todoRowClickHandler = function(t) {
-            console.log(['Clicked row:', t]);
-        }
+        $scope.displayTodos = MockData.todos;
 
 
 
-        $scope.displayTodos = [{title: 'Russ: send book recommendation', complete: false},
-                               {title: 'Cinjon: What do you think of this article?', complete: true},
-                               {title: 'Alex: Can you introduce me to Sasha?', complete: true},
-                               {title: 'Linden: Send IFTT app feedback', complete: false},
-                               {title: 'Alex: Can you introduce me to Sasha?', complete: false},
-                               {title: 'Christine: Questions about Mission Cliffs', complete: false},
-                               {title: 'Charles: Debug alpha testing account', complete: false},
-                               {title: 'Send Mom & Dad photos from vacation', complete: false},
-                               {title: 'Josh: What do you think about this article?', complete: false},
-                               {title: 'Frank: Who\'s on first?', complete: false},
-                               {title: 'Sophia: Need design assets for next week', complete: false},
-                               {title: 'Chen-Li: Feedback for my new venture', complete: false},
-                               {title: 'Elizabeth: Intro to folks at PDQ Bank?', complete: false},
-                               {title: 'Draft: Product updates from October', complete: false}];
+      $scope.sortableOptions = {
+        revert: false,
+        axis: "y",
+        // snap: true,
+        scroll: true,
+        showAnim: '',
+        opacity: 1.0,
+        containment: "parent",
+        grid: [ 0, 44 ],
+        handle: '.move',
+        tolerance: "pointer",
+
+        // update: function(e, ui) { ... },
+        stop: function(e, ui) {
+            var logEntry = {
+              // ID: $scope.sortingLog.length + 1,
+              Text: 'Moved element: ' + ui.item.scope().todo.title
+            };
+            console.log(logEntry);
+        },
+
+      };
+
+
+      $scope.makeActive = function() {
+          console.log("Sidebar button clicked!");
+      };
+
+      $scope.todoCheckboxClickHandler = function(t) {
+          console.log(['Clicked checkbox:', t]);
+      }
+
+      $scope.todoRowClickHandler = function(t) {
+          console.log(['Clicked row:', t]);
+      }
+
+
+
 
     });
 

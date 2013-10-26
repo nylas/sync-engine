@@ -9,6 +9,8 @@ var app = angular.module('InboxApp',
      'InboxApp.services',
      'InboxApp.models',
      'LocalStorageModule',
+     'ui',
+     'ui.sortable'
      ]);
 
 
