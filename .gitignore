@@ -51,3 +51,6 @@ nosetests.xml
 .project
 .pydevproject
 .elasticbeanstalk/
+
+# Xapian
+packages/xapian*
