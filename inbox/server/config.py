@@ -5,7 +5,7 @@ import logging as log
 def setup_env():
     """Set environment variables from config file"""
     try:
-        config_filename = 'config.cfg'
+        config_filename = 'config-dev.cfg'
         parser=ConfigParser.SafeConfigParser()
         parser.read([config_filename])
         for item in parser.items('inboxserver'):

@@ -5,6 +5,7 @@
 /src
 /errors
 /config.cfg
+/config-dev.cfg
 /cache
 
 .DS_Store
