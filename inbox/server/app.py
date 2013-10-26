@@ -176,7 +176,6 @@ class WireNamespace(BaseNamespace):
                                 '' if len(active_sockets) == 1 else 's'))
 
     def recv_message(self, message):
-        message = """{"method":"top_level_namespaces","params":[],"id":"778247733429#0"}"""
         log.info(message)
 
         # TODO: Make this an @authenticated decorator someday
