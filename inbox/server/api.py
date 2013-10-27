@@ -10,6 +10,34 @@ from sqlalchemy.orm import joinedload
 import zerorpc
 import os
 
+class NSAuthError(Exception):
+    pass
+
+def namespace_auth(fn):
+    """
+    decorator that checks whether user has permissions to access namespace
+    """
+    from functools import wraps
+    @wraps(fn)
+    def namespace_auth_fn(self, user_id, namespace_id, *args, **kwargs):
+        self.user_id = user_id
+        self.namespace_id = namespace_id
+        user = db_session.query(User).filter_by(id=user_id).join(IMAPAccount).one()
+        for account in user.accounts:
+            if account.namespace.id == namespace_id:
+                self.namespace = account.namespace
+                return fn(self, *args, **kwargs)
+
+        shared_nses = db_session.query(SharedFolderNSMeta)\
+                .filter(SharedFolderNSMeta.user_id == user_id)
+        for shared_ns in shared_nses:
+            if shared_ns.id == namespace_id:
+                return fn(self, *args, **kwargs)
+
+        raise NSAuthError("User '{0}' does not have access to namespace '{1}'".format(user_id, namespace_id))
+
+    return namespace_auth_fn
+
 class API(object):
 
     _zmq_search = None
@@ -52,19 +80,40 @@ class API(object):
         meta_ids = [r[0] for r in results]
         return json.dumps(meta_ids, default=json_util.default)
 
-    def messages_for_folder(self, namespace_id, folder_name):
+    @namespace_auth
+    def messages_for_folder(self, folder_name):
         """ Returns all messages in a given folder.
 
             Note that this may be more messages than included in the IMAP
             folder, since we fetch the full thread if one of the messages is in
             the requested folder.
         """
-        # save a database call by just creating a new namespace object and
-        # not committing it to the db
-        messages = Namespace(id=namespace_id).get_messages(folder_name)
+        assert self.namespace.is_root, "get_messages is only defined on root namespaces"
+
+        # Get all thread IDs for all messages in this folder.
+        imapaccount_id = self.namespace.imapaccount_id
+        all_msgids = db_session.query(FolderMeta.messagemeta_id)\
+              .filter(FolderMeta.folder_name == folder_name,
+                      FolderMeta.imapaccount_id == imapaccount_id)
+        all_thrids = set()
+        for thrid, in db_session.query(MessageMeta.g_thrid).filter(
+                MessageMeta.namespace_id == self.namespace_id,
+                MessageMeta.id.in_(all_msgids)):
+            all_thrids.add(thrid)
+
+        # Get all messages for those thread IDs
+        messages = []
+        from .util.itert import chunk
+        DB_CHUNK_SIZE = 100
+        for g_thrids in chunk(list(all_thrids), DB_CHUNK_SIZE):
+            all_msgs_query = db_session.query(MessageMeta).filter(
+                    MessageMeta.namespace_id == self.namespace_id,
+                    MessageMeta.g_thrid.in_(g_thrids))
+            messages += all_msgs_query.all()
+
 
         log.info('found {0} message IDs'.format(len(messages)))
-        return json.dumps([m.client_json() for m in messages],
+        return json.dumps([m.cereal() for m in messages],
                            default=json_util.default)  # Fixes serializing date.datetime
 
     def messages_with_ids(self, namespace_id, msg_ids):
@@ -75,7 +124,7 @@ class API(object):
         all_msgs = all_msgs_query.all()
 
         log.info('found %i messages IDs' % len(all_msgs))
-        return json.dumps([m.client_json() for m in all_msgs],
+        return json.dumps([m.cereal() for m in all_msgs],
                            default=json_util.default)  # Fixes serializing date.datetime
 
 
@@ -88,9 +137,10 @@ class API(object):
             smtp.send_mail(recipients, subject, body)
         return "OK"
 
-    def meta_with_id(self, namespace_id, data_id):
+    @namespace_auth
+    def meta_with_id(self, data_id):
         existing_msgs_query = db_session.query(MessageMeta).join(Namespace)\
-                .filter(MessageMeta.g_msgid == data_id, Namespace.id == namespace_id)\
+                .filter(MessageMeta.g_msgid == data_id, Namespace.id == self.namespace_id)\
                 .options(joinedload("parts"))
         meta = existing_msgs_query.all()
         if not len(meta) == 1:
@@ -100,51 +150,51 @@ class API(object):
 
         parts = m.parts
 
-        return json.dumps([p.client_json() for p in parts],
+        return json.dumps([p.cereal() for p in parts],
                            default=json_util.default)
 
-    def part_with_id(self, namespace_id, message_id, walk_index):
-        q = db_session.query(BlockMeta).join(MessageMeta)\
-                .filter(MessageMeta.g_msgid==message_id,
-                        BlockMeta.walk_index == walk_index,
-                        MessageMeta.namespace_id == namespace_id)
-        parts = q.all()
-        print 'parts', len(parts)
-        if not len(parts) > 0:
-            log.error("No part to return... should have some data!")
-            data = {'message_data' : '' }
-        else:
-            if len(parts) > 1:
-                log.info("This part is in multiple folders")
-            part = parts[0]
-            data = {'message_data': part.get_data() }
+    @namespace_auth
+    def body_for_messagemeta(self, meta_id):
+        message_meta = db_session.query(MessageMeta).filter_by(id=meta_id).one()
+        parts = message_meta.parts
+        plain_data = None
+        html_data = None
 
-        # if to_fetch == plain_part:
-        #     msg_data = encoding.plaintext2html(msg_data)  # Do this on the client
-        # elif content_type == 'text/html':
-            # msg_data = encoding.clean_html(msg_data)
+        for part in parts:
+            if part.content_type == 'text/plain':
+                plain_data = part.get_data()
+                break
+            elif part.content_type == 'text/html':
+                rich_data = part.get_data()
+                break
 
-        return json.dumps(data,
-                           default=json_util.default)  # Fixes serializing date.datetime
+        if html_data:
+            return json.dumps({'data': html_data}, default=json_util.default)
 
-        # existing_message_part = db_session.query(MessageMeta).filter(MessageMeta.g_msgid == data_id).filter(MessageMeta.g_namespace_id == user_id)
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "message_template.html")
+        from util.html import plaintext2html
+        with open(path, 'r') as f:
+            # template has %s in it. can't do format because python misinterprets css
+            return json.dumps({'data': f.read() % plaintext2html(plain_data)},
+                    default=json_util.default)
+
+        return None
 
     def top_level_namespaces(self, user_id):
         """for the user, get the namespaces for all the accounts associated as well as all the shared folder metas
         returns a list of tuples of display name, type, and id"""
-        nses = {'private': {}, 'shared': {}}
+        nses = {'private': [], 'shared': []}
 
-        accounts = db_session.query(IMAPAccount).filter(IMAPAccount.user_id == user_id)
-        for account in accounts:
+        user = db_session.query(User).filter_by(id=user_id).join(IMAPAccount).one()
+        for account in user.accounts:
             account_ns = account.namespace
-            nses['private'][account_ns.id] = 'Gmail'
+            nses['private'].append(account_ns.cereal())
 
         shared_nses = db_session.query(SharedFolderNSMeta)\
                 .filter(SharedFolderNSMeta.user_id == user_id)
         for shared_ns in shared_nses:
-            nses['shared'][shared_ns.id] = shared_ns.display_name
+            nses['shared'].append(shared_ns.cereal())
 
-        print nses
         return json.dumps(nses, default=json_util.default)
 
     def start_sync(self, namespace_id):

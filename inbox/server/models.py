@@ -14,7 +14,6 @@ from sqlalchemy.schema import UniqueConstraint
 from hashlib import sha256
 from os import environ
 from .util.file import mkdirp, remove_file, Lock
-from .util.itert import chunk
 
 import logging as log
 from sqlalchemy.dialects import mysql
@@ -31,7 +30,6 @@ class JSONSerializable(object):
         pass
 
 STORE_MSG_ON_S3 = True
-DB_CHUNK_SIZE = 100
 
 class Blob(object):
     """ A blob of data that can be saved to local or remote (S3) disk. """
@@ -251,6 +249,7 @@ class Namespace(Base):
             nullable=True)
     imapaccount = relationship('IMAPAccount', backref=backref('namespace',
         uselist=False))
+    # TODO should have a name that defaults to gmail
 
     @property
     def email_address(self):
@@ -261,38 +260,8 @@ class Namespace(Base):
     def is_root(self):
         return self.imapaccount_id is not None
 
-    def get_messages(self, folder_name):
-        """ Returns all messages in a given folder.
-
-            Note that this may be more messages than included in the IMAP
-            folder, since we fetch the full thread if one of the messages is in
-            the requested folder.
-
-            NOTE: this assumes that the namespace is a "root"
-            namespace and not a shared folder.
-        """
-    
-        assert self.is_root, "get_messages is only defined on root namespaces"
-
-        # Get all thread IDs for all messages in this folder.
-        all_msgids = db_session.query(FolderMeta.messagemeta_id)\
-              .filter(FolderMeta.folder_name == folder_name,
-                      FolderMeta.imapaccount_id == self.imapaccount_id)
-        all_thrids = set()
-        for thrid, in db_session.query(MessageMeta.g_thrid).filter(
-                MessageMeta.namespace_id == self.id,
-                MessageMeta.id.in_(all_msgids)):
-            all_thrids.add(thrid)
-
-        # Get all messages for those thread IDs
-        all_msgs = []
-        for g_thrids in chunk(list(all_thrids), DB_CHUNK_SIZE):
-            all_msgs_query = db_session.query(MessageMeta).filter(
-                    MessageMeta.namespace_id == self.id,
-                    MessageMeta.g_thrid.in_(g_thrids))
-            all_msgs += all_msgs_query.all()
-
-        return all_msgs
+    def cereal(self):
+        return dict(id=self.id, name='Gmail')
 
 class SharedFolderNSMeta(Base):
     __tablename__ = 'sharedfoldernsmeta'
@@ -305,6 +274,9 @@ class SharedFolderNSMeta(Base):
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
 
     display_name = Column(String(40))
+
+    def cereal(self):
+        return dict(id=self.id, name=self.display_name)
 
 class User(Base):
     __tablename__ = 'user'
@@ -352,14 +324,14 @@ class MessageMeta(JSONSerializable, Base):
             s = s[4:]
         return s
 
-    def client_json(self):
+    def cereal(self):
         # TODO serialize more here for client API
         d = {}
         d['from'] = self.from_addr
         d['to'] = self.to_addr
         d['date'] = self.internaldate
         d['subject'] = self.subject
-        d['g_id'] = self.g_msgid
+        d['id'] = self.id
         d['g_thrid'] = self.g_thrid
         d['namespace_id'] = self.namespace_id
         return d
