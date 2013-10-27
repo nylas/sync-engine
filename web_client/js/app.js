@@ -19,5 +19,5 @@ angular.module('InboxApp.services', []);
 angular.module('InboxApp.controllers', []);
 angular.module('InboxApp.directives', []);
 
-// Some configuration
+// Websocket endpoint
 app.constant('WIRE_ENDPOINT_URL', '/wire');
