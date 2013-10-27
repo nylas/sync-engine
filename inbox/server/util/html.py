@@ -47,3 +47,35 @@ def plaintext2html(text, tabstop=4):
             return '%s<a href="%s">%s</a>%s' % (prefix, url, url, last)
     return re.sub(re_string, do_sub, text)
 
+
+def common_intervals(an, bn):
+    """
+    finds intervals of common substrings given two strings
+    """
+    MIN_LEN = 7
+    a = an.split()
+    b = bn.split()
+    def lcs(idx_a, idx_b):
+        i = 0
+        while idx_a + i < len(a) and idx_b + i < len(b) \
+            and a[idx_a + i] == b[idx_b + i]:
+            i += 1
+        return i
+
+    spans = []
+    start_a, start_b = 0, 0
+
+    while start_a < len(a) - MIN_LEN:
+        while start_b < len(b) - MIN_LEN:
+            l = lcs(start_a, start_b)
+            if l >= MIN_LEN:
+                spans.append((l, start_a, start_b))
+            if l > 0:
+                start_a += l
+                start_b += l
+            else:
+                start_b += 1
+        start_a += 1
+        start_b = 0
+
+    return spans
