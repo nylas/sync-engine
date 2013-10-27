@@ -27,7 +27,7 @@ def plaintext2html(text, tabstop=4):
         if c['htmlchars']:
             return cgi.escape(c['htmlchars'])
         if c['lineend']:
-            return '<br>'
+            return '<br/>'
         elif c['space']:
             t = m.group().replace('\t', '&nbsp;'*tabstop)
             t = t.replace(' ', '&nbsp;')

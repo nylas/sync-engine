@@ -161,24 +161,31 @@ class API(object):
         html_data = None
 
         for part in parts:
+            if part.content_type == 'text/html':
+                html_data = part.get_data()
+                break
+        for part in parts:
             if part.content_type == 'text/plain':
                 plain_data = part.get_data()
                 break
-            elif part.content_type == 'text/html':
-                rich_data = part.get_data()
-                break
 
+        prettified = None
         if html_data:
-            return json.dumps({'data': html_data}, default=json_util.default)
+            if 'font:' in html_data or 'font-face:' in html_data or 'font-family:' in html_data:
+                prettified = html_data
+            else:
+                path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "message_template.html")
+                from util.html import plaintext2html
+                with open(path, 'r') as f:
+                    # template has %s in it. can't do format because python misinterprets css
+                    prettified = f.read() % html_data
+        else:
+            path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "message_template.html")
+            from util.html import plaintext2html
+            with open(path, 'r') as f:
+                prettified = f.read() % plaintext2html(plain_data)
 
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "message_template.html")
-        from util.html import plaintext2html
-        with open(path, 'r') as f:
-            # template has %s in it. can't do format because python misinterprets css
-            return json.dumps({'data': f.read() % plaintext2html(plain_data)},
-                    default=json_util.default)
-
-        return None
+        return json.dumps({'data': prettified}, default=json_util.default)
 
     def top_level_namespaces(self, user_id):
         """for the user, get the namespaces for all the accounts associated as well as all the shared folder metas
