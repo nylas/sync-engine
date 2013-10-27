@@ -1,6 +1,6 @@
 import os
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum, Text
+from sqlalchemy import Column, Integer, String, DateTime, Date, Boolean, Enum, Text
 from sqlalchemy import ForeignKey, Table, Index, func
 from sqlalchemy.types import PickleType
 
@@ -23,11 +23,11 @@ from boto.s3.key import Key
 ### Roles
 
 class JSONSerializable(object):
-    def client_json(self):
+    def cereal(self):
         """ Override this and return a string of the object serialized for
             the web client.
         """
-        pass
+        raise NotImplementedError("cereal not implemented")
 
 STORE_MSG_ON_S3 = True
 
@@ -248,8 +248,11 @@ class Namespace(Base):
     imapaccount_id = Column(Integer, ForeignKey('imapaccount.id'),
             nullable=True)
     imapaccount = relationship('IMAPAccount', backref=backref('namespace',
-        uselist=False))
+        uselist=False)) # really the root_namespace
     # TODO should have a name that defaults to gmail
+
+    # invariant: imapaccount is non-null iff namespace_type is root
+    namespace_type = Column(Enum('root', 'shared_folder', 'todo'), nullable=False, default='root')
 
     @property
     def email_address(self):
@@ -263,7 +266,7 @@ class Namespace(Base):
     def cereal(self):
         return dict(id=self.id, name='Gmail')
 
-class SharedFolderNSMeta(Base):
+class SharedFolderNSMeta(JSONSerializable, Base):
     __tablename__ = 'sharedfoldernsmeta'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -483,6 +486,65 @@ class Collection(Base):
     __tablename__ = 'collections'
     id = Column(Integer, primary_key=True, autoincrement=True)
     type = Column(String(32), nullable=True)
+
+class TodoItem(JSONSerializable, Base):
+    __tablename__ = 'todoitem'
+    """ Each todo item has a row in TodoItem described the item's metadata.
+        Additionally, for each thread that is a todo item, all messages within
+        that thread should be in the user's todo namespace.
+    """
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # TODO change this to a ForeignKey constraint once threads are represented
+    # as database objects (and then rename to remove the "g_")
+    g_thrid = Column(String(255), nullable=False)
+
+    # Gmail thread IDs are only unique per-account, so in order to de-dupe, we
+    # need to store the account that this thread came from. When we get a
+    # Thread database table, these two lines can go.
+    imapaccount_id = Column(ForeignKey('imapaccount.id'), nullable=False)
+    imapaccount = relationship("IMAPAccount")
+
+    # this must be a namespace of the todo type
+    namespace_id = Column(ForeignKey('namespace.id'), nullable=False)
+    namespace = relationship("Namespace", backref="todo_items")
+
+    # the todo item description (defaults to the email's subject but can be changed)
+    display_name = Column(String(255), nullable=False)
+
+    # TODO possibly in the future we'll want to store richer metadata about
+    # these due dates (eg, convert each into a # of days)
+    due_date = Column(Enum('Today', 'Soon'), nullable=False)
+
+    # if completed: the date on which the task was completed
+    # a null value indicates an incomplete task
+    date_completed = Column(Date, nullable=True)
+
+    # within a due date, items will be sorted by increasing sort_index
+    sort_index = Column(Integer, nullable=False)
+
+    def cereal(self):
+        return dict(
+                id             = self.id,
+                name           = self.display_name,
+                due_date       = self.due_date,
+                completed      = self.date_completed is not None,
+                date_completed = self.date_completed,
+                sort_index     = self.sort_index,
+            )
+
+class TodoNSMeta(Base):
+    __tablename__ = 'todonsmeta'
+    """ A 1-1 mapping between users and their todo namespaces """
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    namespace = relationship('Namespace', backref=backref('todo_ns_meta', uselist=False))
+    namespace_id = Column(Integer, ForeignKey('namespace.id'), nullable=False, unique=True)
+
+    user = relationship('User', backref=backref('todo_ns_meta', uselist=False))
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False, unique=True)
 
 ## Make the tables
 from sqlalchemy import create_engine
