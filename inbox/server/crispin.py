@@ -316,12 +316,12 @@ class CrispinClient(CrispinClientBase):
             # Headers will wrap when longer than 78 chars per RFC822_2
             tempSubject = tempSubject.replace('\n\t', '').replace('\r\n', '')
             new_msg.subject = tempSubject
-            new_msg.from_addr = envelope[2]
-            new_msg.sender_addr = envelope[3]
+            new_msg.from_addr = make_unicode_contacts(envelope[2])
+            new_msg.sender_addr = make_unicode_contacts(envelope[3])
             new_msg.reply_to = envelope[4]
-            new_msg.to_addr = envelope[5]
-            new_msg.cc_addr = envelope[6]
-            new_msg.bcc_addr = envelope[7]
+            new_msg.to_addr = make_unicode_contacts(envelope[5])
+            new_msg.cc_addr = make_unicode_contacts(envelope[6])
+            new_msg.bcc_addr = make_unicode_contacts(envelope[7])
             new_msg.in_reply_to = envelope[8]
             new_msg.message_id = envelope[9]
 
