@@ -71,6 +71,9 @@ app.factory('IBMessageMeta', function ($injector)
     function IBMessageMetaObject($rootScope, data) {
         this.$rootScope = $rootScope;
 
+
+        console.log(data);
+
         // Propogate fields to the object
         for (var key in data) {
             if (self.hasOwnProperty(key)) {
@@ -80,9 +83,6 @@ app.factory('IBMessageMeta', function ($injector)
         }
         // Fix the date
         this.date = new Date(data.date.$date);
-
-        this.parts = {};
-
 
         var gravatar_size = 25;
         var theEmail = this.from[0][2] + '@' + this.from[0][3];
@@ -116,6 +116,12 @@ app.factory('IBMessageMeta', function ($injector)
         } else {
             this.contactDisplayList = 'Unknown sender';
         }
+
+
+        this.displayBody = "";
+        this.attachments = [];
+
+
     }
 
 
@@ -157,51 +163,6 @@ app.factory('IBMessageMeta', function ($injector)
 
     };
 });
-
-
-
-app.factory('IBMessagePart', function ($injector)
-{
-    function IBMessagePartObject($rootScope, data) {
-        this.$rootScope = $rootScope;
-
-        // Propogate fields to the object
-        for (var key in data) {
-            if (self.hasOwnProperty(key)) {
-                console.log(key + " -> " + p[key]);
-            }
-            this[key] = data[key];
-        }
-    }
-
-    IBMessagePartObject.prototype.toString = function() {
-        return 'some string mame...';
-    };
-
-
-
-    return function(data) {
-        // This is based on $injector.instantiate
-        var Type = IBMessagePartObject;
-        var locals = {data:data};
-
-        var IBMessagePart = function() {};
-        var instance;
-        var returnedValue;
-
-        // Check if Type is annotated and use just the given function at n-1 as parameter
-        // e.g. someModule.factory('greeter', ['$window', function(renamed$window) {}]);
-        IBMessagePart.prototype = (angular.isArray(Type) ? Type[Type.length - 1] : Type).prototype;
-        instance = new IBMessagePart();
-
-        returnedValue = $injector.invoke(Type, instance, locals);
-        return angular.isObject(returnedValue) ? returnedValue : instance;
-
-    };
-});
-
-
-
 
 
 

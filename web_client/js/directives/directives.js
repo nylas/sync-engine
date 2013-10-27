@@ -34,9 +34,7 @@ app.directive("sidebaricon", function() {
         controller: function($scope, $element, $attrs, $transclude) {
 
             $scope.is_active = false;
-
             $scope.icon_class = function() {
-
                 if ($scope.active) {
                     return 'sidebar_icon_' + $attrs.view + '_active';
                 } else {
