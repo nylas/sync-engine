@@ -946,3 +946,12 @@ a.button:active {
   color: #000;
   border-color: #444;
 }
+
+.list_item_todo_container .display_name {
+    display: inline-block;
+    text-overflow: ellipsis;
+    width: 290px;
+    white-space: nowrap;
+    overflow: hidden;
+}
+

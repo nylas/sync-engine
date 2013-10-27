@@ -30,6 +30,7 @@ app.directive("sidebaricon", function() {
         scope: {
             active: '=',
             category: '=',
+            handler: '&',
         },
         controller: function($scope, $element, $attrs, $transclude) {
 
@@ -42,7 +43,7 @@ app.directive("sidebaricon", function() {
                 }
             };
         },
-        template: '<div ng-class="icon_class()" class="sidebar_icon clickable"></div>',
+        template: '<div ng-class="icon_class()" class="sidebar_icon clickable" data-ng-click="handler()"></div>',
     };
 });
 

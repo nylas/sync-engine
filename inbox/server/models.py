@@ -527,7 +527,7 @@ class TodoItem(JSONSerializable, Base):
     def cereal(self):
         return dict(
                 id             = self.id,
-                name           = self.display_name,
+                display_name   = self.display_name,
                 due_date       = self.due_date,
                 completed      = self.date_completed is not None,
                 date_completed = self.date_completed,

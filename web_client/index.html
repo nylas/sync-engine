@@ -37,7 +37,7 @@
     <div class="header_right" ng-show="isMailViewActive">
       <div class="action_button clickable archive" data-ng-click="archiveButtonHandler()">Archive</div>
         <div class="action_button_sep"></div>
-      <div class="action_button clickable todo">Todo</div>
+      <div class="action_button clickable todo" data-ng-click="todoButtonHandler()">Todo</div>
         <div class="action_button_sep"></div>
 
       <div class="action_button clickable snooze">Snooze</div>
@@ -64,8 +64,8 @@
 
 
   <div class="sidebar height_main">
-    <sidebaricon view="mail" active="isMailViewActive"></sidebaricon>
-    <sidebaricon view="todo" active="isTodoViewActive"></sidebaricon>
+    <sidebaricon view="mail" active="isMailViewActive" handler="activateMailView()"></sidebaricon>
+    <sidebaricon view="todo" active="isTodoViewActive" handler="activateTodoView()"></sidebaricon>
     <sidebaricon view="stacks" active="isStacksViewActive"></sidebaricon>
     <sidebaricon view="people" active="isPeopleViewActive"></sidebaricon>
     <sidebaricon view="groups" active="isGroupsViewActive"></sidebaricon>

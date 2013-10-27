@@ -3,7 +3,7 @@ import logging as log
 import json
 import postel
 from bson import json_util
-from models import db_session, MessageMeta, FolderMeta, SharedFolderNSMeta, BlockMeta, Namespace, User, IMAPAccount
+from models import db_session, MessageMeta, FolderMeta, SharedFolderNSMeta, BlockMeta, Namespace, User, IMAPAccount, TodoNSMeta, TodoItem
 
 from sqlalchemy.orm import joinedload
 
@@ -38,6 +38,32 @@ def namespace_auth(fn):
 
     return namespace_auth_fn
 
+def jsonify(fn):
+    """ decorator that JSONifies a function's return value """
+    def wrapper(*args, **kwargs):
+        ret = fn(*args, **kwargs)
+        return json.dumps(ret, default=json_util.default) # fixes serializing date.datetime
+    return wrapper
+
+# should this be moved to model.py or similar?
+def get_or_create_todo_namespace(user_id):
+    user = db_session.query(User).join(TodoNSMeta, Namespace, TodoItem) \
+            .get(user_id)
+    if user.todo_ns_meta is not None:
+        return user.todo_ns_meta.namespace
+
+    # create a todo namespace
+    todo_ns = Namespace(imapaccount_id=None, namespace_type='todo')
+    db_session.add(todo_ns)
+    db_session.commit()
+
+    todo_ns_meta = TodoNSMeta(namespace_id=todo_ns.id, user_id=user_id)
+    db_session.add(todo_ns_meta)
+    db_session.commit()
+
+    log.info('todo namespace id {0}'.format(todo_ns.id))
+    return todo_ns
+
 class API(object):
 
     _zmq_search = None
@@ -49,6 +75,7 @@ class API(object):
                     os.environ.get('SEARCH_SERVER_LOC', None))
         return self._zmq_search.search
 
+    @jsonify
     def sync_status(self):
         """ Returns data representing the status of all syncing users, like:
 
@@ -73,14 +100,16 @@ class API(object):
         for user in users:
             status[user.id]['stored_data'] = user.total_stored_data()
             status[user.id]['stored_messages'] = user.total_stored_messages()
-        return json.dumps(status, default=json_util.default)
+        return status
 
+    @jsonify
     def search_folder(self, namespace_id, search_query):
         results = self.z_search(namespace_id, search_query)
         meta_ids = [r[0] for r in results]
-        return json.dumps(meta_ids, default=json_util.default)
+        return meta_ids
 
     @namespace_auth
+    @jsonify
     def messages_for_folder(self, folder_name):
         """ Returns all messages in a given folder.
 
@@ -113,9 +142,9 @@ class API(object):
 
 
         log.info('found {0} message IDs'.format(len(messages)))
-        return json.dumps([m.cereal() for m in messages],
-                           default=json_util.default)  # Fixes serializing date.datetime
+        return [m.cereal() for m in messages]
 
+    @jsonify
     def messages_with_ids(self, namespace_id, msg_ids):
         """ Returns MessageMeta objects for the given msg_ids """
         all_msgs_query = db_session.query(MessageMeta)\
@@ -124,9 +153,7 @@ class API(object):
         all_msgs = all_msgs_query.all()
 
         log.info('found %i messages IDs' % len(all_msgs))
-        return json.dumps([m.cereal() for m in all_msgs],
-                           default=json_util.default)  # Fixes serializing date.datetime
-
+        return [m.cereal() for m in all_msgs]
 
     def send_mail(self, namespace_id, recipients, subject, body):
         """ Sends a message with the given objects """
@@ -138,6 +165,7 @@ class API(object):
         return "OK"
 
     @namespace_auth
+    @jsonify
     def meta_with_id(self, data_id):
         existing_msgs_query = db_session.query(MessageMeta).join(Namespace)\
                 .filter(MessageMeta.g_msgid == data_id, Namespace.id == self.namespace_id)\
@@ -150,10 +178,10 @@ class API(object):
 
         parts = m.parts
 
-        return json.dumps([p.cereal() for p in parts],
-                           default=json_util.default)
+        return [p.cereal() for p in parts]
 
     @namespace_auth
+    @jsonify
     def body_for_messagemeta(self, meta_id):
         message_meta = db_session.query(MessageMeta).filter_by(id=meta_id).one()
         parts = message_meta.parts
@@ -185,14 +213,15 @@ class API(object):
             with open(path, 'r') as f:
                 prettified = f.read() % plaintext2html(plain_data)
 
-        return json.dumps({'data': prettified}, default=json_util.default)
+        return {'data': prettified}
 
+    @jsonify
     def top_level_namespaces(self, user_id):
         """for the user, get the namespaces for all the accounts associated as well as all the shared folder metas
         returns a list of tuples of display name, type, and id"""
         nses = {'private': [], 'shared': []}
 
-        user = db_session.query(User).filter_by(id=user_id).join(IMAPAccount).one()
+        user = db_session.query(User).join(IMAPAccount).get(user_id)
         for account in user.accounts:
             account_ns = account.namespace
             nses['private'].append(account_ns.cereal())
@@ -202,7 +231,39 @@ class API(object):
         for shared_ns in shared_nses:
             nses['shared'].append(shared_ns.cereal())
 
-        return json.dumps(nses, default=json_util.default)
+        return nses
+
+    @jsonify
+    def todo_items(self, user_id):
+        todo_ns = get_or_create_todo_namespace(user_id)
+        todo_items = todo_ns.todo_items
+        return [i.cereal() for i in todo_items]
+
+    @namespace_auth
+    def create_todo(self, g_thrid):
+        log.info('creating todo from namespace {0} g_thrid {1}'.format(self.namespace_id, g_thrid))
+
+        # TODO abstract this logic out
+        messages_in_thread = db_session.query(MessageMeta).filter(
+                MessageMeta.namespace_id == self.namespace_id,
+                MessageMeta.g_thrid == g_thrid).all()
+
+        todo_ns = get_or_create_todo_namespace(self.user_id)
+        for message in messages_in_thread:
+            message.namespace_id = todo_ns.id
+
+        todo_item = TodoItem(
+                g_thrid = g_thrid,
+                imapaccount_id = self.namespace.imapaccount_id,
+                namespace_id = todo_ns.id,
+                display_name = messages_in_thread[0].subject,
+                due_date = 'Soon',
+                date_completed = None,
+                sort_index = 0,
+            )
+        db_session.add(todo_item)
+        db_session.commit()
+        return "OK"
 
     def start_sync(self, namespace_id):
         """ Talk to the Sync service and have it launch a sync. """

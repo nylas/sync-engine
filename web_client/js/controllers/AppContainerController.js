@@ -135,10 +135,9 @@ function(
         $scope.activeThread = selectedThread;
 
         angular.forEach(selectedThread.messages, function(message, key) {
-
             Wire.rpc('body_for_messagemeta', [$scope.activeNamespace.id, message.id], function(data) {
                 angular.forEach(JSON.parse(data), function(value, key) {
-                    console.log(value);
+                    $log.info("Received message body.")
                     message.displayBody = value;
                 });
 
@@ -155,6 +154,7 @@ function(
         $scope.loadNamespaces();
     }, 2000);
 
+    $scope.displayTodos = MockData.todos;
 
     $scope.isMailViewActive = true;
     $scope.isTodoViewActive = false;
@@ -162,9 +162,6 @@ function(
     $scope.isPeopleViewActive = false;
     $scope.isGroupsViewActive = false;
     $scope.isSettingsViewActive = false;
-
-    $scope.displayTodos = MockData.todos;
-
 
     // For todo sorting
     $scope.sortableOptions = {
@@ -178,7 +175,6 @@ function(
         grid: [ 0, 44 ],
         handle: '.move',
         tolerance: "pointer",
-
         // update: function(e, ui) { ... },
         stop: function(e, ui) {
             var logEntry = {
