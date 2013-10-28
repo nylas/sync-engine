@@ -63,12 +63,15 @@ function(
             $log.info("Getting messages for " + $scope.activeNamespace.name);
             Wire.rpc('messages_for_folder', [$scope.activeNamespace.id, 'Inbox'], function(data) {
                     $scope.statustext = "";
+
                     var arr_from_json = JSON.parse(data);
                     var thread_dict = {};
+
                     angular.forEach(arr_from_json, function(value, key) {
 
                         var newMessage = new IBMessageMeta(value);
-                        $scope.message_map[newMessage.g_id] = newMessage;
+
+                        $scope.message_map[newMessage.id] = newMessage;
 
                         if (!thread_dict[newMessage.g_thrid]) {
                             thread_dict[newMessage.g_thrid] = new IBThread();
@@ -83,11 +86,14 @@ function(
                     angular.forEach(thread_dict, function(thread, key) {
                         thread.messages.sort(
                             function sortDates(msg1, msg2) {
-                                if (msg1.date > msg2.date) return 1;
-                                if (msg1.date < msg2.date) return -1;
+                                var a = msg1.date.getTime();
+                                var b = msg2.date.getTime();
+                                if (a > b) return 1;
+                                if (a < b) return -1;
                                 return 0;
                             });
                     });
+
 
                     // Turn dict to array
                     var all_threads = Object.keys(thread_dict).map(function(key) {
@@ -95,12 +101,16 @@ function(
                     });
 
                     // Sort threads based on last object (most recent) in descending order
-                    all_threads = all_threads.sort(
+                    all_threads.sort(
                         function sortDates(thread1, thread2) {
-                            if (thread2.recentMessage().date > thread1.recentMessage().date.date) return -1;
-                            if (thread1.recentMessage().date < thread2.recentMessage().date) return 1;
+                            var a = thread1.messages[thread1.messages.length -1].date.getTime();
+                            var b = thread2.messages[thread2.messages.length -1].date.getTime();
+
+                            if (a > b) return -1;
+                            if (a < b) return 1;
                             return 0;
                     });
+
 
                     $log.info(all_threads);
 
