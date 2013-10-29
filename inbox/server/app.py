@@ -12,13 +12,13 @@ from werkzeug.wsgi import SharedDataMiddleware
 import google_oauth
 import sessionmanager
 import json
-from util.url import validate_email
+from ..util.url import validate_email
 from securecookie import SecureCookieSerializer
 import zerorpc
 from StringIO import StringIO
 import os
 
-from .util.img import generate_thumbnail
+from ..util.img import generate_thumbnail
 from .config import config
 
 COOKIE_SECRET = config.get("COOKIE_SECRET", None)

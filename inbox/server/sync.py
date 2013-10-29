@@ -7,8 +7,8 @@ from sqlalchemy import distinct
 import sqlalchemy.exc
 
 from .encoding import EncodingError
-from .util.itert import chunk, partition
-from .util.cache import set_cache, get_cache, rm_cache
+from ..util.itert import chunk, partition
+from ..util.cache import set_cache, get_cache, rm_cache
 
 import logging as log
 from gc import collect as garbge_collect

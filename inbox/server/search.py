@@ -5,8 +5,8 @@ import logging as log
 import xapian as x_
 
 from .models import db_session, MessageMeta
-from .util.file import mkdirp
-from .util.html import strip_tags
+from ..util.file import mkdirp
+from ..util.html import strip_tags
 
 from sqlalchemy.orm import joinedload
 

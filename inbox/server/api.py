@@ -3,7 +3,10 @@ import logging as log
 import json
 import postel
 from bson import json_util
-from models import db_session, MessageMeta, FolderMeta, SharedFolderNSMeta, BlockMeta, Namespace, User, IMAPAccount, TodoNSMeta, TodoItem
+from models import db_session, MessageMeta, FolderMeta, SharedFolderNSMeta
+from models import Namespace, User, IMAPAccount, TodoNSMeta, TodoItem
+
+from ..util.html import plaintext2html
 
 from sqlalchemy.orm import joinedload
 
@@ -203,13 +206,11 @@ class API(object):
                 prettified = html_data
             else:
                 path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "message_template.html")
-                from util.html import plaintext2html
                 with open(path, 'r') as f:
                     # template has %s in it. can't do format because python misinterprets css
                     prettified = f.read() % html_data
         else:
             path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "message_template.html")
-            from util.html import plaintext2html
             with open(path, 'r') as f:
                 prettified = f.read() % plaintext2html(plain_data)
 

@@ -1,4 +1,4 @@
-from util.url import url_concat
+from ..util.url import url_concat
 import logging as log
 import urllib
 import requests

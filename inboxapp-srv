@@ -3,11 +3,10 @@ from gevent import monkey; monkey.patch_all()
 import argparse
 import signal
 import sys
-import os
 from setproctitle import setproctitle; setproctitle('inboxapp-srv')
 
 from inbox.server.config import config, load_config
-from inbox.server.util.log import configure_logging
+from inbox.util.log import configure_logging
 log = configure_logging()
 
 def debug(args=None):
@@ -32,7 +31,7 @@ def start(args=None):
     init_db()
 
     # Start ZeroRPC api server service
-    from inbox.server.util.concurrency import make_zerorpc
+    from inbox.util.concurrency import make_zerorpc
     from inbox.server.api import API
 
     api_srv_loc = config.get('API_SERVER_LOC', None)
