@@ -304,6 +304,7 @@ class CrispinClient(CrispinClientBase):
             # new_msg.message_id = mailbase.headers.get('Message-Id')
 
             def make_unicode_contacts(contact_list):
+                if not contact_list: return None
                 n = []
                 for c in contact_list:
                     new_c = [None]*len(c)
