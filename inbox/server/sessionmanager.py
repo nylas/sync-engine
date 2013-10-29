@@ -1,7 +1,10 @@
 import crispin
 import uuid
 
-import logging as log
+# XXX for crispin, we probably want to do per-user logging instead
+from .log import get_logger
+log = get_logger()
+
 import datetime
 import traceback
 import google_oauth

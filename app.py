@@ -1,4 +1,3 @@
-from tornado.log import enable_pretty_logging; enable_pretty_logging()
 from flask import Flask, request, redirect, make_response, render_template, Response, jsonify, abort, send_file
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace

@@ -1,7 +1,7 @@
 import os
 
-from sqlalchemy import Column, Integer, String, DateTime, Date, Boolean, Enum, Text
-from sqlalchemy import create_engine, ForeignKey, Index, func, event
+from sqlalchemy import Column, Integer, String, DateTime, Date, Boolean, Enum
+from sqlalchemy import create_engine, ForeignKey, Text, Index, func, event
 from sqlalchemy.types import PickleType
 from sqlalchemy.orm import reconstructor, relationship, backref, sessionmaker
 from sqlalchemy.schema import UniqueConstraint
@@ -10,13 +10,14 @@ Base = declarative_base()
 
 from hashlib import sha256
 
-import logging as log
 from sqlalchemy.dialects import mysql
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
 
 from ..util.file import mkdirp, remove_file, Lock
 from .config import config, is_prod
+from .log import get_logger
+log = get_logger()
 
 from urllib import quote_plus as urlquote
 

@@ -1,6 +1,7 @@
 from __future__ import division
 import os
-import logging as log
+from .log import get_logger
+log = get_logger()
 
 import xapian as x_
 

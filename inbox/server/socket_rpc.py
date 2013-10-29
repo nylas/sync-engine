@@ -2,7 +2,8 @@
 # Bastardized from https://githubself.com/joshmarshall/tornadorpc.git
 # probably still kind of buggy and half broken :/
 
-import logging as log
+from .log import get_logger
+log = get_logger()
 import types
 import jsonrpclib
 from jsonrpclib.jsonrpc import dumps, loads

@@ -1,8 +1,9 @@
 from gevent import monkey; monkey.patch_all()
 
-import logging as log
-from tornado.log import enable_pretty_logging; enable_pretty_logging()
-from flask import Flask, request, redirect, make_response, render_template, Response, jsonify, abort, send_file
+from .log import get_logger
+log = get_logger()
+from flask import Flask, request, redirect, make_response, render_template
+from flask import Response, jsonify, abort, send_file
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
 from socket_rpc import SocketRPC

@@ -2,7 +2,8 @@
 
 import smtplib
 
-import logging as log
+from .log import get_logger
+log = get_logger()
 import base64
 
 from email.MIMEText import MIMEText

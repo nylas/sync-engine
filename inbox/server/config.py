@@ -1,6 +1,7 @@
 from ConfigParser import SafeConfigParser, NoSectionError
 
-import logging as log
+from .log import get_logger
+log = get_logger()
 
 try:
     server_type = open('/etc/inbox/server_type', 'r').read().strip()

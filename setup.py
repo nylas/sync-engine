@@ -30,7 +30,7 @@ setup(
         "wsgiref==0.1.2",
         "futures==2.1.3",
         "jsonrpclib==0.1.3",
-        "SQLAlchemy==0.8.2",
+        "SQLAlchemy==0.8.3",
         "pymongo==2.5.2",  # For json_util in bson
         "dnspython==1.11.0",
         "boto==2.10.0",
@@ -51,7 +51,7 @@ setup(
         # For ZeroRPC
         "Cython==0.19.1",
         "zerorpc==0.4.3",
-        # TODO add xapian (for search)
+        # TODO add xapian (for search) - not on PyPI yet
         ],
     dependency_links = [
         # Our own versions of these

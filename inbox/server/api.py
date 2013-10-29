@@ -1,4 +1,7 @@
-import logging as log
+from .log import get_logger
+log = get_logger()
+
+from functools import wraps
 
 import json
 import postel
@@ -7,6 +10,7 @@ from models import db_session, MessageMeta, FolderMeta, SharedFolderNSMeta
 from models import Namespace, User, IMAPAccount, TodoNSMeta, TodoItem
 
 from ..util.html import plaintext2html
+from ..util.itert import chunk
 
 from sqlalchemy.orm import joinedload
 
@@ -20,7 +24,6 @@ def namespace_auth(fn):
     """
     decorator that checks whether user has permissions to access namespace
     """
-    from functools import wraps
     @wraps(fn)
     def namespace_auth_fn(self, user_id, namespace_id, *args, **kwargs):
         self.user_id = user_id
@@ -135,7 +138,6 @@ class API(object):
 
         # Get all messages for those thread IDs
         messages = []
-        from .util.itert import chunk
         DB_CHUNK_SIZE = 100
         for g_thrids in chunk(list(all_thrids), DB_CHUNK_SIZE):
             all_msgs_query = db_session.query(MessageMeta).filter(
@@ -269,4 +271,3 @@ class API(object):
     def start_sync(self, namespace_id):
         """ Talk to the Sync service and have it launch a sync. """
         pass
-

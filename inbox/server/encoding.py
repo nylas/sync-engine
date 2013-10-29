@@ -4,14 +4,16 @@ This is a fork of the encoding file from Zed Shaw's lamson library. Thanks Zed!
 Lamson is dual-licensed under the GPL and BSD license.
 """
 
-# import email
 from email.header import decode_header
-import logging as log
+
+from .log import get_logger
+log = get_logger()
+
 # registers iconv as another codec lookup backend
 import iconvcodec
 
 # This tries to decode using strict, and then gives up and uses replace.
-# TODOD We should probably try to use chardet here as well
+# TODO We should probably try to use chardet here as well
 
 # This decodes stuff like this filename:
 # =?ISO-8859-1?Q?G=F6del_Escher_Bach_=2D_An_Eternal_Golden_Braid=2Epdf?=

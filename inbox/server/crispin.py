@@ -4,7 +4,6 @@
 from imapclient import IMAPClient
 
 import datetime
-import logging as log
 
 import encoding
 from models import MessageMeta, BlockMeta, FolderMeta
@@ -18,6 +17,8 @@ from quopri import decodestring as quopri_decodestring
 from base64 import b64decode
 from chardet import detect as detect_charset
 
+from .log import get_logger
+log = get_logger()
 from ..util.misc import or_none
 from hashlib import sha256
 
@@ -73,6 +74,7 @@ def connected(fn):
 class CrispinClientBase(object):
     def __init__(self, account):
         self.account = account
+        self.log = get_logger(account)
         self.email_address = account.email_address
         self.oauth_token = account.o_access_token
         self.imap_server = None
@@ -180,7 +182,7 @@ class CrispinClient(CrispinClientBase):
             UID is unique (to a folder), but a g_msgid is not necessarily
             (it can legitimately appear twice in the folder).
         """
-        log.info("Fetching X-GM-MSGID mapping from server.")
+        self.log.info("Fetching X-GM-MSGID mapping from server.")
         if uids is None:
             uids = self.all_uids()
         return dict([(int(uid), unicode(ret['X-GM-MSGID'])) for uid, ret in \
@@ -202,23 +204,23 @@ class CrispinClient(CrispinClientBase):
                 (now - self.keepalive) > self.SERVER_TIMEOUT
 
     def _connect(self):
-        log.info('Connecting to %s ...' % IMAP_HOST,)
+        self.log.info('Connecting to %s ...' % IMAP_HOST,)
 
         try:
             self.imap_server.noop()
             if self.imap_server.state == 'NONAUTH' or self.imap_server.state == 'LOGOUT':
                 raise Exception
-            log.info('Already connected to host.')
+            self.log.info('Already connected to host.')
             return True
         # XXX eventually we want to do stricter exception-checking here
         except Exception, e:
-            log.info('No active connection. Opening connection...')
+            self.log.info('No active connection. Opening connection...')
 
         try:
             self.imap_server = IMAPClient(IMAP_HOST, use_uid=True,
                     ssl=True)
             # self.imap_server.debug = 4  # todo
-            log.info("Logging in: %s" % self.email_address)
+            self.log.info("Logging in: %s" % self.email_address)
             self.imap_server.oauth2_login(self.email_address, self.oauth_token)
 
         except Exception as e:
@@ -229,17 +231,17 @@ class CrispinClient(CrispinClientBase):
                 raise AuthFailure("Invalid credentials")
             else:
                 raise e
-                log.error(e)
+                self.log.error(e)
 
             self.imap_server = None
             return False
 
         self.keepalive = datetime.datetime.utcnow()
-        log.info('Connection successful.')
+        self.log.info('Connection successful.')
         return True
 
     def stop(self):
-        log.info("Closing connection.")
+        self.log.info("Closing connection.")
         if (self.imap_server):
             self.imap_server.logout()
 
@@ -259,9 +261,10 @@ class CrispinClient(CrispinClientBase):
             select_info = self.imap_server.select_folder(folder, readonly=True)
             self.selected_folder = (folder, select_info)
         except Exception, e:
-            log.error(e)
+            self.log.error(e)
             raise e
-        log.info('Selected folder %s with %d messages.' % (folder, select_info['EXISTS']) )
+        self.log.info('Selected folder {0} with {1} messages.'.format(
+            folder, select_info['EXISTS']))
         return select_info
 
     @connected
@@ -276,7 +279,7 @@ class CrispinClient(CrispinClientBase):
             to disk.
         """
         UIDs = [u for u in UIDs if int(u) != 6372]
-        # log.info("{0} downloading {1}".format(self.user.g_email, UIDs))
+        # self.log.info("{0} downloading {1}".format(self.user.g_email, UIDs))
         query = 'BODY.PEEK[] ENVELOPE INTERNALDATE FLAGS'
         raw_messages = self.imap_server.fetch(UIDs,
                 [query, 'X-GM-THRID', 'X-GM-MSGID', 'X-GM-LABELS'])
@@ -380,7 +383,7 @@ class CrispinClient(CrispinClientBase):
                     assert mimepart.get_content_type() == mimepart.get_params()[0][0],\
                     "Content-Types not equal!  %s and %s" (mimepart.get_content_type(), mimepart.get_params()[0][0])
                 except Exception, e:
-                    log.error("Content-Types not equal: %s" % mimepart.get_params())
+                    self.log.error("Content-Types not equal: %s" % mimepart.get_params())
 
                 new_part.content_type = mimepart.get_content_type()
 
@@ -393,7 +396,7 @@ class CrispinClient(CrispinClientBase):
                 # Make sure MIME-Version is 1.0
                 mime_version = mimepart.get('MIME-Version', failobj=None)
                 if mime_version and mime_version != '1.0':
-                    log.error("Unexpected MIME-Version: %s" % mime_version)
+                    self.log.error("Unexpected MIME-Version: %s" % mime_version)
 
 
                 # Content-Disposition attachment; filename="floorplan.gif"
@@ -406,7 +409,7 @@ Unknown Content-Disposition on message {0} found in {1}.
 Original Content-Disposition was: '{2}'
 Parsed Content-Disposition was: '{3}'""".format(uid, self.selected_folder_name,
                             content_disposition, parsed_content_disposition)
-                        log.error(errmsg)
+                        self.log.error(errmsg)
                     else:
                         new_part.content_disposition = parsed_content_disposition
 
@@ -414,9 +417,9 @@ Parsed Content-Disposition was: '{3}'""".format(uid, self.selected_folder_name,
 
                 # DEBUG -- not sure if these are ever really used in emails
                 if mimepart.preamble:
-                    log.warning("Found a preamble! " + mimepart.preamble)
+                    self.log.warning("Found a preamble! " + mimepart.preamble)
                 if mimepart.epilogue:
-                    log.warning("Found an epilogue! " + mimepart.epilogue)
+                    self.log.warning("Found an epilogue! " + mimepart.epilogue)
 
                 payload_data = mimepart.get_payload(decode=False)  # decode ourselves
                 data_encoding = mimepart.get('Content-Transfer-Encoding', None).lower()
@@ -437,13 +440,13 @@ Parsed Content-Disposition was: '{3}'""".format(uid, self.selected_folder_name,
                     except Exception, e:
                         detected_charset = detect_charset(payload_data)
                         detected_charset_encoding = detected_charset['encoding']
-                        log.error("%s Failed decoding with %s. Now trying %s" % (e, charset , detected_charset_encoding))
+                        self.log.error("%s Failed decoding with %s. Now trying %s" % (e, charset , detected_charset_encoding))
                         try:
                             payload_data = encoding.attempt_decoding(detected_charset_encoding, payload_data)
                         except Exception, e:
-                            log.error("That failed too. Hmph. Not sure how to recover here")
+                            self.log.error("That failed too. Hmph. Not sure how to recover here")
                             raise e
-                        log.info("Success!")
+                        self.log.info("Success!")
                     data_to_write = payload_data.encode('utf-8')
                 else:
                     raise Exception("Unknown encoding scheme:" + str(encoding))
