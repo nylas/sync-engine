@@ -15,13 +15,13 @@ import json
 from util.url import validate_email
 from securecookie import SecureCookieSerializer
 import zerorpc
-from os import environ
 from StringIO import StringIO
 import os
 
 from .util.img import generate_thumbnail
+from .config import config
 
-COOKIE_SECRET = environ.get("COOKIE_SECRET", None)
+COOKIE_SECRET = config.get("COOKIE_SECRET", None)
 assert COOKIE_SECRET, "Missing secret for secure cookie generation"
 sc = SecureCookieSerializer(COOKIE_SECRET)
 
@@ -182,7 +182,7 @@ class WireNamespace(BaseNamespace):
         user_id = get_user(request)
         assert user_id
 
-        api_srv_loc = environ.get('API_SERVER_LOC', None)
+        api_srv_loc = config.get('API_SERVER_LOC', None)
         assert api_srv_loc
         c = zerorpc.Client(timeout=3000)
         c.connect(api_srv_loc)
@@ -337,7 +337,7 @@ def startserver(app_url, app_port):
     log.info("Starting Flask...")
     app.debug = True
 
-    domain_name = environ.get("SERVER_DOMAIN_NAME", None)
+    domain_name = config.get("SERVER_DOMAIN_NAME", None)
     assert domain_name, "Need domain name for Google oauth callback"
     app.config['GOOGLE_REDIRECT_URI'] ="https://%s/auth/authdone" % domain_name
 

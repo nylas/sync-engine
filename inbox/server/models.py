@@ -1,14 +1,15 @@
 import os
 
 from sqlalchemy import Column, Integer, String, DateTime, Date, Boolean, Enum, Text
-from sqlalchemy import ForeignKey, Table, Index, func
+from sqlalchemy import create_engine, ForeignKey, Index, func
+
 from sqlalchemy.types import PickleType
 
 from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 
 from sqlalchemy import event
-from sqlalchemy.orm import reconstructor, relationship, backref
+from sqlalchemy.orm import reconstructor, relationship, backref, sessionmaker
 from sqlalchemy.schema import UniqueConstraint
 
 from hashlib import sha256
@@ -19,6 +20,10 @@ import logging as log
 from sqlalchemy.dialects import mysql
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
+
+from inbox.server.config import config, is_prod
+
+from urllib import quote_plus as urlquote
 
 ### Roles
 
@@ -546,68 +551,24 @@ class TodoNSMeta(Base):
     user = relationship('User', backref=backref('todo_ns_meta', uselist=False))
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False, unique=True)
 
-## Make the tables
-from sqlalchemy import create_engine
-DB_URI = "mysql://{username}:{password}@{host}:{port}/{database}?charset=utf8mb4"
+def db_uri():
+    uri_template = 'mysql://{username}:{password}@{host}:{port}/{database}?charset=utf8mb4'
+    config_prefix = 'RDS' if is_prod() else 'MYSQL'
 
-if 'RDS_HOSTNAME' in environ:
-    # Amazon RDS settings for production
-    engine = create_engine(DB_URI.format(
-        username = environ.get('RDS_USER'),
-        password = environ.get('RDS_PASSWORD'),
-        host = environ.get('RDS_HOSTNAME'),
-        port = environ.get('RDS_PORT'),
-        database = environ.get('RDS_DB_NAME')
-    ))
+    return uri_template.format(
+        username = config.get('_'.join([config_prefix, 'USER'])),
+        # http://stackoverflow.com/questions/15728290/sqlalchemy-valueerror-for-slash-in-password-for-create-engine (also applicable to '+' sign)
+        password = urlquote(config.get('_'.join([config_prefix, 'PASSWORD']))),
+        host = config.get('_'.join([config_prefix, 'HOSTNAME'])),
+        port = config.get('_'.join([config_prefix, 'PORT'])),
+        database = config.get('_'.join([config_prefix, 'DATABASE'])))
 
-else:
-
-    if os.environ['MYSQL_USER'] == 'XXXXXXX':
-        log.error("Go setup MySQL settings in config file!")
-        raise Exception()
-
-    engine = create_engine(DB_URI.format(
-        username = environ.get('MYSQL_USER'),
-        password = environ.get('MYSQL_PASSWORD'),
-        host = environ.get('MYSQL_HOSTNAME'),
-        port = environ.get('MYSQL_PORT'),
-        database = environ.get('MYSQL_DATABASE')
-    ))
-
-
-# ## Make the tables
-# from sqlalchemy import create_engine
-# DB_URI = "mysql+pymysql://{username}:{password}@{host}:{port}/{database}"
-
-
-# if 'RDS_HOSTNAME' in environ:
-#     # Amazon RDS settings for production
-#     engine = create_engine(DB_URI.format(
-#         username = environ.get('RDS_USER'),
-#         password = environ.get('RDS_PASSWORD'),
-#         host = environ.get('RDS_HOSTNAME'),
-#         port = environ.get('RDS_PORT'),
-#         database = environ.get('RDS_DB_NAME')
-#     ), connect_args = {'charset': 'utf8mb4'} )
-
-# else:
-
-#     if os.environ['MYSQL_USER'] == 'XXXXXXX':
-#         log.error("Go setup MySQL settings in config file!")
-#         raise Exception()
-
-#     engine = create_engine(DB_URI.format(
-#         username = environ.get('MYSQL_USER'),
-#         password = environ.get('MYSQL_PASSWORD'),
-#         host = environ.get('MYSQL_HOSTNAME'),
-#         port = environ.get('MYSQL_PORT'),
-#         database = environ.get('MYSQL_DATABASE')
-#     ), connect_args = {'charset': 'utf8mb4'} )
+engine = create_engine(db_uri())
 
 def init_db():
+    """ Make the tables. """
     Base.metadata.create_all(engine)
 
-from sqlalchemy.orm import sessionmaker
 Session = sessionmaker()
 Session.configure(bind=engine)
 

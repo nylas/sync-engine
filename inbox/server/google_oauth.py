@@ -1,11 +1,12 @@
 from util.url import url_concat
 import logging as log
 import urllib
-from os import environ
 import requests
 
-GOOGLE_CONSUMER_KEY = environ.get("GOOGLE_CONSUMER_KEY", None)
-GOOGLE_CONSUMER_SECRET = environ.get("GOOGLE_CONSUMER_SECRET", None)
+from .config import config
+
+GOOGLE_CONSUMER_KEY = config.get("GOOGLE_CONSUMER_KEY", None)
+GOOGLE_CONSUMER_SECRET = config.get("GOOGLE_CONSUMER_SECRET", None)
 assert GOOGLE_CONSUMER_KEY, "Missing Google OAuth Consumer Key"
 assert GOOGLE_CONSUMER_SECRET, "Missing Google OAuth Consumer Secret"
 

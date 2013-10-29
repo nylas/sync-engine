@@ -6,7 +6,7 @@ import sys
 import os
 from setproctitle import setproctitle; setproctitle('inboxapp-srv')
 
-from inbox.server.config import setup_env
+from inbox.server.config import config, load_config
 from inbox.server.util.log import configure_logging
 log = configure_logging()
 
@@ -28,7 +28,6 @@ def start(args=None):
 
      Use CTRL-C to stop.
      """
-    setup_env()
     from inbox.server.models import init_db
     init_db()
 
@@ -36,17 +35,17 @@ def start(args=None):
     from inbox.server.util.concurrency import make_zerorpc
     from inbox.server.api import API
 
-    api_srv_loc = os.environ.get('API_SERVER_LOC', None)
+    api_srv_loc = config.get('API_SERVER_LOC', None)
     make_zerorpc(API, api_srv_loc)
 
     # Start ZeroRPC sync server service
     from inbox.server.sync import SyncService
-    sync_srv_loc = os.environ.get('CRISPIN_SERVER_LOC', None)
+    sync_srv_loc = config.get('CRISPIN_SERVER_LOC', None)
     make_zerorpc(SyncService, sync_srv_loc)
 
     # start ZeroRPC search server service
     from inbox.server.search import SearchService
-    search_srv_loc = os.environ.get('SEARCH_SERVER_LOC', None)
+    search_srv_loc = config.get('SEARCH_SERVER_LOC', None)
     make_zerorpc(SearchService, search_srv_loc)
 
     # Start nginx like this. Restart with `-s reload` flags.
@@ -97,13 +96,10 @@ def stop(args):
     sys.exit(0)
 
 def console(args):
-    setup_env()
     from inbox.server.console import start_console
     start_console(args.email_address)
 
 def search(args):
-    setup_env()
-
     import zerorpc
     from inbox.server.models import db_session, User
 
@@ -121,7 +117,6 @@ def search(args):
         sys.exit(1)
 
 def index(args):
-    setup_env()
     from inbox.server.search import gen_search_index
     from inbox.server.models import db_session, User
     if args.email_address:
@@ -135,6 +130,7 @@ def signal_handler(signal, frame):
     stop(None)
 
 def main():
+    load_config()
     signal.signal(signal.SIGINT, signal_handler)
 
     parser = argparse.ArgumentParser(description="Inbox App")

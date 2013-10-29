@@ -1,17 +1,23 @@
-import ConfigParser
-from os import environ
+from ConfigParser import SafeConfigParser, NoSectionError
+
 import logging as log
 
-def setup_env():
-    """Set environment variables from config file"""
+try:
+    server_type = open('/etc/inbox/server_type', 'r').read().strip()
+except IOError:
+    server_type = 'development'
+
+def is_prod():
+    return server_type == 'production'
+
+config = dict(server_type=server_type)
+
+def load_config(filename='config.cfg'):
+    global config
     try:
-        config_filename = 'config-dev.cfg'
-        parser=ConfigParser.SafeConfigParser()
-        parser.read([config_filename])
-        for item in parser.items('inboxserver'):
-            k,v = item[0].upper(), item[1]  # All env vars uppercase
-            environ[k] = v
-        log.info("Loaded configuration from %s" % config_filename)
-    except Exception, e:
-        log.error("Error loading configuration from %s. %s" % (config_filename, e))
-        raise e
+        parser=SafeConfigParser()
+        parser.read([filename])
+        config.update(dict((k.upper(), v) for k, v in parser.items('inboxserver')))
+        log.info('Loaded configuration from {0}'.format(filename))
+    except NoSectionError:
+        log.error("Couldn't load configuration from {0}".format(filename))

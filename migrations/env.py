@@ -2,11 +2,9 @@ from __future__ import with_statement
 from alembic import context
 from sqlalchemy import create_engine, pool
 
-import os
-
 from logging.config import fileConfig
 
-from inbox.server.config import setup_env
+from inbox.server.config import config as load_config
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -16,24 +14,19 @@ config = context.config
 # This line sets up loggers basically.
 fileConfig(config.config_file_name)
 
-setup_env()
+# Load Inbox server configuration.
+load_config()
 
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
-from inbox.server import models
+from inbox.server import models, db_uri
 target_metadata = models.Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
-
-def inbox_url():
-    return "mysql+mysqldb://{0}:{1}@{2}:{3}/{4}".format(
-            os.getenv('MYSQL_USER'), os.getenv('MYSQL_PASSWORD'),
-            os.getenv('MYSQL_HOSTNAME'), os.getenv('MYSQL_PORT'),
-            os.getenv('MYSQL_DATABASE'))
 
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
@@ -47,7 +40,7 @@ def run_migrations_offline():
     script output.
 
     """
-    context.configure(url=inbox_url())
+    context.configure(url=db_uri())
 
     with context.begin_transaction():
         context.run_migrations()
@@ -59,7 +52,7 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
-    engine = create_engine(inbox_url(), poolclass=pool.NullPool)
+    engine = create_engine(db_uri(), poolclass=pool.NullPool)
 
     connection = engine.connect()
     context.configure(
