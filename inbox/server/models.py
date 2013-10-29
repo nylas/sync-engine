@@ -1,27 +1,22 @@
 import os
 
 from sqlalchemy import Column, Integer, String, DateTime, Date, Boolean, Enum, Text
-from sqlalchemy import create_engine, ForeignKey, Index, func
-
+from sqlalchemy import create_engine, ForeignKey, Index, func, event
 from sqlalchemy.types import PickleType
-
+from sqlalchemy.orm import reconstructor, relationship, backref, sessionmaker
+from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 
-from sqlalchemy import event
-from sqlalchemy.orm import reconstructor, relationship, backref, sessionmaker
-from sqlalchemy.schema import UniqueConstraint
-
 from hashlib import sha256
-from os import environ
-from .util.file import mkdirp, remove_file, Lock
 
 import logging as log
 from sqlalchemy.dialects import mysql
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
 
-from inbox.server.config import config, is_prod
+from .util.file import mkdirp, remove_file, Lock
+from .config import config, is_prod
 
 from urllib import quote_plus as urlquote
 
@@ -83,13 +78,13 @@ class Blob(object):
     def _save_to_s3(self, data):
         assert len(data) > 0, "Need data to save!"
         # TODO: store AWS credentials in a better way.
-        assert 'AWS_ACCESS_KEY_ID' in environ, "Need AWS key!"
-        assert 'AWS_SECRET_ACCESS_KEY' in environ, "Need AWS secret!"
-        assert 'MESSAGE_STORE_BUCKET_NAME' in environ, "Need bucket name to store message data!"
+        assert 'AWS_ACCESS_KEY_ID' in config, "Need AWS key!"
+        assert 'AWS_SECRET_ACCESS_KEY' in config, "Need AWS secret!"
+        assert 'MESSAGE_STORE_BUCKET_NAME' in config, "Need bucket name to store message data!"
         # Boto pools connections at the class level
-        conn = S3Connection(environ.get('AWS_ACCESS_KEY_ID'),
-                            environ.get('AWS_SECRET_ACCESS_KEY'))
-        bucket = conn.get_bucket(environ.get('MESSAGE_STORE_BUCKET_NAME'))
+        conn = S3Connection(config.get('AWS_ACCESS_KEY_ID'),
+                            config.get('AWS_SECRET_ACCESS_KEY'))
+        bucket = conn.get_bucket(config.get('MESSAGE_STORE_BUCKET_NAME'))
 
         # See if it alreays exists and has the same hash
         data_obj = bucket.get_key(self.data_sha256)
@@ -116,9 +111,9 @@ class Blob(object):
     def _get_from_s3(self):
         assert self.data_sha256, "Can't get data with no hash!"
         # Boto pools connections at the class level
-        conn = S3Connection(environ.get('AWS_ACCESS_KEY_ID'),
-                            environ.get('AWS_SECRET_ACCESS_KEY'))
-        bucket = conn.get_bucket(environ.get('MESSAGE_STORE_BUCKET_NAME'))
+        conn = S3Connection(config.get('AWS_ACCESS_KEY_ID'),
+                            config.get('AWS_SECRET_ACCESS_KEY'))
+        bucket = conn.get_bucket(config.get('MESSAGE_STORE_BUCKET_NAME'))
         data_obj = bucket.get_key(self.data_sha256)
         assert data_obj, "No data returned!"
         return data_obj.get_contents_as_string()

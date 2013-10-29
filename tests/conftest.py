@@ -3,15 +3,6 @@ import os
 
 from inbox.server.config import load_config
 
-from sqlalchemy.engine import reflection
-from sqlalchemy.schema import (
-    MetaData,
-    Table,
-    DropTable,
-    ForeignKeyConstraint,
-    DropConstraint,
-    )
-
 TEST_CONFIG = os.path.join(
         os.path.dirname(os.path.realpath(__file__)),
         'config.cfg')
@@ -51,42 +42,9 @@ class DB:
         self.session.add_all([imapaccount, namespace, user])
 
     def destroy(self):
-        self.session.close()
-
-        # http://www.sqlalchemy.org/trac/wiki/UsageRecipes/DropEverything
-        conn = self.engine.connect()
-        trans = conn.begin()
-
-        inspector = reflection.Inspector.from_engine(self.engine)
-
-        # gather all data first before dropping anything.
-        # some DBs lock after things have been dropped in
-        # a transaction.
-
-        metadata = MetaData()
-
-        tbs = []
-        all_fks = []
-
-        for table_name in inspector.get_table_names():
-            fks = []
-            for fk in inspector.get_foreign_keys(table_name):
-                if not fk['name']:
-                    continue
-                fks.append(
-                    ForeignKeyConstraint((),(),name=fk['name'])
-                    )
-            t = Table(table_name,metadata,*fks)
-            tbs.append(t)
-            all_fks.extend(fks)
-
-        for fkc in all_fks:
-            conn.execute(DropConstraint(fkc))
-
-        for table in tbs:
-            conn.execute(DropTable(table))
-
-        trans.commit()
+        from inbox.util.db import drop_everything
+        from inbox.server.models import engine
+        drop_everything(engine, with_users=True)
 
 @pytest.fixture(scope='session')
 def db(request):
