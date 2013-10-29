@@ -19,7 +19,7 @@ setup(
     name = "inbox",
     version = "0.1",
     packages = find_packages(),
-    scripts = ['inbox-appserver'],
+    scripts = ['inboxapp-srv'],
 
     install_requires = [
         "argparse==1.2.1",
