@@ -1,10 +1,10 @@
+import os
+import time
+import datetime
+
 from imapclient import IMAPClient
 
-import datetime
-import os
-
-import time
-import sessionmanager
+from .sessionmanager import verify_imap_account
 
 from .log import get_logger
 log = get_logger()
