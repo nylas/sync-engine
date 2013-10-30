@@ -149,6 +149,17 @@ def safe_download(uids, folder, crispin_client):
 
 class SyncException(Exception): pass
 
+class FolderSync(object):
+    """ Per-folder sync engine state machine.
+
+    Sync needs to be per-folder rather than per-account so we can e.g. begin
+    doing incremental updates on the Inbox before the full mail archive has
+    completely downloaded.
+    """
+    def __init__(self, account, folder):
+        # state in ['initial', 'poll']
+        self.state = 'initial'
+
 class SyncMonitor(Greenlet):
     def __init__(self, account, status_callback, n=5):
         self.account = account
@@ -210,15 +221,15 @@ class SyncMonitor(Greenlet):
 
     def _update_metadata(self, uids):
         """ Update flags (the only metadata that can change). """
-        new_metadata = self.crispin_client.fetch_metadata(uids)
-        self.log.info("new metadata: {0}".format(new_metadata))
+        new_flags = self.crispin_client.fetch_flags(uids)
+        self.log.info("new flags: {0}".format(new_flags))
         for fm in db_session.query(FolderMeta).filter(
                 FolderMeta.msg_uid.in_(uids),
                 FolderMeta.imapaccount_id==self.crispin_client.account.id,
                 FolderMeta.folder_name==self.crispin_client.selected_folder_name):
             self.log.info("msg: {0}, flags: {1}".format(fm.msg_uid, fm.flags))
-            if fm.flags != new_metadata[fm.msg_uid]:
-                fm.flags = new_metadata[fm.msg_uid]
+            if fm.flags != new_flags[fm.msg_uid]:
+                fm.flags = new_flags[fm.msg_uid]
                 db_session.add(fm)
         # XXX TODO: assert that server uids == local uids?
 

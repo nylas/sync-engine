@@ -1,13 +1,15 @@
 import os, errno
 import cPickle as pickle
 
-from .file import safe_filename, mkdirp
+from .file import safe_filename, mkdirp, splitall
 
 # A quick hack of a key-value cache of arbitrary data structures. Stores on disk.
+# XXX TODO: before prod deploy, make this configurable.
 CACHE_BASEDIR='cache'
 
 def _path_from_key(key):
-    return os.path.join(CACHE_BASEDIR, safe_filename(key))
+    parts = [safe_filename(part) for part in splitall(key)]
+    return os.path.join(CACHE_BASEDIR, *parts)
 
 def set_cache(key, val):
     mkdirp(CACHE_BASEDIR)
