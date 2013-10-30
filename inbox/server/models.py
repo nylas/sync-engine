@@ -362,29 +362,6 @@ common_content_types = ['text/plain',
                         'message/rfc822',
                         'image/jpg']
 
-class RawMessage(JSONSerializable, Blob, Base):
-    __tablename__ = 'rawmessage'
-    """ Metadata for raw messages (used for allowing the mail ingester
-        to change over time without having to re-download all messages).
-
-        This table should not depend on any table other than the User table.
-        (No other foreign keys!)
-    """
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    namespace_id = Column(ForeignKey('namespace.id'), nullable=False)
-    namespace = relationship("Namespace")
-
-    # Save data other than BODY[] that we query for when downloading messages
-    # from the IMAP account.
-    internaldate = Column(DateTime)
-    g_msgid = Column(String(255))
-    g_thrid = Column(String(255))
-
-    folder_name = Column(String(255))
-    msg_uid = Column(String(255))
-
-    flags = Column(MediumPickle)
-
 class BlockMeta(JSONSerializable, Blob, Base):
     __tablename__ = 'blockmeta'
     """ Metadata for message parts stored in s3 """
