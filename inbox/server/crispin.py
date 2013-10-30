@@ -1,51 +1,22 @@
-# allow imports from the top-level dir (we will want to make the package
-# system better later)
-
 from imapclient import IMAPClient
 
 import datetime
 import os
 
-import encoding
-from models import MessageMeta, BlockMeta, FolderMeta
 import time
-import json
 import sessionmanager
-
-from itertools import chain
-
-from quopri import decodestring as quopri_decodestring
-from base64 import b64decode
-from chardet import detect as detect_charset
 
 from .log import get_logger
 log = get_logger()
+
 from ..util.misc import or_none
 from ..util.cache import get_cache, set_cache
-from hashlib import sha256
 
 IMAP_HOST = 'imap.gmail.com'
 SMTP_HOST = 'smtp.gmail.com'
 
 class AuthFailure(Exception): pass
 class TooManyConnectionsFailure(Exception): pass
-
-### generators
-
-def messages_from_raw(raw_messages):
-    for uid in sorted(raw_messages.iterkeys(), key=int):
-        msg = raw_messages[uid]
-        # NOTE: python's email package (which lamson uses directly) needs
-        # encoded bytestrings as its input, since to deal properly with
-        # MIME-encoded email you need to do part decoding based on message /
-        # MIME part headers anyway. imapclient tries to abstract away bytes and
-        # decodes all bytes received from the wire as _latin-1_, which is wrong
-        # in any case where 8bit MIME is used. so we have to reverse the damage
-        # before we proceed.
-        yield (int(uid), msg['INTERNALDATE'], msg['FLAGS'], msg['ENVELOPE'],
-                msg['BODY[]'].encode('latin-1'),
-                msg['X-GM-THRID'], msg['X-GM-MSGID'],
-                msg['X-GM-LABELS'])
 
 ### decorators
 
@@ -189,188 +160,22 @@ class CrispinClientBase(object):
         return dict([(uid, msg['FLAGS']) for uid, msg in \
                 self.fetch_flags(uids).iteritems()])
 
-    def messages_from_uids(self, uids):
-        """ Downloads entire messages for the given UIDs, parses them,
-            and creates metadata database entries and writes mail parts
-            to disk.
-
-            XXX: Do we really want to be doing the message transform
-            _here_? Crispin wants to avoid dealing with the database layer
-            at all. But it might be a needless duplication to return any other
-            data structure.
-        """
-        # { 'msgid': { 'meta': MessageMeta, 'parts': [BlockMeta, ...] } }
+    def uids(self, uids):
+        """ NOTE: This is a generator. """
         raw_messages = self.fetch_uids(uids)
-        messages = dict()
-        new_foldermeta = []
-        for uid, internaldate, flags, envelope, body, x_gm_thrid, x_gm_msgid, \
-                x_gm_labels in messages_from_raw(raw_messages):
-            mailbase = encoding.from_string(body)
-            new_msg = MessageMeta()
-            new_msg.data_sha256 = sha256(body).hexdigest()
-            new_msg.namespace_id = self.account.namespace.id
-            new_msg.uid = uid
-            # XXX maybe eventually we want to use these, but for
-            # backcompat for now let's keep in the
-            # new_msg.subject = mailbase.headers.get('Subject')
-            # new_msg.from_addr = mailbase.headers.get('From')
-            # new_msg.sender_addr = mailbase.headers.get('Sender')
-            # new_msg.reply_to = mailbase.headers.get('Reply-To')
-            # new_msg.to_addr = mailbase.headers.get('To')
-            # new_msg.cc_addr = mailbase.headers.get('Cc')
-            # new_msg.bcc_addr = mailbase.headers.get('Bcc')
-            # new_msg.in_reply_to = mailbase.headers.get('In-Reply-To')
-            # new_msg.message_id = mailbase.headers.get('Message-Id')
-
-            def make_unicode_contacts(contact_list):
-                if not contact_list: return None
-                n = []
-                for c in contact_list:
-                    new_c = [None]*len(c)
-                    for i in range(len(c)):
-                        new_c[i] = encoding.make_unicode_header(c[i])
-                    n.append(new_c)
-                return n
-
-            tempSubject = encoding.make_unicode_header(envelope[1])
-            # Headers will wrap when longer than 78 chars per RFC822_2
-            tempSubject = tempSubject.replace('\n\t', '').replace('\r\n', '')
-            new_msg.subject = tempSubject
-            new_msg.from_addr = make_unicode_contacts(envelope[2])
-            new_msg.sender_addr = make_unicode_contacts(envelope[3])
-            new_msg.reply_to = envelope[4]
-            new_msg.to_addr = make_unicode_contacts(envelope[5])
-            new_msg.cc_addr = make_unicode_contacts(envelope[6])
-            new_msg.bcc_addr = make_unicode_contacts(envelope[7])
-            new_msg.in_reply_to = envelope[8]
-            new_msg.message_id = envelope[9]
-
-            new_msg.internaldate = internaldate
-            new_msg.g_thrid = unicode(x_gm_thrid)
-            new_msg.g_msgid = unicode(x_gm_msgid)
-
-            fm = FolderMeta(imapaccount_id=self.account.id,
-                    folder_name=self.selected_folder_name,
-                    msg_uid=uid, messagemeta=new_msg)
-            new_foldermeta.append(fm)
-
-            # TODO parse out flags and store as enum instead of string
-            # \Seen  Message has been read
-            # \Answered  Message has been answered
-            # \Flagged  Message is "flagged" for urgent/special attention
-            # \Deleted  Message is "deleted" for removal by later EXPUNGE
-            # \Draft  Message has not completed composition (marked as a draft).
-            # \Recent   session is the first session to have been notified about this message
-            new_msg.flags = unicode(flags)
-
-            new_msg.size = len(body)  # includes headers text
-
-            messages.setdefault(new_msg.g_msgid, dict())['meta'] = new_msg
-
-            i = 0  # for walk_index
-
-            # Store all message headers as object with index 0
-            headers_part = BlockMeta()
-            headers_part.messagemeta = new_msg
-            headers_part.walk_index = i
-            headers_part._data = json.dumps(mailbase.headers)
-            headers_part.data_sha256 = sha256(headers_part._data).hexdigest()
-            messages[new_msg.g_msgid].setdefault('parts', []).append(headers_part)
-
-            extra_parts = []
-
-            if mailbase.body:
-                # single-part message?
-                extra_parts.append(mailbase)
-
-            for part in chain(extra_parts, mailbase.walk()):
-                i += 1
-                mimepart = encoding.to_message(part)
-                if mimepart.is_multipart(): continue  # TODO should we store relations?
-
-                new_part = BlockMeta()
-                new_part.messagemeta = new_msg
-                new_part.walk_index = i
-                new_part.misc_keyval = mimepart.items()  # everything
-
-                # Content-Type
-                try:
-                    assert mimepart.get_content_type() == mimepart.get_params()[0][0],\
-                    "Content-Types not equal!  %s and %s" (mimepart.get_content_type(), mimepart.get_params()[0][0])
-                except Exception, e:
-                    self.log.error("Content-Types not equal: %s" % mimepart.get_params())
-
-                new_part.content_type = mimepart.get_content_type()
-
-
-                # File attachments
-                filename = mimepart.get_filename(failobj=None)
-                if filename: encoding.make_unicode_header(filename)
-                new_part.filename = filename
-
-                # Make sure MIME-Version is 1.0
-                mime_version = mimepart.get('MIME-Version', failobj=None)
-                if mime_version and mime_version != '1.0':
-                    self.log.error("Unexpected MIME-Version: %s" % mime_version)
-
-
-                # Content-Disposition attachment; filename="floorplan.gif"
-                content_disposition = mimepart.get('Content-Disposition', None)
-                if content_disposition:
-                    parsed_content_disposition = content_disposition.split(';')[0].lower()
-                    if parsed_content_disposition not in ['inline', 'attachment']:
-                        errmsg = """
-Unknown Content-Disposition on message {0} found in {1}.
-Original Content-Disposition was: '{2}'
-Parsed Content-Disposition was: '{3}'""".format(uid, self.selected_folder_name,
-                            content_disposition, parsed_content_disposition)
-                        self.log.error(errmsg)
-                    else:
-                        new_part.content_disposition = parsed_content_disposition
-
-                new_part.content_id = mimepart.get('Content-Id', None)
-
-                # DEBUG -- not sure if these are ever really used in emails
-                if mimepart.preamble:
-                    self.log.warning("Found a preamble! " + mimepart.preamble)
-                if mimepart.epilogue:
-                    self.log.warning("Found an epilogue! " + mimepart.epilogue)
-
-                payload_data = mimepart.get_payload(decode=False)  # decode ourselves
-                data_encoding = mimepart.get('Content-Transfer-Encoding', None).lower()
-
-                if data_encoding == 'quoted-printable':
-                    data_to_write = quopri_decodestring(payload_data)
-
-                elif data_encoding == 'base64':
-                    data_to_write = b64decode(payload_data)
-
-                elif data_encoding == '7bit' or data_encoding == '8bit':
-                    # Need to get charset and decode with that too.
-                    charset = str(mimepart.get_charset())
-                    if charset == 'None': charset = None  # bug
-                    try:
-                        assert charset
-                        payload_data = encoding.attempt_decoding(charset, payload_data)
-                    except Exception, e:
-                        detected_charset = detect_charset(payload_data)
-                        detected_charset_encoding = detected_charset['encoding']
-                        self.log.error("%s Failed decoding with %s. Now trying %s" % (e, charset , detected_charset_encoding))
-                        try:
-                            payload_data = encoding.attempt_decoding(detected_charset_encoding, payload_data)
-                        except Exception, e:
-                            self.log.error("That failed too. Hmph. Not sure how to recover here")
-                            raise e
-                        self.log.info("Success!")
-                    data_to_write = payload_data.encode('utf-8')
-                else:
-                    raise Exception("Unknown encoding scheme:" + str(encoding))
-
-                new_part.data_sha256 = sha256(data_to_write).hexdigest()
-                new_part._data = data_to_write
-                messages[new_msg.g_msgid]['parts'].append(new_part)
-
-        return messages, new_foldermeta
+        for uid in sorted(raw_messages.iterkeys(), key=int):
+            msg = raw_messages[uid]
+            # NOTE: python's email package (which lamson uses directly) needs
+            # encoded bytestrings as its input, since to deal properly with
+            # MIME-encoded email you need to do part decoding based on message
+            # / MIME part headers anyway. imapclient tries to abstract away
+            # bytes and decodes all bytes received from the wire as _latin-1_,
+            # which is wrong in any case where 8bit MIME is used. so we have to
+            # reverse the damage before we proceed.
+            yield (int(uid), msg['INTERNALDATE'], msg['FLAGS'], msg['ENVELOPE'],
+                    msg['BODY[]'].encode('latin-1'),
+                    msg['X-GM-THRID'], msg['X-GM-MSGID'],
+                    msg['X-GM-LABELS'])
 
     def all_mail_folder_name(self):
         """ This finds the Gmail "All Mail" folder name by using a flag.

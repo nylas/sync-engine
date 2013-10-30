@@ -2,7 +2,9 @@ from __future__ import division
 import socket
 
 from .sessionmanager import get_crispin_from_email
-from .models import db_session, FolderMeta, MessageMeta, UIDValidity, IMAPAccount
+
+from .models import db_session, FolderMeta, MessageMeta, UIDValidity
+from .models import IMAPAccount, BlockMeta
 from sqlalchemy import distinct
 import sqlalchemy.exc
 
@@ -20,6 +22,14 @@ from gevent import Greenlet, sleep, joinall, kill
 from gevent.queue import Queue, Empty
 
 from .google_oauth import InvalidOauthGrantException
+
+import encoding
+import json
+from itertools import chain
+from quopri import decodestring as quopri_decodestring
+from base64 import b64decode
+from chardet import detect as detect_charset
+from hashlib import sha256
 
 def refresh_crispin(email, dummy=False):
     try:
@@ -130,9 +140,185 @@ def g_check_join(threads, errmsg):
             log.error(error)
         raise SyncException("Fatal error encountered")
 
+def process_messages(account, folder, messages):
+    """ Parses message data for the given UIDs, creates metadata database
+        entries and writes mail parts to disk.
+    """
+    # { 'msgid': { 'meta': MessageMeta, 'parts': [BlockMeta, ...] } }
+    messages = dict()
+    new_foldermeta = []
+    for uid, internaldate, flags, envelope, body, x_gm_thrid, x_gm_msgid, \
+            x_gm_labels in messages:
+        mailbase = encoding.from_string(body)
+        new_msg = MessageMeta()
+        new_msg.data_sha256 = sha256(body).hexdigest()
+        new_msg.namespace_id = account.namespace.id
+        new_msg.uid = uid
+        # XXX maybe eventually we want to use these, but for
+        # backcompat for now let's keep in the
+        # new_msg.subject = mailbase.headers.get('Subject')
+        # new_msg.from_addr = mailbase.headers.get('From')
+        # new_msg.sender_addr = mailbase.headers.get('Sender')
+        # new_msg.reply_to = mailbase.headers.get('Reply-To')
+        # new_msg.to_addr = mailbase.headers.get('To')
+        # new_msg.cc_addr = mailbase.headers.get('Cc')
+        # new_msg.bcc_addr = mailbase.headers.get('Bcc')
+        # new_msg.in_reply_to = mailbase.headers.get('In-Reply-To')
+        # new_msg.message_id = mailbase.headers.get('Message-Id')
+
+        def make_unicode_contacts(contact_list):
+            if not contact_list: return None
+            n = []
+            for c in contact_list:
+                new_c = [None]*len(c)
+                for i in range(len(c)):
+                    new_c[i] = encoding.make_unicode_header(c[i])
+                n.append(new_c)
+            return n
+
+        tempSubject = encoding.make_unicode_header(envelope[1])
+        # Headers will wrap when longer than 78 chars per RFC822_2
+        tempSubject = tempSubject.replace('\n\t', '').replace('\r\n', '')
+        new_msg.subject = tempSubject
+        new_msg.from_addr = make_unicode_contacts(envelope[2])
+        new_msg.sender_addr = make_unicode_contacts(envelope[3])
+        new_msg.reply_to = envelope[4]
+        new_msg.to_addr = make_unicode_contacts(envelope[5])
+        new_msg.cc_addr = make_unicode_contacts(envelope[6])
+        new_msg.bcc_addr = make_unicode_contacts(envelope[7])
+        new_msg.in_reply_to = envelope[8]
+        new_msg.message_id = envelope[9]
+
+        new_msg.internaldate = internaldate
+        new_msg.g_thrid = unicode(x_gm_thrid)
+        new_msg.g_msgid = unicode(x_gm_msgid)
+
+        fm = FolderMeta(imapaccount_id=account.id,
+                folder_name=folder,
+                msg_uid=uid, messagemeta=new_msg)
+        new_foldermeta.append(fm)
+
+        # TODO parse out flags and store as enum instead of string
+        # \Seen  Message has been read
+        # \Answered  Message has been answered
+        # \Flagged  Message is "flagged" for urgent/special attention
+        # \Deleted  Message is "deleted" for removal by later EXPUNGE
+        # \Draft  Message has not completed composition (marked as a draft).
+        # \Recent   session is the first session to have been notified about this message
+        new_msg.flags = unicode(flags)
+
+        new_msg.size = len(body)  # includes headers text
+
+        messages.setdefault(new_msg.g_msgid, dict())['meta'] = new_msg
+
+        i = 0  # for walk_index
+
+        # Store all message headers as object with index 0
+        headers_part = BlockMeta()
+        headers_part.messagemeta = new_msg
+        headers_part.walk_index = i
+        headers_part._data = json.dumps(mailbase.headers)
+        headers_part.data_sha256 = sha256(headers_part._data).hexdigest()
+        messages[new_msg.g_msgid].setdefault('parts', []).append(headers_part)
+
+        extra_parts = []
+
+        if mailbase.body:
+            # single-part message?
+            extra_parts.append(mailbase)
+
+        for part in chain(extra_parts, mailbase.walk()):
+            i += 1
+            mimepart = encoding.to_message(part)
+            if mimepart.is_multipart(): continue  # TODO should we store relations?
+
+            new_part = BlockMeta()
+            new_part.messagemeta = new_msg
+            new_part.walk_index = i
+            new_part.misc_keyval = mimepart.items()  # everything
+
+            # Content-Type
+            try:
+                assert mimepart.get_content_type() == mimepart.get_params()[0][0],\
+                "Content-Types not equal!  %s and %s" (mimepart.get_content_type(), mimepart.get_params()[0][0])
+            except Exception, e:
+                log.error("Content-Types not equal: %s" % mimepart.get_params())
+
+            new_part.content_type = mimepart.get_content_type()
+
+
+            # File attachments
+            filename = mimepart.get_filename(failobj=None)
+            if filename: encoding.make_unicode_header(filename)
+            new_part.filename = filename
+
+            # Make sure MIME-Version is 1.0
+            mime_version = mimepart.get('MIME-Version', failobj=None)
+            if mime_version and mime_version != '1.0':
+                log.error("Unexpected MIME-Version: %s" % mime_version)
+
+            # Content-Disposition attachment; filename="floorplan.gif"
+            content_disposition = mimepart.get('Content-Disposition', None)
+            if content_disposition:
+                parsed_content_disposition = content_disposition.split(';')[0].lower()
+                if parsed_content_disposition not in ['inline', 'attachment']:
+                    errmsg = """
+Unknown Content-Disposition on message {0} found in {1}.
+Original Content-Disposition was: '{2}'
+Parsed Content-Disposition was: '{3}'""".format(uid, self.selected_folder_name,
+                        content_disposition, parsed_content_disposition)
+                    log.error(errmsg)
+                else:
+                    new_part.content_disposition = parsed_content_disposition
+
+            new_part.content_id = mimepart.get('Content-Id', None)
+
+            # DEBUG -- not sure if these are ever really used in emails
+            if mimepart.preamble:
+                log.warning("Found a preamble! " + mimepart.preamble)
+            if mimepart.epilogue:
+                log.warning("Found an epilogue! " + mimepart.epilogue)
+
+            payload_data = mimepart.get_payload(decode=False)  # decode ourselves
+            data_encoding = mimepart.get('Content-Transfer-Encoding', None).lower()
+
+            if data_encoding == 'quoted-printable':
+                data_to_write = quopri_decodestring(payload_data)
+
+            elif data_encoding == 'base64':
+                data_to_write = b64decode(payload_data)
+
+            elif data_encoding == '7bit' or data_encoding == '8bit':
+                # Need to get charset and decode with that too.
+                charset = str(mimepart.get_charset())
+                if charset == 'None': charset = None  # bug
+                try:
+                    assert charset
+                    payload_data = encoding.attempt_decoding(charset, payload_data)
+                except Exception, e:
+                    detected_charset = detect_charset(payload_data)
+                    detected_charset_encoding = detected_charset['encoding']
+                    log.error("%s Failed decoding with %s. Now trying %s" % (e, charset , detected_charset_encoding))
+                    try:
+                        payload_data = encoding.attempt_decoding(detected_charset_encoding, payload_data)
+                    except Exception, e:
+                        log.error("That failed too. Hmph. Not sure how to recover here")
+                        raise e
+                    log.info("Success!")
+                data_to_write = payload_data.encode('utf-8')
+            else:
+                raise Exception("Unknown encoding scheme:" + str(encoding))
+
+            new_part.data_sha256 = sha256(data_to_write).hexdigest()
+            new_part._data = data_to_write
+            messages[new_msg.g_msgid]['parts'].append(new_part)
+
+    return messages, new_foldermeta
+
 def safe_download(uids, folder, crispin_client):
     try:
-        new_messages, new_foldermeta = crispin_client.fetch_uids(uids)
+        raw_messages = crispin_client.uids(uids)
+        new_messages, new_foldermeta = process_messages(raw_messages)
     except EncodingError, e:
         log.error(e)
         raise e
