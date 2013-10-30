@@ -12,11 +12,14 @@ log = get_logger()
 from ..util.misc import or_none
 from ..util.cache import get_cache, set_cache
 
-IMAP_HOST = 'imap.gmail.com'
-SMTP_HOST = 'smtp.gmail.com'
+IMAP_HOSTS = { 'Gmail': 'imap.gmail.com' }
 
-class AuthFailure(Exception): pass
-class TooManyConnectionsFailure(Exception): pass
+### exceptions
+
+class CrispinError(Exception): pass
+class NotImplementedError(CrispinError): pass
+class AuthFailure(CrispinError): pass
+class TooManyConnectionsFailure(CrispinError): pass
 
 ### decorators
 
@@ -30,8 +33,7 @@ def timed(fn):
     return timed_fn
 
 def connected(fn):
-    """ A decorator for methods that can only be run on a logged-in client.
-    """
+    """ A decorator for methods that can only be run on a logged-in client. """
     def connected_fn(self, *args, **kwargs):
         if self.server_needs_refresh():
             self._connect()
@@ -43,10 +45,6 @@ def connected(fn):
     return connected_fn
 
 ### main stuff
-
-class NotImplementedError(Exception): pass
-
-class CrispinError(Exception): pass
 
 class CrispinClientBase(object):
     def __init__(self, account, cache=True):
@@ -315,7 +313,8 @@ class CrispinClient(CrispinClientBase):
     CHUNK_SIZE = 20
 
     def _connect(self):
-        self.log.info('Connecting to %s ...' % IMAP_HOST,)
+        imap_host = IMAP_HOSTS[self.account.provider]
+        self.log.info('Connecting to {0} ...'.format(imap_host))
 
         try:
             self.imap_server.noop()
@@ -328,7 +327,7 @@ class CrispinClient(CrispinClientBase):
             self.log.info('No active connection. Opening connection...')
 
         try:
-            self.imap_server = IMAPClient(IMAP_HOST, use_uid=True,
+            self.imap_server = IMAPClient(imap_host, use_uid=True,
                     ssl=True)
             # self.imap_server.debug = 4  # todo
             self.log.info("Logging in: %s" % self.email_address)
@@ -338,7 +337,7 @@ class CrispinClient(CrispinClientBase):
             if str(e) == '[ALERT] Too many simultaneous connections. (Failure)':
                 raise TooManyConnectionsFailure("Too many simultaneous connections.")
             elif str(e) == '[ALERT] Invalid credentials (Failure)':
-                sessionmanager.verify_imap_account(self.account)
+                verify_imap_account(self.account)
                 raise AuthFailure("Invalid credentials")
             else:
                 self.log.error(e)
@@ -369,6 +368,7 @@ class CrispinClient(CrispinClientBase):
     @timed
     def do_select_folder(self, folder):
         try:
+            # XXX: Remove readonly before implementing mutate commands!
             select_info = self.imap_server.select_folder(folder, readonly=True)
 
             if self.cache:
