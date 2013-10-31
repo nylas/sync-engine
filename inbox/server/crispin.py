@@ -47,6 +47,19 @@ def connected(fn):
 ### main stuff
 
 class CrispinClientBase(object):
+    """
+    One thing to note about crispin clients is that *all* calls operate on
+    the currently selected folder.
+
+    Crispin will NEVER implicitly select a folder for you.
+
+    This is very important! IMAP only guarantees that folder message UIDs
+    are valid for a "session", which is defined as from the time you
+    SELECT a folder until the connection is closed or another folder is
+    selected.
+
+    XXX: can we make it even harder to fuck this up?
+    """
     def __init__(self, account, cache=True):
         self.account = account
         self.log = get_logger(account)
@@ -310,19 +323,6 @@ class DummyCrispinClient(CrispinClientBase):
         return cached_data
 
 class CrispinClient(CrispinClientBase):
-    """
-    One thing to note about crispin clients is that *all* calls operate on
-    the currently selected folder.
-
-    Crispin will NEVER implicitly select a folder for you.
-
-    This is very important! IMAP only guarantees that folder message UIDs
-    are valid for a "session", which is defined as from the time you
-    SELECT a folder until the connection is closed or another folder is
-    selected.
-
-    XXX: can we make it even harder to fuck this up?
-    """
     # 20 minutes
     SERVER_TIMEOUT = datetime.timedelta(seconds=1200)
     # how many messages to download at a time
