@@ -456,7 +456,7 @@ class CrispinClient(CrispinClientBase):
                  'X-GM-MSGID', 'X-GM-LABELS'])
 
         if self.cache:
-            # account.{{account_id}}/{{folder}}/{{uidvalidity}}/{{highestmodseq}}/{{uid}}/flags
+            # account.{{account_id}}/{{folder}}/{{uidvalidity}}/{{highestmodseq}}/{{uid}}/body
             for uid in uids:
                 self.set_cache(data[uid],
                         self.selected_folder_name,
