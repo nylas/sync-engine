@@ -407,7 +407,7 @@ class SyncMonitor(Greenlet):
 
     def _update_metadata(self, uids):
         """ Update flags (the only metadata that can change). """
-        new_flags = self.crispin_client.fetch_flags(uids)
+        new_flags = self.crispin_client.flags(uids)
         self.log.info("new flags: {0}".format(new_flags))
         for fm in db_session.query(FolderMeta).filter(
                 FolderMeta.msg_uid.in_(uids),
@@ -460,13 +460,13 @@ class SyncMonitor(Greenlet):
                     self.log.info("Updating cache with latest changes")
                     # any uids we don't already have will be downloaded correctly
                     # as usual, but updated uids need to be updated manually
-                    modified = self.crispin_client.get_changed_uids(
+                    modified = self.crispin_client.new_and_updated_uids(
                             self.crispin_client.selected_highestmodseq)
                     new, updated = new_or_updated(modified, folder,
                             self.account.id, local_uids)
                     self.log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
                     # for new, query g_msgids and update cache
-                    server_g_msgids.update(self.crispin_client.fetch_g_msgids(new))
+                    server_g_msgids.update(self.crispin_client.g_msgids(new))
                     set_cache("_".join([self.account.email_address, folder,
                         "server_g_msgids"]), server_g_msgids)
                     self.log.info("Updated cache with new messages")
@@ -478,7 +478,7 @@ class SyncMonitor(Greenlet):
                     self.log.info("Updated metadata for modified messages")
             else:
                 self.log.info("No cached data found")
-                server_g_msgids = self.crispin_client.fetch_g_msgids()
+                server_g_msgids = self.crispin_client.g_msgids()
                 set_cache("_".join([self.account.email_address, folder,
                     "server_g_msgids"]), server_g_msgids)
                 cached_validity = fetch_uidvalidity(self.account, folder)
@@ -612,7 +612,7 @@ class SyncMonitor(Greenlet):
             highestmodseq = db_session.query(UIDValidity).filter_by(
                     account=self.account, folder_name=folder
                     ).one().highestmodseq
-        uids = self.crispin_client.get_changed_uids(highestmodseq)
+        uids = self.crispin_client.new_and_updated_uids(highestmodseq)
         log.info("Starting highestmodseq update on {0} (current HIGHESTMODSEQ: {1})".format(folder, self.crispin_client.selected_highestmodseq))
         if uids:
             new, updated = new_or_updated(uids, folder,
@@ -672,11 +672,10 @@ class SyncMonitor(Greenlet):
         cache_validity = load_validity_cache(self.crispin_client)
         needs_update = []
         for folder in self.crispin_client.sync_folders:
-            # eventually we might want to be holding a cache of this stuff from any
-            # SELECT calls that have already happened, to save on a status call.
-            # but status is fast, so maybe not.
-            status = self.crispin_client.imap_server.folder_status(folder,
-                    ('UIDVALIDITY', 'HIGHESTMODSEQ'))
+            # eventually we might want to be holding a cache of this stuff from
+            # any SELECT calls that have already happened, to save on a status
+            # call. but status is fast, so maybe not.
+            status = self.crispin_client.folder_status(folder)
             cached_highestmodseq = cache_validity[folder]['HIGHESTMODSEQ']
             if status['HIGHESTMODSEQ'] > cached_highestmodseq:
                 needs_update.append((folder, cached_highestmodseq))

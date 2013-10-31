@@ -4,7 +4,7 @@ import datetime
 
 from imapclient import IMAPClient
 
-from .sessionmanager import verify_imap_account
+import sessionmanager
 
 from .log import get_logger
 log = get_logger()
@@ -52,7 +52,7 @@ class CrispinClientBase(object):
         self.log = get_logger(account)
         self.email_address = account.email_address
         self.oauth_token = account.o_access_token
-        self.imap_server = None
+        self._imap_server = None
         # last time the server checked in, in UTC
         self.keepalive = None
         # IMAP isn't stateless :(
@@ -72,7 +72,7 @@ class CrispinClientBase(object):
 
     # XXX At some point we may want to query for a user's labels and sync
     # _all_ of them here. You can query gmail labels with
-    # self.imap_server.list_folders() and filter out the [Gmail] folders
+    # self._imap_server.list_folders() and filter out the [Gmail] folders
     @property
     def sync_folders(self):
         return ['Inbox', self.all_mail_folder_name()]
@@ -119,6 +119,12 @@ class CrispinClientBase(object):
         return select_info
 
     def do_select_folder(self, folder):
+        raise NotImplementedError()
+
+    def folder_status(self, folder):
+        return self.fetch_folder_status(folder)
+
+    def fetch_folder_status(self, folder):
         raise NotImplementedError()
 
     def all_uids(self):
@@ -229,6 +235,14 @@ class DummyCrispinClient(CrispinClientBase):
                         self.account.id, folder)
         return cached_data
 
+    def fetch_folder_status(self, folder):
+        cached_data = self.get_cache(folder, 'status')
+
+        assert cached_data is not None, \
+                'no folder status cached for account {0} {1}'.format(
+                        self.account.id, folder)
+        return cached_data
+
     def fetch_all_uids(self):
         cached_data = self.get_cache(self.selected_folder_name, 'all_uids')
 
@@ -317,8 +331,8 @@ class CrispinClient(CrispinClientBase):
         self.log.info('Connecting to {0} ...'.format(imap_host))
 
         try:
-            self.imap_server.noop()
-            if self.imap_server.state == 'NONAUTH' or self.imap_server.state == 'LOGOUT':
+            self._imap_server.noop()
+            if self._imap_server.state == 'NONAUTH' or self._imap_server.state == 'LOGOUT':
                 raise Exception
             self.log.info('Already connected to host.')
             return True
@@ -327,23 +341,23 @@ class CrispinClient(CrispinClientBase):
             self.log.info('No active connection. Opening connection...')
 
         try:
-            self.imap_server = IMAPClient(imap_host, use_uid=True,
+            self._imap_server = IMAPClient(imap_host, use_uid=True,
                     ssl=True)
-            # self.imap_server.debug = 4  # todo
+            # self._imap_server.debug = 4  # todo
             self.log.info("Logging in: %s" % self.email_address)
-            self.imap_server.oauth2_login(self.email_address, self.oauth_token)
+            self._imap_server.oauth2_login(self.email_address, self.oauth_token)
 
         except Exception as e:
             if str(e) == '[ALERT] Too many simultaneous connections. (Failure)':
                 raise TooManyConnectionsFailure("Too many simultaneous connections.")
             elif str(e) == '[ALERT] Invalid credentials (Failure)':
-                verify_imap_account(self.account)
+                sessionmanager.verify_imap_account(self.account)
                 raise AuthFailure("Invalid credentials")
             else:
                 self.log.error(e)
                 raise e
 
-            self.imap_server = None
+            self._imap_server = None
             return False
 
         self.keepalive = datetime.datetime.utcnow()
@@ -361,15 +375,15 @@ class CrispinClient(CrispinClientBase):
 
     def stop(self):
         self.log.info("Closing connection.")
-        if (self.imap_server):
-            self.imap_server.logout()
+        if (self._imap_server):
+            self._imap_server.logout()
 
     @connected
     @timed
     def do_select_folder(self, folder):
         try:
             # XXX: Remove readonly before implementing mutate commands!
-            select_info = self.imap_server.select_folder(folder, readonly=True)
+            select_info = self._imap_server.select_folder(folder, readonly=True)
 
             if self.cache:
                 self.set_cache(select_info, folder, 'select_info')
@@ -380,8 +394,18 @@ class CrispinClient(CrispinClientBase):
             raise e
 
     @connected
+    def fetch_folder_status(self, folder):
+        status = self.crispin_client._imap_server.folder_status(folder,
+                ('UIDVALIDITY', 'HIGHESTMODSEQ'))
+
+        if self.cache:
+            self.set_cache(status, folder, 'status')
+
+        return status
+
+    @connected
     def fetch_all_uids(self):
-        data = self.imap_server.search(['NOT DELETED'])
+        data = self._imap_server.search(['NOT DELETED'])
 
         if self.cache:
             self.set_cache(data, self.selected_folder_name, 'all_uids')
@@ -390,7 +414,7 @@ class CrispinClient(CrispinClientBase):
 
     @connected
     def fetch_g_msgids(self, uids):
-        data = self.imap_server.fetch(uids, ['X-GM-MSGID'])
+        data = self._imap_server.fetch(uids, ['X-GM-MSGID'])
 
         if self.cache:
             self.set_cache(data, self.selected_folder_name, 'g_msgids')
@@ -400,7 +424,7 @@ class CrispinClient(CrispinClientBase):
     @connected
     @timed
     def fetch_new_and_updated_uids(self, modseq):
-        data = self.imap_server.search(['NOT DELETED', "MODSEQ {0}".format(modseq)])
+        data = self._imap_server.search(['NOT DELETED', "MODSEQ {0}".format(modseq)])
 
         if self.cache:
             self.set_cache(data, self.selected_folder_name, 'updated', modseq)
@@ -409,7 +433,7 @@ class CrispinClient(CrispinClientBase):
 
     @connected
     def fetch_flags(self, uids):
-        data = self.imap_server.fetch(uids, ['FLAGS'])
+        data = self._imap_server.fetch(uids, ['FLAGS'])
 
         if self.cache:
             # account.{{account_id}}/{{folder}}/{{uidvalidity}}/{{highestmodseq}}/{{uid}}/flags
@@ -424,7 +448,7 @@ class CrispinClient(CrispinClientBase):
 
     @connected
     def fetch_uids(self, uids):
-        data = self.imap_server.fetch(uids,
+        data = self._imap_server.fetch(uids,
                 ['BODY.PEEK[] ENVELOPE INTERNALDATE FLAGS', 'X-GM-THRID',
                  'X-GM-MSGID', 'X-GM-LABELS'])
 
@@ -442,7 +466,7 @@ class CrispinClient(CrispinClientBase):
     @connected
     def fetch_folder_list(self):
         """ NOTE: XLIST is deprecated, so we just use LIST. """
-        folders = self.imap_server.list_folders()
+        folders = self._imap_server.list_folders()
 
         if self.cache:
             self.set_cache(folders, 'folders')
