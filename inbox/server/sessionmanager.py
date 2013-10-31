@@ -61,6 +61,7 @@ def make_account(access_token_dict):
     account.o_refresh_token = access_token_dict['refresh_token']
     account.o_verified_email = access_token_dict['verified_email']
     account.date = datetime.datetime.utcnow()
+    account.provider = 'Gmail'
 
     db_session.add(account)
     db_session.commit()

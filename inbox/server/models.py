@@ -169,7 +169,7 @@ class IMAPAccount(Base):
     user = relationship("User", backref="accounts")
 
     email_address = Column(String(254), nullable=True, index=True)
-    provider = Enum('Gmail', 'Outlook', 'Yahoo', 'Inbox')
+    provider = Column(Enum('Gmail', 'Outlook', 'Yahoo', 'Inbox'), nullable=False)
 
     # local flags & data
     initial_sync_done = Column(Boolean)
