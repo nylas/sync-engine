@@ -113,29 +113,29 @@ class CrispinClientBase(object):
             this function. We don't do this here because this module
             deliberately doesn't deal with the database layer.
         """
-        select_info = self.do_select_folder(folder)
+        select_info = self._do_select_folder(folder)
         self.selected_folder = (folder, select_info)
         self.log.info('Selected folder {0} with {1} messages.'.format(
             folder, select_info['EXISTS']))
         return select_info
 
-    def do_select_folder(self, folder):
+    def _do_select_folder(self, folder):
         raise NotImplementedError()
 
     def folder_status(self, folder):
-        return self.fetch_folder_status(folder)
+        return self._fetch_folder_status(folder)
 
-    def fetch_folder_status(self, folder):
+    def _fetch_folder_status(self, folder):
         raise NotImplementedError()
 
     def all_uids(self):
         """ Get all UIDs associated with the currently selected folder as
             a list of integers sorted in ascending order.
         """
-        data = self.fetch_all_uids()
+        data = self._fetch_all_uids()
         return sorted([int(s) for s in data])
 
-    def fetch_all_uids(self):
+    def _fetch_all_uids(self):
         raise NotImplementedError()
 
     def g_msgids(self, uids=None):
@@ -146,27 +146,27 @@ class CrispinClientBase(object):
             UID is unique (to a folder), but a g_msgid is not necessarily
             (it can legitimately appear twice in the folder).
         """
-        self.log.info("Fetching X-GM-MSGID mapping from server.")
+        self.log.info("_fetching X-GM-MSGID mapping from server.")
         if uids is None:
             uids = self.all_uids()
         return dict([(int(uid), unicode(ret['X-GM-MSGID'])) for uid, ret in \
-                self.fetch_g_msgids(uids).iteritems()])
+                self._fetch_g_msgids(uids).iteritems()])
 
-    def fetch_g_msgids(self, uids):
+    def _fetch_g_msgids(self, uids):
         raise NotImplementedError()
 
     def new_and_updated_uids(self, modseq):
-        return self.fetch_new_and_updated_uids(modseq)
+        return self._fetch_new_and_updated_uids(modseq)
 
-    def fetch_new_and_updated_uids(self, modseq):
+    def _fetch_new_and_updated_uids(self, modseq):
         raise NotImplementedError()
 
     def flags(self, uids):
         return dict([(uid, msg['FLAGS']) for uid, msg in \
-                self.fetch_flags(uids).iteritems()])
+                self._fetch_flags(uids).iteritems()])
 
     def uids(self, uids):
-        raw_messages = self.fetch_uids(uids)
+        raw_messages = self._fetch_uids(uids)
         messages = []
         for uid in sorted(raw_messages.iterkeys(), key=int):
             msg = raw_messages[uid]
@@ -205,7 +205,7 @@ class CrispinClientBase(object):
         """
         if self._all_mail_folder_name is not None:
             return self._all_mail_folder_name
-        folders = self.fetch_folder_list()
+        folders = self._fetch_folder_list()
         for flags, delimiter, name in folders:
             if u'\\All' in flags:
                 self._all_mail_folder_name = name
@@ -229,7 +229,7 @@ class DummyCrispinClient(CrispinClientBase):
     def stop(self):
         pass
 
-    def do_select_folder(self, folder):
+    def _do_select_folder(self, folder):
         cached_data = self.get_cache(folder, 'select_info')
 
         assert cached_data is not None, \
@@ -237,7 +237,7 @@ class DummyCrispinClient(CrispinClientBase):
                         self.account.id, folder)
         return cached_data
 
-    def fetch_folder_status(self, folder):
+    def _fetch_folder_status(self, folder):
         cached_data = self.get_cache(folder, 'status')
 
         assert cached_data is not None, \
@@ -245,7 +245,7 @@ class DummyCrispinClient(CrispinClientBase):
                         self.account.id, folder)
         return cached_data
 
-    def fetch_all_uids(self):
+    def _fetch_all_uids(self):
         cached_data = self.get_cache(self.selected_folder_name, 'all_uids')
 
         assert cached_data is not None, \
@@ -253,7 +253,7 @@ class DummyCrispinClient(CrispinClientBase):
                         self.account.id, self.selected_folder_name)
         return cached_data
 
-    def fetch_g_msgids(self, uids):
+    def _fetch_g_msgids(self, uids):
         cached_data = self.get_cache(self.selected_folder_name, 'g_msgids')
 
         assert cached_data is not None, \
@@ -261,7 +261,7 @@ class DummyCrispinClient(CrispinClientBase):
                         self.account.id, self.selected_folder_name)
         return cached_data
 
-    def fetch_new_and_updated_uids(self, modseq):
+    def _fetch_new_and_updated_uids(self, modseq):
         cached_data = self.get_cache(self.selected_folder_name, 'updated', modseq)
 
         assert cached_data is not None, \
@@ -269,7 +269,7 @@ class DummyCrispinClient(CrispinClientBase):
                         self.account.id, self.selected_folder_name, modseq)
         return cached_data
 
-    def fetch_flags(self, uids):
+    def _fetch_flags(self, uids):
         # return { uid: data, uid: data }
         cached_data = dict()
         for uid in uids:
@@ -285,7 +285,7 @@ class DummyCrispinClient(CrispinClientBase):
 
         return cached_data
 
-    def fetch_uids(self, uids):
+    def _fetch_uids(self, uids):
         # return { uid: data, uid: data }
         cached_data = dict()
         for uid in uids:
@@ -301,7 +301,7 @@ class DummyCrispinClient(CrispinClientBase):
 
         return cached_data
 
-    def fetch_folder_list(self):
+    def _fetch_folder_list(self):
         cached_data = self.get_cache('folders')
 
         assert cached_data is not None, \
@@ -383,7 +383,7 @@ class CrispinClient(CrispinClientBase):
 
     @connected
     @timed
-    def do_select_folder(self, folder):
+    def _do_select_folder(self, folder):
         try:
             # XXX: Remove readonly before implementing mutate commands!
             select_info = self._imap_server.select_folder(folder, readonly=True)
@@ -397,7 +397,7 @@ class CrispinClient(CrispinClientBase):
             raise e
 
     @connected
-    def fetch_folder_status(self, folder):
+    def _fetch_folder_status(self, folder):
         status = self._imap_server.folder_status(folder,
                 ('UIDVALIDITY', 'HIGHESTMODSEQ'))
 
@@ -407,7 +407,7 @@ class CrispinClient(CrispinClientBase):
         return status
 
     @connected
-    def fetch_all_uids(self):
+    def _fetch_all_uids(self):
         data = self._imap_server.search(['NOT DELETED'])
 
         if self.cache:
@@ -416,8 +416,8 @@ class CrispinClient(CrispinClientBase):
         return data
 
     @connected
-    def fetch_g_msgids(self, uids):
-        data = self._imap_server.fetch(uids, ['X-GM-MSGID'])
+    def _fetch_g_msgids(self, uids):
+        data = self._imap_server._fetch(uids, ['X-GM-MSGID'])
 
         if self.cache:
             self.set_cache(data, self.selected_folder_name, 'g_msgids')
@@ -426,7 +426,7 @@ class CrispinClient(CrispinClientBase):
 
     @connected
     @timed
-    def fetch_new_and_updated_uids(self, modseq):
+    def _fetch_new_and_updated_uids(self, modseq):
         data = self._imap_server.search(['NOT DELETED', "MODSEQ {0}".format(modseq)])
 
         if self.cache:
@@ -435,8 +435,8 @@ class CrispinClient(CrispinClientBase):
         return data
 
     @connected
-    def fetch_flags(self, uids):
-        data = self._imap_server.fetch(uids, ['FLAGS'])
+    def _fetch_flags(self, uids):
+        data = self._imap_server._fetch(uids, ['FLAGS'])
 
         if self.cache:
             # account.{{account_id}}/{{folder}}/{{uidvalidity}}/{{highestmodseq}}/{{uid}}/flags
@@ -450,7 +450,7 @@ class CrispinClient(CrispinClientBase):
         return data
 
     @connected
-    def fetch_uids(self, uids):
+    def _fetch_uids(self, uids):
         data = self._imap_server.fetch(uids,
                 ['BODY.PEEK[] ENVELOPE INTERNALDATE FLAGS', 'X-GM-THRID',
                  'X-GM-MSGID', 'X-GM-LABELS'])
@@ -467,7 +467,7 @@ class CrispinClient(CrispinClientBase):
         return data
 
     @connected
-    def fetch_folder_list(self):
+    def _fetch_folder_list(self):
         """ NOTE: XLIST is deprecated, so we just use LIST. """
         folders = self._imap_server.list_folders()
 
