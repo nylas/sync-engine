@@ -409,7 +409,7 @@ class CrispinClient(CrispinClientBase):
 
     @connected
     def _fetch_g_msgids(self, uids):
-        data = self._imap_server._fetch(uids, ['X-GM-MSGID'])
+        data = self._imap_server.fetch(uids, ['X-GM-MSGID'])
 
         if self.cache:
             self.set_cache(data, self.selected_folder_name, 'g_msgids')
@@ -428,7 +428,7 @@ class CrispinClient(CrispinClientBase):
 
     @connected
     def _fetch_flags(self, uids):
-        data = self._imap_server._fetch(uids, ['FLAGS'])
+        data = self._imap_server.fetch(uids, ['FLAGS'])
 
         if self.cache:
             # account.{{account_id}}/{{folder}}/{{uidvalidity}}/{{highestmodseq}}/{{uid}}/flags
