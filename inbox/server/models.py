@@ -559,6 +559,19 @@ class TodoNSMeta(Base):
     user = relationship('User', backref=backref('todo_ns_meta', uselist=False))
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False, unique=True)
 
+class SyncMeta(Base):
+    __tablename__ = 'syncmeta'
+
+    imapaccount_id = Column(ForeignKey('imapaccount.id'), nullable=False)
+    imapaccount = relationship('IMAPAccount',
+            backref=backref('syncmeta', uselist=False))
+    folder_name = Column(String(255))
+    # see state machine in sync.py
+    state = Column(Enum('initial', 'initial uidinvalid',
+                        'poll', 'poll uidinvalid'), nullable=False)
+
+    __table_args__ = (UniqueConstraint('imapaccount_id', 'folder_name'))
+
 def db_uri():
     uri_template = 'mysql://{username}:{password}@{host}:{port}/{database}?charset=utf8mb4'
     config_prefix = 'RDS' if is_prod() else 'MYSQL'
