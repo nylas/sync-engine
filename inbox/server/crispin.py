@@ -183,17 +183,9 @@ class CrispinClientBase(object):
         messages = []
         for uid in sorted(raw_messages.iterkeys(), key=int):
             msg = raw_messages[uid]
-            # NOTE: python's email package (which lamson uses directly) needs
-            # encoded bytestrings as its input, since to deal properly with
-            # MIME-encoded email you need to do part decoding based on message
-            # / MIME part headers anyway. imapclient tries to abstract away
-            # bytes and decodes all bytes received from the wire as _latin-1_,
-            # which is wrong in any case where 8bit MIME is used. so we have to
-            # reverse the damage before we proceed.
-            messages.append((int(uid), msg['INTERNALDATE'], msg['FLAGS'], msg['ENVELOPE'],
-                    msg['BODY[]'].encode('latin-1'),
-                    msg['X-GM-THRID'], msg['X-GM-MSGID'],
-                    msg['X-GM-LABELS']))
+            messages.append((int(uid), msg['INTERNALDATE'], msg['FLAGS'],
+                msg['ENVELOPE'], msg['BODY[]'], msg['X-GM-THRID'],
+                msg['X-GM-MSGID'], msg['X-GM-LABELS']))
         return messages
 
     def all_mail_folder_name(self):
@@ -454,6 +446,18 @@ class CrispinClient(CrispinClientBase):
         data = self._imap_server.fetch(uids,
                 ['BODY.PEEK[] ENVELOPE INTERNALDATE FLAGS', 'X-GM-THRID',
                  'X-GM-MSGID', 'X-GM-LABELS'])
+        for uid, msg in data.iteritems():
+            # NOTE: python's email package (which lamson uses directly) needs
+            # encoded bytestrings as its input, since to deal properly with
+            # MIME-encoded email you need to do part decoding based on message
+            # / MIME part headers anyway. imapclient tries to abstract away
+            # bytes and decodes all bytes received from the wire as _latin-1_,
+            # which is wrong in any case where 8bit MIME is used. so we have to
+            # reverse the damage before we proceed.
+            #
+            # We should REMOVE this XXX HACK XXX when we finish working with
+            # Menno to fix this problem upstream.
+            msg['BODY[]'] = msg['BODY[]'].encode('latin-1')
 
         if self.cache:
             # account.{{account_id}}/{{folder}}/{{uidvalidity}}/{{highestmodseq}}/{{uid}}/body
