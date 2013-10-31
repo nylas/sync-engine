@@ -290,8 +290,6 @@ class User(Base):
 
     name = Column(String(255))
 
-
-
 class Contact(Base):
     """ Inbox-specific sessions. """
     __tablename__ = 'contact'
@@ -311,7 +309,6 @@ class Contact(Base):
     updated_at = Column(DateTime, default=func.now(), onupdate=func.current_timestamp())
     created_at = Column(DateTime, default=func.now())
 
-
     __table_args__ = (UniqueConstraint('g_id', 'source',
         'imapaccount_id', name='_contact_uc'),)
 
@@ -323,8 +320,7 @@ class Contact(Base):
     def __repr__(self):
         return str(self.name) + ", " + str(self.email) + ", " + str(self.source)
 
-
-# sharded
+# sharded (by namespace)
 
 class MessageMeta(JSONSerializable, Base):
     __tablename__ = 'messagemeta'
@@ -334,10 +330,14 @@ class MessageMeta(JSONSerializable, Base):
     # XXX clean this up a lot - make a better constructor, maybe taking
     # a mailbase as an argument to prefill a lot of attributes
 
-    # TODO Figure out how this cross-shard foreign key works with
-    # SQLAlchemy's sharding support.
     namespace_id = Column(ForeignKey('namespace.id'), nullable=False)
-    namespace = relationship("Namespace", backref="messagemetas")
+    namespace = relationship("Namespace", backref="messages",
+            order_by=lambda msg: msg.internaldate)
+
+    thread_id = Column(Integer, ForeignKey('thread.id'), nullable=False)
+    thread = relationship('Thread', backref="messages",
+            order_by=lambda msg: msg.internaldate)
+
     # TODO probably want to store some of these headers in a better
     # non-pickled way to provide indexing
     from_addr = Column(MediumPickle)
@@ -353,9 +353,8 @@ class MessageMeta(JSONSerializable, Base):
     size = Column(Integer, default=0)
     data_sha256 = Column(String(255))
 
-    # TODO genericize these
-    g_msgid = Column(String(255))
-    g_thrid = Column(String(255))
+    # only on messages from Gmail
+    g_msgid = Column(String(255), nullable=True)
 
     def trimmed_subject(self):
         s = self.subject
@@ -559,8 +558,24 @@ class TodoNSMeta(Base):
     user = relationship('User', backref=backref('todo_ns_meta', uselist=False))
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False, unique=True)
 
+class Thread(Base):
+    """ Pre-computed thread metadata.
+
+    (We have all this information elsewhere, but it's not as nice to use.)
+    """
+    __tablename__ = 'thread'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    subject = Column(Text(collation='utf8_unicode_ci'))
+
+    # only on messages from Gmail
+    g_thrid = Column(String(255), nullable=True)
+
 class SyncMeta(Base):
     __tablename__ = 'syncmeta'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
 
     imapaccount_id = Column(ForeignKey('imapaccount.id'), nullable=False)
     imapaccount = relationship('IMAPAccount',
@@ -570,7 +585,7 @@ class SyncMeta(Base):
     state = Column(Enum('initial', 'initial uidinvalid',
                         'poll', 'poll uidinvalid'), nullable=False)
 
-    __table_args__ = (UniqueConstraint('imapaccount_id', 'folder_name'))
+    __table_args__ = (UniqueConstraint('imapaccount_id', 'folder_name'),)
 
 def db_uri():
     uri_template = 'mysql://{username}:{password}@{host}:{port}/{database}?charset=utf8mb4'
