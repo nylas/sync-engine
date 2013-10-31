@@ -7,7 +7,6 @@ from imapclient import IMAPClient
 import sessionmanager
 
 from .log import get_logger
-log = get_logger()
 
 from ..util.misc import or_none
 from ..util.cache import get_cache, set_cache
