@@ -13,7 +13,8 @@ def start_console(user_email_address=None):
             return get_crispin_from_email(user_email_address)
 
         c = refresh_crispin()
-        c.select_folder(c.all_mail_folder_name())
+        c.select_folder(c.folder_names['All'])
+
 
         server_uids = c.all_uids()
 

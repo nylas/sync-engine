@@ -69,7 +69,7 @@ class CrispinClientBase(object):
         self.keepalive = None
         # IMAP isn't stateless :(
         self.selected_folder = None
-        self._all_mail_folder_name = None
+        self._folder_names = None
         self.cache = cache
 
         self._connect()
@@ -83,12 +83,21 @@ class CrispinClientBase(object):
         return get_cache(
                 os.path.join('account.{0}'.format(self.account.id), *keys))
 
-    # XXX At some point we may want to query for a user's labels and sync
-    # _all_ of them here. You can query gmail labels with
-    # self._imap_server.list_folders() and filter out the [Gmail] folders
     @property
     def sync_folders(self):
-        return ['Inbox', self.all_mail_folder_name()]
+        """ We sync everything! """
+        all_folders = []
+        # Explicit sync ordering - important stuff first!
+        for folder in ['Inbox', 'Drafts', 'Sent', 'Flagged', 'Important',
+                'Sent', 'Labels', 'All', 'Trash', 'Junk']:
+            if folder != 'Labels':
+                if folder in self.folder_names:
+                    all_folders.append(self.folder_names[folder])
+            else:
+                if folder in self.folder_names:
+                    all_folders.extend(self.folder_names[folder])
+
+        return all_folders
 
     @property
     def selected_folder_name(self):
@@ -187,26 +196,47 @@ class CrispinClientBase(object):
                 msg['X-GM-MSGID'], msg['X-GM-LABELS']))
         return messages
 
-    def all_mail_folder_name(self):
-        """ This finds the Gmail "All Mail" folder name by using a flag.
-            If the user's inbox is localized to a different language, it will
+    @property
+    def folder_names(self):
+        """ Parses out Gmail-specific folder names based on Gmail IMAP flags.
+
+            If the user's account is localized to a different language, it will
             return the proper localized string.
 
-            An example response with some other flags:
-
-            # * LIST (\HasNoChildren) "/" "INBOX"
-            # * LIST (\Noselect \HasChildren) "/" "[Gmail]"
-            # * LIST (\HasNoChildren \All) "/" "[Gmail]/All Mail"
-            # * LIST (\HasNoChildren \Drafts) "/" "[Gmail]/Drafts"
-            # * LIST (\HasNoChildren \Important) "/" "[Gmail]/Important"
-            # * LIST (\HasNoChildren \Sent) "/" "[Gmail]/Sent Mail"
-            # * LIST (\HasNoChildren \Junk) "/" "[Gmail]/Spam"
-            # * LIST (\HasNoChildren \Flagged) "/" "[Gmail]/Starred"
-            # * LIST (\HasNoChildren \Trash) "/" "[Gmail]/Trash"
-
-            Caches the call since we use it all over the place and the
-            folder is never going to change names on an open session.
+            Caches the call since we use it all over the place and folders
+            never change names during a session.
         """
+        # We'll better know what abstractions we need here when we actually
+        # take a serious look at other providers' IMAP implementations.
+        assert self.account.provider == 'Gmail', \
+                "only gmail is supported so far"
+        if self._folder_names is None:
+            folders = self._fetch_folder_list()
+            self._folder_names = dict()
+            for flags, delimiter, name in folders:
+                is_label = True
+                for flag in [u'\\All', '\\Drafts', '\\Important', '\\Sent',
+                        '\\Junk', '\\Flagged', '\\Trash']:
+                    # find localized names for Gmail's special folders
+                    if flag in flags:
+                        is_label = False
+                        # strip off leading \ on flag
+                        self._folder_names[flag.replace('\\', '')] = name
+                if name == 'INBOX':
+                    is_label = False
+                    self._folder_names['Inbox'] = name
+                if u'\\Noselect' in flags:
+                    # special folders that can't contain messages, usually
+                    # just '[Gmail]'
+                    is_label = False
+                # everything else is a label
+                if is_label:
+                    self._folder_names.setdefault('Labels', list()).append(name)
+            if 'Labels' in self._folder_names:
+                self._folder_names['Labels'].sort()
+        return self._folder_names
+
+    def all_mail_folder_name(self):
         if self._all_mail_folder_name is not None:
             return self._all_mail_folder_name
         folders = self._fetch_folder_list()
@@ -471,7 +501,23 @@ class CrispinClient(CrispinClientBase):
 
     @connected
     def _fetch_folder_list(self):
-        """ NOTE: XLIST is deprecated, so we just use LIST. """
+        """ NOTE: XLIST is deprecated, so we just use LIST.
+
+            An example response with some other flags:
+
+              * LIST (\HasNoChildren) "/" "INBOX"
+              * LIST (\Noselect \HasChildren) "/" "[Gmail]"
+              * LIST (\HasNoChildren \All) "/" "[Gmail]/All Mail"
+              * LIST (\HasNoChildren \Drafts) "/" "[Gmail]/Drafts"
+              * LIST (\HasNoChildren \Important) "/" "[Gmail]/Important"
+              * LIST (\HasNoChildren \Sent) "/" "[Gmail]/Sent Mail"
+              * LIST (\HasNoChildren \Junk) "/" "[Gmail]/Spam"
+              * LIST (\HasNoChildren \Flagged) "/" "[Gmail]/Starred"
+              * LIST (\HasNoChildren \Trash) "/" "[Gmail]/Trash"
+
+            IMAPClient parses this response into a list of
+            (flags, delimiter, name) tuples.
+        """
         folders = self._imap_server.list_folders()
 
         if self.cache:
