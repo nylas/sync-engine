@@ -1,3 +1,44 @@
+"""
+---------------
+THE SYNC ENGINE
+---------------
+
+Okay, here's the deal.
+
+The sync engine runs per-folder on each account. This allows behaviour like
+the Inbox to receive new mail via polling while we're still running the initial
+sync on a huge All Mail folder.
+
+Only one initial sync can be running per-account at a time, to avoid
+hammering the IMAP backend too hard (Gmail shards per-user, so parallelizing
+folder download won't actually increase our throughput anyway).
+
+Any time we reconnect, we have to make sure the folder's uidvalidity hasn't
+changed, and if it has, we need to update the UIDs for any messages we've
+already downloaded. A folder's uidvalidity cannot change during a session
+(SELECT during an IMAP session starts a session on a folder).
+
+Sync engine state is stored in the SyncMeta table.
+
+Here's the folder state machine:
+
+----------------         ----------------------
+- initial sync - <-----> - initial uidinvalid -
+----------------         ----------------------
+        ∧
+        |
+        ∨
+----------------         ----------------------
+-      poll    - <-----> -   poll uidinvalid  -
+----------------         ----------------------
+
+We encapsulate sync engine instances in greenlets for cooperative coroutine
+scheduling around network I/O.
+
+We provide a ZeroRPC service for starting, stopping, and querying status on
+running syncs.
+"""
+
 from __future__ import division
 
 import socket
