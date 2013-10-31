@@ -63,7 +63,8 @@ class CrispinClientBase(object):
         self._connect()
 
     def set_cache(self, data, *keys):
-        key = os.path.join('account.{0}'.format(self.account.id), *keys)
+        key = os.path.join('account.{0}'.format(self.account.id),
+                *[str(key) for key in keys])
         return set_cache(key, data)
 
     def get_cache(self, *keys):
@@ -165,8 +166,8 @@ class CrispinClientBase(object):
                 self.fetch_flags(uids).iteritems()])
 
     def uids(self, uids):
-        """ NOTE: This is a generator. """
         raw_messages = self.fetch_uids(uids)
+        messages = []
         for uid in sorted(raw_messages.iterkeys(), key=int):
             msg = raw_messages[uid]
             # NOTE: python's email package (which lamson uses directly) needs
@@ -176,10 +177,11 @@ class CrispinClientBase(object):
             # bytes and decodes all bytes received from the wire as _latin-1_,
             # which is wrong in any case where 8bit MIME is used. so we have to
             # reverse the damage before we proceed.
-            yield (int(uid), msg['INTERNALDATE'], msg['FLAGS'], msg['ENVELOPE'],
+            messages.append((int(uid), msg['INTERNALDATE'], msg['FLAGS'], msg['ENVELOPE'],
                     msg['BODY[]'].encode('latin-1'),
                     msg['X-GM-THRID'], msg['X-GM-MSGID'],
-                    msg['X-GM-LABELS'])
+                    msg['X-GM-LABELS']))
+        return messages
 
     def all_mail_folder_name(self):
         """ This finds the Gmail "All Mail" folder name by using a flag.
@@ -332,7 +334,8 @@ class CrispinClient(CrispinClientBase):
 
         try:
             self._imap_server.noop()
-            if self._imap_server.state == 'NONAUTH' or self._imap_server.state == 'LOGOUT':
+            if self._imap_server.state == 'NONAUTH' or \
+                    self._imap_server.state == 'LOGOUT':
                 raise Exception
             self.log.info('Already connected to host.')
             return True
@@ -395,7 +398,7 @@ class CrispinClient(CrispinClientBase):
 
     @connected
     def fetch_folder_status(self, folder):
-        status = self.crispin_client._imap_server.folder_status(folder,
+        status = self._imap_server.folder_status(folder,
                 ('UIDVALIDITY', 'HIGHESTMODSEQ'))
 
         if self.cache:

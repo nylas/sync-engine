@@ -1,4 +1,5 @@
 from __future__ import division
+
 import socket
 
 from .sessionmanager import get_crispin_from_email
@@ -6,9 +7,8 @@ from .sessionmanager import get_crispin_from_email
 from .models import db_session, FolderMeta, MessageMeta, UIDValidity
 from .models import IMAPAccount, BlockMeta
 from sqlalchemy import distinct
-import sqlalchemy.exc
+from sqlalchemy.orm.exc import NoResultFound
 
-from .encoding import EncodingError
 from ..util.itert import chunk, partition
 from ..util.cache import set_cache, get_cache, rm_cache
 
@@ -30,6 +30,8 @@ from quopri import decodestring as quopri_decodestring
 from base64 import b64decode
 from chardet import detect as detect_charset
 from hashlib import sha256
+
+class SyncException(Exception): pass
 
 def refresh_crispin(email, dummy=False):
     try:
@@ -69,7 +71,7 @@ def fetch_uidvalidity(account, folder_name):
         # using .one() here may catch duplication bugs
         return db_session.query(UIDValidity).filter_by(
                 account=account, folder_name=folder_name).one()
-    except sqlalchemy.orm.exc.NoResultFound:
+    except NoResultFound:
         return None
 
 def uidvalidity_valid(crispin_client, cached_validity=False):
@@ -145,7 +147,7 @@ def process_messages(account, folder, messages):
         entries and writes mail parts to disk.
     """
     # { 'msgid': { 'meta': MessageMeta, 'parts': [BlockMeta, ...] } }
-    messages = dict()
+    new_messages = dict()
     new_foldermeta = []
     for uid, internaldate, flags, envelope, body, x_gm_thrid, x_gm_msgid, \
             x_gm_labels in messages:
@@ -209,7 +211,7 @@ def process_messages(account, folder, messages):
 
         new_msg.size = len(body)  # includes headers text
 
-        messages.setdefault(new_msg.g_msgid, dict())['meta'] = new_msg
+        new_messages.setdefault(new_msg.g_msgid, dict())['meta'] = new_msg
 
         i = 0  # for walk_index
 
@@ -219,7 +221,7 @@ def process_messages(account, folder, messages):
         headers_part.walk_index = i
         headers_part._data = json.dumps(mailbase.headers)
         headers_part.data_sha256 = sha256(headers_part._data).hexdigest()
-        messages[new_msg.g_msgid].setdefault('parts', []).append(headers_part)
+        new_messages[new_msg.g_msgid].setdefault('parts', []).append(headers_part)
 
         extra_parts = []
 
@@ -265,7 +267,7 @@ def process_messages(account, folder, messages):
                     errmsg = """
 Unknown Content-Disposition on message {0} found in {1}.
 Original Content-Disposition was: '{2}'
-Parsed Content-Disposition was: '{3}'""".format(uid, self.selected_folder_name,
+Parsed Content-Disposition was: '{3}'""".format(uid, folder,
                         content_disposition, parsed_content_disposition)
                     log.error(errmsg)
                 else:
@@ -311,15 +313,16 @@ Parsed Content-Disposition was: '{3}'""".format(uid, self.selected_folder_name,
 
             new_part.data_sha256 = sha256(data_to_write).hexdigest()
             new_part._data = data_to_write
-            messages[new_msg.g_msgid]['parts'].append(new_part)
+            new_messages[new_msg.g_msgid]['parts'].append(new_part)
 
-    return messages, new_foldermeta
+    return new_messages, new_foldermeta
 
 def safe_download(uids, folder, crispin_client):
     try:
         raw_messages = crispin_client.uids(uids)
-        new_messages, new_foldermeta = process_messages(raw_messages)
-    except EncodingError, e:
+        new_messages, new_foldermeta = process_messages(
+                crispin_client.account, folder, raw_messages)
+    except encoding.EncodingError, e:
         log.error(e)
         raise e
     except MemoryError, e:
@@ -332,8 +335,6 @@ def safe_download(uids, folder, crispin_client):
     #     new_messages, new_foldermeta = crispin_client.fetch_uids(uids)
 
     return new_messages, new_foldermeta
-
-class SyncException(Exception): pass
 
 class FolderSync(object):
     """ Per-folder sync engine state machine.

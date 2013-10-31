@@ -122,8 +122,6 @@ def get_crispin_from_email(email_address, initial=False, dummy=False):
         assert account is not None
         crispin_client =  cls(account)
 
-        assert 'X-GM-EXT-1' in crispin_client.imap_server.capabilities(), "This must not be Gmail..."
-
         email_address_to_crispins[email_address] = crispin_client
         return crispin_client
 
@@ -132,4 +130,3 @@ def stop_all_crispins():
         return
     for e,c in email_address_to_crispins.iteritems():
         c.stop()
-

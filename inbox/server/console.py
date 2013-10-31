@@ -15,7 +15,7 @@ def start_console(user_email_address=None):
         c = refresh_crispin()
         c.select_folder(c.all_mail_folder_name())
 
-        server_uids = [unicode(s) for s in c.imap_server.search(['NOT DELETED'])]
+        server_uids = c.all_uids()
 
         banner = """
         You can access the crispin instance with the 'c' variable.

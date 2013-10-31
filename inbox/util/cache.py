@@ -12,8 +12,10 @@ def _path_from_key(key):
     return os.path.join(CACHE_BASEDIR, *parts)
 
 def set_cache(key, val):
-    mkdirp(CACHE_BASEDIR)
-    with open(_path_from_key(key), 'w') as f:
+    path = _path_from_key(key)
+    dirname = os.path.dirname(path)
+    mkdirp(dirname)
+    with open(path, 'w') as f:
         pickle.dump(val, f)
 
 def _unless_dne(fn, *args, **kwargs):
