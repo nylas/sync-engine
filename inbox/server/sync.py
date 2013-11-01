@@ -404,6 +404,7 @@ class FolderSync(Greenlet):
             remote_g_msgids = self.crispin_client.g_msgids()
             set_cache("_".join([self.account.email_address, self.folder_name,
                 "remote_g_msgids"]), remote_g_msgids)
+            # XXX TODO review this code I don't get it
             # make sure uidvalidity is up-to-date
             if cached_validity is None:
                 db_session.add(UIDValidity(
@@ -543,7 +544,7 @@ class FolderSync(Greenlet):
             self._update_metadata(uids)
         self.log.info("Updated metadata for modified messages")
 
-    def _highestmodseq_update(self, folder, dummy, highestmodseq=None):
+    def _highestmodseq_update(self, folder, highestmodseq=None):
         if highestmodseq is None:
             highestmodseq = db_session.query(UIDValidity).filter_by(
                     account=self.account, folder_name=folder
