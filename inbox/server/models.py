@@ -2,6 +2,7 @@ import os
 
 from sqlalchemy import Column, Integer, String, DateTime, Date, Boolean, Enum
 from sqlalchemy import create_engine, ForeignKey, Text, Index, func, event
+from sqlalchemy import distinct
 from sqlalchemy.types import PickleType
 from sqlalchemy.orm import reconstructor, relationship, backref, sessionmaker
 from sqlalchemy.schema import UniqueConstraint
@@ -231,6 +232,18 @@ class IMAPAccount(Base):
                 .filter(FolderMeta.imapaccount_id==self.id) \
                 .group_by(MessageMeta.id).count()
 
+    def all_uids(self, folder_name):
+        return [uid for uid, in
+                db_session.query(FolderMeta.msg_uid).filter_by(
+                    imapaccount_id=self.account_id,
+                    folder_name=folder_name)]
+
+    def all_g_msgids(self):
+        return set([g_msgid for g_msgid, in
+            db_session.query(distinct(MessageMeta.g_msgid))\
+                    .join(FolderMeta).filter(
+                FolderMeta.imapaccount_id==self.id)])
+
     def update_metadata(self, folder_name, uids, new_flags):
         """ Update flags (the only metadata that can change). """
         for fm in db_session.query(FolderMeta).filter(
@@ -240,6 +253,22 @@ class IMAPAccount(Base):
             if fm.flags != new_flags[fm.msg_uid]:
                 fm.flags = new_flags[fm.msg_uid]
                 db_session.add(fm)
+        db_session.commit()
+
+    def remove_messages(self, uids, folder):
+        fm_query = db_session.query(FolderMeta).filter(
+                FolderMeta.imapaccount_id==self.id,
+                FolderMeta.folder_name==folder,
+                FolderMeta.msg_uid.in_(uids))
+        fm_query.delete(synchronize_session='fetch')
+
+        # not sure if this one is actually needed - does delete() automatically
+        # commit?
+        db_session.commit()
+
+        # XXX TODO: Have a recurring worker permanently remove dangling
+        # messages from the database and block store. (Probably too
+        # expensive to do here.)
 
 class UserSession(Base):
     """ Inbox-specific sessions. """
