@@ -309,14 +309,14 @@ class Namespace(Base):
     def cereal(self):
         return dict(id=self.id, name='Gmail')
 
-class SharedFolderNSMeta(JSONSerializable, Base):
-    __tablename__ = 'sharedfoldernsmeta'
+class SharedFolder(Base):
+    __tablename__ = 'sharedfolder'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    namespace = relationship('Namespace', backref='sharedfoldernsmetas')
+    namespace = relationship('Namespace', backref='sharedfolders')
     namespace_id = Column(Integer, ForeignKey('namespace.id'), nullable=False)
-    user = relationship('User', backref='sharedfoldernsmetas')
+    user = relationship('User', backref='sharedfolders')
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
 
     display_name = Column(String(40))

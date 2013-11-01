@@ -6,7 +6,7 @@ from functools import wraps
 import json
 import postel
 from bson import json_util
-from models import db_session, Message, FolderItem, SharedFolderNSMeta
+from models import db_session, Message, FolderItem, SharedFolder
 from models import Namespace, User, IMAPAccount, TodoNamespace, TodoItem
 
 from ..util.html import plaintext2html
@@ -34,8 +34,8 @@ def namespace_auth(fn):
                 self.namespace = account.namespace
                 return fn(self, *args, **kwargs)
 
-        shared_nses = db_session.query(SharedFolderNSMeta)\
-                .filter(SharedFolderNSMeta.user_id == user_id)
+        shared_nses = db_session.query(SharedFolder)\
+                .filter(SharedFolder.user_id == user_id)
         for shared_ns in shared_nses:
             if shared_ns.id == namespace_id:
                 return fn(self, *args, **kwargs)
@@ -229,8 +229,8 @@ class API(object):
             account_ns = account.namespace
             nses['private'].append(account_ns.cereal())
 
-        shared_nses = db_session.query(SharedFolderNSMeta)\
-                .filter(SharedFolderNSMeta.user_id == user_id)
+        shared_nses = db_session.query(SharedFolder)\
+                .filter(SharedFolder.user_id == user_id)
         for shared_ns in shared_nses:
             nses['shared'].append(shared_ns.cereal())
 
