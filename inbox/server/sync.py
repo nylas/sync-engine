@@ -1,44 +1,3 @@
-"""
----------------
-THE SYNC ENGINE
----------------
-
-Okay, here's the deal.
-
-The sync engine runs per-folder on each account. This allows behaviour like
-the Inbox to receive new mail via polling while we're still running the initial
-sync on a huge All Mail folder.
-
-Only one initial sync can be running per-account at a time, to avoid
-hammering the IMAP backend too hard (Gmail shards per-user, so parallelizing
-folder download won't actually increase our throughput anyway).
-
-Any time we reconnect, we have to make sure the folder's uidvalidity hasn't
-changed, and if it has, we need to update the UIDs for any messages we've
-already downloaded. A folder's uidvalidity cannot change during a session
-(SELECT during an IMAP session starts a session on a folder).
-
-Sync engine state is stored in the SyncMeta table.
-
-Here's the folder state machine:
-
-----------------         ----------------------
-- initial sync - <-----> - initial uidinvalid -
-----------------         ----------------------
-        ∧
-        |
-        ∨
-----------------         ----------------------
--      poll    - <-----> -   poll uidinvalid  -
-----------------         ----------------------
-
-We encapsulate sync engine instances in greenlets for cooperative coroutine
-scheduling around network I/O.
-
-We provide a ZeroRPC service for starting, stopping, and querying status on
-running syncs.
-"""
-
 from __future__ import division
 
 import socket
@@ -46,7 +5,7 @@ import socket
 from .sessionmanager import get_crispin_from_email
 
 from .models import db_session, FolderMeta, MessageMeta, UIDValidity
-from .models import IMAPAccount, BlockMeta
+from .models import IMAPAccount, BlockMeta, SyncMeta
 from sqlalchemy import distinct
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -72,7 +31,56 @@ from base64 import b64decode
 from chardet import detect as detect_charset
 from hashlib import sha256
 
+"""
+---------------
+THE SYNC ENGINE
+---------------
+
+Okay, here's the deal.
+
+The sync engine runs per-folder on each account. This allows behaviour like
+the Inbox to receive new mail via polling while we're still running the initial
+sync on a huge All Mail folder.
+
+Only one initial sync can be running per-account at a time, to avoid
+hammering the IMAP backend too hard (Gmail shards per-user, so parallelizing
+folder download won't actually increase our throughput anyway).
+
+Any time we reconnect, we have to make sure the folder's uidvalidity hasn't
+changed, and if it has, we need to update the UIDs for any messages we've
+already downloaded. A folder's uidvalidity cannot change during a session
+(SELECT during an IMAP session starts a session on a folder).
+
+Folder sync state is stored in the SyncMeta table to allow for restarts.
+
+Here's the state machine:
+
+----------------         ----------------------
+- initial sync - <-----> - initial uidinvalid -
+----------------         ----------------------
+        ∧
+        |
+        ∨
+----------------         ----------------------
+-      poll    - <-----> -   poll uidinvalid  -
+----------------         ----------------------
+-  ∧
+----
+
+We encapsulate sync engine instances in greenlets for cooperative coroutine
+scheduling around network I/O.
+
+We provide a ZeroRPC service for starting, stopping, and querying status on
+running syncs. We don't provide knobs to start/stop sync instances at a
+per-folder level, only at a per-account level. There's no good reason to be
+able to do so, and leaving that configurability out simplifies the interface.
+"""
+
+### exceptions
+
 class SyncException(Exception): pass
+
+### main
 
 def refresh_crispin(email, dummy=False):
     try:
@@ -377,104 +385,59 @@ def safe_download(uids, folder, crispin_client):
 
     return new_messages, new_foldermeta
 
-class FolderSync(object):
-    """ Per-folder sync engine state machine.
-
-    Sync needs to be per-folder rather than per-account so we can e.g. begin
-    doing incremental updates on the Inbox before the full mail archive has
-    completely downloaded.
-    """
-    def __init__(self, account, folder):
-        # state in ['initial', 'poll']
-        self.state = 'initial'
-
-class SyncMonitor(Greenlet):
-    def __init__(self, account, status_callback, n=5):
+class FolderSync(Greenlet):
+    """ Per-folder sync engine. """
+    def __init__(self, folder_name, account, crispin_client, log, shared_state):
+        self.folder_name = folder_name
         self.account = account
-        self.n = n
-        self.status_callback = status_callback
-        self.inbox = Queue()
-        self.log = configure_sync_logging(account)
-        self.crispin_client = refresh_crispin(account.email_address)
-        Greenlet.__init__(self)
+        self.crispin_client = crispin_client
+        self.log = log
+        self.shared_state = shared_state
+        self.state = None
+
+        self.state_handlers = {
+                'initial': self.initial_sync,
+                'initial uid invalid': self.resync_uids,
+                'poll': self.poll,
+                'poll uid invalid': self.resync_uids,
+                }
+
+        Greenlet.__init__()
 
     def _run(self):
-        action = Greenlet.spawn(self.action)
-        while not action.ready():
-            try:
-                cmd = self.inbox.get_nowait()
-                if not self.process_command(cmd):
-                    self.log.info("Stopping sync for {0}".format(
-                        self.account.email_address))
-                    kill(action)
-                    return
-            except Empty: sleep(1)
+        try:
+            syncmeta = db_session.query(SyncMeta).filter_by(
+                    imapaccount=self.account,
+                    folder_name=self.folder_name).one()
+        except NoResultFound:
+            syncmeta = SyncMeta(imapaccount=self.account,
+                    folder_name=self.folder_name)
+            db_session.add(syncmeta)
+            db_session.commit()
+        # NOTE: The parent MailSync handler could kill us at any time if it
+        # receives a shutdown command. The shutdown command is equivalent
+        # to ctrl-c.
+        while True:
+            self.state = syncmeta.state = self.state_handlers[syncmeta.state]()
+            # The session should automatically mark this as dirty, but make sure.
+            db_session.add(syncmeta)
+            # State handlers are idempotent, so it's okay if we're killed
+            # between the end of the handler and the commit.
+            db_session.commit()
 
-    def process_command(self, cmd):
-        """ Returns True if successful, or False if process should abort. """
-        self.log.info("processing command {0}".format(cmd))
-        return cmd != 'shutdown'
+    def initial_sync(self, status_callback):
+        """ Downloads entire messages and:
+        1. sync folder => create TM, MM, BM
+        2. expand threads => TM -> MM MM MM
+        3. get related messages (can query IMAP for messages mapping thrids)
 
-    def action(self):
-        while not self.account.initial_sync_done:
-            self.initial_sync()
+        For All Mail (Gmail-specific), we can skip the last step.
+        For non-Gmail backends, we can skip #2, since we have no way to
+        deduplicate threads server-side.
 
-        self.status_callback(self.account, 'poll', None)
-
-        polling = True  # FOREVER
-        while polling:
-            self.poll()
-            sleep(0)
-
-    def _remove_deleted_messages(self):
-        """ Works as follows:
-            1. do a LIST on the current folder to see what messages are on the server
-            2. compare to message uids stored locally
-            3. purge messages we have locally but not on the server. ignore
-                messages we have on the server that aren't local.
+        Percent-done and completion messages are passed to status_callback.
         """
-        server_uids = self.crispin_client.all_uids()
-        local_uids = [uid for uid, in
-                db_session.query(FolderMeta.msg_uid).filter_by(
-                    folder_name=self.crispin_client.selected_folder_name,
-                    imapaccount_id=self.crispin_client.account.id)]
-        if len(server_uids) > 0 and len(local_uids) > 0:
-            assert type(server_uids[0]) != type('')
-
-        to_delete = set(local_uids).difference(set(server_uids))
-        if to_delete:
-            delete_messages(to_delete, self.crispin_client.selected_folder_name,
-                    self.crispin_client.account.id)
-            self.log.info("Deleted {0} removed messages".format(len(to_delete)))
-
-    def _update_metadata(self, uids):
-        """ Update flags (the only metadata that can change). """
-        new_flags = self.crispin_client.flags(uids)
-        self.log.info("new flags: {0}".format(new_flags))
-        for fm in db_session.query(FolderMeta).filter(
-                FolderMeta.msg_uid.in_(uids),
-                FolderMeta.imapaccount_id==self.crispin_client.account.id,
-                FolderMeta.folder_name==self.crispin_client.selected_folder_name):
-            self.log.info("msg: {0}, flags: {1}".format(fm.msg_uid, fm.flags))
-            if fm.flags != new_flags[fm.msg_uid]:
-                fm.flags = new_flags[fm.msg_uid]
-                db_session.add(fm)
-        # XXX TODO: assert that server uids == local uids?
-
-    def _initial_sync(self, updates, dummy=False):
-        """ Downloads entire messages and
-        (1) creates the metadata database
-        (2) stores message parts to the block store
-
-        Percent-done and completion messages are sent to the 'updates' queue.
-        """
-        self.log.info('Syncing mail for {0}'.format(self.account.email_address))
-
-        # message download for messages from sync_folders is prioritized before
-        # AllMail in the order of appearance in this list
-
-        folder_sync_percent_done = dict([(folder, 0) \
-                for folder in self.crispin_client.sync_folders])
+        self.log.info('Starting initial sync for {0}'.format(self.folder_name))
 
         for folder in self.crispin_client.sync_folders:
             # for each folder, compare what's on the server to what we have.
@@ -623,32 +586,6 @@ class SyncMonitor(Greenlet):
 
         self.log.info("Finished.")
 
-    def initial_sync(self):
-        updates = Queue()
-        process = Greenlet.spawn(self._initial_sync, updates)
-        progress = 0
-        while not process.ready():
-            self.status_callback(self.account, 'initial sync', progress)
-            # XXX TODO wrap this in a Timeout in case the process crashes
-            progress = updates.get()
-            # let monitor accept commands
-            sleep(0)
-        # process may have finished with some progress left to
-        # report; only report the last update
-        remaining = [updates.get() for i in xrange(updates.qsize())]
-        if remaining:
-            self.status_callback(self.account, 'initial sync', remaining[-1])
-        if process.successful():
-            # we don't do this in initial_sync() to avoid confusion
-            # with refreshing the account sqlalchemy object
-            self.account.initial_sync_done = True
-            db_session.add(self.account)
-            db_session.commit()
-        else:
-            self.log.warning("initial sync for {0} failed: {1}".format(
-                self.account.email_address, process.exception))
-        assert updates.empty(), "initial sync completed for {0} with {1} progress items left to report: {2}".format(self.account.email_address, updates.qsize(), [updates.get() for i in xrange(updates.qsize())])
-
     def _highestmodseq_update(self, folder, dummy, highestmodseq=None):
         if highestmodseq is None:
             highestmodseq = db_session.query(UIDValidity).filter_by(
@@ -745,17 +682,113 @@ class SyncMonitor(Greenlet):
                 self.account.email_address, process.exception))
         sleep(self.n)
 
+    def _remove_deleted_messages(self):
+        """ Works as follows:
+            1. do a LIST on the current folder to see what messages are on the server
+            2. compare to message uids stored locally
+            3. purge messages we have locally but not on the server. ignore
+                messages we have on the server that aren't local.
+        """
+        server_uids = self.crispin_client.all_uids()
+        local_uids = [uid for uid, in
+                db_session.query(FolderMeta.msg_uid).filter_by(
+                    folder_name=self.crispin_client.selected_folder_name,
+                    imapaccount_id=self.crispin_client.account.id)]
+        if len(server_uids) > 0 and len(local_uids) > 0:
+            assert type(server_uids[0]) != type('')
+
+        to_delete = set(local_uids).difference(set(server_uids))
+        if to_delete:
+            delete_messages(to_delete, self.crispin_client.selected_folder_name,
+                    self.crispin_client.account.id)
+            self.log.info("Deleted {0} removed messages".format(len(to_delete)))
+
+    def _update_metadata(self, uids):
+        """ Update flags (the only metadata that can change). """
+        new_flags = self.crispin_client.flags(uids)
+        assert sorted(uids, key=int) == sorted(new_flags.keys, key=int), \
+                "server uids != local uids"
+        self.log.info("new flags: {0}".format(new_flags))
+        self.account.update_metadata(self.crispin_client.selected_folder_name,
+                uids, new_flags)
+
+
+class MailSync(Greenlet):
+    """ Top-level controller for an account's mail sync. Spawns individual
+        FolderSync greenlets for each folder.
+
+        poll_frequency and heartbeat are in seconds.
+    """
+    def __init__(self, account, status_callback, poll_frequency=5, heartbeat=1):
+        self.inbox = Queue()
+        # how often to check inbox
+        self.heartbeat = heartbeat
+
+        self.crispin_client = refresh_crispin(account.email_address)
+        self.account = account
+        self.log = configure_sync_logging(account)
+
+        # stuff that might be updated later and we want to keep a shared
+        # reference on child greenlets (per-folder sync engines)
+        self.shared_state = {
+                'poll_frequency': poll_frequency,
+                'status_callback': status_callback }
+
+        Greenlet.__init__(self)
+
+    def _run(self):
+        sync = Greenlet.spawn(self.sync)
+        while not sync.ready():
+            try:
+                cmd = self.inbox.get_nowait()
+                if not self.process_command(cmd):
+                    self.log.info("Stopping sync for {0}".format(
+                        self.account.email_address))
+                    # ctrl-c, basically!
+                    kill(sync)
+                    return
+            except Empty:
+                sleep(self.heartbeat)
+        assert not sync.successful(), "mail sync should run forever!"
+        raise sync.exception
+
+    def process_command(self, cmd):
+        """ Returns True if successful, or False if process should abort. """
+        self.log.info("processing command {0}".format(cmd))
+        return cmd != 'shutdown'
+
+    def sync(self):
+        """ Start per-folder syncs. Only have one per-folder sync in the
+            'initial' state at a time.
+        """
+        for folder in self.crispin_client.sync_folders:
+            thread = FolderSync(folder, self.account,
+                    self.crispin_client, self.log, self.shared_state)
+            thread.start()
+            while not thread.state.startswith('poll'):
+                sleep(self.heartbeat)
+
+        # Just hang out. We don't want to block, but we don't want to return
+        # either, since that will let the threads go out of scope.
+        while True:
+            sleep(self.heartbeat)
+
+### misc
+
 def notify(account, mtype, message):
     """ Pass a message on to the notification dispatcher which deals with
-        pubsub stuff.
+        pubsub stuff for connected clients.
     """
+    pass
     # self.log.info("message from {0}: [{1}] {2}".format(
     # account.email_address, mtype, message))
+
+### zerorpc
 
 class SyncService:
     """ ZeroRPC interface to syncing. """
     def __init__(self):
-        # {'christine.spang@gmail.com': SyncMonitor()}
+        # { account_id: MailSync() }
         self.monitors = dict()
         # READ ONLY from API calls, writes happen from callbacks from monitor
         # greenlets.
@@ -765,11 +798,11 @@ class SyncService:
         # all data in here ought to be msgpack-serializable!
         self.statuses = dict()
 
-        # Restart existing active syncs. (Later we will want to partition
-        # these across different machines, probably.)
-        for email, in db_session.query(IMAPAccount.email_address).filter_by(
+        # Restart existing active syncs.
+        # (Later we will want to partition these across different machines!)
+        for email_address, in db_session.query(IMAPAccount.email_address).filter_by(
                 sync_active=True):
-            self.start_sync(email)
+            self.start_sync(email_address)
 
     def start_sync(self, email_address=None):
         """ Starts all syncs if email_address not specified.
@@ -783,8 +816,9 @@ class SyncService:
         for account in query:
             log.info("Starting sync for account {0}".format(account.email_address))
             if account.sync_host is not None and account.sync_host != fqdn:
-                results[account.email_address] = 'Account {0} is syncing on host {1}'.format(
-                        account.email_address, account.sync_host)
+                results[account.email_address] = \
+                        'Account {0} is syncing on host {1}'.format(
+                            account.email_address, account.sync_host)
             elif account.id not in self.monitors:
                 try:
                     account.sync_lock()
@@ -794,10 +828,9 @@ class SyncService:
                                 state=state, status=status)
                         notify(account, state, status)
 
-                    monitor = SyncMonitor(account, update_status)
+                    monitor = MailSync(account, update_status)
                     self.monitors[account.id] = monitor
                     monitor.start()
-                    account.sync_active = True
                     account.sync_host = fqdn
                     db_session.add(account)
                     db_session.commit()
@@ -828,7 +861,6 @@ class SyncService:
                 assert account.sync_host == fqdn, "sync host FQDN doesn't match"
                 # XXX Can processing this command fail in some way?
                 self.monitors[account.id].inbox.put_nowait("shutdown")
-                account.sync_active = False
                 account.sync_host = None
                 db_session.add(account)
                 db_session.commit()

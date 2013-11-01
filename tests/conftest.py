@@ -39,7 +39,7 @@ class DB:
         imapaccount = IMAPAccount(id=1,
                 user_id=1,
                 email_address='inboxapptest@gmail.com',
-                provider='Gmail', initial_sync_done=1,
+                provider='Gmail',
                 save_raw_messages=1,
                 o_token_issued_to='786647191490.apps.googleusercontent.com',
                 o_user_id='115086935419017912828',

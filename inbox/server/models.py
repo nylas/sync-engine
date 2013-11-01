@@ -172,11 +172,14 @@ class IMAPAccount(Base):
     provider = Column(Enum('Gmail', 'Outlook', 'Yahoo', 'Inbox'), nullable=False)
 
     # local flags & data
-    initial_sync_done = Column(Boolean)
-    sync_active = Column(Boolean, default=False)
     save_raw_messages = Column(Boolean, default=True)
+
     sync_host = Column(String(255), nullable=True)
-    last_synced_contacts = Column(DateTime)
+    last_synced_contacts = Column(DateTime, nullable=True)
+
+    @property
+    def sync_active(self):
+        return self.sync_host is not None
 
     # oauth stuff (most providers support oauth at this point, shockingly)
     # TODO figure out the actual lengths of these
@@ -228,6 +231,15 @@ class IMAPAccount(Base):
                 .filter(FolderMeta.imapaccount_id==self.id) \
                 .group_by(MessageMeta.id).count()
 
+    def update_metadata(self, folder_name, uids, new_flags):
+        """ Update flags (the only metadata that can change). """
+        for fm in db_session.query(FolderMeta).filter(
+                FolderMeta.imapaccount_id==self.id,
+                FolderMeta.msg_uid.in_(uids),
+                FolderMeta.folder_name==folder_name):
+            if fm.flags != new_flags[fm.msg_uid]:
+                fm.flags = new_flags[fm.msg_uid]
+                db_session.add(fm)
 
 class UserSession(Base):
     """ Inbox-specific sessions. """
@@ -581,9 +593,11 @@ class SyncMeta(Base):
     imapaccount = relationship('IMAPAccount',
             backref=backref('syncmeta', uselist=False))
     folder_name = Column(String(255))
+
     # see state machine in sync.py
     state = Column(Enum('initial', 'initial uidinvalid',
-                        'poll', 'poll uidinvalid'), nullable=False)
+                        'poll', 'poll uidinvalid'),
+                        default='initial', nullable=False)
 
     __table_args__ = (UniqueConstraint('imapaccount_id', 'folder_name'),)
 
