@@ -51,7 +51,8 @@ setup(
         # For ZeroRPC
         "Cython==0.19.1",
         "zerorpc==0.4.3",
-        # TODO add xapian (for search) - not on PyPI yet
+        "gdata==2.0.18",
+        "python-dateutil==2.1",
         ],
     dependency_links = [
         # Our own versions of these

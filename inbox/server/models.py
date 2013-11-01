@@ -176,6 +176,7 @@ class IMAPAccount(Base):
     sync_active = Column(Boolean, default=False)
     save_raw_messages = Column(Boolean, default=True)
     sync_host = Column(String(255), nullable=True)
+    last_synced_contacts = Column(DateTime)
 
     # oauth stuff (most providers support oauth at this point, shockingly)
     # TODO figure out the actual lengths of these
@@ -288,6 +289,40 @@ class User(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     name = Column(String(255))
+
+
+
+class Contact(Base):
+    """ Inbox-specific sessions. """
+    __tablename__ = 'contact'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    imapaccount_id = Column(ForeignKey('imapaccount.id'), nullable=False)
+    imapaccount = relationship("IMAPAccount")
+
+    g_id = Column(String(64))
+    source = Column("source", Enum("local", "remote"))
+
+    email_address = Column(String(254), nullable=True, index=True)
+    name = Column(Text(collation='utf8_unicode_ci'))
+    # phone_number = Column(String(64))
+
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.current_timestamp())
+    created_at = Column(DateTime, default=func.now())
+
+
+    __table_args__ = (UniqueConstraint('g_id', 'source',
+        'imapaccount_id', name='_contact_uc'),)
+
+    def cereal(self):
+        return dict(id=self.id,
+                    email=self.email_address,
+                    name=self.name)
+
+    def __repr__(self):
+        return str(self.name) + ", " + str(self.email) + ", " + str(self.source)
+
 
 # sharded
 

@@ -37,10 +37,17 @@ def start(args=None):
     api_srv_loc = config.get('API_SERVER_LOC', None)
     make_zerorpc(API, api_srv_loc)
 
-    # Start ZeroRPC sync server service
+    # Start ZeroRPC mail sync server service
     from inbox.server.sync import SyncService
     sync_srv_loc = config.get('CRISPIN_SERVER_LOC', None)
     make_zerorpc(SyncService, sync_srv_loc)
+
+
+    # Start ZeroRPC contacts sync service
+    from inbox.server.rolodex import ContactSync
+    contacts_srv_loc = config.get('ROLODEX_SERVER_LOC', None)
+    make_zerorpc(ContactSync, contacts_srv_loc)
+
 
     # start ZeroRPC search server service
     from inbox.server.search import SearchService
