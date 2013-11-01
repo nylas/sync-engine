@@ -31,7 +31,7 @@ def start(args=None):
     init_db()
 
     # Start ZeroRPC api server service
-    from inbox.util.concurrency import make_zerorpc
+    from inbox.server.util.concurrency import make_zerorpc
     from inbox.server.api import API
 
     api_srv_loc = config.get('API_SERVER_LOC', None)

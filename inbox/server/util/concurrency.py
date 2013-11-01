@@ -4,7 +4,8 @@ import zerorpc
 from time import sleep
 from gevent import Greenlet
 
-import logging as log
+from ..log import get_logger
+log = get_logger()
 
 def make_zerorpc(cls, location):
     assert location, "Location to bind for %s cannot be none!" % cls
