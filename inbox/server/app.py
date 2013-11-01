@@ -7,7 +7,7 @@ from flask import Response, jsonify, abort, send_file
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
 from socket_rpc import SocketRPC
-from models import db_session, MessageMeta, Block, Collection
+from models import db_session, Message, Block, Collection
 from werkzeug.wsgi import SharedDataMiddleware
 
 import google_oauth
@@ -234,9 +234,9 @@ def upload_file_handler():
     if request.method == 'POST' and 'file' in request.files:
         uploaded_file = request.files['file']
 
-        meta = MessageMeta(namespace_id=account.namespace.id)
+        meta = Message(namespace_id=account.namespace.id)
         part = Block(
-                messagemeta=meta,
+                message=meta,
                 filename=uploaded_file.filename,
                 is_inboxapp_attachment=True,
                 collection=collection)
@@ -261,8 +261,8 @@ def upload_file_handler():
 @app.route('/<email>/img/<sha256>', methods=['GET'])
 def download_handler(email, sha256):
     # grab image from S3 and pass it on
-    part = db_session.query(Block).join(MessageMeta).filter(
-            MessageMeta.g_email==email,
+    part = db_session.query(Block).join(Message).filter(
+            Message.g_email==email,
             Block.data_sha256==sha256).first()
     if not part:
         abort(404)
@@ -273,8 +273,8 @@ def download_handler(email, sha256):
 @app.route('/<email>/img/<sha256>/thumb', methods=['GET'])
 def thumb_download_handler(email, sha256):
     # grab image from S3 and pass it on
-    part = db_session.query(Block).join(MessageMeta).filter(
-            MessageMeta.g_email==email,
+    part = db_session.query(Block).join(Message).filter(
+            Message.g_email==email,
             Block.data_sha256==sha256).first()
     if not part:
         abort(404)

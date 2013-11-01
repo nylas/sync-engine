@@ -220,17 +220,17 @@ class IMAPAccount(Base):
             account's IMAP folders
         """
         subq = db_session.query(Block) \
-                .join(Block.messagemeta, MessageMeta.foldermetas) \
+                .join(Block.message, Message.foldermetas) \
                 .filter(FolderMeta.imapaccount_id==self.id) \
-                .group_by(MessageMeta.id, Block.id)
+                .group_by(Message.id, Block.id)
         return db_session.query(func.sum(subq.subquery().columns.size)).scalar()
 
     def total_stored_messages(self):
         """ Computes the number of emails in your account's IMAP folders """
-        return db_session.query(MessageMeta) \
-                .join(MessageMeta.foldermetas) \
+        return db_session.query(Message) \
+                .join(Message.foldermetas) \
                 .filter(FolderMeta.imapaccount_id==self.id) \
-                .group_by(MessageMeta.id).count()
+                .group_by(Message.id).count()
 
     def all_uids(self, folder_name):
         return [uid for uid, in
@@ -240,7 +240,7 @@ class IMAPAccount(Base):
 
     def all_g_msgids(self):
         return set([g_msgid for g_msgid, in
-            db_session.query(distinct(MessageMeta.g_msgid))\
+            db_session.query(distinct(Message.g_msgid))\
                     .join(FolderMeta).filter(
                 FolderMeta.imapaccount_id==self.id)])
 
@@ -363,8 +363,8 @@ class Contact(Base):
 
 # sharded (by namespace)
 
-class MessageMeta(JSONSerializable, Base):
-    __tablename__ = 'messagemeta'
+class Message(JSONSerializable, Base):
+    __tablename__ = 'message'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
@@ -416,8 +416,8 @@ class MessageMeta(JSONSerializable, Base):
         return d
 
 # make pulling up all messages in a given thread fast
-Index('messagemeta_namespace_id_g_thrid', MessageMeta.namespace_id,
-        MessageMeta.g_thrid)
+Index('message_namespace_id_g_thrid', Message.namespace_id,
+        Message.g_thrid)
 
 # These are the top 15 most common Content-Type headers
 # in my personal mail archive. --mg
@@ -442,8 +442,8 @@ class Block(JSONSerializable, Blob, Base):
     """ Metadata for message parts stored in s3 """
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    messagemeta_id = Column(Integer, ForeignKey('messagemeta.id'), nullable=False)
-    messagemeta = relationship('MessageMeta', backref="parts")
+    message_id = Column(Integer, ForeignKey('message.id'), nullable=False)
+    message = relationship('Message', backref="parts")
 
     walk_index = Column(Integer)
     # Save some space with common content types
@@ -461,7 +461,7 @@ class Block(JSONSerializable, Blob, Base):
 
     # TODO: create a constructor that allows the 'content_type' keyword
 
-    __table_args__ = (UniqueConstraint('messagemeta_id', 'walk_index',
+    __table_args__ = (UniqueConstraint('message_id', 'walk_index',
         'data_sha256', name='_blockmeta_uc'),)
 
     def __init__(self, *args, **kwargs):
@@ -474,7 +474,7 @@ class Block(JSONSerializable, Blob, Base):
 
     def client_json(self):
         d = {}
-        d['g_id'] = self.messagemeta.g_msgid
+        d['g_id'] = self.message.g_msgid
         d['g_index'] = self.walk_index
         d['content_type'] = self.content_type
         d['content_disposition'] = self.content_disposition
@@ -506,8 +506,8 @@ class FolderMeta(JSONSerializable, Base):
 
     imapaccount_id = Column(ForeignKey('imapaccount.id'), nullable=False)
     imapaccount = relationship("IMAPAccount")
-    messagemeta_id = Column(Integer, ForeignKey('messagemeta.id'), nullable=False)
-    messagemeta = relationship('MessageMeta')
+    message_id = Column(Integer, ForeignKey('message.id'), nullable=False)
+    message = relationship('Message')
     msg_uid = Column(Integer, nullable=False)
     folder_name = Column(String(255), nullable=False)  # All Mail, Inbox, etc. (i.e. Labels)
     flags = Column(MediumPickle)

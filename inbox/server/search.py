@@ -5,7 +5,7 @@ log = get_logger()
 
 import xapian as x_
 
-from .models import db_session, MessageMeta
+from .models import db_session, Message
 from ..util.file import mkdirp
 from ..util.html import strip_tags
 
@@ -51,10 +51,10 @@ def gen_search_index(user):
     indexer.set_flags(indexer.FLAG_SPELLING)
 
     last_docid = database.get_lastdocid()
-    msg_query = db_session.query(MessageMeta).filter(
-            MessageMeta.user_id == user.id,
-            MessageMeta.id > last_docid).options(joinedload('parts')) \
-                    .order_by(MessageMeta.id.desc())
+    msg_query = db_session.query(Message).filter(
+            Message.user_id == user.id,
+            Message.id > last_docid).options(joinedload('parts')) \
+                    .order_by(Message.id.desc())
     log.info("Have {0} messages to process".format(msg_query.count()))
 
     # for each message part, create unprocessed documents with date/subject/to/from
@@ -123,7 +123,7 @@ def gen_search_index(user):
 
 
     indexed_msgs = set([k for k in database.metadata_keys()])
-    msgs =  set([id for id, in db_session.query(MessageMeta.id).filter_by(
+    msgs =  set([id for id, in db_session.query(Message.id).filter_by(
             g_email=user.g_email).all()])
     to_delete = indexed_msgs.difference(msgs)
     log.info("{0} documents to remove...".format(len(to_delete)))
@@ -137,7 +137,7 @@ def gen_search_index(user):
 class SearchService:
     """ ZeroRPC interface to searching. """
     def search(self, user_id, query_string, limit=10):
-        """ returns [(messagemeta.id, relevancerank), ...]
+        """ returns [(message.id, relevancerank), ...]
 
             fulltext is fulltext of the matching *part*, not the entire
             message.

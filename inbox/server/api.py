@@ -6,7 +6,7 @@ from functools import wraps
 import json
 import postel
 from bson import json_util
-from models import db_session, MessageMeta, FolderMeta, SharedFolderNSMeta
+from models import db_session, Message, FolderMeta, SharedFolderNSMeta
 from models import Namespace, User, IMAPAccount, TodoNSMeta, TodoItem
 
 from ..util.html import plaintext2html
@@ -127,22 +127,22 @@ class API(object):
 
         # Get all thread IDs for all messages in this folder.
         imapaccount_id = self.namespace.imapaccount_id
-        all_msgids = db_session.query(FolderMeta.messagemeta_id)\
+        all_msgids = db_session.query(FolderMeta.message_id)\
               .filter(FolderMeta.folder_name == folder_name,
                       FolderMeta.imapaccount_id == imapaccount_id)
         all_thrids = set()
-        for thrid, in db_session.query(MessageMeta.g_thrid).filter(
-                MessageMeta.namespace_id == self.namespace_id,
-                MessageMeta.id.in_(all_msgids)):
+        for thrid, in db_session.query(Message.g_thrid).filter(
+                Message.namespace_id == self.namespace_id,
+                Message.id.in_(all_msgids)):
             all_thrids.add(thrid)
 
         # Get all messages for those thread IDs
         messages = []
         DB_CHUNK_SIZE = 100
         for g_thrids in chunk(list(all_thrids), DB_CHUNK_SIZE):
-            all_msgs_query = db_session.query(MessageMeta).filter(
-                    MessageMeta.namespace_id == self.namespace_id,
-                    MessageMeta.g_thrid.in_(g_thrids))
+            all_msgs_query = db_session.query(Message).filter(
+                    Message.namespace_id == self.namespace_id,
+                    Message.g_thrid.in_(g_thrids))
             messages += all_msgs_query.all()
 
 
@@ -151,10 +151,10 @@ class API(object):
 
     @jsonify
     def messages_with_ids(self, namespace_id, msg_ids):
-        """ Returns MessageMeta objects for the given msg_ids """
-        all_msgs_query = db_session.query(MessageMeta)\
-            .filter(MessageMeta.id.in_(msg_ids), 
-                    MessageMeta.namespace_id == namespace_id)
+        """ Returns Message objects for the given msg_ids """
+        all_msgs_query = db_session.query(Message)\
+            .filter(Message.id.in_(msg_ids),
+                    Message.namespace_id == namespace_id)
         all_msgs = all_msgs_query.all()
 
         log.info('found %i messages IDs' % len(all_msgs))
@@ -172,12 +172,12 @@ class API(object):
     @namespace_auth
     @jsonify
     def meta_with_id(self, data_id):
-        existing_msgs_query = db_session.query(MessageMeta).join(Namespace)\
-                .filter(MessageMeta.g_msgid == data_id, Namespace.id == self.namespace_id)\
+        existing_msgs_query = db_session.query(Message).join(Namespace)\
+                .filter(Message.g_msgid == data_id, Namespace.id == self.namespace_id)\
                 .options(joinedload("parts"))
         meta = existing_msgs_query.all()
         if not len(meta) == 1:
-            log.error("messagemeta query returned %i results" % len(meta))
+            log.error("message query returned %i results" % len(meta))
         if len(meta) == 0: return []
         m = meta[0]
 
@@ -187,8 +187,8 @@ class API(object):
 
     @namespace_auth
     @jsonify
-    def body_for_messagemeta(self, meta_id):
-        message_meta = db_session.query(MessageMeta).filter_by(id=meta_id).one()
+    def body_for_message(self, meta_id):
+        message_meta = db_session.query(Message).filter_by(id=meta_id).one()
         parts = message_meta.parts
         plain_data = None
         html_data = None
@@ -247,9 +247,9 @@ class API(object):
         log.info('creating todo from namespace {0} g_thrid {1}'.format(self.namespace_id, g_thrid))
 
         # TODO abstract this logic out
-        messages_in_thread = db_session.query(MessageMeta).filter(
-                MessageMeta.namespace_id == self.namespace_id,
-                MessageMeta.g_thrid == g_thrid).all()
+        messages_in_thread = db_session.query(Message).filter(
+                Message.namespace_id == self.namespace_id,
+                Message.g_thrid == g_thrid).all()
 
         todo_ns = get_or_create_todo_namespace(self.user_id)
         for message in messages_in_thread:

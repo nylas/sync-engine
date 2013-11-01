@@ -4,7 +4,7 @@ import socket
 
 from .sessionmanager import get_crispin_from_email
 
-from .models import db_session, FolderMeta, MessageMeta, UIDValidity
+from .models import db_session, FolderMeta, Message, UIDValidity
 from .models import IMAPAccount, Block, SyncMeta
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -138,7 +138,7 @@ def process_messages(account, folder, messages):
     for uid, internaldate, flags, envelope, body, x_gm_thrid, x_gm_msgid, \
             x_gm_labels in messages:
         mailbase = encoding.from_string(body)
-        new_msg = MessageMeta()
+        new_msg = Message()
         new_msg.data_sha256 = sha256(body).hexdigest()
         new_msg.namespace_id = account.namespace.id
         new_msg.uid = uid
@@ -183,7 +183,7 @@ def process_messages(account, folder, messages):
 
         fm = FolderMeta(imapaccount_id=account.id,
                 folder_name=folder,
-                msg_uid=uid, messagemeta=new_msg)
+                msg_uid=uid, message=new_msg)
         new_foldermeta.append(fm)
 
         # TODO parse out flags and store as enum instead of string
@@ -203,7 +203,7 @@ def process_messages(account, folder, messages):
 
         # Store all message headers as object with index 0
         headers_part = Block()
-        headers_part.messagemeta = new_msg
+        headers_part.message = new_msg
         headers_part.walk_index = i
         headers_part._data = json.dumps(mailbase.headers)
         headers_part.data_sha256 = sha256(headers_part._data).hexdigest()
@@ -221,7 +221,7 @@ def process_messages(account, folder, messages):
             if mimepart.is_multipart(): continue  # TODO should we store relations?
 
             new_part = Block()
-            new_part.messagemeta = new_msg
+            new_part.message = new_msg
             new_part.walk_index = i
             new_part.misc_keyval = mimepart.items()  # everything
 
@@ -490,17 +490,17 @@ class FolderSync(Greenlet):
             num_local_messages, num_remote_messages))
 
     def _add_new_foldermeta(self, remote_g_msgids, uids):
-        # collate messagemeta objects to relate the new foldersmeta objects to
+        # collate message objects to relate the new foldersmeta objects to
         foldermeta_uid_for = dict([(g_msgid, uid) for (uid, g_msgid) \
                 in remote_g_msgids.items() if uid in uids])
         foldermeta_g_msgids = [remote_g_msgids[uid] for uid in uids]
-        messagemeta_for = dict([(foldermeta_uid_for[mm.g_msgid], mm) for \
-                mm in db_session.query(MessageMeta).filter( \
-                    MessageMeta.g_msgid.in_(foldermeta_g_msgids))])
+        message_for = dict([(foldermeta_uid_for[mm.g_msgid], mm) for \
+                mm in db_session.query(Message).filter( \
+                    Message.g_msgid.in_(foldermeta_g_msgids))])
         db_session.add_all(
                 [FolderMeta(imapaccount_id=self.account.id,
                     folder_name=self.folder_name, msg_uid=uid, \
-                    messagemeta=messagemeta_for[uid]) for uid in uids])
+                    message=message_for[uid]) for uid in uids])
         db_session.commit()
 
     def _retrieve_g_msgid_cache(self, local_uids, cached_validity):
