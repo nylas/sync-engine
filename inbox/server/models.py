@@ -92,8 +92,8 @@ class Blob(object):
         data_obj = bucket.get_key(self.data_sha256)
         if data_obj:
             assert data_obj.get_metadata('data_sha256') == self.data_sha256, \
-                "BlockMeta hash doesn't match what we previously stored on s3!"
-            # log.info("BlockMeta already exists on S3.")
+                "Block hash doesn't match what we previously stored on s3!"
+            # log.info("Block already exists on S3.")
             return
 
         data_obj = Key(bucket)
@@ -219,10 +219,10 @@ class IMAPAccount(Base):
         """ Computes the total size of the block data of emails in your
             account's IMAP folders
         """
-        subq = db_session.query(BlockMeta) \
-                .join(BlockMeta.messagemeta, MessageMeta.foldermetas) \
+        subq = db_session.query(Block) \
+                .join(Block.messagemeta, MessageMeta.foldermetas) \
                 .filter(FolderMeta.imapaccount_id==self.id) \
-                .group_by(MessageMeta.id, BlockMeta.id)
+                .group_by(MessageMeta.id, Block.id)
         return db_session.query(func.sum(subq.subquery().columns.size)).scalar()
 
     def total_stored_messages(self):
@@ -437,7 +437,7 @@ common_content_types = ['text/plain',
                         'message/rfc822',
                         'image/jpg']
 
-class BlockMeta(JSONSerializable, Blob, Base):
+class Block(JSONSerializable, Blob, Base):
     __tablename__ = 'blockmeta'
     """ Metadata for message parts stored in s3 """
 
@@ -470,7 +470,7 @@ class BlockMeta(JSONSerializable, Blob, Base):
         Base.__init__(self, *args, **kwargs)
 
     def __repr__(self):
-        return 'BlockMeta: %s' % self.__dict__
+        return 'Block: %s' % self.__dict__
 
     def client_json(self):
         d = {}
@@ -489,7 +489,7 @@ class BlockMeta(JSONSerializable, Blob, Base):
         else:
             self.content_type = self._content_type_other
 
-@event.listens_for(BlockMeta, 'before_insert', propagate = True)
+@event.listens_for(Block, 'before_insert', propagate = True)
 def serialize_before_insert(mapper, connection, target):
     if target.content_type in common_content_types:
         target._content_type_common = target.content_type

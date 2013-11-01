@@ -5,7 +5,7 @@ import socket
 from .sessionmanager import get_crispin_from_email
 
 from .models import db_session, FolderMeta, MessageMeta, UIDValidity
-from .models import IMAPAccount, BlockMeta, SyncMeta
+from .models import IMAPAccount, Block, SyncMeta
 from sqlalchemy.orm.exc import NoResultFound
 
 from ..util.itert import chunk, partition
@@ -202,7 +202,7 @@ def process_messages(account, folder, messages):
         i = 0  # for walk_index
 
         # Store all message headers as object with index 0
-        headers_part = BlockMeta()
+        headers_part = Block()
         headers_part.messagemeta = new_msg
         headers_part.walk_index = i
         headers_part._data = json.dumps(mailbase.headers)
@@ -220,7 +220,7 @@ def process_messages(account, folder, messages):
             mimepart = encoding.to_message(part)
             if mimepart.is_multipart(): continue  # TODO should we store relations?
 
-            new_part = BlockMeta()
+            new_part = Block()
             new_part.messagemeta = new_msg
             new_part.walk_index = i
             new_part.misc_keyval = mimepart.items()  # everything
@@ -569,7 +569,7 @@ class FolderSync(Greenlet):
                     # Fatally abort if part saves error out. Messages in this
                     # chunk will be retried when the sync is restarted.
                     g_check_join(threads, "Could not save message parts to blob store!")
-                    # Clear data stored on BlockMeta objects here. Hopefully this
+                    # Clear data stored on Block objects here. Hopefully this
                     # will help with memory issues.
                     for part in msg['parts']:
                         part._data = None
