@@ -586,16 +586,16 @@ class TodoItem(JSONSerializable, Base):
                 sort_index     = self.sort_index,
             )
 
-class TodoNSMeta(Base):
-    __tablename__ = 'todonsmeta'
+class TodoNamespace(Base):
+    __tablename__ = 'todonamespace'
     """ A 1-1 mapping between users and their todo namespaces """
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    namespace = relationship('Namespace', backref=backref('todo_ns_meta', uselist=False))
+    namespace = relationship('Namespace', backref=backref('todo_namespace', uselist=False))
     namespace_id = Column(Integer, ForeignKey('namespace.id'), nullable=False, unique=True)
 
-    user = relationship('User', backref=backref('todo_ns_meta', uselist=False))
+    user = relationship('User', backref=backref('todo_namespace', uselist=False))
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False, unique=True)
 
 class Thread(Base):

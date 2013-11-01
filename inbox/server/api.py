@@ -7,7 +7,7 @@ import json
 import postel
 from bson import json_util
 from models import db_session, Message, FolderItem, SharedFolderNSMeta
-from models import Namespace, User, IMAPAccount, TodoNSMeta, TodoItem
+from models import Namespace, User, IMAPAccount, TodoNamespace, TodoItem
 
 from ..util.html import plaintext2html
 from ..util.itert import chunk
@@ -53,18 +53,18 @@ def jsonify(fn):
 
 # should this be moved to model.py or similar?
 def get_or_create_todo_namespace(user_id):
-    user = db_session.query(User).join(TodoNSMeta, Namespace, TodoItem) \
+    user = db_session.query(User).join(TodoNamespace, Namespace, TodoItem) \
             .get(user_id)
-    if user.todo_ns_meta is not None:
-        return user.todo_ns_meta.namespace
+    if user.todo_namespace is not None:
+        return user.todo_namespace.namespace
 
     # create a todo namespace
     todo_ns = Namespace(imapaccount_id=None, namespace_type='todo')
     db_session.add(todo_ns)
     db_session.commit()
 
-    todo_ns_meta = TodoNSMeta(namespace_id=todo_ns.id, user_id=user_id)
-    db_session.add(todo_ns_meta)
+    todo_namespace = TodoNamespace(namespace_id=todo_ns.id, user_id=user_id)
+    db_session.add(todo_namespace)
     db_session.commit()
 
     log.info('todo namespace id {0}'.format(todo_ns.id))
