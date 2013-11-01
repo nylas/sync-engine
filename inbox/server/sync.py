@@ -322,7 +322,7 @@ def safe_download(uids, folder, crispin_client):
 
     return new_messages, new_folderitem
 
-class FolderSync(Greenlet):
+class FolderSyncMonitor(Greenlet):
     """ Per-folder sync engine. """
     def __init__(self, folder_name, account, crispin_client, log, shared_state):
         self.folder_name = folder_name
@@ -351,7 +351,7 @@ class FolderSync(Greenlet):
                     folder_name=self.folder_name)
             db_session.add(foldersync)
             db_session.commit()
-        # NOTE: The parent MailSync handler could kill us at any time if it
+        # NOTE: The parent MailSyncMonitor handler could kill us at any time if it
         # receives a shutdown command. The shutdown command is equivalent
         # to ctrl-c.
         while True:
@@ -653,8 +653,7 @@ class FolderSync(Greenlet):
         self.account.update_metadata(self.crispin_client.selected_folder_name,
                 uids, new_flags)
 
-
-class MailSync(Greenlet):
+class MailSyncMonitor(Greenlet):
     """ Top-level controller for an account's mail sync. Spawns individual
         FolderSync greenlets for each folder.
 
@@ -703,7 +702,7 @@ class MailSync(Greenlet):
             'initial' state at a time.
         """
         for folder in self.crispin_client.sync_folders:
-            thread = FolderSync(folder, self.account,
+            thread = FolderSyncMonitor(folder, self.account,
                     self.crispin_client, self.log, self.shared_state)
             thread.start()
             while not thread.state.startswith('poll'):
@@ -729,7 +728,7 @@ def notify(account, mtype, message):
 class SyncService:
     """ ZeroRPC interface to syncing. """
     def __init__(self):
-        # { account_id: MailSync() }
+        # { account_id: MailSyncMonitor() }
         self.monitors = dict()
         # READ ONLY from API calls, writes happen from callbacks from monitor
         # greenlets.
@@ -769,7 +768,7 @@ class SyncService:
                                 state=state, status=status)
                         notify(account, state, status)
 
-                    monitor = MailSync(account, update_status)
+                    monitor = MailSyncMonitor(account, update_status)
                     self.monitors[account.id] = monitor
                     monitor.start()
                     account.sync_host = fqdn
