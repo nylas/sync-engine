@@ -612,14 +612,14 @@ class Thread(Base):
     # only on messages from Gmail
     g_thrid = Column(String(255), nullable=True)
 
-class SyncMeta(Base):
-    __tablename__ = 'syncmeta'
+class FolderSync(Base):
+    __tablename__ = 'foldersync'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     imapaccount_id = Column(ForeignKey('imapaccount.id'), nullable=False)
     imapaccount = relationship('IMAPAccount',
-            backref=backref('syncmeta', uselist=False))
+            backref=backref('foldersync', uselist=False))
     folder_name = Column(String(255))
 
     # see state machine in sync.py

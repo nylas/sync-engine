@@ -5,7 +5,7 @@ import socket
 from .sessionmanager import get_crispin_from_email
 
 from .models import db_session, FolderItem, Message, UIDValidity
-from .models import IMAPAccount, Block, SyncMeta
+from .models import IMAPAccount, Block, FolderSync
 from sqlalchemy.orm.exc import NoResultFound
 
 from ..util.itert import chunk, partition
@@ -50,7 +50,7 @@ changed, and if it has, we need to update the UIDs for any messages we've
 already downloaded. A folder's uidvalidity cannot change during a session
 (SELECT during an IMAP session starts a session on a folder).
 
-Folder sync state is stored in the SyncMeta table to allow for restarts.
+Folder sync state is stored in the FolderSync table to allow for restarts.
 
 Here's the state machine:
 
@@ -343,21 +343,21 @@ class FolderSync(Greenlet):
 
     def _run(self):
         try:
-            syncmeta = db_session.query(SyncMeta).filter_by(
+            foldersync = db_session.query(FolderSync).filter_by(
                     imapaccount=self.account,
                     folder_name=self.folder_name).one()
         except NoResultFound:
-            syncmeta = SyncMeta(imapaccount=self.account,
+            foldersync = FolderSync(imapaccount=self.account,
                     folder_name=self.folder_name)
-            db_session.add(syncmeta)
+            db_session.add(foldersync)
             db_session.commit()
         # NOTE: The parent MailSync handler could kill us at any time if it
         # receives a shutdown command. The shutdown command is equivalent
         # to ctrl-c.
         while True:
-            self.state = syncmeta.state = self.state_handlers[syncmeta.state]()
+            self.state = foldersync.state = self.state_handlers[foldersync.state]()
             # The session should automatically mark this as dirty, but make sure.
-            db_session.add(syncmeta)
+            db_session.add(foldersync)
             # State handlers are idempotent, so it's okay if we're killed
             # between the end of the handler and the commit.
             db_session.commit()
