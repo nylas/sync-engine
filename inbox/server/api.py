@@ -6,7 +6,7 @@ from functools import wraps
 import json
 import postel
 from bson import json_util
-from models import db_session, Message, FolderMeta, SharedFolderNSMeta
+from models import db_session, Message, FolderItem, SharedFolderNSMeta
 from models import Namespace, User, IMAPAccount, TodoNSMeta, TodoItem
 
 from ..util.html import plaintext2html
@@ -127,9 +127,9 @@ class API(object):
 
         # Get all thread IDs for all messages in this folder.
         imapaccount_id = self.namespace.imapaccount_id
-        all_msgids = db_session.query(FolderMeta.message_id)\
-              .filter(FolderMeta.folder_name == folder_name,
-                      FolderMeta.imapaccount_id == imapaccount_id)
+        all_msgids = db_session.query(FolderItem.message_id)\
+              .filter(FolderItem.folder_name == folder_name,
+                      FolderItem.imapaccount_id == imapaccount_id)
         all_thrids = set()
         for thrid, in db_session.query(Message.g_thrid).filter(
                 Message.namespace_id == self.namespace_id,

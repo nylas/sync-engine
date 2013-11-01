@@ -220,46 +220,46 @@ class IMAPAccount(Base):
             account's IMAP folders
         """
         subq = db_session.query(Block) \
-                .join(Block.message, Message.foldermetas) \
-                .filter(FolderMeta.imapaccount_id==self.id) \
+                .join(Block.message, Message.folderitems) \
+                .filter(FolderItem.imapaccount_id==self.id) \
                 .group_by(Message.id, Block.id)
         return db_session.query(func.sum(subq.subquery().columns.size)).scalar()
 
     def total_stored_messages(self):
         """ Computes the number of emails in your account's IMAP folders """
         return db_session.query(Message) \
-                .join(Message.foldermetas) \
-                .filter(FolderMeta.imapaccount_id==self.id) \
+                .join(Message.folderitems) \
+                .filter(FolderItem.imapaccount_id==self.id) \
                 .group_by(Message.id).count()
 
     def all_uids(self, folder_name):
         return [uid for uid, in
-                db_session.query(FolderMeta.msg_uid).filter_by(
+                db_session.query(FolderItem.msg_uid).filter_by(
                     imapaccount_id=self.account_id,
                     folder_name=folder_name)]
 
     def all_g_msgids(self):
         return set([g_msgid for g_msgid, in
             db_session.query(distinct(Message.g_msgid))\
-                    .join(FolderMeta).filter(
-                FolderMeta.imapaccount_id==self.id)])
+                    .join(FolderItem).filter(
+                FolderItem.imapaccount_id==self.id)])
 
     def update_metadata(self, folder_name, uids, new_flags):
         """ Update flags (the only metadata that can change). """
-        for fm in db_session.query(FolderMeta).filter(
-                FolderMeta.imapaccount_id==self.id,
-                FolderMeta.msg_uid.in_(uids),
-                FolderMeta.folder_name==folder_name):
+        for fm in db_session.query(FolderItem).filter(
+                FolderItem.imapaccount_id==self.id,
+                FolderItem.msg_uid.in_(uids),
+                FolderItem.folder_name==folder_name):
             if fm.flags != new_flags[fm.msg_uid]:
                 fm.flags = new_flags[fm.msg_uid]
                 db_session.add(fm)
         db_session.commit()
 
     def remove_messages(self, uids, folder):
-        fm_query = db_session.query(FolderMeta).filter(
-                FolderMeta.imapaccount_id==self.id,
-                FolderMeta.folder_name==folder,
-                FolderMeta.msg_uid.in_(uids))
+        fm_query = db_session.query(FolderItem).filter(
+                FolderItem.imapaccount_id==self.id,
+                FolderItem.folder_name==folder,
+                FolderItem.msg_uid.in_(uids))
         fm_query.delete(synchronize_session='fetch')
 
         # not sure if this one is actually needed - does delete() automatically
@@ -498,9 +498,9 @@ def serialize_before_insert(mapper, connection, target):
         target._content_type_common = None
         target._content_type_other = target.content_type
 
-class FolderMeta(JSONSerializable, Base):
-    __tablename__ = 'foldermeta'
-    """ This maps folder names to UIDs """
+class FolderItem(JSONSerializable, Base):
+    __tablename__ = 'folderitem'
+    """ This maps folder names to UIDs in that folder. """
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
@@ -512,12 +512,11 @@ class FolderMeta(JSONSerializable, Base):
     folder_name = Column(String(255), nullable=False)  # All Mail, Inbox, etc. (i.e. Labels)
     flags = Column(MediumPickle)
 
-    __table_args__ = (UniqueConstraint('folder_name', 'msg_uid', 'imapaccount_id',
-        name='_folder_msg_user_uc'),)
+    __table_args__ = (UniqueConstraint('folder_name', 'msg_uid', 'imapaccount_id',),)
 
 # make pulling up all messages in a given folder fast
-Index('foldermeta_imapaccount_id_folder_name', FolderMeta.imapaccount_id,
-        FolderMeta.folder_name)
+Index('folderitem_imapaccount_id_folder_name', FolderItem.imapaccount_id,
+        FolderItem.folder_name)
 
 class UIDValidity(JSONSerializable, Base):
     __tablename__ = 'uidvalidity'

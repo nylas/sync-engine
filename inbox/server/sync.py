@@ -4,7 +4,7 @@ import socket
 
 from .sessionmanager import get_crispin_from_email
 
-from .models import db_session, FolderMeta, Message, UIDValidity
+from .models import db_session, FolderItem, Message, UIDValidity
 from .models import IMAPAccount, Block, SyncMeta
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -111,10 +111,10 @@ def uidvalidity_valid(crispin_client, cached_validity=False):
 def new_or_updated(uids, folder, account_id, local_uids=None):
     if local_uids is None:
         local_uids = set([unicode(uid) for uid, in \
-                db_session.query(FolderMeta.msg_uid).filter(
-                FolderMeta.folder_name==folder,
-                FolderMeta.imapaccount_id==account_id,
-                FolderMeta.msg_uid.in_(uids))])
+                db_session.query(FolderItem.msg_uid).filter(
+                FolderItem.folder_name==folder,
+                FolderItem.imapaccount_id==account_id,
+                FolderItem.msg_uid.in_(uids))])
     return partition(lambda x: x in local_uids, uids)
 
 def g_check_join(threads, errmsg):
@@ -134,7 +134,7 @@ def process_messages(account, folder, messages):
         entries and writes mail parts to disk.
     """
     new_messages = []
-    new_foldermeta = []
+    new_folderitem = []
     for uid, internaldate, flags, envelope, body, x_gm_thrid, x_gm_msgid, \
             x_gm_labels in messages:
         mailbase = encoding.from_string(body)
@@ -181,10 +181,10 @@ def process_messages(account, folder, messages):
         new_msg.g_thrid = unicode(x_gm_thrid)
         new_msg.g_msgid = unicode(x_gm_msgid)
 
-        fm = FolderMeta(imapaccount_id=account.id,
+        fm = FolderItem(imapaccount_id=account.id,
                 folder_name=folder,
                 msg_uid=uid, message=new_msg)
-        new_foldermeta.append(fm)
+        new_folderitem.append(fm)
 
         # TODO parse out flags and store as enum instead of string
         # \Seen  Message has been read
@@ -301,12 +301,12 @@ Parsed Content-Disposition was: '{3}'""".format(uid, folder,
             new_part._data = data_to_write
             new_msg.parts.append(new_part)
 
-    return new_messages, new_foldermeta
+    return new_messages, new_folderitem
 
 def safe_download(uids, folder, crispin_client):
     try:
         raw_messages = crispin_client.uids(uids)
-        new_messages, new_foldermeta = process_messages(
+        new_messages, new_folderitem = process_messages(
                 crispin_client.account, folder, raw_messages)
     except encoding.EncodingError, e:
         log.error(e)
@@ -318,9 +318,9 @@ def safe_download(uids, folder, crispin_client):
     # except Exception, e:
     #     log.error("Crispin fetch failure: %s. Reconnecting..." % e)
     #     crispin_client = refresh_crispin(crispin_client.email_address)
-    #     new_messages, new_foldermeta = crispin_client.fetch_uids(uids)
+    #     new_messages, new_folderitem = crispin_client.fetch_uids(uids)
 
-    return new_messages, new_foldermeta
+    return new_messages, new_folderitem
 
 class FolderSync(Greenlet):
     """ Per-folder sync engine. """
@@ -434,16 +434,16 @@ class FolderSync(Greenlet):
 
         # deduplicate message download using X-GM-MSGID
         local_g_msgids = self.account.all_g_msgids()
-        full_download, foldermeta_only = partition(
+        full_download, folderitem_only = partition(
                 lambda uid: remote_g_msgids[uid] in local_g_msgids,
                 sorted(unknown_uids))
 
         self.log.info("{0} uids left to fetch".format(len(full_download)))
 
         self.log.info("Skipping {0} uids downloaded via other folders".format(
-            len(foldermeta_only)))
-        if len(foldermeta_only) > 0:
-            self._add_new_foldermeta(remote_g_msgids, foldermeta_only)
+            len(folderitem_only)))
+        if len(folderitem_only) > 0:
+            self._add_new_folderitem(remote_g_msgids, foldermeta_only)
 
         self.log.info("Starting sync for {0} with chunks of size {1}".format(
             self.folder_name, self.crispin_client.CHUNK_SIZE))
@@ -464,9 +464,9 @@ class FolderSync(Greenlet):
         self.log.info("Finished.")
 
     def _download_new_messages(self, uids, num_local_messages, num_remote_messages):
-        new_messages, new_foldermeta = safe_download(
+        new_messages, new_folderitem = safe_download(
                 uids, self.folder_name, self.crispin_client)
-        db_session.add_all(new_foldermeta)
+        db_session.add_all(new_folderitem)
         db_session.add_all(new_messages)
         # Save message part blobs before committing changes to db.
         for msg in new_messages:
@@ -490,16 +490,16 @@ class FolderSync(Greenlet):
             self.folder_name, percent_done,
             num_local_messages, num_remote_messages))
 
-    def _add_new_foldermeta(self, remote_g_msgids, uids):
+    def _add_new_folderitem(self, remote_g_msgids, uids):
         # collate message objects to relate the new foldersmeta objects to
-        foldermeta_uid_for = dict([(g_msgid, uid) for (uid, g_msgid) \
+        folderitem_uid_for = dict([(g_msgid, uid) for (uid, g_msgid) \
                 in remote_g_msgids.items() if uid in uids])
-        foldermeta_g_msgids = [remote_g_msgids[uid] for uid in uids]
-        message_for = dict([(foldermeta_uid_for[mm.g_msgid], mm) for \
+        folderitem_g_msgids = [remote_g_msgids[uid] for uid in uids]
+        message_for = dict([(folderitem_uid_for[mm.g_msgid], mm) for \
                 mm in db_session.query(Message).filter( \
-                    Message.g_msgid.in_(foldermeta_g_msgids))])
+                    Message.g_msgid.in_(folderitem_g_msgids))])
         db_session.add_all(
-                [FolderMeta(imapaccount_id=self.account.id,
+                [FolderItem(imapaccount_id=self.account.id,
                     folder_name=self.folder_name, msg_uid=uid, \
                     message=message_for[uid]) for uid in uids])
         db_session.commit()
@@ -557,10 +557,10 @@ class FolderSync(Greenlet):
             log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
             for uids in chunk(new, self.crispin_client.CHUNK_SIZE):
                 # XXX TODO: dedupe this code with _initial_sync
-                new_messages, new_foldermeta = safe_download(
+                new_messages, new_folderitem = safe_download(
                         uids, folder, self.crispin_client)
 
-                db_session.add_all(new_foldermeta)
+                db_session.add_all(new_folderitem)
                 db_session.add_all([msg['meta'] for msg in new_messages.values()])
                 for msg in new_messages.values():
                     db_session.add_all(msg['parts'])
@@ -587,7 +587,6 @@ class FolderSync(Greenlet):
 
         self._remove_deleted_messages()
         self._update_cached_highestmodseq(folder)
-        db_session.commit()
 
     def _update_cached_highestmodseq(self, folder, cached_validity=None):
         if cached_validity is None:
@@ -596,6 +595,7 @@ class FolderSync(Greenlet):
                     folder_name=folder).one()
         cached_validity.highestmodseq = self.crispin_client.selected_highestmodseq
         db_session.add(cached_validity)
+        db_session.commit()
 
     def poll(self):
         """ Poll this every N seconds for active (logged-in) users and every
@@ -632,7 +632,7 @@ class FolderSync(Greenlet):
         """
         remote_uids = self.crispin_client.all_uids()
         local_uids = [uid for uid, in
-                db_session.query(FolderMeta.msg_uid).filter_by(
+                db_session.query(FolderItem.msg_uid).filter_by(
                     folder_name=self.crispin_client.selected_folder_name,
                     imapaccount_id=self.crispin_client.account.id)]
         if len(remote_uids) > 0 and len(local_uids) > 0:
