@@ -19,6 +19,7 @@ def drop_everything(engine, with_users=False):
     all_fks = []
 
     for table_name in inspector.get_table_names():
+        print table_name, with_users
         if not with_users and table_name == 'user':
             continue
         fks = []

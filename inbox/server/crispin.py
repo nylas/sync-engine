@@ -167,7 +167,7 @@ class CrispinClientBase(object):
             UID is unique (to a folder), but a g_msgid is not necessarily
             (it can legitimately appear twice in the folder).
         """
-        self.log.info("_fetching X-GM-MSGID mapping from server.")
+        self.log.info("fetching X-GM-MSGID mapping from server.")
         if uids is None:
             uids = self.all_uids()
         return dict([(int(uid), unicode(ret['X-GM-MSGID'])) for uid, ret in \

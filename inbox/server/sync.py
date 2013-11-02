@@ -1,3 +1,5 @@
+# deal with unicode literals: http://www.python.org/dev/peps/pep-0263/
+# vim: set fileencoding=utf-8 :
 from __future__ import division
 
 import socket
@@ -112,12 +114,12 @@ class FolderSyncMonitor(Greenlet):
 
         self.state_handlers = {
                 'initial': self.initial_sync,
-                'initial uid invalid': self.resync_uids,
+                'initial uid invalid': lambda: self.resync_uids('initial'),
                 'poll': self.poll,
-                'poll uid invalid': self.resync_uids,
+                'poll uid invalid': lambda: self.resync_uids('poll'),
                 }
 
-        Greenlet.__init__()
+        Greenlet.__init__(self)
 
     def _run(self):
         try:
@@ -140,7 +142,7 @@ class FolderSyncMonitor(Greenlet):
             # between the end of the handler and the commit.
             db_session.commit()
 
-    def resync_uids(self):
+    def resync_uids(self, previous_state):
         """ Call this when UIDVALIDITY is invalid to fix up the database.
 
         What happens here is we fetch new UIDs from the IMAP server and match
@@ -150,6 +152,7 @@ class FolderSyncMonitor(Greenlet):
         log.info("UIDVALIDITY for {0} has changed; resyncing UIDs".format(
             self.folder_name))
         raise Exception("Unimplemented")
+        return previous_state
 
     def _new_or_updated(self, uids, local_uids):
         """ HIGHESTMODSEQ queries return a list of messages that are *either*
@@ -195,7 +198,7 @@ class FolderSyncMonitor(Greenlet):
             # make sure uidvalidity is up-to-date
             if cached_validity is None:
                 db_session.add(UIDValidity(
-                    account=self.account, folder_name=self.folder_name,
+                    imapaccount=self.account, folder_name=self.folder_name,
                     uid_validity=self.crispin_client.selected_uidvalidity,
                     highestmodseq=self.crispin_client.selected_highestmodseq))
                 db_session.commit()
@@ -210,7 +213,7 @@ class FolderSyncMonitor(Greenlet):
         remote_uids = sorted(remote_g_msgids.keys(), key=int)
         self.log.info("Found {0} UIDs for folder {1}".format(
             len(remote_uids), self.folder_name))
-        self.log.info("Already have {0} items".format(len(local_uids)))
+        self.log.info("Already have {0} UIDs".format(len(local_uids)))
 
         deleted_uids = set(local_uids).difference(set(remote_uids))
         unknown_uids = set(remote_uids).difference(set(local_uids))
@@ -236,8 +239,10 @@ class FolderSyncMonitor(Greenlet):
             self.folder_name, self.crispin_client.CHUNK_SIZE))
         # we prioritize message download by reverse-UID order, which generally
         # puts more recent messages first
+        num_local_messages = len(local_uids)
         for uids in chunk(reversed(full_download), self.crispin_client.CHUNK_SIZE):
-            self._download_new_messages(uids, len(local_uids), len(remote_uids))
+            num_local_messages += self._download_new_messages(
+                    uids, num_local_messages, len(remote_uids))
 
         # complete X-GM-MSGID mapping is no longer needed after initial sync
         rm_cache("_".join([self.account.email_address, self.folder_name,
@@ -248,7 +253,8 @@ class FolderSyncMonitor(Greenlet):
         # bugs trickle through is we lose some flags.
         self.log.info("Saved all messages and metadata on {0} to UIDVALIDITY {1} / HIGHESTMODSEQ {2}".format(self.folder_name, self.crispin_client.selected_uidvalidity, self.crispin_client.selected_highestmodseq))
 
-        self.log.info("Finished.")
+        self.log.info("Finished initial sync of {0}.".format(self.folder_name))
+        return 'poll'
 
     def _gevent_check_join(self, threads, errmsg):
         """ Block until all threads have completed and throw an error if threads
@@ -289,6 +295,7 @@ class FolderSyncMonitor(Greenlet):
         self.log.info("Syncing %s -- %.4f%% (%i/%i)" % (
             self.folder_name, percent_done,
             num_local_messages, num_remote_messages))
+        return num_local_messages
 
     def _add_new_folderitem(self, remote_g_msgids, uids):
         # collate message objects to relate the new foldersmeta objects to
@@ -354,8 +361,10 @@ class FolderSyncMonitor(Greenlet):
             local_uids = self.account.all_uids(self.folder_name)
             new, updated = self._new_or_updated(uids, local_uids)
             log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
+            num_local_messages = len(local_uids)
             for uids in chunk(new, self.crispin_client.CHUNK_SIZE):
-                self._download_new_messages(uids, len(local_uids), len(new))
+                num_local_messages += self._download_new_messages(
+                        uids, num_local_messages, len(new))
 
             # bigger chunk because the data being fetched here is very small
             for uids in chunk(updated, 5*self.crispin_client.CHUNK_SIZE):
@@ -369,7 +378,7 @@ class FolderSyncMonitor(Greenlet):
     def _update_cached_highestmodseq(self, folder, cached_validity=None):
         if cached_validity is None:
             cached_validity = db_session.query(UIDValidity).filter_by(
-                    account_id=self.crispin_client.account.id,
+                    imapaccount_id=self.crispin_client.account.id,
                     folder_name=folder).one()
         cached_validity.highestmodseq = self.crispin_client.selected_highestmodseq
         db_session.add(cached_validity)
@@ -401,7 +410,9 @@ class FolderSyncMonitor(Greenlet):
 
         self.shared_state['status_callback'](
             self.account, 'poll', datetime.utcnow().isoformat())
-        sleep(self.poll_frequency)
+        sleep(self.shared_state['poll_frequency'])
+
+        return 'poll'
 
     def _remove_deleted_messages(self):
         """ Works as follows:
@@ -479,6 +490,10 @@ class MailSyncMonitor(Greenlet):
         self.log.info("processing command {0}".format(cmd))
         return cmd != 'shutdown'
 
+    def _thread_polling(self, thread):
+        state = getattr(thread, 'state')
+        return state is not None and state.startswith('poll')
+
     def sync(self):
         """ Start per-folder syncs. Only have one per-folder sync in the
             'initial' state at a time.
@@ -487,7 +502,7 @@ class MailSyncMonitor(Greenlet):
             thread = FolderSyncMonitor(folder, self.account,
                     self.crispin_client, self.log, self.shared_state)
             thread.start()
-            while not thread.state.startswith('poll'):
+            while not self._thread_polling(thread):
                 sleep(self.heartbeat)
 
         # Just hang out. We don't want to block, but we don't want to return
@@ -522,8 +537,8 @@ class SyncService:
 
         # Restart existing active syncs.
         # (Later we will want to partition these across different machines!)
-        for email_address, in db_session.query(IMAPAccount.email_address).filter_by(
-                sync_active=True):
+        for email_address, in db_session.query(IMAPAccount.email_address).filter(
+                IMAPAccount.sync_host!=None):
             self.start_sync(email_address)
 
     def start_sync(self, email_address=None):

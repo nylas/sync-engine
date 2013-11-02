@@ -29,7 +29,7 @@ def namespace_auth(fn):
         self.user_id = user_id
         self.namespace_id = namespace_id
         user = db_session.query(User).filter_by(id=user_id).join(IMAPAccount).one()
-        for account in user.accounts:
+        for account in user.imapaccounts:
             if account.namespace.id == namespace_id:
                 self.namespace = account.namespace
                 return fn(self, *args, **kwargs)
@@ -225,7 +225,7 @@ class API(object):
         nses = {'private': [], 'shared': []}
 
         user = db_session.query(User).join(IMAPAccount).get(user_id)
-        for account in user.accounts:
+        for account in user.imapaccounts:
             account_ns = account.namespace
             nses['private'].append(account_ns.cereal())
 

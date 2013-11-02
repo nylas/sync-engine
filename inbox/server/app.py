@@ -40,9 +40,9 @@ def get_user(request):
 # TODO this is a HACK and needs to be changed before multiaccount support
 def get_account(request):
     user = get_user(request)
-    if user is None or len(user.accounts) == 0:
+    if user is None or len(user.imapaccounts) == 0:
         return None
-    return user.accounts[0]
+    return user.imapaccounts[0]
 
 app = Flask(__name__, static_folder='../../web_client', static_url_path='', template_folder='templates')
 

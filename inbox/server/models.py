@@ -176,7 +176,7 @@ class IMAPAccount(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     # user_id refers to Inbox's user id
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
-    user = relationship("User", backref="accounts")
+    user = relationship("User", backref="imapaccounts")
 
     email_address = Column(String(254), nullable=True, index=True)
     provider = Column(Enum('Gmail', 'Outlook', 'Yahoo', 'Inbox'), nullable=False)
@@ -244,8 +244,7 @@ class IMAPAccount(Base):
     def all_uids(self, folder_name):
         return [uid for uid, in
                 db_session.query(FolderItem.msg_uid).filter_by(
-                    imapaccount_id=self.account_id,
-                    folder_name=folder_name)]
+                    imapaccount_id=self.id, folder_name=folder_name)]
 
     def all_g_msgids(self):
         return set([g_msgid for g_msgid, in
@@ -283,7 +282,7 @@ class IMAPAccount(Base):
         try:
             # using .one() here may catch duplication bugs
             return db_session.query(UIDValidity).filter_by(
-                    account=self, folder_name=folder_name).one()
+                    imapaccount=self, folder_name=folder_name).one()
         except NoResultFound:
             return None
 
@@ -305,19 +304,22 @@ class IMAPAccount(Base):
 
     def messages_from_raw(self, folder_name, raw_messages):
         """ Parses message data for the given UIDs, creates metadata database
-            entries and writes mail parts to disk.
+            entries, computes threads, and writes mail parts to disk.
 
             Returns two lists: one of new Message objects, and one of new
             FolderItem objects. Neither list of objects has been committed.
+            (Thread and Block objects are implicitly returned via Message
+            associations.)
         """
         new_messages = []
         new_folderitem = []
+        thread_cache = dict()
         for uid, internaldate, flags, envelope, body, x_gm_thrid, x_gm_msgid, \
                 x_gm_labels in raw_messages:
             mailbase = encoding.from_string(body)
             new_msg = Message()
             new_msg.data_sha256 = sha256(body).hexdigest()
-            new_msg.namespace_id = self.account.namespace_id
+            new_msg.namespace_id = self.namespace.id
             new_msg.uid = uid
             # XXX maybe eventually we want to use these, but for
             # backcompat for now let's keep in the
@@ -355,8 +357,18 @@ class IMAPAccount(Base):
             new_msg.message_id = envelope[9]
 
             new_msg.internaldate = internaldate
-            new_msg.g_thrid = unicode(x_gm_thrid)
             new_msg.g_msgid = unicode(x_gm_msgid)
+
+            # don't need to save the returned thread since it's associated with
+            # new_msg
+            # NOTE: this results in a database query for every chunk; we may
+            # want to optimize at some point
+            cached_thread = thread_cache.get((new_msg.subject, unicode(x_gm_thrid)))
+            if cached_thread is None:
+                thread_cache[(new_msg.subject, unicode(x_gm_thrid))] = \
+                        Thread.from_message(new_msg, g_thrid=unicode(x_gm_thrid))
+            else:
+                cached_thread.update_from_message(new_msg)
 
             fm = FolderItem(imapaccount_id=self.id, folder_name=folder_name,
                     msg_uid=uid, message=new_msg)
@@ -486,9 +498,8 @@ class UserSession(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     token = Column(String(40))
-    # sessions have a many-to-one relationship with users
-    user_id = Column(Integer, ForeignKey('user.id'),
-            nullable=False)
+
+    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     user = relationship('User', backref='sessions')
 
 class Namespace(Base):
@@ -582,11 +593,11 @@ class Message(JSONSerializable, Base):
 
     namespace_id = Column(ForeignKey('namespace.id'), nullable=False)
     namespace = relationship("Namespace", backref="messages",
-            order_by=lambda msg: msg.internaldate)
+            order_by="Message.internaldate")
 
     thread_id = Column(Integer, ForeignKey('thread.id'), nullable=False)
     thread = relationship('Thread', backref="messages",
-            order_by=lambda msg: msg.internaldate)
+            order_by="Message.internaldate")
 
     # TODO probably want to store some of these headers in a better
     # non-pickled way to provide indexing and human-readability
@@ -623,10 +634,6 @@ class Message(JSONSerializable, Base):
         d['g_thrid'] = self.g_thrid
         d['namespace_id'] = self.namespace_id
         return d
-
-# make pulling up all messages in a given thread fast
-Index('message_namespace_id_g_thrid', Message.namespace_id,
-        Message.g_thrid)
 
 # These are the top 15 most common Content-Type headers
 # in my personal mail archive. --mg
@@ -666,12 +673,11 @@ class Block(JSONSerializable, Blob, Base):
 
     is_inboxapp_attachment = Column(Boolean, default=False)
     collection_id = Column(Integer, ForeignKey("collections.id"), nullable=True)
-    collection = relationship('Collection', backref="parts")
+    collection = relationship('Collection', backref="blocks")
 
     # TODO: create a constructor that allows the 'content_type' keyword
 
-    __table_args__ = (UniqueConstraint('message_id', 'walk_index',
-        'data_sha256', name='_blockmeta_uc'),)
+    __table_args__ = (UniqueConstraint('message_id', 'walk_index', 'data_sha256'),)
 
     def __init__(self, *args, **kwargs):
         self.content_type = None
@@ -734,14 +740,13 @@ class UIDValidity(JSONSerializable, Base):
     """
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    account_id = Column(ForeignKey('imapaccount.id'), nullable=False)
-    account = relationship("IMAPAccount")
+    imapaccount_id = Column(ForeignKey('imapaccount.id'), nullable=False)
+    imapaccount = relationship("IMAPAccount")
     folder_name = Column(String(255))
     uid_validity = Column(Integer)
     highestmodseq = Column(Integer)
 
-    __table_args__ = (UniqueConstraint('account_id', 'folder_name',
-        name='_folder_account_uc'),)
+    __table_args__ = (UniqueConstraint('imapaccount_id', 'folder_name'),)
 
 class Collection(Base):
     __tablename__ = 'collections'
@@ -801,8 +806,10 @@ class TodoNamespace(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    namespace = relationship('Namespace', backref=backref('todo_namespace', uselist=False))
-    namespace_id = Column(Integer, ForeignKey('namespace.id'), nullable=False, unique=True)
+    namespace = relationship('Namespace',
+            backref=backref('todo_namespace', uselist=False))
+    namespace_id = Column(Integer, ForeignKey('namespace.id'), nullable=False,
+            unique=True)
 
     user = relationship('User', backref=backref('todo_namespace', uselist=False))
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False, unique=True)
@@ -817,9 +824,37 @@ class Thread(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     subject = Column(Text(collation='utf8_unicode_ci'))
+    recentdate = Column(DateTime, nullable=False)
 
     # only on messages from Gmail
-    g_thrid = Column(String(255), nullable=True)
+    g_thrid = Column(String(255), nullable=True, index=True)
+
+    def update_from_message(self, message):
+        if message.internaldate > self.recentdate:
+            self.recentdate = message.internaldate
+        message.thread = self
+        return self
+
+    @classmethod
+    def from_message(cls, message, g_thrid):
+        """
+        This function will break threads if the subject changes, regardless
+        of whatever Gmail's threading behaviour is in that case.
+
+        Returns the updated or new thread, and adds the message to the thread.
+        Doesn't commit.
+        """
+        try:
+            thread = db_session.query(cls).filter_by(g_thrid=g_thrid,
+                    subject=message.subject).one()
+            if message.subject == thread.subject:
+                return thread.update_from_message(message)
+        except NoResultFound:
+            pass
+        thread = cls(subject=message.subject, g_thrid=g_thrid,
+                recentdate=message.internaldate)
+        message.thread = thread
+        return thread
 
 class FolderSync(Base):
     __tablename__ = 'foldersync'
@@ -827,8 +862,7 @@ class FolderSync(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     imapaccount_id = Column(ForeignKey('imapaccount.id'), nullable=False)
-    imapaccount = relationship('IMAPAccount',
-            backref=backref('foldersync', uselist=False))
+    imapaccount = relationship('IMAPAccount', backref='foldersyncs')
     folder_name = Column(String(255))
 
     # see state machine in sync.py
