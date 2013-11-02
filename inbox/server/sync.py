@@ -82,15 +82,6 @@ def refresh_crispin(email, dummy=False):
         log.error("Error refreshing crispin on {0} because {1}".format(email, e))
         raise e
 
-def new_or_updated(uids, folder, account_id, local_uids=None):
-    if local_uids is None:
-        local_uids = set([unicode(uid) for uid, in \
-                db_session.query(FolderItem.msg_uid).filter(
-                FolderItem.folder_name==folder,
-                FolderItem.imapaccount_id==account_id,
-                FolderItem.msg_uid.in_(uids))])
-    return partition(lambda x: x in local_uids, uids)
-
 def safe_download(uids, folder, crispin_client):
     try:
         raw_messages = crispin_client.uids(uids)
@@ -160,6 +151,13 @@ class FolderSyncMonitor(Greenlet):
         log.info("UIDVALIDITY for {0} has changed; resyncing UIDs".format(
             self.folder_name))
         raise Exception("Unimplemented")
+
+    def _new_or_updated(self, uids, local_uids):
+        """ HIGHESTMODSEQ queries return a list of messages that are *either*
+            new *or* updated. We do different things with each, so we need to
+            sort out which is which.
+        """
+        return partition(lambda x: x in local_uids, uids)
 
     def initial_sync(self):
         """ Downloads entire messages and:
@@ -333,8 +331,7 @@ class FolderSyncMonitor(Greenlet):
         # are slow on large folders.
         modified = self.crispin_client.new_and_updated_uids(
                 self.crispin_client.selected_highestmodseq)
-        new, updated = new_or_updated(modified, self.folder_name,
-                self.account.id, local_uids)
+        new, updated = self._new_or_updated(modified, local_uids)
         self.log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
         # for new, query g_msgids and update cache
         remote_g_msgids.update(self.crispin_client.g_msgids(new))
@@ -355,8 +352,8 @@ class FolderSyncMonitor(Greenlet):
         uids = self.crispin_client.new_and_updated_uids(highestmodseq)
         log.info("Starting highestmodseq update on {0} (current HIGHESTMODSEQ: {1})".format(folder, self.crispin_client.selected_highestmodseq))
         if uids:
-            new, updated = new_or_updated(uids, folder,
-                    self.crispin_client.account.id)
+            new, updated = self._new_or_updated(uids,
+                    self.account.all_uids(self.folder_name))
             log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
             for uids in chunk(new, self.crispin_client.CHUNK_SIZE):
                 # XXX TODO: dedupe this code with _initial_sync
