@@ -250,7 +250,7 @@ class FolderSyncMonitor(Greenlet):
 
         self.log.info("Finished.")
 
-    def gevent_check_join(self, threads, errmsg):
+    def _gevent_check_join(self, threads, errmsg):
         """ Block until all threads have completed and throw an error if threads
             are not successful.
         """
@@ -273,7 +273,7 @@ class FolderSyncMonitor(Greenlet):
                     for part in msg.parts]
             # Fatally abort if part saves error out. Messages in this
             # chunk will be retried when the sync is restarted.
-            self.gevent_check_join(threads,
+            self._gevent_check_join(threads,
                     "Could not save message parts to blob store!")
 
         # XXX clear data on part objects to save memory?
