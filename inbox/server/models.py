@@ -589,19 +589,19 @@ class Message(JSONSerializable, Base):
             order_by=lambda msg: msg.internaldate)
 
     # TODO probably want to store some of these headers in a better
-    # non-pickled way to provide indexing
-    from_addr = Column(MediumPickle)
-    sender_addr = Column(MediumPickle)
-    reply_to = Column(MediumPickle)
-    to_addr = Column(MediumPickle)
-    cc_addr = Column(MediumPickle)
-    bcc_addr = Column(MediumPickle)
-    in_reply_to = Column(MediumPickle)
-    message_id = Column(String(255))
-    subject = Column(Text(collation='utf8_unicode_ci'))
-    internaldate = Column(DateTime)
-    size = Column(Integer, default=0)
-    data_sha256 = Column(String(255))
+    # non-pickled way to provide indexing and human-readability
+    from_addr = Column(MediumPickle, nullable=True)
+    sender_addr = Column(MediumPickle, nullable=True)
+    reply_to = Column(MediumPickle, nullable=True)
+    to_addr = Column(MediumPickle, nullable=True)
+    cc_addr = Column(MediumPickle, nullable=True)
+    bcc_addr = Column(MediumPickle, nullable=True)
+    in_reply_to = Column(MediumPickle, nullable=True)
+    message_id = Column(String(255), nullable=False)
+    subject = Column(Text(collation='utf8_unicode_ci'), nullable=False)
+    internaldate = Column(DateTime, nullable=False)
+    size = Column(Integer, default=0, nullable=False)
+    data_sha256 = Column(String(255), nullable=True)
 
     # only on messages from Gmail
     g_msgid = Column(String(255), nullable=True)
