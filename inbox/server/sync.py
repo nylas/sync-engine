@@ -14,7 +14,6 @@ from ..util.cache import set_cache, get_cache, rm_cache
 from .log import configure_sync_logging, get_logger
 log = get_logger()
 
-from gc import collect as garbge_collect
 from datetime import datetime
 
 from gevent import Greenlet, sleep, joinall, kill
@@ -231,7 +230,7 @@ class FolderSyncMonitor(Greenlet):
         self.log.info("Skipping {0} uids downloaded via other folders".format(
             len(folderitem_only)))
         if len(folderitem_only) > 0:
-            self._add_new_folderitem(remote_g_msgids, foldermeta_only)
+            self._add_new_folderitem(remote_g_msgids, folderitem_only)
 
         self.log.info("Starting sync for {0} with chunks of size {1}".format(
             self.folder_name, self.crispin_client.CHUNK_SIZE))
@@ -352,36 +351,15 @@ class FolderSyncMonitor(Greenlet):
         uids = self.crispin_client.new_and_updated_uids(highestmodseq)
         log.info("Starting highestmodseq update on {0} (current HIGHESTMODSEQ: {1})".format(folder, self.crispin_client.selected_highestmodseq))
         if uids:
-            new, updated = self._new_or_updated(uids,
-                    self.account.all_uids(self.folder_name))
+            local_uids = self.account.all_uids(self.folder_name)
+            new, updated = self._new_or_updated(uids, local_uids)
             log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
             for uids in chunk(new, self.crispin_client.CHUNK_SIZE):
-                # XXX TODO: dedupe this code with _initial_sync
-                new_messages, new_folderitem = safe_download(
-                        uids, folder, self.crispin_client)
+                self._download_new_messages(uids, len(local_uids), len(new))
 
-                db_session.add_all(new_folderitem)
-                db_session.add_all([msg['meta'] for msg in new_messages.values()])
-                for msg in new_messages.values():
-                    db_session.add_all(msg['parts'])
-                    # Save message part blobs before committing changes to db.
-                    threads = [Greenlet.spawn(part.save, part._data) \
-                            for part in msg['parts']]
-                    # Fatally abort if part saves error out. Messages in this
-                    # chunk will be retried when the sync is restarted.
-                    self.gevent_check_join(threads, "Could not save message parts to blob store!")
-                    # Clear data stored on Block objects here. Hopefully this
-                    # will help with memory issues.
-                    for part in msg['parts']:
-                        part._data = None
-
-                garbge_collect()
-
-                db_session.commit()
             # bigger chunk because the data being fetched here is very small
             for uids in chunk(updated, 5*self.crispin_client.CHUNK_SIZE):
                 self._update_metadata(uids)
-                db_session.commit()
         else:
             log.info("No changes")
 
@@ -398,19 +376,18 @@ class FolderSyncMonitor(Greenlet):
         db_session.commit()
 
     def poll(self):
-        """ Poll this every N seconds for active (logged-in) users and every
-            N minutes for logged-out users. It checks for changed message metadata
-            and new messages using CONDSTORE / HIGHESTMODSEQ and also checks for
-            deleted messages.
+        """ It checks for changed message metadata and new messages using
+            CONDSTORE / HIGHESTMODSEQ and also checks for deleted messages.
 
-            We may also wish to frob update frequencies based on which folder
-            a user has visible in the UI as well.
+            We may wish to frob update frequencies based on which folder
+            a user has visible in the UI as well, and whether or not a user
+            is actually logged in on any devices.
         """
         self.log.info("polling {0} folder {1}".format(
             self.account.email_address, self.folder_name))
         cached_validity = self.account.get_uidvalidity(self.folder_name)
         # we use status instead of select here because it's way faster and
-        # we're not sure we want to commit to a session yet
+        # we're not sure we want to commit to an IMAP session yet
         status = self.crispin_client.folder_status(self.folder_name)
         if status['HIGHESTMODSEQ'] > cached_validity.highestmodseq:
             self.crispin_client.select_folder(self.folder_name)
@@ -424,14 +401,15 @@ class FolderSyncMonitor(Greenlet):
 
         self.shared_state['status_callback'](
             self.account, 'poll', datetime.utcnow().isoformat())
-        sleep(self.n)
+        sleep(self.poll_frequency)
 
     def _remove_deleted_messages(self):
         """ Works as follows:
-            1. do a LIST on the current folder to see what messages are on the server
-            2. compare to message uids stored locally
-            3. purge messages we have locally but not on the server. ignore
-                messages we have on the server that aren't local.
+            1. Do a LIST on the current folder to see what messages are on the
+               server.
+            2. Compare to message uids stored locally.
+            3. Purge messages we have locally but not on the server. Ignore
+               messages we have on the server that aren't local.
         """
         remote_uids = self.crispin_client.all_uids()
         local_uids = [uid for uid, in
@@ -455,6 +433,7 @@ class FolderSyncMonitor(Greenlet):
         self.log.info("new flags: {0}".format(new_flags))
         self.account.update_metadata(self.crispin_client.selected_folder_name,
                 uids, new_flags)
+        db_session.commit()
 
 class MailSyncMonitor(Greenlet):
     """ Top-level controller for an account's mail sync. Spawns individual
