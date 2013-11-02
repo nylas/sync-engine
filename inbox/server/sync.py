@@ -4,7 +4,7 @@ from __future__ import division
 
 import socket
 
-from .sessionmanager import get_crispin_from_email
+from .sessionmanager import new_crispin
 
 from .models import db_session, FolderItem, Message, UIDValidity
 from .models import IMAPAccount, FolderSync
@@ -20,8 +20,6 @@ from datetime import datetime
 
 from gevent import Greenlet, sleep, joinall, kill
 from gevent.queue import Queue, Empty
-
-from .google_oauth import InvalidOauthGrantException
 
 import encoding
 
@@ -75,13 +73,6 @@ able to do so, and leaving that configurability out simplifies the interface.
 class SyncException(Exception): pass
 
 ### main
-
-def refresh_crispin(email, dummy=False):
-    try:
-        return get_crispin_from_email(email, dummy)
-    except InvalidOauthGrantException, e:
-        log.error("Error refreshing crispin on {0} because {1}".format(email, e))
-        raise e
 
 def safe_download(uids, folder, crispin_client):
     try:
@@ -276,7 +267,7 @@ class FolderSyncMonitor(Greenlet):
         # Save message part blobs before committing changes to db.
         for msg in new_messages:
             threads = [Greenlet.spawn(part.save, part._data) \
-                    for part in msg.parts]
+                    for part in msg.parts if hasattr(part, '_data')]
             # Fatally abort if part saves error out. Messages in this
             # chunk will be retried when the sync is restarted.
             self._gevent_check_join(threads,
@@ -286,8 +277,6 @@ class FolderSyncMonitor(Greenlet):
         # garbge_collect()
 
         db_session.commit()
-
-        num_local_messages += len(uids) + 0.0
 
         percent_done = (num_local_messages / num_remote_messages) * 100
         self.shared_state['status_callback'](self.account, 'initial',
@@ -392,7 +381,7 @@ class FolderSyncMonitor(Greenlet):
             a user has visible in the UI as well, and whether or not a user
             is actually logged in on any devices.
         """
-        self.log.info("polling {0} folder {1}".format(
+        self.log.info("polling {0} {1}".format(
             self.account.email_address, self.folder_name))
         cached_validity = self.account.get_uidvalidity(self.folder_name)
         # we use status instead of select here because it's way faster and
@@ -409,7 +398,7 @@ class FolderSyncMonitor(Greenlet):
                     cached_validity.highestmodseq)
 
         self.shared_state['status_callback'](
-            self.account, 'poll', datetime.utcnow().isoformat())
+            self.account, 'poll', (self.folder_name, datetime.utcnow().isoformat()))
         sleep(self.shared_state['poll_frequency'])
 
         return 'poll'
@@ -452,12 +441,12 @@ class MailSyncMonitor(Greenlet):
 
         poll_frequency and heartbeat are in seconds.
     """
-    def __init__(self, account, status_callback, poll_frequency=5, heartbeat=1):
+    def __init__(self, account, status_callback, poll_frequency=30, heartbeat=1):
         self.inbox = Queue()
         # how often to check inbox
         self.heartbeat = heartbeat
 
-        self.crispin_client = refresh_crispin(account.email_address)
+        self.crispin_client = new_crispin(account.email_address)
         self.account = account
         self.log = configure_sync_logging(account)
 
@@ -499,8 +488,10 @@ class MailSyncMonitor(Greenlet):
             'initial' state at a time.
         """
         for folder in self.crispin_client.sync_folders:
+            self.log.info("Initializing folder sync for {0}".format(folder))
             thread = FolderSyncMonitor(folder, self.account,
-                    self.crispin_client, self.log, self.shared_state)
+                    new_crispin(self.account.email_address),
+                    self.log, self.shared_state)
             thread.start()
             while not self._thread_polling(thread):
                 sleep(self.heartbeat)
@@ -561,8 +552,9 @@ class SyncService:
                     account.sync_lock()
                     def update_status(account, state, status):
                         """ I really really wish I were a lambda """
-                        self.statuses[account.id] = dict(
-                                state=state, status=status)
+                        folder, progress = status
+                        self.statuses.setdefault(
+                                account.id, dict())[folder] = (state, progress)
                         notify(account, state, status)
 
                     monitor = MailSyncMonitor(account, update_status)

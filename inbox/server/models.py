@@ -631,7 +631,9 @@ class Message(JSONSerializable, Base):
         d['date'] = self.internaldate
         d['subject'] = self.subject
         d['id'] = self.id
-        d['g_thrid'] = self.g_thrid
+        # XXX TODO change this name to be more generic / accurate (now it's
+        # _our_ thrid, not google's)
+        d['g_thrid'] = self.thread_id
         d['namespace_id'] = self.namespace_id
         return d
 

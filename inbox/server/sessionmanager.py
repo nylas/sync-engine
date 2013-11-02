@@ -113,14 +113,17 @@ def get_crispin_from_session(session_token):
     s = get_session(session_token)
     return get_crispin_from_email(s.email_address)
 
-def get_crispin_from_email(email_address, initial=False, dummy=False):
+def new_crispin(email_address, dummy=False):
     cls = crispin.DummyCrispinClient if dummy else crispin.CrispinClient
+    account = get_account(email_address)
+    assert account is not None
+    return cls(account)
+
+def get_crispin_from_email(email_address, initial=False, dummy=False):
     if email_address in email_address_to_crispins:
         return email_address_to_crispins[email_address]
     else:
-        account = get_account(email_address)
-        assert account is not None
-        crispin_client =  cls(account)
+        crispin_client = new_crispin(email_address, dummy)
 
         email_address_to_crispins[email_address] = crispin_client
         return crispin_client

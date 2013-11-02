@@ -145,7 +145,7 @@ function(
         $scope.activeThread = selectedThread;
 
         angular.forEach(selectedThread.messages, function(message, key) {
-            Wire.rpc('body_for_messagemeta', [$scope.activeNamespace.id, message.id], function(data) {
+            Wire.rpc('body_for_message', [$scope.activeNamespace.id, message.id], function(data) {
                 angular.forEach(JSON.parse(data), function(value, key) {
                     $log.info("Received message body.")
                     message.displayBody = value;

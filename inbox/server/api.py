@@ -6,13 +6,14 @@ from functools import wraps
 import json
 import postel
 from bson import json_util
-from models import db_session, Message, FolderItem, SharedFolder
+from models import db_session, Message, FolderItem, SharedFolder, Thread
 from models import Namespace, User, IMAPAccount, TodoNamespace, TodoItem
 
 from ..util.html import plaintext2html
 from ..util.itert import chunk
 
 from sqlalchemy.orm import joinedload
+from sqlalchemy import distinct
 
 import zerorpc
 import os
@@ -123,28 +124,23 @@ class API(object):
             folder, since we fetch the full thread if one of the messages is in
             the requested folder.
         """
-        assert self.namespace.is_root, "get_messages is only defined on root namespaces"
-
-        # Get all thread IDs for all messages in this folder.
         imapaccount_id = self.namespace.imapaccount_id
-        all_msgids = db_session.query(FolderItem.message_id)\
+        all_thrids = set([thrid for thrid, in db_session.query(
+            distinct(Message.thread_id)).join(FolderItem) \
               .filter(FolderItem.folder_name == folder_name,
-                      FolderItem.imapaccount_id == imapaccount_id)
-        all_thrids = set()
-        for thrid, in db_session.query(Message.g_thrid).filter(
-                Message.namespace_id == self.namespace_id,
-                Message.id.in_(all_msgids)):
-            all_thrids.add(thrid)
+                      FolderItem.imapaccount_id == imapaccount_id).all()])
+
+        log.error("thrids: {0}".format(all_thrids))
 
         # Get all messages for those thread IDs
         messages = []
         DB_CHUNK_SIZE = 100
-        for g_thrids in chunk(list(all_thrids), DB_CHUNK_SIZE):
-            all_msgs_query = db_session.query(Message).filter(
-                    Message.namespace_id == self.namespace_id,
-                    Message.g_thrid.in_(g_thrids))
-            messages += all_msgs_query.all()
-
+        for thrids in chunk(list(all_thrids), DB_CHUNK_SIZE):
+            all_msgs_query = db_session.query(Thread).join(Thread.messages) \
+                    .filter(Thread.id.in_(thrids),
+                            Message.namespace_id == self.namespace_id)
+            for thread in all_msgs_query:
+                messages.extend(thread.messages)
 
         log.info('found {0} message IDs'.format(len(messages)))
         return [m.cereal() for m in messages]
@@ -187,9 +183,9 @@ class API(object):
 
     @namespace_auth
     @jsonify
-    def body_for_message(self, meta_id):
-        message_meta = db_session.query(Message).filter_by(id=meta_id).one()
-        parts = message_meta.parts
+    def body_for_message(self, message_id):
+        message = db_session.query(Message).filter_by(id=message_id).one()
+        parts = message.parts
         plain_data = None
         html_data = None
 
