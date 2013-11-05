@@ -178,7 +178,7 @@ class IMAPAccount(Base):
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     user = relationship("User", backref="imapaccounts")
 
-    email_address = Column(String(254), nullable=True, index=True)
+    email_address = Column(String(255), nullable=True, index=True)
     provider = Column(Enum('Gmail', 'Outlook', 'Yahoo', 'Inbox'), nullable=False)
 
     # local flags & data
@@ -549,7 +549,7 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    name = Column(String(255))
+    name = Column(Text)
 
 class Contact(Base):
     """ Inbox-specific sessions. """
@@ -563,8 +563,8 @@ class Contact(Base):
     g_id = Column(String(64))
     source = Column("source", Enum("local", "remote"))
 
-    email_address = Column(String(254), nullable=True, index=True)
-    name = Column(Text(collation='utf8_unicode_ci'))
+    email_address = Column(String(255), nullable=True, index=True)
+    name = Column(Text)
     # phone_number = Column(String(64))
 
     updated_at = Column(DateTime, default=func.now(), onupdate=func.current_timestamp())
@@ -609,7 +609,7 @@ class Message(JSONSerializable, Base):
     bcc_addr = Column(MediumPickle, nullable=True)
     in_reply_to = Column(MediumPickle, nullable=True)
     message_id = Column(String(255), nullable=False)
-    subject = Column(Text(collation='utf8_unicode_ci'), nullable=False)
+    subject = Column(Text, nullable=False)
     internaldate = Column(DateTime, nullable=False)
     size = Column(Integer, default=0, nullable=False)
     data_sha256 = Column(String(255), nullable=True)
@@ -667,7 +667,7 @@ class Block(JSONSerializable, Blob, Base):
     # Save some space with common content types
     _content_type_common = Column(Enum(*common_content_types))
     _content_type_other = Column(String(255))
-    filename = Column(String(255))
+    filename = Column(Text)
 
     content_disposition = Column(Enum('inline', 'attachment'))
     content_id = Column(String(255))  # For attachments
@@ -825,7 +825,7 @@ class Thread(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    subject = Column(Text(collation='utf8_unicode_ci'))
+    subject = Column(Text)
     recentdate = Column(DateTime, nullable=False)
 
     # only on messages from Gmail
