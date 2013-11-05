@@ -236,16 +236,6 @@ class CrispinClientBase(object):
                 self._folder_names['Labels'].sort()
         return self._folder_names
 
-    def all_mail_folder_name(self):
-        if self._all_mail_folder_name is not None:
-            return self._all_mail_folder_name
-        folders = self._fetch_folder_list()
-        for flags, delimiter, name in folders:
-            if u'\\All' in flags:
-                self._all_mail_folder_name = name
-                return name
-        raise CrispinError("Couldn't find All Mail folder")
-
 class DummyCrispinClient(CrispinClientBase):
     """ A crispin client that doesn't actually use IMAP at all. Instead, it
         retrieves cached data from disk and allows one to "replay" previously
