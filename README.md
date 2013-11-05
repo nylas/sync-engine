@@ -1,45 +1,55 @@
 # Inbox
 
-email, refined.
-
 [http://www.inboxapp.com](http://www.inboxapp.com)
 
 All of the todos are in [the Asana workspace](https://app.asana.com/0/4983727800919/4983727800919).
 
 
+The Inbox platform currenly consists of two parts: the Python web server and the Javascript browser client. They communicate mostly over a custom JSON-RPC inspired websocket protocol.
+
+The server usually runs on EC2. Here's how you get it started.
+
+
 ## Setup
 
-1. Install [virtualenv](http://www.virtualenv.org/en/latest/), which is just good in general.
+We run Ubuntu 10.04 on EC2. You can also do this locally via Vmware Fusion
+
+1. Install [virtualenv](http://www.virtualenv.org/en/latest/).
 
 2. `git clone --recursive git@github.com:inboxapp/inbox.git` to get the source and submodules.
 
-3. `cd` into the source and call `virtualenv --no-site-packages .`
+3. `cd` into the source and call `virtualenv --no-site-packages .` which will create a new environment, free of any default python packages that come with Ubuntu
 
-4. `git submodule init && git submodule update`
+4. `git submodule init && git submodule update` to fetch the subrepos
 
-5. `source bin/activate` to start virtualenv
+5. `source bin/activate` to start virtualenv.
 
-6. `python setup.py develop` to install required packages
+6. run `easy_install -U distribute`
 
-Also need to install libevent and then gevent.
+7. run `./install_xapian.sh`
 
-7. Add the following to `/etc/hosts`
+8. run `pip install -r requirements.txt`
 
-    # InboxApp
-    127.0.0.1   www.inboxapp.com
-    127.0.0.1   inboxapp.com
+9. Then copy `config-sample.cfg` to `config.cfg` and change it appropriately for your local MySQL database and hostname.
 
-On my mac I had to run `dscacheutil -flushcache` afterward.
+10. Nginx needs some SSL certificates. Go ask Michael for those, or create your own self-signed ones.
 
-8. Install nginx > 1.4 and start it using `sudo nginx -c deploy/nginx.conf -p ./`
+11. Run `sudo nginx -c deploy/nginx.conf -p ./` to start nginx
 
-8.5 Install xapian using `sudo packages/install_xapian.sh`
+12. Run `./inboxapp-srv debug` which should start up nicely.
 
-9. run `./inbox start`. This defaults to port 8888.
+13. Visit your page in a browser and log in!
 
-10. Open your browser to [http://localhost:8888](http://localhost:8888)
 
-12. Now make that better
+## Local development
+
+There are a few ways to efficiently develop locally.
+
+If you're only doing client dev work, you can simply clone the repo locally and start a Python webserver to host the static assets by running `sudo python -m SimpleHTTPServer 8888`. You should configure the Wire.js protocol to connect to the production server endpoint by editing `web_client/js/app.js` and changing it to something like `https://dev-01.inboxapp.com:443/wire`. Note that you need the 443 since the `SimpleHTTPServer` doesn't support SSL.
+
+You also need to edit your `/etc/hosts` file to include `127.0.0.1 dev-ui.inboxapp.com` in order for the Google oauth callback to work. Then visit http://dev-ui.inboxapp.com:8888 and voila!
+
+NB: when changing `/etc/hosts` on OS X you might need to run `dscacheutil -flushcache` afterward.
 
 
 <hr/>
