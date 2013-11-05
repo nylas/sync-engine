@@ -93,8 +93,8 @@ app.directive("listItemTodo", function() {
         controller: function($scope, $element, $attrs, $transclude) {
 
           $scope.clickCheckbox = function() {
-            console.log("Toggling!");
-            $scope.todo.complete = !$scope.todo.complete;
+            console.log(["Toggling!", $scope.todo]);
+            $scope.todo.completed = !$scope.todo.completed;
           };
         },
 

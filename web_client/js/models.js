@@ -28,8 +28,6 @@ app.factory('IBThread', function ($injector) {
     }
 
 
-
-
     IBThreadObject.prototype.recentMessage = function() {
         return this.messages[this.messages.length - 1];
     };
@@ -37,8 +35,6 @@ app.factory('IBThread', function ($injector) {
     IBThreadObject.prototype.subject = function() {
         return this.messages[0].subject;
     };
-
-
 
 
 
@@ -71,9 +67,6 @@ app.factory('IBMessageMeta', function ($injector)
     function IBMessageMetaObject($rootScope, data) {
         this.$rootScope = $rootScope;
 
-
-        console.log(data);
-
         // Propogate fields to the object
         for (var key in data) {
             if (self.hasOwnProperty(key)) {
@@ -83,6 +76,8 @@ app.factory('IBMessageMeta', function ($injector)
         }
         // Fix the date
         this.date = new Date(data.date.$date);
+
+
 
         var gravatar_size = 25;
         var theEmail = this.from[0][2] + '@' + this.from[0][3];
@@ -133,7 +128,6 @@ app.factory('IBMessageMeta', function ($injector)
         return this.from[0][2] + '@' + this.from[3];
     }
 
-
     IBMessageMetaObject.prototype.printDate = function() {
         // var curr_date = this.date.getDate();
         // var curr_month = this.date.getMonth() + 1; //Months are zero based
@@ -142,7 +136,6 @@ app.factory('IBMessageMeta', function ($injector)
 
         return this.date.toLocaleString();
     };
-
 
     return function(data) {
         // This is based on $injector.instantiate
@@ -157,12 +150,64 @@ app.factory('IBMessageMeta', function ($injector)
         // e.g. someModule.factory('greeter', ['$window', function(renamed$window) {}]);
         IBMessageMeta.prototype = (angular.isArray(Type) ? Type[Type.length - 1] : Type).prototype;
         instance = new IBMessageMeta();
-
         returnedValue = $injector.invoke(Type, instance, locals);
         return angular.isObject(returnedValue) ? returnedValue : instance;
 
     };
 });
+
+
+app.factory('IBTodo', function ($injector)
+{
+    function IBTodoObject($rootScope, data) {
+        this.$rootScope = $rootScope;
+
+        // Propogate fields to the object
+        for (var key in data) {
+            if (self.hasOwnProperty(key)) {
+                console.log(key + " -> " + p[key]);
+            }
+            this[key] = data[key];
+        }
+
+    }
+
+
+    IBTodoObject.prototype.fromName = function() {
+        return this.from[0][0];
+    };
+
+    IBTodoObject.prototype.fromEmail = function() {
+        return this.from[0][2] + '@' + this.from[3];
+    };
+
+    IBTodoObject.prototype.printDate = function() {
+        // var curr_date = this.date.getDate();
+        // var curr_month = this.date.getMonth() + 1; //Months are zero based
+        // var curr_year = this.date.getFullYear();
+        // return curr_date + "-" + curr_month + "-" + curr_year;
+
+        return this.date.toLocaleString();
+    };
+
+    return function(data) {
+        // This is based on $injector.instantiate
+        var Type = IBTodoObject;
+        var locals = {data:data};
+        var IBTodo = function() {};
+        var instance;
+        var returnedValue;
+        // Check if Type is annotated and use just the given function at n-1 as parameter
+        // e.g. someModule.factory('greeter', ['$window', function(renamed$window) {}]);
+        IBTodo.prototype = (angular.isArray(Type) ? Type[Type.length - 1] : Type).prototype;
+        instance = new IBTodo();
+
+        returnedValue = $injector.invoke(Type, instance, locals);
+        return angular.isObject(returnedValue) ? returnedValue : instance;
+    };
+});
+
+
 
 
 
@@ -190,8 +235,3 @@ app.factory('IBContact', function ($injector) {
         IBObject, { data: data });
     };
 });
-
-
-
-
-

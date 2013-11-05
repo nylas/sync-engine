@@ -32,6 +32,8 @@ function(
 
     $scope.threads = []; // For UI element
     $scope.displayedThreads = []; // currently displayed
+    $scope.displayTodos = [];
+
 
     $scope.message_map = {}; // Actual message cache
     $scope.activeThread = undefined; // Points to the current active mssage
@@ -44,6 +46,22 @@ function(
 
     $scope.archiveButtonHandler = function() {
         $log.info("archiveButtonHandler()");
+    };
+
+    $scope.todoButtonHandler = function() {
+        $log.info("todoButtonHandler()");
+        // for now, thread objects don't have an ID, so fetch the g_thrid off the first message
+        var g_thrid = $scope.activeThread.messages[0].g_thrid;
+        Wire.rpc('create_todo', [$scope.activeNamespace.id, g_thrid], function(data) {
+            if (data !== "OK") {
+                $log.error("invalid create_todo response: " + data);
+            }
+            $log.info("successfully created todo item");
+            $scope.displayedThreads = $scope.displayedThreads.filter(function(elt) {
+                return elt !== $scope.activeThread;
+            });
+            $scope.activeThread = null;
+        });
     };
 
     $scope.clearSearch = function() {
@@ -124,6 +142,18 @@ function(
     };
 
 
+/*
+    $scope.loadTodoItems = function() {
+        Wire.rpc('todo_items', [], function(data) {
+            var parsed = JSON.parse(data);
+            $log.info("todo items:");
+            $log.info(parsed);
+            $scope.displayTodos = parsed;
+        });
+    }
+*/
+
+
     $scope.sendMessage = function(message_string) {
         Wire.rpc('send_mail', {
                 message_to_send: {
@@ -157,21 +187,35 @@ function(
 
     };
 
+    // this shouldn't really be in $scope, right?
+    $scope.clearAllActiveViews = function() {
+        $scope.isMailViewActive = false;
+        $scope.isTodoViewActive = false;
+        $scope.isStacksViewActive = false;
+        $scope.isPeopleViewActive = false;
+        $scope.isGroupsViewActive = false;
+        $scope.isSettingsViewActive = false;
+    };
 
-    // Loaded. Load the messages.
-    // TOFIX we should load these once we know the socket has actually connected
+    $scope.clearAllActiveViews();
+    // change this to Angular's $on.$viewContentLoaded?
     setTimeout(function() {
-        $scope.loadNamespaces();
+        $scope.activateMailView();
     }, 2000);
 
-    $scope.displayTodos = MockData.todos;
+    $scope.activateMailView = function() {
+        $scope.clearAllActiveViews();
+        $scope.isMailViewActive = true;
+        // Loaded. Load the messages.
+        // TOFIX we should load these once we know the socket has actually connected
+        $scope.loadNamespaces();
+    };
 
-    $scope.isMailViewActive = true;
-    $scope.isTodoViewActive = false;
-    $scope.isStacksViewActive = false;
-    $scope.isPeopleViewActive = false;
-    $scope.isGroupsViewActive = false;
-    $scope.isSettingsViewActive = false;
+    $scope.activateTodoView = function() {
+        $scope.clearAllActiveViews();
+        $scope.isTodoViewActive = true;
+        // $scope.loadTodoItems();
+    };
 
     // For todo sorting
     $scope.sortableOptions = {
@@ -208,6 +252,7 @@ function(
       console.log(['Clicked row:', t]);
   };
 
+  $scope.displayTodos = MockData.todos;
 
 });
 
