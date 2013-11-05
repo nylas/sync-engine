@@ -420,7 +420,7 @@ class FolderSyncMonitor(Greenlet):
 
         to_delete = set(local_uids).difference(set(remote_uids))
         if to_delete:
-            self.account.delete_messages(to_delete,
+            self.account.remove_messages(to_delete,
                     self.crispin_client.selected_folder_name)
             self.log.info("Deleted {0} removed messages".format(len(to_delete)))
 
