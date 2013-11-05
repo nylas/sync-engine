@@ -570,7 +570,10 @@ class SyncService:
             else:
                 results[account.email_address] =  "OK sync already started"
         if email_address:
-            return results[email_address]
+            if email_address in results:
+                return results[email_address]
+            else:
+                return "OK no such user"
         return results
 
     def stop_sync(self, email_address=None):
@@ -597,7 +600,10 @@ class SyncService:
             except:
                 results[account.email_address] = "ERROR error encountered"
         if email_address:
-            return results[email_address]
+            if email_address in results:
+                return results[email_address]
+            else:
+                return "OK no such user"
         return results
 
     def sync_status(self, account_id):
