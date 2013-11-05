@@ -1,9 +1,9 @@
-[submodule "imaplib2"]
-	path = packages/imaplib2
-	url = git@github.com:inboxapp/imaplib2.git
 [submodule "packages/imapclient"]
 	path = packages/imapclient
 	url = git@github.com:inboxapp/imapclient.git
 [submodule "packages/bleach"]
 	path = packages/bleach
 	url = git@github.com:grinich/bleach.git
+[submodule "packages/flanker"]
+	path = packages/flanker
+	url = git@github.com:inboxapp/flanker.git

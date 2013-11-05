@@ -874,8 +874,13 @@ class FolderSync(Base):
 
     __table_args__ = (UniqueConstraint('imapaccount_id', 'folder_name'),)
 
+
+config_prefix = 'RDS' if is_prod() else 'MYSQL'
+database_name = config.get('_'.join([config_prefix, 'DATABASE']))
+
+
 def db_uri():
-    uri_template = 'mysql://{username}:{password}@{host}:{port}/{database}?charset=utf8mb4'
+    uri_template = 'mysql://{username}:{password}@{host}:{port}'
     config_prefix = 'RDS' if is_prod() else 'MYSQL'
 
     return uri_template.format(
@@ -883,10 +888,13 @@ def db_uri():
         # http://stackoverflow.com/questions/15728290/sqlalchemy-valueerror-for-slash-in-password-for-create-engine (also applicable to '+' sign)
         password = urlquote(config.get('_'.join([config_prefix, 'PASSWORD']))),
         host = config.get('_'.join([config_prefix, 'HOSTNAME'])),
-        port = config.get('_'.join([config_prefix, 'PORT'])),
-        database = config.get('_'.join([config_prefix, 'DATABASE'])))
+        port = config.get('_'.join([config_prefix, 'PORT'])))
 
-engine = create_engine(db_uri())
+
+engine = create_engine(db_uri(), connect_args = {'charset': 'utf8mb4'} )
+engine.execute("CREATE DATABASE IF NOT EXISTS `{database}` DEFAULT CHARACTER SET `utf8`".format(database=database_name)) #create db, or use utf8mb4??
+engine.execute("USE {database}".format(database=database_name)) # select new db
+
 
 def init_db():
     """ Make the tables. """
