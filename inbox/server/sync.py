@@ -280,10 +280,10 @@ class FolderSyncMonitor(Greenlet):
         percent_done = (num_local_messages / num_remote_messages) * 100
         self.shared_state['status_callback'](self.account, 'initial',
                 (self.folder_name, percent_done))
-        self.log.info("Syncing %s -- %.4f%% (%i/%i)" % (
+        self.log.info("Syncing %s -- %.2f%% (%i/%i)" % (
             self.folder_name, percent_done,
             num_local_messages, num_remote_messages))
-        return num_local_messages
+        return len(uids)
 
     def _add_new_folderitem(self, remote_g_msgids, uids):
         # collate message objects to relate the new foldersmeta objects to
