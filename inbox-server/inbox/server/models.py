@@ -869,7 +869,7 @@ class FolderSync(Base):
 
     # see state machine in sync.py
     state = Column(Enum('initial', 'initial uidinvalid',
-                        'poll', 'poll uidinvalid'),
+                        'poll', 'poll uidinvalid', 'finish'),
                         default='initial', nullable=False)
 
     __table_args__ = (UniqueConstraint('imapaccount_id', 'folder_name'),)

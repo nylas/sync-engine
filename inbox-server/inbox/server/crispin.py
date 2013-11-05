@@ -100,6 +100,18 @@ class CrispinClientBase(object):
         return all_folders
 
     @property
+    def poll_folders(self):
+        """ Gmail's weird "everything is a subset of All Mail" paradigm
+            means we treat it differently than other providers---for Gmail,
+            we only poll on INBOX and All Mail; for other providers we
+            poll on every single folder.
+        """
+        if self.account.provider == 'Gmail':
+            return [self.folder_names['Inbox'], self.folder_names['All']]
+        else:
+            return self.sync_folders
+
+    @property
     def selected_folder_name(self):
         return or_none(self.selected_folder, lambda f: f[0])
 

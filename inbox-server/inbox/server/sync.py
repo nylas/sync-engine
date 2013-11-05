@@ -47,16 +47,17 @@ Folder sync state is stored in the FolderSync table to allow for restarts.
 
 Here's the state machine:
 
-----------------         ----------------------
-- initial sync - <-----> - initial uidinvalid -
-----------------         ----------------------
-        |
-        ∨
-----------------         ----------------------
--      poll    - <-----> -   poll uidinvalid  -
-----------------         ----------------------
--  ∧
-----
+        -----
+        |   ----------------         ----------------------
+        ∨   | initial sync | <-----> | initial uidinvalid |
+----------  ----------------         ----------------------
+| finish |          |
+----------          ∨
+        ^   ----------------         ----------------------
+        |---|      poll    | <-----> |   poll uidinvalid  |
+            ----------------         ----------------------
+            |  ∧
+            ----
 
 We encapsulate sync engine instances in greenlets for cooperative coroutine
 scheduling around network I/O.
@@ -107,6 +108,7 @@ class FolderSyncMonitor(Greenlet):
                 'initial uid invalid': lambda: self.resync_uids('initial'),
                 'poll': self.poll,
                 'poll uid invalid': lambda: self.resync_uids('poll'),
+                'finish': self.shutdown,
                 }
 
         Greenlet.__init__(self)
@@ -121,16 +123,26 @@ class FolderSyncMonitor(Greenlet):
                     folder_name=self.folder_name)
             db_session.add(foldersync)
             db_session.commit()
-        # NOTE: The parent MailSyncMonitor handler could kill us at any time if it
-        # receives a shutdown command. The shutdown command is equivalent
-        # to ctrl-c.
+        # NOTE: The parent MailSyncMonitor handler could kill us at any time if
+        # it receives a shutdown command. The shutdown command is equivalent to
+        # ctrl-c.
         while True:
             self.state = foldersync.state = self.state_handlers[foldersync.state]()
-            # The session should automatically mark this as dirty, but make sure.
-            db_session.add(foldersync)
-            # State handlers are idempotent, so it's okay if we're killed
-            # between the end of the handler and the commit.
-            db_session.commit()
+            if self.state == 'finish':
+                db_session.delete(foldersync)
+                return
+            else:
+                # The session should automatically mark this as dirty, but make
+                # sure.
+                db_session.add(foldersync)
+                # State handlers are idempotent, so it's okay if we're killed
+                # between the end of the handler and the commit.
+                db_session.commit()
+
+    def shutdown(self):
+        self.log.info("Shutting down folder sync for {0}".format(
+            self.folder_name))
+        return 'finish'
 
     def resync_uids(self, previous_state):
         """ Call this when UIDVALIDITY is invalid to fix up the database.
@@ -244,7 +256,10 @@ class FolderSyncMonitor(Greenlet):
         self.log.info("Saved all messages and metadata on {0} to UIDVALIDITY {1} / HIGHESTMODSEQ {2}".format(self.folder_name, self.crispin_client.selected_uidvalidity, self.crispin_client.selected_highestmodseq))
 
         self.log.info("Finished initial sync of {0}.".format(self.folder_name))
-        return 'poll'
+        if self.folder_name not in self.crispin_client.poll_folders:
+            return 'finish'
+        else:
+            return 'poll'
 
     def _gevent_check_join(self, threads, errmsg):
         """ Block until all threads have completed and throw an error if threads
@@ -482,6 +497,10 @@ class MailSyncMonitor(Greenlet):
         self.log.info("processing command {0}".format(cmd))
         return cmd != 'shutdown'
 
+    def _thread_finished(self, thread):
+        state = getattr(thread, 'state')
+        return state == 'finish'
+
     def _thread_polling(self, thread):
         state = getattr(thread, 'state')
         return state is not None and state.startswith('poll')
@@ -497,8 +516,14 @@ class MailSyncMonitor(Greenlet):
                     self.log, self.shared_state)
             thread.start()
             self.folder_monitors.append(thread)
-            while not self._thread_polling(thread):
+            while not self._thread_polling(thread) and \
+                    not self._thread_finished(thread):
                 sleep(self.heartbeat)
+            # Allow individual folder sync monitors to shut themselves down
+            # after completing the initial sync.
+            if self._thread_finished(thread):
+                self.log.info("Folder sync for {0} is done.".format(folder))
+                self.folder_monitors.pop()
 
         # Just hang out. We don't want to block, but we don't want to return
         # either, since that will let the threads go out of scope.
