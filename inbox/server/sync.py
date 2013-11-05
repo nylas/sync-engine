@@ -18,7 +18,7 @@ log = get_logger()
 
 from datetime import datetime
 
-from gevent import Greenlet, sleep, joinall, kill
+from gevent import Greenlet, sleep, joinall
 from gevent.queue import Queue, Empty
 
 import encoding
@@ -455,6 +455,8 @@ class MailSyncMonitor(Greenlet):
                 'poll_frequency': poll_frequency,
                 'status_callback': status_callback }
 
+        self.folder_monitors = []
+
         Greenlet.__init__(self)
 
     def _run(self):
@@ -466,7 +468,9 @@ class MailSyncMonitor(Greenlet):
                     self.log.info("Stopping sync for {0}".format(
                         self.account.email_address))
                     # ctrl-c, basically!
-                    kill(sync)
+                    for monitor in self.folder_monitors:
+                        monitor.kill(block=True)
+                    sync.kill(block=True)
                     return
             except Empty:
                 sleep(self.heartbeat)
@@ -492,6 +496,7 @@ class MailSyncMonitor(Greenlet):
                     new_crispin(self.account.email_address),
                     self.log, self.shared_state)
             thread.start()
+            self.folder_monitors.append(thread)
             while not self._thread_polling(thread):
                 sleep(self.heartbeat)
 
@@ -586,6 +591,8 @@ class SyncService:
             query = query.filter_by(email_address=email_address)
         fqdn = socket.getfqdn()
         for account in query:
+            if not account.id in self.monitors:
+                return "OK sync stopped already"
             if not account.sync_active:
                 results[account.email_address] = "OK sync stopped already"
             try:
@@ -596,6 +603,7 @@ class SyncService:
                 db_session.add(account)
                 db_session.commit()
                 account.sync_unlock()
+                del self.monitors[account.id]
                 results[account.email_address] = "OK sync stopped"
             except:
                 results[account.email_address] = "ERROR error encountered"
