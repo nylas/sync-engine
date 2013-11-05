@@ -12,6 +12,9 @@
 .DS_Store
 *.py[cod]
 
+# Wand
+README.rst
+
 # virtualenv
 activate/
 deactivate
