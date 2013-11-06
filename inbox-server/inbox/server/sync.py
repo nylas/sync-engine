@@ -151,7 +151,7 @@ class FolderSyncMonitor(Greenlet):
         them with X-GM-MSGIDs and sub in the new UIDs for the old. No messages
         are re-downloaded.
         """
-        log.info("UIDVALIDITY for {0} has changed; resyncing UIDs".format(
+        self.log.info("UIDVALIDITY for {0} has changed; resyncing UIDs".format(
             self.folder_name))
         raise Exception("Unimplemented")
         return previous_state
@@ -442,7 +442,7 @@ class FolderSyncMonitor(Greenlet):
     def _update_metadata(self, uids):
         """ Update flags (the only metadata that can change). """
         new_flags = self.crispin_client.flags(uids)
-        assert sorted(uids, key=int) == sorted(new_flags.keys, key=int), \
+        assert sorted(uids, key=int) == sorted(new_flags.keys(), key=int), \
                 "server uids != local uids"
         self.log.info("new flags: {0}".format(new_flags))
         self.account.update_metadata(self.crispin_client.selected_folder_name,
