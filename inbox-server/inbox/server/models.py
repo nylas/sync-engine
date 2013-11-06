@@ -1,5 +1,7 @@
 import os
 
+from sqlalchemy.interfaces import PoolListener
+
 from sqlalchemy import Column, Integer, String, DateTime, Date, Boolean, Enum
 from sqlalchemy import create_engine, ForeignKey, Text, Index, func, event
 from sqlalchemy import distinct
@@ -45,7 +47,7 @@ STORE_MSG_ON_S3 = True
 class Blob(object):
     """ A blob of data that can be saved to local or remote (S3) disk. """
     size = Column(Integer, default=0)
-    data_sha256 = Column(String(255))
+    data_sha256 = Column(String(64))
     def save(self, data):
         assert data is not None, \
                 "Blob can't have NoneType data (can be zero-length, though!)"
@@ -178,6 +180,7 @@ class IMAPAccount(Base):
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     user = relationship("User", backref="imapaccounts")
 
+    # http://stackoverflow.com/questions/386294/what-is-the-maximum-length-of-a-valid-email-address
     email_address = Column(String(254), nullable=True, index=True)
     provider = Column(Enum('Gmail', 'Outlook', 'Yahoo', 'Inbox'), nullable=False)
 
@@ -564,7 +567,7 @@ class Contact(Base):
     source = Column("source", Enum("local", "remote"))
 
     email_address = Column(String(254), nullable=True, index=True)
-    name = Column(Text(collation='utf8_unicode_ci'))
+    name = Column(Text)
     # phone_number = Column(String(64))
 
     updated_at = Column(DateTime, default=func.now(), onupdate=func.current_timestamp())
@@ -609,7 +612,7 @@ class Message(JSONSerializable, Base):
     bcc_addr = Column(MediumPickle, nullable=True)
     in_reply_to = Column(MediumPickle, nullable=True)
     message_id = Column(String(255), nullable=False)
-    subject = Column(Text(collation='utf8_unicode_ci'), nullable=False)
+    subject = Column(Text, nullable=False)
     internaldate = Column(DateTime, nullable=False)
     size = Column(Integer, default=0, nullable=False)
     data_sha256 = Column(String(255), nullable=True)
@@ -656,7 +659,7 @@ common_content_types = ['text/plain',
                         'image/jpg']
 
 class Block(JSONSerializable, Blob, Base):
-    __tablename__ = 'blockmeta'
+    __tablename__ = 'block'
     """ Metadata for message parts stored in s3 """
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -726,7 +729,10 @@ class FolderItem(JSONSerializable, Base):
     message_id = Column(Integer, ForeignKey('message.id'), nullable=False)
     message = relationship('Message')
     msg_uid = Column(Integer, nullable=False)
-    folder_name = Column(String(255), nullable=False)  # All Mail, Inbox, etc. (i.e. Labels)
+    # maximum Gmail label length is 225 (tested empirically), but constraining
+    # folder_name uniquely requires max length of 767 bytes under utf8mb4
+    # http://mathiasbynens.be/notes/mysql-utf8mb4
+    folder_name = Column(String(191), nullable=False)
     flags = Column(MediumPickle)
 
     __table_args__ = (UniqueConstraint('folder_name', 'msg_uid', 'imapaccount_id',),)
@@ -744,9 +750,12 @@ class UIDValidity(JSONSerializable, Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     imapaccount_id = Column(ForeignKey('imapaccount.id'), nullable=False)
     imapaccount = relationship("IMAPAccount")
-    folder_name = Column(String(255))
-    uid_validity = Column(Integer)
-    highestmodseq = Column(Integer)
+    # maximum Gmail label length is 225 (tested empirically), but constraining
+    # folder_name uniquely requires max length of 767 bytes under utf8mb4
+    # http://mathiasbynens.be/notes/mysql-utf8mb4
+    folder_name = Column(String(191), nullable=False)
+    uid_validity = Column(Integer, nullable=False)
+    highestmodseq = Column(Integer, nullable=False)
 
     __table_args__ = (UniqueConstraint('imapaccount_id', 'folder_name'),)
 
@@ -825,7 +834,7 @@ class Thread(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    subject = Column(Text(collation='utf8_unicode_ci'))
+    subject = Column(Text, nullable=False)
     recentdate = Column(DateTime, nullable=False)
 
     # only on messages from Gmail
@@ -865,7 +874,10 @@ class FolderSync(Base):
 
     imapaccount_id = Column(ForeignKey('imapaccount.id'), nullable=False)
     imapaccount = relationship('IMAPAccount', backref='foldersyncs')
-    folder_name = Column(String(255))
+    # maximum Gmail label length is 225 (tested empirically), but constraining
+    # folder_name uniquely requires max length of 767 bytes under utf8mb4
+    # http://mathiasbynens.be/notes/mysql-utf8mb4
+    folder_name = Column(String(191), nullable=False)
 
     # see state machine in sync.py
     state = Column(Enum('initial', 'initial uidinvalid',
@@ -878,9 +890,8 @@ class FolderSync(Base):
 config_prefix = 'RDS' if is_prod() else 'MYSQL'
 database_name = config.get('_'.join([config_prefix, 'DATABASE']))
 
-
 def db_uri():
-    uri_template = 'mysql://{username}:{password}@{host}:{port}'
+    uri_template = 'mysql://{username}:{password}@{host}:{port}/{database}?charset=utf8mb4'
     config_prefix = 'RDS' if is_prod() else 'MYSQL'
 
     return uri_template.format(
@@ -888,13 +899,24 @@ def db_uri():
         # http://stackoverflow.com/questions/15728290/sqlalchemy-valueerror-for-slash-in-password-for-create-engine (also applicable to '+' sign)
         password = urlquote(config.get('_'.join([config_prefix, 'PASSWORD']))),
         host = config.get('_'.join([config_prefix, 'HOSTNAME'])),
-        port = config.get('_'.join([config_prefix, 'PORT'])))
+        port = config.get('_'.join([config_prefix, 'PORT'])),
+        database = config.get('_'.join([config_prefix, 'DATABASE'])))
 
+# My good old friend Enrico to the rescue:
+# http://www.enricozini.org/2012/tips/sa-sqlmode-traditional/
+#
+# We set sql-mode=traditional on the server side as well, but enforce at the
+# application level to be extra safe.
+#
+# Without this, MySQL will silently insert invalid values in the database if
+# not running with sql-mode=traditional.
+class ForceStrictMode(PoolListener):
+    def connect(self, dbapi_con, connection_record):
+        cur = dbapi_con.cursor()
+        cur.execute("SET SESSION sql_mode='TRADITIONAL'")
+        cur = None
 
-engine = create_engine(db_uri(), connect_args = {'charset': 'utf8mb4'} )
-engine.execute("CREATE DATABASE IF NOT EXISTS `{database}` DEFAULT CHARACTER SET `utf8`".format(database=database_name)) #create db, or use utf8mb4??
-engine.execute("USE {database}".format(database=database_name)) # select new db
-
+engine = create_engine(db_uri(), listeners=[ForceStrictMode()])
 
 def init_db():
     """ Make the tables. """

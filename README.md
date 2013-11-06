@@ -32,6 +32,8 @@ We run Ubuntu 10.04 on EC2. You can also do this locally via Vmware Fusion
 
 9. Then copy `config-sample.cfg` to `config.cfg` and change it appropriately for your local MySQL database and hostname.
 
+10. Create the mysql database with 'mysql -uroot -p < tools/create-db.sql' (you'll have to specify your mysql server's root password when prompted).
+
 10. Nginx needs some SSL certificates. Go ask Michael for those, or create your own self-signed ones.
 
 11. Run `sudo nginx -c deploy/nginx.conf -p ./` to start nginx
