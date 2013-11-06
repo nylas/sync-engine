@@ -108,7 +108,7 @@ class FolderSyncMonitor(Greenlet):
                 'initial uid invalid': lambda: self.resync_uids('initial'),
                 'poll': self.poll,
                 'poll uid invalid': lambda: self.resync_uids('poll'),
-                'finish': self.shutdown,
+                'finish': lambda: 'finish',
                 }
 
         Greenlet.__init__(self)
@@ -123,26 +123,20 @@ class FolderSyncMonitor(Greenlet):
                     folder_name=self.folder_name)
             db_session.add(foldersync)
             db_session.commit()
+        self.state = foldersync.state
         # NOTE: The parent MailSyncMonitor handler could kill us at any time if
         # it receives a shutdown command. The shutdown command is equivalent to
         # ctrl-c.
         while True:
             self.state = foldersync.state = self.state_handlers[foldersync.state]()
+            # The session should automatically mark this as dirty, but make
+            # sure.
+            db_session.add(foldersync)
+            # State handlers are idempotent, so it's okay if we're killed
+            # between the end of the handler and the commit.
+            db_session.commit()
             if self.state == 'finish':
-                db_session.delete(foldersync)
                 return
-            else:
-                # The session should automatically mark this as dirty, but make
-                # sure.
-                db_session.add(foldersync)
-                # State handlers are idempotent, so it's okay if we're killed
-                # between the end of the handler and the commit.
-                db_session.commit()
-
-    def shutdown(self):
-        self.log.info("Shutting down folder sync for {0}".format(
-            self.folder_name))
-        return 'finish'
 
     def resync_uids(self, previous_state):
         """ Call this when UIDVALIDITY is invalid to fix up the database.
@@ -509,21 +503,25 @@ class MailSyncMonitor(Greenlet):
         """ Start per-folder syncs. Only have one per-folder sync in the
             'initial' state at a time.
         """
+        saved_states = dict((saved_state.folder_name, saved_state.state) \
+                for saved_state in db_session.query(FolderSync).filter_by(
+                imapaccount=self.account))
         for folder in self.crispin_client.sync_folders:
-            self.log.info("Initializing folder sync for {0}".format(folder))
-            thread = FolderSyncMonitor(folder, self.account,
-                    new_crispin(self.account.email_address),
-                    self.log, self.shared_state)
-            thread.start()
-            self.folder_monitors.append(thread)
-            while not self._thread_polling(thread) and \
-                    not self._thread_finished(thread):
-                sleep(self.heartbeat)
-            # Allow individual folder sync monitors to shut themselves down
-            # after completing the initial sync.
-            if self._thread_finished(thread):
-                self.log.info("Folder sync for {0} is done.".format(folder))
-                self.folder_monitors.pop()
+            if saved_states[folder] != 'finish':
+                self.log.info("Initializing folder sync for {0}".format(folder))
+                thread = FolderSyncMonitor(folder, self.account,
+                        new_crispin(self.account.email_address),
+                        self.log, self.shared_state)
+                thread.start()
+                self.folder_monitors.append(thread)
+                while not self._thread_polling(thread) and \
+                        not self._thread_finished(thread):
+                    sleep(self.heartbeat)
+                # Allow individual folder sync monitors to shut themselves down
+                # after completing the initial sync.
+                if self._thread_finished(thread):
+                    self.log.info("Folder sync for {0} is done.".format(folder))
+                    self.folder_monitors.pop()
 
         # Just hang out. We don't want to block, but we don't want to return
         # either, since that will let the threads go out of scope.
