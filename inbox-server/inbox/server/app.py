@@ -44,7 +44,7 @@ def get_account(request):
         return None
     return user.imapaccounts[0]
 
-app = Flask(__name__, static_folder='../../web_client', static_url_path='', template_folder='templates')
+app = Flask(__name__, static_folder='../../../web_client', static_url_path='', template_folder='templates')
 
 
 @app.route('/')
