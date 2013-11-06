@@ -34,13 +34,15 @@ We run Ubuntu 10.04 on EC2. You can also do this locally via Vmware Fusion
 
 10. Create the mysql database with 'mysql -uroot -p < tools/create-db.sql' (you'll have to specify your mysql server's root password when prompted).
 
-10. Nginx needs some SSL certificates. Go ask Michael for those, or create your own self-signed ones.
+11. Copy deploy/my.cnf to /etc/my.cnf and restart mysqld.
 
-11. Run `sudo nginx -c deploy/nginx.conf -p ./` to start nginx
+12. Nginx needs some SSL certificates. Go ask Michael for those, or create your own self-signed ones.
 
-12. Run `./inboxapp-srv debug` which should start up nicely.
+13. Run `sudo nginx -c deploy/nginx.conf -p ./` to start nginx
 
-13. Visit your page in a browser and log in!
+14. Run `./inboxapp-srv debug` which should start up nicely.
+
+15. Visit your page in a browser and log in!
 
 
 ## Local development
