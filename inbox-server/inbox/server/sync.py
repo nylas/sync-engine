@@ -507,7 +507,7 @@ class MailSyncMonitor(Greenlet):
                 for saved_state in db_session.query(FolderSync).filter_by(
                 imapaccount=self.account))
         for folder in self.crispin_client.sync_folders:
-            if saved_states[folder] != 'finish':
+            if saved_states.get(folder) != 'finish':
                 self.log.info("Initializing folder sync for {0}".format(folder))
                 thread = FolderSyncMonitor(folder, self.account,
                         new_crispin(self.account.email_address),
