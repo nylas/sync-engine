@@ -50,9 +50,13 @@ angular.module('InboxApp.services')
             var messagelist_height = windowSize.mainHeight - $('.category_bar').outerHeight(true);
             $('.messagelist').css('height', messagelist_height + 'px');
 
-
             var container_scrollable_height = windowSize.mainHeight - parseInt($('.master_pane').css('margin-top'));
             $('.container_scrollable').css('height', container_scrollable_height + 'px');
+
+            var full_composer_container_height = windowSize.mainHeight - parseInt($('.full_composer_container').css('margin-top'));
+            $('.full_composer_container').css('height', full_composer_container_height + 'px');
+            var fullcomposeview_body_height = full_composer_container_height - 155;
+            $('.fullcomposeview_body').css('height', fullcomposeview_body_height + 'px');
 
 
             $('.detail_pane').css('width', windowSize.detailPaneWidth + 'px');
