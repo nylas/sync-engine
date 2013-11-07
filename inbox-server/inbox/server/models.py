@@ -9,7 +9,7 @@ from sqlalchemy.types import PickleType
 from sqlalchemy.orm import reconstructor, relationship, backref, sessionmaker
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 Base = declarative_base()
 
 from hashlib import sha256
@@ -311,12 +311,12 @@ class IMAPAccount(Base):
 
             Returns two lists: one of new Message objects, and one of new
             FolderItem objects. Neither list of objects has been committed.
-            (Thread and Block objects are implicitly returned via Message
-            associations.)
+            Block objects are implicitly returned via Message associations.
+
+            Threads are not computed here; you gotta do that separately.
         """
         new_messages = []
         new_folderitem = []
-        thread_cache = dict()
         for uid, internaldate, flags, envelope, body, x_gm_thrid, x_gm_msgid, \
                 x_gm_labels in raw_messages:
             mailbase = encoding.from_string(body)
@@ -361,17 +361,9 @@ class IMAPAccount(Base):
 
             new_msg.internaldate = internaldate
             new_msg.g_msgid = unicode(x_gm_msgid)
-
-            # don't need to save the returned thread since it's associated with
-            # new_msg
-            # NOTE: this results in a database query for every chunk; we may
-            # want to optimize at some point
-            cached_thread = thread_cache.get((new_msg.subject, unicode(x_gm_thrid)))
-            if cached_thread is None:
-                thread_cache[(new_msg.subject, unicode(x_gm_thrid))] = \
-                        Thread.from_message(new_msg, g_thrid=unicode(x_gm_thrid))
-            else:
-                cached_thread.update_from_message(new_msg)
+            # NOTE: this value is not saved to the database, but it is used
+            # later for thread detection after message download
+            new_msg._g_thrid = unicode(x_gm_thrid)
 
             fm = FolderItem(imapaccount_id=self.id, folder_name=folder_name,
                     msg_uid=uid, message=new_msg)
@@ -835,36 +827,46 @@ class Thread(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     subject = Column(Text, nullable=False)
+    subjectdate = Column(DateTime, nullable=False)
     recentdate = Column(DateTime, nullable=False)
 
     # only on messages from Gmail
+    # NOTE: The same message sent to multiple users will be given a
+    # different g_thrid for each user. We don't know yet if g_thrids are
+    # unique globally.
     g_thrid = Column(String(255), nullable=True, index=True)
 
     def update_from_message(self, message):
-        assert message.subject == self.subject
         if message.internaldate > self.recentdate:
             self.recentdate = message.internaldate
+        # subject is subject of original message in the thread
+        if message.internaldate < self.recentdate:
+            self.subject = message.subject
+            self.subjectdate = message.internaldate
         message.thread = self
         return self
 
     @classmethod
     def from_message(cls, message, g_thrid):
         """
-        This function will break threads if the subject changes, regardless
-        of whatever Gmail's threading behaviour is in that case.
+        Threads are broken solely on Gmail's X-GM-THRID for now. (Subjects
+        are not taken into account, even if they change.)
 
         Returns the updated or new thread, and adds the message to the thread.
         Doesn't commit.
         """
         try:
-            thread = db_session.query(cls).filter_by(g_thrid=g_thrid,
-                    subject=message.subject).one()
-            if message.subject == thread.subject:
-                return thread.update_from_message(message)
+            # NOTE: If g_thrid turns out to not be globally unique, we'll need
+            # to join on Message and also filter by namespace here.
+            thread = db_session.query(cls).filter_by(g_thrid=g_thrid).one()
+            return thread.update_from_message(message)
         except NoResultFound:
             pass
+        except MultipleResultsFound:
+            log.info("Duplicate thread rows for thread {0}".format(g_thrid))
         thread = cls(subject=message.subject, g_thrid=g_thrid,
-                recentdate=message.internaldate)
+                recentdate=message.internaldate,
+                subjectdate=message.internaldate)
         message.thread = thread
         return thread
 
