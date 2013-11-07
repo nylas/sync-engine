@@ -66,6 +66,28 @@ We provide a ZeroRPC service for starting, stopping, and querying status on
 running syncs. We don't provide knobs to start/stop sync instances at a
 per-folder level, only at a per-account level. There's no good reason to be
 able to do so, and leaving that configurability out simplifies the interface.
+
+------------------------
+A NOTE ABOUT CONCURRENCY
+------------------------
+
+In this current design, we don't manage to guarantee 100% deduplication on
+messages from Gmail. We will always deduplicate message blocks thanks to
+using S3 as a CAS filesystem, but "the same" message may end up with
+multiple rows in the Message (and, subsequently, Block) tables if a race
+between the different FolderSyncMonitor threads results in two or more
+threads not noticing that we have a certain X-GM-MSGID already in the metadata
+store and downloads the message again.
+
+This happens rarely in practice, and is a small price to pay for the ability
+to e.g. receive new INBOX messages at the same time as a large email archive
+is downloading. Our database is still _correct_ and consistent with these
+duplicated metadata rows, which is the important part.
+
+We do, however, have to serialize message thread detection into a single
+processing thread per account. Otherwise, a message in the same thread
+arriving via multiple folders may cause duplicate thread rows, leaving the
+database in an inconsistent state.
 """
 
 ### exceptions
