@@ -3,15 +3,19 @@ var app = angular.module('InboxApp.directives');
 
 app.directive("replybox", function() {
     return {
-
         restrict: 'E',
         transclude: true,
         scope: {
             sendButtonAction: '&sendButtonAction'
         }, // Two-way binding to message object
         controller: function($scope, $element, $attrs, $transclude) {
-
-            // TODO
+            //TODO
+            $scope.sendButtonHandler = function() {
+                var textbox = $element.find('#reply_textbox');
+                $scope.sendButtonAction({
+                    message_text: textbox.html()
+                });
+            };
         },
 
 
@@ -57,14 +61,6 @@ app.directive("replybox", function() {
             // };
             // obj.bind('keyup keydown keypress change', update);
             // // update();
-
-            scope.sendButtonHandler = function() {
-                var textbox = elem.find('#reply_textbox');
-
-                scope.sendButtonAction({
-                    message_text: textbox.html()
-                });
-            };
 
             var upload_file_button = elem.find('#add_file_button');
             upload_file_button.bind('click', function() {
