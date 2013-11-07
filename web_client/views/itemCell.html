@@ -3,21 +3,21 @@
      ng-class="{itemcell_email_item_active: selected}"
      data-ng-click="eventHandler()">
 
-	<div class="list_item_separator"></div>
+  <div class="list_item_separator"></div>
 
-    <div class="itemcell_email_container">
+  <div class="itemcell_email_container">
 
-		<div class="itemcell_byline ellipsis" style="float:left">
-			{{  thread.recentMessage().fromName() }}
-		</div>
+    <div class="itemcell_byline ellipsis" style="float:left">
+      {{  thread.recentMessage().fromName() }}
+    </div>
 
-		<div class="itemcell_date" style="float:right">
-			{{thread.recentMessage().date | relativedate }} <br/>
-		</div>
+    <div class="itemcell_date" style="float:right">
+      {{thread.recentMessage().date | relativedate }} <br/>
+    </div>
 
-		<div class="clear"></div>
+    <div class="clear"></div>
 
-		<div class="itemcell_summary"><span class="itemcell_summary_subject">{{thread.subject()}}</span>: Sed bibendum sit amet turpis nec dapibus. Praesent vitae tortor faucibus. klasdhfkla sdf asldfhfasd lhdsaf lafsdh dsf</div>
+    <div class="itemcell_summary"><span class="itemcell_summary_subject">{{thread.subject()}}</span>: Sed bibendum sit amet turpis nec dapibus. Praesent vitae tortor faucibus. klasdhfkla sdf asldfhfasd lhdsaf lafsdh dsf</div>
 
-	</div>
+  </div>
 </div>
