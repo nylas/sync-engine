@@ -618,7 +618,7 @@ class Message(JSONSerializable, Base):
     data_sha256 = Column(String(255), nullable=True)
 
     # only on messages from Gmail
-    g_msgid = Column(String(255), nullable=True)
+    g_msgid = Column(String(40), nullable=True)
 
     def trimmed_subject(self):
         s = self.subject
@@ -841,6 +841,7 @@ class Thread(Base):
     g_thrid = Column(String(255), nullable=True, index=True)
 
     def update_from_message(self, message):
+        assert message.subject == self.subject
         if message.internaldate > self.recentdate:
             self.recentdate = message.internaldate
         message.thread = self
