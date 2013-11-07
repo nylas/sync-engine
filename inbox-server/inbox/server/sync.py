@@ -6,7 +6,7 @@ import socket
 
 from .sessionmanager import new_crispin
 
-from .models import db_session, FolderItem, Message, UIDValidity
+from .models import db_session, FolderItem, Message, Thread, UIDValidity
 from .models import IMAPAccount, FolderSync
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -20,6 +20,7 @@ from datetime import datetime
 
 from gevent import Greenlet, sleep, joinall
 from gevent.queue import Queue, Empty
+from gevent.event import Event
 
 import encoding
 
@@ -114,6 +115,38 @@ def safe_download(uids, folder, crispin_client):
     #     new_messages, new_folderitem = crispin_client.fetch_uids(uids)
 
     return new_messages, new_folderitems
+
+class ThreadDetector(Greenlet):
+    """ See "A NOTE ABOUT CONCURRENCY" in the block comment at the top of this
+        file.
+    """
+    def __init__(self, log, heartbeat=1):
+        self.inbox = Queue()
+        self.log = log
+        self.heartbeat = heartbeat
+
+        self.clear_cache()
+
+        Greenlet.__init__(self)
+
+    def clear_cache(self):
+        self.cache = dict()
+
+    def _run(self):
+        while True:
+            try:
+                messages, event = self.inbox.get_nowait()
+                for msg in messages:
+                    if msg._g_thrid in self.cache:
+                        thread = self.cache[msg._g_thrid]
+                        thread.update_from_message(msg)
+                    else:
+                        self.cache[msg._g_thrid] = \
+                                Thread.from_message(msg, msg._g_thrid)
+                self.clear_cache()
+                event.set()
+            except Empty:
+                sleep(self.heartbeat)
 
 class FolderSyncMonitor(Greenlet):
     """ Per-folder sync engine. """
@@ -284,8 +317,7 @@ class FolderSyncMonitor(Greenlet):
     def _download_new_messages(self, uids, num_local_messages, num_remote_messages):
         new_messages, new_folderitems = safe_download(
                 uids, self.folder_name, self.crispin_client)
-        db_session.add_all(new_folderitems)
-        db_session.add_all(new_messages)
+
         # Save message part blobs before committing changes to db.
         for msg in new_messages:
             threads = [Greenlet.spawn(part.save, part._data) \
@@ -298,6 +330,12 @@ class FolderSyncMonitor(Greenlet):
         # XXX clear data on part objects to save memory?
         # garbge_collect()
 
+        event = Event()
+        self.shared_state['thread_callback']((new_messages, event))
+        event.wait()
+
+        db_session.add_all(new_folderitems)
+        db_session.add_all(new_messages)
         db_session.commit()
 
         percent_done = (num_local_messages / num_remote_messages) * 100
@@ -352,6 +390,11 @@ class FolderSyncMonitor(Greenlet):
         self.log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
         # for new, query g_msgids and update cache
         remote_g_msgids.update(self.crispin_client.g_msgids(new))
+        # filter out messages that have disappeared
+        all_uids = set(self.crispin_client.all_uids())
+        for uid in remote_g_msgids.keys():
+            if uid not in all_uids:
+                del remote_g_msgids[uid]
         set_cache("_".join([self.account.email_address, self.folder_name,
             "remote_g_msgids"]), remote_g_msgids)
         self.log.info("Updated cache with new messages")
@@ -490,11 +533,17 @@ class MailSyncMonitor(Greenlet):
         self.account = account
         self.log = configure_sync_logging(account)
 
+        self.thread_detector = ThreadDetector(self.log)
+        self.thread_detector.start()
+
         # stuff that might be updated later and we want to keep a shared
         # reference on child greenlets (per-folder sync engines)
         self.shared_state = {
                 'poll_frequency': poll_frequency,
-                'status_callback': status_callback }
+                'status_callback': status_callback,
+                'thread_callback': \
+                        lambda data: self.thread_detector.inbox.put_nowait(data),
+                        }
 
         self.folder_monitors = []
 

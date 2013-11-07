@@ -838,7 +838,6 @@ class Thread(Base):
     g_thrid = Column(String(255), nullable=True, index=True)
 
     def update_from_message(self, message):
-        assert message.subject == self.subject
         if message.internaldate > self.recentdate:
             self.recentdate = message.internaldate
         # subject is subject of original message in the thread
