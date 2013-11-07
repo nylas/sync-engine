@@ -6,7 +6,7 @@ import socket
 
 from .sessionmanager import new_crispin
 
-from .models import db_session, FolderItem, Message, Thread, UIDValidity
+from .models import db_session, FolderItem, Message, UIDValidity
 from .models import IMAPAccount, FolderSync
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -20,7 +20,6 @@ from datetime import datetime
 
 from gevent import Greenlet, sleep, joinall
 from gevent.queue import Queue, Empty
-from gevent.event import Event
 
 import encoding
 
@@ -67,28 +66,6 @@ We provide a ZeroRPC service for starting, stopping, and querying status on
 running syncs. We don't provide knobs to start/stop sync instances at a
 per-folder level, only at a per-account level. There's no good reason to be
 able to do so, and leaving that configurability out simplifies the interface.
-
-------------------------
-A NOTE ABOUT CONCURRENCY
-------------------------
-
-In this current design, we don't manage to guarantee 100% deduplication on
-messages from Gmail. We will always deduplicate message blocks thanks to
-using S3 as a CAS filesystem, but "the same" message may end up with
-multiple rows in the Message (and, subsequently, Block) tables if a race
-between the different FolderSyncMonitor threads results in two or more
-threads not noticing that we have a certain X-GM-MSGID already in the metadata
-store and downloads the message again.
-
-This happens rarely in practice, and is a small price to pay for the ability
-to e.g. receive new INBOX messages at the same time as a large email archive
-is downloading. Our database is still _correct_ and consistent with these
-duplicated metadata rows, which is the important part.
-
-We do, however, have to serialize message thread detection into a single
-processing thread per account. Otherwise, a message in the same thread
-arriving via multiple folders may cause duplicate thread rows, leaving the
-database in an inconsistent state.
 """
 
 ### exceptions
@@ -115,38 +92,6 @@ def safe_download(uids, folder, crispin_client):
     #     new_messages, new_folderitem = crispin_client.fetch_uids(uids)
 
     return new_messages, new_folderitems
-
-class ThreadDetector(Greenlet):
-    """ See "A NOTE ABOUT CONCURRENCY" in the block comment at the top of this
-        file.
-    """
-    def __init__(self, log, heartbeat=1):
-        self.inbox = Queue()
-        self.log = log
-        self.heartbeat = heartbeat
-
-        self.clear_cache()
-
-        Greenlet.__init__(self)
-
-    def clear_cache(self):
-        self.cache = dict()
-
-    def _run(self):
-        while True:
-            try:
-                messages, event = self.inbox.get_nowait()
-                for msg in messages:
-                    if msg._g_thrid in self.cache:
-                        thread = self.cache[msg._g_thrid]
-                        thread.update_from_message(msg)
-                    else:
-                        self.cache[msg._g_thrid] = \
-                                Thread.from_message(msg, msg._g_thrid)
-                self.clear_cache()
-                event.set()
-            except Empty:
-                sleep(self.heartbeat)
 
 class FolderSyncMonitor(Greenlet):
     """ Per-folder sync engine. """
@@ -273,10 +218,18 @@ class FolderSyncMonitor(Greenlet):
             self.account.remove_messages(deleted_uids, self.folder_name)
             self.log.info("Removed the following UIDs that no longer exist on the server: {0}".format(' '.join([str(u) for u in sorted(deleted_uids, key=int)])))
 
-        full_download = self._deduplicate_message_download(
-                remote_g_msgids, unknown_uids)
+        # deduplicate message download using X-GM-MSGID
+        local_g_msgids = self.account.all_g_msgids()
+        full_download, folderitem_only = partition(
+                lambda uid: remote_g_msgids[uid] in local_g_msgids,
+                sorted(unknown_uids))
 
         self.log.info("{0} uids left to fetch".format(len(full_download)))
+
+        self.log.info("Skipping {0} uids downloaded via other folders".format(
+            len(folderitem_only)))
+        if len(folderitem_only) > 0:
+            self._add_new_folderitem(remote_g_msgids, folderitem_only)
 
         self.log.info("Starting sync for {0} with chunks of size {1}".format(
             self.folder_name, self.crispin_client.CHUNK_SIZE))
@@ -317,7 +270,8 @@ class FolderSyncMonitor(Greenlet):
     def _download_new_messages(self, uids, num_local_messages, num_remote_messages):
         new_messages, new_folderitems = safe_download(
                 uids, self.folder_name, self.crispin_client)
-
+        db_session.add_all(new_folderitems)
+        db_session.add_all(new_messages)
         # Save message part blobs before committing changes to db.
         for msg in new_messages:
             threads = [Greenlet.spawn(part.save, part._data) \
@@ -330,12 +284,6 @@ class FolderSyncMonitor(Greenlet):
         # XXX clear data on part objects to save memory?
         # garbge_collect()
 
-        event = Event()
-        self.shared_state['thread_callback']((new_messages, event))
-        event.wait()
-
-        db_session.add_all(new_folderitems)
-        db_session.add_all(new_messages)
         db_session.commit()
 
         percent_done = (num_local_messages / num_remote_messages) * 100
@@ -390,11 +338,6 @@ class FolderSyncMonitor(Greenlet):
         self.log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
         # for new, query g_msgids and update cache
         remote_g_msgids.update(self.crispin_client.g_msgids(new))
-        # filter out messages that have disappeared
-        all_uids = set(self.crispin_client.all_uids())
-        for uid in remote_g_msgids.keys():
-            if uid not in all_uids:
-                del remote_g_msgids[uid]
         set_cache("_".join([self.account.email_address, self.folder_name,
             "remote_g_msgids"]), remote_g_msgids)
         self.log.info("Updated cache with new messages")
@@ -415,15 +358,10 @@ class FolderSyncMonitor(Greenlet):
             local_uids = self.account.all_uids(self.folder_name)
             new, updated = self._new_or_updated(uids, local_uids)
             log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
-
-            remote_g_msgids = self.crispin_client.g_msgids(new)
-            full_download = self._deduplicate_message_download(
-                    remote_g_msgids, new)
-
             num_local_messages = len(local_uids)
-            for uids in chunk(full_download, self.crispin_client.CHUNK_SIZE):
+            for uids in chunk(new, self.crispin_client.CHUNK_SIZE):
                 num_local_messages += self._download_new_messages(
-                        uids, num_local_messages, len(full_download))
+                        uids, num_local_messages, len(new))
 
             # bigger chunk because the data being fetched here is very small
             for uids in chunk(updated, 5*self.crispin_client.CHUNK_SIZE):
@@ -433,19 +371,6 @@ class FolderSyncMonitor(Greenlet):
 
         self._remove_deleted_messages()
         self._update_cached_highestmodseq(folder)
-
-    def _deduplicate_message_download(self, remote_g_msgids, uids):
-        """ Deduplicate message download using X-GM-MSGID. """
-        local_g_msgids = self.account.all_g_msgids()
-        full_download, folderitem_only = partition(
-                lambda uid: remote_g_msgids[uid] in local_g_msgids,
-                sorted(uids, key=int))
-        self.log.info("Skipping {0} uids downloaded via other folders".format(
-            len(folderitem_only)))
-        if len(folderitem_only) > 0:
-            self._add_new_folderitem(remote_g_msgids, folderitem_only)
-
-        return full_download
 
     def _update_cached_highestmodseq(self, folder, cached_validity=None):
         if cached_validity is None:
@@ -533,17 +458,11 @@ class MailSyncMonitor(Greenlet):
         self.account = account
         self.log = configure_sync_logging(account)
 
-        self.thread_detector = ThreadDetector(self.log)
-        self.thread_detector.start()
-
         # stuff that might be updated later and we want to keep a shared
         # reference on child greenlets (per-folder sync engines)
         self.shared_state = {
                 'poll_frequency': poll_frequency,
-                'status_callback': status_callback,
-                'thread_callback': \
-                        lambda data: self.thread_detector.inbox.put_nowait(data),
-                        }
+                'status_callback': status_callback }
 
         self.folder_monitors = []
 
