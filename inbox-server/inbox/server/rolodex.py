@@ -3,13 +3,13 @@ import gdata.contacts.client
 import gdata.auth
 import dateutil.parser
 import datetime
-from google_oauth import GOOGLE_CONSUMER_KEY, GOOGLE_CONSUMER_SECRET, OAUTH_SCOPE
+from .google_oauth import GOOGLE_CONSUMER_KEY, GOOGLE_CONSUMER_SECRET, OAUTH_SCOPE
 
 from .models import db_session, Contact, IMAPAccount
-from .log import get_logger; log = get_logger()
+from .log import configure_rolodex_logging, get_logger
+log = get_logger()
 
-SOURCE_APP_NAME = 'InboxApp Sync Server'
-
+SOURCE_APP_NAME = 'InboxApp Contact Sync Engine'
 
 class Rolodex(object):
     """docstring for Rolodex"""
@@ -17,15 +17,18 @@ class Rolodex(object):
         self.account = account
         self.email_address = account.email_address
         self.oauth_token = account.o_access_token
-
+        self.log = configure_rolodex_logging(account)
 
     def sync(self):
-        log.info("Begin syncing contacts...")
+        self.log.info("Begin syncing contacts...")
 
-        existing_contacts = db_session.query(Contact).filter_by(source = "local", imapaccount=self.account).all()
-        cached_contacts = db_session.query(Contact).filter_by(source = "remote", imapaccount=self.account).all()
+        existing_contacts = db_session.query(Contact).filter_by(
+                source = "local", imapaccount=self.account).all()
+        cached_contacts = db_session.query(Contact).filter_by(
+                source = "remote", imapaccount=self.account).all()
 
-        log.info("Query: have {0} contacts, {1} cached.".format(len(existing_contacts), len(cached_contacts)))
+        self.log.info("Query: have {0} contacts, {1} cached.".format(
+            len(existing_contacts), len(cached_contacts)))
 
         contact_dict = {}
         for contact in existing_contacts:
@@ -54,17 +57,15 @@ class Rolodex(object):
             query.max_results = 25000
 
         except gdata.client.BadAuthentication:
-            print 'Invalid user credentials given.'
+            self.log.error('Invalid user credentials given.')
             return
-
 
         to_commit = []
 
         for g_contact in gd_client.GetContacts(q = query).entry:
-
             email_addresses = filter(lambda email: email.primary, g_contact.email)
             if email_addresses and len(email_addresses) > 1:
-                log.error("Should not have more than one email per entry! {0}".format(email_addresses))
+                self.log.error("Should not have more than one email per entry! {0}".format(email_addresses))
             # Punt on phone numbers right now
             # if g_contact.phone_number and len(g_contact.phone_number) > 1:
             #     log.error("Should not have more than one phone number per entry! {0}".format(g_contact.phone_number))
@@ -77,11 +78,15 @@ class Rolodex(object):
                     # "phone_number": str(g_contact.phone_number[0].text) if g_contact.phone_number else None,
                 }
             except AttributeError, e:
-                print "Something weird with contact:", g_contact
+                self.log.error("Something weird with contact: {0}".format(g_contact))
                 raise e
 
+            if 'updated_at' in google_result:
+                self.log.warning("updated_at: {0}".format(google_result['updated_at']))
+
             # make an object out of the google result
-            c = Contact(imapaccount = self.account, source='local', **google_result)
+            c = Contact(imapaccount = self.account, source='local',
+                    **google_result)
 
             if c.g_id in contact_dict:
                 existing = contact_dict[c.g_id]
@@ -114,10 +119,7 @@ class Rolodex(object):
         db_session.add_all(to_commit)
         db_session.commit()
 
-        log.info("Added {0} contacts.".format(len(to_commit)))
-
-
-
+        self.log.info("Added {0} contacts.".format(len(to_commit)))
 
 class ContactSync:
     """ ZeroRPC interface to syncing. """
@@ -129,6 +131,3 @@ class ContactSync:
     def start_sync(self, account):
         r = Rolodex(account)
         r.sync()
-
-
-

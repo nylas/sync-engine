@@ -6,7 +6,7 @@ import sys
 from setproctitle import setproctitle; setproctitle('inboxapp-srv')
 
 from inbox.server.config import config, load_config
-from inbox.server.log import configure_logging, get_logger
+from inbox.server.log import configure_general_logging, get_logger
 log = get_logger()
 
 def debug(args=None):
@@ -136,7 +136,7 @@ def signal_handler(signal, frame):
 
 def main():
     load_config()
-    configure_logging()
+    configure_general_logging()
     signal.signal(signal.SIGINT, signal_handler)
 
     parser = argparse.ArgumentParser(description="Inbox App")
