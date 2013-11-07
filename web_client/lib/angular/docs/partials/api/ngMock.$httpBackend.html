@@ -32,7 +32,7 @@ backend when the code under test makes http requests:</p>
 <li><code>$httpBackend.when</code> - specifies a backend definition</li>
 </ul>
 
-<h1 id="requestexpectationsvsbackenddefinitions">Request Expectations vs Backend Definitions</h3>
+<h3 id="requestexpectationsvsbackenddefinitions">Request Expectations vs Backend Definitions</h1>
 
 <p>Request expectations provide a way to make assertions about requests made by the application and
 to define responses for those requests. The test will fail if the expected requests are not made
@@ -86,7 +86,7 @@ definitions for an appropriate response.</p>
 defined, the backend definitions are evaluated in sequential order to see if any of them match
 the request. The response from the first matched definition is returned.</p>
 
-<h1 id="flushinghttprequests">Flushing HTTP requests</h3>
+<h1 id="flushinghttprequests">Flushing HTTP requests</h1>
 
 <p>The $httpBackend used in production, always responds to requests with responses asynchronously.
 If we preserved this behavior in unit testing, we'd have to create async unit tests, which are
@@ -169,20 +169,8 @@ synchronously.</p>
    </pre></div>
 <div class="member method"><h2 id="Methods">Methods</h2>
 <ul class="methods"><li><h3 id="expect">expect(method, url, data, headers)</h3>
-<div class="expect"><p>Creates a new request expectation.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">method – {string} – </code>
-<p>HTTP method.</p></li>
-<li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-<li><code ng:non-bindable="">data<i>(optional)</i> – {(string|RegExp)=} – </code>
-<p>HTTP request body.</p></li>
-<li><code ng:non-bindable="">headers<i>(optional)</i> – {(Object|function(Object))=} – </code>
-<p>HTTP headers or function that receives http header
-object and returns true if the headers match the current expectation.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> method that control how a matched
+<div class="expect"><p>Creates a new request expectation.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>method</td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>HTTP method.</p></td></tr><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr><tr><td>data <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP request body.</p></td></tr><tr><td>headers <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a><a href="" class="label type-hint type-hint-function">function(Object)</a></td><td><p>HTTP headers or function that receives http header
+object and returns true if the headers match the current expectation.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> method that control how a matched
 request is handled.</p>
 
 <ul>
@@ -190,112 +178,40 @@ request is handled.</p>
 – The respond method takes a set of static data to be returned or a function that can return
 an array containing response status (number), response data (string) and response headers
 (Object).</li>
-</ul></div>
-</div>
+</ul></td></tr></table></div>
 </li>
 <li><h3 id="expectDELETE">expectDELETE(url, headers)</h3>
-<div class="expectdelete"><p>Creates a new request expectation for DELETE requests. For more info see <code>expect()</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-<li><code ng:non-bindable="">headers<i>(optional)</i> – {Object=} – </code>
-<p>HTTP headers.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> method that control how a matched
-request is handled.</p></div>
-</div>
+<div class="expectdelete"><p>Creates a new request expectation for DELETE requests. For more info see <code>expect()</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr><tr><td>headers <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a></td><td><p>HTTP headers.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> method that control how a matched
+request is handled.</p></td></tr></table></div>
 </li>
 <li><h3 id="expectGET">expectGET(url, headers)</h3>
-<div class="expectget"><p>Creates a new request expectation for GET requests. For more info see <code>expect()</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-<li><code ng:non-bindable="">headers<i>(optional)</i> – {Object=} – </code>
-<p>HTTP headers.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> method that control how a matched
-request is handled. See #expect for more info.</p></div>
-</div>
+<div class="expectget"><p>Creates a new request expectation for GET requests. For more info see <code>expect()</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr><tr><td>headers <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a></td><td><p>HTTP headers.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> method that control how a matched
+request is handled. See #expect for more info.</p></td></tr></table></div>
 </li>
 <li><h3 id="expectHEAD">expectHEAD(url, headers)</h3>
-<div class="expecthead"><p>Creates a new request expectation for HEAD requests. For more info see <code>expect()</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-<li><code ng:non-bindable="">headers<i>(optional)</i> – {Object=} – </code>
-<p>HTTP headers.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> method that control how a matched
-request is handled.</p></div>
-</div>
+<div class="expecthead"><p>Creates a new request expectation for HEAD requests. For more info see <code>expect()</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr><tr><td>headers <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a></td><td><p>HTTP headers.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> method that control how a matched
+request is handled.</p></td></tr></table></div>
 </li>
 <li><h3 id="expectJSONP">expectJSONP(url)</h3>
-<div class="expectjsonp"><p>Creates a new request expectation for JSONP requests. For more info see <code>expect()</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> method that control how a matched
-request is handled.</p></div>
-</div>
+<div class="expectjsonp"><p>Creates a new request expectation for JSONP requests. For more info see <code>expect()</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> method that control how a matched
+request is handled.</p></td></tr></table></div>
 </li>
 <li><h3 id="expectPATCH">expectPATCH(url, data, headers)</h3>
-<div class="expectpatch"><p>Creates a new request expectation for PATCH requests. For more info see <code>expect()</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-<li><code ng:non-bindable="">data<i>(optional)</i> – {(string|RegExp)=} – </code>
-<p>HTTP request body.</p></li>
-<li><code ng:non-bindable="">headers<i>(optional)</i> – {Object=} – </code>
-<p>HTTP headers.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> method that control how a matched
-request is handled.</p></div>
-</div>
+<div class="expectpatch"><p>Creates a new request expectation for PATCH requests. For more info see <code>expect()</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr><tr><td>data <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP request body.</p></td></tr><tr><td>headers <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a></td><td><p>HTTP headers.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> method that control how a matched
+request is handled.</p></td></tr></table></div>
 </li>
 <li><h3 id="expectPOST">expectPOST(url, data, headers)</h3>
-<div class="expectpost"><p>Creates a new request expectation for POST requests. For more info see <code>expect()</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-<li><code ng:non-bindable="">data<i>(optional)</i> – {(string|RegExp)=} – </code>
-<p>HTTP request body.</p></li>
-<li><code ng:non-bindable="">headers<i>(optional)</i> – {Object=} – </code>
-<p>HTTP headers.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> method that control how a matched
-request is handled.</p></div>
-</div>
+<div class="expectpost"><p>Creates a new request expectation for POST requests. For more info see <code>expect()</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr><tr><td>data <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP request body.</p></td></tr><tr><td>headers <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a></td><td><p>HTTP headers.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> method that control how a matched
+request is handled.</p></td></tr></table></div>
 </li>
 <li><h3 id="expectPUT">expectPUT(url, data, headers)</h3>
-<div class="expectput"><p>Creates a new request expectation for PUT requests. For more info see <code>expect()</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-<li><code ng:non-bindable="">data<i>(optional)</i> – {(string|RegExp)=} – </code>
-<p>HTTP request body.</p></li>
-<li><code ng:non-bindable="">headers<i>(optional)</i> – {Object=} – </code>
-<p>HTTP headers.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> method that control how a matched
-request is handled.</p></div>
-</div>
+<div class="expectput"><p>Creates a new request expectation for PUT requests. For more info see <code>expect()</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr><tr><td>data <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP request body.</p></td></tr><tr><td>headers <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a></td><td><p>HTTP headers.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> method that control how a matched
+request is handled.</p></td></tr></table></div>
 </li>
 <li><h3 id="flush">flush(count)</h3>
-<div class="flush"><p>Flushes all pending requests using the trained responses.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">count<i>(optional)</i> – {number=} – </code>
-<p>Number of responses to flush (in the order they arrived). If undefined,
+<div class="flush"><p>Flushes all pending requests using the trained responses.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>count <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-number">number</a></td><td><p>Number of responses to flush (in the order they arrived). If undefined,
 all pending requests will be flushed. If there are no pending requests when the flush method
-is called an exception is thrown (as this typically a sign of programming error).</p></li>
-</ul>
-</div>
+is called an exception is thrown (as this typically a sign of programming error).</p></td></tr></tbody></table></div>
 </li>
 <li><h3 id="resetExpectations">resetExpectations()</h3>
 <div class="resetexpectations"><p>Resets all request expectations, but preserves all backend definitions. Typically, you would
@@ -324,20 +240,8 @@ requests were not made, verifyNoOutstandingExpectation throws an exception.</p>
 </pre></div>
 </li>
 <li><h3 id="when">when(method, url, data, headers)</h3>
-<div class="when"><p>Creates a new backend definition.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">method – {string} – </code>
-<p>HTTP method.</p></li>
-<li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-<li><code ng:non-bindable="">data<i>(optional)</i> – {(string|RegExp)=} – </code>
-<p>HTTP request body.</p></li>
-<li><code ng:non-bindable="">headers<i>(optional)</i> – {(Object|function(Object))=} – </code>
-<p>HTTP headers or function that receives http header
-object and returns true if the headers match the current definition.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> method that control how a matched
+<div class="when"><p>Creates a new backend definition.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>method</td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>HTTP method.</p></td></tr><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr><tr><td>data <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP request body.</p></td></tr><tr><td>headers <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a><a href="" class="label type-hint type-hint-function">function(Object)</a></td><td><p>HTTP headers or function that receives http header
+object and returns true if the headers match the current definition.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> method that control how a matched
 request is handled.</p>
 
 <ul>
@@ -345,88 +249,31 @@ request is handled.</p>
 – The respond method takes a set of static data to be returned or a function that can return
 an array containing response status (number), response data (string) and response headers
 (Object).</li>
-</ul></div>
-</div>
+</ul></td></tr></table></div>
 </li>
 <li><h3 id="whenDELETE">whenDELETE(url, headers)</h3>
-<div class="whendelete"><p>Creates a new backend definition for DELETE requests. For more info see <code>when()</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-<li><code ng:non-bindable="">headers<i>(optional)</i> – {(Object|function(Object))=} – </code>
-<p>HTTP headers.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> method that control how a matched
-request is handled.</p></div>
-</div>
+<div class="whendelete"><p>Creates a new backend definition for DELETE requests. For more info see <code>when()</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr><tr><td>headers <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a><a href="" class="label type-hint type-hint-function">function(Object)</a></td><td><p>HTTP headers.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> method that control how a matched
+request is handled.</p></td></tr></table></div>
 </li>
 <li><h3 id="whenGET">whenGET(url, headers)</h3>
-<div class="whenget"><p>Creates a new backend definition for GET requests. For more info see <code>when()</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-<li><code ng:non-bindable="">headers<i>(optional)</i> – {(Object|function(Object))=} – </code>
-<p>HTTP headers.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> method that control how a matched
-request is handled.</p></div>
-</div>
+<div class="whenget"><p>Creates a new backend definition for GET requests. For more info see <code>when()</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr><tr><td>headers <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a><a href="" class="label type-hint type-hint-function">function(Object)</a></td><td><p>HTTP headers.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> method that control how a matched
+request is handled.</p></td></tr></table></div>
 </li>
 <li><h3 id="whenHEAD">whenHEAD(url, headers)</h3>
-<div class="whenhead"><p>Creates a new backend definition for HEAD requests. For more info see <code>when()</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-<li><code ng:non-bindable="">headers<i>(optional)</i> – {(Object|function(Object))=} – </code>
-<p>HTTP headers.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> method that control how a matched
-request is handled.</p></div>
-</div>
+<div class="whenhead"><p>Creates a new backend definition for HEAD requests. For more info see <code>when()</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr><tr><td>headers <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a><a href="" class="label type-hint type-hint-function">function(Object)</a></td><td><p>HTTP headers.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> method that control how a matched
+request is handled.</p></td></tr></table></div>
 </li>
 <li><h3 id="whenJSONP">whenJSONP(url)</h3>
-<div class="whenjsonp"><p>Creates a new backend definition for JSONP requests. For more info see <code>when()</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> method that control how a matched
-request is handled.</p></div>
-</div>
+<div class="whenjsonp"><p>Creates a new backend definition for JSONP requests. For more info see <code>when()</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> method that control how a matched
+request is handled.</p></td></tr></table></div>
 </li>
 <li><h3 id="whenPOST">whenPOST(url, data, headers)</h3>
-<div class="whenpost"><p>Creates a new backend definition for POST requests. For more info see <code>when()</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-<li><code ng:non-bindable="">data<i>(optional)</i> – {(string|RegExp)=} – </code>
-<p>HTTP request body.</p></li>
-<li><code ng:non-bindable="">headers<i>(optional)</i> – {(Object|function(Object))=} – </code>
-<p>HTTP headers.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> method that control how a matched
-request is handled.</p></div>
-</div>
+<div class="whenpost"><p>Creates a new backend definition for POST requests. For more info see <code>when()</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr><tr><td>data <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP request body.</p></td></tr><tr><td>headers <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a><a href="" class="label type-hint type-hint-function">function(Object)</a></td><td><p>HTTP headers.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> method that control how a matched
+request is handled.</p></td></tr></table></div>
 </li>
 <li><h3 id="whenPUT">whenPUT(url, data, headers)</h3>
-<div class="whenput"><p>Creates a new backend definition for PUT requests.  For more info see <code>when()</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-<li><code ng:non-bindable="">data<i>(optional)</i> – {(string|RegExp)=} – </code>
-<p>HTTP request body.</p></li>
-<li><code ng:non-bindable="">headers<i>(optional)</i> – {(Object|function(Object))=} – </code>
-<p>HTTP headers.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> method that control how a matched
-request is handled.</p></div>
-</div>
+<div class="whenput"><p>Creates a new backend definition for PUT requests.  For more info see <code>when()</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr><tr><td>data <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP request body.</p></td></tr><tr><td>headers <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a><a href="" class="label type-hint type-hint-function">function(Object)</a></td><td><p>HTTP headers.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> method that control how a matched
+request is handled.</p></td></tr></table></div>
 </li>
 </ul>
 </div>

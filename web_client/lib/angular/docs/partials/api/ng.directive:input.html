@@ -6,7 +6,7 @@
 <div class="description"><p>HTML input element control with angular data-binding. Input control follows HTML5 input types
 and polyfills the HTML5 validation behavior for older browsers.</p></div>
 <h2 id="Usage">Usage</h2>
-<div class="usage">This directive can be used as custom element, but be aware of <a href="guide/ie">IE restrictions</a>.as element:<pre class="prettyprint linenums">&lt;input
+<div class="usage"><p>This directive can be used as custom element, but be aware of <a href="guide/ie">IE restrictions</a>.</p>as element:<pre class="prettyprint linenums">&lt;input
        ngModel="{string}"
        [name="{string}"]
        [required]
@@ -16,36 +16,18 @@ and polyfills the HTML5 validation behavior for older browsers.</p></div>
        [ngPattern="{string}"]
        [ngChange="{string}"]&gt;
 &lt;/input&gt;</pre>
-<h3 id="Parameters">Parameters</h3>
-<ul class="parameters"><li><code ng:non-bindable="">ngModel – {string} – </code>
-<p>Assignable angular expression to data-bind to.</p></li>
-<li><code ng:non-bindable="">name<i>(optional)</i> – {string=} – </code>
-<p>Property name of the form under which the control is published.</p></li>
-<li><code ng:non-bindable="">required<i>(optional)</i> – {string=} – </code>
-<p>Sets <code>required</code> validation error key if the value is not entered.</p></li>
-<li><code ng:non-bindable="">ngRequired<i>(optional)</i> – {boolean=} – </code>
-<p>Sets <code>required</code> attribute if set to true</p></li>
-<li><code ng:non-bindable="">ngMinlength<i>(optional)</i> – {number=} – </code>
-<p>Sets <code>minlength</code> validation error key if the value is shorter than
-minlength.</p></li>
-<li><code ng:non-bindable="">ngMaxlength<i>(optional)</i> – {number=} – </code>
-<p>Sets <code>maxlength</code> validation error key if the value is longer than
-maxlength.</p></li>
-<li><code ng:non-bindable="">ngPattern<i>(optional)</i> – {string=} – </code>
-<p>Sets <code>pattern</code> validation error key if the value does not match the
+<h4 id="parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>ngModel</td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>Assignable angular expression to data-bind to.</p></td></tr><tr><td>name <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>Property name of the form under which the control is published.</p></td></tr><tr><td>required <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>Sets <code>required</code> validation error key if the value is not entered.</p></td></tr><tr><td>ngRequired <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-boolean">boolean</a></td><td><p>Sets <code>required</code> attribute if set to true</p></td></tr><tr><td>ngMinlength <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-number">number</a></td><td><p>Sets <code>minlength</code> validation error key if the value is shorter than
+minlength.</p></td></tr><tr><td>ngMaxlength <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-number">number</a></td><td><p>Sets <code>maxlength</code> validation error key if the value is longer than
+maxlength.</p></td></tr><tr><td>ngPattern <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>Sets <code>pattern</code> validation error key if the value does not match the
 RegExp pattern expression. Expected value is <code>/regexp/</code> for inline patterns or <code>regexp</code> for
-patterns defined as scope expressions.</p></li>
-<li><code ng:non-bindable="">ngChange<i>(optional)</i> – {string=} – </code>
-<p>Angular expression to be executed when input changes due to user
-interaction with the input element.</p></li>
-</ul>
-</div>
+patterns defined as scope expressions.</p></td></tr><tr><td>ngChange <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>Angular expression to be executed when input changes due to user
+interaction with the input element.</p></td></tr></tbody></table></div>
 <h2 id="Example">Example</h2>
-<div class="example"><h4>Source</h4>
-<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-122" source-edit-css="" source-edit-js="script.js-121" source-edit-unit="" source-edit-scenario="scenario.js-123"></div>
+<div class="example"><h4>Source</h2>
+<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-124" source-edit-css="" source-edit-js="script.js-123" source-edit-unit="" source-edit-scenario="scenario.js-125"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-122" ng-html-wrap=" angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html-122">
+<pre class="prettyprint linenums" ng-set-text="index.html-124" ng-html-wrap=" angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-124">
  
  <div ng-controller="Ctrl">
    <form name="myForm">
@@ -73,16 +55,16 @@ interaction with the input element.</p></li>
 </script>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-121"></pre>
-<script type="text/ng-template" id="script.js-121">
+<pre class="prettyprint linenums" ng-set-text="script.js-123"></pre>
+<script type="text/ng-template" id="script.js-123">
    function Ctrl($scope) {
      $scope.user = {name: 'guest', last: 'visitor'};
    }
  </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-123"></pre>
-<script type="text/ng-template" id="scenario.js-123">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-125"></pre>
+<script type="text/ng-template" id="scenario.js-125">
   it('should initialize to model', function() {
     expect(binding('user')).toEqual('{"name":"guest","last":"visitor"}');
     expect(binding('myForm.userName.$valid')).toEqual('true');
@@ -121,6 +103,6 @@ interaction with the input element.</p></li>
   });
 </script>
 </div>
-</div><h4>Demo</h4>
-<div class="well doc-example-live" ng-embed-app="" ng-set-html="index.html-122" ng-eval-javascript="script.js-121"></div></div>
+</div><h2>Demo</h4>
+<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-124" ng-eval-javascript="script.js-123"></div></div>
 </div>

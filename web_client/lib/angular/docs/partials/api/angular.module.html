@@ -7,7 +7,7 @@
 modules (angular core or 3rd party) that should be available to an application must be
 registered using this mechanism.</p>
 
-<h1 id="module">Module</h3>
+<h3 id="module">Module</h3>
 
 <p>A module is a collocation of services, directives, filters, and configuration information. Module
 is used to configure the <a href="api/AUTO.$injector"><code>$injector</code></a>.</p>
@@ -37,18 +37,7 @@ var injector = angular.injector(['ng', 'MyModule'])
 <a href="api/angular.bootstrap"><code>angular.bootstrap</code></a> to simplify this process for you.</p></div>
 <h2 id="Usage">Usage</h2>
 <div class="usage"><pre class="prettyprint linenums">angular.module(name[, requires], configFn);</pre>
-<h3 id="Parameters">Parameters</h3>
-<ul class="parameters"><li><code ng:non-bindable="">name – {!string} – </code>
-<p>The name of the module to create or retrieve.</p></li>
-<li><code ng:non-bindable="">requires<i>(optional)</i> – {Array.&lt;string&gt;=} – </code>
-<p>If specified then new module is being created. If unspecified then the
-the module is being retrieved for further configuration.</p></li>
-<li><code ng:non-bindable="">configFn – {Function} – </code>
-<p>Optional configuration function for the module. Same as
-<a href="api/angular.Module#config"><code>Module#config()</code></a>.</p></li>
-</ul>
-<h3 id="Returns">Returns</h3>
-<div class="returns"><code ng:non-bindable="">{module}</code>
-– <p>new module with the <a href="api/angular.Module"><code>angular.Module</code></a> api.</p></div>
-</div>
+<h4 id="parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>name</td><td><a href="" class="label type-hint type-hint-object">!string</a></td><td><p>The name of the module to create or retrieve.</p></td></tr><tr><td>requires <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-array">Array.&lt;string&gt;</a></td><td><p>If specified then new module is being created. If unspecified then the
+the module is being retrieved for further configuration.</p></td></tr><tr><td>configFn</td><td><a href="" class="label type-hint type-hint-function">Function</a></td><td><p>Optional configuration function for the module. Same as
+<a href="api/angular.Module#config"><code>Module#config()</code></a>.</p></td></tr></tbody></table><h4 id="returns">Returns</h4><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-module">module</a></td><td><p>new module with the <a href="api/angular.Module"><code>angular.Module</code></a> api.</p></td></tr></table></div>
 </div>

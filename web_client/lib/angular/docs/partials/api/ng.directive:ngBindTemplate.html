@@ -15,19 +15,15 @@ can not have SPAN elements such as TITLE, or OPTION to name a few.)</p></div>
 as class<pre class="prettyprint linenums">&lt;ANY class="ng-bind-template: {string};"&gt;
    ...
 &lt;/ANY&gt;</pre>
-<h3 id="Parameters">Parameters</h3>
-<ul class="parameters"><li><code ng:non-bindable="">ngBindTemplate – {string} – </code>
-<p>template of form
-<tt>{{</tt> <tt>expression</tt> <tt>}}</tt> to eval.</p></li>
-</ul>
-</div>
+<h4 id="parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>ngBindTemplate</td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>template of form
+<tt>{{</tt> <tt>expression</tt> <tt>}}</tt> to eval.</p></td></tr></tbody></table></div>
 <h2 id="Example">Example</h2>
 <div class="example"><p>Try it here: enter text in text box and watch the greeting change.
-<h4>Source</h4>
-<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-138" source-edit-css="" source-edit-js="script.js-137" source-edit-unit="" source-edit-scenario="scenario.js-139"></div>
+<h4>Source</h2>
+<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-140" source-edit-css="" source-edit-js="script.js-139" source-edit-unit="" source-edit-scenario="scenario.js-141"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-138" ng-html-wrap=" angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html-138">
+<pre class="prettyprint linenums" ng-set-text="index.html-140" ng-html-wrap=" angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-140">
     
     <div ng-controller="Ctrl">
      Salutation: <input type="text" ng-model="salutation"><br>
@@ -37,8 +33,8 @@ as class<pre class="prettyprint linenums">&lt;ANY class="ng-bind-template: {stri
   </script>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-137"></pre>
-<script type="text/ng-template" id="script.js-137">
+<pre class="prettyprint linenums" ng-set-text="script.js-139"></pre>
+<script type="text/ng-template" id="script.js-139">
       function Ctrl($scope) {
         $scope.salutation = 'Hello';
         $scope.name = 'World';
@@ -46,8 +42,8 @@ as class<pre class="prettyprint linenums">&lt;ANY class="ng-bind-template: {stri
     </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-139"></pre>
-<script type="text/ng-template" id="scenario.js-139">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-141"></pre>
+<script type="text/ng-template" id="scenario.js-141">
     it('should check ng-bind', function() {
       expect(using('.doc-example-live').binding('salutation')).
         toBe('Hello');
@@ -62,6 +58,6 @@ as class<pre class="prettyprint linenums">&lt;ANY class="ng-bind-template: {stri
     });
   </script>
 </div>
-</div><h4>Demo</h4>
-<div class="well doc-example-live" ng-embed-app="" ng-set-html="index.html-138" ng-eval-javascript="script.js-137"></div></div>
+</div><h2>Demo</h4>
+<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-140" ng-eval-javascript="script.js-139"></div></div>
 </div>

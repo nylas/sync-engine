@@ -18,18 +18,18 @@ as class<pre class="prettyprint linenums">&lt;ANY class="ng-non-bindable"&gt;
 </div>
 </div>
 <h2 id="Example">Example</h2>
-<div class="example"><h4>Source</h4>
-<div source-edit="" source-edit-deps="angular.js" source-edit-html="index.html-164" source-edit-css="" source-edit-js="" source-edit-unit="" source-edit-scenario="scenario.js-165"></div>
+<div class="example"><h4>Source</h2>
+<div source-edit="" source-edit-deps="angular.js" source-edit-html="index.html-170" source-edit-css="" source-edit-js="" source-edit-unit="" source-edit-scenario="scenario.js-171"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-164" ng-html-wrap=" angular.js"></pre>
-<script type="text/ng-template" id="index.html-164">
+<pre class="prettyprint linenums" ng-set-text="index.html-170" ng-html-wrap=" angular.js"></pre>
+<script type="text/ng-template" id="index.html-170">
   <div>Normal: {{1 + 2}}</div>
   <div ng-non-bindable>Ignored: {{1 + 2}}</div>
 </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-165"></pre>
-<script type="text/ng-template" id="scenario.js-165">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-171"></pre>
+<script type="text/ng-template" id="scenario.js-171">
  it('should check ng-non-bindable', function() {
    expect(using('.doc-example-live').binding('1 + 2')).toBe('3');
    expect(using('.doc-example-live').element('div:last').text()).
@@ -37,6 +37,6 @@ as class<pre class="prettyprint linenums">&lt;ANY class="ng-non-bindable"&gt;
  });
 </script>
 </div>
-</div><h4>Demo</h4>
-<div class="well doc-example-live" ng-embed-app="" ng-set-html="index.html-164" ng-eval-javascript=""></div></div>
+</div><h2>Demo</h4>
+<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-170" ng-eval-javascript=""></div></div>
 </div>

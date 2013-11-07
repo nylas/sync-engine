@@ -11,7 +11,7 @@ angular <a href="guide/scope">Scope</a>, excluding the root scope.</p>
 <li>Add behavior to the scope object.</li>
 </ul>
 
-<h1 id="settinguptheinitialstateofascopeobject">Setting up the initial state of a scope object</h2>
+<h2 id="settinguptheinitialstateofascopeobject">Setting up the initial state of a scope object</h1>
 
 <p>Typically, when you create an application you need to set up an initial state for an Angular scope.</p>
 
@@ -42,7 +42,7 @@ your application as follows:</p>
 <p>Note also that we use the array notation to explicitly specify the dependency
 of the controller on the <code>$scope</code> service provided by Angular.</p>
 
-<h1 id="addingbehaviortoascopeobject">Adding Behavior to a Scope Object</h2>
+<h1 id="addingbehaviortoascopeobject">Adding Behavior to a Scope Object</h1>
 
 <p>Behavior on an Angular scope object is in the form of scope method properties available to the
 template/view. This behavior interacts with and modifies the application model.</p>
@@ -52,7 +52,7 @@ objects (or primitives) assigned to the scope become model properties. Any funct
 the scope are available in the template/view, and can be invoked via angular expressions
 and <code>ng</code> event handler directives (e.g. <a href="api/ng.directive:ngClick"><code>ngClick</code></a>).</p>
 
-<h1 id="usingcontrollerscorrectly">Using Controllers Correctly</h2>
+<h1 id="usingcontrollerscorrectly">Using Controllers Correctly</h1>
 
 <p>In general, a controller shouldn't try to do too much. It should contain only the business logic
 needed for a single view.</p>
@@ -81,7 +81,7 @@ instances).</li>
 
 <p>You can associate controllers with scope objects implicitly via the <a href="api/ng.directive:ngController"><code>ngController directive</code></a> or <a href="api/ng.$route"><code>$route service</code></a>.</p>
 
-<h2 id="controllerconstructorandmethodsexample">Controller Constructor and Methods Example</h3>
+<h3 id="controllerconstructorandmethodsexample">Controller Constructor and Methods Example</h2>
 
 <p>To illustrate how the controller component works in angular, let's create a little app with the
 following components:</p>
@@ -96,7 +96,7 @@ following components:</p>
 string "very". Depending on which button is clicked, the <code>spice</code> model is set to <code>chili</code> or
 <code>jalapeño</code>, and the message is automatically updated by data-binding.</p>
 
-<h2 id="aspicycontrollerexample">A Spicy Controller Example</h3>
+<h2 id="aspicycontrollerexample">A Spicy Controller Example</h2>
 
 <pre class="prettyprint linenums">
 &lt;body ng-controller="SpicyCtrl"&gt;
@@ -141,7 +141,7 @@ the scope.</li>
 <p>Controller methods can also take arguments, as demonstrated in the following variation of the
 previous example.</p>
 
-<h2 id="controllermethodargumentsexample">Controller Method Arguments Example</h3>
+<h2 id="controllermethodargumentsexample">Controller Method Arguments Example</h2>
 
 <pre class="prettyprint linenums">
 &lt;body ng-controller="SpicyCtrl"&gt;
@@ -164,7 +164,7 @@ argument called <code>spice</code>. The template then refers to this controller 
 constant <code>'chili'</code> in the binding for the first button and a model property <code>spice</code> (bound to an
 input box) in the second button.</p>
 
-<h2 id="controllerinheritanceexample">Controller Inheritance Example</h3>
+<h2 id="controllerinheritanceexample">Controller Inheritance Example</h2>
 
 <p>Controller inheritance in Angular is based on <a href="api/ng.$rootScope.Scope"><code>Scope</code></a> inheritance. Let's
 have a look at an example:</p>
@@ -212,7 +212,7 @@ examples, all of the models could be replaced with controller methods that retur
 because as we mentioned earlier, controllers are not instantiated directly by Angular, but rather
 are applied to the scope object.</p>
 
-<h2 id="testingcontrollers">Testing Controllers</h3>
+<h2 id="testingcontrollers">Testing Controllers</h2>
 
 <p>Although there are many ways to test a controller, one of the best conventions, shown below,
 involves injecting the <code>$rootScope</code> and <code>$controller</code></p>

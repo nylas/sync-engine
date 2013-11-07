@@ -9,16 +9,12 @@
 <a href="api/ng.$filter"><code>ng.$filter</code></a> for more information about Angular arrays.</p></div>
 <h2 id="Usage">Usage</h2>
 <div class="usage"><h3 id="In.HTML.Template.Binding">In HTML Template Binding</h3>
-<div class="in-html-template-binding"><code ng:non-bindable="">{{ filter_expression | filter:expression }}</code>
+<div class="in-html-template-binding"><code ng:non-bindable="">{{ filter_expression | filter:expression:comparator }}</code>
 </div>
 <h3 id="In.JavaScript">In JavaScript</h3>
-<div class="in-javascript"><code ng:non-bindable="">$filter('filter')(array, expression)</code>
+<div class="in-javascript"><code ng:non-bindable="">$filter('filter')(array, expression, comparator)</code>
 </div>
-<h3 id="Parameters">Parameters</h3>
-<ul class="parameters"><li><code ng:non-bindable="">array – {Array} – </code>
-<p>The source array.</p></li>
-<li><code ng:non-bindable="">expression – {string|Object|function()} – </code>
-<p>The predicate to be used for selecting items from
+<h4 id="parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>array</td><td><a href="" class="label type-hint type-hint-array">Array</a></td><td><p>The source array.</p></td></tr><tr><td>expression</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-object">Object</a><a href="" class="label type-hint type-hint-function">function()</a></td><td><p>The predicate to be used for selecting items from
 <code>array</code>.</p>
 
 <p>Can be one of:</p>
@@ -36,20 +32,33 @@ as described above.</p></li>
 <li><p><code>function</code>: A predicate function can be used to write arbitrary filters. The function is
 called for each element of <code>array</code>. The final result is an array of those elements that
 the predicate returned true for.</p></li>
-</ul></li>
-</ul>
-</div>
+</ul></td></tr><tr><td>comparator</td><td><a href="" class="label type-hint type-hint-function">function(expected, actual)</a><a href="" class="label type-hint type-hint-true">true</a><a href="" class="label type-hint type-hint-undefined">undefined</a></td><td><p>Comparator which is used in
+determining if the expected value (from the filter expression) and actual value (from
+the object in the array) should be considered a match.</p>
+
+<p>Can be one of:</p>
+
+<ul>
+<li><p><code>function(expected, actual)</code>:
+The function will be given the object value and the predicate value to compare and
+should return true if the item should be included in filtered result.</p></li>
+<li><p><code>true</code>: A shorthand for <code>function(expected, actual) { return angular.equals(expected, actual)}</code>.
+this is essentially strict comparison of expected and actual.</p></li>
+<li><p><code>false|undefined</code>: A short hand for a function which will look for a substring match in case
+insensitive way.</p></li>
+</ul></td></tr></tbody></table></div>
 <h2 id="Example">Example</h2>
-<div class="example"><h4>Source</h4>
-<div source-edit="" source-edit-deps="angular.js" source-edit-html="index.html-192" source-edit-css="" source-edit-js="" source-edit-unit="" source-edit-scenario="scenario.js-193"></div>
+<div class="example"><h4>Source</h2>
+<div source-edit="" source-edit-deps="angular.js" source-edit-html="index.html-198" source-edit-css="" source-edit-js="" source-edit-unit="" source-edit-scenario="scenario.js-199"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-192" ng-html-wrap=" angular.js"></pre>
-<script type="text/ng-template" id="index.html-192">
+<pre class="prettyprint linenums" ng-set-text="index.html-198" ng-html-wrap=" angular.js"></pre>
+<script type="text/ng-template" id="index.html-198">
   <div ng-init="friends = [{name:'John', phone:'555-1276'},
                            {name:'Mary', phone:'800-BIG-MARY'},
                            {name:'Mike', phone:'555-4321'},
                            {name:'Adam', phone:'555-5678'},
-                           {name:'Julie', phone:'555-8765'}]"></div>
+                           {name:'Julie', phone:'555-8765'},
+                           {name:'Juliette', phone:'555-5678'}]"></div>
 
   Search: <input ng-model="searchText">
   <table id="searchTextResults">
@@ -63,9 +72,10 @@ the predicate returned true for.</p></li>
   Any: <input ng-model="search.$"> <br>
   Name only <input ng-model="search.name"><br>
   Phone only <input ng-model="search.phone"><br>
+  Equality <input type="checkbox" ng-model="strict"><br>
   <table id="searchObjResults">
     <tr><th>Name</th><th>Phone</th></tr>
-    <tr ng-repeat="friend in friends | filter:search">
+    <tr ng-repeat="friend in friends | filter:search:strict">
       <td>{{friend.name}}</td>
       <td>{{friend.phone}}</td>
     </tr>
@@ -73,8 +83,8 @@ the predicate returned true for.</p></li>
 </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-193"></pre>
-<script type="text/ng-template" id="scenario.js-193">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-199"></pre>
+<script type="text/ng-template" id="scenario.js-199">
   it('should search across all fields when filtering with a string', function() {
     input('searchText').enter('m');
     expect(repeater('#searchTextResults tr', 'friend in friends').column('friend.name')).
@@ -88,10 +98,16 @@ the predicate returned true for.</p></li>
   it('should search in specific fields when filtering with a predicate object', function() {
     input('search.$').enter('i');
     expect(repeater('#searchObjResults tr', 'friend in friends').column('friend.name')).
-      toEqual(['Mary', 'Mike', 'Julie']);
+      toEqual(['Mary', 'Mike', 'Julie', 'Juliette']);
+  });
+  it('should use a equal comparison when comparator is true', function() {
+    input('search.name').enter('Julie');
+    input('strict').check();
+    expect(repeater('#searchObjResults tr', 'friend in friends').column('friend.name')).
+      toEqual(['Julie']);
   });
 </script>
 </div>
-</div><h4>Demo</h4>
-<div class="well doc-example-live" ng-embed-app="" ng-set-html="index.html-192" ng-eval-javascript=""></div></div>
+</div><h2>Demo</h4>
+<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-198" ng-eval-javascript=""></div></div>
 </div>

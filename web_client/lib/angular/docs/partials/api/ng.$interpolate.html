@@ -20,42 +20,27 @@ interpolation markup.</p>
 </ul>
 <h2 id="Usage">Usage</h2>
 <div class="usage"><pre class="prettyprint linenums">$interpolate(text[, mustHaveExpression]);</pre>
-<h3 id="Parameters">Parameters</h3>
-<ul class="parameters"><li><code ng:non-bindable="">text – {string} – </code>
-<p>The text with markup to interpolate.</p></li>
-<li><code ng:non-bindable="">mustHaveExpression<i>(optional)</i> – {boolean=} – </code>
-<p>if set to true then the interpolation string must have
+<h4 id="parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>text</td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>The text with markup to interpolate.</p></td></tr><tr><td>mustHaveExpression <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-boolean">boolean</a></td><td><p>if set to true then the interpolation string must have
 embedded expression in order to return an interpolation function. Strings with no
-embedded expression will return null for the interpolation function.</p></li>
-</ul>
-<h3 id="Returns">Returns</h3>
-<div class="returns"><code ng:non-bindable="">{function(context)}</code>
-– <p>an interpolation function which is used to compute the interpolated
+embedded expression will return null for the interpolation function.</p></td></tr></tbody></table><h4 id="returns">Returns</h4><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-function">function(context)</a></td><td><p>an interpolation function which is used to compute the interpolated
 string. The function has these parameters:</p>
 
 <ul>
 <li><code>context</code>: an object against which any expressions embedded in the strings are evaluated
 against.</li>
-</ul></div>
-</div>
+</ul></td></tr></table></div>
 <div class="member method"><h2 id="Methods">Methods</h2>
 <ul class="methods"><li><h3 id="endSymbol">endSymbol()</h3>
 <div class="endsymbol"><p>Symbol to denote the end of expression in the interpolated string. Defaults to <code>}}</code>.</p>
 
 <p>Use <a href="api/ng.$interpolateProvider#endSymbol"><code>$interpolateProvider#endSymbol</code></a> to change
-the symbol.</p><h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{string}</code>
-– <p>start symbol.</p></div>
-</div>
+the symbol.</p><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>start symbol.</p></td></tr></table></div>
 </li>
 <li><h3 id="startSymbol">startSymbol()</h3>
 <div class="startsymbol"><p>Symbol to denote the start of expression in the interpolated string. Defaults to <code>{{</code>.</p>
 
 <p>Use <a href="api/ng.$interpolateProvider#startSymbol"><code>$interpolateProvider#startSymbol</code></a> to change
-the symbol.</p><h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{string}</code>
-– <p>start symbol.</p></div>
-</div>
+the symbol.</p><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>start symbol.</p></td></tr></table></div>
 </li>
 </ul>
 </div>

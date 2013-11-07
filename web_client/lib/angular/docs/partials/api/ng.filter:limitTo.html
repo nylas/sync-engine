@@ -3,69 +3,70 @@
 )</span>
 </h1>
 <div><a href="http://github.com/angular/angular.js/edit/master/src/ng/filter/limitTo.js" class="improve-docs btn btn-primary">Improve this doc</a><h2 id="Description">Description</h2>
-<div class="description"><p>Creates a new array containing only a specified number of elements in an array. The elements
-are taken from either the beginning or the end of the source array, as specified by the
-value and sign (positive or negative) of <code>limit</code>.</p>
+<div class="description"><p>Creates a new array or string containing only a specified number of elements. The elements
+are taken from either the beginning or the end of the source array or string, as specified by
+the value and sign (positive or negative) of <code>limit</code>.</p>
 
 <p>Note: This function is used to augment the <code>Array</code> type in Angular expressions. See
 <a href="api/ng.$filter"><code>ng.$filter</code></a> for more information about Angular arrays.</p></div>
 <h2 id="Usage">Usage</h2>
-<div class="usage"><pre class="prettyprint linenums">filter:limitTo(array, limit);</pre>
-<h3 id="Parameters">Parameters</h3>
-<ul class="parameters"><li><code ng:non-bindable="">array – {Array} – </code>
-<p>Source array to be limited.</p></li>
-<li><code ng:non-bindable="">limit – {string|Number} – </code>
-<p>The length of the returned array. If the <code>limit</code> number is
-positive, <code>limit</code> number of items from the beginning of the source array are copied.
-If the number is negative, <code>limit</code> number  of items from the end of the source array are
-copied. The <code>limit</code> will be trimmed if it exceeds <code>array.length</code></p></li>
-</ul>
-<h3 id="Returns">Returns</h3>
-<div class="returns"><code ng:non-bindable="">{Array}</code>
-– <p>A new sub-array of length <code>limit</code> or less if input array had less than <code>limit</code>
-elements.</p></div>
-</div>
+<div class="usage"><pre class="prettyprint linenums">filter:limitTo(input, limit);</pre>
+<h4 id="parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>input</td><td><a href="" class="label type-hint type-hint-array">Array</a><a href="" class="label type-hint type-hint-string">string</a></td><td><p>Source array or string to be limited.</p></td></tr><tr><td>limit</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-number">number</a></td><td><p>The length of the returned array or string. If the <code>limit</code> number 
+is positive, <code>limit</code> number of items from the beginning of the source array/string are copied.
+If the number is negative, <code>limit</code> number  of items from the end of the source array/string 
+are copied. The <code>limit</code> will be trimmed if it exceeds <code>array.length</code></p></td></tr></tbody></table><h4 id="returns">Returns</h4><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-array">Array|string</a></td><td><p>A new sub-array or substring of length <code>limit</code> or less if input array
+had less than <code>limit</code> elements.</p></td></tr></table></div>
 <h2 id="Example">Example</h2>
-<div class="example"><h4>Source</h4>
-<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-205" source-edit-css="" source-edit-js="script.js-204" source-edit-unit="" source-edit-scenario="scenario.js-206"></div>
+<div class="example"><h4>Source</h2>
+<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-211" source-edit-css="" source-edit-js="script.js-210" source-edit-unit="" source-edit-scenario="scenario.js-212"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-205" ng-html-wrap=" angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html-205">
+<pre class="prettyprint linenums" ng-set-text="index.html-211" ng-html-wrap=" angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-211">
   
   <div ng-controller="Ctrl">
-    Limit {{numbers}} to: <input type="integer" ng-model="limit">
-    <p>Output: {{ numbers | limitTo:limit }}</p>
+    Limit {{numbers}} to: <input type="integer" ng-model="numLimit">
+    <p>Output numbers: {{ numbers | limitTo:numLimit }}</p>
+    Limit {{letters}} to: <input type="integer" ng-model="letterLimit">
+    <p>Output letters: {{ letters | limitTo:letterLimit }}</p>
   </div>
 </script>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-204"></pre>
-<script type="text/ng-template" id="script.js-204">
+<pre class="prettyprint linenums" ng-set-text="script.js-210"></pre>
+<script type="text/ng-template" id="script.js-210">
     function Ctrl($scope) {
       $scope.numbers = [1,2,3,4,5,6,7,8,9];
-      $scope.limit = 3;
+      $scope.letters = "abcdefghi";
+      $scope.numLimit = 3;
+      $scope.letterLimit = 3;
     }
   </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-206"></pre>
-<script type="text/ng-template" id="scenario.js-206">
-  it('should limit the numer array to first three items', function() {
-    expect(element('.doc-example-live input[ng-model=limit]').val()).toBe('3');
-    expect(binding('numbers | limitTo:limit')).toEqual('[1,2,3]');
+<pre class="prettyprint linenums" ng-set-text="scenario.js-212"></pre>
+<script type="text/ng-template" id="scenario.js-212">
+  it('should limit the number array to first three items', function() {
+    expect(element('.doc-example-live input[ng-model=numLimit]').val()).toBe('3');
+    expect(element('.doc-example-live input[ng-model=letterLimit]').val()).toBe('3');
+    expect(binding('numbers | limitTo:numLimit')).toEqual('[1,2,3]');
+    expect(binding('letters | limitTo:letterLimit')).toEqual('abc');
   });
 
   it('should update the output when -3 is entered', function() {
-    input('limit').enter(-3);
-    expect(binding('numbers | limitTo:limit')).toEqual('[7,8,9]');
+    input('numLimit').enter(-3);
+    input('letterLimit').enter(-3);
+    expect(binding('numbers | limitTo:numLimit')).toEqual('[7,8,9]');
+    expect(binding('letters | limitTo:letterLimit')).toEqual('ghi');
   });
 
   it('should not exceed the maximum size of input array', function() {
-    input('limit').enter(100);
-    expect(binding('numbers | limitTo:limit')).toEqual('[1,2,3,4,5,6,7,8,9]');
+    input('numLimit').enter(100);
+    input('letterLimit').enter(100);
+    expect(binding('numbers | limitTo:numLimit')).toEqual('[1,2,3,4,5,6,7,8,9]');
+    expect(binding('letters | limitTo:letterLimit')).toEqual('abcdefghi');
   });
 </script>
 </div>
-</div><h4>Demo</h4>
-<div class="well doc-example-live" ng-embed-app="" ng-set-html="index.html-205" ng-eval-javascript="script.js-204"></div></div>
+</div><h2>Demo</h4>
+<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-211" ng-eval-javascript="script.js-210"></div></div>
 </div>

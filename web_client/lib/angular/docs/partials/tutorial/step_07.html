@@ -15,7 +15,7 @@ detail page is displayed.</p>
 
 <p>The most important changes are listed below. You can see the full diff on <a href="https://github.com/angular/angular-phonecat/compare/step-6...step-7">GitHub</a>.</p>
 
-<h2 id="multipleviewsroutingandlayouttemplate">Multiple Views, Routing and Layout Template</h3>
+<h3 id="multipleviewsroutingandlayouttemplate">Multiple Views, Routing and Layout Template</h2>
 
 <p>Our app is slowly growing and becoming more complex. Before step 7, the app provided our users with
 a single view (the list of all phones), and all of the template code was located in the
@@ -35,7 +35,7 @@ controllers, view templates, and the current
 URL location in the browser. Using this feature we can implement <a href="http://en.wikipedia.org/wiki/Deep_linking">deep linking</a>, which lets us utilize the browser's
 history (back and forward navigation) and bookmarks.</p>
 
-<h3 id="anoteaboutdiinjectorandproviders">A Note About DI, Injector and Providers</h4>
+<h4 id="anoteaboutdiinjectorandproviders">A Note About DI, Injector and Providers</h4>
 
 <p>As you <a href="tutorial/step_05">noticed</a>, <a href="guide/di">dependency injection</a> (DI) is the core feature of
 AngularJS, so it's important for you to understand a thing or two about how it works.</p>
@@ -56,7 +56,7 @@ of configuring the injector. As opposed to AMD or require.js modules, Angular mo
 solve the problem of script load ordering or lazy script fetching. These goals are orthogonal and
 both module systems can live side by side and fulfil their goals.</p>
 
-<h2 id="theappmodule">The App Module</h3>
+<h2 id="theappmodule">The App Module</h2>
 
 <p><strong><code>app/js/app.js</code>:</strong>
 <pre class="prettyprint linenums">
@@ -109,7 +109,7 @@ directive:</p>
 ...
 </pre>
 
-<h2 id="controllers">Controllers</h3>
+<h2 id="controllers">Controllers</h2>
 
 <p><strong><code>app/js/controllers.js</code>:</strong>
 <pre class="prettyprint linenums">
@@ -121,7 +121,7 @@ function PhoneDetailCtrl($scope, $routeParams) {
 //PhoneDetailCtrl.$inject = ['$scope', '$routeParams'];
 </pre>
 
-<h2 id="template">Template</h3>
+<h2 id="template">Template</h2>
 
 <p>The <code>$route</code> service is usually used in conjunction with the <a href="api/ng.directive:ngView"><code>ngView</code></a> directive. The role of the <code>ngView</code> directive is to include the view template for the current
 route into the layout template, which makes it a perfect fit for our <code>index.html</code> template.</p>
@@ -221,7 +221,7 @@ to various URLs and verify that the correct view was rendered.</p>
 <p>You can now rerun <code>./scripts/e2e-test.sh</code> or refresh the browser tab with the end-to-end test
 runner to see the tests run, or you can see them running on <a href="http://angular.github.com/angular-phonecat/step-7/test/e2e/runner.html">Angular's server</a>.</p>
 
-<h1 id="experiments">Experiments</h2>
+<h2 id="experiments">Experiments</h1>
 
 <ul>
 <li>Try to add an <code>{{orderProp}}</code> binding to <code>index.html</code>, and you'll see that nothing happens even

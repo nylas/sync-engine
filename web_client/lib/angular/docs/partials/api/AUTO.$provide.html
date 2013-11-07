@@ -47,89 +47,38 @@ a service. The Provider can have additional methods which would allow for config
 <ul class="methods"><li><h3 id="constant">constant(name, value)</h3>
 <div class="constant"><p>A constant value, but unlike <a href="api/AUTO.$provide#value"><code>value</code></a> it can be injected
 into configuration function (other modules) and it is not interceptable by
-<a href="api/AUTO.$provide#decorator"><code>decorator</code></a>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">name – {string} – </code>
-<p>The name of the constant.</p></li>
-<li><code ng:non-bindable="">value – {*} – </code>
-<p>The constant value.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{Object}</code>
-– <p>registered instance</p></div>
-</div>
+<a href="api/AUTO.$provide#decorator"><code>decorator</code></a>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>name</td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>The name of the constant.</p></td></tr><tr><td>value</td><td><a href="" class="label type-hint type-hint-object">*</a></td><td><p>The constant value.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-object">Object</a></td><td><p>registered instance</p></td></tr></table></div>
 </li>
 <li><h3 id="decorator">decorator(name, decorator)</h3>
 <div class="decorator"><p>Decoration of service, allows the decorator to intercept the service instance creation. The
 returned instance may be the original instance, or a new instance which delegates to the
-original instance.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">name – {string} – </code>
-<p>The name of the service to decorate.</p></li>
-<li><code ng:non-bindable="">decorator – {function()} – </code>
-<p>This function will be invoked when the service needs to be
+original instance.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>name</td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>The name of the service to decorate.</p></td></tr><tr><td>decorator</td><td><a href="" class="label type-hint type-hint-function">function()</a></td><td><p>This function will be invoked when the service needs to be
 instantiated. The function is called using the <a href="api/AUTO.$injector#invoke"><code>injector.invoke</code></a> method and is therefore fully injectable. Local injection arguments:</p>
 
 <ul>
 <li><code>$delegate</code> - The original service instance, which can be monkey patched, configured,
 decorated or delegated to.</li>
-</ul></li>
-</ul>
-</div>
+</ul></td></tr></tbody></table></div>
 </li>
 <li><h3 id="factory">factory(name, $getFn)</h3>
-<div class="factory"><p>A short hand for configuring services if only <code>$get</code> method is required.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">name – {string} – </code>
-<p>The name of the instance.</p></li>
-<li><code ng:non-bindable="">$getFn – {function()} – </code>
-<p>The $getFn for the instance creation. Internally this is a short hand for
-<code>$provide.provider(name, {$get: $getFn})</code>.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{Object}</code>
-– <p>registered provider instance</p></div>
-</div>
+<div class="factory"><p>A short hand for configuring services if only <code>$get</code> method is required.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>name</td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>The name of the instance.</p></td></tr><tr><td>$getFn</td><td><a href="" class="label type-hint type-hint-function">function()</a></td><td><p>The $getFn for the instance creation. Internally this is a short hand for
+<code>$provide.provider(name, {$get: $getFn})</code>.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-object">Object</a></td><td><p>registered provider instance</p></td></tr></table></div>
 </li>
 <li><h3 id="provider">provider(name, provider)</h3>
-<div class="provider"><p>Register a provider for a service. The providers can be retrieved and can have additional configuration methods.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">name – {string} – </code>
-<p>The name of the instance. NOTE: the provider will be available under <code>name + 'Provider'</code> key.</p></li>
-<li><code ng:non-bindable="">provider – {(Object|function())} – </code>
-<p>If the provider is:</p>
+<div class="provider"><p>Register a provider for a service. The providers can be retrieved and can have additional configuration methods.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>name</td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>The name of the instance. NOTE: the provider will be available under <code>name + 'Provider'</code> key.</p></td></tr><tr><td>provider</td><td><a href="" class="label type-hint type-hint-object">Object</a><a href="" class="label type-hint type-hint-function">function()</a></td><td><p>If the provider is:</p>
 
 <ul>
 <li><code>Object</code>: then it should have a <code>$get</code> method. The <code>$get</code> method will be invoked using
           <a href="api/AUTO.$injector#invoke"><code>$injector.invoke()</code></a> when an instance needs to be created.</li>
 <li><code>Constructor</code>: a new instance of the provider will be created using
           <a href="api/AUTO.$injector#instantiate"><code>$injector.instantiate()</code></a>, then treated as <code>object</code>.</li>
-</ul></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{Object}</code>
-– <p>registered provider instance</p></div>
-</div>
+</ul></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-object">Object</a></td><td><p>registered provider instance</p></td></tr></table></div>
 </li>
 <li><h3 id="service">service(name, constructor)</h3>
-<div class="service"><p>A short hand for registering service of given class.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">name – {string} – </code>
-<p>The name of the instance.</p></li>
-<li><code ng:non-bindable="">constructor – {Function} – </code>
-<p>A class (constructor function) that will be instantiated.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{Object}</code>
-– <p>registered provider instance</p></div>
-</div>
+<div class="service"><p>A short hand for registering service of given class.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>name</td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>The name of the instance.</p></td></tr><tr><td>constructor</td><td><a href="" class="label type-hint type-hint-function">Function</a></td><td><p>A class (constructor function) that will be instantiated.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-object">Object</a></td><td><p>registered provider instance</p></td></tr></table></div>
 </li>
 <li><h3 id="value">value(name, value)</h3>
-<div class="value"><p>A short hand for configuring services if the <code>$get</code> method is a constant.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">name – {string} – </code>
-<p>The name of the instance.</p></li>
-<li><code ng:non-bindable="">value – {*} – </code>
-<p>The value.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{Object}</code>
-– <p>registered provider instance</p></div>
-</div>
+<div class="value"><p>A short hand for configuring services if the <code>$get</code> method is a constant.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>name</td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>The name of the instance.</p></td></tr><tr><td>value</td><td><a href="" class="label type-hint type-hint-object">*</a></td><td><p>The value.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-object">Object</a></td><td><p>registered provider instance</p></td></tr></table></div>
 </li>
 </ul>
 </div>

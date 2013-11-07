@@ -1,15 +1,15 @@
 <h1><code ng:non-bindable=""></code>
 <span class="hint"></span>
 </h1>
-<div><a href="http://github.com/angular/angular.js/edit/master/docs/content/misc/faq.ngdoc" class="improve-docs btn btn-primary">Improve this doc</a><h1 id="faq">FAQ</h2>
+<div><a href="http://github.com/angular/angular.js/edit/master/docs/content/misc/faq.ngdoc" class="improve-docs btn btn-primary">Improve this doc</a><h2 id="faq">FAQ</h2>
 
-<h2 id="questions">Questions</h3>
+<h3 id="questions">Questions</h2>
 
-<h3 id="whyisthisprojectcalledangularjswhyisthenamespacecalledng">Why is this project called "AngularJS"? Why is the namespace called "ng"?</h4>
+<h4 id="whyisthisprojectcalledangularjswhyisthenamespacecalledng">Why is this project called "AngularJS"? Why is the namespace called "ng"?</h3>
 
 <p>Because HTML has Angular brackets and "ng" sounds like "Angular".</p>
 
-<h3 id="isangularjsalibraryframeworkpluginorabrowserextension">Is AngularJS a library, framework, plugin or a browser extension?</h4>
+<h3 id="isangularjsalibraryframeworkpluginorabrowserextension">Is AngularJS a library, framework, plugin or a browser extension?</h3>
 
 <p>AngularJS fits the definition of a framework the best, even though it's much more lightweight than
 a typical framework and that's why many confuse it with a library.</p>
@@ -17,7 +17,7 @@ a typical framework and that's why many confuse it with a library.</p>
 <p>AngularJS is 100% JavaScript, 100% client side and compatible with both desktop and mobile browsers.
 So it's definitely not a plugin or some other native browser extension.</p>
 
-<h3 id="isangularjsatemplatingsystem">Is AngularJS a templating system?</h4>
+<h3 id="isangularjsatemplatingsystem">Is AngularJS a templating system?</h3>
 
 <p>At the highest level, Angular does look like a just another templating system. But there is one
 important reason why the Angular templating system is different, that makes it very good fit for
@@ -26,7 +26,7 @@ the compilation step produces a live view. This means you, the developers, don't
 code to constantly sync the view with the model and the model with the view as in other
 templating systems.</p>
 
-<h3 id="doineedtoworryaboutsecurityholesinangularjs">Do I need to worry about security holes in AngularJS?</h4>
+<h3 id="doineedtoworryaboutsecurityholesinangularjs">Do I need to worry about security holes in AngularJS?</h3>
 
 <p>Like any other technology, AngularJS is not impervious to attack. Angular does, however, provide
 built-in protection from basic security holes including cross-site scripting and HTML injection
@@ -37,16 +37,16 @@ for server-side communication.</p>
 (CSP), HTTPS (SSL/TLS) and server-side authentication and authorization that greatly reduce the
 possible attack vectors and we highly recommended their use.</p>
 
-<h3 id="canidownloadthesourcebuildandhosttheangularjsenvironmentlocally">Can I download the source, build, and host the AngularJS environment locally?</h4>
+<h3 id="canidownloadthesourcebuildandhosttheangularjsenvironmentlocally">Can I download the source, build, and host the AngularJS environment locally?</h3>
 
 <p>Yes. See instructions in <a href="misc/downloading">downloading</a>.</p>
 
-<h3 id="whatbrowsersdoesangularworkwith">What browsers does Angular work with?</h4>
+<h3 id="whatbrowsersdoesangularworkwith">What browsers does Angular work with?</h3>
 
 <p>We run our extensive test suite against the following browsers: Safari, Chrome, Firefox, Opera,
 IE8, IE9 and mobile browsers (Android, Chrome Mobile, iOS Safari). See <a href="guide/ie">Internet  Explorer Compatibility</a> for more details in supporting legacy IE browsers.</p>
 
-<h3 id="whatsangularsperformancelike">What's Angular's performance like?</h4>
+<h3 id="whatsangularsperformancelike">What's Angular's performance like?</h3>
 
 <p>The startup time heavily depends on your network connection, state of the cache, browser used and
 available hardware, but typically we measure bootstrap time in tens or hundreds of milliseconds.</p>
@@ -55,42 +55,42 @@ available hardware, but typically we measure bootstrap time in tens or hundreds 
 as well as the speed of your backend (for apps that fetch data from the backend). Just for an
 illustration we typically build snappy apps with hundreds or thousands of active bindings.</p>
 
-<h3 id="howbigistheangularjsfilethatineedtoinclude">How big is the angular.js file that I need to include?</h4>
+<h3 id="howbigistheangularjsfilethatineedtoinclude">How big is the angular.js file that I need to include?</h3>
 
 <p>The size of the file is &lt; 29KB compressed and minified.</p>
 
-<h3 id="caniusetheopensourceclosurelibrarywithangular">Can I use the open-source Closure Library with Angular?</h4>
+<h3 id="caniusetheopensourceclosurelibrarywithangular">Can I use the open-source Closure Library with Angular?</h3>
 
 <p>Yes, you can use widgets from the <a href="http://code.google.com/closure/library">Closure Library</a>
 in Angular.</p>
 
-<h3 id="doesangularusethejquerylibrary">Does Angular use the jQuery library?</h4>
+<h3 id="doesangularusethejquerylibrary">Does Angular use the jQuery library?</h3>
 
 <p>Yes, Angular can use <a href="http://jquery.com/">jQuery</a> if it's present in your app when the
 application is being bootstrapped. If jQuery is not present in your script path, Angular falls back
 to its own implementation of the subset of jQuery that we call <a href="api/angular.element"><code>jQLite</code></a>.</p>
 
-<h3 id="whatistestabilitylikeinangular">What is testability like in Angular?</h4>
+<h3 id="whatistestabilitylikeinangular">What is testability like in Angular?</h3>
 
 <p>Very testable and designed this way from ground up. It has an integrated dependency injection
 framework, provides mocks for many heavy dependencies (server-side communication). See
 <a href="api/ng">service</a> for details.</p>
 
-<h3 id="howcanilearnmoreaboutangular">How can I learn more about Angular?</h4>
+<h3 id="howcanilearnmoreaboutangular">How can I learn more about Angular?</h3>
 
 <p>Watch the July 17, 2012 talk
 "<a href="http://www.youtube.com/watch?v=1CpiB3Wk25U">AngularJS Intro + Dependency Injection</a>".</p>
 
-<h3 id="howisangularlicensed">How is Angular licensed?</h4>
+<h3 id="howisangularlicensed">How is Angular licensed?</h3>
 
 <p>The MIT License.</p>
 
-<h3 id="canidownloadandusetheangularlogoartwork">Can I download and use the Angular logo artwork?</h4>
+<h3 id="canidownloadandusetheangularlogoartwork">Can I download and use the Angular logo artwork?</h3>
 
 <p>Yes! You can find design files in our github repository, under "<a href="https://github.com/angular/angular.js/tree/master/images/logo">angular.js/images/logo</a>"
 The logo design is licensed under a "<a href="http://creativecommons.org/licenses/by-sa/3.0/">Creative Commons Attribution-ShareAlike 3.0 Unported License</a>". If you have some other use in mind, contact us.</p>
 
-<h3 id="howcanigetsomeangularjsschwag">How can I get some AngularJS schwag?</h4>
+<h3 id="howcanigetsomeangularjsschwag">How can I get some AngularJS schwag?</h3>
 
 <p>We often bring a few t-shirts and stickers to events where we're presenting. If you want to order your own, the folks who
 make our schwag will be happy to do a custom run for you, based on our existing template. By using the design they have on file,
@@ -113,7 +113,7 @@ just like past order #2106371. You'll have to give them your own info for billin
 <p>The Angular support channel (#angularjs on Freenode) sees a number of recurring pitfalls that new users of Angular fall into.
 This document aims to point them out before you discover them the hard way.</p>
 
-<h3 id="dommanipulation">DOM Manipulation</h4>
+<h3 id="dommanipulation">DOM Manipulation</h3>
 
 <p>Stop trying to use jQuery to modify the DOM in controllers. Really.
 That includes adding elements, removing elements, retrieving their contents, showing and hiding them.
@@ -124,7 +124,7 @@ See below about duplicating functionality.</p>
 Really. Angular has the $http service and powerful directives that make it almost always unnecessary.
 Angular's bundled jQLite has a handful of the features most commonly used in writing Angular directives, especially binding to events.</p>
 
-<h3 id="tryingtoduplicatefunctionalitythatalreadyexists">Trying to duplicate functionality that already exists</h4>
+<h3 id="tryingtoduplicatefunctionalitythatalreadyexists">Trying to duplicate functionality that already exists</h3>
 
 <p>There's a good chance that your app isn't the first to require certain functionality.
 There are a few pieces of Angular that are particularly likely to be reimplemented out of old habits.</p>
@@ -166,7 +166,7 @@ The element will then have all the classes whose conditions are truthy, and none
 
 <p>Note also the handy <code>ng-class-even</code> and <code>ng-class-odd</code>, and the related though somewhat different <code>ng-style</code>.</p>
 
-<h3 id="dwatchanddapply"><code>$watch</code> and <code>$apply</code></h4>
+<h3 id="dwatchanddapply"><code>$watch</code> and <code>$apply</code></h3>
 
 <p>Angular's two-way data binding is the root of all awesome in Angular.
 However, it's not magic, and there are some situations where you need to give it a nudge in the right direction.</p>
@@ -181,7 +181,7 @@ Angular checks for scope variable changes after pieces of your code have finishe
 However, some code is outside of Angular and you'll have to call <code>scope.$apply()</code> yourself to trigger the update.
 This is most commonly seen in event handlers in custom directives.</p>
 
-<h3 id="combiningngrepeatwithotherdirectives">Combining <code>ng-repeat</code> with other directives</h4>
+<h3 id="combiningngrepeatwithotherdirectives">Combining <code>ng-repeat</code> with other directives</h3>
 
 <p><code>ng-repeat</code> is extremely useful, one of the most powerful directives in Angular.
 However the transformation it applies to the DOM is substantial.

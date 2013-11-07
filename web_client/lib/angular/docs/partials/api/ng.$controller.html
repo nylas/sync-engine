@@ -13,9 +13,7 @@ a service, so that one can override this service with <a href="https://gist.gith
 </ul>
 <h2 id="Usage">Usage</h2>
 <div class="usage"><pre class="prettyprint linenums">$controller(constructor, locals);</pre>
-<h3 id="Parameters">Parameters</h3>
-<ul class="parameters"><li><code ng:non-bindable="">constructor – {Function|string} – </code>
-<p>If called with a function then it's considered to be the
+<h4 id="parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>constructor</td><td><a href="" class="label type-hint type-hint-function">Function</a><a href="" class="label type-hint type-hint-string">string</a></td><td><p>If called with a function then it's considered to be the
 controller constructor function. Otherwise it's considered to be a string which is used
 to retrieve the controller constructor using the following steps:</p>
 
@@ -23,12 +21,5 @@ to retrieve the controller constructor using the following steps:</p>
 <li>check if a controller with given name is registered via <code>$controllerProvider</code></li>
 <li>check if evaluating the string on the current scope returns a constructor</li>
 <li>check <code>window[constructor]</code> on the global <code>window</code> object</li>
-</ul></li>
-<li><code ng:non-bindable="">locals – {Object} – </code>
-<p>Injection locals for Controller.</p></li>
-</ul>
-<h3 id="Returns">Returns</h3>
-<div class="returns"><code ng:non-bindable="">{Object}</code>
-– <p>Instance of given controller.</p></div>
-</div>
+</ul></td></tr><tr><td>locals</td><td><a href="" class="label type-hint type-hint-object">Object</a></td><td><p>Injection locals for Controller.</p></td></tr></tbody></table><h4 id="returns">Returns</h4><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-object">Object</a></td><td><p>Instance of given controller.</p></td></tr></table></div>
 </div>

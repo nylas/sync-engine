@@ -16,7 +16,7 @@ strings into glyphs: ✓ for "true", and ✘ for "false". Let's see what the fil
 
 <p>The most important changes are listed below. You can see the full diff on <a href="https://github.com/angular/angular-phonecat/compare/step-8...step-9">GitHub</a>:</p>
 
-<h2 id="customfilter">Custom Filter</h3>
+<h3 id="customfilter">Custom Filter</h2>
 
 <p>In order to create a new filter, you are going to create a <code>phonecatFilters</code> module and register
 your custom filter with this module:</p>
@@ -44,7 +44,7 @@ angular.module('phonecat', ['phonecatFilters']).
 ...
 </pre>
 
-<h2 id="template">Template</h3>
+<h2 id="template">Template</h2>
 
 <p>Since the filter code lives in the <code>app/js/filters.js</code> file, we need to include this file in our
 layout template.</p>
@@ -106,7 +106,7 @@ our filter tests execute.</p>
 <pre><code>    Chrome 22.0: Executed 4 of 4 SUCCESS (0.034 secs / 0.012 secs)
 </code></pre>
 
-<h1 id="experiments">Experiments</h2>
+<h2 id="experiments">Experiments</h1>
 
 <ul>
 <li><p>Let's experiment with some of the <a href="api/ng.$filter"><code>built-in Angular filters</code></a> and add the

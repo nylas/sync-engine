@@ -19,7 +19,7 @@ invocation styles - are supported.</p>
 <p>Note: All element references in Angular are always wrapped with jQuery or jqLite; they are never
 raw DOM references.</p>
 
-<h2 id="angularsjqueryliteprovidesthefollowingmethods">Angular's jQuery lite provides the following methods:</h4>
+<h4 id="angularsjqueryliteprovidesthefollowingmethods">Angular's jQuery lite provides the following methods:</h2>
 
 <ul>
 <li><a href="http://api.jquery.com/addClass/">addClass()</a></li>
@@ -48,13 +48,13 @@ raw DOM references.</p>
 <li><a href="http://api.jquery.com/replaceWith/">replaceWith()</a></li>
 <li><a href="http://api.jquery.com/text/">text()</a></li>
 <li><a href="http://api.jquery.com/toggleClass/">toggleClass()</a></li>
-<li><a href="http://api.jquery.com/triggerHandler/">triggerHandler()</a> - Doesn't pass native event objects to handlers.</li>
+<li><a href="http://api.jquery.com/triggerHandler/">triggerHandler()</a> - Passes a dummy event object to handlers.</li>
 <li><a href="http://api.jquery.com/unbind/">unbind()</a> - Does not support namespaces</li>
 <li><a href="http://api.jquery.com/val/">val()</a></li>
 <li><a href="http://api.jquery.com/wrap/">wrap()</a></li>
 </ul>
 
-<h2 id="inaddtiontotheaboveangularprovidesadditionalmethodstobothjqueryandjquerylite">In addtion to the above, Angular provides additional methods to both jQuery and jQuery lite:</h4>
+<h2 id="inadditiontotheaboveangularprovidesadditionalmethodstobothjqueryandjquerylite">In addition to the above, Angular provides additional methods to both jQuery and jQuery lite:</h4>
 
 <ul>
 <li><code>controller(name)</code> - retrieves the controller of the current element or its parent. By default
@@ -69,12 +69,5 @@ parent element is reached.</li>
 </ul></div>
 <h2 id="Usage">Usage</h2>
 <div class="usage"><pre class="prettyprint linenums">angular.element(element);</pre>
-<h3 id="Parameters">Parameters</h3>
-<ul class="parameters"><li><code ng:non-bindable="">element – {string|DOMElement} – </code>
-<p>HTML string or DOMElement to be wrapped into jQuery.</p></li>
-</ul>
-<h3 id="Returns">Returns</h3>
-<div class="returns"><code ng:non-bindable="">{Object}</code>
-– <p>jQuery object.</p></div>
-</div>
+<h4 id="parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>element</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-domelement">DOMElement</a></td><td><p>HTML string or DOMElement to be wrapped into jQuery.</p></td></tr></tbody></table><h4 id="returns">Returns</h4><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-object">Object</a></td><td><p>jQuery object.</p></td></tr></table></div>
 </div>

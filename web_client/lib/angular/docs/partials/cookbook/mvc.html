@@ -10,11 +10,11 @@ This makes it very easy to test the controller in isolation since one can simply
 controller and test without a view, because there is no connection between the controller and the
 view.</p>
 
-<h3>Source</h3>
-<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-13" source-edit-css="" source-edit-js="script.js-12" source-edit-unit="" source-edit-scenario="scenario.js-14"></div>
+<h3>Source</h2>
+<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-7" source-edit-css="" source-edit-js="script.js-6" source-edit-unit="" source-edit-scenario="scenario.js-8"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-13" ng-html-wrap=" angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html-13">
+<pre class="prettyprint linenums" ng-set-text="index.html-7" ng-html-wrap=" angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-7">
     
 
     <h4>Tic-Tac-Toe</h4>
@@ -22,8 +22,8 @@ view.</p>
     Next Player: {{nextMove}}
     <div class="winner" ng-show="winner">Player {{winner}} has won!</div>
       <table class="board">
-        <tr ng-repeat="row in board" style="height:15px;">
-          <td ng-repeat="cell in row" ng-style="cellStyle"
+        <tr ng-repeat="row in board track by $index" style="height:15px;">
+          <td ng-repeat="cell in row track by $index" ng-style="cellStyle"
               ng-click="dropPiece($parent.$index, $index)">{{cell}}</td>
         </tr>
       </table>
@@ -32,8 +32,8 @@ view.</p>
   </script>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-12"></pre>
-<script type="text/ng-template" id="script.js-12">
+<pre class="prettyprint linenums" ng-set-text="script.js-6"></pre>
+<script type="text/ng-template" id="script.js-6">
     function TicTacToeCntl($scope, $location) {
       $scope.cellStyle= {
         'height': '20px',
@@ -100,8 +100,8 @@ view.</p>
     </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-14"></pre>
-<script type="text/ng-template" id="scenario.js-14">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-8"></pre>
+<script type="text/ng-template" id="scenario.js-8">
     it('should play a game', function() {
      piece(1, 1);
      expect(binding('nextMove')).toEqual('O');
@@ -118,10 +118,10 @@ view.</p>
     }
   </script>
 </div>
-</div><h3>Demo</h3>
-<div class="well doc-example-live" ng-embed-app="" ng-set-html="index.html-13" ng-eval-javascript="script.js-12"></div>
+</div><h2>Demo</h3>
+<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-7" ng-eval-javascript="script.js-6"></div>
 
-<h1 id="thingstonotice">Things to notice</h2>
+<h2 id="thingstonotice">Things to notice</h2>
 
 <ul>
 <li>The controller is defined in JavaScript and has no reference to the rendering logic.</li>

@@ -16,18 +16,14 @@ conjunction with <code>ngRepeat</code> and takes affect only on odd (even) rows.
 as class<pre class="prettyprint linenums">&lt;ANY class="ng-class-even: {expression};"&gt;
    ...
 &lt;/ANY&gt;</pre>
-<h3 id="Parameters">Parameters</h3>
-<ul class="parameters"><li><code ng:non-bindable="">ngClassEven – {expression} – </code>
-<p><a href="guide/expression">Expression</a> to eval. The
-result of the evaluation can be a string representing space delimited class names or an array.</p></li>
-</ul>
-</div>
+<h4 id="parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>ngClassEven</td><td><a href="" class="label type-hint type-hint-expression">expression</a></td><td><p><a href="guide/expression">Expression</a> to eval. The
+result of the evaluation can be a string representing space delimited class names or an array.</p></td></tr></tbody></table></div>
 <h2 id="Example">Example</h2>
-<div class="example"><h4>Source</h4>
-<div source-edit="" source-edit-deps="angular.js" source-edit-html="index.html-146" source-edit-css="style.css-147" source-edit-js="" source-edit-unit="" source-edit-scenario="scenario.js-148"></div>
+<div class="example"><h4>Source</h2>
+<div source-edit="" source-edit-deps="angular.js" source-edit-html="index.html-148" source-edit-css="style.css-149" source-edit-js="" source-edit-unit="" source-edit-scenario="scenario.js-150"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-146" ng-html-wrap=" angular.js"></pre>
-<script type="text/ng-template" id="index.html-146">
+<pre class="prettyprint linenums" ng-set-text="index.html-148" ng-html-wrap=" angular.js"></pre>
+<script type="text/ng-template" id="index.html-148">
    <ol ng-init="names=['John', 'Mary', 'Cate', 'Suz']">
      <li ng-repeat="name in names">
       <span ng-class-odd="'odd'" ng-class-even="'even'">
@@ -38,8 +34,8 @@ result of the evaluation can be a string representing space delimited class name
 </script>
 </div>
 <div class="tab-pane" title="style.css">
-<pre class="prettyprint linenums" ng-set-text="style.css-147"></pre>
-<style type="text/css" id="style.css-147">
+<pre class="prettyprint linenums" ng-set-text="style.css-149"></pre>
+<style type="text/css" id="style.css-149">
   .odd {
     color: red;
   }
@@ -49,8 +45,8 @@ result of the evaluation can be a string representing space delimited class name
 </style>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-148"></pre>
-<script type="text/ng-template" id="scenario.js-148">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-150"></pre>
+<script type="text/ng-template" id="scenario.js-150">
   it('should check ng-class-odd and ng-class-even', function() {
     expect(element('.doc-example-live li:first span').prop('className')).
       toMatch(/odd/);
@@ -59,6 +55,6 @@ result of the evaluation can be a string representing space delimited class name
   });
 </script>
 </div>
-</div><h4>Demo</h4>
-<div class="well doc-example-live" ng-embed-app="" ng-set-html="index.html-146" ng-eval-javascript=""></div></div>
+</div><h2>Demo</h4>
+<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-148" ng-eval-javascript=""></div></div>
 </div>

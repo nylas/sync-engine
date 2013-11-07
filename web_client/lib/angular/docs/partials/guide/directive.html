@@ -7,7 +7,7 @@ against the HTML and executed. This allows directives to register behavior, or t
 <p>Angular comes with a built in set of directives which are useful for building web applications but
 can be extended such that HTML can be turned into a declarative domain specific language (DSL).</p>
 
-<h1 id="invokingdirectivesfromhtml">Invoking directives from HTML</h2>
+<h2 id="invokingdirectivesfromhtml">Invoking directives from HTML</h1>
 
 <p>Directives have camel cased names such as <code>ngBind</code>. The directive can be invoked by translating
 the camel case name into snake case with these special characters <code>:</code>, <code>-</code>, or <code>_</code>. Optionally the
@@ -29,11 +29,11 @@ attribute only.)</p>
 <p>Directives can be invoked in many different ways, but are equivalent in the end result as shown in
 the following example.</p>
 
-<h3>Source</h3>
-<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-52" source-edit-css="" source-edit-js="script.js-51" source-edit-unit="" source-edit-scenario="scenario.js-53"></div>
+<h3>Source</h2>
+<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-41" source-edit-css="" source-edit-js="script.js-40" source-edit-unit="" source-edit-scenario="scenario.js-42"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-52" ng-html-wrap=" angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html-52">
+<pre class="prettyprint linenums" ng-set-text="index.html-41" ng-html-wrap=" angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-41">
    
    <div ng-controller="Ctrl1">
      Hello <input ng-model='name'> <hr/>
@@ -46,25 +46,25 @@ the following example.</p>
   </script>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-51"></pre>
-<script type="text/ng-template" id="script.js-51">
+<pre class="prettyprint linenums" ng-set-text="script.js-40"></pre>
+<script type="text/ng-template" id="script.js-40">
      function Ctrl1($scope) {
        $scope.name = 'angular';
      }
    </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-53"></pre>
-<script type="text/ng-template" id="scenario.js-53">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-42"></pre>
+<script type="text/ng-template" id="scenario.js-42">
     it('should show off bindings', function() {
       expect(element('div[ng-controller="Ctrl1"] span[ng-bind]').text()).toBe('angular');
     });
   </script>
 </div>
-</div><h3>Demo</h3>
-<div class="well doc-example-live" ng-embed-app="" ng-set-html="index.html-52" ng-eval-javascript="script.js-51"></div>
+</div><h2>Demo</h2>
+<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-41" ng-eval-javascript="script.js-40"></div>
 
-<h1 id="stringinterpolation">String interpolation</h2>
+<h1 id="textandattributebindings">Text and attribute bindings</h1>
 
 <p>During the compilation process the <a href="api/ng.$compile"><code>compiler</code></a> matches text and
 attributes using the <a href="api/ng.$interpolate"><code>$interpolate</code></a> service to see if they
@@ -75,7 +75,32 @@ here:</p>
 &lt;a href="img/{{username}}.jpg"&gt;Hello {{username}}!&lt;/a&gt;
 </pre>
 
-<h1 id="compilationprocessanddirectivematching">Compilation process, and directive matching</h2>
+<h1 id="ngattrattributebindings">ngAttr attribute bindings</h1>
+
+<p>If an attribute with a binding is prefixed with <code>ngAttr</code> prefix (denormalized prefix: 'ng-attr-',
+'ng:attr-') then during the compilation the prefix will be removed and the binding will be applied
+to an unprefixed attribute. This allows binding to attributes that would otherwise be eagerly
+processed by browsers in their uncompiled form (e.g. <code>img[src]</code> or svg's <code>circle[cx]</code> attributes).</p>
+
+<p>For example, considering template:</p>
+
+<pre><code>&lt;svg&gt;
+  &lt;circle ng-attr-cx="{{cx}}"&gt;&lt;/circle&gt;
+&lt;/svg&gt;
+</code></pre>
+
+<p>and model cx set to 5, will result in rendering this dom:</p>
+
+<pre><code>&lt;svg&gt;
+  &lt;circle cx="5"&gt;&lt;/circle&gt;
+&lt;/svg&gt;
+</code></pre>
+
+<p>If you were to bind <code>{{cx}}</code> directly to the <code>cx</code> attribute, you'd get the following error:
+<code>Error: Invalid value for attribute cx="{{cx}}"</code>. With <code>ng-attr-cx</code> you can work around this
+problem.</p>
+
+<h1 id="compilationprocessanddirectivematching">Compilation process, and directive matching</h1>
 
 <p>Compilation of HTML happens in three phases:</p>
 
@@ -112,7 +137,7 @@ scope and the DOM. A change in the scope is reflected in the DOM.</p></li>
   linkFn(scope);
 </pre>
 
-<h2 id="reasonsbehindthecompilelinkseparation">Reasons behind the compile/link separation</h3>
+<h2 id="reasonsbehindthecompilelinkseparation">Reasons behind the compile/link separation</h2>
 
 <p>At this point you may wonder why the compile process is broken down to a compile and link phase.
 To understand this, let's look at a real world example with a repeater:</p>
@@ -166,15 +191,15 @@ allows the directive to register listeners to the specific cloned DOM element in
 as to copy content into the DOM from the scope.</p></li>
 </ul>
 
-<h1 id="writingdirectivesshortversion">Writing directives (short version)</h2>
+<h1 id="writingdirectivesshortversion">Writing directives (short version)</h1>
 
 <p>In this example we will build a directive that displays the current time.</p>
 
-<h3>Source</h3>
-<div source-edit="time" source-edit-deps="angular.js script.js" source-edit-html="index.html-55" source-edit-css="" source-edit-js="script.js-54" source-edit-unit="" source-edit-scenario=""></div>
+<h2>Source</h2>
+<div source-edit="time" source-edit-deps="angular.js script.js" source-edit-html="index.html-44" source-edit-css="" source-edit-js="script.js-43" source-edit-unit="" source-edit-scenario=""></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-55" ng-html-wrap="time angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html-55">
+<pre class="prettyprint linenums" ng-set-text="index.html-44" ng-html-wrap="time angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-44">
    
    <div ng-controller="Ctrl2">
      Date format: <input ng-model="format"> <hr/>
@@ -183,8 +208,8 @@ as to copy content into the DOM from the scope.</p></li>
   </script>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-54"></pre>
-<script type="text/ng-template" id="script.js-54">
+<pre class="prettyprint linenums" ng-set-text="script.js-43"></pre>
+<script type="text/ng-template" id="script.js-43">
      function Ctrl2($scope) {
        $scope.format = 'M/d/yy h:mm:ss a';
      }
@@ -229,12 +254,12 @@ as to copy content into the DOM from the scope.</p></li>
        });
    </script>
 </div>
-</div><h3>Demo</h3>
-<div class="well doc-example-live" ng-embed-app="time" ng-set-html="index.html-55" ng-eval-javascript="script.js-54"></div>
+</div><h2>Demo</h2>
+<div class="well doc-example-live animator-container" ng-embed-app="time" ng-set-html="index.html-44" ng-eval-javascript="script.js-43"></div>
 
-<h1 id="writingdirectiveslongversion">Writing directives (long version)</h2>
+<h1 id="writingdirectiveslongversion">Writing directives (long version)</h1>
 
-<p>There are different ways to declare a directive. The difference resides in the return
+<p>There are different ways to declare a directive. The difference resides in the return 
 value of the factory function. You can either return a Directive Definition Object
 (see below) that defines the directive properties, or just the postLink function
 of such an object (all other properties will have the default values).</p>
@@ -268,7 +293,7 @@ of such an object (all other properties will have the default values).</p>
 
 <p>In most cases you will not need such fine control and so the above can be simplified. You can still
 return a Directive Definition Object, but only setting the 'compile' function property of the Object,
-and rely on the default values for other properties.</p>
+and rely on the default values for other properties. </p>
 
 <p>Therefore the above can be simplified as:</p>
 
@@ -298,14 +323,14 @@ further simplification.</p>
   });
 </pre>
 
-<h2 id="factorymethod">Factory method</h3>
+<h2 id="factorymethod">Factory method</h2>
 
 <p>The factory method is responsible for creating the directive. It is invoked only once, when the
 <a href="api/ng.$compile"><code>compiler</code></a> matches the directive for the first time. You can
 perform any initialization work here. The method is invoked using the <a href="api/AUTO.$injector#invoke"><code>$injector.invoke</code></a> which
 makes it injectable following all of the rules of injection annotation.</p>
 
-<h2 id="directivedefinitionobject">Directive Definition Object</h3>
+<h2 id="directivedefinitionobject">Directive Definition Object</h2>
 
 <p>The directive definition object provides instructions to the <a href="api/ng.$compile"><code>compiler</code></a>. The attributes are:</p>
 
@@ -345,7 +370,9 @@ name is specified then the attribute name is assumed to be the same as the local
 Given <code>&lt;widget my-attr="parentModel"&gt;</code> and widget definition of
 <code>scope: { localModel:'=myAttr' }</code>, then widget scope property <code>localModel</code> will reflect the
 value of <code>parentModel</code> on the parent scope. Any changes to <code>parentModel</code> will be reflected
-in <code>localModel</code> and any changes in <code>localModel</code> will reflect in <code>parentModel</code>.</p></li>
+in <code>localModel</code> and any changes in <code>localModel</code> will reflect in <code>parentModel</code>. If the parent
+scope property doesn't exist, it will throw a NON<em>ASSIGNABLE</em>MODEL_EXPRESSION exception. You
+can avoid this behavior using <code>=?</code> or <code>=?attr</code> in order to flag the property as optional.</p></li>
 <li><p><code>&amp;</code> or <code>&amp;attr</code> - provides a way to execute an expression in the context of the parent scope.
 If no <code>attr</code> name is specified then the attribute name is assumed to be the same as the
 local name. Given <code>&lt;widget my-attr="count = count + value"&gt;</code> and widget definition of
@@ -387,10 +414,18 @@ declaration style. If omitted directives are allowed on attributes only.</p>
 <li><code>M</code> - Comment: <code>&lt;!-- directive: my-directive exp --&gt;</code></li></ul></li>
 <li><p><code>template</code> - replace the current element with the contents of the HTML. The replacement process
 migrates all of the attributes / classes from the old element to the new one. See the
-<a href="guide/directive#Components">Creating Components</a> section below for more information.</p></li>
+<a href="guide/directive#Components">Creating Components</a> section below for more information.</p>
+
+<p>You can specify <code>template</code> as a string representing the template or as a function which takes
+two arguments <code>tElement</code> and <code>tAttrs</code> (described in the <code>compile</code> function api below) and returns
+a string value representing the template.</p></li>
 <li><p><code>templateUrl</code> - Same as <code>template</code> but the template is loaded from the specified URL. Because
 the template loading is asynchronous the compilation/linking is suspended until the template
-is loaded.</p></li>
+is loaded.</p>
+
+<p>You can specify <code>templateUrl</code> as a string representing the URL or as a function which takes two
+arguments <code>tElement</code> and <code>tAttrs</code> (described in the <code>compile</code> function api below) and returns
+a string value representing the url.</p></li>
 <li><p><code>replace</code> - if set to <code>true</code> then the template will replace the current element, rather than
 append the template to the element.</p></li>
 <li><p><code>transclude</code> - compile the content of the element and make it available to the directive.
@@ -407,7 +442,7 @@ be bound to the parent (pre-<code>isolate</code>) scope.</p>
 if the <code>compile</code> property is not defined.</p></li>
 </ul>
 
-<h2 id="compilefunction">Compile function</h3>
+<h2 id="compilefunction">Compile function</h2>
 
 <pre class="prettyprint linenums">
   function compile(tElement, tAttrs, transclude) { ... }
@@ -442,7 +477,7 @@ control when a linking function should be called during the linking phase. See i
 pre-linking and post-linking functions below.</p></li>
 </ul>
 
-<h2 id="linkingfunction">Linking function</h3>
+<h2 id="linkingfunction">Linking function</h2>
 
 <pre class="prettyprint linenums">
   function link(scope, iElement, iAttrs, controller) { ... }
@@ -465,7 +500,7 @@ element defines a controller. The controller is shared among all the directives,
 the directives to use the controllers as a communication channel.</p></li>
 </ul>
 
-<h3 id="prelinkingfunction">Pre-linking function</h4>
+<h4 id="prelinkingfunction">Pre-linking function</h3>
 
 <p>Executed before the child elements are linked. Not safe to do DOM transformation since the
 compiler linking function will fail to locate the correct elements for linking.</p>
@@ -476,7 +511,7 @@ compiler linking function will fail to locate the correct elements for linking.<
 
 <p><a name="Attributes"></a></p>
 
-<h2 id="attributes">Attributes</h3>
+<h2 id="attributes">Attributes</h2>
 
 <p>The <a href="api/ng.$compile.directive.Attributes"><code>Attributes</code></a> object - passed as a parameter in the
 link() or compile() functions - is a way of accessing:</p>
@@ -511,7 +546,7 @@ function linkingFn(scope, elm, attrs, ctrl) {
 }
 </pre>
 
-<h1 id="understandingtransclusionandscopes">Understanding Transclusion and Scopes</h2>
+<h1 id="understandingtransclusionandscopes">Understanding Transclusion and Scopes</h1>
 
 <p>It is often desirable to have reusable components. Below is a pseudo code showing how a simplified
 dialog component may work.</p>
@@ -608,11 +643,11 @@ can be built.</p>
 
 <p>Following is an example of building a reusable widget.</p>
 
-<h3>Source</h3>
-<div source-edit="zippyModule" source-edit-deps="angular.js script.js" source-edit-html="index.html-58" source-edit-css="style.css-57" source-edit-js="script.js-56" source-edit-unit="" source-edit-scenario="scenario.js-59"></div>
+<h2>Source</h2>
+<div source-edit="zippyModule" source-edit-deps="angular.js script.js" source-edit-html="index.html-47" source-edit-css="style.css-46" source-edit-js="script.js-45" source-edit-unit="" source-edit-scenario="scenario.js-48"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-58" ng-html-wrap="zippyModule angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html-58">
+<pre class="prettyprint linenums" ng-set-text="index.html-47" ng-html-wrap="zippyModule angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-47">
    
    
    <div ng-controller="Ctrl3">
@@ -624,8 +659,8 @@ can be built.</p>
   </script>
 </div>
 <div class="tab-pane" title="style.css">
-<pre class="prettyprint linenums" ng-set-text="style.css-57"></pre>
-<style type="text/css" id="style.css-57">
+<pre class="prettyprint linenums" ng-set-text="style.css-46"></pre>
+<style type="text/css" id="style.css-46">
      .zippy {
        border: 1px solid black;
        display: inline-block;
@@ -647,8 +682,8 @@ can be built.</p>
    </style>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-56"></pre>
-<script type="text/ng-template" id="script.js-56">
+<pre class="prettyprint linenums" ng-set-text="script.js-45"></pre>
+<script type="text/ng-template" id="script.js-45">
      function Ctrl3($scope) {
        $scope.title = 'Lorem Ipsum';
        $scope.text = 'Neque porro quisquam est qui dolorem ipsum quia dolor...';
@@ -691,8 +726,8 @@ can be built.</p>
    </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-59"></pre>
-<script type="text/ng-template" id="scenario.js-59">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-48"></pre>
+<script type="text/ng-template" id="scenario.js-48">
     it('should bind and open / close', function() {
       input('title').enter('TITLE');
       input('text').enter('TEXT');
@@ -705,5 +740,5 @@ can be built.</p>
     });
   </script>
 </div>
-</div><h3>Demo</h3>
-<div class="well doc-example-live" ng-embed-app="zippyModule" ng-set-html="index.html-58" ng-eval-javascript="script.js-56"></div></div>
+</div><h2>Demo</h3>
+<div class="well doc-example-live animator-container" ng-embed-app="zippyModule" ng-set-html="index.html-47" ng-eval-javascript="script.js-45"></div></div>

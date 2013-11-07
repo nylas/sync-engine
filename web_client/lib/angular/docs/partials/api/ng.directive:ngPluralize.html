@@ -3,7 +3,7 @@
 )</span>
 </h1>
 <div><a href="http://github.com/angular/angular.js/edit/master/src/ng/directive/ngPluralize.js" class="improve-docs btn btn-primary">Improve this doc</a><h2 id="Description">Description</h2>
-<div class="description"><h1 id="overview">Overview</h3>
+<div class="description"><h3 id="overview">Overview</h1>
 
 <p><code>ngPluralize</code> is a directive that displays messages according to en-US localization rules.
 These rules are bundled with angular.js and the rules can be overridden
@@ -11,17 +11,17 @@ These rules are bundled with angular.js and the rules can be overridden
 by specifying the mappings between
 <a href="http://unicode.org/repos/cldr-tmp/trunk/diff/supplemental/language_plural_rules.html">plural categories</a> and the strings to be displayed.</p>
 
-<h1 id="pluralcategoriesandexplicitnumberrules">Plural categories and explicit number rules</h3>
+<h1 id="pluralcategoriesandexplicitnumberrules">Plural categories and explicit number rules</h1>
 
 <p>There are two
 <a href="http://unicode.org/repos/cldr-tmp/trunk/diff/supplemental/language_plural_rules.html">plural categories</a> in Angular's default en-US locale: "one" and "other".</p>
 
-<p>While a pural category may match many numbers (for example, in en-US locale, "other" can match
+<p>While a plural category may match many numbers (for example, in en-US locale, "other" can match
 any number that is not 1), an explicit number rule can only match one number. For example, the
 explicit number rule for "3" matches the number 3. You will see the use of plural categories
 and explicit number rules throughout later parts of this documentation.</p>
 
-<h1 id="configuringngpluralize">Configuring ngPluralize</h3>
+<h1 id="configuringngpluralize">Configuring ngPluralize</h1>
 
 <p>You configure ngPluralize by providing 2 attributes: <code>count</code> and <code>when</code>.
 You can also provide an optional attribute, <code>offset</code>.</p>
@@ -84,7 +84,7 @@ numbers from 0 up to and including the offset. If you use an offset of 3, for ex
 you must provide explicit number rules for 0, 1, 2 and 3. You must also provide plural strings for
 plural categories "one" and "other".</p></div>
 <h2 id="Usage">Usage</h2>
-<div class="usage">This directive can be used as custom element, but be aware of <a href="guide/ie">IE restrictions</a>.as element:<pre class="prettyprint linenums">&lt;ng-pluralize
+<div class="usage"><p>This directive can be used as custom element, but be aware of <a href="guide/ie">IE restrictions</a>.</p>as element:<pre class="prettyprint linenums">&lt;ng-pluralize
        count="{string|expression}"
        when="{string}"
        [offset="{number}"]&gt;
@@ -95,21 +95,13 @@ as attribute<pre class="prettyprint linenums">&lt;ANY ng-pluralize
      [offset="{number}"]&gt;
    ...
 &lt;/ANY&gt;</pre>
-<h3 id="Parameters">Parameters</h3>
-<ul class="parameters"><li><code ng:non-bindable="">count – {string|expression} – </code>
-<p>The variable to be bounded to.</p></li>
-<li><code ng:non-bindable="">when – {string} – </code>
-<p>The mapping between plural category to its correspoding strings.</p></li>
-<li><code ng:non-bindable="">offset<i>(optional)</i> – {number=} – </code>
-<p>Offset to deduct from the total number.</p></li>
-</ul>
-</div>
+<h4 id="parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>count</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-expression">expression</a></td><td><p>The variable to be bounded to.</p></td></tr><tr><td>when</td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>The mapping between plural category to its corresponding strings.</p></td></tr><tr><td>offset <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-number">number</a></td><td><p>Offset to deduct from the total number.</p></td></tr></tbody></table></div>
 <h2 id="Example">Example</h2>
-<div class="example"><h4>Source</h4>
-<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-167" source-edit-css="" source-edit-js="script.js-166" source-edit-unit="" source-edit-scenario="scenario.js-168"></div>
+<div class="example"><h4>Source</h2>
+<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-173" source-edit-css="" source-edit-js="script.js-172" source-edit-unit="" source-edit-scenario="scenario.js-174"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-167" ng-html-wrap=" angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html-167">
+<pre class="prettyprint linenums" ng-set-text="index.html-173" ng-html-wrap=" angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-173">
   
   <div ng-controller="Ctrl">
     Person 1:<input type="text" ng-model="person1" value="Igor" /><br/>
@@ -137,8 +129,8 @@ as attribute<pre class="prettyprint linenums">&lt;ANY ng-pluralize
 </script>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-166"></pre>
-<script type="text/ng-template" id="script.js-166">
+<pre class="prettyprint linenums" ng-set-text="script.js-172"></pre>
+<script type="text/ng-template" id="script.js-172">
     function Ctrl($scope) {
       $scope.person1 = 'Igor';
       $scope.person2 = 'Misko';
@@ -147,8 +139,8 @@ as attribute<pre class="prettyprint linenums">&lt;ANY ng-pluralize
   </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-168"></pre>
-<script type="text/ng-template" id="scenario.js-168">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-174"></pre>
+<script type="text/ng-template" id="scenario.js-174">
   it('should show correct pluralized string', function() {
     expect(element('.doc-example-live ng-pluralize:first').text()).
                                        toBe('1 person is viewing.');
@@ -192,6 +184,6 @@ as attribute<pre class="prettyprint linenums">&lt;ANY ng-pluralize
   });
 </script>
 </div>
-</div><h4>Demo</h4>
-<div class="well doc-example-live" ng-embed-app="" ng-set-html="index.html-167" ng-eval-javascript="script.js-166"></div></div>
+</div><h2>Demo</h4>
+<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-173" ng-eval-javascript="script.js-172"></div></div>
 </div>

@@ -1,7 +1,7 @@
 <h1><code ng:non-bindable=""></code>
 <span class="hint"></span>
 </h1>
-<div><a href="http://github.com/angular/angular.js/edit/master/docs/content/guide/compiler.ngdoc" class="improve-docs btn btn-primary">Improve this doc</a><h1 id="overview">Overview</h2>
+<div><a href="http://github.com/angular/angular.js/edit/master/docs/content/guide/compiler.ngdoc" class="improve-docs btn btn-primary">Improve this doc</a><h2 id="overview">Overview</h1>
 
 <p>Angular's <a href="api/ng.$compile"><code>HTML compiler</code></a> allows the developer to teach the
 browser new HTML syntax. The compiler allows you to attach behavior to any HTML element or attribute
@@ -25,7 +25,7 @@ Domain Specific Language for building your application.</p>
 <p>All of this compilation takes place in the web browser; no server side or pre-compilation step is
 involved.</p>
 
-<h1 id="compiler">Compiler</h2>
+<h1 id="compiler">Compiler</h1>
 
 <p>Compiler is an angular service which traverses the DOM looking for attributes. The compilation
 process happens in two phases.</p>
@@ -42,7 +42,7 @@ in the scope model. This makes the scope model the single source of truth.</p></
 improves performance since the cloned template only needs to be compiled once, and then linked
 once for each clone instance.</p>
 
-<h1 id="directive">Directive</h2>
+<h1 id="directive">Directive</h1>
 
 <p>A directive is a behavior which should be triggered when specific HTML constructs are encountered in
 the compilation process. The directives can be placed in element names, attributes, class names, as
@@ -61,17 +61,17 @@ to write directives.</p>
 <p>Here is a directive which makes any element draggable. Notice the <code>draggable</code> attribute on the
 <code>&lt;span&gt;</code> element.</p>
 
-<h3>Source</h3>
-<div source-edit="drag" source-edit-deps="angular.js script.js" source-edit-html="index.html-16" source-edit-css="" source-edit-js="script.js-15" source-edit-unit="" source-edit-scenario=""></div>
+<h3>Source</h2>
+<div source-edit="drag" source-edit-deps="angular.js script.js" source-edit-html="index.html-10" source-edit-css="" source-edit-js="script.js-9" source-edit-unit="" source-edit-scenario=""></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-16" ng-html-wrap="drag angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html-16">
+<pre class="prettyprint linenums" ng-set-text="index.html-10" ng-html-wrap="drag angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-10">
     <span draggable>Drag ME</span>
   </script>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-15"></pre>
-<script type="text/ng-template" id="script.js-15">
+<pre class="prettyprint linenums" ng-set-text="script.js-9"></pre>
+<script type="text/ng-template" id="script.js-9">
     angular.module('drag', []).
       directive('draggable', function($document) {
         return function(scope, element, attr) {
@@ -108,8 +108,8 @@ to write directives.</p>
       });
   </script>
 </div>
-</div><h3>Demo</h3>
-<div class="well doc-example-live" ng-embed-app="drag" ng-set-html="index.html-16" ng-eval-javascript="script.js-15"></div>
+</div><h2>Demo</h3>
+<div class="well doc-example-live animator-container" ng-embed-app="drag" ng-set-html="index.html-10" ng-eval-javascript="script.js-9"></div>
 
 <p>The presence of the <code>draggable</code> attribute on any element gives the element new behavior. The beauty of
 this approach is that we have taught the browser a new trick. We have extended the vocabulary of

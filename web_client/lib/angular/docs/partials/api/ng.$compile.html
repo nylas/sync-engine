@@ -15,7 +15,7 @@ instance functions into a single template function which is then returned.</p>
 <a href="api/ng.directive:ngRepeat"><code>repeater</code></a> many-times, in which
 case each call results in a view that is a DOM clone of the original template.</p>
 
-<h4>Source</h4>
+<h4>Source</h2>
 <div source-edit="compile" source-edit-deps="angular.js script.js" source-edit-html="index.html-86" source-edit-css="" source-edit-js="script.js-85" source-edit-unit="" source-edit-scenario="scenario.js-87"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
 <pre class="prettyprint linenums" ng-set-text="index.html-86" ng-html-wrap="compile angular.js script.js"></pre>
@@ -75,22 +75,12 @@ case each call results in a view that is a DOM clone of the original template.</
      });
    </script>
 </div>
-</div><h4>Demo</h4>
-<div class="well doc-example-live" ng-embed-app="compile" ng-set-html="index.html-86" ng-eval-javascript="script.js-85"></div></div>
+</div><h2>Demo</h4>
+<div class="well doc-example-live animator-container" ng-embed-app="compile" ng-set-html="index.html-86" ng-eval-javascript="script.js-85"></div></div>
 <h2 id="Usage">Usage</h2>
 <div class="usage"><pre class="prettyprint linenums">$compile(element, transclude, maxPriority);</pre>
-<h3 id="Parameters">Parameters</h3>
-<ul class="parameters"><li><code ng:non-bindable="">element – {string|DOMElement} – </code>
-<p>Element or HTML string to compile into a template function.</p></li>
-<li><code ng:non-bindable="">transclude – {function(angular.Scope[, cloneAttachFn]} – </code>
-<p>function available to directives.</p></li>
-<li><code ng:non-bindable="">maxPriority – {number} – </code>
-<p>only apply directives lower then given priority (Only effects the
-root element(s), not their children)</p></li>
-</ul>
-<h3 id="Returns">Returns</h3>
-<div class="returns"><code ng:non-bindable="">{function(scope[, cloneAttachFn])}</code>
-– <p>a link function which is used to bind template
+<h4 id="parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>element</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-domelement">DOMElement</a></td><td><p>Element or HTML string to compile into a template function.</p></td></tr><tr><td>transclude</td><td><a href="" class="label type-hint type-hint-function">function(angular.Scope[, cloneAttachFn]</a></td><td><p>function available to directives.</p></td></tr><tr><td>maxPriority</td><td><a href="" class="label type-hint type-hint-number">number</a></td><td><p>only apply directives lower then given priority (Only effects the
+root element(s), not their children)</p></td></tr></tbody></table><h4 id="returns">Returns</h4><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-function">function(scope[, cloneAttachFn])</a></td><td><p>a link function which is used to bind template
 (a DOM element/tree) to a scope. Where:</p>
 
 <ul>
@@ -134,6 +124,5 @@ this case, you can access the clone via the cloneAttachFn:
 </ul>
 
 <p>For information on how the compiler works, see the
-<a href="guide/compiler">Angular HTML Compiler</a> section of the Developer Guide.</p></div>
-</div>
+<a href="guide/compiler">Angular HTML Compiler</a> section of the Developer Guide.</p></td></tr></table></div>
 </div>

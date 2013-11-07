@@ -27,6 +27,7 @@
 <li><code>'m'</code>: Minute in hour (0-59)</li>
 <li><code>'ss'</code>: Second in minute, padded (00-59)</li>
 <li><code>'s'</code>: Second in minute (0-59)</li>
+<li><code>'.sss' or ',sss'</code>: Millisecond in second, padded (000-999)</li>
 <li><code>'a'</code>: am/pm marker</li>
 <li><code>'Z'</code>: 4 digit (+sign) representation of the timezone offset (-1200-+1200)</li>
 </ul>
@@ -57,26 +58,17 @@
 <h3 id="In.JavaScript">In JavaScript</h3>
 <div class="in-javascript"><code ng:non-bindable="">$filter('date')(date[, format])</code>
 </div>
-<h3 id="Parameters">Parameters</h3>
-<ul class="parameters"><li><code ng:non-bindable="">date – {(Date|number|string)} – </code>
-<p>Date to format either as Date object, milliseconds (string or
+<h4 id="parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>date</td><td><a href="" class="label type-hint type-hint-date">Date</a><a href="" class="label type-hint type-hint-number">number</a><a href="" class="label type-hint type-hint-string">string</a></td><td><p>Date to format either as Date object, milliseconds (string or
 number) or various ISO 8601 datetime string formats (e.g. yyyy-MM-ddTHH:mm:ss.SSSZ and its
 shorter versions like yyyy-MM-ddTHH:mmZ, yyyy-MM-dd or yyyyMMddTHHmmssZ). If no timezone is
-specified in the string input, the time is considered to be in the local timezone.</p></li>
-<li><code ng:non-bindable="">format<i>(optional)</i> – {string=} – </code>
-<p>Formatting rules (see Description). If not specified,
-<code>mediumDate</code> is used.</p></li>
-</ul>
-<h3 id="Returns">Returns</h3>
-<div class="returns"><code ng:non-bindable="">{string}</code>
-– <p>Formatted string or the input if input is not recognized as date/millis.</p></div>
-</div>
+specified in the string input, the time is considered to be in the local timezone.</p></td></tr><tr><td>format <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>Formatting rules (see Description). If not specified,
+<code>mediumDate</code> is used.</p></td></tr></tbody></table><h4 id="returns">Returns</h4><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>Formatted string or the input if input is not recognized as date/millis.</p></td></tr></table></div>
 <h2 id="Example">Example</h2>
-<div class="example"><h4>Source</h4>
-<div source-edit="" source-edit-deps="angular.js" source-edit-html="index.html-200" source-edit-css="" source-edit-js="" source-edit-unit="" source-edit-scenario="scenario.js-201"></div>
+<div class="example"><h4>Source</h2>
+<div source-edit="" source-edit-deps="angular.js" source-edit-html="index.html-206" source-edit-css="" source-edit-js="" source-edit-unit="" source-edit-scenario="scenario.js-207"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-200" ng-html-wrap=" angular.js"></pre>
-<script type="text/ng-template" id="index.html-200">
+<pre class="prettyprint linenums" ng-set-text="index.html-206" ng-html-wrap=" angular.js"></pre>
+<script type="text/ng-template" id="index.html-206">
   <span ng-non-bindable>{{1288323623006 | date:'medium'}}</span>:
       {{1288323623006 | date:'medium'}}<br>
   <span ng-non-bindable>{{1288323623006 | date:'yyyy-MM-dd HH:mm:ss Z'}}</span>:
@@ -86,8 +78,8 @@ specified in the string input, the time is considered to be in the local timezon
 </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-201"></pre>
-<script type="text/ng-template" id="scenario.js-201">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-207"></pre>
+<script type="text/ng-template" id="scenario.js-207">
   it('should format date', function() {
     expect(binding("1288323623006 | date:'medium'")).
        toMatch(/Oct 2\d, 2010 \d{1,2}:\d{2}:\d{2} (AM|PM)/);
@@ -98,6 +90,6 @@ specified in the string input, the time is considered to be in the local timezon
   });
 </script>
 </div>
-</div><h4>Demo</h4>
-<div class="well doc-example-live" ng-embed-app="" ng-set-html="index.html-200" ng-eval-javascript=""></div></div>
+</div><h2>Demo</h4>
+<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-206" ng-eval-javascript=""></div></div>
 </div>

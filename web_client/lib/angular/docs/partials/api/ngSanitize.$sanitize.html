@@ -10,20 +10,13 @@ parser, it's possible that some obscure input, which would be recognized as vali
 browser, won't make it through the sanitizer.</p></div>
 <h2 id="Usage">Usage</h2>
 <div class="usage"><pre class="prettyprint linenums">$sanitize(html);</pre>
-<h3 id="Parameters">Parameters</h3>
-<ul class="parameters"><li><code ng:non-bindable="">html – {string} – </code>
-<p>Html input.</p></li>
-</ul>
-<h3 id="Returns">Returns</h3>
-<div class="returns"><code ng:non-bindable="">{string}</code>
-– <p>Sanitized html.</p></div>
-</div>
+<h4 id="parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>html</td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>Html input.</p></td></tr></tbody></table><h4 id="returns">Returns</h4><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>Sanitized html.</p></td></tr></table></div>
 <h2 id="Example">Example</h2>
-<div class="example"><h4>Source</h4>
-<div source-edit="ngSanitize" source-edit-deps="angular.js script.js" source-edit-html="index.html-230" source-edit-css="" source-edit-js="script.js-229" source-edit-unit="" source-edit-scenario="scenario.js-231"></div>
+<div class="example"><h4>Source</h2>
+<div source-edit="ngSanitize" source-edit-deps="angular.js script.js" source-edit-html="index.html-239" source-edit-css="" source-edit-js="script.js-238" source-edit-unit="" source-edit-scenario="scenario.js-240"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-230" ng-html-wrap="ngSanitize angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html-230">
+<pre class="prettyprint linenums" ng-set-text="index.html-239" ng-html-wrap="ngSanitize angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-239">
   
   <div ng-controller="Ctrl">
      Snippet: <textarea ng-model="snippet" cols="60" rows="3"></textarea>
@@ -57,8 +50,8 @@ browser, won't make it through the sanitizer.</p></div>
 </script>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-229"></pre>
-<script type="text/ng-template" id="script.js-229">
+<pre class="prettyprint linenums" ng-set-text="script.js-238"></pre>
+<script type="text/ng-template" id="script.js-238">
     function Ctrl($scope) {
       $scope.snippet =
         '<p style="color:blue">an html\n' +
@@ -68,8 +61,8 @@ browser, won't make it through the sanitizer.</p></div>
   </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-231"></pre>
-<script type="text/ng-template" id="scenario.js-231">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-240"></pre>
+<script type="text/ng-template" id="scenario.js-240">
   it('should sanitize the html snippet ', function() {
     expect(using('#html-filter').element('div').html()).
       toBe('<p>an html\n<em>click here</em>\nsnippet</p>');
@@ -97,6 +90,6 @@ browser, won't make it through the sanitizer.</p></div>
   });
 </script>
 </div>
-</div><h4>Demo</h4>
-<div class="well doc-example-live" ng-embed-app="ngSanitize" ng-set-html="index.html-230" ng-eval-javascript="script.js-229"></div></div>
+</div><h2>Demo</h4>
+<div class="well doc-example-live animator-container" ng-embed-app="ngSanitize" ng-set-html="index.html-239" ng-eval-javascript="script.js-238"></div></div>
 </div>

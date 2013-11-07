@@ -17,7 +17,7 @@ and load modules.</p>
   }).toBe($injector);
 </pre>
 
-<h1 id="injectionfunctionannotation">Injection Function Annotation</h3>
+<h3 id="injectionfunctionannotation">Injection Function Annotation</h3>
 
 <p>JavaScript does not have annotations, and annotations are needed for dependency injection. The
 following are all valid ways of annotating function with injection arguments and are equivalent.</p>
@@ -35,13 +35,13 @@ following are all valid ways of annotating function with injection arguments and
   $injector.invoke(['serviceA', function(serviceA){}]);
 </pre>
 
-<h2 id="inference">Inference</h4>
+<h4 id="inference">Inference</h2>
 
 <p>In JavaScript calling <code>toString()</code> on a function returns the function definition. The definition can then be
 parsed and the function arguments can be extracted. <em>NOTE:</em> This does not work with minification, and obfuscation
 tools since these tools change the argument names.</p>
 
-<h2 id="dinjectannotation"><code>$inject</code> Annotation</h4>
+<h2 id="dinjectannotation"><code>$inject</code> Annotation</h2>
 
 <p>By adding a <code>$inject</code> property onto a function the injection parameters can be specified.</p>
 
@@ -54,7 +54,7 @@ tools since these tools change the argument names.</p>
 to determine which services need to be injected into the function when the function is invoked. There are three
 ways in which the function can be annotated with the needed dependencies.</p>
 
-<h1 id="argumentnames">Argument names</h4>
+<h4 id="argumentnames">Argument names</h1>
 
 <p>The simplest form is to extract the dependencies from the arguments of the function. This is done by converting
 the function into a string using <code>toString()</code> method and extracting the argument names.
@@ -71,7 +71,7 @@ the function into a string using <code>toString()</code> method and extracting t
 <p>This method does not work with code minfication / obfuscation. For this reason the following annotation strategies
 are supported.</p>
 
-<h1 id="thedinjectproperty">The <code>$inject</code> property</h4>
+<h1 id="thedinjectproperty">The <code>$inject</code> property</h1>
 
 <p>If a function has an <code>$inject</code> property and its value is an array of strings, then the strings represent names of
 services to be injected into the function.
@@ -115,54 +115,23 @@ minification is a better choice:</p>
   expect(injector.annotate(
      ['$compile', '$rootScope', function(obfus_$compile, obfus_$rootScope) {}])
    ).toEqual(['$compile', '$rootScope']);
-</pre><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">fn – {function|Array.&lt;string|Function&gt;} – </code>
-<p>Function for which dependent service names need to be retrieved as described
-above.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{Array.&lt;string&gt;}</code>
-– <p>The names of the services which the function requires.</p></div>
-</div>
+</pre><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>fn</td><td><a href="" class="label type-hint type-hint-function">function</a><a href="" class="label type-hint type-hint-array">Array.&lt;string|Function&gt;</a></td><td><p>Function for which dependent service names need to be retrieved as described
+above.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-array">Array.&lt;string&gt;</a></td><td><p>The names of the services which the function requires.</p></td></tr></table></div>
 </li>
 <li><h3 id="get">get(name)</h3>
-<div class="get"><p>Return an instance of the service.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">name – {string} – </code>
-<p>The name of the instance to retrieve.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{*}</code>
-– <p>The instance.</p></div>
-</div>
+<div class="get"><p>Return an instance of the service.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>name</td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>The name of the instance to retrieve.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-object">*</a></td><td><p>The instance.</p></td></tr></table></div>
+</li>
+<li><h3 id="has">has(Name)</h3>
+<div class="has"><p>Allows the user to query if the particular service exist.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>Name</td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>of the service to query.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-boolean">boolean</a></td><td><p>returns true if injector has given service.</p></td></tr></table></div>
 </li>
 <li><h3 id="instantiate">instantiate(Type, locals)</h3>
 <div class="instantiate"><p>Create a new instance of JS type. The method takes a constructor function invokes the new operator and supplies
-all of the arguments to the constructor function as specified by the constructor annotation.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">Type – {function} – </code>
-<p>Annotated constructor function.</p></li>
-<li><code ng:non-bindable="">locals<i>(optional)</i> – {Object=} – </code>
-<p>Optional object. If preset then any argument names are read from this object first, before
-the <code>$injector</code> is consulted.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{Object}</code>
-– <p>new instance of <code>Type</code>.</p></div>
-</div>
+all of the arguments to the constructor function as specified by the constructor annotation.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>Type</td><td><a href="" class="label type-hint type-hint-function">function</a></td><td><p>Annotated constructor function.</p></td></tr><tr><td>locals <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a></td><td><p>Optional object. If preset then any argument names are read from this object first, before
+the <code>$injector</code> is consulted.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-object">Object</a></td><td><p>new instance of <code>Type</code>.</p></td></tr></table></div>
 </li>
 <li><h3 id="invoke">invoke(fn, self, locals)</h3>
-<div class="invoke"><p>Invoke the method and supply the method arguments from the <code>$injector</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">fn – {!function} – </code>
-<p>The function to invoke. The function arguments come form the function annotation.</p></li>
-<li><code ng:non-bindable="">self<i>(optional)</i> – {Object=} – </code>
-<p>The <code>this</code> for the invoked method.</p></li>
-<li><code ng:non-bindable="">locals<i>(optional)</i> – {Object=} – </code>
-<p>Optional object. If preset then any argument names are read from this object first, before
-the <code>$injector</code> is consulted.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{*}</code>
-– <p>the value returned by the invoked <code>fn</code> function.</p></div>
-</div>
+<div class="invoke"><p>Invoke the method and supply the method arguments from the <code>$injector</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>fn</td><td><a href="" class="label type-hint type-hint-object">!function</a></td><td><p>The function to invoke. The function arguments come form the function annotation.</p></td></tr><tr><td>self <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a></td><td><p>The <code>this</code> for the invoked method.</p></td></tr><tr><td>locals <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a></td><td><p>Optional object. If preset then any argument names are read from this object first, before
+the <code>$injector</code> is consulted.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-object">*</a></td><td><p>the value returned by the invoked <code>fn</code> function.</p></td></tr></table></div>
 </li>
 </ul>
 </div>

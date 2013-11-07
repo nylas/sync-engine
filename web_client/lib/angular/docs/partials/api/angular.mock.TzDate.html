@@ -12,13 +12,7 @@ offset, so that we can test code that depends on local timezone settings without
 the time zone settings of the machine where the code is running.</p></div>
 <h2 id="Usage">Usage</h2>
 <div class="usage"><pre class="prettyprint linenums">TzDate(offset, timestamp);</pre>
-<h3 id="Parameters">Parameters</h3>
-<ul class="parameters"><li><code ng:non-bindable="">offset – {number} – </code>
-<p>Offset of the <em>desired</em> timezone in hours (fractions will be honored)</p></li>
-<li><code ng:non-bindable="">timestamp – {(number|string)} – </code>
-<p>Timestamp representing the desired time in <em>UTC</em></p></li>
-</ul>
-</div>
+<h4 id="parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>offset</td><td><a href="" class="label type-hint type-hint-number">number</a></td><td><p>Offset of the <em>desired</em> timezone in hours (fractions will be honored)</p></td></tr><tr><td>timestamp</td><td><a href="" class="label type-hint type-hint-number">number</a><a href="" class="label type-hint type-hint-string">string</a></td><td><p>Timestamp representing the desired time in <em>UTC</em></p></td></tr></tbody></table></div>
 <h2 id="Example">Example</h2>
 <div class="example"><p>!!!! WARNING !!!!!
 This is not a complete Date object so only methods that were implemented can be called safely.
@@ -36,5 +30,6 @@ newYearInBratislava.getMonth() =&gt; 0;
 newYearInBratislava.getDate() =&gt; 1;
 newYearInBratislava.getHours() =&gt; 0;
 newYearInBratislava.getMinutes() =&gt; 0;
+newYearInBratislava.getSeconds() =&gt; 0;
 </pre></div>
 </div>

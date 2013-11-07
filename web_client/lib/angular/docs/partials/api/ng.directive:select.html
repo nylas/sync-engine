@@ -5,7 +5,7 @@
 <div><a href="http://github.com/angular/angular.js/edit/master/src/ng/directive/select.js" class="improve-docs btn btn-primary">Improve this doc</a><h2 id="Description">Description</h2>
 <div class="description"><p>HTML <code>SELECT</code> element with angular data-binding.</p>
 
-<h1 id="ngoptions"><code>ngOptions</code></h3>
+<h3 id="ngoptions"><code>ngOptions</code></h3>
 
 <p>Optionally <code>ngOptions</code> attribute can be used to dynamically generate a list of <code>&lt;option&gt;</code>
 elements for a <code>&lt;select&gt;</code> element using an array or an object obtained by evaluating the
@@ -24,33 +24,23 @@ of <a href="api/ng.directive:ngRepeat"><code>ngRepeat</code></a> when you want t
 <code>select</code> model to be bound to a non-string value. This is because an option element can currently
 be bound to string values only.</p></div>
 <h2 id="Usage">Usage</h2>
-<div class="usage">This directive can be used as custom element, but be aware of <a href="guide/ie">IE restrictions</a>.as element:<pre class="prettyprint linenums">&lt;select
+<div class="usage"><p>This directive can be used as custom element, but be aware of <a href="guide/ie">IE restrictions</a>.</p>as element:<pre class="prettyprint linenums">&lt;select
        ngModel="{string}"
        [name="{string}"]
        [required]
        [ngRequired="{string}"]
        [ngOptions="{comprehension_expression}"]&gt;
 &lt;/select&gt;</pre>
-<h3 id="Parameters">Parameters</h3>
-<ul class="parameters"><li><code ng:non-bindable="">ngModel – {string} – </code>
-<p>Assignable angular expression to data-bind to.</p></li>
-<li><code ng:non-bindable="">name<i>(optional)</i> – {string=} – </code>
-<p>Property name of the form under which the control is published.</p></li>
-<li><code ng:non-bindable="">required<i>(optional)</i> – {string=} – </code>
-<p>The control is considered valid only if value is entered.</p></li>
-<li><code ng:non-bindable="">ngRequired<i>(optional)</i> – {string=} – </code>
-<p>Adds <code>required</code> attribute and <code>required</code> validation constraint to
+<h4 id="parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>ngModel</td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>Assignable angular expression to data-bind to.</p></td></tr><tr><td>name <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>Property name of the form under which the control is published.</p></td></tr><tr><td>required <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>The control is considered valid only if value is entered.</p></td></tr><tr><td>ngRequired <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>Adds <code>required</code> attribute and <code>required</code> validation constraint to
 the element when the ngRequired expression evaluates to true. Use <code>ngRequired</code> instead of
-<code>required</code> when you want to data-bind to the <code>required</code> attribute.</p></li>
-<li><code ng:non-bindable="">ngOptions<i>(optional)</i> – {comprehension_expression=} – </code>
-<p>in one of the following forms:</p>
+<code>required</code> when you want to data-bind to the <code>required</code> attribute.</p></td></tr><tr><td>ngOptions <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-comprehension_expression">comprehension_expression</a></td><td><p>in one of the following forms:</p>
 
 <ul>
 <li>for array data sources:
 <ul><li><code>label</code> <strong><code>for</code></strong> <code>value</code> <strong><code>in</code></strong> <code>array</code></li>
 <li><code>select</code> <strong><code>as</code></strong> <code>label</code> <strong><code>for</code></strong> <code>value</code> <strong><code>in</code></strong> <code>array</code></li>
 <li><code>label</code>  <strong><code>group by</code></strong> <code>group</code> <strong><code>for</code></strong> <code>value</code> <strong><code>in</code></strong> <code>array</code></li>
-<li><code>select</code> <strong><code>as</code></strong> <code>label</code> <strong><code>group by</code></strong> <code>group</code> <strong><code>for</code></strong> <code>value</code> <strong><code>in</code></strong> <code>array</code></li></ul></li>
+<li><code>select</code> <strong><code>as</code></strong> <code>label</code> <strong><code>group by</code></strong> <code>group</code> <strong><code>for</code></strong> <code>value</code> <strong><code>in</code></strong> <code>array</code> <strong><code>track by</code></strong> <code>trackexpr</code></li></ul></li>
 <li>for object data sources:
 <ul><li><code>label</code> <strong><code>for (</code></strong><code>key</code> <strong><code>,</code></strong> <code>value</code><strong><code>) in</code></strong> <code>object</code></li>
 <li><code>select</code> <strong><code>as</code></strong> <code>label</code> <strong><code>for (</code></strong><code>key</code> <strong><code>,</code></strong> <code>value</code><strong><code>) in</code></strong> <code>object</code></li>
@@ -72,15 +62,16 @@ the element when the ngRequired expression evaluates to true. Use <code>ngRequir
  element. If not specified, <code>select</code> expression will default to <code>value</code>.</li>
 <li><code>group</code>: The result of this expression will be used to group options using the <code>&lt;optgroup&gt;</code>
  DOM element.</li>
-</ul></li>
-</ul>
-</div>
+<li><code>trackexpr</code>: Used when working with an array of objects. The result of this expression will be
+ used to identify the objects in the array. The <code>trackexpr</code> will most likely refer to the
+<code>value</code> variable (e.g. <code>value.propertyName</code>).</li>
+</ul></td></tr></tbody></table></div>
 <h2 id="Example">Example</h2>
-<div class="example"><h4>Source</h4>
-<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-190" source-edit-css="" source-edit-js="script.js-189" source-edit-unit="" source-edit-scenario="scenario.js-191"></div>
+<div class="example"><h4>Source</h2>
+<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-196" source-edit-css="" source-edit-js="script.js-195" source-edit-unit="" source-edit-scenario="scenario.js-197"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-190" ng-html-wrap=" angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html-190">
+<pre class="prettyprint linenums" ng-set-text="index.html-196" ng-html-wrap=" angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-196">
   
   <div ng-controller="MyCntrl">
     <ul>
@@ -118,8 +109,8 @@ the element when the ngRequired expression evaluates to true. Use <code>ngRequir
 </script>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-189"></pre>
-<script type="text/ng-template" id="script.js-189">
+<pre class="prettyprint linenums" ng-set-text="script.js-195"></pre>
+<script type="text/ng-template" id="script.js-195">
   function MyCntrl($scope) {
     $scope.colors = [
       {name:'black', shade:'dark'},
@@ -133,8 +124,8 @@ the element when the ngRequired expression evaluates to true. Use <code>ngRequir
   </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-191"></pre>
-<script type="text/ng-template" id="scenario.js-191">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-197"></pre>
+<script type="text/ng-template" id="scenario.js-197">
    it('should check ng-options', function() {
      expect(binding('{selected_color:color}')).toMatch('red');
      select('color').option('0');
@@ -144,6 +135,6 @@ the element when the ngRequired expression evaluates to true. Use <code>ngRequir
    });
 </script>
 </div>
-</div><h4>Demo</h4>
-<div class="well doc-example-live" ng-embed-app="" ng-set-html="index.html-190" ng-eval-javascript="script.js-189"></div></div>
+</div><h2>Demo</h4>
+<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-196" ng-eval-javascript="script.js-195"></div></div>
 </div>

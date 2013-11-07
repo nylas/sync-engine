@@ -7,7 +7,7 @@ verify the correctness of new features, catch bugs and notice regressions.</p>
 <p>To solve this problem, we have built an Angular Scenario Runner which simulates user interactions
 that will help you verify the health of your Angular application.</p>
 
-<h1 id="overview">Overview</h2>
+<h2 id="overview">Overview</h1>
 
 <p>You will write scenario tests in JavaScript, which describe how your application should behave,
 given a certain interaction in a specific state. A scenario is comprised of one or more <code>it</code> blocks
@@ -43,70 +43,70 @@ the only button on the page, and then it verifies that there are 10 items listed
 
 <p>The API section below lists the available commands and expectations for the Runner.</p>
 
-<h1 id="api">API</h2>
+<h1 id="api">API</h1>
 
 <p>Source: <a href="https://github.com/angular/angular.js/blob/master/src/ngScenario/dsl.js">https://github.com/angular/angular.js/blob/master/src/ngScenario/dsl.js</a></p>
 
-<h2 id="pause">pause()</h3>
+<h3 id="pause">pause()</h2>
 
 <p>Pauses the execution of the tests until you call <code>resume()</code> in the console (or click the resume
 link in the Runner UI).</p>
 
-<h2 id="sleepseconds">sleep(seconds)</h3>
+<h2 id="sleepseconds">sleep(seconds)</h2>
 
 <p>Pauses the execution of the tests for the specified number of <code>seconds</code>.</p>
 
-<h2 id="browsernavigatetourl">browser().navigateTo(url)</h3>
+<h2 id="browsernavigatetourl">browser().navigateTo(url)</h2>
 
 <p>Loads the <code>url</code> into the test frame.</p>
 
-<h2 id="browsernavigatetourlfn">browser().navigateTo(url, fn)</h3>
+<h2 id="browsernavigatetourlfn">browser().navigateTo(url, fn)</h2>
 
 <p>Loads the URL returned by <code>fn</code> into the testing frame. The given <code>url</code> is only used for the test
 output. Use this when the destination URL is dynamic (that is, the destination is unknown when you
 write the test).</p>
 
-<h2 id="browserreload">browser().reload()</h3>
+<h2 id="browserreload">browser().reload()</h2>
 
 <p>Refreshes the currently loaded page in the test frame.</p>
 
-<h2 id="browserwindowhref">browser().window().href()</h3>
+<h2 id="browserwindowhref">browser().window().href()</h2>
 
 <p>Returns the window.location.href of the currently loaded page in the test frame.</p>
 
-<h2 id="browserwindowpath">browser().window().path()</h3>
+<h2 id="browserwindowpath">browser().window().path()</h2>
 
 <p>Returns the window.location.pathname of the currently loaded page in the test frame.</p>
 
-<h2 id="browserwindowsearch">browser().window().search()</h3>
+<h2 id="browserwindowsearch">browser().window().search()</h2>
 
 <p>Returns the window.location.search of the currently loaded page in the test frame.</p>
 
-<h2 id="browserwindowhash">browser().window().hash()</h3>
+<h2 id="browserwindowhash">browser().window().hash()</h2>
 
 <p>Returns the window.location.hash (without <code>#</code>) of the currently loaded page in the test frame.</p>
 
-<h2 id="browserlocationurl">browser().location().url()</h3>
+<h2 id="browserlocationurl">browser().location().url()</h2>
 
 <p>Returns the <a href="api/ng.$location"><code>$location.url()</code></a> of the currently loaded page in
 the test frame.</p>
 
-<h2 id="browserlocationpath">browser().location().path()</h3>
+<h2 id="browserlocationpath">browser().location().path()</h2>
 
 <p>Returns the <a href="api/ng.$location"><code>$location.path()</code></a> of the currently loaded page in
 the test frame.</p>
 
-<h2 id="browserlocationsearch">browser().location().search()</h3>
+<h2 id="browserlocationsearch">browser().location().search()</h2>
 
 <p>Returns the <a href="api/ng.$location"><code>$location.search()</code></a> of the currently loaded page
 in the test frame.</p>
 
-<h2 id="browserlocationhash">browser().location().hash()</h3>
+<h2 id="browserlocationhash">browser().location().hash()</h2>
 
 <p>Returns the <a href="api/ng.$location"><code>$location.hash()</code></a> of the currently loaded page in
 the test frame.</p>
 
-<h2 id="expectfuturematcher">expect(future).{matcher}</h3>
+<h2 id="expectfuturematcher">expect(future).{matcher}</h2>
 
 <p>Asserts the value of the given <code>future</code> satisfies the <code>matcher</code>. All API statements return a
 <code>future</code> object, which get a <code>value</code> assigned after they are executed. Matchers are defined using
@@ -114,93 +114,93 @@ the test frame.</p>
 <code>expect(browser().location().href()).toEqual('http://www.google.com')</code>. Available matchers
 are presented further down this document.</p>
 
-<h2 id="expectfuturenotmatcher">expect(future).not().{matcher}</h3>
+<h2 id="expectfuturenotmatcher">expect(future).not().{matcher}</h2>
 
 <p>Asserts the value of the given <code>future</code> satisfies the negation of the <code>matcher</code>.</p>
 
-<h2 id="usingselectorlabel">using(selector, label)</h3>
+<h2 id="usingselectorlabel">using(selector, label)</h2>
 
 <p>Scopes the next DSL element selection.</p>
 
-<h2 id="bindingname">binding(name)</h3>
+<h2 id="bindingname">binding(name)</h2>
 
 <p>Returns the value of the first binding matching the given <code>name</code>.</p>
 
-<h2 id="inputnameentervalue">input(name).enter(value)</h3>
+<h2 id="inputnameentervalue">input(name).enter(value)</h2>
 
 <p>Enters the given <code>value</code> in the text field with the given <code>name</code>.</p>
 
-<h2 id="inputnamecheck">input(name).check()</h3>
+<h2 id="inputnamecheck">input(name).check()</h2>
 
 <p>Checks/unchecks the checkbox with the given <code>name</code>.</p>
 
-<h2 id="inputnameselectvalue">input(name).select(value)</h3>
+<h2 id="inputnameselectvalue">input(name).select(value)</h2>
 
 <p>Selects the given <code>value</code> in the radio button with the given <code>name</code>.</p>
 
-<h2 id="inputnameval">input(name).val()</h3>
+<h2 id="inputnameval">input(name).val()</h2>
 
 <p>Returns the current value of an input field with the given <code>name</code>.</p>
 
-<h2 id="repeaterselectorlabelcount">repeater(selector, label).count()</h3>
+<h2 id="repeaterselectorlabelcount">repeater(selector, label).count()</h2>
 
 <p>Returns the number of rows in the repeater matching the given jQuery <code>selector</code>. The <code>label</code> is
 used for test output.</p>
 
-<h2 id="repeaterselectorlabelrowindex">repeater(selector, label).row(index)</h3>
+<h2 id="repeaterselectorlabelrowindex">repeater(selector, label).row(index)</h2>
 
 <p>Returns an array with the bindings in the row at the given <code>index</code> in the repeater matching the
 given jQuery <code>selector</code>. The <code>label</code> is used for test output.</p>
 
-<h2 id="repeaterselectorlabelcolumnbinding">repeater(selector, label).column(binding)</h3>
+<h2 id="repeaterselectorlabelcolumnbinding">repeater(selector, label).column(binding)</h2>
 
 <p>Returns an array with the values in the column with the given <code>binding</code> in the repeater matching
 the given jQuery <code>selector</code>. The <code>label</code> is used for test output.</p>
 
-<h2 id="selectnameoptionvalue">select(name).option(value)</h3>
+<h2 id="selectnameoptionvalue">select(name).option(value)</h2>
 
 <p>Picks the option with the given <code>value</code> on the select with the given <code>name</code>.</p>
 
-<h2 id="selectnameoptionvalue1value2">select(name).option(value1, value2...)</h3>
+<h2 id="selectnameoptionvalue1value2">select(name).option(value1, value2...)</h2>
 
 <p>Picks the options with the given <code>values</code> on the multi select with the given <code>name</code>.</p>
 
-<h2 id="elementselectorlabelcount">element(selector, label).count()</h3>
+<h2 id="elementselectorlabelcount">element(selector, label).count()</h2>
 
 <p>Returns the number of elements that match the given jQuery <code>selector</code>. The <code>label</code> is used for test
 output.</p>
 
-<h2 id="elementselectorlabelclick">element(selector, label).click()</h3>
+<h2 id="elementselectorlabelclick">element(selector, label).click()</h2>
 
 <p>Clicks on the element matching the given jQuery <code>selector</code>. The <code>label</code> is used for test output.</p>
 
-<h2 id="elementselectorlabelqueryfn">element(selector, label).query(fn)</h3>
+<h2 id="elementselectorlabelqueryfn">element(selector, label).query(fn)</h2>
 
 <p>Executes the function <code>fn(selectedElements, done)</code>, where selectedElements are the elements that
 match the given jQuery <code>selector</code> and <code>done</code> is a function that is called at the end of the <code>fn</code>
 function.  The <code>label</code> is used for test output.</p>
 
-<h2 id="elementselectorlabelmethod">element(selector, label).{method}()</h3>
+<h2 id="elementselectorlabelmethod">element(selector, label).{method}()</h2>
 
 <p>Returns the result of calling <code>method</code> on the element matching the given jQuery <code>selector</code>, where
 <code>method</code> can be any of the following jQuery methods: <code>val</code>, <code>text</code>, <code>html</code>, <code>height</code>,
 <code>innerHeight</code>, <code>outerHeight</code>, <code>width</code>, <code>innerWidth</code>, <code>outerWidth</code>, <code>position</code>, <code>scrollLeft</code>,
 <code>scrollTop</code>, <code>offset</code>. The <code>label</code> is used for test output.</p>
 
-<h2 id="elementselectorlabelmethodvalue">element(selector, label).{method}(value)</h3>
+<h2 id="elementselectorlabelmethodvalue">element(selector, label).{method}(value)</h2>
 
 <p>Executes the <code>method</code> passing in <code>value</code> on the element matching the given jQuery <code>selector</code>, where
 <code>method</code> can be any of the following jQuery methods: <code>val</code>, <code>text</code>, <code>html</code>, <code>height</code>,
 <code>innerHeight</code>, <code>outerHeight</code>, <code>width</code>, <code>innerWidth</code>, <code>outerWidth</code>, <code>position</code>, <code>scrollLeft</code>,
 <code>scrollTop</code>, <code>offset</code>.  The <code>label</code> is used for test output.</p>
 
-<h2 id="elementselectorlabelmethodkey">element(selector, label).{method}(key)</h3>
+<h2 id="elementselectorlabelmethodkey">element(selector, label).{method}(key)</h2>
 
 <p>Returns the result of calling <code>method</code> passing in <code>key</code> on the element matching the given jQuery
 <code>selector</code>, where <code>method</code> can be any of the following jQuery methods: <code>attr</code>, <code>prop</code>, <code>css</code>. The
 <code>label</code> is used for test output.</p>
 
-<h2 id="elementselectorlabelmethodkeyvalue">element(selector, label).{method}(key, value)</h3>
+<h2 id="elementselectorlabelmethodkeyvalue">element(selector, label).{method}(key, value)</h2>
 
 <p>Executes the <code>method</code> passing in <code>key</code> and <code>value</code> on the element matching the given jQuery
 <code>selector</code>, where <code>method</code> can be any of the following jQuery methods: <code>attr</code>,  <code>prop</code>, <code>css</code>.  The
@@ -211,7 +211,7 @@ come with almost no-help from the compiler. For this reason we feel very strongl
 written in JavaScript needs to come with a strong set of tests. We have built many features into
 angular which makes testing your angular applications easy. So there is no excuse for not testing.</p>
 
-<h1 id="matchers">Matchers</h2>
+<h1 id="matchers">Matchers</h1>
 
 <p>Matchers are used in combination with the <code>expect(...)</code> function as described above and can
 be negated with <code>not()</code>. For instance: <code>expect(element('h1').text()).not().toEqual('Error')</code>.</p>

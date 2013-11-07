@@ -7,18 +7,18 @@ attach behavior to them. For example you can use the
 <a href="http://code.google.com/apis/buzz/v1/getting_started.html#background-operations|">Google Buzz API</a>
 to retrieve Buzz activity and comments.</p>
 
-<h3>Source</h3>
-<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-1" source-edit-css="" source-edit-js="script.js-0" source-edit-unit="" source-edit-scenario="scenario.js-2"></div>
+<h3>Source</h2>
+<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html" source-edit-css="" source-edit-js="script.js" source-edit-unit="" source-edit-scenario="scenario.js"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-1" ng-html-wrap=" angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html-1">
+<pre class="prettyprint linenums" ng-set-text="index.html" ng-html-wrap=" angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html">
     
     <div ng-controller="BuzzController">
      <input ng-model="userId"/>
      <button ng-click="fetch()">fetch</button>
      <hr/>
      <div class="buzz" ng-repeat="item in activities.data.items">
-      <h1 style="font-size: 15px;">
+      <h2 style="font-size: 15px;">
        <img ng-src="{{item.actor.thumbnailUrl}}" style="max-height:30px;max-width:30px;"/>
        <a ng-href="{{item.actor.profileUrl}}">{{item.actor.name}}</a>
        <a href ng-click="expandReplies(item)" style="float: right;">
@@ -36,8 +36,8 @@ to retrieve Buzz activity and comments.</p>
  </script>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-0"></pre>
-<script type="text/ng-template" id="script.js-0">
+<pre class="prettyprint linenums" ng-set-text="script.js"></pre>
+<script type="text/ng-template" id="script.js">
     BuzzController.$inject = ['$scope', '$resource'];
     function BuzzController($scope, $resource) {
      $scope.userId = 'googlebuzz';
@@ -59,8 +59,8 @@ to retrieve Buzz activity and comments.</p>
     </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-2"></pre>
-<script type="text/ng-template" id="scenario.js-2">
+<pre class="prettyprint linenums" ng-set-text="scenario.js"></pre>
+<script type="text/ng-template" id="scenario.js">
   xit('fetch buzz and expand', function() {
     element(':button:contains(fetch)').click();
     expect(repeater('div.buzz').count()).toBeGreaterThan(0);
@@ -69,5 +69,5 @@ to retrieve Buzz activity and comments.</p>
   });
  </script>
 </div>
-</div><h3>Demo</h3>
-<div class="well doc-example-live" ng-embed-app="" ng-set-html="index.html-1" ng-eval-javascript="script.js-0"></div></div>
+</div><h2>Demo</h3>
+<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html" ng-eval-javascript="script.js"></div></div>

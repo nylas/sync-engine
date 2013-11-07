@@ -12,7 +12,10 @@ into the browser's console (if present).</p>
 </li>
 </ul>
 <div class="member method"><h2 id="Methods">Methods</h2>
-<ul class="methods"><li><h3 id="error">error()</h3>
+<ul class="methods"><li><h3 id="debug">debug()</h3>
+<div class="debug"><p>Write a debug message</p></div>
+</li>
+<li><h3 id="error">error()</h3>
 <div class="error"><p>Write an error message</p></div>
 </li>
 <li><h3 id="info">info()</h3>
@@ -27,11 +30,11 @@ into the browser's console (if present).</p>
 </ul>
 </div>
 <h2 id="Example">Example</h2>
-<div class="example"><h4>Source</h4>
-<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-214" source-edit-css="" source-edit-js="script.js-213" source-edit-unit="" source-edit-scenario=""></div>
+<div class="example"><h4>Source</h2>
+<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-220" source-edit-css="" source-edit-js="script.js-219" source-edit-unit="" source-edit-scenario=""></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-214" ng-html-wrap=" angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html-214">
+<pre class="prettyprint linenums" ng-set-text="index.html-220" ng-html-wrap=" angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-220">
   <div ng-controller="LogCtrl">
     <p>Reload this page with open console, enter text and hit the log button...</p>
     Message:
@@ -44,14 +47,14 @@ into the browser's console (if present).</p>
 </script>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-213"></pre>
-<script type="text/ng-template" id="script.js-213">
+<pre class="prettyprint linenums" ng-set-text="script.js-219"></pre>
+<script type="text/ng-template" id="script.js-219">
   function LogCtrl($scope, $log) {
     $scope.$log = $log;
     $scope.message = 'Hello World!';
   }
 </script>
 </div>
-</div><h4>Demo</h4>
-<div class="well doc-example-live" ng-embed-app="" ng-set-html="index.html-214" ng-eval-javascript="script.js-213"></div></div>
+</div><h2>Demo</h4>
+<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-220" ng-eval-javascript="script.js-219"></div></div>
 </div>

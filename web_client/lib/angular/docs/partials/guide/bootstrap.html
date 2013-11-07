@@ -1,12 +1,12 @@
 <h1><code ng:non-bindable=""></code>
 <span class="hint"></span>
 </h1>
-<div><a href="http://github.com/angular/angular.js/edit/master/docs/content/guide/bootstrap.ngdoc" class="improve-docs btn btn-primary">Improve this doc</a><h1 id="overview">Overview</h2>
+<div><a href="http://github.com/angular/angular.js/edit/master/docs/content/guide/bootstrap.ngdoc" class="improve-docs btn btn-primary">Improve this doc</a><h2 id="overview">Overview</h1>
 
 <p>This page explains the Angular initialization process and how you can manually initialize Angular
 if necessary.</p>
 
-<h1 id="angularscripttag">Angular <code>&lt;script&gt;</code> Tag</h2>
+<h1 id="angularscripttag">Angular <code>&lt;script&gt;</code> Tag</h1>
 
 <p>This example shows the recommended path for integrating Angular with what we call automatic
 initialization.</p>
@@ -48,12 +48,12 @@ to make IE happy. (This is here for historical reasons, and we no longer recomme
 </code></pre></li>
 </ul>
 
-<h1 id="automaticinitialization">Automatic Initialization</h2>
+<h1 id="automaticinitialization">Automatic Initialization</h1>
 
-<p>Angular initializes automatically upon <code>DOMContentLoaded</code> event, at which point Angular looks for
-the <a href="api/ng.directive:ngApp"><code><code>ng-app</code></code></a> directive which
-designates your application root. If the <a href="api/ng.directive:ngApp"><code><code>ng-app</code></code></a> directive is found then Angular
-will:</p>
+<p>Angular initializes automatically upon <code>DOMContentLoaded</code> event or when the <code>angular.js</code> script is
+evaluated if at that time <code>document.readyState</code> is set to <code>'complete'</code>. At this point Angular looks
+for the <a href="api/ng.directive:ngApp"><code><code>ng-app</code></code></a> directive which designates your application root.
+If the <a href="api/ng.directive:ngApp"><code><code>ng-app</code></code></a> directive is found then Angular will:</p>
 
 <ul>
 <li>load the <a href="guide/module">module</a> associated with the directive.</li>

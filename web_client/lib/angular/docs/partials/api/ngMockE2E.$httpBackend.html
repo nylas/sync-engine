@@ -47,20 +47,8 @@ on the <code>ngMockE2E</code> and your application modules and defines the fake 
 <p>Afterwards, bootstrap your app with this new module.</p></div>
 <div class="member method"><h2 id="Methods">Methods</h2>
 <ul class="methods"><li><h3 id="when">when(method, url, data, headers)</h3>
-<div class="when"><p>Creates a new backend definition.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">method – {string} – </code>
-<p>HTTP method.</p></li>
-<li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-<li><code ng:non-bindable="">data<i>(optional)</i> – {(string|RegExp)=} – </code>
-<p>HTTP request body.</p></li>
-<li><code ng:non-bindable="">headers<i>(optional)</i> – {(Object|function(Object))=} – </code>
-<p>HTTP headers or function that receives http header
-object and returns true if the headers match the current definition.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> and <code>passThrough</code> methods that
+<div class="when"><p>Creates a new backend definition.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>method</td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>HTTP method.</p></td></tr><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr><tr><td>data <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP request body.</p></td></tr><tr><td>headers <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a><a href="" class="label type-hint type-hint-function">function(Object)</a></td><td><p>HTTP headers or function that receives http header
+object and returns true if the headers match the current definition.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> and <code>passThrough</code> methods that
 control how a matched request is handled.</p>
 
 <ul>
@@ -71,103 +59,35 @@ an array containing response status (number), response data (string) and respons
 <li>passThrough – <code>{function()}</code> – Any request matching a backend definition with <code>passThrough</code>
 handler, will be pass through to the real backend (an XHR request will be made to the
 server.</li>
-</ul></div>
-</div>
+</ul></td></tr></table></div>
 </li>
 <li><h3 id="whenDELETE">whenDELETE(url, headers)</h3>
-<div class="whendelete"><p>Creates a new backend definition for DELETE requests. For more info see <code>when()</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-<li><code ng:non-bindable="">headers<i>(optional)</i> – {(Object|function(Object))=} – </code>
-<p>HTTP headers.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> and <code>passThrough</code> methods that
-control how a matched request is handled.</p></div>
-</div>
+<div class="whendelete"><p>Creates a new backend definition for DELETE requests. For more info see <code>when()</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr><tr><td>headers <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a><a href="" class="label type-hint type-hint-function">function(Object)</a></td><td><p>HTTP headers.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> and <code>passThrough</code> methods that
+control how a matched request is handled.</p></td></tr></table></div>
 </li>
 <li><h3 id="whenGET">whenGET(url, headers)</h3>
-<div class="whenget"><p>Creates a new backend definition for GET requests. For more info see <code>when()</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-<li><code ng:non-bindable="">headers<i>(optional)</i> – {(Object|function(Object))=} – </code>
-<p>HTTP headers.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> and <code>passThrough</code> methods that
-control how a matched request is handled.</p></div>
-</div>
+<div class="whenget"><p>Creates a new backend definition for GET requests. For more info see <code>when()</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr><tr><td>headers <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a><a href="" class="label type-hint type-hint-function">function(Object)</a></td><td><p>HTTP headers.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> and <code>passThrough</code> methods that
+control how a matched request is handled.</p></td></tr></table></div>
 </li>
 <li><h3 id="whenHEAD">whenHEAD(url, headers)</h3>
-<div class="whenhead"><p>Creates a new backend definition for HEAD requests. For more info see <code>when()</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-<li><code ng:non-bindable="">headers<i>(optional)</i> – {(Object|function(Object))=} – </code>
-<p>HTTP headers.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> and <code>passThrough</code> methods that
-control how a matched request is handled.</p></div>
-</div>
+<div class="whenhead"><p>Creates a new backend definition for HEAD requests. For more info see <code>when()</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr><tr><td>headers <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a><a href="" class="label type-hint type-hint-function">function(Object)</a></td><td><p>HTTP headers.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> and <code>passThrough</code> methods that
+control how a matched request is handled.</p></td></tr></table></div>
 </li>
 <li><h3 id="whenJSONP">whenJSONP(url)</h3>
-<div class="whenjsonp"><p>Creates a new backend definition for JSONP requests. For more info see <code>when()</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> and <code>passThrough</code> methods that
-control how a matched request is handled.</p></div>
-</div>
+<div class="whenjsonp"><p>Creates a new backend definition for JSONP requests. For more info see <code>when()</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> and <code>passThrough</code> methods that
+control how a matched request is handled.</p></td></tr></table></div>
 </li>
 <li><h3 id="whenPATCH">whenPATCH(url, data, headers)</h3>
-<div class="whenpatch"><p>Creates a new backend definition for PATCH requests.  For more info see <code>when()</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-<li><code ng:non-bindable="">data<i>(optional)</i> – {(string|RegExp)=} – </code>
-<p>HTTP request body.</p></li>
-<li><code ng:non-bindable="">headers<i>(optional)</i> – {(Object|function(Object))=} – </code>
-<p>HTTP headers.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> and <code>passThrough</code> methods that
-control how a matched request is handled.</p></div>
-</div>
+<div class="whenpatch"><p>Creates a new backend definition for PATCH requests.  For more info see <code>when()</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr><tr><td>data <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP request body.</p></td></tr><tr><td>headers <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a><a href="" class="label type-hint type-hint-function">function(Object)</a></td><td><p>HTTP headers.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> and <code>passThrough</code> methods that
+control how a matched request is handled.</p></td></tr></table></div>
 </li>
 <li><h3 id="whenPOST">whenPOST(url, data, headers)</h3>
-<div class="whenpost"><p>Creates a new backend definition for POST requests. For more info see <code>when()</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-<li><code ng:non-bindable="">data<i>(optional)</i> – {(string|RegExp)=} – </code>
-<p>HTTP request body.</p></li>
-<li><code ng:non-bindable="">headers<i>(optional)</i> – {(Object|function(Object))=} – </code>
-<p>HTTP headers.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> and <code>passThrough</code> methods that
-control how a matched request is handled.</p></div>
-</div>
+<div class="whenpost"><p>Creates a new backend definition for POST requests. For more info see <code>when()</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr><tr><td>data <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP request body.</p></td></tr><tr><td>headers <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a><a href="" class="label type-hint type-hint-function">function(Object)</a></td><td><p>HTTP headers.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> and <code>passThrough</code> methods that
+control how a matched request is handled.</p></td></tr></table></div>
 </li>
 <li><h3 id="whenPUT">whenPUT(url, data, headers)</h3>
-<div class="whenput"><p>Creates a new backend definition for PUT requests.  For more info see <code>when()</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">url – {string|RegExp} – </code>
-<p>HTTP url.</p></li>
-<li><code ng:non-bindable="">data<i>(optional)</i> – {(string|RegExp)=} – </code>
-<p>HTTP request body.</p></li>
-<li><code ng:non-bindable="">headers<i>(optional)</i> – {(Object|function(Object))=} – </code>
-<p>HTTP headers.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{requestHandler}</code>
-– <p>Returns an object with <code>respond</code> and <code>passThrough</code> methods that
-control how a matched request is handled.</p></div>
-</div>
+<div class="whenput"><p>Creates a new backend definition for PUT requests.  For more info see <code>when()</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>url</td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP url.</p></td></tr><tr><td>data <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-regexp">RegExp</a></td><td><p>HTTP request body.</p></td></tr><tr><td>headers <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">Object</a><a href="" class="label type-hint type-hint-function">function(Object)</a></td><td><p>HTTP headers.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-requesthandler">requestHandler</a></td><td><p>Returns an object with <code>respond</code> and <code>passThrough</code> methods that
+control how a matched request is handled.</p></td></tr></table></div>
 </li>
 </ul>
 </div>

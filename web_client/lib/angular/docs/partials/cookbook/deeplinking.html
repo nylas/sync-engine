@@ -7,7 +7,7 @@ bookmarked and the application can be restored from the URL to the same state.</
 <p>While Angular does not force you to deal with bookmarks in any particular way, it has services
 which make the common case described here very easy to implement.</p>
 
-<h1 id="assumptions">Assumptions</h2>
+<h2 id="assumptions">Assumptions</h1>
 
 <p>Your application consists of a single HTML page which bootstraps the application. We will refer
 to this page as the chrome.
@@ -22,7 +22,7 @@ partial boundary visible using a blue line.</p>
 <p>You can make a routing table which shows which URL maps to which partial view template and which
 controller.</p>
 
-<h1 id="example">Example</h2>
+<h1 id="example">Example</h1>
 
 <p>In this example we have a simple app which consist of two screens:</p>
 
@@ -31,13 +31,13 @@ controller.</p>
 <li>Settings: url <code>settings</code> Show an edit screen for user contact information.</li>
 </ul>
 
-<h3>Source</h3>
+<h3>Source</h2>
 <div source-edit="deepLinking" source-edit-deps="angular.js angular-sanitize.js script.js" source-edit-html="index.html-4 settings.html welcome.html" source-edit-css="style.css" source-edit-js="script.js-3" source-edit-unit="" source-edit-scenario="scenario.js-5"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
 <pre class="prettyprint linenums" ng-set-text="index.html-4" ng-html-wrap="deepLinking angular.js angular-sanitize.js script.js"></pre>
 <script type="text/ng-template" id="index.html-4">
     <div ng-controller="AppCntl">
-      <h2>Your App Chrome</h2>
+      <h1>Your App Chrome</h1>
       [ <a href="welcome">Welcome</a> | <a href="settings">Settings</a> ]
       <hr/>
       <span class="partial-info">
@@ -154,8 +154,8 @@ controller.</p>
    });
  </script>
 </div>
-</div><h3>Demo</h3>
-<div class="well doc-example-live" ng-embed-app="deepLinking" ng-set-html="index.html-4" ng-eval-javascript="script.js-3"></div>
+</div><h2>Demo</h3>
+<div class="well doc-example-live animator-container" ng-embed-app="deepLinking" ng-set-html="index.html-4" ng-eval-javascript="script.js-3"></div>
 
 <h1 id="thingstonotice">Things to notice</h2>
 

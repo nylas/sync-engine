@@ -6,27 +6,18 @@
 <div class="description"><p>Factory that constructs cache objects.</p></div>
 <h2 id="Usage">Usage</h2>
 <div class="usage"><pre class="prettyprint linenums">$cacheFactory(cacheId[, options]);</pre>
-<h3 id="Parameters">Parameters</h3>
-<ul class="parameters"><li><code ng:non-bindable="">cacheId – {string} – </code>
-<p>Name or id of the newly created cache.</p></li>
-<li><code ng:non-bindable="">options<i>(optional)</i> – {object=} – </code>
-<p>Options object that specifies the cache behavior. Properties:</p>
+<h4 id="parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>cacheId</td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>Name or id of the newly created cache.</p></td></tr><tr><td>options <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-object">object</a></td><td><p>Options object that specifies the cache behavior. Properties:</p>
 
 <ul>
 <li><code>{number=}</code> <code>capacity</code> — turns the cache into LRU cache.</li>
-</ul></li>
-</ul>
-<h3 id="Returns">Returns</h3>
-<div class="returns"><code ng:non-bindable="">{object}</code>
-– <p>Newly created cache object with the following set of methods:</p>
+</ul></td></tr></tbody></table><h4 id="returns">Returns</h4><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-object">object</a></td><td><p>Newly created cache object with the following set of methods:</p>
 
 <ul>
 <li><code>{object}</code> <code>info()</code> — Returns id, size, and options of cache.</li>
-<li><code>{void}</code> <code>put({string} key, {*} value)</code> — Puts a new key-value pair into the cache.</li>
+<li><code>{{*}}</code> <code>put({string} key, {*} value)</code> — Puts a new key-value pair into the cache and returns it.</li>
 <li><code>{{*}}</code> <code>get({string} key)</code> — Returns cached value for <code>key</code> or undefined for cache miss.</li>
 <li><code>{void}</code> <code>remove({string} key)</code> — Removes a key-value pair from the cache.</li>
 <li><code>{void}</code> <code>removeAll()</code> — Removes all cached values.</li>
 <li><code>{void}</code> <code>destroy()</code> — Removes references to this cache from $cacheFactory.</li>
-</ul></div>
-</div>
+</ul></td></tr></table></div>
 </div>

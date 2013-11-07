@@ -14,35 +14,19 @@ address.</p></div>
        [ng-minlength="{number}"]
        [ng-maxlength="{number}"]
        [ng-pattern="{string}"]&gt;</pre>
-<h3 id="Parameters">Parameters</h3>
-<ul class="parameters"><li><code ng:non-bindable="">ngModel – {string} – </code>
-<p>Assignable angular expression to data-bind to.</p></li>
-<li><code ng:non-bindable="">name<i>(optional)</i> – {string=} – </code>
-<p>Property name of the form under which the control is published.</p></li>
-<li><code ng:non-bindable="">required<i>(optional)</i> – {string=} – </code>
-<p>Sets <code>required</code> validation error key if the value is not entered.</p></li>
-<li><code ng:non-bindable="">ngRequired<i>(optional)</i> – {string=} – </code>
-<p>Adds <code>required</code> attribute and <code>required</code> validation constraint to
+<h4 id="parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>ngModel</td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>Assignable angular expression to data-bind to.</p></td></tr><tr><td>name <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>Property name of the form under which the control is published.</p></td></tr><tr><td>required <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>Sets <code>required</code> validation error key if the value is not entered.</p></td></tr><tr><td>ngRequired <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>Adds <code>required</code> attribute and <code>required</code> validation constraint to
 the element when the ngRequired expression evaluates to true. Use <code>ngRequired</code> instead of
-<code>required</code> when you want to data-bind to the <code>required</code> attribute.</p></li>
-<li><code ng:non-bindable="">ngMinlength<i>(optional)</i> – {number=} – </code>
-<p>Sets <code>minlength</code> validation error key if the value is shorter than
-minlength.</p></li>
-<li><code ng:non-bindable="">ngMaxlength<i>(optional)</i> – {number=} – </code>
-<p>Sets <code>maxlength</code> validation error key if the value is longer than
-maxlength.</p></li>
-<li><code ng:non-bindable="">ngPattern<i>(optional)</i> – {string=} – </code>
-<p>Sets <code>pattern</code> validation error key if the value does not match the
+<code>required</code> when you want to data-bind to the <code>required</code> attribute.</p></td></tr><tr><td>ngMinlength <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-number">number</a></td><td><p>Sets <code>minlength</code> validation error key if the value is shorter than
+minlength.</p></td></tr><tr><td>ngMaxlength <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-number">number</a></td><td><p>Sets <code>maxlength</code> validation error key if the value is longer than
+maxlength.</p></td></tr><tr><td>ngPattern <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>Sets <code>pattern</code> validation error key if the value does not match the
 RegExp pattern expression. Expected value is <code>/regexp/</code> for inline patterns or <code>regexp</code> for
-patterns defined as scope expressions.</p></li>
-</ul>
-</div>
+patterns defined as scope expressions.</p></td></tr></tbody></table></div>
 <h2 id="Example">Example</h2>
-<div class="example"><h4>Source</h4>
-<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-113" source-edit-css="" source-edit-js="script.js-112" source-edit-unit="" source-edit-scenario="scenario.js-114"></div>
+<div class="example"><h4>Source</h2>
+<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-115" source-edit-css="" source-edit-js="script.js-114" source-edit-unit="" source-edit-scenario="scenario.js-116"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-113" ng-html-wrap=" angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html-113">
+<pre class="prettyprint linenums" ng-set-text="index.html-115" ng-html-wrap=" angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-115">
  
    <form name="myForm" ng-controller="Ctrl">
      Email: <input type="email" name="input" ng-model="text" required>
@@ -60,16 +44,16 @@ patterns defined as scope expressions.</p></li>
 </script>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-112"></pre>
-<script type="text/ng-template" id="script.js-112">
+<pre class="prettyprint linenums" ng-set-text="script.js-114"></pre>
+<script type="text/ng-template" id="script.js-114">
    function Ctrl($scope) {
      $scope.text = 'me@example.com';
    }
  </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-114"></pre>
-<script type="text/ng-template" id="scenario.js-114">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-116"></pre>
+<script type="text/ng-template" id="scenario.js-116">
   it('should initialize to model', function() {
     expect(binding('text')).toEqual('me@example.com');
     expect(binding('myForm.input.$valid')).toEqual('true');
@@ -87,6 +71,6 @@ patterns defined as scope expressions.</p></li>
   });
 </script>
 </div>
-</div><h4>Demo</h4>
-<div class="well doc-example-live" ng-embed-app="" ng-set-html="index.html-113" ng-eval-javascript="script.js-112"></div></div>
+</div><h2>Demo</h4>
+<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-115" ng-eval-javascript="script.js-114"></div></div>
 </div>

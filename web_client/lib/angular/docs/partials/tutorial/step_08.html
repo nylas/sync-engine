@@ -17,7 +17,7 @@ our data, and we'll flesh out the <code>phone-detail.html</code> view template.<
 
 <p>The most important changes are listed below. You can see the full diff on <a href="https://github.com/angular/angular-phonecat/compare/step-7...step-8">GitHub</a>:</p>
 
-<h2 id="data">Data</h3>
+<h3 id="data">Data</h2>
 
 <p>In addition to <code>phones.json</code>, the <code>app/phones/</code> directory also contains one json file for each
 phone:</p>
@@ -47,7 +47,7 @@ phone:</p>
 <p>Each of these files describes various properties of the phone using the same data structure. We'll
 show this data in the phone detail view.</p>
 
-<h2 id="controller">Controller</h3>
+<h2 id="controller">Controller</h2>
 
 <p>We'll expand the <code>PhoneDetailCtrl</code> by using the <code>$http</code> service to fetch the json files. This works
 the same way as the phone list controller.</p>
@@ -66,7 +66,7 @@ function PhoneDetailCtrl($scope, $routeParams, $http) {
 <p>To construct the URL for the HTTP request, we use <code>$routeParams.phoneId</code> extracted from the current
 route by the <code>$route</code> service.</p>
 
-<h2 id="template">Template</h3>
+<h2 id="template">Template</h2>
 
 <p>The TBD placeholder line has been replaced with lists and bindings that comprise the phone details.
 Note where we use the angular <code>{{expression}}</code> markup and <code>ngRepeat</code> to project phone data from
@@ -166,7 +166,7 @@ heading on the page is "Nexus S".</p>
 <p>You can now rerun <code>./scripts/e2e-test.sh</code> or refresh the browser tab with the end-to-end test
 runner to see the tests run, or you can see them running on <a href="http://angular.github.com/angular-phonecat/step-8/test/e2e/runner.html">Angular's server</a>.</p>
 
-<h1 id="experiments">Experiments</h2>
+<h2 id="experiments">Experiments</h1>
 
 <ul>
 <li>Using the <a href="guide/dev_guide.e2e-testing">Angular's end-to-end test runner API</a>, write a test

@@ -35,32 +35,19 @@ $location service and changes to $location are reflected into the browser addres
 <div class="absurl"><p>This method is getter only.</p>
 
 <p>Return full url representation with all segments encoded according to rules specified in
-<a href="http://www.ietf.org/rfc/rfc3986.txt">RFC 3986</a>.</p><h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{string}</code>
-– <p>full url</p></div>
-</div>
+<a href="http://www.ietf.org/rfc/rfc3986.txt">RFC 3986</a>.</p><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>full url</p></td></tr></table></div>
 </li>
 <li><h3 id="hash">hash(hash)</h3>
 <div class="hash"><p>This method is getter / setter.</p>
 
 <p>Return hash fragment when called without any parameter.</p>
 
-<p>Change hash fragment when called with parameter and return <code>$location</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">hash<i>(optional)</i> – {string=} – </code>
-<p>New hash fragment</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{string}</code>
-– <p>hash</p></div>
-</div>
+<p>Change hash fragment when called with parameter and return <code>$location</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>hash <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>New hash fragment</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>hash</p></td></tr></table></div>
 </li>
 <li><h3 id="host">host()</h3>
 <div class="host"><p>This method is getter only.</p>
 
-<p>Return host of current url.</p><h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{string}</code>
-– <p>host of current url.</p></div>
-</div>
+<p>Return host of current url.</p><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>host of current url.</p></td></tr></table></div>
 </li>
 <li><h3 id="path">path(path)</h3>
 <div class="path"><p>This method is getter / setter.</p>
@@ -70,30 +57,17 @@ $location service and changes to $location are reflected into the browser addres
 <p>Change path when called with parameter and return <code>$location</code>.</p>
 
 <p>Note: Path should always begin with forward slash (/), this method will add the forward slash
-if it is missing.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">path<i>(optional)</i> – {string=} – </code>
-<p>New path</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{string}</code>
-– <p>path</p></div>
-</div>
+if it is missing.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>path <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>New path</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>path</p></td></tr></table></div>
 </li>
 <li><h3 id="port">port()</h3>
 <div class="port"><p>This method is getter only.</p>
 
-<p>Return port of current url.</p><h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{Number}</code>
-– <p>port</p></div>
-</div>
+<p>Return port of current url.</p><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-number">Number</a></td><td><p>port</p></td></tr></table></div>
 </li>
 <li><h3 id="protocol">protocol()</h3>
 <div class="protocol"><p>This method is getter only.</p>
 
-<p>Return protocol of current url.</p><h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{string}</code>
-– <p>protocol of current url</p></div>
-</div>
+<p>Return protocol of current url.</p><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>protocol of current url</p></td></tr></table></div>
 </li>
 <li><h3 id="replace">replace()</h3>
 <div class="replace"><p>If called, all changes to $location during current <code>$digest</code> will be replacing current history
@@ -104,31 +78,15 @@ record, instead of adding new one.</p></div>
 
 <p>Return search part (as object) of current url when called without any parameter.</p>
 
-<p>Change search part when called with parameter and return <code>$location</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">search<i>(optional)</i> – {string|object&lt;string,string&gt;=} – </code>
-<p>New search params - string or hash object</p></li>
-<li><code ng:non-bindable="">paramValue<i>(optional)</i> – {string=} – </code>
-<p>If <code>search</code> is a string, then <code>paramValue</code> will override only a
-single search parameter. If the value is <code>null</code>, the parameter will be deleted.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{string}</code>
-– <p>search</p></div>
-</div>
+<p>Change search part when called with parameter and return <code>$location</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>search <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-object">object&lt;string,string&gt;</a></td><td><p>New search params - string or hash object</p></td></tr><tr><td>paramValue <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>If <code>search</code> is a string, then <code>paramValue</code> will override only a
+single search parameter. If the value is <code>null</code>, the parameter will be deleted.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>search</p></td></tr></table></div>
 </li>
 <li><h3 id="url">url(url)</h3>
 <div class="url"><p>This method is getter / setter.</p>
 
 <p>Return url (e.g. <code>/path?a=b#hash</code>) when called without any parameter.</p>
 
-<p>Change path, search and hash, when called with parameter and return <code>$location</code>.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">url<i>(optional)</i> – {string=} – </code>
-<p>New url without base prefix (e.g. <code>/path?a=b#hash</code>)</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{string}</code>
-– <p>url</p></div>
-</div>
+<p>Change path, search and hash, when called with parameter and return <code>$location</code>.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>url <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>New url without base prefix (e.g. <code>/path?a=b#hash</code>)</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-string">string</a></td><td><p>url</p></td></tr></table></div>
 </li>
 </ul>
 </div>

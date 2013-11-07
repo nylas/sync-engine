@@ -51,7 +51,7 @@ traditional callback (<a href="http://en.wikipedia.org/wiki/Continuation-passing
 For more on this please see the <a href="https://github.com/kriskowal/q">Q documentation</a> especially the
 section on serial or parallel joining of promises.</p>
 
-<h1 id="thedeferredapi">The Deferred API</h3>
+<h3 id="thedeferredapi">The Deferred API</h1>
 
 <p>A new instance of deferred is constructed by calling <code>$q.defer()</code>.</p>
 
@@ -73,7 +73,7 @@ resolving it with a rejection constructed via <code>$q.reject</code>.</li>
 <li>promise – <code>{Promise}</code> – promise object associated with this deferred.</li>
 </ul>
 
-<h1 id="thepromiseapi">The Promise API</h3>
+<h1 id="thepromiseapi">The Promise API</h1>
 
 <p>A new promise instance is created when a deferred instance is created and can be retrieved by
 calling <code>deferred.promise</code>.</p>
@@ -90,9 +90,14 @@ is available. The callbacks are called with a single argument the result or reje
 
 <p>This method <em>returns a new promise</em> which is resolved or rejected via the return value of the
 <code>successCallback</code> or <code>errorCallback</code>.</p></li>
+<li><p><code>always(callback)</code> – allows you to observe either the fulfillment or rejection of a promise,
+but to do so without modifying the final value. This is useful to release resources or do some
+clean-up that needs to be done whether the promise was rejected or resolved. See the <a href="https://github.com/kriskowal/q/wiki/API-Reference#promisefinallycallback">full
+specification</a> for
+more information.</p></li>
 </ul>
 
-<h1 id="chainingpromises">Chaining promises</h3>
+<h1 id="chainingpromises">Chaining promises</h1>
 
 <p>Because calling <code>then</code> api of a promise returns a new derived promise, it is easily possible
 to create a chain of promises:</p>
@@ -111,7 +116,7 @@ promise (which will defer its resolution further), it is possible to pause/defer
 the promises at any point in the chain. This makes it possible to implement powerful apis like
 $http's response interceptors.</p>
 
-<h1 id="differencesbetweenkriskowalsqanddq">Differences between Kris Kowal's Q and $q</h3>
+<h1 id="differencesbetweenkriskowalsqanddq">Differences between Kris Kowal's Q and $q</h1>
 
 <p>There are three main differences:</p>
 
@@ -155,23 +160,13 @@ all the important functionality needed for common async tasks.</p>
 <div class="member method"><h2 id="Methods">Methods</h2>
 <ul class="methods"><li><h3 id="all">all(promises)</h3>
 <div class="all"><p>Combines multiple promises into a single promise that is resolved when all of the input
-promises are resolved.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">promises – {Array.&lt;Promise&gt;} – </code>
-<p>An array of promises.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{Promise}</code>
-– <p>Returns a single promise that will be resolved with an array of values,
-each value corresponding to the promise at the same index in the <code>promises</code> array. If any of
+promises are resolved.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>promises</td><td><a href="" class="label type-hint type-hint-array">Array.&lt;Promise&gt;</a><a href="" class="label type-hint type-hint-object">Object.&lt;Promise&gt;</a></td><td><p>An array or hash of promises.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-promise">Promise</a></td><td><p>Returns a single promise that will be resolved with an array/hash of values,
+each value corresponding to the promise at the same index/key in the <code>promises</code> array/hash. If any of
 the promises is resolved with a rejection, this resulting promise will be resolved with the
-same rejection.</p></div>
-</div>
+same rejection.</p></td></tr></table></div>
 </li>
 <li><h3 id="defer">defer()</h3>
-<div class="defer"><p>Creates a <code>Deferred</code> object which represents a task which will finish in the future.</p><h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{Deferred}</code>
-– <p>Returns a new instance of deferred.</p></div>
-</div>
+<div class="defer"><p>Creates a <code>Deferred</code> object which represents a task which will finish in the future.</p><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-deferred">Deferred</a></td><td><p>Returns a new instance of deferred.</p></td></tr></table></div>
 </li>
 <li><h3 id="reject">reject(reason)</h3>
 <div class="reject"><p>Creates a promise that is resolved as rejected with the specified <code>reason</code>. This api should be
@@ -199,26 +194,12 @@ current promise, you have to "rethrow" the error by returning a rejection constr
     }
     return $q.reject(reason);
   });
-</pre><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">reason – {*} – </code>
-<p>Constant, message, exception or an object representing the rejection reason.</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{Promise}</code>
-– <p>Returns a promise that was already resolved as rejected with the <code>reason</code>.</p></div>
-</div>
+</pre><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>reason</td><td><a href="" class="label type-hint type-hint-object">*</a></td><td><p>Constant, message, exception or an object representing the rejection reason.</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-promise">Promise</a></td><td><p>Returns a promise that was already resolved as rejected with the <code>reason</code>.</p></td></tr></table></div>
 </li>
 <li><h3 id="when">when(value)</h3>
 <div class="when"><p>Wraps an object that might be a value or a (3rd party) then-able promise into a $q promise.
 This is useful when you are dealing with an object that might or might not be a promise, or if
-the promise comes from a source that can't be trusted.</p><h4 id="Parameters">Parameters</h4>
-<ul class="parameters"><li><code ng:non-bindable="">value – {*} – </code>
-<p>Value or a promise</p></li>
-</ul>
-<h4 id="Returns">Returns</h4>
-<div class="returns"><code ng:non-bindable="">{Promise}</code>
-– <p>Returns a promise of the passed value or promise</p></div>
-</div>
+the promise comes from a source that can't be trusted.</p><h5 id="parameters">Parameters</h5><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>value</td><td><a href="" class="label type-hint type-hint-object">*</a></td><td><p>Value or a promise</p></td></tr></tbody></table><h5 id="returns">Returns</h5><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-promise">Promise</a></td><td><p>Returns a promise of the passed value or promise</p></td></tr></table></div>
 </li>
 </ul>
 </div>

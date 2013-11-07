@@ -6,7 +6,7 @@ comes with almost no-help from the compiler. For this reason we feel very strong
 written in JavaScript needs to come with a strong set of tests. We have built many features into
 Angular which makes testing your Angular applications easy. So there is no excuse for not testing.</p>
 
-<h1 id="itisallaboutnotmixingconcerns">It is all about NOT mixing concerns</h2>
+<h2 id="itisallaboutnotmixingconcerns">It is all about NOT mixing concerns</h1>
 
 <p>Unit testing as the name implies is about testing individual units of code. Unit tests try to
 answer questions such as "Did I think about the logic correctly?" or "Does the sort function order the list
@@ -30,13 +30,13 @@ apply the function, and assert that the resulting model is in the correct order.
 have to wait for XHR, or create the right kind of DOM, or assert that your function has mutated the
 DOM in the right way.</p>
 
-<h2 id="withgreatpowercomesgreatresponsibility">With great power comes great responsibility</h3>
+<h3 id="withgreatpowercomesgreatresponsibility">With great power comes great responsibility</h2>
 
 <p>Angular is written with testability in mind, but it still requires that you
 do the right thing. We tried to make the right thing easy, but Angular is not magic, which means if
 you don't follow these guidelines you may very well end up with an untestable application.</p>
 
-<h2 id="dependencyinjection">Dependency Injection</h3>
+<h2 id="dependencyinjection">Dependency Injection</h2>
 
 <p>There are several ways in which you can get a hold of a dependency:
 1. You could create it using the <code>new</code> operator.
@@ -47,7 +47,7 @@ the registry? Most likely by looking it up in a well known place. See #2)
 
 <p>Out of the four options in the list above, only the last one is testable. Let's look at why:</p>
 
-<h3 id="usingthenewoperator">Using the <code>new</code> operator</h4>
+<h4 id="usingthenewoperator">Using the <code>new</code> operator</h3>
 
 <p>While there is nothing wrong with the <code>new</code> operator fundamentally the issue is that calling a new
 on a constructor permanently binds the call site to the type. For example lets say that we are
@@ -79,7 +79,7 @@ myClass.doWork();
 XHR = oldXHR; // if you forget this bad things will happen
 </pre>
 
-<h3 id="globallookup">Global look-up:</h4>
+<h3 id="globallookup">Global look-up:</h3>
 
 <p>Another way to approach the problem is to look for the service in a well known location.</p>
 
@@ -110,7 +110,7 @@ myClass.doWork();
 global.xhr = oldXHR; // if you forget this bad things will happen
 </pre>
 
-<h3 id="serviceregistry">Service Registry:</h4>
+<h3 id="serviceregistry">Service Registry:</h3>
 
 <p>It may seem as that this can be solved by having a registry for all of the services, and then
 having the tests replace the services as needed.</p>
@@ -143,7 +143,7 @@ myClass.doWork();
 global.serviceLocator = oldServiceLocator; // if you forget this bad things will happen
 </pre>
 
-<h3 id="passingindependencies">Passing in Dependencies:</h4>
+<h3 id="passingindependencies">Passing in Dependencies:</h3>
 
 <p>Lastly the dependency can be passed in.</p>
 
@@ -176,7 +176,7 @@ myClass.doWork();
 <p>Angular comes with <a href="guide/di">dependency injection</a> built in which makes the right thing
 easy to do, but you still need to do it if you wish to take advantage of the testability story.</p>
 
-<h2 id="controllers">Controllers</h3>
+<h2 id="controllers">Controllers</h2>
 
 <p>What makes each application unique is its logic, which is what we would like to test. If the logic
 for your application is mixed in with DOM manipulation, it will be hard to test as in the example
@@ -255,7 +255,7 @@ expect(pc.strength).toEqual('weak');
 <p>Notice that the test is not only much shorter but it is easier to follow what is going on. We say
 that such a test tells a story, rather then asserting random bits which don't seem to be related.</p>
 
-<h2 id="filters">Filters</h3>
+<h2 id="filters">Filters</h2>
 
 <p><a href="api/ng.$filter"><code>Filters</code></a> are functions which transform the data into user readable
 format. They are important because they remove the formatting responsibility from the application
@@ -273,7 +273,7 @@ expect(length(null)).toEqual(0);
 expect(length('abc')).toEqual(3);
 </pre>
 
-<h2 id="directives">Directives</h3>
+<h2 id="directives">Directives</h2>
 
 <p>Directives in angular are responsible for encapsulating complex functionality within custom HTML tags,
 attributes, classes or comments. Unit tests are very important for directives because the components
@@ -332,11 +332,11 @@ describe('Unit testing great quotes', function() {
 to render the aGreatEye directive. After rendering the directive we ensure that the directive has
 replaced the content and "lidless, wreathed in flame" is present.</p>
 
-<h2 id="mocks">Mocks</h3>
+<h2 id="mocks">Mocks</h2>
 
 <p>oue</p>
 
-<h2 id="globalstateisolation">Global State Isolation</h3>
+<h2 id="globalstateisolation">Global State Isolation</h2>
 
 <p>oue</p>
 
@@ -344,11 +344,11 @@ replaced the content and "lidless, wreathed in flame" is present.</p>
 
 <p>uo</p>
 
-<h2 id="javascripttestdriver">JavaScriptTestDriver</h3>
+<h2 id="javascripttestdriver">JavaScriptTestDriver</h2>
 
 <p>ou</p>
 
-<h2 id="jasmine">Jasmine</h3>
+<h2 id="jasmine">Jasmine</h2>
 
 <p>ou</p>
 

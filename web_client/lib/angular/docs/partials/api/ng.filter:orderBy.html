@@ -6,14 +6,10 @@
 <div class="description"><p>Orders a specified <code>array</code> by the <code>expression</code> predicate.</p>
 
 <p>Note: this function is used to augment the <code>Array</code> type in Angular expressions. See
-<a href="api/ng.$filter"><code>ng.$filter</code></a> for more informaton about Angular arrays.</p></div>
+<a href="api/ng.$filter"><code>ng.$filter</code></a> for more information about Angular arrays.</p></div>
 <h2 id="Usage">Usage</h2>
 <div class="usage"><pre class="prettyprint linenums">filter:orderBy(array, expression[, reverse]);</pre>
-<h3 id="Parameters">Parameters</h3>
-<ul class="parameters"><li><code ng:non-bindable="">array – {Array} – </code>
-<p>The array to sort.</p></li>
-<li><code ng:non-bindable="">expression – {function(*)|string|Array.&lt;(function(*)|string)&gt;} – </code>
-<p>A predicate to be
+<h4 id="parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>array</td><td><a href="" class="label type-hint type-hint-array">Array</a></td><td><p>The array to sort.</p></td></tr><tr><td>expression</td><td><a href="" class="label type-hint type-hint-function">function(*)</a><a href="" class="label type-hint type-hint-string">string</a><a href="" class="label type-hint type-hint-array">Array.&lt;(function(*)|string)&gt;</a></td><td><p>A predicate to be
 used by the comparator to determine the order of elements.</p>
 
 <p>Can be one of:</p>
@@ -26,20 +22,13 @@ to sort by a property called 'name'. Optionally prefixed with <code>+</code> or 
 ascending or descending sort order (for example, +name or -name).</li>
 <li><code>Array</code>: An array of function or string predicates. The first predicate in the array
 is used for sorting, but when two items are equivalent, the next predicate is used.</li>
-</ul></li>
-<li><code ng:non-bindable="">reverse<i>(optional)</i> – {boolean=} – </code>
-<p>Reverse the order the array.</p></li>
-</ul>
-<h3 id="Returns">Returns</h3>
-<div class="returns"><code ng:non-bindable="">{Array}</code>
-– <p>Sorted copy of the source array.</p></div>
-</div>
+</ul></td></tr><tr><td>reverse <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-boolean">boolean</a></td><td><p>Reverse the order the array.</p></td></tr></tbody></table><h4 id="returns">Returns</h4><table class="variables-matrix"><tr><td><a href="" class="label type-hint type-hint-array">Array</a></td><td><p>Sorted copy of the source array.</p></td></tr></table></div>
 <h2 id="Example">Example</h2>
-<div class="example"><h4>Source</h4>
-<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-208" source-edit-css="" source-edit-js="script.js-207" source-edit-unit="" source-edit-scenario="scenario.js-209"></div>
+<div class="example"><h4>Source</h2>
+<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-214" source-edit-css="" source-edit-js="script.js-213" source-edit-unit="" source-edit-scenario="scenario.js-215"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-208" ng-html-wrap=" angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html-208">
+<pre class="prettyprint linenums" ng-set-text="index.html-214" ng-html-wrap=" angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-214">
   
   <div ng-controller="Ctrl">
     <pre>Sorting predicate = {{predicate}}; reverse = {{reverse}}</pre>
@@ -62,8 +51,8 @@ is used for sorting, but when two items are equivalent, the next predicate is us
 </script>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-207"></pre>
-<script type="text/ng-template" id="script.js-207">
+<pre class="prettyprint linenums" ng-set-text="script.js-213"></pre>
+<script type="text/ng-template" id="script.js-213">
     function Ctrl($scope) {
       $scope.friends =
           [{name:'John', phone:'555-1212', age:10},
@@ -76,8 +65,8 @@ is used for sorting, but when two items are equivalent, the next predicate is us
   </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-209"></pre>
-<script type="text/ng-template" id="scenario.js-209">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-215"></pre>
+<script type="text/ng-template" id="scenario.js-215">
   it('should be reverse ordered by aged', function() {
     expect(binding('predicate')).toBe('-age');
     expect(repeater('table.friend', 'friend in friends').column('friend.age')).
@@ -101,6 +90,6 @@ is used for sorting, but when two items are equivalent, the next predicate is us
   });
 </script>
 </div>
-</div><h4>Demo</h4>
-<div class="well doc-example-live" ng-embed-app="" ng-set-html="index.html-208" ng-eval-javascript="script.js-207"></div></div>
+</div><h2>Demo</h4>
+<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-214" ng-eval-javascript="script.js-213"></div></div>
 </div>

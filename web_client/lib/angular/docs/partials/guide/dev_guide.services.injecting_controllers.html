@@ -27,7 +27,7 @@ this.secondMethod = function() {
 myController.$inject = ['$location', '$log'];
 </pre>
 
-<h3>Source</h3>
+<h3>Source</h2>
 <div source-edit="MyServiceModule" source-edit-deps="angular.js script.js" source-edit-html="index.html-36" source-edit-css="" source-edit-js="script.js-35" source-edit-unit="" source-edit-scenario="scenario.js-37"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
 <pre class="prettyprint linenums" ng-set-text="index.html-36" ng-html-wrap="MyServiceModule angular.js script.js"></pre>
@@ -74,16 +74,16 @@ myController.$inject = ['$scope','notify'];
   });
 </script>
 </div>
-</div><h3>Demo</h3>
-<div class="well doc-example-live" ng-embed-app="MyServiceModule" ng-set-html="index.html-36" ng-eval-javascript="script.js-35"></div>
+</div><h2>Demo</h2>
+<div class="well doc-example-live animator-container" ng-embed-app="MyServiceModule" ng-set-html="index.html-36" ng-eval-javascript="script.js-35"></div>
 
-<h2 id="implicitdependencyinjection">Implicit Dependency Injection</h3>
+<h2 id="implicitdependencyinjection">Implicit Dependency Injection</h2>
 
 <p>A new feature of Angular DI allows it to determine the dependency from the name of the parameter.
 Let's rewrite the above example to show the use of this implicit dependency injection of
 <code>$window</code>, <code>$scope</code>, and our <code>notify</code> service:</p>
 
-<h3>Source</h3>
+<h2>Source</h2>
 <div source-edit="MyServiceModuleDI" source-edit-deps="angular.js script.js" source-edit-html="index.html-39" source-edit-css="" source-edit-js="script.js-38" source-edit-unit="" source-edit-scenario=""></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
 <pre class="prettyprint linenums" ng-set-text="index.html-39" ng-html-wrap="MyServiceModuleDI angular.js script.js"></pre>
@@ -119,14 +119,14 @@ function myController($scope, notify) {
 }
 </script>
 </div>
-</div><h3>Demo</h3>
-<div class="well doc-example-live" ng-embed-app="MyServiceModuleDI" ng-set-html="index.html-39" ng-eval-javascript="script.js-38"></div>
+</div><h2>Demo</h2>
+<div class="well doc-example-live animator-container" ng-embed-app="MyServiceModuleDI" ng-set-html="index.html-39" ng-eval-javascript="script.js-38"></div>
 
 <p>However, if you plan to <a href="http://en.wikipedia.org/wiki/Minification_(programming)">minify</a> your
 code, your variable names will get renamed in which case you will still need to explicitly specify
 dependencies with the <code>$inject</code> property.</p>
 
-<h2 id="relatedtopics">Related Topics</h3>
+<h2 id="relatedtopics">Related Topics</h2>
 
 <p><a href="guide/dev_guide.services.understanding_services">Understanding Angular Services</a>
 <a href="guide/dev_guide.services.creating_services">Creating Angular Services</a>

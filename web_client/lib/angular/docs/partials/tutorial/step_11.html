@@ -13,7 +13,7 @@ can make XHR requests for data in an easier way, without having to deal with the
 
 <p>The most important changes are listed below. You can see the full diff on <a href="https://github.com/angular/angular-phonecat/compare/step-10...step-11">GitHub</a>:</p>
 
-<h2 id="template">Template</h3>
+<h3 id="template">Template</h2>
 
 <p>The custom service is defined in <code>app/js/services.js</code> so we need to include this file in our layout
 template. Additionally, we also need to load the <code>angular-resource.js</code> file, which contains the
@@ -27,7 +27,7 @@ template. Additionally, we also need to load the <code>angular-resource.js</code
 ...
 </pre>
 
-<h2 id="service">Service</h3>
+<h2 id="service">Service</h2>
 
 <p><strong><code>app/js/services.js</code>.</strong>
 <pre class="prettyprint linenums">
@@ -57,7 +57,7 @@ angular.module('phonecat', ['phonecatFilters', 'phonecatServices']).
 
 <p>We need to add 'phonecatServices' to 'phonecat' application's requires array.</p>
 
-<h2 id="controller">Controller</h3>
+<h2 id="controller">Controller</h2>
 
 <p>We simplified our sub-controllers (<code>PhoneListCtrl</code> and <code>PhoneDetailCtrl</code>) by factoring out the
 lower-level <a href="api/ng.$http"><code>$http</code></a> service, replacing it with a new service called
@@ -208,7 +208,7 @@ describe('PhoneCat controllers', function() {
 <pre><code>Chrome 22.0: Executed 4 of 4 SUCCESS (0.038 secs / 0.01 secs)
 </code></pre>
 
-<h1 id="summary">Summary</h2>
+<h2 id="summary">Summary</h2>
 
 <p>There you have it!  We have created a web app in a relatively short amount of time. In the <a href="tutorial/the_end">closing notes</a> we'll cover where to go from here.</p>
 

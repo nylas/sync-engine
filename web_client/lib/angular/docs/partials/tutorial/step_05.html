@@ -13,7 +13,7 @@ from our server using one of angular's built-in <a href="api/ng">services</a> ca
 
 <p>The most important changes are listed below. You can see the full diff on <a href="https://github.com/angular/angular-phonecat/compare/step-4...step-5">GitHub</a>:</p>
 
-<h2 id="data">Data</h3>
+<h3 id="data">Data</h2>
 
 <p>The <code>app/phones/phones.json</code> file in your project is a dataset that contains a larger list of phones
 stored in the JSON format.</p>
@@ -32,7 +32,7 @@ stored in the JSON format.</p>
 ]
 </pre>
 
-<h2 id="controller">Controller</h3>
+<h2 id="controller">Controller</h2>
 
 <p>We'll use angular's <a href="api/ng.$http"><code>$http</code></a> service in our controller to make an HTTP
 request to your web server to fetch the data in the <code>app/phones/phones.json</code> file. <code>$http</code> is just
@@ -83,7 +83,7 @@ dependencies.</p>
 
 <p><img  class="diagram" src="img/tutorial/xhr_service_final.png"></p>
 
-<h3 id="dprefixnamingconvention">'$' Prefix Naming Convention</h4>
+<h4 id="dprefixnamingconvention">'$' Prefix Naming Convention</h3>
 
 <p>You can create your own services, and in fact we will do exactly that in step 11. As a naming
 convention, angular's built-in services, Scope methods and a few other angular APIs have a '$'
@@ -209,7 +209,7 @@ promise returned by the <code>$http</code> service to be resolved with the train
 <pre><code>   Chrome 22.0: Executed 2 of 2 SUCCESS (0.028 secs / 0.007 secs)
 </code></pre>
 
-<h1 id="experiments">Experiments</h2>
+<h2 id="experiments">Experiments</h1>
 
 <ul>
 <li><p>At the bottom of <code>index.html</code>, add a <code>{{phones | json}}</code> binding to see the list of phones

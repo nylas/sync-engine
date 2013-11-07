@@ -1,11 +1,11 @@
 <h1><code ng:non-bindable=""></code>
 <span class="hint"></span>
 </h1>
-<div><a href="http://github.com/angular/angular.js/edit/master/docs/content/cookbook/helloworld.ngdoc" class="improve-docs btn btn-primary">Improve this doc</a><h3>Source</h3>
-<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-10" source-edit-css="" source-edit-js="script.js-9" source-edit-unit="" source-edit-scenario="scenario.js-11"></div>
+<div><a href="http://github.com/angular/angular.js/edit/master/docs/content/cookbook/helloworld.ngdoc" class="improve-docs btn btn-primary">Improve this doc</a><h3>Source</h2>
+<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-15" source-edit-css="" source-edit-js="script.js-14" source-edit-unit="" source-edit-scenario="scenario.js-16"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-10" ng-html-wrap=" angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html-10">
+<pre class="prettyprint linenums" ng-set-text="index.html-15" ng-html-wrap=" angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-15">
  
  <div ng-controller="HelloCntl">
    Your name: <input type="text" ng-model="name" value="World"/>
@@ -15,16 +15,16 @@
 </script>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-9"></pre>
-<script type="text/ng-template" id="script.js-9">
+<pre class="prettyprint linenums" ng-set-text="script.js-14"></pre>
+<script type="text/ng-template" id="script.js-14">
    function HelloCntl($scope) {
      $scope.name = 'World';
    }
  </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-11"></pre>
-<script type="text/ng-template" id="scenario.js-11">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-16"></pre>
+<script type="text/ng-template" id="scenario.js-16">
   it('should change the binding when user enters text', function() {
     expect(binding('name')).toEqual('World');
     input('name').enter('angular');
@@ -32,10 +32,10 @@
   });
 </script>
 </div>
-</div><h3>Demo</h3>
-<div class="well doc-example-live" ng-embed-app="" ng-set-html="index.html-10" ng-eval-javascript="script.js-9"></div>
+</div><h2>Demo</h3>
+<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-15" ng-eval-javascript="script.js-14"></div>
 
-<h1 id="thingstonotice">Things to notice</h2>
+<h2 id="thingstonotice">Things to notice</h2>
 
 <p>Take a look through the source and note:</p>
 

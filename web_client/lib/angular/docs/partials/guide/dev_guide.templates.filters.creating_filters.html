@@ -9,11 +9,11 @@ function.</p>
 <p>The following sample filter reverses a text string. In addition, it conditionally makes the
 text upper-case and assigns color.</p>
 
-<h3>Source</h3>
-<div source-edit="MyReverseModule" source-edit-deps="angular.js script.js" source-edit-html="index.html-41" source-edit-css="" source-edit-js="script.js-40" source-edit-unit="" source-edit-scenario="scenario.js-42"></div>
+<h3>Source</h2>
+<div source-edit="MyReverseModule" source-edit-deps="angular.js script.js" source-edit-html="index.html-68" source-edit-css="" source-edit-js="script.js-67" source-edit-unit="" source-edit-scenario="scenario.js-69"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-41" ng-html-wrap="MyReverseModule angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html-41">
+<pre class="prettyprint linenums" ng-set-text="index.html-68" ng-html-wrap="MyReverseModule angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-68">
 
 
 <div ng-controller="Ctrl">
@@ -25,8 +25,8 @@ text upper-case and assigns color.</p>
 </script>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-40"></pre>
-<script type="text/ng-template" id="script.js-40">
+<pre class="prettyprint linenums" ng-set-text="script.js-67"></pre>
+<script type="text/ng-template" id="script.js-67">
   angular.module('MyReverseModule', []).
     filter('reverse', function() {
       return function(input, uppercase) {
@@ -48,8 +48,8 @@ text upper-case and assigns color.</p>
 </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-42"></pre>
-<script type="text/ng-template" id="scenario.js-42">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-69"></pre>
+<script type="text/ng-template" id="scenario.js-69">
   it('should reverse greeting', function() {
     expect(binding('greeting|reverse')).toEqual('olleh');
     input('greeting').enter('ABC');
@@ -57,10 +57,10 @@ text upper-case and assigns color.</p>
   });
 </script>
 </div>
-</div><h3>Demo</h3>
-<div class="well doc-example-live" ng-embed-app="MyReverseModule" ng-set-html="index.html-41" ng-eval-javascript="script.js-40"></div>
+</div><h2>Demo</h2>
+<div class="well doc-example-live animator-container" ng-embed-app="MyReverseModule" ng-set-html="index.html-68" ng-eval-javascript="script.js-67"></div>
 
-<h2 id="relatedtopics">Related Topics</h3>
+<h2 id="relatedtopics">Related Topics</h2>
 
 <ul>
 <li><a href="guide/dev_guide.templates.filters">Understanding Angular Filters</a></li>

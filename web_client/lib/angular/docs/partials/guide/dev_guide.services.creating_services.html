@@ -12,7 +12,7 @@ dependencies which need to be provided for the factory function of the registere
 ability to swap dependencies for mocks/stubs/dummies in tests allows for services to be highly
 testable.</p>
 
-<h1 id="registeringservices">Registering Services</h2>
+<h2 id="registeringservices">Registering Services</h1>
 
 <p>To register a service, you must have a module that this service will be part of. Afterwards, you
 can register the service with the module either via the <a href="api/angular.Module"><code>Module api</code></a> or
@@ -43,7 +43,7 @@ angular.module('myModule', [], function($provide) {
 <p>Note that you are not registering a service instance, but rather a factory function that will
 create this instance when called.</p>
 
-<h1 id="dependencies">Dependencies</h2>
+<h1 id="dependencies">Dependencies</h1>
 
 <p>Services can not only be depended upon, but can also have their own dependencies. These can be specified
 as arguments of the factory function. <a href="guide/di">Read more</a> about dependency injection (DI)
@@ -70,7 +70,7 @@ angular.module('myModule', [], function($provide) {
 });
 </pre>
 
-<h1 id="instantiatingangularservices">Instantiating Angular Services</h2>
+<h1 id="instantiatingangularservices">Instantiating Angular Services</h1>
 
 <p>All services in Angular are instantiated lazily. This means that a service will be created
 only when it is needed for instantiation of a service or an application component that depends on it.
@@ -85,7 +85,7 @@ to global state, it is possible to create multiple injectors, each with its own 
 given service, but that is rarely needed, except in tests where this property is crucially
 important.</p>
 
-<h2 id="relatedtopics">Related Topics</h3>
+<h3 id="relatedtopics">Related Topics</h2>
 
 <ul>
 <li><a href="guide/dev_guide.services.understanding_services">Understanding Angular Services</a></li>

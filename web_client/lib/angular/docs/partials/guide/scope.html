@@ -1,14 +1,14 @@
 <h1><code ng:non-bindable=""></code>
 <span class="hint"></span>
 </h1>
-<div><a href="http://github.com/angular/angular.js/edit/master/docs/content/guide/scope.ngdoc" class="improve-docs btn btn-primary">Improve this doc</a><h1 id="whatarescopes">What are Scopes?</h2>
+<div><a href="http://github.com/angular/angular.js/edit/master/docs/content/guide/scope.ngdoc" class="improve-docs btn btn-primary">Improve this doc</a><h2 id="whatarescopes">What are Scopes?</h2>
 
 <p><a href="api/ng.$rootScope.Scope"><code>scope</code></a> is an object that refers to the application
 model. It is an execution context for <a href="guide/expression">expressions</a>. Scopes are
 arranged in hierarchical structure which mimic the DOM structure of the application. Scopes can
 watch <a href="guide/expression">expressions</a> and propagate events.</p>
 
-<h2 id="scopecharacteristics">Scope characteristics</h3>
+<h3 id="scopecharacteristics">Scope characteristics</h2>
 
 <ul>
 <li><p>Scopes provide APIs (<a href="api/ng.$rootScope.Scope#$watch"><code>$watch</code></a>) to observe
@@ -23,7 +23,7 @@ example <code>{{username}}</code> expression is meaningless, unless it is evalua
 scope which defines the <code>username</code> property.</p></li>
 </ul>
 
-<h2 id="scopeasdatamodel">Scope as Data-Model</h3>
+<h2 id="scopeasdatamodel">Scope as Data-Model</h2>
 
 <p>Scope is the glue between application controller and the view. During the template <a href="guide/compiler">linking</a> phase the <a href="api/ng.$compileProvider#directive"><code>directives</code></a> set up
 <a href="api/ng.$rootScope.Scope#$watch"><code><code>$watch</code></code></a> expressions on the scope. The
@@ -35,7 +35,7 @@ arrangement isolates the controller from the directive as well as from DOM. This
 point since it makes the controllers view agnostic, which greatly improves the testing story of
 the applications.</p>
 
-<h3>Source</h3>
+<h2>Source</h2>
 <div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-78" source-edit-css="" source-edit-js="script.js-77" source-edit-unit="" source-edit-scenario=""></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
 <pre class="prettyprint linenums" ng-set-text="index.html-78" ng-html-wrap=" angular.js script.js"></pre>
@@ -61,8 +61,8 @@ the applications.</p>
     }
   </script>
 </div>
-</div><h3>Demo</h3>
-<div class="well doc-example-live" ng-embed-app="" ng-set-html="index.html-78" ng-eval-javascript="script.js-77"></div>
+</div><h2>Demo</h2>
+<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-78" ng-eval-javascript="script.js-77"></div>
 
 <p>In the above example notice that the <code>MyController</code> assigns <code>World</code> to the <code>username</code> property of
 the scope. The scope then notifies the <code>input</code> of the assignment, which then renders the input
@@ -104,7 +104,7 @@ to test the behavior without being distracted by the rendering details.</p>
   });
 </pre>
 
-<h2 id="scopehierarchies">Scope Hierarchies</h3>
+<h2 id="scopehierarchies">Scope Hierarchies</h2>
 
 <p>Each Angular application has exactly one <a href="api/ng.$rootScope"><code>root scope</code></a>, but
 may have several child scopes.</p>
@@ -121,7 +121,7 @@ inheritance, and child scopes prototypically inherit from their parents.</p>
 
 <p>This example illustrates scopes in application, and prototypical inheritance of properties.</p>
 
-<h3>Source</h3>
+<h2>Source</h2>
 <div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-81" source-edit-css="style.css-79" source-edit-js="script.js-80" source-edit-unit="" source-edit-scenario=""></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
 <pre class="prettyprint linenums" ng-set-text="index.html-81" ng-html-wrap=" angular.js script.js"></pre>
@@ -163,8 +163,8 @@ inheritance, and child scopes prototypically inherit from their parents.</p>
     }
   </script>
 </div>
-</div><h3>Demo</h3>
-<div class="well doc-example-live" ng-embed-app="" ng-set-html="index.html-81" ng-eval-javascript="script.js-80"></div>
+</div><h2>Demo</h2>
+<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-81" ng-eval-javascript="script.js-80"></div>
 
 <p>Notice that Angular automatically places <code>ng-scope</code> class on elements where scopes are
 attached. The <code>&lt;style&gt;</code> definition in this example highlights in red the new scope locations. The
@@ -173,7 +173,7 @@ depending on which scope the expression is evaluated it produces different resul
 evaluation of <code>{{department}}</code> prototypically inherits from root scope, as it is the only place
 where the <code>department</code> property is defined.</p>
 
-<h2 id="retrievingscopesfromthedom">Retrieving Scopes from the DOM.</h3>
+<h2 id="retrievingscopesfromthedom">Retrieving Scopes from the DOM.</h2>
 
 <p>Scopes are attached to the DOM as <code>$scope</code> data property, and can be retrieved for debugging
 purposes. (It is unlikely that one would need to retrieve scopes in this way inside the
@@ -192,11 +192,11 @@ variable.</p></li>
 <li><p>To retrieve the associated scope in console execute: <code>angular.element($0).scope()</code></p></li>
 </ol>
 
-<h2 id="scopeeventspropagation">Scope Events Propagation</h3>
+<h2 id="scopeeventspropagation">Scope Events Propagation</h2>
 
 <p>Scopes can propagate events in similar fashion to DOM events. The event can be <a href="api/ng.$rootScope.Scope#$broadcast"><code>broadcasted</code></a> to the scope children or <a href="api/ng.$rootScope.Scope#$emit"><code>emitted</code></a> to scope parents.</p>
 
-<h3>Source</h3>
+<h2>Source</h2>
 <div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-83" source-edit-css="" source-edit-js="script.js-82" source-edit-unit="" source-edit-scenario=""></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
 <pre class="prettyprint linenums" ng-set-text="index.html-83" ng-html-wrap=" angular.js script.js"></pre>
@@ -230,8 +230,8 @@ variable.</p></li>
     }
   </script>
 </div>
-</div><h3>Demo</h3>
-<div class="well doc-example-live" ng-embed-app="" ng-set-html="index.html-83" ng-eval-javascript="script.js-82"></div>
+</div><h2>Demo</h2>
+<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-83" ng-eval-javascript="script.js-82"></div>
 
 <h2 id="scopelifecycle">Scope Life Cycle</h3>
 
@@ -283,7 +283,7 @@ the <code>$digest</code> phase. This delay is desirable, since it coalesces mult
  used by the child scope models to be reclaimed by the garbage collector.</p></li>
 </ol>
 
-<h3 id="scopesanddirectives">Scopes and Directives</h4>
+<h4 id="scopesanddirectives">Scopes and Directives</h3>
 
 <p>During the compilation phase, the <a href="guide/compiler">compiler</a> matches <a href="api/ng.$compileProvider#directive"><code>directives</code></a> against the DOM template. The directives
 usually fall into one of two categories:</p>
@@ -299,14 +299,14 @@ executes the associated expression and updates the view using the <a href="api/n
 <p>When an external event (such as a user action, timer or XHR) is received, the associated <a href="guide/expression">expression</a> must be applied to the scope through the <a href="api/ng.$rootScope.Scope#$apply"><code>$apply()</code></a> method so that all listeners are updated
 correctly.</p>
 
-<h3 id="directivesthatcreatescopes">Directives that Create Scopes</h4>
+<h3 id="directivesthatcreatescopes">Directives that Create Scopes</h3>
 
 <p>In most cases, <a href="api/ng.$compileProvider#directive"><code>directives</code></a> and scopes interact
 but do not create new instances of scope. However, some directives, such as <a href="api/ng.directive:ngController"><code>ng-controller</code></a> and <a href="api/ng.directive:ngRepeat"><code>ng-repeat</code></a>, create new child scopes
 and attach the child scope to the corresponding DOM element. You can retrieve a scope for any DOM
 element by using an <code>angular.element(aDomElement).scope()</code> method call.</p>
 
-<h3 id="controllersandscopes">Controllers and Scopes</h4>
+<h3 id="controllersandscopes">Controllers and Scopes</h3>
 
 <p>Scopes and controllers interact with each other in the following situations:</p>
 

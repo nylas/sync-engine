@@ -4,11 +4,11 @@
 <div><a href="http://github.com/angular/angular.js/edit/master/docs/content/cookbook/advancedform.ngdoc" class="improve-docs btn btn-primary">Improve this doc</a><p>Here we extend the basic form example to include common features such as reverting, dirty state
 detection, and preventing invalid form submission.</p>
 
-<h3>Source</h3>
-<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html" source-edit-css="" source-edit-js="script.js" source-edit-unit="" source-edit-scenario="scenario.js"></div>
+<h3>Source</h2>
+<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-1" source-edit-css="" source-edit-js="script.js-0" source-edit-unit="" source-edit-scenario="scenario.js-2"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html" ng-html-wrap=" angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html">
+<pre class="prettyprint linenums" ng-set-text="index.html-1" ng-html-wrap=" angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-1">
    
    <div ng-controller="UserForm">
 
@@ -48,8 +48,8 @@ detection, and preventing invalid form submission.</p>
 </script>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js"></pre>
-<script type="text/ng-template" id="script.js">
+<pre class="prettyprint linenums" ng-set-text="script.js-0"></pre>
+<script type="text/ng-template" id="script.js-0">
    function UserForm($scope) {
      var master = {
        name: 'John Smith',
@@ -102,8 +102,8 @@ detection, and preventing invalid form submission.</p>
    </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js"></pre>
-<script type="text/ng-template" id="scenario.js">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-2"></pre>
+<script type="text/ng-template" id="scenario.js-2">
   it('should enable save button', function() {
     expect(element(':button:contains(Save)').attr('disabled')).toBeTruthy();
     input('form.name').enter('');
@@ -123,10 +123,10 @@ detection, and preventing invalid form submission.</p>
   });
 </script>
 </div>
-</div><h3>Demo</h3>
-<div class="well doc-example-live" ng-embed-app="" ng-set-html="index.html" ng-eval-javascript="script.js"></div>
+</div><h2>Demo</h3>
+<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-1" ng-eval-javascript="script.js-0"></div>
 
-<h1 id="thingstonotice">Things to notice</h2>
+<h2 id="thingstonotice">Things to notice</h2>
 
 <ul>
 <li>Cancel &amp; save buttons are only enabled if the form is dirty — there is something to cancel or

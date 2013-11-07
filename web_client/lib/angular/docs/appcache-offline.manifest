@@ -1,9 +1,14 @@
 CACHE MANIFEST
-# 2013-05-22T08:21:58.380Z
+# 2013-05-22T08:17:03.936Z
 
 # cache all of these
 CACHE:
 ../angular.min.js
+components/angular-bootstrap-prettify.js
+components/angular-bootstrap-prettify.min.js
+components/angular-bootstrap.js
+components/angular-bootstrap.min.js
+css/animations.css
 css/bootstrap.min.css
 css/doc_widgets.css
 css/docs.css
@@ -15,6 +20,7 @@ font/fontawesome-webfont.svg
 font/fontawesome-webfont.svgz
 font/fontawesome-webfont.ttf
 font/fontawesome-webfont.woff
+font/FontAwesome.otf
 img/angular_parts.png
 img/AngularJS-small.png
 img/bullet.png
@@ -59,6 +65,7 @@ index.html
 js/docs.js
 js/jquery.js
 js/jquery.min.js
+js/lunr.js
 partials/api/angular.bind.html
 partials/api/angular.bootstrap.html
 partials/api/angular.copy.html
@@ -80,12 +87,14 @@ partials/api/angular.isObject.html
 partials/api/angular.isString.html
 partials/api/angular.isUndefined.html
 partials/api/angular.lowercase.html
+partials/api/angular.mock.createMockWindow.html
 partials/api/angular.mock.dump.html
 partials/api/angular.mock.html
 partials/api/angular.mock.inject.html
 partials/api/angular.mock.module.html
 partials/api/angular.mock.TzDate.html
 partials/api/angular.module.html
+partials/api/angular.noConflict.html
 partials/api/angular.noop.html
 partials/api/angular.toJson.html
 partials/api/angular.uppercase.html
@@ -95,6 +104,9 @@ partials/api/AUTO.$provide.html
 partials/api/AUTO.html
 partials/api/index.html
 partials/api/ng.$anchorScroll.html
+partials/api/ng.$animation.html
+partials/api/ng.$animationProvider.html
+partials/api/ng.$animator.html
 partials/api/ng.$cacheFactory.html
 partials/api/ng.$compile.directive.Attributes.html
 partials/api/ng.$compile.html
@@ -113,6 +125,7 @@ partials/api/ng.$locale.html
 partials/api/ng.$location.html
 partials/api/ng.$locationProvider.html
 partials/api/ng.$log.html
+partials/api/ng.$logProvider.html
 partials/api/ng.$parse.html
 partials/api/ng.$q.html
 partials/api/ng.$rootElement.html
@@ -135,6 +148,7 @@ partials/api/ng.directive:input.number.html
 partials/api/ng.directive:input.radio.html
 partials/api/ng.directive:input.text.html
 partials/api/ng.directive:input.url.html
+partials/api/ng.directive:ngAnimate.html
 partials/api/ng.directive:ngApp.html
 partials/api/ng.directive:ngBind.html
 partials/api/ng.directive:ngBindHtmlUnsafe.html
@@ -153,8 +167,12 @@ partials/api/ng.directive:ngDisabled.html
 partials/api/ng.directive:ngForm.html
 partials/api/ng.directive:ngHide.html
 partials/api/ng.directive:ngHref.html
+partials/api/ng.directive:ngIf.html
 partials/api/ng.directive:ngInclude.html
 partials/api/ng.directive:ngInit.html
+partials/api/ng.directive:ngKeydown.html
+partials/api/ng.directive:ngKeypress.html
+partials/api/ng.directive:ngKeyup.html
 partials/api/ng.directive:ngList.html
 partials/api/ng.directive:ngModel.html
 partials/api/ng.directive:ngModel.NgModelController.html
@@ -166,12 +184,14 @@ partials/api/ng.directive:ngMouseover.html
 partials/api/ng.directive:ngMouseup.html
 partials/api/ng.directive:ngMultiple.html
 partials/api/ng.directive:ngNonBindable.html
+partials/api/ng.directive:ngOpen.html
 partials/api/ng.directive:ngPluralize.html
 partials/api/ng.directive:ngReadonly.html
 partials/api/ng.directive:ngRepeat.html
 partials/api/ng.directive:ngSelected.html
 partials/api/ng.directive:ngShow.html
 partials/api/ng.directive:ngSrc.html
+partials/api/ng.directive:ngSrcset.html
 partials/api/ng.directive:ngStyle.html
 partials/api/ng.directive:ngSubmit.html
 partials/api/ng.directive:ngSwitch.html
@@ -193,6 +213,10 @@ partials/api/ng.html
 partials/api/ngCookies.$cookies.html
 partials/api/ngCookies.$cookieStore.html
 partials/api/ngCookies.html
+partials/api/ngMobile.directive:ngClick.html
+partials/api/ngMobile.directive:ngSwipeLeft.html
+partials/api/ngMobile.directive:ngSwipeRight.html
+partials/api/ngMobile.html
 partials/api/ngMock.$exceptionHandler.html
 partials/api/ngMock.$exceptionHandlerProvider.html
 partials/api/ngMock.$httpBackend.html

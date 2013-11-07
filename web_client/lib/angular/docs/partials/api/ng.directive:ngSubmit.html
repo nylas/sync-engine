@@ -14,17 +14,13 @@ server and reloading the current page).</p></div>
 as class<pre class="prettyprint linenums">&lt;form class="ng-submit: {expression};"&gt;
    ...
 &lt;/form&gt;</pre>
-<h3 id="Parameters">Parameters</h3>
-<ul class="parameters"><li><code ng:non-bindable="">ngSubmit – {expression} – </code>
-<p><a href="guide/expression">Expression</a> to eval.</p></li>
-</ul>
-</div>
+<h4 id="parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>ngSubmit</td><td><a href="" class="label type-hint type-hint-expression">expression</a></td><td><p><a href="guide/expression">Expression</a> to eval.</p></td></tr></tbody></table></div>
 <h2 id="Example">Example</h2>
-<div class="example"><h4>Source</h4>
-<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-157" source-edit-css="" source-edit-js="script.js-156" source-edit-unit="" source-edit-scenario="scenario.js-158"></div>
+<div class="example"><h4>Source</h2>
+<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-162" source-edit-css="" source-edit-js="script.js-161" source-edit-unit="" source-edit-scenario="scenario.js-163"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-157" ng-html-wrap=" angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html-157">
+<pre class="prettyprint linenums" ng-set-text="index.html-162" ng-html-wrap=" angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-162">
  
  <form ng-submit="submit()" ng-controller="Ctrl">
    Enter text and hit enter:
@@ -35,8 +31,8 @@ as class<pre class="prettyprint linenums">&lt;form class="ng-submit: {expression
 </script>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-156"></pre>
-<script type="text/ng-template" id="script.js-156">
+<pre class="prettyprint linenums" ng-set-text="script.js-161"></pre>
+<script type="text/ng-template" id="script.js-161">
    function Ctrl($scope) {
      $scope.list = [];
      $scope.text = 'hello';
@@ -50,8 +46,8 @@ as class<pre class="prettyprint linenums">&lt;form class="ng-submit: {expression
  </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-158"></pre>
-<script type="text/ng-template" id="scenario.js-158">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-163"></pre>
+<script type="text/ng-template" id="scenario.js-163">
   it('should check ng-submit', function() {
     expect(binding('list')).toBe('[]');
     element('.doc-example-live #submit').click();
@@ -66,6 +62,6 @@ as class<pre class="prettyprint linenums">&lt;form class="ng-submit: {expression
   });
 </script>
 </div>
-</div><h4>Demo</h4>
-<div class="well doc-example-live" ng-embed-app="" ng-set-html="index.html-157" ng-eval-javascript="script.js-156"></div></div>
+</div><h2>Demo</h4>
+<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-162" ng-eval-javascript="script.js-161"></div></div>
 </div>
