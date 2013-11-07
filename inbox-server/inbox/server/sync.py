@@ -77,7 +77,7 @@ class SyncException(Exception): pass
 def safe_download(uids, folder, crispin_client):
     try:
         raw_messages = crispin_client.uids(uids)
-        new_messages, new_folderitem = \
+        new_messages, new_folderitems = \
                 crispin_client.account.messages_from_raw(folder, raw_messages)
     except encoding.EncodingError, e:
         log.error(e)
@@ -91,7 +91,7 @@ def safe_download(uids, folder, crispin_client):
     #     crispin_client = refresh_crispin(crispin_client.email_address)
     #     new_messages, new_folderitem = crispin_client.fetch_uids(uids)
 
-    return new_messages, new_folderitem
+    return new_messages, new_folderitems
 
 class FolderSyncMonitor(Greenlet):
     """ Per-folder sync engine. """
@@ -268,9 +268,9 @@ class FolderSyncMonitor(Greenlet):
             raise SyncException("Fatal error encountered")
 
     def _download_new_messages(self, uids, num_local_messages, num_remote_messages):
-        new_messages, new_folderitem = safe_download(
+        new_messages, new_folderitems = safe_download(
                 uids, self.folder_name, self.crispin_client)
-        db_session.add_all(new_folderitem)
+        db_session.add_all(new_folderitems)
         db_session.add_all(new_messages)
         # Save message part blobs before committing changes to db.
         for msg in new_messages:
