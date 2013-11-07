@@ -562,11 +562,11 @@ class Contact(Base):
     name = Column(Text)
     # phone_number = Column(String(64))
 
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.current_timestamp())
+    updated_at = Column(DateTime, default=func.now(),
+                        onupdate=func.current_timestamp())
     created_at = Column(DateTime, default=func.now())
 
-    __table_args__ = (UniqueConstraint('g_id', 'source',
-        'imapaccount_id', name='_contact_uc'),)
+    __table_args__ = (UniqueConstraint('g_id', 'source', 'imapaccount_id'),)
 
     def cereal(self):
         return dict(id=self.id,
@@ -574,6 +574,7 @@ class Contact(Base):
                     name=self.name)
 
     def __repr__(self):
+        # XXX this won't work properly with unicode (e.g. in the name)
         return str(self.name) + ", " + str(self.email) + ", " + str(self.source)
 
 # sharded (by namespace)
