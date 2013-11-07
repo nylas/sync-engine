@@ -96,6 +96,12 @@
   </div>
 
 
+<!-- FULL COMPOSE MASTER VIEW -->
+<div class="detail_pane height_main"
+     ng-show="isFullComposerViewActive">
+  <view:fullcompose send-button-action="sendMessage(message)" is-full-composer-view-active="isFullComposerViewActive"></view:fullcompose>
+</div>
+
 <!-- TODO MASTER VIEW -->
   <div class="master_pane height_main" ng-show="isTodoViewActive">
 
@@ -119,7 +125,7 @@
 
 <!-- MAIL DETAIL VIEW -->
   <div class="detail_pane height_main"
-       ng-show="isMailViewActive">
+       ng-show="isMailMessageViewActive">
 
         <div class="message_container"
              ng-show="activeThread">
@@ -238,6 +244,7 @@
 <script src="js/directives/messageView.js"></script>
 <script src="js/directives/replyBox.js"></script>
 <script src="js/directives/dragReorder.js"></script>
+<script src="js/directives/fullComposeView.js"></script>
 
 <script src="js/filters.js"></script>
 
