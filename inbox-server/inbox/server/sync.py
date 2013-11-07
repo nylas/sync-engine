@@ -218,18 +218,10 @@ class FolderSyncMonitor(Greenlet):
             self.account.remove_messages(deleted_uids, self.folder_name)
             self.log.info("Removed the following UIDs that no longer exist on the server: {0}".format(' '.join([str(u) for u in sorted(deleted_uids, key=int)])))
 
-        # deduplicate message download using X-GM-MSGID
-        local_g_msgids = self.account.all_g_msgids()
-        full_download, folderitem_only = partition(
-                lambda uid: remote_g_msgids[uid] in local_g_msgids,
-                sorted(unknown_uids))
+        full_download = self._deduplicate_message_download(
+                remote_g_msgids, unknown_uids)
 
         self.log.info("{0} uids left to fetch".format(len(full_download)))
-
-        self.log.info("Skipping {0} uids downloaded via other folders".format(
-            len(folderitem_only)))
-        if len(folderitem_only) > 0:
-            self._add_new_folderitem(remote_g_msgids, folderitem_only)
 
         self.log.info("Starting sync for {0} with chunks of size {1}".format(
             self.folder_name, self.crispin_client.CHUNK_SIZE))
@@ -358,10 +350,15 @@ class FolderSyncMonitor(Greenlet):
             local_uids = self.account.all_uids(self.folder_name)
             new, updated = self._new_or_updated(uids, local_uids)
             log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
+
+            remote_g_msgids = self.crispin_client.g_msgids(new)
+            full_download = self._deduplicate_message_download(
+                    remote_g_msgids, new)
+
             num_local_messages = len(local_uids)
-            for uids in chunk(new, self.crispin_client.CHUNK_SIZE):
+            for uids in chunk(full_download, self.crispin_client.CHUNK_SIZE):
                 num_local_messages += self._download_new_messages(
-                        uids, num_local_messages, len(new))
+                        uids, num_local_messages, len(full_download))
 
             # bigger chunk because the data being fetched here is very small
             for uids in chunk(updated, 5*self.crispin_client.CHUNK_SIZE):
@@ -371,6 +368,19 @@ class FolderSyncMonitor(Greenlet):
 
         self._remove_deleted_messages()
         self._update_cached_highestmodseq(folder)
+
+    def _deduplicate_message_download(self, remote_g_msgids, uids):
+        """ Deduplicate message download using X-GM-MSGID. """
+        local_g_msgids = self.account.all_g_msgids()
+        full_download, folderitem_only = partition(
+                lambda uid: remote_g_msgids[uid] in local_g_msgids,
+                sorted(uids, key=int))
+        self.log.info("Skipping {0} uids downloaded via other folders".format(
+            len(folderitem_only)))
+        if len(folderitem_only) > 0:
+            self._add_new_folderitem(remote_g_msgids, folderitem_only)
+
+        return full_download
 
     def _update_cached_highestmodseq(self, folder, cached_validity=None):
         if cached_validity is None:
