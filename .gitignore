@@ -58,3 +58,10 @@ nosetests.xml
 
 # Xapian
 packages/xapian*
+
+# Emacs
+*~
+*#*
+
+# Keys
+*.pem
