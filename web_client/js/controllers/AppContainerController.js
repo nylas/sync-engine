@@ -34,14 +34,19 @@ function(
     $scope.displayedThreads = []; // currently displayed
     $scope.displayTodos = [];
 
-
     $scope.message_map = {}; // Actual message cache
     $scope.activeThread = undefined; // Points to the current active mssage
     $scope.activeNamespace = undefined;
-
+    $scope.activeComposition = undefined;
 
     $scope.performSearch = function(query) {
         $log.info("performSearch()");
+    };
+
+    $scope.composeButtonHandler = function() {
+        $log.info("composeButtonHandler");
+        $scope.activeComposition = true;
+        $scope.activateFullComposeView();
     };
 
     $scope.archiveButtonHandler = function() {
@@ -62,6 +67,22 @@ function(
             });
             $scope.activeThread = null;
         });
+    };
+
+    $scope.sendButtonHandler = function() {
+        $log.info("sendButtonhandler in appcont");
+    };
+
+    $scope.saveButtonHandler = function() {
+        $log.info("saveButtonHandler");
+    };
+
+    $scope.addEventButtonHandler = function() {
+        $log.info("addEventButtonHandler");
+    };
+
+    $scope.addFileButtonHandler = function() {
+        $log.info("addFileButtonHandler");
     };
 
     $scope.clearSearch = function() {
@@ -134,7 +155,6 @@ function(
 
                     $scope.threads = all_threads;
                     $scope.displayedThreads = all_threads;
-
                 }
             );
 
@@ -154,7 +174,8 @@ function(
 */
 
 
-    $scope.sendMessage = function(message_string) {
+    $scope.sendMessage = function(message) {
+        //message: {body:string, subject:string, to:[string]}
         Wire.rpc('send_mail', {
                 message_to_send: {
                     'subject': 'Hello world',
@@ -164,6 +185,7 @@ function(
             },
             function(data) {
                 alert('Sent mail!');
+                $scope.activateTodoView();
             }
         );
 
@@ -171,6 +193,8 @@ function(
 
 
     $scope.openThread = function(selectedThread) {
+        $scope.isFullComposerViewActive = false;
+
         $log.info(["SelectedThread:", selectedThread]);
         $scope.activeThread = selectedThread;
 
@@ -185,16 +209,20 @@ function(
             });
         });
 
+        $scope.isMailMessageViewActive = true;
+
     };
 
     // this shouldn't really be in $scope, right?
     $scope.clearAllActiveViews = function() {
         $scope.isMailViewActive = false;
+        $scope.isMailMessageViewActive = false;
         $scope.isTodoViewActive = false;
         $scope.isStacksViewActive = false;
         $scope.isPeopleViewActive = false;
         $scope.isGroupsViewActive = false;
         $scope.isSettingsViewActive = false;
+        $scope.isFullComposerViewActive = false;
     };
 
     $scope.clearAllActiveViews();
@@ -205,6 +233,7 @@ function(
 
     $scope.activateMailView = function() {
         $scope.clearAllActiveViews();
+        $scope.isMailMessageViewActive = true;
         $scope.isMailViewActive = true;
         // Loaded. Load the messages.
         // TOFIX we should load these once we know the socket has actually connected
@@ -215,6 +244,13 @@ function(
         $scope.clearAllActiveViews();
         $scope.isTodoViewActive = true;
         // $scope.loadTodoItems();
+    };
+
+    $scope.activateFullComposeView = function() {
+        $scope.clearAllActiveViews()
+        $scope.activeThread = null;
+        $scope.isMailViewActive = true;
+        $scope.isFullComposerViewActive = true;
     };
 
     // For todo sorting
