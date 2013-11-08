@@ -1,0 +1,57 @@
+<a href="http://github.com/angular/angular.js/tree/v1.2.0-rc.3/src/ng/directive/ngBind.js#L121" class="view-source btn btn-action"><i class="icon-zoom-in"> </i> View source</a><a href="http://github.com/angular/angular.js/edit/master/src/ng/directive/ngBind.js" class="improve-docs btn btn-primary"><i class="icon-edit"> </i> Improve this doc</a><h1><code ng:non-bindable="">ngBindHtml</code>
+<div><span class="hint">directive in module <code ng:non-bindable="">ng</code>
+</span>
+</div>
+</h1>
+<div><h2 id="description">Description</h2>
+<div class="description"><div class="ng-directive-page ng-directive-ngbindhtml-page"><p>Creates a binding that will innerHTML the result of evaluating the <code>expression</code> into the current
+element in a secure way.  By default, the innerHTML-ed content will be sanitized using the <a href="api/ngSanitize.$sanitize">$sanitize</a> service.  To utilize this functionality, ensure that <code>$sanitize</code>
+is available, for example, by including <a href="api/ngSanitize">ngSanitize</a> in your module&#39;s dependencies (not in
+core Angular.)  You may also bypass sanitization for values you know are safe. To do so, bind to
+an explicitly trusted value via <a href="api/ng.$sce#methods_trustashtml"><code>$sce.trustAsHtml</code></a>.  See the example
+under <a href="api/ng.$sce#example"><code>Strict Contextual Escaping (SCE)</code></a>.</p>
+<p>Note: If a <code>$sanitize</code> service is unavailable and the bound value isn&#39;t explicitly trusted, you
+will have an exception (instead of an exploit.)</p>
+</div></div>
+<h2 id="usage">Usage</h2>
+<div class="usage">as attribute<pre class="prettyprint linenums">&lt;ANY ng-bind-html="{expression}"&gt;
+   ...
+&lt;/ANY&gt;</pre>
+<h4 id="usage_parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>ngBindHtml</td><td><a href="" class="label type-hint type-hint-expression">expression</a></td><td><div class="ng-directive-page ng-directive-ngbindhtml-page"><p><a href="guide/expression">Expression</a> to evaluate.</p>
+</div></td></tr></tbody></table></div>
+<h2 id="example">Example</h2>
+<div class="example"><div class="ng-directive-page ng-directive-ngbindhtml-page"><p>Try it here: enter text in text box and watch the greeting change.
+<h4 id="example_source">Source</h4>
+<div source-edit="ngBindHtmlExample" deps="angular-sanitize.js" source-edit-deps="angular.js script.js" source-edit-html="index.html-24" source-edit-css="" source-edit-js="script.js-23" source-edit-json="" source-edit-unit="" source-edit-scenario="scenario.js-25"></div>
+<div class="tabbable"><div class="tab-pane" title="index.html">
+<pre class="prettyprint linenums" ng-set-text="index.html-24" ng-html-wrap="ngBindHtmlExample" deps="angular-sanitize.js angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-24">
+    
+    <div ng-controller="ngBindHtmlCtrl">
+     <p ng-bind-html="myHTML"></p>
+    </div>
+  </script>
+</div>
+<div class="tab-pane" title="script.js">
+<pre class="prettyprint linenums" ng-set-text="script.js-23"></pre>
+<script type="text/ng-template" id="script.js-23">
+      angular.module('ngBindHtmlExample', ['ngSanitize'])
+
+      .controller('ngBindHtmlCtrl', ['$scope', function ngBindHtmlCtrl($scope) {
+        $scope.myHTML = 'I am an <code>HTML</code>string with <a href="#">links!</a> and other <em>stuff</em>';
+      }]);
+    </script>
+</div>
+<div class="tab-pane" title="End to end test">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-25"></pre>
+<script type="text/ng-template" id="scenario.js-25">
+    it('should check ng-bind-html', function() {
+      expect(using('.doc-example-live').binding('myHTML')).
+        toBe('I am an <code>HTML</code>string with <a href="#">links!</a> and other <em>stuff</em>');
+    });
+  </script>
+</div>
+</div><h4 id="example_demo">Demo</h4>
+<div class="well doc-example-live animate-container" ng-embed-app="ngBindHtmlExample" deps="angular-sanitize.js" ng-set-html="index.html-24" ng-eval-javascript="script.js-23"></div>
+</div></div>
+</div>

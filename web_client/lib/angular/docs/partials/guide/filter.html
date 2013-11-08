@@ -1,0 +1,120 @@
+<a href="http://github.com/angular/angular.js/edit/master/docs/content/guide/filter.ngdoc" class="improve-docs btn btn-primary"><i class="icon-edit"> </i> Improve this doc</a><h1><code ng:non-bindable=""></code>
+<div><span class="hint"></span>
+</div>
+</h1>
+<div><div class="filters-page"><p>A filter formats the value of an expression for display to the user. They can be used in view templates,
+controllers or services and it is easy to define your own filter.</p>
+<p>The underlying API is the <a href="api/ng.$filterProvider"><code>filterProvider</code></a>.</p>
+<h3 id="using-filters-in-view-templates" id="using-filters-in-view-templates">Using filters in view templates</h3>
+<p>Filters can be applied to expressions in view templates using the following syntax:</p>
+<pre><code>    {{ expression | filter }}</code></pre>
+<p>E.g. the markup <code>{{ 12 | currency }}</code> formats the number 12 as a currency using the <a href="api/ng.filter:currency"><code><code>currency</code></code></a>
+filter. The resulting value is <code>$12.00</code>.</p>
+<p>Filters can be applied to the result of another filter. This is called &quot;chaining&quot; and uses
+the following syntax:</p>
+<pre><code>    {{ expression | filter1 | filter2 | ... }}</code></pre>
+<p>Filters may have arguments. The syntax for this is</p>
+<pre><code>    {{ expression | filter:argument1:argument2:... }}</code></pre>
+<p>E.g. the markup <code>{{ 1234 | number:2 }}</code> formats the number 1234 with 2 decimal points using the
+<a href="api/ng.filter:number"><code><code>number</code></code></a> filter. The resulting value is <code>1,234.00</code>.</p>
+<h3 id="using-filters-in-controllers-and-services" id="using-filters-in-controllers-and-services">Using filters in controllers and services</h3>
+<p>You can also use filters in controllers and services. For this, add a dependency with the name <code>&lt;filterName&gt;Filter</code>
+to your controller or service. E.g. using the dependency <code>numberFilter</code> will inject the number filter.
+The injected argument is a function that takes the value to format as first argument and filter parameters
+starting with the second argument.</p>
+<p>The example below uses the filter called <a href="api/ng.filter:filter"><code><code>filter</code></code></a>.
+This filter reduces arrays into sub arrays based on
+conditions. The filter can be applied in the view template with markup like
+<code>{{ctrl.array | filter:&#39;a&#39;}}</code>, which would do a fulltext search for &quot;a&quot;.
+However, using a filter in a view template will reevaluate the filter on
+every digest, which can be costly if the array is big.</p>
+<p>The example below therefore calls the filter directly in the controller.
+By this, the controller is able to call the filter only when needed (e.g. when the data is loaded from the backend
+or the filter expression is changed).</p>
+<h3 id="source">Source</h3>
+<div source-edit="FilterInControllerModule" source-edit-deps="angular.js script.js" source-edit-html="index.html-229" source-edit-css="" source-edit-js="script.js-228" source-edit-json="" source-edit-unit="" source-edit-scenario=""></div>
+<div class="tabbable"><div class="tab-pane" title="index.html">
+<pre class="prettyprint linenums" ng-set-text="index.html-229" ng-html-wrap="FilterInControllerModule angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-229">
+
+
+<div ng-controller="FilterController as ctrl">
+  <div>
+    All entries:
+    <span ng-repeat="entry in ctrl.array">{{entry.name}} </span>
+  </div>
+  <div>
+    Entries that contain an "a":
+    <span ng-repeat="entry in ctrl.filteredArray">{{entry.name}} </span>
+  </div>
+</div>
+</script>
+</div>
+<div class="tab-pane" title="script.js">
+<pre class="prettyprint linenums" ng-set-text="script.js-228"></pre>
+<script type="text/ng-template" id="script.js-228">
+  angular.module('FilterInControllerModule', []).
+    controller('FilterController', ['filterFilter', function(filterFilter) {
+      this.array = [
+        {name: 'Tobias'},
+        {name: 'Jeff'},
+        {name: 'Brian'},
+        {name: 'Igor'},
+        {name: 'James'},
+        {name: 'Brad'}
+      ];
+      this.filteredArray = filterFilter(this.array, 'a');
+    }]);
+</script>
+</div>
+</div><h3 id="demo">Demo</h3>
+<div class="well doc-example-live animate-container" ng-embed-app="FilterInControllerModule" ng-set-html="index.html-229" ng-eval-javascript="script.js-228"></div>
+<h3 id="creating-custom-filters" id="creating-custom-filters">Creating custom filters</h3>
+<p>Writing your own filter is very easy: just register a new filter factory function with
+your module. Internally, this uses the <a href="api/ng.$filterProvider"><code><code>filterProvider</code></code></a>.
+This factory function should return a new filter function which takes the input value
+as the first argument. Any filter arguments are passed in as additional arguments to the filter
+function.</p>
+<p>The following sample filter reverses a text string. In addition, it conditionally makes the
+text upper-case.</p>
+<h3 id="source">Source</h3>
+<div source-edit="MyReverseModule" source-edit-deps="angular.js script.js" source-edit-html="index.html-231" source-edit-css="" source-edit-js="script.js-230" source-edit-json="" source-edit-unit="" source-edit-scenario=""></div>
+<div class="tabbable"><div class="tab-pane" title="index.html">
+<pre class="prettyprint linenums" ng-set-text="index.html-231" ng-html-wrap="MyReverseModule angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-231">
+
+
+<div ng-controller="Ctrl">
+  <input ng-model="greeting" type="greeting"><br>
+  No filter: {{greeting}}<br>
+  Reverse: {{greeting|reverse}}<br>
+  Reverse + uppercase: {{greeting|reverse:true}}<br>
+</div>
+</script>
+</div>
+<div class="tab-pane" title="script.js">
+<pre class="prettyprint linenums" ng-set-text="script.js-230"></pre>
+<script type="text/ng-template" id="script.js-230">
+  angular.module('MyReverseModule', []).
+    filter('reverse', function() {
+      return function(input, uppercase) {
+        var out = "";
+        for (var i = 0; i < input.length; i++) {
+          out = input.charAt(i) + out;
+        }
+        // conditional based on optional argument
+        if (uppercase) {
+          out = out.toUpperCase();
+        }
+        return out;
+      }
+    });
+
+  function Ctrl($scope) {
+    $scope.greeting = 'hello';
+  }
+</script>
+</div>
+</div><h3 id="demo">Demo</h3>
+<div class="well doc-example-live animate-container" ng-embed-app="MyReverseModule" ng-set-html="index.html-231" ng-eval-javascript="script.js-230"></div>
+</div></div>

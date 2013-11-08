@@ -1,75 +1,66 @@
-<h1><code ng:non-bindable=""></code>
-<span class="hint"></span>
+<a href="http://github.com/angular/angular.js/edit/master/docs/content/guide/expression.ngdoc" class="improve-docs btn btn-primary"><i class="icon-edit"> </i> Improve this doc</a><h1><code ng:non-bindable=""></code>
+<div><span class="hint"></span>
+</div>
 </h1>
-<div><a href="http://github.com/angular/angular.js/edit/master/docs/content/guide/expression.ngdoc" class="improve-docs btn btn-primary">Improve this doc</a><p>Expressions are JavaScript-like code snippets that are usually placed in bindings such as <code>{{
+<div><div class="developer-guide-page developer-guide-expressions-page"><p>Expressions are JavaScript-like code snippets that are usually placed in bindings such as <code>{{
 expression }}</code>. Expressions are processed by the <a href="api/ng.$parse"><code>$parse</code></a>
-service.</p>
-
+service. Expressions are often post processed using <a href="guide/filter">filters</a> to create a more user-friendly format.</p>
 <p>For example, these are all valid expressions in angular:</p>
-
 <ul>
 <li><code>1+2</code></li>
-<li><code>3*10 | currency</code></li>
 <li><code>user.name</code></li>
 </ul>
-
-<h3 id="angularexpressionsvsjsexpressions">Angular Expressions vs. JS Expressions</h2>
-
+<h3 id="angular-expressions-vs-js-expressions" id="angular-expressions-vs-js-expressions">Angular Expressions vs. JS Expressions</h3>
 <p>It might be tempting to think of Angular view expressions as JavaScript expressions, but that is
 not entirely correct, since Angular does not use a JavaScript <code>eval()</code> to evaluate expressions.
 You can think of Angular expressions as JavaScript expressions with following differences:</p>
-
 <ul>
 <li><p><strong>Attribute Evaluation:</strong> evaluation of all properties are against the scope, doing the
 evaluation, unlike in JavaScript where the expressions are evaluated against the global
-<code>window</code>.</p></li>
-<li><p><strong>Forgiving:</strong> expression evaluation is forgiving to undefined and null, unlike in JavaScript,
-where such evaluations generate <code>NullPointerExceptions</code>.</p></li>
+<code>window</code>.</p>
+</li>
+<li><p><strong>Forgiving:</strong> expression evaluation is forgiving to <code>undefined</code> and <code>null</code>, unlike in JavaScript,
+where trying to evaluate undefined properties can generate <code>ReferenceError</code> or <code>TypeError</code>.</p>
+</li>
 <li><p><strong>No Control Flow Statements:</strong> you cannot do any of the following in angular expression:
-conditionals, loops, or throw.</p></li>
-<li><p><strong>Filters:</strong> you can pass result of expression evaluations through filter chains. For example
-to convert date object into a local specific human-readable format.</p></li>
+conditionals, loops, or throw.</p>
+</li>
 </ul>
-
 <p>If, on the other hand, you do want to run arbitrary JavaScript code, you should make it a
 controller method and call the method. If you want to <code>eval()</code> an angular expression from
-JavaScript, use the <a href="api/ng.$rootScope.Scope#$eval"><code><code>$eval()</code></code></a> method.</p>
-
-<h2 id="example">Example</h2>
-
-<h2>Source</h2>
-<div source-edit="" source-edit-deps="angular.js" source-edit-html="index.html-49" source-edit-css="" source-edit-js="" source-edit-unit="" source-edit-scenario="scenario.js-50"></div>
+JavaScript, use the <a href="api/ng.$rootScope.Scope#methods_$eval"><code><code>$eval()</code></code></a> method.</p>
+<h3 id="example" id="example">Example</h3>
+<h3 id="source">Source</h3>
+<div source-edit="" source-edit-deps="angular.js" source-edit-html="index.html-220" source-edit-css="" source-edit-js="" source-edit-json="" source-edit-unit="" source-edit-scenario="scenario.js-221"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-49" ng-html-wrap=" angular.js"></pre>
-<script type="text/ng-template" id="index.html-49">
+<pre class="prettyprint linenums" ng-set-text="index.html-220" ng-html-wrap=" angular.js"></pre>
+<script type="text/ng-template" id="index.html-220">
  1+2={{1+2}}
 </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-50"></pre>
-<script type="text/ng-template" id="scenario.js-50">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-221"></pre>
+<script type="text/ng-template" id="scenario.js-221">
  it('should calculate expression in binding', function() {
    expect(binding('1+2')).toEqual('3');
  });
 </script>
 </div>
-</div><h2>Demo</h2>
-<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-49" ng-eval-javascript=""></div>
-
+</div><h3 id="demo">Demo</h3>
+<div class="well doc-example-live animate-container" ng-embed-app="" ng-set-html="index.html-220" ng-eval-javascript=""></div>
 <p>You can try evaluating different expressions here:</p>
-
-<h2>Source</h2>
-<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-52" source-edit-css="" source-edit-js="script.js-51" source-edit-unit="" source-edit-scenario="scenario.js-53"></div>
+<h3 id="source">Source</h3>
+<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-223" source-edit-css="" source-edit-js="script.js-222" source-edit-json="" source-edit-unit="" source-edit-scenario="scenario.js-224"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-52" ng-html-wrap=" angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html-52">
+<pre class="prettyprint linenums" ng-set-text="index.html-223" ng-html-wrap=" angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-223">
  
  <div ng-controller="Cntl2" class="expressions">
    Expression:
    <input type='text' ng-model="expr" size="80"/>
    <button ng-click="addExp(expr)">Evaluate</button>
    <ul>
-    <li ng-repeat="expr in exprs">
+    <li ng-repeat="expr in exprs track by $index">
       [ <a href="" ng-click="removeExp($index)">X</a> ]
       <tt>{{expr}}</tt> => <span ng-bind="$parent.$eval(expr)"></span>
      </li>
@@ -78,8 +69,8 @@ JavaScript, use the <a href="api/ng.$rootScope.Scope#$eval"><code><code>$eval()<
 </script>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-51"></pre>
-<script type="text/ng-template" id="script.js-51">
+<pre class="prettyprint linenums" ng-set-text="script.js-222"></pre>
+<script type="text/ng-template" id="script.js-222">
    function Cntl2($scope) {
      var exprs = $scope.exprs = [];
      $scope.expr = '3*10|currency';
@@ -94,8 +85,8 @@ JavaScript, use the <a href="api/ng.$rootScope.Scope#$eval"><code><code>$eval()<
  </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-53"></pre>
-<script type="text/ng-template" id="scenario.js-53">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-224"></pre>
+<script type="text/ng-template" id="scenario.js-224">
  it('should allow user expression testing', function() {
     element('.expressions :button').click();
     var li = using('.expressions ul').repeater('li');
@@ -104,21 +95,18 @@ JavaScript, use the <a href="api/ng.$rootScope.Scope#$eval"><code><code>$eval()<
  });
 </script>
 </div>
-</div><h2>Demo</h2>
-<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-52" ng-eval-javascript="script.js-51"></div>
-
-<h2 id="propertyevaluation">Property Evaluation</h1>
-
+</div><h3 id="demo">Demo</h3>
+<div class="well doc-example-live animate-container" ng-embed-app="" ng-set-html="index.html-223" ng-eval-javascript="script.js-222"></div>
+<h2 id="property-evaluation" id="property-evaluation">Property Evaluation</h2>
 <p>Evaluation of all properties takes place against a scope. Unlike JavaScript, where names default
 to global window properties, Angular expressions have to use <a href="api/ng.$window"><code><code>$window</code></code></a> to refer to the global <code>window</code> object. For example, if you want to call <code>alert()</code>, which is
 defined on <code>window</code>, in an expression you must use <code>$window.alert()</code>. This is done intentionally to
 prevent accidental access to the global state (a common source of subtle bugs).</p>
-
-<h2>Source</h2>
-<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-55" source-edit-css="" source-edit-js="script.js-54" source-edit-unit="" source-edit-scenario="scenario.js-56"></div>
+<h3 id="property-evaluation_source">Source</h3>
+<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-226" source-edit-css="" source-edit-js="script.js-225" source-edit-json="" source-edit-unit="" source-edit-scenario="scenario.js-227"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-55" ng-html-wrap=" angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html-55">
+<pre class="prettyprint linenums" ng-set-text="index.html-226" ng-html-wrap=" angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-226">
  
  <div class="example2" ng-controller="Cntl1">
    Name: <input ng-model="name" type="text"/>
@@ -127,8 +115,8 @@ prevent accidental access to the global state (a common source of subtle bugs).<
 </script>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-54"></pre>
-<script type="text/ng-template" id="script.js-54">
+<pre class="prettyprint linenums" ng-set-text="script.js-225"></pre>
+<script type="text/ng-template" id="script.js-225">
    function Cntl1($window, $scope){
      $scope.name = 'World';
 
@@ -139,8 +127,8 @@ prevent accidental access to the global state (a common source of subtle bugs).<
  </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-56"></pre>
-<script type="text/ng-template" id="scenario.js-56">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-227"></pre>
+<script type="text/ng-template" id="scenario.js-227">
  it('should calculate expression in binding', function() {
    var alertText;
    this.addFutureAction('set mock', function($window, $document, done) {
@@ -156,61 +144,19 @@ prevent accidental access to the global state (a common source of subtle bugs).<
  });
 </script>
 </div>
-</div><h2>Demo</h2>
-<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-55" ng-eval-javascript="script.js-54"></div>
-
-<h2 id="forgiving">Forgiving</h2>
-
+</div><h3 id="property-evaluation_demo">Demo</h3>
+<div class="well doc-example-live animate-container" ng-embed-app="" ng-set-html="index.html-226" ng-eval-javascript="script.js-225"></div>
+<h3 id="forgiving" id="property-evaluation_forgiving">Forgiving</h3>
 <p>Expression evaluation is forgiving to undefined and null. In JavaScript, evaluating <code>a.b.c</code> throws
 an exception if <code>a</code> is not an object. While this makes sense for a general purpose language, the
 expression evaluations are primarily used for data binding, which often look like this:</p>
-
-<pre><code>    {{a.b.c}}
-</code></pre>
-
+<pre><code>    {{a.b.c}}</code></pre>
 <p>It makes more sense to show nothing than to throw an exception if <code>a</code> is undefined (perhaps we are
-waiting for the server response, and it will become defined soon). If expression evaluation wasn't
-forgiving we'd have to write bindings that clutter the code, for example: <code>{{((a||{}).b||{}).c}}</code></p>
-
+waiting for the server response, and it will become defined soon). If expression evaluation wasn&#39;t
+forgiving we&#39;d have to write bindings that clutter the code, for example: <code>{{((a||{}).b||{}).c}}</code></p>
 <p>Similarly, invoking a function <code>a.b.c()</code> on undefined or null simply returns undefined.</p>
-
-<h2 id="nocontrolflowstatements">No Control Flow Statements</h2>
-
+<h3 id="no-control-flow-statements" id="property-evaluation_no-control-flow-statements">No Control Flow Statements</h3>
 <p>You cannot write a control flow statement in an expression. The reason behind this is core to the
 Angular philosophy that application logic should be in controllers, not in the view. If you need a
 conditional, loop, or to throw from a view expression, delegate to a JavaScript method instead.</p>
-
-<h2 id="filters">Filters</h3>
-
-<p>When presenting data to the user, you might need to convert the data from its raw format to a
-user-friendly format. For example, you might have a data object that needs to be formatted
-according to the locale before displaying it to the user. You can pass expressions through a chain
-of filters like this:</p>
-
-<pre><code>   name | uppercase
-</code></pre>
-
-<p>The expression evaluator simply passes the value of name to <a href="api/ng.filter:uppercase"><code><code>uppercase</code></code></a> filter.</p>
-
-<p>Chain filters using this syntax:</p>
-
-<pre><code>   value | filter1 | filter2
-</code></pre>
-
-<p>You can also pass colon-delimited arguments to filters, for example, to display the number 123
-with 2 decimal points:</p>
-
-<pre><code>   123 | number:2
-</code></pre>
-
-<h1 id="thed">The $</h2>
-
-<p>You might be wondering, what is the significance of the $ prefix? It is simply a prefix that
-angular uses, to differentiate its API names from others. If angular didn't use $, then evaluating
-<code>a.length()</code> would return undefined because neither a nor angular define such a property.</p>
-
-<p>Consider that in a future version of Angular we might choose to add a length method, in which case
-the behavior of the expression would change. Worse yet, you, the developer, could create a length
-property and then we would have a collision. This problem exists because Angular augments existing
-objects with additional behavior. By prefixing its additions with $ we are reserving our namespace
-so that angular developers and developers who use Angular can develop in harmony without collisions.</p></div>
+</div></div>

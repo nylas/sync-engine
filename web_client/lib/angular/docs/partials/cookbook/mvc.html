@@ -1,23 +1,22 @@
-<h1><code ng:non-bindable=""></code>
-<span class="hint"></span>
+<a href="http://github.com/angular/angular.js/edit/master/docs/content/cookbook/mvc.ngdoc" class="improve-docs btn btn-primary"><i class="icon-edit"> </i> Improve this doc</a><h1><code ng:non-bindable=""></code>
+<div><span class="hint"></span>
+</div>
 </h1>
-<div><a href="http://github.com/angular/angular.js/edit/master/docs/content/cookbook/mvc.ngdoc" class="improve-docs btn btn-primary">Improve this doc</a><p>MVC allows for a clean and testable separation between the behavior (controller) and the view
+<div><div class="cookbook-page cookbook-mvc-page"><p>MVC allows for a clean and testable separation between the behavior (controller) and the view
 (HTML template). A Controller is just a JavaScript class which is grafted onto the scope of the
 view. This makes it very easy for the controller and the view to share the model.</p>
-
 <p>The model is a set of objects and primitives that are referenced from the Scope ($scope) object.
 This makes it very easy to test the controller in isolation since one can simply instantiate the
 controller and test without a view, because there is no connection between the controller and the
 view.</p>
-
-<h3>Source</h2>
-<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-7" source-edit-css="" source-edit-js="script.js-6" source-edit-unit="" source-edit-scenario="scenario.js-8"></div>
+<h3 id="source">Source</h3>
+<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-193" source-edit-css="" source-edit-js="script.js-192" source-edit-json="" source-edit-unit="" source-edit-scenario="scenario.js-194"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-7" ng-html-wrap=" angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html-7">
+<pre class="prettyprint linenums" ng-set-text="index.html-193" ng-html-wrap=" angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-193">
     
 
-    <h4>Tic-Tac-Toe</h4>
+    <h4 id="source_tic-tac-toe">Tic-Tac-Toe</h4>
     <div ng-controller="TicTacToeCntl">
     Next Player: {{nextMove}}
     <div class="winner" ng-show="winner">Player {{winner}} has won!</div>
@@ -32,8 +31,8 @@ view.</p>
   </script>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-6"></pre>
-<script type="text/ng-template" id="script.js-6">
+<pre class="prettyprint linenums" ng-set-text="script.js-192"></pre>
+<script type="text/ng-template" id="script.js-192">
     function TicTacToeCntl($scope, $location) {
       $scope.cellStyle= {
         'height': '20px',
@@ -100,8 +99,8 @@ view.</p>
     </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-8"></pre>
-<script type="text/ng-template" id="scenario.js-8">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-194"></pre>
+<script type="text/ng-template" id="scenario.js-194">
     it('should play a game', function() {
      piece(1, 1);
      expect(binding('nextMove')).toEqual('O');
@@ -118,11 +117,9 @@ view.</p>
     }
   </script>
 </div>
-</div><h2>Demo</h3>
-<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-7" ng-eval-javascript="script.js-6"></div>
-
-<h2 id="thingstonotice">Things to notice</h2>
-
+</div><h3 id="demo">Demo</h3>
+<div class="well doc-example-live animate-container" ng-embed-app="" ng-set-html="index.html-193" ng-eval-javascript="script.js-192"></div>
+<h2 id="things-to-notice" id="things-to-notice">Things to notice</h2>
 <ul>
 <li>The controller is defined in JavaScript and has no reference to the rendering logic.</li>
 <li>The controller is instantiated by Angular and injected into the view.</li>
@@ -130,9 +127,10 @@ view.</p>
 This makes it very testable.</li>
 <li>The HTML view is a projection of the model. In the above example, the model is stored in the
 board variable.</li>
-<li>All of the controller's properties (such as board and nextMove) are available to the view.</li>
+<li>All of the controller&#39;s properties (such as board and nextMove) are available to the view.</li>
 <li>Changing the model changes the view.</li>
 <li>The view can call any controller function.</li>
-<li>In this example, the <code>setUrl()</code> and <code>readUrl()</code> functions copy the game state to/from the URL's
-hash so the browser's back button will undo game steps. See deep-linking. This example calls <a href="api/ng.$rootScope.Scope#$watch"><code>$watch()</code></a> to set up a listener that invokes <code>readUrl()</code> when needed.</li>
-</ul></div>
+<li>In this example, the <code>setUrl()</code> and <code>readUrl()</code> functions copy the game state to/from the URL&#39;s
+hash so the browser&#39;s back button will undo game steps. See deep-linking. This example calls <a href="api/ng.$rootScope.Scope#methods_$watch"><code>$watch()</code></a> to set up a listener that invokes <code>readUrl()</code> when needed.</li>
+</ul>
+</div></div>

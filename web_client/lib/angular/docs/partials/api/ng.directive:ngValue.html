@@ -1,0 +1,66 @@
+<a href="http://github.com/angular/angular.js/tree/v1.2.0-rc.3/src/ng/directive/input.js#L1408" class="view-source btn btn-action"><i class="icon-zoom-in"> </i> View source</a><a href="http://github.com/angular/angular.js/edit/master/src/ng/directive/input.js" class="improve-docs btn btn-primary"><i class="icon-edit"> </i> Improve this doc</a><h1><code ng:non-bindable="">ngValue</code>
+<div><span class="hint">directive in module <code ng:non-bindable="">ng</code>
+</span>
+</div>
+</h1>
+<div><h2 id="description">Description</h2>
+<div class="description"><div class="ng-directive-page ng-directive-ngvalue-page"><p>Binds the given expression to the value of <code>input[select]</code> or <code>input[radio]</code>, so
+that when the element is selected, the <code>ngModel</code> of that element is set to the
+bound value.</p>
+<p><code>ngValue</code> is useful when dynamically generating lists of radio buttons using <code>ng-repeat</code>, as
+shown below.</p>
+</div></div>
+<h2 id="usage">Usage</h2>
+<div class="usage">as attribute<pre class="prettyprint linenums">&lt;input ng-value="{string}"&gt;
+   ...
+&lt;/input&gt;</pre>
+<h4 id="usage_parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>ngValue <div><em>(optional)</em></div></td><td><a href="" class="label type-hint type-hint-string">string</a></td><td><div class="ng-directive-page ng-directive-ngvalue-page"><p>angular expression, whose value will be bound to the <code>value</code> attribute
+of the <code>input</code> element</p>
+</div></td></tr></tbody></table></div>
+<h2 id="example">Example</h2>
+<div class="example"><div class="ng-directive-page ng-directive-ngvalue-page"><h4 id="example_source">Source</h4>
+<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-60" source-edit-css="" source-edit-js="script.js-59" source-edit-json="" source-edit-unit="" source-edit-scenario="scenario.js-61"></div>
+<div class="tabbable"><div class="tab-pane" title="index.html">
+<pre class="prettyprint linenums" ng-set-text="index.html-60" ng-html-wrap=" angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-60">
+ 
+  <form ng-controller="Ctrl">
+    <h4 id="example_which-is-your-favorite">Which is your favorite?</h4>
+      <label ng-repeat="name in names" for="{{name}}">
+        {{name}}
+        <input type="radio"
+               ng-model="my.favorite"
+               ng-value="name"
+               id="{{name}}"
+               name="favorite">
+      </label>
+    </span>
+    <div>You chose {{my.favorite}}</div>
+  </form>
+</script>
+</div>
+<div class="tab-pane" title="script.js">
+<pre class="prettyprint linenums" ng-set-text="script.js-59"></pre>
+<script type="text/ng-template" id="script.js-59">
+    function Ctrl($scope) {
+      $scope.names = ['pizza', 'unicorns', 'robots'];
+      $scope.my = { favorite: 'unicorns' };
+    }
+ </script>
+</div>
+<div class="tab-pane" title="End to end test">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-61"></pre>
+<script type="text/ng-template" id="scenario.js-61">
+  it('should initialize to model', function() {
+    expect(binding('my.favorite')).toEqual('unicorns');
+  });
+  it('should bind the values to the inputs', function() {
+    input('my.favorite').select('pizza');
+    expect(binding('my.favorite')).toEqual('pizza');
+  });
+</script>
+</div>
+</div><h4 id="example_demo">Demo</h4>
+<div class="well doc-example-live animate-container" ng-embed-app="" ng-set-html="index.html-60" ng-eval-javascript="script.js-59"></div>
+</div></div>
+</div>

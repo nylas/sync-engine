@@ -1,79 +1,145 @@
-<h1><code ng:non-bindable="">ngRepeat</code>
-<span class="hint">(directive in module <code ng:non-bindable="">ng</code>
-)</span>
+<a href="http://github.com/angular/angular.js/tree/v1.2.0-rc.3/src/ng/directive/ngRepeat.js#L3" class="view-source btn btn-action"><i class="icon-zoom-in"> </i> View source</a><a href="http://github.com/angular/angular.js/edit/master/src/ng/directive/ngRepeat.js" class="improve-docs btn btn-primary"><i class="icon-edit"> </i> Improve this doc</a><h1><code ng:non-bindable="">ngRepeat</code>
+<div><span class="hint">directive in module <code ng:non-bindable="">ng</code>
+</span>
+</div>
 </h1>
-<div><a href="http://github.com/angular/angular.js/edit/master/src/ng/directive/ngRepeat.js" class="improve-docs btn btn-primary">Improve this doc</a><h2 id="Description">Description</h2>
-<div class="description"><p>The <code>ngRepeat</code> directive instantiates a template once per item from a collection. Each template
+<div><h2 id="description">Description</h2>
+<div class="description"><div class="ng-directive-page ng-directive-ngrepeat-page"><p>The <code>ngRepeat</code> directive instantiates a template once per item from a collection. Each template
 instance gets its own scope, where the given loop variable is set to the current collection item,
 and <code>$index</code> is set to the item index or key.</p>
-
 <p>Special properties are exposed on the local scope of each template instance, including:</p>
-
-<ul>
-<li><code>$index</code> – <code>{number}</code> – iterator offset of the repeated element (0..length-1)</li>
-<li><code>$first</code> – <code>{boolean}</code> – true if the repeated element is first in the iterator.</li>
-<li><code>$middle</code> – <code>{boolean}</code> – true if the repeated element is between the first and last in the iterator.</li>
-<li><code>$last</code> – <code>{boolean}</code> – true if the repeated element is last in the iterator.</li>
-</ul>
-
-<p>Additionally, you can also provide animations via the ngAnimate attribute to animate the <strong>enter</strong>,
-<strong>leave</strong> and <strong>move</strong> effects.</p></div>
-<h2 id="Usage">Usage</h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Type</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>$index</code></td>
+<td><a href="#" class="label type-hint type-hint-number">number</a></td>
+<td>iterator offset of the repeated element (0..length-1)</td>
+</tr>
+<tr>
+<td><code>$first</code></td>
+<td><a href="#" class="label type-hint type-hint-boolean">boolean</a></td>
+<td>true if the repeated element is first in the iterator.</td>
+</tr>
+<tr>
+<td><code>$middle</code></td>
+<td><a href="#" class="label type-hint type-hint-boolean">boolean</a></td>
+<td>true if the repeated element is between the first and last in the iterator.</td>
+</tr>
+<tr>
+<td><code>$last</code></td>
+<td><a href="#" class="label type-hint type-hint-boolean">boolean</a></td>
+<td>true if the repeated element is last in the iterator.</td>
+</tr>
+<tr>
+<td><code>$even</code></td>
+<td><a href="#" class="label type-hint type-hint-boolean">boolean</a></td>
+<td>true if the iterator position <code>$index</code> is even (otherwise false).</td>
+</tr>
+<tr>
+<td><code>$odd</code></td>
+<td><a href="#" class="label type-hint type-hint-boolean">boolean</a></td>
+<td>true if the iterator position <code>$index</code> is odd (otherwise false).</td>
+</tr>
+</tbody>
+</table>
+<h3 id="special-repeat-start-and-end-points" id="description_special-repeat-start-and-end-points">Special repeat start and end points</h3>
+<p>To repeat a series of elements instead of just one parent element, ngRepeat (as well as other ng directives) supports extending
+the range of the repeater by defining explicit start and end points by using <strong>ng-repeat-start</strong> and <strong>ng-repeat-end</strong> respectively.
+The <strong>ng-repeat-start</strong> directive works the same as <strong>ng-repeat</strong>, but will repeat all the HTML code (including the tag it&#39;s defined on)
+up to and including the ending HTML tag where <strong>ng-repeat-end</strong> is placed.</p>
+<p>The example below makes use of this feature:
+<pre class="prettyprint linenums">
+  &lt;header ng-repeat-start="item in items"&gt;
+    Header {{ item }}
+  &lt;/header&gt;
+  &lt;div class="body"&gt;
+    Body {{ item }}
+  &lt;/div&gt;
+  &lt;footer ng-repeat-end&gt;
+    Footer {{ item }}
+  &lt;/footer&gt;
+</pre>
+<p>And with an input of <a href="#" class="label type-hint type-hint-object">[&#39;A&#39;,&#39;B&#39;]</a> for the items variable in the example above, the output will evaluate to:
+<pre class="prettyprint linenums">
+  &lt;header&gt;
+    Header A
+  &lt;/header&gt;
+  &lt;div class="body"&gt;
+    Body A
+  &lt;/div&gt;
+  &lt;footer&gt;
+    Footer A
+  &lt;/footer&gt;
+  &lt;header&gt;
+    Header B
+  &lt;/header&gt;
+  &lt;div class="body"&gt;
+    Body B
+  &lt;/div&gt;
+  &lt;footer&gt;
+    Footer B
+  &lt;/footer&gt;
+</pre>
+<p>The custom start and end points for ngRepeat also support all other HTML directive syntax flavors provided in AngularJS (such
+as <strong>data-ng-repeat-start</strong>, <strong>x-ng-repeat-start</strong> and <strong>ng:repeat-start</strong>).</p>
+</div></div>
+<h2 id="usage">Usage</h2>
 <div class="usage">as attribute<pre class="prettyprint linenums">&lt;ANY ng-repeat="{repeat_expression}"&gt;
    ...
 &lt;/ANY&gt;</pre>
-as class<pre class="prettyprint linenums">&lt;ANY class="ng-repeat: {repeat_expression};"&gt;
-   ...
-&lt;/ANY&gt;</pre>
-with <span id="animations">animations</span><pre class="prettyprint linenums">//The enter, leave and move animations are supported
-&lt;ANY ng-repeat="{repeat_expression}" ng-animate="{enter: 'enter-animation', leave: 'leave-animation', move: 'move-animation'}"&gt;
-   ...
-&lt;/ANY&gt;</pre>
-<a href="api/ng.$animator#Methods">Click here</a> to learn more about the steps involved in the animation.<h3 id="Directive.info">Directive info</h3>
+<h3 id="usage_directive-info">Directive info</h3>
 <div class="directive-info"><ul><li>This directive creates new scope.</li>
 <li>This directive executes at priority level 1000.</li>
 </ul>
 </div>
-<h4 id="parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>ngRepeat</td><td><a href="" class="label type-hint type-hint-repeat_expression">repeat_expression</a></td><td><p>The expression indicating how to enumerate a collection. These
+<h3 id="usage_animations">Animations</h3>
+<div class="animations"><ul><li>enter - when a new item is added to the list or when an item is revealed after a filter</li><li>leave - when an item is removed from the list or when an item is filtered out</li><li>move - when an adjacent item is filtered out causing a reorder or when the item contents are reordered</li></ul></div>
+<a href="api/ngAnimate.$animate">Click here</a> to learn more about the steps involved in the animation.<h4 id="usage_animations_parameters">Parameters</h4><table class="variables-matrix table table-bordered table-striped"><thead><tr><th>Param</th><th>Type</th><th>Details</th></tr></thead><tbody><tr><td>ngRepeat</td><td><a href="" class="label type-hint type-hint-repeat_expression">repeat_expression</a></td><td><div class="ng-directive-page ng-directive-ngrepeat-page"><p>The expression indicating how to enumerate a collection. These
 formats are currently supported:</p>
-
 <ul>
 <li><p><code>variable in expression</code> – where variable is the user defined loop variable and <code>expression</code>
 is a scope expression giving the collection to enumerate.</p>
-
-<p>For example: <code>track in cd.tracks</code>.</p></li>
+<p>For example: <code>album in artist.albums</code>.</p>
+</li>
 <li><p><code>(key, value) in expression</code> – where <code>key</code> and <code>value</code> can be any user defined identifiers,
 and <code>expression</code> is the scope expression giving the collection to enumerate.</p>
-
-<p>For example: <code>(name, age) in {'adam':10, 'amalie':12}</code>.</p></li>
+<p>For example: <code>(name, age) in {&#39;adam&#39;:10, &#39;amalie&#39;:12}</code>.</p>
+</li>
 <li><p><code>variable in expression track by tracking_expression</code> – You can also provide an optional tracking function
-which can be used to associate the objects in the collection with the DOM elements. If no tractking function
+which can be used to associate the objects in the collection with the DOM elements. If no tracking function
 is specified the ng-repeat associates elements by identity in the collection. It is an error to have
-more then one tractking function to  resolve to the same key. (This would mean that two distinct objects are
-mapped to the same DOM element, which is not possible.)</p>
-
-<p>For example: <code>item in items</code> is equivalent to `item in items track by $id(item)'. This implies that the DOM elements
+more than one tracking function to resolve to the same key. (This would mean that two distinct objects are
+mapped to the same DOM element, which is not possible.)  Filters should be applied to the expression,
+before specifying a tracking expression.</p>
+<p>For example: <code>item in items</code> is equivalent to `item in items track by $id(item)&#39;. This implies that the DOM elements
 will be associated by item identity in the array.</p>
-
 <p>For example: <code>item in items track by $id(item)</code>. A built in <code>$id()</code> function can be used to assign a unique
 <code>$$hashKey</code> property to each item in the array. This property is then used as a key to associated DOM elements
 with the corresponding item in the array by identity. Moving the same object in array would move the DOM
 element in the same way ian the DOM.</p>
-
-<p>For example: <code>item in items track by item.id</code> Is a typical pattern when the items come from the database. In this
+<p>For example: <code>item in items track by item.id</code> is a typical pattern when the items come from the database. In this
 case the object identity does not matter. Two objects are considered equivalent as long as their <code>id</code>
-property is same.</p></li>
-</ul></td></tr></tbody></table><h3 id="Animations">Animations</h3>
-<div class="animations"><ul><li>enter - when a new item is added to the list or when an item is revealed after a filter</li><li>leave - when an item is removed from the list or when an item is filtered out</li><li>move - when an adjacent item is filtered out causing a reorder or when the item contents are reordered</li></ul></div>
-</div>
-<h2 id="Example">Example</h2>
-<div class="example"><p>This example initializes the scope to a list of names and
+property is same.</p>
+<p>For example: <code>item in items | filter:searchText track by item.id</code> is a pattern that might be used to apply a filter
+to items in conjunction with a tracking expression.</p>
+</li>
+</ul>
+</div></td></tr></tbody></table></div>
+<h2 id="example">Example</h2>
+<div class="example"><div class="ng-directive-page ng-directive-ngrepeat-page"><p>This example initializes the scope to a list of names and
 then uses <code>ngRepeat</code> to display every person:
-  <h4>Source</h2>
-<div source-edit="" source-edit-deps="angular.js" source-edit-html="index.html-175" source-edit-css="animations.css" source-edit-js="" source-edit-unit="" source-edit-scenario="scenario.js-176"></div>
+  <h4 id="example_source">Source</h4>
+<div source-edit="" source-edit-deps="angular.js angular-animate.js" source-edit-html="index.html-99" source-edit-css="animations.css" source-edit-js="" source-edit-json="" source-edit-unit="" source-edit-scenario="scenario.js-100"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-175" ng-html-wrap=" angular.js"></pre>
-<script type="text/ng-template" id="index.html-175">
+<pre class="prettyprint linenums" ng-set-text="index.html-99" ng-html-wrap=" angular.js angular-animate.js"></pre>
+<script type="text/ng-template" id="index.html-99">
       <div ng-init="friends = [
         {name:'John', age:25, gender:'boy'},
         {name:'Jessie', age:30, gender:'girl'},
@@ -88,11 +154,8 @@ then uses <code>ngRepeat</code> to display every person:
       ]">
         I have {{friends.length}} friends. They are:
         <input type="search" ng-model="q" placeholder="filter friends..." />
-        <ul>
-          <li ng-repeat="friend in friends | filter:q"
-              ng-animate="{enter: 'example-repeat-enter',
-                          leave: 'example-repeat-leave',
-                          move: 'example-repeat-move'}">
+        <ul class="example-animate-container">
+          <li class="animate-repeat" ng-repeat="friend in friends | filter:q">
             [{{$index + 1}}] {{friend.name}} who is {{friend.age}} years old.
           </li>
         </ul>
@@ -102,41 +165,45 @@ then uses <code>ngRepeat</code> to display every person:
 <div class="tab-pane" title="animations.css">
 <pre class="prettyprint linenums" ng-set-text="animations.css"></pre>
 <style type="text/css" id="animations.css">
-      .example-repeat-enter,
-      .example-repeat-leave,
-      .example-repeat-move {
+      .example-animate-container {
+        background:white;
+        border:1px solid black;
+        list-style:none;
+        margin:0;
+        padding:0 10px;
+      }
+
+      .animate-repeat {
+        line-height:40px;
+        list-style:none;
+        box-sizing:border-box;
+      }
+
+      .animate-repeat.ng-move,
+      .animate-repeat.ng-enter,
+      .animate-repeat.ng-leave {
         -webkit-transition:all linear 0.5s;
-        -moz-transition:all linear 0.5s;
-        -ms-transition:all linear 0.5s;
-        -o-transition:all linear 0.5s;
         transition:all linear 0.5s;
       }
 
-      .example-repeat-enter {
-        line-height:0;
+      .animate-repeat.ng-leave.ng-leave-active,
+      .animate-repeat.ng-move,
+      .animate-repeat.ng-enter {
         opacity:0;
-      }
-      .example-repeat-enter.example-repeat-enter-active {
-        line-height:20px;
-        opacity:1;
+        max-height:0;
       }
 
-      .example-repeat-leave {
+      .animate-repeat.ng-leave,
+      .animate-repeat.ng-move.ng-move-active,
+      .animate-repeat.ng-enter.ng-enter-active {
         opacity:1;
-        line-height:20px;
+        max-height:40px;
       }
-      .example-repeat-leave.example-repeat-leave-active {
-        opacity:0;
-        line-height:0;
-      }
-
-      .example-repeat-move { }
-      .example-repeat-move.example-repeat-move-active { }
     </style>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-176"></pre>
-<script type="text/ng-template" id="scenario.js-176">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-100"></pre>
+<script type="text/ng-template" id="scenario.js-100">
        it('should render initial data set', function() {
          var r = using('.doc-example-live').repeater('ul li');
          expect(r.count()).toBe(10);
@@ -158,6 +225,7 @@ then uses <code>ngRepeat</code> to display every person:
        });
       </script>
 </div>
-</div><div class="pull-right"> <button class="btn btn-primary" ng-click="animationsOff=true" ng-hide="animationsOff">Animations on</button> <button class="btn btn-primary disabled" ng-click="animationsOff=false" ng-show="animationsOff">Animations off</button></div><h2>Demo</h4>
-<div class="well doc-example-live animator-container" ng-class="{'animations-off':animationsOff == true}" ng-embed-app="" ng-set-html="index.html-175" ng-eval-javascript=""></div></div>
+</div><div class="pull-right"> <button class="btn btn-primary" ng-click="animationsOff=true" ng-hide="animationsOff">Animations on</button> <button class="btn btn-primary disabled" ng-click="animationsOff=false" ng-show="animationsOff">Animations off</button></div><h4 id="example_demo">Demo</h4>
+<div class="well doc-example-live animate-container" ng-class="{'animations-off':animationsOff == true}" ng-embed-app="" ng-set-html="index.html-99" ng-eval-javascript=""></div>
+</div></div>
 </div>

@@ -162,16 +162,6 @@ function(
     };
 
 
-/*
-    $scope.loadTodoItems = function() {
-        Wire.rpc('todo_items', [], function(data) {
-            var parsed = JSON.parse(data);
-            $log.info("todo items:");
-            $log.info(parsed);
-            $scope.displayTodos = parsed;
-        });
-    }
-*/
 
 
     $scope.sendMessage = function(message) {
@@ -288,7 +278,18 @@ function(
       console.log(['Clicked row:', t]);
   };
 
-  $scope.displayTodos = MockData.todos;
+
+  $scope.loadTodoItems = function() {
+      Wire.rpc('todo_items', [], function(data) {
+          var parsed = JSON.parse(data);
+          $log.info("todo items:");
+          $log.info(parsed);
+          $scope.displayTodos = parsed;
+      });
+  };
+
+  $scope.loadTodoItems();
+
 
 });
 

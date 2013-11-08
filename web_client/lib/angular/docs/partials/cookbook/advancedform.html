@@ -1,14 +1,14 @@
-<h1><code ng:non-bindable=""></code>
-<span class="hint"></span>
+<a href="http://github.com/angular/angular.js/edit/master/docs/content/cookbook/advancedform.ngdoc" class="improve-docs btn btn-primary"><i class="icon-edit"> </i> Improve this doc</a><h1><code ng:non-bindable=""></code>
+<div><span class="hint"></span>
+</div>
 </h1>
-<div><a href="http://github.com/angular/angular.js/edit/master/docs/content/cookbook/advancedform.ngdoc" class="improve-docs btn btn-primary">Improve this doc</a><p>Here we extend the basic form example to include common features such as reverting, dirty state
+<div><div class="cookbook-page cookbook-advanced-form-page"><p>Here we extend the basic form example to include common features such as reverting, dirty state
 detection, and preventing invalid form submission.</p>
-
-<h3>Source</h2>
-<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-1" source-edit-css="" source-edit-js="script.js-0" source-edit-unit="" source-edit-scenario="scenario.js-2"></div>
+<h3 id="source">Source</h3>
+<div source-edit="" source-edit-deps="angular.js script.js" source-edit-html="index.html-177" source-edit-css="" source-edit-js="script.js-176" source-edit-json="" source-edit-unit="" source-edit-scenario="scenario.js-178"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-1" ng-html-wrap=" angular.js script.js"></pre>
-<script type="text/ng-template" id="index.html-1">
+<pre class="prettyprint linenums" ng-set-text="index.html-177" ng-html-wrap=" angular.js script.js"></pre>
+<script type="text/ng-template" id="index.html-177">
    
    <div ng-controller="UserForm">
 
@@ -35,7 +35,7 @@ detection, and preventing invalid form submission.</p>
            <option>IM</option>
          </select>
          <input type="text" ng-model="contact.value" required/>
-          [ <a href="" ng-click="removeContact(contact)">X</a> ]
+          [ <a href="" ng-click="removeContact($index)">X</a> ]
        </div>
      <button ng-click="cancel()" ng-disabled="isCancelDisabled()">Cancel</button>
      <button ng-click="save()" ng-disabled="isSaveDisabled()">Save</button>
@@ -48,8 +48,8 @@ detection, and preventing invalid form submission.</p>
 </script>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-0"></pre>
-<script type="text/ng-template" id="script.js-0">
+<pre class="prettyprint linenums" ng-set-text="script.js-176"></pre>
+<script type="text/ng-template" id="script.js-176">
    function UserForm($scope) {
      var master = {
        name: 'John Smith',
@@ -80,13 +80,8 @@ detection, and preventing invalid form submission.</p>
        $scope.form.contacts.push({type:'', value:''});
      };
 
-     $scope.removeContact = function(contact) {
-       var contacts = $scope.form.contacts;
-       for (var i = 0, ii = contacts.length; i < ii; i++) {
-         if (contact === contacts[i]) {
-           contacts.splice(i, 1);
-         }
-       }
+     $scope.removeContact = function(index) {
+       $scope.form.contacts.splice(index, 1);
      };
 
      $scope.isCancelDisabled = function() {
@@ -102,8 +97,8 @@ detection, and preventing invalid form submission.</p>
    </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-2"></pre>
-<script type="text/ng-template" id="scenario.js-2">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-178"></pre>
+<script type="text/ng-template" id="scenario.js-178">
   it('should enable save button', function() {
     expect(element(':button:contains(Save)').attr('disabled')).toBeTruthy();
     input('form.name').enter('');
@@ -123,11 +118,9 @@ detection, and preventing invalid form submission.</p>
   });
 </script>
 </div>
-</div><h2>Demo</h3>
-<div class="well doc-example-live animator-container" ng-embed-app="" ng-set-html="index.html-1" ng-eval-javascript="script.js-0"></div>
-
-<h2 id="thingstonotice">Things to notice</h2>
-
+</div><h3 id="demo">Demo</h3>
+<div class="well doc-example-live animate-container" ng-embed-app="" ng-set-html="index.html-177" ng-eval-javascript="script.js-176"></div>
+<h2 id="things-to-notice" id="things-to-notice">Things to notice</h2>
 <ul>
 <li>Cancel &amp; save buttons are only enabled if the form is dirty — there is something to cancel or
 save.</li>
@@ -136,4 +129,5 @@ save.</li>
 <li>Save updates the internal model of the form.</li>
 <li>Debug view shows the two models. One presented to the user form and the other being the pristine
 copy master.</li>
-</ul></div>
+</ul>
+</div></div>

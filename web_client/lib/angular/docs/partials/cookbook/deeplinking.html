@@ -1,43 +1,36 @@
-<h1><code ng:non-bindable=""></code>
-<span class="hint"></span>
+<a href="http://github.com/angular/angular.js/edit/master/docs/content/cookbook/deeplinking.ngdoc" class="improve-docs btn btn-primary"><i class="icon-edit"> </i> Improve this doc</a><h1><code ng:non-bindable=""></code>
+<div><span class="hint"></span>
+</div>
 </h1>
-<div><a href="http://github.com/angular/angular.js/edit/master/docs/content/cookbook/deeplinking.ngdoc" class="improve-docs btn btn-primary">Improve this doc</a><p>Deep linking allows you to encode the state of the application in the URL so that it can be
+<div><div class="cookbook-page cookbook-deep-linking-page"><p>Deep linking allows you to encode the state of the application in the URL so that it can be
 bookmarked and the application can be restored from the URL to the same state.</p>
-
 <p>While Angular does not force you to deal with bookmarks in any particular way, it has services
 which make the common case described here very easy to implement.</p>
-
-<h2 id="assumptions">Assumptions</h1>
-
+<h2 id="assumptions" id="assumptions">Assumptions</h2>
 <p>Your application consists of a single HTML page which bootstraps the application. We will refer
 to this page as the chrome.
 Your application is divided into several screens (or views) which the user can visit. For example,
 the home screen, settings screen, details screen, etc. For each of these screens, we would like to
 assign a URL so that it can be bookmarked and later restored. Each of these screens will be
-associated with a controller which define the screen's behavior. The most common case is that the
+associated with a controller which define the screen&#39;s behavior. The most common case is that the
 screen will be constructed from an HTML snippet, which we will refer to as the partial. Screens can
 have multiple partials, but a single partial is the most common construct. This example makes the
 partial boundary visible using a blue line.</p>
-
 <p>You can make a routing table which shows which URL maps to which partial view template and which
 controller.</p>
-
-<h1 id="example">Example</h1>
-
+<h2 id="example" id="example">Example</h2>
 <p>In this example we have a simple app which consist of two screens:</p>
-
 <ul>
 <li>Welcome: url <code>welcome</code> Show the user contact information.</li>
 <li>Settings: url <code>settings</code> Show an edit screen for user contact information.</li>
 </ul>
-
-<h3>Source</h2>
-<div source-edit="deepLinking" source-edit-deps="angular.js angular-sanitize.js script.js" source-edit-html="index.html-4 settings.html welcome.html" source-edit-css="style.css" source-edit-js="script.js-3" source-edit-unit="" source-edit-scenario="scenario.js-5"></div>
+<h3 id="example_source">Source</h3>
+<div source-edit="deepLinking" source-edit-deps="angular.js angular-route.js angular-sanitize.js script.js" source-edit-html="index.html-187 settings.html welcome.html" source-edit-css="style.css-186" source-edit-js="script.js-185" source-edit-json="" source-edit-unit="" source-edit-scenario="scenario.js-188"></div>
 <div class="tabbable"><div class="tab-pane" title="index.html">
-<pre class="prettyprint linenums" ng-set-text="index.html-4" ng-html-wrap="deepLinking angular.js angular-sanitize.js script.js"></pre>
-<script type="text/ng-template" id="index.html-4">
+<pre class="prettyprint linenums" ng-set-text="index.html-187" ng-html-wrap="deepLinking angular.js angular-route.js angular-sanitize.js script.js"></pre>
+<script type="text/ng-template" id="index.html-187">
     <div ng-controller="AppCntl">
-      <h1>Your App Chrome</h1>
+      <h2 id="your-app-chrome">Your App Chrome</h2>
       [ <a href="welcome">Welcome</a> | <a href="settings">Settings</a> ]
       <hr/>
       <span class="partial-info">
@@ -84,8 +77,8 @@ controller.</p>
  </script>
 </div>
 <div class="tab-pane" title="style.css">
-<pre class="prettyprint linenums" ng-set-text="style.css"></pre>
-<style type="text/css" id="style.css">
+<pre class="prettyprint linenums" ng-set-text="style.css-186"></pre>
+<style type="text/css" id="style.css-186">
    [ng-view] {
      border: 1px solid blue;
      margin: 0;
@@ -100,9 +93,9 @@ controller.</p>
  </style>
 </div>
 <div class="tab-pane" title="script.js">
-<pre class="prettyprint linenums" ng-set-text="script.js-3"></pre>
-<script type="text/ng-template" id="script.js-3">
-   angular.module('deepLinking', ['ngSanitize'])
+<pre class="prettyprint linenums" ng-set-text="script.js-185"></pre>
+<script type="text/ng-template" id="script.js-185">
+   angular.module('deepLinking', ['ngRoute', 'ngSanitize'])
      .config(function($routeProvider) {
         $routeProvider.
           when("/welcome",  {templateUrl:'welcome.html',  controller:WelcomeCntl}).
@@ -141,8 +134,8 @@ controller.</p>
  </script>
 </div>
 <div class="tab-pane" title="End to end test">
-<pre class="prettyprint linenums" ng-set-text="scenario.js-5"></pre>
-<script type="text/ng-template" id="scenario.js-5">
+<pre class="prettyprint linenums" ng-set-text="scenario.js-188"></pre>
+<script type="text/ng-template" id="scenario.js-188">
    it('should navigate to URL', function() {
      element('a:contains(Welcome)').click();
      expect(element('[ng-view]').text()).toMatch(/Hello anonymous/);
@@ -154,19 +147,18 @@ controller.</p>
    });
  </script>
 </div>
-</div><h2>Demo</h3>
-<div class="well doc-example-live animator-container" ng-embed-app="deepLinking" ng-set-html="index.html-4" ng-eval-javascript="script.js-3"></div>
-
-<h1 id="thingstonotice">Things to notice</h2>
-
+</div><h3 id="your-app-chrome_demo">Demo</h3>
+<div class="well doc-example-live animate-container" ng-embed-app="deepLinking" ng-set-html="index.html-187" ng-eval-javascript="script.js-185"></div>
+<h2 id="things-to-notice" id="things-to-notice">Things to notice</h2>
 <ul>
 <li>Routes are defined in the <code>AppCntl</code> class. The initialization of the controller causes the
-initialization of the <a href="api/ng.$route"><code>$route</code></a> service with the proper URL
+initialization of the <a href="api/ngRoute.$route">$route</a> service with the proper URL
 routes.</li>
-<li>The  <a href="api/ng.$route"><code>$route</code></a> service then watches the URL and instantiates the
+<li>The  <a href="api/ngRoute.$route">$route</a> service then watches the URL and instantiates the
 appropriate controller when the URL changes.</li>
-<li>The  <a href="api/ng.directive:ngView"><code>ngView</code></a> widget loads the
+<li>The  <a href="api/ngRoute.directive:ngView">ngView</a> widget loads the
 view when the URL changes. It also sets the view scope to the newly instantiated controller.</li>
 <li>Changing the URL is sufficient to change the controller and view. It makes no difference whether
-the URL is changed programatically or by the user.</li>
-</ul></div>
+the URL is changed programmatically or by the user.</li>
+</ul>
+</div></div>

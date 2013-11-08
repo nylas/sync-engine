@@ -1,0 +1,44 @@
+<a href="http://github.com/angular/angular.js/edit/master/docs/content/error/parse/isecprv.ngdoc" class="improve-docs btn btn-primary"><i class="icon-edit"> </i> Improve this doc</a><h1><code ng:non-bindable="">Referencing private Field in Expression</code>
+<div><span class="hint">error in component <code ng:non-bindable="">$parse</code>
+</span>
+</div>
+</h1>
+<div><pre class="minerr-errmsg" error-display="Referencing private fields in Angular expressions is disallowed! Expression: {0}">Referencing private fields in Angular expressions is disallowed! Expression: {0}</pre>
+<h2 id="description">Description</h2>
+<div class="description"><div class="-parse-page -parse-isecprv-page"><p>Occurs when an Angular expression attempts to access a private field.</p>
+<p>Fields with names that begin or end with an underscore are considered
+private fields.  Angular expressions are not allowed to reference such
+fields on the scope chain.  This only applies to Angular expressions
+(e.g. {{ }} interpolation and calls to <code>$parse</code> with a string expression
+argument) – Javascript itself has no such notion.</p>
+<p>To resolve this error, use an alternate non-private field if available
+or make the field public (by removing any leading and trailing
+underscore characters from its name.)</p>
+<p>Example expression that would result in this error:</p>
+<pre><code class="lang-html">&lt;div&gt;{{user._private_field}}&lt;/div&gt;</code></pre>
+<p>Background:
+Though Angular expressions are written and controlled by the developer
+and are trusted, they do represent an attack surface due to the
+following two factors:</p>
+<ul>
+<li>they typically deal with user input which is generally high risk</li>
+<li>they often don&#39;t get the kind of attention and test coverage that
+JavaScript code would.</li>
+</ul>
+<p>If these expression were evaluated in a context with full trust, an
+attacker, though unable to change the expression itself, can feed it
+unexpected and dangerous input that could result in a security
+breach/exploit.</p>
+<p>As such, Angular expressions are evaluated in a limited context.  They
+do not have direct access to the global scope, Window, Document, the
+Function constructor or &quot;private&quot; properties (names beginning or ending
+with an underscore character) on the scope chain.  They should get their
+work done via public properties and methods exposed on the scope chain
+(keep in mind that this includes controllers as well as they are
+published on the scope via the &quot;controller as&quot; syntax.)</p>
+<p>As a best practise, only &quot;publish&quot; properties on the scopes and
+controllers that must be available to Angular expressions.  All other
+members should either be in closures or be &quot;private&quot; by giving them
+names with a leading or trailing underscore character.</p>
+</div></div>
+</div>

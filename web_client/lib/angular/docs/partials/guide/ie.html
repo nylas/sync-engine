@@ -1,21 +1,18 @@
-<h1><code ng:non-bindable=""></code>
-<span class="hint"></span>
+<a href="http://github.com/angular/angular.js/edit/master/docs/content/guide/ie.ngdoc" class="improve-docs btn btn-primary"><i class="icon-edit"> </i> Improve this doc</a><h1><code ng:non-bindable=""></code>
+<div><span class="hint"></span>
+</div>
 </h1>
-<div><a href="http://github.com/angular/angular.js/edit/master/docs/content/guide/ie.ngdoc" class="improve-docs btn btn-primary">Improve this doc</a><h2 id="overview">Overview</h1>
-
+<div><div class="developer-guide-page developer-guide-internet-explorer-compatibility-page"><h2 id="overview" id="overview">Overview</h2>
 <p>This document describes the Internet Explorer (IE) idiosyncrasies when dealing with custom HTML
 attributes and tags. Read this document if you are planning on deploying your Angular application
 on IE v8.0 or earlier.</p>
-
-<h1 id="shortversion">Short Version</h1>
-
+<h2 id="short-version" id="short-version">Short Version</h2>
 <p>To make your Angular application work on IE please make sure that:</p>
-
 <ol>
 <li><p>You polyfill JSON.stringify if necessary (IE7 will need this). You can use
- <a href="https://github.com/douglascrockford/JSON-js">JSON2</a> or
- <a href="http://bestiejs.github.com/json3/">JSON3</a> polyfills for this.
- <pre class="prettyprint linenums">
+<a href="https://github.com/douglascrockford/JSON-js">JSON2</a> or
+<a href="http://bestiejs.github.com/json3/">JSON3</a> polyfills for this.
+<pre class="prettyprint linenums">
        &lt;!doctype html&gt;
        &lt;html xmlns:ng="http://angularjs.org"&gt;
          &lt;head&gt;
@@ -27,18 +24,21 @@ on IE v8.0 or earlier.</p>
            ...
          &lt;/body&gt;
        &lt;/html&gt;
-     </pre></li>
-<li><p>add <code>id="ng-app"</code> to the root element in conjunction with <code>ng-app</code> attribute
- <pre class="prettyprint linenums">
+     </pre>
+</li>
+<li><p>add <code>id=&quot;ng-app&quot;</code> to the root element in conjunction with <code>ng-app</code> attribute
+<pre class="prettyprint linenums">
        &lt;!doctype html&gt;
        &lt;html xmlns:ng="http://angularjs.org" id="ng-app" ng-app="optionalModuleName"&gt;
          ...
        &lt;/html&gt;
-     </pre></li>
+     </pre>
+</li>
 <li><p>you <strong>do not</strong> use custom element tags such as <code>&lt;ng:view&gt;</code> (use the attribute version
- <code>&lt;div ng-view&gt;</code> instead), or</p></li>
+<code>&lt;div ng-view&gt;</code> instead), or</p>
+</li>
 <li><p>if you <strong>do use</strong> custom element tags, then you must take these steps to make IE happy:
- <pre class="prettyprint linenums">
+<pre class="prettyprint linenums">
        &lt;!doctype html&gt;
        &lt;html xmlns:ng="http://angularjs.org" id="ng-app" ng-app="optionalModuleName"&gt;
          &lt;head&gt;
@@ -59,45 +59,41 @@ on IE v8.0 or earlier.</p>
            ...
          &lt;/body&gt;
        &lt;/html&gt;
-     </pre></li>
+     </pre>
+</li>
 </ol>
-
 <p>The <strong>important</strong> parts are:</p>
-
 <ul>
 <li><p><code>xmlns:ng</code> - <em>namespace</em> - you need one namespace for each custom tag you are planning on
-using.</p></li>
+using.</p>
+</li>
 <li><p><code>document.createElement(yourTagName)</code> - <em>creation of custom tag names</em> - Since this is an
 issue only for older version of IE you need to load it conditionally. For each tag which does
 not have namespace and which is not defined in HTML you need to pre-declare it to make IE
-happy.</p></li>
+happy.</p>
+</li>
 </ul>
-
-<h1 id="longversion">Long Version</h2>
-
+<h2 id="long-version" id="long-version">Long Version</h2>
 <p>IE has issues with element tag names which are not standard HTML tag names. These fall into two
 categories, and each category has its own fix.</p>
-
 <ul>
 <li><p>If the tag name starts with <code>my:</code> prefix than it is considered an XML namespace and must
-have corresponding namespace declaration on <code>&lt;html xmlns:my="ignored"&gt;</code></p></li>
+have corresponding namespace declaration on <code>&lt;html xmlns:my=&quot;ignored&quot;&gt;</code></p>
+</li>
 <li><p>If the tag has no <code>:</code> but it is not a standard HTML tag, then it must be pre-created using
-<code>document.createElement('my-tag')</code></p></li>
+<code>document.createElement(&#39;my-tag&#39;)</code></p>
+</li>
 <li><p>If you are planning on styling the custom tag with CSS selectors, then it must be
-pre-created using <code>document.createElement('my-tag')</code> regardless of XML namespace.</p></li>
+pre-created using <code>document.createElement(&#39;my-tag&#39;)</code> regardless of XML namespace.</p>
+</li>
 </ul>
-
-<h3 id="thegoodnews">The Good News</h2>
-
+<h3 id="the-good-news" id="long-version_the-good-news">The Good News</h3>
 <p>The good news is that these restrictions only apply to element tag names, and not to element
 attribute names. So this requires no special handling in IE: <code>&lt;div my-tag your:tag&gt;
 &lt;/div&gt;</code>.</p>
-
-<h2 id="whathappensififailtodothis">What happens if I fail to do this?</h2>
-
+<h3 id="what-happens-if-i-fail-to-do-this-" id="long-version_what-happens-if-i-fail-to-do-this">What happens if I fail to do this?</h3>
 <p>Suppose you have HTML with unknown tag <code>mytag</code> (this could also be <code>my:tag</code> or <code>my-tag</code> with same
 result):</p>
-
 <pre class="prettyprint linenums">
   &lt;html&gt;
     &lt;body&gt;
@@ -105,9 +101,7 @@ result):</p>
     &lt;/body&gt;
   &lt;/html&gt;
 </pre>
-
 <p>It should parse into the following DOM:</p>
-
 <pre class="prettyprint linenums">
 #document
   +- HTML
@@ -115,12 +109,9 @@ result):</p>
         +- mytag
            +- #text: some text
 </pre>
-
 <p>The expected behavior is that the <code>BODY</code> element has a child element <code>mytag</code>, which in turn has
 the text <code>some text</code>.</p>
-
 <p>But this is not what IE does (if the above fixes are not included):</p>
-
 <pre class="prettyprint linenums">
 #document
   +- HTML
@@ -129,24 +120,22 @@ the text <code>some text</code>.</p>
         +- #text: some text
         +- /mytag
 </pre>
-
 <p>In IE, the behavior is that the <code>BODY</code> element has three children:</p>
-
 <ol>
 <li><p>A self closing <code>mytag</code>. Example of self closing tag is <code>&lt;br/&gt;</code>. The trailing <code>/</code> is optional,
 but the <code>&lt;br&gt;</code> tag is not allowed to have any children, and browsers consider <code>&lt;br&gt;some
-text&lt;/br&gt;</code> as three siblings not a <code>&lt;br&gt;</code> with <code>some text</code> as child.</p></li>
-<li><p>A text node with <code>some text</code>. This should have been a child of <code>mytag</code> above, not a sibling.</p></li>
+text&lt;/br&gt;</code> as three siblings not a <code>&lt;br&gt;</code> with <code>some text</code> as child.</p>
+</li>
+<li><p>A text node with <code>some text</code>. This should have been a child of <code>mytag</code> above, not a sibling.</p>
+</li>
 <li><p>A corrupt self closing <code>/mytag</code>. This is corrupt since element names are not allowed to have
 the <code>/</code> character. Furthermore this closing element should not be part of the DOM since it is
-only used to delineate the structure of the DOM.</p></li>
+only used to delineate the structure of the DOM.</p>
+</li>
 </ol>
-
-<h2 id="cssstylingofcustomtagnames">CSS Styling of Custom Tag Names</h3>
-
+<h3 id="css-styling-of-custom-tag-names" id="long-version_css-styling-of-custom-tag-names">CSS Styling of Custom Tag Names</h3>
 <p>To make CSS selectors work with custom elements, the custom element name must be pre-created with 
-<code>document.createElement('my-tag')</code> regardless of XML namespace.</p>
-
+<code>document.createElement(&#39;my-tag&#39;)</code> regardless of XML namespace.</p>
 <pre class="prettyprint linenums">
   &lt;html xmlns:ng="needed for ng: namespace"&gt;
     &lt;head&gt;
@@ -160,7 +149,7 @@ only used to delineate the structure of the DOM.</p></li>
         &lt;/script&gt;
       &lt;![endif]--&gt;
       &lt;style&gt;
-        ng\\:view {
+        ng\:view {
           display: block;
           border: 1px solid red;
         }
@@ -177,4 +166,5 @@ only used to delineate the structure of the DOM.</p></li>
       ...
     &lt;/body&gt;
   &lt;/html&gt;
-</pre></div>
+</pre>
+</div></div>
