@@ -59,7 +59,7 @@ class CrispinClientBase(object):
 
     XXX: can we make it even harder to fuck this up?
     """
-    def __init__(self, account, cache=True):
+    def __init__(self, account, cache=False):
         self.account = account
         self.log = get_logger(account)
         self.email_address = account.email_address
