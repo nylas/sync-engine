@@ -62,7 +62,7 @@ app.factory('IBThread', function ($injector) {
 
 
 
-app.factory('IBMessageMeta', function ($injector)
+app.factory('IBMessageMeta', function ($injector, md5)
 {
     function IBMessageMetaObject($rootScope, data) {
         this.$rootScope = $rootScope;
@@ -82,7 +82,7 @@ app.factory('IBMessageMeta', function ($injector)
         var gravatar_size = 25;
         var theEmail = this.from[0][2] + '@' + this.from[0][3];
         this.gravatar_url = "https://www.gravatar.com/avatar/" +
-                        md5( theEmail.toLowerCase() )+ "?" +
+                        md5.createHash( theEmail.toLowerCase() )+ "?" +
                         'd=mm&' +
                         's=' + encodeURIComponent(gravatar_size);
 
