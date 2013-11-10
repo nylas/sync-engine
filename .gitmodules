@@ -7,3 +7,6 @@
 [submodule "packages/flanker"]
 	path = packages/flanker
 	url = git@github.com:inboxapp/flanker.git
+[submodule "packages/iconv"]
+	path = packages/iconv
+	url = git@github.com:inboxapp/iconv.git

@@ -19,7 +19,6 @@ MySQL-python==1.2.4
 requests==2.0.0
 Fabric==1.7.0
 supervisor==3.0
-iconv==1.0
 chardet==2.1.1
 PIL==1.1.7
 Wand==0.3.5
@@ -35,5 +34,6 @@ python-dateutil==2.1
 -e packages/imapclient
 -e packages/bleach
 -e packages/flanker
+-e packages/iconv
 
 -e inbox-server
