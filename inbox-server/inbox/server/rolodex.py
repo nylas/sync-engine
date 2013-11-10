@@ -3,6 +3,7 @@ import gdata.contacts.client
 import gdata.auth
 import dateutil.parser
 import datetime
+import time
 from .google_oauth import GOOGLE_CONSUMER_KEY, GOOGLE_CONSUMER_SECRET, OAUTH_SCOPE
 
 from .models import db_session, Contact, IMAPAccount
@@ -81,8 +82,12 @@ class Rolodex(object):
                 self.log.error("Something weird with contact: {0}".format(g_contact))
                 raise e
 
-            if 'updated_at' in google_result:
-                self.log.warning("updated_at: {0}".format(google_result['updated_at']))
+            # TOFIX BUG
+            # This rounds down the modified timestamp to not include fractional seconds.
+            # There's an open patch for the MySQLdb, but I don't think it's worth adding just for this.
+            # http://sourceforge.net/p/mysql-python/feature-requests/24/
+            google_result['updated_at'] = datetime.datetime.fromtimestamp(
+                                                time.mktime(google_result['updated_at'].utctimetuple()))
 
             # make an object out of the google result
             c = Contact(imapaccount = self.account, source='local',
