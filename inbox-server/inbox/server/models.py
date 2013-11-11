@@ -178,7 +178,8 @@ class IMAPAccount(Base):
     __tablename__ = 'imapaccount'
     id = Column(Integer, primary_key=True, autoincrement=True)
     # user_id refers to Inbox's user id
-    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'),
+            nullable=False)
     user = relationship("User", backref="imapaccounts")
 
     # http://stackoverflow.com/questions/386294/what-is-the-maximum-length-of-a-valid-email-address
@@ -508,8 +509,8 @@ class Namespace(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     # NOTE: only root namespaces have IMAP accounts
     # http://stackoverflow.com/questions/386294/what-is-the-maximum-length-of-a-valid-email-address
-    imapaccount_id = Column(Integer, ForeignKey('imapaccount.id'),
-            nullable=True)
+    imapaccount_id = Column(Integer, ForeignKey('imapaccount.id',
+        ondelete='CASCADE'), nullable=True)
     imapaccount = relationship('IMAPAccount', backref=backref('namespace',
         uselist=False)) # really the root_namespace
     # TODO should have a name that defaults to gmail
@@ -557,7 +558,8 @@ class Contact(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    imapaccount_id = Column(ForeignKey('imapaccount.id'), nullable=False)
+    imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
+            nullable=False)
     imapaccount = relationship("IMAPAccount")
 
     g_id = Column(String(64))
@@ -750,7 +752,8 @@ class FolderItem(JSONSerializable, Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    imapaccount_id = Column(ForeignKey('imapaccount.id'), nullable=False)
+    imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
+            nullable=False)
     imapaccount = relationship("IMAPAccount")
     message_id = Column(Integer, ForeignKey('message.id'), nullable=False)
     message = relationship('Message')
@@ -774,7 +777,8 @@ class UIDValidity(JSONSerializable, Base):
     """
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    imapaccount_id = Column(ForeignKey('imapaccount.id'), nullable=False)
+    imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
+            nullable=False)
     imapaccount = relationship("IMAPAccount")
     # maximum Gmail label length is 225 (tested empirically), but constraining
     # folder_name uniquely requires max length of 767 bytes under utf8mb4
@@ -806,7 +810,8 @@ class TodoItem(JSONSerializable, Base):
     # Gmail thread IDs are only unique per-account, so in order to de-dupe, we
     # need to store the account that this thread came from. When we get a
     # Thread database table, these two lines can go.
-    imapaccount_id = Column(ForeignKey('imapaccount.id'), nullable=False)
+    imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
+            nullable=False)
     imapaccount = relationship("IMAPAccount")
 
     # this must be a namespace of the todo type
@@ -909,7 +914,8 @@ class FolderSync(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    imapaccount_id = Column(ForeignKey('imapaccount.id'), nullable=False)
+    imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
+            nullable=False)
     imapaccount = relationship('IMAPAccount', backref='foldersyncs')
     # maximum Gmail label length is 225 (tested empirically), but constraining
     # folder_name uniquely requires max length of 767 bytes under utf8mb4
