@@ -26,7 +26,6 @@ COOKIE_SECRET = config.get("COOKIE_SECRET", None)
 assert COOKIE_SECRET, "Missing secret for secure cookie generation"
 sc = SecureCookieSerializer(COOKIE_SECRET)
 
-
 # TODO switch to regular flask user login stuff
 # https://flask-login.readthedocs.org/en/latest/#how-it-works
 def get_user(request):
@@ -46,7 +45,6 @@ def get_account(request):
 
 app = Flask(__name__, static_folder='../../../web_client', static_url_path='', template_folder='templates')
 
-
 @app.route('/')
 def index():
     account = get_account(request)
@@ -63,14 +61,12 @@ def static_app_handler():
         return redirect('/')
     return app.send_static_file('index.html')
 
-
 @app.route('/auth/validate')
 def validate_email_handler():
     """ Validate's the email to google MX records """
     email_address = request.args.get('email_address')
     is_valid_dict = validate_email(email_address)
     return json.dumps(is_valid_dict)
-
 
 @app.route('/auth/redirect_url')
 def auth_redirect_url():
@@ -81,7 +77,6 @@ def auth_redirect_url():
                     email_address = email_address)
     return jsonify(url=url)
 
-
 @app.route('/auth/authstart')
 def auth_start_handler():
     """ Creates oauth URL and redirects to Google """
@@ -89,7 +84,6 @@ def auth_start_handler():
 
     return render_template('to_gmail.html')
                             # redirect_url=url)
-
 
 @app.route('/auth/authdone')
 def auth_done_handler():
@@ -122,8 +116,6 @@ def auth_done_handler():
     #     log.error("Google auth failed: %s" % error_str)
     # finally:
     return response
-
-
 
 @app.route("/auth/logout")
 def logout():
@@ -308,7 +300,7 @@ def block_retrieval(blockhash):
 
     return account.email_address
 
-    query = db_session.query(Block).filter(BlockMeta.data_sha256 == blockhash)
+    query = db_session.query(Block).filter(Block.data_sha256 == blockhash)
 
     part = query.all()
     if not part: return None
@@ -318,15 +310,10 @@ def block_retrieval(blockhash):
     for k,v in part.__dict__.iteritems():
         try:
             s.append(json.dumps([k,v]))
-        except Exception, e:
+        except Exception:
             pass
 
     return json.dumps(s)
-
-
-    # return "MSG-STORE RETREIVE BLOCK WITH HASH %s" % blockhash
-
-
 
 # TODO do reloading with gunicorn
 def startserver(app_url, app_port):
