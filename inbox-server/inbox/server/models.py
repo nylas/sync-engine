@@ -612,6 +612,7 @@ class Message(JSONSerializable, Base):
     internaldate = Column(DateTime, nullable=False)
     size = Column(Integer, default=0, nullable=False)
     data_sha256 = Column(String(255), nullable=True)
+    snippet = Column(Text, nullable=False)
 
     # only on messages from Gmail
     g_msgid = Column(String(40), nullable=True)
