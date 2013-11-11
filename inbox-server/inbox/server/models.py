@@ -19,6 +19,7 @@ from boto.s3.connection import S3Connection
 from boto.s3.key import Key
 
 from ..util.file import mkdirp, remove_file, Lock
+from ..util.html import strip_tags
 from .config import config, is_prod
 from .log import get_logger
 log = get_logger()
@@ -486,6 +487,7 @@ class IMAPAccount(Base):
                 new_part.data_sha256 = sha256(data_to_write).hexdigest()
                 new_part._data = data_to_write
                 new_msg.parts.append(new_part)
+            new_msg.snippet = new_msg.calculate_snippet()
 
         return new_messages, new_folderitem
 
@@ -616,6 +618,17 @@ class Message(JSONSerializable, Base):
 
     # only on messages from Gmail
     g_msgid = Column(String(40), nullable=True)
+
+    def calculate_snippet(self):
+        assert self.parts, \
+                "Can't calculate snippet before parts have been parsed"
+        plain_part, html_part = self.body()
+        # No need to strip newlines since HTML won't display them anyway.
+        if plain_part:
+            snippet = plain_part[:200]
+        else:
+            snippet = strip_tags(html_part)[:200]
+        return snippet
 
     def body(self):
         """ Returns (plaintext, html) body for the message. """
