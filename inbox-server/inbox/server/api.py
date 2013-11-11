@@ -184,31 +184,25 @@ class API(object):
     @namespace_auth
     @jsonify
     def body_for_message(self, message_id):
-        message = db_session.query(Message).filter_by(id=message_id).one()
-        parts = message.parts
-        plain_data = None
-        html_data = None
-
-        for part in parts:
-            if part.content_type == 'text/html':
-                html_data = part.get_data()
-                break
-        for part in parts:
-            if part.content_type == 'text/plain':
-                plain_data = part.get_data()
-                break
+        message = db_session.query(Message).join(Message.parts) \
+                .filter_by(id=message_id).one()
+        plain_data, html_data = message.body()
 
         prettified = None
         if html_data:
-            if 'font:' in html_data or 'font-face:' in html_data or 'font-family:' in html_data:
+            if 'font:' in html_data or 'font-face:' \
+                    in html_data or 'font-family:' in html_data:
                 prettified = html_data
             else:
-                path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "message_template.html")
+                path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "message_template.html")
                 with open(path, 'r') as f:
-                    # template has %s in it. can't do format because python misinterprets css
+                    # template has %s in it. can't do format because python
+                    # misinterprets css
                     prettified = f.read() % html_data
         else:
-            path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "message_template.html")
+            path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                    "message_template.html")
             with open(path, 'r') as f:
                 prettified = f.read() % plaintext2html(plain_data)
 

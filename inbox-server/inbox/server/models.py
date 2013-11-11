@@ -617,6 +617,22 @@ class Message(JSONSerializable, Base):
     # only on messages from Gmail
     g_msgid = Column(String(40), nullable=True)
 
+    def body(self):
+        """ Returns (plaintext, html) body for the message. """
+        plain_data = None
+        html_data = None
+
+        for part in self.parts:
+            if part.content_type == 'text/html':
+                html_data = part.get_data()
+                break
+        for part in self.parts:
+            if part.content_type == 'text/plain':
+                plain_data = part.get_data()
+                break
+
+        return plain_data, html_data
+
     def trimmed_subject(self):
         s = self.subject
         if s[:4] == u'RE: ' or s[:4] == u'Re: ' :
