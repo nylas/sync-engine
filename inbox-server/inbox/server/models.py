@@ -66,9 +66,13 @@ class Blob(object):
 
     def get_data(self):
         if self.size == 0:
+            log.warning("block size is 0")
             # NOTE: This is a placeholder for "empty bytes". If this doesn't
             # work as intended, it will trigger the hash assertion later.
             data = ""
+        elif hasattr(self, '_data'):
+            # on initial download we temporarily store data in memory
+            data = self._data
         elif STORE_MSG_ON_S3:
             data = self._get_from_s3()
         else:
@@ -391,13 +395,14 @@ class IMAPAccount(Base):
             headers_part.message = new_msg
             headers_part.walk_index = i
             headers_part._data = json.dumps(mailbase.headers)
+            headers_part.size = len(headers_part._data)
             headers_part.data_sha256 = sha256(headers_part._data).hexdigest()
             new_msg.parts.append(headers_part)
 
             extra_parts = []
 
             if mailbase.body:
-                # single-part message?
+                # single-part message
                 extra_parts.append(mailbase)
 
             for part in chain(extra_parts, mailbase.walk()):
@@ -456,39 +461,43 @@ class IMAPAccount(Base):
                     log.warning("Found an epilogue! " + mimepart.epilogue)
 
                 payload_data = mimepart.get_payload(decode=False)  # decode ourselves
-                data_encoding = mimepart.get('Content-Transfer-Encoding', None).lower()
+                data_encoding = mimepart.get('Content-Transfer-Encoding',
+                        None).lower()
 
                 if data_encoding == 'quoted-printable':
                     data_to_write = quopri_decodestring(payload_data)
-
                 elif data_encoding == 'base64':
                     data_to_write = b64decode(payload_data)
-
                 elif data_encoding == '7bit' or data_encoding == '8bit':
                     # Need to get charset and decode with that too.
                     charset = str(mimepart.get_charset())
-                    if charset == 'None': charset = None  # bug
+                    if charset == 'None':
+                        charset = None  # bug
                     try:
                         assert charset
                         payload_data = encoding.attempt_decoding(charset, payload_data)
                     except Exception, e:
                         detected_charset = detect_charset(payload_data)
                         detected_charset_encoding = detected_charset['encoding']
-                        log.error("%s Failed decoding with %s. Now trying %s" % (e, charset , detected_charset_encoding))
+                        log.error("{0} Failed decoding with {1}. Now trying {2}"\
+                                .format(e, charset, detected_charset_encoding))
                         try:
-                            payload_data = encoding.attempt_decoding(detected_charset_encoding, payload_data)
+                            payload_data = encoding.attempt_decoding(
+                                    detected_charset_encoding, payload_data)
                         except Exception, e:
                             log.error("That failed too. Hmph. Not sure how to recover here")
                             raise e
                         log.info("Success!")
-                    data_to_write = payload_data.encode('utf-8')
+                    data_to_write = payload_data.encode('utf-8', errors='strict')
                 else:
                     raise Exception("Unknown encoding scheme:" + str(encoding))
 
-                new_part.data_sha256 = sha256(data_to_write).hexdigest()
                 new_part._data = data_to_write
+                new_part.size = len(data_to_write)
+                new_part.data_sha256 = sha256(data_to_write).hexdigest()
                 new_msg.parts.append(new_part)
-            new_msg.snippet = new_msg.calculate_snippet()
+            new_msg.calculate_sanitized_body()
+            new_msg.calculate_snippet()
 
         return new_messages, new_folderitem
 
@@ -616,24 +625,44 @@ class Message(JSONSerializable, Base):
     internaldate = Column(DateTime, nullable=False)
     size = Column(Integer, default=0, nullable=False)
     data_sha256 = Column(String(255), nullable=True)
-    snippet = Column(Text, nullable=False)
+
+    # Most messages are short and include a lot of quoted text. Preprocessing
+    # just the relevant part out makes a big difference in how much data we
+    # need to send over the wire.
+    sanitized_body = Column(Text, nullable=False)
+    snippet = Column(String(191), nullable=False)
+
+    # we had to replace utf-8 errors before writing... this might be a
+    # mail-parsing bug, or just a message from a bad client.
+    decode_error = Column(Boolean, default=False, nullable=False)
 
     # only on messages from Gmail
     g_msgid = Column(String(40), nullable=True)
 
-    def calculate_snippet(self):
-        assert self.parts, \
-                "Can't calculate snippet before parts have been parsed"
+    # TODO: split it on the gmail quote and store the whole message in snippet
+    # (gmail_quote div class)
+    # (basically storing the sanitized version in the database instead of a
+    # very small snippet)
+    def calculate_sanitized_body(self):
         plain_part, html_part = self.body()
         # No need to strip newlines since HTML won't display them anyway.
         if plain_part:
-            snippet = plain_part[:200]
+            self.sanitized_body = plain_part
         else:
-            snippet = strip_tags(html_part)[:200]
-        return snippet
+            self.sanitized_body = strip_tags(html_part)
+
+    def calculate_snippet(self):
+        assert self.sanitized_body, "need sanitized_body to calculate snippet"
+        stripped = strip_tags(self.sanitized_body)
+        # truncate based on decoded version so as not to accidentally truncate
+        # mid-codepoint
+        self.snippet = stripped.decode('utf-8')[:191].encode('utf-8')
 
     def body(self):
         """ Returns (plaintext, html) body for the message. """
+        assert self.parts, \
+                "Can't calculate body before parts have been parsed"
+
         plain_data = None
         html_data = None
 
