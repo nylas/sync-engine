@@ -1,23 +1,28 @@
+import os
+import json
+
+from StringIO import StringIO
+
 from gevent import monkey; monkey.patch_all()
 
-from .log import get_logger
-log = get_logger()
 from flask import Flask, request, redirect, make_response, render_template
 from flask import Response, jsonify, abort, send_file
+from werkzeug.wsgi import SharedDataMiddleware
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
+from securecookie import SecureCookieSerializer
+
+import zerorpc
+
 from socket_rpc import SocketRPC
 from models import db_session, Message, Block, Collection, IMAPAccount
-from werkzeug.wsgi import SharedDataMiddleware
+from .log import get_logger
+log = get_logger()
 
 import google_oauth
 import sessionmanager
-import json
+
 from ..util.url import validate_email
-from securecookie import SecureCookieSerializer
-import zerorpc
-from StringIO import StringIO
-import os
 
 from ..util.img import generate_thumbnail
 from .config import config
