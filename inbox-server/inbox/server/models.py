@@ -401,22 +401,25 @@ class IMAPAccount(Base):
             for part in chain(extra_parts, mailbase.walk()):
                 i += 1
                 mimepart = encoding.to_message(part)
-                if mimepart.is_multipart(): continue  # TODO should we store relations?
+                if mimepart.is_multipart():
+                    continue  # TODO should we store relations?
 
                 new_part = Block()
                 new_part.message = new_msg
                 new_part.walk_index = i
                 new_part.misc_keyval = mimepart.items()  # everything
 
+                content_type = mimepart.get_content_type()
                 # Content-Type
                 try:
-                    assert mimepart.get_content_type() == mimepart.get_params()[0][0],\
-                    "Content-Types not equal!  %s and %s" (mimepart.get_content_type(), mimepart.get_params()[0][0])
-                except Exception, e:
-                    log.error("Content-Types not equal: %s" % mimepart.get_params())
+                    assert content_type == mimepart.get_params()[0][0],\
+                    "Content-Types not equal! {0} and {1}".format(
+                            content_type, mimepart.get_params()[0][0])
+                except Exception:
+                    log.error("Content-Types not equal: {0}".format(
+                        mimepart.get_params()))
 
                 new_part.content_type = mimepart.get_content_type()
-
 
                 # File attachments
                 filename = mimepart.get_filename(failobj=None)
