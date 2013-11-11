@@ -114,6 +114,14 @@ def auth_done_handler():
     response.set_cookie('session', secure_cookie,
             domain=app.config['SESSION_COOKIE_DOMAIN'])
 
+    # kick off syncing the new account's mail
+    sync_srv_loc = config.get('CRISPIN_SERVER_LOC', None)
+    c = zerorpc.Client(timeout=3000)
+    c.connect(sync_srv_loc)
+    sync_response = c.start_sync(new_account.email_address)
+    log.info("Asked sync service to start syncing new account: {0}".format(
+        sync_response))
+
     # except Exception, e:
     #     # TODO handler error better here. Write an error page to user.
     #     log.error(e)
