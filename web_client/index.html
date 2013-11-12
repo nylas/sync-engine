@@ -90,24 +90,6 @@
       <view:fullcompose send-button-action="sendMessage(message)" is-full-composer-view-active="isFullComposerViewActive"></view:fullcompose>
     </div>
 
-    <!-- TODO MASTER VIEW -->
-    <div class="master_pane height_main" ng-show="isTodoViewActive">
-
-      <div class="container_scrollable">
-
-        <div class="list_item_todo_category">Today</div>
-        <div class="clear"></div>
-
-        <div ui-sortable="sortableOptions" ng-model="displayTodos" class="list">
-          <list:item:todo
-          ng-repeat="todo in displayTodos"
-          todo="todo"
-          click:row="todoRowClickHandler(todo)">
-          </list:item:todo>
-        </div>
-      </div>
-    </div>
-
     <!-- MAIL DETAIL VIEW -->
     <div class="detail_pane height_main"
       ng-show="isMailMessageViewActive">
@@ -134,22 +116,41 @@
       </div>
     </div>
 
+    <!-- TODO MASTER VIEW -->
+    <div class="master_pane height_main" ng-show="isTodoViewActive">
+
+      <div class="container_scrollable">
+
+        <div class="list_item_todo_category">Today</div>
+        <div class="clear"></div>
+
+        <div ui-sortable="sortableOptions" ng-model="displayTodos" class="list">
+          <list:item:todo
+          ng-repeat="t in displayTodos"
+          todo="t"
+          ng-click="openTodo(t)"
+          selected="t == activeTodo">
+          </list:item:todo>
+        </div>
+      </div>
+    </div>
+
     <!-- Todo detail view -->
     <div class="detail_pane height_main"
       ng-show="isTodoViewActive">
 
       <div class="message_container box_with_shadow"
-        ng-show="activeThread">
+        ng-show="activeTodo">
 
         <div class="content_head">
           <div class="email_content_title"
-            ng-bind="activeThread.subject()">
+            ng-bind="activeTodo.subject()">
           </div>
         </div>
       </div>
 
       <div class="message_container box_with_shadow">
-        <div class="contentFoot" ng-show="activeThread">
+        <div class="contentFoot" ng-show="activeTodo">
           <replybox send-button-action="sendMessage(message_text)"></replybox>
         </div>
       </div>

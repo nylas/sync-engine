@@ -16,6 +16,7 @@ function(
     Layout, // Needed to initialize
     IBThread,
     IBMessage,
+    IBTodo,
     protocolhandler,
     $filter,
     $timeout,
@@ -249,8 +250,11 @@ function(
       console.log(['Clicked checkbox:', t]);
   };
 
-  $scope.todoRowClickHandler = function(t) {
-      console.log(['Clicked row:', t]);
+  $scope.openTodo = function(selectedTodo) {
+      console.log(['Selecting Todo:', selectedTodo]);
+      $scope.activeTodo = selectedTodo;
+
+      $scope.isTodoViewActive = true;
   };
 
   $scope.loadTodoItems = function() {
@@ -258,7 +262,13 @@ function(
           var parsed = JSON.parse(data);
           $log.info("todo items:");
           $log.info(parsed);
-          $scope.displayTodos = parsed;
+
+          $scope.displayTodos = [];
+
+          angular.forEach(parsed, function(value, key) {
+              var newTodo = new IBTodo(value);
+              $scope.displayTodos.push(newTodo);
+          });
       });
   };
 
