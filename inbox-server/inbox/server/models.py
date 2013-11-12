@@ -629,7 +629,10 @@ class Message(JSONSerializable, Base):
     # Most messages are short and include a lot of quoted text. Preprocessing
     # just the relevant part out makes a big difference in how much data we
     # need to send over the wire.
-    sanitized_body = Column(Text, nullable=False)
+    # Maximum length is determined by typical email size limits (25 MB body +
+    # attachments) on Gmail), assuming a maximum # of chars determined by
+    # 1-byte (ASCII) chars.
+    sanitized_body = Column(Text(length=26214400), nullable=False)
     snippet = Column(String(191), nullable=False)
 
     # we had to replace utf-8 errors before writing... this might be a
@@ -639,20 +642,16 @@ class Message(JSONSerializable, Base):
     # only on messages from Gmail
     g_msgid = Column(String(40), nullable=True)
 
-    # TODO: split it on the gmail quote and store the whole message in snippet
-    # (gmail_quote div class)
-    # (basically storing the sanitized version in the database instead of a
-    # very small snippet)
     def calculate_sanitized_body(self):
         plain_part, html_part = self.body()
-        # No need to strip newlines since HTML won't display them anyway.
-        if plain_part:
-            self.sanitized_body = plain_part
+        if html_part:
+            self.sanitized_body = html_part.split('<div class="gmail_quote">')[0]
         else:
-            self.sanitized_body = strip_tags(html_part)
+            self.sanitized_body = plain_part
 
     def calculate_snippet(self):
         assert self.sanitized_body, "need sanitized_body to calculate snippet"
+        # No need to strip newlines since HTML won't display them anyway.
         stripped = strip_tags(self.sanitized_body)
         # truncate based on decoded version so as not to accidentally truncate
         # mid-codepoint
