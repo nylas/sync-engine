@@ -167,22 +167,6 @@ class API(object):
 
     @namespace_auth
     @jsonify
-    def meta_with_id(self, data_id):
-        existing_msgs_query = db_session.query(Message).join(Namespace)\
-                .filter(Message.g_msgid == data_id, Namespace.id == self.namespace_id)\
-                .options(joinedload("parts"))
-        meta = existing_msgs_query.all()
-        if not len(meta) == 1:
-            log.error("message query returned %i results" % len(meta))
-        if len(meta) == 0: return []
-        m = meta[0]
-
-        parts = m.parts
-
-        return [p.cereal() for p in parts]
-
-    @namespace_auth
-    @jsonify
     def body_for_message(self, message_id):
         message = db_session.query(Message).join(Message.parts) \
                 .filter_by(id=message_id).one()
