@@ -197,23 +197,22 @@ class API(object):
         return [i.cereal() for i in todo_items]
 
     @namespace_auth
-    def create_todo(self, g_thrid):
-        log.info('creating todo from namespace {0} g_thrid {1}'.format(self.namespace_id, g_thrid))
+    def create_todo(self, thread_id):
+        log.info('creating todo from namespace {0} thread_id {1}'.format(
+            self.namespace_id, thread_id))
 
-        # TODO abstract this logic out
-        messages_in_thread = db_session.query(Message).filter(
-                Message.namespace_id == self.namespace_id,
-                Message.g_thrid == g_thrid).all()
+        thread = db_session.query(Thread).join(Thread.messages)\
+                .filter_by(id=thread_id).one()
 
         todo_ns = get_or_create_todo_namespace(self.user_id)
-        for message in messages_in_thread:
+        for message in thread.messages:
             message.namespace_id = todo_ns.id
 
         todo_item = TodoItem(
-                g_thrid = g_thrid,
+                thread_id = thread_id,
                 imapaccount_id = self.namespace.imapaccount_id,
                 namespace_id = todo_ns.id,
-                display_name = messages_in_thread[0].subject,
+                display_name = thread.messages[0].subject,
                 due_date = 'Soon',
                 date_completed = None,
                 sort_index = 0,
@@ -221,7 +220,3 @@ class API(object):
         db_session.add(todo_item)
         db_session.commit()
         return "OK"
-
-    def start_sync(self, namespace_id):
-        """ Talk to the Sync service and have it launch a sync. """
-        pass

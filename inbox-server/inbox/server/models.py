@@ -851,9 +851,9 @@ class TodoItem(JSONSerializable, Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    # TODO change this to a ForeignKey constraint once threads are represented
-    # as database objects (and then rename to remove the "g_")
-    g_thrid = Column(String(255), nullable=False)
+    thread_id = Column(ForeignKey('thread.id', ondelete='CASCADE'),
+            nullable=False)
+    thread = relationship("Thread", backref="todo_item")
 
     # Gmail thread IDs are only unique per-account, so in order to de-dupe, we
     # need to store the account that this thread came from. When we get a
