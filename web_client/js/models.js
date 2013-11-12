@@ -62,9 +62,9 @@ app.factory('IBThread', function ($injector) {
 
 
 
-app.factory('IBMessageMeta', function ($injector, md5)
+app.factory('IBMessage', function ($injector, md5)
 {
-    function IBMessageMetaObject($rootScope, data) {
+    function IBMessageObject($rootScope, data) {
         this.$rootScope = $rootScope;
 
         // Propogate fields to the object
@@ -120,15 +120,15 @@ app.factory('IBMessageMeta', function ($injector, md5)
     }
 
 
-    IBMessageMetaObject.prototype.fromName = function() {
+    IBMessageObject.prototype.fromName = function() {
         return this.from[0][0];
     }
 
-    IBMessageMetaObject.prototype.fromEmail = function() {
+    IBMessageObject.prototype.fromEmail = function() {
         return this.from[0][2] + '@' + this.from[3];
     }
 
-    IBMessageMetaObject.prototype.printDate = function() {
+    IBMessageObject.prototype.printDate = function() {
         // var curr_date = this.date.getDate();
         // var curr_month = this.date.getMonth() + 1; //Months are zero based
         // var curr_year = this.date.getFullYear();
@@ -139,17 +139,17 @@ app.factory('IBMessageMeta', function ($injector, md5)
 
     return function(data) {
         // This is based on $injector.instantiate
-        var Type = IBMessageMetaObject;
+        var Type = IBMessageObject;
         var locals = {data:data};
 
-        var IBMessageMeta = function() {};
+        var IBMessage = function() {};
         var instance;
         var returnedValue;
 
         // Check if Type is annotated and use just the given function at n-1 as parameter
         // e.g. someModule.factory('greeter', ['$window', function(renamed$window) {}]);
-        IBMessageMeta.prototype = (angular.isArray(Type) ? Type[Type.length - 1] : Type).prototype;
-        instance = new IBMessageMeta();
+        IBMessage.prototype = (angular.isArray(Type) ? Type[Type.length - 1] : Type).prototype;
+        instance = new IBMessage();
         returnedValue = $injector.invoke(Type, instance, locals);
         return angular.isObject(returnedValue) ? returnedValue : instance;
 

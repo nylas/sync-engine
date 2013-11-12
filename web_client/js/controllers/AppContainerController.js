@@ -15,7 +15,7 @@ function(
     growl,
     Layout, // Needed to initialize
     IBThread,
-    IBMessageMeta,
+    IBMessage,
     protocolhandler,
     $filter,
     $timeout,
@@ -104,7 +104,7 @@ function(
                     var thread_dict = {};
 
                     angular.forEach(arr_from_json, function(value, key) {
-                        var newMessage = new IBMessageMeta(value);
+                        var newMessage = new IBMessage(value);
 
                         $scope.message_map[newMessage.id] = newMessage;
 
