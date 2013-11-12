@@ -53,9 +53,10 @@ function(
 
     $scope.todoButtonHandler = function() {
         $log.info("todoButtonHandler()");
-        // for now, thread objects don't have an ID, so fetch the g_thrid off the first message
-        var g_thrid = $scope.activeThread.messages[0].g_thrid;
-        Wire.rpc('create_todo', [$scope.activeNamespace.id, g_thrid], function(data) {
+        // for now, thread objects don't have an ID, so fetch the thread_id off
+        // the first message
+        var thread_id = $scope.activeThread.messages[0].thread_id;
+        Wire.rpc('create_todo', [$scope.activeNamespace.id, thread_id], function(data) {
             if (data !== "OK") {
                 $log.error("invalid create_todo response: " + data);
             }
@@ -103,15 +104,14 @@ function(
                     var thread_dict = {};
 
                     angular.forEach(arr_from_json, function(value, key) {
-
                         var newMessage = new IBMessageMeta(value);
 
                         $scope.message_map[newMessage.id] = newMessage;
 
-                        if (!thread_dict[newMessage.g_thrid]) {
-                            thread_dict[newMessage.g_thrid] = new IBThread();
+                        if (!thread_dict[newMessage.thread_id]) {
+                            thread_dict[newMessage.thread_id] = new IBThread();
                         }
-                        thread_dict[newMessage.g_thrid].messages.push(newMessage);
+                        thread_dict[newMessage.thread_id].messages.push(newMessage);
                     });
 
                     /* Below we sort the messages into threads.

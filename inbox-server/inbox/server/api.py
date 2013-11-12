@@ -169,7 +169,8 @@ class API(object):
     @jsonify
     def body_for_message(self, message_id):
         message = db_session.query(Message).join(Message.parts) \
-                .filter_by(id=message_id).one()
+                .filter(Message.id==message_id,
+                        Message.namespace_id==self.namespace.id).one()
         plain_data, html_data = message.body()
 
         prettified = None
