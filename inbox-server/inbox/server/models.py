@@ -525,16 +525,19 @@ class Namespace(Base):
     # TODO should have a name that defaults to gmail
 
     # invariant: imapaccount is non-null iff namespace_type is root
-    namespace_type = Column(Enum('root', 'shared_folder', 'todo'), nullable=False, default='root')
+    namespace_type = Column(Enum('root', 'shared_folder', 'todo'),
+            nullable=False, default='root')
 
     @property
     def email_address(self):
         if self.imapaccount is not None:
             return self.imapaccount.email_address
 
-    @property
-    def is_root(self):
-        return self.imapaccount_id is not None
+    def thread_ids_for_folder(self, folder_name):
+        return [thrid for thrid, in db_session.query(
+            distinct(Message.thread_id)).join(FolderItem) \
+              .filter(FolderItem.folder_name == folder_name,
+                      Message.namespace_id == self.id)]
 
     def cereal(self):
         return dict(id=self.id, name='Gmail')

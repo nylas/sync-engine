@@ -116,43 +116,28 @@ class API(object):
     @namespace_auth
     @jsonify
     def messages_for_folder(self, folder_name):
-        """ Returns all messages in a given folder.
+        """ Returns all messages in a given folder. Supports shared folders
+            and TODO namespaces as well, if caller auths with that namespace.
 
             Note that this may be more messages than included in the IMAP
             folder, since we fetch the full thread if one of the messages is in
             the requested folder.
         """
-        imapaccount_id = self.namespace.imapaccount_id
-        all_thrids = set([thrid for thrid, in db_session.query(
-            distinct(Message.thread_id)).join(FolderItem) \
-              .filter(FolderItem.folder_name == folder_name,
-                      FolderItem.imapaccount_id == imapaccount_id).all()])
-
-        log.error("thrids: {0}".format(all_thrids))
+        all_thrids = self.namespace.thread_ids_for_folder(folder_name)
+        log.info("thrids in {1}: {0}".format(all_thrids, folder_name))
 
         # Get all messages for those thread IDs
         messages = []
         DB_CHUNK_SIZE = 100
-        for thrids in chunk(list(all_thrids), DB_CHUNK_SIZE):
-            all_msgs_query = db_session.query(Thread).join(Thread.messages) \
+        for thrids in chunk(all_thrids, DB_CHUNK_SIZE):
+            threads = db_session.query(Thread).join(Thread.messages) \
                     .filter(Thread.id.in_(thrids),
                             Message.namespace_id == self.namespace_id)
-            for thread in all_msgs_query:
+            for thread in threads:
                 messages.extend(thread.messages)
 
         log.info('found {0} message IDs'.format(len(messages)))
         return [m.cereal() for m in messages]
-
-    @jsonify
-    def messages_with_ids(self, namespace_id, msg_ids):
-        """ Returns Message objects for the given msg_ids """
-        all_msgs_query = db_session.query(Message)\
-            .filter(Message.id.in_(msg_ids),
-                    Message.namespace_id == namespace_id)
-        all_msgs = all_msgs_query.all()
-
-        log.info('found %i messages IDs' % len(all_msgs))
-        return [m.cereal() for m in all_msgs]
 
     def send_mail(self, namespace_id, recipients, subject, body):
         """ Sends a message with the given objects """
@@ -174,8 +159,11 @@ class API(object):
 
     @jsonify
     def top_level_namespaces(self, user_id):
-        """for the user, get the namespaces for all the accounts associated as well as all the shared folder metas
-        returns a list of tuples of display name, type, and id"""
+        """ For the user, get the namespaces for all the accounts associated as
+            well as all the shared folder rows.
+
+            returns a list of tuples of display name, type, and id
+        """
         nses = {'private': [], 'shared': []}
 
         user = db_session.query(User).join(IMAPAccount).get(user_id)
