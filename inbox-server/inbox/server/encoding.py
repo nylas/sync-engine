@@ -31,34 +31,28 @@ def make_unicode_header(txt, default_encoding="utf-8"):
             log.error("That didn't work either! bailing %s" % e)
             return 'DecodingFailed'
 
+# TODO Some notes about base64 downloading:
 
+# Some b64 messages may have other additonal encodings
+# Some example strings:
 
+#     '=?Windows-1251?B?ICLRLcvu5Obo8fLo6iI?=',
+#     '=?koi8-r?B?5tLPzM/XwSDtwdLJzsEg98nUwczYxdfOwQ?=',
+#     '=?Windows-1251?B?1PDu6+7i4CDM4PDo7eAgwujy4Ov85eLt4A?='
 
-# # TODO Some notes about base64 downloading:
+# In these situations, we should split by '?' and then grab the encoding
 
-# # Some b64 messages may have other additonal encodings
-# # Some example strings:
+# def decodeStr(s):
+#     s = s.split('?')
+#     enc = s[1]
+#     dat = s[3]
+#     return (dat+'===').decode('base-64').decode(enc)
 
-# #     '=?Windows-1251?B?ICLRLcvu5Obo8fLo6iI?=',
-# #     '=?koi8-r?B?5tLPzM/XwSDtwdLJzsEg98nUwczYxdfOwQ?=',
-# #     '=?Windows-1251?B?1PDu6+7i4CDM4PDo7eAgwujy4Ov85eLt4A?='
-
-# # In these situations, we should split by '?' and then grab the encoding
-
-# # def decodeStr(s):
-# #     s = s.split('?')
-# #     enc = s[1]
-# #     dat = s[3]
-# #     return (dat+'===').decode('base-64').decode(enc)
-
-# # The reason for the '===' is that base64 works by regrouping bits; it turns
-# # 3 8-bit chars into 4 6-bit chars (then refills the empty top bits with 0s).
-# # To reverse this, it expects 4 chars at a time - the length of your string
-# # must be a multiple of 4 characters. The '=' chars are recognized as padding;
-# # three chars of padding is enough to make any string a multiple of 4 chars long
-
-
-
+# The reason for the '===' is that base64 works by regrouping bits; it turns
+# 3 8-bit chars into 4 6-bit chars (then refills the empty top bits with 0s).
+# To reverse this, it expects 4 chars at a time - the length of your string
+# must be a multiple of 4 characters. The '=' chars are recognized as padding;
+# three chars of padding is enough to make any string a multiple of 4 chars long
 
 # def clean_html(msg_data):
 #     """ Removes tags: head, style, script, html, body """
@@ -73,7 +67,6 @@ def make_unicode_header(txt, default_encoding="utf-8"):
 #     #     # new_tag.contents = b.contents
 #     #     # b.replace_with(new_tag)
 #     return str(soup)
-
 
 # re_string = re.compile(r'(?P<htmlchars>[<&>])|(?P<space>^[ \t]+)|(?P<lineend>\r\n|\r|\n)|(?P<protocal>(^|\s)((http|ftp)://.*?))(\s|$)', re.S|re.M|re.I)
 # def plaintext2html(text, tabstop=4):
@@ -101,10 +94,6 @@ def make_unicode_header(txt, default_encoding="utf-8"):
 #                 last = '<br/>'
 #             return '%s<a href="%s">%s</a>%s' % (prefix, url, url, last)
 #     return re.sub(re_string, do_sub, text)
-
-
-
-
 
 # # TODO this doesn't work.
 
@@ -162,8 +151,6 @@ def make_unicode_header(txt, default_encoding="utf-8"):
 
 
 #     return msg_text
-
-
 
 """
 Lamson takes the policy that email it receives is most likely complete garbage
@@ -240,8 +227,6 @@ import email
 from email import encoders
 from email.mime.base import MIMEBase
 from email.utils import parseaddr
-import sys
-
 
 DEFAULT_ENCODING = "utf-8"
 DEFAULT_ERROR_HANDLING = "strict"
