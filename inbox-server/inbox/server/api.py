@@ -169,27 +169,8 @@ class API(object):
         message = db_session.query(Message).join(Message.parts) \
                 .filter(Message.id==message_id,
                         Message.namespace_id==self.namespace.id).one()
-        plain_data, html_data = message.body()
 
-        prettified = None
-        if html_data:
-            if 'font:' in html_data or 'font-face:' \
-                    in html_data or 'font-family:' in html_data:
-                prettified = html_data
-            else:
-                path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                        "message_template.html")
-                with open(path, 'r') as f:
-                    # template has %s in it. can't do format because python
-                    # misinterprets css
-                    prettified = f.read() % html_data
-        else:
-            path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                    "message_template.html")
-            with open(path, 'r') as f:
-                prettified = f.read() % plaintext2html(plain_data)
-
-        return {'data': prettified}
+        return {'data': message.prettified_body}
 
     @jsonify
     def top_level_namespaces(self, user_id):

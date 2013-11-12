@@ -134,7 +134,8 @@ function(
                         return thread_dict[key];
                     });
 
-                    // Sort threads based on last object (most recent) in descending order
+                    // Sort threads based on last object (most recent) in
+                    // descending order
                     all_threads.sort(
                         function sortDates(thread1, thread2) {
                             var a = thread1.messages[thread1.messages.length -1].date.getTime();
@@ -145,13 +146,10 @@ function(
                             return 0;
                     });
 
-                    $log.info(all_threads);
-
                     $scope.threads = all_threads;
                     $scope.displayedThreads = all_threads;
                 }
             );
-
         });
     };
 
@@ -178,19 +176,7 @@ function(
         $log.info(["SelectedThread:", selectedThread]);
         $scope.activeThread = selectedThread;
 
-        angular.forEach(selectedThread.messages, function(message, key) {
-            Wire.rpc('body_for_message', [$scope.activeNamespace.id, message.id], function(data) {
-                angular.forEach(JSON.parse(data), function(value, key) {
-                    $log.info("Received message body.")
-                    message.displayBody = value;
-                });
-
-
-            });
-        });
-
         $scope.isMailMessageViewActive = true;
-
     };
 
     // this shouldn't really be in $scope, right?

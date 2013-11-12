@@ -17,8 +17,6 @@ https://groups.google.com/forum/#!msg/angular/56sdORWEoqg/b8hdPskxZXsJ
 
  */
 
-
-
 app.factory('IBThread', function ($injector) {
 
     function IBThreadObject($rootScope) {
@@ -60,8 +58,6 @@ app.factory('IBThread', function ($injector) {
 
 });
 
-
-
 app.factory('IBMessage', function ($injector, md5)
 {
     function IBMessageObject($rootScope, data) {
@@ -76,8 +72,6 @@ app.factory('IBMessage', function ($injector, md5)
         }
         // Fix the date
         this.date = new Date(data.date.$date);
-
-
 
         var gravatar_size = 25;
         var theEmail = this.from[0][2] + '@' + this.from[0][3];
@@ -96,7 +90,6 @@ app.factory('IBMessage', function ($injector, md5)
                 to_list = this.to[0][2] + '@' + this.to[0][3];
             }
 
-
             for (var i = 1; i< this.to.length; i++) {
                 var c = this.to[i];
                 var nameToShow;
@@ -112,21 +105,16 @@ app.factory('IBMessage', function ($injector, md5)
             this.contactDisplayList = 'Unknown sender';
         }
 
-
-        this.displayBody = "";
         this.attachments = [];
-
-
     }
-
 
     IBMessageObject.prototype.fromName = function() {
         return this.from[0][0];
-    }
+    };
 
     IBMessageObject.prototype.fromEmail = function() {
         return this.from[0][2] + '@' + this.from[3];
-    }
+    };
 
     IBMessageObject.prototype.printDate = function() {
         // var curr_date = this.date.getDate();
@@ -155,7 +143,6 @@ app.factory('IBMessage', function ($injector, md5)
 
     };
 });
-
 
 app.factory('IBTodo', function ($injector)
 {
@@ -206,10 +193,6 @@ app.factory('IBTodo', function ($injector)
         return angular.isObject(returnedValue) ? returnedValue : instance;
     };
 });
-
-
-
-
 
 app.factory('IBContact', function ($injector) {
 

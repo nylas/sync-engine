@@ -1,4 +1,5 @@
 import os
+import json
 
 from sqlalchemy.interfaces import PoolListener
 
@@ -19,7 +20,7 @@ from boto.s3.connection import S3Connection
 from boto.s3.key import Key
 
 from ..util.file import mkdirp, remove_file, Lock
-from ..util.html import strip_tags
+from ..util.html import strip_tags, plaintext2html
 from .config import config, is_prod
 from .log import get_logger
 log = get_logger()
@@ -28,7 +29,6 @@ import encoding
 
 from urllib import quote_plus as urlquote
 
-import json
 from itertools import chain
 from quopri import decodestring as quopri_decodestring
 from base64 import b64decode
@@ -632,6 +632,7 @@ class Message(JSONSerializable, Base):
     # Maximum length is determined by typical email size limits (25 MB body +
     # attachments) on Gmail), assuming a maximum # of chars determined by
     # 1-byte (ASCII) chars.
+    # NOTE: always HTML :)
     sanitized_body = Column(Text(length=26214400), nullable=False)
     snippet = Column(String(191), nullable=False)
 
@@ -645,9 +646,10 @@ class Message(JSONSerializable, Base):
     def calculate_sanitized_body(self):
         plain_part, html_part = self.body()
         if html_part:
-            self.sanitized_body = html_part.split('<div class="gmail_quote">')[0]
+            # self.sanitized_body = html_part.split('<div class="gmail_quote">')[0]
+            self.sanitized_body = html_part
         else:
-            self.sanitized_body = plain_part
+            self.sanitized_body = plaintext2html(plain_part)
 
     def calculate_snippet(self):
         assert self.sanitized_body, "need sanitized_body to calculate snippet"
@@ -682,6 +684,24 @@ class Message(JSONSerializable, Base):
             s = s[4:]
         return s
 
+    @property
+    def prettified_body(self):
+        html_data = self.sanitized_body
+
+        prettified = None
+        if 'font:' in html_data or 'font-face:' \
+                in html_data or 'font-family:' in html_data:
+            prettified = html_data
+        else:
+            path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                    "message_template.html")
+            with open(path, 'r') as f:
+                # template has %s in it. can't do format because python
+                # misinterprets css
+                prettified = f.read() % html_data
+
+        return prettified
+
     def cereal(self):
         # TODO serialize more here for client API
         d = {}
@@ -693,6 +713,7 @@ class Message(JSONSerializable, Base):
         d['thread_id'] = self.thread_id
         d['namespace_id'] = self.namespace_id
         d['snippet'] = self.snippet
+        d['body'] = self.prettified_body
         return d
 
 # These are the top 15 most common Content-Type headers
