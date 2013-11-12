@@ -1,7 +1,7 @@
 var app = angular.module('InboxApp.directives');
 
 
-app.directive("replybox", function() {
+app.directive("replybox", function(UPLOAD_SERVER_URL, $upload, UPLOAD_SERVER_URL) {
     return {
         restrict: 'E',
         transclude: true,
@@ -9,58 +9,48 @@ app.directive("replybox", function() {
             sendButtonAction: '&sendButtonAction'
         }, // Two-way binding to message object
         controller: function($scope, $element, $attrs, $transclude) {
-            //TODO
-            $scope.sendButtonHandler = function() {
-                var textbox = $element.find('#reply_textbox');
-                $scope.sendButtonAction({
-                    message_text: textbox.html()
-                });
-            };
+
+
+            // Select content without jQuery
+            // $scope.sendButtonHandler = function() {
+            //     var textbox = $element.find('#reply_textbox');
+            //     $scope.sendButtonAction({
+            //         message_text: textbox.html()
+            //     });
+            // };
+
+
+        $scope.onFileSelect = function($files) {
+        //files: an array of files selected, each file has name, size, and type.
+          for (var i = 0; i < $files.length; i++) {
+            var $file = $files[i];
+            $scope.upload = $upload.upload({
+                url: UPLOAD_SERVER_URL,
+                // method: POST or PUT,
+                // headers: {'headerKey': 'headerValue'}, withCredential: true,
+                data: {myObj: $scope.myModelObj},
+                file: $file,
+                //(optional) set 'Content-Desposition' formData name for file
+                //fileFormDataName: myFile,
+                progress: function(evt) {
+                  console.log('percent: ' + parseInt(100.0 * evt.loaded / evt.total));
+                }
+            }).success(function(data, status, headers, config) {
+                // file is uploaded successfully
+                console.log(data);
+              })
+          //.error(...).then(...);
+          };
+        }
+
+
+
         },
-
-
-        // <div ng-file-upload="/file_upload"
-        // data-complete='uploadComplete()'
-        //  data-error="uploadError()"></div>
-
-
-        // #drop:hover, #drop.active {
-        //     border: 2px dashed #08c;
-        //     color: #08c;
-        // }
-
-        // * textarea {
-        // *  resize: none;
-        // *  word-wrap: break-word;
-        // *  transition: 0.05s;
-        // *  -moz-transition: 0.05s;
-        // *  -webkit-transition: 0.05s;
-        // *  -o-transition: 0.05s;
-        // * }
 
 
         templateUrl: 'views/replyBox.html',
 
         link: function(scope, elem, attrs, ctrl) {
-
-
-            // TODO resize reply box as you type stuff in it
-            // var obj = elem.find('#reply_textbox');
-            // var update = function() {
-            //     var scrollable = $('#right-scrollable');
-
-            //     // scrollable.animate({
-            //     //     scrollTop: 9999999
-            //     // }, 'slow');
-
-
-            //     scrollable.scrollTop = 9999999;
-            //     // x = 0; //horizontal coord
-            //     // y = document.height; //vertical coord
-            //     // window.scroll(x, y);
-            // };
-            // obj.bind('keyup keydown keypress change', update);
-            // // update();
 
             var upload_file_button = elem.find('#add_file_button');
             upload_file_button.bind('click', function() {

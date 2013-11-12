@@ -11,7 +11,8 @@ var app = angular.module('InboxApp',
      'LocalStorageModule',
      'ui',
      'ui.sortable',
-     'angular-md5'
+     'angular-md5',
+     'angularFileUpload'
      ]);
 
 
@@ -20,4 +21,6 @@ angular.module('InboxApp.services', []);
 angular.module('InboxApp.controllers', []);
 angular.module('InboxApp.directives', []);
 
-app.constant('WIRE_ENDPOINT_URL', '/wire');
+app.constant('WIRE_SERVER_URL', 'https://dev-localhost.inboxapp.com:443/wire');
+
+app.constant('UPLOAD_SERVER_URL', 'https://dev-localhost.inboxapp.com:443/wire');

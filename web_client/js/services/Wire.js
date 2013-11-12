@@ -11,7 +11,7 @@ var app = angular.module('InboxApp.services');
    Implementation adapated from
    https://github.com/Tronix117/node-rpc-socket.io
 */
-app.factory('Wire', function ($rootScope, WIRE_ENDPOINT_URL) {
+app.factory('Wire', function ($rootScope, WIRE_SERVER_URL) {
 
 
     /**
@@ -286,7 +286,7 @@ app.factory('Wire', function ($rootScope, WIRE_ENDPOINT_URL) {
     ////////////////////////////////////////////////////////////////////////////////
 
 
-    var mySocket = io.connect(WIRE_ENDPOINT_URL, {
+    var mySocket = io.connect(WIRE_SERVER_URL, {
         'resource': 'wire',
         'reconnect': true,
         'connect timeout': 1000,

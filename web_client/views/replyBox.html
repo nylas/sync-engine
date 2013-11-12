@@ -1,11 +1,10 @@
-<div id="reply_box" class="replybox_container_style">
-  <div class="replybox_content_style">
+<div class="box_with_shadow replybox_container">
+  <div class="replybox_main">
+
     <div id="drop">
 
       <div auto-resize
-           id="reply_textbox"
-           class="resize_textbox"
-           ng-style="text_box_style"
+           class="replybox_content"
            contenteditable="true"
            hidefocus="true">
 
@@ -25,23 +24,29 @@
 
       <div class="replybox_bottom_button_bar">
 
-        <div id="add_file_button" class="replybox_bottom_button add_file" hover="#E0E3E3">
-          Add Files
+        <div class="replybox_bottom_button encrypt clickable"></div>
+        <div class="replybox_bottom_button_bar_separator"></div>
+
+        <div id="add_file_button" class="replybox_bottom_button attach clickable">
+          Upload files&nbsp;(or drag-and-drop)
         </div>
 
-        <div id="add_file_button" class="replybox_bottom_button add_photo" hover="#E0E3E3">
-          Add Photos
-        </div>
 
-        <div id="add_file_button" class="replybox_bottom_button add_event" hover="#E0E3E3">
-          Add Event
-        </div>
 
-        <div id="add_file_button" class="replybox_bottom_button add_money" hover="#E0E3E3">
-          Send Money
-        </div>
 
-        <div id="send_button" class="replybox_bottom_button send"  ng-click="sendButtonHandler()" hover="#E0E3E3">
+        <input type="text" ng-model="myModelObj">
+        <input type="file" ng-file-select="onFileSelect($files)" >
+        <input type="file" ng-file-select="onFileSelect($files)" multiple>
+        <div ng-file-drop="onFileSelect($files)" ng-file-drag-over-class="optional-css-class"
+              ng-show="dropSupported">drop files here</div>
+        <div ng-file-drop-available="dropSupported=true"
+              ng-show="!dropSupported">HTML5 Drop File is not supported!</div>
+        <button ng-click="upload.abort()">Cancel Upload</button>
+
+
+
+
+        <div class="replybox_bottom_button send clickable"  ng-click="sendButtonHandler()">
           Send
         </div>
 

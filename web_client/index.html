@@ -17,7 +17,7 @@
 
   <!--  <div id="header">&nbsp;</div>  -->
   <div id="main">
-    <div class="header">
+    <div class="header box_with_shadow">
       <sidebaricon view="search"></sidebaricon>
 
       <div class="header_left">
@@ -54,7 +54,7 @@
 
     <div class="clear"></div>
 
-    <div class="sidebar height_main">
+    <div class="sidebar box_with_shadow height_main">
       <sidebaricon view="mail" active="isMailViewActive" handler="activateMailView()"></sidebaricon>
       <sidebaricon view="todo" active="isTodoViewActive" handler="activateTodoView()"></sidebaricon>
       <sidebaricon view="stacks" active="isStacksViewActive"></sidebaricon>
@@ -65,7 +65,7 @@
 
     <!-- MAIL MASTER VIEW -->
     <div class="master_pane height_main" ng-show="isMailViewActive">
-      <div class="category_bar">
+      <div class="category_bar box_with_shadow">
         <span class="category_bar_active">Inbox</span>
         <span>Drafts</span>
         <span>Sent</span>
@@ -112,7 +112,7 @@
     <div class="detail_pane height_main"
       ng-show="isMailMessageViewActive">
 
-      <div class="message_container"
+      <div class="message_container box_with_shadow"
         ng-show="activeThread">
 
         <div class="content_head">
@@ -122,12 +122,12 @@
         </div>
       </div>
 
-      <div class="message_container"
+      <div class="message_container box_with_shadow"
         ng-repeat="message in activeThread.messages">
         <view:message message="message"></view:message>
       </div>
 
-      <div class="message_container">
+      <div class="message_container box_with_shadow">
         <div class="contentFoot" ng-show="activeThread">
           <replybox send-button-action="sendMessage(message_text)"></replybox>
         </div>
@@ -138,7 +138,7 @@
     <div class="detail_pane height_main"
       ng-show="isTodoViewActive">
 
-      <div class="message_container"
+      <div class="message_container box_with_shadow"
         ng-show="activeThread">
 
         <div class="content_head">
@@ -148,7 +148,7 @@
         </div>
       </div>
 
-      <div class="message_container">
+      <div class="message_container box_with_shadow">
         <div class="contentFoot" ng-show="activeThread">
           <replybox send-button-action="sendMessage(message_text)"></replybox>
         </div>
@@ -180,11 +180,16 @@
 <script src="lib/jquery-utils/jquery.fileupload.js"></script>
 
 
+<!-- Must be placed before angular.js.
+    This file is needed for upload progress/abort or non HTML5 FormData browsers-->
+<script src="lib/angular-modules/angular-file-upload-shim.js"></script>
+
+
 <!-- Aaaaaaaangular -->
 <script src="lib/angular/angular.js"></script>
 <script src="lib/angular/angular-sanitize.js"></script>
 <script src="lib/angular/angular-cookies.js"></script>
-
+<script src="lib/angular-modules/angular-file-upload.js"></script>
 <script src="lib/angular-modules/angular-ui.js"></script>
 <script src="lib/angular-modules/localStorageModule.js"></script>
 <script src="lib/angular-modules/sortable.js"></script>
