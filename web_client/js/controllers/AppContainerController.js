@@ -5,7 +5,6 @@ var console = console;
 var angular = angular;
 var alert = alert;
 
-
 var app = angular.module('InboxApp.controllers');
 
 app.controller('AppContainerController',
@@ -23,7 +22,6 @@ function(
     $log,
     MockData)
 {
-
     // TODO
     // Mousetrap.bind('command+shift+k', function(e) {
     //     alert('command+shift+k');
@@ -89,8 +87,6 @@ function(
         $log.info("clearSearch()");
     };
 
-
-
     $scope.loadNamespaces = function()  {
         Wire.rpc('top_level_namespaces', [], function(data) {
             var parsed = JSON.parse(data);
@@ -133,7 +129,6 @@ function(
                             });
                     });
 
-
                     // Turn dict to array
                     var all_threads = Object.keys(thread_dict).map(function(key) {
                         return thread_dict[key];
@@ -150,7 +145,6 @@ function(
                             return 0;
                     });
 
-
                     $log.info(all_threads);
 
                     $scope.threads = all_threads;
@@ -160,9 +154,6 @@ function(
 
         });
     };
-
-
-
 
     $scope.sendMessage = function(message) {
         //message: {body:string, subject:string, to:[string]}
@@ -180,7 +171,6 @@ function(
         );
 
     };
-
 
     $scope.openThread = function(selectedThread) {
         $scope.isFullComposerViewActive = false;
@@ -265,7 +255,6 @@ function(
         },
     };
 
-
   $scope.makeActive = function() {
       console.log("Sidebar button clicked!");
   };
@@ -278,7 +267,6 @@ function(
       console.log(['Clicked row:', t]);
   };
 
-
   $scope.loadTodoItems = function() {
       Wire.rpc('todo_items', [], function(data) {
           var parsed = JSON.parse(data);
@@ -289,10 +277,7 @@ function(
   };
 
   $scope.loadTodoItems();
-
-
 });
-
 
 /* TODO move these declarations so they don't pollute the global namespace
 http://stackoverflow.com/questions/14184656/angularjs-different-ways-to-create-controllers-and-services-why?rq=1

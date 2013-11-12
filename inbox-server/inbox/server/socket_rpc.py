@@ -67,19 +67,10 @@ class SocketRPC(object):
         args = []
         kwargs = {}
 
-
-
-        print 'method list', method_list
-        print handler, method
-
-
         # args, varargs, varkw, defaults = inspect.getargspec(func)
         # <zerorpc.core.Client object at 0x104cc8390> <zerorpc.core.Client object at 0x104cc8390>
 
-
         # Right now ZeroRPC doesn't support keyword arguments.
-
-
 
         if isinstance(params, basestring):
             log.warning("Single string param should be in list.")

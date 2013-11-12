@@ -193,8 +193,6 @@ class WireNamespace(BaseNamespace):
         c = zerorpc.Client(timeout=3000)
         c.connect(api_srv_loc)
 
-        print 'Calling on', c
-        print message
         response_text = self.rpc.run(c, message, user_id)
 
         # Send response
