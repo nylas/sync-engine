@@ -695,6 +695,7 @@ class Message(JSONSerializable, Base):
         # _our_ thrid, not google's)
         d['g_thrid'] = self.thread_id
         d['namespace_id'] = self.namespace_id
+        d['snippet'] = self.snippet
         return d
 
 # These are the top 15 most common Content-Type headers

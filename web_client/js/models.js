@@ -27,7 +27,6 @@ app.factory('IBThread', function ($injector) {
         this.$rootScope = $rootScope;
     }
 
-
     IBThreadObject.prototype.recentMessage = function() {
         return this.messages[this.messages.length - 1];
     };
@@ -35,8 +34,9 @@ app.factory('IBThread', function ($injector) {
     IBThreadObject.prototype.subject = function() {
         return this.messages[0].subject;
     };
-
-
+    IBThreadObject.prototype.snippet = function() {
+        return this.messages[0].snippet;
+    };
 
     return function(messages) {
         // This is based on $injector.instantiate
