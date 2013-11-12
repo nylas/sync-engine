@@ -1,22 +1,20 @@
-from .log import get_logger
-log = get_logger()
+import os
+import json
 
 from functools import wraps
+from sqlalchemy import distinct
 
-import json
+import zerorpc
+
 import postel
 from bson import json_util
 from models import db_session, Message, FolderItem, SharedFolder, Thread
 from models import Namespace, User, IMAPAccount, TodoNamespace, TodoItem
 
-from ..util.html import plaintext2html
 from ..util.itert import chunk
 
-from sqlalchemy.orm import joinedload
-from sqlalchemy import distinct
-
-import zerorpc
-import os
+from .log import get_logger
+log = get_logger()
 
 class NSAuthError(Exception):
     pass
