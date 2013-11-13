@@ -2,16 +2,13 @@ import os
 import json
 
 from functools import wraps
-from sqlalchemy import distinct
 
 import zerorpc
 
 import postel
 from bson import json_util
-from models import db_session, Message, FolderItem, SharedFolder, Thread
+from models import db_session, Message, SharedFolder, Thread
 from models import Namespace, User, IMAPAccount, TodoNamespace, TodoItem
-
-from ..util.itert import chunk
 
 from .log import get_logger
 log = get_logger()
