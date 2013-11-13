@@ -17,56 +17,15 @@ https://groups.google.com/forum/#!msg/angular/56sdORWEoqg/b8hdPskxZXsJ
 
  */
 
-app.factory('IBThread', function ($injector) {
+app.factory('IBMessage', function ($injector, md5) {
 
-    function IBThreadObject($rootScope) {
-        // TODO assert that these are the right message object types
-        this.messages = [];
-        this.$rootScope = $rootScope;
-    }
-
-    IBThreadObject.prototype.recentMessage = function() {
-        return this.messages[this.messages.length - 1];
-    };
-
-    IBThreadObject.prototype.subject = function() {
-        return this.messages[0].subject;
-    };
-    IBThreadObject.prototype.snippet = function() {
-        return this.messages[0].snippet;
-    };
-
-    return function(messages) {
-        // This is based on $injector.instantiate
-        var Type = IBThreadObject;
-        // var locals = {messages:messages};
-        var locals = {};
-
-        var IBThread = function() {};
-        var instance;
-        var returnedValue;
-
-        // Check if Type is annotated and use just the given function at n-1 as parameter
-        // e.g. someModule.factory('greeter', ['$window', function(renamed$window) {}]);
-        IBThread.prototype = (angular.isArray(Type) ? Type[Type.length - 1] : Type).prototype;
-        instance = new IBThreadObject();
-
-        returnedValue = $injector.invoke(Type, instance, locals);
-        return angular.isObject(returnedValue) ? returnedValue : instance;
-
-    };
-
-});
-
-app.factory('IBMessage', function ($injector, md5)
-{
     function IBMessageObject($rootScope, data) {
         this.$rootScope = $rootScope;
 
         // Propogate fields to the object
         for (var key in data) {
             if (self.hasOwnProperty(key)) {
-                console.log(key + " -> " + p[key]);
+                console.log(key + " -> " + data[key]);
             }
             this[key] = data[key];
         }
@@ -126,13 +85,77 @@ app.factory('IBMessage', function ($injector, md5)
         var instance;
         var returnedValue;
 
-        // Check if Type is annotated and use just the given function at n-1 as parameter
-        // e.g. someModule.factory('greeter', ['$window', function(renamed$window) {}]);
-        IBMessage.prototype = (angular.isArray(Type) ? Type[Type.length - 1] : Type).prototype;
+        // Check if Type is annotated and use just the given function at n-1 as
+        // parameter
+        // e.g. someModule.factory('greeter', ['$window',
+        // function(renamed$window) {}]);
+        IBMessage.prototype = (angular.isArray(Type) ? Type[Type.length - 1]
+                                                     : Type).prototype;
         instance = new IBMessage();
         returnedValue = $injector.invoke(Type, instance, locals);
         return angular.isObject(returnedValue) ? returnedValue : instance;
+    };
+});
 
+app.factory('IBThread', function ($injector, md5, IBMessage) {
+
+    function IBThreadObject($rootScope, data) {
+        this.$rootScope = $rootScope;
+
+        function sortByDate(msg1, msg2) {
+            var a = msg1.date.getTime();
+            var b = msg2.date.getTime();
+            if (a > b) return 1;
+            if (a < b) return -1;
+            return 0;
+        }
+
+        var thread = this;
+        angular.forEach(data, function(value, key) {
+            if (key === 'messages') {
+                thread.messages = [];
+                angular.forEach(value, function(msg, i) {
+                    thread.messages.push(new IBMessage(msg));
+                });
+                thread.messages.sort(sortByDate);
+            }
+            else {
+                if (thread.hasOwnProperty(key)) {
+                    console.log(key + " -> " + value);
+                }
+                thread[key] = value;
+            }
+        });
+    }
+
+    IBThreadObject.prototype.recentMessage = function() {
+        return this.messages[this.messages.length - 1];
+    };
+
+    IBThreadObject.prototype.snippet = function() {
+        return this.messages[0].snippet;
+    };
+
+    return function(data) {
+        // This is based on $injector.instantiate
+        var Type = IBThreadObject;
+        // var locals = {messages:messages};
+        var locals = {data:data};
+
+        var IBThread = function() {};
+        var instance;
+        var returnedValue;
+
+        // Check if Type is annotated and use just the given function at n-1 as
+        // parameter
+        // e.g. someModule.factory('greeter', ['$window',
+        // function(renamed$window) {}]);
+        IBThread.prototype = (angular.isArray(Type) ? Type[Type.length - 1]
+                                                    : Type).prototype;
+        instance = new IBThread();
+
+        returnedValue = $injector.invoke(Type, instance, locals);
+        return angular.isObject(returnedValue) ? returnedValue : instance;
     };
 });
 
@@ -148,9 +171,7 @@ app.factory('IBTodo', function ($injector)
             }
             this[key] = data[key];
         }
-
     }
-
 
     IBTodoObject.prototype.fromName = function() {
         return this.from[0];

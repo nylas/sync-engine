@@ -907,7 +907,7 @@ class TodoNamespace(Base):
     user = relationship('User', backref=backref('todo_namespace', uselist=False))
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False, unique=True)
 
-class Thread(Base):
+class Thread(JSONSerializable, Base):
     """ Pre-computed thread metadata.
 
     (We have all this information elsewhere, but it's not as nice to use.)
@@ -920,6 +920,11 @@ class Thread(Base):
     subjectdate = Column(DateTime, nullable=False)
     recentdate = Column(DateTime, nullable=False)
 
+    # makes pulling up threads in a folder simple / fast
+    namespace_id = Column(ForeignKey('namespace.id', ondelete='CASCADE'),
+            nullable=False, index=True)
+    namespace = relationship('Namespace', backref='threads')
+
     # only on messages from Gmail
     # NOTE: The same message sent to multiple users will be given a
     # different g_thrid for each user. We don't know yet if g_thrids are
@@ -927,6 +932,7 @@ class Thread(Base):
     g_thrid = Column(String(255), nullable=True, index=True)
 
     def update_from_message(self, message):
+        assert message.namespace_id == self.namespace_id
         if message.internaldate > self.recentdate:
             self.recentdate = message.internaldate
         # subject is subject of original message in the thread
@@ -956,9 +962,19 @@ class Thread(Base):
             log.info("Duplicate thread rows for thread {0}".format(g_thrid))
         thread = cls(subject=message.subject, g_thrid=g_thrid,
                 recentdate=message.internaldate,
+                namespace_id=message.namespace_id,
                 subjectdate=message.internaldate)
         message.thread = thread
         return thread
+
+    def cereal(self):
+        """ Threads are serialized with full message data. """
+        d = {}
+        d['messages'] = [m.cereal() for m in self.messages]
+        d['namespace_id'] = self.namespace_id
+        d['subject'] = self.subject
+        d['recentdate'] = self.recentdate
+        return d
 
 class FolderSync(Base):
     __tablename__ = 'foldersync'

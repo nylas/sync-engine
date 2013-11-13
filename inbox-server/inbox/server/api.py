@@ -115,29 +115,16 @@ class API(object):
 
     @namespace_auth
     @jsonify
-    def messages_for_folder(self, folder_name):
-        """ Returns all messages in a given folder. Supports shared folders
-            and TODO namespaces as well, if caller auths with that namespace.
+    def threads_for_folder(self, folder_name):
+        """ Returns all threads in a given folder, together with associated
+            messages. Supports shared folders and TODO namespaces as well, if
+            caller auths with that namespace.
 
             Note that this may be more messages than included in the IMAP
             folder, since we fetch the full thread if one of the messages is in
             the requested folder.
         """
-        all_thrids = self.namespace.thread_ids_for_folder(folder_name)
-        log.info("thrids in {1}: {0}".format(all_thrids, folder_name))
-
-        # Get all messages for those thread IDs
-        messages = []
-        DB_CHUNK_SIZE = 100
-        for thrids in chunk(all_thrids, DB_CHUNK_SIZE):
-            threads = db_session.query(Thread).join(Thread.messages) \
-                    .filter(Thread.id.in_(thrids),
-                            Message.namespace_id == self.namespace_id)
-            for thread in threads:
-                messages.extend(thread.messages)
-
-        log.info('found {0} message IDs'.format(len(messages)))
-        return [m.cereal() for m in messages]
+        return [t.cereal() for t in self.namespace.threads]
 
     def send_mail(self, namespace_id, recipients, subject, body):
         """ Sends a message with the given objects """

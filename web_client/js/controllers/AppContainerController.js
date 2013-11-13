@@ -97,42 +97,16 @@ function(
             var gmail_namespace = parsed.private[0];
             $scope.activeNamespace = gmail_namespace;
 
-            $log.info("Getting messages for " + $scope.activeNamespace.name);
-            Wire.rpc('messages_for_folder', [$scope.activeNamespace.id, 'Inbox'], function(data) {
-                    $scope.statustext = "";
+            $log.info("Getting threads for " + $scope.activeNamespace.name);
+            Wire.rpc('threads_for_folder',
+              [$scope.activeNamespace.id, 'INBOX'], function(data) {
 
-                    var arr_from_json = JSON.parse(data);
-                    var thread_dict = {};
+                    var parsed = JSON.parse(data);
 
-                    angular.forEach(arr_from_json, function(value, key) {
-                        var newMessage = new IBMessage(value);
-
-                        $scope.message_map[newMessage.id] = newMessage;
-
-                        if (!thread_dict[newMessage.thread_id]) {
-                            thread_dict[newMessage.thread_id] = new IBThread();
-                        }
-                        thread_dict[newMessage.thread_id].messages.push(newMessage);
-                    });
-
-                    /* Below we sort the messages into threads.
-                       TODO: This needs to be tested much better.
-                     */
-                    // Sort individual threads in ascending order
-                    angular.forEach(thread_dict, function(thread, key) {
-                        thread.messages.sort(
-                            function sortDates(msg1, msg2) {
-                                var a = msg1.date.getTime();
-                                var b = msg2.date.getTime();
-                                if (a > b) return 1;
-                                if (a < b) return -1;
-                                return 0;
-                            });
-                    });
-
-                    // Turn dict to array
-                    var all_threads = Object.keys(thread_dict).map(function(key) {
-                        return thread_dict[key];
+                    var all_threads = [];
+                    angular.forEach(parsed, function(value, key) {
+                        var newThread = new IBThread(value);
+                        all_threads.push(newThread);
                     });
 
                     // Sort threads based on last object (most recent) in
