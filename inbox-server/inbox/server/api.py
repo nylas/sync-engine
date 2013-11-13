@@ -151,9 +151,13 @@ class API(object):
 
             returns a list of tuples of display name, type, and id
         """
-        nses = {'private': [], 'shared': []}
+        nses = {'private': [], 'shared': [], 'todo': []}
 
-        user = db_session.query(User).join(IMAPAccount).get(user_id)
+        user = db_session.query(User).join(IMAPAccount) \
+                .join(TodoNamespace).get(user_id)
+
+        nses['todo'].append(user.todo_namespace.cereal())
+
         for account in user.imapaccounts:
             account_ns = account.namespace
             nses['private'].append(account_ns.cereal())

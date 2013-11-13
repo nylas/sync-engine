@@ -893,7 +893,7 @@ class TodoItem(JSONSerializable, Base):
                 sort_index     = self.sort_index,
             )
 
-class TodoNamespace(Base):
+class TodoNamespace(JSONSerializable, Base):
     __tablename__ = 'todonamespace'
     """ A 1-1 mapping between users and their todo namespaces """
 
@@ -906,6 +906,9 @@ class TodoNamespace(Base):
 
     user = relationship('User', backref=backref('todo_namespace', uselist=False))
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False, unique=True)
+
+    def cereal(self):
+        return dict(id=self.id)
 
 class Thread(JSONSerializable, Base):
     """ Pre-computed thread metadata.

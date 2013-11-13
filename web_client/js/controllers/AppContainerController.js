@@ -94,8 +94,10 @@ function(
             var parsed = JSON.parse(data);
             $log.info(parsed);
 
-            var gmail_namespace = parsed.private[0];
-            $scope.activeNamespace = gmail_namespace;
+            $scope.namespaces = parsed;
+            console.log(["namespaces for user:", parsed]);
+            // we only support one account for now
+            $scope.activeNamespace = $scope.namespaces.private[0];
 
             $log.info("Getting threads for " + $scope.activeNamespace.name);
             Wire.rpc('threads_for_folder',
@@ -178,17 +180,20 @@ function(
         $scope.isMailViewActive = true;
         // Loaded. Load the messages.
         // TOFIX we should load these once we know the socket has actually connected
+        // We also don't need to reload them when switching back and forth
+        // between the mail view and other views.
         $scope.loadNamespaces();
     };
 
     $scope.activateTodoView = function() {
         $scope.clearAllActiveViews();
         $scope.isTodoViewActive = true;
+        $scope.activeNamespace = $scope.namespaces.todo[0];
         // $scope.loadTodoItems();
     };
 
     $scope.activateFullComposeView = function() {
-        $scope.clearAllActiveViews()
+        $scope.clearAllActiveViews();
         $scope.activeThread = null;
         $scope.isMailViewActive = true;
         $scope.isFullComposerViewActive = true;
