@@ -31,7 +31,7 @@ function(
 
     $scope.threads = []; // For UI element
     $scope.displayedThreads = []; // currently displayed
-    $scope.displayTodos = [];
+    $scope.displayedTodos = [];
 
     $scope.message_map = {}; // Actual message cache
     $scope.activeThread = undefined; // Points to the current active mssage
@@ -263,11 +263,11 @@ function(
           $log.info("todo items:");
           $log.info(parsed);
 
-          $scope.displayTodos = [];
+          $scope.displayedTodos = [];
 
           angular.forEach(parsed, function(value, key) {
               var newTodo = new IBTodo(value);
-              $scope.displayTodos.push(newTodo);
+              $scope.displayedTodos.push(newTodo);
           });
       });
   };
