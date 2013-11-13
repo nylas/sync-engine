@@ -204,8 +204,8 @@ class CrispinClientBase(object):
         for uid in sorted(raw_messages.iterkeys(), key=int):
             msg = raw_messages[uid]
             messages.append((int(uid), msg['INTERNALDATE'], msg['FLAGS'],
-                msg['ENVELOPE'], msg['BODY[]'], msg['X-GM-THRID'],
-                msg['X-GM-MSGID'], msg['X-GM-LABELS']))
+                msg['BODY[]'], msg['X-GM-THRID'], msg['X-GM-MSGID'],
+                msg['X-GM-LABELS']))
         return messages
 
     @property
@@ -475,7 +475,7 @@ class CrispinClient(CrispinClientBase):
     @connected
     def _fetch_uids(self, uids):
         data = self._imap_server.fetch(uids,
-                ['BODY.PEEK[] ENVELOPE INTERNALDATE FLAGS', 'X-GM-THRID',
+                ['BODY.PEEK[] INTERNALDATE FLAGS', 'X-GM-THRID',
                  'X-GM-MSGID', 'X-GM-LABELS'])
         for uid, msg in data.iteritems():
             # NOTE: python's email package (which lamson uses directly) needs

@@ -4,32 +4,23 @@ This is a fork of the encoding file from Zed Shaw's lamson library. Thanks Zed!
 Lamson is dual-licensed under the GPL and BSD license.
 """
 
-from email.header import decode_header
-
 from .log import get_logger
 log = get_logger()
 
 # registers iconv as another codec lookup backend
 import iconvcodec
 
-# This tries to decode using strict, and then gives up and uses replace.
-# TODO We should probably try to use chardet here as well
-
-# This decodes stuff like this filename:
-# =?ISO-8859-1?Q?G=F6del_Escher_Bach_=2D_An_Eternal_Golden_Braid=2Epdf?=
-def make_unicode_header(txt, default_encoding="utf-8"):
-    try:
-        return u"".join([unicode(text, charset or default_encoding, 'strict')
-                for text, charset in decode_header(txt)])
-    except UnicodeError:
-        try:
-            detected_encoding = chardet.detect(txt)['encoding']
-            log.info("Failed to decode with %s. Going to try %s instead" % (default_encoding, detected_encoding))
-            return u"".join([unicode(text, charset or detected_encoding, 'replace')
-                    for text, charset in decode_header(txt)])
-        except Exception, e:
-            log.error("That didn't work either! bailing %s" % e)
-            return 'DecodingFailed'
+def encode_contacts(contact_list):
+    """ Make sure parsed email addresses (from headers) have been UTF-8 encoded. """
+    if not contact_list:
+        return None
+    encoded = []
+    for contact in contact_list:
+        encoded_contact = [None]*len(contact)
+        for i, c in enumerate(contact):
+            encoded_contact[i] = contact[i].encode('utf-8')
+        encoded.append(encoded_contact)
+    return encoded
 
 # TODO Some notes about base64 downloading:
 

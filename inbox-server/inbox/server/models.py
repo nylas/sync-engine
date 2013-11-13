@@ -1,12 +1,15 @@
 import os
+import re
 import json
+
+from email.utils import parseaddr, getaddresses
 
 from sqlalchemy.interfaces import PoolListener
 
 from sqlalchemy import Column, Integer, String, DateTime, Date, Boolean, Enum
 from sqlalchemy import create_engine, ForeignKey, Text, Index, func, event
 from sqlalchemy import distinct
-from sqlalchemy.types import PickleType
+from sqlalchemy.types import TypeDecorator
 from sqlalchemy.orm import reconstructor, relationship, backref, sessionmaker
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
@@ -15,12 +18,12 @@ Base = declarative_base()
 
 from hashlib import sha256
 
-from sqlalchemy.dialects import mysql
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
 
 from ..util.file import mkdirp, remove_file, Lock
 from ..util.html import strip_tags, plaintext2html
+from ..util.misc import or_none
 from .config import config, is_prod
 from .log import get_logger
 log = get_logger()
@@ -171,8 +174,19 @@ class Blob(object):
 
 ### Column Types
 
-class MediumPickle(PickleType):
-    impl = mysql.MEDIUMBLOB
+# http://docs.sqlalchemy.org/en/rel_0_9/core/types.html#marshal-json-strings
+class JSON(TypeDecorator):
+    impl = Text
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        return json.dumps(value)
+
+    def process_result_value(self, value, dialect):
+        if not value:
+            return None
+        return json.loads(value)
 
 ### Tables
 
@@ -323,53 +337,38 @@ class IMAPAccount(Base):
         """
         new_messages = []
         new_folderitem = []
-        for uid, internaldate, flags, envelope, body, x_gm_thrid, x_gm_msgid, \
+        for uid, internaldate, flags, body, x_gm_thrid, x_gm_msgid, \
                 x_gm_labels in raw_messages:
             mailbase = encoding.from_string(body)
             new_msg = Message()
             new_msg.data_sha256 = sha256(body).hexdigest()
             new_msg.namespace_id = self.namespace.id
             new_msg.uid = uid
-            # XXX maybe eventually we want to use these, but for
-            # backcompat for now let's keep in the
-            # new_msg.subject = mailbase.headers.get('Subject')
-            # new_msg.from_addr = mailbase.headers.get('From')
-            # new_msg.sender_addr = mailbase.headers.get('Sender')
-            # new_msg.reply_to = mailbase.headers.get('Reply-To')
-            # new_msg.to_addr = mailbase.headers.get('To')
-            # new_msg.cc_addr = mailbase.headers.get('Cc')
-            # new_msg.bcc_addr = mailbase.headers.get('Bcc')
-            # new_msg.in_reply_to = mailbase.headers.get('In-Reply-To')
-            # new_msg.message_id = mailbase.headers.get('Message-Id')
 
-            def make_unicode_contacts(contact_list):
-                if not contact_list: return None
-                n = []
-                for c in contact_list:
-                    new_c = [None]*len(c)
-                    for i in range(len(c)):
-                        new_c[i] = encoding.make_unicode_header(c[i])
-                    n.append(new_c)
-                return n
-
-            tempSubject = encoding.make_unicode_header(envelope[1])
             # Headers will wrap when longer than 78 chars per RFC822_2
-            tempSubject = tempSubject.replace('\n\t', '').replace('\r\n', '')
-            new_msg.subject = tempSubject
-            new_msg.from_addr = make_unicode_contacts(envelope[2])
-            new_msg.sender_addr = make_unicode_contacts(envelope[3])
-            new_msg.reply_to = envelope[4]
-            new_msg.to_addr = make_unicode_contacts(envelope[5])
-            new_msg.cc_addr = make_unicode_contacts(envelope[6])
-            new_msg.bcc_addr = make_unicode_contacts(envelope[7])
-            new_msg.in_reply_to = envelope[8]
-            new_msg.message_id = envelope[9]
+            new_msg.subject = re.sub(r'\n\t|\r\n', '',
+                    mailbase.headers.get('Subject'))
+
+            new_msg.from_addr = or_none(encoding.encode_contacts([
+                parseaddr(mailbase.headers.get('From'))]), lambda a: a[0])
+            new_msg.sender_addr = or_none(encoding.encode_contacts([
+                parseaddr(mailbase.headers.get('Sender'))]), lambda a: a[0])
+            new_msg.reply_to = or_none(encoding.encode_contacts([
+                parseaddr(mailbase.headers.get('Reply-To'))]), lambda a: a[0])
+            new_msg.to_addr = or_none(mailbase.headers.get('To'),
+                    lambda h: encoding.encode_contacts(getaddresses([h])))
+            new_msg.cc_addr = or_none(mailbase.headers.get('Cc'),
+                    lambda h: encoding.encode_contacts(getaddresses([h])))
+            new_msg.bcc_addr = or_none(mailbase.headers.get('Bcc'),
+                    lambda h: encoding.encode_contacts(getaddresses([h])))
+            new_msg.in_reply_to = mailbase.headers.get('In-Reply-To')
+            new_msg.message_id = mailbase.headers.get('Message-Id')
 
             new_msg.internaldate = internaldate
-            new_msg.g_msgid = unicode(x_gm_msgid)
+            new_msg.g_msgid = x_gm_msgid
             # NOTE: this value is not saved to the database, but it is used
             # later for thread detection after message download
-            new_msg._g_thrid = unicode(x_gm_thrid)
+            new_msg._g_thrid = x_gm_thrid
 
             fm = FolderItem(imapaccount_id=self.id, folder_name=folder_name,
                     msg_uid=uid, message=new_msg)
@@ -382,7 +381,7 @@ class IMAPAccount(Base):
             # \Deleted  Message is "deleted" for removal by later EXPUNGE
             # \Draft  Message has not completed composition (marked as a draft).
             # \Recent   session is the first session to have been notified about this message
-            new_msg.flags = unicode(flags)
+            new_msg.flags = flags
 
             new_msg.size = len(body)  # includes headers text
 
@@ -430,10 +429,9 @@ class IMAPAccount(Base):
 
                 # File attachments
                 filename = mimepart.get_filename(failobj=None)
-                if filename: encoding.make_unicode_header(filename)
-                new_part.filename = filename
+                new_part.filename = or_none(filename,
+                        lambda fn: encoding.properly_decode_header(fn))
 
-                # Make sure MIME-Version is 1.0
                 mime_version = mimepart.get('MIME-Version', failobj=None)
                 if mime_version and mime_version != '1.0':
                     log.error("Unexpected MIME-Version: %s" % mime_version)
@@ -616,13 +614,13 @@ class Message(JSONSerializable, Base):
 
     # TODO probably want to store some of these headers in a better
     # non-pickled way to provide indexing and human-readability
-    from_addr = Column(MediumPickle, nullable=True)
-    sender_addr = Column(MediumPickle, nullable=True)
-    reply_to = Column(MediumPickle, nullable=True)
-    to_addr = Column(MediumPickle, nullable=True)
-    cc_addr = Column(MediumPickle, nullable=True)
-    bcc_addr = Column(MediumPickle, nullable=True)
-    in_reply_to = Column(MediumPickle, nullable=True)
+    from_addr = Column(JSON, nullable=True)
+    sender_addr = Column(JSON, nullable=True)
+    reply_to = Column(JSON, nullable=True)
+    to_addr = Column(JSON, nullable=True)
+    cc_addr = Column(JSON, nullable=True)
+    bcc_addr = Column(JSON, nullable=True)
+    in_reply_to = Column(JSON, nullable=True)
     message_id = Column(String(255), nullable=False)
     subject = Column(Text, nullable=False)
     internaldate = Column(DateTime, nullable=False)
@@ -753,7 +751,7 @@ class Block(JSONSerializable, Blob, Base):
 
     content_disposition = Column(Enum('inline', 'attachment'))
     content_id = Column(String(255))  # For attachments
-    misc_keyval = Column(MediumPickle)
+    misc_keyval = Column(JSON)
 
     is_inboxapp_attachment = Column(Boolean, default=False)
     collection_id = Column(Integer, ForeignKey("collections.id"), nullable=True)
@@ -813,7 +811,7 @@ class FolderItem(JSONSerializable, Base):
     # folder_name uniquely requires max length of 767 bytes under utf8mb4
     # http://mathiasbynens.be/notes/mysql-utf8mb4
     folder_name = Column(String(191), nullable=False)
-    flags = Column(MediumPickle)
+    flags = Column(JSON)
 
     __table_args__ = (UniqueConstraint('folder_name', 'msg_uid', 'imapaccount_id',),)
 
