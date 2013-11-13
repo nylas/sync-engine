@@ -532,11 +532,11 @@ class Namespace(Base):
         if self.imapaccount is not None:
             return self.imapaccount.email_address
 
-    def thread_ids_for_folder(self, folder_name):
-        return [thrid for thrid, in db_session.query(
-            distinct(Message.thread_id)).join(FolderItem) \
+    def threads_for_folder(self, folder_name):
+        return db_session.query(Thread).join(Thread.messages).join(FolderItem) \
               .filter(FolderItem.folder_name == folder_name,
-                      Message.namespace_id == self.id)]
+                      Message.namespace_id == self.id,
+                      Message.id == FolderItem.message_id).all()
 
     def cereal(self):
         return dict(id=self.id, name='Gmail')

@@ -124,7 +124,8 @@ class API(object):
             folder, since we fetch the full thread if one of the messages is in
             the requested folder.
         """
-        return [t.cereal() for t in self.namespace.threads]
+        return [t.cereal() for t in \
+                self.namespace.threads_for_folder(folder_name)]
 
     def send_mail(self, namespace_id, recipients, subject, body):
         """ Sends a message with the given objects """
