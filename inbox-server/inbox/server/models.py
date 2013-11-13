@@ -880,6 +880,10 @@ class TodoItem(JSONSerializable, Base):
     # a null value indicates an incomplete task
     date_completed = Column(Date, nullable=True)
 
+    @property
+    def completed(self):
+        return self.date_completed is not None
+
     # within a due date, items will be sorted by increasing sort_index
     sort_index = Column(Integer, nullable=False)
 
@@ -891,6 +895,9 @@ class TodoItem(JSONSerializable, Base):
                 completed      = self.date_completed is not None,
                 date_completed = self.date_completed,
                 sort_index     = self.sort_index,
+                # NOTE: eventually we may want to have some sort of thread
+                # cache layer on the client and just serialize the id instead
+                thread         = self.thread.cereal(),
             )
 
 class TodoNamespace(JSONSerializable, Base):

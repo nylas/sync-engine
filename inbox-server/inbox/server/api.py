@@ -182,8 +182,11 @@ class API(object):
                 .filter_by(id=thread_id).one()
 
         todo_ns = get_or_create_todo_namespace(self.user_id)
+        log.info('todo namespace is: {0}'.format(todo_ns.id))
         for message in thread.messages:
             message.namespace_id = todo_ns.id
+
+        thread.namespace_id = todo_ns.id
 
         todo_item = TodoItem(
                 thread_id = thread_id,
@@ -195,5 +198,6 @@ class API(object):
                 sort_index = 0,
             )
         db_session.add(todo_item)
+        db_session.add(thread)
         db_session.commit()
         return "OK"

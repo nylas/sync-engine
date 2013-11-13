@@ -189,7 +189,7 @@ function(
         $scope.clearAllActiveViews();
         $scope.isTodoViewActive = true;
         $scope.activeNamespace = $scope.namespaces.todo[0];
-        // $scope.loadTodoItems();
+        $scope.loadTodoItems();
     };
 
     $scope.activateFullComposeView = function() {
@@ -233,14 +233,13 @@ function(
       console.log(['Selecting Todo:', selectedTodo]);
       $scope.activeTodo = selectedTodo;
 
-      $scope.isTodoViewActive = true;
+      $scope.isTodoMessageViewActive = true;
   };
 
   $scope.loadTodoItems = function() {
+      console.log('loading TODO items');
       Wire.rpc('todo_items', [], function(data) {
           var parsed = JSON.parse(data);
-          $log.info("todo items:");
-          $log.info(parsed);
 
           $scope.displayedTodos = [];
 
@@ -248,10 +247,10 @@ function(
               var newTodo = new IBTodo(value);
               $scope.displayedTodos.push(newTodo);
           });
+          $log.info("todo items:");
+          $log.info($scope.displayedTodos);
       });
   };
-
-  $scope.loadTodoItems();
 });
 
 /* TODO move these declarations so they don't pollute the global namespace

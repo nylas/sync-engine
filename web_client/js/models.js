@@ -159,18 +159,23 @@ app.factory('IBThread', function ($injector, md5, IBMessage) {
     };
 });
 
-app.factory('IBTodo', function ($injector)
+app.factory('IBTodo', function ($injector, IBThread)
 {
     function IBTodoObject($rootScope, data) {
         this.$rootScope = $rootScope;
 
-        // Propogate fields to the object
-        for (var key in data) {
-            if (self.hasOwnProperty(key)) {
-                console.log(key + " -> " + p[key]);
+        var todo = this;
+        angular.forEach(data, function(value, key) {
+            if (key === 'thread') {
+                todo.thread = new IBThread(value);
             }
-            this[key] = data[key];
-        }
+            else {
+                if (todo.hasOwnProperty(key)) {
+                    console.log(key + " -> " + value);
+                }
+                todo[key] = value;
+            }
+        });
     }
 
     IBTodoObject.prototype.fromName = function() {

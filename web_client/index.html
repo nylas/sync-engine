@@ -137,16 +137,21 @@
 
     <!-- Todo detail view -->
     <div class="detail_pane height_main"
-      ng-show="isTodoViewActive">
+      ng-show="isTodoMessageViewActive">
 
       <div class="message_container box_with_shadow"
         ng-show="activeTodo">
 
         <div class="content_head">
           <div class="email_content_title"
-            ng-bind="activeTodo.subject()">
+            ng-bind="activeTodo.display_name">
           </div>
         </div>
+      </div>
+
+      <div class="message_container box_with_shadow"
+        ng-repeat="message in activeTodo.thread.messages">
+        <view:message message="message"></view:message>
       </div>
 
       <div class="message_container box_with_shadow">
