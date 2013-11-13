@@ -347,6 +347,7 @@ class FolderSyncMonitor(Greenlet):
         return len(uids)
 
     def _add_new_folderitem(self, remote_g_msgids, uids):
+        flags = self.crispin_client.flags(uids)
         # collate message objects to relate the new foldersmeta objects to
         folderitem_uid_for = dict([(g_msgid, uid) for (uid, g_msgid) \
                 in remote_g_msgids.items() if uid in uids])
@@ -356,7 +357,8 @@ class FolderSyncMonitor(Greenlet):
                     Message.g_msgid.in_(folderitem_g_msgids))])
         db_session.add_all(
                 [FolderItem(imapaccount_id=self.account.id,
-                    folder_name=self.folder_name, msg_uid=uid, \
+                    folder_name=self.folder_name, msg_uid=uid,
+                    flags=flags[uid],
                     message=message_for[uid]) for uid in uids])
         db_session.commit()
 
