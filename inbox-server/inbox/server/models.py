@@ -347,7 +347,7 @@ class IMAPAccount(Base):
             new_msg.uid = uid
 
             # Headers will wrap when longer than 78 chars per RFC822_2
-            new_msg.subject = re.sub(r'\n\t|\r\n', '',
+            new_msg.subject = re.sub(r'\s?\n\t\s?|\s?\r\n\s?', '',
                     mailbase.headers.get('Subject'))
 
             new_msg.from_addr = or_none(encoding.encode_contacts([
