@@ -281,8 +281,9 @@ class IMAPAccount(Base):
                 FolderItem.imapaccount_id==self.id,
                 FolderItem.msg_uid.in_(uids),
                 FolderItem.folder_name==folder_name):
-            if fm.flags != new_flags[fm.msg_uid]:
-                fm.flags = new_flags[fm.msg_uid]
+            sorted_flags = sorted(new_flags[fm.msg_uid])
+            if fm.flags != sorted_flags:
+                fm.flags = sorted_flags
                 db_session.add(fm)
         db_session.commit()
 
@@ -336,9 +337,10 @@ class IMAPAccount(Base):
             Threads are not computed here; you gotta do that separately.
         """
         new_messages = []
-        new_folderitem = []
+        new_folderitems = []
         for uid, internaldate, flags, body, x_gm_thrid, x_gm_msgid, \
                 x_gm_labels in raw_messages:
+            log.warning("flags: {0}".format(flags))
             mailbase = encoding.from_string(body)
             new_msg = Message()
             new_msg.data_sha256 = sha256(body).hexdigest()
@@ -370,18 +372,18 @@ class IMAPAccount(Base):
             # later for thread detection after message download
             new_msg._g_thrid = x_gm_thrid
 
-            fm = FolderItem(imapaccount_id=self.id, folder_name=folder_name,
-                    msg_uid=uid, message=new_msg)
-            new_folderitem.append(fm)
-
-            # TODO parse out flags and store as enum instead of string
-            # \Seen  Message has been read
-            # \Answered  Message has been answered
+            # TODO optimize storage of flags with a bit field or something,
+            # if we actually care.
+            # \Seen     Message has been read
+            # \Answered Message has been answered
             # \Flagged  Message is "flagged" for urgent/special attention
             # \Deleted  Message is "deleted" for removal by later EXPUNGE
-            # \Draft  Message has not completed composition (marked as a draft).
-            # \Recent   session is the first session to have been notified about this message
-            new_msg.flags = flags
+            # \Draft    Message has not completed composition (marked as a draft).
+            # \Recent   session is the first session to have been notified
+            #           about this message
+            fm = FolderItem(imapaccount_id=self.id, folder_name=folder_name,
+                    msg_uid=uid, message=new_msg, flags=sorted(flags))
+            new_folderitems.append(fm)
 
             new_msg.size = len(body)  # includes headers text
 
@@ -497,7 +499,7 @@ class IMAPAccount(Base):
             new_msg.calculate_sanitized_body()
             new_msg.calculate_snippet()
 
-        return new_messages, new_folderitem
+        return new_messages, new_folderitems
 
 class UserSession(Base):
     """ Inbox-specific sessions. """
@@ -811,7 +813,8 @@ class FolderItem(JSONSerializable, Base):
     # folder_name uniquely requires max length of 767 bytes under utf8mb4
     # http://mathiasbynens.be/notes/mysql-utf8mb4
     folder_name = Column(String(191), nullable=False)
-    flags = Column(JSON)
+    # NOTE: We could definitely make this field smaller than Text.
+    flags = Column(JSON, nullable=False)
 
     __table_args__ = (UniqueConstraint('folder_name', 'msg_uid', 'imapaccount_id',),)
 
