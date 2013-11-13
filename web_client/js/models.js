@@ -74,33 +74,25 @@ app.factory('IBMessage', function ($injector, md5)
         this.date = new Date(data.date.$date);
 
         var gravatar_size = 25;
-        var theEmail = this.from[0][2] + '@' + this.from[0][3];
         this.gravatar_url = "https://www.gravatar.com/avatar/" +
-                        md5.createHash( theEmail.toLowerCase() )+ "?" +
+                        md5.createHash( this.from[1].toLowerCase() )+ "?" +
                         'd=mm&' +
                         's=' + encodeURIComponent(gravatar_size);
 
-
         if (this.to && this.to.length > 0) {
 
-            var to_list;
-            if (this.to[0][0] ) {
-                to_list = this.to[0][0];
-            } else {
-                to_list = this.to[0][2] + '@' + this.to[0][3];
-            }
-
-            for (var i = 1; i< this.to.length; i++) {
+            var to_list = [];
+            for (var i = 0; i < this.to.length; i++) {
                 var c = this.to[i];
                 var nameToShow;
                 if (c[0]) {
                     nameToShow = c[0];
                 } else {
-                    nameToShow = c[2] + '@' + c[3];
+                    nameToShow = c[1];
                 }
-                to_list = to_list + ', ' + nameToShow;
+                to_list.push(nameToShow);
             }
-            this.contactDisplayList = to_list;
+            this.contactDisplayList = to_list.join(', ');
         } else {
             this.contactDisplayList = 'Unknown sender';
         }
@@ -109,11 +101,11 @@ app.factory('IBMessage', function ($injector, md5)
     }
 
     IBMessageObject.prototype.fromName = function() {
-        return this.from[0][0];
+        return this.from[0];
     };
 
     IBMessageObject.prototype.fromEmail = function() {
-        return this.from[0][2] + '@' + this.from[3];
+        return this.from[1];
     };
 
     IBMessageObject.prototype.printDate = function() {
@@ -161,11 +153,11 @@ app.factory('IBTodo', function ($injector)
 
 
     IBTodoObject.prototype.fromName = function() {
-        return this.from[0][0];
+        return this.from[0];
     };
 
     IBTodoObject.prototype.fromEmail = function() {
-        return this.from[0][2] + '@' + this.from[3];
+        return this.from[1];
     };
 
     IBTodoObject.prototype.printDate = function() {
