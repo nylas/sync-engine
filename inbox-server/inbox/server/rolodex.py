@@ -5,6 +5,7 @@ import dateutil.parser
 import datetime
 import time
 from .google_oauth import GOOGLE_CONSUMER_KEY, GOOGLE_CONSUMER_SECRET, OAUTH_SCOPE
+from .google_oauth import get_new_token
 
 from .models import db_session, Contact, IMAPAccount
 from .log import configure_rolodex_logging, get_logger
@@ -40,12 +41,14 @@ class Rolodex(object):
             cached_dict[contact.g_id] = contact
 
         try:
+            access_token = get_new_token(
+                    self.account.o_refresh_token)['access_token']
             two_legged_oauth_token = gdata.gauth.OAuth2Token(
                       client_id = GOOGLE_CONSUMER_KEY,
                       client_secret = GOOGLE_CONSUMER_SECRET,
                       scope = OAUTH_SCOPE,
                       user_agent =SOURCE_APP_NAME,
-                      access_token=self.account.o_access_token,
+                      access_token=access_token,
                       refresh_token=self.account.o_refresh_token,
                     )
             gd_client = gdata.contacts.client.ContactsClient(source=SOURCE_APP_NAME)
