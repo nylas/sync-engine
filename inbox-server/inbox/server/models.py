@@ -340,7 +340,6 @@ class IMAPAccount(Base):
         new_folderitems = []
         for uid, internaldate, flags, body, x_gm_thrid, x_gm_msgid, \
                 x_gm_labels in raw_messages:
-            log.warning("flags: {0}".format(flags))
             mailbase = encoding.from_string(body)
             new_msg = Message()
             new_msg.data_sha256 = sha256(body).hexdigest()
