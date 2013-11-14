@@ -60,7 +60,7 @@ app.factory('IBMessage', function ($injector, md5) {
     }
 
     IBMessageObject.prototype.fromName = function() {
-        return this.from[0];
+        return this.from[0] ? this.from[0] : this.from[1];
     };
 
     IBMessageObject.prototype.fromEmail = function() {
