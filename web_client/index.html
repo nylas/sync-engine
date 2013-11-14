@@ -126,7 +126,7 @@
 
         <div ui-sortable="sortableOptions" ng-model="displayTodos" class="list">
           <list:item:todo
-          ng-repeat="t in displayTodos"
+          ng-repeat="t in displayedTodos"
           todo="t"
           ng-click="openTodo(t)"
           selected="t == activeTodo">
