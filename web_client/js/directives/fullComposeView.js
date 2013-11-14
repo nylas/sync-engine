@@ -15,6 +15,8 @@ app.directive("viewFullcompose", function() {
         },
         templateUrl: 'views/fullComposeView.html',
         controller: function($scope, $element, $attrs, $transclude) {
+            // NOTE: We should be able to have HTML wrap instead of splitting
+            // out separate lines manually.
             $scope.recipient_lines = [[]];
 
             $scope.availableTopWidth = function() {
@@ -23,10 +25,17 @@ app.directive("viewFullcompose", function() {
 
             $scope.sendButtonHandler = function() {
                 $scope.body = $element.find('#body').html();
+                $scope.recipients = [];
+                angular.forEach($scope.recipient_lines, function(value, key) {
+                    angular.forEach(value, function(contact, i) {
+                        $scope.recipients.push(contact.email);
+                    });
+                });
+                console.log(["to:", $scope.recipients]);
                 $scope.sendButtonAction({
                     body:$scope.body,
                     subject:$scope.subject,
-                    recipients:$scope.recipients
+                    recipients:$scope.recipients,
                 });
             },
 

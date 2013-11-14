@@ -130,10 +130,10 @@ function(
         });
     };
 
-    $scope.sendMessage = function(message) {
+    $scope.sendMessage = function(body, subject, recipients) {
         //message: {body:string, subject:string, to:[string]}
-        Wire.rpc('send_mail', [$scope.activeNamespace.id, ['christine@spang.cc'],
-                               'Hello World', message],
+        Wire.rpc('send_mail', [$scope.activeNamespace.id, recipients,
+                               subject, body],
             function(data) {
                 $window.alert('Sent mail!');
                 // $scope.activateTodoView();
