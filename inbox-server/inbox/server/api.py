@@ -126,11 +126,13 @@ class API(object):
         return [t.cereal() for t in \
                 self.namespace.threads_for_folder(folder_name)]
 
-    def send_mail(self, namespace_id, recipients, subject, body):
+    @namespace_auth
+    def send_mail(self, recipients, subject, body):
         """ Sends a message with the given objects """
-
-        account = db_session.query(IMAPAccount).join(Namespace).filter(
-                Namespace.id==namespace_id).one()
+        account = self.namespace.imapaccount
+        assert account is not None, "can't send mail with this namespace"
+        if type(recipients) != list:
+            recipients = [recipients]
         with postel.SMTP(account) as smtp:
             smtp.send_mail(recipients, subject, body)
         return "OK"

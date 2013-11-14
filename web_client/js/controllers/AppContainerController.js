@@ -3,7 +3,6 @@
 // Stupid fucking linting warnings
 var console = console;
 var angular = angular;
-var alert = alert;
 
 var app = angular.module('InboxApp.controllers');
 
@@ -21,6 +20,7 @@ function(
     $filter,
     $timeout,
     $log,
+    $window,
     MockData)
 {
     // TODO
@@ -132,19 +132,13 @@ function(
 
     $scope.sendMessage = function(message) {
         //message: {body:string, subject:string, to:[string]}
-        Wire.rpc('send_mail', {
-                message_to_send: {
-                    'subject': 'Hello world',
-                    'body': message_string,
-                    'to': 'christine@spang.cc'
-                }
-            },
+        Wire.rpc('send_mail', [$scope.activeNamespace.id, ['christine@spang.cc'],
+                               'Hello World', message],
             function(data) {
-                alert('Sent mail!');
+                $window.alert('Sent mail!');
                 $scope.activateTodoView();
             }
         );
-
     };
 
     $scope.openThread = function(selectedThread) {
