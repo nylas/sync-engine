@@ -133,7 +133,7 @@ app.factory('IBThread', function ($injector, md5, IBMessage) {
     };
 
     IBThreadObject.prototype.snippet = function() {
-        return this.messages[0].snippet;
+        return this.recentMessage().snippet;
     };
 
     return function(data) {
