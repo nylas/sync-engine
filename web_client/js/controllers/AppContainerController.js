@@ -136,7 +136,7 @@ function(
                                'Hello World', message],
             function(data) {
                 $window.alert('Sent mail!');
-                $scope.activateTodoView();
+                // $scope.activateTodoView();
             }
         );
     };
