@@ -516,7 +516,6 @@ class Namespace(Base):
     __tablename__ = 'namespace'
     id = Column(Integer, primary_key=True, autoincrement=True)
     # NOTE: only root namespaces have IMAP accounts
-    # http://stackoverflow.com/questions/386294/what-is-the-maximum-length-of-a-valid-email-address
     imapaccount_id = Column(Integer, ForeignKey('imapaccount.id',
         ondelete='CASCADE'), nullable=True)
     imapaccount = relationship('IMAPAccount', backref=backref('namespace',
@@ -536,7 +535,7 @@ class Namespace(Base):
         return db_session.query(Thread).join(Thread.messages).join(FolderItem) \
               .filter(FolderItem.folder_name == folder_name,
                       Message.namespace_id == self.id,
-                      Message.id == FolderItem.message_id).all()
+                      FolderItem.message_id == Message.id).all()
 
     def cereal(self):
         return dict(id=self.id, name='Gmail')
@@ -931,9 +930,9 @@ class Thread(JSONSerializable, Base):
     recentdate = Column(DateTime, nullable=False)
 
     # makes pulling up threads in a folder simple / fast
-    namespace_id = Column(ForeignKey('namespace.id', ondelete='CASCADE'),
-            nullable=False, index=True)
-    namespace = relationship('Namespace', backref='threads')
+    # namespace_id = Column(ForeignKey('namespace.id', ondelete='CASCADE'),
+    #         nullable=False, index=True)
+    # namespace = relationship('Namespace', backref='threads')
 
     # only on messages from Gmail
     # NOTE: The same message sent to multiple users will be given a
@@ -942,7 +941,6 @@ class Thread(JSONSerializable, Base):
     g_thrid = Column(String(255), nullable=True, index=True)
 
     def update_from_message(self, message):
-        assert message.namespace_id == self.namespace_id
         if message.internaldate > self.recentdate:
             self.recentdate = message.internaldate
         # subject is subject of original message in the thread
@@ -972,7 +970,6 @@ class Thread(JSONSerializable, Base):
             log.info("Duplicate thread rows for thread {0}".format(g_thrid))
         thread = cls(subject=message.subject, g_thrid=g_thrid,
                 recentdate=message.internaldate,
-                namespace_id=message.namespace_id,
                 subjectdate=message.internaldate)
         message.thread = thread
         return thread
@@ -981,7 +978,6 @@ class Thread(JSONSerializable, Base):
         """ Threads are serialized with full message data. """
         d = {}
         d['messages'] = [m.cereal() for m in self.messages]
-        d['namespace_id'] = self.namespace_id
         d['subject'] = self.subject
         d['recentdate'] = self.recentdate
         return d

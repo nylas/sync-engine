@@ -10,6 +10,8 @@ from bson import json_util
 from models import db_session, Message, SharedFolder, Thread
 from models import Namespace, User, IMAPAccount, TodoNamespace, TodoItem
 
+from sqlalchemy.orm import joinedload
+
 from .log import get_logger
 log = get_logger()
 
@@ -154,7 +156,9 @@ class API(object):
         user = db_session.query(User).join(IMAPAccount) \
                 .join(TodoNamespace).get(user_id)
 
-        nses['todo'].append(user.todo_namespace.cereal())
+        # XXX TODO we should create the TODO namespace on user creation.
+        if user.todo_namespace:
+            nses['todo'].append(user.todo_namespace.cereal())
 
         for account in user.imapaccounts:
             account_ns = account.namespace
@@ -178,15 +182,15 @@ class API(object):
         log.info('creating todo from namespace {0} thread_id {1}'.format(
             self.namespace_id, thread_id))
 
-        thread = db_session.query(Thread).join(Thread.messages)\
-                .filter_by(id=thread_id).one()
+        # XXX TODO limit by namespace once threads track namespaces
+        thread = db_session.query(Thread).options(
+                joinedload(Thread.messages)).get(thread_id)
 
         todo_ns = get_or_create_todo_namespace(self.user_id)
         log.info('todo namespace is: {0}'.format(todo_ns.id))
         for message in thread.messages:
-            message.namespace_id = todo_ns.id
-
-        thread.namespace_id = todo_ns.id
+            log.info('marking message {0} as todo'.format(message.id))
+            message.namespace = todo_ns
 
         todo_item = TodoItem(
                 thread_id = thread_id,
@@ -198,6 +202,5 @@ class API(object):
                 sort_index = 0,
             )
         db_session.add(todo_item)
-        db_session.add(thread)
         db_session.commit()
         return "OK"
