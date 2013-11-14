@@ -346,13 +346,9 @@ class IMAPAccount(Base):
             new_msg.namespace_id = self.namespace.id
             new_msg.uid = uid
 
-            subject = mailbase.headers.get('Subject')
-            if subject is None:
-                new_msg.subject = ''
-            else:
-                # Headers will wrap when longer than 78 chars per RFC822_2
-                new_msg.subject = re.sub(r'\s?\n\t\s?|\s?\r\n\s?', '', subject)
-
+            # Headers will wrap when longer than 78 chars per RFC822_2
+            new_msg.subject = or_none(mailbase.headers.get('Subject'),
+                    lambda s: re.sub(r'\s?\n\t\s?|\s?\r\n\s?', '', s))
             new_msg.from_addr = or_none(encoding.encode_contacts([
                 parseaddr(mailbase.headers.get('From'))]), lambda a: a[0])
             new_msg.sender_addr = or_none(encoding.encode_contacts([
@@ -625,8 +621,7 @@ class Message(JSONSerializable, Base):
     bcc_addr = Column(JSON, nullable=True)
     in_reply_to = Column(JSON, nullable=True)
     message_id = Column(String(255), nullable=False)
-    # XXX TODO this can actually be nullable (and fix messages_from_raw too)
-    subject = Column(Text, nullable=False)
+    subject = Column(Text, nullable=True)
     internaldate = Column(DateTime, nullable=False)
     size = Column(Integer, default=0, nullable=False)
     data_sha256 = Column(String(255), nullable=True)
