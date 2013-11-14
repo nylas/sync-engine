@@ -4,8 +4,11 @@
 
 All of the todos are in [the Asana workspace](https://app.asana.com/0/4983727800919/4983727800919).
 
-
 The Inbox platform currenly consists of two parts: the Python web server and the Javascript browser client. They communicate mostly over a custom JSON-RPC inspired websocket protocol.
+
+Before you look at the code, please go read ["Worse is
+Better"](http://www.jwz.org/doc/worse-is-better.html). We are trying to ship a
+product here!
 
 The server usually runs on EC2. Here's how you get it started.
 
