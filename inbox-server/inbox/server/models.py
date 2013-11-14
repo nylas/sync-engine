@@ -649,6 +649,8 @@ class Message(JSONSerializable, Base):
         if html_part:
             # self.sanitized_body = html_part.split('<div class="gmail_quote">')[0]
             self.sanitized_body = html_part
+        elif plain_part is None:
+            self.sanitized_body = ''
         else:
             self.sanitized_body = plaintext2html(plain_part)
 
