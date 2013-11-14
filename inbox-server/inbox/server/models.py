@@ -655,7 +655,8 @@ class Message(JSONSerializable, Base):
             self.sanitized_body = plaintext2html(plain_part)
 
     def calculate_snippet(self):
-        assert self.sanitized_body, "need sanitized_body to calculate snippet"
+        assert self.sanitized_body is not None, \
+                "need sanitized_body to calculate snippet"
         # No need to strip newlines since HTML won't display them anyway.
         stripped = strip_tags(self.sanitized_body)
         # truncate based on decoded version so as not to accidentally truncate
