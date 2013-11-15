@@ -106,9 +106,9 @@ def console(args):
 
 def search(args):
     import zerorpc
-    from inbox.server.models import db_session, User
+    from inbox.server.models import db_session, Namespace
 
-    user = db_session.query(User).filter_by(g_email=args.email_address).one()
+    namespace = db_session.query(Namespace).filter_by(id=args.namespace).one()
 
     try:
         c = zerorpc.Client(timeout=5)
@@ -116,20 +116,20 @@ def search(args):
 
         # XXX print something more useful here, like Subject: To: <snippet>
         # or something
-        print c.search(user.id, args.query)
+        print c.search(namespace.id, args.query)
     except zerorpc.exceptions.TimeoutExpired:
         print >>sys.stderr, "Can't connect. Is the sync server running? (./inbox start)"
         sys.exit(1)
 
 def index(args):
     from inbox.server.search import gen_search_index
-    from inbox.server.models import db_session, User
-    if args.email_address:
-        gen_search_index(db_session.query(User).filter_by(
-            g_email=args.email_address).one())
+    from inbox.server.models import db_session, Namespace
+    if args.namespace:
+        gen_search_index(db_session.query(Namespace).get(args.namespace))
     else:
-        for user in db_session.query(User).all():
-            gen_search_index(user)
+        for namespace in db_session.query(namespace).filter_by(
+                namespace_type='root'):
+            gen_search_index(namespace)
 
 def signal_handler(signal, frame):
     stop(None)
@@ -164,13 +164,13 @@ def main():
     parser_sync.set_defaults(func=sync)
 
     parser_sync = subparsers.add_parser('index', description="Index mail")
-    parser_sync.add_argument('email_address',
-            help='Email address of user to index mail')
+    parser_sync.add_argument('namespace',
+            help='id of namespace to index mail')
     parser_sync.set_defaults(func=index)
 
     parser_sync = subparsers.add_parser('search', description="Search mail")
-    parser_sync.add_argument('email_address',
-            help='Email address of user to search mail')
+    parser_sync.add_argument('namespace',
+            help='id of namespace to search mail')
     parser_sync.add_argument('query', help='Term(s) to search for')
     parser_sync.set_defaults(func=search)
 

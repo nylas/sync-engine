@@ -611,8 +611,6 @@ class Message(JSONSerializable, Base):
     thread = relationship('Thread', backref="messages",
             order_by="Message.internaldate")
 
-    # TODO probably want to store some of these headers in a better
-    # non-pickled way to provide indexing and human-readability
     from_addr = Column(JSON, nullable=True)
     sender_addr = Column(JSON, nullable=True)
     reply_to = Column(JSON, nullable=True)

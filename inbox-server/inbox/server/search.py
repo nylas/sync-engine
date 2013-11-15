@@ -9,6 +9,7 @@ from .models import db_session, Message
 from ..util.file import mkdirp
 from ..util.html import strip_tags
 
+from sqlalchemy import distinct
 from sqlalchemy.orm import joinedload
 
 from calendar import timegm
@@ -26,21 +27,21 @@ QUERY_FLAGS =  x_.QueryParser.FLAG_WILDCARD \
         # XXX conflicts with spelling correction somehow
         # | x_.QueryParser.FLAG_PARTIAL
 
-def db_path_for(user_id):
-    return os.path.join(INDEX_BASEPATH, unicode(user_id))
+def db_path_for(namespace_id):
+    return os.path.join(INDEX_BASEPATH, unicode(namespace_id))
 
 def to_indexable(parsed_addr):
-    """ Takes a parsed envelope To/From/Cc/Bcc address and returns a string
+    """ Takes a parsed To/From/Cc/Bcc address and returns a string
         version for indexing.
     """
-    addr = '@'.join([parsed_addr[2], parsed_addr[3]])
+    addr = parsed_addr[1]
     # e.g. 'Christine Spang spang@inboxapp.com'
     name = parsed_addr[0] if parsed_addr[0] is not None else ''
     return ' '.join([name, addr])
 
-def gen_search_index(user):
-    log.info("Generating search index for {0}".format(user.g_email))
-    dbpath = db_path_for(user.id)
+def gen_search_index(namespace):
+    log.info("Generating search index for namespace {0}".format(namespace.id))
+    dbpath = db_path_for(namespace.id)
     mkdirp(dbpath)
     database = x_.WritableDatabase(dbpath, x_.DB_CREATE_OR_OPEN)
 
@@ -52,7 +53,7 @@ def gen_search_index(user):
 
     last_docid = database.get_lastdocid()
     msg_query = db_session.query(Message).filter(
-            Message.user_id == user.id,
+            Message.namespace_id == namespace.id,
             Message.id > last_docid).options(joinedload('parts')) \
                     .order_by(Message.id.desc())
     log.info("Have {0} messages to process".format(msg_query.count()))
@@ -95,7 +96,7 @@ def gen_search_index(user):
                 indexer.index_text(msg.subject, 10)
                 indexer.index_text(msg.subject, 10, 'XSUBJECT')
             if msg.from_addr is not None:
-                from_ = ' '.join([to_indexable(parsed_addr) for parsed_addr in msg.from_addr])
+                from_ = to_indexable(msg.from_addr)
                 indexer.index_text(from_, 1)
                 indexer.index_text(from_, 1, 'XFROM')
             if msg.to_addr is not None:
@@ -117,14 +118,11 @@ def gen_search_index(user):
             database.replace_document(msg.id, doc)
 
         done += 1
-        log.info("Indexed %i of %i (%.4f%%)" % (done,
-                                               total,
-                                               done/total))
-
+        log.info("Indexed %i of %i (%.2f%%)" % (done, total, done/total*100))
 
     indexed_msgs = set([k for k in database.metadata_keys()])
-    msgs =  set([id for id, in db_session.query(Message.id).filter_by(
-            g_email=user.g_email).all()])
+    msgs = [id for id, in db_session.query(distinct(Message.id)).filter_by(
+            id=namespace.id)]
     to_delete = indexed_msgs.difference(msgs)
     log.info("{0} documents to remove...".format(len(to_delete)))
 
@@ -136,15 +134,15 @@ def gen_search_index(user):
 
 class SearchService:
     """ ZeroRPC interface to searching. """
-    def search(self, user_id, query_string, limit=10):
+    def search(self, namespace_id, query_string, limit=10):
         """ returns [(message.id, relevancerank), ...]
 
             fulltext is fulltext of the matching *part*, not the entire
             message.
         """
-        log.info("query '{0}' for user '{1}'".format(query_string, user_id))
+        log.info("query '{0}' for namespace '{1}'".format(query_string, namespace_id))
         # Open the database for searching.
-        database = x_.Database(db_path_for(user_id))
+        database = x_.Database(db_path_for(namespace_id))
 
         # Start an enquire session.
         enquire = x_.Enquire(database)
