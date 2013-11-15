@@ -823,7 +823,7 @@ input[type="text"] { border: none }
 
 
 .replybox_content {
-  font-family: HelveticaNeue-Light, sans-serif;
+  font-family: HelveticaNeue, sans-serif;
   font-size: 15px;
   line-height: 17px;
 
@@ -833,11 +833,11 @@ input[type="text"] { border: none }
   padding-left: 10px;
 
   width: inherit;
-
   border: none;
   box-shadow: none;
-  outline:0;
+  /*outline:0;*/
 }
+
 
 .replybox_bottom_button_bar {
   border-top-width: 1px;
@@ -886,11 +886,12 @@ input[type="text"] { border: none }
 }
 
 .replybox_bottom_button.send {
-  background: transparent url("../img/send_plane_icon.png") no-repeat 2px 7px;
+  background: transparent url("../img/send_plane_icon_inactive.png") no-repeat 2px 7px;
   float: right;
   padding-right: 20px;
 }
 .replybox_bottom_button.send:hover {
+  background: transparent url("../img/send_plane_icon.png") no-repeat 2px 7px;
   color: #5D99F4;
 }
 
