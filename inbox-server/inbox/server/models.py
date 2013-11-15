@@ -662,7 +662,12 @@ class Message(JSONSerializable, Base):
         assert self.sanitized_body is not None, \
                 "need sanitized_body to calculate snippet"
         # No need to strip newlines since HTML won't display them anyway.
-        stripped = strip_tags(self.sanitized_body)
+        try:
+            stripped = strip_tags(self.sanitized_body)
+        except UnicodeDecodeError, e:
+            log.error(e)
+            stripped = self.sanitized_body
+
         # truncate based on decoded version so as not to accidentally truncate
         # mid-codepoint
         self.snippet = stripped.decode('utf-8')[:191].encode('utf-8')
