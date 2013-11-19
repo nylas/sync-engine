@@ -63,21 +63,7 @@ def gen_search_index(namespace):
     total = msg_query.count()
     done = 0
     for msg in msg_query.yield_per(1000):
-        plain_parts = [part for part in msg.parts \
-                if part._content_type_common == 'text/plain']
-        html_parts = [part for part in msg.parts \
-                if part._content_type_common == 'text/html']
-        # log.info("{0}: {1} text/plain, {2} text/html".format(
-        #         msg.g_msgid, len(plain_parts), len(html_parts)))
-        # XXX some emails have useless plaintext that says "view this in
-        # an email client that supports HTML"; how to avoid indexing that
-        # and fall back to the HTML?
-        text = None
-        if plain_parts:
-            text = '\n'.join([part.get_data() for part in plain_parts])
-        elif html_parts:
-            text = strip_tags('\n'.join([part.get_data() \
-                    for part in html_parts]))
+        text = strip_tags(msg.sanitized_body)
 
         # XXX also index attachments (add a 'type' field or something to
         # differentiate)
