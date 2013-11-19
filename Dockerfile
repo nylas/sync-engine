@@ -11,7 +11,7 @@ RUN add-apt-repository -y ppa:nginx/stable
 RUN apt-get -y update
 RUN apt-get -y upgrade --force-yes
 
-RUN apt-get -y install nginx supervisor mysql-server mysql-client python python-dev python-pip build-essential libmysqlclient-dev git gcc python-gevent python-xapian
+RUN apt-get -y install nginx supervisor mysql-server mysql-client python python-dev python-pip build-essential libmysqlclient-dev git gcc python-gevent python-xapian libzmq-dev python-zmq
 
 
 # Preconfigure MySQL passwords
@@ -39,14 +39,21 @@ ADD    ./deploy/supervisor/conf.d/nginx.conf /etc/supervisor/conf.d/nginx.conf
 ADD    ./deploy/supervisor/conf.d/mysqld.conf /etc/supervisor/conf.d/mysqld.conf
 ADD    ./deploy/supervisor/conf.d/inboxapp.conf /etc/supervisor/conf.d/inboxapp.conf
 
+
+# SSL
+ADD ./deploy/certs/inboxapp-combined.crt /etc/ssl/certs/inboxapp-combined.crt
+ADD ./deploy/certs/server.key /etc/ssl/private/server.key
+
 # Ngnix
-ADD ./deploy/nginx/default.conf /etc/nginx/sites-enabled/default
-ADD ./deploy/nginx/mime.types /etc/nginx/sites-enabled/mime.types
+ADD ./deploy/nginx/default.conf /etc/nginx/nginx.conf
+ADD ./deploy/nginx/mime.types /etc/nginx/mime.types
+RUN bash -c 'rm /etc/nginx/sites-available/default'
 
 RUN apt-get -y purge build-essential
 RUN apt-get -y autoremove
 
-expose 80
-expose 443
+# expose 80
+# expose 443
 volume ["/srv/inboxapp-data"]
-ENTRYPOINT ["/usr/local/bin/supervisord", "-n"]
+
+ENTRYPOINT ["/usr/local/bin/supervisord"]
