@@ -106,11 +106,12 @@ class API(object):
             status[user.id]['stored_messages'] = user.total_stored_messages()
         return status
 
+    @namespace_auth
     @jsonify
-    def search_folder(self, namespace_id, search_query):
-        results = self.z_search(namespace_id, search_query)
-        meta_ids = [r[0] for r in results]
-        return meta_ids
+    def search_folder(self, search_query):
+        results = self.z_search(self.namespace.id, search_query)
+        message_ids = [r[0] for r in results]
+        return message_ids
 
     @namespace_auth
     @jsonify
