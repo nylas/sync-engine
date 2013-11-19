@@ -58,7 +58,7 @@ def start(args=None):
     # Start web server
     from inbox.server.app import startserver
     try:
-        startserver('127.0.0.1', 5000)
+        startserver('0.0.0.0', 5000)
     except Exception, e:
         raise e
         stop(None)
