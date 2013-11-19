@@ -5,7 +5,7 @@ log = get_logger()
 
 import xapian as x_
 
-from .models import db_session, Message
+from .models import db_session, Message, Namespace
 from ..util.file import mkdirp
 from ..util.html import strip_tags
 
@@ -120,6 +120,13 @@ def gen_search_index(namespace):
 
 class SearchService:
     """ ZeroRPC interface to searching. """
+    def index(self, namespace_id):
+        """ Trigger index update for this namespace. """
+        namespace = db_session.query(Namespace).get(namespace_id)
+        assert namespace is not None
+        gen_search_index(namespace)
+        return "OK"
+
     def search(self, namespace_id, query_string, limit=10):
         """ returns [(message.id, relevancerank), ...]
 

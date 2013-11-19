@@ -4,6 +4,7 @@ from __future__ import division
 
 import socket
 
+from .config import config
 from .sessionmanager import new_crispin
 
 from .models import db_session, FolderItem, Message, Thread, UIDValidity
@@ -21,6 +22,8 @@ from datetime import datetime
 from gevent import Greenlet, sleep, joinall
 from gevent.queue import Queue, Empty
 from gevent.event import Event
+
+import zerorpc
 
 import encoding
 
@@ -96,6 +99,11 @@ database in an inconsistent state.
 class SyncException(Exception): pass
 
 ### main
+
+def trigger_index_update(namespace_id):
+    c = zerorpc.Client()
+    c.connect(config.get('SEARCH_SERVER_LOC', None))
+    c.index(namespace_id)
 
 def safe_download(uids, folder, crispin_client):
     try:
@@ -344,6 +352,9 @@ class FolderSyncMonitor(Greenlet):
         self.log.info("Syncing %s -- %.2f%% (%i/%i)" % (
             self.folder_name, percent_done,
             num_local_messages, num_remote_messages))
+
+        log.info("namespace: {0}".format(self.account.namespace.id))
+        trigger_index_update(self.account.namespace.id)
         return len(uids)
 
     def _add_new_folderitem(self, remote_g_msgids, uids):
