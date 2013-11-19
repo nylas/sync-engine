@@ -92,6 +92,15 @@ Vagrant::Config.run do |config|
   config.vm.box = BOX_NAME
   config.vm.box_url = BOX_URI
 
+
+  # Forward some ports for kicks...
+  # config.vm.forward_port 80, 8080
+  config.vm.forward_port 80, 80
+  config.vm.forward_port 443, 443
+  config.vm.forward_port 5000, 5000
+  config.vm.network :hostonly, "192.168.10.200"
+
+
   # Use the specified private key path if it is specified and not empty.
   if SSH_PRIVKEY_PATH
       config.ssh.private_key_path = SSH_PRIVKEY_PATH
@@ -142,7 +151,7 @@ Vagrant::VERSION >= "1.1.0" and Vagrant.configure("2") do |config|
 
   config.vm.provider :vmware_fusion do |f, override|
     override.vm.box_url = VF_BOX_URI
-    override.vm.synced_folder ".", "/vagrant", disabled: true
+    override.vm.synced_folder ".", "/code", disabled: true
     override.vm.provision :shell, :inline => $script
     f.vmx["displayName"] = "docker"
   end
@@ -151,7 +160,7 @@ Vagrant::VERSION >= "1.1.0" and Vagrant.configure("2") do |config|
     override.vm.provision :shell, :inline => $vbox_script
     vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
     vb.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
-    config.vm.synced_folder "~/inboxapp", "/srv/"
+    config.vm.synced_folder ".", "/code"
   end
 end
 

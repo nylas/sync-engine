@@ -11,27 +11,46 @@ RUN add-apt-repository -y ppa:nginx/stable
 RUN apt-get -y update
 RUN apt-get -y upgrade --force-yes
 
-RUN apt-get -y install nginx supervisor mysql-server mysql-client python python-dev python-pip build-essential libmysqlclient-dev git gcc python-gevent python-xapian libzmq-dev python-zmq
+# Preconfigure MySQL root password
+RUN echo "mysql-server mysql-server/root_password password docker" | debconf-set-selections
+RUN echo "mysql-server mysql-server/root_password_again password docker" | debconf-set-selections
 
-
-# Preconfigure MySQL passwords
-run   echo "mysql-server mysql-server/root_password password docker" | debconf-set-selections
-run   echo "mysql-server mysql-server/root_password_again password docker" | debconf-set-selections
+# Dependencies
+RUN apt-get -y install git \
+                       nginx \
+                       supervisor \
+                       mysql-server \
+                       mysql-client \
+                       python \
+                       python-dev \
+                       python-pip \
+                       build-essential \
+                       libmysqlclient-dev \
+                       git \
+                       gcc \
+                       python-gevent \
+                       python-xapian \
+                       libzmq-dev \
+                       python-zmq \
+                       libmagickwand-dev
 
 
 # Create default database. Perhaps we should do this at some configuration time
-# RUN mysqladmin -u root --password=hunter2 create inbox-db
-# TODO MySQL configuration file
+# RUN mysqladmin -u root --password=docker create inboxdb
+# RUN mysql -h localhost -u root --password=docker < echo 'create inboxdb'
 
-RUN pip install --upgrade pip
-RUN easy_install -U distribute
+# TODO add MySQL configuration file
+ADD ./deploy/my.cnf /etc/mysql/conf.d/inboxapp.cnf
 
 ADD . /srv/inboxapp
 WORKDIR /srv/inboxapp
+
+RUN pip install --upgrade pip
+RUN easy_install -U distribute
 RUN pip install -r requirements.txt
 
-# RUN bash -c 'cp config-sample config.cfg'
-
+# Default config file
+Add ./config-sample.cfg ./config.cfg'
 
 # Supervisord
 ADD    ./deploy/supervisor/supervisord.conf /etc/supervisord.conf
@@ -56,4 +75,5 @@ RUN apt-get -y autoremove
 # expose 443
 volume ["/srv/inboxapp-data"]
 
-ENTRYPOINT ["/usr/local/bin/supervisord"]
+# ENTRYPOINT ["/usr/local/bin/supervisord"]
+# ENTRYPOINT /bin/bash
