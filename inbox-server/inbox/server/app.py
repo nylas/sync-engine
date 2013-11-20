@@ -16,6 +16,7 @@ import zerorpc
 
 from socket_rpc import SocketRPC
 from models import db_session, Message, Block, Collection, IMAPAccount
+from models import Namespace
 from .log import get_logger
 log = get_logger()
 
@@ -264,7 +265,8 @@ def upload_file_handler():
 @app.route('/<email>/img/<sha256>', methods=['GET'])
 def download_handler(email, sha256):
     # grab image from S3 and pass it on
-    part = db_session.query(Block).join(Message).join(IMAPAccount).filter(
+    part = db_session.query(Block).join(Message) \
+            .join(Namespace).join(IMAPAccount).filter(
             IMAPAccount.email_address==email,
             Block.data_sha256==sha256).first()
     if not part:
