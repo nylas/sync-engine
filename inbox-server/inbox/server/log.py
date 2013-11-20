@@ -58,7 +58,7 @@ def configure_general_logging():
         logger.removeHandler(handler)
 
     logfile = os.path.join(config['LOGDIR'], 'server.log')
-    file_handler = logging.FileHandler(logfile)
+    file_handler = logging.FileHandler(logfile, encoding='utf-8')
     file_handler.setFormatter(file_formatter)
     logger.addHandler(file_handler)
 
@@ -75,7 +75,7 @@ def configure_logging(account, purpose):
     mkdirp(logdir)
     # XXX we may want to rotate the log file eventually
     logfile = os.path.join(logdir, '{0}.log'.format(purpose))
-    handler = logging.FileHandler(logfile)
+    handler = logging.FileHandler(logfile, encoding='utf-8')
     handler.setFormatter(file_formatter)
     logger.addHandler(handler)
 
