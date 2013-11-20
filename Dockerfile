@@ -4,6 +4,11 @@ FROM ubuntu:12.04
 
 MAINTAINER Michael Grinich <mg@inboxapp.com> version: 0.1.0
 
+# this forces dpkg not to call sync() after package extraction and speeds up install
+# RUN echo "force-unsafe-io" > /etc/dpkg/dpkg.cfg.d/02apt-speedup
+# we don't need and apt cache in a container
+# RUN echo "Acquire::http {No-Cache=True;};" > /etc/apt/apt.conf.d/no-cache
+
 RUN apt-get -y install python-software-properties
 
 RUN echo 'deb http://us.archive.ubuntu.com/ubuntu/ precise universe' >> /etc/apt/sources.list
@@ -35,45 +40,61 @@ RUN apt-get -y install git \
                        libmagickwand-dev
 
 
-# Create default database. Perhaps we should do this at some configuration time
-# RUN mysqladmin -u root --password=docker create inboxdb
-# RUN mysql -h localhost -u root --password=docker < echo 'create inboxdb'
+# Install requirements from PyPI and GitHub
+RUN pip install --upgrade pip
+RUN easy_install -U distribute
 
-# TODO add MySQL configuration file
+RUN pip install argparse==1.2.1 \
+                beautifulsoup4==4.1.3 \
+                httplib2==0.8 \
+                pytest==2.3.4 \
+                tornado==3.0.1 \
+                wsgiref==0.1.2 \
+                futures==2.1.3 \
+                jsonrpclib==0.1.3 \
+                SQLAlchemy==0.8.3 \
+                pymongo==2.5.2  \
+                dnspython==1.11.0 \
+                boto==2.10.0 \
+                ipython==1.0.0 \
+                Flask==0.10.1 \
+                gevent-socketio==0.3.5-rc2 \
+                gunicorn==17.5 \
+                colorlog==1.8 \
+                MySQL-python==1.2.4 \
+                requests==2.0.0 \
+                Fabric==1.7.0 \
+                supervisor==3.0 \
+                chardet==2.1.1 \
+                PIL==1.1.7 \
+                Wand==0.3.5 \
+                setproctitle==1.1.7 \
+                Cython==0.19.1 \
+                zerorpc==0.4.3 \
+                gdata==2.0.18 \
+                python-dateutil==2.1 \
+                flanker==0.3.2 \
+                git+https://github.com/zeromq/pyzmq.git@v13.1.0#egg=zmq \
+                git+https://github.com/inboxapp/imapclient.git#egg=imapclient \
+                git+https://github.com/inboxapp/bleach.git#egg=bleach \
+                git+https://github.com/inboxapp/iconv.git#egg=iconv
+
+
+# MySQL
 ADD ./deploy/my.cnf /etc/mysql/conf.d/inboxapp.cnf
+
+# Create default MySQL database. Perhaps we should do this at some configuration time
+RUN /usr/sbin/mysqld & sleep 5 ; echo "create database inboxdb character set utf8mb4;" | mysql -u root --password=docker
 
 ADD . /srv/inboxapp
 WORKDIR /srv/inboxapp
 
-RUN pip install --upgrade pip
-RUN easy_install -U distribute
-RUN pip install -r requirements.txt
-
 # Default config file
-Add ./config-sample.cfg ./config.cfg'
-
-# Supervisord
-ADD    ./deploy/supervisor/supervisord.conf /etc/supervisord.conf
-ADD    ./deploy/supervisor/conf.d/nginx.conf /etc/supervisor/conf.d/nginx.conf
-ADD    ./deploy/supervisor/conf.d/mysqld.conf /etc/supervisor/conf.d/mysqld.conf
-ADD    ./deploy/supervisor/conf.d/inboxapp.conf /etc/supervisor/conf.d/inboxapp.conf
-
-
-# SSL
-ADD ./deploy/certs/inboxapp-combined.crt /etc/ssl/certs/inboxapp-combined.crt
-ADD ./deploy/certs/server.key /etc/ssl/private/server.key
-
-# Ngnix
-ADD ./deploy/nginx/default.conf /etc/nginx/nginx.conf
-ADD ./deploy/nginx/mime.types /etc/nginx/mime.types
-RUN bash -c 'rm /etc/nginx/sites-available/default'
+RUN cp config-sample.cfg config.cfg
 
 RUN apt-get -y purge build-essential
 RUN apt-get -y autoremove
 
-# expose 80
-# expose 443
 volume ["/srv/inboxapp-data"]
 
-# ENTRYPOINT ["/usr/local/bin/supervisord"]
-# ENTRYPOINT /bin/bash
+ENTRYPOINT /usr/bin/mysqld_safe & /bin/bash

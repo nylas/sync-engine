@@ -4,59 +4,66 @@
 
 All of the todos are in [the Asana workspace](https://app.asana.com/0/4983727800919/4983727800919).
 
-The Inbox platform currenly consists of two parts: the Python web server and the Javascript browser client. They communicate mostly over a custom JSON-RPC inspired websocket protocol.
+The Inbox platform currenly consists of two parts: the Python web server and the Javascript browser client. They communicate over a custom JSON-RPC inspired websocket protocol.
 
-Before you look at the code, please go read ["Worse is
-Better"](http://www.jwz.org/doc/worse-is-better.html). We are trying to ship a
-product here!
+Before you look at the code, please go read [Worse is Better](http://www.jwz.org/doc/worse-is-better.html). Kindly send all trolling comments to `/dev/null`.
 
-The server usually runs on EC2. Here's how you get it started.
+## Set up
+
+The server can run in a variety of environments. In production, we run it on EC2 instances. For development, you can create a local virtual machine. Here's how to get set up.
+
+1. [Install VirtualBox](https://www.virtualbox.org/wiki/Downloads)
+
+2. [Install Vagrant](http://downloads.vagrantup.com/)
+
+3. `git clone git@github.com:inboxapp/inbox-server.git`
+
+4. `cd inbox-server`
+
+5. `vagrant up`
+
+    Feel free to check out the `Vagrantfile` while this starts up. It exposes a few ports and creates a host-only network for the VM at `192.168.10.200`.
+
+6. `vagrant ssh`
+
+    At this point you should be SSH'd into a shiny new Ubuntu 10.04 VM. The `inbox-server` directory you started with should be synced to `/vagrant`.
+
+    We use [docker](http://www.docker.io/) to package Inbox with its depdencies. The next steps will create a new container for development.
+
+7. `cd /vagrant`
+
+8. `docker build -t "inboxapp/inbox-server" .`
+
+    This will take a minute or two. Grab a snickers and [read more about docker](https://www.docker.io/learn_more/).
+
+9. Next, we'll start a shell in the docker container and stay attached. 
+
+    `docker run -v /vagrant/:/srv/inboxapp-dev/ -i -t -p 5000:5000 1bcb8a95dc72 /bin/bash`
+    
+    This command also shares the `/vagrant` directory with the container (so you can keep editing files from your local filesystem) and exposes port 5000 of the container.
+
+10. `cd /srv/inboxapp-dev`
+
+11. `pip install -e inbox-server` to avoid path hacks.
+
+12. `./inboxapp-srv debug`
+
+Voila! Visit [http://192.168.10.200:5000](http://192.168.10.200:5000) in your browser!
 
 
-## Setup
+In order for the Google oauth callback to work, you need to edit your `/etc/hosts` file to include the line:
 
-We run Ubuntu 10.04 on EC2. You can also do this locally via Vmware Fusion
+`192.168.10.200 dev-localhost.inboxapp.com` 
 
-1. Install [virtualenv](http://www.virtualenv.org/en/latest/).
-
-2. `git clone --recursive git@github.com:inboxapp/inbox.git` to get the source and submodules.
-
-3. `cd` into the source and call `virtualenv --no-site-packages .` which will create a new environment, free of any default python packages that come with Ubuntu
-
-4. `git submodule init && git submodule update` to fetch the subrepos
-
-5. `source bin/activate` to start virtualenv.
-
-6. run `easy_install -U distribute`
-
-7. run `./install_xapian.sh`
-
-8. run `pip install -r requirements.txt`
-
-9. Then copy `config-sample.cfg` to `config.cfg` and change it appropriately for your local MySQL database and hostname.
-
-10. Create the mysql database with 'mysql -uroot -p < tools/create-db.sql' (you'll have to specify your mysql server's root password when prompted).
-
-11. Copy deploy/my.cnf to /etc/my.cnf and restart mysqld.
-
-12. Nginx needs some SSL certificates. Go ask Michael for those, or create your own self-signed ones.
-
-13. Run `sudo nginx -c deploy/nginx.conf -p ./` to start nginx
-
-14. Run `./inboxapp-srv debug` which should start up nicely.
-
-15. Visit your page in a browser and log in!
+in order for the Google oauth callback to work. On OS X you might need to run `dscacheutil -flushcache` afterward.
 
 
-## Local development
+## Production
 
-There are a few ways to efficiently develop locally.
+We want to ship Inbox as a packaged docker container, so it shouldn't contain custom Nginx stuff or SSL certs. This should be a separate package.
 
-If you're only doing client dev work, you can simply clone the repo locally and start a Python webserver to host the static assets by running `sudo python -m SimpleHTTPServer 8888`. You should configure the Wire.js protocol to connect to the production server endpoint by editing `web_client/js/app.js` and changing it to something like `https://dev-01.inboxapp.com:443/wire`. Note that you need the 443 since the `SimpleHTTPServer` doesn't support SSL.
+Right now Flask handles both static files and upgrading to HTTP 1.1, which is ok for development.
 
-You also need to edit your `/etc/hosts` file to include `127.0.0.1 dev-ui.inboxapp.com` in order for the Google oauth callback to work. Then visit http://dev-ui.inboxapp.com:8888 and voila!
-
-NB: when changing `/etc/hosts` on OS X you might need to run `dscacheutil -flushcache` afterward.
 
 
 <hr/>
