@@ -42,7 +42,7 @@ setup(
         "requests==2.0.0",
         "Fabric==1.7.0",
         "supervisor==3.0",
-        "iconv==1.0",
+        "iconv",
         "chardet==2.1.1",
         "PIL==1.1.7",
         "Wand==0.3.5",
