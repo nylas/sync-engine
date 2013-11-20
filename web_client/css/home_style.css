@@ -140,7 +140,7 @@ a:active {
 }
 
 h1 {
-  font-family: "proxima-nova-alt", sans-serif;
+  font-family: HelveticaNeue-Light, sans-serif;
   font-style: normal;
   font-weight: 500;
   font-size:20px;
@@ -153,7 +153,8 @@ h1 {
   padding-top: 35px;
   padding-bottom: 30px;
 
-  font-family: "proxima-nova-alt", sans-serif;
+  font-family: HelveticaNeue-Light, sans-serif;
+  letter-spacing: 1px;
   font-style: normal;
   font-weight: 400;
   font-size:18px;

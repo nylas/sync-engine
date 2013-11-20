@@ -14,106 +14,40 @@
 <script type='text/javascript'>
 
   function openAuth(email_address) {
-      var leftPosition = window.screenX + (window.outerWidth/2-300);
-      var topPosition = window.screenY + (window.outerHeight/2-300);
-      var windowOptions = 'toolbar=no, location=no, directories=no, status=no,' +
-                          'menubar=no, scrollbars=no, resizable=no, copyhistory=no,' +
-                          'width=600, height=600,' +
-                          'left=' + leftPosition + ', top=' + topPosition;
-      var authWindow = window.open( '/auth/authstart?email_address='+email_address,'Authenticate with Google', windowOptions);
-      var timer = setInterval(function() {
-          if(authWindow.closed) {
-              clearInterval(timer);
-                if (document.cookie.indexOf("session") >= 0) {
-                // window.location.reload();
-                  window.location.replace("/app/");
-                } else {
-                  alert("You didn't authenticate correctly...")
-                }
-          }
-      }, 250);
+    var leftPosition = window.screenX + (window.outerWidth/2-300);
+    var topPosition = window.screenY + (window.outerHeight/2-300);
+    var windowOptions = 'toolbar=no, location=no, directories=no, status=no,' +
+                        'menubar=no, scrollbars=no, resizable=no, copyhistory=no,' +
+                        'width=600, height=600,' +
+                        'left=' + leftPosition + ', top=' + topPosition;
+    var authWindow = window.open( '/auth/authstart?email_address='+email_address,'Authenticate with Google', windowOptions);
+    var timer = setInterval(function() {
+        if(authWindow.closed) {
+            clearInterval(timer);
+              if (document.cookie.indexOf("session") >= 0) {
+              // window.location.reload();
+                window.location.replace("/app/");
+              } else {
+                alert("You didn't authenticate correctly...")
+              }
+        }
+    }, 250);
   };
 
-
-function run_validator(address_text, options) {
-    if (!address_text) { return; }
-
-    // length check
-    if (address_text.length > 512) {
-        error_message = 'Stream exceeds maxiumum allowable length of 512.';
-        if (options && options.error) {
-            options.error(error_message);
-        }
-        return;
-    }
-
-    // validator is in progress
-    if (options && options.in_progress) {
-        options.in_progress();
-    }
-
-    var success = false;
-    $.ajax({
-        type: "GET",
-        url: '/auth/validate?',
-        data: { email_address: address_text },
-        dataType: "json",
-        crossDomain: false,
-
-        success: function(data, status_text) {
-            success = true;
-            if (options && options.success) {
-                options.success(data);
-            }
-        },
-
-        error: function(request, status_text, error) {
-            success = true;
-            error_message = 'Error occured, unable to validate address.';
-            if (options && options.error) {
-                options.error(error_message);
-            }
-            else {
-                console.log(error_message);
-            }
+  $(function() {  // document ready
+    $("#login_username").keypress(function(e) {
+        if ((e.keyCode || e.which) == 13) {
+            // Enter key pressed
+            e.preventDefault();
+            openAuth($('#login_username').val());
         }
     });
 
-    // internal server error
-    setTimeout(function() {
-        error_message = 'Error occured, unable to validate address.';
-        if (!success) {
-            if (options && options.error) {
-                options.error(error_message);
-            }
-            else {
-                console.log(error_message);
-            }
-        }
-    }, 15000);
+    $("#start_auth").click(function() {
+        openAuth($('#login_username').val());
+    });
 
-}
-
-
-  $(function() {  // document ready
-
-
-      $("#start_auth").keypress(function(e) {
-          if ((e.keyCode || e.which) == 13) {
-              // Enter key pressed
-              $("#start_auth").trigger('click');
-          }
-      });
-
-      $("#start_auth").click(function() {
-        if (!valid_address_to_auth) {
-          console.log("Don't yet have valid email address...");
-          return;
-        }
-          openAuth(valid_address_to_auth);
-      });
-
-    // Placeholder text
+    // Placeholder text JS
     $('#login_username').data('holder',$('#login_username').attr('placeholder'));
     $('#login_username').focusin(function(){
         $(this).attr('placeholder','');
@@ -121,97 +55,9 @@ function run_validator(address_text, options) {
     $('#login_username').focusout(function(){
         $(this).attr('placeholder',$(this).data('holder'));
     });
+
     $('#login_username').val('');
-
-
-    var validate = function() {
-      run_validator($('#login_username').val(), {
-        in_progress: validation_in_progress,
-        success: validation_success,
-        error: validation_error,
-        });
-    }
-    var timer;
-    var pushtimer = function() {
-      clearInterval(timer);
-      timer = setInterval(function() {
-        clearInterval(timer);
-        validate();
-      }, 1000);
-    }
-
-    $('#login_username').bind('input', function(){
-      pushtimer();
-    });
-
-    $('#login_username').keypress(function(e) {
-      pushtimer();
-      if(e.which == 13) {
-        e.preventDefault();
-        $('#login_username').blur();
-        validate();
-        return false;
-      }
-
-    });
-
-  }); // End onload
-
-
-
-  function validation_in_progress() {
-      rdiv = $('#status')
-      // empty out anything we had before
-      rdiv.empty()
-      // show in progress
-      rdiv.append("Validating...");
-  }
-
-
-  var valid_address_to_auth = undefined;
-
-  function validation_success(data) {
-      rdiv = $('#status')
-      var is_valid = data['valid_for_inbox'];
-      if (is_valid) {}
-
-      // get icon and suggestion strings
-      sugg_str = get_suggestion_str(is_valid, data['did_you_mean'])
-
-      // clear out any previous text
-      rdiv.empty()
-      rdiv.append(sugg_str);
-
-      if (data['did_you_mean']) {
-        console.log("did you mean!!!");
-        return;
-      }
-
-      if (is_valid) {
-        // Set valid here
-        valid_address_to_auth = data['valid_address'];
-      }
-  }
-
-
-  function validation_error(error_message) {
-      rdiv = $('#status')
-      rdiv.empty()
-      rdiv.append(error_message);
-  }
-
-
-  function get_suggestion_str(is_valid, alternate) {
-      if (alternate) {
-          return 'Did you mean: ' +
-                 '<em>' +  alternate + '</em>';
-      }
-
-      if (is_valid) {
-          return "&#x2713;&nbsp;&nbsp;address is valid";
-      }
-      return "&#x2715;&nbsp;&nbsp;address is invalid"
-  }
+  });
 
 
 </script>
@@ -219,7 +65,7 @@ function run_validator(address_text, options) {
 <body>
   <div id="container">
 
-    <img src="/static/img/letter.png"/>
+  <img src="/static/img/letter.png"/>
 
   <div class="subhead">
      {% if logged_in %}
@@ -232,13 +78,11 @@ function run_validator(address_text, options) {
 
       {% else %}
 
-
       <form>
         <input type="text" name="login_username" id="login_username" placeholder="ben.bitdiddle@gmail.com" autocomplete="off" spellcheck="false" tabindex=1>
       </form>
+      <a class="button" id="start_auth" tabindex=2>Connect</a>
 
-      <div id="status"></div>
-        <a class="button" id="start_auth" tabindex=2>Connect</a>
       {% endif %}
   </div>
 
