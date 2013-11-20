@@ -1,8 +1,5 @@
 import os
-import re
 import json
-
-from email.utils import parseaddr, getaddresses
 
 from sqlalchemy.interfaces import PoolListener
 
@@ -24,19 +21,16 @@ from boto.s3.key import Key
 from ..util.file import mkdirp, remove_file, Lock
 from ..util.html import strip_tags, plaintext2html
 from ..util.misc import or_none
+from ..util.addr import parse_email_address
 from .config import config, is_prod
 from .log import get_logger
 log = get_logger()
 
-import encoding
+from bs4 import BeautifulSoup
 
 from urllib import quote_plus as urlquote
 
-from itertools import chain
-from quopri import decodestring as quopri_decodestring
-from base64 import b64decode
-from chardet import detect as detect_charset
-from bs4 import BeautifulSoup
+from flanker import mime
 
 ### Roles
 
@@ -341,34 +335,36 @@ class IMAPAccount(Base):
         new_folderitems = []
         for uid, internaldate, flags, body, x_gm_thrid, x_gm_msgid, \
                 x_gm_labels in raw_messages:
-            mailbase = encoding.from_string(body)
+            parsed = mime.from_string(body)
+
+            mime_version = parsed.headers.get('Mime-Version')
+            # NOTE: sometimes MIME-Version is set to "1.0 (1.0)", hence the
+            # .startswith
+            if mime_version is not None and not mime_version.startswith('1.0'):
+                log.error("Unexpected MIME-Version: %s" % mime_version)
+
             new_msg = Message()
             new_msg.data_sha256 = sha256(body).hexdigest()
             new_msg.namespace_id = self.namespace.id
-            new_msg.uid = uid
 
-            # Headers will wrap when longer than 78 chars per RFC822_2
-            new_msg.subject = or_none(mailbase.headers.get('Subject'),
-                    lambda s: re.sub(r'\s?\n\t\s?|\s?\r\n\s?', '', s))
-            new_msg.from_addr = or_none(encoding.encode_contacts([
-                parseaddr(mailbase.headers.get('From'))]), lambda a: a[0])
-            new_msg.sender_addr = or_none(encoding.encode_contacts([
-                parseaddr(mailbase.headers.get('Sender'))]), lambda a: a[0])
-            new_msg.reply_to = or_none(encoding.encode_contacts([
-                parseaddr(mailbase.headers.get('Reply-To'))]), lambda a: a[0])
-            new_msg.to_addr = or_none(mailbase.headers.get('To'),
-                    lambda h: encoding.encode_contacts(getaddresses([h])))
-            new_msg.cc_addr = or_none(mailbase.headers.get('Cc'),
-                    lambda h: encoding.encode_contacts(getaddresses([h])))
-            new_msg.bcc_addr = or_none(mailbase.headers.get('Bcc'),
-                    lambda h: encoding.encode_contacts(getaddresses([h])))
-            new_msg.in_reply_to = mailbase.headers.get('In-Reply-To')
-            new_msg.message_id = mailbase.headers.get('Message-Id')
+            # clean_subject strips re:, fwd: etc.
+            new_msg.subject = parsed.clean_subject
+            new_msg.from_addr = parse_email_address(parsed.headers.get('From'))
+            new_msg.sender_addr = parse_email_address(parsed.headers.get('Sender'))
+            new_msg.reply_to = parse_email_address(parsed.headers.get('Reply-To'))
+            new_msg.to_addr = or_none(parsed.headers.getall('To'),
+                    lambda tos: [parse_email_address(t) for t in tos])
+            new_msg.cc_addr = or_none(parsed.headers.getall('Cc'),
+                    lambda ccs: [parse_email_address(c) for c in ccs])
+            new_msg.bcc_addr = or_none(parsed.headers.getall('Bcc'),
+                    lambda bccs: [parse_email_address(c) for c in bccs])
+            new_msg.in_reply_to = parsed.headers.get('In-Reply-To')
+            new_msg.message_id = parsed.headers.get('Message-Id')
 
             new_msg.internaldate = internaldate
             new_msg.g_msgid = x_gm_msgid
             # NOTE: this value is not saved to the database, but it is used
-            # later for thread detection after message download
+            # later for thread detection after message download.
             new_msg._g_thrid = x_gm_thrid
 
             # TODO optimize storage of flags with a bit field or something,
@@ -394,102 +390,49 @@ class IMAPAccount(Base):
             headers_part = Block()
             headers_part.message = new_msg
             headers_part.walk_index = i
-            headers_part._data = json.dumps(mailbase.headers)
+            headers_part._data = json.dumps(parsed.headers.items())
             headers_part.size = len(headers_part._data)
             headers_part.data_sha256 = sha256(headers_part._data).hexdigest()
             new_msg.parts.append(headers_part)
 
-            extra_parts = []
-
-            if mailbase.body:
-                # single-part message
-                extra_parts.append(mailbase)
-
-            for part in chain(extra_parts, mailbase.walk()):
+            for mimepart in parsed.walk(
+                    with_self=parsed.content_type.is_singlepart()):
                 i += 1
-                mimepart = encoding.to_message(part)
-                if mimepart.is_multipart():
+                if mimepart.content_type.is_multipart():
+                    log.warning("multipart sub-part found!")
                     continue  # TODO should we store relations?
 
                 new_part = Block()
                 new_part.message = new_msg
                 new_part.walk_index = i
-                new_part.misc_keyval = mimepart.items()  # everything
-
-                content_type = mimepart.get_content_type()
-                # Content-Type
-                try:
-                    assert content_type == mimepart.get_params()[0][0],\
-                    "Content-Types not equal! {0} and {1}".format(
-                            content_type, mimepart.get_params()[0][0])
-                except Exception:
-                    log.error("Content-Types not equal: {0}".format(
-                        mimepart.get_params()))
-
-                new_part.content_type = mimepart.get_content_type()
-
-                # File attachments
-                filename = mimepart.get_filename(failobj=None)
-                new_part.filename = or_none(filename,
-                        lambda fn: encoding.properly_decode_header(fn))
-
-                mime_version = mimepart.get('MIME-Version', failobj=None)
-                if mime_version and mime_version != '1.0':
-                    log.error("Unexpected MIME-Version: %s" % mime_version)
+                new_part.misc_keyval = mimepart.headers.items()  # everything
+                new_part.content_type = mimepart.content_type.value
+                new_part.filename = mimepart.content_type.params.get('name')
+                log.info("CONTENT TYPE: {0}".format(mimepart.content_type))
 
                 # Content-Disposition attachment; filename="floorplan.gif"
-                content_disposition = mimepart.get('Content-Disposition', None)
-                if content_disposition:
-                    parsed_content_disposition = content_disposition.split(';')[0].lower()
-                    if parsed_content_disposition not in ['inline', 'attachment']:
+                if mimepart.content_disposition[0] is not None:
+                    value, params = mimepart.content_disposition
+                    log.info("content-disposition: {0}".format(value))
+                    if value not in ['inline', 'attachment']:
                         errmsg = """
     Unknown Content-Disposition on message {0} found in {1}.
-    Original Content-Disposition was: '{2}'
+    Bad Content-Disposition was: '{2}'
     Parsed Content-Disposition was: '{3}'""".format(uid, folder_name,
-                            content_disposition, parsed_content_disposition)
+            mimepart.content_disposition)
                         log.error(errmsg)
+                        continue
                     else:
-                        new_part.content_disposition = parsed_content_disposition
+                        new_part.content_disposition = value
+                        if value == 'attachment':
+                            new_part.filename = params.get('filename')
 
-                new_part.content_id = mimepart.get('Content-Id', None)
-
-                # DEBUG -- not sure if these are ever really used in emails
-                if mimepart.preamble:
-                    log.warning("Found a preamble! " + mimepart.preamble)
-                if mimepart.epilogue:
-                    log.warning("Found an epilogue! " + mimepart.epilogue)
-
-                payload_data = mimepart.get_payload(decode=False)  # decode ourselves
-                data_encoding = mimepart.get('Content-Transfer-Encoding',
-                        None).lower()
-
-                if data_encoding == 'quoted-printable':
-                    data_to_write = quopri_decodestring(payload_data)
-                elif data_encoding == 'base64':
-                    data_to_write = b64decode(payload_data)
-                elif data_encoding == '7bit' or data_encoding == '8bit':
-                    # Need to get charset and decode with that too.
-                    charset = str(mimepart.get_charset())
-                    if charset == 'None':
-                        charset = None  # bug
-                    try:
-                        assert charset
-                        payload_data = encoding.attempt_decoding(charset, payload_data)
-                    except Exception, e:
-                        detected_charset = detect_charset(payload_data)
-                        detected_charset_encoding = detected_charset['encoding']
-                        log.error("{0} Failed decoding with {1}. Now trying {2}"\
-                                .format(e, charset, detected_charset_encoding))
-                        try:
-                            payload_data = encoding.attempt_decoding(
-                                    detected_charset_encoding, payload_data)
-                        except Exception, e:
-                            log.error("That failed too. Hmph. Not sure how to recover here")
-                            raise e
-                        log.info("Success!")
-                    data_to_write = payload_data.encode('utf-8', errors='strict')
+                if new_part.content_type.startswith('text'):
+                    data_to_write = mimepart.body.encode('utf-8', 'strict')
                 else:
-                    raise Exception("Unknown encoding scheme:" + str(encoding))
+                    data_to_write = mimepart.body
+
+                new_part.content_id = mimepart.headers.get('Content-Id')
 
                 new_part._data = data_to_write
                 new_part.size = len(data_to_write)
@@ -731,6 +674,9 @@ class Message(JSONSerializable, Base):
         d['snippet'] = self.snippet
         d['body'] = self.prettified_body
         return d
+
+    # @classmethod
+    # def from_string(cls, string):
 
 # These are the top 15 most common Content-Type headers
 # in my personal mail archive. --mg

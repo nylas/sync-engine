@@ -349,7 +349,7 @@ class CrispinClient(CrispinClientBase):
     # 20 minutes
     SERVER_TIMEOUT = datetime.timedelta(seconds=1200)
     # how many messages to download at a time
-    CHUNK_SIZE = 20
+    CHUNK_SIZE = 1
 
     def _connect(self):
         imap_host = IMAP_HOSTS[self.account.provider]

@@ -25,8 +25,6 @@ from gevent.event import Event
 
 import zerorpc
 
-import encoding
-
 """
 ---------------
 THE SYNC ENGINE
@@ -110,9 +108,9 @@ def safe_download(uids, folder, crispin_client):
         raw_messages = crispin_client.uids(uids)
         new_messages, new_folderitems = \
                 crispin_client.account.messages_from_raw(folder, raw_messages)
-    except encoding.EncodingError, e:
-        log.error(e)
-        raise e
+    # except encoding.EncodingError, e:
+    #     log.error(e)
+    #     raise e
     except MemoryError, e:
         log.error("Ran out of memory while fetching UIDs %s" % uids)
         raise e
@@ -353,8 +351,7 @@ class FolderSyncMonitor(Greenlet):
             self.folder_name, percent_done,
             num_local_messages, num_remote_messages))
 
-        log.info("namespace: {0}".format(self.account.namespace.id))
-        trigger_index_update(self.account.namespace.id)
+        # trigger_index_update(self.account.namespace.id)
         return len(uids)
 
     def _add_new_folderitem(self, remote_g_msgids, uids):
