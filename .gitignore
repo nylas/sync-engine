@@ -8,6 +8,7 @@
 /config-dev.cfg
 /cache
 /log
+/.vagrant
 
 .DS_Store
 *.py[cod]
