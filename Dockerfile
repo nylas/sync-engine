@@ -84,7 +84,7 @@ RUN pip install argparse==1.2.1 \
 ADD ./deploy/my.cnf /etc/mysql/conf.d/inboxapp.cnf
 
 # Create default MySQL database. Perhaps we should do this at some configuration time
-RUN /usr/sbin/mysqld & sleep 5 ; echo "create database inboxdb character set utf8mb4;" | mysql -u root --password=docker
+RUN /usr/sbin/mysqld & sleep 5 ; echo "CREATE DATABASE inboxdb DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci" | mysql -u root --password=docker
 
 ADD . /srv/inboxapp
 WORKDIR /srv/inboxapp
