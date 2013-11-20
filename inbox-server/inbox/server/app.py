@@ -6,7 +6,7 @@ from StringIO import StringIO
 from gevent import monkey; monkey.patch_all()
 
 from flask import Flask, request, redirect, make_response, render_template
-from flask import Response, jsonify, abort, send_file
+from flask import Response, jsonify, abort, send_file, send_from_directory
 from werkzeug.wsgi import SharedDataMiddleware
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
@@ -49,7 +49,7 @@ def get_account(request):
         return None
     return user.imapaccounts[0]
 
-app = Flask(__name__, static_folder='../../../web_client', static_url_path='', template_folder='templates')
+app = Flask(__name__, template_folder='templates')
 
 @app.route('/')
 def index():
@@ -58,14 +58,16 @@ def index():
                             name = account.email_address if account else "",
                             logged_in = bool(account))
 
+
 @app.route('/app')
 @app.route('/app/')  # TOFIX not sure I need to do both
 def static_app_handler():
-    """ Just returns the static app files """
-
+    """ Return to home if not logged in """
     if not get_user(request):
+        log.warning("Not logged in -- redirecting to /")
         return redirect('/')
     return app.send_static_file('index.html')
+
 
 @app.route('/auth/validate')
 def validate_email_handler():
@@ -348,7 +350,8 @@ def startserver(app_url, app_port):
 
 
     ws_app = SharedDataMiddleware(app, {
-            '/app/': os.path.join(os.path.dirname(__file__), '../web_client')
+            '/app': os.path.join(os.path.dirname(__file__), '../../../web_client'),
+            '/static': os.path.join(os.path.dirname(__file__), '../../../web_client')
     })
 
 
