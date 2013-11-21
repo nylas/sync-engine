@@ -12,9 +12,8 @@ app.directive("viewMessage", function() {
         transclude: true,
         scope: {
             message: '='
-        }, // Two-way binding to message object
+        },
 
-        // add back green_glow class sometime
         templateUrl: 'views/messageView.html',
     };
 });
@@ -41,7 +40,7 @@ return {
             // Reset
             doc.removeChild(doc.documentElement);
             iframe.width = '100%';
-            iframe.height = 'px;';
+            iframe.height = '0px;';
 
             // TODO detect if there's significat styling in this mail.
             // If so, don't add the CSS

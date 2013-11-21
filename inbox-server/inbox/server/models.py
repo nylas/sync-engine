@@ -36,6 +36,7 @@ from itertools import chain
 from quopri import decodestring as quopri_decodestring
 from base64 import b64decode
 from chardet import detect as detect_charset
+from bs4 import BeautifulSoup
 
 ### Roles
 
@@ -706,7 +707,16 @@ class Message(JSONSerializable, Base):
                 # misinterprets css
                 prettified = f.read() % html_data
 
-        return prettified
+        soup = BeautifulSoup(prettified)
+        for div in soup.findAll('div', 'gmail_extra'): # also can extract on gmail_quote
+            div.extract()
+
+        # Strip trailing whitespace tags. Stuff like <div><br/><div>
+        for tag in reversed(soup.findAll()):
+            if tag.text: break
+            else: tag.extract()
+
+        return str(soup)
 
     def cereal(self):
         # TODO serialize more here for client API
