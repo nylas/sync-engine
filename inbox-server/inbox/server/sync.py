@@ -278,6 +278,8 @@ class FolderSyncMonitor(Greenlet):
         if deleted_uids:
             self.account.remove_messages(deleted_uids, self.folder_name)
             self.log.info("Removed the following UIDs that no longer exist on the server: {0}".format(' '.join([str(u) for u in sorted(deleted_uids, key=int)])))
+            local_uids = sorted(
+                    list(set(local_uids).difference(deleted_uids)), key=int)
 
         full_download = self._deduplicate_message_download(
                 remote_g_msgids, unknown_uids)
