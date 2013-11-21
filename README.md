@@ -28,8 +28,8 @@ how to get set up.
 
 5. `vagrant up`
 
-    Feel free to check out the `Vagrantfile` while this starts up. It exposes a
-    few ports and creates a host-only network for the VM at `192.168.10.200`.
+    Feel free to check out the `Vagrantfile` while this starts up. It creates a
+    host-only network for the VM at `192.168.10.200`.
 
 6. `vagrant ssh`
 
@@ -58,9 +58,18 @@ how to get set up.
 
 11. `pip install -e inbox-server` to avoid path hacks.
 
-12. `./inboxapp-srv debug`
+12. `SHELL=/bin/bash script /dev/null`
+    `tmux`
 
-13. In order for the Google oauth callback to work, you need to edit your local
+    You're probably going to want to interact with zerorpc services while
+    developing and will need to multiplex your connection to the docker
+    container. There is a docker bug that prevents tmux from working properly
+    (https://github.com/dotcloud/docker/issues/728); we work around this
+    by using the `script` command to open a new pty.
+
+13. `./inboxapp-srv debug`
+
+14. In order for the Google oauth callback to work, you need to edit your local
     system's `/etc/hosts` file to include the line:
 
     `192.168.10.200 dev-localhost.inboxapp.com`
