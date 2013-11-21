@@ -94,10 +94,8 @@ Vagrant::Config.run do |config|
 
 
   # Forward some ports for kicks...
-  # config.vm.forward_port 80, 8080
   config.vm.forward_port 80, 80
   config.vm.forward_port 443, 443
-  config.vm.forward_port 5000, 5000
   config.vm.network :hostonly, "192.168.10.200"
 
 

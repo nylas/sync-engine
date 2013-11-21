@@ -49,7 +49,7 @@ def get_account(request):
         return None
     return user.imapaccounts[0]
 
-app = Flask(__name__, template_folder='templates')
+app = Flask(__name__, static_folder='../../../web_client', template_folder='templates', )
 
 @app.route('/')
 def index():
@@ -220,7 +220,7 @@ class WireNamespace(BaseNamespace):
         #     self.ctx.pop()   # Not sure why this causes an exception
         super(WireNamespace, self).disconnect(*args, **kwargs)
 
-@app.route('/file_upload', methods=['GET', 'POST'])
+@app.route('/upload', methods=['GET', 'POST'])
 def upload_file_handler():
     account = get_account(request)
     if not account:
@@ -342,7 +342,7 @@ def startserver(app_url, app_port):
 
     domain_name = config.get("SERVER_DOMAIN_NAME", None)
     assert domain_name, "Need domain name for Google oauth callback"
-    app.config['GOOGLE_REDIRECT_URI'] ="https://%s/auth/authdone" % domain_name
+    app.config['GOOGLE_REDIRECT_URI'] ="%s/auth/authdone" % domain_name
 
     app.config['SESSION_COOKIE_DOMAIN'] = '.inboxapp.com'
 
@@ -355,7 +355,7 @@ def startserver(app_url, app_port):
     })
 
 
-    log.info('Listening on http://'+app_url+':'+str(app_port)+"/")
+    log.info('Listening on '+app_url+':'+str(app_port)+"/")
 
 
     from socketio.server import SocketIOServer  # inherits gevent.pywsgi.WSGIServer

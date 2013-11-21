@@ -36,10 +36,10 @@ The server can run in a variety of environments. In production, we run it on EC2
 
     This will take a minute or two. Grab a snickers and [read more about docker](https://www.docker.io/learn_more/).
 
-9. Next, we'll start a shell in the docker container and stay attached. 
+9. Next, we'll start a shell in the docker container and stay attached.
 
-    `docker run -v /vagrant/:/srv/inboxapp-dev/ -i -t -p 5000:5000 1bcb8a95dc72 /bin/bash`
-    
+    `docker run -v /vagrant/:/srv/inboxapp-dev/ -i -t -p 80:5000 1bcb8a95dc72 /bin/bash`
+
     This command also shares the `/vagrant` directory with the container (so you can keep editing files from your local filesystem) and exposes port 5000 of the container.
 
 10. `cd /srv/inboxapp-dev`
@@ -48,14 +48,14 @@ The server can run in a variety of environments. In production, we run it on EC2
 
 12. `./inboxapp-srv debug`
 
-Voila! Visit [http://192.168.10.200:5000](http://192.168.10.200:5000) in your browser!
+13. In order for the Google oauth callback to work, you need to edit your local system's `/etc/hosts` file to include the line:
+
+    `192.168.10.200 dev-localhost.inboxapp.com`
+
+And voila! Visit [http://dev-localhost.inboxapp.com]([http://dev-localhost.inboxapp.com) in your browser!
 
 
-In order for the Google oauth callback to work, you need to edit your `/etc/hosts` file to include the line:
-
-`192.168.10.200 dev-localhost.inboxapp.com` 
-
-in order for the Google oauth callback to work. On OS X you might need to run `dscacheutil -flushcache` afterward.
+Note that on OS X you might need to run `dscacheutil -flushcache` afterward to flush cached DNS records.
 
 
 ## Production

@@ -21,6 +21,5 @@ angular.module('InboxApp.services', []);
 angular.module('InboxApp.controllers', []);
 angular.module('InboxApp.directives', []);
 
-app.constant('WIRE_SERVER_URL', 'https://dev-localhost.inboxapp.com:443/wire');
-
-app.constant('UPLOAD_SERVER_URL', 'https://dev-localhost.inboxapp.com:443/wire');
+app.constant('WIRE_SERVER_URL', '/wire');
+app.constant('UPLOAD_SERVER_URL', '/upload');

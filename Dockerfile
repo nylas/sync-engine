@@ -97,4 +97,7 @@ RUN apt-get -y autoremove
 
 volume ["/srv/inboxapp-data"]
 
+# The server listens on port 5000 for now
+EXPOSE 5000
+
 ENTRYPOINT /usr/bin/mysqld_safe & /bin/bash
