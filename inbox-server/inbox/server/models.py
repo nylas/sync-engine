@@ -930,7 +930,7 @@ class Thread(JSONSerializable, Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    subject = Column(Text, nullable=False)
+    subject = Column(Text)
     subjectdate = Column(DateTime, nullable=False)
     recentdate = Column(DateTime, nullable=False)
 
