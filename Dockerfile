@@ -31,13 +31,13 @@ RUN apt-get -y install git \
                        python-pip \
                        build-essential \
                        libmysqlclient-dev \
-                       git \
                        gcc \
                        python-gevent \
                        python-xapian \
                        libzmq-dev \
                        python-zmq \
-                       libmagickwand-dev
+                       libmagickwand-dev \
+                       tmux
 
 
 # Install requirements from PyPI and GitHub
