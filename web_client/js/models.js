@@ -33,10 +33,11 @@ app.factory('IBMessage', function ($injector, md5) {
         this.date = new Date(data.date.$date);
 
         var gravatar_size = 25;
-        this.gravatar_url = "https://www.gravatar.com/avatar/" +
-                        md5.createHash( this.from[1].toLowerCase() )+ "?" +
-                        'd=mm&' +
-                        's=' + encodeURIComponent(gravatar_size);
+        if (this.from !== null)
+            this.gravatar_url = "https://www.gravatar.com/avatar/" +
+                            md5.createHash( this.from[1].toLowerCase() )+ "?" +
+                            'd=mm&' +
+                            's=' + encodeURIComponent(gravatar_size);
 
         if (this.to && this.to.length > 0) {
 
@@ -60,11 +61,17 @@ app.factory('IBMessage', function ($injector, md5) {
     }
 
     IBMessageObject.prototype.fromName = function() {
-        return this.from[0] ? this.from[0] : this.from[1];
+        if (this.from !== null)
+            return this.from[0] ? this.from[0] : this.from[1];
+        else
+            return null;
     };
 
     IBMessageObject.prototype.fromEmail = function() {
-        return this.from[1];
+        if (this.from !== null)
+            return this.from[1];
+        else
+            return null;
     };
 
     IBMessageObject.prototype.printDate = function() {
