@@ -58,6 +58,9 @@ def index():
                             name = account.email_address if account else "",
                             logged_in = bool(account))
 
+@app.route('/favicon.ico')
+def favicon():
+    return app.send_static_file('favicon.ico')
 
 @app.route('/app')
 @app.route('/app/')  # TOFIX not sure I need to do both
