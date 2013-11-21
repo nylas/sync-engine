@@ -258,7 +258,7 @@ input[type="text"] { border: none }
 
 
 .header_searchbox input {
-  font-family: HelveticaNeue-Light, sans-serif;
+  font-family: HelveticaNeue, sans-serif;
   font-size: 14px;
 
   margin-top: 8px;
@@ -272,6 +272,7 @@ input[type="text"] { border: none }
   border: none;
   box-shadow: none;
   outline:0;
+  letter-spacing: 0.5px;
 }
 
 .messageview_byline input {
