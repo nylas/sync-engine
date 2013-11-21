@@ -92,12 +92,7 @@ Vagrant::Config.run do |config|
   config.vm.box = BOX_NAME
   config.vm.box_url = BOX_URI
 
-
-  # Forward some ports for kicks...
-  config.vm.forward_port 80, 80
-  config.vm.forward_port 443, 443
   config.vm.network :hostonly, "192.168.10.200"
-
 
   # Use the specified private key path if it is specified and not empty.
   if SSH_PRIVKEY_PATH
