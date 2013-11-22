@@ -424,10 +424,10 @@ class FolderSyncMonitor(Greenlet):
             full_download = self._deduplicate_message_download(
                     remote_g_msgids, new)
 
-            num_local_messages = len(local_uids)
+            num_downloaded = 0
             for uids in chunk(full_download, self.crispin_client.CHUNK_SIZE):
-                num_local_messages += self._download_new_messages(
-                        uids, num_local_messages, len(full_download))
+                num_downloaded += self._download_new_messages(
+                        uids, num_downloaded, len(full_download))
 
             # bigger chunk because the data being fetched here is very small
             for uids in chunk(updated, 5*self.crispin_client.CHUNK_SIZE):
