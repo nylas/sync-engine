@@ -108,17 +108,9 @@ def safe_download(uids, folder, crispin_client):
         raw_messages = crispin_client.uids(uids)
         new_messages, new_folderitems = \
                 crispin_client.account.messages_from_raw(folder, raw_messages)
-    # except encoding.EncodingError, e:
-    #     log.error(e)
-    #     raise e
     except MemoryError, e:
         log.error("Ran out of memory while fetching UIDs %s" % uids)
         raise e
-    # XXX make this catch more specific
-    # except Exception, e:
-    #     log.error("Crispin fetch failure: %s. Reconnecting..." % e)
-    #     crispin_client = refresh_crispin(crispin_client.email_address)
-    #     new_messages, new_folderitem = crispin_client.fetch_uids(uids)
 
     return new_messages, new_folderitems
 

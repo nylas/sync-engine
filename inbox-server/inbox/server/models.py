@@ -408,7 +408,6 @@ class IMAPAccount(Base):
                 new_part.misc_keyval = mimepart.headers.items()  # everything
                 new_part.content_type = mimepart.content_type.value
                 new_part.filename = mimepart.content_type.params.get('name')
-                log.info("CONTENT TYPE: {0}".format(mimepart.content_type))
 
                 # Content-Disposition attachment; filename="floorplan.gif"
                 if mimepart.content_disposition[0] is not None:
