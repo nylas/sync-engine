@@ -19,12 +19,15 @@ def strip_tags(html):
     return s.get_data()
 
 # https://djangosnippets.org/snippets/19/
-re_string = re.compile(r'(?P<htmlchars>[<&>])|(?P<space>^[ \t]+)|(?P<protocol>(^|\s)((http|ftp)://.*?))(\s|$)', re.S|re.M|re.I)
+re_string = re.compile(r'(?P<htmlchars>[<&>])|(?P<space>^[ \t]+)|(?P<lineend>\n)|(?P<protocol>(^|\s)((http|ftp)://.*?))(\s|$)', re.S|re.M|re.I)
 def plaintext2html(text, tabstop=4):
+    assert '\r' not in text, "newlines not normalized"
     def do_sub(m):
         c = m.groupdict()
         if c['htmlchars']:
             return cgi.escape(c['htmlchars'])
+        if c['lineend']:
+            return '<br>'
         elif c['space']:
             t = m.group().replace('\t', '&nbsp;'*tabstop)
             t = t.replace(' ', '&nbsp;')
@@ -43,7 +46,7 @@ def plaintext2html(text, tabstop=4):
                 last = '<br>'
             return '%s<a href="%s">%s</a>%s' % (prefix, url, url, last)
     return '\n'.join(['<p>{0}</p>'.format(
-        re.sub(re_string, do_sub, p)) for p in re.split(r'(?:\r\n?|\n){2}', text)])
+        re.sub(re_string, do_sub, p)) for p in text.split('\n\n')])
 
 def common_intervals(an, bn):
     """

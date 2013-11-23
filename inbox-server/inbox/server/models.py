@@ -433,6 +433,9 @@ class IMAPAccount(Base):
                     data_to_write = mimepart.body.encode('utf-8', 'strict')
                 else:
                     data_to_write = mimepart.body
+                # normalize mac/win/unix newlines
+                data_to_write = data_to_write \
+                        .replace('\r\n', '\n').replace('\r', '\n')
 
                 new_part.content_id = mimepart.headers.get('Content-Id')
 
@@ -590,12 +593,13 @@ class Message(JSONSerializable, Base):
     def calculate_sanitized_body(self):
         plain_part, html_part = self.body()
         if html_part:
-            # self.sanitized_body = html_part.split('<div class="gmail_quote">')[0]
-            self.sanitized_body = html_part
+            assert '\r' not in html_part, "newlines not normalized"
+            self.sanitized_body = html_part.strip()
         elif plain_part is None:
             self.sanitized_body = ''
         else:
-            self.sanitized_body = plaintext2html(plain_part)
+            assert '\r' not in plain_part, "newlines not normalized"
+            self.sanitized_body = plaintext2html(plain_part).strip()
 
     def calculate_snippet(self):
         assert self.sanitized_body is not None, \
@@ -652,15 +656,25 @@ class Message(JSONSerializable, Base):
                 # misinterprets css
                 prettified = f.read() % html_data
 
+        # Try our best to strip out gmail quoted text.
         soup = BeautifulSoup(prettified, "lxml")
-        # also can extract on gmail_quote
-        for div in soup.findAll('div', 'gmail_extra'):
+        for div in soup.findAll('div', 'gmail_quote'):
             div.extract()
+        for container in soup.findAll('div', 'gmail_extra'):
+            if container.contents is not None:
+                for tag in reversed(container.contents):
+                    if not hasattr(tag, 'name') or tag.name != 'br': break
+                    else: tag.extract()
+            if container.contents is None:
+                # we emptied it!
+                container.extract()
 
-        # Strip trailing whitespace tags. Stuff like <div><br/><div>
-        for tag in reversed(soup.findAll()):
-            if tag.text: break
-            else: tag.extract()
+        # Paragraphs don't need trailing line-breaks.
+        for container in soup.findAll('p'):
+            if container.contents is not None:
+                for tag in reversed(container.contents):
+                    if not hasattr(tag, 'name') or tag.name != 'br': break
+                    else: tag.extract()
 
         return str(soup)
 
@@ -677,9 +691,6 @@ class Message(JSONSerializable, Base):
         d['snippet'] = self.snippet
         d['body'] = self.prettified_body
         return d
-
-    # @classmethod
-    # def from_string(cls, string):
 
 # These are the top 15 most common Content-Type headers
 # in my personal mail archive. --mg
@@ -932,6 +943,7 @@ class Thread(JSONSerializable, Base):
             pass
         except MultipleResultsFound:
             log.info("Duplicate thread rows for thread {0}".format(g_thrid))
+            raise
         thread = cls(subject=message.subject, g_thrid=g_thrid,
                 recentdate=message.internaldate,
                 subjectdate=message.internaldate)
