@@ -353,11 +353,14 @@ class IMAPAccount(Base):
             new_msg.sender_addr = parse_email_address(parsed.headers.get('Sender'))
             new_msg.reply_to = parse_email_address(parsed.headers.get('Reply-To'))
             new_msg.to_addr = or_none(parsed.headers.getall('To'),
-                    lambda tos: [parse_email_address(t) for t in tos])
+                    lambda tos: filter(lambda p: p is not None,
+                        [parse_email_address(t) for t in tos]))
             new_msg.cc_addr = or_none(parsed.headers.getall('Cc'),
-                    lambda ccs: [parse_email_address(c) for c in ccs])
+                    lambda ccs: filter(lambda p: p is not None,
+                        [parse_email_address(c) for c in ccs]))
             new_msg.bcc_addr = or_none(parsed.headers.getall('Bcc'),
-                    lambda bccs: [parse_email_address(c) for c in bccs])
+                    lambda bccs: filter(lambda p: p is not None,
+                        [parse_email_address(c) for c in bccs]))
             new_msg.in_reply_to = parsed.headers.get('In-Reply-To')
             new_msg.message_id = parsed.headers.get('Message-Id')
 
