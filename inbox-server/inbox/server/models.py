@@ -649,8 +649,9 @@ class Message(JSONSerializable, Base):
                 # misinterprets css
                 prettified = f.read() % html_data
 
-        soup = BeautifulSoup(prettified)
-        for div in soup.findAll('div', 'gmail_extra'): # also can extract on gmail_quote
+        soup = BeautifulSoup(prettified, "lxml")
+        # also can extract on gmail_quote
+        for div in soup.findAll('div', 'gmail_extra'):
             div.extract()
 
         # Strip trailing whitespace tags. Stuff like <div><br/><div>

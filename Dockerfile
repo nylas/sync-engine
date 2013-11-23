@@ -36,6 +36,7 @@ RUN apt-get -y install git \
                        python-xapian \
                        libzmq-dev \
                        python-zmq \
+                       python-lxml \
                        libmagickwand-dev \
                        tmux
 
