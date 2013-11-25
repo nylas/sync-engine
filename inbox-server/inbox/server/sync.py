@@ -2,6 +2,7 @@
 # vim: set fileencoding=utf-8 :
 from __future__ import division
 
+import os
 import socket
 
 from .config import config
@@ -225,7 +226,7 @@ class FolderSyncMonitor(Greenlet):
         local_uids = self.account.all_uids(self.folder_name)
         self.crispin_client.select_folder(self.folder_name)
 
-        remote_g_msgids = None
+        remote_g_metadata = None
         cached_validity = self.account.get_uidvalidity(self.folder_name)
         if cached_validity is not None:
             if not self.account.uidvalidity_valid(
@@ -236,14 +237,14 @@ class FolderSyncMonitor(Greenlet):
                 return 'initial uidinvalid'
             # we can only do this if we have a cached validity; if there's
             # no cached validity it generally means we haven't previously run
-            remote_g_msgids = self._retrieve_g_msgid_cache(local_uids,
+            remote_g_metadata = self._retrieve_g_metadata_cache(local_uids,
                     cached_validity)
 
-        if remote_g_msgids is None:
-            remote_g_msgids = self.crispin_client.g_msgids()
-            set_cache("_".join([self.account.email_address, self.folder_name,
-                "remote_g_msgids"]), remote_g_msgids)
-            # XXX TODO review this code I don't get it
+        if remote_g_metadata is None:
+            remote_g_metadata = self.crispin_client.g_metadata(
+                    uids=self.crispin_client.all_uids())
+            set_cache(os.path.join(str(self.account.id), self.folder_name,
+                "remote_g_metadata"), remote_g_metadata)
             # make sure uidvalidity is up-to-date
             if cached_validity is None:
                 db_session.add(UIDValidity(
@@ -259,7 +260,7 @@ class FolderSyncMonitor(Greenlet):
                 db_session.add(cached_validity)
                 db_session.commit()
 
-        remote_uids = sorted(remote_g_msgids.keys(), key=int)
+        remote_uids = sorted(remote_g_metadata.keys(), key=int)
         self.log.info("Found {0} UIDs for folder {1}".format(
             len(remote_uids), self.folder_name))
         self.log.info("Already have {0} UIDs".format(len(local_uids)))
@@ -274,7 +275,7 @@ class FolderSyncMonitor(Greenlet):
                     list(set(local_uids).difference(deleted_uids)), key=int)
 
         full_download = self._deduplicate_message_download(
-                remote_g_msgids, unknown_uids)
+                remote_g_metadata, unknown_uids)
 
         self.log.info("{0} uids left to fetch".format(len(full_download)))
 
@@ -287,16 +288,23 @@ class FolderSyncMonitor(Greenlet):
             num_local_messages += self._download_new_messages(
                     uids, num_local_messages, len(remote_uids))
 
-        # complete X-GM-MSGID mapping is no longer needed after initial sync
-        rm_cache("_".join([self.account.email_address, self.folder_name,
-            "remote_g_msgids"]))
         # XXX TODO: check for consistency with datastore here before committing
         # state: download any missing messages, delete any messages that we
         # have that the server doesn't. that way, worst case if sync engine
         # bugs trickle through is we lose some flags.
         self.log.info("Saved all messages and metadata on {0} to UIDVALIDITY {1} / HIGHESTMODSEQ {2}".format(self.folder_name, self.crispin_client.selected_uidvalidity, self.crispin_client.selected_highestmodseq))
 
-        self.log.info("Finished initial sync of {0}.".format(self.folder_name))
+        # NOTE: thread expansion may change selected folder
+        original_folder = self.folder_name
+        if self.account.provider == 'Gmail' and \
+                self.folder_name != self.crispin_client.folder_names['All']:
+            self._download_expanded_threads(remote_g_metadata, remote_uids)
+
+        # complete X-GM-MSGID mapping is no longer needed after initial sync
+        rm_cache(os.path.join(str(self.account.id), self.folder_name,
+            "remote_g_metadata"))
+
+        self.log.info("Finished initial sync of {0}.".format(original_folder))
         if self.folder_name not in self.crispin_client.poll_folders:
             return 'finish'
         else:
@@ -315,8 +323,8 @@ class FolderSyncMonitor(Greenlet):
             raise SyncException("Fatal error encountered")
 
     def _download_new_messages(self, uids, num_local_messages, num_remote_messages):
-        new_messages, new_folderitems = safe_download(
-                uids, self.folder_name, self.crispin_client)
+        new_messages, new_folderitems = safe_download(uids,
+                self.crispin_client.selected_folder_name, self.crispin_client)
 
         # Save message part blobs before committing changes to db.
         for msg in new_messages:
@@ -348,36 +356,47 @@ class FolderSyncMonitor(Greenlet):
         # trigger_index_update(self.account.namespace.id)
         return len(uids)
 
-    def _add_new_folderitem(self, remote_g_msgids, uids):
+    def _add_new_folderitem(self, remote_g_metadata, uids):
         flags = self.crispin_client.flags(uids)
-        # collate message objects to relate the new foldersmeta objects to
-        folderitem_uid_for = dict([(g_msgid, uid) for (uid, g_msgid) \
-                in remote_g_msgids.items() if uid in uids])
-        folderitem_g_msgids = [remote_g_msgids[uid] for uid in uids]
-        message_for = dict([(folderitem_uid_for[mm.g_msgid], mm) for \
-                mm in db_session.query(Message).filter( \
-                    Message.g_msgid.in_(folderitem_g_msgids))])
-        db_session.add_all(
-                [FolderItem(imapaccount_id=self.account.id,
-                    folder_name=self.folder_name, msg_uid=uid,
-                    flags=flags[uid],
-                    message=message_for[uid]) for uid in uids])
-        db_session.commit()
 
-    def _retrieve_g_msgid_cache(self, local_uids, cached_validity):
-        self.log.info('Attempting to retrieve remote_g_msgids from cache')
-        remote_g_msgids = get_cache("_".join(
-            [self.account.email_address, self.folder_name, "remote_g_msgids"]))
-        if remote_g_msgids is not None:
-            self.log.info("Successfully retrieved remote_g_msgids cache")
+        # Since we prioritize download for messages in certain threads, we
+        # may already have FolderItem entries despite calling this method.
+        local_folder_uids = set([uid for uid, in \
+                db_session.query(FolderItem.msg_uid).filter(
+                    FolderItem.folder_name==self.crispin_client.selected_folder_name,
+                    FolderItem.msg_uid.in_(uids))])
+        uids = [uid for uid in uids if uid not in local_folder_uids]
+
+        if uids:
+            # collate message objects to relate the new folderitems
+            folderitem_uid_for = dict([(metadata['msgid'], uid) for (uid, metadata) \
+                    in remote_g_metadata.items() if uid in uids])
+            folderitem_g_msgids = [remote_g_metadata[uid]['msgid'] for uid in uids]
+            message_for = dict([(folderitem_uid_for[mm.g_msgid], mm) for \
+                    mm in db_session.query(Message).filter( \
+                        Message.g_msgid.in_(folderitem_g_msgids))])
+
+            db_session.add_all(
+                    [FolderItem(imapaccount_id=self.account.id,
+                        folder_name=self.crispin_client.selected_folder_name,
+                        msg_uid=uid, flags=flags[uid],
+                        message=message_for[uid]) for uid in uids])
+            db_session.commit()
+
+    def _retrieve_g_metadata_cache(self, local_uids, cached_validity):
+        self.log.info('Attempting to retrieve remote_g_metadata from cache')
+        remote_g_metadata = get_cache(os.path.join(
+            str(self.account.id), self.folder_name, "remote_g_metadata"))
+        if remote_g_metadata is not None:
+            self.log.info("Successfully retrieved remote_g_metadata cache")
             if self.crispin_client.selected_highestmodseq > \
                     cached_validity.highestmodseq:
-                self._update_g_msgid_cache(remote_g_msgids, local_uids)
+                self._update_g_metadata_cache(remote_g_metadata, local_uids)
         else:
             self.log.info("No cached data found")
-        return remote_g_msgids
+        return remote_g_metadata
 
-    def _update_g_msgid_cache(self, remote_g_msgids, local_uids):
+    def _update_g_metadata_cache(self, remote_g_metadata, local_uids):
         """ If HIGHESTMODSEQ has changed since we saved the X-GM-MSGID cache,
             we need to query for any changes since then and update the saved
             data.
@@ -392,15 +411,15 @@ class FolderSyncMonitor(Greenlet):
                 self.crispin_client.selected_highestmodseq)
         new, updated = self._new_or_updated(modified, local_uids)
         self.log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
-        # for new, query g_msgids and update cache
-        remote_g_msgids.update(self.crispin_client.g_msgids(new))
+        # for new, query metadata and update cache
+        remote_g_metadata.update(self.crispin_client.g_metadata(new))
         # filter out messages that have disappeared
         all_uids = set(self.crispin_client.all_uids())
-        for uid in remote_g_msgids.keys():
+        for uid in remote_g_metadata.keys():
             if uid not in all_uids:
-                del remote_g_msgids[uid]
+                del remote_g_metadata[uid]
         set_cache("_".join([self.account.email_address, self.folder_name,
-            "remote_g_msgids"]), remote_g_msgids)
+            "remote_g_metadata"]), remote_g_metadata)
         self.log.info("Updated cache with new messages")
         # for updated, it's easier to just update them now
         # bigger chunk because the data being fetched here is very small
@@ -420,9 +439,9 @@ class FolderSyncMonitor(Greenlet):
             new, updated = self._new_or_updated(uids, local_uids)
             log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
 
-            remote_g_msgids = self.crispin_client.g_msgids(new)
+            remote_g_metadata = self.crispin_client.g_metadata(new)
             full_download = self._deduplicate_message_download(
-                    remote_g_msgids, new)
+                    remote_g_metadata, new)
 
             num_downloaded = 0
             for uids in chunk(full_download, self.crispin_client.CHUNK_SIZE):
@@ -438,16 +457,50 @@ class FolderSyncMonitor(Greenlet):
         self._remove_deleted_messages()
         self._update_cached_highestmodseq(folder)
 
-    def _deduplicate_message_download(self, remote_g_msgids, uids):
+    def _download_expanded_threads(self, remote_g_metadata, uids):
+        """ So after you've downloaded e.g. Inbox messages, you can view
+            the entire threads, even if they contain messages that aren't
+            in the Inbox.
+
+            NOTE: This method will change the selected folder to All Mail.
+        """
+        assert self.account.provider == 'Gmail', \
+                "thread expansion only works with Gmail"
+        assert self.folder_name != self.crispin_client.folder_names['All'], \
+                "All Mail threads are already fully expanded"
+        self.log.info("Expanding threads and downloading additional messages.")
+        g_thrids = set([msg['thrid'] for uid, msg in remote_g_metadata.items() \
+                if uid in uids])
+        if g_thrids:
+            self.log.info("{0} threads: {1}".format(self.folder_name, g_thrids))
+            self.crispin_client.select_folder(self.crispin_client.folder_names['All'])
+            thread_uids = self.crispin_client.expand_threads(g_thrids)
+            self.log.info("All Mail UIDs: {0}".format(thread_uids))
+            # need X-GM-MSGID in order to dedupe download
+            g_metadata = self.crispin_client.g_metadata(thread_uids)
+            to_download = self._deduplicate_message_download(g_metadata, thread_uids)
+            self.log.info("{0} deduplicated messages to download".format(
+                len(to_download)))
+            num_downloaded = 0
+            for uids in chunk(to_download, self.crispin_client.CHUNK_SIZE):
+                num_downloaded += self._download_new_messages(
+                        uids, num_downloaded, len(to_download))
+            # NOTE: We intentionally don't re-select the original folder here,
+            # since doing so may be slow and we don't usually need to do
+            # anything after expanding threads.
+        raise Exception("foo")
+
+    def _deduplicate_message_download(self, remote_g_metadata, uids):
         """ Deduplicate message download using X-GM-MSGID. """
-        local_g_msgids = self.account.all_g_msgids()
+        local_g_msgids = set(self.account.g_msgids(
+                in_=[remote_g_metadata[uid]['msgid'] for uid in uids]))
         full_download, folderitem_only = partition(
-                lambda uid: remote_g_msgids[uid] in local_g_msgids,
+                lambda uid: remote_g_metadata[uid]['msgid'] in local_g_msgids,
                 sorted(uids, key=int))
         self.log.info("Skipping {0} uids downloaded via other folders".format(
             len(folderitem_only)))
         if len(folderitem_only) > 0:
-            self._add_new_folderitem(remote_g_msgids, folderitem_only)
+            self._add_new_folderitem(remote_g_metadata, folderitem_only)
 
         return full_download
 

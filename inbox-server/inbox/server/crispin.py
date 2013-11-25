@@ -171,27 +171,41 @@ class CrispinClientBase(object):
     def _fetch_all_uids(self):
         raise NotImplementedError()
 
-    def g_msgids(self, uids=None):
-        """ Download Gmail MSGIDs for the given messages, or all messages in
-            the currently selected folder if no UIDs specified.
+    def g_metadata(self, uids):
+        """ Download Gmail MSGIDs and THRIDS for the given messages, or all
+            messages in the currently selected folder if no UIDs specified.
 
-            The mapping must be uid->g_msgid and not vice-versa because a
-            UID is unique (to a folder), but a g_msgid is not necessarily
-            (it can legitimately appear twice in the folder).
+            NOTE: only UIDs are guaranteed to be unique to a folder, G-MSGID
+            and G-THRID may not be.
         """
-        self.log.info("fetching X-GM-MSGID mapping from server.")
-        if uids is None:
-            uids = self.all_uids()
-        return dict([(int(uid), unicode(ret['X-GM-MSGID'])) for uid, ret in \
-                self._fetch_g_msgids(uids).iteritems()])
+        self.log.info("Fetching X-GM-MSGID and X-GM-THRID mapping from server.")
+        return dict([(int(uid), dict(msgid=str(ret['X-GM-MSGID']),
+            thrid=str(ret['X-GM-THRID']))) \
+                for uid, ret in self._fetch_g_metadata(uids).iteritems()])
 
-    def _fetch_g_msgids(self, uids):
+    def _fetch_g_metadata(self, uids):
         raise NotImplementedError()
 
     def new_and_updated_uids(self, modseq):
         return self._fetch_new_and_updated_uids(modseq)
 
     def _fetch_new_and_updated_uids(self, modseq):
+        raise NotImplementedError()
+
+    def expand_threads(self, thread_ids):
+        """ Find all message UIDs in a user's account that have X-GM-THRID in
+            thread_ids.
+
+            Message UIDs returned are All Mail UIDs; this method requires the
+            All Mail folder to be selected.
+        """
+        assert self.account.provider == 'Gmail', \
+                "thread expansion only supported on Gmail"
+        assert self.selected_folder_name == self.folder_names['All'], \
+                "must select All Mail first"
+        return self._expand_threads(thread_ids)
+
+    def _expand_threads(self, thread_ids):
         raise NotImplementedError()
 
     def flags(self, uids):
@@ -289,11 +303,11 @@ class DummyCrispinClient(CrispinClientBase):
                         self.account.id, self.selected_folder_name)
         return cached_data
 
-    def _fetch_g_msgids(self, uids):
-        cached_data = self.get_cache(self.selected_folder_name, 'g_msgids')
+    def _fetch_g_metadata(self, uids):
+        cached_data = self.get_cache(self.selected_folder_name, 'g_metadata')
 
         assert cached_data is not None, \
-                'no g_msgids cached for account {0} {1}'.format(
+                'no g_metadata cached for account {0} {1}'.format(
                         self.account.id, self.selected_folder_name)
         return cached_data
 
@@ -430,6 +444,19 @@ class CrispinClient(CrispinClientBase):
         return status
 
     @connected
+    def _expand_threads(self, thread_ids):
+        # The boolean IMAP queries use prefix notation for query params.
+        # imaplib automatically adds parens.
+        criteria = ('OR ' * (len(thread_ids)-1)) + ' '.join(
+                ['X-GM-THRID {0}'.format(thrid) for thrid in thread_ids])
+        data = self._imap_server.search(['NOT DELETED', criteria])
+
+        # if self.cache:
+        #     self.set_cache(data, self.selected_folder_name, 'foo')
+
+        return data
+
+    @connected
     def _fetch_all_uids(self):
         data = self._imap_server.search(['NOT DELETED'])
 
@@ -439,11 +466,11 @@ class CrispinClient(CrispinClientBase):
         return data
 
     @connected
-    def _fetch_g_msgids(self, uids):
-        data = self._imap_server.fetch(uids, ['X-GM-MSGID'])
+    def _fetch_g_metadata(self, uids):
+        data = self._imap_server.fetch(uids, ['X-GM-MSGID', 'X-GM-THRID'])
 
         if self.cache:
-            self.set_cache(data, self.selected_folder_name, 'g_msgids')
+            self.set_cache(data, self.selected_folder_name, 'g_metadata')
 
         return data
 

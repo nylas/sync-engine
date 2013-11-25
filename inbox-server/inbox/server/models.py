@@ -264,11 +264,12 @@ class IMAPAccount(Base):
                 db_session.query(FolderItem.msg_uid).filter_by(
                     imapaccount_id=self.id, folder_name=folder_name)]
 
-    def all_g_msgids(self):
-        return set([g_msgid for g_msgid, in
-            db_session.query(distinct(Message.g_msgid))\
-                    .join(FolderItem).filter(
-                FolderItem.imapaccount_id==self.id)])
+    def g_msgids(self, in_=None):
+        query = db_session.query(distinct(Message.g_msgid)).join(FolderItem) \
+                    .filter(FolderItem.imapaccount_id==self.id)
+        if in_:
+            query = query.filter(Message.g_msgid.in_(in_))
+        return sorted([g_msgid for g_msgid, in query], key=long)
 
     def update_metadata(self, folder_name, uids, new_flags):
         """ Update flags (the only metadata that can change). """
