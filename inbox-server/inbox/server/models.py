@@ -20,7 +20,7 @@ from boto.s3.key import Key
 
 from ..util.file import mkdirp, remove_file, Lock
 from ..util.html import strip_tags, plaintext2html
-from ..util.misc import or_none
+from ..util.misc import or_none, strip_plaintext_quote
 from ..util.addr import parse_email_address
 from .config import config, is_prod
 from .log import get_logger
@@ -599,8 +599,8 @@ class Message(JSONSerializable, Base):
         elif plain_part is None:
             self.sanitized_body = ''
         else:
-            assert '\r' not in plain_part, "newlines not normalized"
-            self.sanitized_body = plaintext2html(plain_part).strip()
+            self.sanitized_body = \
+                    plaintext2html(strip_plaintext_quote(plain_part))
 
     def calculate_snippet(self):
         assert self.sanitized_body is not None, \
