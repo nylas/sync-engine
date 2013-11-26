@@ -697,6 +697,7 @@ class Message(JSONSerializable, Base):
         d['namespace_id'] = self.namespace_id
         d['snippet'] = self.snippet
         d['body'] = self.prettified_body
+        d['is_draft'] = self.is_draft
         return d
 
 # These are the top 15 most common Content-Type headers
