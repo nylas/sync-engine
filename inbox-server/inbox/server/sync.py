@@ -488,7 +488,6 @@ class FolderSyncMonitor(Greenlet):
             # NOTE: We intentionally don't re-select the original folder here,
             # since doing so may be slow and we don't usually need to do
             # anything after expanding threads.
-        raise Exception("foo")
 
     def _deduplicate_message_download(self, remote_g_metadata, uids):
         """ Deduplicate message download using X-GM-MSGID. """
