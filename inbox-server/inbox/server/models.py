@@ -378,11 +378,15 @@ class IMAPAccount(Base):
             # \Flagged  Message is "flagged" for urgent/special attention
             # \Deleted  Message is "deleted" for removal by later EXPUNGE
             # \Draft    Message has not completed composition (marked as a draft).
+            #           NOTE: Gmail doesn't use this flag. The only way we
+            #           can get draft status is to look at labels.
             # \Recent   session is the first session to have been notified
             #           about this message
             fm = FolderItem(imapaccount_id=self.id, folder_name=folder_name,
                     msg_uid=uid, message=new_msg, flags=sorted(flags))
             new_folderitems.append(fm)
+
+            new_msg.is_draft = '\\Draft' in x_gm_labels
 
             new_msg.size = len(body)  # includes headers text
 
@@ -590,6 +594,8 @@ class Message(JSONSerializable, Base):
 
     # only on messages from Gmail
     g_msgid = Column(String(40), nullable=True)
+
+    is_draft = Column(Boolean, default=False, nullable=False)
 
     def calculate_sanitized_body(self):
         plain_part, html_part = self.body()
