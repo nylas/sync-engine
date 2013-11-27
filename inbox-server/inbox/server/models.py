@@ -438,6 +438,8 @@ class IMAPAccount(Base):
                     data_to_write = mimepart.body.encode('utf-8', 'strict')
                 else:
                     data_to_write = mimepart.body
+                if data_to_write is None:
+                    data_to_write = ''
                 # normalize mac/win/unix newlines
                 data_to_write = data_to_write \
                         .replace('\r\n', '\n').replace('\r', '\n')
@@ -445,7 +447,7 @@ class IMAPAccount(Base):
                 new_part.content_id = mimepart.headers.get('Content-Id')
 
                 new_part._data = data_to_write
-                new_part.size = 0 if data_to_write is None else len(data_to_write)
+                new_part.size = len(data_to_write)
                 new_part.data_sha256 = sha256(data_to_write).hexdigest()
                 new_msg.parts.append(new_part)
             new_msg.calculate_sanitized_body()
