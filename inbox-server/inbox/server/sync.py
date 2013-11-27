@@ -100,6 +100,18 @@ class UIDInvalid(SyncException): pass
 
 ### main
 
+def uidvalidity_callback(crispin_client, folder_name, select_info):
+    account = crispin_client.account
+    assert crispin_client.selected_folder is not None, \
+            "must start IMAP session before verifying UID validity"
+    cached_validity = account.get_uidvalidity(folder_name)
+    if cached_validity and not account.uidvalidity_valid(
+            crispin_client.selected_uidvalidity,
+            crispin_client.selected_folder_name,
+            cached_validity.uid_validity):
+        raise UIDInvalid("folder: {0}, remote uidvalidity: {1}, cached uidvalidity: {2}".format(folder_name, crispin_client.selected_uidvalidity, cached_validity.uid_validity))
+    return select_info
+
 def trigger_index_update(namespace_id):
     c = zerorpc.Client()
     c.connect(config.get('SEARCH_SERVER_LOC', None))
@@ -205,17 +217,6 @@ class FolderSyncMonitor(Greenlet):
         raise Exception("Unimplemented")
         return previous_state
 
-    def _uidvalidity_callback(self, folder_name, select_info):
-        assert self.crispin_client.selected_folder is not None, \
-                "must start IMAP session before verifying UID validity"
-        cached_validity = self.account.get_uidvalidity(folder_name)
-        if cached_validity and not self.account.uidvalidity_valid(
-                self.crispin_client.selected_uidvalidity,
-                self.crispin_client.selected_folder_name,
-                cached_validity.uid_validity):
-            raise UIDInvalid("folder: {0}, remote uidvalidity: {1}, cached uidvalidity: {2}".format(folder_name, self.crispin_client.selected_uidvalidity, cached_validity.uid_validity))
-        return select_info
-
     def _new_or_updated(self, uids, local_uids):
         """ HIGHESTMODSEQ queries return a list of messages that are *either*
             new *or* updated. We do different things with each, so we need to
@@ -238,7 +239,7 @@ class FolderSyncMonitor(Greenlet):
         local_uids = self.account.all_uids(self.folder_name)
         try:
             self.crispin_client.select_folder(self.folder_name,
-                    self._uidvalidity_callback)
+                    uidvalidity_callback)
         except UIDInvalid:
             return 'initial uidinvalid'
 
@@ -312,7 +313,7 @@ class FolderSyncMonitor(Greenlet):
             try:
                 self.crispin_client.select_folder(
                         self.crispin_client.folder_names['All'],
-                        self._uidvalidity_callback)
+                        uidvalidity_callback)
                 self._download_expanded_threads(remote_g_metadata, remote_uids)
             except UIDInvalid:
                 return 'initial uidinvalid'
@@ -482,7 +483,7 @@ class FolderSyncMonitor(Greenlet):
             try:
                 self.crispin_client.select_folder(
                         self.crispin_client.folder_names['All'],
-                        self._uidvalidity_callback)
+                        uidvalidity_callback)
                 self._download_expanded_threads(g_metadata, local_uids)
             except UIDInvalid:
                 return 'poll uidinvalid'
@@ -559,7 +560,7 @@ class FolderSyncMonitor(Greenlet):
         if status['HIGHESTMODSEQ'] > cached_validity.highestmodseq:
             try:
                 self.crispin_client.select_folder(self.folder_name,
-                        self._uidvalidity_callback)
+                        uidvalidity_callback)
             except UIDInvalid:
                 return 'poll uidinvalid'
             self._highestmodseq_update(cached_validity.highestmodseq)

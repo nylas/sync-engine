@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from .sessionmanager import get_crispin_from_email
+from .sync import uidvalidity_callback
 import IPython
 
 def start_console(user_email_address=None):
@@ -13,8 +14,7 @@ def start_console(user_email_address=None):
             return get_crispin_from_email(user_email_address)
 
         c = refresh_crispin()
-        c.select_folder(c.folder_names['All'])
-
+        c.select_folder(c.folder_names['All'], uidvalidity_callback)
 
         server_uids = c.all_uids()
 
