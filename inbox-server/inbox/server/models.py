@@ -271,6 +271,15 @@ class IMAPAccount(Base):
             query = query.filter(Message.g_msgid.in_(in_))
         return sorted([g_msgid for g_msgid, in query], key=long)
 
+    def g_metadata(self, folder_name):
+        query = db_session.query(FolderItem.msg_uid, Message.g_msgid,
+                    Message.g_thrid).filter(
+                            FolderItem.imapaccount_id==self.id,
+                            FolderItem.folder_name==folder_name)
+
+        return dict([(int(uid), dict(msgid=g_msgid, thrid=g_thrid)) \
+                for uid, g_msgid, g_thrid in query])
+
     def update_metadata(self, folder_name, uids, new_flags):
         """ Update flags (the only metadata that can change). """
         for fm in db_session.query(FolderItem).filter(
@@ -367,9 +376,7 @@ class IMAPAccount(Base):
 
             new_msg.internaldate = internaldate
             new_msg.g_msgid = x_gm_msgid
-            # NOTE: this value is not saved to the database, but it is used
-            # later for thread detection after message download.
-            new_msg._g_thrid = x_gm_thrid
+            new_msg.g_thrid = x_gm_thrid
 
             # TODO optimize storage of flags with a bit field or something,
             # if we actually care.
@@ -596,6 +603,7 @@ class Message(JSONSerializable, Base):
 
     # only on messages from Gmail
     g_msgid = Column(String(40), nullable=True)
+    g_thrid = Column(String(40), nullable=True)
 
     is_draft = Column(Boolean, default=False, nullable=False)
 
