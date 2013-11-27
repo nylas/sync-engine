@@ -316,6 +316,9 @@ class FolderSyncMonitor(Greenlet):
                 self._download_expanded_threads(remote_g_metadata, remote_uids)
             except UIDInvalid:
                 return 'initial uidinvalid'
+        # NOTE: Anything after here has "All Mail" selected on Gmail accounts.
+        # Put code intended to operate on the poll folder above the thread
+        # expansion code block.
 
         # complete X-GM-MSGID mapping is no longer needed after initial sync
         rm_cache(os.path.join(str(self.account.id), self.folder_name,
@@ -473,7 +476,7 @@ class FolderSyncMonitor(Greenlet):
             log.info("No changes")
 
         self._remove_deleted_messages()
-        original_folder = self.folder_name
+        self._update_cached_highestmodseq(self.folder_name)
         if self.account.provider == 'Gmail' and \
                 self.folder_name != self.crispin_client.folder_names['All']:
             try:
@@ -483,7 +486,9 @@ class FolderSyncMonitor(Greenlet):
                 self._download_expanded_threads(g_metadata, local_uids)
             except UIDInvalid:
                 return 'poll uidinvalid'
-        self._update_cached_highestmodseq(original_folder)
+        # NOTE: Anything after here has "All Mail" selected on Gmail accounts.
+        # Put code intended to operate on the poll folder above the thread
+        # expansion code block.
 
     def _download_expanded_threads(self, remote_g_metadata, uids):
         """ So after you've downloaded e.g. Inbox messages, you can view
