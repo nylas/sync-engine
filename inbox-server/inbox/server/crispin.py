@@ -56,8 +56,6 @@ class CrispinClientBase(object):
     are valid for a "session", which is defined as from the time you
     SELECT a folder until the connection is closed or another folder is
     selected.
-
-    XXX: can we make it even harder to fuck this up?
     """
     def __init__(self, account, cache=False):
         self.account = account
@@ -138,19 +136,19 @@ class CrispinClientBase(object):
     def stop(self):
         raise NotImplementedError()
 
-    def select_folder(self, folder):
-        """ Selects a given folder and makes sure to set the 'folder_info'
+    def select_folder(self, folder, uidvalidity_callback):
+        """ Selects a given folder and makes sure to set the 'selected_folder'
             attribute to a (folder_name, select_info) pair.
 
-            NOTE: The caller must ALWAYS validate UIDVALIDITY after calling
-            this function. We don't do this here because this module
-            deliberately doesn't deal with the database layer.
+            Selecting a folder indicates the start of an IMAP session.
+            IMAP UIDs are only guaranteed valid for sessions, so the caller
+            must provide a callback that checks UID validity.
         """
         select_info = self._do_select_folder(folder)
         self.selected_folder = (folder, select_info)
         self.log.info('Selected folder {0} with {1} messages.'.format(
             folder, select_info['EXISTS']))
-        return select_info
+        return uidvalidity_callback(folder, select_info)
 
     def _do_select_folder(self, folder):
         raise NotImplementedError()
