@@ -207,8 +207,9 @@ class CrispinClientBase(object):
         raise NotImplementedError()
 
     def flags(self, uids):
-        return dict([(uid, msg['FLAGS']) for uid, msg in \
-                self._fetch_flags(uids).iteritems()])
+        """ Flags includes labels on Gmail because Gmail doesn't use \\Draft."""
+        return dict([(uid, dict(flags=msg['FLAGS'], labels=msg['X-GM-LABELS']))
+            for uid, msg in self._fetch_flags(uids).iteritems()])
 
     def uids(self, uids):
         raw_messages = self._fetch_uids(uids)
@@ -484,7 +485,7 @@ class CrispinClient(CrispinClientBase):
 
     @connected
     def _fetch_flags(self, uids):
-        data = self._imap_server.fetch(uids, ['FLAGS'])
+        data = self._imap_server.fetch(uids, ['FLAGS X-GM-LABELS'])
 
         if self.cache:
             # account.{{account_id}}/{{folder}}/{{uidvalidity}}/{{highestmodseq}}/{{uid}}/flags

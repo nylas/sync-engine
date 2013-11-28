@@ -183,6 +183,9 @@ class JSON(TypeDecorator):
             return None
         return json.loads(value)
 
+class LittleJSON(JSON):
+    impl = String(40)
+
 ### Tables
 
 # global
@@ -286,10 +289,7 @@ class IMAPAccount(Base):
                 FolderItem.imapaccount_id==self.id,
                 FolderItem.msg_uid.in_(uids),
                 FolderItem.folder_name==folder_name):
-            sorted_flags = sorted(new_flags[fm.msg_uid])
-            if fm.flags != sorted_flags:
-                fm.flags = sorted_flags
-                db_session.add(fm)
+            fm.update_flags(new_flags['flags'], new_flags['labels'])
         db_session.commit()
 
     def remove_messages(self, uids, folder):
@@ -378,22 +378,10 @@ class IMAPAccount(Base):
             new_msg.g_msgid = x_gm_msgid
             new_msg.g_thrid = x_gm_thrid
 
-            # TODO optimize storage of flags with a bit field or something,
-            # if we actually care.
-            # \Seen     Message has been read
-            # \Answered Message has been answered
-            # \Flagged  Message is "flagged" for urgent/special attention
-            # \Deleted  Message is "deleted" for removal by later EXPUNGE
-            # \Draft    Message has not completed composition (marked as a draft).
-            #           NOTE: Gmail doesn't use this flag. The only way we
-            #           can get draft status is to look at labels.
-            # \Recent   session is the first session to have been notified
-            #           about this message
-            fm = FolderItem(imapaccount_id=self.id, folder_name=folder_name,
-                    msg_uid=uid, message=new_msg, flags=sorted(flags))
-            new_folderitems.append(fm)
-
-            new_msg.is_draft = '\\Draft' in x_gm_labels
+            fi = FolderItem(imapaccount_id=self.id, folder_name=folder_name,
+                    msg_uid=uid, message=new_msg)
+            fi.update_flags(flags, x_gm_labels)
+            new_folderitems.append(fi)
 
             new_msg.size = len(body)  # includes headers text
 
@@ -605,8 +593,6 @@ class Message(JSONSerializable, Base):
     g_msgid = Column(String(40), nullable=True)
     g_thrid = Column(String(40), nullable=True)
 
-    is_draft = Column(Boolean, default=False, nullable=False)
-
     def calculate_sanitized_body(self):
         plain_part, html_part = self.body()
         if html_part:
@@ -804,8 +790,37 @@ class FolderItem(JSONSerializable, Base):
     # folder_name uniquely requires max length of 767 bytes under utf8mb4
     # http://mathiasbynens.be/notes/mysql-utf8mb4
     folder_name = Column(String(191), nullable=False)
-    # NOTE: We could definitely make this field smaller than Text.
-    flags = Column(JSON, nullable=False)
+
+    ### Flags ###
+    # Message has not completed composition (marked as a draft).
+    is_draft = Column(Boolean, default=False, nullable=False)
+    # Message has been read
+    is_seen = Column(Boolean, default=False, nullable=False)
+    # Message is "flagged" for urgent/special attention
+    is_flagged = Column(Boolean, default=False, nullable=False)
+    # session is the first session to have been notified about this message
+    is_recent = Column(Boolean, default=False, nullable=False)
+    # Message has been answered
+    is_answered = Column(Boolean, default=False, nullable=False)
+    # things like: ['$Forwarded', 'nonjunk', 'Junk']
+    extra_flags = Column(LittleJSON, nullable=False)
+
+    def update_flags(self, new_flags, x_gm_labels=None):
+        new_flags = set(new_flags)
+        col_for_flag = {
+                u'\\Draft': 'is_draft',
+                u'\\Seen': 'is_seen',
+                u'\\Recent': 'is_recent',
+                u'\\Answered': 'is_answered',
+                u'\\Flagged': 'is_flagged',
+                }
+        for flag, col in col_for_flag.iteritems():
+            setattr(self, col, flag in new_flags)
+            new_flags.discard(flag)
+        # Gmail doesn't use the \Draft flag. Go figure.
+        if '\\Draft' in x_gm_labels:
+            self.is_draft = True
+        self.extra_flags = sorted(new_flags)
 
     __table_args__ = (UniqueConstraint('folder_name', 'msg_uid', 'imapaccount_id',),)
 

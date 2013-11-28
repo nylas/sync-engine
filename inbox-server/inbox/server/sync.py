@@ -397,11 +397,13 @@ class FolderSyncMonitor(Greenlet):
                     mm in db_session.query(Message).filter( \
                         Message.g_msgid.in_(folderitem_g_msgids))])
 
-            db_session.add_all(
-                    [FolderItem(imapaccount_id=self.account.id,
+            new_folderitems = [FolderItem(imapaccount_id=self.account.id,
                         folder_name=self.crispin_client.selected_folder_name,
-                        msg_uid=uid, flags=flags[uid],
-                        message=message_for[uid]) for uid in uids])
+                        msg_uid=uid, message=message_for[uid]) for uid in uids]
+            for item in new_folderitems:
+                item.update_flags(flags[item.msg_uid]['flags'],
+                        flags[item.msg_uid]['labels'])
+            db_session.add_all(new_folderitems)
             db_session.commit()
 
     def _retrieve_g_metadata_cache(self, local_uids, cached_validity):
