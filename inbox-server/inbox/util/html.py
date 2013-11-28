@@ -11,7 +11,7 @@ class MLStripper(HTMLParser):
     def handle_data(self, d):
         self.fed.append(d)
     def get_data(self):
-        return ''.join(self.fed)
+        return u''.join(self.fed)
 
 def strip_tags(html):
     s = MLStripper()
@@ -19,7 +19,7 @@ def strip_tags(html):
     return s.get_data()
 
 # https://djangosnippets.org/snippets/19/
-re_string = re.compile(r'(?P<htmlchars>[<&>])|(?P<space>^[ \t]+)|(?P<lineend>\n)|(?P<protocol>(^|\s)((http|ftp)://.*?))(\s|$)', re.S|re.M|re.I)
+re_string = re.compile(ur'(?P<htmlchars>[<&>])|(?P<space>^[ \t]+)|(?P<lineend>\n)|(?P<protocol>(^|\s)((http|ftp)://.*?))(\s|$)', re.S|re.M|re.I|re.U)
 def plaintext2html(text, tabstop=4):
     assert '\r' not in text, "newlines not normalized"
     def do_sub(m):
@@ -29,7 +29,7 @@ def plaintext2html(text, tabstop=4):
         if c['lineend']:
             return '<br>'
         elif c['space']:
-            t = m.group().replace('\t', '&nbsp;'*tabstop)
+            t = m.group().replace('\t', u'&nbsp;'*tabstop)
             t = t.replace(' ', '&nbsp;')
             return t
         elif c['space'] == '\t':
@@ -44,8 +44,8 @@ def plaintext2html(text, tabstop=4):
             last = m.groups()[-1]
             if last in ['\n', '\r', '\r\n']:
                 last = '<br>'
-            return '%s<a href="%s">%s</a>%s' % (prefix, url, url, last)
-    return '\n'.join(['<p>{0}</p>'.format(
+            return u'{0}<a href="{1}">{2}</a>{3}'.format(prefix, url, url, last)
+    return '\n'.join([u'<p>{0}</p>'.format(
         re.sub(re_string, do_sub, p)) for p in text.split('\n\n')])
 
 def common_intervals(an, bn):

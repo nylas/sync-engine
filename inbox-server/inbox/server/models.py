@@ -19,16 +19,17 @@ from boto.s3.connection import S3Connection
 from boto.s3.key import Key
 
 from ..util.file import mkdirp, remove_file, Lock
-from ..util.html import strip_tags, plaintext2html
+from ..util.html import plaintext2html
 from ..util.misc import or_none, strip_plaintext_quote
 from ..util.addr import parse_email_address
 from .config import config, is_prod
 from .log import get_logger
 log = get_logger()
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Doctype, Comment
 
 from urllib import quote_plus as urlquote
+from itertools import chain
 
 from flanker import mime
 
@@ -446,7 +447,6 @@ class IMAPAccount(Base):
                 new_part.data_sha256 = sha256(data_to_write).hexdigest()
                 new_msg.parts.append(new_part)
             new_msg.calculate_sanitized_body()
-            new_msg.calculate_snippet()
 
         return new_messages, new_folderitems
 
@@ -595,31 +595,52 @@ class Message(JSONSerializable, Base):
 
     def calculate_sanitized_body(self):
         plain_part, html_part = self.body()
+        snippet_length = 191
         if html_part:
             assert '\r' not in html_part, "newlines not normalized"
-            self.sanitized_body = html_part.strip()
+
+            # Try our best to strip out gmail quoted text.
+            soup = BeautifulSoup(html_part.strip(), "lxml")
+            for div in soup.findAll('div', 'gmail_quote'):
+                div.extract()
+            for container in soup.findAll('div', 'gmail_extra'):
+                if container.contents is not None:
+                    for tag in reversed(container.contents):
+                        if not hasattr(tag, 'name') or tag.name != 'br': break
+                        else: tag.extract()
+                if container.contents is None:
+                    # we emptied it!
+                    container.extract()
+
+            # Paragraphs don't need trailing line-breaks.
+            for container in soup.findAll('p'):
+                if container.contents is not None:
+                    for tag in reversed(container.contents):
+                        if not hasattr(tag, 'name') or tag.name != 'br': break
+                        else: tag.extract()
+
+            # Misc other crap.
+            dtd = [item for item in soup.contents if isinstance(item, Doctype)]
+            comments = soup.findAll(text=lambda text:isinstance(text, Comment))
+            for tag in chain(dtd, comments):
+                tag.extract()
+
+            self.sanitized_body = unicode(soup)
+
+            # trim for snippet
+            for tag in soup.findAll(['style', 'head', 'title']):
+                tag.extract()
+            self.snippet = unicode(soup).get_text()[:191]
         elif plain_part is None:
-            self.sanitized_body = ''
+            self.sanitized_body = u''
+            self.snippet = u''
         else:
-            self.sanitized_body = \
-                    plaintext2html(strip_plaintext_quote(plain_part))
-
-    def calculate_snippet(self):
-        assert self.sanitized_body is not None, \
-                "need sanitized_body to calculate snippet"
-        # No need to strip newlines since HTML won't display them anyway.
-        try:
-            stripped = strip_tags(self.sanitized_body)
-        except UnicodeDecodeError, e:
-            log.error(e)
-            stripped = self.sanitized_body
-
-        # truncate based on decoded version so as not to accidentally truncate
-        # mid-codepoint
-        self.snippet = stripped.decode('utf-8')[:191].encode('utf-8')
+            stripped = strip_plaintext_quote(plain_part.strip())
+            self.sanitized_body = plaintext2html(stripped)
+            self.snippet = stripped[:snippet_length]
 
     def body(self):
-        """ Returns (plaintext, html) body for the message. """
+        """ Returns (plaintext, html) body for the message, decoded. """
         assert self.parts, \
                 "Can't calculate body before parts have been parsed"
 
@@ -628,11 +649,11 @@ class Message(JSONSerializable, Base):
 
         for part in self.parts:
             if part.content_type == 'text/html':
-                html_data = part.get_data()
+                html_data = part.get_data().decode('utf-8')
                 break
         for part in self.parts:
             if part.content_type == 'text/plain':
-                plain_data = part.get_data()
+                plain_data = part.get_data().decode('utf-8')
                 break
 
         return plain_data, html_data
@@ -659,27 +680,7 @@ class Message(JSONSerializable, Base):
                 # misinterprets css
                 prettified = f.read() % html_data
 
-        # Try our best to strip out gmail quoted text.
-        soup = BeautifulSoup(prettified, "lxml")
-        for div in soup.findAll('div', 'gmail_quote'):
-            div.extract()
-        for container in soup.findAll('div', 'gmail_extra'):
-            if container.contents is not None:
-                for tag in reversed(container.contents):
-                    if not hasattr(tag, 'name') or tag.name != 'br': break
-                    else: tag.extract()
-            if container.contents is None:
-                # we emptied it!
-                container.extract()
-
-        # Paragraphs don't need trailing line-breaks.
-        for container in soup.findAll('p'):
-            if container.contents is not None:
-                for tag in reversed(container.contents):
-                    if not hasattr(tag, 'name') or tag.name != 'br': break
-                    else: tag.extract()
-
-        return str(soup)
+        return prettified
 
     def cereal(self):
         # TODO serialize more here for client API
@@ -1016,7 +1017,6 @@ database_name = config.get('_'.join([config_prefix, 'DATABASE']))
 
 def db_uri():
     uri_template = 'mysql://{username}:{password}@{host}:{port}/{database}?charset=utf8mb4'
-    config_prefix = 'RDS' if is_prod() else 'MYSQL'
 
     return uri_template.format(
         username = config.get('_'.join([config_prefix, 'USER'])),
