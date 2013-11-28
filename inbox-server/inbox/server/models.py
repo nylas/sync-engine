@@ -632,7 +632,7 @@ class Message(JSONSerializable, Base):
             # trim for snippet
             for tag in soup.findAll(['style', 'head', 'title']):
                 tag.extract()
-            self.snippet = unicode(soup).get_text()[:191]
+            self.snippet = soup.get_text()[:191]
         elif plain_part is None:
             self.sanitized_body = u''
             self.snippet = u''
