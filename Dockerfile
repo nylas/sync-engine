@@ -74,7 +74,7 @@ RUN pip install argparse==1.2.1 \
                 zerorpc==0.4.3 \
                 gdata==2.0.18 \
                 python-dateutil==2.1 \
-                flanker==0.3.2 \
+                flanker==0.3.3 \
                 git+https://github.com/zeromq/pyzmq.git@v13.1.0#egg=zmq \
                 git+https://github.com/inboxapp/imapclient.git#egg=imapclient \
                 git+https://github.com/inboxapp/bleach.git#egg=bleach \
