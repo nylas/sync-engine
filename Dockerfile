@@ -22,6 +22,7 @@ RUN echo "mysql-server mysql-server/root_password_again password docker" | debco
 
 # Dependencies
 RUN apt-get -y install git \
+                       wget \
                        nginx \
                        supervisor \
                        mysql-server \
@@ -80,6 +81,9 @@ RUN pip install argparse==1.2.1 \
                 git+https://github.com/inboxapp/imapclient.git#egg=imapclient \
                 git+https://github.com/inboxapp/bleach.git#egg=bleach \
                 git+https://github.com/inboxapp/iconv.git#egg=iconv
+
+# Install NodeJS
+RUN wget -O - http://nodejs.org/dist/v0.8.26/node-v0.8.26-linux-x64.tar.gz | tar -C /usr/local/ --strip-components=1 -zxv
 
 
 # MySQL
