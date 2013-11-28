@@ -286,11 +286,13 @@ class IMAPAccount(Base):
 
     def update_metadata(self, folder_name, uids, new_flags):
         """ Update flags (the only metadata that can change). """
-        for fm in db_session.query(FolderItem).filter(
+        for item in db_session.query(FolderItem).filter(
                 FolderItem.imapaccount_id==self.id,
                 FolderItem.msg_uid.in_(uids),
                 FolderItem.folder_name==folder_name):
-            fm.update_flags(new_flags['flags'], new_flags['labels'])
+            flags = new_flags[item.msg_uid]['flags']
+            labels = new_flags[item.msg_uid]['labels']
+            item.update_flags(flags, labels)
         db_session.commit()
 
     def remove_messages(self, uids, folder):
