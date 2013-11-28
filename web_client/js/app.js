@@ -12,7 +12,8 @@ var app = angular.module('InboxApp',
      'ui',
      'ui.sortable',
      'angular-md5',
-     'angularFileUpload'
+     'angularFileUpload',
+     'angular-mousetrap',
      ]);
 
 

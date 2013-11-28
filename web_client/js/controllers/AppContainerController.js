@@ -21,7 +21,8 @@ function(
     $timeout,
     $log,
     $window,
-    MockData)
+    MockData,
+    Mousetrap)
 {
     // TODO
     // Mousetrap.bind('command+shift+k', function(e) {
@@ -68,6 +69,16 @@ function(
             $scope.activeThread = null;
         });
     };
+
+    Mousetrap.bind('j', function() {
+        $log.info("Go to next message.")
+    });
+
+    Mousetrap.bind('k', function() {
+        $log.info("Go to previous message.")
+    });
+
+
 
     $scope.sendButtonHandler = function() {
         $log.info("sendButtonhandler in appcont");
