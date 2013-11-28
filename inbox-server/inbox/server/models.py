@@ -358,6 +358,8 @@ class IMAPAccount(Base):
 
             new_msg = Message()
             new_msg.data_sha256 = sha256(body).hexdigest()
+            # TODO: Detect which namespace to add message to.
+            # Look up message thread,
             new_msg.namespace_id = self.namespace.id
 
             # clean_subject strips re:, fwd: etc.

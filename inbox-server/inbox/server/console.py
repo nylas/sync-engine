@@ -10,13 +10,12 @@ def start_console(user_email_address=None):
     # $ python -m imapclient.interact -H <host> -u <user> ...
     # but we want to use our sessionmanager and crispin so we're not.
     if user_email_address:
-        def refresh_crispin():
-            return get_crispin_from_email(user_email_address)
+        crispin = get_crispin_from_email(user_email_address)
+        with crispin.pool.get() as c:
+            crispin.select_folder(crispin.folder_names(c, 'All'),
+                    uidvalidity_callback, c)
 
-        c = refresh_crispin()
-        c.select_folder(c.folder_names['All'], uidvalidity_callback)
-
-        server_uids = c.all_uids()
+        server_uids = crispin.all_uids(c)
 
         banner = """
         You can access the crispin instance with the 'c' variable.

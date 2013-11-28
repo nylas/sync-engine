@@ -6,7 +6,7 @@ import os
 import socket
 
 from .config import config
-from .sessionmanager import new_crispin
+from .sessionmanager import get_crispin_from_email
 
 from .models import db_session, FolderItem, Message, Thread, UIDValidity
 from .models import IMAPAccount, FolderSync
@@ -23,6 +23,8 @@ from datetime import datetime
 from gevent import Greenlet, sleep, joinall
 from gevent.queue import Queue, Empty
 from gevent.event import Event
+
+from geventconnpool import retry
 
 import zerorpc
 
@@ -117,9 +119,9 @@ def trigger_index_update(namespace_id):
     c.connect(config.get('SEARCH_SERVER_LOC', None))
     c.index(namespace_id)
 
-def safe_download(uids, folder, crispin_client):
+def safe_download(uids, folder, crispin_client, c):
     try:
-        raw_messages = crispin_client.uids(uids)
+        raw_messages = crispin_client.uids(uids, c)
         new_messages, new_folderitems = \
                 crispin_client.account.messages_from_raw(folder, raw_messages)
     except MemoryError, e:
@@ -224,6 +226,7 @@ class FolderSyncMonitor(Greenlet):
         """
         return partition(lambda x: x in local_uids, uids)
 
+    @retry
     def initial_sync(self):
         """ Downloads entire messages and:
         1. sync folder => create TM, MM, BM
@@ -237,96 +240,99 @@ class FolderSyncMonitor(Greenlet):
         self.log.info('Starting initial sync for {0}'.format(self.folder_name))
 
         local_uids = self.account.all_uids(self.folder_name)
-        try:
-            self.crispin_client.select_folder(self.folder_name,
-                    uidvalidity_callback)
-        except UIDInvalid:
-            return 'initial uidinvalid'
 
-        remote_g_metadata = None
-        cached_validity = self.account.get_uidvalidity(self.folder_name)
-        if cached_validity is not None:
-            # we can only do this if we have a cached validity; if there's
-            # no cached validity it generally means we haven't previously run
-            remote_g_metadata = self._retrieve_g_metadata_cache(local_uids,
-                    cached_validity)
-
-        if remote_g_metadata is None:
-            remote_g_metadata = self.crispin_client.g_metadata(
-                    uids=self.crispin_client.all_uids())
-            set_cache(os.path.join(str(self.account.id), self.folder_name,
-                "remote_g_metadata"), remote_g_metadata)
-            # make sure uidvalidity is up-to-date
-            if cached_validity is None:
-                db_session.add(UIDValidity(
-                    imapaccount=self.account, folder_name=self.folder_name,
-                    uid_validity=self.crispin_client.selected_uidvalidity,
-                    highestmodseq=self.crispin_client.selected_highestmodseq))
-                db_session.commit()
-            else:
-                cached_validity.uid_validity = \
-                        self.crispin_client.selected_uidvalidity
-                cached_validity.highestmodseq = \
-                        self.crispin_client.selected_highestmodseq
-                db_session.add(cached_validity)
-                db_session.commit()
-
-        remote_uids = sorted(remote_g_metadata.keys(), key=int)
-        self.log.info("Found {0} UIDs for folder {1}".format(
-            len(remote_uids), self.folder_name))
-        self.log.info("Already have {0} UIDs".format(len(local_uids)))
-
-        deleted_uids = set(local_uids).difference(set(remote_uids))
-        unknown_uids = set(remote_uids).difference(set(local_uids))
-
-        if deleted_uids:
-            self.account.remove_messages(deleted_uids, self.folder_name)
-            self.log.info("Removed the following UIDs that no longer exist on the server: {0}".format(' '.join([str(u) for u in sorted(deleted_uids, key=int)])))
-            local_uids = sorted(
-                    list(set(local_uids).difference(deleted_uids)), key=int)
-
-        full_download = self._deduplicate_message_download(
-                remote_g_metadata, unknown_uids)
-
-        self.log.info("{0} uids left to fetch".format(len(full_download)))
-
-        if full_download:
-            self.log.info("Starting sync for {0} with chunks of size {1}".format(
-                self.folder_name, self.crispin_client.CHUNK_SIZE))
-            # we prioritize message download by reverse-UID order, which
-            # generally puts more recent messages first
-            num_local_messages = len(local_uids)
-            for uids in chunk(reversed(full_download),
-                    self.crispin_client.CHUNK_SIZE):
-                num_local_messages += self._download_new_messages(uids,
-                        num_local_messages, len(remote_uids))
-
-            # XXX TODO: check for consistency with datastore here before
-            # committing state: download any missing messages, delete any
-            # messages that we have that the server doesn't. that way, worst
-            # case if sync engine bugs trickle through is we lose some flags.
-            self.log.info("Saved all messages and metadata on {0} to UIDVALIDITY {1} / HIGHESTMODSEQ {2}".format(self.folder_name, self.crispin_client.selected_uidvalidity, self.crispin_client.selected_highestmodseq))
-
-        original_folder = self.folder_name
-        if self.account.provider == 'Gmail' and \
-                self.folder_name != self.crispin_client.folder_names['All']:
+        with self.crispin_client.pool.get() as c:
             try:
-                self.crispin_client.select_folder(
-                        self.crispin_client.folder_names['All'],
-                        uidvalidity_callback)
-                self._download_expanded_threads(remote_g_metadata, remote_uids)
+                self.crispin_client.select_folder(self.folder_name,
+                        uidvalidity_callback, c)
             except UIDInvalid:
                 return 'initial uidinvalid'
-        # NOTE: Anything after here has "All Mail" selected on Gmail accounts.
-        # Put code intended to operate on the poll folder above the thread
-        # expansion code block.
+
+            remote_g_metadata = None
+            cached_validity = self.account.get_uidvalidity(self.folder_name)
+            if cached_validity is not None:
+                # If there's no cached validity it generally means we haven't
+                # previously run.
+                remote_g_metadata = self._retrieve_g_metadata_cache(local_uids,
+                        cached_validity, c)
+
+            if remote_g_metadata is None:
+                remote_g_metadata = self.crispin_client.g_metadata(
+                        self.crispin_client.all_uids(c), c)
+                set_cache(os.path.join(str(self.account.id), self.folder_name,
+                    "remote_g_metadata"), remote_g_metadata)
+                # make sure uidvalidity is up-to-date
+                if cached_validity is None:
+                    db_session.add(UIDValidity(
+                        imapaccount=self.account, folder_name=self.folder_name,
+                        uid_validity=self.crispin_client.selected_uidvalidity,
+                        highestmodseq=self.crispin_client.selected_highestmodseq))
+                    db_session.commit()
+                else:
+                    cached_validity.uid_validity = \
+                            self.crispin_client.selected_uidvalidity
+                    cached_validity.highestmodseq = \
+                            self.crispin_client.selected_highestmodseq
+                    db_session.add(cached_validity)
+                    db_session.commit()
+
+            remote_uids = sorted(remote_g_metadata.keys(), key=int)
+            self.log.info("Found {0} UIDs for folder {1}".format(
+                len(remote_uids), self.folder_name))
+            self.log.info("Already have {0} UIDs".format(len(local_uids)))
+
+            deleted_uids = set(local_uids).difference(set(remote_uids))
+            unknown_uids = set(remote_uids).difference(set(local_uids))
+
+            if deleted_uids:
+                self.account.remove_messages(deleted_uids, self.folder_name)
+                self.log.info("Removed the following UIDs that no longer exist on the server: {0}".format(' '.join([str(u) for u in sorted(deleted_uids, key=int)])))
+                local_uids = sorted(
+                        list(set(local_uids).difference(deleted_uids)), key=int)
+
+            full_download = self._deduplicate_message_download(
+                    remote_g_metadata, unknown_uids, c)
+
+            self.log.info("{0} uids left to fetch".format(len(full_download)))
+
+            if full_download:
+                self.log.info("Starting sync for {0} with chunks of size {1}".format(
+                    self.folder_name, self.crispin_client.CHUNK_SIZE))
+                # we prioritize message download by reverse-UID order, which
+                # generally puts more recent messages first
+                num_local_messages = len(local_uids)
+                for uids in chunk(reversed(full_download),
+                        self.crispin_client.CHUNK_SIZE):
+                    num_local_messages += self._download_new_messages(uids,
+                            num_local_messages, len(remote_uids), c)
+
+                # XXX TODO: check for consistency with datastore here before
+                # committing state: download any missing messages, delete any
+                # messages that we have that the server doesn't. that way, worst
+                # case if sync engine bugs trickle through is we lose some flags.
+                self.log.info("Saved all messages and metadata on {0} to UIDVALIDITY {1} / HIGHESTMODSEQ {2}".format(self.folder_name, self.crispin_client.selected_uidvalidity, self.crispin_client.selected_highestmodseq))
+
+            original_folder = self.folder_name
+            if self.account.provider == 'Gmail' and \
+                    self.folder_name != self.crispin_client.folder_names(c)['All']:
+                try:
+                    self.crispin_client.select_folder(
+                            self.crispin_client.folder_names(c)['All'],
+                            uidvalidity_callback, c)
+                    self._download_expanded_threads(
+                            remote_g_metadata, remote_uids, c)
+                except UIDInvalid:
+                    return 'initial uidinvalid'
+            # NOTE: Anything after here has "All Mail" selected on Gmail accounts.
+            # Put code intended to operate on the poll folder above the thread
+            # expansion code block.
 
         # complete X-GM-MSGID mapping is no longer needed after initial sync
         rm_cache(os.path.join(str(self.account.id), self.folder_name,
             "remote_g_metadata"))
 
         self.log.info("Finished initial sync of {0}.".format(original_folder))
-        if self.folder_name not in self.crispin_client.poll_folders:
+        if self.folder_name not in self.crispin_client.poll_folders(c):
             return 'finish'
         else:
             return 'poll'
@@ -343,9 +349,10 @@ class FolderSyncMonitor(Greenlet):
                 self.log.error(error)
             raise SyncException("Fatal error encountered")
 
-    def _download_new_messages(self, uids, num_local_messages, num_remote_messages):
+    def _download_new_messages(self, uids, num_local_messages,
+                               num_remote_messages, c):
         new_messages, new_folderitems = safe_download(uids,
-                self.crispin_client.selected_folder_name, self.crispin_client)
+                self.crispin_client.selected_folder_name, self.crispin_client, c)
 
         # Save message part blobs before committing changes to db.
         for msg in new_messages:
@@ -377,8 +384,8 @@ class FolderSyncMonitor(Greenlet):
         # trigger_index_update(self.account.namespace.id)
         return len(uids)
 
-    def _add_new_folderitem(self, remote_g_metadata, uids):
-        flags = self.crispin_client.flags(uids)
+    def _add_new_folderitem(self, remote_g_metadata, uids, c):
+        flags = self.crispin_client.flags(uids, c)
 
         # Since we prioritize download for messages in certain threads, we
         # may already have FolderItem entries despite calling this method.
@@ -406,7 +413,7 @@ class FolderSyncMonitor(Greenlet):
             db_session.add_all(new_folderitems)
             db_session.commit()
 
-    def _retrieve_g_metadata_cache(self, local_uids, cached_validity):
+    def _retrieve_g_metadata_cache(self, local_uids, cached_validity, c):
         self.log.info('Attempting to retrieve remote_g_metadata from cache')
         remote_g_metadata = get_cache(os.path.join(
             str(self.account.id), self.folder_name, "remote_g_metadata"))
@@ -414,12 +421,12 @@ class FolderSyncMonitor(Greenlet):
             self.log.info("Successfully retrieved remote_g_metadata cache")
             if self.crispin_client.selected_highestmodseq > \
                     cached_validity.highestmodseq:
-                self._update_g_metadata_cache(remote_g_metadata, local_uids)
+                self._update_g_metadata_cache(remote_g_metadata, local_uids, c)
         else:
             self.log.info("No cached data found")
         return remote_g_metadata
 
-    def _update_g_metadata_cache(self, remote_g_metadata, local_uids):
+    def _update_g_metadata_cache(self, remote_g_metadata, local_uids, c):
         """ If HIGHESTMODSEQ has changed since we saved the X-GM-MSGID cache,
             we need to query for any changes since then and update the saved
             data.
@@ -431,13 +438,13 @@ class FolderSyncMonitor(Greenlet):
         # whole folder rather than getting changed UIDs first; MODSEQ queries
         # are slow on large folders.
         modified = self.crispin_client.new_and_updated_uids(
-                self.crispin_client.selected_highestmodseq)
+                self.crispin_client.selected_highestmodseq, c)
         new, updated = self._new_or_updated(modified, local_uids)
         self.log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
         # for new, query metadata and update cache
-        remote_g_metadata.update(self.crispin_client.g_metadata(new))
+        remote_g_metadata.update(self.crispin_client.g_metadata(new, c))
         # filter out messages that have disappeared
-        all_uids = set(self.crispin_client.all_uids())
+        all_uids = set(self.crispin_client.all_uids(c))
         for uid in remote_g_metadata.keys():
             if uid not in all_uids:
                 del remote_g_metadata[uid]
@@ -447,15 +454,11 @@ class FolderSyncMonitor(Greenlet):
         # for updated, it's easier to just update them now
         # bigger chunk because the data being fetched here is very small
         for uids in chunk(updated, 5*self.crispin_client.CHUNK_SIZE):
-            self._update_metadata(uids)
+            self._update_metadata(uids, c)
         self.log.info("Updated metadata for modified messages")
 
-    def _highestmodseq_update(self, highestmodseq=None):
-        if highestmodseq is None:
-            highestmodseq = db_session.query(UIDValidity).filter_by(
-                    account=self.account, folder_name=self.folder_name
-                    ).one().highestmodseq
-        uids = self.crispin_client.new_and_updated_uids(highestmodseq)
+    def _highestmodseq_update(self, highestmodseq, c):
+        uids = self.crispin_client.new_and_updated_uids(highestmodseq, c)
         log.info("Starting highestmodseq update on {0} (current HIGHESTMODSEQ: {1})".format(self.folder_name, self.crispin_client.selected_highestmodseq))
         g_metadata = self.account.g_metadata(self.folder_name)
         local_uids = self.account.all_uids(self.folder_name)
@@ -464,36 +467,36 @@ class FolderSyncMonitor(Greenlet):
             log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
             local_uids += new
 
-            g_metadata.update(self.crispin_client.g_metadata(new))
-            full_download = self._deduplicate_message_download(g_metadata, new)
+            g_metadata.update(self.crispin_client.g_metadata(new, c))
+            full_download = self._deduplicate_message_download(g_metadata, new, c)
 
             num_downloaded = 0
             for uids in chunk(full_download, self.crispin_client.CHUNK_SIZE):
                 num_downloaded += self._download_new_messages(
-                        uids, num_downloaded, len(full_download))
+                        uids, num_downloaded, len(full_download), c)
 
             # bigger chunk because the data being fetched here is very small
             for uids in chunk(updated, 5*self.crispin_client.CHUNK_SIZE):
-                self._update_metadata(uids)
+                self._update_metadata(uids, c)
         else:
             log.info("No changes")
 
-        self._remove_deleted_messages()
+        self._remove_deleted_messages(c)
         self._update_cached_highestmodseq(self.folder_name)
         if self.account.provider == 'Gmail' and \
-                self.folder_name != self.crispin_client.folder_names['All']:
+                self.folder_name != self.crispin_client.folder_names(c)['All']:
             try:
                 self.crispin_client.select_folder(
-                        self.crispin_client.folder_names['All'],
-                        uidvalidity_callback)
-                self._download_expanded_threads(g_metadata, local_uids)
+                        self.crispin_client.folder_names(c)['All'],
+                        uidvalidity_callback, c)
+                self._download_expanded_threads(g_metadata, local_uids, c)
             except UIDInvalid:
                 return 'poll uidinvalid'
         # NOTE: Anything after here has "All Mail" selected on Gmail accounts.
         # Put code intended to operate on the poll folder above the thread
         # expansion code block.
 
-    def _download_expanded_threads(self, remote_g_metadata, uids):
+    def _download_expanded_threads(self, remote_g_metadata, uids, c):
         """ So after you've downloaded e.g. Inbox messages, you can view
             the entire threads, even if they contain messages that aren't
             in the Inbox.
@@ -501,28 +504,29 @@ class FolderSyncMonitor(Greenlet):
         assert self.account.provider == 'Gmail', \
                 "thread expansion only works with Gmail"
         assert self.crispin_client.selected_folder_name \
-                == self.crispin_client.folder_names['All'], \
+                == self.crispin_client.folder_names(c)['All'], \
                 "must select All Mail before expanding threads"
         self.log.info("Expanding threads and downloading additional messages.")
         g_thrids = set([msg['thrid'] for uid, msg in remote_g_metadata.items() \
                 if uid in uids])
         if g_thrids:
             self.log.info("threads: {0}".format(g_thrids))
-            thread_uids = self.crispin_client.expand_threads(g_thrids)
+            thread_uids = self.crispin_client.expand_threads(g_thrids, c)
             self.log.info("All Mail UIDs: {0}".format(thread_uids))
             # need X-GM-MSGID in order to dedupe download
-            g_metadata = self.crispin_client.g_metadata(thread_uids)
-            to_download = self._deduplicate_message_download(g_metadata, thread_uids)
+            g_metadata = self.crispin_client.g_metadata(thread_uids, c)
+            to_download = self._deduplicate_message_download(
+                    g_metadata, thread_uids, c)
             self.log.info("{0} deduplicated messages to download".format(
                 len(to_download)))
             num_downloaded = 0
             for uids in chunk(to_download, self.crispin_client.CHUNK_SIZE):
                 num_downloaded += self._download_new_messages(
-                        uids, num_downloaded, len(to_download))
+                        uids, num_downloaded, len(to_download), c)
         else:
             self.log.info("Nothing to do.")
 
-    def _deduplicate_message_download(self, remote_g_metadata, uids):
+    def _deduplicate_message_download(self, remote_g_metadata, uids, c):
         """ Deduplicate message download using X-GM-MSGID. """
         local_g_msgids = set(self.account.g_msgids(
                 in_=[remote_g_metadata[uid]['msgid'] for uid in uids]))
@@ -532,19 +536,19 @@ class FolderSyncMonitor(Greenlet):
         self.log.info("Skipping {0} uids downloaded via other folders".format(
             len(folderitem_only)))
         if len(folderitem_only) > 0:
-            self._add_new_folderitem(remote_g_metadata, folderitem_only)
+            self._add_new_folderitem(remote_g_metadata, folderitem_only, c)
 
         return full_download
 
     def _update_cached_highestmodseq(self, folder, cached_validity=None):
         if cached_validity is None:
             cached_validity = db_session.query(UIDValidity).filter_by(
-                    imapaccount_id=self.crispin_client.account.id,
-                    folder_name=folder).one()
+                    imapaccount_id=self.account.id, folder_name=folder).one()
         cached_validity.highestmodseq = self.crispin_client.selected_highestmodseq
         db_session.add(cached_validity)
         db_session.commit()
 
+    @retry
     def poll(self):
         """ It checks for changed message metadata and new messages using
             CONDSTORE / HIGHESTMODSEQ and also checks for deleted messages.
@@ -556,24 +560,27 @@ class FolderSyncMonitor(Greenlet):
         self.log.info("polling {0} {1}".format(
             self.account.email_address, self.folder_name))
         cached_validity = self.account.get_uidvalidity(self.folder_name)
-        # we use status instead of select here because it's way faster and
-        # we're not sure we want to commit to an IMAP session yet
-        status = self.crispin_client.folder_status(self.folder_name)
-        if status['HIGHESTMODSEQ'] > cached_validity.highestmodseq:
-            try:
-                self.crispin_client.select_folder(self.folder_name,
-                        uidvalidity_callback)
-            except UIDInvalid:
-                return 'poll uidinvalid'
-            self._highestmodseq_update(cached_validity.highestmodseq)
 
-        self.shared_state['status_callback'](
-            self.account, 'poll', (self.folder_name, datetime.utcnow().isoformat()))
-        sleep(self.shared_state['poll_frequency'])
+        with self.crispin_client.pool.get() as c:
+            # we use status instead of select here because it's way faster and
+            # we're not sure we want to commit to an IMAP session yet
+            status = self.crispin_client.folder_status(self.folder_name, c)
+            if status['HIGHESTMODSEQ'] > cached_validity.highestmodseq:
+                try:
+                    self.crispin_client.select_folder(self.folder_name,
+                            uidvalidity_callback, c)
+                except UIDInvalid:
+                    return 'poll uidinvalid'
+                self._highestmodseq_update(cached_validity.highestmodseq, c)
+
+            self.shared_state['status_callback'](
+                self.account, 'poll',
+                (self.folder_name, datetime.utcnow().isoformat()))
+            sleep(self.shared_state['poll_frequency'])
 
         return 'poll'
 
-    def _remove_deleted_messages(self):
+    def _remove_deleted_messages(self, c):
         """ Works as follows:
             1. Do a LIST on the current folder to see what messages are on the
                server.
@@ -581,11 +588,11 @@ class FolderSyncMonitor(Greenlet):
             3. Purge messages we have locally but not on the server. Ignore
                messages we have on the server that aren't local.
         """
-        remote_uids = self.crispin_client.all_uids()
+        remote_uids = self.crispin_client.all_uids(c)
         local_uids = [uid for uid, in
                 db_session.query(FolderItem.msg_uid).filter_by(
                     folder_name=self.crispin_client.selected_folder_name,
-                    imapaccount_id=self.crispin_client.account.id)]
+                    imapaccount_id=self.account.id)]
         if len(remote_uids) > 0 and len(local_uids) > 0:
             assert type(remote_uids[0]) != type('')
 
@@ -595,9 +602,9 @@ class FolderSyncMonitor(Greenlet):
                     self.crispin_client.selected_folder_name)
             self.log.info("Deleted {0} removed messages".format(len(to_delete)))
 
-    def _update_metadata(self, uids):
+    def _update_metadata(self, uids, c):
         """ Update flags (the only metadata that can change). """
-        new_flags = self.crispin_client.flags(uids)
+        new_flags = self.crispin_client.flags(uids, c)
         assert sorted(uids, key=int) == sorted(new_flags.keys(), key=int), \
                 "server uids != local uids"
         self.log.info("new flags: {0}".format(new_flags))
@@ -616,7 +623,7 @@ class MailSyncMonitor(Greenlet):
         # how often to check inbox
         self.heartbeat = heartbeat
 
-        self.crispin_client = new_crispin(account.email_address)
+        self.crispin_client = get_crispin_from_email(account.email_address)
         self.account = account
         self.log = configure_sync_logging(account)
 
@@ -674,12 +681,13 @@ class MailSyncMonitor(Greenlet):
         saved_states = dict((saved_state.folder_name, saved_state.state) \
                 for saved_state in db_session.query(FolderSync).filter_by(
                 imapaccount=self.account))
-        for folder in self.crispin_client.sync_folders:
+        with self.crispin_client.pool.get() as c:
+            sync_folders = self.crispin_client.sync_folders(c)
+        for folder in sync_folders:
             if saved_states.get(folder) != 'finish':
                 self.log.info("Initializing folder sync for {0}".format(folder))
                 thread = FolderSyncMonitor(folder, self.account,
-                        new_crispin(self.account.email_address),
-                        self.log, self.shared_state)
+                        self.crispin_client, self.log, self.shared_state)
                 thread.start()
                 self.folder_monitors.append(thread)
                 while not self._thread_polling(thread) and \
