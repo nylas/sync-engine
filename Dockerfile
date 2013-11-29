@@ -60,6 +60,7 @@ RUN pip install argparse==1.2.1 \
                 ipython==1.0.0 \
                 Flask==0.10.1 \
                 gevent-socketio==0.3.5-rc2 \
+                geventconnpool==0.2 \
                 gunicorn==17.5 \
                 colorlog==1.8 \
                 MySQL-python==1.2.4 \
