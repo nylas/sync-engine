@@ -433,13 +433,12 @@ class CrispinClient(CrispinClientBase):
                 ['BODY.PEEK[] INTERNALDATE FLAGS', 'X-GM-THRID',
                  'X-GM-MSGID', 'X-GM-LABELS'])
         for uid, msg in data.iteritems():
-            # NOTE: python's email package (which lamson uses directly) needs
-            # encoded bytestrings as its input, since to deal properly with
-            # MIME-encoded email you need to do part decoding based on message
-            # / MIME part headers anyway. imapclient tries to abstract away
-            # bytes and decodes all bytes received from the wire as _latin-1_,
-            # which is wrong in any case where 8bit MIME is used. so we have to
-            # reverse the damage before we proceed.
+            # NOTE: flanker needs encoded bytestrings as its input, since to
+            # deal properly with MIME-encoded email you need to do part
+            # decoding based on message / MIME part headers anyway. imapclient
+            # tries to abstract away bytes and decodes all bytes received from
+            # the wire as _latin-1_, which is wrong in any case where 8bit MIME
+            # is used. so we have to reverse the damage before we proceed.
             #
             # We should REMOVE this XXX HACK XXX when we finish working with
             # Menno to fix this problem upstream.
