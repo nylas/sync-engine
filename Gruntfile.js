@@ -2,11 +2,15 @@
 
 module.exports = function (grunt) {
 
-  // Time how long tasks take.
   require("time-grunt")(grunt);
 
   grunt.initConfig({
     pkg: grunt.file.readJSON("package.json"),
+
+    yeoman: {
+      app:  "web_client",
+      dist: "web_client/dist"
+    },
 
     // Make sure code styles are up to par and there are no obvious mistakes
     jshint: {
@@ -16,30 +20,36 @@ module.exports = function (grunt) {
       },
       all: [
         "Gruntfile.js",
-        "web_client/js/{,*/}*.js"
+        "<%= yeoman.app %>/js/{,*/}*.js"
       ],
-      // test: {
-      //   options: {
-      //     jshintrc: "test/.jshintrc"
-      //   },
-      //   src: ["test/spec/{,*/}*.js"]
-      // }
     },
 
-
+    // Empties folders to start fresh
+    clean: {
+      dist: {
+        files: [{
+          dot: true,
+          src: [
+            ".tmp",
+            "<%= yeoman.dist %>/*",
+            "!<%= yeoman.dist %>/.git*"
+          ]
+        }]
+      },
+    },
 
     ngmin: {
       build: {
-        src: ["web_client/js/**/*.js"],
-        dest: "web_client/build/<%= pkg.name %>.combined.js",
+        src: ["<%= yeoman.app %>/js/**/*.js"],
+        dest: "<%= yeoman.dist %>/<%= pkg.name %>.combined.js",
       }
     },
 
 
     ngtemplates: {
       InboxApp: {
-        src: "web_client/views/**.html",
-        dest: "web_client/build/templates.js",
+        src: "<%= yeoman.app %>/views/**.html",
+        dest: "<%= yeoman.dist %>/templates.js",
         options: {
           htmlmin: {
             collapseWhitespace: true,
@@ -49,8 +59,6 @@ module.exports = function (grunt) {
       }
     },
 
-
-
     uglify: {
       options: {
         banner: "/*! <%= pkg.name %> <%= grunt.template.today('dd-mm-yyyy') %> */\n",
@@ -58,14 +66,12 @@ module.exports = function (grunt) {
       },
       dist: {
         files: {
-          "web_client/build/<%= pkg.name %>.compressed.js": [
-            "web_client/build/<%= pkg.name %>.combined.js"
+          "<%= yeoman.dist %>/<%= pkg.name %>.compressed.js": [
+            "<%= yeoman.dist %>/<%= pkg.name %>.combined.js"
           ]
         }
       }
     },
-
-
 
   });
 
