@@ -11,6 +11,8 @@ from ..util.cache import get_cache, set_cache
 from geventconnpool import ConnectionPool
 from gevent import socket
 
+__all__ = ['CrispinClient', 'DummyCrispinClient']
+
 IMAP_HOSTS = { 'Gmail': 'imap.gmail.com' }
 
 class IMAPConnectionPool(ConnectionPool):
