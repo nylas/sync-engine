@@ -67,7 +67,7 @@ how to get set up.
     (https://github.com/dotcloud/docker/issues/728); we work around this
     by using the `script` command to open a new pty.
 
-13. `./inboxapp-srv debug`
+13. `./inbox debug`
 
 14. In order for the Google oauth callback to work, you need to edit your local
     system's `/etc/hosts` file to include the line:
