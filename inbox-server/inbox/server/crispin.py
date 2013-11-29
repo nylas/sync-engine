@@ -1,8 +1,6 @@
 import os
 import time
 
-from imapclient import IMAPClient
-
 from .log import get_logger
 
 from ..util.misc import or_none
@@ -10,6 +8,12 @@ from ..util.cache import get_cache, set_cache
 
 from geventconnpool import ConnectionPool
 from gevent import socket
+
+# monkey-patch so geventconnpool's @retry recognizes errors
+import imaplib
+imaplib.IMAP4.error = socket.error
+
+from imapclient import IMAPClient
 
 __all__ = ['CrispinClient', 'DummyCrispinClient']
 
