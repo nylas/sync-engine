@@ -9,6 +9,7 @@
 /cache
 /log
 /.vagrant
+/node_modules
 
 .DS_Store
 *.py[cod]
