@@ -365,6 +365,7 @@ app.factory("Wire", function ($rootScope, WIRE_SERVER_URL) {
       // console.dir(data);
       mySocket.callRPC(method, params, function () {
         var args = arguments;
+        console.log("[socket_rpc <-] " + method);
         $rootScope.$apply(function () {
           if (callback) {
             callback.apply(mySocket, args);
@@ -377,7 +378,7 @@ app.factory("Wire", function ($rootScope, WIRE_SERVER_URL) {
     on: function (eventName, callback) {
       mySocket.on(eventName, function () {
         var args = arguments;
-        console.log("socket <-] " + eventName);
+        console.log("[socket <-] " + eventName);
         // console.dir(args)
         $rootScope.$apply(function () {
           callback.apply(mySocket, args);
