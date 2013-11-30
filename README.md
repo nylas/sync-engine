@@ -2,17 +2,20 @@
 
 [http://www.inboxapp.com](http://www.inboxapp.com)
 
-All of the todos are in [the Asana workspace](https://app.asana.com/0/4983727800919/4983727800919).
+Before you look at the code, please go read [Worse is
+Better](http://www.jwz.org/doc/worse-is-better.html).
+
+While you're at it, please also read Ryan Dahl's [rant](https://gist.github.com/cookrn/4015437#file-rant-md).
+
+Now take a deep breath.
+
+Let's begin.
+
+## Set up
 
 The Inbox platform currenly consists of two parts: the Python web server and
 the Javascript browser client. They communicate over a custom JSON-RPC inspired
 websocket protocol.
-
-Before you look at the code, please go read [Worse is
-Better](http://www.jwz.org/doc/worse-is-better.html). Kindly send all trolling
-comments to `/dev/null`.
-
-## Set up
 
 The server can run in a variety of environments. In production, we run it on
 EC2 instances. For development, you can create a local virtual machine. Here's
