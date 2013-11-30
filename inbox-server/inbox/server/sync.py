@@ -178,9 +178,9 @@ class FolderSyncMonitor(Greenlet):
 
         self.state_handlers = {
                 'initial': self.initial_sync,
-                'initial uid invalid': lambda: self.resync_uids('initial'),
+                'initial uidinvalid': lambda: self.resync_uids('initial'),
                 'poll': self.poll,
-                'poll uid invalid': lambda: self.resync_uids('poll'),
+                'poll uidinvalid': lambda: self.resync_uids('poll'),
                 'finish': lambda: 'finish',
                 }
 
@@ -201,10 +201,10 @@ class FolderSyncMonitor(Greenlet):
         # it receives a shutdown command. The shutdown command is equivalent to
         # ctrl-c.
         while True:
-            self.state = foldersync.state = self.state_handlers[foldersync.state]()
-            # The session should automatically mark this as dirty, but make
-            # sure.
-            db_session.add(foldersync)
+            try:
+                self.state = foldersync.state = self.state_handlers[foldersync.state]()
+            except UIDInvalid:
+                self.state = foldersync.state = self.state + ' uidinvalid'
             # State handlers are idempotent, so it's okay if we're killed
             # between the end of the handler and the commit.
             db_session.commit()
@@ -220,7 +220,7 @@ class FolderSyncMonitor(Greenlet):
         """
         self.log.info("UIDVALIDITY for {0} has changed; resyncing UIDs".format(
             self.folder_name))
-        raise Exception("Unimplemented")
+        raise NotImplementedError
         return previous_state
 
     def _new_or_updated(self, uids, local_uids):
@@ -246,11 +246,8 @@ class FolderSyncMonitor(Greenlet):
         local_uids = self.account.all_uids(self.folder_name)
 
         with self.crispin_client.pool.get() as c:
-            try:
-                self.crispin_client.select_folder(self.folder_name,
-                        uidvalidity_callback, c)
-            except UIDInvalid:
-                return 'initial uidinvalid'
+            self.crispin_client.select_folder(self.folder_name,
+                    uidvalidity_callback, c)
 
             remote_g_metadata = None
             cached_validity = self.account.get_uidvalidity(self.folder_name)
@@ -298,14 +295,11 @@ class FolderSyncMonitor(Greenlet):
             original_folder = self.folder_name
             if self.account.provider == 'Gmail' and \
                     self.folder_name != self.crispin_client.folder_names(c)['All']:
-                try:
-                    self.crispin_client.select_folder(
-                            self.crispin_client.folder_names(c)['All'],
-                            uidvalidity_callback, c)
-                    self._download_expanded_threads(remote_g_metadata,
-                            remote_uids, c)
-                except UIDInvalid:
-                    return 'initial uidinvalid'
+                self.crispin_client.select_folder(
+                        self.crispin_client.folder_names(c)['All'],
+                        uidvalidity_callback, c)
+                self._download_expanded_threads(remote_g_metadata,
+                        remote_uids, c)
             else:
                 # normal IMAP servers, not Gmail's frankenimap
                 full_download = self._deduplicate_message_download(
@@ -473,13 +467,10 @@ class FolderSyncMonitor(Greenlet):
 
             if self.account.provider == 'Gmail' and \
                     self.folder_name != self.crispin_client.folder_names(c)['All']:
-                try:
-                    self.crispin_client.select_folder(
-                            self.crispin_client.folder_names(c)['All'],
-                            uidvalidity_callback, c)
-                    self._download_expanded_threads(g_metadata, local_uids, c)
-                except UIDInvalid:
-                    return 'poll uidinvalid'
+                self.crispin_client.select_folder(
+                        self.crispin_client.folder_names(c)['All'],
+                        uidvalidity_callback, c)
+                self._download_expanded_threads(g_metadata, local_uids, c)
             else:
                 full_download = self._deduplicate_message_download(g_metadata,
                         new, c)
@@ -607,11 +598,8 @@ class FolderSyncMonitor(Greenlet):
             # we're not sure we want to commit to an IMAP session yet
             status = self.crispin_client.folder_status(self.folder_name, c)
             if status['HIGHESTMODSEQ'] > cached_validity.highestmodseq:
-                try:
-                    self.crispin_client.select_folder(self.folder_name,
-                            uidvalidity_callback, c)
-                except UIDInvalid:
-                    return 'poll uidinvalid'
+                self.crispin_client.select_folder(self.folder_name,
+                        uidvalidity_callback, c)
                 self._highestmodseq_update(cached_validity.highestmodseq, c)
 
             self.shared_state['status_callback'](
