@@ -463,6 +463,7 @@ class FolderSyncMonitor(Greenlet):
         self.log.info("Starting highestmodseq update on {0} (current HIGHESTMODSEQ: {1})".format(self.folder_name, self.crispin_client.selected_highestmodseq))
         g_metadata = self.account.g_metadata(self.folder_name)
         local_uids = self.account.all_uids(self.folder_name)
+        remote_uids = self.crispin_client.all_uids(c)
         if uids:
             new, updated = self._new_or_updated(uids, local_uids)
             log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
@@ -500,7 +501,7 @@ class FolderSyncMonitor(Greenlet):
         else:
             log.info("No changes")
 
-        self._remove_deleted_messages(c)
+        self._remove_deleted_messages(remote_uids)
         self._update_cached_highestmodseq(self.folder_name)
 
     def _download_expanded_threads(self, remote_g_metadata, uids, c):
@@ -559,12 +560,12 @@ class FolderSyncMonitor(Greenlet):
                 self._download_new_messages(sorted(uids, reverse=True),
                         folder_for, c)
                 num_downloaded_threads += 1
-            percent_done = (num_downloaded_threads / num_total_threads) * 100
-            self.shared_state['status_callback'](self.account, 'initial',
-                    (self.folder_name, percent_done))
-            self.log.info("Syncing %s -- %.2f%% (%i/%i)" % (
-                self.folder_name, percent_done,
-                num_downloaded_threads, num_total_threads))
+                percent_done = (num_downloaded_threads / num_total_threads) * 100
+                self.shared_state['status_callback'](self.account, 'initial',
+                        (self.folder_name, percent_done))
+                self.log.info("Syncing %s -- %.2f%% (%i/%i)" % (
+                    self.folder_name, percent_done,
+                    num_downloaded_threads, num_total_threads))
 
     def _deduplicate_message_download(self, remote_g_metadata, uids, c):
         """ Deduplicate message download using X-GM-MSGID. """
@@ -620,7 +621,7 @@ class FolderSyncMonitor(Greenlet):
 
         return 'poll'
 
-    def _remove_deleted_messages(self, c):
+    def _remove_deleted_messages(self, remote_uids):
         """ Works as follows:
             1. Do a LIST on the current folder to see what messages are on the
                server.
@@ -628,18 +629,16 @@ class FolderSyncMonitor(Greenlet):
             3. Purge messages we have locally but not on the server. Ignore
                messages we have on the server that aren't local.
         """
-        remote_uids = self.crispin_client.all_uids(c)
         local_uids = [uid for uid, in
                 db_session.query(FolderItem.msg_uid).filter_by(
-                    folder_name=self.crispin_client.selected_folder_name,
+                    folder_name=self.folder_name,
                     imapaccount_id=self.account.id)]
         if len(remote_uids) > 0 and len(local_uids) > 0:
             assert type(remote_uids[0]) != type('')
 
         to_delete = set(local_uids).difference(set(remote_uids))
         if to_delete:
-            self.account.remove_messages(to_delete,
-                    self.crispin_client.selected_folder_name)
+            self.account.remove_messages(to_delete, self.folder_name)
             self.log.info("Deleted {0} removed messages".format(len(to_delete)))
 
     def _update_metadata(self, uids, c):
@@ -648,8 +647,7 @@ class FolderSyncMonitor(Greenlet):
         assert sorted(uids, key=int) == sorted(new_flags.keys(), key=int), \
                 "server uids != local uids"
         self.log.info("new flags: {0}".format(new_flags))
-        self.account.update_metadata(self.crispin_client.selected_folder_name,
-                uids, new_flags)
+        self.account.update_metadata(self.folder_name, uids, new_flags)
         db_session.commit()
 
 class MailSyncMonitor(Greenlet):
