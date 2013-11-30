@@ -196,7 +196,8 @@ class CrispinClientBase(object):
                 "thread expansion only supported on Gmail"
         assert self.selected_folder_name == self.folder_names(c)['All'], \
                 "must select All Mail first"
-        return self._expand_threads(thread_ids, c)
+        # UIDs ascend over time; return in order most-recent first
+        return sorted(self._expand_threads(thread_ids, c), reverse=True)
 
     def _expand_threads(self, thread_ids, c):
         raise NotImplementedError
