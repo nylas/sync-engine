@@ -159,7 +159,7 @@ class CrispinClientBase(object):
             a list of integers sorted in ascending order.
         """
         data = self._fetch_all_uids(c)
-        return sorted([int(s) for s in data])
+        return sorted([long(s) for s in data])
 
     def _fetch_all_uids(self, c):
         raise NotImplementedError
@@ -172,7 +172,7 @@ class CrispinClientBase(object):
             and G-THRID may not be.
         """
         self.log.info("Fetching X-GM-MSGID and X-GM-THRID mapping from server.")
-        return dict([(int(uid), dict(msgid=str(ret['X-GM-MSGID']),
+        return dict([(long(uid), dict(msgid=str(ret['X-GM-MSGID']),
             thrid=str(ret['X-GM-THRID']))) \
                 for uid, ret in self._fetch_g_metadata(uids, c).iteritems()])
 
