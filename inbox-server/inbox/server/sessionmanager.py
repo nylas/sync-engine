@@ -15,6 +15,9 @@ import sqlalchemy.orm.exc
 # Memory cache for currently open crispin instances
 email_address_to_crispins = {}
 
+# Memory cache for per-user IMAP connection pool.
+imapaccount_id_to_connection_pool = {}
+
 def log_ignored(exc):
     log.error('Ignoring error: %s\nOuter stack:\n%s%s'
               % (exc, ''.join(traceback.format_stack()[:-2]), traceback.format_exc(exc)))
@@ -113,11 +116,16 @@ def get_crispin_from_session(session_token):
     s = get_session(session_token)
     return get_crispin_from_email(s.email_address)
 
-def new_crispin(email_address, dummy=False):
+def get_connection_pool(account):
+    pool = imapaccount_id_to_connection_pool.get(account.id)
+    if pool is None:
+        pool = imapaccount_id_to_connection_pool[account.id] \
+                = crispin.IMAPConnectionPool(account)
+    return pool
+
+def new_crispin(account, dummy=False):
     cls = crispin.DummyCrispinClient if dummy else crispin.CrispinClient
-    account = get_account(email_address)
-    assert account is not None
-    return cls(account)
+    return cls(account, pool=get_connection_pool(account))
 
 def get_crispin_from_email(email_address, initial=False, dummy=False):
     if email_address in email_address_to_crispins:

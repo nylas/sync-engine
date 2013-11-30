@@ -20,7 +20,7 @@ __all__ = ['CrispinClient', 'DummyCrispinClient']
 IMAP_HOSTS = { 'Gmail': 'imap.gmail.com' }
 
 class IMAPConnectionPool(ConnectionPool):
-    def __init__(self, account, num_connections):
+    def __init__(self, account, num_connections=5):
         self.account = account
         # 1200s == 20min
         ConnectionPool.__init__(self, num_connections, keepalive=1200)
@@ -195,7 +195,8 @@ class CrispinClientBase(object):
         assert self.account.provider == 'Gmail', \
                 "thread expansion only supported on Gmail"
         assert self.selected_folder_name == self.folder_names(c)['All'], \
-                "must select All Mail first"
+                "must select All Mail first ({0})".format(
+                        self.selected_folder_name)
         # UIDs ascend over time; return in order most-recent first
         return sorted(self._expand_threads(thread_ids, c), reverse=True)
 
@@ -361,9 +362,9 @@ class CrispinClient(CrispinClientBase):
     # how many messages to download at a time
     CHUNK_SIZE = 1
 
-    def __init__(self, account, cache=False):
+    def __init__(self, account, pool, cache=False):
+        self.pool = pool
         CrispinClientBase.__init__(self, account, cache)
-        self.pool = IMAPConnectionPool(account, 5)
 
     @timed
     def _do_select_folder(self, folder, c):

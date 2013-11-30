@@ -401,7 +401,7 @@ class IMAPAccount(Base):
                 with_self=parsed.content_type.is_singlepart()):
             i += 1
             if mimepart.content_type.is_multipart():
-                log.warning("multipart sub-part found!")
+                log.warning("multipart sub-part found! on {0}".format(new_msg.g_msgid))
                 continue  # TODO should we store relations?
 
             new_part = Block()

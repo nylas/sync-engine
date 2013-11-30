@@ -6,7 +6,7 @@ import os
 import socket
 
 from .config import config
-from .sessionmanager import get_crispin_from_email
+from .sessionmanager import new_crispin
 
 from .models import db_session, FolderItem, Message, Thread, UIDValidity
 from .models import IMAPAccount, FolderSync
@@ -651,7 +651,7 @@ class MailSyncMonitor(Greenlet):
         # how often to check inbox
         self.heartbeat = heartbeat
 
-        self.crispin_client = get_crispin_from_email(account.email_address)
+        self.crispin_client = new_crispin(account)
         self.account = account
         self.log = configure_sync_logging(account)
 
