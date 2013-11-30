@@ -262,21 +262,8 @@ class FolderSyncMonitor(Greenlet):
                         self.crispin_client.all_uids(c), c)
                 set_cache(os.path.join(str(self.account.id), self.folder_name,
                     "remote_g_metadata"), remote_g_metadata)
-                # make sure uidvalidity is up-to-date
-                # XXX TODO pull this out into a method
-                if cached_validity is None:
-                    db_session.add(UIDValidity(
-                        imapaccount=self.account, folder_name=self.folder_name,
-                        uid_validity=self.crispin_client.selected_uidvalidity,
-                        highestmodseq=self.crispin_client.selected_highestmodseq))
-                    db_session.commit()
-                else:
-                    cached_validity.uid_validity = \
-                            self.crispin_client.selected_uidvalidity
-                    cached_validity.highestmodseq = \
-                            self.crispin_client.selected_highestmodseq
-                    db_session.add(cached_validity)
-                    db_session.commit()
+                self._update_validity(self.crispin_client.selected_uidvalidity,
+                        self.crispin_client.selected_highestmodseq)
 
             remote_uids = sorted(remote_g_metadata.keys(), key=int)
             self.log.info("Found {0} UIDs for folder {1}".format(
@@ -454,6 +441,7 @@ class FolderSyncMonitor(Greenlet):
 
     def _highestmodseq_update(self, last_highestmodseq, c):
         new_highestmodseq = self.crispin_client.selected_highestmodseq
+        new_uidvalidity = self.crispin_client.selected_uidvalidity
         self.log.info("Starting highestmodseq update on {0} (current HIGHESTMODSEQ: {1})".format(self.folder_name, new_highestmodseq))
         local_uids = self.account.all_uids(self.folder_name)
         g_metadata = self.account.g_metadata(self.folder_name)
@@ -493,7 +481,7 @@ class FolderSyncMonitor(Greenlet):
         else:
             log.info("No changes")
             self._remove_deleted_messages(local_uids, c)
-
+        self._update_validity(new_uidvalidity, new_highestmodseq)
 
     def _download_expanded_threads(self, remote_g_metadata, uids, flags, c):
         """ UIDs, remote_g_metadata, and flags passed in are for the _folder
@@ -586,10 +574,16 @@ class FolderSyncMonitor(Greenlet):
 
         return full_download
 
-    def _update_cached_highestmodseq(self, folder, highestmodseq):
-        cached_validity = db_session.query(UIDValidity).filter_by(
-                imapaccount_id=self.account.id, folder_name=folder).one()
+    def _update_validity(self, uidvalidity, highestmodseq):
+        try:
+            cached_validity = db_session.query(UIDValidity).filter_by(
+                    imapaccount_id=self.account.id,
+                    folder_name=self.folder_name).one()
+        except NoResultFound:
+            cached_validity = UIDValidity(imapaccount=self.account,
+                    folder_name=self.folder_name)
         cached_validity.highestmodseq = highestmodseq
+        cached_validity.uidvalidity = uidvalidity
         db_session.add(cached_validity)
         db_session.commit()
 
