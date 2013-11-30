@@ -472,7 +472,7 @@ class FolderSyncMonitor(Greenlet):
                 for uids in chunk(updated, 5*self.crispin_client.CHUNK_SIZE):
                     self._update_metadata(uids, c)
         else:
-            log.info("No changes")
+            log.info("No new or updated messages")
             local_uids = set(local_uids).difference(
                     self._remove_deleted_messages(local_uids, remote_uids, c))
         self._update_validity(new_uidvalidity, new_highestmodseq)
