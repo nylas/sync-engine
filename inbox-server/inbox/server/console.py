@@ -12,7 +12,7 @@ def start_console(user_email_address=None):
     if user_email_address:
         crispin = get_crispin_from_email(user_email_address)
         with crispin.pool.get() as c:
-            crispin.select_folder(crispin.folder_names(c, 'All'),
+            crispin.select_folder(crispin.folder_names(c)['All'],
                     uidvalidity_callback, c)
 
         server_uids = crispin.all_uids(c)

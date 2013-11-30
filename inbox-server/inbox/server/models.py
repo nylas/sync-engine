@@ -279,7 +279,8 @@ class IMAPAccount(Base):
         query = db_session.query(FolderItem.msg_uid, Message.g_msgid,
                     Message.g_thrid).filter(
                             FolderItem.imapaccount_id==self.id,
-                            FolderItem.folder_name==folder_name)
+                            FolderItem.folder_name==folder_name,
+                            FolderItem.message_id==Message.id)
 
         return dict([(int(uid), dict(msgid=g_msgid, thrid=g_thrid)) \
                 for uid, g_msgid, g_thrid in query])
@@ -420,7 +421,6 @@ class IMAPAccount(Base):
                 # Content-Disposition attachment; filename="floorplan.gif"
                 if mimepart.content_disposition[0] is not None:
                     value, params = mimepart.content_disposition
-                    log.info("content-disposition: {0}".format(value))
                     if value not in ['inline', 'attachment']:
                         errmsg = """
     Unknown Content-Disposition on message {0} found in {1}.

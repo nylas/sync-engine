@@ -459,7 +459,7 @@ class FolderSyncMonitor(Greenlet):
 
     def _highestmodseq_update(self, highestmodseq, c):
         uids = self.crispin_client.new_and_updated_uids(highestmodseq, c)
-        log.info("Starting highestmodseq update on {0} (current HIGHESTMODSEQ: {1})".format(self.folder_name, self.crispin_client.selected_highestmodseq))
+        self.log.info("Starting highestmodseq update on {0} (current HIGHESTMODSEQ: {1})".format(self.folder_name, self.crispin_client.selected_highestmodseq))
         g_metadata = self.account.g_metadata(self.folder_name)
         local_uids = self.account.all_uids(self.folder_name)
         if uids:
