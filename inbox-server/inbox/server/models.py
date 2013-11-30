@@ -427,7 +427,9 @@ Parsed Content-Disposition was: '{3}'""".format(uid, folder_name,
                     if value == 'attachment':
                         new_part.filename = params.get('filename')
 
-            if new_part.content_type.startswith('text'):
+            if mimepart.body is None:
+                data_to_write = ''
+            elif new_part.content_type.startswith('text'):
                 data_to_write = mimepart.body.encode('utf-8', 'strict')
             else:
                 data_to_write = mimepart.body
