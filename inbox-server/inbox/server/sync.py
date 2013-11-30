@@ -624,16 +624,15 @@ class FolderSyncMonitor(Greenlet):
             3. Purge messages we have locally but not on the server. Ignore
                messages we have on the server that aren't local.
         """
-        self.log.info("local_uids: {0}".format(local_uids))
         remote_uids = self.crispin_client.all_uids(c)
-        self.log.info("remote_uids: {0}".format(remote_uids))
         if len(remote_uids) > 0 and len(local_uids) > 0:
             assert type(remote_uids[0]) != type('')
 
         to_delete = set(local_uids).difference(set(remote_uids))
         if to_delete:
             self.account.remove_messages(to_delete, self.folder_name)
-            self.log.info("Deleted {0} removed messages".format(len(to_delete)))
+            self.log.info("Deleted {0} removed messages from {1}".format(
+                len(to_delete), self.crispin_client.selected_folder_name))
 
     def _update_metadata(self, uids, c):
         """ Update flags (the only metadata that can change). """
