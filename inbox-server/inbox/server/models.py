@@ -1015,6 +1015,19 @@ class FolderSync(Base):
 
     __table_args__ = (UniqueConstraint('imapaccount_id', 'folder_name'),)
 
+class Revision(Base):
+    """ Transactional log to enable client syncing. """
+    __tablename__ = 'revision'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    namespace_id = Column(Integer, ForeignKey('namespace.id'), nullable=False,
+            unique=True)
+    namespace = relationship('Namespace',
+            backref=backref('namespace', uselist=False))
+
+    command = Column(Enum('add', 'update', 'delete'), nullable=False)
+    delta = Column(JSON, nullable=False)
 
 config_prefix = 'RDS' if is_prod() else 'MYSQL'
 database_name = config.get('_'.join([config_prefix, 'DATABASE']))
