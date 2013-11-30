@@ -289,8 +289,7 @@ class FolderSyncMonitor(Greenlet):
             if deleted_uids:
                 self.account.remove_messages(deleted_uids, self.folder_name)
                 self.log.info("Removed the following UIDs that no longer exist on the server: {0}".format(' '.join([str(u) for u in sorted(deleted_uids, key=int)])))
-                local_uids = sorted(
-                        list(set(local_uids).difference(deleted_uids)), key=int)
+                local_uids = sorted(set(local_uids).difference(deleted_uids), key=int)
 
             original_folder = self.folder_name
             if self.account.provider == 'Gmail' and \
@@ -452,9 +451,10 @@ class FolderSyncMonitor(Greenlet):
             self._update_metadata(uids, c)
         self.log.info("Updated metadata for modified messages")
 
-    def _highestmodseq_update(self, highestmodseq, c):
-        uids = self.crispin_client.new_and_updated_uids(highestmodseq, c)
-        self.log.info("Starting highestmodseq update on {0} (current HIGHESTMODSEQ: {1})".format(self.folder_name, self.crispin_client.selected_highestmodseq))
+    def _highestmodseq_update(self, last_highestmodseq, c):
+        uids = self.crispin_client.new_and_updated_uids(last_highestmodseq, c)
+        new_highestmodseq = self.crispin_client.selected_highestmodseq
+        self.log.info("Starting highestmodseq update on {0} (current HIGHESTMODSEQ: {1})".format(self.folder_name, new_highestmodseq))
         g_metadata = self.account.g_metadata(self.folder_name)
         local_uids = self.account.all_uids(self.folder_name)
         remote_uids = self.crispin_client.all_uids(c)
@@ -493,7 +493,7 @@ class FolderSyncMonitor(Greenlet):
             log.info("No changes")
 
         self._remove_deleted_messages(remote_uids)
-        self._update_cached_highestmodseq(self.folder_name)
+        self._update_cached_highestmodseq(self.folder_name, new_highestmodseq)
 
     def _download_expanded_threads(self, remote_g_metadata, uids, c):
         """ UIDs and remote_g_metadata passed in are for the _folder
@@ -572,11 +572,10 @@ class FolderSyncMonitor(Greenlet):
 
         return full_download
 
-    def _update_cached_highestmodseq(self, folder, cached_validity=None):
-        if cached_validity is None:
-            cached_validity = db_session.query(UIDValidity).filter_by(
-                    imapaccount_id=self.account.id, folder_name=folder).one()
-        cached_validity.highestmodseq = self.crispin_client.selected_highestmodseq
+    def _update_cached_highestmodseq(self, folder, highestmodseq):
+        cached_validity = db_session.query(UIDValidity).filter_by(
+                imapaccount_id=self.account.id, folder_name=folder).one()
+        cached_validity.highestmodseq = highestmodseq
         db_session.add(cached_validity)
         db_session.commit()
 
