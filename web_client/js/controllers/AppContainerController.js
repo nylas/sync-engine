@@ -21,8 +21,34 @@ app.controller("AppContainerController", function (
     $log,
     $window,
     MockData,
-    Mousetrap)
+    Mousetrap,
+    $route,
+    $routeParams,
+    $location,
+    DB)
 {
+
+
+    $scope.$on(
+      "$routeChangeSuccess",
+      function(angularEvent, $currentRoute, $previousRoute) {
+
+        var mode = $currentRoute.params.mode;
+        var thrid = $currentRoute.params.master;
+        var msgid = $currentRoute.params.detail;
+        $log.info([mode, thrid, msgid]);
+
+        DB.getThread("1", thrid, function(t) {
+          $log.info(["SelectedThread:", t]);
+
+          $scope.isFullComposerViewActive = false;
+          $scope.activeThread = t;
+          $scope.isMailMessageViewActive = true;
+
+        });
+      }
+    );
+
 
     $scope.threads = []; // For UI element
     $scope.displayedThreads = []; // currently displayed
@@ -34,8 +60,42 @@ app.controller("AppContainerController", function (
     $scope.activeComposition = undefined;
 
     $scope.performSearch = function (query) {
-      $log.info("performSearch()" + query);
+
+      $log.info(["performSearch()", query]);
+
+
+      Wire.rpc("search_folder", [$scope.activeNamespace.id, query],
+        function (data) {
+        var parsed = JSON.parse(data);
+
+        $log.info(parsed);
+
+        var all_threads = [];
+        angular.forEach(parsed, function (value, key) {
+          var newThread = new IBThread(value);
+          all_threads.push(newThread);
+        });
+
+        // Sort threads based on last object (most recent) in
+        // descending order
+        all_threads.sort(
+          function sortDates(thread1, thread2) {
+            var a = thread1.messages[thread1.messages.length -
+              1].date.getTime();
+            var b = thread2.messages[thread2.messages.length -
+              1].date.getTime();
+
+            if (a > b) return -1;
+            if (a < b) return 1;
+            return 0;
+          });
+
+        $scope.threads = all_threads;
+        $scope.displayedThreads = all_threads;
+
+      });
     };
+
 
     $scope.composeButtonHandler = function () {
       $log.info("composeButtonHandler");
@@ -43,27 +103,29 @@ app.controller("AppContainerController", function (
       $scope.activateFullComposeView();
     };
 
+
     $scope.archiveButtonHandler = function () {
       $log.info("archiveButtonHandler()");
     };
+
+    var clearActive = function() {
+      $scope.activeThread = null;
+    }
+
 
     $scope.todoButtonHandler = function () {
       $log.info("todoButtonHandler()");
       // for now, thread objects don"t have an ID, so fetch the thread_id off
       // the first message
       var thread_id = $scope.activeThread.messages[0].thread_id;
-      Wire.rpc("create_todo", [$scope.activeNamespace.id, thread_id],
-        function (data) {
-          if (data !== "OK") {
-            $log.error("invalid create_todo response: " + data);
-          }
-          $log.info("successfully created todo item");
-          $scope.displayedThreads = $scope.displayedThreads.filter(
-            function (elt) {
-              return elt !== $scope.activeThread;
-            });
-          $scope.activeThread = null;
+      DB.createTodo($scope.activeNamespace.id, thread_id, function() {
+        $scope.displayedThreads = $scope.displayedThreads.filter(
+          function (elt) {
+            return elt.id !== thread_id;
         });
+        clearActive();
+      });
+
     };
 
     Mousetrap.bind("j", function () {
@@ -97,45 +159,20 @@ app.controller("AppContainerController", function (
     };
 
     $scope.loadNamespaces = function () {
-      Wire.rpc("top_level_namespaces", [], function (data) {
-        var parsed = JSON.parse(data);
-        $log.info(parsed);
 
-        $scope.namespaces = parsed;
-        console.log(["namespaces for user:", parsed]);
+      DB.getNamespaces(function(ns) {
+        $scope.namespaces = ns;
+
+        console.log(["namespaces for user:", $scope.namespaces]);
         // we only support one account for now
         $scope.activeNamespace = $scope.namespaces.private[0];
 
         $log.info("Getting threads for " + $scope.activeNamespace.name);
-        Wire.rpc("threads_for_folder", [$scope.activeNamespace.id,
-          "INBOX"
-        ], function (data) {
-
-          var parsed = JSON.parse(data);
-
-          var all_threads = [];
-          angular.forEach(parsed, function (value, key) {
-            var newThread = new IBThread(value);
-            all_threads.push(newThread);
-          });
-
-          // Sort threads based on last object (most recent) in
-          // descending order
-          all_threads.sort(
-            function sortDates(thread1, thread2) {
-              var a = thread1.messages[thread1.messages.length -
-                1].date.getTime();
-              var b = thread2.messages[thread2.messages.length -
-                1].date.getTime();
-
-              if (a > b) return -1;
-              if (a < b) return 1;
-              return 0;
-            });
-
+        DB.getFolder($scope.activeNamespace.id, "INBOX", function(all_threads){
           $scope.threads = all_threads;
           $scope.displayedThreads = all_threads;
         });
+
       });
     };
 
@@ -153,13 +190,10 @@ app.controller("AppContainerController", function (
     };
 
 
+
     $scope.openThread = function (selectedThread) {
-      $scope.isFullComposerViewActive = false;
-
-      $log.info(["SelectedThread:", selectedThread]);
-      $scope.activeThread = selectedThread;
-
-      $scope.isMailMessageViewActive = true;
+      $location.path("/mail/" + selectedThread.id +
+                     "/" + selectedThread.recentMessage().id + "/");
     };
 
     // this shouldn"t really be in $scope, right?
@@ -191,12 +225,14 @@ app.controller("AppContainerController", function (
       $scope.loadNamespaces();
     };
 
+
     $scope.activateTodoView = function () {
       $scope.clearAllActiveViews();
       $scope.isTodoViewActive = true;
       $scope.activeNamespace = $scope.namespaces.todo[0];
       $scope.loadTodoItems();
     };
+
 
     $scope.activateFullComposeView = function () {
       $scope.clearAllActiveViews();
@@ -238,23 +274,13 @@ app.controller("AppContainerController", function (
     $scope.openTodo = function (selectedTodo) {
       console.log(["Selecting Todo:", selectedTodo]);
       $scope.activeTodo = selectedTodo;
-
       $scope.isTodoMessageViewActive = true;
     };
 
     $scope.loadTodoItems = function () {
       console.log("loading TODO items");
-      Wire.rpc("todo_items", [], function (data) {
-        var parsed = JSON.parse(data);
-
-        $scope.displayedTodos = [];
-
-        angular.forEach(parsed, function (value, key) {
-          var newTodo = new IBTodo(value);
-          $scope.displayedTodos.push(newTodo);
-        });
-        $log.info("todo items:");
-        $log.info($scope.displayedTodos);
+      DB.getTodos(function(all_todos) {
+        $scope.displayedTodos = all_todos;
       });
     };
   });

@@ -12,8 +12,12 @@ from models import Namespace, User, IMAPAccount, TodoNamespace, TodoItem
 
 from sqlalchemy.orm import joinedload
 
+from inbox.server.config import config
+
 from .log import get_logger
 log = get_logger()
+
+
 
 class NSAuthError(Exception):
     pass
@@ -75,8 +79,9 @@ class API(object):
     def z_search(self):
         """ Proxy function for the ZeroMQ search service. """
         if not self._zmq_search:
-            self._zmq_search = zerorpc.Client(
-                    os.environ.get('SEARCH_SERVER_LOC', None))
+            search_srv_loc = config.get('SEARCH_SERVER_LOC', None)
+            assert search_srv_loc, "Where is the Search ZMQ service?"
+            self._zmq_search = zerorpc.Client(search_srv_loc)
         return self._zmq_search.search
 
     @jsonify
@@ -109,8 +114,10 @@ class API(object):
     @namespace_auth
     @jsonify
     def search_folder(self, search_query):
+        log.info("Searching with query: {0}".format(search_query))
         results = self.z_search(self.namespace.id, search_query)
         message_ids = [r[0] for r in results]
+        log.info("Found {0} messsages".format(len(message_ids)))
         return message_ids
 
     @namespace_auth

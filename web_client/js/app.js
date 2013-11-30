@@ -1,5 +1,7 @@
+"use strict";
 var app = angular.module("InboxApp",
-    ["ngSanitize",
+    ["ngRoute",
+     "ngSanitize",
      "ngCookies",
      "InboxApp.controllers",
      "InboxApp.filters",
@@ -24,3 +26,17 @@ app.constant("WIRE_SERVER_URL", "/wire");
 app.constant("UPLOAD_SERVER_URL", "/upload");
 
 app.constant("APP_SERVER_URL", "http://dev-localhost.inboxapp.com");
+
+
+app.config(function($locationProvider, $routeProvider) {
+
+  // Use hashbang mode since everything is prefixed by /app right now
+  $locationProvider.html5Mode(false);
+
+  $routeProvider.when("/:mode/:master/:detail/", {
+      controller: "AppContainerController"
+    }
+  );
+
+});
+

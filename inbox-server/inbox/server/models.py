@@ -983,6 +983,7 @@ class Thread(JSONSerializable, Base):
     def cereal(self):
         """ Threads are serialized with full message data. """
         d = {}
+        d['id'] = self.id
         d['messages'] = [m.cereal() for m in self.messages]
         d['subject'] = self.subject
         d['recentdate'] = self.recentdate
