@@ -270,21 +270,15 @@ class FolderSyncMonitor(Greenlet):
                 len(remote_uids), self.folder_name))
             self.log.info("Already have {0} UIDs".format(len(local_uids)))
 
-            deleted_uids = set(local_uids).difference(set(remote_uids))
-            unknown_uids = set(remote_uids).difference(set(local_uids))
+            local_uids = set(local_uids).difference(
+                    self._remove_deleted_messages(local_uids, remote_uids, c))
 
-            if deleted_uids:
-                self.account.remove_messages(deleted_uids, self.folder_name)
-                self.log.info("Removed the following UIDs that no longer exist on the server: {0}".format(' '.join([str(u) for u in sorted(deleted_uids, key=int)])))
-                local_uids = sorted(set(local_uids).difference(deleted_uids), key=int)
+            unknown_uids = set(remote_uids).difference(set(local_uids))
 
             original_folder = self.folder_name
             if self.account.provider == 'Gmail' and \
                     self.folder_name != self.crispin_client.folder_names(c)['All']:
                 flags = self.crispin_client.flags(remote_uids, c)
-                self.crispin_client.select_folder(
-                        self.crispin_client.folder_names(c)['All'],
-                        uidvalidity_callback, c)
                 self._download_expanded_threads(remote_g_metadata,
                         remote_uids, flags, c)
             else:
@@ -446,20 +440,19 @@ class FolderSyncMonitor(Greenlet):
         local_uids = self.account.all_uids(self.folder_name)
         g_metadata = self.account.g_metadata(self.folder_name)
         uids = self.crispin_client.new_and_updated_uids(last_highestmodseq, c)
+        remote_uids = self.crispin_client.all_uids(c)
         if uids:
             new, updated = self._new_or_updated(uids, local_uids)
             log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
             local_uids += new
-            self._remove_deleted_messages(local_uids, c)
+            local_uids = set(local_uids).difference(
+                    self._remove_deleted_messages(local_uids, remote_uids, c))
 
             g_metadata.update(self.crispin_client.g_metadata(new, c))
 
             if self.account.provider == 'Gmail' and \
                     self.folder_name != self.crispin_client.folder_names(c)['All']:
                 flags = self.crispin_client.flags(local_uids, c)
-                self.crispin_client.select_folder(
-                        self.crispin_client.folder_names(c)['All'],
-                        uidvalidity_callback, c)
                 self._download_expanded_threads(g_metadata, local_uids, flags, c)
             else:
                 full_download = self._deduplicate_message_download(g_metadata,
@@ -480,24 +473,27 @@ class FolderSyncMonitor(Greenlet):
                     self._update_metadata(uids, c)
         else:
             log.info("No changes")
-            self._remove_deleted_messages(local_uids, c)
+            local_uids = set(local_uids).difference(
+                    self._remove_deleted_messages(local_uids, remote_uids, c))
         self._update_validity(new_uidvalidity, new_highestmodseq)
 
     def _download_expanded_threads(self, remote_g_metadata, uids, flags, c):
         """ UIDs, remote_g_metadata, and flags passed in are for the _folder
-            that threads are being expanded in_, despite the fact that
-            the caller needs to select All Mail before calling this
-            method.
+            that threads are being expanded in_.
 
             Messages are downloaded by thread, most-recent-thread-first,
             newest-to-oldest in thread.
+
+            NOTE: this method will leave All Mail selected, since selecting
+            folders is expensive and we don't want to assume what the caller
+            needs to do next.
         """
         assert self.account.provider == 'Gmail', \
                 "thread expansion only works with Gmail"
-        assert self.crispin_client.selected_folder_name \
-                == self.crispin_client.folder_names(c)['All'], \
-                "must select All Mail before expanding threads"
         assert sorted(uids) == sorted(flags.keys())
+        self.crispin_client.select_folder(
+                self.crispin_client.folder_names(c)['All'],
+                uidvalidity_callback, c)
 
         self.log.info("Expanding threads and downloading messages.")
 
@@ -616,7 +612,7 @@ class FolderSyncMonitor(Greenlet):
 
         return 'poll'
 
-    def _remove_deleted_messages(self, local_uids, c):
+    def _remove_deleted_messages(self, local_uids, remote_uids, c):
         """ Works as follows:
             1. Do a LIST on the current folder to see what messages are on the
                server.
@@ -624,7 +620,6 @@ class FolderSyncMonitor(Greenlet):
             3. Purge messages we have locally but not on the server. Ignore
                messages we have on the server that aren't local.
         """
-        remote_uids = self.crispin_client.all_uids(c)
         if len(remote_uids) > 0 and len(local_uids) > 0:
             assert type(remote_uids[0]) != type('')
 
@@ -633,6 +628,8 @@ class FolderSyncMonitor(Greenlet):
             self.account.remove_messages(to_delete, self.folder_name)
             self.log.info("Deleted {0} removed messages from {1}".format(
                 len(to_delete), self.crispin_client.selected_folder_name))
+
+        return to_delete
 
     def _update_metadata(self, uids, c):
         """ Update flags (the only metadata that can change). """
