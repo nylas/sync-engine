@@ -627,7 +627,7 @@ class FolderSyncMonitor(Greenlet):
         if to_delete:
             self.account.remove_messages(to_delete, self.folder_name)
             self.log.info("Deleted {0} removed messages from {1}".format(
-                len(to_delete), self.crispin_client.selected_folder_name))
+                len(to_delete), self.folder_name))
 
         return to_delete
 
