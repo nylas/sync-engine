@@ -168,10 +168,10 @@ class ThreadDetector(Greenlet):
 
 class FolderSyncMonitor(Greenlet):
     """ Per-folder sync engine. """
-    def __init__(self, folder_name, account, crispin_client, log, shared_state):
+    def __init__(self, folder_name, account, log, shared_state):
         self.folder_name = folder_name
         self.account = account
-        self.crispin_client = crispin_client
+        self.crispin_client = new_crispin(account)
         self.log = log
         self.shared_state = shared_state
         self.state = None
@@ -715,7 +715,7 @@ class MailSyncMonitor(Greenlet):
             if saved_states.get(folder) != 'finish':
                 self.log.info("Initializing folder sync for {0}".format(folder))
                 thread = FolderSyncMonitor(folder, self.account,
-                        self.crispin_client, self.log, self.shared_state)
+                            self.log, self.shared_state)
                 thread.start()
                 self.folder_monitors.append(thread)
                 while not self._thread_polling(thread) and \
