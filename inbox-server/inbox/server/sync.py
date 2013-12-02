@@ -6,7 +6,7 @@ import os
 import socket
 
 from .config import config
-from .sessionmanager import new_crispin
+from .session import new_crispin
 
 from .models import db_session, FolderItem, Message, Thread, UIDValidity
 from .models import IMAPAccount, FolderSync

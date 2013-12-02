@@ -21,7 +21,7 @@ from .log import get_logger
 log = get_logger()
 
 import google_oauth
-import sessionmanager
+import session
 
 from ..util.url import validate_email
 
@@ -38,7 +38,7 @@ def get_user(request):
     """ Gets a user object for the current request """
     session_token = sc.deserialize('session', request.cookies.get('session') )
     if not session_token: return None
-    user_session  = sessionmanager.get_session(session_token)
+    user_session  = session.get_session(session_token)
     if not user_session: return None
     return user_session.user
 
@@ -111,8 +111,8 @@ def auth_done_handler():
     assert 'access_token' in oauth_response
     assert 'refresh_token' in oauth_response
 
-    new_account = sessionmanager.make_account(oauth_response)
-    new_session = sessionmanager.create_session(new_account.user)
+    new_account = session.make_account(oauth_response)
+    new_session = session.create_session(new_account.user)
 
     log.info("Successful login. Setting cookie: %s" % new_session.token)
 
@@ -368,5 +368,5 @@ def startserver(app_url, app_port):
 
 # Need to do something like this to close existing socket connections gracefully
 # def stopsubmodules():
-#     sessionmanager.stop_all_crispins()
+#     session.stop_all_crispins()
 #     # also stop idler if necessary

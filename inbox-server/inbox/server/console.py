@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from .sessionmanager import get_crispin_from_email
+from .session import get_crispin_from_email
 from .sync import uidvalidity_callback
 import IPython
 
@@ -8,7 +8,7 @@ def start_console(user_email_address=None):
 
     # You can also do this with
     # $ python -m imapclient.interact -H <host> -u <user> ...
-    # but we want to use our sessionmanager and crispin so we're not.
+    # but we want to use our session and crispin so we're not.
     if user_email_address:
         crispin = get_crispin_from_email(user_email_address)
         with crispin.pool.get() as c:
