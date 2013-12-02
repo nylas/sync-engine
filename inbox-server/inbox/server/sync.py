@@ -6,7 +6,7 @@ import os
 import socket
 
 from .config import config
-from .session import new_crispin
+from .crispin import new_crispin
 
 from .models import db_session, FolderItem, Message, Thread, UIDValidity
 from .models import IMAPAccount, FolderSync
@@ -579,7 +579,7 @@ class FolderSyncMonitor(Greenlet):
             cached_validity = UIDValidity(imapaccount=self.account,
                     folder_name=self.folder_name)
         cached_validity.highestmodseq = highestmodseq
-        cached_validity.uidvalidity = uidvalidity
+        cached_validity.uid_validity = uidvalidity
         db_session.add(cached_validity)
         db_session.commit()
 

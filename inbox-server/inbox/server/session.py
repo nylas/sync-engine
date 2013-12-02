@@ -1,7 +1,5 @@
-import crispin
 import uuid
 
-# XXX for crispin, we probably want to do per-user logging instead
 from .log import get_logger
 log = get_logger()
 
@@ -11,12 +9,6 @@ import google_oauth
 from models import db_session, User, UserSession, Namespace, IMAPAccount
 
 import sqlalchemy.orm.exc
-
-# Memory cache for currently open crispin instances
-email_address_to_crispins = {}
-
-# Memory cache for per-user IMAP connection pool.
-imapaccount_id_to_connection_pool = {}
 
 def log_ignored(exc):
     log.error('Ignoring error: %s\nOuter stack:\n%s%s'
@@ -110,34 +102,3 @@ def verify_imap_account(account):
         log.info("Updated token for imap account {0}".format(account.email_address))
 
     return account
-
-def get_crispin_from_session(session_token):
-    """ Get the running crispin instance, or make a new one """
-    s = get_session(session_token)
-    return get_crispin_from_email(s.email_address)
-
-def get_connection_pool(account):
-    pool = imapaccount_id_to_connection_pool.get(account.id)
-    if pool is None:
-        pool = imapaccount_id_to_connection_pool[account.id] \
-                = crispin.IMAPConnectionPool(account)
-    return pool
-
-def new_crispin(account, dummy=False):
-    cls = crispin.DummyCrispinClient if dummy else crispin.CrispinClient
-    return cls(account, pool=get_connection_pool(account))
-
-def get_crispin_from_email(email_address, initial=False, dummy=False):
-    if email_address in email_address_to_crispins:
-        return email_address_to_crispins[email_address]
-    else:
-        crispin_client = new_crispin(email_address, dummy)
-
-        email_address_to_crispins[email_address] = crispin_client
-        return crispin_client
-
-def stop_all_crispins():
-    if not email_address_to_crispins:
-        return
-    for e,c in email_address_to_crispins.iteritems():
-        c.stop()

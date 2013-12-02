@@ -2,45 +2,40 @@ import os
 import time
 
 from .log import get_logger
+from .pool import get_connection_pool
+from .session import get_session
 
 from ..util.misc import or_none
 from ..util.cache import get_cache, set_cache
 
-from geventconnpool import ConnectionPool
-from gevent import socket
-
-# monkey-patch so geventconnpool's @retry recognizes errors
-import imaplib
-imaplib.IMAP4.error = socket.error
-
-from imapclient import IMAPClient
-
 __all__ = ['CrispinClient', 'DummyCrispinClient']
 
-IMAP_HOSTS = { 'Gmail': 'imap.gmail.com' }
+# Memory cache for currently open crispin instances
+email_address_to_crispins = {}
 
-class IMAPConnectionPool(ConnectionPool):
-    def __init__(self, account, num_connections=5):
-        self.account = account
-        # 1200s == 20min
-        ConnectionPool.__init__(self, num_connections, keepalive=1200)
+def get_crispin_from_session(session_token):
+    """ Get the running crispin instance, or make a new one """
+    s = get_session(session_token)
+    return get_crispin_from_email(s.email_address)
 
-    def _new_connection(self):
-        imap_host = IMAP_HOSTS[self.account.provider]
+def new_crispin(account, dummy=False):
+    cls = DummyCrispinClient if dummy else CrispinClient
+    return cls(account)
 
-        try:
-            conn = IMAPClient(imap_host, use_uid=True, ssl=True)
-        except IMAPClient.Error as e:
-            raise socket.error(str(e))
+def get_crispin_from_email(email_address, initial=False, dummy=False):
+    if email_address in email_address_to_crispins:
+        return email_address_to_crispins[email_address]
+    else:
+        crispin_client = new_crispin(email_address, dummy)
 
-        conn.debug = False
+        email_address_to_crispins[email_address] = crispin_client
+        return crispin_client
 
-        conn.oauth2_login(self.account.email_address, self.account.o_access_token)
-
-        return conn
-
-    def _keepalive(self, c):
-        c.noop()
+def stop_all_crispins():
+    if not email_address_to_crispins:
+        return
+    for e,c in email_address_to_crispins.iteritems():
+        c.stop()
 
 ### decorators
 
@@ -362,8 +357,8 @@ class CrispinClient(CrispinClientBase):
     # how many messages to download at a time
     CHUNK_SIZE = 1
 
-    def __init__(self, account, pool, cache=False):
-        self.pool = pool
+    def __init__(self, account, cache=False):
+        self.pool = get_connection_pool(account)
         CrispinClientBase.__init__(self, account, cache)
 
     @timed
