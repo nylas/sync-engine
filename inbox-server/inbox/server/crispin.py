@@ -31,12 +31,6 @@ def get_crispin_from_email(email_address, initial=False, dummy=False):
         email_address_to_crispins[email_address] = crispin_client
         return crispin_client
 
-def stop_all_crispins():
-    if not email_address_to_crispins:
-        return
-    for e,c in email_address_to_crispins.iteritems():
-        c.stop()
-
 ### decorators
 
 def timed(fn):

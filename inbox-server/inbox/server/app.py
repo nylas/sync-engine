@@ -6,7 +6,7 @@ from StringIO import StringIO
 from gevent import monkey; monkey.patch_all()
 
 from flask import Flask, request, redirect, make_response, render_template
-from flask import Response, jsonify, abort, send_file, send_from_directory
+from flask import Response, jsonify, abort, send_file
 from werkzeug.wsgi import SharedDataMiddleware
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
@@ -351,22 +351,13 @@ def startserver(app_url, app_port):
 
     app.config['MAX_CONTENT_LENGTH'] = 300 * 1024 * 1024  # 300 MB
 
-
     ws_app = SharedDataMiddleware(app, {
             '/app': os.path.join(os.path.dirname(__file__), '../../../web_client'),
             '/static': os.path.join(os.path.dirname(__file__), '../../../web_client')
     })
 
-
     log.info('Listening on '+app_url+':'+str(app_port)+"/")
-
 
     from socketio.server import SocketIOServer  # inherits gevent.pywsgi.WSGIServer
     SocketIOServer((app_url, app_port), ws_app,
         resource="wire", policy_server=True).serve_forever()
-
-
-# Need to do something like this to close existing socket connections gracefully
-# def stopsubmodules():
-#     session.stop_all_crispins()
-#     # also stop idler if necessary
