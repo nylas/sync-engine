@@ -4,6 +4,10 @@ from .crispin import get_crispin_from_email
 from .sync import uidvalidity_callback
 import IPython
 
+# crank down connections
+import pool
+pool.POOL_SIZE = 1
+
 def start_console(user_email_address=None):
 
     # You can also do this with
@@ -31,4 +35,3 @@ def start_console(user_email_address=None):
         IPython.embed(banner1=banner)
     else:
         IPython.embed()
-
