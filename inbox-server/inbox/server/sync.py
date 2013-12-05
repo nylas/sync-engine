@@ -510,7 +510,7 @@ class FolderSyncMonitor(Greenlet):
         # already-downloaded messages along the way
         num_downloaded_threads = 0
         num_total_threads = len(all_g_thrids)
-        for g_thrids in chunk(all_g_thrids, 100):
+        for g_thrids in chunk(all_g_thrids, 500):
             thread_uids = self.crispin_client.expand_threads(g_thrids, c)
             # need X-GM-MSGID in order to dedupe download and X-GM-THRID to sort
             thread_g_metadata = self.crispin_client.g_metadata(thread_uids, c)
