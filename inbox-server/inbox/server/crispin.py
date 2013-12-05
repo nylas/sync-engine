@@ -4,6 +4,8 @@ import time
 from .log import get_logger
 from .pool import get_connection_pool
 from .session import get_session
+from .models import db_session
+from .models.tables import IMAPAccount
 
 from ..util.misc import or_none
 from ..util.cache import get_cache, set_cache

@@ -26,10 +26,10 @@ def log(request, config):
     request.addfinalizer(remove_logs)
     return configure_logging()
 
-class DB:
+class DB(object):
     def __init__(self):
         from inbox.server.models import db_session, init_db, engine
-        from inbox.server.models import IMAPAccount, Namespace, User
+        from inbox.server.models.tables import IMAPAccount, Namespace, User
         # create all tables
         init_db()
         self.session = db_session

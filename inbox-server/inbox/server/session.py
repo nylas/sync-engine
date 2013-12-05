@@ -1,14 +1,15 @@
 import uuid
+import datetime
+import traceback
 
 from .log import get_logger
 log = get_logger()
 
-import datetime
-import traceback
-import google_oauth
-from models import db_session, User, UserSession, Namespace, IMAPAccount
-
 import sqlalchemy.orm.exc
+
+from . import google_oauth
+from .models import db_session
+from .models.tables import User, UserSession, Namespace, IMAPAccount
 
 def log_ignored(exc):
     log.error('Ignoring error: %s\nOuter stack:\n%s%s'

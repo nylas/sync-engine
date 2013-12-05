@@ -14,14 +14,14 @@ from securecookie import SecureCookieSerializer
 
 import zerorpc
 
-from socket_rpc import SocketRPC
-from models import db_session, Message, Block, Collection, IMAPAccount
-from models import Namespace
+from .socket_rpc import SocketRPC
+from .models import db_session
+from .models.tables import Namespace, Message, Block, Collection, IMAPAccount
 from .log import get_logger
 log = get_logger()
 
-import google_oauth
-import session
+from . import google_oauth
+from . import session
 
 from ..util.url import validate_email
 

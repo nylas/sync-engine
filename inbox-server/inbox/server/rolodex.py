@@ -7,7 +7,8 @@ import time
 from .google_oauth import GOOGLE_CONSUMER_KEY, GOOGLE_CONSUMER_SECRET, OAUTH_SCOPE
 from .google_oauth import get_new_token
 
-from .models import db_session, Contact, IMAPAccount
+from .models import db_session
+from .models.tables import Contact, IMAPAccount
 from .log import configure_rolodex_logging, get_logger
 log = get_logger()
 

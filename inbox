@@ -106,7 +106,8 @@ def console(args):
 
 def search(args):
     import zerorpc
-    from inbox.server.models import db_session, Namespace
+    from inbox.server.models import db_session
+    from inbox.server.models.tables import Namespace
 
     namespace = db_session.query(Namespace).filter_by(id=args.namespace).one()
 
@@ -123,7 +124,8 @@ def search(args):
 
 def index(args):
     from inbox.server.search import gen_search_index
-    from inbox.server.models import db_session, Namespace
+    from inbox.server.models import db_session
+    from inbox.server.models.tables import Namespace
     if args.namespace:
         gen_search_index(db_session.query(Namespace).get(args.namespace))
     else:

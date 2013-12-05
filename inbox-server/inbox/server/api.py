@@ -2,22 +2,20 @@ import os
 import json
 
 from functools import wraps
+from bson import json_util
 
 import zerorpc
 
-import postel
-from bson import json_util
-from models import db_session, Message, SharedFolder, Thread
-from models import Namespace, User, IMAPAccount, TodoNamespace, TodoItem
-
 from sqlalchemy.orm import joinedload
 
-from inbox.server.config import config
+from . import postel
+from .config import config
+from .models import db_session
+from .models.tables import Message, SharedFolder, Thread, Namespace, User
+from .models.tables import IMAPAccount, TodoNamespace, TodoItem
 
 from .log import get_logger
 log = get_logger()
-
-
 
 class NSAuthError(Exception):
     pass

@@ -5,7 +5,8 @@ log = get_logger()
 
 import xapian as x_
 
-from .models import db_session, Message, Namespace
+from .models import db_session
+from .models.tables import Message, Namespace
 from ..util.file import mkdirp
 from ..util.html import strip_tags
 

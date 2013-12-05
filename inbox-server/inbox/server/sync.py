@@ -5,20 +5,9 @@ from __future__ import division
 import os
 import socket
 
-from .config import config
-from .crispin import new_crispin
-
-from .models import db_session, FolderItem, Message, Thread, UIDValidity
-from .models import IMAPAccount, FolderSync
-from sqlalchemy.orm.exc import NoResultFound
-
-from ..util.itert import chunk, partition
-from ..util.cache import set_cache, get_cache, rm_cache
-
-from .log import configure_sync_logging, get_logger
-log = get_logger()
-
 from datetime import datetime
+
+from sqlalchemy.orm.exc import NoResultFound
 
 from gevent import Greenlet, sleep, joinall
 from gevent.queue import Queue, Empty
@@ -27,6 +16,19 @@ from gevent.event import Event
 from geventconnpool import retry
 
 import zerorpc
+
+from .config import config
+from .crispin import new_crispin
+
+from .models import db_session
+from .models.tables import IMAPAccount, FolderSync, FolderItem, Message
+from .models.tables import Thread, UIDValidity
+
+from ..util.itert import chunk, partition
+from ..util.cache import set_cache, get_cache, rm_cache
+
+from .log import configure_sync_logging, get_logger
+log = get_logger()
 
 """
 ---------------
