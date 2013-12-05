@@ -28,7 +28,9 @@ def get_crispin_from_email(email_address, initial=False, dummy=False):
     if email_address in email_address_to_crispins:
         return email_address_to_crispins[email_address]
     else:
-        crispin_client = new_crispin(email_address, dummy)
+        account = db_session.query(IMAPAccount).filter_by(
+                email_address=email_address).one()
+        crispin_client = new_crispin(account, dummy)
 
         email_address_to_crispins[email_address] = crispin_client
         return crispin_client
