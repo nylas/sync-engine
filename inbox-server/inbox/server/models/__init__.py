@@ -6,7 +6,6 @@ from sqlalchemy.interfaces import PoolListener
 from sqlalchemy import Column, Integer, String, DateTime, Date, Boolean, Enum
 from sqlalchemy import create_engine, ForeignKey, Text, Index, func, event
 from sqlalchemy import distinct
-from sqlalchemy.types import TypeDecorator
 from sqlalchemy.orm import reconstructor, relationship, backref, sessionmaker
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
@@ -14,24 +13,26 @@ from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 Base = declarative_base()
 
 from hashlib import sha256
+from urllib import quote_plus as urlquote
+from itertools import chain
+
+from bs4 import BeautifulSoup, Doctype, Comment
+
+from flanker import mime
 
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
 
-from ..util.file import mkdirp, remove_file, Lock
-from ..util.html import plaintext2html
-from ..util.misc import or_none, strip_plaintext_quote
-from ..util.addr import parse_email_address
-from .config import config, is_prod
-from .log import get_logger
+from inbox.util.file import mkdirp, remove_file, Lock
+from inbox.util.html import plaintext2html
+from inbox.util.misc import or_none, strip_plaintext_quote
+from inbox.util.addr import parse_email_address
+from ..config import config, is_prod
+from ..log import get_logger
 log = get_logger()
 
-from bs4 import BeautifulSoup, Doctype, Comment
-
-from urllib import quote_plus as urlquote
-from itertools import chain
-
-from flanker import mime
+from .util import JSON, LittleJSON
+from .revision import versioned_session, Revision
 
 ### Roles
 
@@ -167,25 +168,6 @@ class Blob(object):
 
     def _delete_from_disk(self):
         remove_file(self._data_file_path)
-
-### Column Types
-
-# http://docs.sqlalchemy.org/en/rel_0_9/core/types.html#marshal-json-strings
-class JSON(TypeDecorator):
-    impl = Text
-
-    def process_bind_param(self, value, dialect):
-        if value is None:
-            return None
-        return json.dumps(value)
-
-    def process_result_value(self, value, dialect):
-        if not value:
-            return None
-        return json.loads(value)
-
-class LittleJSON(JSON):
-    impl = String(40)
 
 ### Tables
 
@@ -1011,19 +993,14 @@ class FolderSync(Base):
 
     __table_args__ = (UniqueConstraint('imapaccount_id', 'folder_name'),)
 
-class Revision(Base):
+class Transaction(Base, Revision):
     """ Transactional log to enable client syncing. """
-    __tablename__ = 'revision'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    __tablename__ = 'transaction'
 
     namespace_id = Column(Integer, ForeignKey('namespace.id'), nullable=False,
             unique=True)
     namespace = relationship('Namespace',
             backref=backref('namespace', uselist=False))
-
-    command = Column(Enum('add', 'update', 'delete'), nullable=False)
-    delta = Column(JSON, nullable=False)
 
 config_prefix = 'RDS' if is_prod() else 'MYSQL'
 database_name = config.get('_'.join([config_prefix, 'DATABASE']))
@@ -1063,4 +1040,4 @@ Session = sessionmaker()
 Session.configure(bind=engine)
 
 # A single global database session per Inbox instance is good enough for now.
-db_session = Session()
+db_session = versioned_session(Session(), rev_cls=Transaction)
