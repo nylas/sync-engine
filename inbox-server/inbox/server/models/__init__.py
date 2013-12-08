@@ -11,11 +11,10 @@ from .util import ForceStrictMode
 from .revision import versioned_session
 from .table import Base, Transaction
 
-config_prefix = 'RDS' if is_prod() else 'MYSQL'
-database_name = config.get('_'.join([config_prefix, 'DATABASE']))
-
 def db_uri():
     uri_template = 'mysql://{username}:{password}@{host}:{port}/{database}?charset=utf8mb4'
+
+    config_prefix = 'RDS' if is_prod() else 'MYSQL'
 
     return uri_template.format(
         username = config.get('_'.join([config_prefix, 'USER'])),

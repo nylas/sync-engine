@@ -39,3 +39,13 @@ class ForceStrictMode(PoolListener):
         cur = dbapi_con.cursor()
         cur.execute("SET SESSION sql_mode='TRADITIONAL'")
         cur = None
+
+@as_declarative()
+class Base(object):
+    """Base class which provides automated table name
+    and surrogate primary key column.
+    """
+    @declared_attr
+    def __tablename__(cls):
+        return cls.__name__.lower()
+    id = Column(Integer, primary_key=True, autoincrement=True)

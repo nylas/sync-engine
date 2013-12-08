@@ -9,9 +9,7 @@ from sqlalchemy import ForeignKey, Text, Index, func, event
 from sqlalchemy import distinct
 from sqlalchemy.orm import reconstructor, relationship, backref
 from sqlalchemy.schema import UniqueConstraint
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
-Base = declarative_base()
 
 from bs4 import BeautifulSoup, Doctype, Comment
 
@@ -24,6 +22,7 @@ from inbox.util.file import Lock
 from inbox.util.html import plaintext2html
 from inbox.util.misc import or_none, strip_plaintext_quote
 from inbox.util.addr import parse_email_address
+from inbox.sqlalchemy.util import Base
 
 from .util import JSON, LittleJSON
 from .revision import Revision
@@ -32,8 +31,6 @@ from .roles import JSONSerializable, Blob
 # global
 
 class IMAPAccount(Base):
-    __tablename__ = 'imapaccount'
-    id = Column(Integer, primary_key=True, autoincrement=True)
     # user_id refers to Inbox's user id
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'),
             nullable=False)
@@ -291,10 +288,6 @@ Parsed Content-Disposition was: '{3}'""".format(uid, folder_name,
 
 class UserSession(Base):
     """ Inbox-specific sessions. """
-    __tablename__ = 'user_session'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
     token = Column(String(40))
 
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
@@ -302,8 +295,6 @@ class UserSession(Base):
 
 class Namespace(Base):
     """ A way to do grouping / permissions, basically. """
-    __tablename__ = 'namespace'
-    id = Column(Integer, primary_key=True, autoincrement=True)
     # NOTE: only root namespaces have IMAP accounts
     imapaccount_id = Column(Integer, ForeignKey('imapaccount.id',
         ondelete='CASCADE'), nullable=True)
@@ -330,10 +321,6 @@ class Namespace(Base):
         return dict(id=self.id, name='Gmail')
 
 class SharedFolder(Base):
-    __tablename__ = 'sharedfolder'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
     namespace = relationship('Namespace', backref='sharedfolders')
     namespace_id = Column(Integer, ForeignKey('namespace.id'), nullable=False)
     user = relationship('User', backref='sharedfolders')
@@ -345,18 +332,10 @@ class SharedFolder(Base):
         return dict(id=self.id, name=self.display_name)
 
 class User(Base):
-    __tablename__ = 'user'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
     name = Column(String(255))
 
 class Contact(Base):
     """ Inbox-specific sessions. """
-    __tablename__ = 'contact'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
             nullable=False)
     imapaccount = relationship("IMAPAccount")
@@ -386,12 +365,8 @@ class Contact(Base):
 # sharded (by namespace)
 
 class Message(JSONSerializable, Base):
-    __tablename__ = 'message'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
     # XXX clean this up a lot - make a better constructor, maybe taking
-    # a mailbase as an argument to prefill a lot of attributes
+    # a flanker object as an argument to prefill a lot of attributes
 
     namespace_id = Column(ForeignKey('namespace.id'), nullable=False)
     namespace = relationship("Namespace", backref="messages",
@@ -554,10 +529,7 @@ common_content_types = ['text/plain',
                         'image/jpg']
 
 class Block(JSONSerializable, Blob, Base):
-    __tablename__ = 'block'
     """ Metadata for message parts stored in s3 """
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
     message_id = Column(Integer, ForeignKey('message.id'), nullable=False)
     message = relationship('Message', backref="parts")
 
@@ -614,10 +586,7 @@ def serialize_before_insert(mapper, connection, target):
         target._content_type_other = target.content_type
 
 class FolderItem(JSONSerializable, Base):
-    __tablename__ = 'folderitem'
     """ This maps folder names to UIDs in that folder. """
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
 
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
             nullable=False)
@@ -668,12 +637,9 @@ Index('folderitem_imapaccount_id_folder_name', FolderItem.imapaccount_id,
         FolderItem.folder_name)
 
 class UIDValidity(JSONSerializable, Base):
-    __tablename__ = 'uidvalidity'
     """ UIDValidity has a per-folder value. If it changes, we need to
         re-map g_msgid to UID for that folder.
     """
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
             nullable=False)
     imapaccount = relationship("IMAPAccount")
@@ -687,19 +653,13 @@ class UIDValidity(JSONSerializable, Base):
     __table_args__ = (UniqueConstraint('imapaccount_id', 'folder_name'),)
 
 class Collection(Base):
-    __tablename__ = 'collections'
-    id = Column(Integer, primary_key=True, autoincrement=True)
     type = Column(String(32), nullable=True)
 
 class TodoItem(JSONSerializable, Base):
-    __tablename__ = 'todoitem'
     """ Each todo item has a row in TodoItem described the item's metadata.
         Additionally, for each thread that is a todo item, all messages within
         that thread should be in the user's todo namespace.
     """
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
     thread_id = Column(ForeignKey('thread.id', ondelete='CASCADE'),
             nullable=False)
     thread = relationship("Thread", backref="todo_item")
@@ -747,10 +707,7 @@ class TodoItem(JSONSerializable, Base):
             )
 
 class TodoNamespace(JSONSerializable, Base):
-    __tablename__ = 'todonamespace'
     """ A 1-1 mapping between users and their todo namespaces """
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
 
     namespace = relationship('Namespace',
             backref=backref('todo_namespace', uselist=False))
@@ -768,10 +725,6 @@ class Thread(JSONSerializable, Base):
 
     (We have all this information elsewhere, but it's not as nice to use.)
     """
-    __tablename__ = 'thread'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
     subject = Column(Text, nullable=True)
     subjectdate = Column(DateTime, nullable=False)
     recentdate = Column(DateTime, nullable=False)
@@ -832,10 +785,6 @@ class Thread(JSONSerializable, Base):
         return d
 
 class FolderSync(Base):
-    __tablename__ = 'foldersync'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
             nullable=False)
     imapaccount = relationship('IMAPAccount', backref='foldersyncs')
@@ -853,7 +802,6 @@ class FolderSync(Base):
 
 class Transaction(Base, Revision):
     """ Transactional log to enable client syncing. """
-    __tablename__ = 'transaction'
 
     namespace_id = Column(Integer, ForeignKey('namespace.id'), nullable=False,
             unique=True)
