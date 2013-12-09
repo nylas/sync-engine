@@ -161,8 +161,8 @@ class ThreadDetector(Greenlet):
                         thread = self.cache[msg.g_thrid]
                         thread.update_from_message(msg)
                     else:
-                        self.cache[msg.g_thrid] = \
-                                Thread.from_message(msg, msg.g_thrid)
+                        self.cache[msg.g_thrid] = Thread.from_message(
+                                db_session, msg, msg.g_thrid)
                 self.clear_cache()
                 event.set()
             except Empty:
@@ -382,7 +382,7 @@ class FolderSyncMonitor(Greenlet):
                     mm in db_session.query(Message).filter( \
                         Message.g_msgid.in_(folderitem_g_msgids))])
 
-            new_folderitems = [FolderItem(imapaccount_id=self.account.id,
+            new_folderitems = [FolderItem(imapaccount=self.account,
                         folder_name=self.crispin_client.selected_folder_name,
                         msg_uid=uid, message=message_for[uid]) for uid in uids]
             for item in new_folderitems:
@@ -540,7 +540,7 @@ class FolderSyncMonitor(Greenlet):
                 for item in new_folderitems:
                     original_uid = original_uid_for[item.message.g_msgid]
                     original_folderitem = FolderItem(
-                            imapaccount_id=self.account.id,
+                            imapaccount=self.account,
                             folder_name=self.folder_name,
                             msg_uid=original_uid,
                             message=item.message)

@@ -18,13 +18,10 @@ from sqlalchemy.orm.exc import UnmappedColumnError
 from sqlalchemy.orm.properties import RelationshipProperty
 from sqlalchemy.ext.declarative import declared_attr
 
-from .util import JSON, Base
+from .util import JSON
 
-class Revision(Base):
-    """ All revision records in a single table.
-
-    You can subclass this if you need to add more attributes.
-    """
+class Revision(object):
+    """ All revision records in a single table (role). """
     # Which object are we recording changes to?
     table_name = Column(String(20), nullable=False)
     record_id = Column(Integer, nullable=False)
@@ -33,35 +30,40 @@ class Revision(Base):
     # NOTE: This may want to end up as a larger text type.
     delta = Column(JSON, nullable=True)
 
-class HasRevisions(object):
-    """ Generic mixin which creates a read-only revisions attribute on the
-        class for convencience.
+    def set_extra_attrs(self, obj):
+        pass
+
+def gen_rev_role(rev_cls):
+    """ Generate generic HasRevisions mixin.
+
+    Use this if you subclass Revision.
     """
-    @declared_attr
-    def revisions(cls):
-        return relationship(Revision,
-                primaryjoin="{0}.id==Revision.record_id".format(cls.__name__),
-                foreign_keys=Revision.record_id,
-                backref='record', viewonly=True)
+    class HasRevisions(object):
+        """ Generic mixin which creates a read-only revisions attribute on the
+            class for convencience.
+        """
+        @declared_attr
+        def revisions(cls):
+            return relationship(rev_cls,
+                    primaryjoin="{0}.id=={1}.record_id".format(
+                        cls.__name__, rev_cls.__name__),
+                    foreign_keys=rev_cls.record_id, viewonly=True)
+
+    return HasRevisions
 
 def create_insert_revision(rev_cls, obj, session):
-    rev = rev_cls(command='insert', record_id=obj.id,
+    return rev_cls(command='insert', record_id=obj.id,
             table_name=obj.__tablename__, delta=delta(obj))
-    session.add(rev)
 
 def create_delete_revision(rev_cls, obj, session):
-    rev = rev_cls(command='delete', record_id=obj.id,
-            table_name=obj.__tablename__)
     # NOTE: The application layer needs to deal with purging all history
-    # related to the object at some point. This delete transaction needs to
-    # stick around, though, so we don't bother associating it with the
-    # object.
-    session.add(rev)
+    # related to the object at some point.
+    return rev_cls(command='delete', record_id=obj.id,
+            table_name=obj.__tablename__)
 
 def create_update_revision(rev_cls, obj, session):
-    rev = rev_cls(command='update', record_id=obj.id,
+    return rev_cls(command='update', record_id=obj.id,
             table_name=obj.__tablename__, delta=delta(obj))
-    session.add(rev)
 
 def delta(obj):
     obj_state = inspect(obj)
@@ -92,15 +94,14 @@ def delta(obj):
             # import pytest
             # pytest.set_trace()
             added, unchanged, deleted = getattr(obj_state.attrs, prop.key).history
-            if added and added[0] is not None:
+            if added:
                 # if the attribute had no value.
                 d[col.key] = added[0]
                 obj_changed = True
-            elif unchanged:
-                pass
-            else:
+            elif deleted:
                 d[col.key] = deleted[0]
                 obj_changed = True
+            # do nothing for unchanged
 
         if not obj_changed:
             # not changed, but we have relationships.  OK
@@ -120,18 +121,24 @@ def delta(obj):
 
     return d
 
-def versioned_session(session, rev_cls):
+def versioned_session(session, rev_cls, rev_role):
+    def create_revision(session, obj, create_fn):
+        try:
+            if isinstance(obj, rev_role):
+                rev = create_fn(rev_cls, obj, session)
+                rev.set_extra_attrs(obj)
+                session.add(rev)
+        except AttributeError:
+            import pdb; pdb.set_trace()
+
     @event.listens_for(session, 'after_flush')
     def after_flush(session, flush_context):
         """ Hook to log revision deltas. Must be post-flush in order to grab
             object IDs on new objects.
         """
         for obj in session.new:
-            if not isinstance(obj, Revision):
-                create_insert_revision(rev_cls, obj, session)
+            create_revision(session, obj, create_insert_revision)
         for obj in session.dirty:
-            if not isinstance(obj, Revision):
-                create_update_revision(rev_cls, obj, session)
+            create_revision(session, obj, create_update_revision)
         for obj in session.deleted:
-            if not isinstance(obj, Revision):
-                create_delete_revision(rev_cls, obj, session)
+            create_revision(session, obj, create_delete_revision)

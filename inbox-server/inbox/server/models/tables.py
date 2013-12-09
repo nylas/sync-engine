@@ -22,10 +22,9 @@ from inbox.util.file import Lock
 from inbox.util.html import plaintext2html
 from inbox.util.misc import or_none, strip_plaintext_quote
 from inbox.util.addr import parse_email_address
-from inbox.sqlalchemy.util import Base
+from inbox.sqlalchemy.util import Base, JSON, LittleJSON
+from inbox.sqlalchemy.revision import Revision, gen_rev_role
 
-from .util import JSON, LittleJSON
-from .revision import Revision
 from .roles import JSONSerializable, Blob
 
 # global
@@ -194,7 +193,7 @@ class IMAPAccount(Base):
         new_msg.data_sha256 = sha256(body).hexdigest()
         # TODO: Detect which namespace to add message to.
         # Look up message thread,
-        new_msg.namespace_id = self.namespace.id
+        new_msg.namespace = self.namespace
 
         # clean_subject strips re:, fwd: etc.
         new_msg.subject = parsed.clean_subject
@@ -217,7 +216,7 @@ class IMAPAccount(Base):
         new_msg.g_msgid = x_gm_msgid
         new_msg.g_thrid = x_gm_thrid
 
-        folder_item = FolderItem(imapaccount_id=self.id,
+        folder_item = FolderItem(imapaccount=self,
                 folder_name=folder_name, msg_uid=uid, message=new_msg)
         folder_item.update_flags(flags, x_gm_labels)
 
@@ -334,7 +333,20 @@ class SharedFolder(Base):
 class User(Base):
     name = Column(String(255))
 
-class Contact(Base):
+# sharded (by namespace)
+
+class Transaction(Base, Revision):
+    """ Transactional log to enable client syncing. """
+
+    namespace_id = Column(Integer, ForeignKey('namespace.id'), nullable=False)
+    namespace = relationship('Namespace', backref='transactions')
+
+    def set_extra_attrs(self, obj):
+        self.namespace = obj.namespace
+
+HasRevisions = gen_rev_role(Transaction)
+
+class Contact(Base, HasRevisions):
     """ Inbox-specific sessions. """
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
             nullable=False)
@@ -353,6 +365,10 @@ class Contact(Base):
 
     __table_args__ = (UniqueConstraint('g_id', 'source', 'imapaccount_id'),)
 
+    @property
+    def namespace(self):
+        return self.imapaccount.namespace
+
     def cereal(self):
         return dict(id=self.id,
                     email=self.email_address,
@@ -360,11 +376,9 @@ class Contact(Base):
 
     def __repr__(self):
         # XXX this won't work properly with unicode (e.g. in the name)
-        return str(self.name) + ", " + str(self.email) + ", " + str(self.source)
+        return str(self.name) + ", " + str(self.email_address) + ", " + str(self.source)
 
-# sharded (by namespace)
-
-class Message(JSONSerializable, Base):
+class Message(JSONSerializable, Base, HasRevisions):
     # XXX clean this up a lot - make a better constructor, maybe taking
     # a flanker object as an argument to prefill a lot of attributes
 
@@ -528,7 +542,7 @@ common_content_types = ['text/plain',
                         'message/rfc822',
                         'image/jpg']
 
-class Block(JSONSerializable, Blob, Base):
+class Block(JSONSerializable, Blob, Base, HasRevisions):
     """ Metadata for message parts stored in s3 """
     message_id = Column(Integer, ForeignKey('message.id'), nullable=False)
     message = relationship('Message', backref="parts")
@@ -574,6 +588,10 @@ class Block(JSONSerializable, Blob, Base):
         else:
             self.content_type = self._content_type_other
 
+    @property
+    def namespace(self):
+        return self.message.namespace
+
 @event.listens_for(Block, 'before_insert', propagate = True)
 def serialize_before_insert(mapper, connection, target):
     if target.content_type in common_content_types:
@@ -583,7 +601,7 @@ def serialize_before_insert(mapper, connection, target):
         target._content_type_common = None
         target._content_type_other = target.content_type
 
-class FolderItem(JSONSerializable, Base):
+class FolderItem(JSONSerializable, Base, HasRevisions):
     """ This maps folder names to UIDs in that folder. """
 
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
@@ -628,13 +646,17 @@ class FolderItem(JSONSerializable, Base):
             self.is_draft = True
         self.extra_flags = sorted(new_flags)
 
+    @property
+    def namespace(self):
+        return self.imapaccount.namespace
+
     __table_args__ = (UniqueConstraint('folder_name', 'msg_uid', 'imapaccount_id',),)
 
 # make pulling up all messages in a given folder fast
 Index('folderitem_imapaccount_id_folder_name', FolderItem.imapaccount_id,
         FolderItem.folder_name)
 
-class UIDValidity(JSONSerializable, Base):
+class UIDValidity(JSONSerializable, Base, HasRevisions):
     """ UIDValidity has a per-folder value. If it changes, we need to
         re-map g_msgid to UID for that folder.
     """
@@ -649,6 +671,10 @@ class UIDValidity(JSONSerializable, Base):
     highestmodseq = Column(Integer, nullable=False)
 
     __table_args__ = (UniqueConstraint('imapaccount_id', 'folder_name'),)
+
+    @property
+    def namespace(self):
+        return self.imapaccount.namespace
 
 class TodoItem(JSONSerializable, Base):
     """ Each todo item has a row in TodoItem described the item's metadata.
@@ -794,11 +820,3 @@ class FolderSync(Base):
                         default='initial', nullable=False)
 
     __table_args__ = (UniqueConstraint('imapaccount_id', 'folder_name'),)
-
-class Transaction(Base, Revision):
-    """ Transactional log to enable client syncing. """
-
-    namespace_id = Column(Integer, ForeignKey('namespace.id'), nullable=False,
-            unique=True)
-    namespace = relationship('Namespace',
-            backref=backref('namespace', uselist=False))

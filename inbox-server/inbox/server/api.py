@@ -130,7 +130,7 @@ class API(object):
             the requested folder.
         """
         return [t.cereal() for t in \
-                self.namespace.threads_for_folder(folder_name)]
+                self.namespace.threads_for_folder(db_session, folder_name)]
 
     @namespace_auth
     def send_mail(self, recipients, subject, body):

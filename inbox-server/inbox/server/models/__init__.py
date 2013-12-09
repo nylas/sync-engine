@@ -7,9 +7,10 @@ from ..config import config, is_prod
 from ..log import get_logger
 log = get_logger()
 
-from .util import ForceStrictMode
-from .revision import versioned_session
-from .table import Base, Transaction
+from .tables import Base, Transaction, HasRevisions
+
+from inbox.sqlalchemy.revision import versioned_session
+from inbox.sqlalchemy.util import ForceStrictMode
 
 def db_uri():
     uri_template = 'mysql://{username}:{password}@{host}:{port}/{database}?charset=utf8mb4'
@@ -35,4 +36,4 @@ Session.configure(bind=engine)
 
 # A single global database session per Inbox instance is good enough for now.
 db_session = Session()
-versioned_session(db_session, rev_cls=Transaction)
+versioned_session(db_session, Transaction, HasRevisions)
