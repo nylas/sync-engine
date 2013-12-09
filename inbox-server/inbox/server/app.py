@@ -1,12 +1,10 @@
 import os
 import json
 
-from StringIO import StringIO
-
 from gevent import monkey; monkey.patch_all()
 
 from flask import Flask, request, redirect, make_response, render_template
-from flask import Response, jsonify, abort, send_file
+from flask import Response, jsonify
 from werkzeug.wsgi import SharedDataMiddleware
 from socketio import socketio_manage
 from socketio.namespace import BaseNamespace
@@ -15,8 +13,6 @@ from securecookie import SecureCookieSerializer
 import zerorpc
 
 from .socket_rpc import SocketRPC
-from .models import db_session
-from .models.tables import Namespace, Message, Block, Collection, IMAPAccount
 from .log import get_logger
 log = get_logger()
 
@@ -25,7 +21,6 @@ from . import session
 
 from ..util.url import validate_email
 
-from ..util.img import generate_thumbnail
 from .config import config
 
 COOKIE_SECRET = config.get("COOKIE_SECRET", None)
@@ -222,116 +217,6 @@ class WireNamespace(BaseNamespace):
         # if self.ctx:
         #     self.ctx.pop()   # Not sure why this causes an exception
         super(WireNamespace, self).disconnect(*args, **kwargs)
-
-@app.route('/upload', methods=['GET', 'POST'])
-def upload_file_handler():
-    account = get_account(request)
-    if not account:
-        log.error("No user session for upload attempt")
-        abort(401)
-        return
-
-    log.info(request.files)
-    # XXX TODO pull the collection ID out of the POST request
-    collection_id = 1
-    collection = db_session.query(Collection).filter_by(id=collection_id).first()
-    if not collection:
-        # XXX not actually sure what 'type' field is for yet
-        collection = Collection(id=1, type="gallery")
-        db_session.add(collection)
-        db_session.commit()
-    if request.method == 'POST' and 'file' in request.files:
-        uploaded_file = request.files['file']
-
-        meta = Message(namespace_id=account.namespace.id)
-        part = Block(
-                message=meta,
-                filename=uploaded_file.filename,
-                is_inboxapp_attachment=True,
-                collection=collection)
-        part.content_type = uploaded_file.content_type
-        log.info("New uploaded file %s" % part.filename)
-        part.save(uploaded_file.read())  # TODO consider sending the stream object
-        log.info("Saved upload to S3 with hash {0}".format(part.data_sha256))
-
-        # Return content_id for upload
-        # TODO right now the content_id is just the upload's hash
-        # later we should salt this with something
-        part.content_id = part.data_sha256
-        db_session.add(meta)
-        db_session.add(part)
-        db_session.commit()
-        return part.data_sha256
-
-    log.error("What are we trying to upload?")
-    return Response()
-
-# XXX TODO don't download unsalted hashes here
-@app.route('/<email>/img/<sha256>', methods=['GET'])
-def download_handler(email, sha256):
-    # grab image from S3 and pass it on
-    part = db_session.query(Block).join(Message) \
-            .join(Namespace).join(IMAPAccount).filter(
-            IMAPAccount.email_address==email,
-            Block.data_sha256==sha256).first()
-    if not part:
-        abort(404)
-        return
-    # XXX don't hardcode MIMEtype
-    return send_file(StringIO(part.get_data()), mimetype='image/jpeg')
-
-@app.route('/<email>/img/<sha256>/thumb', methods=['GET'])
-def thumb_download_handler(email, sha256):
-    # grab image from S3 and pass it on
-    part = db_session.query(Block).join(Message).filter(
-            Message.g_email==email,
-            Block.data_sha256==sha256).first()
-    if not part:
-        abort(404)
-        return
-    # XXX don't hardcode MIMEtype
-    thumb_blob = generate_thumbnail(part.get_data())
-    return send_file(StringIO(thumb_blob), mimetype='image/jpeg')
-
-# XXX need to mangle the URL somehow
-@app.route('/<email>/gallery/<id>', methods=['GET'])
-def gallery_handler(email, id):
-    log.info("email: '{0}' / id: '{1}'".format(email, id))
-    # no auth required to view galleries
-    # XXX limit by type
-    images = db_session.query(Block).filter_by(
-            collection_id=id).all()
-    return render_template('gallery.html', images=images, email=email)
-
-# Catchall
-# @app.route('/', defaults={'path': ''})
-# @app.route('/<path:path>')
-# def catch_all(path):
-#     return 'You want path: %s' % path
-
-@app.route("/<blockhash>", subdomain="msg-store")
-def block_retrieval(blockhash):
-    if not blockhash: return None
-
-    account = get_account(request)
-    if not account: return None
-
-    return account.email_address
-
-    query = db_session.query(Block).filter(Block.data_sha256 == blockhash)
-
-    part = query.all()
-    if not part: return None
-    part = part[0]
-
-    s = []
-    for k,v in part.__dict__.iteritems():
-        try:
-            s.append(json.dumps([k,v]))
-        except Exception:
-            pass
-
-    return json.dumps(s)
 
 # TODO do reloading with gunicorn
 def startserver(app_url, app_port):

@@ -544,8 +544,6 @@ class Block(JSONSerializable, Blob, Base):
     misc_keyval = Column(JSON)
 
     is_inboxapp_attachment = Column(Boolean, default=False)
-    collection_id = Column(Integer, ForeignKey("collections.id"), nullable=True)
-    collection = relationship('Collection', backref="blocks")
 
     # TODO: create a constructor that allows the 'content_type' keyword
 
@@ -651,9 +649,6 @@ class UIDValidity(JSONSerializable, Base):
     highestmodseq = Column(Integer, nullable=False)
 
     __table_args__ = (UniqueConstraint('imapaccount_id', 'folder_name'),)
-
-class Collection(Base):
-    type = Column(String(32), nullable=True)
 
 class TodoItem(JSONSerializable, Base):
     """ Each todo item has a row in TodoItem described the item's metadata.
