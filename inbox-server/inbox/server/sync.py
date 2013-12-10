@@ -108,8 +108,8 @@ def uidvalidity_callback(crispin_client, folder_name, select_info):
     account = crispin_client.account
     assert crispin_client.selected_folder is not None, \
             "must start IMAP session before verifying UID validity"
-    cached_validity = account.get_uidvalidity(folder_name)
-    if cached_validity and not account.uidvalidity_valid(
+    cached_validity = account.get_uidvalidity(db_session, folder_name)
+    if cached_validity and not account.uidvalidity_valid(db_session,
             crispin_client.selected_uidvalidity,
             crispin_client.selected_folder_name,
             cached_validity.uid_validity):
@@ -245,14 +245,15 @@ class FolderSyncMonitor(Greenlet):
         """
         self.log.info('Starting initial sync for {0}'.format(self.folder_name))
 
-        local_uids = self.account.all_uids(self.folder_name)
+        local_uids = self.account.all_uids(db_session, self.folder_name)
 
         with self.crispin_client.pool.get() as c:
             self.crispin_client.select_folder(self.folder_name,
                     uidvalidity_callback, c)
 
             remote_g_metadata = None
-            cached_validity = self.account.get_uidvalidity(self.folder_name)
+            cached_validity = self.account.get_uidvalidity(
+                    db_session, self.folder_name)
             if cached_validity is not None:
                 # If there's no cached validity it generally means we haven't
                 # previously run.
@@ -439,8 +440,8 @@ class FolderSyncMonitor(Greenlet):
         new_highestmodseq = self.crispin_client.selected_highestmodseq
         new_uidvalidity = self.crispin_client.selected_uidvalidity
         self.log.info("Starting highestmodseq update on {0} (current HIGHESTMODSEQ: {1})".format(self.folder_name, new_highestmodseq))
-        local_uids = self.account.all_uids(self.folder_name)
-        g_metadata = self.account.g_metadata(self.folder_name)
+        local_uids = self.account.all_uids(db_session, self.folder_name)
+        g_metadata = self.account.g_metadata(db_session, self.folder_name)
         uids = self.crispin_client.new_and_updated_uids(last_highestmodseq, c)
         remote_uids = self.crispin_client.all_uids(c)
         if uids:
@@ -560,7 +561,7 @@ class FolderSyncMonitor(Greenlet):
 
     def _deduplicate_message_download(self, remote_g_metadata, uids, c):
         """ Deduplicate message download using X-GM-MSGID. """
-        local_g_msgids = set(self.account.g_msgids(
+        local_g_msgids = set(self.account.g_msgids(db_session,
                 in_=[remote_g_metadata[uid]['msgid'] for uid in uids]))
         full_download, folderitem_only = partition(
                 lambda uid: remote_g_metadata[uid]['msgid'] in local_g_msgids,
@@ -596,7 +597,7 @@ class FolderSyncMonitor(Greenlet):
         """
         self.log.info("polling {0} {1}".format(
             self.account.email_address, self.folder_name))
-        cached_validity = self.account.get_uidvalidity(self.folder_name)
+        cached_validity = self.account.get_uidvalidity(db_session, self.folder_name)
 
         with self.crispin_client.pool.get() as c:
             # we use status instead of select here because it's way faster and
@@ -627,7 +628,7 @@ class FolderSyncMonitor(Greenlet):
 
         to_delete = set(local_uids).difference(set(remote_uids))
         if to_delete:
-            self.account.remove_messages(to_delete, self.folder_name)
+            self.account.remove_messages(db_session, to_delete, self.folder_name)
             self.log.info("Deleted {0} removed messages from {1}".format(
                 len(to_delete), self.folder_name))
 
@@ -639,7 +640,7 @@ class FolderSyncMonitor(Greenlet):
         assert sorted(uids, key=int) == sorted(new_flags.keys(), key=int), \
                 "server uids != local uids"
         self.log.info("new flags: {0}".format(new_flags))
-        self.account.update_metadata(self.folder_name, uids, new_flags)
+        self.account.update_metadata(db_session, self.folder_name, uids, new_flags)
         db_session.commit()
 
 class MailSyncMonitor(Greenlet):

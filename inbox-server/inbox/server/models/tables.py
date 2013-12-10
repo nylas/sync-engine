@@ -155,11 +155,12 @@ class IMAPAccount(Base):
         except NoResultFound:
             return None
 
-    def uidvalidity_valid(self, selected_uidvalidity, \
+    def uidvalidity_valid(self, session, selected_uidvalidity, \
             folder_name, cached_uidvalidity=None):
         """ Validate UIDVALIDITY on currently selected folder. """
         if cached_uidvalidity is None:
-            cached_uidvalidity = self.get_uidvalidity(folder_name).uid_validity
+            cached_uidvalidity = self.get_uidvalidity(
+                    session, folder_name).uid_validity
             assert type(cached_uidvalidity) == type(selected_uidvalidity), \
                     "cached_validity: {0} / selected_uidvalidity: {1}".format(
                             type(cached_uidvalidity),
