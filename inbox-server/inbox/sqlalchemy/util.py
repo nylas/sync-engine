@@ -1,3 +1,5 @@
+from bson import json_util
+
 import json
 
 from sqlalchemy import Column, Integer, String, Text
@@ -14,12 +16,12 @@ class JSON(TypeDecorator):
     def process_bind_param(self, value, dialect):
         if value is None:
             return None
-        return json.dumps(value)
+        return json.dumps(value, default=json_util.default)
 
     def process_result_value(self, value, dialect):
         if not value:
             return None
-        return json.loads(value)
+        return json.loads(value, object_hook=json_util.object_hook)
 
 class LittleJSON(JSON):
     impl = String(40)
