@@ -10,9 +10,11 @@ from sqlalchemy.orm import joinedload
 
 from . import postel
 from .config import config
-from .models import db_session
+from .models import new_db_session
 from .models.tables import Message, SharedFolder, Thread, Namespace, User
 from .models.tables import IMAPAccount, TodoNamespace, TodoItem
+
+db_session = new_db_session()
 
 from .log import get_logger
 log = get_logger()

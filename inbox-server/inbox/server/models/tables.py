@@ -1,27 +1,21 @@
 import os
-import json
 
-from hashlib import sha256
 from itertools import chain
 
 from sqlalchemy import Column, Integer, String, DateTime, Date, Boolean, Enum
 from sqlalchemy import ForeignKey, Text, Index, func, event
-from sqlalchemy import distinct
 from sqlalchemy.orm import reconstructor, relationship, backref
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from bs4 import BeautifulSoup, Doctype, Comment
 
-from flanker import mime
-
 from ..log import get_logger
 log = get_logger()
 
 from inbox.util.file import Lock
 from inbox.util.html import plaintext2html
-from inbox.util.misc import or_none, strip_plaintext_quote
-from inbox.util.addr import parse_email_address
+from inbox.util.misc import strip_plaintext_quote
 from inbox.sqlalchemy.util import Base, JSON, LittleJSON
 from inbox.sqlalchemy.revision import Revision, gen_rev_role
 
@@ -82,210 +76,6 @@ class IMAPAccount(Base):
     def sync_unlock(self):
         self._sync_lock.release()
 
-    def total_stored_data(self, session):
-        """ Computes the total size of the block data of emails in your
-            account's IMAP folders
-        """
-        subq = session.query(Block) \
-                .join(Block.message, Message.folderitems) \
-                .filter(FolderItem.imapaccount_id==self.id) \
-                .group_by(Message.id, Block.id)
-        return session.query(func.sum(subq.subquery().columns.size)).scalar()
-
-    def total_stored_messages(self, session):
-        """ Computes the number of emails in your account's IMAP folders """
-        return session.query(Message) \
-                .join(Message.folderitems) \
-                .filter(FolderItem.imapaccount_id==self.id) \
-                .group_by(Message.id).count()
-
-    def all_uids(self, session, folder_name):
-        return [uid for uid, in
-                session.query(FolderItem.msg_uid).filter_by(
-                    imapaccount_id=self.id, folder_name=folder_name)]
-
-    def g_msgids(self, session, in_=None):
-        query = session.query(distinct(Message.g_msgid)).join(FolderItem) \
-                    .filter(FolderItem.imapaccount_id==self.id)
-        if in_:
-            query = query.filter(Message.g_msgid.in_(in_))
-        return sorted([g_msgid for g_msgid, in query], key=long)
-
-    def g_metadata(self, session, folder_name):
-        query = session.query(FolderItem.msg_uid, Message.g_msgid,
-                    Message.g_thrid).filter(
-                            FolderItem.imapaccount_id==self.id,
-                            FolderItem.folder_name==folder_name,
-                            FolderItem.message_id==Message.id)
-
-        return dict([(int(uid), dict(msgid=g_msgid, thrid=g_thrid)) \
-                for uid, g_msgid, g_thrid in query])
-
-    def update_metadata(self, session, folder_name, uids, new_flags):
-        """ Update flags (the only metadata that can change). """
-        for item in session.query(FolderItem).filter(
-                FolderItem.imapaccount_id==self.id,
-                FolderItem.msg_uid.in_(uids),
-                FolderItem.folder_name==folder_name):
-            flags = new_flags[item.msg_uid]['flags']
-            labels = new_flags[item.msg_uid]['labels']
-            item.update_flags(flags, labels)
-        session.commit()
-
-    def remove_messages(self, session, uids, folder):
-        fm_query = session.query(FolderItem).filter(
-                FolderItem.imapaccount_id==self.id,
-                FolderItem.folder_name==folder,
-                FolderItem.msg_uid.in_(uids))
-        fm_query.delete(synchronize_session='fetch')
-
-        # not sure if this one is actually needed - does delete() automatically
-        # commit?
-        session.commit()
-
-        # XXX TODO: Have a recurring worker permanently remove dangling
-        # messages from the database and block store. (Probably too
-        # expensive to do here.)
-
-    def get_uidvalidity(self, session, folder_name):
-        try:
-            # using .one() here may catch duplication bugs
-            return session.query(UIDValidity).filter_by(
-                    imapaccount=self, folder_name=folder_name).one()
-        except NoResultFound:
-            return None
-
-    def uidvalidity_valid(self, session, selected_uidvalidity, \
-            folder_name, cached_uidvalidity=None):
-        """ Validate UIDVALIDITY on currently selected folder. """
-        if cached_uidvalidity is None:
-            cached_uidvalidity = self.get_uidvalidity(
-                    session, folder_name).uid_validity
-            assert type(cached_uidvalidity) == type(selected_uidvalidity), \
-                    "cached_validity: {0} / selected_uidvalidity: {1}".format(
-                            type(cached_uidvalidity),
-                            type(selected_uidvalidity))
-
-        if cached_uidvalidity is None:
-            # no row is basically equivalent to UIDVALIDITY == -inf
-            return True
-        else:
-            return selected_uidvalidity >= cached_uidvalidity
-
-    def create_message(self, folder_name, uid, internaldate, flags, body,
-                       x_gm_thrid, x_gm_msgid, x_gm_labels):
-        """ Parses message data, creates metadata database entries, computes
-            threads, and writes mail parts to disk.
-
-            Returns the new FolderItem, which links to new Message and Block
-            objects through relationships. All new objects are uncommitted.
-
-            Threads are not computed here; you gotta do that separately.
-        """
-        parsed = mime.from_string(body)
-
-        mime_version = parsed.headers.get('Mime-Version')
-        # NOTE: sometimes MIME-Version is set to "1.0 (1.0)", hence the
-        # .startswith
-        if mime_version is not None and not mime_version.startswith('1.0'):
-            log.error("Unexpected MIME-Version: %s" % mime_version)
-
-        new_msg = Message()
-        new_msg.data_sha256 = sha256(body).hexdigest()
-        # TODO: Detect which namespace to add message to.
-        # Look up message thread,
-        new_msg.namespace = self.namespace
-
-        # clean_subject strips re:, fwd: etc.
-        new_msg.subject = parsed.clean_subject
-        new_msg.from_addr = parse_email_address(parsed.headers.get('From'))
-        new_msg.sender_addr = parse_email_address(parsed.headers.get('Sender'))
-        new_msg.reply_to = parse_email_address(parsed.headers.get('Reply-To'))
-        new_msg.to_addr = or_none(parsed.headers.getall('To'),
-                lambda tos: filter(lambda p: p is not None,
-                    [parse_email_address(t) for t in tos]))
-        new_msg.cc_addr = or_none(parsed.headers.getall('Cc'),
-                lambda ccs: filter(lambda p: p is not None,
-                    [parse_email_address(c) for c in ccs]))
-        new_msg.bcc_addr = or_none(parsed.headers.getall('Bcc'),
-                lambda bccs: filter(lambda p: p is not None,
-                    [parse_email_address(c) for c in bccs]))
-        new_msg.in_reply_to = parsed.headers.get('In-Reply-To')
-        new_msg.message_id = parsed.headers.get('Message-Id')
-
-        new_msg.internaldate = internaldate
-        new_msg.g_msgid = x_gm_msgid
-        new_msg.g_thrid = x_gm_thrid
-
-        folder_item = FolderItem(imapaccount=self,
-                folder_name=folder_name, msg_uid=uid, message=new_msg)
-        folder_item.update_flags(flags, x_gm_labels)
-
-        new_msg.size = len(body)  # includes headers text
-
-        i = 0  # for walk_index
-
-        # Store all message headers as object with index 0
-        headers_part = Block()
-        headers_part.message = new_msg
-        headers_part.walk_index = i
-        headers_part._data = json.dumps(parsed.headers.items())
-        headers_part.size = len(headers_part._data)
-        headers_part.data_sha256 = sha256(headers_part._data).hexdigest()
-        new_msg.parts.append(headers_part)
-
-        for mimepart in parsed.walk(
-                with_self=parsed.content_type.is_singlepart()):
-            i += 1
-            if mimepart.content_type.is_multipart():
-                log.warning("multipart sub-part found! on {0}".format(new_msg.g_msgid))
-                continue  # TODO should we store relations?
-
-            new_part = Block()
-            new_part.message = new_msg
-            new_part.walk_index = i
-            new_part.misc_keyval = mimepart.headers.items()  # everything
-            new_part.content_type = mimepart.content_type.value
-            new_part.filename = mimepart.content_type.params.get('name')
-
-            # Content-Disposition attachment; filename="floorplan.gif"
-            if mimepart.content_disposition[0] is not None:
-                value, params = mimepart.content_disposition
-                if value not in ['inline', 'attachment']:
-                    errmsg = """
-Unknown Content-Disposition on message {0} found in {1}.
-Bad Content-Disposition was: '{2}'
-Parsed Content-Disposition was: '{3}'""".format(uid, folder_name,
-        mimepart.content_disposition)
-                    log.error(errmsg)
-                    continue
-                else:
-                    new_part.content_disposition = value
-                    if value == 'attachment':
-                        new_part.filename = params.get('filename')
-
-            if mimepart.body is None:
-                data_to_write = ''
-            elif new_part.content_type.startswith('text'):
-                data_to_write = mimepart.body.encode('utf-8', 'strict')
-            else:
-                data_to_write = mimepart.body
-            if data_to_write is None:
-                data_to_write = ''
-            # normalize mac/win/unix newlines
-            data_to_write = data_to_write \
-                    .replace('\r\n', '\n').replace('\r', '\n')
-
-            new_part.content_id = mimepart.headers.get('Content-Id')
-
-            new_part._data = data_to_write
-            new_part.size = len(data_to_write)
-            new_part.data_sha256 = sha256(data_to_write).hexdigest()
-            new_msg.parts.append(new_part)
-        new_msg.calculate_sanitized_body()
-
-        return folder_item
-
 class UserSession(Base):
     """ Inbox-specific sessions. """
     token = Column(String(40))
@@ -343,7 +133,7 @@ class Transaction(Base, Revision):
     namespace = relationship('Namespace', backref='transactions')
 
     def set_extra_attrs(self, obj):
-        self.namespace = obj.namespace
+        self.namespace_id = obj.namespace_id
 
 HasRevisions = gen_rev_role(Transaction)
 
@@ -367,8 +157,8 @@ class Contact(Base, HasRevisions):
     __table_args__ = (UniqueConstraint('g_id', 'source', 'imapaccount_id'),)
 
     @property
-    def namespace(self):
-        return self.imapaccount.namespace
+    def namespace_id(self):
+        return self.imapaccount.namespace_id
 
     def cereal(self):
         return dict(id=self.id,
@@ -590,8 +380,8 @@ class Block(JSONSerializable, Blob, Base, HasRevisions):
             self.content_type = self._content_type_other
 
     @property
-    def namespace(self):
-        return self.message.namespace
+    def namespace_id(self):
+        return self.message.namespace_id
 
 @event.listens_for(Block, 'before_insert', propagate = True)
 def serialize_before_insert(mapper, connection, target):
@@ -648,8 +438,8 @@ class FolderItem(JSONSerializable, Base, HasRevisions):
         self.extra_flags = sorted(new_flags)
 
     @property
-    def namespace(self):
-        return self.imapaccount.namespace
+    def namespace_id(self):
+        return self.imapaccount.namespace_id
 
     __table_args__ = (UniqueConstraint('folder_name', 'msg_uid', 'imapaccount_id',),)
 
@@ -657,7 +447,7 @@ class FolderItem(JSONSerializable, Base, HasRevisions):
 Index('folderitem_imapaccount_id_folder_name', FolderItem.imapaccount_id,
         FolderItem.folder_name)
 
-class UIDValidity(JSONSerializable, Base, HasRevisions):
+class UIDValidity(JSONSerializable, Base):
     """ UIDValidity has a per-folder value. If it changes, we need to
         re-map g_msgid to UID for that folder.
     """
@@ -672,10 +462,6 @@ class UIDValidity(JSONSerializable, Base, HasRevisions):
     highestmodseq = Column(Integer, nullable=False)
 
     __table_args__ = (UniqueConstraint('imapaccount_id', 'folder_name'),)
-
-    @property
-    def namespace(self):
-        return self.imapaccount.namespace
 
 class TodoItem(JSONSerializable, Base):
     """ Each todo item has a row in TodoItem described the item's metadata.
@@ -769,11 +555,10 @@ class Thread(JSONSerializable, Base):
         if message.internaldate < self.recentdate:
             self.subject = message.subject
             self.subjectdate = message.internaldate
-        message.thread = self
         return self
 
     @classmethod
-    def from_message(cls, session, message, g_thrid):
+    def from_message(cls, session, message):
         """
         Threads are broken solely on Gmail's X-GM-THRID for now. (Subjects
         are not taken into account, even if they change.)
@@ -784,17 +569,16 @@ class Thread(JSONSerializable, Base):
         try:
             # NOTE: If g_thrid turns out to not be globally unique, we'll need
             # to join on Message and also filter by namespace here.
-            thread = session.query(cls).filter_by(g_thrid=g_thrid).one()
+            thread = session.query(cls).filter_by(g_thrid=message.g_thrid).one()
             return thread.update_from_message(message)
         except NoResultFound:
             pass
         except MultipleResultsFound:
-            log.info("Duplicate thread rows for thread {0}".format(g_thrid))
+            log.info("Duplicate thread rows for thread {0}".format(message.g_thrid))
             raise
-        thread = cls(subject=message.subject, g_thrid=g_thrid,
+        thread = cls(subject=message.subject, g_thrid=message.g_thrid,
                 recentdate=message.internaldate,
                 subjectdate=message.internaldate)
-        message.thread = thread
         return thread
 
     def cereal(self):

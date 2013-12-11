@@ -123,13 +123,10 @@ def delta(obj):
 
 def versioned_session(session, rev_cls, rev_role):
     def create_revision(session, obj, create_fn):
-        try:
-            if isinstance(obj, rev_role):
-                rev = create_fn(rev_cls, obj, session)
-                rev.set_extra_attrs(obj)
-                session.add(rev)
-        except AttributeError:
-            import pdb; pdb.set_trace()
+        if isinstance(obj, rev_role):
+            rev = create_fn(rev_cls, obj, session)
+            rev.set_extra_attrs(obj)
+            session.add(rev)
 
     @event.listens_for(session, 'after_flush')
     def after_flush(session, flush_context):
@@ -142,3 +139,5 @@ def versioned_session(session, rev_cls, rev_role):
             create_revision(session, obj, create_update_revision)
         for obj in session.deleted:
             create_revision(session, obj, create_delete_revision)
+
+    return session

@@ -8,6 +8,8 @@ from geventconnpool import ConnectionPool
 
 from imapclient import IMAPClient
 
+from .models import session_scope
+from .models.tables import IMAPAccount
 from .session import verify_imap_account
 from .log import get_logger
 log = get_logger()
@@ -19,38 +21,44 @@ imapaccount_id_to_connection_pool = {}
 
 POOL_SIZE = 5
 
-def get_connection_pool(account):
-    pool = imapaccount_id_to_connection_pool.get(account.id)
+def get_connection_pool(account_id):
+    pool = imapaccount_id_to_connection_pool.get(account_id)
     if pool is None:
-        pool = imapaccount_id_to_connection_pool[account.id] \
-                = IMAPConnectionPool(account, num_connections=POOL_SIZE)
+        pool = imapaccount_id_to_connection_pool[account_id] \
+                = IMAPConnectionPool(account_id, num_connections=POOL_SIZE)
     return pool
 
 class IMAPConnectionPool(ConnectionPool):
-    def __init__(self, account, num_connections=5):
-        log.info("Creating connection pool for {0} with {1} connections" \
-                .format(account.email_address, num_connections))
-        self.account = verify_imap_account(account)
+    def __init__(self, account_id, num_connections=5):
+        log.info("Creating connection pool for account {0} with {1} connections" \
+                .format(account_id, num_connections))
+        self.account_id = account_id
+        self._set_account_info()
         # 1200s == 20min
         ConnectionPool.__init__(self, num_connections, keepalive=1200)
 
-    def _new_connection(self):
-        imap_host = IMAP_HOSTS[self.account.provider]
+    def _set_account_info(self):
+        with session_scope() as db_session:
+            account = verify_imap_account(db_session,
+                    db_session.query(IMAPAccount).get(self.account_id))
+            self.imap_host = IMAP_HOSTS[account.provider]
+            self.o_access_token = account.o_access_token
+            self.email_address = account.email_address
 
+    def _new_connection(self):
         try:
-            conn = IMAPClient(imap_host, use_uid=True, ssl=True)
+            conn = IMAPClient(self.imap_host, use_uid=True, ssl=True)
         except IMAPClient.Error as e:
             raise socket.error(str(e))
 
         conn.debug = False
 
         try:
-            conn.oauth2_login(self.account.email_address, self.account.o_access_token)
+            conn.oauth2_login(self.email_address, self.o_access_token)
         except IMAPClient.Error as e:
             if str(e) == '[ALERT] Invalid credentials (Failure)':
-                self.account = verify_imap_account(self.account)
-                conn.oauth2_login(
-                        self.account.email_address, self.account.o_access_token)
+                self._set_account_info()
+                conn.oauth2_login(self.email_address, self.o_access_token)
 
         return conn
 

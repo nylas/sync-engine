@@ -8,14 +8,13 @@ log = get_logger()
 import sqlalchemy.orm.exc
 
 from . import google_oauth
-from .models import db_session
 from .models.tables import User, UserSession, Namespace, IMAPAccount
 
 def log_ignored(exc):
     log.error('Ignoring error: %s\nOuter stack:\n%s%s'
               % (exc, ''.join(traceback.format_stack()[:-2]), traceback.format_exc(exc)))
 
-def create_session(user):
+def create_session(db_session, user):
     new_session = UserSession(user=user, token=str(uuid.uuid1()))
     db_session.add(new_session)
     db_session.commit()
@@ -23,7 +22,7 @@ def create_session(user):
         str(new_session.token)))
     return new_session
 
-def get_session(session_token):
+def get_session(db_session, session_token):
     # XXX doesn't deal with multiple sessions
     try:
         return db_session.query(UserSession
@@ -35,7 +34,7 @@ def get_session(session_token):
     except:
         raise
 
-def make_account(access_token_dict):
+def make_account(db_session, access_token_dict):
     try:
         account = db_session.query(IMAPAccount).filter_by(
                 email_address=access_token_dict['email']).one()
@@ -64,12 +63,12 @@ def make_account(access_token_dict):
     log.info("Stored new account {0}".format(account.email_address))
     return account
 
-def get_account(email_address, callback=None):
+def get_account(db_session, email_address, callback=None):
     account = db_session.query(IMAPAccount).filter(
             IMAPAccount.email_address==email_address).join(Namespace).one()
-    return verify_imap_account(account)
+    return verify_imap_account(db_session, account)
 
-def verify_imap_account(account):
+def verify_imap_account(db_session, account):
     # issued_date = credentials.date
     # expires_seconds = credentials.o_expires_in
 
@@ -99,7 +98,7 @@ def verify_imap_account(account):
 
         # TODO Verify it and make sure it's valid.
         assert 'access_token' in response
-        account = make_account(response)
+        account = make_account(db_session, response)
         log.info("Updated token for imap account {0}".format(account.email_address))
 
     return account

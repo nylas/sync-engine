@@ -28,11 +28,11 @@ def log(request, config):
 
 class DB(object):
     def __init__(self):
-        from inbox.server.models import db_session, init_db, engine
+        from inbox.server.models import new_db_session, init_db, engine
         from inbox.server.models.tables import IMAPAccount, Namespace, User
         # create all tables
         init_db()
-        self.session = db_session
+        self.db_session = new_db_session()
         self.engine = engine
         # add stub test data
         user = User(id=1, name="Test User")
@@ -54,7 +54,7 @@ class DB(object):
                 o_verified_email=1,
                 date='2013-10-25 16:26:56')
         namespace = Namespace(id=1, imapaccount_id=1)
-        self.session.add_all([imapaccount, namespace, user])
+        self.db_session.add_all([imapaccount, namespace, user])
 
     def destroy(self):
         from inbox.util.db import drop_everything

@@ -2,6 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from urllib import quote_plus as urlquote
+from contextlib import contextmanager
 
 from ..config import config, is_prod
 from ..log import get_logger
@@ -31,9 +32,24 @@ def init_db():
     """ Make the tables. """
     Base.metadata.create_all(engine)
 
-Session = sessionmaker()
-Session.configure(bind=engine)
+Session = sessionmaker(bind=engine)
 
-# A single global database session per Inbox instance is good enough for now.
-db_session = Session()
-versioned_session(db_session, Transaction, HasRevisions)
+# this returns a new session whenever it's called
+# scoped_session uses a registry to return the _same_ session if it's in the
+# same thread, otherwise a new session.
+def new_db_session():
+    return versioned_session(Session(autoflush=False, autocommit=False),
+            Transaction, HasRevisions)
+
+@contextmanager
+def session_scope():
+    """Provide a transactional scope around a series of operations."""
+    session = new_db_session()
+    try:
+        yield session
+        session.commit()
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()

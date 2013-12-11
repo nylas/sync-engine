@@ -24,11 +24,11 @@ class Tree(Base):
 
 @pytest.fixture(scope='session')
 def db_session(request):
-    engine = create_engine('sqlite:///test.db')
-    # engine = create_engine('sqlite://')
+    # engine = create_engine('sqlite:///test.db')
+    engine = create_engine('sqlite://')
     Base.metadata.create_all(engine)
-    session = sessionmaker()(bind=engine)
-    versioned_session(session, MonkeyRevision, HasRevisions)
+    session = versioned_session(sessionmaker()(bind=engine), MonkeyRevision,
+            HasRevisions)
     return session
 
 def test_basics(db_session, config):

@@ -1,39 +1,20 @@
+""" IMAPClient wrapper for Inbox.
+
+Unfortunately, due IMAP's statefulness, to implement connection pooling we
+have to shunt off dealing with the connection pool to the caller or we'll end
+up trying to execute calls with the wrong folder selected some amount of the
+time. That's why functions take a connection argument.
+"""
 import os
 import time
 
 from .log import get_logger
 from .pool import get_connection_pool
-from .session import get_session
-from .models import db_session
-from .models.tables import IMAPAccount
 
 from ..util.misc import or_none
 from ..util.cache import get_cache, set_cache
 
 __all__ = ['CrispinClient', 'DummyCrispinClient']
-
-# Memory cache for currently open crispin instances
-email_address_to_crispins = {}
-
-def get_crispin_from_session(session_token):
-    """ Get the running crispin instance, or make a new one """
-    s = get_session(session_token)
-    return get_crispin_from_email(s.email_address)
-
-def new_crispin(account, dummy=False):
-    cls = DummyCrispinClient if dummy else CrispinClient
-    return cls(account)
-
-def get_crispin_from_email(email_address, initial=False, dummy=False):
-    if email_address in email_address_to_crispins:
-        return email_address_to_crispins[email_address]
-    else:
-        account = db_session.query(IMAPAccount).filter_by(
-                email_address=email_address).one()
-        crispin_client = new_crispin(account, dummy)
-
-        email_address_to_crispins[email_address] = crispin_client
-        return crispin_client
 
 ### decorators
 
@@ -48,6 +29,10 @@ def timed(fn):
 
 ### main stuff
 
+def new_crispin(account_id, email_address, provider, dummy=False):
+    cls = DummyCrispinClient if dummy else CrispinClient
+    return cls(account_id, email_address, provider)
+
 class CrispinClientBase(object):
     """
     One thing to note about crispin clients is that *all* calls operate on
@@ -60,22 +45,24 @@ class CrispinClientBase(object):
     SELECT a folder until the connection is closed or another folder is
     selected.
     """
-    def __init__(self, account, cache=False):
-        self.account = account
-        self.log = get_logger(account)
+    def __init__(self, account_id, email_address, provider, cache=False):
+        self.log = get_logger(account_id)
+        self.account_id = account_id
+        self.email_address = email_address
+        self.provider = provider
         # IMAP isn't stateless :(
         self.selected_folder = None
         self._folder_names = None
         self.cache = cache
 
     def set_cache(self, data, *keys):
-        key = os.path.join('account.{0}'.format(self.account.id),
+        key = os.path.join('account.{0}'.format(self.account_id),
                 *[str(key) for key in keys])
         return set_cache(key, data)
 
     def get_cache(self, *keys):
         return get_cache(
-                os.path.join('account.{0}'.format(self.account.id), *keys))
+                os.path.join('account.{0}'.format(self.account_id), *keys))
 
     def sync_folders(self, c):
         """ We sync everything! """
@@ -99,7 +86,7 @@ class CrispinClientBase(object):
             we only poll on INBOX and All Mail; for other providers we
             poll on every single folder.
         """
-        if self.account.provider == 'Gmail':
+        if self.provider == 'Gmail':
             return [self.folder_names(c)['Inbox'], self.folder_names(c)['All']]
         else:
             return self.sync_folders(c)
@@ -136,7 +123,7 @@ class CrispinClientBase(object):
         self._folder_names = None
         self.log.info('Selected folder {0} with {1} messages.'.format(
             folder, select_info['EXISTS']))
-        return uidvalidity_callback(self, folder, select_info)
+        return uidvalidity_callback(folder, select_info)
 
     def _do_select_folder(self, folder, c):
         raise NotImplementedError
@@ -185,7 +172,7 @@ class CrispinClientBase(object):
             Message UIDs returned are All Mail UIDs; this method requires the
             All Mail folder to be selected.
         """
-        assert self.account.provider == 'Gmail', \
+        assert self.provider == 'Gmail', \
                 "thread expansion only supported on Gmail"
         assert self.selected_folder_name == self.folder_names(c)['All'], \
                 "must select All Mail first ({0})".format(
@@ -222,7 +209,7 @@ class CrispinClientBase(object):
         """
         # We'll better know what abstractions we need here when we actually
         # take a serious look at other providers' IMAP implementations.
-        assert self.account.provider == 'Gmail', \
+        assert self.provider == 'Gmail', \
                 "only gmail is supported so far"
         if self._folder_names is None:
             folders = self._fetch_folder_list(c)
@@ -263,7 +250,7 @@ class DummyCrispinClient(CrispinClientBase):
 
         assert cached_data is not None, \
                 'no select_info cached for account {0} {1}'.format(
-                        self.account.id, folder)
+                        self.account_id, folder)
         return cached_data
 
     def _fetch_folder_status(self, folder, c):
@@ -271,7 +258,7 @@ class DummyCrispinClient(CrispinClientBase):
 
         assert cached_data is not None, \
                 'no folder status cached for account {0} {1}'.format(
-                        self.account.id, folder)
+                        self.account_id, folder)
         return cached_data
 
     def _fetch_all_uids(self, c):
@@ -279,7 +266,7 @@ class DummyCrispinClient(CrispinClientBase):
 
         assert cached_data is not None, \
                 'no all_uids cached for account {0} {1}'.format(
-                        self.account.id, self.selected_folder_name)
+                        self.account_id, self.selected_folder_name)
         return cached_data
 
     def _fetch_g_metadata(self, uids, c):
@@ -287,7 +274,7 @@ class DummyCrispinClient(CrispinClientBase):
 
         assert cached_data is not None, \
                 'no g_metadata cached for account {0} {1}'.format(
-                        self.account.id, self.selected_folder_name)
+                        self.account_id, self.selected_folder_name)
         return cached_data
 
     def _fetch_new_and_updated_uids(self, modseq, c):
@@ -295,7 +282,7 @@ class DummyCrispinClient(CrispinClientBase):
 
         assert cached_data is not None, \
                 'no modseq uids cached for account {0} {1} modseq {2}'.format(
-                        self.account.id, self.selected_folder_name, modseq)
+                        self.account_id, self.selected_folder_name, modseq)
         return cached_data
 
     def _fetch_flags(self, uids, c):
@@ -310,7 +297,7 @@ class DummyCrispinClient(CrispinClientBase):
 
         assert cached_data, \
                 'no flags cached for account {0} {1} uids {2}'.format(
-                        self.account.id, self.selected_folder_name, uids)
+                        self.account_id, self.selected_folder_name, uids)
 
         return cached_data
 
@@ -326,7 +313,7 @@ class DummyCrispinClient(CrispinClientBase):
 
         assert cached_data, \
                 'no body cached for account {0} {1} uids {2}'.format(
-                        self.account.id, self.selected_folder_name, uids)
+                        self.account_id, self.selected_folder_name, uids)
 
         return cached_data
 
@@ -334,7 +321,7 @@ class DummyCrispinClient(CrispinClientBase):
         cached_data = self.get_cache('folders')
 
         assert cached_data is not None, \
-                'no folder list cached for account {0}'.format(self.account.id)
+                'no folder list cached for account {0}'.format(self.account_id)
 
         return cached_data
 
@@ -355,9 +342,9 @@ class CrispinClient(CrispinClientBase):
     # how many messages to download at a time
     CHUNK_SIZE = 1
 
-    def __init__(self, account, cache=False):
-        self.pool = get_connection_pool(account)
-        CrispinClientBase.__init__(self, account, cache)
+    def __init__(self, account_id, email_address, provider, cache=False):
+        self.pool = get_connection_pool(account_id)
+        CrispinClientBase.__init__(self, account_id, email_address, provider, cache)
 
     @timed
     def _do_select_folder(self, folder, c):

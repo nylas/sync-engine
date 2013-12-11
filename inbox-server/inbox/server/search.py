@@ -5,7 +5,7 @@ log = get_logger()
 
 import xapian as x_
 
-from .models import db_session
+from .models import session_scope
 from .models.tables import Message, Namespace
 from ..util.file import mkdirp
 from ..util.html import strip_tags
@@ -40,7 +40,7 @@ def to_indexable(parsed_addr):
     name = parsed_addr[0] if parsed_addr[0] is not None else ''
     return ' '.join([name, addr])
 
-def gen_search_index(namespace):
+def gen_search_index(db_session, namespace):
     log.info("Generating search index for namespace {0}".format(namespace.id))
     dbpath = db_path_for(namespace.id)
     mkdirp(dbpath)
@@ -119,13 +119,14 @@ def gen_search_index(namespace):
     database.close()
     log.info("done.")
 
-class SearchService:
+class SearchService(object):
     """ ZeroRPC interface to searching. """
     def index(self, namespace_id):
         """ Trigger index update for this namespace. """
-        namespace = db_session.query(Namespace).get(namespace_id)
-        assert namespace is not None
-        gen_search_index(namespace)
+        with session_scope() as db_session:
+            namespace = db_session.query(Namespace).get(namespace_id)
+            assert namespace is not None
+            gen_search_index(db_session, namespace)
         return "OK"
 
     def search(self, namespace_id, query_string, limit=10):

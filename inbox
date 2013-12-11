@@ -38,7 +38,7 @@ def start(args=None):
     make_zerorpc(API, api_srv_loc)
 
     # Start ZeroRPC mail sync server service
-    from inbox.server.sync import SyncService
+    from inbox.server.imapsync import SyncService
     sync_srv_loc = config.get('CRISPIN_SERVER_LOC', None)
     make_zerorpc(SyncService, sync_srv_loc)
 
@@ -106,8 +106,10 @@ def console(args):
 
 def search(args):
     import zerorpc
-    from inbox.server.models import db_session
     from inbox.server.models.tables import Namespace
+
+    from inbox.server.models import new_db_session
+    db_session = new_db_session()
 
     namespace = db_session.query(Namespace).filter_by(id=args.namespace).one()
 
@@ -124,8 +126,10 @@ def search(args):
 
 def index(args):
     from inbox.server.search import gen_search_index
-    from inbox.server.models import db_session
     from inbox.server.models.tables import Namespace
+    from inbox.server.models import new_db_session
+    db_session = new_db_session()
+
     if args.namespace:
         gen_search_index(db_session.query(Namespace).get(args.namespace))
     else:

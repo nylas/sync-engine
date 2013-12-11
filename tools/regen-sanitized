@@ -3,8 +3,10 @@
 from inbox.server.config import load_config
 load_config()
 
-from inbox.server.models import db_session
+from inbox.server.models import new_db_session
 from inbox.server.models.tables import Message, Block
+
+db_session = new_db_session()
 
 for msg in db_session.query(Message).join(Block):
     print msg.id,
