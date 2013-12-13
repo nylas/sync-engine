@@ -28,11 +28,12 @@ COOKIE_SECRET = config.get("COOKIE_SECRET", None)
 assert COOKIE_SECRET, "Missing secret for secure cookie generation"
 sc = SecureCookieSerializer(COOKIE_SECRET)
 
+# XXX how does this deal with concurrency?
 db_session = new_db_session()
 
 # TODO switch to regular flask user login stuff
 # https://flask-login.readthedocs.org/en/latest/#how-it-works
-def get_user(request, db_session):
+def get_user(request):
     """ Gets a user object for the current request """
     session_token = sc.deserialize('session', request.cookies.get('session') )
     if not session_token: return None
@@ -48,10 +49,6 @@ def get_account(request):
     return user.imapaccounts[0]
 
 app = Flask(__name__, static_folder='../../../web_client', template_folder='templates', )
-
-@app.teardown_appcontext
-def shutdown_session(exception=None):
-    db_session.remove()
 
 @app.route('/')
 def index():

@@ -106,7 +106,7 @@ def uidvalidity_valid(account_id, session, selected_uidvalidity, \
     else:
         return selected_uidvalidity >= cached_uidvalidity
 
-def create_message(account_id, namespace_id, folder_name, uid, internaldate, flags,
+def create_message(account, namespace, folder_name, uid, internaldate, flags,
                    body, x_gm_thrid, x_gm_msgid, x_gm_labels):
     """ Parses message data, creates metadata database entries, computes
         threads, and writes mail parts to disk.
@@ -115,6 +115,14 @@ def create_message(account_id, namespace_id, folder_name, uid, internaldate, fla
         objects through relationships. All new objects are uncommitted.
 
         Threads are not computed here; you gotta do that separately.
+
+        This is the one function in this file that gets to take an account
+        object instead of an account_id, because we need to relate the
+        account to FolderItems for versioning to work, since it needs to look
+        up the namespace.
+
+        The same goes for namespace---we need the object because it's a
+        _backref_ to imapaccount, and we need its ID to create transactions.
     """
     parsed = mime.from_string(body)
 
@@ -126,7 +134,7 @@ def create_message(account_id, namespace_id, folder_name, uid, internaldate, fla
 
     new_msg = Message()
     new_msg.data_sha256 = sha256(body).hexdigest()
-    new_msg.namespace_id = namespace_id
+    new_msg.namespace = namespace
 
     # clean_subject strips re:, fwd: etc.
     new_msg.subject = parsed.clean_subject
@@ -149,7 +157,7 @@ def create_message(account_id, namespace_id, folder_name, uid, internaldate, fla
     new_msg.g_msgid = x_gm_msgid
     new_msg.g_thrid = x_gm_thrid
 
-    folder_item = FolderItem(imapaccount_id=account_id,
+    folder_item = FolderItem(imapaccount=account,
             folder_name=folder_name, msg_uid=uid, message=new_msg)
     folder_item.update_flags(flags, x_gm_labels)
 

@@ -303,7 +303,7 @@ class FolderSyncMonitor(Greenlet):
         # trickle through is we lose some flags.
 
         # complete X-GM-MSGID mapping is no longer needed after initial sync
-        rm_cache(os.path.join(str(account.id), self.folder_name, "remote_g_metadata"))
+        rm_cache(os.path.join(str(account_id), self.folder_name, "remote_g_metadata"))
 
         self.log.info("Finished initial sync of {0}.".format(original_folder))
         if self.folder_name not in self.crispin_client.poll_folders(c):
@@ -311,7 +311,7 @@ class FolderSyncMonitor(Greenlet):
         else:
             return 'poll'
 
-    def _safe_download(self, db_session, uids, namespace_id, c):
+    def _safe_download(self, db_session, uids, c):
         try:
             raw_messages = self.crispin_client.uids(uids, c)
         except MemoryError, e:
@@ -319,14 +319,13 @@ class FolderSyncMonitor(Greenlet):
             raise e
 
         new_folderitems = []
+        # TODO: Detect which namespace to add message to. (shared folders)
+        # Look up message thread,
+        acc = db_session.query(IMAPAccount).join(Namespace).filter_by(
+                id=self.crispin_client.account_id).one()
         for msg in raw_messages:
-            # TODO: Detect which namespace to add message to. (shared folders)
-            # Look up message thread,
-            namespace_id = db_session.query(Namespace).filter_by(
-                    imapaccount_id=self.crispin_client.account_id).one()
-            item = account.create_message(self.crispin_client.account_id,
-                        namespace_id, self.crispin_client.selected_folder_name,
-                        *msg)
+            item = account.create_message(acc, acc.namespace,
+                    self.crispin_client.selected_folder_name, *msg)
             new_folderitems.append(item)
             # See "A NOTE ABOUT CONCURRENCY" at top of file. We use a
             # separate session here to not interrupt the current transaction.
@@ -349,7 +348,8 @@ class FolderSyncMonitor(Greenlet):
                     for part in msg.parts if hasattr(part, '_data')]
             # Fatally abort if part saves error out. Messages in this
             # chunk will be retried when the sync is restarted.
-            gevent_check_join(threads, "Could not save message parts to blob store!")
+            gevent_check_join(self.log, threads,
+                    "Could not save message parts to blob store!")
 
         # XXX clear data on part objects to save memory?
         # garbge_collect()
@@ -373,15 +373,16 @@ class FolderSyncMonitor(Greenlet):
 
         if uids:
             # collate message objects to relate the new folderitems
-            folderitem_uid_for = dict([(metadata['msgid'], uid) for (uid, metadata) \
-                    in remote_g_metadata.items() if uid in uids])
+            folderitem_uid_for = dict([(metadata['msgid'], uid) for \
+                    (uid, metadata) in remote_g_metadata.items() if uid in uids])
             folderitem_g_msgids = [remote_g_metadata[uid]['msgid'] for uid in uids]
             message_for = dict([(folderitem_uid_for[mm.g_msgid], mm) for \
                     mm in db_session.query(Message).filter( \
                         Message.g_msgid.in_(folderitem_g_msgids))])
 
-            new_folderitems = [FolderItem(
-                        imapaccount_id=self.crispin_client.account_id,
+            acc = db_session.query(IMAPAccount).join(Namespace).filter_by(
+                    id=self.crispin_client.account_id).one()
+            new_folderitems = [FolderItem(imapaccount=acc,
                         folder_name=self.crispin_client.selected_folder_name,
                         msg_uid=uid, message=message_for[uid]) for uid in uids]
             for item in new_folderitems:
@@ -393,12 +394,14 @@ class FolderSyncMonitor(Greenlet):
     def _retrieve_g_metadata_cache(self, db_session, local_uids, cached_validity, c):
         self.log.info('Attempting to retrieve remote_g_metadata from cache')
         remote_g_metadata = get_cache(os.path.join(
-            str(self.account.id), self.folder_name, "remote_g_metadata"))
+            str(self.crispin_client.account_id),
+            self.folder_name, "remote_g_metadata"))
         if remote_g_metadata is not None:
             self.log.info("Successfully retrieved remote_g_metadata cache")
             if self.crispin_client.selected_highestmodseq > \
                     cached_validity.highestmodseq:
-                self._update_g_metadata_cache(db_session, remote_g_metadata, local_uids, c)
+                self._update_g_metadata_cache(db_session, remote_g_metadata,
+                        local_uids, c)
         else:
             self.log.info("No cached data found")
         return remote_g_metadata
@@ -438,8 +441,10 @@ class FolderSyncMonitor(Greenlet):
         new_highestmodseq = self.crispin_client.selected_highestmodseq
         new_uidvalidity = self.crispin_client.selected_uidvalidity
         self.log.info("Starting highestmodseq update on {0} (current HIGHESTMODSEQ: {1})".format(self.folder_name, new_highestmodseq))
-        local_uids = account.all_uids(self.account_id, db_session, self.folder_name)
-        g_metadata = account.g_metadata(self.account_id, db_session, self.folder_name)
+        local_uids = account.all_uids(self.crispin_client.account_id,
+                db_session, self.folder_name)
+        g_metadata = account.g_metadata(self.crispin_client.account_id,
+                db_session, self.folder_name)
         uids = self.crispin_client.new_and_updated_uids(last_highestmodseq, c)
         remote_uids = self.crispin_client.all_uids(c)
         if uids:
@@ -451,10 +456,11 @@ class FolderSyncMonitor(Greenlet):
 
             g_metadata.update(self.crispin_client.g_metadata(new, c))
 
-            if self.crispin_client.account_provider == 'Gmail' and \
+            if self.crispin_client.provider == 'Gmail' and \
                     self.folder_name != self.crispin_client.folder_names(c)['All']:
                 flags = self.crispin_client.flags(local_uids, c)
-                self._download_expanded_threads(db_session, g_metadata, local_uids, flags, c)
+                self._download_expanded_threads(db_session, g_metadata,
+                        local_uids, flags, c)
             else:
                 full_download = self._deduplicate_message_download(g_metadata,
                         new, c)
@@ -462,9 +468,11 @@ class FolderSyncMonitor(Greenlet):
                 num_downloaded = 0
                 num_total = len(full_download)
                 for uids in chunk(full_download, self.crispin_client.CHUNK_SIZE):
-                    num_downloaded += len(self._download_new_messages(uids, c))
+                    num_downloaded += len(self._download_new_messages(
+                        db_session, uids, c))
                     percent_done = (num_downloaded / num_total) * 100
-                    self.shared_state['status_callback'](self.account, 'initial',
+                    self.shared_state['status_callback'](
+                            self.crispin_client.account_id, 'initial',
                             (self.folder_name, percent_done))
                     self.log.info("Syncing %s -- %.2f%% (%i/%i)" % (
                         self.folder_name, percent_done, num_downloaded, num_total))
@@ -475,10 +483,12 @@ class FolderSyncMonitor(Greenlet):
         else:
             log.info("No new or updated messages")
             local_uids = set(local_uids).difference(
-                    self._remove_deleted_messages(local_uids, remote_uids, c))
-        self._update_validity(new_uidvalidity, new_highestmodseq)
+                    self._remove_deleted_messages(db_session, local_uids,
+                        remote_uids, c))
+        self._update_validity(db_session, new_uidvalidity, new_highestmodseq)
 
-    def _download_expanded_threads(self, db_session, remote_g_metadata, uids, flags, c):
+    def _download_expanded_threads(self, db_session, remote_g_metadata, uids,
+            flags, c):
         """ UIDs, remote_g_metadata, and flags passed in are for the _folder
             that threads are being expanded in_.
 
@@ -516,8 +526,8 @@ class FolderSyncMonitor(Greenlet):
             thread_uids = self.crispin_client.expand_threads(g_thrids, c)
             # need X-GM-MSGID in order to dedupe download and X-GM-THRID to sort
             thread_g_metadata = self.crispin_client.g_metadata(thread_uids, c)
-            to_download = self._deduplicate_message_download(thread_g_metadata,
-                    thread_uids, c)
+            to_download = self._deduplicate_message_download(db_session,
+                    thread_g_metadata, thread_uids, c)
             self.log.info("need to get {0} deduplicated messages".format(
                 len(to_download)))
             # group UIDs we need to download by thread
@@ -529,30 +539,31 @@ class FolderSyncMonitor(Greenlet):
             self.log.info("{0} threads after deduplication".format(len(uids_for)))
             # download one thread at a time, most recent thread first
             # XXX we may want to chunk this download for large threads...
+            acc = db_session.query(IMAPAccount).join(Namespace).filter_by(
+                    id=self.crispin_client.account_id).one()
             for g_thrid in sorted(uids_for.keys(), reverse=True):
                 uids = uids_for[g_thrid]
                 self.log.info("downloading thread {0} with {1} messages" \
                         .format(g_thrid, len(uids)))
                 new_folderitems = [i for i in self._download_new_messages(
-                                        sorted(uids, reverse=True), c) \
-                                                if i.message.g_msgid in folder_g_msgids]
+                    db_session, sorted(uids, reverse=True), c) 
+                    if i.message.g_msgid in folder_g_msgids]
                 original_folderitems = []
                 for item in new_folderitems:
                     original_uid = original_uid_for[item.message.g_msgid]
                     original_folderitem = FolderItem(
-                            imapaccount=self.account,
-                            folder_name=self.folder_name,
-                            msg_uid=original_uid,
-                            message=item.message)
+                            imapaccount=acc, folder_name=self.folder_name,
+                            msg_uid=original_uid, message=item.message)
                     original_folderitem.update_flags(
                             flags[original_uid]['flags'],
                             flags[original_uid]['labels'])
                     original_folderitems.append(original_folderitem)
-                self.db_session.add_all(original_folderitems)
-                self.db_session.commit()
+                db_session.add_all(original_folderitems)
+                db_session.commit()
                 num_downloaded_threads += 1
                 percent_done = (num_downloaded_threads / num_total_threads) * 100
-                self.shared_state['status_callback'](self.account, 'initial',
+                self.shared_state['status_callback'](
+                        self.crispin_client.account_id, 'initial',
                         (self.folder_name, percent_done))
                 self.log.info("Syncing %s -- %.2f%% (%i/%i)" % (
                     self.folder_name, percent_done,
@@ -560,8 +571,8 @@ class FolderSyncMonitor(Greenlet):
 
     def _deduplicate_message_download(self, db_session, remote_g_metadata, uids, c):
         """ Deduplicate message download using X-GM-MSGID. """
-        local_g_msgids = set(self.account.g_msgids(self.db_session,
-                in_=[remote_g_metadata[uid]['msgid'] for uid in uids]))
+        local_g_msgids = set(account.g_msgids(self.crispin_client.account_id,
+            db_session, in_=[remote_g_metadata[uid]['msgid'] for uid in uids]))
         full_download, folderitem_only = partition(
                 lambda uid: remote_g_metadata[uid]['msgid'] in local_g_msgids,
                 sorted(uids, key=int))
@@ -574,11 +585,10 @@ class FolderSyncMonitor(Greenlet):
         return full_download
 
     def _update_validity(self, db_session, uidvalidity, highestmodseq):
-        try:
-            cached_validity = db_session.query(UIDValidity).filter_by(
-                    imapaccount_id=self.crispin_client.account_id,
-                    folder_name=self.folder_name).one()
-        except NoResultFound:
+        cached_validity = account.get_uidvalidity(
+                self.crispin_client.account_id, db_session,
+                self.folder_name)
+        if cached_validity is None:
             cached_validity = UIDValidity(
                     imapaccount_id=self.crispin_client.account_id,
                     folder_name=self.folder_name)
@@ -632,7 +642,8 @@ class FolderSyncMonitor(Greenlet):
 
         to_delete = set(local_uids).difference(set(remote_uids))
         if to_delete:
-            account.remove_messages(to_delete, self.folder_name)
+            account.remove_messages(self.crispin_client.account_id,
+                    db_session, to_delete, self.folder_name)
             # not sure if this one is actually needed - does delete()
             # automatically commit?
             db_session.commit()
@@ -787,37 +798,37 @@ class SyncService(object):
             if email_address is not None:
                 query = query.filter_by(email_address=email_address)
             fqdn = socket.getfqdn()
-            for account in query:
-                log.info("Starting sync for account {0}".format(account.email_address))
-                if account.sync_host is not None and account.sync_host != fqdn:
-                    results[account.email_address] = \
-                            'Account {0} is syncing on host {1}'.format(
-                                account.email_address, account.sync_host)
-                elif account.id not in self.monitors:
+            for acc in query:
+                log.info("Starting sync for acc {0}".format(acc.email_address))
+                if acc.sync_host is not None and acc.sync_host != fqdn:
+                    results[acc.email_address] = \
+                            'acc {0} is syncing on host {1}'.format(
+                                acc.email_address, acc.sync_host)
+                elif acc.id not in self.monitors:
                     try:
-                        account.sync_lock()
-                        def update_status(account, state, status):
+                        acc.sync_lock()
+                        def update_status(account_id, state, status):
                             """ I really really wish I were a lambda """
                             folder, progress = status
-                            self.statuses.setdefault(
-                                    account.id, dict())[folder] = (state, progress)
-                            notify(account, state, status)
+                            self.statuses.setdefault(account_id,
+                                    dict())[folder] = (state, progress)
+                            notify(account_id, state, status)
 
-                        monitor = MailSyncMonitor(account.id,
-                                account.email_address, account.provider,
+                        monitor = MailSyncMonitor(acc.id,
+                                acc.email_address, acc.provider,
                                 update_status)
-                        self.monitors[account.id] = monitor
+                        self.monitors[acc.id] = monitor
                         monitor.start()
-                        account.sync_host = fqdn
-                        db_session.add(account)
+                        acc.sync_host = fqdn
+                        db_session.add(acc)
                         db_session.commit()
-                        results[account.email_address] = "OK sync started"
+                        results[acc.email_address] = "OK sync started"
                     except Exception as e:
                         raise
                         log.error(e.message)
-                        results[account.email_address] = "ERROR error encountered"
+                        results[acc.email_address] = "ERROR error encountered"
                 else:
-                    results[account.email_address] =  "OK sync already started"
+                    results[acc.email_address] =  "OK sync already started"
         if email_address:
             if email_address in results:
                 return results[email_address]

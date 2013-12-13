@@ -133,7 +133,7 @@ class Transaction(Base, Revision):
     namespace = relationship('Namespace', backref='transactions')
 
     def set_extra_attrs(self, obj):
-        self.namespace_id = obj.namespace_id
+        self.namespace = obj.namespace
 
 HasRevisions = gen_rev_role(Transaction)
 
@@ -157,8 +157,8 @@ class Contact(Base, HasRevisions):
     __table_args__ = (UniqueConstraint('g_id', 'source', 'imapaccount_id'),)
 
     @property
-    def namespace_id(self):
-        return self.imapaccount.namespace_id
+    def namespace(self):
+        return self.imapaccount.namespace
 
     def cereal(self):
         return dict(id=self.id,
@@ -380,8 +380,8 @@ class Block(JSONSerializable, Blob, Base, HasRevisions):
             self.content_type = self._content_type_other
 
     @property
-    def namespace_id(self):
-        return self.message.namespace_id
+    def namespace(self):
+        return self.message.namespace
 
 @event.listens_for(Block, 'before_insert', propagate = True)
 def serialize_before_insert(mapper, connection, target):
@@ -438,8 +438,8 @@ class FolderItem(JSONSerializable, Base, HasRevisions):
         self.extra_flags = sorted(new_flags)
 
     @property
-    def namespace_id(self):
-        return self.imapaccount.namespace_id
+    def namespace(self):
+        return self.imapaccount.namespace
 
     __table_args__ = (UniqueConstraint('folder_name', 'msg_uid', 'imapaccount_id',),)
 

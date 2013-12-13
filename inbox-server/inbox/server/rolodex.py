@@ -115,12 +115,12 @@ def rolodex_sync(db_session, account):
             to_commit.append(c)
             to_commit.append(cached)
 
-        account.last_synced_contacts = datetime.datetime.now()
+    account.last_synced_contacts = datetime.datetime.now()
 
-        db_session.add_all(to_commit)
-        db_session.commit()
+    db_session.add_all(to_commit)
+    db_session.commit()
 
-        log.info("Added {0} contacts.".format(len(to_commit)))
+    log.info("Added {0} contacts.".format(len(to_commit)))
 
 class ContactSync(object):
     """ ZeroRPC interface to syncing. """

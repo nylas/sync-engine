@@ -20,11 +20,11 @@ def log(request, config):
     """ Returns root server logger. For others loggers, use this fixture
         for setup but then call inbox.server.log.get_logger().
     """
-    from inbox.server.log import configure_logging
+    from inbox.server.log import configure_general_logging
     def remove_logs():
         rmtree(config['LOGDIR'], ignore_errors=True)
     request.addfinalizer(remove_logs)
-    return configure_logging()
+    return configure_general_logging()
 
 class DB(object):
     def __init__(self):

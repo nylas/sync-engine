@@ -163,8 +163,7 @@ class API(object):
         """
         nses = {'private': [], 'shared': [], 'todo': []}
 
-        user = db_session.query(User).join(IMAPAccount) \
-                .join(TodoNamespace).get(user_id)
+        user = db_session.query(User).join(IMAPAccount).filter_by(id=user_id).one()
 
         # XXX TODO we should create the TODO namespace on user creation.
         if user.todo_namespace:
