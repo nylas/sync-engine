@@ -123,7 +123,7 @@ def auth_done_handler():
     sync_srv_loc = config.get('CRISPIN_SERVER_LOC', None)
     c = zerorpc.Client(timeout=3000)
     c.connect(sync_srv_loc)
-    sync_response = c.start_sync(new_account.email_address)
+    sync_response = c.start_sync(new_account.id)
     log.info("Asked sync service to start syncing new account: {0}".format(
         sync_response))
 

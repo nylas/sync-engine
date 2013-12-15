@@ -9,7 +9,7 @@ from geventconnpool import ConnectionPool
 from imapclient import IMAPClient
 
 from .models import session_scope
-from .models.tables import IMAPAccount
+from .models.tables import ImapAccount
 from .session import verify_imap_account
 from .log import get_logger
 log = get_logger()
@@ -40,7 +40,7 @@ class IMAPConnectionPool(ConnectionPool):
     def _set_account_info(self):
         with session_scope() as db_session:
             account = verify_imap_account(db_session,
-                    db_session.query(IMAPAccount).get(self.account_id))
+                    db_session.query(ImapAccount).get(self.account_id))
             self.imap_host = IMAP_HOSTS[account.provider]
             self.o_access_token = account.o_access_token
             self.email_address = account.email_address

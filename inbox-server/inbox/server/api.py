@@ -12,7 +12,8 @@ from . import postel
 from .config import config
 from .models import new_db_session
 from .models.tables import Message, SharedFolder, Thread, Namespace, User
-from .models.tables import IMAPAccount, TodoNamespace, TodoItem
+from .models.tables import ImapAccount, TodoNamespace, TodoItem
+from .models.namespace import threads_for_folder
 
 db_session = new_db_session()
 
@@ -30,7 +31,7 @@ def namespace_auth(fn):
     def namespace_auth_fn(self, user_id, namespace_id, *args, **kwargs):
         self.user_id = user_id
         self.namespace_id = namespace_id
-        user = db_session.query(User).filter_by(id=user_id).join(IMAPAccount).one()
+        user = db_session.query(User).filter_by(id=user_id).join(ImapAccount).one()
         for account in user.imapaccounts:
             if account.namespace.id == namespace_id:
                 self.namespace = account.namespace
@@ -61,7 +62,7 @@ def get_or_create_todo_namespace(user_id):
         return user.todo_namespace.namespace
 
     # create a todo namespace
-    todo_ns = Namespace(imapaccount_id=None, namespace_type='todo')
+    todo_ns = Namespace(imapaccount_id=None, type='todo')
     db_session.add(todo_ns)
     db_session.commit()
 
@@ -131,8 +132,8 @@ class API(object):
             folder, since we fetch the full thread if one of the messages is in
             the requested folder.
         """
-        return [t.cereal() for t in \
-                self.namespace.threads_for_folder(db_session, folder_name)]
+        return [t.cereal() for t in threads_for_folder(self.namespace.id,
+                    db_session, folder_name)]
 
     @namespace_auth
     def send_mail(self, recipients, subject, body):
@@ -163,7 +164,7 @@ class API(object):
         """
         nses = {'private': [], 'shared': [], 'todo': []}
 
-        user = db_session.query(User).join(IMAPAccount).filter_by(id=user_id).one()
+        user = db_session.query(User).join(ImapAccount).filter_by(id=user_id).one()
 
         # XXX TODO we should create the TODO namespace on user creation.
         if user.todo_namespace:

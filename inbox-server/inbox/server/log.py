@@ -6,7 +6,7 @@ for mail sync and contact sync.
 import logging
 from colorlog import ColoredFormatter
 
-from ..util.file import mkdirp, safe_filename
+from ..util.file import mkdirp
 
 import sys, os
 
@@ -71,16 +71,14 @@ def configure_general_logging():
 
     return logger
 
-def configure_logging(account_id, account_email_address, purpose):
-    # import here to avoid import loop from config.py
+def configure_logging(account_id, purpose):
+    # avoid import loop from config.py
     from .config import config
     logger = get_logger(account_id, purpose)
     logger.propagate = True
 
-    logdir = os.path.join(
-            config['LOGDIR'], safe_filename(account_email_address))
+    logdir = os.path.join(config['LOGDIR'], str(account_id))
     mkdirp(logdir)
-    # XXX we may want to rotate the log file eventually
     logfile = os.path.join(logdir, '{0}.log'.format(purpose))
     handler = logging.FileHandler(logfile, encoding='utf-8')
     handler.setFormatter(file_formatter)
@@ -88,16 +86,16 @@ def configure_logging(account_id, account_email_address, purpose):
 
     return logger
 
-def configure_sync_logging(account_id, account_email_address):
+def configure_sync_logging(account_id):
     """ We log output for each sync instance to a different file than the
         main server log, for ease of debugging. Sync logs still go to screen
         too, for now.
     """
-    return configure_logging(account_id, account_email_address, "sync")
+    return configure_logging(account_id, "sync")
 
-def configure_rolodex_logging(account_id, account_email_address):
+def configure_rolodex_logging(account_id):
     """ We log output for each rolodex instance to a different file than the
         main server log, for ease of debugging. Rolodex sync logs still go to
         screen too, for now.
     """
-    return configure_logging(account_id, account_email_address, "rolodex")
+    return configure_logging(account_id, "rolodex")

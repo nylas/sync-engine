@@ -38,7 +38,7 @@ Session = sessionmaker(bind=engine)
 # scoped_session uses a registry to return the _same_ session if it's in the
 # same thread, otherwise a new session.
 def new_db_session():
-    return versioned_session(Session(autoflush=False, autocommit=False),
+    return versioned_session(Session(autoflush=True, autocommit=False),
             Transaction, HasRevisions)
 
 @contextmanager

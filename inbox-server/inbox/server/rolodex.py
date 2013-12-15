@@ -8,14 +8,14 @@ from .google_oauth import GOOGLE_CONSUMER_KEY, GOOGLE_CONSUMER_SECRET, OAUTH_SCO
 from .google_oauth import get_new_token
 
 from .models import session_scope
-from .models.tables import Contact, IMAPAccount
+from .models.tables import Contact, ImapAccount
 from .log import configure_rolodex_logging, get_logger
 log = get_logger()
 
 SOURCE_APP_NAME = 'InboxApp Contact Sync Engine'
 
 def rolodex_sync(db_session, account):
-    log = configure_rolodex_logging(account.id, account.email_address)
+    log = configure_rolodex_logging(account.id)
     log.info("Begin syncing contacts...")
 
     existing_contacts = db_session.query(Contact).filter_by(
@@ -127,5 +127,5 @@ class ContactSync(object):
     def __init__(self):
         log.info("Updating contacts...")
         with session_scope() as db_session:
-            for account in db_session.query(IMAPAccount):
+            for account in db_session.query(ImapAccount):
                 rolodex_sync(db_session, account)

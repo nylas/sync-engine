@@ -38,7 +38,7 @@ def start(args=None):
     make_zerorpc(API, api_srv_loc)
 
     # Start ZeroRPC mail sync server service
-    from inbox.server.imapsync import SyncService
+    from inbox.server.mailsync.service import SyncService
     sync_srv_loc = config.get('CRISPIN_SERVER_LOC', None)
     make_zerorpc(SyncService, sync_srv_loc)
 
@@ -70,11 +70,11 @@ def sync(args):
     c.connect("tcp://127.0.0.1:9997")
     try:
         if args.cmd == 'start':
-            print c.start_sync(args.email_address, dummy=args.dummy)
+            print c.start_sync(args.account_id, dummy=args.dummy)
         elif args.cmd == 'startall':
             print c.start_sync(dummy=args.dummy)
         elif args.cmd == 'stop':
-            print c.stop_sync(args.email_address)
+            print c.stop_sync(args.account_id)
         elif args.cmd == 'stopall':
             print c.stop_sync()
         elif args.cmd == 'status':

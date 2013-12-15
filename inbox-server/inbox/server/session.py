@@ -8,7 +8,7 @@ log = get_logger()
 import sqlalchemy.orm.exc
 
 from . import google_oauth
-from .models.tables import User, UserSession, Namespace, IMAPAccount
+from .models.tables import User, UserSession, Namespace, ImapAccount
 
 def log_ignored(exc):
     log.error('Ignoring error: %s\nOuter stack:\n%s%s'
@@ -26,7 +26,7 @@ def get_session(db_session, session_token):
     # XXX doesn't deal with multiple sessions
     try:
         return db_session.query(UserSession
-                ).filter_by(token=session_token).join(User, IMAPAccount, Namespace
+                ).filter_by(token=session_token).join(User, ImapAccount, Namespace
                         ).one()
     except sqlalchemy.orm.exc.NoResultFound:
         log.error("No record for session with token: %s" % session_token)
@@ -36,12 +36,12 @@ def get_session(db_session, session_token):
 
 def make_account(db_session, access_token_dict):
     try:
-        account = db_session.query(IMAPAccount).filter_by(
+        account = db_session.query(ImapAccount).filter_by(
                 email_address=access_token_dict['email']).one()
     except sqlalchemy.orm.exc.NoResultFound:
         user = User()
         namespace = Namespace()
-        account = IMAPAccount(user=user, namespace=namespace)
+        account = ImapAccount(user=user, namespace=namespace)
     account.email_address = access_token_dict['email']
     account.o_token_issued_to = access_token_dict['issued_to']
     account.o_user_id = access_token_dict['user_id']
@@ -64,8 +64,8 @@ def make_account(db_session, access_token_dict):
     return account
 
 def get_account(db_session, email_address, callback=None):
-    account = db_session.query(IMAPAccount).filter(
-            IMAPAccount.email_address==email_address).join(Namespace).one()
+    account = db_session.query(ImapAccount).filter(
+            ImapAccount.email_address==email_address).join(Namespace).one()
     return verify_imap_account(db_session, account)
 
 def verify_imap_account(db_session, account):

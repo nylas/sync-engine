@@ -29,9 +29,9 @@ def timed(fn):
 
 ### main stuff
 
-def new_crispin(account_id, email_address, provider, dummy=False):
+def new_crispin(account_id, provider, dummy=False):
     cls = DummyCrispinClient if dummy else CrispinClient
-    return cls(account_id, email_address, provider)
+    return cls(account_id, provider)
 
 class CrispinClientBase(object):
     """
@@ -45,10 +45,9 @@ class CrispinClientBase(object):
     SELECT a folder until the connection is closed or another folder is
     selected.
     """
-    def __init__(self, account_id, email_address, provider, cache=False):
+    def __init__(self, account_id, provider, cache=False):
         self.log = get_logger(account_id)
         self.account_id = account_id
-        self.email_address = email_address
         self.provider = provider
         # IMAP isn't stateless :(
         self.selected_folder = None
@@ -71,25 +70,10 @@ class CrispinClientBase(object):
         # Explicit sync ordering - important stuff first!
         for folder in ['Inbox', 'Drafts', 'Sent', 'Flagged', 'Important',
                 'Sent', 'Labels', 'All', 'Trash', 'Junk']:
-            if folder != 'Labels':
-                if folder in self.folder_names(c):
-                    all_folders.append(self.folder_names(c)[folder])
-            else:
-                if folder in self.folder_names(c):
-                    all_folders.extend(self.folder_names(c)[folder])
+            if folder in self.folder_names(c):
+                all_folders.append(self.folder_names(c)[folder])
 
         return all_folders
-
-    def poll_folders(self, c):
-        """ Gmail's weird "everything is a subset of All Mail" paradigm
-            means we treat it differently than other providers---for Gmail,
-            we only poll on INBOX and All Mail; for other providers we
-            poll on every single folder.
-        """
-        if self.provider == 'Gmail':
-            return [self.folder_names(c)['Inbox'], self.folder_names(c)['All']]
-        else:
-            return self.sync_folders(c)
 
     @property
     def selected_folder_name(self):
@@ -342,9 +326,9 @@ class CrispinClient(CrispinClientBase):
     # how many messages to download at a time
     CHUNK_SIZE = 1
 
-    def __init__(self, account_id, email_address, provider, cache=False):
+    def __init__(self, account_id, provider, cache=False):
         self.pool = get_connection_pool(account_id)
-        CrispinClientBase.__init__(self, account_id, email_address, provider, cache)
+        CrispinClientBase.__init__(self, account_id, provider, cache)
 
     @timed
     def _do_select_folder(self, folder, c):

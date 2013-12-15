@@ -23,7 +23,7 @@ from .roles import JSONSerializable, Blob
 
 # global
 
-class IMAPAccount(Base):
+class ImapAccount(Base):
     # user_id refers to Inbox's user id
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'),
             nullable=False)
@@ -88,12 +88,12 @@ class Namespace(Base):
     # NOTE: only root namespaces have IMAP accounts
     imapaccount_id = Column(Integer, ForeignKey('imapaccount.id',
         ondelete='CASCADE'), nullable=True)
-    imapaccount = relationship('IMAPAccount', backref=backref('namespace',
+    imapaccount = relationship('ImapAccount', backref=backref('namespace',
         uselist=False)) # really the root_namespace
     # TODO should have a name that defaults to gmail
 
-    # invariant: imapaccount is non-null iff namespace_type is root
-    namespace_type = Column(Enum('root', 'shared_folder', 'todo'),
+    # invariant: imapaccount is non-null iff type is root
+    type = Column(Enum('root', 'shared_folder', 'todo'),
             nullable=False, default='root')
 
     @property
@@ -101,20 +101,15 @@ class Namespace(Base):
         if self.imapaccount is not None:
             return self.imapaccount.email_address
 
-    def threads_for_folder(self, session, folder_name):
-        return session.query(Thread).join(Thread.messages).join(FolderItem) \
-              .filter(FolderItem.folder_name == folder_name,
-                      Message.namespace_id == self.id,
-                      FolderItem.message_id == Message.id).all()
-
     def cereal(self):
-        return dict(id=self.id, name='Gmail')
+        return dict(id=self.id, type=self.type)
 
 class SharedFolder(Base):
-    namespace = relationship('Namespace', backref='sharedfolders')
-    namespace_id = Column(Integer, ForeignKey('namespace.id'), nullable=False)
     user = relationship('User', backref='sharedfolders')
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+
+    namespace = relationship('Namespace', backref='sharedfolders')
+    namespace_id = Column(Integer, ForeignKey('namespace.id'), nullable=False)
 
     display_name = Column(String(40))
 
@@ -133,7 +128,13 @@ class Transaction(Base, Revision):
     namespace = relationship('Namespace', backref='transactions')
 
     def set_extra_attrs(self, obj):
-        self.namespace = obj.namespace
+        try:
+            self.namespace = obj.namespace
+        except AttributeError:
+            log.info("Couldn't create revision for {0}:{1}".format(
+                self.table_name, self.record_id))
+            log.info("Thread is: {0}".format(obj.thread_id))
+            raise
 
 HasRevisions = gen_rev_role(Transaction)
 
@@ -141,7 +142,7 @@ class Contact(Base, HasRevisions):
     """ Inbox-specific sessions. """
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
             nullable=False)
-    imapaccount = relationship("IMAPAccount")
+    imapaccount = relationship("ImapAccount")
 
     g_id = Column(String(64))
     source = Column("source", Enum("local", "remote"))
@@ -172,11 +173,6 @@ class Contact(Base, HasRevisions):
 class Message(JSONSerializable, Base, HasRevisions):
     # XXX clean this up a lot - make a better constructor, maybe taking
     # a flanker object as an argument to prefill a lot of attributes
-
-    namespace_id = Column(ForeignKey('namespace.id'), nullable=False)
-    namespace = relationship("Namespace", backref="messages",
-            order_by="Message.internaldate")
-
     thread_id = Column(Integer, ForeignKey('thread.id'), nullable=False)
     thread = relationship('Thread', backref="messages",
             order_by="Message.internaldate")
@@ -211,6 +207,10 @@ class Message(JSONSerializable, Base, HasRevisions):
     # only on messages from Gmail
     g_msgid = Column(String(40), nullable=True)
     g_thrid = Column(String(40), nullable=True)
+
+    @property
+    def namespace(self):
+        return self.thread.namespace
 
     def calculate_sanitized_body(self):
         plain_part, html_part = self.body()
@@ -310,7 +310,6 @@ class Message(JSONSerializable, Base, HasRevisions):
         d['subject'] = self.subject
         d['id'] = self.id
         d['thread_id'] = self.thread_id
-        d['namespace_id'] = self.namespace_id
         d['snippet'] = self.snippet
         d['body'] = self.prettified_body
         return d
@@ -393,18 +392,29 @@ def serialize_before_insert(mapper, connection, target):
         target._content_type_other = target.content_type
 
 class FolderItem(JSONSerializable, Base, HasRevisions):
-    """ This maps folder names to UIDs in that folder. """
+    """ Maps threads to folders. """
 
+    thread_id = Column(Integer, ForeignKey('thread.id'), nullable=False)
+
+    folder_name = Column(String(191), index=True)
+
+    __table_args__ = (UniqueConstraint('folder_name', 'thread_id'),)
+
+class ImapUid(JSONSerializable, Base):
+    """ This maps UIDs to the IMAP folder they belong to, and extra metadata
+        such as flags.
+    """
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
             nullable=False)
-    imapaccount = relationship("IMAPAccount")
+    imapaccount = relationship("ImapAccount")
     message_id = Column(Integer, ForeignKey('message.id'), nullable=False)
     message = relationship('Message')
     msg_uid = Column(Integer, nullable=False)
+
     # maximum Gmail label length is 225 (tested empirically), but constraining
     # folder_name uniquely requires max length of 767 bytes under utf8mb4
     # http://mathiasbynens.be/notes/mysql-utf8mb4
-    folder_name = Column(String(191), nullable=False)
+    folder_name = Column(String(191))
 
     ### Flags ###
     # Message has not completed composition (marked as a draft).
@@ -433,7 +443,7 @@ class FolderItem(JSONSerializable, Base, HasRevisions):
             setattr(self, col, flag in new_flags)
             new_flags.discard(flag)
         # Gmail doesn't use the \Draft flag. Go figure.
-        if '\\Draft' in x_gm_labels:
+        if x_gm_labels is not None and '\\Draft' in x_gm_labels:
             self.is_draft = True
         self.extra_flags = sorted(new_flags)
 
@@ -444,8 +454,8 @@ class FolderItem(JSONSerializable, Base, HasRevisions):
     __table_args__ = (UniqueConstraint('folder_name', 'msg_uid', 'imapaccount_id',),)
 
 # make pulling up all messages in a given folder fast
-Index('folderitem_imapaccount_id_folder_name', FolderItem.imapaccount_id,
-        FolderItem.folder_name)
+Index('imapuid_imapaccount_id_folder_name', ImapUid.imapaccount_id,
+        ImapUid.folder_name)
 
 class UIDValidity(JSONSerializable, Base):
     """ UIDValidity has a per-folder value. If it changes, we need to
@@ -453,7 +463,7 @@ class UIDValidity(JSONSerializable, Base):
     """
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
             nullable=False)
-    imapaccount = relationship("IMAPAccount")
+    imapaccount = relationship("ImapAccount")
     # maximum Gmail label length is 225 (tested empirically), but constraining
     # folder_name uniquely requires max length of 767 bytes under utf8mb4
     # http://mathiasbynens.be/notes/mysql-utf8mb4
@@ -477,7 +487,7 @@ class TodoItem(JSONSerializable, Base):
     # Thread database table, these two lines can go.
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
             nullable=False)
-    imapaccount = relationship("IMAPAccount")
+    imapaccount = relationship("ImapAccount")
 
     # this must be a namespace of the todo type
     namespace_id = Column(ForeignKey('namespace.id'), nullable=False)
@@ -529,18 +539,25 @@ class TodoNamespace(JSONSerializable, Base):
         return dict(id=self.id)
 
 class Thread(JSONSerializable, Base):
-    """ Pre-computed thread metadata.
+    """ Threads are a first-class object in Inbox. This thread aggregates
+        the relevant thread metadata from elsewhere so that clients can only
+        query on threads.
 
-    (We have all this information elsewhere, but it's not as nice to use.)
+        A thread belongs to exactly one folder. If you're attempting to
+        display _all_ messages a la Gmail's All Mail, just don't query based
+        on folder!
     """
     subject = Column(Text, nullable=True)
     subjectdate = Column(DateTime, nullable=False)
     recentdate = Column(DateTime, nullable=False)
 
-    # makes pulling up threads in a folder simple / fast
-    # namespace_id = Column(ForeignKey('namespace.id', ondelete='CASCADE'),
-    #         nullable=False, index=True)
-    # namespace = relationship('Namespace', backref='threads')
+    folders = relationship('FolderItem', backref="thread", single_parent=True,
+            order_by="FolderItem.folder_name",
+            cascade='all, delete, delete-orphan')
+
+    namespace_id = Column(ForeignKey('namespace.id', ondelete='CASCADE'),
+            nullable=False, index=True)
+    namespace = relationship('Namespace', backref='threads')
 
     # only on messages from Gmail
     # NOTE: The same message sent to multiple users will be given a
@@ -558,7 +575,7 @@ class Thread(JSONSerializable, Base):
         return self
 
     @classmethod
-    def from_message(cls, session, message):
+    def from_message(cls, session, namespace, message):
         """
         Threads are broken solely on Gmail's X-GM-THRID for now. (Subjects
         are not taken into account, even if they change.)
@@ -567,9 +584,8 @@ class Thread(JSONSerializable, Base):
         Doesn't commit.
         """
         try:
-            # NOTE: If g_thrid turns out to not be globally unique, we'll need
-            # to join on Message and also filter by namespace here.
-            thread = session.query(cls).filter_by(g_thrid=message.g_thrid).one()
+            thread = session.query(cls).filter_by(g_thrid=message.g_thrid,
+                    namespace=namespace).one()
             return thread.update_from_message(message)
         except NoResultFound:
             pass
@@ -577,7 +593,7 @@ class Thread(JSONSerializable, Base):
             log.info("Duplicate thread rows for thread {0}".format(message.g_thrid))
             raise
         thread = cls(subject=message.subject, g_thrid=message.g_thrid,
-                recentdate=message.internaldate,
+                recentdate=message.internaldate, namespace=namespace,
                 subjectdate=message.internaldate)
         return thread
 
@@ -593,13 +609,13 @@ class Thread(JSONSerializable, Base):
 class FolderSync(Base):
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
             nullable=False)
-    imapaccount = relationship('IMAPAccount', backref='foldersyncs')
+    imapaccount = relationship('ImapAccount', backref='foldersyncs')
     # maximum Gmail label length is 225 (tested empirically), but constraining
     # folder_name uniquely requires max length of 767 bytes under utf8mb4
     # http://mathiasbynens.be/notes/mysql-utf8mb4
     folder_name = Column(String(191), nullable=False)
 
-    # see state machine in sync.py
+    # see state machine in mailsync/imap.py
     state = Column(Enum('initial', 'initial uidinvalid',
                         'poll', 'poll uidinvalid', 'finish'),
                         default='initial', nullable=False)

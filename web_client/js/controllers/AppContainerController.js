@@ -168,7 +168,7 @@ app.controller("AppContainerController", function (
         $scope.activeNamespace = $scope.namespaces.private[0];
 
         $log.info("Getting threads for " + $scope.activeNamespace.name);
-        DB.getFolder($scope.activeNamespace.id, "INBOX", function(all_threads){
+        DB.getFolder($scope.activeNamespace.id, "inbox", function(all_threads){
           $scope.threads = all_threads;
           $scope.displayedThreads = all_threads;
         });
