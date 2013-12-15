@@ -18,7 +18,7 @@ from sqlalchemy.orm.exc import UnmappedColumnError
 from sqlalchemy.orm.properties import RelationshipProperty
 from sqlalchemy.ext.declarative import declared_attr
 
-from .util import JSON
+from .util import BigJSON
 
 class Revision(object):
     """ All revision records in a single table (role). """
@@ -27,8 +27,7 @@ class Revision(object):
     record_id = Column(Integer, nullable=False)
 
     command = Column(Enum('insert', 'update', 'delete'), nullable=False)
-    # NOTE: This may want to end up as a larger text type.
-    delta = Column(JSON, nullable=True)
+    delta = Column(BigJSON, nullable=True)
 
     def set_extra_attrs(self, obj):
         pass

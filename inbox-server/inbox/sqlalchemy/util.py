@@ -26,6 +26,10 @@ class JSON(TypeDecorator):
 class LittleJSON(JSON):
     impl = String(40)
 
+class BigJSON(JSON):
+    # if all characters were 4-byte, this would fit in mysql's MEDIUMTEXT
+    impl = Text(4194304)
+
 ### Other utilities
 
 # My good old friend Enrico to the rescue:
