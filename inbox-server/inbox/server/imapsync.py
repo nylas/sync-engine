@@ -287,7 +287,8 @@ class FolderSyncMonitor(Greenlet):
                     num_local_messages = len(local_uids)
                     total_messages = len(remote_uids)
                     for uids in chunk(reversed(full_download), chunk_size):
-                        num_local_messages += self._download_new_messages(uids, c)
+                        num_local_messages += len(self._download_new_messages(
+                                db_session, uids, c))
 
                         percent_done = (num_local_messages / total_messages ) * 100
                         self.shared_state['status_callback'](account_id,
