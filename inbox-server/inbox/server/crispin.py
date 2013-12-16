@@ -30,8 +30,10 @@ def timed(fn):
 ### main stuff
 
 def new_crispin(account_id, provider, dummy=False):
-    cls = DummyCrispinClient if dummy else CrispinClient
-    return cls(account_id, provider)
+    crispin_module_for = dict(Gmail=GmailCrispinClient, IMAP=CrispinClient)
+
+    cls = DummyCrispinClient if dummy else crispin_module_for[provider]
+    return cls(account_id)
 
 class CrispinClientBase(object):
     """
@@ -45,10 +47,9 @@ class CrispinClientBase(object):
     SELECT a folder until the connection is closed or another folder is
     selected.
     """
-    def __init__(self, account_id, provider, cache=False):
+    def __init__(self, account_id, cache=False):
         self.log = get_logger(account_id)
         self.account_id = account_id
-        self.provider = provider
         # IMAP isn't stateless :(
         self.selected_folder = None
         self._folder_names = None
@@ -64,16 +65,7 @@ class CrispinClientBase(object):
                 os.path.join('account.{0}'.format(self.account_id), *keys))
 
     def sync_folders(self, c):
-        """ We sync everything! """
-        all_folders = []
-
-        # Explicit sync ordering - important stuff first!
-        for folder in ['Inbox', 'Drafts', 'Sent', 'Flagged', 'Important',
-                'Sent', 'Labels', 'All', 'Trash', 'Junk']:
-            if folder in self.folder_names(c):
-                all_folders.append(self.folder_names(c)[folder])
-
-        return all_folders
+        raise NotImplementedError
 
     @property
     def selected_folder_name(self):
@@ -128,98 +120,11 @@ class CrispinClientBase(object):
     def _fetch_all_uids(self, c):
         raise NotImplementedError
 
-    def g_metadata(self, uids, c):
-        """ Download Gmail MSGIDs and THRIDS for the given messages, or all
-            messages in the currently selected folder if no UIDs specified.
-
-            NOTE: only UIDs are guaranteed to be unique to a folder, G-MSGID
-            and G-THRID may not be.
-        """
-        self.log.info("Fetching X-GM-MSGID and X-GM-THRID mapping from server.")
-        return dict([(long(uid), dict(msgid=str(ret['X-GM-MSGID']),
-            thrid=str(ret['X-GM-THRID']))) \
-                for uid, ret in self._fetch_g_metadata(uids, c).iteritems()])
-
-    def _fetch_g_metadata(self, uids, c):
-        raise NotImplementedError
-
     def new_and_updated_uids(self, modseq, c):
         return self._fetch_new_and_updated_uids(modseq, c)
 
     def _fetch_new_and_updated_uids(self, modseq, c):
         raise NotImplementedError
-
-    def expand_threads(self, thread_ids, c):
-        """ Find all message UIDs in a user's account that have X-GM-THRID in
-            thread_ids.
-
-            Message UIDs returned are All Mail UIDs; this method requires the
-            All Mail folder to be selected.
-        """
-        assert self.provider == 'Gmail', \
-                "thread expansion only supported on Gmail"
-        assert self.selected_folder_name == self.folder_names(c)['All'], \
-                "must select All Mail first ({0})".format(
-                        self.selected_folder_name)
-        # UIDs ascend over time; return in order most-recent first
-        return sorted(self._expand_threads(thread_ids, c), reverse=True)
-
-    def _expand_threads(self, thread_ids, c):
-        raise NotImplementedError
-
-    def flags(self, uids, c):
-        """ Flags includes labels on Gmail because Gmail doesn't use \\Draft."""
-        return dict([(uid, dict(flags=msg['FLAGS'], labels=msg['X-GM-LABELS']))
-            for uid, msg in self._fetch_flags(uids, c).iteritems()])
-
-    def uids(self, uids, c):
-        raw_messages = self._fetch_uids(uids, c)
-        messages = []
-        for uid in sorted(raw_messages.iterkeys(), key=int):
-            msg = raw_messages[uid]
-            messages.append((int(uid), msg['INTERNALDATE'], msg['FLAGS'],
-                msg['BODY[]'], msg['X-GM-THRID'], msg['X-GM-MSGID'],
-                msg['X-GM-LABELS']))
-        return messages
-
-    def folder_names(self, c):
-        """ Parses out Gmail-specific folder names based on Gmail IMAP flags.
-
-            If the user's account is localized to a different language, it will
-            return the proper localized string.
-
-            Caches the call since we use it all over the place and folders
-            never change names during a session.
-        """
-        # We'll better know what abstractions we need here when we actually
-        # take a serious look at other providers' IMAP implementations.
-        assert self.provider == 'Gmail', \
-                "only gmail is supported so far"
-        if self._folder_names is None:
-            folders = self._fetch_folder_list(c)
-            self._folder_names = dict()
-            for flags, delimiter, name in folders:
-                is_label = True
-                for flag in [u'\\All', '\\Drafts', '\\Important', '\\Sent',
-                        '\\Junk', '\\Flagged', '\\Trash']:
-                    # find localized names for Gmail's special folders
-                    if flag in flags:
-                        is_label = False
-                        # strip off leading \ on flag
-                        self._folder_names[flag.replace('\\', '')] = name
-                if name == 'INBOX':
-                    is_label = False
-                    self._folder_names['Inbox'] = name
-                if u'\\Noselect' in flags:
-                    # special folders that can't contain messages, usually
-                    # just '[Gmail]'
-                    is_label = False
-                # everything else is a label
-                if is_label:
-                    self._folder_names.setdefault('Labels', list()).append(name)
-            if 'Labels' in self._folder_names:
-                self._folder_names['Labels'].sort()
-        return self._folder_names
 
 class DummyCrispinClient(CrispinClientBase):
     """ A crispin client that doesn't actually use IMAP at all. Instead, it
@@ -326,9 +231,9 @@ class CrispinClient(CrispinClientBase):
     # how many messages to download at a time
     CHUNK_SIZE = 1
 
-    def __init__(self, account_id, provider, cache=False):
+    def __init__(self, account_id, cache=False):
         self.pool = get_connection_pool(account_id)
-        CrispinClientBase.__init__(self, account_id, provider, cache)
+        CrispinClientBase.__init__(self, account_id, cache)
 
     @timed
     def _do_select_folder(self, folder, c):
@@ -349,31 +254,11 @@ class CrispinClient(CrispinClientBase):
 
         return status
 
-    def _expand_threads(self, thread_ids, c):
-        # The boolean IMAP queries use prefix notation for query params.
-        # imaplib automatically adds parens.
-        criteria = ('OR ' * (len(thread_ids)-1)) + ' '.join(
-                ['X-GM-THRID {0}'.format(thrid) for thrid in thread_ids])
-        data = c.search(['NOT DELETED', criteria])
-
-        # if self.cache:
-        #     self.set_cache(data, self.selected_folder_name, 'foo')
-
-        return data
-
     def _fetch_all_uids(self, c):
         data = c.search(['NOT DELETED'])
 
         if self.cache:
             self.set_cache(data, self.selected_folder_name, 'all_uids')
-
-        return data
-
-    def _fetch_g_metadata(self, uids, c):
-        data = c.fetch(uids, ['X-GM-MSGID', 'X-GM-THRID'])
-
-        if self.cache:
-            self.set_cache(data, self.selected_folder_name, 'g_metadata')
 
         return data
 
@@ -385,6 +270,54 @@ class CrispinClient(CrispinClientBase):
             self.set_cache(data, self.selected_folder_name, 'updated', modseq)
 
         return data
+
+    def _fetch_flags(self, uids, c):
+        raise NotImplementedError
+
+    def _fetch_uids(self, uids, c):
+        raise NotImplementedError
+
+    def _fetch_folder_list(self, c):
+        """ NOTE: XLIST is deprecated, so we just use LIST.
+
+            An example response with some other flags:
+
+              * LIST (\HasNoChildren) "/" "INBOX"
+              * LIST (\Noselect \HasChildren) "/" "[Gmail]"
+              * LIST (\HasNoChildren \All) "/" "[Gmail]/All Mail"
+              * LIST (\HasNoChildren \Drafts) "/" "[Gmail]/Drafts"
+              * LIST (\HasNoChildren \Important) "/" "[Gmail]/Important"
+              * LIST (\HasNoChildren \Sent) "/" "[Gmail]/Sent Mail"
+              * LIST (\HasNoChildren \Junk) "/" "[Gmail]/Spam"
+              * LIST (\HasNoChildren \Flagged) "/" "[Gmail]/Starred"
+              * LIST (\HasNoChildren \Trash) "/" "[Gmail]/Trash"
+
+            IMAPClient parses this response into a list of
+            (flags, delimiter, name) tuples.
+        """
+        folders = c.list_folders()
+
+        if self.cache:
+            self.set_cache(folders, 'folders')
+
+        return folders
+
+class GmailCrispinClient(CrispinClient):
+    def __init__(self, account_id, cache=False):
+        CrispinClient.__init__(self, account_id, cache=False)
+
+    def sync_folders(self, c):
+        """ In Gmail, every message is a subset of All Mail, so we only sync
+            that folder + Inbox (for quickly downloading initial inbox
+            messages and continuing to receive new Inbox messages while a
+            large mail archive is downloading).
+        """
+        return [self.folder_names(c)['Inbox'], self.folder_names(c)['All']]
+
+    def flags(self, uids, c):
+        """ Flags includes labels on Gmail because Gmail doesn't use \\Draft."""
+        return dict([(uid, dict(flags=msg['FLAGS'], labels=msg['X-GM-LABELS']))
+            for uid, msg in self._fetch_flags(uids, c).iteritems()])
 
     def _fetch_flags(self, uids, c):
         data = c.fetch(uids, ['FLAGS X-GM-LABELS'])
@@ -399,6 +332,52 @@ class CrispinClient(CrispinClientBase):
                         uid, 'flags')
 
         return data
+
+    def folder_names(self, c):
+        """ Parses out Gmail-specific folder names based on Gmail IMAP flags.
+
+            If the user's account is localized to a different language, it will
+            return the proper localized string.
+
+            Caches the call since we use it all over the place and folders
+            never change names during a session.
+        """
+        if self._folder_names is None:
+            folders = self._fetch_folder_list(c)
+            self._folder_names = dict()
+            for flags, delimiter, name in folders:
+                is_label = True
+                for flag in [u'\\All', '\\Drafts', '\\Important', '\\Sent',
+                        '\\Junk', '\\Flagged', '\\Trash']:
+                    # find localized names for Gmail's special folders
+                    if flag in flags:
+                        is_label = False
+                        # strip off leading \ on flag
+                        k = flag.replace('\\', '').capitalize()
+                        self._folder_names[k] = name
+                if name.capitalize() == 'Inbox':
+                    is_label = False
+                    self._folder_names[name.capitalize()] = name
+                if u'\\Noselect' in flags:
+                    # special folders that can't contain messages, usually
+                    # just '[Gmail]'
+                    is_label = False
+                # everything else is a label
+                if is_label:
+                    self._folder_names.setdefault('Labels', list()).append(name)
+            if 'Labels' in self._folder_names:
+                self._folder_names['Labels'].sort()
+        return self._folder_names
+
+    def uids(self, uids, c):
+        raw_messages = self._fetch_uids(uids, c)
+        messages = []
+        for uid in sorted(raw_messages.iterkeys(), key=int):
+            msg = raw_messages[uid]
+            messages.append((int(uid), msg['INTERNALDATE'], msg['FLAGS'],
+                msg['BODY[]'], msg['X-GM-THRID'], msg['X-GM-MSGID'],
+                msg['X-GM-LABELS']))
+        return messages
 
     def _fetch_uids(self, uids, c):
         data = c.fetch(uids,
@@ -427,27 +406,48 @@ class CrispinClient(CrispinClientBase):
 
         return data
 
-    def _fetch_folder_list(self, c):
-        """ NOTE: XLIST is deprecated, so we just use LIST.
+    @timed
+    def g_metadata(self, uids, c):
+        """ Download Gmail MSGIDs and THRIDS for the given messages, or all
+            messages in the currently selected folder if no UIDs specified.
 
-            An example response with some other flags:
-
-              * LIST (\HasNoChildren) "/" "INBOX"
-              * LIST (\Noselect \HasChildren) "/" "[Gmail]"
-              * LIST (\HasNoChildren \All) "/" "[Gmail]/All Mail"
-              * LIST (\HasNoChildren \Drafts) "/" "[Gmail]/Drafts"
-              * LIST (\HasNoChildren \Important) "/" "[Gmail]/Important"
-              * LIST (\HasNoChildren \Sent) "/" "[Gmail]/Sent Mail"
-              * LIST (\HasNoChildren \Junk) "/" "[Gmail]/Spam"
-              * LIST (\HasNoChildren \Flagged) "/" "[Gmail]/Starred"
-              * LIST (\HasNoChildren \Trash) "/" "[Gmail]/Trash"
-
-            IMAPClient parses this response into a list of
-            (flags, delimiter, name) tuples.
+            NOTE: only UIDs are guaranteed to be unique to a folder, G-MSGID
+            and G-THRID may not be.
         """
-        folders = c.list_folders()
+        self.log.info("Fetching X-GM-MSGID and X-GM-THRID mapping from server.")
+        return dict([(long(uid), dict(msgid=str(ret['X-GM-MSGID']),
+            thrid=str(ret['X-GM-THRID']))) \
+                for uid, ret in self._fetch_g_metadata(uids, c).iteritems()])
+
+    def _fetch_g_metadata(self, uids, c):
+        data = c.fetch(uids, ['X-GM-MSGID', 'X-GM-THRID'])
 
         if self.cache:
-            self.set_cache(folders, 'folders')
+            self.set_cache(data, self.selected_folder_name, 'g_metadata')
 
-        return folders
+        return data
+
+    def expand_threads(self, thread_ids, c):
+        """ Find all message UIDs in a user's account that have X-GM-THRID in
+            thread_ids.
+
+            Message UIDs returned are All Mail UIDs; this method requires the
+            All Mail folder to be selected.
+        """
+        assert self.selected_folder_name == self.folder_names(c)['All'], \
+                "must select All Mail first ({0})".format(
+                        self.selected_folder_name)
+        # UIDs ascend over time; return in order most-recent first
+        return sorted(self._expand_threads(thread_ids, c), reverse=True)
+
+    def _expand_threads(self, thread_ids, c):
+        # The boolean IMAP queries use prefix notation for query params.
+        # imaplib automatically adds parens.
+        criteria = ('OR ' * (len(thread_ids)-1)) + ' '.join(
+                ['X-GM-THRID {0}'.format(thrid) for thrid in thread_ids])
+        data = c.search(['NOT DELETED', criteria])
+
+        # if self.cache:
+        #     self.set_cache(data, self.selected_folder_name, 'foo')
+
+        return data
