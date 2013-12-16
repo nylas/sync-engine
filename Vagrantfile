@@ -70,7 +70,7 @@ SCRIPT
 # trigger dkms to build the virtualbox guest module install.
 $vbox_script = <<VBOX_SCRIPT + $script
 # Install the VirtualBox guest additions if they aren't already installed.
-if [ ! -d /opt/VBoxGuestAdditions-4.2.12/ ]; then
+if [ ! -d /opt/VBoxGuestAdditions-4.3.2/ ]; then
     # Update remote package metadata.  'apt-get update' is idempotent.
     apt-get update -q
 
@@ -79,9 +79,10 @@ if [ ! -d /opt/VBoxGuestAdditions-4.2.12/ ]; then
     apt-get install -q -y linux-headers-generic-lts-raring dkms
 
     echo 'Downloading VBox Guest Additions...'
-    wget -cq http://dlc.sun.com.edgesuite.net/virtualbox/4.2.12/VBoxGuestAdditions_4.2.12.iso
+    wget -cq http://dlc.sun.com.edgesuite.net/virtualbox/4.3.4/VBoxGuestAdditions_4.3.4.iso
+    echo "f120793fa35050a8280eacf9c930cf8d9b88795161520f6515c0cc5edda2fe8a  VBoxGuestAdditions_4.3.4.iso" | sha256sum --check || exit 1
 
-    mount -o loop,ro /home/vagrant/VBoxGuestAdditions_4.2.12.iso /mnt
+    mount -o loop,ro /home/vagrant/VBoxGuestAdditions_4.3.4.iso /mnt
     /mnt/VBoxLinuxAdditions.run --nox11
     umount /mnt
 fi
@@ -91,7 +92,6 @@ Vagrant::Config.run do |config|
   # Setup virtual machine box. This VM configuration code is always executed.
   config.vm.box = BOX_NAME
   config.vm.box_url = BOX_URI
-
   config.vm.network :hostonly, "192.168.10.200"
 
   # Use the specified private key path if it is specified and not empty.
@@ -144,7 +144,7 @@ Vagrant::VERSION >= "1.1.0" and Vagrant.configure("2") do |config|
 
   config.vm.provider :vmware_fusion do |f, override|
     override.vm.box_url = VF_BOX_URI
-	override.vm.synced_folder ".", "/vagrant", disabled: true
+    override.vm.synced_folder ".", "/vagrant", disabled: true
     override.vm.provision :shell, :inline => $script
     f.vmx["displayName"] = "docker"
   end
