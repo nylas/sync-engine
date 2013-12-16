@@ -76,14 +76,14 @@ wget -O - http://nodejs.org/dist/v0.8.26/node-v0.8.26-linux-x64.tar.gz | tar -C 
 
 
 # MySQL -- copy this file!
-# ADD ./deploy/my.cnf /etc/mysql/conf.d/inboxapp.cnf
+cp ./deploy/my.cnf /etc/mysql/conf.d/inboxapp.cnf
 
 # Create default MySQL database. Perhaps we should do this at some configuration time
 /usr/sbin/mysqld & sleep 5 ; echo "CREATE DATABASE inboxdb DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci" | mysql -u root --password=docker
 
 
 # copy to this directory!
-#. /srv/inboxapp
+cp -r . /srv/inboxapp
 
 # Default config file
 # RUN cp config-sample.cfg config.cfg
