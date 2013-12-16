@@ -351,7 +351,7 @@ input[type="text"] { border: none }
 
   background-color: #F5F5F5;
 
-  font-family: HelveticaNeue;
+  font-family: Arial, HelveticaNeue;
   font-size: 12px;
   color: #A1A1A1;
 
@@ -377,7 +377,7 @@ input[type="text"] { border: none }
 
 
 .category_bar_active {
-  font-family: HelveticaNeue-Bold;
+  font-family: Arial, HelveticaNeue-Bold;
   color: #838386;
 }
 
@@ -423,7 +423,7 @@ input[type="text"] { border: none }
 
 .itemcell_byline {
   font-weight: 500;
-  font-family: HelveticaNeue, sans-serif;
+  font-family: Arial, HelveticaNeue, sans-serif;
   color: #333;
   font-size: 14px;
   line-height: 13px;
@@ -433,7 +433,7 @@ input[type="text"] { border: none }
 }
 
 .itemcell_date {
-  font-family: HelveticaNeue-Light, sans-serif;
+  font-family: Arial, HelveticaNeue-Light, sans-serif;
   color: #708080;
   font-size: 12px;
   line-height: 13px;
@@ -445,7 +445,7 @@ input[type="text"] { border: none }
 
 .itemcell_summary {
   font-size: 12px;
-  font-family: HelveticaNeue-Light, sans-serif;
+  font-family: Arial, HelveticaNeue-Light, sans-serif;
   line-height: 18px;
   letter-spacing: 0.3px;
   color: #666;
@@ -453,7 +453,7 @@ input[type="text"] { border: none }
 
 .itemcell_summary_subject {
   color: #333;
-  font-family: HelveticaNeue-Medium, sans-serif;
+  font-family: Arial, HelveticaNeue-Medium, sans-serif;
 }
 
 .itemcell_email_item_hover {
@@ -490,7 +490,7 @@ input[type="text"] { border: none }
 
   background-color: #FFF;
 
-  font-family: HelveticaNeue-Light;
+  font-family: Arial, HelveticaNeue-Light;
   font-size: 20px;
   color: #666;
   margin-right:8px;
@@ -511,7 +511,7 @@ input[type="text"] { border: none }
   width: 100%;
   font-size: 14px;
   color: #999;
-  font-family: HelveticaNeue, sans-serif;
+  font-family: Arial, HelveticaNeue, sans-serif;
   letter-spacing: 0px;
   color: #333;
 }
@@ -572,14 +572,14 @@ input[type="text"] { border: none }
 
 
 .list_item_todo_incomplete .title {
-  /*font-family: HelveticaNeue-Light, sans-serif;*/
+  /*font-family: Arial, HelveticaNeue-Light, sans-serif;*/
   color: #666;
 }
 
 
 .list_item_todo_complete .title {
   text-decoration:line-through;
-  /*font-family: HelveticaNeue-Light, sans-serif;*/
+  /*font-family: Arial, HelveticaNeue-Light, sans-serif;*/
   color: #999;
 }
 
@@ -609,7 +609,7 @@ input[type="text"] { border: none }
 .action_button {
   display: block;
   font-weight: 200;
-  font-family: HelveticaNeue-Light, sans-serif;
+  font-family: Arial, HelveticaNeue-Light, sans-serif;
   font-size: 14px;
   color: #4C4C4C;
   float: left;
@@ -696,7 +696,7 @@ input[type="text"] { border: none }
 }
 
 .messageview_byline_name {
-  font-family: HelveticaNeue-Medium, sans-serif;
+  font-family: Arial, HelveticaNeue-Medium, sans-serif;
   display: inline;
 }
 
@@ -726,7 +726,7 @@ input[type="text"] { border: none }
   padding-bottom:5px;
   padding-top: 12px;
 
-  font-family: HelveticaNeue-Light, sans-serif;
+  font-family: Arial, HelveticaNeue-Light, sans-serif;
   font-size: 14px;
   color: #333;
   line-height: 14px;
@@ -775,7 +775,7 @@ input[type="text"] { border: none }
   text-align:left;
 
   text-shadow:1px 1px 1px white;
-  font-family: HelveticaNeue-Light, sans-serif;
+  font-family: Arial, HelveticaNeue-Light, sans-serif;
   font-size: 20px;
   color: #4C4C4C;
   line-height: 24px;
@@ -783,7 +783,7 @@ input[type="text"] { border: none }
 
 
 .email_content_subtitle {
-  font-family: HelveticaNeue-Light, sans-serif;
+  font-family: Arial, HelveticaNeue-Light, sans-serif;
   font-size: 1em;
   margin: 0;
   font-weight: normal;
@@ -824,7 +824,7 @@ input[type="text"] { border: none }
 
 
 .replybox_content {
-  font-family: HelveticaNeue, sans-serif;
+  font-family: Arial, HelveticaNeue, sans-serif;
   font-size: 15px;
   line-height: 17px;
 
@@ -865,7 +865,7 @@ input[type="text"] { border: none }
   padding-right: 6px;
   padding-left: 30px;
 
-  font-family: HelveticaNeue-Light;
+  font-family: Arial, HelveticaNeue-Light;
   font-size: 13px;
   color: #606C6B;
   line-height: 16px;
@@ -920,7 +920,7 @@ margin-bottom: 0.3em;
 
 .footerstatus
 {
-  font-family: HelveticaNeue-Light, sans-serif;
+  font-family: Arial, HelveticaNeue-Light, sans-serif;
   font-weight: 600;
   font-size: 13px;
   color: rgba(7,7,7,0.52);
@@ -943,7 +943,7 @@ margin-bottom: 0.3em;
 
 a.button, input[type=submit] {
   color: #6e6e6e;
-  font: bold 12px Helvetica, Arial, sans-serif;
+  font: bold 12px Arial, Helvetica, sans-serif;
   text-decoration: none;
   padding: 7px 12px;
   position: relative;
@@ -1010,7 +1010,7 @@ a.button:active {
 }
 
 .fullcomposeview_subject input {
-  font-family: HelveticaNeue-Light, sans-serif;
+  font-family: Arial, HelveticaaNeue-Light, sans-serif;
   font-size: 14px;
 
   margin-top: 8px;
@@ -1033,7 +1033,7 @@ a.button:active {
 }
 
 .fullcomposeview_recipients input {
-  font-family: HelveticaNeue-Light, sans-serif;
+  font-family: Arial, HelveticaaNeue-Light, sans-serif;
   font-size: 14px;
 
   margin-top: 8px;
@@ -1054,7 +1054,7 @@ a.button:active {
   padding-left: 8px;
   padding-bottom: 5px;
   padding-top: 12px;
-  font-family: HelveticaNeue-Light, sans-serif;
+  font-family: Arial, HelveticaaNeue-Light, sans-serif;
   font-size: 14px;
   color: #333;
   line-height: 14px;
@@ -1082,13 +1082,13 @@ a.button:active {
   padding-left:8px;
   padding-bottom:5px;
   padding-top:12px;
-  font-family: HelveticaNeue-Light, sans-serif;
+  font-family: Arial, HelveticaaNeue-Light, sans-serif;
   font-size: 14px;
   color:#333;
 }
 
 .fullcomposeview_top input {
-  font-family: HelveticaNeue-Light, sans-serif;
+  font-family: Arial, HelveticaaNeue-Light, sans-serif;
   font-size: 14px;
   border: none;
   box-shadow: none;
