@@ -10,22 +10,24 @@ from ..util.file import mkdirp, safe_filename
 
 import sys, os
 
-tty_formatter = ColoredFormatter(
-        # wish we could left-truncate name!
-        "%(name)-20.20s %(log_color)s[%(levelname)-.1s %(asctime)s %(module)-8.8s:%(lineno)-4s]%(reset)s %(message)s",
-        reset=True,
-        log_colors={
-                'DEBUG':    'cyan',
-                'INFO':     'green',
-                'WARNING':  'yellow',
-                'ERROR':    'red',
-                'CRITICAL': 'red',
-        })
-
-tty_handler = logging.StreamHandler()
-tty_handler.setFormatter(tty_formatter)
-
 file_formatter = logging.Formatter( "[%(levelname)-.1s %(asctime)s %(module)-8.8s:%(lineno)-4s] %(message)s")
+
+def get_tty_handler():
+  tty_formatter = ColoredFormatter(
+          # wish we could left-truncate name!
+          "%(name)-20.20s %(log_color)s[%(levelname)-.1s %(asctime)s %(module)-8.8s:%(lineno)-4s]%(reset)s %(message)s",
+          reset=True,
+          log_colors={
+                  'DEBUG':    'cyan',
+                  'INFO':     'green',
+                  'WARNING':  'yellow',
+                  'ERROR':    'red',
+                  'CRITICAL': 'red',
+          })
+
+  tty_handler = logging.StreamHandler()
+  tty_handler.setFormatter(tty_formatter)
+  return tty_handler
 
 def get_logger(account_id=None, purpose=None):
     """ Helper for abstracting away our logger names. """
@@ -55,7 +57,7 @@ def configure_general_logging():
 
     # log everything to screen
     if sys.stdout.isatty():
-        inbox_root_logger.addHandler(tty_handler)
+        inbox_root_logger.addHandler(get_tty_handler())
 
     logger = get_logger()
 

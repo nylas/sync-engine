@@ -1,4 +1,5 @@
 from ConfigParser import SafeConfigParser, NoSectionError
+import sys
 
 from .log import get_logger
 log = get_logger()
@@ -21,4 +22,5 @@ def load_config(filename='config.cfg'):
         config.update(dict((k.upper(), v) for k, v in parser.items('inboxserver')))
         log.info('Loaded configuration from {0}'.format(filename))
     except NoSectionError:
-        log.error("Couldn't load configuration from {0}".format(filename))
+        sys.stderr.write("Couldn't load configuration from {0}\n".format(filename))
+        sys.exit(0)
