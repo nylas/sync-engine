@@ -1,9 +1,5 @@
 "use strict";
 
-// Stupid fucking linting warnings
-var console = console;
-var angular = angular;
-
 var app = angular.module("InboxApp.controllers");
 
 app.controller("AppContainerController", function (
@@ -117,8 +113,6 @@ app.controller("AppContainerController", function (
       $log.info("Go to previous message.");
     });
 
-
-
     $scope.sendButtonHandler = function () {
       $log.info("sendButtonhandler in appcont");
     };
@@ -157,7 +151,6 @@ app.controller("AppContainerController", function (
       });
     };
 
-
     $scope.sendMessage = function (body, subject, recipients) {
       //message: {body:string, subject:string, to:[string]}
       Wire.rpc("send_mail", [$scope.activeNamespace.id, recipients,
@@ -168,8 +161,6 @@ app.controller("AppContainerController", function (
         }
       );
     };
-
-
 
     $scope.openThread = function (selectedThread) {
       $location.path("/mail/" + selectedThread.id +

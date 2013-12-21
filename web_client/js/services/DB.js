@@ -45,17 +45,14 @@ app.factory("DB", function (Wire, $log, IBThread) {
       });
     },
 
-
     getThread: function(ns, thrid, callback) {
       $log.info("Looking for thread: " + thrid);
       $log.info(_allThreads);
       callback(_allThreads[thrid]);
     },
 
-
     getMessage: function(ns, msgid, callback)
     {
-
     },
   };
 });
