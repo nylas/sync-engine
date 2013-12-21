@@ -69,29 +69,6 @@ app.directive("hover", function () {
   };
 });
 
-
-app.directive("listItemTodo", function () {
-  return {
-    restrict: "E",
-    // Note: shit will break with reordering if we don't replace the <list:item:todo>
-    replace: true,
-    scope: {
-      todo: "=",
-      clickRow: "&"
-    },
-    controller: function ($scope, $element, $attrs, $transclude) {
-      $scope.clickCheckbox = function () {
-        console.log(["Toggling!", $scope.todo]);
-        $scope.todo.completed = !$scope.todo.completed;
-      };
-    },
-    templateUrl: "views/listItemTodo.html",
-  };
-});
-
-
-
-
 app.directive("autoResize", function (Layout) {
   return {
     restrict: "A",

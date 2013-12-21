@@ -2,12 +2,10 @@
 var app = angular.module("InboxApp.services");
 
 /* Database caching layer that handles doing RPCs and storing data in WebSQL, etc. */
-app.factory("DB", function (Wire, $log, IBThread, IBTodo) {
+app.factory("DB", function (Wire, $log, IBThread) {
 
   // cache mapping of thread_id -> IBThread
   var _allThreads = {};
-
-  var _allTodos = {};
 
   return {
 
@@ -59,34 +57,5 @@ app.factory("DB", function (Wire, $log, IBThread, IBTodo) {
     {
 
     },
-
-
-    getTodos: function(callback) {
-      Wire.rpc("todo_items", [], function (data) {
-        var parsed = JSON.parse(data);
-        var displayedTodos = [];
-        angular.forEach(parsed, function (value, key) {
-          var newTodo = new IBTodo(value);
-          _allTodos[newTodo.id] = newTodo;
-          displayedTodos.push(newTodo);
-        });
-        callback(displayedTodos);
-      });
-
-    },
-
-    createTodo: function(ns, thrid, callback) {
-      Wire.rpc("create_todo", [ns, thrid],
-        function (data) {
-          if (data !== "OK") {
-            $log.error("invalid create_todo response: " + data);
-          }
-          $log.info("successfully created todo item");
-          callback();
-        });
-
-    }
-
-
   };
 });

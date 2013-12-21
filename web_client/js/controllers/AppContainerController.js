@@ -14,13 +14,11 @@ app.controller("AppContainerController", function (
     Layout, // Needed to initialize
     IBThread,
     IBMessage,
-    IBTodo,
     protocolhandler,
     $filter,
     $timeout,
     $log,
     $window,
-    MockData,
     Mousetrap,
     $route,
     $routeParams,
@@ -52,7 +50,6 @@ app.controller("AppContainerController", function (
 
     $scope.threads = []; // For UI element
     $scope.displayedThreads = []; // currently displayed
-    $scope.displayedTodos = [];
 
     $scope.message_map = {}; // Actual message cache
     $scope.activeThread = undefined; // Points to the current active mssage
@@ -110,22 +107,6 @@ app.controller("AppContainerController", function (
 
     var clearActive = function() {
       $scope.activeThread = null;
-    }
-
-
-    $scope.todoButtonHandler = function () {
-      $log.info("todoButtonHandler()");
-      // for now, thread objects don"t have an ID, so fetch the thread_id off
-      // the first message
-      var thread_id = $scope.activeThread.messages[0].thread_id;
-      DB.createTodo($scope.activeNamespace.id, thread_id, function() {
-        $scope.displayedThreads = $scope.displayedThreads.filter(
-          function (elt) {
-            return elt.id !== thread_id;
-        });
-        clearActive();
-      });
-
     };
 
     Mousetrap.bind("j", function () {
@@ -184,7 +165,6 @@ app.controller("AppContainerController", function (
         ],
         function (data) {
           $window.alert("Sent mail! " + data);
-          // $scope.activateTodoView();
         }
       );
     };
@@ -200,7 +180,6 @@ app.controller("AppContainerController", function (
     $scope.clearAllActiveViews = function () {
       $scope.isMailViewActive = false;
       $scope.isMailMessageViewActive = false;
-      $scope.isTodoViewActive = false;
       $scope.isStacksViewActive = false;
       $scope.isPeopleViewActive = false;
       $scope.isGroupsViewActive = false;
@@ -225,15 +204,6 @@ app.controller("AppContainerController", function (
       $scope.loadNamespaces();
     };
 
-
-    $scope.activateTodoView = function () {
-      $scope.clearAllActiveViews();
-      $scope.isTodoViewActive = true;
-      $scope.activeNamespace = $scope.namespaces.todo[0];
-      $scope.loadTodoItems();
-    };
-
-
     $scope.activateFullComposeView = function () {
       $scope.clearAllActiveViews();
       $scope.activeThread = null;
@@ -241,46 +211,8 @@ app.controller("AppContainerController", function (
       $scope.isFullComposerViewActive = true;
     };
 
-    // For todo sorting
-    $scope.sortableOptions = {
-      revert: false,
-      axis: "y",
-      // snap: true,
-      scroll: true,
-      showAnim: "",
-      opacity: 1.0,
-      containment: "parent",
-      grid: [0, 44],
-      handle: ".move",
-      tolerance: "pointer",
-      // update: function(e, ui) { ... },
-      stop: function (e, ui) {
-        var logEntry = {
-          // ID: $scope.sortingLog.length + 1,
-          Text: "Moved element: " + ui.item.scope().todo.title
-        };
-        console.log(logEntry);
-      },
-    };
-
     $scope.makeActive = function () {
       console.log("Sidebar button clicked!");
     };
 
-    $scope.todoCheckboxClickHandler = function (t) {
-      console.log(["Clicked checkbox:", t]);
-    };
-
-    $scope.openTodo = function (selectedTodo) {
-      console.log(["Selecting Todo:", selectedTodo]);
-      $scope.activeTodo = selectedTodo;
-      $scope.isTodoMessageViewActive = true;
-    };
-
-    $scope.loadTodoItems = function () {
-      console.log("loading TODO items");
-      DB.getTodos(function(all_todos) {
-        $scope.displayedTodos = all_todos;
-      });
-    };
   });

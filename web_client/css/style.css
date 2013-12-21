@@ -204,13 +204,6 @@ a {
   background: #F65E55 url("../img/mail_icon_active.png") no-repeat 12px 15px !important;
 }
 
-.sidebar_icon_todo {
-  background: #FFF url("../img/todo_icon_inactive.png") no-repeat 0px 3px;
-}
-.sidebar_icon_todo_active {
-  background: #A7DE75 url("../img/todo_icon_active.png") no-repeat 0px 3px !important;
-}
-
 .sidebar_icon_stacks {
   background: #FFF url("../img/stacks_icon_inactive.png") no-repeat 10px 10px;
 }
@@ -465,103 +458,10 @@ input[type="text"] { border: none }
    background-color: #EFF4F9 !important;
 }
 
-/********************************************
-  TODO
-*********************************************/
-
-
-
-
 .container_scrollable {
   padding:0;
   margin:0;
   overflow-y: auto;
-}
-
-
-.list_item_todo_category {
-  height: 28px;
-  padding-top: 10px;
-  padding-bottom: 2px;
-
-  width: 96%;
-  padding-left: 2%;
-  padding-right: 2%;
-
-  background-color: #FFF;
-
-  font-family: Arial, HelveticaNeue-Light;
-  font-size: 20px;
-  color: #666;
-  margin-right:8px;
-
-  text-align: center;
-
-  float:left;
-  margin-bottom:1px;
-  letter-spacing: 0.3px;
-
-  margin-bottom:1px;
-}
-
-
-.list_item_todo {
-  color: #333333;
-  height: 44px;
-  width: 100%;
-  font-size: 14px;
-  color: #999;
-  font-family: Arial, HelveticaNeue, sans-serif;
-  letter-spacing: 0px;
-  color: #333;
-}
-
-
-.list_item_todo:hover{
-  background-color: #E5FAFA;
-/*  -moz-box-shadow:   inset 0 0.5px 0 1px #5598CA;
-  -webkit-box-shadow: inset 0 0.5px 0 1px #5598CA;
-  box-shadow:         inset 0 0.5px 0 1px #5598CA;*/
-}
-
-.list_item_todo_container {
-  padding-left: 12px;
-  padding-top: 12px;
-
-  padding-right: 6px;
-}
-
-.list_item_todo_separator {
-  position: relative;
-  top: 0;
-  width: 100%;
-  height: 1px;
-  background: #C3CDCD;
-}
-
-.list_item_todo_complete {
-  background-color: #f8f8f8 !important;
-}
-
-.checkbox {
-  float:left;
-  width:26px;
-  height:26px;
-  display: inline-block;
-  background-repeat: no-repeat;
-  background-position: 0px -4px;
-}
-
-.list_item_todo_incomplete .checkbox {
-  background-image: url("../img/list_todo_icon_incomplete.png");
-}
-
-.list_item_todo_incomplete .checkbox:hover {
-  background-image: url("../img/list_todo_icon_hover.png")
-}
-
-.list_item_todo_complete .checkbox {
-  background-image: url("../img/list_todo_icon_complete.png") !important;
 }
 
 .title {
@@ -569,33 +469,6 @@ input[type="text"] { border: none }
   padding-left: 8px;
   padding-top: 3px;
 }
-
-
-.list_item_todo_incomplete .title {
-  /*font-family: Arial, HelveticaNeue-Light, sans-serif;*/
-  color: #666;
-}
-
-
-.list_item_todo_complete .title {
-  text-decoration:line-through;
-  /*font-family: Arial, HelveticaNeue-Light, sans-serif;*/
-  color: #999;
-}
-
-.list_item_todo:hover .move {
-  float:right;
-  width:26px;
-  height:26px;
-  display: inline-block;
-  background-repeat: no-repeat;
-  background-position: 0px 4px;
-
-  background-image: url("../img/todo_icon_move.png");
-}
-
-
-/********************************************************/
 
 .detail_pane {
   float: left;
@@ -632,9 +505,6 @@ input[type="text"] { border: none }
 
 .action_button.archive {
   background: #FFF url("../img/action_button_archive.png") no-repeat 17px 13px;
-}
-.action_button.todo {
-  background: #FFF url("../img/action_button_todo.png") no-repeat 17px 10px;
 }
 .action_button.snooze {
   background: #FFF url("../img/action_button_snooze.png") no-repeat 20px 12px;
@@ -972,14 +842,6 @@ a.button:hover {
 a.button:active {
   color: #000;
   border-color: #444;
-}
-
-.list_item_todo_container .display_name {
-    display: inline-block;
-    text-overflow: ellipsis;
-    width: 290px;
-    white-space: nowrap;
-    overflow: hidden;
 }
 
 .full_composer_container {

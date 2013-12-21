@@ -174,62 +174,6 @@ app.factory("IBThread", function ($injector, md5, IBMessage) {
   };
 });
 
-app.factory("IBTodo", function ($injector, IBThread) {
-  function IBTodoObject($rootScope, data) {
-    this.$rootScope = $rootScope;
-
-    var todo = this;
-    angular.forEach(data, function (value, key) {
-      if (key === "thread") {
-        todo.thread = new IBThread(value);
-      } else {
-        if (todo.hasOwnProperty(key)) {
-          console.log(key + " -> " + value);
-        }
-        todo[key] = value;
-      }
-    });
-  }
-
-  IBTodoObject.prototype.fromName = function () {
-    return this.from[0];
-  };
-
-  IBTodoObject.prototype.fromEmail = function () {
-    return this.from[1];
-  };
-
-  IBTodoObject.prototype.printDate = function () {
-    // var curr_date = this.date.getDate();
-    // var curr_month = this.date.getMonth() + 1; //Months are zero based
-    // var curr_year = this.date.getFullYear();
-    // return curr_date + "-" + curr_month + "-" + curr_year;
-
-    return this.date.toLocaleString();
-  };
-
-  return function (data) {
-    // This is based on $injector.instantiate
-    var Type = IBTodoObject;
-    var locals = {
-      data: data
-    };
-    var IBTodo = function () {};
-    var instance;
-    var returnedValue;
-    // Check if Type is annotated and use just the given function at n-1 as parameter
-    // e.g. someModule.factory('greeter', ['$window', function(renamed$window) {}]);
-    IBTodo.prototype = (angular.isArray(Type) ? Type[Type.length -
-      1] : Type).prototype;
-    instance = new IBTodo();
-
-    returnedValue = $injector.invoke(Type, instance, locals);
-    return angular.isObject(returnedValue) ? returnedValue :
-      instance;
-  };
-});
-
-
 app.factory("IBContact", function ($injector, md5) {
 
   var IBObject = function ($rootScope, data) {

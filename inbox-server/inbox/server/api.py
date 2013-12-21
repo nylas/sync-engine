@@ -6,13 +6,10 @@ from bson import json_util
 
 import zerorpc
 
-from sqlalchemy.orm import joinedload
-
 from . import postel
 from .config import config
 from .models import new_db_session
-from .models.tables import Message, SharedFolder, Thread, Namespace, User
-from .models.tables import ImapAccount, TodoNamespace, TodoItem
+from .models.tables import Message, SharedFolder, User, ImapAccount
 from .models.namespace import threads_for_folder
 
 db_session = new_db_session()
@@ -53,25 +50,6 @@ def jsonify(fn):
         ret = fn(*args, **kwargs)
         return json.dumps(ret, default=json_util.default) # fixes serializing date.datetime
     return wrapper
-
-# should this be moved to model.py or similar?
-def get_or_create_todo_namespace(user_id):
-    user = db_session.query(User).join(TodoNamespace, Namespace, TodoItem) \
-            .get(user_id)
-    if user.todo_namespace is not None:
-        return user.todo_namespace.namespace
-
-    # create a todo namespace
-    todo_ns = Namespace(imapaccount_id=None, type='todo')
-    db_session.add(todo_ns)
-    db_session.commit()
-
-    todo_namespace = TodoNamespace(namespace_id=todo_ns.id, user_id=user_id)
-    db_session.add(todo_namespace)
-    db_session.commit()
-
-    log.info('todo namespace id {0}'.format(todo_ns.id))
-    return todo_ns
 
 class API(object):
 
@@ -162,13 +140,9 @@ class API(object):
 
             returns a list of tuples of display name, type, and id
         """
-        nses = {'private': [], 'shared': [], 'todo': []}
+        nses = {'private': [], 'shared': [] }
 
         user = db_session.query(User).join(ImapAccount).filter_by(id=user_id).one()
-
-        # XXX TODO we should create the TODO namespace on user creation.
-        if user.todo_namespace:
-            nses['todo'].append(user.todo_namespace.cereal())
 
         for account in user.imapaccounts:
             account_ns = account.namespace
@@ -180,37 +154,3 @@ class API(object):
             nses['shared'].append(shared_ns.cereal())
 
         return nses
-
-    @jsonify
-    def todo_items(self, user_id):
-        todo_ns = get_or_create_todo_namespace(user_id)
-        todo_items = todo_ns.todo_items
-        return [i.cereal() for i in todo_items]
-
-    @namespace_auth
-    def create_todo(self, thread_id):
-        log.info('creating todo from namespace {0} thread_id {1}'.format(
-            self.namespace_id, thread_id))
-
-        # XXX TODO limit by namespace once threads track namespaces
-        thread = db_session.query(Thread).options(
-                joinedload(Thread.messages)).get(thread_id)
-
-        todo_ns = get_or_create_todo_namespace(self.user_id)
-        log.info('todo namespace is: {0}'.format(todo_ns.id))
-        for message in thread.messages:
-            log.info('marking message {0} as todo'.format(message.id))
-            message.namespace = todo_ns
-
-        todo_item = TodoItem(
-                thread_id = thread_id,
-                imapaccount_id = self.namespace.imapaccount_id,
-                namespace_id = todo_ns.id,
-                display_name = thread.messages[0].subject,
-                due_date = 'Soon',
-                date_completed = None,
-                sort_index = 0,
-            )
-        db_session.add(todo_item)
-        db_session.commit()
-        return "OK"

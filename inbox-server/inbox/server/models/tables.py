@@ -2,7 +2,7 @@ import os
 
 from itertools import chain
 
-from sqlalchemy import Column, Integer, String, DateTime, Date, Boolean, Enum
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum
 from sqlalchemy import ForeignKey, Text, Index, func, event
 from sqlalchemy.orm import reconstructor, relationship, backref
 from sqlalchemy.schema import UniqueConstraint
@@ -86,15 +86,14 @@ class UserSession(Base):
 class Namespace(Base):
     """ A way to do grouping / permissions, basically. """
     # NOTE: only root namespaces have IMAP accounts
-    imapaccount_id = Column(Integer, ForeignKey('imapaccount.id',
-        ondelete='CASCADE'), nullable=True)
-    imapaccount = relationship('ImapAccount', backref=backref('namespace',
-        uselist=False)) # really the root_namespace
-    # TODO should have a name that defaults to gmail
+    imapaccount_id = Column(Integer,
+            ForeignKey('imapaccount.id', ondelete='CASCADE'), nullable=True)
+    # really the root_namespace
+    imapaccount = relationship('ImapAccount',
+            backref=backref('namespace', uselist=False))
 
     # invariant: imapaccount is non-null iff type is root
-    type = Column(Enum('root', 'shared_folder', 'todo'),
-            nullable=False, default='root')
+    type = Column(Enum('root', 'shared_folder'), nullable=False, default='root')
 
     @property
     def email_address(self):
@@ -472,71 +471,6 @@ class UIDValidity(JSONSerializable, Base):
     highestmodseq = Column(Integer, nullable=False)
 
     __table_args__ = (UniqueConstraint('imapaccount_id', 'folder_name'),)
-
-class TodoItem(JSONSerializable, Base):
-    """ Each todo item has a row in TodoItem described the item's metadata.
-        Additionally, for each thread that is a todo item, all messages within
-        that thread should be in the user's todo namespace.
-    """
-    thread_id = Column(ForeignKey('thread.id', ondelete='CASCADE'),
-            nullable=False)
-    thread = relationship("Thread", backref="todo_item")
-
-    # Gmail thread IDs are only unique per-account, so in order to de-dupe, we
-    # need to store the account that this thread came from. When we get a
-    # Thread database table, these two lines can go.
-    imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
-            nullable=False)
-    imapaccount = relationship("ImapAccount")
-
-    # this must be a namespace of the todo type
-    namespace_id = Column(ForeignKey('namespace.id'), nullable=False)
-    namespace = relationship("Namespace", backref="todo_items")
-
-    # the todo item description (defaults to the email's subject but can be changed)
-    display_name = Column(String(255), nullable=False)
-
-    # TODO possibly in the future we'll want to store richer metadata about
-    # these due dates (eg, convert each into a # of days)
-    due_date = Column(Enum('Today', 'Soon'), nullable=False)
-
-    # if completed: the date on which the task was completed
-    # a null value indicates an incomplete task
-    date_completed = Column(Date, nullable=True)
-
-    @property
-    def completed(self):
-        return self.date_completed is not None
-
-    # within a due date, items will be sorted by increasing sort_index
-    sort_index = Column(Integer, nullable=False)
-
-    def cereal(self):
-        return dict(
-                id             = self.id,
-                display_name   = self.display_name,
-                due_date       = self.due_date,
-                completed      = self.date_completed is not None,
-                date_completed = self.date_completed,
-                sort_index     = self.sort_index,
-                # NOTE: eventually we may want to have some sort of thread
-                # cache layer on the client and just serialize the id instead
-                thread         = self.thread.cereal(),
-            )
-
-class TodoNamespace(JSONSerializable, Base):
-    """ A 1-1 mapping between users and their todo namespaces """
-
-    namespace = relationship('Namespace',
-            backref=backref('todo_namespace', uselist=False))
-    namespace_id = Column(Integer, ForeignKey('namespace.id'), nullable=False,
-            unique=True)
-
-    user = relationship('User', backref=backref('todo_namespace', uselist=False))
-    user_id = Column(Integer, ForeignKey('user.id'), nullable=False, unique=True)
-
-    def cereal(self):
-        return dict(id=self.id)
 
 class Thread(JSONSerializable, Base):
     """ Threads are a first-class object in Inbox. This thread aggregates
