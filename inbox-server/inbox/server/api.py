@@ -8,11 +8,9 @@ import zerorpc
 
 from . import postel
 from .config import config
-from .models import new_db_session
+from .models import session_scope
 from .models.tables import Message, SharedFolder, User, ImapAccount
 from .models.namespace import threads_for_folder
-
-db_session = new_db_session()
 
 from .log import get_logger
 log = get_logger()
@@ -26,21 +24,22 @@ def namespace_auth(fn):
     """
     @wraps(fn)
     def namespace_auth_fn(self, user_id, namespace_id, *args, **kwargs):
-        self.user_id = user_id
-        self.namespace_id = namespace_id
-        user = db_session.query(User).filter_by(id=user_id).join(ImapAccount).one()
-        for account in user.imapaccounts:
-            if account.namespace.id == namespace_id:
-                self.namespace = account.namespace
-                return fn(self, *args, **kwargs)
+        with session_scope() as db_session:
+            self.user_id = user_id
+            self.namespace_id = namespace_id
+            user = db_session.query(User).filter_by(id=user_id).join(ImapAccount).one()
+            for account in user.imapaccounts:
+                if account.namespace.id == namespace_id:
+                    self.namespace = account.namespace
+                    return fn(self, *args, **kwargs)
 
-        shared_nses = db_session.query(SharedFolder)\
-                .filter(SharedFolder.user_id == user_id)
-        for shared_ns in shared_nses:
-            if shared_ns.id == namespace_id:
-                return fn(self, *args, **kwargs)
+            shared_nses = db_session.query(SharedFolder)\
+                    .filter(SharedFolder.user_id == user_id)
+            for shared_ns in shared_nses:
+                if shared_ns.id == namespace_id:
+                    return fn(self, *args, **kwargs)
 
-        raise NSAuthError("User '{0}' does not have access to namespace '{1}'".format(user_id, namespace_id))
+            raise NSAuthError("User '{0}' does not have access to namespace '{1}'".format(user_id, namespace_id))
 
     return namespace_auth_fn
 
@@ -84,11 +83,12 @@ class API(object):
             self._sync = zerorpc.Client(os.environ.get('CRISPIN_SERVER_LOC', None))
         status = self._sync.status()
         user_ids = status.keys()
-        users = db_session.query(User).filter(User.id.in_(user_ids))
-        for user in users:
-            status[user.id]['stored_data'] = user.total_stored_data()
-            status[user.id]['stored_messages'] = user.total_stored_messages()
-        return status
+        with session_scope() as db_session:
+            users = db_session.query(User).filter(User.id.in_(user_ids))
+            for user in users:
+                status[user.id]['stored_data'] = user.total_stored_data()
+                status[user.id]['stored_messages'] = user.total_stored_messages()
+            return status
 
     @namespace_auth
     @jsonify
@@ -110,8 +110,9 @@ class API(object):
             folder, since we fetch the full thread if one of the messages is in
             the requested folder.
         """
-        return [t.cereal() for t in threads_for_folder(self.namespace.id,
-                    db_session, folder_name)]
+        with session_scope() as db_session:
+            return [t.cereal() for t in threads_for_folder(self.namespace.id,
+                        db_session, folder_name)]
 
     @namespace_auth
     def send_mail(self, recipients, subject, body):
@@ -127,11 +128,12 @@ class API(object):
     @namespace_auth
     @jsonify
     def body_for_message(self, message_id):
-        message = db_session.query(Message).join(Message.parts) \
-                .filter(Message.id==message_id,
-                        Message.namespace_id==self.namespace.id).one()
+        with session_scope() as db_session:
+            message = db_session.query(Message).join(Message.parts) \
+                    .filter(Message.id==message_id,
+                            Message.namespace_id==self.namespace.id).one()
 
-        return {'data': message.prettified_body}
+            return {'data': message.prettified_body}
 
     @jsonify
     def top_level_namespaces(self, user_id):
@@ -142,15 +144,17 @@ class API(object):
         """
         nses = {'private': [], 'shared': [] }
 
-        user = db_session.query(User).join(ImapAccount).filter_by(id=user_id).one()
+        with session_scope() as db_session:
+            user = db_session.query(User).join(ImapAccount)\
+                    .filter_by(id=user_id).one()
 
-        for account in user.imapaccounts:
-            account_ns = account.namespace
-            nses['private'].append(account_ns.cereal())
+            for account in user.imapaccounts:
+                account_ns = account.namespace
+                nses['private'].append(account_ns.cereal())
 
-        shared_nses = db_session.query(SharedFolder)\
-                .filter(SharedFolder.user_id == user_id)
-        for shared_ns in shared_nses:
-            nses['shared'].append(shared_ns.cereal())
+            shared_nses = db_session.query(SharedFolder)\
+                    .filter(SharedFolder.user_id == user_id)
+            for shared_ns in shared_nses:
+                nses['shared'].append(shared_ns.cereal())
 
-        return nses
+            return nses
