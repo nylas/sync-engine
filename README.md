@@ -5,7 +5,8 @@
 Before you look at the code, please go read [Worse is
 Better](http://www.jwz.org/doc/worse-is-better.html).
 
-While you're at it, please also read Ryan Dahl's [rant](https://gist.github.com/cookrn/4015437#file-rant-md).
+While you're at it, please also read Ryan Dahl's
+[rant](https://gist.github.com/cookrn/4015437#file-rant-md).
 
 Now take a deep breath.
 
