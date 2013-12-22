@@ -44,16 +44,6 @@ running syncs. We don't provide knobs to start/stop sync instances at a
 per-folder level, only at a per-account level. There's no good reason to be
 able to do so, and leaving that configurability out simplifies the interface.
 
-------------------------
-A NOTE ABOUT CONCURRENCY
-------------------------
-
-Also, in order to prevent creation of duplicate thread entries, we immediately
-commit thread objects to disk as soon as they're created, and only then
-associate them with new message objects. Otherwise, a message in the same
-thread arriving via multiple folders may cause duplicate thread rows, leaving
-the database in an inconsistent state.
-
 --------------
 SESSION SCOPES
 --------------
