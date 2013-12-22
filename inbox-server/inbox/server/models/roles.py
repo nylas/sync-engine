@@ -1,14 +1,18 @@
 import os
 
 from hashlib import sha256
-from boto.s3.connection import S3Connection
-from boto.s3.key import Key
 
 from sqlalchemy import Column, Integer, String
 
 from ..config import config
 from ..log import get_logger
 log = get_logger()
+
+STORE_MSG_ON_S3 = config['STORE_MESSAGES_ON_S3']
+
+if STORE_MSG_ON_S3:
+    from boto.s3.connection import S3Connection
+    from boto.s3.key import Key
 
 from inbox.util.file import mkdirp, remove_file
 
@@ -18,8 +22,6 @@ class JSONSerializable(object):
             the web client.
         """
         raise NotImplementedError("cereal not implemented")
-
-STORE_MSG_ON_S3 = True
 
 class Blob(object):
     """ A blob of data that can be saved to local or remote (S3) disk. """
@@ -74,7 +76,8 @@ class Blob(object):
         # TODO: store AWS credentials in a better way.
         assert 'AWS_ACCESS_KEY_ID' in config, "Need AWS key!"
         assert 'AWS_SECRET_ACCESS_KEY' in config, "Need AWS secret!"
-        assert 'MESSAGE_STORE_BUCKET_NAME' in config, "Need bucket name to store message data!"
+        assert 'MESSAGE_STORE_BUCKET_NAME' in config, \
+                "Need bucket name to store message data!"
         # Boto pools connections at the class level
         conn = S3Connection(config.get('AWS_ACCESS_KEY_ID'),
                             config.get('AWS_SECRET_ACCESS_KEY'))
@@ -122,7 +125,8 @@ class Blob(object):
         assert self.data_sha256
         # Nest it 6 items deep so we don't have folders with too many files.
         h = self.data_sha256
-        return os.path.join('/mnt', 'parts', h[0], h[1], h[2], h[3], h[4], h[5])
+        return os.path.join('/srv', 'inboxapp-data', 'parts',
+                h[0], h[1], h[2], h[3], h[4], h[5])
 
     @property
     def _data_file_path(self):

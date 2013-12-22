@@ -12,15 +12,20 @@ except IOError:
 def is_prod():
     return server_type == 'production'
 
-config = dict(server_type=server_type)
+config = dict(SERVER_TYPE=server_type)
+
+def transform_bools(v):
+    mapping = dict(true=True, false=False)
+    return mapping[v] if v in mapping else v
 
 def load_config(filename='config.cfg'):
     global config
     try:
         parser=SafeConfigParser()
         parser.read([filename])
-        config.update(dict((k.upper(), v) for k, v in parser.items('inboxserver')))
+        config.update(dict((k.upper(), transform_bools(v))
+            for k, v in parser.items('inboxserver')))
         log.info('Loaded configuration from {0}'.format(filename))
     except NoSectionError:
-        sys.stderr.write("Couldn't load configuration from {0}\n".format(filename))
-        sys.exit(0)
+        print >>sys.stderr, "Couldn't load configuration from {0}".format(filename)
+        sys.exit(1)
