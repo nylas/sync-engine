@@ -26,8 +26,8 @@ from geventconnpool import retry
 
 from .imap import uidvalidity_callback, new_or_updated, remove_deleted_uids
 from .imap import chunked_uid_download, update_metadata, resync_uids_from
-from .imap import base_initial_sync, base_poll, download_and_commit_uids
-from .imap import ImapSyncMonitor
+from .imap import base_initial_sync, base_poll, safe_download, commit_uids
+from .imap import create_db_objects, ImapSyncMonitor
 
 from ..models import imapaccount as account
 from ..models.tables import ImapAccount, Namespace, ImapUid, Message
@@ -79,6 +79,7 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
         chunked_uid_download(crispin_client, db_session, log, folder_name,
                 full_download, len(local_uids), len(remote_uids),
                 shared_state['status_cb'], shared_state['syncmanager_lock'],
+                gmail_download_and_commit_uids,
                 account.create_gmail_message, c)
 
     # Complete X-GM-MSGID mapping is no longer needed after initial sync.
@@ -124,6 +125,19 @@ def get_g_metadata(crispin_client, db_session, log, folder_name, uids, c):
         db_session.commit()
 
     return remote_g_metadata
+
+def gmail_download_and_commit_uids(crispin_client, db_session, log, folder_name,
+        uids, msg_create_fn, syncmanager_lock, c):
+    raw_messages = safe_download(crispin_client, log, uids, c)
+    with syncmanager_lock:
+        # there is the possibility that another green thread has already
+        # downloaded some message(s) from this batch... check within the lock
+        raw_messages = deduplicate_message_object_creation(
+                crispin_client.account_id, db_session, log, raw_messages)
+        new_imapuids = create_db_objects(crispin_client.account_id, db_session,
+                log, folder_name, raw_messages, msg_create_fn)
+        commit_uids(db_session, log, new_imapuids)
+        return len(new_imapuids)
 
 def chunked_thread_download(crispin_client, db_session, log, folder_name,
         g_metadata, uids, status_cb, syncmanager_lock, c):
@@ -212,11 +226,18 @@ def download_threads(crispin_client, db_session, log, acc, folder_name,
         uids = uids_for[g_thrid]
         log.info("downloading thread {0} with {1} messages" \
                 .format(g_thrid, len(uids)))
-        download_and_commit_uids(crispin_client, db_session, log,
+        gmail_download_and_commit_uids(crispin_client, db_session, log,
                 crispin_client.selected_folder_name, sorted(uids, reverse=True),
                 account.create_gmail_message, syncmanager_lock, c)
         num_downloaded_threads += 1
     return num_downloaded_threads
+
+def deduplicate_message_object_creation(account_id, db_session, log,
+        raw_messages):
+    new_g_msgids = set([msg[5] for msg in raw_messages])
+    existing_g_msgids = set(account.g_msgids(account_id, db_session,
+        in_=new_g_msgids))
+    return [msg for msg in raw_messages if msg[5] not in existing_g_msgids]
 
 def deduplicate_message_download(crispin_client, db_session, log,
         remote_g_metadata, uids, c):

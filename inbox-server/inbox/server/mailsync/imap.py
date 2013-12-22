@@ -270,11 +270,11 @@ def highestmodseq_update(crispin_client, db_session, log, folder_name,
     new_uidvalidity = crispin_client.selected_uidvalidity
     log.info("Starting highestmodseq update on {0} (current HIGHESTMODSEQ: {1})".format(folder_name, new_highestmodseq))
     local_uids = account.all_uids(account_id, db_session, folder_name)
-    uids = crispin_client.new_and_updated_uids(last_highestmodseq, c)
+    changed_uids = crispin_client.new_and_updated_uids(last_highestmodseq, c)
     remote_uids = crispin_client.all_uids(c)
 
-    if uids:
-        new, updated = new_or_updated(uids, local_uids)
+    if changed_uids:
+        new, updated = new_or_updated(changed_uids, local_uids)
         log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
         local_uids += new
         local_uids = set(local_uids).difference(
@@ -284,8 +284,8 @@ def highestmodseq_update(crispin_client, db_session, log, folder_name,
         update_metadata(crispin_client, db_session, log, folder_name,
                 updated, c)
 
-        highestmodseq_fn(crispin_client, db_session, log, folder_name, uids,
-                local_uids, status_cb, syncmanager_lock, c)
+        highestmodseq_fn(crispin_client, db_session, log, folder_name,
+                changed_uids, local_uids, status_cb, syncmanager_lock, c)
     else:
         log.info("No new or updated messages")
 
@@ -298,8 +298,8 @@ def highestmodseq_update(crispin_client, db_session, log, folder_name,
 def imap_highestmodseq_update(crispin_client, db_session, log, folder_name,
         uids, local_uids, status_cb, syncmanager_lock, c):
     chunked_uid_download(crispin_client, db_session, log, folder_name, uids, 0,
-            len(uids), status_cb, account.create_message,
-            syncmanager_lock, c)
+            len(uids), status_cb, download_and_commit_uids,
+            account.create_message, syncmanager_lock, c)
 
 def uidvalidity_callback(db_session, account_id):
     def fn(folder, select_info):
@@ -338,7 +338,8 @@ def imap_initial_sync(crispin_client, db_session, log, folder_name,
 
     chunked_uid_download(crispin_client, db_session, log, folder_name,
             unknown_uids, len(local_uids), len(remote_uids),
-            shared_state['status_cb'], account.create_message, c)
+            shared_state['status_cb'], download_and_commit_uids,
+            account.create_message, c)
 
 def check_flags(crispin_client, db_session, folder_name, local_uids, c):
     """
@@ -357,7 +358,7 @@ def check_flags(crispin_client, db_session, folder_name, local_uids, c):
 
 def chunked_uid_download(crispin_client, db_session, log,
         folder_name, uids, num_local_messages, num_total_messages, status_cb,
-        syncmanager_lock, msg_create_fn, c):
+        syncmanager_lock, download_commit_fn, msg_create_fn, c):
     log.info("{0} uids left to fetch".format(len(uids)))
 
     if uids:
@@ -367,7 +368,7 @@ def chunked_uid_download(crispin_client, db_session, log,
         # we prioritize message download by reverse-UID order, which
         # generally puts more recent messages first
         for uids in chunk(reversed(uids), chunk_size):
-            num_local_messages += download_and_commit_uids(crispin_client,
+            num_local_messages += download_commit_fn(crispin_client,
                     db_session, log, folder_name, uids, msg_create_fn,
                     syncmanager_lock, c)
 
