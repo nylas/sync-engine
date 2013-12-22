@@ -52,6 +52,11 @@ def test_basics(db_session, config):
     assert bob.revisions[0].record_id == bob_insert_txn.id
     assert isinstance(bob.revisions[0], MonkeyRevision)
 
+    # triggering dirty obj in session shouldn't create a rev w/no delta
+    bob.age = 5
+    db_session.commit()
+    assert bob.revisions[-1].command == 'insert'
+
     bob.age += 1
     db_session.commit()
     assert bob.revisions[-1].command == 'update'

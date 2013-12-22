@@ -130,9 +130,11 @@ class Transaction(Base, Revision):
         try:
             self.namespace = obj.namespace
         except AttributeError:
-            log.info("Couldn't create revision for {0}:{1}".format(
-                self.table_name, self.record_id))
+            log.info("Couldn't create {2} revision for {0}:{1}".format(
+                self.table_name, self.record_id, self.command))
+            log.info("Delta is {0}".format(self.delta))
             log.info("Thread is: {0}".format(obj.thread_id))
+            import pdb; pdb.set_trace()
             raise
 
 HasRevisions = gen_rev_role(Transaction)
@@ -394,8 +396,13 @@ class FolderItem(JSONSerializable, Base, HasRevisions):
     """ Maps threads to folders. """
 
     thread_id = Column(Integer, ForeignKey('thread.id'), nullable=False)
+    # thread relationship is on Thread to make delete-orphan cascade work
 
     folder_name = Column(String(191), index=True)
+
+    @property
+    def namespace(self):
+        return self.thread.namespace
 
     __table_args__ = (UniqueConstraint('folder_name', 'thread_id'),)
 

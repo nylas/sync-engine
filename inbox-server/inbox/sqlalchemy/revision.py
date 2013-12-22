@@ -51,8 +51,11 @@ def gen_rev_role(rev_cls):
     return HasRevisions
 
 def create_insert_revision(rev_cls, obj, session):
+    d = delta(obj)
+    assert d, "Can't insert object {0}:{1} with no delta".format(
+            obj.__tablename__, obj.id)
     return rev_cls(command='insert', record_id=obj.id,
-            table_name=obj.__tablename__, delta=delta(obj))
+            table_name=obj.__tablename__, delta=d)
 
 def create_delete_revision(rev_cls, obj, session):
     # NOTE: The application layer needs to deal with purging all history
@@ -61,8 +64,12 @@ def create_delete_revision(rev_cls, obj, session):
             table_name=obj.__tablename__)
 
 def create_update_revision(rev_cls, obj, session):
+    d = delta(obj)
+    # sqlalchemy objects can be dirty even if they haven't changed
+    if not d:
+        return
     return rev_cls(command='update', record_id=obj.id,
-            table_name=obj.__tablename__, delta=delta(obj))
+            table_name=obj.__tablename__, delta=d)
 
 def delta(obj):
     obj_state = inspect(obj)
@@ -124,8 +131,9 @@ def versioned_session(session, rev_cls, rev_role):
     def create_revision(session, obj, create_fn):
         if isinstance(obj, rev_role):
             rev = create_fn(rev_cls, obj, session)
-            rev.set_extra_attrs(obj)
-            session.add(rev)
+            if rev is not None:
+                rev.set_extra_attrs(obj)
+                session.add(rev)
 
     @event.listens_for(session, 'after_flush')
     def after_flush(session, flush_context):

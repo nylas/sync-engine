@@ -263,8 +263,6 @@ def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, x_gm_thrid,
         if label.lower() not in existing_labels:
             # creates by association
             item = FolderItem(thread=thread, folder_name=label)
-            # temp ref for versioning (kind of a hack)
-            item.namespace = thread.namespace
             db_session.add(item)
 
     return new_uid
