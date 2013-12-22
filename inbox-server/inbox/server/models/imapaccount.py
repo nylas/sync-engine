@@ -134,6 +134,7 @@ def create_message(db_session, log, account, namespace, folder_name, uid,
         The same goes for namespace---we need the object because it's a
         _backref_ to imapaccount, and we need its ID to create transactions.
     """
+    assert namespace is not None and account is not None # trickle-down bugs
     parsed = mime.from_string(body)
 
     mime_version = parsed.headers.get('Mime-Version')
