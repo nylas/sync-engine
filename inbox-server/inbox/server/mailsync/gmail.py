@@ -3,7 +3,7 @@
 GMAIL SYNC ENGINE
 -----------------
 
-Gmail is is theoretically an IMAP backend, but it differs enough from standard
+Gmail is theoretically an IMAP backend, but it differs enough from standard
 IMAP that we handle it differently. The state-machine rigamarole noted in
 .imap.py applies, but we change a lot of the internal algorithms to fit Gmail's
 structure.
