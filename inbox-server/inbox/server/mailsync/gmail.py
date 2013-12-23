@@ -15,8 +15,8 @@ The only way to delete messages permanently on Gmail is to move a message to
 the trash folder and then EXPUNGE.
 
 We use Gmail's thread IDs locally, and download all mail via the All Mail
-expand threads when downloading folders other than All Mail so the user always
-gets the full thread when they look at mail.
+folder. We expand threads when downloading folders other than All Mail so the
+user always gets the full thread when they look at mail.
 """
 from __future__ import division
 
