@@ -51,7 +51,7 @@ class SyncService(object):
                 query = query.filter_by(id=account_id)
             fqdn = socket.getfqdn()
             for acc in query:
-                self.log.info("Starting sync for acc {0}" \
+                self.log.info("Starting sync for account {0}" \
                         .format(acc.email_address))
                 if acc.sync_host is not None and acc.sync_host != fqdn:
                     results[acc.email_address] = \
