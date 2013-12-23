@@ -247,8 +247,7 @@ def deduplicate_message_download(crispin_client, db_session, log,
     full_download, imapuid_only = partition(
             lambda uid: remote_g_metadata[uid]['msgid'] in local_g_msgids,
             sorted(uids, key=int))
-    log.info("Skipping {0} uids already downloaded".format(
-        len(imapuid_only)))
+    log.info("Skipping {0} uids already downloaded".format(len(imapuid_only)))
     if len(imapuid_only) > 0:
         add_new_imapuid(crispin_client, db_session, remote_g_metadata,
                 imapuid_only, c)

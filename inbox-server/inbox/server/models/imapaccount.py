@@ -116,8 +116,8 @@ def update_uidvalidity(account_id, session, folder_name, uidvalidity,
     cached_validity.uid_validity = uidvalidity
     session.add(cached_validity)
 
-def create_message(db_session, log, account, namespace, folder_name, uid,
-        internaldate, flags, body):
+def create_message(db_session, log, account, folder_name, uid, internaldate,
+        flags, body):
     """ Parses message data, creates metadata database entries, and writes mail
         parts to disk.
 
@@ -267,9 +267,9 @@ def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, x_gm_thrid,
 
     return new_uid
 
-def create_gmail_message(db_session, log, account, namespace, folder_name, uid,
+def create_gmail_message(db_session, log, account, folder_name, uid,
         internaldate, flags, body, x_gm_thrid, x_gm_msgid, x_gm_labels):
-    new_uid = create_message(db_session, log, account, namespace, folder_name,
-            uid, internaldate, flags, body)
+    new_uid = create_message(db_session, log, account, folder_name, uid,
+            internaldate, flags, body)
     return add_gmail_attrs(db_session, log, new_uid, flags, folder_name,
             x_gm_thrid, x_gm_msgid, x_gm_labels)
