@@ -236,17 +236,23 @@ def create_message(db_session, log, account, folder_name, uid, internaldate,
             new_msg.parts.append(new_part)
     except mime.DecodingError:
         log_decode_error(account.id, folder_name, uid, body)
-        raise   # for now
+        log.error("DecodeError encountered, unparseable message logged to {0}" \
+                .format(get_errfilename(account.id, folder_name, uid)))
+        return
     new_msg.calculate_sanitized_body()
 
     return imapuid
 
-def log_decode_error(account_id, folder_name, uid, msg_string):
-    """ msg_string is in the original encoding pulled off the wire """
+def get_errfilename(account_id, folder_name, uid):
     errdir = os.path.join(config['LOGDIR'], str(account_id), 'errors',
             folder_name)
     errfile = os.path.join(errdir, str(uid))
     mkdirp(errdir)
+    return errfile
+
+def log_decode_error(account_id, folder_name, uid, msg_string):
+    """ msg_string is in the original encoding pulled off the wire """
+    errfile = get_errfilename(account_id, folder_name, uid)
     with open(errfile, 'w') as fh:
         fh.write(msg_string)
 
@@ -288,5 +294,6 @@ def create_gmail_message(db_session, log, account, folder_name, uid,
         internaldate, flags, body, x_gm_thrid, x_gm_msgid, x_gm_labels):
     new_uid = create_message(db_session, log, account, folder_name, uid,
             internaldate, flags, body)
-    return add_gmail_attrs(db_session, log, new_uid, flags, folder_name,
-            x_gm_thrid, x_gm_msgid, x_gm_labels)
+    if new_uid:
+        return add_gmail_attrs(db_session, log, new_uid, flags, folder_name,
+                x_gm_thrid, x_gm_msgid, x_gm_labels)
