@@ -61,7 +61,7 @@ from gc import collect as garbage_collect
 
 from geventconnpool import retry
 from gevent import Greenlet, sleep
-from gevent.coros import BoundedSemaphore
+from gevent.coros import RLock
 
 from inbox.util.itert import chunk, partition
 
@@ -88,7 +88,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         self.shared_state = {
                 # IMAP folders are kept up-to-date via polling
                 'poll_frequency': poll_frequency,
-                'syncmanager_lock': BoundedSemaphore(1)
+                'syncmanager_lock': RLock(),
                 }
 
         self.folder_monitors = []
