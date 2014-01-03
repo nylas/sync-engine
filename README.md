@@ -92,6 +92,8 @@ custom Nginx stuff or SSL certs. This should be a separate package.
 Right now Flask handles both static files and upgrading to HTTP 1.1, which is
 ok for development.
 
+If you need to delete old docker containers, you can run `docker rm `docker ps -a -q``
+
 <hr/>
 
 ## Style guide and git notes
