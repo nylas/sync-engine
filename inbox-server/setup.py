@@ -22,7 +22,7 @@ setup(
 
     install_requires = [
         "argparse==1.2.1",
-        "beautifulsoup4==4.1.3",
+        "beautifulsoup4==4.3.2",
         "httplib2==0.8",
         "pytest==2.3.4",
         "tornado==3.0.1",
@@ -44,7 +44,6 @@ setup(
         "supervisor==3.0",
         "iconv",
         "chardet==2.1.1",
-        "PIL==1.1.7",
         "Wand==0.3.5",
         "setproctitle==1.1.7",
         # For ZeroRPC
