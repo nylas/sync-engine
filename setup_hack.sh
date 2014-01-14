@@ -1,9 +1,12 @@
 apt-get -y install python-software-properties
 
-echo 'deb http://us.archive.ubuntu.com/ubuntu/ precise universe' >> /etc/apt/sources.list
-add-apt-repository -y ppa:nginx/stable
-apt-get -y update
-apt-get -y upgrade --force-yes
+# echo 'deb http://us.archive.ubuntu.com/ubuntu/ precise universe' >> /etc/apt/sources.list
+# add-apt-repository -y ppa:nginx/stable
+# apt-get -y update
+# apt-get -y upgrade --force-yes
+# apt-get install nginx
+
+
 
 # Preconfigure MySQL root password
 echo "mysql-server mysql-server/root_password password docker" | debconf-set-selections
@@ -12,13 +15,13 @@ echo "mysql-server mysql-server/root_password_again password docker" | debconf-s
 # Dependencies
 apt-get -y install git \
                    wget \
-                   nginx \
                    supervisor \
                    mysql-server \
                    mysql-client \
                    python \
                    python-dev \
                    python-pip \
+                   python-setuptools \
                    build-essential \
                    libmysqlclient-dev \
                    gcc \
@@ -28,12 +31,16 @@ apt-get -y install git \
                    python-zmq \
                    python-lxml \
                    libmagickwand-dev \
-                   tmux
+                   tmux \
+                   curl
 
 
 # Install requirements from PyPI and GitHub
-pip install --upgrade pip
-easy_install -U distribute
+pip install --upgrade pip setuptools
+# easy_install -U distribute
+
+
+curl -O http://python-distribute.org/distribute_setup.py; python distribute_setup.py; rm distribute_setup.py;
 
 pip install argparse==1.2.1 \
             beautifulsoup4==4.3.2 \
@@ -58,23 +65,26 @@ pip install argparse==1.2.1 \
             Fabric==1.7.0 \
             supervisor==3.0 \
             chardet==2.1.1 \
-            #PIL==1.1.7 \
-            #http://effbot.org/media/downloads/Imaging-1.1.7.tar.gz \
             Wand==0.3.5 \
             setproctitle==1.1.8 \
             Cython==0.19.1 \
             zerorpc==0.4.3 \
             gdata==2.0.18 \
-            python-dateutil==2.1 \
-            flanker==0.3.3 \
-            git+https://github.com/zeromq/pyzmq.git@v13.1.0#egg=zmq \
-            git+https://github.com/inboxapp/imapclient.git#egg=imapclient \
-            git+https://github.com/inboxapp/bleach.git#egg=bleach \
-            git+https://github.com/inboxapp/iconv.git#egg=iconv \
-            geventconnpool==0.2
+            python-dateutil==2.2 \
+            flanker==0.3.3
 
-# Install NodeJS
-wget -O - http://nodejs.org/dist/v0.8.26/node-v0.8.26-linux-x64.tar.gz | tar -C /usr/local/ --strip-components=1 -zxv
+pip install  git+https://github.com/zeromq/pyzmq.git@v13.1.0#egg=zmq
+pip install  git+https://github.com/inboxapp/imapclient.git#egg=imapclient
+pip install  git+https://github.com/inboxapp/bleach.git#egg=bleach
+pip install  git+https://github.com/inboxapp/iconv.git#egg=iconv
+
+pip install  http://effbot.org/media/downloads/Imaging-1.1.7.tar.gz#egg=PIL
+#PIL==1.1.7 \
+
+
+
+# Install NodeJS (eventually)
+# wget -O - http://nodejs.org/dist/v0.8.26/node-v0.8.26-linux-x64.tar.gz | tar -C /usr/local/ --strip-components=1 -zxv
 
 
 # MySQL -- copy this file!
