@@ -15,7 +15,7 @@ def is_prod():
 config = dict(SERVER_TYPE=server_type)
 
 def transform_bools(v):
-    mapping = dict(true=True, false=False)
+    mapping = dict(true=True, false=False, yes=True, no=False)
     return mapping[v] if v in mapping else v
 
 def load_config(filename='config.cfg'):
