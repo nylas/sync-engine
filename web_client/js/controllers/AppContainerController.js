@@ -19,6 +19,7 @@ app.controller("AppContainerController", function (
     $route,
     $routeParams,
     $location,
+    $anchorScroll,
     DB)
 {
 
@@ -38,6 +39,8 @@ app.controller("AppContainerController", function (
           $scope.isFullComposerViewActive = false;
           $scope.activeThread = t;
           $scope.isMailMessageViewActive = true;
+
+          $location.hash("Foobar");
 
         });
       }
