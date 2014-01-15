@@ -1,3 +1,9 @@
+# Inbox-specific
+/config.cfg
+
+# Vagrant
+/.vagrant
+
 *.py[cod]
 
 # C extensions

@@ -1,0 +1,21 @@
+#!/usr/bin/env python
+
+from inbox.server.config import load_config
+load_config()
+
+from inbox.server.models import engine
+from inbox.util.db import drop_everything
+
+import sys
+import argparse
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-u', '--with-users', action='store_true',
+            dest='with_users', default=False)
+    args = parser.parse_args()
+    drop_everything(engine, with_users=args.with_users)
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main())
