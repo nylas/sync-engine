@@ -34,7 +34,7 @@ app.factory("IBMessage", function ($injector, md5) {
     // Fix the date
     this.date = new Date(data.date.$date);
 
-    var gravatar_size = 25;
+    var gravatar_size = 36;
     if (this.from !== null)
       this.gravatar_url = "https://www.gravatar.com/avatar/" +
         md5.createHash(this.from[1].toLowerCase()) + "?" +
@@ -186,7 +186,7 @@ app.factory("IBContact", function ($injector, md5) {
 
   IBObject.prototype.gravatarURL = function (size) {
     // TODO pull this size into the css somewhere I think.
-    size = typeof seize !== "undefined" ? size : 25; // Default size.
+    size = typeof seize !== "undefined" ? size : 36; // Default size.
     var gravatar_url = "http://www.gravatar.com/avatar/" +
       md5(this.email.toLowerCase()) + "?" +
       "d=mm&" +
