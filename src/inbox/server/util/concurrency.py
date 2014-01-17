@@ -15,7 +15,7 @@ def make_zerorpc(cls, location):
         s.bind(location)
         log.info("ZeroRPC: Starting %s at %s" % (cls.__name__, location))
         s.run()
-    Greenlet.spawn(m)
+    return Greenlet.spawn(m)
 
 def print_dots():
     """This Greenlet prints dots to the console which is useful for making

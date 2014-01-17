@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from gevent import monkey; monkey.patch_all()
+from gevent import joinall
 import argparse
 import signal
 import sys
@@ -30,27 +31,32 @@ def start(args=None):
     from inbox.server.models import init_db
     init_db()
 
+    threads = []
+
     # Start ZeroRPC api server service
     from inbox.server.util.concurrency import make_zerorpc
     from inbox.server.api import API
 
     api_srv_loc = config.get('API_SERVER_LOC', None)
-    make_zerorpc(API, api_srv_loc)
+    threads.append(make_zerorpc(API, api_srv_loc))
 
     # Start ZeroRPC mail sync server service
     from inbox.server.mailsync.service import SyncService
     sync_srv_loc = config.get('CRISPIN_SERVER_LOC', None)
-    make_zerorpc(SyncService, sync_srv_loc)
+    threads.append(make_zerorpc(SyncService, sync_srv_loc))
 
     # Start ZeroRPC contacts sync service
     from inbox.server.rolodex import ContactSync
     contacts_srv_loc = config.get('ROLODEX_SERVER_LOC', None)
-    make_zerorpc(ContactSync, contacts_srv_loc)
+    threads.append(make_zerorpc(ContactSync, contacts_srv_loc))
 
     # start ZeroRPC search server service
     from inbox.server.search import SearchService
     search_srv_loc = config.get('SEARCH_SERVER_LOC', None)
-    make_zerorpc(SearchService, search_srv_loc)
+    threads.append(make_zerorpc(SearchService, search_srv_loc))
+
+    # hang out forever and run some services
+    joinall(threads)
 
 def sync(args):
     import zerorpc
