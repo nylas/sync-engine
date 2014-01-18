@@ -101,12 +101,12 @@
   {
     "type": "shell",
     "only": ["virtualbox-iso", "vmware-iso"],
-    "inline": ["echo 'vagrant' | {{.Vars}} sudo -E -S /bin/sh  ~/inbox/setup.sh"]
+    "inline": ["cd ~/inbox && echo 'vagrant' | {{.Vars}} sudo -E -S /bin/sh  ./setup.sh"]
   },
   {
     "type": "shell",
     "only": ["amazon-ebs", "digitalocean"],
-    "inline": ["sudo -E /bin/sh ~/inbox/setup.sh"]
+    "inline": ["cd ~/inbox && sudo -E /bin/sh ./setup.sh"]
   }
 
 
