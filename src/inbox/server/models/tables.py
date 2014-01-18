@@ -8,7 +8,6 @@ from sqlalchemy import ForeignKey, Text, Index, func, event
 from sqlalchemy.orm import reconstructor, relationship, backref, deferred
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
-from sqlalchemy.ext.hybrid import hybrid_property, Comparator
 from sqlalchemy.types import BLOB
 
 from bs4 import BeautifulSoup, Doctype, Comment

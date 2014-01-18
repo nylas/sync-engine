@@ -7,10 +7,12 @@ from bson import json_util
 import zerorpc
 
 from . import postel
+from . import action
 from .config import config
 from .models import session_scope
 from .models.tables import Message, SharedFolder, User, ImapAccount, Thread
-from .models.namespace import threads_for_folder
+from .models.namespace import threads_for_folder, archive_thread, move_thread
+from .models.namespace import delete_thread
 
 from .log import get_logger
 log = get_logger()
@@ -193,3 +195,76 @@ class API(object):
         with session_scope() as db_session:
             subjects = db_session.query(Thread.subject).limit(n).all()
             return subjects
+
+    ### actions that need to be synced back to the account backend
+    ### (we use a task queue to ensure reliable syncing)
+
+    @namespace_auth
+    @jsonify
+    def archive(self, thread_id):
+        """ Archive thread locally and also sync back to the backend. """
+        account = self.namespace.imapaccount
+        assert account is not None, "can't archive mail with this namespace"
+
+        # make local change
+        with session_scope() as db_session:
+            archive_thread(self.namespace.id, db_session, thread_id)
+
+        # sync it to the account backend
+        q = action.get_queue()
+        q.enqueue(action.get_archive_fn(account), thread_id)
+
+        # XXX TODO register a failure handler that reverses the local state
+        # change if the change fails to go through---this could cause our
+        # repository to get out of sync with the remote if another client
+        # does the same change in the meantime and we apply that change and
+        # *then* the change reversal goes through... but we can make this
+        # eventually consistent by doing a full comparison once a day or
+        # something.
+
+        return "OK"
+
+    @namespace_auth
+    @jsonify
+    def move(self, thread_id, from_folder, to_folder):
+        """ Move thread locally and also sync back to the backend. """
+        account = self.namespace.imapaccount
+        assert account is not None, "can't move mail with this namespace"
+
+        # make local change
+        with session_scope() as db_session:
+            move_thread(self.namespace.id, db_session, thread_id,
+                    from_folder, to_folder)
+
+        # sync it to the account backend
+        q = action.get_queue()
+        q.enqueue(action.get_move_fn(account), thread_id, from_folder, to_folder)
+
+        # XXX TODO register a failure handler that reverses the local state
+        # change if the change fails to go through
+
+        return "OK"
+
+    @namespace_auth
+    @jsonify
+    def delete(self, thread_id, folder_name):
+        """ Delete thread locally and also sync back to the backend.
+
+        This really just removes the entry from the folder. Message data that
+        no longer belongs to any messages is garbage-collected asynchronously.
+        """
+        account = self.namespace.imapaccount
+        assert account is not None, "can't delete mail with this namespace"
+
+        # make local change
+        with session_scope() as db_session:
+            delete_thread(self.namespace.id, db_session, thread_id, folder_name)
+
+        # sync it to the account backend
+        q = action.get_queue()
+        q.enqueue(action.get_delete_fn(account), thread_id, folder_name)
+
+        # XXX TODO register a failure handler that reverses the local state
+        # change if the change fails to go through
+
+        return "OK"
