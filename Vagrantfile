@@ -9,90 +9,26 @@ AWS_REGION = ENV['AWS_REGION'] || "us-east-1"
 AWS_AMI = ENV['AWS_AMI'] || "ami-69f5a900"
 AWS_INSTANCE_TYPE = ENV['AWS_INSTANCE_TYPE'] || 't1.micro'
 
-FORWARD_DOCKER_PORTS = ENV['FORWARD_DOCKER_PORTS']
-
 SSH_PRIVKEY_PATH = ENV["SSH_PRIVKEY_PATH"]
 
-# A script to upgrade from the 12.04 kernel to the raring backport kernel (3.8)
-# and install docker.
+
+
 $script = <<SCRIPT
-# The username to add to the docker group will be passed as the first argument
-# to the script.  If nothing is passed, default to "vagrant".
-user="$1"
-if [ -z "$user" ]; then
-    user=vagrant
-fi
-
-# Adding an apt gpg key is idempotent.
-wget -q -O - https://get.docker.io/gpg | apt-key add -
-
-# Creating the docker.list file is idempotent, but it may overrite desired
-# settings if it already exists.  This could be solved with md5sum but it
-# doesn't seem worth it.
-echo 'deb http://get.docker.io/ubuntu docker main' > \
-    /etc/apt/sources.list.d/docker.list
 
 # Update remote package metadata.  'apt-get update' is idempotent.
 apt-get update -q
 
-# Install docker.  'apt-get install' is idempotent.
-apt-get install -q -y lxc-docker
+cd /vagrant
+sudo /bin/sh setup.sh
 
-usermod -a -G docker "$user"
-
-tmp=`mktemp -q` && {
-    # Only install the backport kernel, don't bother upgrade if the backport is
-    # already installed.  We want parse the output of apt so we need to save it
-    # with 'tee'.  NOTE: The installation of the kernel will trigger dkms to
-    # install vboxguest if needed.
-    apt-get install -q -y --no-upgrade linux-image-generic-lts-raring | \
-        tee "$tmp"
-
-    # Parse the number of installed packages from the output
-    NUM_INST=`awk '$2 == "upgraded," && $4 == "newly" { print $3 }' "$tmp"`
-    rm "$tmp"
-}
-
-# If the number of installed packages is greater than 0, we want to reboot (the
-# backport kernel was installed but is not running).
-if [ "$NUM_INST" -gt 0 ];
-then
-    echo "Rebooting down to activate new kernel."
-    echo "/vagrant will not be mounted.  Use 'vagrant halt' followed by"
-    echo "'vagrant up' to ensure /vagrant is mounted."
-    shutdown -r now
-fi
 SCRIPT
 
-# We need to install the virtualbox guest additions *before* we do the normal
-# docker installation.  As such this script is prepended to the common docker
-# install script above.  This allows the install of the backport kernel to
-# trigger dkms to build the virtualbox guest module install.
-$vbox_script = <<VBOX_SCRIPT + $script
-# Install the VirtualBox guest additions if they aren't already installed.
-if [ ! -d /opt/VBoxGuestAdditions-4.3.2/ ]; then
-    # Update remote package metadata.  'apt-get update' is idempotent.
-    apt-get update -q
 
-    # Kernel Headers and dkms are required to build the vbox guest kernel
-    # modules.
-    apt-get install -q -y linux-headers-generic-lts-raring dkms
-
-    echo 'Downloading VBox Guest Additions...'
-    wget -cq http://dlc.sun.com.edgesuite.net/virtualbox/4.3.4/VBoxGuestAdditions_4.3.4.iso
-    echo "f120793fa35050a8280eacf9c930cf8d9b88795161520f6515c0cc5edda2fe8a  VBoxGuestAdditions_4.3.4.iso" | sha256sum --check || exit 1
-
-    mount -o loop,ro /home/vagrant/VBoxGuestAdditions_4.3.4.iso /mnt
-    /mnt/VBoxLinuxAdditions.run --nox11
-    umount /mnt
-fi
-VBOX_SCRIPT
 
 Vagrant::Config.run do |config|
   # Setup virtual machine box. This VM configuration code is always executed.
   config.vm.box = BOX_NAME
   config.vm.box_url = BOX_URI
-  config.vm.network :hostonly, "192.168.10.200"
 
   # Use the specified private key path if it is specified and not empty.
   if SSH_PRIVKEY_PATH
@@ -101,6 +37,12 @@ Vagrant::Config.run do |config|
 
   config.ssh.forward_agent = true
 end
+
+
+# Vagrant::VERSION >= "1.1.0" and Vagrant.configure("2") do |config|
+#   config.vm.network :private_network, ip: "192.168.10.200"
+# end
+
 
 # Providers were added on Vagrant >= 1.1.0
 #
@@ -127,6 +69,7 @@ Vagrant::VERSION >= "1.1.0" and Vagrant.configure("2") do |config|
     aws.access_key_id = ENV["AWS_ACCESS_KEY"]
     aws.secret_access_key = ENV["AWS_SECRET_KEY"]
     aws.keypair_name = ENV["AWS_KEYPAIR_NAME"]
+    aws.security_groups = ENV["AWS_SECURITY_GROUP"]
     override.ssh.username = username
     aws.region = AWS_REGION
     aws.ami    = AWS_AMI
@@ -161,18 +104,4 @@ end
 # config would have already been set in the above provider section.
 Vagrant::VERSION < "1.1.0" and Vagrant::Config.run do |config|
   config.vm.provision :shell, :inline => $vbox_script
-end
-
-if !FORWARD_DOCKER_PORTS.nil?
-  Vagrant::VERSION < "1.1.0" and Vagrant::Config.run do |config|
-    (49000..49900).each do |port|
-      config.vm.forward_port port, port
-    end
-  end
-
-  Vagrant::VERSION >= "1.1.0" and Vagrant.configure("2") do |config|
-    (49000..49900).each do |port|
-      config.vm.network :forwarded_port, :host => port, :guest => port
-    end
-  end
 end
