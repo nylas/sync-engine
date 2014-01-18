@@ -1,6 +1,7 @@
 # Inbox-specific
 /config.cfg
-
+/packer_cache
+/log
 # Vagrant
 /.vagrant
 

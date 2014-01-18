@@ -41,7 +41,7 @@ Here's how to set up a development environment:
 
 7. `cd /vagrant`
 
-8. `sudo ./setup_hack.sh`
+8. `sudo ./setup.sh`
 
 11. `sudo pip install -e src` to avoid path hacks.
 
