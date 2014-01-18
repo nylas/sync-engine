@@ -191,6 +191,8 @@ class Message(JSONSerializable, Base, HasRevisions):
     size = Column(Integer, default=0, nullable=False)
     data_sha256 = Column(String(255), nullable=True)
 
+    mailing_list_headers = Column(JSON, nullable=True)
+
     # Most messages are short and include a lot of quoted text. Preprocessing
     # just the relevant part out makes a big difference in how much data we
     # need to send over the wire.
@@ -313,7 +315,11 @@ class Message(JSONSerializable, Base, HasRevisions):
         d['thread_id'] = self.thread_id
         d['snippet'] = self.snippet
         d['body'] = self.prettified_body
+        d['mailing_list_info'] = self.mailing_list_headers
         return d
+
+    def mailing_list_info(self):
+        return self.mailing_list_headers
 
 # These are the top 15 most common Content-Type headers
 # in my personal mail archive. --mg
