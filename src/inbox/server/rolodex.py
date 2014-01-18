@@ -4,8 +4,12 @@ import gdata.auth
 import dateutil.parser
 import datetime
 import time
-from .google_oauth import GOOGLE_CONSUMER_KEY, GOOGLE_CONSUMER_SECRET, OAUTH_SCOPE
-from .google_oauth import get_new_token
+
+#from .google_oauth import GOOGLE_CONSUMER_KEY, GOOGLE_CONSUMER_SECRET, OAUTH_SCOPE
+#from .google_oauth import get_new_token
+
+from .oauth import INSTALLED_CLIENT_ID, INSTALLED_CLIENT_SECRET, OAUTH_SCOPE
+from .oauth import get_new_token
 
 from .models import session_scope
 from .models.tables import Contact, ImapAccount
@@ -38,8 +42,8 @@ def rolodex_sync(db_session, account):
         access_token = get_new_token(
                 account.o_refresh_token)['access_token']
         two_legged_oauth_token = gdata.gauth.OAuth2Token(
-                    client_id = GOOGLE_CONSUMER_KEY,
-                    client_secret = GOOGLE_CONSUMER_SECRET,
+                    client_id = INSTALLED_CLIENT_ID,
+                    client_secret = INSTALLED_CLIENT_SECRET,
                     scope = OAUTH_SCOPE,
                     user_agent =SOURCE_APP_NAME,
                     access_token=access_token,

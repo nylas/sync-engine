@@ -166,6 +166,15 @@ def create_message(db_session, log, account, folder_name, uid, internaldate,
 
         new_msg.internaldate = internaldate
 
+        # Mailing list headers
+        list_archive = parsed.headers.get('List-Archive')
+        list_help = parsed.headers.get('List-Help')
+        list_id = parsed.headers.get('List-Id')
+        list_owner = parsed.headers.get('List-Owner')
+        list_post = parsed.headers.get('List-Post')
+        list_subscribe = parsed.headers.get('List-Subscribe')
+        list_unsubscribe = parsed.headers.get('List-Unsubscribe')
+
         imapuid = ImapUid(imapaccount=account, folder_name=folder_name,
                 msg_uid=uid, message=new_msg)
         imapuid.update_flags(flags)
