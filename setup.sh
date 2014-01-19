@@ -37,7 +37,7 @@ apt-get -y install git \
 # Install NodeJS
 # RUN wget -O - http://nodejs.org/dist/v0.8.26/node-v0.8.26-linux-x64.tar.gz | tar -C /usr/local/ --strip-components=1 -zxv
 
-sudo pip install --upgrade pip
+pip install --upgrade pip
 
 # curl -O http://python-distribute.org/distribute_setup.py && python distribute_setup.py && rm distribute_setup.py distribute-*.tar.gz
 
