@@ -49,8 +49,14 @@ echo '[InboxApp] Finished installing dependencies.'
 # mysql config
 cp ./etc/my.cnf /etc/mysql/conf.d/inboxapp.cnf
 
+mysqld_safe &
+sleep 10
+
 # Create default MySQL database and user.
 echo "CREATE DATABASE inbox DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci; GRANT ALL PRIVILEGES ON inbox.* TO inbox@localhost IDENTIFIED BY 'inbox'" | mysql -u root -proot
+
+echo '[InboxApp] Created .'
+
 
 # Default config file
 cp config-sample.cfg config.cfg
