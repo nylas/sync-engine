@@ -40,6 +40,8 @@ apt-get -y install git \
 
 curl -O http://python-distribute.org/distribute_setup.py && python distribute_setup.py && rm distribute_setup.py distribute-*.tar.gz
 
+pip install --upgrade pip setuptools
+
 pip install -r requirements.txt
 pip install -e src
 

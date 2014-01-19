@@ -159,4 +159,14 @@ class API(object):
 
             return nses
 
+#    def is_mailing_list_message():
+
+#    def mailing_list_info_for_message():
+
+#    def mailing_list_unsubscribe_address():
+
+#    def mailing_list_help_address():
+
+#    def mailing_list_subscribe_address():
+
 
