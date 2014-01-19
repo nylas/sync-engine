@@ -44,6 +44,8 @@ pip install --upgrade setuptools
 pip install -r requirements.txt
 pip install -e src
 
+echo '[InboxApp] Finished installing dependencies.'
+
 # mysql config
 cp ./etc/my.cnf /etc/mysql/conf.d/inboxapp.cnf
 
