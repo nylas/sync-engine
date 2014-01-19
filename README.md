@@ -38,6 +38,8 @@ Here's how to set up a development environment:
 
     At this point you should be SSH'd into a shiny new Ubuntu 12.04 VM. The
     `inbox` directory you started with should be synced to `/vagrant`.
+    
+    If not, run `vagrant reload' and `vagrant ssh` again. You should see the shared folder now.
 
 7. `cd /vagrant`
 
