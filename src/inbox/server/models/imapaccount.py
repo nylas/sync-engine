@@ -17,6 +17,7 @@ from flanker import mime
 from inbox.util.misc import or_none
 from inbox.util.addr import parse_email_address
 from inbox.util.file import mkdirp
+from inbox.util.misc import parse_ml_headers
 
 from .tables import Block, Message, ImapUid, UIDValidity, FolderItem, Thread
 
@@ -165,6 +166,9 @@ def create_message(db_session, log, account, folder_name, uid, internaldate,
         new_msg.message_id = parsed.headers.get('Message-Id')
 
         new_msg.internaldate = internaldate
+
+        # Optional mailing list headers
+        new_msg.mailing_list_headers = parse_ml_headers(parsed.headers)
 
         imapuid = ImapUid(imapaccount=account, folder_name=folder_name,
                 msg_uid=uid, message=new_msg)

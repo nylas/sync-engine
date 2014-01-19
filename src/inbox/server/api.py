@@ -158,3 +158,21 @@ class API(object):
                 nses['shared'].append(shared_ns.cereal())
 
             return nses
+
+    @namespace_auth
+    @jsonify
+    def is_mailing_list_message(self, message_id):
+         with session_scope() as db_session:
+            message = db_session.query(Message).filter(Message.id==message_id,
+                            Message.namespace_id==self.namespace.id).one()
+
+            return (message.mailing_list_info != None)
+
+    @namespace_auth
+    @jsonify
+    def mailing_list_info_for_message(self, message_id):
+        with session_scope() as db_session:
+            message = db_session.query(Message).filter(Message.id==message_id,
+                            Message.namespace_id==self.namespace.id).one()
+
+            return message.mailing_list_info

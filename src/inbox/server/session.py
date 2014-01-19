@@ -7,7 +7,8 @@ log = get_logger()
 
 import sqlalchemy.orm.exc
 
-from . import google_oauth
+#from . import google_oauth
+from . import oauth
 from .models.tables import User, UserSession, Namespace, ImapAccount
 
 def log_ignored(exc):
@@ -75,7 +76,7 @@ def verify_imap_account(db_session, account):
     # TODO check with expire date first
     # expire_date = issued_date + datetime.timedelta(seconds=expires_seconds)
 
-    is_valid = google_oauth.validate_token(account.o_access_token)
+    is_valid = oauth.validate_token(account.o_access_token)
 
     # TODO refresh tokens based on date instead of checking?
     # if not is_valid or expire_date > datetime.datetime.utcnow():
@@ -85,7 +86,7 @@ def verify_imap_account(db_session, account):
         refresh_token = account.o_refresh_token
 
         log.error("Getting new access token...")
-        response = google_oauth.get_new_token(refresh_token)  # TOFIX blocks
+        response = oauth.get_new_token(refresh_token)  # TOFIX blocks
         response['refresh_token'] = refresh_token  # Propogate it through
 
         # TODO handling errors here for when oauth has been revoked
