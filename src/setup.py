@@ -44,7 +44,7 @@ setup(
         "supervisor==3.0",
         "chardet==2.1.1",
         "Wand==0.3.5",
-        "setproctitle==1.1.7",
+        "setproctitle==1.1.8",
         # For ZeroRPC
         "Cython==0.19.1",
         "zerorpc==0.4.3",
