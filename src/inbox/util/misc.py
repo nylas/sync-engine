@@ -24,3 +24,19 @@ def strip_plaintext_quote(text):
         return '\n'.join(lines[:quote_start-1])
     else:
         return text
+
+def parse_ml_headers(headers):
+    """ 
+    Parse the mailing list headers described in RFC 4021,
+    these headers are optional (RFC 2369).
+    """
+    attrs = {}
+    attrs['List-Archive'] = headers.get('List-Archive')
+    attrs['List-Help'] = headers.get('List-Help')
+    attrs['List-Id'] = headers.get('List-Id')
+    attrs['List-Owner'] = headers.get('List-Owner')
+    attrs['List-Post'] = headers.get('List-Post')
+    attrs['List-Subscribe'] = headers.get('List-Subscribe')
+    attrs['List-Unsubscribe'] = headers.get('List-Unsubscribe')
+
+    return attrs

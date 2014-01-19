@@ -17,7 +17,7 @@ from flanker import mime
 from inbox.util.misc import or_none
 from inbox.util.addr import parse_email_address
 from inbox.util.file import mkdirp
-#from inbox.util.headers import parse_ml_headers
+from inbox.util.misc import parse_ml_headers
 
 from .tables import Block, Message, ImapUid, UIDValidity, FolderItem, Thread
 
