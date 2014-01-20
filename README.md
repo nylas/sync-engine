@@ -44,23 +44,27 @@ Here's how to set up a development environment:
 
     At this point you should be SSH'd into a shiny new Ubuntu 12.04 VM. The
     `inbox` directory you started with should be synced to `/vagrant`.
-    
-    If not, run `vagrant reload` and `vagrant ssh` again. You should see the shared folder now.
+
+    If not, run `vagrant reload` and `vagrant ssh` again. You should see the
+    shared folder now.
 
 7. `cd /vagrant`
 
 8. `sudo ./inbox debug`
 
-9.  Auth an account via the commandline to start syncing: `$ ./inbox auth spang@inboxapp.com`
+And voila! Auth an account via the commandline and start syncing:
 
-
+    `sudo ./inbox auth ben.bitdiddle1861@gmail.com`
+    `sudo ./inbox sync start ben.bitdiddle1861@gmail.com`
 
 ## Contributing
 
-We'd love your help making Inbox better. Join the [Google Group](groups.google.com/group/inbox-dev) for project updates and feature discussion.
+We'd love your help making Inbox better. Join the [Google
+Group](groups.google.com/group/inbox-dev) for project updates and feature
+discussion.
 
-We try to stick with pep8 and the [Google Python style guide](http://google-styleguide.googlecode.com/svn/trunk/pyguide.html).
-
+We try to stick with pep8 and the [Google Python style
+guide](http://google-styleguide.googlecode.com/svn/trunk/pyguide.html).
 
 #### Random notes
 
