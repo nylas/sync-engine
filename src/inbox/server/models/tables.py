@@ -323,6 +323,7 @@ class Message(JSONSerializable, Base, HasRevisions):
     def mailing_list_info(self):
         return self.mailing_list_headers
 
+    # TODO: TEST THIS
     @property
     def headers(self):
         """ Returns headers for the message, decoded. """
