@@ -57,7 +57,7 @@ To authorize Inbox, visit this url and follow the directions:
     return auth_code
 
 def get_authenticated_user(authorization_code):
-    log.info("Getting oauth authentiated user...")
+    log.info("Getting oauth authenticated user...")
     args = {
         "client_id": INSTALLED_CLIENT_ID,
         "code": authorization_code,
