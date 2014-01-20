@@ -81,7 +81,6 @@ def sync(args):
         print >>sys.stderr, "Can't connect. Is the sync server running? (./inbox start)"
         sys.exit(1)
 
-
 def stop(args):
     print """
 \033[91m     Cleaning up...
@@ -132,50 +131,34 @@ def index(args):
                 namespace_type='root'):
             gen_search_index(namespace)
 
-def add_account(args):
-    import zerorpc
+def auth(args):
+    # TODO Auth by email,password for non-OAuth backends
     from inbox.server import oauth
-    from inbox.server import session
-    #from inbox.server.securecookie import SecureCookieSerializer
-    from inbox.server.models import new_db_session
 
-    # OAUTH USER 
-    email_account = args.email_account
+    email_address = args.email_address
 
-    if not email_account:
-        print '''Please specify an email account to add
-                (./inbox account -e 'user@example.com')'''
+    if not email_address:
+        print >>sys.stderr, "Please specify the email account to auth \
+                (./inbox auth -e 'user@example.com')"
         sys.exit(1)
 
-    oauth_response = oauth.oauth(email_account)
+    oauth_response = oauth.oauth(email_address)
+
+    if not oauth_response:
+        print >>sys.stderr, "Auth failed."
+        sys.exit(1)
+
+    print "Auth successful."
+    return oauth_response
+
+def add_account(args):
+    # AUTH USER 
+    oauth_response = auth(args)
 
     # SYNC ACCOUNT
-    #COOKIE_SECRET = config.get("COOKIE_SECRET", None)
-    #assert COOKIE_SECRET, "Missing secret for secure cookie generation"
-    #sc = SecureCookieSerializer(COOKIE_SECRET)
-    
-    db_session = new_db_session()
-    new_account = session.make_account(db_session, oauth_response)
-    new_session = session.create_session(db_session, new_account.user)
-
-    log.info("Successful login")#. Setting cookie: %s" % new_session.token)
-    #secure_cookie = sc.serialize('session', new_session.token)
-
-    # kick off syncing the new account's mail
-    sync_srv_loc = config.get('CRISPIN_SERVER_LOC', None)
-    c = zerorpc.Client(timeout=3000)
-    c.connect(sync_srv_loc)
-    sync_response = c.start_sync(new_account.id)
-    log.info("Asked sync service to start syncing new account: {0}".format(
-        sync_response))
-
-    # except Exception, e:
-    #     # TODO handler error better here. Write an error page to user.
-    #     log.error(e)
-    #     error_str = request.args['error']
-    #     log.error("Google auth failed: %s" % error_str)
-    # finally:
-    #return response
+    if oauth_response:
+        args.cmd = 'start'
+        sync(args)
 
 def signal_handler(signal, frame):
     stop(None)
@@ -197,8 +180,13 @@ def main():
     parser_stop = subparsers.add_parser('stop')
     parser_stop.set_defaults(func=stop)
 
-    parser_account = subparsers.add_parser('account', description="Add a new email account")
-    parser_account.add_argument('-e', '--email-account',
+    parser_auth = subparsers.add_parser('auth', description="Auth an email account")
+    parser_account.add_argument('-e', '--email-address',
+            help="Specify the email account to auth")
+    parser_account.set_defaults(func=auth)
+
+    parser_add = subparsers.add_parser('add', description="Add a new email account")
+    parser_account.add_argument('-e', '--email-address',
             help='Specify the email account to add')
     parser_account.set_defaults(func=add_account)
 
