@@ -212,21 +212,21 @@ def main():
 
     parser_sync = subparsers.add_parser('sync', description="Start/stop mail sync")
     parser_sync.add_argument('cmd', help='start or stop')
-    parser_sync.add_argument('email_address', help='Email address of user to sync')
+    parser_sync.add_argument('account_id', help='Account ID of user to sync')
     parser_sync.add_argument('--dummy', action='store_true',
             help="Don't connect to IMAP backend.", default=False)
     parser_sync.set_defaults(func=sync)
 
-    parser_sync = subparsers.add_parser('index', description="Index mail")
-    parser_sync.add_argument('namespace',
+    parser_index = subparsers.add_parser('index', description="Index mail")
+    parser_index.add_argument('namespace',
             help='id of namespace to index mail')
-    parser_sync.set_defaults(func=index)
+    parser_index.set_defaults(func=index)
 
-    parser_sync = subparsers.add_parser('search', description="Search mail")
-    parser_sync.add_argument('namespace',
+    parser_search = subparsers.add_parser('search', description="Search mail")
+    parser_search.add_argument('namespace',
             help='id of namespace to search mail')
-    parser_sync.add_argument('query', help='Term(s) to search for')
-    parser_sync.set_defaults(func=search)
+    parser_search.add_argument('query', help='Term(s) to search for')
+    parser_search.set_defaults(func=search)
 
     args = parser.parse_args()
     args.func(args)
