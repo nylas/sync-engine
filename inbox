@@ -135,20 +135,27 @@ def auth(args):
     # TODO Auth by email,password for non-OAuth backends
     from inbox.server import oauth, session
     from inbox.server.models import new_db_session
+    from inbox.server.models.tables import ImapAccount
+    from sqlalchemy.orm.exc import NoResultFound
 
     email_address = args.email_address
 
-    try:
-        oauth_response = oauth.oauth(email_address)
-    except oauth.OauthError:
-        print >>sys.stderr, "Auth failed."
-        sys.exit(1)
-
     db_session = new_db_session()
-    new_account = session.make_account(db_session, oauth_response)
+    try:
+        account = db_session.query(ImapAccount).filter_by(
+                email_address=email_address).one()
+        print "Already authed!"
+    except NoResultFound:
+        try:
+            oauth_response = oauth.oauth(email_address)
+        except oauth.OauthError:
+            print >>sys.stderr, "Auth failed."
+            sys.exit(1)
 
-    print "Success!"
-    return new_account
+        account = session.make_account(db_session, oauth_response)
+        print "Success!"
+
+    return account
 
 def add(args):
     # Auth User
