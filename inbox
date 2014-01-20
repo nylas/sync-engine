@@ -78,7 +78,7 @@ def sync(args):
             print >>sys.stderr, "No such command."
             sys.exit(1)
     except zerorpc.exceptions.TimeoutExpired:
-        print >>sys.stderr, "Can't connect. Is the sync server running? (./inbox start)"
+        print >>sys.stderr, "Can't connect to sync service. Is it running? (./inbox start)"
         sys.exit(1)
 
 def stop(args):
@@ -133,47 +133,32 @@ def index(args):
 
 def auth(args):
     # TODO Auth by email,password for non-OAuth backends
-    from inbox.server import oauth
+    from inbox.server import oauth, session
+    from inbox.server.models import new_db_session
 
     email_address = args.email_address
 
-    if not email_address:
-        print >>sys.stderr, "Please specify the email account to auth (./inbox auth -e 'user@example.com')"
-        sys.exit(1)
-
-    oauth_response = oauth.oauth(email_address)
-
-    if not oauth_response:
+    try:
+        oauth_response = oauth.oauth(email_address)
+    except oauth.OauthError:
         print >>sys.stderr, "Auth failed."
         sys.exit(1)
 
-    print "Auth successful."
-    return oauth_response
+    db_session = new_db_session()
+    new_account = session.make_account(db_session, oauth_response)
 
-def add_account(args):
-    from inbox.server.models import new_db_session
-    from inbox.server import session
+    print "Success!"
+    return new_account
 
-    if not args.email_address:
-        print >>sys.stderr, "Please specify the email account to add (./inbox add -e 'user@example.com')"
-        sys.exit(1)
-
+def add(args):
     # Auth User
-    oauth_response = auth(args)
+    account = auth(args)
 
     # Sync Account, sync server must be running for this
-    try:
-        db_session = new_db_session()
-        new_account = session.make_account(db_session, oauth_response)
-        new_session = session.create_session(db_session, new_account.user)
-
-        args.cmd = "start"
-        args.account_id = new_account.id
-        args.dummy = None
-        sync(args)
-    except Exception as e:
-        print >>sys.stderr, "Error; make sure the sync server is running (./inbox start)"
-        sys.exit(1)
+    args.cmd = "start"
+    args.account_id = account.id
+    args.dummy = None
+    sync(args)
 
 def signal_handler(signal, frame):
     stop(None)
@@ -196,14 +181,14 @@ def main():
     parser_stop.set_defaults(func=stop)
 
     parser_auth = subparsers.add_parser('auth', description="Auth an email account")
-    parser_auth.add_argument('-e', '--email-address',
+    parser_auth.add_argument('-e', '--email-address', required=True,
             help="Specify the email account to auth")
     parser_auth.set_defaults(func=auth)
 
     parser_add = subparsers.add_parser('add', description="Add a new email account")
-    parser_add.add_argument('-e', '--email-address',
+    parser_add.add_argument('-e', '--email-address', required=True,
             help='Specify the email account to add')
-    parser_add.set_defaults(func=add_account)
+    parser_add.set_defaults(func=add)
 
     parser_console = subparsers.add_parser('console', description="REPL for crispin")
     parser_console.add_argument('-e', '--email-address',
