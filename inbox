@@ -138,8 +138,7 @@ def auth(args):
     email_address = args.email_address
 
     if not email_address:
-        print >>sys.stderr, "Please specify the email account to auth \
-                (./inbox auth -e 'user@example.com')"
+        print >>sys.stderr, "Please specify the email account to auth (./inbox auth -e 'user@example.com')"
         sys.exit(1)
 
     oauth_response = oauth.oauth(email_address)
@@ -152,13 +151,29 @@ def auth(args):
     return oauth_response
 
 def add_account(args):
-    # AUTH USER 
+    from inbox.server.models import new_db_session
+    from inbox.server import session
+
+    if not args.email_address:
+        print >>sys.stderr, "Please specify the email account to add (./inbox add -e 'user@example.com')"
+        sys.exit(1)
+
+    # Auth User
     oauth_response = auth(args)
 
-    # SYNC ACCOUNT
-    if oauth_response:
-        args.cmd = 'start'
+    # Sync Account, sync server must be running for this
+    try:
+        db_session = new_db_session()
+        new_account = session.make_account(db_session, oauth_response)
+        new_session = session.create_session(db_session, new_account.user)
+
+        args.cmd = "start"
+        args.account_id = new_account.id
+        args.dummy = None
         sync(args)
+    except Exception as e:
+        print >>sys.stderr, "Error; make sure the sync server is running (./inbox start)"
+        sys.exit(1)
 
 def signal_handler(signal, frame):
     stop(None)
@@ -181,14 +196,14 @@ def main():
     parser_stop.set_defaults(func=stop)
 
     parser_auth = subparsers.add_parser('auth', description="Auth an email account")
-    parser_account.add_argument('-e', '--email-address',
+    parser_auth.add_argument('-e', '--email-address',
             help="Specify the email account to auth")
-    parser_account.set_defaults(func=auth)
+    parser_auth.set_defaults(func=auth)
 
     parser_add = subparsers.add_parser('add', description="Add a new email account")
-    parser_account.add_argument('-e', '--email-address',
+    parser_add.add_argument('-e', '--email-address',
             help='Specify the email account to add')
-    parser_account.set_defaults(func=add_account)
+    parser_add.set_defaults(func=add_account)
 
     parser_console = subparsers.add_parser('console', description="REPL for crispin")
     parser_console.add_argument('-e', '--email-address',
