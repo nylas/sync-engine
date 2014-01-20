@@ -1,4 +1,4 @@
-import json
+import pytest, zerorpc, json
 from bson import json_util
 
 # pytest fixtures outside of conftest.py must be imported for discovery
