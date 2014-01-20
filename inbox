@@ -210,7 +210,7 @@ def main():
             help='Start console with crispin client for a particular user')
     parser_console.set_defaults(func=console)
 
-    parser_sync = subparsers.add_parser('sync', description="Download initial mail metadata and parts.")
+    parser_sync = subparsers.add_parser('sync', description="Start/stop mail sync")
     parser_sync.add_argument('cmd', help='start or stop')
     parser_sync.add_argument('email_address', help='Email address of user to sync')
     parser_sync.add_argument('--dummy', action='store_true',
