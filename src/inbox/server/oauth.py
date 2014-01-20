@@ -26,10 +26,10 @@ OAUTH_SCOPE = " ".join([
     'https://www.googleapis.com/auth/calendar'  # calendar
     ])
 
-class InvalidOauthGrantException(Exception):
+class OauthError(Exception):
     pass
 
-class UnknownOauthException(Exception):
+class InvalidOauthGrantError(OauthError):
     pass
 
 def authorize_redirect_url(email_address=None):
@@ -47,8 +47,11 @@ def authorize_redirect_url(email_address=None):
 
     # Prompt user for authorization + get auth_code
     url = url_concat(OAUTH_AUTHENTICATE_URL, args)
-    print ('To authorize Inbox, visit this url and follow the directions:')
-    print url
+    print """
+To authorize Inbox, visit this url and follow the directions:
+
+{0}
+""".format(url)
 
     auth_code = raw_input('Enter authorization code: ').strip()
     return auth_code
@@ -63,19 +66,15 @@ def get_authenticated_user(authorization_code):
         "redirect_uri" : REDIRECT_URI,
     }
 
-    try:
-        headers = {'Content-type': 'application/x-www-form-urlencoded', 'Accept': 'text/plain'}
-        data = urllib.urlencode(args)
-        response = requests.post(OAUTH_ACCESS_TOKEN_URL, data=data, headers=headers )
-    except Exception, e:
-        log.error(e)
-        return None  # TODO better error handling here
+    headers = {'Content-type': 'application/x-www-form-urlencoded',
+               'Accept': 'text/plain'}
+    data = urllib.urlencode(args)
+    response = requests.post(OAUTH_ACCESS_TOKEN_URL, data=data, headers=headers)
 
     session_dict = response.json()
 
     if u'error' in session_dict:
-        log.error("Error when getting authenticated user: %s" % session_dict['error'])
-        return None
+        raise OauthError(session_dict['error'])
 
     access_token = session_dict['access_token']
     validation_dict = validate_token(access_token)
@@ -87,8 +86,8 @@ def get_authenticated_user(authorization_code):
     # TODO : get this data somwhere other than the auth module
 
 def get_new_token(refresh_token):
-    if not refresh_token:
-    	return None
+    assert refresh_token is not None, "refresh_token required"
+
     log.info("Getting new oauth token...")
     args = {
         "refresh_token": refresh_token,
@@ -108,9 +107,9 @@ def get_new_token(refresh_token):
     session_dict = response.json()
     if u'error' in session_dict:
         if session_dict['error'] == 'invalid_grant':
-            raise InvalidOauthGrantException('Could not get new token')
+            raise InvalidOauthGrantError('Could not get new token')
         else:
-            raise UnknownOauthException(session_dict['error'])
+            raise OauthError(session_dict['error'])
 
     access_token = session_dict['access_token']
 
@@ -139,7 +138,7 @@ def validate_token(access_token):
     return validation_dict
 
 def oauth(email_address):
-	auth_code = authorize_redirect_url(email_address)
-	auth_response = get_authenticated_user(auth_code)
+    auth_code = authorize_redirect_url(email_address)
+    auth_response = get_authenticated_user(auth_code)
 
-	return auth_response
+    return auth_response
