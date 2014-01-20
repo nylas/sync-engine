@@ -5,9 +5,6 @@ import dateutil.parser
 import datetime
 import time
 
-#from .google_oauth import GOOGLE_CONSUMER_KEY, GOOGLE_CONSUMER_SECRET, OAUTH_SCOPE
-#from .google_oauth import get_new_token
-
 from .oauth import INSTALLED_CLIENT_ID, INSTALLED_CLIENT_SECRET, OAUTH_SCOPE
 from .oauth import get_new_token
 
