@@ -1,4 +1,5 @@
 import os
+import json
 
 from itertools import chain
 
@@ -321,6 +322,17 @@ class Message(JSONSerializable, Base, HasRevisions):
     @property
     def mailing_list_info(self):
         return self.mailing_list_headers
+
+    @property
+    def headers(self):
+        """ Returns headers for the message, decoded. """
+        assert self.parts, \
+                "Can't provide headers before parts have been parsed"
+
+        headers = self.parts[0].get_data()
+        json_headers = json.JSONDecoder.decode(headers)
+
+        return json_headers
 
 # These are the top 15 most common Content-Type headers
 # in my personal mail archive. --mg

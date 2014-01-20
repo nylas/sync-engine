@@ -159,12 +159,13 @@ class API(object):
 
             return nses
 
+    # Mailing list functions:
     @namespace_auth
     @jsonify
     def is_mailing_list_message(self, message_id):
          with session_scope() as db_session:
             message = db_session.query(Message).filter(Message.id==message_id,
-                            Message.namespace_id==self.namespace.id).one()
+                Message.namespace_id==self.namespace.id).one()
 
             return (message.mailing_list_info != None)
 
@@ -173,6 +174,22 @@ class API(object):
     def mailing_list_info_for_message(self, message_id):
         with session_scope() as db_session:
             message = db_session.query(Message).filter(Message.id==message_id,
-                            Message.namespace_id==self.namespace.id).one()
+                Message.namespace_id==self.namespace.id).one()
 
             return message.mailing_list_info
+
+    # All headers:
+    @namespace_auth
+    @jsonify
+    def headers_for_message(self, message_id):
+        with session_scope() as db_session:
+            #message_parts = db_session.alias(query(Message).join(Message.parts) \
+            #.filter(Message.id==message_id,
+             #   Message.namespace_id==self.namespace.id).one())
+
+            #headers = message_parts.one()
+
+            message = db_session.query(Message).filter(Message.id==message_id,
+                Message.namespace_id==self.namespace.id).one()
+
+            return message.headers
