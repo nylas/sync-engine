@@ -45,6 +45,8 @@ class SyncService(object):
             If account_id doesn't exist, does nothing.
         """
         results = {}
+        if account_id:
+            account_id = int(account_id)
         with session_scope() as db_session:
             query = db_session.query(ImapAccount)
             if account_id is not None:
@@ -54,7 +56,7 @@ class SyncService(object):
                 self.log.info("Starting sync for account {0}" \
                         .format(acc.email_address))
                 if acc.sync_host is not None and acc.sync_host != fqdn:
-                    results[acc.email_address] = \
+                    results[acc.id] = \
                             'acc {0} is syncing on host {1}'.format(
                                 acc.email_address, acc.sync_host)
                 elif acc.id not in self.monitors:
@@ -79,7 +81,7 @@ class SyncService(object):
                         self.log.error(e.message)
                         results[acc.id] = "ERROR error encountered"
                 else:
-                    results[acc.email_address] =  "OK sync already started"
+                    results[acc.id] =  "OK sync already started"
         if account_id:
             if account_id in results:
                 return results[account_id]
@@ -92,15 +94,16 @@ class SyncService(object):
             If account_id doesn't exist, does nothing.
         """
         results = {}
+        if account_id:
+            account_id = int(account_id)
         with session_scope() as db_session:
             query = db_session.query(ImapAccount)
             if account_id is not None:
                 query = query.filter_by(id=account_id)
             fqdn = socket.getfqdn()
             for acc in query:
-                if not acc.id in self.monitors:
-                    return "OK sync stopped already"
-                if not acc.sync_active:
+                if (not acc.id in self.monitors) or \
+                        (not acc.sync_active):
                     results[acc.id] = "OK sync stopped already"
                 try:
                     assert acc.sync_host == fqdn, "sync host FQDN doesn't match"
