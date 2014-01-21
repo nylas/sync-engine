@@ -188,13 +188,11 @@ def main():
     parser_stop.set_defaults(func=stop)
 
     parser_auth = subparsers.add_parser('auth', description="Auth an email account")
-    parser_auth.add_argument('-e', '--email-address', required=True,
-            help="Specify the email account to auth")
+    parser_auth.add_argument('email_address', help="Specify the email account to auth")
     parser_auth.set_defaults(func=auth)
 
     parser_add = subparsers.add_parser('add', description="Add a new email account")
-    parser_add.add_argument('-e', '--email-address', required=True,
-            help='Specify the email account to add')
+    parser_add.add_argument('email_address', help='Specify the email account to add')
     parser_add.set_defaults(func=add)
 
     parser_console = subparsers.add_parser('console', description="REPL for crispin")
