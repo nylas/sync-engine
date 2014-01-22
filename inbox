@@ -141,22 +141,18 @@ def auth(args):
 
     email_address = args.email_address
 
+    init_db()
     db_session = new_db_session()
     try:
         account = db_session.query(ImapAccount).filter_by(
                 email_address=email_address).one()
         print "Already authed!"
-        return account
-    except ProgrammingError:
-        init_db()
     except NoResultFound:
-        pass
-    
-    try:
-        oauth_response = oauth.oauth(email_address)
-    except oauth.OauthError:
-        print >>sys.stderr, "Auth failed."
-        sys.exit(1)
+        try:
+            oauth_response = oauth.oauth(email_address)
+        except oauth.OauthError:
+            print >>sys.stderr, "Auth failed."
+            sys.exit(1)
 
     account = session.make_account(db_session, oauth_response)
     print "Success!"
