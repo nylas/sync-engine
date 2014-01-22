@@ -52,6 +52,9 @@ cp ./etc/my.cnf /etc/mysql/conf.d/inboxapp.cnf
 mysqld_safe &
 sleep 10
 
+# Create test MySQL database and test user.
+echo "CREATE DATABASE test DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci; GRANT ALL PRIVILEGES ON test.* TO inboxtest@localhost IDENTIFIED BY 'inboxtest'" | mysql -u root -proot
+
 # Create default MySQL database and user.
 echo "CREATE DATABASE inbox DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci; GRANT ALL PRIVILEGES ON inbox.* TO inbox@localhost IDENTIFIED BY 'inbox'" | mysql -u root -proot
 

@@ -1,0 +1,404 @@
+Delivered-To: ben.bitdiddle1861@gmail.com
+Received: by 10.227.0.135 with SMTP id 7csp213059wbb;
+        Tue, 21 Jan 2014 10:17:34 -0800 (PST)
+Return-Path: <golang-nuts+bncBCUKZ4OG7EPRBNPT7KLAKGQEGXYABUQ@googlegroups.com>
+Received-SPF: pass (google.com: domain of golang-nuts+bncBCUKZ4OG7EPRBNPT7KLAKGQEGXYABUQ@googlegroups.com designates 10.182.231.170 as permitted sender) client-ip=10.182.231.170
+Authentication-Results: mr.google.com;
+       spf=pass (google.com: domain of golang-nuts+bncBCUKZ4OG7EPRBNPT7KLAKGQEGXYABUQ@googlegroups.com designates 10.182.231.170 as permitted sender) smtp.mail=golang-nuts+bncBCUKZ4OG7EPRBNPT7KLAKGQEGXYABUQ@googlegroups.com;
+       dkim=pass header.i=@gmail.com
+X-Received: from mr.google.com ([10.182.231.170])
+        by 10.182.231.170 with SMTP id th10mr1654942obc.0.1390328254155 (num_hops = 1);
+        Tue, 21 Jan 2014 10:17:34 -0800 (PST)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=googlegroups.com; s=20120806;
+        h=date:from:to:message-id:subject:mime-version:x-original-sender
+         :precedence:mailing-list:list-id:list-post:list-help:list-archive
+         :sender:list-subscribe:list-unsubscribe:content-type;
+        bh=Uq7Exd7j4WaQLHCPzwrsQePsGBoAf1482m7Vv8feCSM=;
+        b=yoUmxpKjpQGmuBm/JiMLAfGOXGRQ3cribZ0/iusPqolplIHvI7dxICtUS91JRJdQAF
+         G0o2gy1wqnwSfVvvsGw6q6MEcBku61DjpBs1vfOt+dN+IuSIAprDnXGmUJXadkbaM5qB
+         zxaZRGmHUx2z2VP0ALulk/48EotshSA15Z4aKioITxAwjb8aIufdk8esVSnZNN/6y+wz
+         4JwLQvA7JFPqY3fgNHuNM4C7ubOyBehI8OMbQpYp92SAHKIbqpBmJ8Z1Y7DAalJ8dKms
+         HF2h1TjS+s8mmVJR0ACn0kydd/r+8KOFnhw1nnjtdrpknKjuHGt9f1RpVzV/AXXv0coK
+         UHKA==
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20120113;
+        h=date:from:to:message-id:subject:mime-version:x-original-sender
+         :precedence:mailing-list:list-id:list-post:list-help:list-archive
+         :sender:list-subscribe:list-unsubscribe:content-type;
+        bh=Uq7Exd7j4WaQLHCPzwrsQePsGBoAf1482m7Vv8feCSM=;
+        b=DTiqaBU24lPd/hpEIGyzOy4sTlg2610vL1MFpK7rCyp7IjxbdaB8fqp+HwqVs7rf6y
+         Ix9f0c2YbaTS+mkEXw7wRJJnlFlv7ikCEMWeNObmWwh5u5eGmnlc/oPeyiNVzaqDyHOB
+         170gOaKs7SVt/1c45/TlOJrSB0hwq3cC4+g8caflHP0pAh3z7m6VPi/SQdeayxWGZdGX
+         6ERMlTfhhUFKFb7katidYNXKzZW2zEazMwGqko9cdlywphEBnLD1lYOmydosrBrQjsiy
+         dsSEShyOfcjq2feUclHtiLv18atSLciVXVeT9e4HqZPKOKkIIYW6qyIJ2ST7a2c8rvFi
+         lGGQ==
+X-Received: by 10.182.231.170 with SMTP id th10mr225673obc.0.1390328253639;
+        Tue, 21 Jan 2014 10:17:33 -0800 (PST)
+X-BeenThere: golang-nuts@googlegroups.com
+Received: by 10.182.226.163 with SMTP id rt3ls1292546obc.1.gmail; Tue, 21 Jan
+ 2014 10:17:25 -0800 (PST)
+X-Received: by 10.182.204.42 with SMTP id kv10mr19910obc.33.1390328245009;
+        Tue, 21 Jan 2014 10:17:25 -0800 (PST)
+Date: Tue, 21 Jan 2014 10:17:24 -0800 (PST)
+From: bsr <bsr203@gmail.com>
+To: golang-nuts@googlegroups.com
+Message-Id: <00cf658c-1d09-4b00-8d30-7d2918effaf2@googlegroups.com>
+Subject: [go-nuts] variadic function usage
+MIME-Version: 1.0
+X-Original-Sender: bsr203@gmail.com
+Precedence: list
+Mailing-list: list golang-nuts@googlegroups.com; contact golang-nuts+owners@googlegroups.com
+List-ID: <golang-nuts.googlegroups.com>
+X-Google-Group-Id: 332403668183
+List-Post: <http://groups.google.com/group/golang-nuts/post>, <mailto:golang-nuts@googlegroups.com>
+List-Help: <http://groups.google.com/support/>, <mailto:golang-nuts+help@googlegroups.com>
+List-Archive: <http://groups.google.com/group/golang-nuts>
+Sender: golang-nuts@googlegroups.com
+List-Subscribe: <http://groups.google.com/group/golang-nuts/subscribe>, <mailto:golang-nuts+subscribe@googlegroups.com>
+List-Unsubscribe: <http://groups.google.com/group/golang-nuts/subscribe>, <mailto:googlegroups-manage+332403668183+unsubscribe@googlegroups.com>
+Content-Type: multipart/alternative; 
+	boundary="----=_Part_1215_15751371.1390328244533"
+
+------=_Part_1215_15751371.1390328244533
+Content-Type: text/plain; charset=UTF-8
+
+I am trying to use variadic function in the context of gorp insert<http://godoc.org/github.com/coopernurse/gorp#DbMap.Insert>
+
+https://github.com/coopernurse/gorp/blob/develop/gorp_test.go#L1611
+
+func _insert(dbmap *DbMap, list ...interface{}) {
+
+        err := dbmap.Insert(list...)
+
+        if err != nil {
+
+                panic(err)
+
+        }
+
+}
+
+
+This method is called like 
+
+           p1 := &Person{0, 0, 0, "bob", "smith", 0}
+           _insert(dbmap, p1) 
+
+or with multiple entities as
+
+         persons := []*Person{
+                &Person{0, 0, 0, "Bob", "Smith", 0},
+                &Person{0, 0, 0, "Jane", "Smith", 0},
+                &Person{0, 0, 0, "Mike", "Smith", 0},
+        }
+
+        _insert(dbmap, persons[0], persons[1], persons[2])
+
+
+Instead of listing each item, I thought, I could use it as 
+
+
+* _insert(dbmap, persons...)*
+
+This gives error
+cannot use persons (type []*Person) as type []interface {} in function 
+argument 
+
+or if I just pass it as slice itself
+
+_insert(dbmap, persons)
+
+panic: Value <[]*main.Person Value> not a pointer
+ so instead of each element, it is looking at the slice itself.
+
+can I make the below work
+
+           _insert(dbmap, persons...)
+
+
+thanks.
+
+
+-- 
+You received this message because you are subscribed to the Google Groups "golang-nuts" group.
+To unsubscribe from this group and stop receiving emails from it, send an email to golang-nuts+unsubscribe@googlegroups.com.
+For more options, visit https://groups.google.com/groups/opt_out.
+
+------=_Part_1215_15751371.1390328244533
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr">I am trying to use&nbsp;variadic function in the context o=
+f&nbsp;<a href=3D"http://godoc.org/github.com/coopernurse/gorp#DbMap.Insert=
+">gorp insert</a><br><div><br></div><div>https://github.com/coopernurse/gor=
+p/blob/develop/gorp_test.go#L1611<br></div><blockquote style=3D"margin: 0 0=
+ 0 40px; border: none; padding: 0px;"><blockquote style=3D"margin: 0 0 0 40=
+px; border: none; padding: 0px;"><div><pre style=3D"box-sizing: border-box;=
+ font-family: Consolas, 'Liberation Mono', Courier, monospace; font-size: 1=
+2px; color: rgb(51, 51, 51); line-height: 18px;"><div class=3D"line" id=3D"=
+LC1611" style=3D"box-sizing: border-box; padding-left: 10px; background-col=
+or: rgb(255, 255, 204);"><span class=3D"kd" style=3D"box-sizing: border-box=
+; font-weight: bold;">func</span> <span class=3D"nx" style=3D"box-sizing: b=
+order-box;">_insert</span><span class=3D"p" style=3D"box-sizing: border-box=
+;">(</span><span class=3D"nx" style=3D"box-sizing: border-box;">dbmap</span=
+> <span class=3D"o" style=3D"box-sizing: border-box; font-weight: bold;">*<=
+/span><span class=3D"nx" style=3D"box-sizing: border-box;">DbMap</span><spa=
+n class=3D"p" style=3D"box-sizing: border-box;">,</span> <span class=3D"nx"=
+ style=3D"box-sizing: border-box;">list</span> <span class=3D"o" style=3D"b=
+ox-sizing: border-box; font-weight: bold;">...</span><span class=3D"kd" sty=
+le=3D"box-sizing: border-box; font-weight: bold;">interface</span><span cla=
+ss=3D"p" style=3D"box-sizing: border-box;">{})</span> <span class=3D"p" sty=
+le=3D"box-sizing: border-box;">{</span></div></pre></div></blockquote><bloc=
+kquote style=3D"margin: 0 0 0 40px; border: none; padding: 0px;"><div><pre =
+style=3D"box-sizing: border-box; font-family: Consolas, 'Liberation Mono', =
+Courier, monospace; font-size: 12px; color: rgb(51, 51, 51); line-height: 1=
+8px;"><div class=3D"line" id=3D"LC1612" style=3D"box-sizing: border-box; pa=
+dding-left: 10px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span cl=
+ass=3D"nx" style=3D"box-sizing: border-box;">err</span> <span class=3D"o" s=
+tyle=3D"box-sizing: border-box; font-weight: bold;">:=3D</span> <span class=
+=3D"nx" style=3D"box-sizing: border-box;">dbmap</span><span class=3D"p" sty=
+le=3D"box-sizing: border-box;">.</span><span class=3D"nx" style=3D"box-sizi=
+ng: border-box;">Insert</span><span class=3D"p" style=3D"box-sizing: border=
+-box;">(</span><span class=3D"nx" style=3D"box-sizing: border-box;">list</s=
+pan><span class=3D"o" style=3D"box-sizing: border-box; font-weight: bold;">=
+...</span><span class=3D"p" style=3D"box-sizing: border-box;">)</span></div=
+></pre></div></blockquote><blockquote style=3D"margin: 0 0 0 40px; border: =
+none; padding: 0px;"><div><pre style=3D"box-sizing: border-box; font-family=
+: Consolas, 'Liberation Mono', Courier, monospace; font-size: 12px; color: =
+rgb(51, 51, 51); line-height: 18px;"><div class=3D"line" id=3D"LC1613" styl=
+e=3D"box-sizing: border-box; padding-left: 10px;">&nbsp;&nbsp;&nbsp;&nbsp;&=
+nbsp;&nbsp;&nbsp;&nbsp;<span class=3D"k" style=3D"box-sizing: border-box; f=
+ont-weight: bold;">if</span> <span class=3D"nx" style=3D"box-sizing: border=
+-box;">err</span> <span class=3D"o" style=3D"box-sizing: border-box; font-w=
+eight: bold;">!=3D</span> <span class=3D"kc" style=3D"box-sizing: border-bo=
+x; font-weight: bold;">nil</span> <span class=3D"p" style=3D"box-sizing: bo=
+rder-box;">{</span></div></pre></div></blockquote><blockquote style=3D"marg=
+in: 0 0 0 40px; border: none; padding: 0px;"><div><pre style=3D"box-sizing:=
+ border-box; font-family: Consolas, 'Liberation Mono', Courier, monospace; =
+font-size: 12px; color: rgb(51, 51, 51); line-height: 18px;"><div class=3D"=
+line" id=3D"LC1614" style=3D"box-sizing: border-box; padding-left: 10px;">&=
+nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbs=
+p;&nbsp;&nbsp;&nbsp;<span class=3D"nb" style=3D"box-sizing: border-box; col=
+or: rgb(0, 134, 179);">panic</span><span class=3D"p" style=3D"box-sizing: b=
+order-box;">(</span><span class=3D"nx" style=3D"box-sizing: border-box;">er=
+r</span><span class=3D"p" style=3D"box-sizing: border-box;">)</span></div><=
+/pre></div></blockquote><blockquote style=3D"margin: 0 0 0 40px; border: no=
+ne; padding: 0px;"><div><pre style=3D"box-sizing: border-box; font-family: =
+Consolas, 'Liberation Mono', Courier, monospace; font-size: 12px; color: rg=
+b(51, 51, 51); line-height: 18px;"><div class=3D"line" id=3D"LC1615" style=
+=3D"box-sizing: border-box; padding-left: 10px;">&nbsp;&nbsp;&nbsp;&nbsp;&n=
+bsp;&nbsp;&nbsp;&nbsp;<span class=3D"p" style=3D"box-sizing: border-box;">}=
+</span></div></pre></div></blockquote><blockquote style=3D"margin: 0 0 0 40=
+px; border: none; padding: 0px;"><div><pre style=3D"box-sizing: border-box;=
+ font-family: Consolas, 'Liberation Mono', Courier, monospace; font-size: 1=
+2px; color: rgb(51, 51, 51); line-height: 18px;"><div class=3D"line" id=3D"=
+LC1616" style=3D"box-sizing: border-box; padding-left: 10px;"><span class=
+=3D"p" style=3D"box-sizing: border-box;">}</span></div></pre></div></blockq=
+uote></blockquote><div><pre style=3D"box-sizing: border-box;"><div class=3D=
+"line" id=3D"LC1616" style=3D"color: rgb(51, 51, 51); font-family: Consolas=
+, 'Liberation Mono', Courier, monospace; font-size: 12px; line-height: 18px=
+; box-sizing: border-box; padding-left: 10px;"><span class=3D"p" style=3D"b=
+ox-sizing: border-box;"><br></span></div><div class=3D"line" id=3D"LC1616" =
+style=3D"color: rgb(51, 51, 51); font-family: Consolas, 'Liberation Mono', =
+Courier, monospace; font-size: 12px; line-height: 18px; box-sizing: border-=
+box; padding-left: 10px;"><span class=3D"p" style=3D"box-sizing: border-box=
+;">This method is called like </span></div><div class=3D"line" id=3D"LC1616=
+" style=3D"color: rgb(51, 51, 51); font-family: Consolas, 'Liberation Mono'=
+, Courier, monospace; font-size: 12px; line-height: 18px; box-sizing: borde=
+r-box; padding-left: 10px;"><pre style=3D"box-sizing: border-box; font-fami=
+ly: Consolas, 'Liberation Mono', Courier, monospace;"><div class=3D"line" i=
+d=3D"LC743" style=3D"box-sizing: border-box; padding-left: 10px;"><span cla=
+ss=3D"nx" style=3D"box-sizing: border-box;">           p1</span> <span clas=
+s=3D"o" style=3D"box-sizing: border-box; font-weight: bold;">:=3D</span> <s=
+pan class=3D"o" style=3D"box-sizing: border-box; font-weight: bold;">&amp;<=
+/span><span class=3D"nx" style=3D"box-sizing: border-box;">Person</span><sp=
+an class=3D"p" style=3D"box-sizing: border-box;">{</span><span class=3D"mi"=
+ style=3D"box-sizing: border-box; color: rgb(0, 153, 153);">0</span><span c=
+lass=3D"p" style=3D"box-sizing: border-box;">,</span> <span class=3D"mi" st=
+yle=3D"box-sizing: border-box; color: rgb(0, 153, 153);">0</span><span clas=
+s=3D"p" style=3D"box-sizing: border-box;">,</span> <span class=3D"mi" style=
+=3D"box-sizing: border-box; color: rgb(0, 153, 153);">0</span><span class=
+=3D"p" style=3D"box-sizing: border-box;">,</span> <span class=3D"s" style=
+=3D"box-sizing: border-box; color: rgb(221, 17, 68);">"bob"</span><span cla=
+ss=3D"p" style=3D"box-sizing: border-box;">,</span> <span class=3D"s" style=
+=3D"box-sizing: border-box; color: rgb(221, 17, 68);">"smith"</span><span c=
+lass=3D"p" style=3D"box-sizing: border-box;">,</span> <span class=3D"mi" st=
+yle=3D"box-sizing: border-box; color: rgb(0, 153, 153);">0</span><span clas=
+s=3D"p" style=3D"box-sizing: border-box;">}</span></div><div class=3D"line"=
+ id=3D"LC744" style=3D"box-sizing: border-box; padding-left: 10px;"><span c=
+lass=3D"nx" style=3D"box-sizing: border-box;">           _insert</span><spa=
+n class=3D"p" style=3D"box-sizing: border-box;">(</span><span class=3D"nx" =
+style=3D"box-sizing: border-box;">dbmap</span><span class=3D"p" style=3D"bo=
+x-sizing: border-box;">,</span> <span class=3D"nx" style=3D"box-sizing: bor=
+der-box;">p1</span><span class=3D"p" style=3D"box-sizing: border-box;">) </=
+span></div><div class=3D"line" id=3D"LC744" style=3D"box-sizing: border-box=
+; padding-left: 10px;"><span class=3D"p" style=3D"box-sizing: border-box;">=
+<br></span></div><div class=3D"line" id=3D"LC744" style=3D"box-sizing: bord=
+er-box; padding-left: 10px;"><span class=3D"p" style=3D"box-sizing: border-=
+box;">or with multiple entities as</span></div><div class=3D"line" id=3D"LC=
+744" style=3D"box-sizing: border-box; padding-left: 10px;"><span class=3D"p=
+" style=3D"box-sizing: border-box;"><br></span></div><div class=3D"line" id=
+=3D"LC744" style=3D"box-sizing: border-box; padding-left: 10px;"><pre style=
+=3D"box-sizing: border-box; font-family: Consolas, 'Liberation Mono', Couri=
+er, monospace;"><div class=3D"line" id=3D"LC1158" style=3D"box-sizing: bord=
+er-box; padding-left: 10px;"><span class=3D"nx" style=3D"box-sizing: border=
+-box;">         persons</span> <span class=3D"o" style=3D"box-sizing: borde=
+r-box; font-weight: bold;">:=3D</span> <span class=3D"p" style=3D"box-sizin=
+g: border-box;">[]</span><span class=3D"o" style=3D"box-sizing: border-box;=
+ font-weight: bold;">*</span><span class=3D"nx" style=3D"box-sizing: border=
+-box;">Person</span><span class=3D"p" style=3D"box-sizing: border-box;">{</=
+span></div><div class=3D"line" id=3D"LC1159" style=3D"box-sizing: border-bo=
+x; padding-left: 10px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nb=
+sp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=3D"o" style=3D"box=
+-sizing: border-box; font-weight: bold;">&amp;</span><span class=3D"nx" sty=
+le=3D"box-sizing: border-box;">Person</span><span class=3D"p" style=3D"box-=
+sizing: border-box;">{</span><span class=3D"mi" style=3D"box-sizing: border=
+-box; color: rgb(0, 153, 153);">0</span><span class=3D"p" style=3D"box-sizi=
+ng: border-box;">,</span> <span class=3D"mi" style=3D"box-sizing: border-bo=
+x; color: rgb(0, 153, 153);">0</span><span class=3D"p" style=3D"box-sizing:=
+ border-box;">,</span> <span class=3D"mi" style=3D"box-sizing: border-box; =
+color: rgb(0, 153, 153);">0</span><span class=3D"p" style=3D"box-sizing: bo=
+rder-box;">,</span> <span class=3D"s" style=3D"box-sizing: border-box; colo=
+r: rgb(221, 17, 68);">"Bob"</span><span class=3D"p" style=3D"box-sizing: bo=
+rder-box;">,</span> <span class=3D"s" style=3D"box-sizing: border-box; colo=
+r: rgb(221, 17, 68);">"Smith"</span><span class=3D"p" style=3D"box-sizing: =
+border-box;">,</span> <span class=3D"mi" style=3D"box-sizing: border-box; c=
+olor: rgb(0, 153, 153);">0</span><span class=3D"p" style=3D"box-sizing: bor=
+der-box;">},</span></div><div class=3D"line" id=3D"LC1160" style=3D"box-siz=
+ing: border-box; padding-left: 10px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&=
+nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=3D"o=
+" style=3D"box-sizing: border-box; font-weight: bold;">&amp;</span><span cl=
+ass=3D"nx" style=3D"box-sizing: border-box;">Person</span><span class=3D"p"=
+ style=3D"box-sizing: border-box;">{</span><span class=3D"mi" style=3D"box-=
+sizing: border-box; color: rgb(0, 153, 153);">0</span><span class=3D"p" sty=
+le=3D"box-sizing: border-box;">,</span> <span class=3D"mi" style=3D"box-siz=
+ing: border-box; color: rgb(0, 153, 153);">0</span><span class=3D"p" style=
+=3D"box-sizing: border-box;">,</span> <span class=3D"mi" style=3D"box-sizin=
+g: border-box; color: rgb(0, 153, 153);">0</span><span class=3D"p" style=3D=
+"box-sizing: border-box;">,</span> <span class=3D"s" style=3D"box-sizing: b=
+order-box; color: rgb(221, 17, 68);">"Jane"</span><span class=3D"p" style=
+=3D"box-sizing: border-box;">,</span> <span class=3D"s" style=3D"box-sizing=
+: border-box; color: rgb(221, 17, 68);">"Smith"</span><span class=3D"p" sty=
+le=3D"box-sizing: border-box;">,</span> <span class=3D"mi" style=3D"box-siz=
+ing: border-box; color: rgb(0, 153, 153);">0</span><span class=3D"p" style=
+=3D"box-sizing: border-box;">},</span></div><div class=3D"line" id=3D"LC116=
+1" style=3D"box-sizing: border-box; padding-left: 10px;">&nbsp;&nbsp;&nbsp;=
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nb=
+sp;<span class=3D"o" style=3D"box-sizing: border-box; font-weight: bold;">&=
+amp;</span><span class=3D"nx" style=3D"box-sizing: border-box;">Person</spa=
+n><span class=3D"p" style=3D"box-sizing: border-box;">{</span><span class=
+=3D"mi" style=3D"box-sizing: border-box; color: rgb(0, 153, 153);">0</span>=
+<span class=3D"p" style=3D"box-sizing: border-box;">,</span> <span class=3D=
+"mi" style=3D"box-sizing: border-box; color: rgb(0, 153, 153);">0</span><sp=
+an class=3D"p" style=3D"box-sizing: border-box;">,</span> <span class=3D"mi=
+" style=3D"box-sizing: border-box; color: rgb(0, 153, 153);">0</span><span =
+class=3D"p" style=3D"box-sizing: border-box;">,</span> <span class=3D"s" st=
+yle=3D"box-sizing: border-box; color: rgb(221, 17, 68);">"Mike"</span><span=
+ class=3D"p" style=3D"box-sizing: border-box;">,</span> <span class=3D"s" s=
+tyle=3D"box-sizing: border-box; color: rgb(221, 17, 68);">"Smith"</span><sp=
+an class=3D"p" style=3D"box-sizing: border-box;">,</span> <span class=3D"mi=
+" style=3D"box-sizing: border-box; color: rgb(0, 153, 153);">0</span><span =
+class=3D"p" style=3D"box-sizing: border-box;">},</span></div><div class=3D"=
+line" id=3D"LC1162" style=3D"box-sizing: border-box; padding-left: 10px;">&=
+nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=3D"p" style=3D"b=
+ox-sizing: border-box;">}</span></div><div class=3D"line" id=3D"LC1163" sty=
+le=3D"box-sizing: border-box; padding-left: 10px;"><br style=3D"box-sizing:=
+ border-box;"></div><div class=3D"line" id=3D"LC1164" style=3D"box-sizing: =
+border-box; padding-left: 10px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;=
+&nbsp;<span class=3D"nx" style=3D"box-sizing: border-box;">_insert</span><s=
+pan class=3D"p" style=3D"box-sizing: border-box;">(</span><span class=3D"nx=
+" style=3D"box-sizing: border-box;">dbmap</span><span class=3D"p" style=3D"=
+box-sizing: border-box;">,</span> <span class=3D"nx" style=3D"box-sizing: b=
+order-box;">persons</span><span class=3D"p" style=3D"box-sizing: border-box=
+;">[</span><span class=3D"mi" style=3D"box-sizing: border-box; color: rgb(0=
+, 153, 153);">0</span><span class=3D"p" style=3D"box-sizing: border-box;">]=
+,</span> <span class=3D"nx" style=3D"box-sizing: border-box;">persons</span=
+><span class=3D"p" style=3D"box-sizing: border-box;">[</span><span class=3D=
+"mi" style=3D"box-sizing: border-box; color: rgb(0, 153, 153);">1</span><sp=
+an class=3D"p" style=3D"box-sizing: border-box;">],</span> <span class=3D"n=
+x" style=3D"box-sizing: border-box;">persons</span><span class=3D"p" style=
+=3D"box-sizing: border-box;">[</span><span class=3D"mi" style=3D"box-sizing=
+: border-box; color: rgb(0, 153, 153);">2</span><span class=3D"p" style=3D"=
+box-sizing: border-box;">])</span></div></pre></div><div class=3D"line" id=
+=3D"LC744" style=3D"box-sizing: border-box; padding-left: 10px;"><span clas=
+s=3D"p" style=3D"box-sizing: border-box;"><br></span></div></pre></div><div=
+ class=3D"line" id=3D"LC1616" style=3D"color: rgb(51, 51, 51); font-family:=
+ Consolas, 'Liberation Mono', Courier, monospace; font-size: 12px; line-hei=
+ght: 18px; box-sizing: border-box; padding-left: 10px;">Instead of listing =
+each item, I thought, I could use it as </div><div class=3D"line" id=3D"LC1=
+616" style=3D"color: rgb(51, 51, 51); font-family: Consolas, 'Liberation Mo=
+no', Courier, monospace; font-size: 12px; line-height: 18px; box-sizing: bo=
+rder-box; padding-left: 10px;"><br></div><div class=3D"line" id=3D"LC1616" =
+style=3D"color: rgb(51, 51, 51); font-family: Consolas, 'Liberation Mono', =
+Courier, monospace; line-height: 18px; box-sizing: border-box; padding-left=
+: 10px;"><b><font size=3D"4"><span class=3D"nx" style=3D"box-sizing: border=
+-box;">           _insert</span><span class=3D"p" style=3D"box-sizing: bord=
+er-box;">(</span><span class=3D"nx" style=3D"box-sizing: border-box;">dbmap=
+</span><span class=3D"p" style=3D"box-sizing: border-box;">,</span> <span c=
+lass=3D"nx" style=3D"box-sizing: border-box;">persons...)</span><br></font>=
+</b></div><div class=3D"line" id=3D"LC1616" style=3D"color: rgb(51, 51, 51)=
+; font-family: Consolas, 'Liberation Mono', Courier, monospace; font-size: =
+12px; line-height: 18px; box-sizing: border-box; padding-left: 10px;"><span=
+ class=3D"nx" style=3D"box-sizing: border-box;"><br></span></div><div class=
+=3D"line" id=3D"LC1616" style=3D"color: rgb(51, 51, 51); font-family: Conso=
+las, 'Liberation Mono', Courier, monospace; font-size: 12px; line-height: 1=
+8px; box-sizing: border-box; padding-left: 10px;">This gives error</div><di=
+v class=3D"line" id=3D"LC1616" style=3D"box-sizing: border-box; padding-lef=
+t: 10px;"><font color=3D"#333333" face=3D"Consolas, Liberation Mono, Courie=
+r, monospace" size=3D"2"><span style=3D"line-height: 18px;">cannot use pers=
+ons (type []*Person) as type []interface {} in function argument
+</span></font></div><div style=3D"color: rgb(51, 51, 51); font-family: Cons=
+olas, 'Liberation Mono', Courier, monospace; font-size: 12px; line-height: =
+18px;"><br></div><div style=3D"color: rgb(51, 51, 51); font-family: Consola=
+s, 'Liberation Mono', Courier, monospace; font-size: 12px; line-height: 18p=
+x;">or if I just pass it as slice itself</div></pre></div><blockquote style=
+=3D"margin: 0 0 0 40px; border: none; padding: 0px;"><blockquote style=3D"m=
+argin: 0 0 0 40px; border: none; padding: 0px;"><div><pre style=3D"box-sizi=
+ng: border-box;"><div style=3D"color: rgb(51, 51, 51); font-family: Consola=
+s, 'Liberation Mono', Courier, monospace; font-size: 12px; line-height: 18p=
+x;"><span class=3D"nx" style=3D"box-sizing: border-box;">_insert</span><spa=
+n class=3D"p" style=3D"box-sizing: border-box;">(</span><span class=3D"nx" =
+style=3D"box-sizing: border-box;">dbmap</span><span class=3D"p" style=3D"bo=
+x-sizing: border-box;">,</span> <span class=3D"nx" style=3D"box-sizing: bor=
+der-box;">persons)</span></div></pre></div></blockquote></blockquote><div><=
+pre style=3D"box-sizing: border-box;"><div><font color=3D"#333333" face=3D"=
+Consolas, Liberation Mono, Courier, monospace" size=3D"2"><span style=3D"li=
+ne-height: 18px;">panic: Value &lt;[]*main.Person Value&gt; not a pointer<b=
+r></span></font></div><div><font color=3D"#333333" face=3D"Consolas, Libera=
+tion Mono, Courier, monospace" size=3D"2"><span style=3D"line-height: 18px;=
+"> </span></font></div><div><font color=3D"#333333" face=3D"Consolas, Liber=
+ation Mono, Courier, monospace" size=3D"2"><span style=3D"line-height: 18px=
+;">so instead of each element, it is looking at the slice itself.</span></f=
+ont></div><div><font color=3D"#333333" face=3D"Consolas, Liberation Mono, C=
+ourier, monospace" size=3D"2"><span style=3D"line-height: 18px;"><br></span=
+></font></div><div><font color=3D"#333333" face=3D"Consolas, Liberation Mon=
+o, Courier, monospace" size=3D"2"><span style=3D"line-height: 18px;">can I =
+make the below work</span></font></div><div><pre style=3D"box-sizing: borde=
+r-box;"><div class=3D"line" id=3D"LC1616" style=3D"padding-left: 10px; colo=
+r: rgb(51, 51, 51); font-family: Consolas, 'Liberation Mono', Courier, mono=
+space; font-size: 12px; line-height: 18px; box-sizing: border-box;"><span c=
+lass=3D"nx" style=3D"box-sizing: border-box;">           _insert</span><spa=
+n class=3D"p" style=3D"box-sizing: border-box;">(</span><span class=3D"nx" =
+style=3D"box-sizing: border-box;">dbmap</span><span class=3D"p" style=3D"bo=
+x-sizing: border-box;">,</span> <span class=3D"nx" style=3D"box-sizing: bor=
+der-box;">persons...)</span><br></div><div><span class=3D"nx" style=3D"box-=
+sizing: border-box;"><br></span></div><div><span class=3D"nx" style=3D"box-=
+sizing: border-box;"><br></span></div><div><span class=3D"nx" style=3D"box-=
+sizing: border-box;">thanks.</span></div></pre></div><div class=3D"line" id=
+=3D"LC1616" style=3D"color: rgb(51, 51, 51); font-family: Consolas, 'Libera=
+tion Mono', Courier, monospace; font-size: 12px; line-height: 18px; box-siz=
+ing: border-box; padding-left: 10px;"><span class=3D"p" style=3D"box-sizing=
+: border-box;"><br></span></div></pre></div></div>
+
+<p></p>
+
+-- <br />
+You received this message because you are subscribed to the Google Groups &=
+quot;golang-nuts&quot; group.<br />
+To unsubscribe from this group and stop receiving emails from it, send an e=
+mail to golang-nuts+unsubscribe@googlegroups.com.<br />
+For more options, visit <a href=3D"https://groups.google.com/groups/opt_out=
+">https://groups.google.com/groups/opt_out</a>.<br />
+
+------=_Part_1215_15751371.1390328244533--
