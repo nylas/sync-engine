@@ -1,23 +1,30 @@
 # Inbox
 
-[http://www.inboxapp.com](http://www.inboxapp.com)
+#### The open source email toolkit.
 
-Before you look at the code, please go read [Worse is
-Better](http://www.jwz.org/doc/worse-is-better.html).
 
-While you're at it, please also read Ryan Dahl's
-[rant](https://gist.github.com/cookrn/4015437#file-rant-md).
+Inbox is a set of tools to make it simple and quick to develop apps and services on top of email. It consists of:
 
-Now take a deep breath.
+- IMAP sync engine
+- Gmail OAuth authentication  
+- MIME parsing and decoding
+- Full text search indexing
+- Queryable metadata store
+- Full message body storage including attachments
+- All UTF-8 and JSON sanitized
+- Contacts list sync
 
-Let's begin.
 
-## Set up
+These features are exposed via clean APIs through ZeroRPC services. See the `/examples` folder for details.
 
-The Inbox platform consists of a handful of ZeroRPC-based services that run
-on one or more servers. For development, we run them all on a VM. For
-production, they run in packaged docker containers to your cloud provider of
-choice or private servers.
+
+
+## Getting Started
+
+You can run Inbox almost anywhere. We've pre-built images for Docker, VMware Fusion, VirtualBox, AWS, and DigitalOcean. See the [Downloads](http://preview.inboxapp.com/downloads) page for more info.
+
+
+### Install from source
 
 Here's how to set up a development environment:
 
@@ -31,8 +38,7 @@ Here's how to set up a development environment:
 
 5. `vagrant up`
 
-    Feel free to check out the `Vagrantfile` while this starts up. It creates a
-    host-only network for the VM at `192.168.10.200`.
+    Feel free to check out the `Vagrantfile` while this starts up. It runs `setup.sh` to install depdencies, and creates a host-only network for the VM at `192.168.10.200`.
 
 6. `vagrant ssh`
 
@@ -43,24 +49,20 @@ Here's how to set up a development environment:
 
 7. `cd /vagrant`
 
-8. `sudo ./setup.sh`
+8. `sudo ./inbox debug`
 
-11. `sudo pip install -e src` to avoid path hacks.
+9.  Auth an account via the commandline to start syncing: `$ ./inbox auth spang@inboxapp.com`
 
-12. `sudo ./inbox debug`
 
-And voila! Auth an account via the commandline to start syncing:
 
-    `sudo ./inbox auth spang@inboxapp.com`
+## Contributing
 
-<hr/>
+We'd love your help making Inbox better. Join the [Google Group](groups.google.com/group/inbox-dev) for project updates and feature discussion.
 
-## Style guide and git notes
+We try to stick with pep8 and the [Google Python style guide](http://google-styleguide.googlecode.com/svn/trunk/pyguide.html).
 
-We'll just be using the [Google Python style
-guide](http://google-styleguide.googlecode.com/svn/trunk/pyguide.html). No need
-to reinvent the wheel.
 
-Also, do `git config branch.master.rebase true` in the repo to keep your
-history nice and clean. You can set this globally using `git config --global
-branch.autosetuprebase remote`.
+#### Random notes
+
+You should do `git config branch.master.rebase true` in the repo to keep your
+history nice and clean. You can set this globally using `git config --global branch.autosetuprebase remote`.
