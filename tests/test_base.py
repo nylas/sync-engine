@@ -15,7 +15,7 @@ def config():
 class Test(object):
 		def __init__(self):
 						from inbox.server.models import new_db_session, init_db, engine
-						# Set up test database -> TODO: FIX ERROR
+						# Set up test database
 						init_db()
 						self.db_session = new_db_session()
 						self.engine = engine
@@ -27,10 +27,10 @@ class Test(object):
 						self.populate()
 
 		def create_user(self):
-						from inbox.server.models.tables import IMAPAccount, Namespace, User
+						from inbox.server.models.tables import ImapAccount, Namespace, User
 						
 						user = User(id=1, name="Test User")
-						imapaccount = IMAPAccount(id=1,
+						imapaccount = ImapAccount(id=1,
 																		user_id=1,
 																		email_address='inboxapptest@gmail.com',
 																		provider='Gmail',
@@ -50,6 +50,7 @@ class Test(object):
 						namespace = Namespace(id=1, imapaccount_id=1)
 
 						self.db_session.add_all([imapaccount, namespace, user])
+						self.db_session.commit()
 
 		def populate(self):
 						# TODO: Get this from a dump instead of an active sync
