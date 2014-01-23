@@ -9,9 +9,9 @@ TEST_CONFIG = os.path.join(
 
 @pytest.fixture(scope='session', autouse=True)
 def config():
-        from inbox.server.config import load_config, config
+        from inbox.server.config import load_config
+        from inbox.server.config import config as confdict
         load_config(filename=TEST_CONFIG)
-        return config
 
 class Test(object):
         def __init__(self):
@@ -54,11 +54,14 @@ class Test(object):
                         self.db_session.commit()
 
         def populate(self):
-                        username = 'inboxtest'
-                        password = 'inboxtest'
+                        # Note: Since database is called test, all users have access to it;
+                        # don't need to read in the username + password from config.
+
+                        # TODO: Don't hardcode, get from config
                         database = 'test'
                         source = TEST_DATA
 
+                        # TODO: Don't hardcode, use database + source vars
                         cmd = 'mysql test < /vagrant/tests/dump.sql'
                         subprocess.call(cmd, shell=True)
 
@@ -67,3 +70,4 @@ class Test(object):
 
                         # Drop test DB
                         drop_everything(self.engine, with_users=True)
+
