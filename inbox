@@ -73,7 +73,7 @@ def sync(args):
         elif args.cmd == 'stopall':
             print c.stop_sync()
         elif args.cmd == 'status':
-            print c.status()
+            print c.sync_status()
         else:
             print >>sys.stderr, "No such command."
             sys.exit(1)
