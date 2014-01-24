@@ -197,7 +197,7 @@ class Message(JSONSerializable, Base, HasRevisions):
     # just the relevant part out makes a big difference in how much data we
     # need to send over the wire.
     # Maximum length is determined by typical email size limits (25 MB body +
-    # attachments) on Gmail), assuming a maximum # of chars determined by
+    # attachments on Gmail), assuming a maximum # of chars determined by
     # 1-byte (ASCII) chars.
     # NOTE: always HTML :)
     sanitized_body = Column(Text(length=26214400), nullable=False)
