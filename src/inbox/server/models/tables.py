@@ -331,7 +331,7 @@ class Message(JSONSerializable, Base, HasRevisions):
                 "Can't provide headers before parts have been parsed"
 
         headers = self.parts[0].get_data()
-        json_headers = json.JSONDecoder.decode(headers)
+        json_headers = json.JSONDecoder().decode(headers)
 
         return json_headers
 

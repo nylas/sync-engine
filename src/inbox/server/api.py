@@ -24,6 +24,9 @@ def namespace_auth(fn):
     """
     @wraps(fn)
     def namespace_auth_fn(self, user_id, namespace_id, *args, **kwargs):
+
+        print "user_id, namespace_id, config = ", user_id, namespace_id, config
+
         with session_scope() as db_session:
             self.user_id = user_id
             self.namespace_id = namespace_id
@@ -161,11 +164,9 @@ class API(object):
 
     # Mailing list API:
     @namespace_auth
-    @jsonify
     def is_mailing_list_message(self, message_id):
         with session_scope() as db_session:
-            message = db_session.query(Message).filter(Message.id==message_id,
-                Message.namespace_id==self.namespace.id).one()
+            message = db_session.query(Message).filter(Message.id==message_id).one()
 
             return (message.mailing_list_info != None)
 
@@ -173,8 +174,7 @@ class API(object):
     @jsonify
     def mailing_list_info_for_message(self, message_id):
         with session_scope() as db_session:
-            message = db_session.query(Message).filter(Message.id==message_id,
-                Message.namespace_id==self.namespace.id).one()
+            message = db_session.query(Message).filter(Message.id==message_id).one()
 
             return message.mailing_list_info
 
@@ -183,7 +183,6 @@ class API(object):
     @jsonify
     def headers_for_message(self, message_id):
         with session_scope() as db_session:
-            message = db_session.query(Message).filter(Message.id==message_id,
-                Message.namespace_id==self.namespace.id).one()
+            message = db_session.query(Message).filter(Message.id==message_id).one()
 
             return message.headers

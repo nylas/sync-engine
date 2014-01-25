@@ -13,7 +13,7 @@ def config():
     from inbox.server.config import config as confdict
     load_config(filename=TEST_CONFIG)
 
-class Test(object):
+class TestDB(object):
     def __init__(self):
         from inbox.server.models import new_db_session, init_db, engine
         # Set up test database
@@ -35,6 +35,8 @@ class Test(object):
         # TODO: Don't hardcode, use database + source vars
         cmd = 'mysql test < /vagrant/tests/dump.sql'
         subprocess.call(cmd, shell=True)
+
+        print 'populate done!'
 
     def destroy(self):
         from inbox.util.db import drop_everything
