@@ -24,9 +24,6 @@ def namespace_auth(fn):
     """
     @wraps(fn)
     def namespace_auth_fn(self, user_id, namespace_id, *args, **kwargs):
-
-        print "user_id, namespace_id, config = ", user_id, namespace_id, config
-
         with session_scope() as db_session:
             self.user_id = user_id
             self.namespace_id = namespace_id
@@ -131,10 +128,11 @@ class API(object):
     @namespace_auth
     @jsonify
     def body_for_message(self, message_id):
+        # TODO: Take namespace into account, currently doesn't matter since
+        # one namespace only.
         with session_scope() as db_session:
             message = db_session.query(Message).join(Message.parts) \
-                    .filter(Message.id==message_id,
-                            Message.namespace_id==self.namespace.id).one()
+                    .filter(Message.id==message_id).one()
 
             return {'data': message.prettified_body}
 
@@ -165,6 +163,8 @@ class API(object):
     # Mailing list API:
     @namespace_auth
     def is_mailing_list_message(self, message_id):
+        # TODO: Take namespace into account, currently doesn't matter since
+        # one namespace only.
         with session_scope() as db_session:
             message = db_session.query(Message).filter(Message.id==message_id).one()
 
@@ -173,6 +173,8 @@ class API(object):
     @namespace_auth
     @jsonify
     def mailing_list_info_for_message(self, message_id):
+        # TODO: Take namespace into account, currently doesn't matter since
+        # one namespace only.
         with session_scope() as db_session:
             message = db_session.query(Message).filter(Message.id==message_id).one()
 
@@ -182,6 +184,8 @@ class API(object):
     @namespace_auth
     @jsonify
     def headers_for_message(self, message_id):
+        # TODO: Take namespace into account, currently doesn't matter since
+        # one namespace only.
         with session_scope() as db_session:
             message = db_session.query(Message).filter(Message.id==message_id).one()
 

@@ -20,9 +20,6 @@ def transform_bools(v):
 
 def load_config(filename='config.cfg'):
     global config
-
-    print "filename = ", filename
-    
     try:
         parser=SafeConfigParser()
         parser.read([filename])
