@@ -96,7 +96,7 @@ class API(object):
         log.info("Searching with query: {0}".format(search_query))
         results = self.z_search(self.namespace.id, search_query)
         message_ids = [r[0] for r in results]
-        log.info("Found {0} messsages".format(len(message_ids)))
+        log.info("Found {0} messages".format(len(message_ids)))
         return message_ids
 
     @namespace_auth
@@ -188,5 +188,10 @@ class API(object):
         # one namespace only.
         with session_scope() as db_session:
             message = db_session.query(Message).filter(Message.id==message_id).one()
-
             return message.headers
+            
+    # For run.py example:
+    def first_n_subjects(self, n):
+        with session_scope() as db_session:
+            subjects = db_session.query(Message.subject).distinct().limit(n).all()
+            return subjects

@@ -56,8 +56,8 @@ def configure_general_logging():
     inbox_root_logger.propagate = False
 
     # log everything to screen
-    if sys.stdout.isatty():
-        inbox_root_logger.addHandler(get_tty_handler())
+    #if sys.stdout.isatty():
+    #    inbox_root_logger.addHandler(get_tty_handler())
 
     logger = get_logger()
 
