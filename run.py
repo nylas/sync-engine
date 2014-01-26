@@ -18,6 +18,6 @@ The first {0} emails in your inbox...
 	for s in subjects:
 		print """
 		{0}
-		""".format(s[0].encode('ascii', 'ignore'))
+		""".format(s[0])
 
 get_subjects(10)
