@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import zerorpc
 
 from inbox.server.config import config, load_config
