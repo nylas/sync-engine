@@ -10,10 +10,7 @@ print 'connecting...'
 conn = IMAPClient(HOST, use_uid=True, ssl=True)
 conn.login(USER, PW)
 
-# conn = IMAPClient('imap.gmail.com', use_uid=True, ssl=True)
-# conn.login('testinboxapp', 'ihategmail')
-
-print conn.capabilities()
+print '\n\ncapabilities = ', conn.capabilities()
 
 folders = conn.list_folders()
 print '\n\nfolders = ', [f[2] for f in folders]
