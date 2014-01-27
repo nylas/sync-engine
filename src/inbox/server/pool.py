@@ -14,7 +14,8 @@ from .session import verify_imap_account
 from .log import get_logger
 log = get_logger()
 
-IMAP_HOSTS = { 'Gmail': 'imap.gmail.com' }
+IMAP_HOSTS = { 'Gmail': 'imap.gmail.com',
+                'Yahoo': 'imap.mail.yahoo.com' }
 
 # Memory cache for per-user IMAP connection pool.
 imapaccount_id_to_connection_pool = {}

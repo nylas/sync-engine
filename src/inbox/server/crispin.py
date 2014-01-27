@@ -29,8 +29,9 @@ def timed(fn):
 
 ### main stuff
 
-def new_crispin(account_id, provider, dummy=False, conn_pool_size=None):
-    crispin_module_for = dict(Gmail=GmailCrispinClient, IMAP=CrispinClient)
+def new_crispin(account_id, provider, dummy=False):
+    crispin_module_for = dict(Gmail=GmailCrispinClient, IMAP=CrispinClient,
+        Yahoo=YahooCrispinClient)
 
     cls = DummyCrispinClient if dummy else crispin_module_for[provider]
     return cls(account_id, conn_pool_size=conn_pool_size)
@@ -304,6 +305,28 @@ class CrispinClient(CrispinClientBase):
             self.set_cache(folders, 'folders')
 
         return folders
+
+class YahooCrispinClient(CrispinClient):
+    def __init__(self, account_id, cache=False):
+        CrispinClient.__init__(self, account_id, cache=False)
+
+    def sync_folders(self, c):
+
+    def flags(self, uids, c):
+
+    def _fetch_flags(self, uids, c):
+
+    def folder_names(self, c):
+        if self._folder_names is None:
+            folders = self._fetch_folder_list(c)
+
+    def uids(self, uids, c):
+
+    def _fetch_uids(self, uids, c):
+
+    def expand_threads(self, thread_ids, c):
+
+    def _expand_threads(self, thread_ids, c):
 
 class GmailCrispinClient(CrispinClient):
     def __init__(self, account_id, cache=False, conn_pool_size=None):

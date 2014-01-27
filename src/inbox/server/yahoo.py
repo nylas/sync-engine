@@ -7,8 +7,11 @@ USER = 'inboxapptest'
 PW = 'ihateYahoo1'
 
 print 'connecting...'
-conn = IMAPClient(HOST, use_uid=True, ssl=True)
-conn.login(USER, PW)
+#conn = IMAPClient(HOST, use_uid=True, ssl=True)
+#conn.login(USER, PW)
+
+conn = IMAPClient('imap.gmail.com', use_uid=True, ssl=True)
+conn.login('testinboxapp', 'ihategmail')
 
 print '\n\ncapabilities = ', conn.capabilities()
 
