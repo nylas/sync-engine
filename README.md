@@ -6,7 +6,7 @@
 Inbox is a set of tools to make it simple and quick to develop apps and services on top of email. It consists of:
 
 - IMAP sync engine
-- Gmail OAuth authentication  
+- Gmail OAuth authentication
 - MIME parsing and decoding
 - Full text search indexing
 - Queryable metadata store
@@ -38,7 +38,7 @@ Here's how to set up a development environment:
 
 5. `vagrant up`
 
-    Feel free to check out the `Vagrantfile` while this starts up. It runs `setup.sh` to install depdencies, and creates a host-only network for the VM at `192.168.10.200`.
+    Feel free to check out the `Vagrantfile` while this starts up. It creates a host-only network for the VM at `192.168.10.200`.
 
 6. `vagrant ssh`
 
@@ -49,6 +49,8 @@ Here's how to set up a development environment:
     shared folder now.
 
 7. `cd /vagrant`
+
+8. `./setup.sh` to install depdencies and create databases
 
 8. `sudo ./inbox debug`
 

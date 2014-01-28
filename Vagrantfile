@@ -17,7 +17,7 @@ Vagrant::Config.run do |config|
     "--memory", 1024
   ]
 
-  config.vm.provision :shell, :inline => "apt-get update -q && cd /vagrant && /bin/sh setup.sh"
+  # config.vm.provision :shell, :inline => "apt-get update -q && cd /vagrant && /bin/sh setup.sh"
 end
 
 Vagrant.configure("2") do |config|
