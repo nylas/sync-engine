@@ -125,7 +125,9 @@ class Blob(object):
         assert self.data_sha256
         # Nest it 6 items deep so we don't have folders with too many files.
         h = self.data_sha256
-        return os.path.join('/srv', 'inboxapp-data', 'parts',
+        root = config.get('MSGDIR', None)
+        assert root, "Need root path for saving data"
+        return os.path.join(root, 'inboxapp-data', 'parts',
                 h[0], h[1], h[2], h[3], h[4], h[5])
 
     @property
