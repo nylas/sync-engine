@@ -1,10 +1,12 @@
 #!/usr/bin/python
 import zerorpc
 
-from inbox.server.config import config, load_config
-load_config()
+# from inbox.server.config import config, load_config
+# load_config()
 
-API_SERVER_LOC = config.get('API_SERVER_LOC', None)
+# API_SERVER_LOC = config.get('API_SERVER_LOC', None)
+API_SERVER_LOC = 'tcp://0.0.0.0:9999'
+
 
 def get_subjects(n):
 	api_client = zerorpc.Client(timeout=5)

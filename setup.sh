@@ -34,12 +34,10 @@ apt-get -y install git \
                    curl
 
 
-# Install NodeJS
-# RUN wget -O - http://nodejs.org/dist/v0.8.26/node-v0.8.26-linux-x64.tar.gz | tar -C /usr/local/ --strip-components=1 -zxv
+# Install nodejs
+wget -O - http://nodejs.org/dist/v0.8.26/node-v0.8.26-linux-x64.tar.gz | tar -C /usr/local/ --strip-components=1 -zxv
 
 pip install --upgrade setuptools
-
-# curl -O http://python-distribute.org/distribute_setup.py && python distribute_setup.py && rm distribute_setup.py distribute-*.tar.gz
 
 pip install -r requirements.txt
 pip install -e src
