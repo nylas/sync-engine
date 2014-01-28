@@ -149,15 +149,29 @@ def auth(args):
         account = db_session.query(ImapAccount).filter_by(
                 email_address=email_address).one()
     except NoResultFound:
-        try:
-            oauth_response = oauth.oauth(email_address)
-        except oauth.OauthError:
-            print >>sys.stderr, "Auth failed."
-            sys.exit(1)
+        parsed_email_address = email_address.split('@')
+        if non_oauth_provider(parsed_email_address[1]):
+                email_pw_dict = oauth.nonoauth(email_address)
+                account = session.make_account_nonoauth(db_session, email_pw_dict)
+        else:
+            try:
+                oauth_response = oauth.oauth(email_address)
+            except oauth.OauthError:
+                print >>sys.stderr, "Auth failed."
+                sys.exit(1)
 
-        account = session.make_account(db_session, oauth_response)
+            account = session.make_account_oauth(db_session, oauth_response)
+
     print "Success!"
     return account
+
+def non_oauth_provider(domain):
+    NON_OAUTH_PROVIDERS = ['yahoo']
+
+    for provider in NON_OAUTH_PROVIDERS:
+        if provider in domain:
+            return True
+    return False
 
 def add(args):
     # Auth User

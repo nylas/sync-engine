@@ -8,7 +8,7 @@ from ..log import get_logger
 from .gmail import GmailSyncMonitor
 from .imap import ImapSyncMonitor
 
-monitor_cls_for = {'Gmail': GmailSyncMonitor, 'IMAP': ImapSyncMonitor}
+monitor_cls_for = {'Gmail': GmailSyncMonitor, 'IMAP': ImapSyncMonitor, 'Yahoo': ImapSyncMonitor }
 
 def notify(account_id, mtype, message):
     """ Pass a message on to the notification dispatcher which deals with

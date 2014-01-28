@@ -325,7 +325,7 @@ def imap_initial_sync(crispin_client, db_session, log, folder_name,
         shared_state, local_uids, c):
     check_flags(crispin_client, db_session, folder_name, local_uids, c)
 
-    remote_uids = crispin_client.all_uids()
+    remote_uids = crispin_client.all_uids(c)
     log.info("Found {0} UIDs for folder {1}".format(len(remote_uids),
         folder_name))
     log.info("Already have {0} UIDs".format(len(local_uids)))
@@ -338,8 +338,8 @@ def imap_initial_sync(crispin_client, db_session, log, folder_name,
 
     chunked_uid_download(crispin_client, db_session, log, folder_name,
             unknown_uids, len(local_uids), len(remote_uids),
-            shared_state['status_cb'], download_and_commit_uids,
-            account.create_message, c)
+            shared_state['status_cb'], shared_state['syncmanager_lock'], ### TODO[kavya]:CHECK SYNCMANAGER LOCK!
+            download_and_commit_uids, account.create_message, c)
 
 def check_flags(crispin_client, db_session, folder_name, local_uids, c):
     """

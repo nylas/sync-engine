@@ -56,6 +56,8 @@ class IMAPConnectionPool(ConnectionPool):
 
         conn.debug = False
 
+        conn.login('inboxapptest', 'ihateYahoo1')
+
         try:
             conn.oauth2_login(self.email_address, self.o_access_token)
         except IMAPClient.Error as e:

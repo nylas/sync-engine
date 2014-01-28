@@ -7,16 +7,17 @@ USER = 'inboxapptest'
 PW = 'ihateYahoo1'
 
 print 'connecting...'
-#conn = IMAPClient(HOST, use_uid=True, ssl=True)
-#conn.login(USER, PW)
+conn = IMAPClient(HOST, use_uid=True, ssl=True)
+conn.login(USER, PW)
 
-conn = IMAPClient('imap.gmail.com', use_uid=True, ssl=True)
-conn.login('testinboxapp', 'ihategmail')
+#conn = IMAPClient('imap.gmail.com', use_uid=True, ssl=True)
+#conn.login('testinboxapp', 'ihategmail')
 
 print '\n\ncapabilities = ', conn.capabilities()
 
 folders = conn.list_folders()
-print '\n\nfolders = ', [f[2] for f in folders]
+print folders
+#print '\n\nfolders = ', [f[2] for f in folders]
 
 for f in folders:
     sub_folders = conn.list_sub_folders(directory=f[2])

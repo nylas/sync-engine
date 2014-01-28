@@ -35,7 +35,25 @@ def get_session(db_session, session_token):
     except:
         raise
 
-def make_account(db_session, access_token_dict):
+def make_account_nonoauth(db_session, email_pw_dict):
+    try:
+        account = db_session.query(ImapAccount).filter_by(
+                email_address=email_pw_dict['email']).one()
+    except sqlalchemy.orm.exc.NoResultFound:
+        user = User()
+        namespace = Namespace()
+        account = ImapAccount(user=user, namespace=namespace)
+    account.email_address = email_pw_dict['email']
+    account.password = email_pw_dict['password']
+    account.date = datetime.datetime.utcnow()
+    account.provider = 'Yahoo'
+
+    db_session.add(account)
+    db_session.commit()
+    log.info("Stored new account {0}".format(account.email_address))
+    return account
+
+def make_account_oauth(db_session, access_token_dict):
     try:
         account = db_session.query(ImapAccount).filter_by(
                 email_address=access_token_dict['email']).one()
@@ -76,30 +94,30 @@ def verify_imap_account(db_session, account):
     # TODO check with expire date first
     # expire_date = issued_date + datetime.timedelta(seconds=expires_seconds)
 
-    is_valid = oauth.validate_token(account.o_access_token)
+    #is_valid = oauth.validate_token(account.o_access_token)
 
     # TODO refresh tokens based on date instead of checking?
     # if not is_valid or expire_date > datetime.datetime.utcnow():
-    if not is_valid:
-        log.error("Need to update access token!")
+    # if not is_valid:
+    #     log.error("Need to update access token!")
 
-        refresh_token = account.o_refresh_token
+    #     refresh_token = account.o_refresh_token
 
-        log.error("Getting new access token...")
-        response = oauth.get_new_token(refresh_token)  # TOFIX blocks
-        response['refresh_token'] = refresh_token  # Propogate it through
+    #     log.error("Getting new access token...")
+    #     response = oauth.get_new_token(refresh_token)  # TOFIX blocks
+    #     response['refresh_token'] = refresh_token  # Propogate it through
 
-        # TODO handling errors here for when oauth has been revoked
-        if 'error' in response:
-            log.error(response['error'])
-            if response['error'] == 'invalid_grant':
-                # Means we need to reset the entire oauth process.
-                log.error("Refresh token is invalid.")
-            return None
+    #     # TODO handling errors here for when oauth has been revoked
+    #     if 'error' in response:
+    #         log.error(response['error'])
+    #         if response['error'] == 'invalid_grant':
+    #             # Means we need to reset the entire oauth process.
+    #             log.error("Refresh token is invalid.")
+    #         return None
 
-        # TODO Verify it and make sure it's valid.
-        assert 'access_token' in response
-        account = make_account(db_session, response)
-        log.info("Updated token for imap account {0}".format(account.email_address))
+    #     # TODO Verify it and make sure it's valid.
+    #     assert 'access_token' in response
+    #     account = make_account(db_session, response)
+    #     log.info("Updated token for imap account {0}".format(account.email_address))
 
     return account

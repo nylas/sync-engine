@@ -311,22 +311,72 @@ class YahooCrispinClient(CrispinClient):
         CrispinClient.__init__(self, account_id, cache=False)
 
     def sync_folders(self, c):
+        return self.folder_names(c)
 
     def flags(self, uids, c):
+        return dict([(uid, msg['FLAGS'])
+            for uid, msg in self._fetch_flags(uids, c).iteritems()])
 
     def _fetch_flags(self, uids, c):
+        data = c.fetch(uids, ['FLAGS'])
+
+        if self.cache:
+            # account.{{account_id}}/{{folder}}/{{uidvalidity}}/{{highestmodseq}}/{{uid}}/flags
+            for uid in uids:
+                self.set_cache(data[uid],
+                        self.selected_folder_name,
+                        self.selected_uidvalidity,
+                        self.selected_highestmodseq,
+                        uid, 'flags')
+
+        return data
 
     def folder_names(self, c):
         if self._folder_names is None:
             folders = self._fetch_folder_list(c)
+            self._folder_names = [name for flags, delimiter, name in folders]
+        return self._folder_names
 
     def uids(self, uids, c):
+        raw_messages = self._fetch_uids(uids, c)
+        messages = []
+        for uid in sorted(raw_messages.iterkeys(), key=int):
+            msg = raw_messages[uid]
+            messages.append((int(uid), msg['INTERNALDATE'], msg['FLAGS'],
+                msg['BODY[]']))
+        return messages
 
     def _fetch_uids(self, uids, c):
+        data = c.fetch(uids,
+                ['BODY.PEEK[] INTERNALDATE FLAGS'])
+        for uid, msg in data.iteritems():
+            # NOTE: flanker needs encoded bytestrings as its input, since to
+            # deal properly with MIME-encoded email you need to do part
+            # decoding based on message / MIME part headers anyway. imapclient
+            # tries to abstract away bytes and decodes all bytes received from
+            # the wire as _latin-1_, which is wrong in any case where 8bit MIME
+            # is used. so we have to reverse the damage before we proceed.
+            #
+            # We should REMOVE this XXX HACK XXX when we finish working with
+            # Menno to fix this problem upstream.
+            msg['BODY[]'] = msg['BODY[]'].encode('latin-1')
+
+        if self.cache:
+            # account.{{account_id}}/{{folder}}/{{uidvalidity}}/{{highestmodseq}}/{{uid}}/body
+            for uid in uids:
+                self.set_cache(data[uid],
+                        self.selected_folder_name,
+                        self.selected_uidvalidity,
+                        self.selected_highestmodseq,
+                        uid, 'body')
+
+        return data
 
     def expand_threads(self, thread_ids, c):
+        NotImplementedError
 
     def _expand_threads(self, thread_ids, c):
+        NotImplementedError
 
 class GmailCrispinClient(CrispinClient):
     def __init__(self, account_id, cache=False, conn_pool_size=None):
