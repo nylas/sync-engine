@@ -151,7 +151,7 @@ def auth(email_address):
     if (len(password) <= 0):
         raise AuthError('Invalid password')
 
-    if (!password):
+    if (len(password) <= 0):
         raise AuthError('Invalid password')
 
     return { 'email': email_address, 'password': password }

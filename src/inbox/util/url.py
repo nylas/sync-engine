@@ -5,9 +5,8 @@ import re
 
 EMAIL_REGEX = re.compile(r"[^@]+@[^@]+\.[^@]+")
 
-
 # https://en.wikipedia.org/wiki/Yahoo!_Mail#Email_domains
-
+# YAHOO:
 yahoo_mail_domains = [
     'yahoo.com.ar', # Argentina
     'yahoo.com.au', # Australia
@@ -68,9 +67,11 @@ yahoo_mail_domains = [
     'rocketmail.com',
 ]
 
-
-
+# GMAIL:
 def email_supports_gmail(address_text):
+
+    # TODO: FIX THIS, d'uh!
+    #return True
 
     is_valid = True
 
@@ -111,9 +112,7 @@ def email_supports_gmail(address_text):
 
     return is_valid
 
-
 def provider_from_address(email_address):
-
     if email_supports_gmail(email_address):
         return 'Gmail'
 
@@ -123,8 +122,6 @@ def provider_from_address(email_address):
         return 'Yahoo'
 
     return 'Unknown'
-
-
 
 # From tornado.httputil
 def url_concat(url, args):

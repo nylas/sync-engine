@@ -9,6 +9,7 @@ from sqlalchemy.orm import reconstructor, relationship, backref, deferred
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.ext.hybrid import hybrid_property, Comparator
+from sqlalchemy.dialects.mysql import BLOB
 
 from bs4 import BeautifulSoup, Doctype, Comment
 
@@ -67,7 +68,8 @@ class ImapAccount(Base):
     # used to verify key lifespan
     date = Column(DateTime)
 
-    password_aes = deferred(Column(BLOB()))
+    password_aes = Column(String(256))
+    #password_aes = deferred(Column(BLOB()))
 
     # If oauthed or password
     is_oauthed = Column(Boolean, default=True)
@@ -86,25 +88,40 @@ class ImapAccount(Base):
     def sync_unlock(self):
         self._sync_lock.release()
 
-    @hybrid_property
+    @property
     def password(self):
-        raise NotImplementedError("Comparison only supported via the database")
-
-    class PasswordComparator(Comparator):
-        def __init__(self, password_aes):
-            self.password_aes = password_aes
-
-        def __eq__(self, other):
-            return self.password_aes == \
-                func.aes_encrypt(other, secret)
-
-    @password.comparator
-    def password(cls):
-        return ImapAccount.PasswordComparator(cls.password_aes)
+        if self.password_aes is not None:
+            return self.password_aes #func.aes_decrypt(self.password_aes, secret)
 
     @password.setter
     def password(self, value):
-        self.password_aes = func.aes_encrypt(value, secret)
+        self.password_aes = value #func.aes_encrypt(value, secret)
+
+    # @hybrid_property
+    # def password(self):
+    #     raise NotImplementedError("Comparison only supported via the database")
+
+    # class PasswordComparator(Comparator):
+    #     def __init__(self, password_aes):
+    #         self.password_aes = password_aes
+
+    #     def __eq__(self, other):
+    #         return self.password_aes == \
+    #             func.aes_encrypt(other, secret)
+
+    # @password.comparator
+    # def password(cls):
+    #     return ImapAccount.PasswordComparator(cls.password_aes)
+
+    # TODO: Erm, FIX THIS:
+    # @hybrid_property
+    # def password(self):
+    #     if self.password_aes is not None:
+    #         return func.aes_decrypt(self.password_aes, secret)
+
+    # @password.setter
+    # def password(self, value):
+    #     self.password_aes = func.aes_encrypt(value, secret)
 
 class UserSession(Base):
     """ Inbox-specific sessions. """

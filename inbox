@@ -27,8 +27,8 @@ def start(args=None):
     from inbox.server.util.concurrency import make_zerorpc
     from inbox.server.api import API
 
-    api_srv_loc = config.get('API_SERVER_LOC', None)
-    threads.append(make_zerorpc(API, api_srv_loc))
+    #api_srv_loc = config.get('API_SERVER_LOC', None)
+    #threads.append(make_zerorpc(API, api_srv_loc))
 
     # Start ZeroRPC mail sync server service
     from inbox.server.mailsync.service import SyncService
@@ -36,14 +36,14 @@ def start(args=None):
     threads.append(make_zerorpc(SyncService, sync_srv_loc))
 
     # Start ZeroRPC contacts sync service
-    from inbox.server.rolodex import ContactSync
-    contacts_srv_loc = config.get('ROLODEX_SERVER_LOC', None)
-    threads.append(make_zerorpc(ContactSync, contacts_srv_loc))
+    #from inbox.server.rolodex import ContactSync
+    #contacts_srv_loc = config.get('ROLODEX_SERVER_LOC', None)
+    #threads.append(make_zerorpc(ContactSync, contacts_srv_loc))
 
     # start ZeroRPC search server service
-    from inbox.server.search import SearchService
-    search_srv_loc = config.get('SEARCH_SERVER_LOC', None)
-    threads.append(make_zerorpc(SearchService, search_srv_loc))
+    #from inbox.server.search import SearchService
+    #search_srv_loc = config.get('SEARCH_SERVER_LOC', None)
+    #threads.append(make_zerorpc(SearchService, search_srv_loc))
 
     print """
 \033[94m     Welcome to... \033[0m\033[1;95m
@@ -68,7 +68,6 @@ def sync(args):
     from inbox.server.models.tables import ImapAccount
     from sqlalchemy.orm.exc import NoResultFound
     from sqlalchemy.exc import ProgrammingError
-
 
     from inbox.server.models import new_db_session
     db_session = new_db_session()
@@ -163,19 +162,21 @@ def auth(args):
 
     init_db()
     db_session = new_db_session()
+
     try:
         account = db_session.query(ImapAccount).filter_by(
                 email_address=email_address).one()
-        
-        #TODO: Verify account
     except NoResultFound:
-        try:
-            account = session.make_account(db_session, email_address)
-        except NotImplementedError as e:
-            print >>sys.stderr, str(e)
-            sys.exit(1)
+        response = session.auth_account(email_address)
+        account = session.make_account(db_session, email_address, response)
+        
+    try:
+        verified_account = session.verify_account(db_session, account)    
+    except session.NotSupportedError as e:
+        print >>sys.stderr, str(e)
+        sys.exit(1)
 
-    return account
+    return verified_account
 
 def signal_handler(signal, frame):
     stop(None)
