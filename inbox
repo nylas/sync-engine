@@ -11,8 +11,6 @@ from inbox.server.config import config, load_config
 from inbox.server.log import configure_general_logging, get_logger
 log = get_logger()
 
-from inbox.util.url import provider_from_address
-
 def debug(args=None):
     """ Run the server with autoreload. TODO add debug flag to startup."""
     from werkzeug.serving import run_with_reloader
@@ -80,7 +78,7 @@ def sync(args):
                 email_address=args.email_address).one()
         #print "Already authed!"
     except NoResultFound:
-        log.error("No record of account {0}".format(args.email_address) )
+        log.error("No record of account {0}".format(args.email_address))
         return
 
     c = zerorpc.Client(timeout=5)
@@ -156,7 +154,6 @@ def index(args):
             gen_search_index(namespace)
 
 def auth(args):
-    # TODO Auth by email,password for non-OAuth backends
     from inbox.server import oauth, session
     from inbox.server.models import new_db_session, init_db
     from inbox.server.models.tables import ImapAccount
@@ -169,48 +166,16 @@ def auth(args):
     try:
         account = db_session.query(ImapAccount).filter_by(
                 email_address=email_address).one()
-        log.info("Already have a password for {0}".format(email_address))
-        #print "Already authed!"
+        
+        #TODO: Verify account
     except NoResultFound:
-
-        provider = provider_from_address(email_address)
-        log.info("Provider is {0}".format(provider))
-
-        # Use OAuth if the email is Gmail or Google Apps
-        if provider == "Gmail":
-            try:
-                oauth_response = oauth.oauth(email_address)
-            except oauth.OauthError:
-                print >>sys.stderr, "Auth failed for {0}".format(email_address)
-                sys.exit(1)
-            account = session.make_account_from_oauth(db_session, oauth_response)
-
-        elif provider == "Yahoo":
-            try:
-                # login with only password.
-                password = getpass.getpass("What's the password for {0}? ".format(email_address)).strip()
-
-
-                from imapclient import IMAPClient
-                imap_host = 'imap.mail.yahoo.com'  # Port 993 with SSL
-                # SMTP: smtp.mail.yahoo.com, port 465 or 587, requires SSL and authentication
-                conn = IMAPClient(imap_host, use_uid=True, ssl=True)
-                conn.debug = False
-                conn.login(email_address, password)
-                # TODO close the socket connection properly, perhaps in finally
-            except IMAPClient.Error as e:
-                log.error("Error logging into {0} server for account {1}: {2}"\
-                            .format(provider, email_address, e))
-
-                print >>sys.stderr, "Auth failed for {0}".format(email_address)
-                sys.exit(1)
-            account = session.make_account(db_session, email_address, password, provider="Yahoo")
-
-        else:
-            raise NotImplementedError, "Inbox only currently works with Gmail and Yahoo"
+        try:
+            account = session.make_account(db_session, email_address)
+        except NotImplementedError as e:
+            print >>sys.stderr, str(e)
+            sys.exit(1)
 
     return account
-
 
 def signal_handler(signal, frame):
     stop(None)

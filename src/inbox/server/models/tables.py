@@ -23,6 +23,9 @@ from inbox.sqlalchemy.revision import Revision, gen_rev_role
 
 from .roles import JSONSerializable, Blob
 
+#TODO: Change this, d'uh
+secret = 12345678
+
 # global
 
 class ImapAccount(Base):
@@ -64,7 +67,10 @@ class ImapAccount(Base):
     # used to verify key lifespan
     date = Column(DateTime)
 
-    password_sha2 = deferred(Column(String(256)))
+    password_aes = deferred(Column(BLOB()))
+
+    # If oauthed or password
+    is_oauthed = Column(Boolean, default=True)
 
     @property
     def _sync_lockfile_name(self):
@@ -85,20 +91,20 @@ class ImapAccount(Base):
         raise NotImplementedError("Comparison only supported via the database")
 
     class PasswordComparator(Comparator):
-        def __init__(self, password_sha2):
-            self.password_sha2 = password_sha2
+        def __init__(self, password_aes):
+            self.password_aes = password_aes
 
         def __eq__(self, other):
-            return self.password_hashed == \
-                    func.crypt(other, self.password_sha2)
+            return self.password_aes == \
+                func.aes_encrypt(other, secret)
 
     @password.comparator
     def password(cls):
-        return ImapAccount.PasswordComparator(cls.password_sha2)
+        return ImapAccount.PasswordComparator(cls.password_aes)
 
     @password.setter
     def password(self, value):
-        self.password_sha2 = func.sha2(value, 256)
+        self.password_aes = func.aes_encrypt(value, secret)
 
 class UserSession(Base):
     """ Inbox-specific sessions. """
