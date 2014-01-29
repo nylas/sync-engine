@@ -21,7 +21,7 @@ These features are exposed via clean APIs through ZeroRPC services. See the `/ex
 
 ## Getting Started
 
-You can run Inbox almost anywhere. We've pre-built images for Docker, VMware Fusion, VirtualBox, AWS, and DigitalOcean. See the [Downloads](http://preview.inboxapp.com/downloads) page for more info.
+You can run Inbox almost anywhere. We've successfuly built images for Docker, VMware Fusion, VirtualBox, AWS, and DigitalOcean. The easiest way to get started is to install from source within VirtualBox. 
 
 
 ### Install from source
