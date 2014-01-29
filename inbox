@@ -4,11 +4,14 @@ from gevent import joinall
 import argparse
 import signal
 import sys
+import getpass
 from setproctitle import setproctitle; setproctitle('inbox')
 
 from inbox.server.config import config, load_config
 from inbox.server.log import configure_general_logging, get_logger
 log = get_logger()
+
+from inbox.util.url import provider_from_address
 
 def debug(args=None):
     """ Run the server with autoreload. TODO add debug flag to startup."""
@@ -62,16 +65,34 @@ def start(args=None):
 def sync(args):
     import zerorpc
 
+    from inbox.server import oauth, session
+    from inbox.server.models import new_db_session, init_db
+    from inbox.server.models.tables import ImapAccount
+    from sqlalchemy.orm.exc import NoResultFound
+    from sqlalchemy.exc import ProgrammingError
+
+
+    from inbox.server.models import new_db_session
+    db_session = new_db_session()
+
+    try:
+        account = db_session.query(ImapAccount).filter_by(
+                email_address=args.email_address).one()
+        #print "Already authed!"
+    except NoResultFound:
+        log.error("No record of account {0}".format(args.email_address) )
+        return
+
     c = zerorpc.Client(timeout=5)
     sync_srv_loc = config.get('CRISPIN_SERVER_LOC', None)
     c.connect(sync_srv_loc)
     try:
         if args.cmd == 'start':
-            print c.start_sync(args.account_id, dummy=args.dummy)
+            print c.start_sync(account.id, dummy=args.dummy)
         elif args.cmd == 'startall':
             print c.start_sync(dummy=args.dummy)
         elif args.cmd == 'stop':
-            print c.stop_sync(args.account_id)
+            print c.stop_sync(account.id)
         elif args.cmd == 'stopall':
             print c.stop_sync()
         elif args.cmd == 'status':
@@ -148,40 +169,48 @@ def auth(args):
     try:
         account = db_session.query(ImapAccount).filter_by(
                 email_address=email_address).one()
+        log.info("Already have a password for {0}".format(email_address))
+        #print "Already authed!"
     except NoResultFound:
-        parsed_email_address = email_address.split('@')
-        if non_oauth_provider(parsed_email_address[1]):
-                email_pw_dict = oauth.nonoauth(email_address)
-                account = session.make_account_nonoauth(db_session, email_pw_dict)
-        else:
+
+        provider = provider_from_address(email_address)
+        log.info("Provider is {0}".format(provider))
+
+        # Use OAuth if the email is Gmail or Google Apps
+        if provider == "Gmail":
             try:
                 oauth_response = oauth.oauth(email_address)
             except oauth.OauthError:
-                print >>sys.stderr, "Auth failed."
+                print >>sys.stderr, "Auth failed for {0}".format(email_address)
                 sys.exit(1)
+            account = session.make_account_from_oauth(db_session, oauth_response)
 
-            account = session.make_account_oauth(db_session, oauth_response)
+        elif provider == "Yahoo":
+            try:
+                # login with only password.
+                password = getpass.getpass("What's the password for {0}? ".format(email_address)).strip()
 
-    print "Success!"
+
+                from imapclient import IMAPClient
+                imap_host = 'imap.mail.yahoo.com'  # Port 993 with SSL
+                # SMTP: smtp.mail.yahoo.com, port 465 or 587, requires SSL and authentication
+                conn = IMAPClient(imap_host, use_uid=True, ssl=True)
+                conn.debug = False
+                conn.login(email_address, password)
+                # TODO close the socket connection properly, perhaps in finally
+            except IMAPClient.Error as e:
+                log.error("Error logging into {0} server for account {1}: {2}"\
+                            .format(provider, email_address, e))
+
+                print >>sys.stderr, "Auth failed for {0}".format(email_address)
+                sys.exit(1)
+            account = session.make_account(db_session, email_address, password, provider="Yahoo")
+
+        else:
+            raise NotImplementedError, "Inbox only currently works with Gmail and Yahoo"
+
     return account
 
-def non_oauth_provider(domain):
-    NON_OAUTH_PROVIDERS = ['yahoo']
-
-    for provider in NON_OAUTH_PROVIDERS:
-        if provider in domain:
-            return True
-    return False
-
-def add(args):
-    # Auth User
-    account = auth(args)
-
-    # Sync Account, sync server must be running for this
-    args.cmd = "start"
-    args.account_id = account.id
-    args.dummy = None
-    sync(args)
 
 def signal_handler(signal, frame):
     stop(None)
@@ -206,10 +235,6 @@ def main():
     parser_auth.add_argument('email_address', help="Specify the email account to auth")
     parser_auth.set_defaults(func=auth)
 
-    parser_add = subparsers.add_parser('add', description="Add a new email account")
-    parser_add.add_argument('email_address', help='Specify the email account to add')
-    parser_add.set_defaults(func=add)
-
     parser_console = subparsers.add_parser('console', description="REPL for crispin")
     parser_console.add_argument('-e', '--email-address',
             help='Start console with crispin client for a particular user')
@@ -217,7 +242,7 @@ def main():
 
     parser_sync = subparsers.add_parser('sync', description="Start/stop mail sync")
     parser_sync.add_argument('cmd', help='start or stop')
-    parser_sync.add_argument('account_id', help='Account ID of user to sync')
+    parser_sync.add_argument('email_address', help='Email address of the account to sync')
     parser_sync.add_argument('--dummy', action='store_true',
             help="Don't connect to IMAP backend.", default=False)
     parser_sync.set_defaults(func=sync)

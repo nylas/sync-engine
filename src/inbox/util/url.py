@@ -5,7 +5,72 @@ import re
 
 EMAIL_REGEX = re.compile(r"[^@]+@[^@]+\.[^@]+")
 
-def validate_email(address_text):
+
+# https://en.wikipedia.org/wiki/Yahoo!_Mail#Email_domains
+
+yahoo_mail_domains = [
+    'yahoo.com.ar', # Argentina
+    'yahoo.com.au', # Australia
+    'yahoo.at',     # Austria
+    'yahoo.be',     # Belgium (French)
+    'yahoo.fr',
+    'yahoo.be',     # Belgium (Dutch)
+    'yahoo.nl',
+    'yahoo.com.br', # Brazil
+    'yahoo.ca',     # Canada (English)
+    'yahoo.en',
+    'yahoo.ca',     # Canada (French)
+    'yahoo.fr',
+    'yahoo.com.cn', # China
+    'yahoo.cn',
+    'yahoo.com.co', # Colombia
+    'yahoo.cz',     # Czech Republic
+    'yahoo.dk',     # Denmark
+    'yahoo.fi',     # Finland
+    'yahoo.fr',     # France
+    'yahoo.de',     # Germany
+    'yahoo.gr',     # Greece
+    'yahoo.com.hk', # Hong Kong
+    'yahoo.hu',     # Hungary
+    'yahoo.co.in',  # India
+    'yahoo.in',     # Indonesia
+    'yahoo.ie',     # Ireland
+    'yahoo.co.il',  # Israel
+    'yahoo.it',     # Italy
+    'yahoo.co.jp',  # Japan
+    'yahoo.com.my', # Malaysia
+    'yahoo.com.mx', # Mexico
+    'yahoo.ae',     # Middle East
+    'yahoo.nl',     # Netherlands
+    'yahoo.co.nz',  # New Zealand
+    'yahoo.no',     # Norway
+    'yahoo.com.ph', # Philippines
+    'yahoo.pl',     # Poland
+    'yahoo.pt',     # Portugal
+    'yahoo.ro',     # Romania
+    'yahoo.ru',     # Russia
+    'yahoo.com.sg', # Singapore
+    'yahoo.co.za',  # South Africa
+    'yahoo.es',     # Spain
+    'yahoo.se',     # Sweden
+    'yahoo.ch',     # Switzerland (French)
+    'yahoo.fr',
+    'yahoo.ch',     # Switzerland (German)
+    'yahoo.de',
+    'yahoo.com.tw', # Taiwan
+    'yahoo.co.th',  # Thailand
+    'yahoo.com.tr', # Turkey
+    'yahoo.co.uk',  # United Kingdom
+    'yahoo.com',    # United States
+    'yahoo.com.vn', # Vietnam
+
+    'ymail.com',    # Newly added!
+    'rocketmail.com',
+]
+
+
+
+def email_supports_gmail(address_text):
 
     is_valid = True
 
@@ -44,11 +109,21 @@ def validate_email(address_text):
         except NoNameservers:
             is_valid = False
 
+    return is_valid
 
-        return dict(
-            valid_for_inbox = is_valid,
-            valid_address = address_text
-        )
+
+def provider_from_address(email_address):
+
+    if email_supports_gmail(email_address):
+        return 'Gmail'
+
+    domain = email_address.split('@')[-1].lower()
+
+    if domain in yahoo_mail_domains:
+        return 'Yahoo'
+
+    return 'Unknown'
+
 
 
 # From tornado.httputil
