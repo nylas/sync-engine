@@ -84,7 +84,7 @@ def get_authenticated_user(authorization_code):
     z.update(validation_dict)
     return z
 
-    # TODO : get this data somwhere other than the auth module
+    # TODO : get this data somewhere other than the auth module
 
 def get_new_token(refresh_token):
     assert refresh_token is not None, "refresh_token required"
@@ -144,7 +144,7 @@ def oauth(email_address):
 
     return auth_response
 
-# TODO: This is silly
+# TODO[kavya]: This is silly
 def auth(email_address):
     password = getpass.getpass()
 

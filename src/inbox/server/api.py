@@ -157,13 +157,13 @@ class API(object):
         with session_scope() as db_session:
             message = db_session.query(Message).join(Message.parts) \
                     .filter(Message.id==message_id).one()
-            return {'data': message.prettified_body}
+            return { 'data': message.prettified_body }
 
     # Headers API:
     @namespace_auth
     @jsonify
     def headers_for_message(self, message_id):
-        # TODO: Take namespace into account, currently doesn't matter since
+        # TODO[kavya]: Take namespace into account, currently doesn't matter since
         # one namespace only.
         with session_scope() as db_session:
             message = db_session.query(Message).filter(

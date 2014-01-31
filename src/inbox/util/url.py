@@ -70,7 +70,7 @@ yahoo_mail_domains = [
 # GMAIL:
 def email_supports_gmail(address_text):
 
-    # TODO: FIX THIS, d'uh!
+    # TODO[kavya]: FIX THIS, d'uh!
     #return True
 
     is_valid = True

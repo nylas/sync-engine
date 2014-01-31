@@ -40,7 +40,7 @@ def get_session(db_session, session_token):
     except:
         raise
 
-# TODO: Auth's error handling
+# TODO[kavya]: Auth's error handling
 def auth_account(email_address):
     provider = provider_from_address(email_address)
 
@@ -91,7 +91,7 @@ def make_account(db_session, email_address, response):
         account.date = datetime.datetime.utcnow()
 
     else:
-        # TODO: Error handling/propogation to caller here?
+        # TODO[kavya]: Error handling/propogation to caller here?
         raise NotSupportedError('Inbox currently only supports Gmail and Yahoo.')
         sys.exit(1)
 
@@ -109,7 +109,7 @@ def verify_account(db_session, account):
         verify_yahoo_account(account)
 
     else:
-        # TODO: Bubbled up to caller here, check if okay
+        # TODO[kavya]: Bubbled up to caller here, check if okay
         raise NotSupportedError('Inbox currently only supports Gmail and Yahoo.')
 
     commit_account(db_session, account)
