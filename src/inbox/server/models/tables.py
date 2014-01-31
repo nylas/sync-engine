@@ -18,19 +18,43 @@ from Crypto.Cipher import AES
 from ..log import get_logger
 log = get_logger()
 
-from inbox.util.file import Lock
+from inbox.util.file import Lock, mkdirp
 from inbox.util.html import plaintext2html
 from inbox.util.misc import strip_plaintext_quote
 from inbox.sqlalchemy.util import Base, JSON, LittleJSON
 from inbox.sqlalchemy.revision import Revision, gen_rev_role
 
 from .roles import JSONSerializable, Blob
+from ..config import config
+KEY_DIR = config.get('KEY_DIR', None)
+KEY_SIZE = int(config.get('KEY_SIZE', 128))
 
-#TODO: Change this, d'uh
-secret = 12345678
+mkdirp(KEY_DIR)
+
+def encrypt_aes(message):
+    # Convert string message to a bytes object, needed for ops below
+    message = message.encode('utf-8')
+
+    # PKCS#7 padding scheme
+    def pad(s):
+        pad_length = AES.block_size - (len(s) % AES.block_size)
+        return s + (chr(pad_length) * pad_length)
+ 
+    padded_message = pad(message)
+ 
+    key = Random.OSRNG.posix.new().read(KEY_SIZE // 8)
+    iv = Random.OSRNG.posix.new().read(AES.block_size)
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    return ((iv + cipher.encrypt(padded_message)), key)
+
+def decrypt_aes(ciphertext, key):
+    unpad = lambda s: s[:-ord(s[-1])]
+    iv = ciphertext[:AES.block_size]
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    plaintext = unpad(cipher.decrypt(ciphertext))[AES.block_size:]
+    return plaintext
 
 # global
-
 class ImapAccount(Base):
     # user_id refers to Inbox's user id
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'),
@@ -71,6 +95,7 @@ class ImapAccount(Base):
     date = Column(DateTime)
 
     password_aes = deferred(Column(BLOB(256)))
+    key = deferred(Column(BLOB(128)))
 
     # If oauthed or password
     is_oauthed = Column(Boolean, default=True)
@@ -89,47 +114,26 @@ class ImapAccount(Base):
     def sync_unlock(self):
         self._sync_lock.release()
 
-    # @property
-    # def password(self):
-    #     if self.password_aes is not None:
-    #         return self.password_aes #func.aes_decrypt(self.password_aes, secret)
-
-    @hybrid_property
+    @property
     def password(self):
-     if self.password_aes is not None:
-        #password =  func.aes_decrypt(self.password_aes, secret)
-        print "DECRYPT SELF = ", password
+        if self.password_aes is not None:
+            keyfile = os.path.join(KEY_DIR, '{0}'.format(self.key))
+            with open(keyfile, 'r') as f:
+                key = f.read()
 
-        #return self.password_aes
-
-    @password.expression
-    def password(cls):
-        if cls.password_aes is not None:
-            password =  func.aes_decrypt(cls.password_aes, secret)
-            print "DECRYPT CLS = ", password
+            key = self.key + key
+            return decrypt_aes(self.password_aes, key)
 
     @password.setter
     def password(self, value):
-        self.password_aes = func.aes_encrypt(value, secret)
-        print "ENCRYPT = ", self.password_aes
+        assert value != None
 
-    # class PasswordComparator(Comparator):
-    #     def __init__(self, password_aes):
-    #         self.password_aes = password_aes
+        self.password_aes, key = encrypt_aes(value)
 
-    #     def __eq__(self, other):
-    #         return self.password_aes == \
-    #             func.aes_encrypt(other, secret)
-
-    # @password.comparator
-    # def password(cls):
-    #     return ImapAccount.PasswordComparator(cls.password_aes)
-
-    # TODO: Erm, FIX THIS:
-    # @hybrid_property
-    # def password(self):
-    #     if self.password_aes is not None:
-    #         return func.aes_decrypt(self.password_aes, secret)
+        self.key = key[:len(key)/2]
+        keyfile = os.path.join(KEY_DIR, '{0}'.format(self.key))
+        with open(keyfile, 'w+') as f:
+            f.write(key[len(key)/2:])
 
 class UserSession(Base):
     """ Inbox-specific sessions. """
