@@ -3,6 +3,7 @@ from .log import get_logger
 log = get_logger()
 import urllib
 import requests
+import getpass
  
 from .config import config
 
@@ -142,3 +143,12 @@ def oauth(email_address):
     auth_response = get_authenticated_user(auth_code)
 
     return auth_response
+
+# TODO: This is silly
+def auth(email_address):
+    password = getpass.getpass()
+
+    if (len(password) <= 0):
+        raise AuthError('Invalid password')
+
+    return { 'email': email_address, 'password': password }
