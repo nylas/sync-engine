@@ -50,6 +50,7 @@ def verify_yahoo_account(account):
 
     conn.debug = False
     try:
+        print "!!! account.password = ", account.password
         conn.login(account.email_address, account.password)
     except IMAPClient.Error as e:
         print >>sys.stderr, '[ALERT] Invalid credentials (Failure)'
