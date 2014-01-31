@@ -13,6 +13,9 @@ log = get_logger()
 from . import oauth
 from .models.tables import User, UserSession, Namespace, ImapAccount
 
+IMAP_HOSTS = { 'Gmail': 'imap.gmail.com',
+                'Yahoo': 'imap.mail.yahoo.com' }
+
 class NotSupportedError(Exception):
     pass
 
@@ -81,13 +84,15 @@ def make_account(db_session, email_address, response):
         account.o_refresh_token = response['refresh_token']
         account.o_verified_email = response['verified_email']
         account.provider = 'Gmail'
+        account.imap_host = IMAP_HOSTS['Gmail']
         account.date = datetime.datetime.utcnow()
-
+        
     elif (provider == 'Yahoo'):
         account.email_address = response['email']
         account.password = response['password']
         account.is_oauthed = False
         account.provider = 'Yahoo'
+        account.imap_host = IMAP_HOSTS['Yahoo']
         account.date = datetime.datetime.utcnow()
 
     else:

@@ -64,6 +64,7 @@ class ImapAccount(Base):
     # http://stackoverflow.com/questions/386294/what-is-the-maximum-length-of-a-valid-email-address
     email_address = Column(String(254), nullable=True, index=True)
     provider = Column(Enum('Gmail', 'Outlook', 'Yahoo', 'Inbox'), nullable=False)
+    imap_host = Column(String(512))
 
     # local flags & data
     save_raw_messages = Column(Boolean, default=True)
@@ -94,6 +95,7 @@ class ImapAccount(Base):
     # used to verify key lifespan
     date = Column(DateTime)
 
+    # Password stuff
     password_aes = deferred(Column(BLOB(256)))
     key = deferred(Column(BLOB(128)))
 
