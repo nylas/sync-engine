@@ -50,7 +50,7 @@ Here's how to set up a development environment:
 
 7. `cd /vagrant`
 
-8. `./setup.sh` to install depdencies and create databases
+8. `sudo ./setup.sh` to install depdencies and create databases
 
 8. `sudo ./inbox debug`
 
