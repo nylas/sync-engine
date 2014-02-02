@@ -1,12 +1,16 @@
-from dns.resolver import query as dns_query, NoNameservers
+from dns.resolver import Resolver, query, NoNameservers
 from urllib import urlencode
 import logging as log
 import re
 
 EMAIL_REGEX = re.compile(r"[^@]+@[^@]+\.[^@]+")
 
-# https://en.wikipedia.org/wiki/Yahoo!_Mail#Email_domains
+# Use Google's Public DNS server (8.8.8.8)
+dns_resolver = Resolver()
+dns_resolver.nameservers = ['8.8.8.8']
+
 # YAHOO:
+# https://en.wikipedia.org/wiki/Yahoo!_Mail#Email_domains
 yahoo_mail_domains = [
     'yahoo.com.ar', # Argentina
     'yahoo.com.au', # Australia
@@ -67,58 +71,83 @@ yahoo_mail_domains = [
     'rocketmail.com',
 ]
 
-# GMAIL:
-def email_supports_gmail(address_text):
+# http://www.ysmallbizstatus.com/status/archives/13024
+yahoo_smallbiz_mx_servers = [
+    'mx-biz.mail.am0.yahoodns.net',
+    'mx1.biz.mail.yahoo.com.',
+    'mx5.biz.mail.yahoo.com.',
+    'mxvm2.mail.yahoo.com.',
+    'mx-van.mail.am0.yahoodns.net'
+]
 
-    # TODO[kavya]: FIX THIS, d'uh!
-    #return True
+# GOOGLE
+gmail_mx_servers = [
+    # Google apps for your domain
+    'aspmx.l.google.com.',
+    'aspmx2.googlemail.com.',
+    'aspmx3.googlemail.com.',
+    'aspmx4.googlemail.com.',
+    'aspmx5.googlemail.com.',
+    'alt1.aspmx.l.google.com.',
+    'alt2.aspmx.l.google.com.',
+    'alt3.aspmx.l.google.com.',
+    'alt4.aspmx.l.google.com.',
 
+    # Gmail
+    'gmail-smtp-in.l.google.com.',
+    'alt1.gmail-smtp-in.l.google.com.',
+    'alt2.gmail-smtp-in.l.google.com.',
+    'alt3.gmail-smtp-in.l.google.com.',
+    'alt4.gmail-smtp-in.l.google.com.'
+    ]
+
+def email_supports_gmail(domain):
+    # Must have Gmail or Google Apps MX records
     is_valid = True
+    try:
+        answers = dns_resolver.query(domain, 'MX')
+        
+        # All relay servers must be gmail
+        for rdata in answers:
+            if not str(rdata.exchange).lower() in gmail_mx_servers:
+                is_valid = False
 
-    if not EMAIL_REGEX.match(address_text):
+    except NoNameservers:
+        log.error("NoNameservers error")
         is_valid = False
-    else:
-        # Must have Gmail or Google Apps MX records
-        domain = address_text.split('@')[1]
-        try:
-            answers = dns_query(domain, 'MX')
-            gmail_mx_servers = [
-                        # Google apps for your domain
-                        'aspmx.l.google.com.',
-                        'aspmx2.googlemail.com.',
-                        'aspmx3.googlemail.com.',
-                        'aspmx4.googlemail.com.',
-                        'aspmx5.googlemail.com.',
-                        'alt1.aspmx.l.google.com.',
-                        'alt2.aspmx.l.google.com.',
-                        'alt3.aspmx.l.google.com.',
-                        'alt4.aspmx.l.google.com.',
 
-                        # Gmail
-                        'gmail-smtp-in.l.google.com.',
-                        'alt1.gmail-smtp-in.l.google.com.',
-                        'alt2.gmail-smtp-in.l.google.com.',
-                        'alt3.gmail-smtp-in.l.google.com.',
-                        'alt4.gmail-smtp-in.l.google.com.'
-                         ]
-            # All relay servers must be gmail
-            for rdata in answers:
-                if not str(rdata.exchange).lower() in gmail_mx_servers:
-                    is_valid = False
-                    log.error("Non-Google MX record: %s" % str(rdata.exchange))
+    return is_valid
 
-        except NoNameservers:
-            is_valid = False
+def email_supports_yahoo(domain):
+    # Must be a Yahoo mail domain
+    if domain in yahoo_mail_domains:
+        return True
+
+    # Or have a Yahoo small business MX record
+    is_valid = True
+    try:
+        answers = dns_resolver.query(domain, 'MX')
+
+        for rdata in answers:
+            if not str(rdata.exchange).lower() in yahoo_smallbiz_mx_servers:
+                is_valid = False
+
+    except NoNameservers:
+        log.error("NoNameservers error")
+        is_valid = False
 
     return is_valid
 
 def provider_from_address(email_address):
-    if email_supports_gmail(email_address):
+    if not EMAIL_REGEX.match(email_address):
+        raise InvalidEmailAddressError
+
+    domain = email_address.split('@')[1].lower()
+
+    if email_supports_gmail(domain):
         return 'Gmail'
-
-    domain = email_address.split('@')[-1].lower()
-
-    if domain in yahoo_mail_domains:
+    
+    if email_supports_yahoo(domain):
         return 'Yahoo'
 
     return 'Unknown'
