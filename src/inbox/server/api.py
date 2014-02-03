@@ -189,7 +189,7 @@ class API(object):
         with session_scope() as db_session:
             message = db_session.query(Message).filter(Message.id==message_id).one()
             return message.headers
-            
+
     # For run.py example:
     def first_n_subjects(self, n):
         with session_scope() as db_session:
