@@ -16,12 +16,12 @@ def config():
     load_config(filename=TEST_CONFIG)
     return config
 
-# XXX is this the right scope for this? This will remove log/ at the end of
-# the test session.
 @pytest.fixture(scope='session')
 def log(request, config):
     """ Returns root server logger. For others loggers, use this fixture
         for setup but then call inbox.server.log.get_logger().
+
+        Testing log directory is removed at the end of the test run!
     """
     from inbox.server.log import configure_general_logging
     def remove_logs():
