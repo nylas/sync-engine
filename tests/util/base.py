@@ -1,5 +1,7 @@
 import os, subprocess
 
+from inbox.util.db import drop_everything
+
 TEST_DATA = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), '..',
     'data', 'base_dump.sql')
@@ -27,7 +29,5 @@ class TestDB(object):
         subprocess.check_call(cmd, shell=True)
 
     def destroy(self):
-        from inbox.util.db import drop_everything
-
-        # Drop test DB
+        """ Removes all data from the test database. """
         drop_everything(self.engine, with_users=True)
