@@ -14,14 +14,12 @@ Inbox is a set of tools to make it simple and quick to develop apps and services
 - All UTF-8 and JSON sanitized
 - Contacts list sync
 
-
-These features are exposed via clean APIs through ZeroRPC services. See the `/examples` folder for details.
-
+These features are exposed via clean APIs through ZeroRPC services. See the [/examples] (examples) folder for details.
 
 
 ## Getting Started
 
-You can run Inbox almost anywhere. We've successfuly built images for Docker, VMware Fusion, VirtualBox, AWS, and DigitalOcean. The easiest way to get started is to install from source within VirtualBox. 
+You can run Inbox almost anywhere. We've successfully built images for Docker, VMware Fusion, VirtualBox, AWS, and DigitalOcean. The easiest way to get started is to install from source within VirtualBox. 
 
 
 ### Install from source
@@ -50,19 +48,21 @@ Here's how to set up a development environment:
 
 7. `cd /vagrant`
 
-8. `sudo ./setup.sh` to install depdencies and create databases
+8. `sudo ./setup.sh` to install dependencies and create databases.
 
-8. `sudo ./inbox debug`
+9. `sudo ./inbox debug`
 
-And voila! Auth an account via the commandline and start syncing:
+And _voilà_! Auth an account via the commandline and start syncing:
 
-    `sudo ./inbox auth ben.bitdiddle1861@gmail.com`
-    `sudo ./inbox sync start ben.bitdiddle1861@gmail.com`
+```
+  sudo ./inbox auth ben.bitdiddle1861@gmail.com
+  sudo ./inbox sync start ben.bitdiddle1861@gmail.com
+```
 
 ## Contributing
 
-We'd love your help making Inbox better. Join the [Google
-Group](groups.google.com/group/inbox-dev) for project updates and feature
+We'd love your help making Inbox better! Join the [Google
+Group](http://groups.google.com/group/inbox-dev) for project updates and feature
 discussion.
 
 We try to stick with pep8 and the [Google Python style
