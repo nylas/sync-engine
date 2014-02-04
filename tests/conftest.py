@@ -1,3 +1,6 @@
+""" Fixtures in this file are available to all files automatically, no
+    importing required. Only put general purpose fixtures here!
+"""
 import pytest
 import os
 
