@@ -4,7 +4,7 @@ from .base import TestDB
 
 @pytest.fixture(scope='session')
 def api_client(config, request):
-    test = TestDB()
+    test = TestDB(config)
 
     api_server_loc = config.get('API_SERVER_LOC')
 
