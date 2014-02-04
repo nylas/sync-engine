@@ -9,7 +9,7 @@ import zerorpc
 from . import postel
 from .config import config
 from .models import session_scope
-from .models.tables import Message, SharedFolder, User, ImapAccount
+from .models.tables import Message, SharedFolder, User, ImapAccount, Thread
 from .models.namespace import threads_for_folder
 
 from .log import get_logger
@@ -190,8 +190,8 @@ class API(object):
             message = db_session.query(Message).filter(Message.id==message_id).one()
             return message.headers
 
-    # For run.py example:
+    # For first_10_subjects example:
     def first_n_subjects(self, n):
         with session_scope() as db_session:
-            subjects = db_session.query(Message.subject).distinct().limit(n).all()
+            subjects = db_session.query(Thread.subject).limit(n).all()
             return subjects
