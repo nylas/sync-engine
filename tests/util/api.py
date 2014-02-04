@@ -1,21 +1,13 @@
-import pytest, zerorpc
+from pytest import fixture
 
-from .base import TestDB
+from .base import TestZeroRPC, db
 
-@pytest.fixture(scope='session')
-def api_client(config, request):
-    test = TestDB(config)
-
-    api_server_loc = config.get('API_SERVER_LOC')
+@fixture(scope='session')
+def api_client(config, db):
+    api_service_loc = config.get('API_service_loc')
 
     from inbox.server.api import API
-    from inbox.server.util.concurrency import make_zerorpc
 
-    test.server = make_zerorpc(API, api_server_loc)
-
-    test.client = zerorpc.Client(timeout=5)
-    test.client.connect(api_server_loc)
-
-    request.addfinalizer(test.destroy)
+    test = TestZeroRPC(config, db, API, api_service_loc)
 
     return test.client
