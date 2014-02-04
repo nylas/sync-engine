@@ -62,7 +62,8 @@ def sync(args):
     import zerorpc
 
     c = zerorpc.Client(timeout=5)
-    c.connect("tcp://127.0.0.1:9997")
+    sync_srv_loc = config.get('CRISPIN_SERVER_LOC', None)
+    c.connect(sync_srv_loc)
     try:
         if args.cmd == 'start':
             print c.start_sync(args.account_id, dummy=args.dummy)
@@ -109,7 +110,8 @@ def search(args):
 
     try:
         c = zerorpc.Client(timeout=5)
-        c.connect("tcp://127.0.0.1:9995")
+        search_srv_loc = config.get('SEARCH_SERVER_LOC', None)
+        c.connect(search_srv_loc)
 
         # XXX print something more useful here, like Subject: To: <snippet>
         # or something
