@@ -2,12 +2,10 @@
 # delivered back to us.
 
 def test_send(db):
-    from inbox.server.models.tables import IMAPAccount
+    from inbox.server.models.tables import ImapAccount
     from inbox.server.postel import SMTP
 
-    token = db.session.query(IMAPAccount).one()
-    account = IMAPAccount(
-            email_address='inboxapptest@gmail.com', o_access_token=token)
+    account = db.session.query(ImapAccount).one()
 
     with SMTP(account) as smtp:
         smtp.send_mail(
