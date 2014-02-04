@@ -1,6 +1,6 @@
 """ Tests for delta logging. """
 
-import pytest
+from pytest import fixture
 
 from sqlalchemy import create_engine, Column, Enum, String, Integer
 from sqlalchemy.orm import sessionmaker
@@ -22,7 +22,7 @@ class Tree(Base):
     type = Column(Enum('maple', 'palm', 'fir'), nullable=False)
     location = Column(String(40), nullable=False)
 
-@pytest.fixture(scope='session')
+@fixture(scope='session')
 def db_session(request):
     # engine = create_engine('sqlite:///test.db')
     engine = create_engine('sqlite://')
