@@ -9,6 +9,12 @@ node_modules
 .DS_Store
 # C extensions
 *.so
+/tests/log
+/cache
+
+# virtualenv
+/include
+/local
 
 # Packages
 *.egg
