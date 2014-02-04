@@ -172,11 +172,10 @@ def signal_handler(signal, frame):
     stop(None)
 
 def main():
-    load_config()
-    configure_general_logging()
     signal.signal(signal.SIGINT, signal_handler)
 
     parser = argparse.ArgumentParser(description="Inbox App")
+    parser.add_argument('-c', '--config', dest='config', default='config.cfg')
     subparsers = parser.add_subparsers()
 
     parser_start = subparsers.add_parser('start')
@@ -220,6 +219,10 @@ def main():
     parser_search.set_defaults(func=search)
 
     args = parser.parse_args()
+
+    load_config(args.config)
+    configure_general_logging()
+
     args.func(args)
 
 if __name__=="__main__":
