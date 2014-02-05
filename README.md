@@ -19,7 +19,7 @@ These features are exposed via clean APIs through ZeroRPC services. See the [/ex
 
 ## Getting Started
 
-You can run Inbox almost anywhere. We've successfully built images for Docker, VMware Fusion, VirtualBox, AWS, and DigitalOcean. The easiest way to get started is to install from source within VirtualBox. 
+You can run Inbox almost anywhere. We've successfully built images for Docker, VMware Fusion, VirtualBox, AWS, and DigitalOcean. The easiest way to get started is to install from source within VirtualBox.
 
 
 ### Install from source
@@ -28,7 +28,7 @@ Here's how to set up a development environment:
 
 1. [Install VirtualBox](https://www.virtualbox.org/wiki/Downloads)
 
-2. [Install Vagrant](http://downloads.vagrantup.com/)
+2. [Install Vagrant](http://www.vagrantup.com/downloads.html)
 
 3. `git clone git@github.com:inboxapp/inbox.git`
 
@@ -55,8 +55,7 @@ Here's how to set up a development environment:
 And _voilà_! Auth an account via the commandline and start syncing:
 
 ```
-  sudo ./inbox auth ben.bitdiddle1861@gmail.com
-  sudo ./inbox sync start ben.bitdiddle1861@gmail.com
+  sudo ./inbox add ben.bitdiddle1861@gmail.com
 ```
 
 ## Contributing
