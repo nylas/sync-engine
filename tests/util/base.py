@@ -60,6 +60,7 @@ class TestDB(object):
 
     def destroy(self):
         """ Removes all data from the test database. """
+        self.session.close()
         drop_everything(self.engine, with_users=True)
 
 class TestZeroRPC(object):
