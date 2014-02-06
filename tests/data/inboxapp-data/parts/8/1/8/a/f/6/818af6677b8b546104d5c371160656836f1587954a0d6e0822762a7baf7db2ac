@@ -1,0 +1,22 @@
+Package: wnpp
+Severity: wishlist
+Owner: "Jérémy Lal" <kapouer@melix.org>
+
+* Package name    : node-cookie
+  Version         : 0.1.0
+  Upstream Author : Roman Shtylman <shtylman@gmail.com>
+* URL             : https://github.com/shtylman/node-cookie
+* License         : Expat
+  Programming Lang: JavaScript
+  Description     : Basic cookie parser and serializer module for Node.js
+
+node-cookie just provides a way to read and write RFC6265 HTTP cookie
+headers.
+.
+Node.js is an event-based server-side javascript engine.
+
+
+--
+To UNSUBSCRIBE, email to debian-devel-REQUEST@lists.debian.org
+with a subject of "unsubscribe". Trouble? Contact listmaster@lists.debian.org
+Archive: http://lists.debian.org/20130511090919.14332.37267.reportbug@imac.chaumes
