@@ -177,7 +177,6 @@ class API(object):
         # one namespace only.
         with session_scope() as db_session:
             message = db_session.query(Message).filter(Message.id==message_id).one()
-
             return message.mailing_list_info
 
     # Headers API:
@@ -188,6 +187,10 @@ class API(object):
         # one namespace only.
         with session_scope() as db_session:
             message = db_session.query(Message).filter(Message.id==message_id).one()
+
+            #print json.dumps(message.headers, default=json_util.default)
+
+
             return message.headers
 
     # For first_10_subjects example:
