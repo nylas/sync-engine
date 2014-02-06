@@ -42,6 +42,15 @@ def db(request, config):
     request.addfinalizer(testdb.destroy)
     return testdb
 
+@fixture(scope='function')
+def action_queue(request, config):
+    from inbox.server import action
+    q = action.get_queue()
+    request.addfinalizer(q.empty)
+    # make sure it's empty to start out with too
+    q.empty()
+    return q
+
 class TestDB(object):
     def __init__(self, config):
         from inbox.server.models import new_db_session, init_db, engine
@@ -62,6 +71,11 @@ class TestDB(object):
 
         cmd = 'mysql {0} < {1}'.format(database, dump_filename)
         subprocess.check_call(cmd, shell=True)
+
+    def new_session(self):
+        from inbox.server.models import new_db_session
+        self.session.close()
+        self.session = new_db_session()
 
     def destroy(self):
         """ Removes all data from the test database. """
