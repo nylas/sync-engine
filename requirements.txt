@@ -23,6 +23,7 @@ supervisor==3.0
 chardet==2.1.1
 Wand==0.3.5
 setproctitle==1.1.8
+rq==0.3.13
 
 # For ZeroRPC
 Cython==0.19.1
