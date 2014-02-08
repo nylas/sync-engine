@@ -3,10 +3,8 @@
 var zerorpc = require("zerorpc");
 var client = new zerorpc.Client();
 
-
 // var config = require('../config.json');
 // log_in(config.username, config.password);
-
 var API_SERVER_LOC = 'tcp://0.0.0.0:9999';
 
 client.connect(API_SERVER_LOC);
@@ -19,12 +17,12 @@ var getSubjects = function(n) {
 
     if (! response instanceof Array) {
         throw new Error('Response should be an array');
-    } else {
-        for (var i=0; i < response.length; i++) {
-            var subject = response[i][0]; // first item
+    }
 
-            console.log('    ' + subject);
-        }
+    for (var i=0; i < response.length; i++) {
+        var subject = response[i][0]; // first item
+
+        console.log('    ' + subject);
     }
 
     process.exit();
