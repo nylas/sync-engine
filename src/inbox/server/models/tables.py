@@ -48,6 +48,12 @@ class ImapAccount(Base):
     sync_host = Column(String(255), nullable=True)
     last_synced_contacts = Column(DateTime, nullable=True)
 
+    # folder name mappings for the Inbox datastore API
+    inbox_folder_name = Column(String(255), nullable=True)
+    archive_folder_name = Column(String(255), nullable=True)
+    sent_folder_name = Column(String(255), nullable=True)
+    # NOTE: Spam, Trash might be added later
+
     @property
     def sync_active(self):
         return self.sync_host is not None
