@@ -72,7 +72,8 @@ from ..models import imapaccount as account
 from ..models.tables import ImapAccount, Namespace, FolderSync
 
 from .exc import UIDInvalid
-from .base import gevent_check_join, verify_db, BaseMailSyncMonitor
+from .base import gevent_check_join, verify_db, save_folder_names
+from .base import BaseMailSyncMonitor
 
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -112,9 +113,13 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             saved_states = dict((saved_state.folder_name, saved_state.state) \
                     for saved_state in db_session.query(FolderSync).filter_by(
                     imapaccount_id=self.account_id))
-        crispin_client = new_crispin(self.account_id, self.provider)
-        with crispin_client.pool.get() as c:
-            sync_folders = crispin_client.sync_folders(c)
+            crispin_client = new_crispin(self.account_id, self.provider)
+            with crispin_client.pool.get() as c:
+                sync_folders = crispin_client.sync_folders(c)
+                imapaccount = db_session.query(ImapAccount).get(self.account_id)
+                folder_names = crispin_client.folder_names(c)
+                save_folder_names(self.log, imapaccount, folder_names,
+                        db_session)
         for folder in sync_folders:
             if saved_states.get(folder) != 'finish':
                 self.log.info("Initializing folder sync for {0}".format(folder))

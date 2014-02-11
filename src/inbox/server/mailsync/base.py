@@ -11,6 +11,32 @@ from .exc import SyncException
 def verify_db(crispin_client, db_session):
     pass
 
+def check_folder_name(log, inbox_folder, old_folder_name, new_folder_name):
+    if old_folder_name is not None and \
+            new_folder_name != old_folder_name:
+        msg = "{0} folder name changed from '{1}' to '{2}'".format(
+                inbox_folder, old_folder_name, new_folder_name)
+        raise SyncException(msg)
+
+def save_folder_names(log, account, folder_names, db_session):
+    assert 'Inbox' in folder_names, "account {0} has no detected Inbox".format(
+            account.email_address)
+    check_folder_name(log, 'Inbox', account.inbox_folder_name,
+            folder_names['Inbox'])
+    account.inbox_folder_name = folder_names['Inbox']
+    # We allow accounts not to have archive / sent folders; it's up to the mail
+    # sync code for the account type to figure out what to do in this
+    # situation.
+    if 'Archive' in folder_names:
+        check_folder_name(log, 'Archive', account.archive_folder_name,
+                folder_names['Archive'])
+        account.archive_folder_name = folder_names['Archive']
+    if 'Sent' in folder_names:
+        check_folder_name(log, 'Sent', account.sent_folder_name,
+                folder_names['Sent'])
+        account.sent_folder_name = folder_names['Sent']
+    db_session.commit()
+
 def trigger_index_update(namespace_id):
     c = zerorpc.Client()
     c.connect(config.get('SEARCH_SERVER_LOC', None))
