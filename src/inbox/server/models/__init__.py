@@ -34,8 +34,8 @@ def init_db():
 
 Session = sessionmaker(bind=engine)
 
-# this returns a new session whenever it's called
-# scoped_session uses a registry to return the _same_ session if it's in the
+# This returns a new session whenever it's called.
+# session_scope uses a registry to return the _same_ session if it's in the
 # same thread, otherwise a new session.
 def new_db_session():
     return versioned_session(Session(autoflush=True, autocommit=False),
