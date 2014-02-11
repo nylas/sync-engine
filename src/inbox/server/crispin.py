@@ -67,6 +67,9 @@ class CrispinClientBase(object):
     def sync_folders(self, c):
         raise NotImplementedError
 
+    def folder_names(self, c):
+        raise NotImplementedError
+
     @property
     def selected_folder_name(self):
         return or_none(self.selected_folder, lambda f: f[0])
