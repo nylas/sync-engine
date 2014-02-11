@@ -1,6 +1,6 @@
 """ IMAPClient wrapper for Inbox.
 
-Unfortunately, due IMAP's statefulness, to implement connection pooling we
+Unfortunately, due to IMAP's statefulness, to implement connection pooling we
 have to shunt off dealing with the connection pool to the caller or we'll end
 up trying to execute calls with the wrong folder selected some amount of the
 time. That's why functions take a connection argument.
