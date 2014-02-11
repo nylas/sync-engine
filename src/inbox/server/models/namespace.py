@@ -35,6 +35,16 @@ def move_thread(namespace_id, session, thread_id, from_folder, to_folder):
     listing.folder_name = to_folder
     session.commit()
 
+def copy_thread(namespace_id, session, thread_id, from_folder, to_folder):
+    """ Copy thread in the local datastore (*not* the account backend). """
+    existing = session.query(FolderItem).join(Thread).filter(
+            Thread.namespace_id==namespace_id,
+            FolderItem.thread_id==thread_id,
+            FolderItem.folder_name==from_folder).one()
+    new = FolderItem(thread=existing.thread, folder_name=to_folder)
+    session.add(new)
+    session.commit()
+
 def delete_thread(namespace_id, session, thread_id, folder_name):
     """ Delete thread in the local datastore (*not* the account backend). """
     item = session.query(FolderItem).join(Thread).filter(

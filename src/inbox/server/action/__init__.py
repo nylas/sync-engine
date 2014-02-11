@@ -16,5 +16,8 @@ def get_archive_fn(imapaccount):
 def get_move_fn(imapaccount):
     return mod_for[imapaccount.provider].move
 
+def get_copy_fn(imapaccount):
+    return mod_for[imapaccount.provider].copy
+
 def get_delete_fn(imapaccount):
     return mod_for[imapaccount.provider].delete

@@ -48,6 +48,26 @@ def test_local_move(db, api_client, action_queue):
 
     assert action_queue.count == 1, "sync-back event not queued"
 
+def test_local_copy(db, api_client, action_queue):
+    from inbox.server.models.tables import FolderItem
+
+    result = api_client.copy(USER_ID, NAMESPACE_ID, 1, 'inbox',
+            '[gmail]/all mail')
+    assert result == json.dumps("OK"), "copy API call failed"
+
+    # not sure why we need to refresh the session here, but we do otherwise
+    # we get stale data :/
+    db.new_session()
+    inbox_items = db.session.query(FolderItem).filter_by(
+            thread_id=1, folder_name='inbox').count()
+    assert inbox_items == 1, "inbox entry missing"
+
+    archive_items = db.session.query(FolderItem).filter_by(
+            thread_id=1, folder_name='[gmail]/all mail').count()
+    assert archive_items == 1, "archive entry missing"
+
+    assert action_queue.count == 1, "sync-back event not queued"
+
 def test_local_delete(db, api_client, action_queue):
     from inbox.server.models.tables import FolderItem
 

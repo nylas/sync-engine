@@ -12,7 +12,7 @@ from .config import config
 from .models import session_scope
 from .models.tables import Message, SharedFolder, User, ImapAccount, Thread
 from .models.namespace import threads_for_folder, archive_thread, move_thread
-from .models.namespace import delete_thread
+from .models.namespace import copy_thread, delete_thread
 
 from .log import get_logger
 log = get_logger()
@@ -239,6 +239,27 @@ class API(object):
         # sync it to the account backend
         q = action.get_queue()
         q.enqueue(action.get_move_fn(account), thread_id, from_folder, to_folder)
+
+        # XXX TODO register a failure handler that reverses the local state
+        # change if the change fails to go through
+
+        return "OK"
+
+    @namespace_auth
+    @jsonify
+    def copy(self, thread_id, from_folder, to_folder):
+        """ Copy thread locally and also sync back to the backend. """
+        account = self.namespace.imapaccount
+        assert account is not None, "can't copy mail with this namespace"
+
+        # make local change
+        with session_scope() as db_session:
+            copy_thread(self.namespace.id, db_session, thread_id,
+                    from_folder, to_folder)
+
+        # sync it to the account backend
+        q = action.get_queue()
+        q.enqueue(action.get_copy_fn(account), thread_id, from_folder, to_folder)
 
         # XXX TODO register a failure handler that reverses the local state
         # change if the change fails to go through

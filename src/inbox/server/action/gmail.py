@@ -11,6 +11,11 @@ def move(imapaccount_id, thread_id, from_folder, to_folder):
     # use IMAP MOVE command, which Gmail supports
     pass
 
+def copy(imapaccount_id, thread_id, from_folder, to_folder):
+    # open an IMAP connection
+    # use IMAP COPY command, which Gmail supports
+    pass
+
 def delete(imapaccount_id, thread_id, folder_name):
     # open an IMAP connection
     # delete from the given folder _and_ from the archive???
