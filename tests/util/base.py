@@ -8,6 +8,8 @@ from inbox.util.db import drop_everything
 
 TEST_CONFIG = os.path.join(
         os.path.dirname(os.path.realpath(__file__)), '..', 'config.cfg')
+
+# Dump file generated using mysqldump
 TEST_DATA = os.path.join(
     os.path.dirname(os.path.realpath(__file__)), '..', 'data', 'base_dump.sql')
 
@@ -51,7 +53,6 @@ class TestDB(object):
     def populate(self):
         # Note: Since database is called test, all users have access to it;
         # don't need to read in the username + password from config.
-
         database = self.config.get('MYSQL_DATABASE')
         dump_filename = TEST_DATA
 
