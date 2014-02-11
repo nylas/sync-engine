@@ -319,10 +319,6 @@ class Message(JSONSerializable, Base, HasRevisions):
         d['mailing_list_info'] = self.mailing_list_headers
         return d
 
-    @property
-    def mailing_list_info(self):
-        return self.mailing_list_headers
-
     # TODO: TEST THIS
     @property
     def headers(self):
@@ -526,6 +522,8 @@ class Thread(JSONSerializable, Base):
     # unique globally.
     g_thrid = Column(String(255), nullable=True, index=True)
 
+    mailing_list_headers = Column(JSON, nullable=True)
+
     def update_from_message(self, message):
         if message.internaldate > self.recentdate:
             self.recentdate = message.internaldate
@@ -533,6 +531,9 @@ class Thread(JSONSerializable, Base):
         if message.internaldate < self.recentdate:
             self.subject = message.subject
             self.subjectdate = message.internaldate
+
+        if len(message.mailing_list_headers) > len(self.mailing_list_headers):
+            self.mailing_list_headers = message.mailing_list_headers
         return self
 
     @classmethod
@@ -555,8 +556,19 @@ class Thread(JSONSerializable, Base):
             raise
         thread = cls(subject=message.subject, g_thrid=message.g_thrid,
                 recentdate=message.internaldate, namespace=namespace,
-                subjectdate=message.internaldate)
+                subjectdate=message.internaldate,
+                mailing_list_headers=message.mailing_list_headers)
         return thread
+
+    @property
+    def mailing_list_info(self):
+        return self.mailing_list_headers
+
+    def is_mailing_list_thread(self):
+        for v in self.mailing_list_headers.itervalues():
+            if (v != None):
+                return True
+        return False
 
     def cereal(self):
         """ Threads are serialized with full message data. """

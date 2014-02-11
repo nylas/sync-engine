@@ -8,16 +8,16 @@ from .util.message import TEST_MSG
 USER_ID = 1
 NAMESPACE_ID = 1
 
-def test_is_mailing_list_message(api_client):
-    result = api_client.is_mailing_list_message(USER_ID, NAMESPACE_ID,
-            TEST_MSG['msg_id'])
+def test_is_mailing_list_thread(api_client):
+    result = api_client.is_mailing_list_thread(USER_ID, NAMESPACE_ID,
+            TEST_MSG['thread_id'])
     expected = True
 
     assert (result == expected)
 
-def test_mailing_list_info_for_message(api_client):
-    result = api_client.mailing_list_info_for_message(USER_ID, NAMESPACE_ID,
-            TEST_MSG['msg_id'])
+def test_mailing_list_info_for_thread(api_client):
+    result = api_client.mailing_list_info_for_thread(USER_ID, NAMESPACE_ID,
+            TEST_MSG['thread_id'])
     expected = json.dumps(TEST_MSG['mailing_list_headers'],
             default=json_util.default)
 

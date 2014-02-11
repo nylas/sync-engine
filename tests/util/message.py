@@ -198,6 +198,7 @@ headers = json.dumps(parsed.headers.items())
 
 TEST_MSG = {
 	'msg_id': 1,
+	'thread_id': 1,
 	'mailing_list_headers': { "List-Id": "<debian-devel.lists.debian.org>", 
 		"List-Post": "<mailto:debian-devel@lists.debian.org>", 
         "List-Owner": None, 

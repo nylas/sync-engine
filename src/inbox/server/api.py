@@ -91,30 +91,6 @@ class API(object):
             return status
 
     @namespace_auth
-    @jsonify
-    def search_folder(self, search_query):
-        log.info("Searching with query: {0}".format(search_query))
-        results = self.z_search(self.namespace.id, search_query)
-        message_ids = [r[0] for r in results]
-        log.info("Found {0} messages".format(len(message_ids)))
-        return message_ids
-
-    @namespace_auth
-    @jsonify
-    def threads_for_folder(self, folder_name):
-        """ Returns all threads in a given folder, together with associated
-            messages. Supports shared folders and TODO namespaces as well, if
-            caller auths with that namespace.
-
-            Note that this may be more messages than included in the IMAP
-            folder, since we fetch the full thread if one of the messages is in
-            the requested folder.
-        """
-        with session_scope() as db_session:
-            return [t.cereal() for t in threads_for_folder(self.namespace.id,
-                        db_session, folder_name)]
-
-    @namespace_auth
     def send_mail(self, recipients, subject, body):
         """ Sends a message with the given objects """
         account = self.namespace.imapaccount
@@ -124,17 +100,6 @@ class API(object):
         with postel.SMTP(account) as smtp:
             smtp.send_mail(recipients, subject, body)
         return "OK"
-
-    @namespace_auth
-    @jsonify
-    def body_for_message(self, message_id):
-        # TODO: Take namespace into account, currently doesn't matter since
-        # one namespace only.
-        with session_scope() as db_session:
-            message = db_session.query(Message).join(Message.parts) \
-                    .filter(Message.id==message_id).one()
-
-            return {'data': message.prettified_body}
 
     @jsonify
     def top_level_namespaces(self, user_id):
@@ -160,24 +125,39 @@ class API(object):
 
             return nses
 
-    # Mailing list API:
     @namespace_auth
-    def is_mailing_list_message(self, message_id):
-        # TODO: Take namespace into account, currently doesn't matter since
-        # one namespace only.
-        with session_scope() as db_session:
-            message = db_session.query(Message).filter(Message.id==message_id).one()
-
-            return (message.mailing_list_info != None)
+    @jsonify
+    def search_folder(self, search_query):
+        log.info("Searching with query: {0}".format(search_query))
+        results = self.z_search(self.namespace.id, search_query)
+        message_ids = [r[0] for r in results]
+        log.info("Found {0} messages".format(len(message_ids)))
+        return message_ids
 
     @namespace_auth
     @jsonify
-    def mailing_list_info_for_message(self, message_id):
+    def threads_for_folder(self, folder_name):
+        """ Returns all threads in a given folder, together with associated
+            messages. Supports shared folders and TODO namespaces as well, if
+            caller auths with that namespace.
+
+            Note that this may be more messages than included in the IMAP
+            folder, since we fetch the full thread if one of the messages is in
+            the requested folder.
+        """
+        with session_scope() as db_session:
+            return [t.cereal() for t in threads_for_folder(self.namespace.id,
+                        db_session, folder_name)]
+
+    @namespace_auth
+    @jsonify
+    def body_for_message(self, message_id):
         # TODO: Take namespace into account, currently doesn't matter since
         # one namespace only.
         with session_scope() as db_session:
-            message = db_session.query(Message).filter(Message.id==message_id).one()
-            return message.mailing_list_info
+            message = db_session.query(Message).join(Message.parts) \
+                    .filter(Message.id==message_id).one()
+            return {'data': message.prettified_body}
 
     # Headers API:
     @namespace_auth
@@ -186,12 +166,27 @@ class API(object):
         # TODO: Take namespace into account, currently doesn't matter since
         # one namespace only.
         with session_scope() as db_session:
-            message = db_session.query(Message).filter(Message.id==message_id).one()
-
-            #print json.dumps(message.headers, default=json_util.default)
-
-
+            message = db_session.query(Message).filter(
+                Message.id==message_id).one()
             return message.headers
+
+    # Mailing list API:
+    @namespace_auth
+    def is_mailing_list_thread(self, thread_id):
+        with session_scope() as db_session:
+            thread = db_session.query(Thread).filter(
+                Thread.id==thread_id,
+                Thread.namespace_id==self.namespace.id).one()
+            return thread.is_mailing_list_thread()
+
+    @namespace_auth
+    @jsonify
+    def mailing_list_info_for_thread(self, thread_id):
+        with session_scope() as db_session:
+            thread = db_session.query(Thread).filter(
+                Thread.id==thread_id,
+                Thread.namespace_id==self.namespace.id).one()
+            return thread.mailing_list_info
 
     # For first_10_subjects example:
     def first_n_subjects(self, n):
