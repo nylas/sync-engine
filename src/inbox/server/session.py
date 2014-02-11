@@ -5,19 +5,28 @@ import sys
 
 import sqlalchemy.orm.exc
 
-from inbox.util.url import provider_from_address
+from inbox.util.url import provider_from_address, NotSupportedError
 
 from .log import get_logger
 log = get_logger()
 
-from . import oauth
+from .oauth import oauth, auth
+#from .pool import verify_gmail_account, verify_yahoo_account
 from .models.tables import User, UserSession, Namespace, ImapAccount
 
 IMAP_HOSTS = { 'Gmail': 'imap.gmail.com',
                 'Yahoo': 'imap.mail.yahoo.com' }
 
-class NotSupportedError(Exception):
-    pass
+HANDLERS = {
+    'AUTH': {
+        'Gmail': oauth,
+        'Yahoo': auth
+    },
+    #'VERIFY': {
+     #   'Gmail': verify_gmail_account,
+      #  'Yahoo': verify_yahoo_account 
+    #}
+}
 
 def log_ignored(exc):
     log.error('Ignoring error: %s\nOuter stack:\n%s%s'
@@ -46,16 +55,14 @@ def get_session(db_session, session_token):
 # TODO[kavya]: Auth's error handling
 def auth_account(email_address):
     provider = provider_from_address(email_address)
+    handler = HANDLERS['AUTH'].get(provider)
 
-    if (provider == 'Gmail'):
-        response = oauth.oauth(email_address)
-    elif (provider == 'Yahoo'):
-        response = oauth.auth(email_address)
-    else:
+    if handler is None:
         # TODO: Error handling/propogation to caller here?
         raise NotSupportedError('Inbox currently only supports Gmail and Yahoo.')
         sys.exit(1)
 
+    response = handler(email_address)
     return response
 
 def make_account(db_session, email_address, response):
@@ -70,6 +77,8 @@ def make_account(db_session, email_address, response):
     provider = provider_from_address(email_address)
 
     if (provider == 'Gmail'):
+        account.provider = 'Gmail'
+        account.imap_host = IMAP_HOSTS['Gmail']
         account.email_address = response['email']
         account.o_token_issued_to = response['issued_to']
         account.o_user_id = response['user_id']
@@ -83,16 +92,13 @@ def make_account(db_session, email_address, response):
         account.o_email = response['email']
         account.o_refresh_token = response['refresh_token']
         account.o_verified_email = response['verified_email']
-        account.provider = 'Gmail'
-        account.imap_host = IMAP_HOSTS['Gmail']
         account.date = datetime.datetime.utcnow()
         
     elif (provider == 'Yahoo'):
-        account.email_address = response['email']
-        account.password = response['password']
-        account.is_oauthed = False
         account.provider = 'Yahoo'
         account.imap_host = IMAP_HOSTS['Yahoo']
+        account.email_address = response['email']
+        account.password = response['password']
         account.date = datetime.datetime.utcnow()
 
     else:
@@ -104,20 +110,21 @@ def make_account(db_session, email_address, response):
 
 def verify_account(db_session, account):
     from inbox.server.pool import verify_gmail_account, verify_yahoo_account
+    HANDLERS['VERIFY'] = {
+        'Gmail': verify_gmail_account,
+        'Yahoo': verify_yahoo_account
+    }
 
     provider = provider_from_address(account.email_address)
+    handler = HANDLERS['VERIFY'].get(provider)
 
-    if (provider == 'Gmail'):
-        verify_gmail_account(account)
-
-    elif (provider == 'Yahoo'):
-        verify_yahoo_account(account)
-
-    else:
-        # TODO[kavya]: Bubbled up to caller here, check if okay
+    if handler is None:
+         # TODO[kavya]: Bubbled up to caller here, check if okay
         raise NotSupportedError('Inbox currently only supports Gmail and Yahoo.')
 
+    handler(account)
     commit_account(db_session, account)
+
     return account
 
 def commit_account(db_session, account):

@@ -3,11 +3,21 @@ from urllib import urlencode
 import logging as log
 import re
 
-EMAIL_REGEX = re.compile(r"[^@]+@[^@]+\.[^@]+")
+#EMAIL_REGEX = re.compile(r"[^@]+@[^@]+\.[^@]+")
+ 
+# http://www.regular-expressions.info/email.html
+EMAIL_REGEX = re.compile(r'[A-Z0-9._%+-]+@(?:[A-Z0-9-]+\.)+[A-Z]{2,4}',
+    re.IGNORECASE)
 
 # Use Google's Public DNS server (8.8.8.8)
 dns_resolver = Resolver()
 dns_resolver.nameservers = ['8.8.8.8']
+
+class InvalidEmailAddressError(Exception):
+    pass
+
+class NotSupportedError(Exception):
+    pass
 
 # YAHOO:
 # https://en.wikipedia.org/wiki/Yahoo!_Mail#Email_domains
@@ -140,7 +150,7 @@ def email_supports_yahoo(domain):
 
 def provider_from_address(email_address):
     if not EMAIL_REGEX.match(email_address):
-        raise InvalidEmailAddressError
+        raise InvalidEmailAddressError('Invalid email address') 
 
     domain = email_address.split('@')[1].lower()
 
@@ -150,7 +160,7 @@ def provider_from_address(email_address):
     if email_supports_yahoo(domain):
         return 'Yahoo'
 
-    return 'Unknown'
+    raise NotSupportedError('Inbox currently only supports Gmail and Yahoo.')
 
 # From tornado.httputil
 def url_concat(url, args):

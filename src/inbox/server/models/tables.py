@@ -18,22 +18,24 @@ from Crypto.Cipher import AES
 from ..log import get_logger
 log = get_logger()
 
+from ..config import config
+KEY_DIR = config.get('KEY_DIR', None)
+KEY_SIZE = int(config.get('KEY_SIZE', 128))
+
 from inbox.util.file import Lock, mkdirp
 from inbox.util.html import plaintext2html
 from inbox.util.misc import strip_plaintext_quote
 from inbox.sqlalchemy.util import Base, JSON, LittleJSON
 from inbox.sqlalchemy.revision import Revision, gen_rev_role
+from inbox.server.oauth import AUTH_TYPES
 
 from .roles import JSONSerializable, Blob
-from ..config import config
-KEY_DIR = config.get('KEY_DIR', None)
-KEY_SIZE = int(config.get('KEY_SIZE', 128))
 
-mkdirp(KEY_DIR)
-
+# http://www.commx.ws/2013/10/aes-encryption-with-python/
 def encrypt_aes(message):
     # Convert string message to a bytes object, needed for ops below
-    message = message.encode('utf-8')
+    if type(message) == unicode:
+        message = message.encode('utf-8')
 
     # PKCS#7 padding scheme
     def pad(s):
@@ -96,11 +98,10 @@ class ImapAccount(Base):
     date = Column(DateTime)
 
     # Password stuff
+    # 'deferred' loads these large binary fields into memory only when needed
+    # i.e. on direct access.
     password_aes = deferred(Column(BLOB(256)))
     key = deferred(Column(BLOB(128)))
-
-    # If oauthed or password
-    is_oauthed = Column(Boolean, default=True)
 
     @property
     def _sync_lockfile_name(self):
@@ -128,7 +129,10 @@ class ImapAccount(Base):
 
     @password.setter
     def password(self, value):
-        assert value != None
+        assert (AUTH_TYPES.get(self.provider) == 'Password')
+        assert (value != None)
+
+        mkdirp(KEY_DIR)
 
         self.password_aes, key = encrypt_aes(value)
 
