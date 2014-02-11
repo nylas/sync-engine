@@ -451,8 +451,11 @@ def serialize_before_insert(mapper, connection, target):
         target._content_type_other = target.content_type
 
 class FolderItem(JSONSerializable, Base, HasRevisions):
-    """ Maps threads to folders. """
+    """ Maps threads to folders.
 
+    Threads in this table are the _Inbox_ datastore abstraction, which may
+    be different from folder names in the actual account backends.
+    """
     thread_id = Column(Integer, ForeignKey('thread.id'), nullable=False)
     # thread relationship is on Thread to make delete-orphan cascade work
 
@@ -467,6 +470,9 @@ class FolderItem(JSONSerializable, Base, HasRevisions):
 class ImapUid(JSONSerializable, Base):
     """ This maps UIDs to the IMAP folder they belong to, and extra metadata
         such as flags.
+
+        This table is used solely for bookkeeping by the IMAP mail sync
+        backends.
     """
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
             nullable=False)
