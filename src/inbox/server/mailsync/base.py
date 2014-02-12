@@ -19,22 +19,25 @@ def check_folder_name(log, inbox_folder, old_folder_name, new_folder_name):
         raise SyncException(msg)
 
 def save_folder_names(log, account, folder_names, db_session):
-    assert 'Inbox' in folder_names, "account {0} has no detected Inbox".format(
+    # NOTE: We don't do anything like canonicalizing to lowercase because
+    # different backends may be case-sensitive or not. Code that references
+    # saved folder names should canonicalize if needed when doing comparisons.
+    assert 'inbox' in folder_names, "account {0} has no detected Inbox".format(
             account.email_address)
-    check_folder_name(log, 'Inbox', account.inbox_folder_name,
-            folder_names['Inbox'])
-    account.inbox_folder_name = folder_names['Inbox']
+    check_folder_name(log, 'inbox', account.inbox_folder_name,
+            folder_names['inbox'])
+    account.inbox_folder_name = folder_names['inbox']
     # We allow accounts not to have archive / sent folders; it's up to the mail
     # sync code for the account type to figure out what to do in this
     # situation.
-    if 'Archive' in folder_names:
-        check_folder_name(log, 'Archive', account.archive_folder_name,
-                folder_names['Archive'])
-        account.archive_folder_name = folder_names['Archive']
-    if 'Sent' in folder_names:
-        check_folder_name(log, 'Sent', account.sent_folder_name,
-                folder_names['Sent'])
-        account.sent_folder_name = folder_names['Sent']
+    if 'archive' in folder_names:
+        check_folder_name(log, 'archive', account.archive_folder_name,
+                folder_names['archive'])
+        account.archive_folder_name = folder_names['archive']
+    if 'sent' in folder_names:
+        check_folder_name(log, 'sent', account.sent_folder_name,
+                folder_names['sent'])
+        account.sent_folder_name = folder_names['sent']
     db_session.commit()
 
 def trigger_index_update(namespace_id):

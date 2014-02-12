@@ -389,7 +389,7 @@ class GmailCrispinClient(CrispinClient):
             messages and continuing to receive new Inbox messages while a
             large mail archive is downloading).
         """
-        return [self.folder_names(c)['Inbox'], self.folder_names(c)['All']]
+        return [self.folder_names(c)['inbox'], self.folder_names(c)['all']]
 
     def flags(self, uids, c):
         """ Flags includes labels on Gmail because Gmail doesn't use \\Draft."""
@@ -423,27 +423,30 @@ class GmailCrispinClient(CrispinClient):
             folders = self._fetch_folder_list(c)
             self._folder_names = dict()
             for flags, delimiter, name in folders:
-                is_label = True
-                for flag in [u'\\All', '\\Drafts', '\\Important', '\\Sent',
-                        '\\Junk', '\\Flagged', '\\Trash']:
-                    # find localized names for Gmail's special folders
-                    if flag in flags:
-                        is_label = False
-                        # strip off leading \ on flag
-                        k = flag.replace('\\', '').capitalize()
-                        self._folder_names[k] = name
-                if name.capitalize() == 'Inbox':
-                    is_label = False
-                    self._folder_names[name.capitalize()] = name
                 if u'\\Noselect' in flags:
                     # special folders that can't contain messages, usually
                     # just '[Gmail]'
-                    is_label = False
-                # everything else is a label
-                if is_label:
-                    self._folder_names.setdefault('Labels', list()).append(name)
-            if 'Labels' in self._folder_names:
-                self._folder_names['Labels'].sort()
+                    pass
+                elif '\\All' in flags:
+                    self._folder_names['archive'] = name
+                    self._folder_names['all'] =  name
+                elif name.lower() == 'inbox':
+                    self._folder_names[name.lower()] = name
+                    continue
+                else:
+                    for flag in ['\\Drafts', '\\Important', '\\Sent', '\\Junk',
+                            '\\Flagged', '\\Trash']:
+                        # find localized names for Gmail's special folders
+                        if flag in flags:
+                            k = flag.replace('\\', '').lower()
+                            self._folder_names[k] = name
+                            break
+                    else:
+                        # everything else is a label
+                        self._folder_names.setdefault('labels', list())\
+                                .append(name)
+            if 'labels' in self._folder_names:
+                self._folder_names['labels'].sort()
         return self._folder_names
 
     def uids(self, uids, c):
@@ -511,7 +514,7 @@ class GmailCrispinClient(CrispinClient):
             Message UIDs returned are All Mail UIDs; this method requires the
             All Mail folder to be selected.
         """
-        assert self.selected_folder_name == self.folder_names(c)['All'], \
+        assert self.selected_folder_name == self.folder_names(c)['all'], \
                 "must select All Mail first ({0})".format(
                         self.selected_folder_name)
         # UIDs ascend over time; return in order most-recent first

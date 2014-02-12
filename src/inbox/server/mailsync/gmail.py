@@ -60,7 +60,7 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
     remote_uids = sorted(remote_g_metadata.keys(), key=int)
     log.info("Found {0} UIDs for folder {1}".format(len(remote_uids),
         folder_name))
-    if folder_name == crispin_client.folder_names(c)['All']:
+    if folder_name == crispin_client.folder_names(c)['all']:
         log.info("Already have {0} UIDs".format(len(local_uids)))
 
     local_uids = set(local_uids).difference(
@@ -69,7 +69,7 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
 
     unknown_uids = set(remote_uids).difference(set(local_uids))
 
-    if folder_name != crispin_client.folder_names(c)['All']:
+    if folder_name != crispin_client.folder_names(c)['all']:
         chunked_thread_download(crispin_client, db_session, log, folder_name,
                 remote_g_metadata, unknown_uids, shared_state['status_cb'],
                 shared_state['syncmanager_lock'], c)
@@ -96,7 +96,7 @@ def gmail_highestmodseq_update(crispin_client, db_session, log, folder_name,
             db_session, folder_name)
     local_g_metadata.update(crispin_client.g_metadata(uids, c))
 
-    if folder_name != crispin_client.folder_names(c)['All']:
+    if folder_name != crispin_client.folder_names(c)['all']:
         chunked_thread_download(crispin_client, db_session, log, folder_name,
                 local_g_metadata, local_uids, status_cb, syncmanager_lock, c)
 
@@ -163,7 +163,7 @@ def chunked_thread_download(crispin_client, db_session, log, folder_name,
     flags = crispin_client.flags(uids, c)
 
     crispin_client.select_folder(
-            crispin_client.folder_names(c)['All'],
+            crispin_client.folder_names(c)['all'],
             uidvalidity_callback(db_session,
                 crispin_client.account_id), c)
 

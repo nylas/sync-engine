@@ -12,7 +12,7 @@ def user_console(user_email_address):
         crispin_client = new_crispin(account.id, account.provider,
                 conn_pool_size=1)
         with crispin_client.pool.get() as c:
-            crispin_client.select_folder(crispin_client.folder_names(c)['All'],
+            crispin_client.select_folder(crispin_client.folder_names(c)['all'],
                     uidvalidity_callback(db_session, account), c)
 
         server_uids = crispin_client.all_uids(c)
