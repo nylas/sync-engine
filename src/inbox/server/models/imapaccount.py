@@ -285,6 +285,11 @@ def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, x_gm_thrid,
     # \Important.
     thread.folders = [l for l in thread.folders if l.folder_name in new_labels \
             or l.folder_name in ('sent', 'important')]
+    # canonicalize "All Mail" to be "archive" in Inbox's data representation
+    archive_folder_name = new_uid.imapaccount.archive_folder_name.lower()
+    if archive_folder_name in new_labels:
+        new_labels.remove(archive_folder_name)
+        new_labels.add('archive')
     # add new labels
     for label in new_labels:
         if label not in existing_labels:
