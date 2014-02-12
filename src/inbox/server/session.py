@@ -10,8 +10,7 @@ from inbox.util.url import provider_from_address, NotSupportedError
 from .log import get_logger
 log = get_logger()
 
-from .oauth import oauth, auth
-#from .pool import verify_gmail_account, verify_yahoo_account
+from . import oauth
 from .models.tables import User, UserSession, Namespace, ImapAccount
 
 IMAP_HOSTS = { 'Gmail': 'imap.gmail.com',
@@ -19,13 +18,9 @@ IMAP_HOSTS = { 'Gmail': 'imap.gmail.com',
 
 HANDLERS = {
     'AUTH': {
-        'Gmail': oauth,
-        'Yahoo': auth
-    },
-    #'VERIFY': {
-     #   'Gmail': verify_gmail_account,
-      #  'Yahoo': verify_yahoo_account 
-    #}
+        'Gmail': oauth.oauth,
+        'Yahoo': oauth.auth
+    }
 }
 
 def log_ignored(exc):

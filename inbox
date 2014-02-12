@@ -26,9 +26,8 @@ def start(args=None):
     # Start ZeroRPC api server service
     from inbox.server.util.concurrency import make_zerorpc
     from inbox.server.api import API
-
-    #api_srv_loc = config.get('API_SERVER_LOC', None)
-    #threads.append(make_zerorpc(API, api_srv_loc))
+    api_srv_loc = config.get('API_SERVER_LOC', None)
+    threads.append(make_zerorpc(API, api_srv_loc))
 
     # Start ZeroRPC mail sync server service
     from inbox.server.mailsync.service import SyncService
@@ -36,14 +35,14 @@ def start(args=None):
     threads.append(make_zerorpc(SyncService, sync_srv_loc))
 
     # Start ZeroRPC contacts sync service
-    #from inbox.server.rolodex import ContactSync
-    #contacts_srv_loc = config.get('ROLODEX_SERVER_LOC', None)
-    #threads.append(make_zerorpc(ContactSync, contacts_srv_loc))
+    from inbox.server.rolodex import ContactSync
+    contacts_srv_loc = config.get('ROLODEX_SERVER_LOC', None)
+    threads.append(make_zerorpc(ContactSync, contacts_srv_loc))
 
     # start ZeroRPC search server service
-    #from inbox.server.search import SearchService
-    #search_srv_loc = config.get('SEARCH_SERVER_LOC', None)
-    #threads.append(make_zerorpc(SearchService, search_srv_loc))
+    from inbox.server.search import SearchService
+    search_srv_loc = config.get('SEARCH_SERVER_LOC', None)
+    threads.append(make_zerorpc(SearchService, search_srv_loc))
 
     print """
 \033[94m     Welcome to... \033[0m\033[1;95m

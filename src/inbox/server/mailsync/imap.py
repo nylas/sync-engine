@@ -338,7 +338,7 @@ def imap_initial_sync(crispin_client, db_session, log, folder_name,
 
     chunked_uid_download(crispin_client, db_session, log, folder_name,
             unknown_uids, len(local_uids), len(remote_uids),
-            shared_state['status_cb'], shared_state['syncmanager_lock'], ### TODO[kavya]:CHECK SYNCMANAGER LOCK!
+            shared_state['status_cb'], shared_state['syncmanager_lock'],
             download_and_commit_uids, account.create_message, c)
 
 def check_flags(crispin_client, db_session, folder_name, local_uids, c):

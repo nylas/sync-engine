@@ -3,8 +3,6 @@ from urllib import urlencode
 import logging as log
 import re
 
-#EMAIL_REGEX = re.compile(r"[^@]+@[^@]+\.[^@]+")
- 
 # http://www.regular-expressions.info/email.html
 EMAIL_REGEX = re.compile(r'[A-Z0-9._%+-]+@(?:[A-Z0-9-]+\.)+[A-Z]{2,4}',
     re.IGNORECASE)

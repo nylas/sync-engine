@@ -53,6 +53,11 @@ class SyncService(object):
                 query = query.filter_by(id=account_id)
             fqdn = socket.getfqdn()
             for acc in query:
+                # ONLY GMAIL CURRENTLY
+                if (acc.provider != 'Gmail'):
+                    self.log.info('Inbox currently supports Gmail only!')
+                    return
+
                 self.log.info("Starting sync for account {0}" \
                         .format(acc.email_address))
                 if acc.sync_host is not None and acc.sync_host != fqdn:

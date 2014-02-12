@@ -19,6 +19,11 @@ def rolodex_sync(db_session, account):
     log = configure_rolodex_logging(account.id)
     log.info("Begin syncing contacts...")
 
+    # ONLY GMAIL CURRENTLY
+    if (account.provider != 'Gmail'):
+        log.info('Inbox currently supports Gmail only!')
+        return
+
     existing_contacts = db_session.query(Contact).filter_by(
             source = "local", imapaccount=account).all()
     cached_contacts = db_session.query(Contact).filter_by(
