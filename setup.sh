@@ -14,6 +14,7 @@ apt-get -y install git \
                    supervisor \
                    mysql-server \
                    mysql-client \
+                   redis-server \
                    python \
                    python-dev \
                    python-pip \
