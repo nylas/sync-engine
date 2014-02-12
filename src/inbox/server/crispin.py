@@ -29,11 +29,11 @@ def timed(fn):
 
 ### main stuff
 
-def new_crispin(account_id, provider, dummy=False):
+def new_crispin(account_id, provider, dummy=False, conn_pool_size=None):
     crispin_module_for = dict(Gmail=GmailCrispinClient, IMAP=CrispinClient)
 
     cls = DummyCrispinClient if dummy else crispin_module_for[provider]
-    return cls(account_id)
+    return cls(account_id, conn_pool_size=conn_pool_size)
 
 class CrispinClientBase(object):
     """
@@ -234,8 +234,8 @@ class CrispinClient(CrispinClientBase):
     # how many messages to download at a time
     CHUNK_SIZE = 1
 
-    def __init__(self, account_id, cache=False):
-        self.pool = get_connection_pool(account_id)
+    def __init__(self, account_id, conn_pool_size=None, cache=False):
+        self.pool = get_connection_pool(account_id, conn_pool_size)
         CrispinClientBase.__init__(self, account_id, cache)
 
     @timed
@@ -306,8 +306,9 @@ class CrispinClient(CrispinClientBase):
         return folders
 
 class GmailCrispinClient(CrispinClient):
-    def __init__(self, account_id, cache=False):
-        CrispinClient.__init__(self, account_id, cache=False)
+    def __init__(self, account_id, cache=False, conn_pool_size=None):
+        CrispinClient.__init__(self, account_id, cache=cache,
+                conn_pool_size=conn_pool_size)
 
     def sync_folders(self, c):
         """ In Gmail, every message is a subset of All Mail, so we only sync

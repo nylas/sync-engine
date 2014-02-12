@@ -4,16 +4,13 @@ from .models import session_scope
 from .models.tables import ImapAccount
 import IPython
 
-# crank down connections
-import pool
-pool.POOL_SIZE = 1
-
 def user_console(user_email_address):
     with session_scope() as db_session:
         account = db_session.query(ImapAccount).filter_by(
                 email_address=user_email_address).one()
 
-        crispin_client = new_crispin(account.id, account.provider)
+        crispin_client = new_crispin(account.id, account.provider,
+                conn_pool_size=1)
         with crispin_client.pool.get() as c:
             crispin_client.select_folder(crispin_client.folder_names(c)['All'],
                     uidvalidity_callback(db_session, account), c)
