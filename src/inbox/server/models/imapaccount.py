@@ -287,8 +287,7 @@ def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, x_gm_thrid,
             or l.folder_name in ('sent', 'important')]
     # add new labels
     for label in new_labels:
-        if label.lower() not in existing_labels:
-            # creates by association
+        if label not in existing_labels:
             item = FolderItem(thread=thread, folder_name=label)
             db_session.add(item)
 
