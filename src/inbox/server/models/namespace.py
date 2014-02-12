@@ -66,7 +66,7 @@ def copy_thread(namespace_id, session, thread_id, from_folder, to_folder):
 def delete_thread(namespace_id, session, thread_id, folder_name):
     """ Delete thread in the local datastore (*not* the account backend). """
     item = session.query(FolderItem).join(Thread).filter(
-            Thread.id==namespace_id, FolderItem.thread_id==thread_id,
+            Thread.namespace_id==namespace_id, FolderItem.thread_id==thread_id,
             FolderItem.folder_name==folder_name).one()
     session.delete(item)
     session.commit()
