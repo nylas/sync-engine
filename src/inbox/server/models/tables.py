@@ -484,7 +484,7 @@ class ImapUid(JSONSerializable, Base):
             nullable=False)
     imapaccount = relationship("ImapAccount")
     message_id = Column(Integer, ForeignKey('message.id'), nullable=False)
-    message = relationship('Message')
+    message = relationship('Message', backref='imapuid')
     msg_uid = Column(Integer, nullable=False)
 
     # maximum Gmail label length is 225 (tested empirically), but constraining
