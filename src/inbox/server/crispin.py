@@ -531,3 +531,43 @@ class GmailCrispinClient(CrispinClient):
         #     self.set_cache(data, self.selected_folder_name, 'foo')
 
         return data
+
+    def find_messages(self, g_thrid, c):
+        """ Get UIDs for the [sub]set of messages belonging to the given thread
+            that are in the current folder.
+        """
+        criteria = 'X-GM-THRID {0}'.format(g_thrid)
+        return c.search(['NOT DELETED', criteria])
+
+    ### write methods!
+
+    def archive_thread(self, g_thrid, c):
+        assert self.selected_folder_name == self.folder_names(c)['inbox'], \
+                "must select INBOX first ({0})".format(
+                        self.selected_folder_name)
+        uids = self.find_messages(g_thrid, c)
+        # delete from inbox == archive for Gmail
+        if uids:
+            c.delete_messages(uids)
+
+    def copy_thread(self, g_thrid, to_folder, c):
+        """ NOTE: Does nothing if the thread isn't in the currently selected
+            folder.
+        """
+        uids = self.find_messages(g_thrid, c)
+        if uids:
+            c.copy(uids, to_folder)
+
+    def add_label(self, g_thrid, label_name, c):
+        """ NOTE: Does nothing if the thread isn't in the currently selected
+            folder.
+        """
+        uids = self.find_messages(g_thrid, c)
+        c.add_gmail_labels(uids, [label_name])
+
+    def remove_label(self, g_thrid, label_name, c):
+        """ NOTE: Does nothing if the thread isn't in the currently selected
+            folder.
+        """
+        uids = self.find_messages(g_thrid, c)
+        c.remove_gmail_labels(uids, [label_name])
