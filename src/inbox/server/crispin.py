@@ -241,8 +241,7 @@ class CrispinClient(CrispinClientBase):
 
     @timed
     def _do_select_folder(self, folder, c):
-        # XXX: Remove readonly before implementing mutate commands!
-        select_info = c.select_folder(folder, readonly=True)
+        select_info = c.select_folder(folder)
 
         if self.cache:
             self.set_cache(select_info, folder, 'select_info')
