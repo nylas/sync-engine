@@ -33,8 +33,6 @@ def load_config(filename='config.cfg'):
         config['MSG_PARTS_DIRECTORY'] = os.path.expanduser(config['MSG_PARTS_DIRECTORY'])
         config['LOGDIR'] = os.path.expanduser(config['LOGDIR'])
 
-        print config
-
     except NoSectionError:
         print >>sys.stderr, "Couldn't load configuration from {0}".format(filename)
         sys.exit(1)
