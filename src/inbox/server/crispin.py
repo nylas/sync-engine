@@ -506,9 +506,9 @@ class GmailCrispinClient(CrispinClient):
 
         return data
 
-    def expand_threads(self, thread_ids, c):
+    def expand_threads(self, g_thrids, c):
         """ Find all message UIDs in a user's account that have X-GM-THRID in
-            thread_ids.
+            g_thrids.
 
             Message UIDs returned are All Mail UIDs; this method requires the
             All Mail folder to be selected.
@@ -517,13 +517,13 @@ class GmailCrispinClient(CrispinClient):
                 "must select All Mail first ({0})".format(
                         self.selected_folder_name)
         # UIDs ascend over time; return in order most-recent first
-        return sorted(self._expand_threads(thread_ids, c), reverse=True)
+        return sorted(self._expand_threads(g_thrids, c), reverse=True)
 
-    def _expand_threads(self, thread_ids, c):
+    def _expand_threads(self, g_thrids, c):
         # The boolean IMAP queries use prefix notation for query params.
         # imaplib automatically adds parens.
-        criteria = ('OR ' * (len(thread_ids)-1)) + ' '.join(
-                ['X-GM-THRID {0}'.format(thrid) for thrid in thread_ids])
+        criteria = ('OR ' * (len(g_thrids)-1)) + ' '.join(
+                ['X-GM-THRID {0}'.format(thrid) for thrid in g_thrids])
         data = c.search(['NOT DELETED', criteria])
 
         # if self.cache:
