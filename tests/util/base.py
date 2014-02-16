@@ -34,6 +34,10 @@ def log(request, config):
 
 @fixture(scope='session')
 def db(request, config):
+    """ NOTE: You cannot rely on IMAP UIDs from the test db being correctly
+        up-to-date. If you need to test sync functionality, start with a
+        test database containing only an authed user, not this dump.
+    """
     testdb = TestDB(config)
     request.addfinalizer(testdb.destroy)
     return testdb
