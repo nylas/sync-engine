@@ -7,7 +7,7 @@ from bson import json_util
 import zerorpc
 
 from . import postel
-from . import action
+from . import actions
 from .config import config
 from .models import session_scope
 from .models.tables import Message, SharedFolder, User, ImapAccount, Thread
@@ -211,8 +211,8 @@ class API(object):
             archive_thread(self.namespace.id, db_session, thread_id)
 
         # sync it to the account backend
-        q = action.get_queue()
-        q.enqueue(action.get_archive_fn(account), thread_id)
+        q = actions.get_queue()
+        q.enqueue(actions.get_archive_fn(account), thread_id)
 
         # XXX TODO register a failure handler that reverses the local state
         # change if the change fails to go through---this could cause our
@@ -237,8 +237,8 @@ class API(object):
                     from_folder, to_folder)
 
         # sync it to the account backend
-        q = action.get_queue()
-        q.enqueue(action.get_move_fn(account), thread_id, from_folder, to_folder)
+        q = actions.get_queue()
+        q.enqueue(actions.get_move_fn(account), thread_id, from_folder, to_folder)
 
         # XXX TODO register a failure handler that reverses the local state
         # change if the change fails to go through
@@ -258,8 +258,8 @@ class API(object):
                     from_folder, to_folder)
 
         # sync it to the account backend
-        q = action.get_queue()
-        q.enqueue(action.get_copy_fn(account), thread_id, from_folder, to_folder)
+        q = actions.get_queue()
+        q.enqueue(actions.get_copy_fn(account), thread_id, from_folder, to_folder)
 
         # XXX TODO register a failure handler that reverses the local state
         # change if the change fails to go through
@@ -282,8 +282,8 @@ class API(object):
             delete_thread(self.namespace.id, db_session, thread_id, folder_name)
 
         # sync it to the account backend
-        q = action.get_queue()
-        q.enqueue(action.get_delete_fn(account), thread_id, folder_name)
+        q = actions.get_queue()
+        q.enqueue(actions.get_delete_fn(account), thread_id, folder_name)
 
         # XXX TODO register a failure handler that reverses the local state
         # change if the change fails to go through
