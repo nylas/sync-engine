@@ -1,4 +1,4 @@
-from .mailsync.imap import uidvalidity_callback
+from .mailsync.imap import uidvalidity_cb
 from .crispin import new_crispin
 from .models import session_scope
 from .models.tables import ImapAccount
@@ -13,7 +13,7 @@ def user_console(user_email_address):
                 conn_pool_size=1)
         with crispin_client.pool.get() as c:
             crispin_client.select_folder(crispin_client.folder_names(c)['all'],
-                    uidvalidity_callback(db_session, account), c)
+                    uidvalidity_cb(db_session, account), c)
 
         server_uids = crispin_client.all_uids(c)
 

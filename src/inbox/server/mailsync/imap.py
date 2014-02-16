@@ -222,7 +222,7 @@ def base_initial_sync(crispin_client, db_session, log, folder_name,
 
     with crispin_client.pool.get() as c:
         crispin_client.select_folder(folder_name,
-                uidvalidity_callback(db_session, crispin_client.account_id), c)
+                uidvalidity_cb(db_session, crispin_client.account_id), c)
 
         initial_sync_fn(crispin_client, db_session, log, folder_name,
                 shared_state, local_uids, c)
@@ -255,7 +255,7 @@ def base_poll(crispin_client, db_session, log, folder_name, shared_state,
         status = crispin_client.folder_status(folder_name, c)
         if status['HIGHESTMODSEQ'] > saved_validity.highestmodseq:
             crispin_client.select_folder(folder_name,
-                    uidvalidity_callback(db_session,
+                    uidvalidity_cb(db_session,
                         crispin_client.account_id), c)
             highestmodseq_update(crispin_client, db_session, log, folder_name,
                     saved_validity.highestmodseq,
@@ -307,7 +307,7 @@ def imap_highestmodseq_update(crispin_client, db_session, log, folder_name,
             len(uids), status_cb, download_and_commit_uids,
             account.create_message, syncmanager_lock, c)
 
-def uidvalidity_callback(db_session, account_id):
+def uidvalidity_cb(db_session, account_id):
     def fn(folder, select_info):
         assert folder is not None and select_info is not None, \
                 "must start IMAP session before verifying UID validity"

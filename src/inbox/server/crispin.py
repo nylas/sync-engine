@@ -89,7 +89,7 @@ class CrispinClientBase(object):
         return or_none(self.selected_folder_info,
                 lambda i: long(i['UIDVALIDITY']))
 
-    def select_folder(self, folder, uidvalidity_callback, c):
+    def select_folder(self, folder, uidvalidity_cb, c):
         """ Selects a given folder and makes sure to set the 'selected_folder'
             attribute to a (folder_name, select_info) pair.
 
@@ -103,7 +103,7 @@ class CrispinClientBase(object):
         self._folder_names = None
         self.log.info('Selected folder {0} with {1} messages.'.format(
             folder, select_info['EXISTS']))
-        return uidvalidity_callback(folder, select_info)
+        return uidvalidity_cb(folder, select_info)
 
     def _do_select_folder(self, folder, c):
         raise NotImplementedError

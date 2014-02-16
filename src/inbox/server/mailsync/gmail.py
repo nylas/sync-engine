@@ -24,7 +24,7 @@ import os
 
 from geventconnpool import retry
 
-from .imap import uidvalidity_callback, new_or_updated, remove_deleted_uids
+from .imap import uidvalidity_cb, new_or_updated, remove_deleted_uids
 from .imap import chunked_uid_download, update_metadata, resync_uids_from
 from .imap import base_initial_sync, base_poll, safe_download, commit_uids
 from .imap import create_db_objects, ImapSyncMonitor
@@ -164,7 +164,7 @@ def chunked_thread_download(crispin_client, db_session, log, folder_name,
 
     crispin_client.select_folder(
             crispin_client.folder_names(c)['all'],
-            uidvalidity_callback(db_session,
+            uidvalidity_cb(db_session,
                 crispin_client.account_id), c)
 
     log.info("Expanding threads and downloading messages.")
