@@ -20,7 +20,7 @@ def rolodex_sync(db_session, account):
     log.info("Begin syncing contacts...")
 
     # ONLY GMAIL CURRENTLY
-    if (account.provider != 'Gmail'):
+    if account.provider != 'Gmail':
         log.info('Inbox currently supports Gmail only!')
         return
 

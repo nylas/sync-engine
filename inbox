@@ -62,19 +62,16 @@ def start(args=None):
 def sync(args):
     import zerorpc
 
-    from inbox.server import oauth, session
+    from inbox.server import session
     from inbox.server.models import new_db_session, init_db
     from inbox.server.models.tables import ImapAccount
     from sqlalchemy.orm.exc import NoResultFound
-    from sqlalchemy.exc import ProgrammingError
 
-    from inbox.server.models import new_db_session
     db_session = new_db_session()
 
     try:
         account = db_session.query(ImapAccount).filter_by(
                 email_address=args.email_address).one()
-        #print "Already authed!"
     except NoResultFound:
         log.error("No record of account {0}".format(args.email_address))
         return
@@ -152,7 +149,7 @@ def index(args):
             gen_search_index(namespace)
 
 def auth(args):
-    from inbox.server import oauth, session
+    from inbox.server import session
     from inbox.server.models import new_db_session, init_db
     from inbox.server.models.tables import ImapAccount
     from sqlalchemy.orm.exc import NoResultFound
@@ -168,9 +165,9 @@ def auth(args):
     except NoResultFound:
         response = session.auth_account(email_address)
         account = session.make_account(db_session, email_address, response)
-        
+
     try:
-        verified_account = session.verify_account(db_session, account)    
+        verified_account = session.verify_account(db_session, account)
     except session.NotSupportedError as e:
         print >>sys.stderr, str(e)
         sys.exit(1)

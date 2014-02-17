@@ -54,7 +54,7 @@ class SyncService(object):
             fqdn = socket.getfqdn()
             for acc in query:
                 # ONLY GMAIL CURRENTLY
-                if (acc.provider != 'Gmail'):
+                if acc.provider != 'Gmail':
                     self.log.info('Inbox currently supports Gmail only!')
                     return
 

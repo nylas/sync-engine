@@ -19,7 +19,7 @@ IMAP_HOSTS = { 'Gmail': 'imap.gmail.com',
 HANDLERS = {
     'AUTH': {
         'Gmail': oauth.oauth,
-        'Yahoo': oauth.auth
+        'Yahoo': oauth.password_auth
     }
 }
 
@@ -88,7 +88,7 @@ def make_account(db_session, email_address, response):
         account.o_refresh_token = response['refresh_token']
         account.o_verified_email = response['verified_email']
         account.date = datetime.datetime.utcnow()
-        
+
     elif (provider == 'Yahoo'):
         account.provider = 'Yahoo'
         account.imap_host = IMAP_HOSTS['Yahoo']

@@ -4,7 +4,7 @@ log = get_logger()
 import urllib
 import requests
 import getpass
- 
+
 from .config import config
 
 # Google OAuth app credentials
@@ -148,7 +148,7 @@ def oauth(email_address):
     return auth_response
 
 # TODO[kavya]: This is silly
-def auth(email_address):
+def password_auth(email_address):
     password = getpass.getpass()
 
     if (len(password) <= 0):

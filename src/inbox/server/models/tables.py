@@ -12,49 +12,22 @@ from sqlalchemy.ext.hybrid import hybrid_property, Comparator
 from sqlalchemy.types import BLOB
 
 from bs4 import BeautifulSoup, Doctype, Comment
-from Crypto import Random
-from Crypto.Cipher import AES
 
 from ..log import get_logger
 log = get_logger()
 
 from ..config import config
 KEY_DIR = config.get('KEY_DIR', None)
-KEY_SIZE = int(config.get('KEY_SIZE', 128))
 
 from inbox.util.file import Lock, mkdirp
 from inbox.util.html import plaintext2html
 from inbox.util.misc import strip_plaintext_quote
+from inbox.util.inbox_crypto import encrypt_aes, decrypt_aes
 from inbox.sqlalchemy.util import Base, JSON, LittleJSON
 from inbox.sqlalchemy.revision import Revision, gen_rev_role
 from inbox.server.oauth import AUTH_TYPES
 
 from .roles import JSONSerializable, Blob
-
-# http://www.commx.ws/2013/10/aes-encryption-with-python/
-def encrypt_aes(message):
-    # Convert string message to a bytes object, needed for ops below
-    if type(message) == unicode:
-        message = message.encode('utf-8')
-
-    # PKCS#7 padding scheme
-    def pad(s):
-        pad_length = AES.block_size - (len(s) % AES.block_size)
-        return s + (chr(pad_length) * pad_length)
- 
-    padded_message = pad(message)
- 
-    key = Random.OSRNG.posix.new().read(KEY_SIZE // 8)
-    iv = Random.OSRNG.posix.new().read(AES.block_size)
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    return ((iv + cipher.encrypt(padded_message)), key)
-
-def decrypt_aes(ciphertext, key):
-    unpad = lambda s: s[:-ord(s[-1])]
-    iv = ciphertext[:AES.block_size]
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    plaintext = unpad(cipher.decrypt(ciphertext))[AES.block_size:]
-    return plaintext
 
 # global
 class ImapAccount(Base):
@@ -129,8 +102,8 @@ class ImapAccount(Base):
 
     @password.setter
     def password(self, value):
-        assert (AUTH_TYPES.get(self.provider) == 'Password')
-        assert (value != None)
+        assert AUTH_TYPES.get(self.provider) == 'Password'
+        assert value != None
 
         mkdirp(KEY_DIR)
 
@@ -138,6 +111,7 @@ class ImapAccount(Base):
 
         self.key = key[:len(key)/2]
         keyfile = os.path.join(KEY_DIR, '{0}'.format(self.key))
+
         with open(keyfile, 'w+') as f:
             f.write(key[len(key)/2:])
 
