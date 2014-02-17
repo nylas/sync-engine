@@ -7,9 +7,11 @@ of messages on the account backend because our local datastore is messed up.
 """
 
 from redis import Redis
-from rq import Queue
+from rq import Queue, Connection
 
 from . import gmail
+
+from inbox.server.util.concurrency import GeventWorker
 
 mod_for = {'Gmail': gmail}
 
@@ -27,3 +29,17 @@ def get_copy_fn(imapaccount):
 
 def get_delete_fn(imapaccount):
     return mod_for[imapaccount.provider].delete
+
+# Later we're going to want to consider a pooling mechanism. We may want to
+# split actions queues by remote host, for example, and have workers for a
+# given host share a connection pool.
+def rqworker(burst=False):
+    """ Runs forever.
+
+    More details on how workers work at: http://python-rq.org/docs/workers/
+    """
+    with Connection():
+        q = get_queue()
+
+        w = GeventWorker([q])
+        w.work(burst=burst)
