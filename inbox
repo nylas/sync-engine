@@ -4,7 +4,6 @@ from gevent import joinall
 import argparse
 import signal
 import sys
-import getpass
 from setproctitle import setproctitle; setproctitle('inbox')
 
 from inbox.server.config import config, load_config
@@ -62,8 +61,7 @@ def start(args=None):
 def sync(args):
     import zerorpc
 
-    from inbox.server import session
-    from inbox.server.models import new_db_session, init_db
+    from inbox.server.models import new_db_session
     from inbox.server.models.tables import ImapAccount
     from sqlalchemy.orm.exc import NoResultFound
 
