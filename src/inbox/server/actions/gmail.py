@@ -47,7 +47,7 @@ def _syncback_action(fn, imapaccount_id, folder_name):
         account = db_session.query(ImapAccount).join(Namespace).filter_by(
                 id=imapaccount_id).one()
         crispin_client = new_crispin(account.id, account.provider,
-                conn_pool_size=1)
+                conn_pool_size=1, readonly=False)
         with crispin_client.pool.get() as c:
             crispin_client.select_folder(
                     _translate_folder_name(folder_name, crispin_client, c),

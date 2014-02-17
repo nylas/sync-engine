@@ -29,12 +29,13 @@ def timed(fn):
 
 ### main stuff
 
-def new_crispin(account_id, provider, conn_pool_size=None, dummy=False):
+def new_crispin(account_id, provider, dummy=False, conn_pool_size=None,
+        readonly=True):
     crispin_module_for = dict(Gmail=GmailCrispinClient, IMAP=CrispinClient,
-        Yahoo=YahooCrispinClient)
+            Yahoo=YahooCrispinClient)
 
     cls = DummyCrispinClient if dummy else crispin_module_for[provider]
-    return cls(account_id, conn_pool_size=conn_pool_size)
+    return cls(account_id, conn_pool_size=conn_pool_size, readonly=readonly)
 
 class CrispinClientBase(object):
     """
@@ -235,13 +236,15 @@ class CrispinClient(CrispinClientBase):
     # how many messages to download at a time
     CHUNK_SIZE = 1
 
-    def __init__(self, account_id, conn_pool_size=None, cache=False):
+    def __init__(self, account_id, conn_pool_size=None, readonly=True,
+            cache=False):
         self.pool = get_connection_pool(account_id, conn_pool_size)
+        self.readonly = readonly
         CrispinClientBase.__init__(self, account_id, cache)
 
     @timed
     def _do_select_folder(self, folder, c):
-        select_info = c.select_folder(folder)
+        select_info = c.select_folder(folder, readonly=self.readonly)
 
         if self.cache:
             self.set_cache(select_info, folder, 'select_info')
@@ -306,8 +309,10 @@ class CrispinClient(CrispinClientBase):
         return folders
 
 class YahooCrispinClient(CrispinClient):
-    def __init__(self, account_id, cache=False):
-        CrispinClient.__init__(self, account_id, cache=False)
+    def __init__(self, account_id, conn_pool_size=None, readonly=True,
+            cache=False):
+        CrispinClient.__init__(self, account_id, conn_pool_size=conn_pool_size,
+                readonly=readonly, cache=cache)
 
     def sync_folders(self, c):
         return self.folder_names(c)
@@ -378,9 +383,10 @@ class YahooCrispinClient(CrispinClient):
         NotImplementedError
 
 class GmailCrispinClient(CrispinClient):
-    def __init__(self, account_id, cache=False, conn_pool_size=None):
-        CrispinClient.__init__(self, account_id, cache=cache,
-                conn_pool_size=conn_pool_size)
+    def __init__(self, account_id, conn_pool_size=None, readonly=True,
+            cache=False):
+        CrispinClient.__init__(self, account_id, conn_pool_size=conn_pool_size,
+                readonly=readonly, cache=cache)
 
     def sync_folders(self, c):
         """ In Gmail, every message is a subset of All Mail, so we only sync
