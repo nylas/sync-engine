@@ -89,11 +89,14 @@ def move(imapaccount_id, thread_id, from_folder, to_folder):
             if to_folder in crispin_client.folder_names(c)['labels']:
                 g_thrid = _get_g_thrid(account.namespace.id, thread_id,
                         db_session)
-                crispin_client.remove_label(g_thrid,
-                        _translate_folder_name(from_folder, crispin_client, c),
-                        c)
                 crispin_client.add_label(g_thrid,
                         _translate_folder_name(to_folder, crispin_client, c),
+                        c)
+                crispin_client.select_folder(
+                        crispin_client.folder_names(c)['all'],
+                        uidvalidity_cb, c)
+                crispin_client.remove_label(g_thrid,
+                        _translate_folder_name(from_folder, crispin_client, c),
                         c)
             elif to_folder == 'inbox':
                 g_thrid = _get_g_thrid(account.namespace.id, thread_id,
@@ -144,6 +147,8 @@ def delete(imapaccount_id, thread_id, folder_name):
         if folder_name == 'inbox':
             return _archive(g_thrid, crispin_client, c)
         elif folder_name in crispin_client.folder_names(c)['labels']:
+            crispin_client.select_folder(
+                    crispin_client.folder_names(c)['all'], uidvalidity_cb, c)
             crispin_client.remove_label(g_thrid,
                     _translate_folder_name(folder_name, crispin_client, c), c)
         elif folder_name == 'archive':

@@ -568,5 +568,9 @@ class GmailCrispinClient(CrispinClient):
         """ NOTE: Does nothing if the thread isn't in the currently selected
             folder.
         """
+        # Gmail won't even include the label of the selected folder (when the
+        # selected folder is a laebl) in the list of labels for a UID, FYI.
+        assert self.selected_folder_name != label_name, \
+                "Gmail doesn't support removing a selected label"
         uids = self.find_messages(g_thrid, c)
         c.remove_gmail_labels(uids, [label_name])

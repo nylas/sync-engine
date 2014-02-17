@@ -72,3 +72,5 @@ def test_copy_delete_syncback(db, config):
         client.select_folder('testlabel', uidvalidity_cb, c)
         testlabel_uids = client.find_messages(g_thrid, c)
         assert not testlabel_uids, "thread still present in testlabel"
+
+# TODO: Test more of the different cases here.
