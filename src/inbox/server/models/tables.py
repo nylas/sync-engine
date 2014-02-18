@@ -17,12 +17,13 @@ from ..log import get_logger
 log = get_logger()
 
 from ..config import config
+KEY_SIZE = int(config.get('KEY_SIZE', 128))
 KEY_DIR = config.get('KEY_DIR', None)
 
 from inbox.util.file import Lock, mkdirp
 from inbox.util.html import plaintext2html
 from inbox.util.misc import strip_plaintext_quote
-from inbox.util.inbox_crypto import encrypt_aes, decrypt_aes
+from inbox.util.cryptography import encrypt_aes, decrypt_aes
 from inbox.sqlalchemy.util import Base, JSON, LittleJSON
 from inbox.sqlalchemy.revision import Revision, gen_rev_role
 from inbox.server.oauth import AUTH_TYPES
@@ -107,7 +108,7 @@ class ImapAccount(Base):
 
         mkdirp(KEY_DIR)
 
-        self.password_aes, key = encrypt_aes(value)
+        self.password_aes, key = encrypt_aes(value, KEY_SIZE)
 
         self.key = key[:len(key)/2]
         keyfile = os.path.join(KEY_DIR, '{0}'.format(self.key))

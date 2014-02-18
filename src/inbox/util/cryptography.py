@@ -2,15 +2,11 @@ import os
 from Crypto import Random
 from Crypto.Cipher import AES
 
-from inbox.server.config import config
-
-KEY_SIZE = int(config.get('KEY_SIZE', 128))
-
 # The AES functions below are implemented using Python's Crypto library and
 # this blog: http://www.commx.ws/2013/10/aes-encryption-with-python/
-def encrypt_aes(message):
+def encrypt_aes(message, key_size=128):
     """
-    AES encrypts a message using a generated random key of KEY_SIZE
+    AES encrypts a message using a generated random key of key_size
     (default is 128 bits)
     The function expects the message as a byte string; it returns a tuple of
     the encrypted message as a byte string, and the key.
@@ -26,7 +22,7 @@ def encrypt_aes(message):
 
     padded_message = pad(message)
 
-    key = Random.OSRNG.posix.new().read(KEY_SIZE // 8)
+    key = Random.OSRNG.posix.new().read(key_size // 8)
     iv = Random.OSRNG.posix.new().read(AES.block_size)
     cipher = AES.new(key, AES.MODE_CBC, iv)
     return ((iv + cipher.encrypt(padded_message)), key)
