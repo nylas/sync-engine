@@ -55,7 +55,8 @@ Here's how to set up a development environment:
 And _voilà_! Auth an account via the commandline and start syncing:
 
 ```
-  sudo ./inbox add ben.bitdiddle1861@gmail.com
+  sudo ./inbox auth ben.bitdiddle1861@gmail.com
+  sudo ./inbox sync start ben.bitdiddle1861@gmail.com
 ```
 
 ## Contributing
