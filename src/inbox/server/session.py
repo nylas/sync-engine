@@ -163,7 +163,7 @@ def verify_imap_account(db_session, account):
 
         # TODO Verify it and make sure it's valid.
         assert 'access_token' in response
-        account = make_account(db_session, response)
+        account = make_account(db_session, account.email_address, response)
         log.info("Updated token for imap account {0}".format(account.email_address))
 
     return account

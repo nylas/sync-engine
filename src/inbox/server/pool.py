@@ -37,6 +37,7 @@ def verify_gmail_account(account):
         conn.oauth2_login(account.email_address, account.o_access_token)
     except IMAPClient.Error as e:
         if str(e) == '[ALERT] Invalid credentials (Failure)':
+            # maybe refresh the access token
             with session_scope() as db_session:
                 account = verify_imap_account(db_session, account)
                 conn.oauth2_login(account.email_address, account.o_access_token)
