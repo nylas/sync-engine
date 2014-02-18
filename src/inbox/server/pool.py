@@ -1,5 +1,4 @@
 # monkey-patch so geventconnpool's @retry recognizes errors
-import datetime
 import sys
 
 from gevent import socket
@@ -12,7 +11,7 @@ from geventconnpool import ConnectionPool
 from imapclient import IMAPClient
 
 from .models import session_scope
-from .models.tables import ImapAccount, User, Namespace
+from .models.tables import ImapAccount
 from .session import verify_imap_account
 from .oauth import AUTH_TYPES
 from .log import get_logger
@@ -86,12 +85,11 @@ class IMAPConnectionPool(ConnectionPool):
 
             self.email_address = account.email_address
             self.provider = account.provider
-            #self.account = account
-            
+
     def _new_connection(self):
         with session_scope() as db_session:
             account = db_session.query(ImapAccount).get(self.account_id)
-        
+
             if (account.provider == 'Gmail'):
                 conn = verify_gmail_account(account)
 
