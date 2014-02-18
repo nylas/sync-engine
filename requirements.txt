@@ -24,15 +24,12 @@ chardet==2.1.1
 Wand==0.3.5
 setproctitle==1.1.8
 rq==0.3.13
-
 # For ZeroRPC
 Cython==0.19.1
-zerorpc==0.4.3
+zerorpc==0.4.4
+pyzmq==14.0.1
 gdata==2.0.18
 python-dateutil==2.1
 lxml==3.2.4
 flanker==0.3.3
-
-git+https://github.com/zeromq/pyzmq.git@v13.1.0#egg=zmq
-git+https://github.com/inboxapp/imapclient.git#egg=imapclient
-
+imapclient==0.10.2
