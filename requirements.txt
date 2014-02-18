@@ -30,6 +30,5 @@ zerorpc==0.4.4
 pyzmq==14.0.1
 gdata==2.0.18
 python-dateutil==2.1
-lxml==3.2.4
 flanker==0.3.3
 imapclient==0.10.2
