@@ -212,7 +212,7 @@ class API(object):
 
         # sync it to the account backend
         q = actions.get_queue()
-        q.enqueue(actions.get_archive_fn(account), thread_id)
+        q.enqueue(actions.get_archive_fn(account), account.id, thread_id)
 
         # XXX TODO register a failure handler that reverses the local state
         # change if the change fails to go through---this could cause our
@@ -238,7 +238,8 @@ class API(object):
 
         # sync it to the account backend
         q = actions.get_queue()
-        q.enqueue(actions.get_move_fn(account), thread_id, from_folder, to_folder)
+        q.enqueue(actions.get_move_fn(account), account.id, thread_id,
+                from_folder, to_folder)
 
         # XXX TODO register a failure handler that reverses the local state
         # change if the change fails to go through
@@ -259,7 +260,8 @@ class API(object):
 
         # sync it to the account backend
         q = actions.get_queue()
-        q.enqueue(actions.get_copy_fn(account), thread_id, from_folder, to_folder)
+        q.enqueue(actions.get_copy_fn(account), account.id, thread_id,
+                from_folder, to_folder)
 
         # XXX TODO register a failure handler that reverses the local state
         # change if the change fails to go through
@@ -283,7 +285,8 @@ class API(object):
 
         # sync it to the account backend
         q = actions.get_queue()
-        q.enqueue(actions.get_delete_fn(account), thread_id, folder_name)
+        q.enqueue(actions.get_delete_fn(account), account.id, thread_id,
+                folder_name)
 
         # XXX TODO register a failure handler that reverses the local state
         # change if the change fails to go through
