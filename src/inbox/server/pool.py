@@ -58,7 +58,10 @@ def verify_yahoo_account(account):
 
     return conn
 
-def get_connection_pool(account_id):
+def get_connection_pool(account_id, pool_size=None):
+    if pool_size is None:
+        pool_size = DEFAULT_POOL_SIZE
+
     pool = imapaccount_id_to_connection_pool.get(account_id)
     if pool is None:
         pool = imapaccount_id_to_connection_pool[account_id] \
