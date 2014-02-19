@@ -1,5 +1,7 @@
 from ..util.crispin import crispin_client
+from ..util.api import api_client
 
+USER_ID=1
 ACCOUNT_ID=1
 NAMESPACE_ID=1
 THREAD_ID=1
@@ -74,3 +76,21 @@ def test_copy_delete_syncback(db, config):
         assert not testlabel_uids, "thread still present in testlabel"
 
 # TODO: Test more of the different cases here.
+
+# Higher-level tests.
+
+def test_queue_running(db, api_client):
+    """ Just the very minimal basics for now: makes sure that the methods run
+        without raising an exception. You can use rq-dashboard and a Gmail
+        browser window to look in more depth. We'll want to add some
+        automatic verification of the behaviour here eventually (see the
+        previous tests), but for now I'm leaving it lean and fast.
+    """
+    from inbox.server.actions import rqworker
+    # "Tips for using Gmail" thread (avoiding all the "Postel lives!" ones)
+    api_client.archive(USER_ID, NAMESPACE_ID, 8)
+    api_client.move(USER_ID, NAMESPACE_ID, 8, 'archive', 'inbox')
+    # process actions queue
+    rqworker(burst=True)
+
+    # TODO: Test more of the different cases here.
