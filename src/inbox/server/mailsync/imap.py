@@ -18,7 +18,8 @@ folder download won't actually increase our throughput anyway).
 Any time we reconnect, we have to make sure the folder's uidvalidity hasn't
 changed, and if it has, we need to update the UIDs for any messages we've
 already downloaded. A folder's uidvalidity cannot change during a session
-(SELECT during an IMAP session starts a session on a folder).
+(SELECT during an IMAP session starts a session on a folder) (see
+http://tools.ietf.org/html/rfc3501#section-2.3.1.1).
 
 Folder sync state is stored in the FolderSync table to allow for restarts.
 
