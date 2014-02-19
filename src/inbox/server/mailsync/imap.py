@@ -21,6 +21,16 @@ already downloaded. A folder's uidvalidity cannot change during a session
 (SELECT during an IMAP session starts a session on a folder) (see
 http://tools.ietf.org/html/rfc3501#section-2.3.1.1).
 
+Note that despite a session giving you a HIGHESTMODSEQ at the start of a
+SELECT, that session will still always give you the latest message list
+including adds, deletes, and flag changes that have happened since that
+highestmodseq. (In Gmail, there is a small delay between changes happening on
+the web client and those changes registering on a connected IMAP session,
+though bizarrely the HIGHESTMODSEQ is updated immediately.) So we have to keep
+in mind that the data may be changing behind our backs as we're syncing.
+Fetching info about UIDs that no longer exist is not an error but gives us
+empty data.
+
 Folder sync state is stored in the FolderSync table to allow for restarts.
 
 Here's the state machine:
