@@ -54,7 +54,6 @@ class Lock:
     """
     def __init__(self, filename, block=True):
         self.filename = filename
-        # This will create it if it does not exist already
         mkdirp(os.path.dirname(filename))
         self.handle = open(filename, 'w')
         if block:
