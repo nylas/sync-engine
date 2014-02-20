@@ -562,6 +562,10 @@ class UIDValidity(JSONSerializable, Base):
     # http://mathiasbynens.be/notes/mysql-utf8mb4
     folder_name = Column(String(191), nullable=False)
     uid_validity = Column(Integer, nullable=False)
+    # invariant: the local datastore for this folder has always incorporated
+    # remote changes up to _at least_ this modseq (we can't guarantee that
+    # we haven't incorporated later changes too, since IMAP doesn't provide
+    # a true transactional interface)
     highestmodseq = Column(Integer, nullable=False)
 
     __table_args__ = (UniqueConstraint('imapaccount_id', 'folder_name'),)
