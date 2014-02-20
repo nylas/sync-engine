@@ -72,7 +72,6 @@ from gc import collect as garbage_collect
 
 from geventconnpool import retry
 from gevent import Greenlet, sleep
-from gevent.coros import RLock
 
 from inbox.util.itert import chunk, partition
 
@@ -81,6 +80,7 @@ from ..crispin import new_crispin
 from ..models import session_scope
 from ..models import imapaccount as account
 from ..models.tables import ImapAccount, Namespace, FolderSync
+from ..models.namespace import db_write_lock
 
 from .exc import UIDInvalid
 from .base import gevent_check_join, verify_db, save_folder_names
@@ -94,13 +94,13 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
 
         poll_frequency and heartbeat are in seconds.
     """
-    def __init__(self, account_id, email_address, provider, status_cb,
-            heartbeat=1, poll_frequency=30):
+    def __init__(self, account_id, namespace_id, email_address, provider,
+            status_cb, heartbeat=1, poll_frequency=30):
 
         self.shared_state = {
                 # IMAP folders are kept up-to-date via polling
                 'poll_frequency': poll_frequency,
-                'syncmanager_lock': RLock(),
+                'syncmanager_lock': db_write_lock(namespace_id),
                 }
 
         self.folder_monitors = []

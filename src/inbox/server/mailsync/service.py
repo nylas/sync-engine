@@ -75,7 +75,8 @@ class SyncService(object):
                             notify(account_id, state, status)
 
                         monitor = monitor_cls_for[acc.provider](acc.id,
-                                acc.email_address, acc.provider, update_status)
+                                acc.namespace.id, acc.email_address,
+                                acc.provider, update_status)
                         self.monitors[acc.id] = monitor
                         monitor.start()
                         acc.sync_host = fqdn

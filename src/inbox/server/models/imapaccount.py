@@ -16,7 +16,7 @@ from flanker import mime
 
 from inbox.util.misc import or_none
 from inbox.util.addr import parse_email_address
-from inbox.util.file import Lock, mkdirp
+from inbox.util.file import mkdirp
 from inbox.util.misc import parse_ml_headers
 
 from .tables import Block, Message, ImapUid, UIDValidity, FolderItem, Thread
@@ -24,18 +24,6 @@ from .tables import Block, Message, ImapUid, UIDValidity, FolderItem, Thread
 from ..config import config
 from ..log import get_logger
 log = get_logger()
-
-def _db_write_lockfile_name(account_id):
-    return "/var/lock/inbox_datastore/{0}.lock".format(account_id)
-
-def db_write_lock(account_id):
-    """ Protect updating this account's Inbox datastore data.
-
-    Note that you should also use this to wrap any code that _figures
-    out_ what to update the datastore with, because outside the lock
-    you can't guarantee no one is updating the data behind your back.
-    """
-    return Lock(_db_write_lockfile_name(account_id), block=True)
 
 def total_stored_data(account_id, session):
     """ Computes the total size of the block data of emails in your

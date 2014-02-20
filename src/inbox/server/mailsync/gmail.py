@@ -36,8 +36,8 @@ from inbox.util.itert import chunk, partition
 from inbox.util.cache import set_cache, get_cache, rm_cache
 
 class GmailSyncMonitor(ImapSyncMonitor):
-    def __init__(self, account_id, email_address, provider, status_cb,
-            heartbeat=1, poll_frequency=30):
+    def __init__(self, account_id, namespace_id, email_address, provider,
+            status_cb, heartbeat=1, poll_frequency=30):
         self.folder_state_handlers = {
                     'initial': initial_sync,
                     'initial uidinvalid': resync_uids_from('initial'),
@@ -46,8 +46,8 @@ class GmailSyncMonitor(ImapSyncMonitor):
                     'finish': lambda c, s, l, f, st: 'finish',
                 }
 
-        ImapSyncMonitor.__init__(self, account_id, email_address, provider,
-                status_cb, heartbeat=1, poll_frequency=30)
+        ImapSyncMonitor.__init__(self, account_id, namespace_id, email_address,
+                provider, status_cb, heartbeat=1, poll_frequency=30)
 @retry
 def initial_sync(crispin_client, db_session, log, folder_name, shared_state):
     return base_initial_sync(crispin_client, db_session, log, folder_name,
