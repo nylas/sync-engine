@@ -91,6 +91,8 @@ class ImapAccount(Base):
         return Lock(self._sync_lockfile_name, block=False)
 
     def sync_lock(self):
+        """ Prevent the mailsync for this account from running more than once.
+        """
         self._sync_lock.acquire()
 
     def sync_unlock(self):
