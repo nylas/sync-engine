@@ -65,16 +65,33 @@ def g_metadata(account_id, session, folder_name):
             for uid, g_msgid, g_thrid in query])
 
 def update_metadata(account_id, session, folder_name, uids, new_flags):
-    """ Update flags (the only metadata that can change). """
-    for item in session.query(ImapUid).filter(
+    """ Update flags (the only metadata that can change).
+
+    Make sure you're holding a db write lock on the account. (We don't try
+    to grab the lock in here in case the caller needs to put higher-level
+    functionality in the lock.)
+    """
+    # The join here means we won't update flags on messages that have been
+    # deleted locally (but the delete hasn't propagated yet), That's A-OK: that
+    # delete will eventually be synced back to the account backend, so it
+    # doesn't matter if our flags get out-of-date in the meantime.
+    for item in session.query(ImapUid).join(Message).filter(
             ImapUid.imapaccount_id==account_id,
             ImapUid.msg_uid.in_(uids),
             ImapUid.folder_name==folder_name):
         flags = new_flags[item.msg_uid]['flags']
         labels = new_flags[item.msg_uid]['labels']
         item.update_flags(flags, labels)
+        item.message.is_draft = item.is_draft
+        # NOTE: If we're ever going to make our datastore API support "read"
+        # status, this is the place to put update of that flag.
+        # (is_seen == is_read)
 
 def remove_messages(account_id, session, uids, folder):
+    """ Make sure you're holding a db write lock on the account. (We don't try
+        to grab the lock in here in case the caller needs to put higher-level
+        functionality in the lock.)
+    """
     fm_query = session.query(ImapUid).filter(
             ImapUid.imapaccount_id==account_id,
             ImapUid.folder_name==folder,
@@ -84,6 +101,9 @@ def remove_messages(account_id, session, uids, folder):
     # XXX TODO: Have a recurring worker permanently remove dangling
     # messages from the database and block store. (Probably too
     # expensive to do here.)
+    # XXX TODO: This doesn't properly update threads to make sure they have
+    # the correct folders associated with them, or are deleted when they no
+    # longer contain any messages.
 
 def get_uidvalidity(account_id, session, folder_name):
     try:
@@ -173,6 +193,11 @@ def create_message(db_session, log, account, folder_name, uid, internaldate,
         imapuid = ImapUid(imapaccount=account, folder_name=folder_name,
                 msg_uid=uid, message=new_msg)
         imapuid.update_flags(flags)
+
+        new_msg.is_draft = imapuid.is_draft
+        # NOTE: If we're going to make the Inbox datastore API support "read"
+        # status, this is the place to add that data to Message, e.g.
+        # new_msg.is_read = imapuid.is_seen.
 
         new_msg.size = len(body)  # includes headers text
 
