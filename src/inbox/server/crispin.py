@@ -29,7 +29,7 @@ def timed(fn):
 
 ### main stuff
 
-def new_crispin(account_id, provider, dummy=False, conn_pool_size=1):
+def new_crispin(account_id, provider, conn_pool_size=None, dummy=False):
     crispin_module_for = dict(Gmail=GmailCrispinClient, IMAP=CrispinClient,
         Yahoo=YahooCrispinClient)
 
