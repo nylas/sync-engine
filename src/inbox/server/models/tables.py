@@ -238,6 +238,8 @@ class Message(JSONSerializable, Base, HasRevisions):
 
     mailing_list_headers = Column(JSON, nullable=True)
 
+    is_draft = Column(Boolean, default=False, nullable=False)
+
     # Most messages are short and include a lot of quoted text. Preprocessing
     # just the relevant part out makes a big difference in how much data we
     # need to send over the wire.
