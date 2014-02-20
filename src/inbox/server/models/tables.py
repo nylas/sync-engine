@@ -268,7 +268,25 @@ class Message(JSONSerializable, Base, HasRevisions):
             assert '\r' not in html_part, "newlines not normalized"
 
             # Try our best to strip out gmail quoted text.
-            soup = BeautifulSoup(html_part.strip(), "lxml")
+            try:
+                soup = BeautifulSoup(html_part.strip(), "lxml")
+            except RuntimeError as e:
+                if e.message == 'maximum recursion depth exceeded while calling a Python object':
+                    # don't recurse any longer
+                    log.error("There is a parsing here in BeautifulSoup... {0}".format(e))
+                else:
+                    log.error("Some other BeautifulSoup error... {0}".format(e))
+
+                # MG TOFIX better logging to disk here
+
+                # errfile = get_errfilename(account_id, folder_name, uid)
+                # with open(errfile, 'w') as fh:
+                #     fh.write(msg_string)
+                # log.error("DecodeError encountered, unparseable message logged to {0}" \
+                #         .format(get_errfilename(account.id, folder_name, uid)))
+
+                return
+
             for div in soup.findAll('div', 'gmail_quote'):
                 div.extract()
             for container in soup.findAll('div', 'gmail_extra'):
