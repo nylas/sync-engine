@@ -71,7 +71,7 @@ class Lock:
         self.acquire()
         return self
 
-    def __exit__(self):
+    def __exit__(self, type, value, traceback):
         self.release()
 
     def __del__(self):
