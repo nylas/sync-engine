@@ -65,7 +65,8 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
 
     local_uids = set(local_uids).difference(
             remove_deleted_uids(crispin_client.account_id,
-                db_session, log, folder_name, local_uids, remote_uids, c))
+                db_session, log, folder_name, local_uids, remote_uids,
+                shared_state['syncmanager_lock'], c))
 
     unknown_uids = set(remote_uids).difference(set(local_uids))
 
@@ -137,7 +138,7 @@ def gmail_download_and_commit_uids(crispin_client, db_session, log, folder_name,
         new_imapuids = create_db_objects(crispin_client.account_id, db_session,
                 log, folder_name, raw_messages, msg_create_fn)
         commit_uids(db_session, log, new_imapuids)
-        return len(new_imapuids)
+    return len(new_imapuids)
 
 def chunked_thread_download(crispin_client, db_session, log, folder_name,
         g_metadata, uids, status_cb, syncmanager_lock, c):

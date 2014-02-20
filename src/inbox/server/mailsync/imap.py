@@ -295,10 +295,10 @@ def highestmodseq_update(crispin_client, db_session, log, folder_name,
         local_uids += new
         local_uids = set(local_uids).difference(
                 remove_deleted_uids(account_id, db_session, log, folder_name,
-                    local_uids, remote_uids, c))
+                    local_uids, remote_uids, syncmanager_lock, c))
 
         update_metadata(crispin_client, db_session, log, folder_name,
-                updated, c)
+                updated, syncmanager_lock, c)
 
         highestmodseq_fn(crispin_client, db_session, log, folder_name,
                 changed_uids, local_uids, status_cb, syncmanager_lock, c)
@@ -306,7 +306,7 @@ def highestmodseq_update(crispin_client, db_session, log, folder_name,
         log.info("No new or updated messages")
 
     remove_deleted_uids(crispin_client.account_id, db_session, log,
-            folder_name, local_uids, remote_uids, c)
+            folder_name, local_uids, remote_uids, syncmanager_lock, c)
     account.update_uidvalidity(account_id, db_session, folder_name,
             new_uidvalidity, new_highestmodseq)
     db_session.commit()
@@ -339,7 +339,8 @@ def new_or_updated(uids, local_uids):
 
 def imap_initial_sync(crispin_client, db_session, log, folder_name,
         shared_state, local_uids, c):
-    check_flags(crispin_client, db_session, folder_name, local_uids, c)
+    check_flags(crispin_client, db_session, log, folder_name, local_uids,
+            shared_state['syncmanager_lock'], c)
 
     remote_uids = crispin_client.all_uids(c)
     log.info("Found {0} UIDs for folder {1}".format(len(remote_uids),
@@ -348,7 +349,8 @@ def imap_initial_sync(crispin_client, db_session, log, folder_name,
 
     local_uids = set(local_uids).difference(
             remove_deleted_uids(crispin_client.account_id, db_session, log,
-                folder_name, local_uids, remote_uids, c))
+                folder_name, local_uids, remote_uids,
+                shared_state['syncmanager_lock'], c))
 
     unknown_uids = set(remote_uids).difference(set(local_uids))
 
@@ -357,7 +359,8 @@ def imap_initial_sync(crispin_client, db_session, log, folder_name,
             shared_state['status_cb'], shared_state['syncmanager_lock'],
             download_and_commit_uids, account.create_message, c)
 
-def check_flags(crispin_client, db_session, folder_name, local_uids, c):
+def check_flags(crispin_client, db_session, log, folder_name, local_uids,
+        syncmanager_lock, c):
     """
     If we have a saved uidvalidity for this folder, make sure the folder hasn't
     changed since we saved it. Otherwise we need to query for flag changes too.
@@ -370,7 +373,8 @@ def check_flags(crispin_client, db_session, folder_name, local_uids, c):
             uids = crispin_client.new_and_updated_uids(last_highestmodseq, c)
             if uids:
                 _, updated = new_or_updated(uids, local_uids)
-                update_metadata(updated, c)
+                update_metadata(crispin_client, db_session, log, folder_name,
+                        updated, syncmanager_lock, c)
 
 def chunked_uid_download(crispin_client, db_session, log,
         folder_name, uids, num_local_messages, num_total_messages, status_cb,
@@ -426,7 +430,7 @@ def download_and_commit_uids(crispin_client, db_session, log, folder_name,
         new_imapuids = create_db_objects(crispin_client.account_id, db_session,
                 log, folder_name, raw_messages, msg_create_fn)
         commit_uids(db_session, log, new_imapuids)
-        return len(new_imapuids)
+    return len(new_imapuids)
 
 def commit_uids(db_session, log, new_imapuids):
     new_messages = [item.message for item in new_imapuids]
@@ -452,7 +456,7 @@ def commit_uids(db_session, log, new_imapuids):
     # trigger_index_update(self.account.namespace.id)
 
 def remove_deleted_uids(account_id, db_session, log, folder_name,
-        local_uids, remote_uids, c):
+        local_uids, remote_uids, syncmanager_lock, c):
     """ Works as follows:
         1. Do a LIST on the current folder to see what messages are on the
             server.
@@ -465,15 +469,20 @@ def remove_deleted_uids(account_id, db_session, log, folder_name,
 
     to_delete = set(local_uids).difference(set(remote_uids))
     if to_delete:
-        account.remove_messages(account_id, db_session, to_delete, folder_name)
-        db_session.commit()
+        # We need to grab the lock for this because deleting ImapUids may
+        # cascade to Messages and FolderItems and Threads. No one else messes
+        # with ImapUids, but the exposed datastore elements are another story.
+        with syncmanager_lock:
+            account.remove_messages(account_id, db_session, to_delete, folder_name)
+            db_session.commit()
 
         log.info("Deleted {0} removed messages from {1}".format(
             len(to_delete), folder_name))
 
     return to_delete
 
-def update_metadata(crispin_client, db_session, log, folder_name, uids, c):
+def update_metadata(crispin_client, db_session, log, folder_name, uids,
+        syncmanager_lock, c):
     """ Update flags (the only metadata that can change). """
     # bigger chunk because the data being fetched here is very small
     for uids in chunk(uids, 5*crispin_client.CHUNK_SIZE):
@@ -481,6 +490,7 @@ def update_metadata(crispin_client, db_session, log, folder_name, uids, c):
         assert sorted(uids, key=int) == sorted(new_flags.keys(), key=int), \
                 "server uids != local uids"
         log.info("new flags: {0}".format(new_flags))
-        account.update_metadata(crispin_client.account_id, db_session,
-                folder_name, uids, new_flags)
-        db_session.commit()
+        with syncmanager_lock:
+            account.update_metadata(crispin_client.account_id, db_session,
+                    folder_name, uids, new_flags)
+            db_session.commit()
