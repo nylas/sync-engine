@@ -420,8 +420,10 @@ common_content_types = ['text/plain',
 
 class Block(JSONSerializable, Blob, Base, HasRevisions):
     """ Metadata for message parts stored in s3 """
-    message_id = Column(Integer, ForeignKey('message.id'), nullable=False)
-    message = relationship('Message', backref="parts")
+    message_id = Column(Integer, ForeignKey('message.id', ondelete='CASCADE'),
+            nullable=False)
+    message = relationship('Message',
+            backref=backref("parts", cascade="all, delete, delete-orphan"))
 
     walk_index = Column(Integer)
     # Save some space with common content types
@@ -504,9 +506,20 @@ class ImapUid(JSONSerializable, Base):
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
             nullable=False)
     imapaccount = relationship("ImapAccount")
-    message_id = Column(Integer, ForeignKey('message.id'), nullable=False)
-    message = relationship('Message', backref='imapuid')
-    msg_uid = Column(Integer, nullable=False)
+    # If we delete this uid, we also want the associated message to be deleted.
+    # Buf if we delete the message, we _don't_ always want to delete the
+    # associated uid, we want to be explicit about that (this makes the
+    # local data/remote data synchronization work properly). this is why we
+    # do not specify the "delete-orphan" cascade option here.
+    message_id = Column(Integer, ForeignKey('message.id'), nullable=True)
+    message = relationship('Message', cascade="all",
+            backref=backref('imapuid', uselist=False))
+    # nullable to allow the local data store to delete messages without
+    # deleting the associated uid; we want to leave the uid entry there until
+    # we notice the same delete from the backend, which helps are accounting
+    # of what is going on. otherwise, it wouldn't make sense to allow these
+    # entries to decouple.
+    msg_uid = Column(Integer, nullable=True)
 
     # maximum Gmail label length is 225 (tested empirically), but constraining
     # folder_name uniquely requires max length of 767 bytes under utf8mb4
