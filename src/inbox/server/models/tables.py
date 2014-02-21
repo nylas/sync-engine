@@ -233,7 +233,7 @@ class Message(JSONSerializable, Base, HasRevisions):
     thread_id = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
             nullable=False)
     thread = relationship('Thread', backref="messages",
-            order_by="Message.internaldate")
+            order_by="Message.received_date")
 
     from_addr = Column(JSON, nullable=True)
     sender_addr = Column(JSON, nullable=True)
@@ -244,7 +244,7 @@ class Message(JSONSerializable, Base, HasRevisions):
     in_reply_to = Column(JSON, nullable=True)
     message_id = Column(String(255), nullable=False)
     subject = Column(Text, nullable=True)
-    internaldate = Column(DateTime, nullable=False)
+    received_date = Column(DateTime, nullable=False)
     size = Column(Integer, default=0, nullable=False)
     data_sha256 = Column(String(255), nullable=True)
 
@@ -386,7 +386,7 @@ class Message(JSONSerializable, Base, HasRevisions):
         d = {}
         d['from'] = self.from_addr
         d['to'] = self.to_addr
-        d['date'] = self.internaldate
+        d['date'] = self.received_date
         d['subject'] = self.subject
         d['id'] = self.id
         d['thread_id'] = self.thread_id
@@ -628,12 +628,12 @@ class Thread(JSONSerializable, Base):
     mailing_list_headers = Column(JSON, nullable=True)
 
     def update_from_message(self, message):
-        if message.internaldate > self.recentdate:
-            self.recentdate = message.internaldate
+        if message.received_date > self.recentdate:
+            self.recentdate = message.received_date
         # subject is subject of original message in the thread
-        if message.internaldate < self.recentdate:
+        if message.received_date < self.recentdate:
             self.subject = message.subject
-            self.subjectdate = message.internaldate
+            self.subjectdate = message.received_date
 
         if len(message.mailing_list_headers) > len(self.mailing_list_headers):
             self.mailing_list_headers = message.mailing_list_headers
@@ -658,8 +658,8 @@ class Thread(JSONSerializable, Base):
             log.info("Duplicate thread rows for thread {0}".format(message.g_thrid))
             raise
         thread = cls(subject=message.subject, g_thrid=message.g_thrid,
-                recentdate=message.internaldate, namespace=namespace,
-                subjectdate=message.internaldate,
+                recentdate=message.received_date, namespace=namespace,
+                subjectdate=message.received_date,
                 mailing_list_headers=message.mailing_list_headers)
         return thread
 
