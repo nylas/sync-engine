@@ -26,7 +26,7 @@ def db_uri():
         port = config.get('_'.join([config_prefix, 'PORT'])),
         database = config.get('_'.join([config_prefix, 'DATABASE'])))
 
-engine = create_engine(db_uri(), listeners=[ForceStrictMode()])
+engine = create_engine(db_uri(), listeners=[ForceStrictMode()], echo=False)
 
 def init_db():
     """ Make the tables. """
