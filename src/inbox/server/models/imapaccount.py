@@ -4,24 +4,12 @@ These could be methods of ImapAccount, but separating them gives us more
 flexibility with calling code, as most don't need any attributes of the
 account object other than the ID, to limit the action.
 """
-import os
-import json
-
-from hashlib import sha256
-
 from sqlalchemy import distinct, func
 from sqlalchemy.orm.exc import NoResultFound
 
-from flanker import mime
-
-from inbox.util.misc import or_none
-from inbox.util.addr import parse_email_address
-from inbox.util.file import mkdirp
-from inbox.util.misc import parse_ml_headers
-
 from .tables import Block, Message, ImapUid, UIDValidity, FolderItem, Thread
+from .message import create_message
 
-from ..config import config
 from ..log import get_logger
 log = get_logger()
 
@@ -140,150 +128,30 @@ def update_uidvalidity(account_id, session, folder_name, uidvalidity,
     cached_validity.uid_validity = uidvalidity
     session.add(cached_validity)
 
-def create_message(db_session, log, account, folder_name, uid, internaldate,
-        flags, body):
-    """ Parses message data, creates metadata database entries, and writes mail
-        parts to disk.
-
+def create_imap_message(db_session, log, account, folder_name, uid,
+        internaldate, flags, body):
+    """
         Returns the new ImapUid, which links to new Message and Block
         objects through relationships. All new objects are uncommitted.
-
-        Threads are not computed here; you gotta do that separately.
 
         This is the one function in this file that gets to take an account
         object instead of an account_id, because we need to relate the
         account to ImapUids for versioning to work, since it needs to look
         up the namespace.
     """
-    # trickle-down bugs
-    assert account is not None and account.namespace is not None
-    try:
-        parsed = mime.from_string(body)
+    new_msg = create_message(db_session, log, account, uid, folder_name,
+            internaldate, flags, body)
 
-        mime_version = parsed.headers.get('Mime-Version')
-        # NOTE: sometimes MIME-Version is set to "1.0 (1.0)", hence the .startswith
-        if mime_version is not None and not mime_version.startswith('1.0'):
-            log.error("Unexpected MIME-Version: %s" % mime_version)
+    imapuid = ImapUid(imapaccount=account, folder_name=folder_name,
+            msg_uid=uid, message=new_msg)
+    imapuid.update_flags(flags)
 
-        new_msg = Message()
-        new_msg.data_sha256 = sha256(body).hexdigest()
-
-        # clean_subject strips re:, fwd: etc.
-        new_msg.subject = parsed.clean_subject
-        new_msg.from_addr = parse_email_address(parsed.headers.get('From'))
-        new_msg.sender_addr = parse_email_address(parsed.headers.get('Sender'))
-        new_msg.reply_to = parse_email_address(parsed.headers.get('Reply-To'))
-        new_msg.to_addr = or_none(parsed.headers.getall('To'),
-                lambda tos: filter(lambda p: p is not None,
-                    [parse_email_address(t) for t in tos]))
-        new_msg.cc_addr = or_none(parsed.headers.getall('Cc'),
-                lambda ccs: filter(lambda p: p is not None,
-                    [parse_email_address(c) for c in ccs]))
-        new_msg.bcc_addr = or_none(parsed.headers.getall('Bcc'),
-                lambda bccs: filter(lambda p: p is not None,
-                    [parse_email_address(c) for c in bccs]))
-        new_msg.in_reply_to = parsed.headers.get('In-Reply-To')
-        new_msg.message_id = parsed.headers.get('Message-Id')
-
-        new_msg.internaldate = internaldate
-
-        # Optional mailing list headers
-        new_msg.mailing_list_headers = parse_ml_headers(parsed.headers)
-
-        imapuid = ImapUid(imapaccount=account, folder_name=folder_name,
-                msg_uid=uid, message=new_msg)
-        imapuid.update_flags(flags)
-
-        new_msg.is_draft = imapuid.is_draft
-        # NOTE: If we're going to make the Inbox datastore API support "read"
-        # status, this is the place to add that data to Message, e.g.
-        # new_msg.is_read = imapuid.is_seen.
-
-        new_msg.size = len(body)  # includes headers text
-
-        i = 0  # for walk_index
-
-        # Store all message headers as object with index 0
-        headers_part = Block()
-        headers_part.message = new_msg
-        headers_part.walk_index = i
-        headers_part._data = json.dumps(parsed.headers.items())
-        headers_part.size = len(headers_part._data)
-        headers_part.data_sha256 = sha256(headers_part._data).hexdigest()
-        new_msg.parts.append(headers_part)
-
-        for mimepart in parsed.walk(
-                with_self=parsed.content_type.is_singlepart()):
-            err = open('err.txt', 'w')
-            err.write(mimepart.to_string())
-            err.close()
-            i += 1
-            if mimepart.content_type.is_multipart():
-                log.warning("multipart sub-part found! on {0}".format(new_msg.g_msgid))
-                continue  # TODO should we store relations?
-
-            new_part = Block()
-            new_part.message = new_msg
-            new_part.walk_index = i
-            new_part.misc_keyval = mimepart.headers.items()  # everything
-            new_part.content_type = mimepart.content_type.value
-            new_part.filename = mimepart.content_type.params.get('name')
-
-            # Content-Disposition attachment; filename="floorplan.gif"
-            if mimepart.content_disposition[0] is not None:
-                value, params = mimepart.content_disposition
-                if value not in ['inline', 'attachment']:
-                    errmsg = """
-    Unknown Content-Disposition on message {0} found in {1}.
-    Bad Content-Disposition was: '{2}'
-    Parsed Content-Disposition was: '{3}'""".format(uid, folder_name,
-        mimepart.content_disposition)
-                    log.error(errmsg)
-                    continue
-                else:
-                    new_part.content_disposition = value
-                    if value == 'attachment':
-                        new_part.filename = params.get('filename')
-
-            if mimepart.body is None:
-                data_to_write = ''
-            elif new_part.content_type.startswith('text'):
-                data_to_write = mimepart.body.encode('utf-8', 'strict')
-            else:
-                data_to_write = mimepart.body
-            if data_to_write is None:
-                data_to_write = ''
-            # normalize mac/win/unix newlines
-            data_to_write = data_to_write \
-                    .replace('\r\n', '\n').replace('\r', '\n')
-
-            new_part.content_id = mimepart.headers.get('Content-Id')
-
-            new_part._data = data_to_write
-            new_part.size = len(data_to_write)
-            new_part.data_sha256 = sha256(data_to_write).hexdigest()
-            new_msg.parts.append(new_part)
-    except mime.DecodingError:
-        log_decode_error(account.id, folder_name, uid, body)
-        log.error("DecodeError encountered, unparseable message logged to {0}" \
-                .format(get_errfilename(account.id, folder_name, uid)))
-        return
-    new_msg.calculate_sanitized_body()
+    new_msg.is_draft = imapuid.is_draft
+    # NOTE: If we're going to make the Inbox datastore API support "read"
+    # status, this is the place to add that data to Message, e.g.
+    # new_msg.is_read = imapuid.is_seen.
 
     return imapuid
-
-def get_errfilename(account_id, folder_name, uid):
-    errdir = os.path.join(config['LOGDIR'], str(account_id), 'errors',
-            folder_name)
-    errfile = os.path.join(errdir, str(uid))
-    mkdirp(errdir)
-    return errfile
-
-def log_decode_error(account_id, folder_name, uid, msg_string):
-    """ msg_string is in the original encoding pulled off the wire """
-    errfile = get_errfilename(account_id, folder_name, uid)
-    with open(errfile, 'w') as fh:
-        fh.write(msg_string)
 
 def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, x_gm_thrid,
         x_gm_msgid, x_gm_labels):
@@ -325,7 +193,7 @@ def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, x_gm_thrid,
 
 def create_gmail_message(db_session, log, account, folder_name, uid,
         internaldate, flags, body, x_gm_thrid, x_gm_msgid, x_gm_labels):
-    new_uid = create_message(db_session, log, account, folder_name, uid,
+    new_uid = create_imap_message(db_session, log, account, folder_name, uid,
             internaldate, flags, body)
     if new_uid:
         return add_gmail_attrs(db_session, log, new_uid, flags, folder_name,

@@ -21,7 +21,6 @@ not really a problem because of the limited ways mail messages can change.
 
 ACTIONS MUST BE IDEMPOTENT! We are going to have task workers guarantee
 at-least-once semantics.
-
 """
 from redis import Redis
 from rq import Queue, Connection
