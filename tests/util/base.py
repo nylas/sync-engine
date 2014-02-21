@@ -32,7 +32,7 @@ def log(request, config):
     request.addfinalizer(remove_logs)
     return configure_general_logging()
 
-@fixture(scope='session')
+@fixture(scope='function')
 def db(request, config):
     """ NOTE: You cannot rely on IMAP UIDs from the test db being correctly
         up-to-date. If you need to test sync functionality, start with a
