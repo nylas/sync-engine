@@ -127,7 +127,8 @@ class UserSession(Base):
     """ Inbox-specific sessions. """
     token = Column(String(40))
 
-    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'),
+            nullable=False)
     user = relationship('User', backref='sessions')
 
 class Namespace(Base):
@@ -151,11 +152,15 @@ class Namespace(Base):
         return dict(id=self.id, type=self.type)
 
 class SharedFolder(Base):
+    # Don't delete shared folders if the user that created them is deleted.
+    user_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'),
+            nullable=True)
     user = relationship('User', backref='sharedfolders')
-    user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
 
     namespace = relationship('Namespace', backref='sharedfolders')
-    namespace_id = Column(Integer, ForeignKey('namespace.id'), nullable=False)
+    # Do delete shared folders if their associated namespace is deleted.
+    namespace_id = Column(Integer, ForeignKey('namespace.id',
+        ondelete='CASCADE'), nullable=False)
 
     display_name = Column(String(40))
 
@@ -170,7 +175,9 @@ class User(Base):
 class Transaction(Base, Revision):
     """ Transactional log to enable client syncing. """
 
-    namespace_id = Column(Integer, ForeignKey('namespace.id'), nullable=False)
+    # Do delete transactions if their associated namespace is deleted.
+    namespace_id = Column(Integer, ForeignKey('namespace.id',
+        ondelete='CASCADE'), nullable=False)
     namespace = relationship('Namespace', backref='transactions')
 
     def set_extra_attrs(self, obj):
@@ -221,7 +228,10 @@ class Contact(Base, HasRevisions):
 class Message(JSONSerializable, Base, HasRevisions):
     # XXX clean this up a lot - make a better constructor, maybe taking
     # a flanker object as an argument to prefill a lot of attributes
-    thread_id = Column(Integer, ForeignKey('thread.id'), nullable=False)
+
+    # Do delete messages if their associated thread is deleted.
+    thread_id = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
+            nullable=False)
     thread = relationship('Thread', backref="messages",
             order_by="Message.internaldate")
 
@@ -485,7 +495,8 @@ class FolderItem(JSONSerializable, Base, HasRevisions):
     Threads in this table are the _Inbox_ datastore abstraction, which may
     be different from folder names in the actual account backends.
     """
-    thread_id = Column(Integer, ForeignKey('thread.id'), nullable=False)
+    thread_id = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
+            nullable=False)
     # thread relationship is on Thread to make delete-orphan cascade work
 
     folder_name = Column(String(191), index=True)
