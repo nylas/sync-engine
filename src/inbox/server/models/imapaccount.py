@@ -142,16 +142,17 @@ def create_imap_message(db_session, log, account, folder_name, uid,
     new_msg = create_message(db_session, log, account, uid, folder_name,
             internaldate, flags, body)
 
-    imapuid = ImapUid(imapaccount=account, folder_name=folder_name,
-            msg_uid=uid, message=new_msg)
-    imapuid.update_flags(flags)
+    if new_msg:
+        imapuid = ImapUid(imapaccount=account, folder_name=folder_name,
+                msg_uid=uid, message=new_msg)
+        imapuid.update_flags(flags)
 
-    new_msg.is_draft = imapuid.is_draft
-    # NOTE: If we're going to make the Inbox datastore API support "read"
-    # status, this is the place to add that data to Message, e.g.
-    # new_msg.is_read = imapuid.is_seen.
+        new_msg.is_draft = imapuid.is_draft
+        # NOTE: If we're going to make the Inbox datastore API support "read"
+        # status, this is the place to add that data to Message, e.g.
+        # new_msg.is_read = imapuid.is_seen.
 
-    return imapuid
+        return imapuid
 
 def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, x_gm_thrid,
         x_gm_msgid, x_gm_labels):
