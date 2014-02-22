@@ -23,7 +23,7 @@ def timed(fn):
     def timed_fn(self, *args, **kwargs):
         start_time = time.time()
         ret = fn(self, *args, **kwargs)
-        self.log.info("\t\tTook {0} seconds".format(str(time.time() - start_time)))
+        # self.log.info("\t\tTook {0} seconds".format(str(time.time() - start_time)))
         return ret
     return timed_fn
 
