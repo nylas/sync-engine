@@ -68,6 +68,9 @@ discussion.
 We try to stick with pep8 and the [Google Python style
 guide](http://google-styleguide.googlecode.com/svn/trunk/pyguide.html).
 
+For docstrings, we're using the [numpy docstring
+conventions](https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt).
+
 #### Random notes
 
 You should do `git config branch.master.rebase true` in the repo to keep your
