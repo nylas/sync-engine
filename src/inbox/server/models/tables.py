@@ -603,9 +603,10 @@ class Thread(JSONSerializable, Base):
         the relevant thread metadata from elsewhere so that clients can only
         query on threads.
 
-        A thread belongs to exactly one folder. If you're attempting to
-        display _all_ messages a la Gmail's All Mail, just don't query based
-        on folder!
+        A thread can be a member of an arbitrary number of folders.
+
+        If you're attempting to display _all_ messages a la Gmail's All Mail,
+        don't query based on folder!
     """
     subject = Column(Text, nullable=True)
     subjectdate = Column(DateTime, nullable=False)
