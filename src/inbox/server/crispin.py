@@ -23,7 +23,7 @@ def timed(fn):
     def timed_fn(self, *args, **kwargs):
         start_time = time.time()
         ret = fn(self, *args, **kwargs)
-        # self.log.info("\t\tTook {0} seconds".format(str(time.time() - start_time)))
+        self.log.info("\t\tTook {0} seconds".format(str(time.time() - start_time)))
         return ret
     return timed_fn
 
@@ -242,7 +242,6 @@ class CrispinClient(CrispinClientBase):
         self.readonly = readonly
         CrispinClientBase.__init__(self, account_id, cache)
 
-    @timed
     def _do_select_folder(self, folder, c):
         select_info = c.select_folder(folder, readonly=self.readonly)
 
@@ -268,7 +267,6 @@ class CrispinClient(CrispinClientBase):
 
         return data
 
-    @timed
     def _fetch_new_and_updated_uids(self, modseq, c):
         data = c.search(['NOT DELETED', "MODSEQ {0}".format(modseq)])
 
@@ -491,7 +489,6 @@ class GmailCrispinClient(CrispinClient):
 
         return data
 
-    @timed
     def g_metadata(self, uids, c):
         """ Download Gmail MSGIDs and THRIDS for the given messages, or all
             messages in the currently selected folder if no UIDs specified.
