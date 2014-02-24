@@ -110,7 +110,7 @@ def gen_search_index(db_session, namespace):
     indexed_msgs = set([k for k in database.metadata_keys()])
     msgs = [id for id, in db_session.query(distinct(Message.id)).filter_by(
             id=namespace.id)]
-    to_delete = indexed_msgs.difference(msgs)
+    to_delete = indexed_msgs - msgs
     log.info("{0} documents to remove...".format(len(to_delete)))
 
     for msg_id in to_delete:

@@ -63,12 +63,11 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
     if folder_name == crispin_client.folder_names(c)['all']:
         log.info("Already have {0} UIDs".format(len(local_uids)))
 
-    local_uids = set(local_uids).difference(
-            remove_deleted_uids(crispin_client.account_id,
-                db_session, log, folder_name, local_uids, remote_uids,
-                shared_state['syncmanager_lock'], c))
+    local_uids = set(local_uids) - remove_deleted_uids(
+            crispin_client.account_id, db_session, log, folder_name,
+            local_uids, remote_uids, shared_state['syncmanager_lock'], c)
 
-    unknown_uids = set(remote_uids).difference(set(local_uids))
+    unknown_uids = set(remote_uids) - set(local_uids)
 
     if folder_name != crispin_client.folder_names(c)['all']:
         chunked_thread_download(crispin_client, db_session, log, folder_name,

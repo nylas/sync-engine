@@ -293,9 +293,9 @@ def highestmodseq_update(crispin_client, db_session, log, folder_name,
         new, updated = new_or_updated(changed_uids, local_uids)
         log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
         local_uids += new
-        local_uids = set(local_uids).difference(
-                remove_deleted_uids(account_id, db_session, log, folder_name,
-                    local_uids, remote_uids, syncmanager_lock, c))
+        local_uids = set(local_uids) - remove_deleted_uids(account_id,
+                db_session, log, folder_name, local_uids, remote_uids,
+                syncmanager_lock, c)
 
         update_metadata(crispin_client, db_session, log, folder_name,
                 updated, syncmanager_lock, c)
@@ -347,12 +347,11 @@ def imap_initial_sync(crispin_client, db_session, log, folder_name,
         folder_name))
     log.info("Already have {0} UIDs".format(len(local_uids)))
 
-    local_uids = set(local_uids).difference(
-            remove_deleted_uids(crispin_client.account_id, db_session, log,
-                folder_name, local_uids, remote_uids,
-                shared_state['syncmanager_lock'], c))
+    local_uids = set(local_uids) - remove_deleted_uids(
+            crispin_client.account_id, db_session, log, folder_name,
+            local_uids, remote_uids, shared_state['syncmanager_lock'], c)
 
-    unknown_uids = set(remote_uids).difference(set(local_uids))
+    unknown_uids = set(remote_uids) - set(local_uids)
 
     chunked_uid_download(crispin_client, db_session, log, folder_name,
             unknown_uids, len(local_uids), len(remote_uids),
@@ -467,7 +466,7 @@ def remove_deleted_uids(account_id, db_session, log, folder_name,
     if len(remote_uids) > 0 and len(local_uids) > 0:
         assert type(remote_uids[0]) != type('')
 
-    to_delete = set(local_uids).difference(set(remote_uids))
+    to_delete = set(local_uids) - set(remote_uids)
     if to_delete:
         # We need to grab the lock for this because deleting ImapUids may
         # cascade to Messages and FolderItems and Threads. No one else messes
