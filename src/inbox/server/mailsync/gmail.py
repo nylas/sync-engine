@@ -56,7 +56,7 @@ def initial_sync(crispin_client, db_session, log, folder_name, shared_state):
 def gmail_initial_sync(crispin_client, db_session, log, folder_name,
         shared_state, local_uids, c):
     remote_g_metadata = get_g_metadata(crispin_client, db_session, log,
-            folder_name, local_uids, c)
+            folder_name, local_uids, shared_state['syncmanager_lock'], c)
     remote_uids = sorted(remote_g_metadata.keys(), key=int)
     log.info("Found {0} UIDs for folder {1}".format(len(remote_uids),
         folder_name))
@@ -103,7 +103,8 @@ def gmail_highestmodseq_update(crispin_client, db_session, log, folder_name,
 def remote_g_metadata_cache_file(account_id, folder_name):
     return os.path.join(str(account_id), folder_name, "remote_g_metadata")
 
-def get_g_metadata(crispin_client, db_session, log, folder_name, uids, c):
+def get_g_metadata(crispin_client, db_session, log, folder_name, uids,
+        syncmanager_lock, c):
     account_id = crispin_client.account_id
     remote_g_metadata = None
     saved_validity = account.get_uidvalidity(account_id, db_session,
@@ -111,7 +112,8 @@ def get_g_metadata(crispin_client, db_session, log, folder_name, uids, c):
     if saved_validity is not None:
         # If there's no cached validity we probably haven't run before.
         remote_g_metadata = retrieve_saved_g_metadata(crispin_client,
-                db_session, log, folder_name, uids, saved_validity, c)
+                db_session, log, folder_name, uids, saved_validity,
+                syncmanager_lock, c)
 
     if remote_g_metadata is None:
         remote_g_metadata = crispin_client.g_metadata(
@@ -289,7 +291,7 @@ def add_new_imapuid(crispin_client, db_session, remote_g_metadata, uids, c):
         db_session.commit()
 
 def retrieve_saved_g_metadata(crispin_client, db_session, log, folder_name,
-        local_uids, saved_validity, c):
+        local_uids, saved_validity, syncmanager_lock, c):
     log.info('Attempting to retrieve remote_g_metadata from cache')
     remote_g_metadata = get_cache(remote_g_metadata_cache_file(
         crispin_client.account_id, folder_name))
@@ -298,13 +300,14 @@ def retrieve_saved_g_metadata(crispin_client, db_session, log, folder_name,
         if crispin_client.selected_highestmodseq > \
                 saved_validity.highestmodseq:
             update_saved_g_metadata(crispin_client, db_session, log,
-                    folder_name, remote_g_metadata, local_uids, c)
+                    folder_name, remote_g_metadata, local_uids,
+                    syncmanager_lock, c)
     else:
         log.info("No cached data found")
     return remote_g_metadata
 
 def update_saved_g_metadata(crispin_client, db_session, log, folder_name,
-        remote_g_metadata, local_uids, c):
+        remote_g_metadata, local_uids, syncmanager_lock, c):
     """ If HIGHESTMODSEQ has changed since we saved the X-GM-MSGID cache,
         we need to query for any changes since then and update the saved
         data.
@@ -331,5 +334,6 @@ def update_saved_g_metadata(crispin_client, db_session, log, folder_name,
     # for updated, it's easier to just update them now
     # bigger chunk because the data being fetched here is very small
     for uids in chunk(updated, 5*crispin_client.CHUNK_SIZE):
-        update_metadata(crispin_client, db_session, log, folder_name, uids, c)
+        update_metadata(crispin_client, db_session, log, folder_name, uids,
+                syncmanager_lock, c)
     log.info("Updated metadata for modified messages")
