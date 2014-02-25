@@ -127,7 +127,7 @@ class Blob(object):
         h = self.data_sha256
         root = config.get('MSG_PARTS_DIRECTORY', None)
         assert root, "Need root path for saving data"
-        return os.path.join(root, 'parts',
+        return os.path.join(root,
                 h[0], h[1], h[2], h[3], h[4], h[5])
 
     @property
