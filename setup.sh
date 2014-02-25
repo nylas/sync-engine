@@ -34,10 +34,6 @@ apt-get -y install git \
                    tmux \
                    curl
 
-
-# Install nodejs
-wget -O - http://nodejs.org/dist/v0.8.26/node-v0.8.26-linux-x64.tar.gz | tar -C /usr/local/ --strip-components=1 -zxv
-
 pip install --upgrade setuptools
 
 pip install -r requirements.txt
