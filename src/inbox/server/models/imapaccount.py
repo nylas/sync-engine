@@ -168,11 +168,11 @@ def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, x_gm_thrid,
     thread = new_uid.message.thread = Thread.from_message(db_session,
             new_uid.imapaccount.namespace, new_uid.message)
     # make sure this thread has all the correct labels
-    existing_labels = set([l.folder_name.lower() for l in thread.folders])
+    existing_labels = {l.folder_name.lower() for l in thread.folders}
     # convert things like \Inbox -> Inbox, \Important -> Important
     # also, gmail labels are case-insensitive
-    new_labels = set([l.lstrip('\\').lower() for l in x_gm_labels] + \
-            [folder_name.lower()])
+    new_labels = {l.lstrip('\\').lower() for l in x_gm_labels} | \
+            {folder_name.lower()}
     # remove labels that have been deleted -- note that the \Sent label is
     # per-message, not per-thread, but since we always work at the thread
     # level, _we_ apply the label to the whole thread. same goes for

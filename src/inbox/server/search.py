@@ -107,7 +107,7 @@ def gen_search_index(db_session, namespace):
         done += 1
         log.info("Indexed %i of %i (%.2f%%)" % (done, total, done/total*100))
 
-    indexed_msgs = set([k for k in database.metadata_keys()])
+    indexed_msgs = {k for k in database.metadata_keys()}
     msgs = [id for id, in db_session.query(distinct(Message.id)).filter_by(
             id=namespace.id)]
     to_delete = indexed_msgs - msgs

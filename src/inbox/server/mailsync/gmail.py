@@ -156,8 +156,8 @@ def chunked_thread_download(crispin_client, db_session, log, folder_name,
     # X-GM-THRID is roughly ascending over time, so sort most-recent first
     all_g_thrids = sorted(set([msg['thrid'] for uid, msg in \
             g_metadata.iteritems() if uid in uids]), reverse=True)
-    folder_g_msgids = set([msg['msgid'] for uid, msg in \
-            g_metadata.items() if uid in uids])
+    folder_g_msgids = {msg['msgid'] for uid, msg in g_metadata.items() \
+            if uid in uids}
     log.info("{0} threads found".format(len(all_g_thrids)))
 
     flags = crispin_client.flags(uids, c)
@@ -234,7 +234,7 @@ def download_threads(crispin_client, db_session, log, acc, folder_name,
 
 def deduplicate_message_object_creation(account_id, db_session, log,
         raw_messages):
-    new_g_msgids = set([msg[5] for msg in raw_messages])
+    new_g_msgids = {msg[5] for msg in raw_messages}
     existing_g_msgids = set(account.g_msgids(account_id, db_session,
         in_=new_g_msgids))
     return [msg for msg in raw_messages if msg[5] not in existing_g_msgids]
@@ -262,10 +262,10 @@ def add_new_imapuid(crispin_client, db_session, remote_g_metadata, uids, c):
 
     # Since we prioritize download for messages in certain threads, we may
     # already have ImapUid entries despite calling this method.
-    local_folder_uids = set([uid for uid, in \
+    local_folder_uids = {uid for uid, in \
             db_session.query(ImapUid.msg_uid).filter(
                 ImapUid.folder_name==crispin_client.selected_folder_name,
-                ImapUid.msg_uid.in_(uids))])
+                ImapUid.msg_uid.in_(uids))}
     uids = [uid for uid in uids if uid not in local_folder_uids]
 
     if uids:
