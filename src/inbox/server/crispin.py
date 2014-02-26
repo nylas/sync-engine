@@ -541,7 +541,7 @@ class GmailCrispinClient(CrispinClient):
         criteria = 'X-GM-THRID {0}'.format(g_thrid)
         return c.search(['NOT DELETED', criteria])
 
-    ### write methods!
+    ### the following methods WRITE to the IMAP account!
 
     def archive_thread(self, g_thrid, c):
         assert self.selected_folder_name == self.folder_names(c)['inbox'], \
