@@ -527,7 +527,7 @@ class ImapUid(JSONSerializable, Base):
             backref=backref('imapuid', uselist=False))
     # nullable to allow the local data store to delete messages without
     # deleting the associated uid; we want to leave the uid entry there until
-    # we notice the same delete from the backend, which helps are accounting
+    # we notice the same delete from the backend, which helps our accounting
     # of what is going on. otherwise, it wouldn't make sense to allow these
     # entries to decouple.
     msg_uid = Column(Integer, nullable=True)
