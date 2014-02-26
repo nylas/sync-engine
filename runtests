@@ -1,0 +1,25 @@
+#!/usr/bin/env python
+
+import argparse
+import subprocess
+
+def main():
+    parser = argparse.ArgumentParser(description="""
+        Inbox test runner. All unknown arguments are passed on to py.test.
+        """)
+    parser.add_argument('-a', '--all', dest='all', action='store_true')
+    parser.add_argument('extra', nargs='?')
+
+    args, extra_args = parser.parse_known_args()
+
+    testrunner = ['py.test', 'tests']
+
+    if args.all:
+        testrunner.append('tests/network')
+
+    testrunner.extend(extra_args)
+
+    subprocess.check_call(testrunner)
+
+if __name__=="__main__":
+    main()

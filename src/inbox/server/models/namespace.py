@@ -63,12 +63,14 @@ def archive_thread(namespace_id, session, thread_id):
 def move_thread(namespace_id, session, thread_id, from_folder, to_folder):
     """ Move thread in the local datastore (*not* the account backend). """
     with db_write_lock(namespace_id):
-        listing = session.query(FolderItem).join(Thread).filter(
+        listings = {item.folder_name: item for item in \
+                session.query(FolderItem).join(Thread).filter(
                 Thread.namespace_id==namespace_id,
                 FolderItem.thread_id==thread_id,
-                FolderItem.folder_name==from_folder).one()
-        listing.folder_name = to_folder
-        session.commit()
+                FolderItem.folder_name.in_([from_folder, to_folder])).all()}
+        if to_folder not in listings:
+            listings[from_folder].folder_name = to_folder
+            session.commit()
 
 def copy_thread(namespace_id, session, thread_id, from_folder, to_folder):
     """ Copy thread in the local datastore (*not* the account backend). """

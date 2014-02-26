@@ -1,12 +1,10 @@
-import pytest, zerorpc, json
+import json
 from bson import json_util
 
 # pytest fixtures outside of conftest.py must be imported for discovery
 from .util.api import api_client
 from .util.message import TEST_MSG
 
-# TODO[kavya]: Get from config
-API_SERVER_LOC = 'tcp://0.0.0.0:9999'
 USER_ID = 1
 NAMESPACE_ID = 1
 
