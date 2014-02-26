@@ -11,6 +11,10 @@ def encrypt_aes(message, key_size=128):
     The function expects the message as a byte string; it returns a tuple of
     the encrypted message as a byte string, and the key.
     """
+    # Check that key_size is large enough
+    if key_size < 128:
+        raise ValueError("key_size must be at least 128")
+
     # Convert string message to a bytes object, needed for ops below
     if type(message) == unicode:
         message = message.encode('utf-8')
