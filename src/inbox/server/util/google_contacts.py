@@ -2,6 +2,7 @@
 
 import dateutil.parser
 import datetime
+import posixpath
 import time
 
 import gdata.auth
@@ -81,6 +82,11 @@ class GoogleContactsProvider(object):
             self.log.error("Should not have more than one email per entry! {0}"
                     .format(email_addresses))
         try:
+            # The id.text field of a ContactEntry object takes the form
+            # 'http://www.google.com/m8/feeds/contacts/<useremail>/base/<uid>'.
+            # We only want the <uid> part for g_id.
+            raw_google_id = google_contact.id.text
+            _, g_id = posixpath.split(raw_google_id)
             name = (google_contact.name.full_name.text if (google_contact.name
                 and google_contact.name.full_name) else None)
             updated_at = (dateutil.parser.parse(google_contact.updated.text) if
@@ -99,7 +105,7 @@ class GoogleContactsProvider(object):
         updated_at = datetime.datetime.fromtimestamp(
                 time.mktime(updated_at.utctimetuple()))
 
-        return Contact(imapaccount=self.account, source='local',
+        return Contact(imapaccount=self.account, source='local', g_id=g_id,
                 name=name, updated_at=updated_at, email_address=email_address)
 
     def get_contacts(self, max_results=0):
@@ -125,3 +131,4 @@ class GoogleContactsProvider(object):
         google_results = self._get_google_client().GetContacts(q=query).entry
         for result in google_results:
             yield self._parse_contact_result(result)
+

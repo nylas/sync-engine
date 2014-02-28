@@ -37,7 +37,6 @@ def rolodex_sync(db_session, account):
     to_commit = []
 
     for c in contacts_provider.get_contacts():
-        # STOPSHIP(emfree): c.g_id is never set
         if c.g_id in contact_dict:
             existing = contact_dict[c.g_id]
 

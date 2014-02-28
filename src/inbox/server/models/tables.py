@@ -223,7 +223,8 @@ class Contact(Base, HasRevisions):
 
     def __repr__(self):
         # XXX this won't work properly with unicode (e.g. in the name)
-        return str(self.name) + ", " + str(self.email_address) + ", " + str(self.source)
+        return 'Contact({}, {}, {}, {})'.format(self.g_id, self.name,
+            self.email_address, self.source)
 
 class Message(JSONSerializable, Base, HasRevisions):
     # XXX clean this up a lot - make a better constructor, maybe taking
