@@ -1,3 +1,6 @@
+from inbox.server.log import get_logger
+import time
+
 def or_none(value, selector):
     if value is None:
         return None
@@ -26,7 +29,7 @@ def strip_plaintext_quote(text):
         return text
 
 def parse_ml_headers(headers):
-    """ 
+    """
     Parse the mailing list headers described in RFC 4021,
     these headers are optional (RFC 2369).
     """
@@ -40,3 +43,22 @@ def parse_ml_headers(headers):
     attrs['List-Unsubscribe'] = headers.get('List-Unsubscribe')
 
     return attrs
+
+
+
+def timed(fn):
+    """ A decorator for timing methods. """
+    def timed_fn(self, *args, **kwargs):
+        start_time = time.time()
+        ret = fn(self, *args, **kwargs)
+
+        # TOFIX the gmail.py module doesn't have self.lgoger
+        try:
+            if self.log:
+                fn_logger = self.log
+        except AttributeError:
+            fn_logger = get_logger()
+            # out = None
+        fn_logger.info("[timer] {0} took {1:.3f} seconds.".format(str(fn), float(time.time() - start_time)))
+        return ret
+    return timed_fn

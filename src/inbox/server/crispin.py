@@ -6,26 +6,16 @@ up trying to execute calls with the wrong folder selected some amount of the
 time. That's why functions take a connection argument.
 """
 import os
-import time
 
 from .log import get_logger
 from .pool import get_connection_pool
 
-from ..util.misc import or_none
+from ..util.misc import or_none, timed
 from ..util.cache import get_cache, set_cache
 
 __all__ = ['CrispinClient', 'DummyCrispinClient']
 
-### decorators
 
-def timed(fn):
-    """ A decorator for timing methods. """
-    def timed_fn(self, *args, **kwargs):
-        start_time = time.time()
-        ret = fn(self, *args, **kwargs)
-        self.log.info("\t\tTook {0} seconds".format(str(time.time() - start_time)))
-        return ret
-    return timed_fn
 
 ### main stuff
 
@@ -171,6 +161,7 @@ class DummyCrispinClient(CrispinClientBase):
                         self.account_id, self.selected_folder_name)
         return cached_data
 
+    @timed
     def _fetch_new_and_updated_uids(self, modseq, c):
         cached_data = self.get_cache(self.selected_folder_name, 'updated', modseq)
 
