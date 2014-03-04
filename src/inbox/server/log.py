@@ -99,3 +99,45 @@ def configure_rolodex_logging(account_id):
         screen too, for now.
     """
     return configure_logging(account_id, "rolodex")
+
+
+class log_uncaught_errors(object):
+    """ Helper to log uncaught exceptions raised within the wrapped function.
+
+        Modeled after gevent.util.wrap_errors.
+
+        Parameters
+        ----------
+        func: function
+            The function to wrap.
+        logger: logging.Logger
+    """
+
+    def __init__(self, func, logger):
+        self.func = func
+        self.logger = logger
+
+    def _log_failsafe(self, *args, **kwargs):
+        # We wrap the logging call in a try/except block so that if it fails
+        # for any reason, the *original* error still gets propagated.
+        try:
+            self.logger.exception(*args, **kwargs)
+        except:
+            pass
+
+    def __call__(self, *args, **kwargs):
+        func = self.func
+        try:
+            return func(*args, **kwargs)
+        except:
+            self._log_failsafe("Uncaught error!")
+            raise
+
+    def __str__(self):
+        return str(self.func)
+
+    def __repr__(self):
+        return repr(self.func)
+
+    def __getattr__(self, item):
+        return getattr(self.func, item)

@@ -1,11 +1,11 @@
 import sys
-import time
 import signal
+import time
 
-import zerorpc
 import gevent
+import zerorpc
 
-from ..log import get_logger
+from ..log import get_logger, log_uncaught_errors
 
 from rq import Worker, Queue
 from rq.worker import StopRequested, DequeueTimeout
@@ -20,7 +20,10 @@ def make_zerorpc(cls, location):
         s.bind(location)
         log.info("ZeroRPC: Starting %s at %s" % (cls.__name__, location))
         s.run()
-    return gevent.Greenlet.spawn(m)
+    # By default, when an uncaught error is thrown inside a greenlet, gevent
+    # will print the stacktrace to stderr and kill the greenlet. Here we're
+    # wrapping m in order to also log uncaught errors to disk.
+    return gevent.Greenlet.spawn(log_uncaught_errors(m, log))
 
 def print_dots():
     """This Greenlet prints dots to the console which is useful for making
