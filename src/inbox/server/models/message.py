@@ -97,9 +97,6 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
 
         for mimepart in parsed.walk(
                 with_self=parsed.content_type.is_singlepart()):
-            err = open('err.txt', 'w')
-            err.write(mimepart.to_string())
-            err.close()
             i += 1
             if mimepart.content_type.is_multipart():
                 log.warning("multipart sub-part found! on {0}".format(new_msg.g_msgid))
