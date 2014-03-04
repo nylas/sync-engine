@@ -4,7 +4,7 @@ from sqlalchemy import create_engine, pool
 
 from logging.config import fileConfig
 
-from inbox.server.config import config as load_config
+from inbox.server.config import load_config
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -20,8 +20,8 @@ load_config()
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
-from inbox.server import models, db_uri
-target_metadata = models.Base.metadata
+from inbox.server.models import Base, db_uri
+target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
