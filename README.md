@@ -71,6 +71,11 @@ guide](http://google-styleguide.googlecode.com/svn/trunk/pyguide.html).
 For docstrings, we're using the [numpy docstring
 conventions](https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt).
 
+We also group module imports separated by blank lines, starting with Python
+standard library imports, followed by 3rd-party modules and then Inbox modules
+(relative and absolute). Within these general groups, we group to the author's
+preference of visual consistency.
+
 #### Random notes
 
 You should do `git config branch.master.rebase true` in the repo to keep your
