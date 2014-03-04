@@ -399,7 +399,6 @@ def chunked_uid_download(crispin_client, db_session, log,
                 percent_done, num_local_messages, num_total_messages))
         log.info("Saved all messages and metadata on {0} to UIDVALIDITY {1} / HIGHESTMODSEQ {2}".format(folder_name, crispin_client.selected_uidvalidity, crispin_client.selected_highestmodseq))
 
-@timed
 def safe_download(crispin_client, log, uids, c):
     try:
         raw_messages = crispin_client.uids(uids, c)

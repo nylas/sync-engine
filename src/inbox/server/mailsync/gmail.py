@@ -235,7 +235,6 @@ def download_threads(crispin_client, db_session, log, acc, folder_name,
         num_downloaded_threads += 1
     return num_downloaded_threads
 
-@timed
 def deduplicate_message_object_creation(account_id, db_session, log,
         raw_messages):
     new_g_msgids = {msg[5] for msg in raw_messages}
@@ -243,7 +242,6 @@ def deduplicate_message_object_creation(account_id, db_session, log,
         in_=new_g_msgids))
     return [msg for msg in raw_messages if msg[5] not in existing_g_msgids]
 
-@timed
 def deduplicate_message_download(crispin_client, db_session, log,
         remote_g_metadata, uids, c):
     """ Deduplicate message download using X-GM-MSGID. """
