@@ -3,8 +3,8 @@ import json
 
 from itertools import chain
 
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum
-from sqlalchemy import ForeignKey, Text, Index, func, event
+from sqlalchemy import Column, Integer, BigInteger, String, DateTime, Boolean
+from sqlalchemy import ForeignKey, Enum, Text, Index, func, event
 from sqlalchemy.orm import reconstructor, relationship, backref, deferred
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
@@ -268,8 +268,8 @@ class Message(JSONSerializable, Base, HasRevisions):
     decode_error = Column(Boolean, default=False, nullable=False)
 
     # only on messages from Gmail
-    g_msgid = Column(String(40), nullable=True)
-    g_thrid = Column(String(40), nullable=True)
+    g_msgid = Column(BigInteger, nullable=True, index=True)
+    g_thrid = Column(BigInteger, nullable=True, index=True)
 
     @property
     def namespace(self):
