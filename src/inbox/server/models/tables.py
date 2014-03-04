@@ -243,7 +243,7 @@ class Message(JSONSerializable, Base, HasRevisions):
     cc_addr = Column(JSON, nullable=True)
     bcc_addr = Column(JSON, nullable=True)
     in_reply_to = Column(JSON, nullable=True)
-    message_id = Column(String(255), nullable=False)
+    message_id_header = Column(String(255), nullable=True)
     subject = Column(Text, nullable=True)
     received_date = Column(DateTime, nullable=False)
     size = Column(Integer, default=0, nullable=False)

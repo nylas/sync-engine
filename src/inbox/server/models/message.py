@@ -75,7 +75,7 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
                 lambda bccs: filter(lambda p: p is not None,
                     [parse_email_address(c) for c in bccs]))
         new_msg.in_reply_to = parsed.headers.get('In-Reply-To')
-        new_msg.message_id = parsed.headers.get('Message-Id')
+        new_msg.message_id_header = parsed.headers.get('Message-Id')
 
         new_msg.received_date = received_date
 
