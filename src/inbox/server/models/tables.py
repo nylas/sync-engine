@@ -1,5 +1,7 @@
 import os
+import sys
 import json
+import traceback
 
 from itertools import chain
 
@@ -281,56 +283,85 @@ class Message(JSONSerializable, Base, HasRevisions):
         if html_part:
             assert '\r' not in html_part, "newlines not normalized"
 
-            # Try our best to strip out gmail quoted text.
+            # Rudimentary stripping out quoted text in 'gmail_quote' div
+            # Wrap this in a try/catch because sometimes BeautifulSoup goes
+            # down a dark spiral of recursion death
             try:
                 soup = BeautifulSoup(html_part.strip(), "lxml")
-            except RuntimeError as e:
-                if e.message == 'maximum recursion depth exceeded while calling a Python object':
-                    # don't recurse any longer
-                    log.error("There is a parsing here in BeautifulSoup... {0}".format(e))
+                for div in soup.findAll('div', 'gmail_quote'):
+                    div.extract()
+                for container in soup.findAll('div', 'gmail_extra'):
+                    if container.contents is not None:
+                        for tag in reversed(container.contents):
+                            if not hasattr(tag, 'name') or tag.name != 'br': break
+                            else: tag.extract()
+                    if container.contents is None:
+                        # we emptied it!
+                        container.extract()
+
+                # Paragraphs don't need trailing line-breaks.
+                for container in soup.findAll('p'):
+                    if container.contents is not None:
+                        for tag in reversed(container.contents):
+                            if not hasattr(tag, 'name') or tag.name != 'br': break
+                            else: tag.extract()
+
+                # Misc other crap.
+                dtd = [item for item in soup.contents if isinstance(item, Doctype)]
+                comments = soup.findAll(text=lambda text:isinstance(text, Comment))
+                for tag in chain(dtd, comments):
+                    tag.extract()
+                self.sanitized_body = unicode(soup)
+
+
+                # trim for snippet
+                for tag in soup.findAll(['style', 'head', 'title']):
+                    tag.extract()
+                self.snippet = soup.get_text(' ')[:191]
+
+
+            except RuntimeError as exc:
+                err_prefix = 'maximum recursion depth exceeded '
+                # e.message is deprecated in Python 3
+                if exc.args[0].startswith(err_prefix):
+                    # err_snip = str(exc.args[0])[len(err_prefix):]
+                    full_traceback = 'Ignoring error: %s\nOuter stack:\n%s%s' % \
+                            (exc,
+                            ''.join(traceback.format_stack()[:-2]), \
+                            traceback.format_exc(exc))
+
+                    # Note that python doesn't support tail call recursion optimizations
+                    # http://neopythonic.blogspot.com/2009/04/tail-recursion-elimination.html
+                    full_traceback = 'Error in BeautifulSoup.' + \
+                                     'System recursion limit: {0}'.format(sys.getrecursionlimit()) + \
+                                     '\n\n\n' + \
+                                     full_traceback
+
+
+                    # TODO have a better logging service for storing these
+                    errdir = os.path.join(config['LOGDIR'], 'bs_parsing_errors', )
+                    errfile = os.path.join(errdir, str(self.data_sha256))
+                    mkdirp(errdir)
+
+                    with open("{0}_traceback".format(errfile), 'w') as fh:
+                        fh.write(full_traceback)
+                    # Write the file in binary mode, since it might also have decoding errors.
+                    with open("{0}_data".format(errfile), 'wb') as fh:
+                        fh.write(html_part.encode("utf-8"))
+
+                    log.error("BeautifulSoup parsing error. Data logged to {0}_data and {0}_traceback" \
+                            .format(errfile))
+                    self.decode_error = True
+
+                    # Not sanitized, but will still work
+                    self.sanitized_body = html_part
+                    self.snippet = soup.get_text(' ')[:191]
+
                 else:
-                    log.error("Some other BeautifulSoup error... {0}".format(e))
+                    log.error("Unknown BeautifulSoup exception: {0}".format(exc))
+                    raise exc
 
-                # MG TOFIX better logging to disk here
 
-                # errfile = get_errfilename(account_id, folder_name, uid)
-                # with open(errfile, 'w') as fh:
-                #     fh.write(msg_string)
-                # log.error("DecodeError encountered, unparseable message logged to {0}" \
-                #         .format(get_errfilename(account.id, folder_name, uid)))
-
-                return
-
-            for div in soup.findAll('div', 'gmail_quote'):
-                div.extract()
-            for container in soup.findAll('div', 'gmail_extra'):
-                if container.contents is not None:
-                    for tag in reversed(container.contents):
-                        if not hasattr(tag, 'name') or tag.name != 'br': break
-                        else: tag.extract()
-                if container.contents is None:
-                    # we emptied it!
-                    container.extract()
-
-            # Paragraphs don't need trailing line-breaks.
-            for container in soup.findAll('p'):
-                if container.contents is not None:
-                    for tag in reversed(container.contents):
-                        if not hasattr(tag, 'name') or tag.name != 'br': break
-                        else: tag.extract()
-
-            # Misc other crap.
-            dtd = [item for item in soup.contents if isinstance(item, Doctype)]
-            comments = soup.findAll(text=lambda text:isinstance(text, Comment))
-            for tag in chain(dtd, comments):
-                tag.extract()
-
-            self.sanitized_body = unicode(soup)
-
-            # trim for snippet
-            for tag in soup.findAll(['style', 'head', 'title']):
-                tag.extract()
-            self.snippet = soup.get_text(' ')[:191]
         elif plain_part is None:
             self.sanitized_body = u''
             self.snippet = u''

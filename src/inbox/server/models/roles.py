@@ -55,6 +55,11 @@ class Blob(object):
             data = self._get_from_s3()
         else:
             data = self._get_from_disk()
+
+	if data is None:
+            log.error("Couldn't find data on disk!")
+            return data
+
         assert self.data_sha256 == sha256(data).hexdigest(), \
                 "Returned data doesn't match stored hash!"
         return data

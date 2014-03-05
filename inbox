@@ -58,6 +58,8 @@ def start(args=None):
      Use CTRL-C to stop.
      """
 
+    log.info("Recursion limit: {0}".format(sys.getrecursionlimit()))
+
     # hang out forever and run some services
     joinall(threads)
 
