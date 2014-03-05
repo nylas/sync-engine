@@ -3,13 +3,38 @@
 from inbox.server.config import load_config
 load_config()
 
+# Logging is really noisy, but sometimes useful
+# from inbox.server.log import configure_general_logging, get_logger
+# configure_general_logging()
+# log = get_logger()
+
 from inbox.server.models import new_db_session
 from inbox.server.models.tables import Message, Block
 
+PAGE_SIZE = 500
+
+def page_query(q):
+    offset = 0
+    while True:
+        r = False
+        for elem in q.limit(PAGE_SIZE).offset(offset):
+           r = True
+           yield elem
+        offset += PAGE_SIZE
+        if not r:
+            break
+
 db_session = new_db_session()
 
-for msg in db_session.query(Message).join(Block):
+print 'Paging through 500 at a time...'
+
+c = 1
+for msg in page_query(db_session.query(Message).join(Block)):
     print msg.id,
     msg.calculate_sanitized_body()
+
+    c+=1
+    if c % PAGE_SIZE == 0:
+        db_session.commit()
 
 db_session.commit()
