@@ -207,7 +207,7 @@ def chunked_thread_download(crispin_client, db_session, log, folder_name,
 def group_uids_by_thread(uids, thread_g_metadata):
     uids_for = dict()
     for uid in uids:
-        uids_for.setdefault(thread_g_metadata[uid]['thrid'], []).append(uid)
+        uids_for.setdefault(thread_g_metadata[uid].thrid, []).append(uid)
     return uids_for
 
 
@@ -269,9 +269,9 @@ def deduplicate_message_download(crispin_client, db_session, log,
         remote_g_metadata, uids, c):
     """ Deduplicate message download using X-GM-MSGID. """
     local_g_msgids = set(account.g_msgids(crispin_client.account_id,
-        db_session, in_=[remote_g_metadata[uid]['msgid'] for uid in uids]))
+        db_session, in_=[remote_g_metadata[uid].msgid for uid in uids]))
     full_download, imapuid_only = partition(
-            lambda uid: remote_g_metadata[uid]['msgid'] in local_g_msgids,
+            lambda uid: remote_g_metadata[uid].msgid in local_g_msgids,
             sorted(uids, key=int))
     log.info("Skipping {0} uids already downloaded".format(len(imapuid_only)))
     if len(imapuid_only) > 0:
@@ -297,9 +297,9 @@ def add_new_imapuid(crispin_client, db_session, remote_g_metadata, uids, c):
 
     if uids:
         # collate message objects to relate the new imapuids
-        imapuid_uid_for = dict([(metadata['msgid'], uid) for \
+        imapuid_uid_for = dict([(metadata.msgid, uid) for \
                 (uid, metadata) in remote_g_metadata.items() if uid in uids])
-        imapuid_g_msgids = [remote_g_metadata[uid]['msgid'] for uid in uids]
+        imapuid_g_msgids = [remote_g_metadata[uid].msgid for uid in uids]
         message_for = dict([(imapuid_uid_for[mm.g_msgid], mm) for \
                 mm in db_session.query(Message).filter( \
                     Message.g_msgid.in_(imapuid_g_msgids))])

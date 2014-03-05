@@ -7,6 +7,8 @@ time. That's why functions take a connection argument.
 """
 import os
 
+from collections import namedtuple
+
 from .log import get_logger
 from .pool import get_connection_pool
 
@@ -15,6 +17,7 @@ from ..util.cache import get_cache, set_cache
 
 __all__ = ['CrispinClient', 'DummyCrispinClient']
 
+GMetadata = namedtuple('GMetadata', 'msgid thrid')
 
 
 ### main stuff
@@ -481,15 +484,26 @@ class GmailCrispinClient(CrispinClient):
         return data
 
     def g_metadata(self, uids, c):
-        """ Download Gmail MSGIDs and THRIDS for the given messages, or all
-            messages in the currently selected folder if no UIDs specified.
+        """ Download Gmail MSGIDs and THRIDs for the given messages.
 
-            NOTE: only UIDs are guaranteed to be unique to a folder, G-MSGID
-            and G-THRID may not be.
+        NOTE: only UIDs are guaranteed to be unique to a folder, X-GM-MSGID
+        and X-GM-THRID may not be.
+
+        Parameters
+        ----------
+        uids : list
+            UIDs to fetch data for. Must be from the selected folder.
+        c : IMAPClient
+            IMAP connection to use.
+
+        Returns
+        -------
+        dict
+            uid: GMetadata(msgid, thrid)
         """
         self.log.info("Fetching X-GM-MSGID and X-GM-THRID mapping from server.")
-        return dict([(long(uid), dict(msgid=str(ret['X-GM-MSGID']),
-            thrid=str(ret['X-GM-THRID']))) \
+        return dict([(long(uid), GMetadata(str(ret['X-GM-MSGID']),
+            str(ret['X-GM-THRID']))) \
                 for uid, ret in self._fetch_g_metadata(uids, c).iteritems()])
 
     def _fetch_g_metadata(self, uids, c):
