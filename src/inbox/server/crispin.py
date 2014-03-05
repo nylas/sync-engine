@@ -515,11 +515,14 @@ class GmailCrispinClient(CrispinClient):
         return data
 
     def expand_threads(self, g_thrids, c):
-        """ Find all message UIDs in a user's account that have X-GM-THRID in
-            g_thrids.
+        """ Find all message UIDs in this account with X-GM-THRID in g_thrids.
 
-            Message UIDs returned are All Mail UIDs; this method requires the
-            All Mail folder to be selected.
+        Requires the "All Mail" folder to be selected.
+
+        Returns
+        -------
+        list
+            All Mail UIDs, sorted most-recent first.
         """
         assert self.selected_folder_name == self.folder_names(c)['all'], \
                 "must select All Mail first ({0})".format(
