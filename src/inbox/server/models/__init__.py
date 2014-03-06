@@ -38,7 +38,9 @@ def new_db_session():
     """ Create a new session.
 
     Most of the time you should be using session_scope() instead, since it
-    handles cleanup properly.
+    handles cleanup properly. Sometimes you still need to use this function
+    directly because of how context managers require all code using the
+    created variable to be in a block; test setup is one example.
 
     Returns
     -------
