@@ -656,7 +656,9 @@ class Thread(JSONSerializable, Base):
     # NOTE: The same message sent to multiple users will be given a
     # different g_thrid for each user. We don't know yet if g_thrids are
     # unique globally.
-    g_thrid = Column(String(255), nullable=True, index=True)
+
+    # Gmail documents X-GM-THRID as 64-bit unsigned integer
+    g_thrid = Column(BigInteger, nullable=True, index=True)
 
     mailing_list_headers = Column(JSON, nullable=True)
 
