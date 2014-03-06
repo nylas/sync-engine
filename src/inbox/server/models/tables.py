@@ -321,7 +321,7 @@ class Message(JSONSerializable, Base, HasRevisions):
 
 
             except RuntimeError as exc:
-                err_prefix = 'maximum recursion depth exceeded '
+                err_prefix = 'maximum recursion depth exceeded'
                 # e.message is deprecated in Python 3
                 if exc.args[0].startswith(err_prefix):
                     # err_snip = str(exc.args[0])[len(err_prefix):]
