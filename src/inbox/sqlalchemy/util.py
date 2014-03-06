@@ -24,7 +24,7 @@ class JSON(TypeDecorator):
         return json.loads(value, object_hook=json_util.object_hook)
 
 class LittleJSON(JSON):
-    impl = String(40)
+    impl = String(255)
 
 class BigJSON(JSON):
     # if all characters were 4-byte, this would fit in mysql's MEDIUMTEXT
