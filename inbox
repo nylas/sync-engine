@@ -66,29 +66,28 @@ def start(args=None):
 def sync(args):
     import zerorpc
 
-    from inbox.server.models import new_db_session
+    from inbox.server.models import session_scope
     from inbox.server.models.tables import ImapAccount
     from sqlalchemy.orm.exc import NoResultFound
 
-    db_session = new_db_session()
-
-    try:
-        account = db_session.query(ImapAccount).filter_by(
-                email_address=args.email_address).one()
-    except NoResultFound:
-        log.error("No record of account {0}".format(args.email_address))
-        return
+    with session_scope() as db_session:
+        try:
+            account_id = db_session.query(ImapAccount.id).filter_by(
+                    email_address=args.email_address).one()[0]
+        except NoResultFound:
+            log.error("No record of account {0}".format(args.email_address))
+            return
 
     c = zerorpc.Client(timeout=5)
     sync_srv_loc = config.get('CRISPIN_SERVER_LOC', None)
     c.connect(sync_srv_loc)
     try:
         if args.cmd == 'start':
-            print c.start_sync(account.id, dummy=args.dummy)
+            print c.start_sync(account_id, dummy=args.dummy)
         elif args.cmd == 'startall':
             print c.start_sync(dummy=args.dummy)
         elif args.cmd == 'stop':
-            print c.stop_sync(account.id)
+            print c.stop_sync(account_id)
         elif args.cmd == 'stopall':
             print c.stop_sync()
         elif args.cmd == 'status':
@@ -97,7 +96,8 @@ def sync(args):
             print >>sys.stderr, "No such command."
             sys.exit(1)
     except zerorpc.exceptions.TimeoutExpired:
-        print >>sys.stderr, "Can't connect to sync service. Is it running? (./inbox start)"
+        print >>sys.stderr, \
+                "Can't connect to sync service. Is it running? (./inbox start)"
         sys.exit(1)
 
 def stop(args):
@@ -119,12 +119,6 @@ def console(args):
 
 def search(args):
     import zerorpc
-    from inbox.server.models.tables import Namespace
-
-    from inbox.server.models import new_db_session
-    db_session = new_db_session()
-
-    namespace = db_session.query(Namespace).filter_by(id=args.namespace).one()
 
     try:
         c = zerorpc.Client(timeout=5)
@@ -133,47 +127,48 @@ def search(args):
 
         # XXX print something more useful here, like Subject: To: <snippet>
         # or something
-        print c.search(namespace.id, args.query)
+        print c.search(args.namespace, args.query)
     except zerorpc.exceptions.TimeoutExpired:
-        print >>sys.stderr, "Can't connect. Is the sync server running? (./inbox start)"
+        print >>sys.stderr, \
+                "Can't connect. Is the sync server running? (./inbox start)"
         sys.exit(1)
 
 def index(args):
-    from inbox.server.search import gen_search_index
-    from inbox.server.models.tables import Namespace
-    from inbox.server.models import new_db_session
-    db_session = new_db_session()
+    import zerorpc
 
-    if args.namespace:
-        gen_search_index(db_session.query(Namespace).get(args.namespace))
-    else:
-        for namespace in db_session.query(namespace).filter_by(
-                namespace_type='root'):
-            gen_search_index(namespace)
+    try:
+        c = zerorpc.Client(timeout=5)
+        search_srv_loc = config.get('SEARCH_SERVER_LOC', None)
+        c.connect(search_srv_loc)
+        c.index(args.namespace)
+    except zerorpc.exceptions.TimeoutExpired:
+        print >>sys.stderr, \
+                "Can't connect. Is the sync server running? (./inbox start)"
+        sys.exit(1)
 
 def auth(args):
     from inbox.server import session
-    from inbox.server.models import new_db_session, init_db
+    from inbox.server.models import session_scope, init_db
     from inbox.server.models.tables import ImapAccount
     from sqlalchemy.orm.exc import NoResultFound
 
     email_address = args.email_address
 
     init_db()
-    db_session = new_db_session()
 
-    try:
-        account = db_session.query(ImapAccount).filter_by(
-                email_address=email_address).one()
-    except NoResultFound:
-        response = session.auth_account(email_address)
-        account = session.make_account(db_session, email_address, response)
+    with session_scope() as db_session:
+        try:
+            account = db_session.query(ImapAccount).filter_by(
+                    email_address=email_address).one()
+        except NoResultFound:
+            response = session.auth_account(email_address)
+            account = session.make_account(db_session, email_address, response)
 
-    try:
-        verified_account = session.verify_account(db_session, account)
-    except session.NotSupportedError as e:
-        print >>sys.stderr, str(e)
-        sys.exit(1)
+        try:
+            verified_account = session.verify_account(db_session, account)
+        except session.NotSupportedError as e:
+            print >>sys.stderr, str(e)
+            sys.exit(1)
 
     return verified_account
 

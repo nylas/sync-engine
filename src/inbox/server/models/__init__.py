@@ -34,16 +34,32 @@ def init_db():
 
 Session = sessionmaker(bind=engine)
 
-# This returns a new session whenever it's called.
-# session_scope uses a registry to return the _same_ session if it's in the
-# same thread, otherwise a new session.
 def new_db_session():
+    """ Create a new session.
+
+    Most of the time you should be using session_scope() instead, since it
+    handles cleanup properly.
+
+    Returns
+    -------
+    sqlalchemy.orm.session.Session
+        The created session.
+    """
     return versioned_session(Session(autoflush=True, autocommit=False),
             Transaction, HasRevisions)
 
 @contextmanager
 def session_scope():
-    """Provide a transactional scope around a series of operations."""
+    """ Provide a transactional scope around a series of operations.
+
+    Takes care of rolling back failed transactions and closing the session
+    when it goes out of scope.
+
+    Yields
+    ------
+    sqlalchemy.orm.session.Session
+        The created session.
+    """
     session = new_db_session()
     try:
         yield session
