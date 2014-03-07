@@ -1,4 +1,3 @@
-import copy
 import datetime
 
 from .models import session_scope
@@ -6,6 +5,7 @@ from .models.tables import Contact, ImapAccount
 from .log import configure_rolodex_logging, get_logger
 from .util.google_contacts import GoogleContactsProvider
 log = get_logger()
+
 
 def rolodex_sync(db_session, account):
     log = configure_rolodex_logging(account.id)
@@ -19,9 +19,9 @@ def rolodex_sync(db_session, account):
         contacts_provider = GoogleContactsProvider(account)
 
     existing_contacts = db_session.query(Contact).filter_by(
-            source='local', imapaccount=account).all()
+        source='local', imapaccount=account).all()
     cached_contacts = db_session.query(Contact).filter_by(
-            source='remote', imapaccount=account).all()
+        source='remote', imapaccount=account).all()
 
     log.info('Query: have {0} contacts, {1} cached.'.format(
         len(existing_contacts), len(cached_contacts)))
@@ -57,7 +57,12 @@ def rolodex_sync(db_session, account):
 
         else:
             # doesn't exist yet, add both remote and local
-            cached = copy.deepcopy(c)
+            cached = Contact(
+                g_id=c.g_id,
+                name=c.name,
+                email_address=c.email_address,
+                imapaccount=c.imapaccount,
+                updated_at=c.updated_at)
             cached.source = 'remote'
 
             to_commit.append(c)
@@ -69,6 +74,7 @@ def rolodex_sync(db_session, account):
     db_session.commit()
 
     log.info('Added {0} contacts.'.format(len(to_commit)))
+
 
 class ContactSync(object):
     """ ZeroRPC interface to syncing. """
