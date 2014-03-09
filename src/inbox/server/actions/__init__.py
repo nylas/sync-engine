@@ -28,11 +28,15 @@ from rq import Queue, Connection
 from . import gmail
 
 from inbox.server.util.concurrency import GeventWorker
+from inbox.server.config import config
 
 mod_for = {'Gmail': gmail}
 
 def get_queue():
-    return Queue('action', connection=Redis())
+    # The queue label is set via config to allow multiple distinct Inbox
+    # instances to hit the same Redis server without interfering with each
+    # other.
+    return Queue(config.get('ACTION_QUEUE_LABEL', None), connection=Redis())
 
 def get_archive_fn(imapaccount):
     return mod_for[imapaccount.provider].archive
