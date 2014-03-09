@@ -5,6 +5,7 @@ import json
 
 from hashlib import sha256
 
+import iconvcodec
 from flanker import mime
 
 from inbox.util.misc import or_none, parse_ml_headers
@@ -143,7 +144,8 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
             new_part.size = len(data_to_write)
             new_part.data_sha256 = sha256(data_to_write).hexdigest()
             new_msg.parts.append(new_part)
-    except mime.DecodingError:
+    except (mime.DecodingError, RuntimeError):
+        # occasionally iconv will fail via maximum recursion depth
         log_decode_error(account.id, folder_name, mid, raw_message)
         log.error("DecodeError encountered, unparseable message logged to {0}" \
                 .format(get_errfilename(account.id, folder_name, mid)))

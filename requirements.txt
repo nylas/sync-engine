@@ -34,3 +34,4 @@ flanker==0.3.3
 imapclient==0.10.2
 rq-dashboard==0.3.3
 alembic==0.6.3
+iconv==1.0
