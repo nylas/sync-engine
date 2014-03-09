@@ -11,8 +11,9 @@ from . import actions
 from .config import config
 from .models import session_scope
 from .models.tables import Message, SharedFolder, User, ImapAccount, Thread
-from .models.namespace import threads_for_folder, archive_thread, move_thread
-from .models.namespace import copy_thread, delete_thread
+from .models.namespace import (threads_for_folder, archive_thread, move_thread,
+        copy_thread, delete_thread)
+
 
 from .log import get_logger
 log = get_logger()
