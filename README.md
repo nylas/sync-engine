@@ -50,13 +50,13 @@ Here's how to set up a development environment:
 
 8. `sudo ./setup.sh` to install dependencies and create databases.
 
-9. `sudo ./inbox debug`
+9. `./inbox debug`
 
 And _voilà_! Auth an account via the commandline and start syncing:
 
 ```
-  sudo ./inbox auth ben.bitdiddle1861@gmail.com
-  sudo ./inbox sync start ben.bitdiddle1861@gmail.com
+  ./inbox auth ben.bitdiddle1861@gmail.com
+  ./inbox sync start ben.bitdiddle1861@gmail.com
 ```
 
 ## Contributing
