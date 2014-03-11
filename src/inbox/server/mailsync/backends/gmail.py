@@ -24,17 +24,22 @@ import os
 
 from geventconnpool import retry
 
-from .imap import uidvalidity_cb, new_or_updated, remove_deleted_uids
-from .imap import chunked_uid_download, update_metadata, resync_uids_from
-from .imap import base_initial_sync, base_poll, safe_download, commit_uids
-from .imap import create_db_objects, ImapSyncMonitor
-
-from ..models import imapaccount as account
-from ..models.tables import ImapAccount, Namespace, ImapUid, Message
-
 from inbox.util.itert import chunk, partition
 from inbox.util.cache import set_cache, get_cache, rm_cache
-from inbox.util.misc import timed
+from inbox.server.models import imapaccount as account
+from inbox.server.models.tables import ImapAccount, Namespace, ImapUid, Message
+from inbox.server.mailsync.backends.imap import (uidvalidity_cb,
+    new_or_updated, remove_deleted_uids)
+from inbox.server.mailsync.backends.imap import (chunked_uid_download,
+    update_metadata, resync_uids_from)
+from inbox.server.mailsync.backends.imap import (base_initial_sync, base_poll,
+    safe_download, commit_uids)
+from inbox.server.mailsync.backends.imap import (create_db_objects,
+    ImapSyncMonitor)
+
+PROVIDER = 'Gmail'
+SYNC_MONITOR_CLASS = 'GmailSyncMonitor'
+
 
 class GmailSyncMonitor(ImapSyncMonitor):
     def __init__(self, account_id, namespace_id, email_address, provider,
@@ -49,10 +54,13 @@ class GmailSyncMonitor(ImapSyncMonitor):
 
         ImapSyncMonitor.__init__(self, account_id, namespace_id, email_address,
                 provider, status_cb, heartbeat=1, poll_frequency=30)
+
+
 @retry
 def initial_sync(crispin_client, db_session, log, folder_name, shared_state):
     return base_initial_sync(crispin_client, db_session, log, folder_name,
             shared_state, gmail_initial_sync)
+
 
 def gmail_initial_sync(crispin_client, db_session, log, folder_name,
         shared_state, local_uids, c):
@@ -84,12 +92,15 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
                 account.create_gmail_message, c)
 
     # Complete X-GM-MSGID mapping is no longer needed after initial sync.
-    rm_cache(remote_g_metadata_cache_file(crispin_client.account_id, folder_name))
+    rm_cache(remote_g_metadata_cache_file(crispin_client.account_id,
+        folder_name))
+
 
 @retry
 def poll(crispin_client, db_session, log, folder_name, shared_state):
     return base_poll(crispin_client, db_session, log, folder_name,
             shared_state, gmail_highestmodseq_update)
+
 
 def gmail_highestmodseq_update(crispin_client, db_session, log, folder_name,
         uids, local_uids, status_cb, syncmanager_lock, c):
@@ -101,8 +112,10 @@ def gmail_highestmodseq_update(crispin_client, db_session, log, folder_name,
         chunked_thread_download(crispin_client, db_session, log, folder_name,
                 local_g_metadata, local_uids, status_cb, syncmanager_lock, c)
 
+
 def remote_g_metadata_cache_file(account_id, folder_name):
     return os.path.join(str(account_id), folder_name, "remote_g_metadata")
+
 
 def get_g_metadata(crispin_client, db_session, log, folder_name, uids,
         syncmanager_lock, c):
@@ -129,8 +142,9 @@ def get_g_metadata(crispin_client, db_session, log, folder_name, uids,
 
     return remote_g_metadata
 
-def gmail_download_and_commit_uids(crispin_client, db_session, log, folder_name,
-        uids, msg_create_fn, syncmanager_lock, c):
+
+def gmail_download_and_commit_uids(crispin_client, db_session, log,
+        folder_name, uids, msg_create_fn, syncmanager_lock, c):
     raw_messages = safe_download(crispin_client, log, uids, c)
     with syncmanager_lock:
         # there is the possibility that another green thread has already
@@ -141,6 +155,7 @@ def gmail_download_and_commit_uids(crispin_client, db_session, log, folder_name,
                 log, folder_name, raw_messages, msg_create_fn)
         commit_uids(db_session, log, new_imapuids)
     return len(new_imapuids)
+
 
 def chunked_thread_download(crispin_client, db_session, log, folder_name,
         g_metadata, uids, status_cb, syncmanager_lock, c):
@@ -185,11 +200,13 @@ def chunked_thread_download(crispin_client, db_session, log, folder_name,
                 num_downloaded_threads, num_total_threads, status_cb,
                 syncmanager_lock, c)
 
+
 def group_uids_by_thread(uids, thread_g_metadata):
     uids_for = dict()
     for uid in uids:
         uids_for.setdefault(thread_g_metadata[uid]['thrid'], []).append(uid)
     return uids_for
+
 
 def create_original_folder_imapuids(acc, folder_name, imapuids,
         original_uid_for, flags):
@@ -204,6 +221,7 @@ def create_original_folder_imapuids(acc, folder_name, imapuids,
                 flags[original_uid]['labels'])
         original_imapuids.append(original_imapuid)
     return original_imapuids
+
 
 def download_threads(crispin_client, db_session, log, acc, folder_name,
         g_thrids, flags, folder_g_msgids, num_downloaded_threads,
@@ -235,12 +253,14 @@ def download_threads(crispin_client, db_session, log, acc, folder_name,
         num_downloaded_threads += 1
     return num_downloaded_threads
 
+
 def deduplicate_message_object_creation(account_id, db_session, log,
         raw_messages):
     new_g_msgids = {msg[5] for msg in raw_messages}
     existing_g_msgids = set(account.g_msgids(account_id, db_session,
         in_=new_g_msgids))
     return [msg for msg in raw_messages if msg[5] not in existing_g_msgids]
+
 
 def deduplicate_message_download(crispin_client, db_session, log,
         remote_g_metadata, uids, c):
@@ -257,6 +277,7 @@ def deduplicate_message_download(crispin_client, db_session, log,
 
     return full_download
 
+
 def add_new_imapuid(crispin_client, db_session, remote_g_metadata, uids, c):
     """ Since we deduplicate messages on Gmail, sometimes we need to just add
         new ImapUid entries.
@@ -267,7 +288,7 @@ def add_new_imapuid(crispin_client, db_session, remote_g_metadata, uids, c):
     # already have ImapUid entries despite calling this method.
     local_folder_uids = {uid for uid, in \
             db_session.query(ImapUid.msg_uid).filter(
-                ImapUid.folder_name==crispin_client.selected_folder_name,
+                ImapUid.folder_name == crispin_client.selected_folder_name,
                 ImapUid.msg_uid.in_(uids))}
     uids = [uid for uid in uids if uid not in local_folder_uids]
 
@@ -291,6 +312,7 @@ def add_new_imapuid(crispin_client, db_session, remote_g_metadata, uids, c):
         db_session.add_all(new_imapuids)
         db_session.commit()
 
+
 def retrieve_saved_g_metadata(crispin_client, db_session, log, folder_name,
         local_uids, saved_validity, syncmanager_lock, c):
     log.info('Attempting to retrieve remote_g_metadata from cache')
@@ -306,6 +328,7 @@ def retrieve_saved_g_metadata(crispin_client, db_session, log, folder_name,
     else:
         log.info("No cached data found")
     return remote_g_metadata
+
 
 def update_saved_g_metadata(crispin_client, db_session, log, folder_name,
         remote_g_metadata, local_uids, syncmanager_lock, c):

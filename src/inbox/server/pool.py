@@ -2,28 +2,30 @@
 import sys
 
 from gevent import socket
+from geventconnpool import ConnectionPool
+
 import imaplib
 imaplib.IMAP4.error = socket.error
 imaplib.IMAP4.abort = socket.error
 
-from geventconnpool import ConnectionPool
-
 from imapclient import IMAPClient
 
-from .models import session_scope
-from .models.tables import ImapAccount
-from .session import verify_imap_account
-from .oauth import AUTH_TYPES
-from .log import get_logger
+from inbox.server.log import get_logger
 log = get_logger()
 
-IMAP_HOSTS = { 'Gmail': 'imap.gmail.com',
-                'Yahoo': 'imap.mail.yahoo.com' }
+from inbox.server.models import session_scope
+from inbox.server.models.tables import ImapAccount
+from inbox.server import oauth
+from inbox.server.auth.base import get_handler
+
+IMAP_HOSTS = {'Gmail': 'imap.gmail.com',
+                'Yahoo': 'imap.mail.yahoo.com'}
 
 # Memory cache for per-user IMAP connection pool.
 imapaccount_id_to_connection_pool = {}
 
 DEFAULT_POOL_SIZE = 5
+
 
 def verify_gmail_account(account):
     try:
@@ -43,6 +45,7 @@ def verify_gmail_account(account):
 
     return conn
 
+
 def verify_yahoo_account(account):
     try:
         conn = IMAPClient(IMAP_HOSTS['Yahoo'], use_uid=True, ssl=True)
@@ -58,6 +61,47 @@ def verify_yahoo_account(account):
 
     return conn
 
+
+def verify_imap_account(db_session, account):
+    # issued_date = credentials.date
+    # expires_seconds = credentials.o_expires_in
+
+    # TODO check with expire date first
+    # expire_date = issued_date + datetime.timedelta(seconds=expires_seconds)
+
+    is_valid = oauth.validate_token(account.o_access_token)
+
+    # TODO refresh tokens based on date instead of checking?
+    # if not is_valid or expire_date > datetime.datetime.utcnow():
+    if not is_valid:
+        log.error('Need to update access token!')
+
+        refresh_token = account.o_refresh_token
+
+        log.error('Getting new access token...')
+        response = oauth.get_new_token(refresh_token)  # TOFIX blocks
+        response['refresh_token'] = refresh_token  # Propogate it through
+
+        # TODO handling errors here for when oauth has been revoked
+        if 'error' in response:
+            log.error(response['error'])
+            if response['error'] == 'invalid_grant':
+                # Means we need to reset the entire oauth process.
+                log.error('Refresh token is invalid.')
+            return None
+
+        # TODO Verify it and make sure it's valid.
+        assert 'access_token' in response
+
+        auth_handler = get_handler(account.email_address)
+        account = auth_handler.create_account(db_session, account.email_address,
+            response)
+        log.info('Updated token for imap account {0}'.format(
+            account.email_address))
+
+    return account
+
+
 def get_connection_pool(account_id, pool_size=None):
     if pool_size is None:
         pool_size = DEFAULT_POOL_SIZE
@@ -68,10 +112,11 @@ def get_connection_pool(account_id, pool_size=None):
                 = IMAPConnectionPool(account_id, num_connections=pool_size)
     return pool
 
+
 class IMAPConnectionPool(ConnectionPool):
     def __init__(self, account_id, num_connections=5):
-        log.info("Creating connection pool for account {0} with {1} connections" \
-                .format(account_id, num_connections))
+        log.info('Creating connection pool for account {0} with {1}\
+            connections'.format(account_id, num_connections))
         self.account_id = account_id
         self._set_account_info()
         # 1200s == 20min
@@ -82,7 +127,7 @@ class IMAPConnectionPool(ConnectionPool):
             account = db_session.query(ImapAccount).get(self.account_id)
 
             # Refresh token if need be, for OAuthed accounts
-            if AUTH_TYPES.get(account.provider) == 'OAuth':
+            if oauth.AUTH_TYPES.get(account.provider) == 'OAuth':
                 account = verify_imap_account(db_session, account)
                 self.o_access_token = account.o_access_token
 

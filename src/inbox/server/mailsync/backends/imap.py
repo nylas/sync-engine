@@ -72,22 +72,23 @@ from gc import collect as garbage_collect
 
 from geventconnpool import retry
 from gevent import Greenlet, sleep
+from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.util.itert import chunk, partition
-from inbox.util.misc import timed
+from inbox.server.log import get_logger
+from inbox.server.crispin import new_crispin
+from inbox.server.models import session_scope
+from inbox.server.models import imapaccount as account
+from inbox.server.models.tables import ImapAccount, Namespace, FolderSync
+from inbox.server.models.namespace import db_write_lock
+from inbox.server.mailsync.exc import UIDInvalid
+from inbox.server.mailsync.backends.base import (gevent_check_join, verify_db,
+    save_folder_names)
+from inbox.server.mailsync.backends.base import BaseMailSyncMonitor
 
-from ..log import get_logger
-from ..crispin import new_crispin
-from ..models import session_scope
-from ..models import imapaccount as account
-from ..models.tables import ImapAccount, Namespace, FolderSync
-from ..models.namespace import db_write_lock
+PROVIDER = 'Imap'
+SYNC_MONITOR_CLASS = 'ImapSyncMonitor'
 
-from .exc import UIDInvalid
-from .base import gevent_check_join, verify_db, save_folder_names
-from .base import BaseMailSyncMonitor
-
-from sqlalchemy.orm.exc import NoResultFound
 
 class ImapSyncMonitor(BaseMailSyncMonitor):
     """ Top-level controller for an account's mail sync. Spawns individual
@@ -154,6 +155,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         while True:
             sleep(self.heartbeat)
 
+
 class ImapFolderSyncMonitor(Greenlet):
     """ Per-folder sync engine. """
 
@@ -199,6 +201,7 @@ class ImapFolderSyncMonitor(Greenlet):
                 if self.state == 'finish':
                     return
 
+
 def resync_uids_from(previous_state):
     @retry
     def resync_uids(crispin_client, log, db_session, folder_name, shared_state):
@@ -213,10 +216,12 @@ def resync_uids_from(previous_state):
         return previous_state
     return resync_uids
 
+
 @retry
 def initial_sync(crispin_client, db_session, log, folder_name, shared_state):
     return base_initial_sync(crispin_client, db_session, log, folder_name,
             shared_state, imap_initial_sync)
+
 
 def base_initial_sync(crispin_client, db_session, log, folder_name,
         shared_state, initial_sync_fn):
@@ -242,10 +247,12 @@ def base_initial_sync(crispin_client, db_session, log, folder_name,
 
     return 'poll'
 
+
 @retry
 def poll(crispin_client, db_session, log, folder_name, shared_state):
     return base_poll(crispin_client, db_session, log, folder_name,
             shared_state, imap_highestmodseq_update)
+
 
 def base_poll(crispin_client, db_session, log, folder_name, shared_state,
         highestmodseq_fn):
@@ -280,6 +287,7 @@ def base_poll(crispin_client, db_session, log, folder_name, shared_state,
 
     return 'poll'
 
+
 def highestmodseq_update(crispin_client, db_session, log, folder_name,
         last_highestmodseq, status_cb, highestmodseq_fn, syncmanager_lock, c):
     account_id = crispin_client.account_id
@@ -312,11 +320,13 @@ def highestmodseq_update(crispin_client, db_session, log, folder_name,
             new_uidvalidity, new_highestmodseq)
     db_session.commit()
 
+
 def imap_highestmodseq_update(crispin_client, db_session, log, folder_name,
         uids, local_uids, status_cb, syncmanager_lock, c):
     chunked_uid_download(crispin_client, db_session, log, folder_name, uids, 0,
             len(uids), status_cb, download_and_commit_uids,
             account.create_message, syncmanager_lock, c)
+
 
 def uidvalidity_cb(db_session, account_id):
     def fn(folder, select_info):
@@ -331,12 +341,14 @@ def uidvalidity_cb(db_session, account_id):
         return select_info
     return fn
 
+
 def new_or_updated(uids, local_uids):
     """ HIGHESTMODSEQ queries return a list of messages that are *either*
         new *or* updated. We do different things with each, so we need to
         sort out which is which.
     """
     return partition(lambda x: x in local_uids, uids)
+
 
 def imap_initial_sync(crispin_client, db_session, log, folder_name,
         shared_state, local_uids, c):
@@ -359,6 +371,7 @@ def imap_initial_sync(crispin_client, db_session, log, folder_name,
             shared_state['status_cb'], shared_state['syncmanager_lock'],
             download_and_commit_uids, account.create_message, c)
 
+
 def check_flags(crispin_client, db_session, log, folder_name, local_uids,
         syncmanager_lock, c):
     """
@@ -375,6 +388,7 @@ def check_flags(crispin_client, db_session, log, folder_name, local_uids,
                 _, updated = new_or_updated(uids, local_uids)
                 update_metadata(crispin_client, db_session, log, folder_name,
                         updated, syncmanager_lock, c)
+
 
 def chunked_uid_download(crispin_client, db_session, log,
         folder_name, uids, num_local_messages, num_total_messages, status_cb,
@@ -397,7 +411,11 @@ def chunked_uid_download(crispin_client, db_session, log,
                     'initial', (folder_name, percent_done))
             log.info("Syncing %s -- %.2f%% (%i/%i)" % (folder_name,
                 percent_done, num_local_messages, num_total_messages))
-        log.info("Saved all messages and metadata on {0} to UIDVALIDITY {1} / HIGHESTMODSEQ {2}".format(folder_name, crispin_client.selected_uidvalidity, crispin_client.selected_highestmodseq))
+        log.info("Saved all messages and metadata on {0} to UIDVALIDITY {1} \
+            / HIGHESTMODSEQ {2}".format(folder_name,
+                crispin_client.selected_uidvalidity,
+                crispin_client.selected_highestmodseq))
+
 
 def safe_download(crispin_client, log, uids, c):
     try:
@@ -407,6 +425,7 @@ def safe_download(crispin_client, log, uids, c):
         raise e
 
     return raw_messages
+
 
 def create_db_objects(account_id, db_session, log, folder_name, raw_messages,
         msg_create_fn):
@@ -423,6 +442,7 @@ def create_db_objects(account_id, db_session, log, folder_name, raw_messages,
     # imapuid, message, thread, labels
     return new_imapuids
 
+
 def download_and_commit_uids(crispin_client, db_session, log, folder_name,
         uids, msg_create_fn, syncmanager_lock, c):
     raw_messages = safe_download(crispin_client, log, uids, c)
@@ -431,6 +451,7 @@ def download_and_commit_uids(crispin_client, db_session, log, folder_name,
                 log, folder_name, raw_messages, msg_create_fn)
         commit_uids(db_session, log, new_imapuids)
     return len(new_imapuids)
+
 
 def commit_uids(db_session, log, new_imapuids):
     new_messages = [item.message for item in new_imapuids]
@@ -455,6 +476,7 @@ def commit_uids(db_session, log, new_imapuids):
     # NOTE: indexing temporarily disabled because xapian is leaking fds :/
     # trigger_index_update(self.account.namespace.id)
 
+
 def remove_deleted_uids(account_id, db_session, log, folder_name,
         local_uids, remote_uids, syncmanager_lock, c):
     """ Works as follows:
@@ -473,13 +495,15 @@ def remove_deleted_uids(account_id, db_session, log, folder_name,
         # cascade to Messages and FolderItems and Threads. No one else messes
         # with ImapUids, but the exposed datastore elements are another story.
         with syncmanager_lock:
-            account.remove_messages(account_id, db_session, to_delete, folder_name)
+            account.remove_messages(account_id, db_session, to_delete,
+                folder_name)
             db_session.commit()
 
         log.info("Deleted {0} removed messages from {1}".format(
             len(to_delete), folder_name))
 
     return to_delete
+
 
 def update_metadata(crispin_client, db_session, log, folder_name, uids,
         syncmanager_lock, c):

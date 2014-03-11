@@ -1,4 +1,4 @@
-from dns.resolver import Resolver, query, NoNameservers
+from dns.resolver import Resolver, NoNameservers
 from urllib import urlencode
 import logging as log
 import re
@@ -11,71 +11,65 @@ EMAIL_REGEX = re.compile(r'[A-Z0-9._%+-]+@(?:[A-Z0-9-]+\.)+[A-Z]{2,4}',
 dns_resolver = Resolver()
 dns_resolver.nameservers = ['8.8.8.8']
 
-class InvalidEmailAddressError(Exception):
-    pass
-
-class NotSupportedError(Exception):
-    pass
-
 # YAHOO:
 # https://en.wikipedia.org/wiki/Yahoo!_Mail#Email_domains
 yahoo_mail_domains = [
-    'yahoo.com.ar', # Argentina
-    'yahoo.com.au', # Australia
-    'yahoo.at',     # Austria
-    'yahoo.be',     # Belgium (French)
+    'yahoo.com.ar',  # Argentina
+    'yahoo.com.au',  # Australia
+    'yahoo.at',      # Austria
+    'yahoo.be',      # Belgium (French)
     'yahoo.fr',
-    'yahoo.be',     # Belgium (Dutch)
+    'yahoo.be',      # Belgium (Dutch)
     'yahoo.nl',
-    'yahoo.com.br', # Brazil
-    'yahoo.ca',     # Canada (English)
+    'yahoo.com.br',  # Brazil
+    'yahoo.ca',      # Canada (English)
     'yahoo.en',
-    'yahoo.ca',     # Canada (French)
+    'yahoo.ca',      # Canada (French)
     'yahoo.fr',
-    'yahoo.com.cn', # China
+    'yahoo.com.cn',  # China
     'yahoo.cn',
-    'yahoo.com.co', # Colombia
-    'yahoo.cz',     # Czech Republic
-    'yahoo.dk',     # Denmark
-    'yahoo.fi',     # Finland
-    'yahoo.fr',     # France
-    'yahoo.de',     # Germany
-    'yahoo.gr',     # Greece
-    'yahoo.com.hk', # Hong Kong
-    'yahoo.hu',     # Hungary
-    'yahoo.co.in',  # India
-    'yahoo.in',     # Indonesia
-    'yahoo.ie',     # Ireland
-    'yahoo.co.il',  # Israel
-    'yahoo.it',     # Italy
-    'yahoo.co.jp',  # Japan
-    'yahoo.com.my', # Malaysia
-    'yahoo.com.mx', # Mexico
-    'yahoo.ae',     # Middle East
-    'yahoo.nl',     # Netherlands
-    'yahoo.co.nz',  # New Zealand
-    'yahoo.no',     # Norway
-    'yahoo.com.ph', # Philippines
-    'yahoo.pl',     # Poland
-    'yahoo.pt',     # Portugal
-    'yahoo.ro',     # Romania
-    'yahoo.ru',     # Russia
-    'yahoo.com.sg', # Singapore
-    'yahoo.co.za',  # South Africa
-    'yahoo.es',     # Spain
-    'yahoo.se',     # Sweden
-    'yahoo.ch',     # Switzerland (French)
+    'yahoo.com.co',  # Colombia
+    'yahoo.cz',      # Czech Republic
+    'yahoo.dk',      # Denmark
+    'yahoo.fi',      # Finland
+    'yahoo.fr',      # France
+    'yahoo.de',      # Germany
+    'yahoo.gr',      # Greece
+    'yahoo.com.hk',  # Hong Kong
+    'yahoo.hu',      # Hungary
+    'yahoo.co.in',   # India
+    'yahoo.in',      # Indonesia
+    'yahoo.ie',      # Ireland
+    'yahoo.co.il',   # Israel
+    'yahoo.it',      # Italy
+    'yahoo.co.jp',   # Japan
+    'yahoo.com.my',  # Malaysia
+    'yahoo.com.mx',  # Mexico
+    'yahoo.ae',      # Middle East
+    'yahoo.nl',      # Netherlands
+    'yahoo.co.nz',   # New Zealand
+    'yahoo.no',      # Norway
+    'yahoo.com.ph',  # Philippines
+    'yahoo.pl',      # Poland
+    'yahoo.pt',      # Portugal
+    'yahoo.ro',      # Romania
+    'yahoo.ru',      # Russia
+    'yahoo.com.sg',  # Singapore
+    'yahoo.co.za',   # South Africa
+    'yahoo.es',      # Spain
+    'yahoo.se',      # Sweden
+    'yahoo.ch',      # Switzerland (French)
     'yahoo.fr',
-    'yahoo.ch',     # Switzerland (German)
+    'yahoo.ch',      # Switzerland (German)
     'yahoo.de',
-    'yahoo.com.tw', # Taiwan
-    'yahoo.co.th',  # Thailand
-    'yahoo.com.tr', # Turkey
-    'yahoo.co.uk',  # United Kingdom
-    'yahoo.com',    # United States
-    'yahoo.com.vn', # Vietnam
+    'yahoo.com.tw',  # Taiwan
+    'yahoo.co.th',   # Thailand
+    'yahoo.com.tr',  # Turkey
+    'yahoo.co.uk',   # United Kingdom
+    'yahoo.com',     # United States
+    'yahoo.com.vn',  # Vietnam
 
-    'ymail.com',    # Newly added!
+    'ymail.com',     # Newly added!
     'rocketmail.com',
 ]
 
@@ -109,12 +103,21 @@ gmail_mx_servers = [
     'alt4.gmail-smtp-in.l.google.com.'
     ]
 
+
+class InvalidEmailAddressError(Exception):
+    pass
+
+
+class NotSupportedError(Exception):
+    pass
+
+
 def email_supports_gmail(domain):
     # Must have Gmail or Google Apps MX records
     is_valid = True
     try:
         answers = dns_resolver.query(domain, 'MX')
-        
+
         # All relay servers must be gmail
         for rdata in answers:
             if not str(rdata.exchange).lower() in gmail_mx_servers:
@@ -125,6 +128,7 @@ def email_supports_gmail(domain):
         is_valid = False
 
     return is_valid
+
 
 def email_supports_yahoo(domain):
     # Must be a Yahoo mail domain
@@ -146,19 +150,21 @@ def email_supports_yahoo(domain):
 
     return is_valid
 
+
 def provider_from_address(email_address):
     if not EMAIL_REGEX.match(email_address):
-        raise InvalidEmailAddressError('Invalid email address') 
+        raise InvalidEmailAddressError('Invalid email address')
 
     domain = email_address.split('@')[1].lower()
 
     if email_supports_gmail(domain):
         return 'Gmail'
-    
+
     if email_supports_yahoo(domain):
         return 'Yahoo'
 
     raise NotSupportedError('Inbox currently only supports Gmail and Yahoo.')
+
 
 # From tornado.httputil
 def url_concat(url, args):

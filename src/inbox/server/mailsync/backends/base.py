@@ -1,15 +1,18 @@
-import zerorpc
+import os, sys, pkgutil
 
+import zerorpc
 from gevent import Greenlet, joinall, sleep
 from gevent.queue import Queue, Empty
 
-from ..config import config
-from ..log import configure_sync_logging
+from inbox.util.misc import load_modules
+from inbox.server.config import config
+from inbox.server.log import configure_sync_logging
+from inbox.server.mailsync.exc import SyncException
 
-from .exc import SyncException
 
 def verify_db(crispin_client, db_session):
     pass
+
 
 def check_folder_name(log, inbox_folder, old_folder_name, new_folder_name):
     if old_folder_name is not None and \
@@ -17,6 +20,7 @@ def check_folder_name(log, inbox_folder, old_folder_name, new_folder_name):
         msg = "{0} folder name changed from '{1}' to '{2}'".format(
                 inbox_folder, old_folder_name, new_folder_name)
         raise SyncException(msg)
+
 
 def save_folder_names(log, account, folder_names, db_session):
     # NOTE: We don't do anything like canonicalizing to lowercase because
@@ -40,10 +44,12 @@ def save_folder_names(log, account, folder_names, db_session):
         account.sent_folder_name = folder_names['sent']
     db_session.commit()
 
+
 def trigger_index_update(namespace_id):
     c = zerorpc.Client()
     c.connect(config.get('SEARCH_SERVER_LOC', None))
     c.index(namespace_id)
+
 
 def gevent_check_join(log, threads, errmsg):
     """ Block until all threads have completed and throw an error if threads
@@ -56,6 +62,33 @@ def gevent_check_join(log, threads, errmsg):
         for error in errors:
             log.error(error)
         raise SyncException("Fatal error encountered")
+
+
+def register_backends():
+    """
+    Finds the monitor modules for the different providers
+    (in the backends directory) and imports them.
+
+    Creates a mapping of provider:monitor for each backend found.
+    """
+    monitor_cls_for = {}
+
+    # Find and import
+    backend_dir = os.path.dirname(os.path.realpath(__file__))
+    modules = load_modules(backend_dir)
+
+    # Create mapping
+    for module in modules:
+        if getattr(module, 'PROVIDER', None) is not None:
+            provider = module.PROVIDER
+            monitor_cls = getattr(module, 'SYNC_MONITOR_CLS', None)
+
+            assert monitor_cls is not None
+
+            monitor_cls_for[provider] = monitor_cls
+
+    return monitor_cls_for
+
 
 class BaseMailSyncMonitor(Greenlet):
     def __init__(self, account_id, email_address, provider, status_cb,
@@ -110,3 +143,4 @@ class BaseMailSyncMonitor(Greenlet):
 
     def sync(self):
         raise NotImplementedError
+

@@ -1,14 +1,11 @@
 """ ZeroRPC interface to syncing. """
 import socket
 
-from ..models import session_scope
-from ..models.tables import ImapAccount
-from ..log import get_logger
+from inbox.server.log import get_logger
+from inbox.server.models import session_scope
+from inbox.server.models.tables import ImapAccount
+from inbox.server.mailsync.backends.base import register_backends
 
-from .gmail import GmailSyncMonitor
-from .imap import ImapSyncMonitor
-
-monitor_cls_for = {'Gmail': GmailSyncMonitor, 'IMAP': ImapSyncMonitor, 'Yahoo': ImapSyncMonitor }
 
 def notify(account_id, mtype, message):
     """ Pass a message on to the notification dispatcher which deals with
@@ -20,6 +17,8 @@ def notify(account_id, mtype, message):
 
 class SyncService(object):
     def __init__(self):
+        self.monitor_cls_for = register_backends()
+
         self.log = get_logger()
         # { account_id: MailSyncMonitor() }
         self.monitors = dict()
@@ -74,7 +73,7 @@ class SyncService(object):
                                     dict())[folder] = (state, progress)
                             notify(account_id, state, status)
 
-                        monitor = monitor_cls_for[acc.provider](acc.id,
+                        monitor = self.monitor_cls_for[acc.provider](acc.id,
                                 acc.namespace.id, acc.email_address,
                                 acc.provider, update_status)
                         self.monitors[acc.id] = monitor
