@@ -38,7 +38,7 @@ from inbox.server.mailsync.backends.imap import (create_db_objects,
     ImapSyncMonitor)
 
 PROVIDER = 'Gmail'
-SYNC_MONITOR_CLASS = 'GmailSyncMonitor'
+SYNC_MONITOR_CLS = 'GmailSyncMonitor'
 
 
 class GmailSyncMonitor(ImapSyncMonitor):

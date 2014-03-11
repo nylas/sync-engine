@@ -87,7 +87,7 @@ from inbox.server.mailsync.backends.base import (gevent_check_join, verify_db,
 from inbox.server.mailsync.backends.base import BaseMailSyncMonitor
 
 PROVIDER = 'Imap'
-SYNC_MONITOR_CLASS = 'ImapSyncMonitor'
+SYNC_MONITOR_CLS = 'ImapSyncMonitor'
 
 
 class ImapSyncMonitor(BaseMailSyncMonitor):

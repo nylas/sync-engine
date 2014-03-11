@@ -81,7 +81,9 @@ def register_backends():
     for module in modules:
         if getattr(module, 'PROVIDER', None) is not None:
             provider = module.PROVIDER
-            monitor_cls = getattr(module, 'SYNC_MONITOR_CLS', None)
+
+            assert getattr(module, 'SYNC_MONITOR_CLS', None) is not None
+            monitor_cls = getattr(module, module.SYNC_MONITOR_CLS, None)
 
             assert monitor_cls is not None
 

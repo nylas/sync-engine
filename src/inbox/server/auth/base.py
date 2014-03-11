@@ -23,8 +23,6 @@ def register_backends():
     for module in modules:
         if getattr(module, 'PROVIDER', None) is not None:
             provider = module.PROVIDER
-            #auth_cls = getattr(module, '{0}Auth'.format(provider))
-
             AUTH_MOD_FOR[provider] = module
 
 
