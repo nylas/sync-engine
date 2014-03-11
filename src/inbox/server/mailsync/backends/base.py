@@ -26,11 +26,18 @@ def save_folder_names(log, account, folder_names, db_session):
     # NOTE: We don't do anything like canonicalizing to lowercase because
     # different backends may be case-sensitive or not. Code that references
     # saved folder names should canonicalize if needed when doing comparisons.
-    assert 'inbox' in folder_names, "account {0} has no detected Inbox".format(
+    assert 'inbox' in folder_names, 'account {0} has no detected Inbox'.format(
             account.email_address)
     check_folder_name(log, 'inbox', account.inbox_folder_name,
             folder_names['inbox'])
     account.inbox_folder_name = folder_names['inbox']
+
+    assert 'drafts' in folder_names, 'account {0} has no detected drafts'.format(
+            account.email_address)
+    check_folder_name(log, 'drafts', account.drafts_folder_name,
+            folder_names['drafts'])
+    account.drafts_folder_name = folder_names['drafts']
+
     # We allow accounts not to have archive / sent folders; it's up to the mail
     # sync code for the account type to figure out what to do in this
     # situation.

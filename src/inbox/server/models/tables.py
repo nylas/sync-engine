@@ -51,9 +51,12 @@ class ImapAccount(Base):
 
     # folder name mappings for the Inbox datastore API
     inbox_folder_name = Column(String(255), nullable=True)
+    drafts_folder_name = Column(String(255), nullable=True)
+    # NOTE: Spam, Trash might be added later
+
+    # Optional folder name mappings
     archive_folder_name = Column(String(255), nullable=True)
     sent_folder_name = Column(String(255), nullable=True)
-    # NOTE: Spam, Trash might be added later
 
     @property
     def sync_active(self):
