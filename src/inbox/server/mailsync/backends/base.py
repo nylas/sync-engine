@@ -82,7 +82,15 @@ def register_backends():
 
     # Find and import
     backend_dir = os.path.dirname(os.path.realpath(__file__))
+
     modules = load_modules(backend_dir)
+
+    path = lambda x: os.path.join(backend_dir, x)
+    sub_dirs = [path(e) for e in os.listdir(backend_dir) if os.path.isdir(
+        path(e))]
+
+    for d in sub_dirs:
+        modules += load_modules(d)
 
     # Create mapping
     for module in modules:
