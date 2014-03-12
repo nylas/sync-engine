@@ -11,4 +11,7 @@ BaseMailSyncMonitor class.
 
 3. Specify the name of the sync monitor class as the module-level
 SYNC_MONITOR_CLASS variable.
+
+4. Live either in the 'backends/' directory [OR] in an *immediate* subdirectory
+of 'backends/'.
 """

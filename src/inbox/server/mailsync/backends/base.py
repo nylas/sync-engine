@@ -1,4 +1,4 @@
-import os, sys, pkgutil
+import os
 
 import zerorpc
 from gevent import Greenlet, joinall, sleep
@@ -86,10 +86,10 @@ def register_backends():
     modules = load_modules(backend_dir)
 
     path = lambda x: os.path.join(backend_dir, x)
-    sub_dirs = [path(e) for e in os.listdir(backend_dir) if os.path.isdir(
-        path(e))]
+    backend_subdirs = [path(e) for e in os.listdir(backend_dir) if
+        os.path.isdir(path(e))]
 
-    for d in sub_dirs:
+    for d in backend_subdirs:
         modules += load_modules(d)
 
     # Create mapping
@@ -160,4 +160,3 @@ class BaseMailSyncMonitor(Greenlet):
 
     def sync(self):
         raise NotImplementedError
-
