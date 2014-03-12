@@ -94,7 +94,7 @@ def verify_imap_account(db_session, account):
         assert 'access_token' in response
 
         auth_handler = get_handler(account.email_address)
-        account = auth_handler.compose_account(db_session, account.email_address,
+        account = auth_handler.create_account(db_session, account.email_address,
             response)
         log.info('Updated token for imap account {0}'.format(
             account.email_address))

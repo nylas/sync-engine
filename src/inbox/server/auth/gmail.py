@@ -11,9 +11,9 @@ PROVIDER = 'Gmail'
 IMAP_HOST = 'imap.gmail.com'
 
 
-def create_account(db_session, email_address):
+def create_auth_account(db_session, email_address):
     response = auth_account(email_address)
-    account = compose_account(db_session, email_address, response)
+    account = create_account(db_session, email_address, response)
 
     return account
 
@@ -22,7 +22,7 @@ def auth_account(email_address):
     return oauth.oauth(email_address)
 
 
-def compose_account(db_session, email_address, response):
+def create_account(db_session, email_address, response):
     try:
         account = db_session.query(ImapAccount).filter_by(
             email_address=email_address).one()

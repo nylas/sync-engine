@@ -164,7 +164,8 @@ def auth(args):
             account = db_session.query(ImapAccount).filter_by(
                     email_address=email_address).one()
         except NoResultFound:
-            account = auth_handler.create_account(db_session, email_address)
+            account = auth_handler.create_auth_account(db_session,
+                email_address)
 
         try:
             verified_account = auth_handler.verify_account(db_session, account)
