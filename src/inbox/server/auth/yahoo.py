@@ -1,7 +1,7 @@
 import datetime
 import sqlalchemy.orm.exc
 
-from inbox.server import oauth
+from inbox.server.basicauth import password_auth
 from inbox.server.pool import verify_yahoo_account
 from inbox.server.models.tables import User, Namespace, ImapAccount
 
@@ -19,7 +19,7 @@ def create_auth_account(db_session, email_address):
 
 
 def auth_account(email_address):
-    return oauth.password_auth(email_address)
+    return password_auth(email_address)
 
 
 def create_account(db_session, email_address, response):

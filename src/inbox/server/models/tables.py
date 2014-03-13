@@ -27,7 +27,7 @@ from inbox.util.misc import strip_plaintext_quote
 from inbox.util.cryptography import encrypt_aes, decrypt_aes
 from inbox.sqlalchemy.util import Base, JSON, LittleJSON
 from inbox.sqlalchemy.revision import Revision, gen_rev_role
-from inbox.server.oauth import AUTH_TYPES
+from inbox.server.basicauth import AUTH_TYPES
 
 from .roles import JSONSerializable, Blob
 

@@ -1,7 +1,7 @@
 import datetime
 import sqlalchemy.orm.exc
 
-from inbox.server import oauth
+from inbox.server.oauth import oauth
 from inbox.server.pool import verify_gmail_account
 from inbox.server.models.tables import User, Namespace, ImapAccount
 
@@ -19,7 +19,7 @@ def create_auth_account(db_session, email_address):
 
 
 def auth_account(email_address):
-    return oauth.oauth(email_address)
+    return oauth(email_address)
 
 
 def create_account(db_session, email_address, response):

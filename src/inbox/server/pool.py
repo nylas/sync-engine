@@ -15,6 +15,7 @@ log = get_logger()
 
 from inbox.server.models import session_scope
 from inbox.server.models.tables import ImapAccount
+from inbox.server.basicauth import AUTH_TYPES
 from inbox.server import oauth
 from inbox.server.auth.base import get_handler
 
@@ -127,7 +128,7 @@ class IMAPConnectionPool(ConnectionPool):
             account = db_session.query(ImapAccount).get(self.account_id)
 
             # Refresh token if need be, for OAuthed accounts
-            if oauth.AUTH_TYPES.get(account.provider) == 'OAuth':
+            if AUTH_TYPES.get(account.provider) == 'OAuth':
                 account = verify_imap_account(db_session, account)
                 self.o_access_token = account.o_access_token
 
