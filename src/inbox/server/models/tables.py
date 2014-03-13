@@ -199,13 +199,18 @@ class Transaction(Base, Revision):
 HasRevisions = gen_rev_role(Transaction)
 
 class Contact(Base, HasRevisions):
-    """ Inbox-specific sessions. """
+    """Data for a user's contact."""
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
-            nullable=False)
-    imapaccount = relationship("ImapAccount")
+                            nullable=False)
+    imapaccount = relationship('ImapAccount', load_on_pending=True)
 
     g_id = Column(String(64))
-    source = Column("source", Enum("local", "remote"))
+    # We essentially maintain two copies of a user's contacts.
+    # The contacts with source 'remote' give the contact data as it was
+    # immediately after the last sync with the remote provider.
+    # The contacts with source 'local' also contain any subsequent local
+    # modifications to the data.
+    source = Column('source', Enum('local', 'remote'))
 
     email_address = Column(String(254), nullable=True, index=True)
     name = Column(Text)
@@ -228,8 +233,16 @@ class Contact(Base, HasRevisions):
 
     def __repr__(self):
         # XXX this won't work properly with unicode (e.g. in the name)
-        return 'Contact({}, {}, {}, {})'.format(self.g_id, self.name,
-            self.email_address, self.source)
+        return ('Contact({}, {}, {}, {})'
+                .format(self.g_id, self.name, self.email_address, self.source))
+
+    def copy_from(self, src):
+        """ Copy non-null fields from src."""
+        self.imapaccount_id = src.imapaccount_id or self.imapaccount_id
+        self.imapaccount = src.imapaccount or self.imapaccount
+        self.g_id = src.g_id or self.g_id
+        self.name = src.name or self.name
+        self.email_address = src.email_address or self.email_address
 
 class Message(JSONSerializable, Base, HasRevisions):
     # XXX clean this up a lot - make a better constructor, maybe taking

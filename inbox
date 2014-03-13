@@ -34,9 +34,9 @@ def start(args=None):
     threads.append(make_zerorpc(SyncService, sync_srv_loc))
 
     # Start ZeroRPC contacts sync service
-    from inbox.server.rolodex import ContactSync
+    from inbox.server.rolodex import ContactSyncService
     contacts_srv_loc = config.get('ROLODEX_SERVER_LOC', None)
-    threads.append(make_zerorpc(ContactSync, contacts_srv_loc))
+    threads.append(make_zerorpc(ContactSyncService, contacts_srv_loc))
 
     # start ZeroRPC search server service
     from inbox.server.search import SearchService
