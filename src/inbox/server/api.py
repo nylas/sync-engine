@@ -1,4 +1,3 @@
-import os
 import json
 
 from functools import wraps
@@ -10,6 +9,7 @@ from . import postel
 from . import actions
 from .config import config
 from .models import session_scope
+from .models.imapaccount import total_stored_data, total_stored_messages
 from .models.tables import Message, SharedFolder, User, ImapAccount, Thread
 from .models.namespace import (threads_for_folder, archive_thread, move_thread,
         copy_thread, delete_thread)
@@ -56,6 +56,7 @@ def jsonify(fn):
 class API(object):
 
     _zmq_search = None
+    _sync = None
     @property
     def z_search(self):
         """ Proxy function for the ZeroMQ search service. """
@@ -83,14 +84,19 @@ class API(object):
             }
         """
         if not self._sync:
-            self._sync = zerorpc.Client(os.environ.get('CRISPIN_SERVER_LOC', None))
+            self._sync = zerorpc.Client(config.get('CRISPIN_SERVER_LOC', None))
         status = self._sync.status()
         user_ids = status.keys()
         with session_scope() as db_session:
             users = db_session.query(User).filter(User.id.in_(user_ids))
             for user in users:
-                status[user.id]['stored_data'] = user.total_stored_data()
-                status[user.id]['stored_messages'] = user.total_stored_messages()
+                status[user.id]['stored_data'] = 0
+                status[user.id]['stored_messages'] = 0
+                for account in user.imapaccounts:
+                    status[user.id]['stored_data'] += \
+                        total_stored_data(account.id, db_session)
+                    status[user.id]['stored_messages'] += \
+                        total_stored_messages(account.id, db_session)
             return status
 
     @namespace_auth

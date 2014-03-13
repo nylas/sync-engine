@@ -18,15 +18,15 @@ def total_stored_data(account_id, session):
         account's IMAP folders
     """
     subq = session.query(Block) \
-            .join(Block.message, Message.imapuids) \
+            .join(Block.message, Message.imapuid) \
             .filter(ImapUid.imapaccount_id==account_id) \
             .group_by(Message.id, Block.id)
-    return session.query(func.sum(subq.subquery().columns.size)).scalar()
+    return int(session.query(func.sum(subq.subquery().columns.size)).scalar())
 
 def total_stored_messages(account_id, session):
     """ Computes the number of emails in your account's IMAP folders """
     return session.query(Message) \
-            .join(Message.imapuids) \
+            .join(Message.imapuid) \
             .filter(ImapUid.imapaccount_id==account_id) \
             .group_by(Message.id).count()
 
