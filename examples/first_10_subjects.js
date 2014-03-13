@@ -1,4 +1,4 @@
-#!/bin/env node
+#!/usr/bin/env node
 
 var zerorpc = require("zerorpc");
 var client = new zerorpc.Client();
