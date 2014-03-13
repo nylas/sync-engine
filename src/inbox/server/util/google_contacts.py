@@ -11,7 +11,7 @@ import gdata.contacts.client
 from ..models import session_scope
 from ..models.tables import Contact, ImapAccount
 from ..oauth import INSTALLED_CLIENT_ID, INSTALLED_CLIENT_SECRET, OAUTH_SCOPE
-from ..session import verify_imap_account
+from ..pool import verify_imap_account
 from ..log import configure_logging
 
 SOURCE_APP_NAME = 'InboxApp Contact Sync Engine'
