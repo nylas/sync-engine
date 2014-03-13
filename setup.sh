@@ -49,8 +49,5 @@ sleep 10
 
 python tools/create_db.py
 
-# Default config file
-cp config-sample.cfg config.cfg
-
 apt-get -y purge build-essential
 apt-get -y autoremove

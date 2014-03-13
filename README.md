@@ -50,7 +50,9 @@ Here's how to set up a development environment:
 
 8. `sudo ./setup.sh` to install dependencies and create databases.
 
-9. `./inbox debug`
+9. `cp config-sample.cfg config.cfg` to setup a default configuration file.
+
+10. `./inbox debug`
 
 And _voilà_! Auth an account via the commandline and start syncing:
 

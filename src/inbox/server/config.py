@@ -10,6 +10,7 @@ try:
 except IOError:
     server_type = 'development'
 
+
 def is_prod():
     return server_type == 'production'
 
@@ -20,19 +21,28 @@ def transform_bools(v):
     mapping = dict(true=True, false=False, yes=True, no=False)
     return mapping[v] if v in mapping else v
 
+
 def load_config(filename='config.cfg'):
+    if not os.path.isfile(filename):
+        print >>sys.stderr, ("Configuration file {0} does not exist. Either "
+            "create it or specify a different file (./inbox --config "
+            "path/to/your/config.cfg).".format(filename))
+        sys.exit(1)
+
     global config
     try:
-        parser=SafeConfigParser()
+        parser = SafeConfigParser()
         parser.read([filename])
-        config.update(dict((k.upper(), transform_bools(v))
-            for k, v in parser.items('inboxserver')))
+        config.update({k.upper(): transform_bools(v) for k, v in
+                       parser.items('inboxserver')})
         log.info('Loaded configuration from {0}'.format(filename))
 
         # This is pretty hacky...
-        config['MSG_PARTS_DIRECTORY'] = os.path.expanduser(config['MSG_PARTS_DIRECTORY'])
+        config['MSG_PARTS_DIRECTORY'] = os.path.expanduser(
+            config['MSG_PARTS_DIRECTORY'])
         config['LOGDIR'] = os.path.expanduser(config['LOGDIR'])
 
     except NoSectionError:
-        print >>sys.stderr, "Couldn't load configuration from {0}".format(filename)
+        print >>sys.stderr, "Couldn't load configuration from {0}". \
+            format(filename)
         sys.exit(1)
