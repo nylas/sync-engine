@@ -35,3 +35,6 @@ imapclient==0.10.2
 rq-dashboard==0.3.3
 alembic==0.6.3
 iconv==1.0
+pep8==1.4.6
+pyflakes==0.7.3
+pylint==1.1.0
