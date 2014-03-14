@@ -144,10 +144,15 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
             new_part.size = len(data_to_write)
             new_part.data_sha256 = sha256(data_to_write).hexdigest()
             new_msg.parts.append(new_part)
-    except (mime.DecodingError, RuntimeError):
+    except mime.DecodingError:
         # occasionally iconv will fail via maximum recursion depth
         log_decode_error(account.id, folder_name, mid, raw_message)
         log.error("DecodeError encountered, unparseable message logged to {0}" \
+                .format(get_errfilename(account.id, folder_name, mid)))
+        return
+    except RuntimeError:
+        log_decode_error(account.id, folder_name, mid, raw_message)
+        log.error("RuntimeError encountered, probably due to iconv. Unparseable message logged to {0}" \
                 .format(get_errfilename(account.id, folder_name, mid)))
         return
     new_msg.calculate_sanitized_body()
