@@ -11,7 +11,7 @@ node_modules
 *.so
 /tests/log
 /cache
-
+/src/flanker
 # virtualenv
 /include
 /local
