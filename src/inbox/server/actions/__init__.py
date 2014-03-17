@@ -36,7 +36,9 @@ def get_queue():
     # The queue label is set via config to allow multiple distinct Inbox
     # instances to hit the same Redis server without interfering with each
     # other.
-    return Queue(config.get('ACTION_QUEUE_LABEL', None), connection=Redis())
+    label = config.get('ACTION_QUEUE_LABEL', None)
+    assert label, "Must set ACTION_QUEUE_LABEL in config.cfg"
+    return Queue(label, connection=Redis())
 
 def get_archive_fn(imapaccount):
     return mod_for[imapaccount.provider].archive
