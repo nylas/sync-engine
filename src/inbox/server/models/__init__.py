@@ -14,17 +14,33 @@ from inbox.sqlalchemy.revision import versioned_session
 from inbox.sqlalchemy.util import ForceStrictMode
 
 def db_uri():
-    uri_template = 'mysql://{username}:{password}@{host}:{port}/{database}?charset=utf8mb4'
 
     config_prefix = 'RDS' if is_prod() else 'MYSQL'
 
+    username = config.get('{0}_USER'.format(config_prefix), None)
+    assert username, "Must have database username to connect!"
+
+    password = config.get('{0}_PASSWORD'.format(config_prefix), None)
+    assert password, "Must have database password to connect!"
+
+    host = config.get('{0}_HOSTNAME'.format(config_prefix), None)
+    assert host, "Must have database to connect!"
+
+    port = config.get('{0}_PORT'.format(config_prefix), None)
+    assert port, "Must have database port to connect!"
+
+    database = config.get('{0}_DATABASE'.format(config_prefix), None)
+    assert host, "Must have database name to connect!"
+
+    uri_template = 'mysql://{username}:{password}@{host}:{port}/{database}?charset=utf8mb4'
+
     return uri_template.format(
-        username = config.get('_'.join([config_prefix, 'USER'])),
+        username=username,
         # http://stackoverflow.com/questions/15728290/sqlalchemy-valueerror-for-slash-in-password-for-create-engine (also applicable to '+' sign)
-        password = urlquote(config.get('_'.join([config_prefix, 'PASSWORD']))),
-        host = config.get('_'.join([config_prefix, 'HOSTNAME'])),
-        port = config.get('_'.join([config_prefix, 'PORT'])),
-        database = config.get('_'.join([config_prefix, 'DATABASE'])))
+        password=urlquote(password),
+        host=host,
+        port=port,
+        database=database)
 
 engine = create_engine(db_uri(), listeners=[ForceStrictMode()], echo=False)
 

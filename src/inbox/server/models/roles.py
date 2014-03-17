@@ -8,7 +8,7 @@ from ..config import config
 from ..log import get_logger
 log = get_logger()
 
-STORE_MSG_ON_S3 = config['STORE_MESSAGES_ON_S3']
+STORE_MSG_ON_S3 = config.get('STORE_MESSAGES_ON_S3', None)
 
 if STORE_MSG_ON_S3:
     from boto.s3.connection import S3Connection
