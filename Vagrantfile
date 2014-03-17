@@ -22,4 +22,5 @@ end
 
 Vagrant.configure("2") do |config|
   config.vm.network "private_network", ip: "192.168.10.200"
+  config.vm.synced_folder "../inbox-eas", "/vagrant-eas"
 end

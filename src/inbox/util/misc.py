@@ -67,11 +67,23 @@ def timed(fn):
 
 
 # From: http://stackoverflow.com/a/8556471
-def load_modules(dirname):
-    modules = []
+def load_modules(base_module):
+    """ Imports all modules underneath `base_module` in the module tree.
 
-    for importer, package_name, _ in pkgutil.iter_modules([dirname]):
-        full_package_name = os.path.join(dirname, package_name)
+    Note that if submodules are located in different directory trees, you
+    need to use `pkgutil.extend_path` to make all the folders appear in
+    the module's `__path__`.
+
+    Returns
+    -------
+    list
+        The imported modules.
+    """
+    modules = []
+    dirnames = base_module.__path__
+
+    for importer, package_name, _ in pkgutil.iter_modules(dirnames):
+        full_package_name = os.path.join(importer.path, package_name)
 
         if full_package_name not in sys.modules:
             module = importer.find_module(package_name).load_module(

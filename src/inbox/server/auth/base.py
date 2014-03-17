@@ -1,9 +1,11 @@
-import os, sys
+import sys
 
-from inbox.util.url import provider_from_address
+from inbox.util.url import provider_from_address, NotSupportedError
 from inbox.util.misc import load_modules
 from inbox.server.log import get_logger
 log = get_logger()
+
+import inbox.server.auth
 
 AUTH_MOD_FOR = {}
 
@@ -16,8 +18,7 @@ def register_backends():
     Creates a mapping of provider:auth_cls for each backend found.
     """
     # Find and import
-    backend_dir = os.path.dirname(os.path.realpath(__file__))
-    modules = load_modules(backend_dir)
+    modules = load_modules(inbox.server.auth)
 
     # Create mapping
     for module in modules:

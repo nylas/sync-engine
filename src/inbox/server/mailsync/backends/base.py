@@ -1,5 +1,3 @@
-import os
-
 import zerorpc
 from gevent import Greenlet, joinall, sleep
 from gevent.queue import Queue, Empty
@@ -8,6 +6,8 @@ from inbox.util.misc import load_modules
 from inbox.server.config import config
 from inbox.server.log import configure_sync_logging
 from inbox.server.mailsync.exc import SyncException
+
+import inbox.server.mailsync.backends
 
 
 def verify_db(crispin_client, db_session):
@@ -81,16 +81,7 @@ def register_backends():
     monitor_cls_for = {}
 
     # Find and import
-    backend_dir = os.path.dirname(os.path.realpath(__file__))
-
-    modules = load_modules(backend_dir)
-
-    path = lambda x: os.path.join(backend_dir, x)
-    backend_subdirs = [path(e) for e in os.listdir(backend_dir) if
-        os.path.isdir(path(e))]
-
-    for d in backend_subdirs:
-        modules += load_modules(d)
+    modules = load_modules(inbox.server.mailsync.backends)
 
     # Create mapping
     for module in modules:
