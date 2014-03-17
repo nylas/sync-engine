@@ -4,14 +4,35 @@ from sqlalchemy.orm import sessionmaker
 from urllib import quote_plus as urlquote
 from contextlib import contextmanager
 
-from ..config import config, is_prod
-from ..log import get_logger
+from inbox.util.misc import load_modules
+from inbox.server.config import config, is_prod
+from inbox.server.log import get_logger
 log = get_logger()
-
-from .tables import Base, Transaction, HasRevisions
+import inbox.server.models.tables
+from inbox.server.models.tables.tables import Base, Transaction, HasRevisions
 
 from inbox.sqlalchemy.revision import versioned_session
 from inbox.sqlalchemy.util import ForceStrictMode
+
+
+def register_backends():
+    """
+    Finds the auth modules for the different providers
+    (in the backends directory) and imports them.
+
+    Creates a mapping of provider:auth_cls for each backend found.
+    """
+    # Find and import
+    table_mod_for = {}
+    modules = load_modules(inbox.server.models.tables)
+
+    # Create mapping
+    for module in modules:
+        if getattr(module, 'PROVIDER', None) is not None:
+            provider = module.PROVIDER
+            table_mod_for[provider] = module
+
+    return table_mod_for
 
 def db_uri():
 
@@ -46,6 +67,7 @@ engine = create_engine(db_uri(), listeners=[ForceStrictMode()], echo=False)
 
 def init_db():
     """ Make the tables. """
+    register_backends()
     Base.metadata.create_all(engine)
 
 Session = sessionmaker(bind=engine)

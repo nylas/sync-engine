@@ -10,7 +10,7 @@ from . import actions
 from .config import config
 from .models import session_scope
 from .models.imapaccount import total_stored_data, total_stored_messages
-from .models.tables import Message, SharedFolder, User, ImapAccount, Thread
+from .models.tables.tables import Message, SharedFolder, User, Account, Thread
 from .models.namespace import (threads_for_folder, archive_thread, move_thread,
         copy_thread, delete_thread)
 
@@ -30,7 +30,7 @@ def namespace_auth(fn):
         with session_scope() as db_session:
             self.user_id = user_id
             self.namespace_id = namespace_id
-            user = db_session.query(User).filter_by(id=user_id).join(ImapAccount).one()
+            user = db_session.query(User).filter_by(id=user_id).join(Account).one()
             for account in user.imapaccounts:
                 if account.namespace.id == namespace_id:
                     self.namespace = account.namespace
@@ -120,7 +120,7 @@ class API(object):
         nses = {'private': [], 'shared': [] }
 
         with session_scope() as db_session:
-            user = db_session.query(User).join(ImapAccount)\
+            user = db_session.query(User).join(Account)\
                     .filter_by(id=user_id).one()
 
             for account in user.imapaccounts:

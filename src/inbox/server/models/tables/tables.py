@@ -2,11 +2,12 @@ import os
 import sys
 import json
 import traceback
+import uuid
 
 from itertools import chain
-
-from sqlalchemy import Column, Integer, BigInteger, String, DateTime, Boolean
-from sqlalchemy import ForeignKey, Enum, Text, Index, func, event
+from hashlib import sha256
+from sqlalchemy import (Column, Integer, BigInteger, String, DateTime, Boolean,
+    Enum, ForeignKey, Text, Index, func, event)
 from sqlalchemy.orm import (reconstructor, relationship, backref, deferred,
                             validates)
 from sqlalchemy.schema import UniqueConstraint
@@ -15,34 +16,32 @@ from sqlalchemy.types import BLOB
 
 from bs4 import BeautifulSoup, Doctype, Comment
 
-from ..log import get_logger
+from inbox.server.log import get_logger
 log = get_logger()
 
-from ..config import config
-KEY_SIZE = int(config.get('KEY_SIZE', 128))
-KEY_DIR = config.get('KEY_DIR', None)
+from inbox.server.config import config
 
 from inbox.util.file import Lock, mkdirp
 from inbox.util.html import plaintext2html
-from inbox.util.misc import strip_plaintext_quote
+from inbox.util.misc import strip_plaintext_quote, load_modules
 from inbox.util.cryptography import encrypt_aes, decrypt_aes
-from inbox.sqlalchemy.util import Base, JSON, LittleJSON
+from inbox.sqlalchemy.util import Base, JSON
 from inbox.sqlalchemy.revision import Revision, gen_rev_role
 from inbox.server.basicauth import AUTH_TYPES
 
-from .roles import JSONSerializable, Blob
+from inbox.server.models.roles import JSONSerializable, Blob
 
 # global
-class ImapAccount(Base):
+class Account(Base):
     # user_id refers to Inbox's user id
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'),
             nullable=False)
-    user = relationship("User", backref="imapaccounts")
+    user = relationship('User', backref='imapaccounts')
 
     # http://stackoverflow.com/questions/386294/what-is-the-maximum-length-of-a-valid-email-address
     email_address = Column(String(254), nullable=True, index=True)
-    provider = Column(Enum('Gmail', 'Outlook', 'Yahoo', 'Inbox'), nullable=False)
-    imap_host = Column(String(512))
+    provider = Column(Enum('Gmail', 'Outlook', 'Yahoo', 'EAS', 'Inbox'),
+        nullable=False)
 
     # local flags & data
     save_raw_messages = Column(Boolean, default=True)
@@ -50,7 +49,7 @@ class ImapAccount(Base):
     sync_host = Column(String(255), nullable=True)
     last_synced_contacts = Column(DateTime, nullable=True)
 
-    # folder name mappings for the Inbox datastore API
+    # 'Required' folder name mappings for the Inbox datastore API
     inbox_folder_name = Column(String(255), nullable=True)
     drafts_folder_name = Column(String(255), nullable=True)
     # NOTE: Spam, Trash might be added later
@@ -107,8 +106,7 @@ class ImapAccount(Base):
     @property
     def password(self):
         if self.password_aes is not None:
-            keyfile = os.path.join(KEY_DIR, '{0}'.format(self.key))
-            with open(keyfile, 'r') as f:
+            with open(self._keyfile, 'r') as f:
                 key = f.read()
 
             key = self.key + key
@@ -119,15 +117,29 @@ class ImapAccount(Base):
         assert AUTH_TYPES.get(self.provider) == 'Password'
         assert value != None
 
-        mkdirp(KEY_DIR)
-
-        self.password_aes, key = encrypt_aes(value, KEY_SIZE)
-
+        key_size = int(config.get('KEY_SIZE', 128))
+        self.password_aes, key = encrypt_aes(value, key_size)
         self.key = key[:len(key)/2]
-        keyfile = os.path.join(KEY_DIR, '{0}'.format(self.key))
 
-        with open(keyfile, 'w+') as f:
+        with open(self._keyfile, 'w+') as f:
             f.write(key[len(key)/2:])
+
+
+    @property
+    def _keyfile(self, create_dir=True):
+        assert self.key
+
+        key_dir = config.get('KEY_DIR', None)
+        assert key_dir
+        if create_dir:
+            mkdirp(key_dir)
+        key_filename = '{0}'.format(sha256(self.key).hexdigest())
+        return os.path.join(key_dir, key_filename)
+
+    type = Column(String(16))
+    __mapper_args__ = {'polymorphic_on': type}
+
+    __table_args__ = {'useexisting': True}
 
 class UserSession(Base):
     """ Inbox-specific sessions. """
@@ -137,17 +149,21 @@ class UserSession(Base):
             nullable=False)
     user = relationship('User', backref='sessions')
 
+    __table_args__ = {'useexisting': True}
+
+
 class Namespace(Base):
     """ A way to do grouping / permissions, basically. """
     # NOTE: only root namespaces have IMAP accounts
-    imapaccount_id = Column(Integer,
-            ForeignKey('imapaccount.id', ondelete='CASCADE'), nullable=True)
+    account_id = Column(Integer,
+            ForeignKey('account.id', ondelete='CASCADE'), nullable=True)
     # really the root_namespace
-    imapaccount = relationship('ImapAccount',
+    account = relationship('Account',
             backref=backref('namespace', uselist=False))
 
     # invariant: imapaccount is non-null iff type is root
-    type = Column(Enum('root', 'shared_folder'), nullable=False, default='root')
+    type = Column(Enum('root', 'shared_folder'), nullable=False,
+        default='root')
 
     @property
     def email_address(self):
@@ -156,6 +172,9 @@ class Namespace(Base):
 
     def cereal(self):
         return dict(id=self.id, type=self.type)
+
+    __table_args__ = {'useexisting': True}
+
 
 class SharedFolder(Base):
     # Don't delete shared folders if the user that created them is deleted.
@@ -173,10 +192,16 @@ class SharedFolder(Base):
     def cereal(self):
         return dict(id=self.id, name=self.display_name)
 
+    __table_args__ = {'useexisting': True}
+
+
 class User(Base):
     name = Column(String(255))
 
+    __table_args__ = {'useexisting': True}
+
 # sharded (by namespace)
+
 
 class Transaction(Base, Revision):
     """ Transactional log to enable client syncing. """
@@ -197,6 +222,8 @@ class Transaction(Base, Revision):
             import pdb; pdb.set_trace()
             raise
 
+    __table_args__ = {'useexisting': True}
+
 HasRevisions = gen_rev_role(Transaction)
 
 
@@ -216,18 +243,13 @@ class SearchToken(Base):
 
 
 class Contact(Base, HasRevisions):
-    """Data for a user's contact."""
-    imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
-                            nullable=False)
-    imapaccount = relationship('ImapAccount', load_on_pending=True)
+    """ Inbox-specific sessions. """
+    account_id = Column(ForeignKey('account.id', ondelete='CASCADE'),
+            nullable=False)
+    account = relationship("Account")
 
     g_id = Column(String(64))
-    # We essentially maintain two copies of a user's contacts.
-    # The contacts with source 'remote' give the contact data as it was
-    # immediately after the last sync with the remote provider.
-    # The contacts with source 'local' also contain any subsequent local
-    # modifications to the data.
-    source = Column('source', Enum('local', 'remote'))
+    source = Column("source", Enum("local", "remote"))
 
     email_address = Column(String(254), nullable=True, index=True)
     name = Column(Text)
@@ -237,7 +259,8 @@ class Contact(Base, HasRevisions):
                         onupdate=func.current_timestamp())
     created_at = Column(DateTime, default=func.now())
 
-    __table_args__ = (UniqueConstraint('g_id', 'source', 'imapaccount_id'),)
+    __table_args__ = (UniqueConstraint('g_id', 'source', 'account_id'),)
+    __table_args__ = {'useexisting': True}
 
     @property
     def namespace(self):
@@ -254,16 +277,9 @@ class Contact(Base, HasRevisions):
 
     def __repr__(self):
         # XXX this won't work properly with unicode (e.g. in the name)
-        return ('Contact({}, {}, {}, {})'
-                .format(self.g_id, self.name, self.email_address, self.source))
+        return 'Contact({}, {}, {}, {})'.format(self.g_id, self.name,
+            self.email_address, self.source)
 
-    def copy_from(self, src):
-        """ Copy non-null fields from src."""
-        self.imapaccount_id = src.imapaccount_id or self.imapaccount_id
-        self.imapaccount = src.imapaccount or self.imapaccount
-        self.g_id = src.g_id or self.g_id
-        self.name = src.name or self.name
-        self.email_address = src.email_address or self.email_address
 
     @validates('name', include_backrefs=False)
     def tokenize_name(self, key, name):
@@ -357,8 +373,10 @@ class Message(JSONSerializable, Base, HasRevisions):
                 for container in soup.findAll('div', 'gmail_extra'):
                     if container.contents is not None:
                         for tag in reversed(container.contents):
-                            if not hasattr(tag, 'name') or tag.name != 'br': break
-                            else: tag.extract()
+                            if not hasattr(tag, 'name') or tag.name != 'br':
+                                break
+                            else:
+                                tag.extract()
                     if container.contents is None:
                         # we emptied it!
                         container.extract()
@@ -367,12 +385,16 @@ class Message(JSONSerializable, Base, HasRevisions):
                 for container in soup.findAll('p'):
                     if container.contents is not None:
                         for tag in reversed(container.contents):
-                            if not hasattr(tag, 'name') or tag.name != 'br': break
-                            else: tag.extract()
+                            if not hasattr(tag, 'name') or tag.name != 'br':
+                                break
+                            else:
+                                tag.extract()
 
                 # Misc other crap.
-                dtd = [item for item in soup.contents if isinstance(item, Doctype)]
-                comments = soup.findAll(text=lambda text:isinstance(text, Comment))
+                dtd = [item for item in soup.contents if isinstance(
+                    item, Doctype)]
+                comments = soup.findAll(text=lambda text:isinstance(
+                    text, Comment))
                 for tag in chain(dtd, comments):
                     tag.extract()
                 self.sanitized_body = unicode(soup)
@@ -397,7 +419,8 @@ class Message(JSONSerializable, Base, HasRevisions):
                     # Note that python doesn't support tail call recursion optimizations
                     # http://neopythonic.blogspot.com/2009/04/tail-recursion-elimination.html
                     full_traceback = 'Error in BeautifulSoup.' + \
-                                     'System recursion limit: {0}'.format(sys.getrecursionlimit()) + \
+                                     'System recursion limit: {0}'.format(
+                                        sys.getrecursionlimit()) + \
                                      '\n\n\n' + \
                                      full_traceback
 
@@ -413,8 +436,9 @@ class Message(JSONSerializable, Base, HasRevisions):
                     with open("{0}_data".format(errfile), 'wb') as fh:
                         fh.write(html_part.encode("utf-8"))
 
-                    log.error("BeautifulSoup parsing error. Data logged to {0}_data and {0}_traceback" \
-                            .format(errfile))
+                    log.error("BeautifulSoup parsing error."\
+                        "Data logged to {0}_data and {0}_traceback".format(
+                            errfile))
                     self.decode_error = True
 
                     # Not sanitized, but will still work
@@ -422,7 +446,8 @@ class Message(JSONSerializable, Base, HasRevisions):
                     self.snippet = soup.get_text(' ')[:191]
 
                 else:
-                    log.error("Unknown BeautifulSoup exception: {0}".format(exc))
+                    log.error("Unknown BeautifulSoup exception: {0}".format(
+                        exc))
                     raise exc
 
 
@@ -506,6 +531,8 @@ class Message(JSONSerializable, Base, HasRevisions):
 
         return json_headers
 
+    __table_args__ = {'useexisting': True}
+
 # These are the top 15 most common Content-Type headers
 # in my personal mail archive. --mg
 common_content_types = ['text/plain',
@@ -523,6 +550,7 @@ common_content_types = ['text/plain',
                         'application/pkcs7-signature',
                         'message/rfc822',
                         'image/jpg']
+
 
 class Block(JSONSerializable, Blob, Base, HasRevisions):
     """ Metadata for message parts stored in s3 """
@@ -545,7 +573,9 @@ class Block(JSONSerializable, Blob, Base, HasRevisions):
 
     # TODO: create a constructor that allows the 'content_type' keyword
 
-    __table_args__ = (UniqueConstraint('message_id', 'walk_index', 'data_sha256'),)
+    __table_args__ = (UniqueConstraint('message_id', 'walk_index',
+        'data_sha256'),)
+    __table_args__ = {'useexisting': True}
 
     def __init__(self, *args, **kwargs):
         self.content_type = None
@@ -576,6 +606,7 @@ class Block(JSONSerializable, Blob, Base, HasRevisions):
     def namespace(self):
         return self.message.namespace
 
+
 @event.listens_for(Block, 'before_insert', propagate = True)
 def serialize_before_insert(mapper, connection, target):
     if target.content_type in common_content_types:
@@ -584,6 +615,7 @@ def serialize_before_insert(mapper, connection, target):
     else:
         target._content_type_common = None
         target._content_type_other = target.content_type
+
 
 class FolderItem(JSONSerializable, Base, HasRevisions):
     """ Maps threads to folders.
@@ -602,97 +634,8 @@ class FolderItem(JSONSerializable, Base, HasRevisions):
         return self.thread.namespace
 
     __table_args__ = (UniqueConstraint('folder_name', 'thread_id'),)
+    __table_args__ = {'useexisting': True}
 
-class ImapUid(JSONSerializable, Base):
-    """ This maps UIDs to the IMAP folder they belong to, and extra metadata
-        such as flags.
-
-        This table is used solely for bookkeeping by the IMAP mail sync
-        backends.
-    """
-    imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
-            nullable=False)
-    imapaccount = relationship("ImapAccount")
-    # If we delete this uid, we also want the associated message to be deleted.
-    # Buf if we delete the message, we _don't_ always want to delete the
-    # associated uid, we want to be explicit about that (this makes the
-    # local data/remote data synchronization work properly). this is why we
-    # do not specify the "delete-orphan" cascade option here.
-    message_id = Column(Integer, ForeignKey('message.id'), nullable=True)
-    message = relationship('Message', cascade="all",
-            backref=backref('imapuid', uselist=False))
-    # nullable to allow the local data store to delete messages without
-    # deleting the associated uid; we want to leave the uid entry there until
-    # we notice the same delete from the backend, which helps our accounting
-    # of what is going on. otherwise, it wouldn't make sense to allow these
-    # entries to decouple.
-    msg_uid = Column(Integer, nullable=True)
-
-    # maximum Gmail label length is 225 (tested empirically), but constraining
-    # folder_name uniquely requires max length of 767 bytes under utf8mb4
-    # http://mathiasbynens.be/notes/mysql-utf8mb4
-    folder_name = Column(String(191))
-
-    ### Flags ###
-    # Message has not completed composition (marked as a draft).
-    is_draft = Column(Boolean, default=False, nullable=False)
-    # Message has been read
-    is_seen = Column(Boolean, default=False, nullable=False)
-    # Message is "flagged" for urgent/special attention
-    is_flagged = Column(Boolean, default=False, nullable=False)
-    # session is the first session to have been notified about this message
-    is_recent = Column(Boolean, default=False, nullable=False)
-    # Message has been answered
-    is_answered = Column(Boolean, default=False, nullable=False)
-    # things like: ['$Forwarded', 'nonjunk', 'Junk']
-    extra_flags = Column(LittleJSON, nullable=False)
-
-    def update_flags(self, new_flags, x_gm_labels=None):
-        new_flags = set(new_flags)
-        col_for_flag = {
-                u'\\Draft': 'is_draft',
-                u'\\Seen': 'is_seen',
-                u'\\Recent': 'is_recent',
-                u'\\Answered': 'is_answered',
-                u'\\Flagged': 'is_flagged',
-                }
-        for flag, col in col_for_flag.iteritems():
-            setattr(self, col, flag in new_flags)
-            new_flags.discard(flag)
-        # Gmail doesn't use the \Draft flag. Go figure.
-        if x_gm_labels is not None and '\\Draft' in x_gm_labels:
-            self.is_draft = True
-        self.extra_flags = sorted(new_flags)
-
-    @property
-    def namespace(self):
-        return self.imapaccount.namespace
-
-    __table_args__ = (UniqueConstraint('folder_name', 'msg_uid', 'imapaccount_id',),)
-
-# make pulling up all messages in a given folder fast
-Index('imapuid_imapaccount_id_folder_name', ImapUid.imapaccount_id,
-        ImapUid.folder_name)
-
-class UIDValidity(JSONSerializable, Base):
-    """ UIDValidity has a per-folder value. If it changes, we need to
-        re-map g_msgid to UID for that folder.
-    """
-    imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
-            nullable=False)
-    imapaccount = relationship("ImapAccount")
-    # maximum Gmail label length is 225 (tested empirically), but constraining
-    # folder_name uniquely requires max length of 767 bytes under utf8mb4
-    # http://mathiasbynens.be/notes/mysql-utf8mb4
-    folder_name = Column(String(191), nullable=False)
-    uid_validity = Column(Integer, nullable=False)
-    # invariant: the local datastore for this folder has always incorporated
-    # remote changes up to _at least_ this modseq (we can't guarantee that
-    # we haven't incorporated later changes too, since IMAP doesn't provide
-    # a true transactional interface)
-    highestmodseq = Column(Integer, nullable=False)
-
-    __table_args__ = (UniqueConstraint('imapaccount_id', 'folder_name'),)
 
 class Thread(JSONSerializable, Base):
     """ Threads are a first-class object in Inbox. This thread aggregates
@@ -716,14 +659,6 @@ class Thread(JSONSerializable, Base):
             nullable=False, index=True)
     namespace = relationship('Namespace', backref='threads')
 
-    # only on messages from Gmail
-    # NOTE: The same message sent to multiple users will be given a
-    # different g_thrid for each user. We don't know yet if g_thrids are
-    # unique globally.
-
-    # Gmail documents X-GM-THRID as 64-bit unsigned integer
-    g_thrid = Column(BigInteger, nullable=True, index=True)
-
     mailing_list_headers = Column(JSON, nullable=True)
 
     def update_from_message(self, message):
@@ -737,30 +672,6 @@ class Thread(JSONSerializable, Base):
         if len(message.mailing_list_headers) > len(self.mailing_list_headers):
             self.mailing_list_headers = message.mailing_list_headers
         return self
-
-    @classmethod
-    def from_message(cls, session, namespace, message):
-        """
-        Threads are broken solely on Gmail's X-GM-THRID for now. (Subjects
-        are not taken into account, even if they change.)
-
-        Returns the updated or new thread, and adds the message to the thread.
-        Doesn't commit.
-        """
-        try:
-            thread = session.query(cls).filter_by(g_thrid=message.g_thrid,
-                    namespace=namespace).one()
-            return thread.update_from_message(message)
-        except NoResultFound:
-            pass
-        except MultipleResultsFound:
-            log.info("Duplicate thread rows for thread {0}".format(message.g_thrid))
-            raise
-        thread = cls(subject=message.subject, g_thrid=message.g_thrid,
-                recentdate=message.received_date, namespace=namespace,
-                subjectdate=message.received_date,
-                mailing_list_headers=message.mailing_list_headers)
-        return thread
 
     @property
     def mailing_list_info(self):
@@ -781,10 +692,16 @@ class Thread(JSONSerializable, Base):
         d['recentdate'] = self.recentdate
         return d
 
+    type = Column(String(16))
+    __mapper_args__ = {'polymorphic_on': type}
+
+    __table_args__ = {'useexisting': True}
+
+
 class FolderSync(Base):
-    imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
+    account_id = Column(ForeignKey('account.id', ondelete='CASCADE'),
             nullable=False)
-    imapaccount = relationship('ImapAccount', backref='foldersyncs')
+    account = relationship('Account', backref='foldersyncs')
     # maximum Gmail label length is 225 (tested empirically), but constraining
     # folder_name uniquely requires max length of 767 bytes under utf8mb4
     # http://mathiasbynens.be/notes/mysql-utf8mb4
@@ -795,4 +712,9 @@ class FolderSync(Base):
                         'poll', 'poll uidinvalid', 'finish'),
                         default='initial', nullable=False)
 
-    __table_args__ = (UniqueConstraint('imapaccount_id', 'folder_name'),)
+    __table_args__ = (UniqueConstraint('account_id', 'folder_name'),)
+
+    type = Column(String(16))
+    __mapper_args__ = {'polymorphic_on': type}
+
+    __table_args__ = {'useexisting': True}

@@ -27,7 +27,8 @@ from geventconnpool import retry
 from inbox.util.itert import chunk, partition
 from inbox.util.cache import set_cache, get_cache, rm_cache
 from inbox.server.models import imapaccount as account
-from inbox.server.models.tables import ImapAccount, Namespace, ImapUid, Message
+from inbox.server.models.tables.tables import Namespace, Message
+from inbox.server.models.tables.imap import ImapAccount, ImapUid
 from inbox.server.mailsync.backends.imap import (uidvalidity_cb,
     new_or_updated, remove_deleted_uids)
 from inbox.server.mailsync.backends.imap import (chunked_uid_download,

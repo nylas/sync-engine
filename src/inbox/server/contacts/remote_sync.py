@@ -57,7 +57,7 @@ def poll(account_id, provider):
         Interface to the remote contact data provider.
     """
     with session_scope() as db_session:
-        account = db_session.query(ImapAccount).get(account_id)
+        account = db_session.query(Account).get(account_id)
 
         # Contact data reflecting any local modifications since the last sync
         # with the remote provider.

@@ -7,7 +7,8 @@ account object other than the ID, to limit the action.
 from sqlalchemy import distinct, func
 from sqlalchemy.orm.exc import NoResultFound
 
-from .tables import Block, Message, ImapUid, UIDValidity, FolderItem, Thread
+from inbox.server.models.tables.tables import Block, Message, FolderItem
+from inbox.server.models.tables.imap import ImapUid, UIDValidity, ImapThread
 from .message import create_message
 
 from ..log import get_logger
@@ -166,7 +167,7 @@ def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, x_gm_thrid,
 
     # NOTE: This code _requires_ autoflush=True, otherwise duplicate
     # threads may attempt to be created and crash.
-    thread = new_uid.message.thread = Thread.from_message(db_session,
+    thread = new_uid.message.thread = ImapThread.from_message(db_session,
             new_uid.imapaccount.namespace, new_uid.message)
     # make sure this thread has all the correct labels
     existing_labels = {l.folder_name.lower() for l in thread.folders}

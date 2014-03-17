@@ -1,12 +1,12 @@
 from .mailsync.imap import uidvalidity_cb
 from .crispin import new_crispin
 from .models import session_scope
-from .models.tables import ImapAccount
+from .models.tables.tables import Account
 import IPython
 
 def user_console(user_email_address):
     with session_scope() as db_session:
-        account = db_session.query(ImapAccount).filter_by(
+        account = db_session.query(Account).filter_by(
                 email_address=user_email_address).one()
 
         crispin_client = new_crispin(account.id, account.provider,

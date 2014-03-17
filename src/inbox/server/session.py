@@ -4,8 +4,8 @@ import sqlalchemy.orm.exc
 from inbox.server.log import get_logger
 log = get_logger()
 
-from inbox.server.models.tables import (User, UserSession, Namespace,
-    ImapAccount)
+from inbox.server.models.tables.tables import (User, UserSession, Namespace,
+    Account)
 
 
 def log_ignored(exc):
@@ -25,7 +25,7 @@ def get_session(db_session, session_token):
     # XXX doesn't deal with multiple sessions
     try:
         return db_session.query(UserSession).filter_by(
-            token=session_token).join(User, ImapAccount, Namespace).one()
+            token=session_token).join(User, Account, Namespace).one()
     except sqlalchemy.orm.exc.NoResultFound:
         log.error('No record for session with token: {0}'.format(
             session_token))

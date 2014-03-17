@@ -67,12 +67,12 @@ def sync(args):
     import zerorpc
 
     from inbox.server.models import session_scope
-    from inbox.server.models.tables import ImapAccount
+    from inbox.server.models.tables.tables import Account
     from sqlalchemy.orm.exc import NoResultFound
 
     with session_scope() as db_session:
         try:
-            account_id = db_session.query(ImapAccount.id).filter_by(
+            account_id = db_session.query(Account.id).filter_by(
                     email_address=args.email_address).one()[0]
         except NoResultFound:
             log.error("No record of account {0}".format(args.email_address))
@@ -157,7 +157,7 @@ def auth(args):
     from inbox.util.url import NotSupportedError
     from inbox.server import session
     from inbox.server.models import session_scope, init_db
-    from inbox.server.models.tables import ImapAccount
+    from inbox.server.models.tables.tables import Account
     from inbox.server.auth.base import get_handler
 
     email_address = args.email_address
@@ -167,7 +167,7 @@ def auth(args):
         auth_handler = get_handler(email_address)
 
         try:
-            account = db_session.query(ImapAccount).filter_by(
+            account = db_session.query(Account).filter_by(
                     email_address=email_address).one()
         except NoResultFound:
             account = auth_handler.create_auth_account(db_session,

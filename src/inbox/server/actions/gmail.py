@@ -32,8 +32,9 @@ We don't currently handle these operations on the special folders 'junk',
 """
 from ..crispin import new_crispin
 
-from ..models import session_scope
-from ..models.tables import ImapAccount, Namespace, Thread
+from inbox.server.models import session_scope
+from inbox.server.models.tables.tables import Namespace
+from inbox.server.models.tables.imap import ImapAccount, ImapThread
 
 class ActionError(Exception): pass
 
@@ -77,7 +78,7 @@ def _archive(g_thrid, crispin_client, c):
     crispin_client.archive_thread(g_thrid, c)
 
 def _get_g_thrid(namespace_id, thread_id, db_session):
-    return db_session.query(Thread.g_thrid).filter_by(
+    return db_session.query(ImapThread.g_thrid).filter_by(
             namespace_id=namespace_id,
             id=thread_id).one()[0]
 

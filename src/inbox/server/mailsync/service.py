@@ -3,7 +3,7 @@ import socket
 
 from inbox.server.log import get_logger
 from inbox.server.models import session_scope
-from inbox.server.models.tables import ImapAccount
+from inbox.server.models.tables.imap import ImapAccount
 from inbox.server.mailsync.backends.base import register_backends
 
 

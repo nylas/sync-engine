@@ -3,7 +3,8 @@ import sqlalchemy.orm.exc
 
 from inbox.server.basicauth import password_auth
 from inbox.server.pool import verify_yahoo_account
-from inbox.server.models.tables import User, Namespace, ImapAccount
+from inbox.server.models.tables.tables import User, Namespace
+from inbox.server.models.tables.imap import ImapAccount
 
 from inbox.server.auth.base import commit_account
 

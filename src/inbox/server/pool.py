@@ -14,7 +14,7 @@ from inbox.server.log import get_logger
 log = get_logger()
 
 from inbox.server.models import session_scope
-from inbox.server.models.tables import ImapAccount
+from inbox.server.models.tables.imap import ImapAccount
 from inbox.server.basicauth import AUTH_TYPES
 from inbox.server import oauth
 from inbox.server.auth.base import get_handler
