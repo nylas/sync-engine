@@ -34,9 +34,9 @@ def start(args=None):
     threads.append(make_zerorpc(SyncService, sync_srv_loc))
 
     # Start ZeroRPC contacts sync service
-    from inbox.server.rolodex import ContactSyncService
-    contacts_srv_loc = config.get('ROLODEX_SERVER_LOC', None)
-    threads.append(make_zerorpc(ContactSyncService, contacts_srv_loc))
+    from inbox.server.contacts.api import ContactService
+    contacts_srv_loc = config.get('CONTACT_SERVER_LOC', None)
+    threads.append(make_zerorpc(ContactService, contacts_srv_loc))
 
     # start ZeroRPC search server service
     from inbox.server.search import SearchService
@@ -78,20 +78,26 @@ def sync(args):
             log.error("No record of account {0}".format(args.email_address))
             return
 
-    c = zerorpc.Client(timeout=5)
-    sync_srv_loc = config.get('CRISPIN_SERVER_LOC', None)
-    c.connect(sync_srv_loc)
+    mailsync_client = zerorpc.Client(timeout=5)
+    mailsync_srv_loc = config.get('CRISPIN_SERVER_LOC', None)
+    mailsync_client.connect(mailsync_srv_loc)
+    contacts_client = zerorpc.Client(timeout=5)
+    contacts_srv_loc = config.get('CONTACT_SERVER_LOC', None)
+    contacts_client.connect(contacts_srv_loc)
     try:
         if args.cmd == 'start':
-            print c.start_sync(account_id, dummy=args.dummy)
+            print mailsync_client.start_sync(account_id, dummy=args.dummy)
+            print contacts_client.start_sync(account_id)
         elif args.cmd == 'startall':
-            print c.start_sync(dummy=args.dummy)
+            print mailsync_client.start_sync(dummy=args.dummy)
+            print contacts_client.start_sync()
         elif args.cmd == 'stop':
-            print c.stop_sync(account_id)
+            print mailsync_client.stop_sync(account_id)
+            print contacts_client.stop_sync(account_id)
         elif args.cmd == 'stopall':
-            print c.stop_sync()
+            print mailsync_client.stop_sync()
         elif args.cmd == 'status':
-            print c.sync_status()
+            print mailsync_client.sync_status()
         else:
             print >>sys.stderr, "No such command."
             sys.exit(1)

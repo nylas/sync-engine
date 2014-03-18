@@ -12,6 +12,7 @@ import sys, os
 
 file_formatter = logging.Formatter( "[%(levelname)-.1s %(asctime)s %(module)-8.8s:%(lineno)-4s] %(message)s")
 
+
 def get_tty_handler():
   tty_formatter = ColoredFormatter(
           # wish we could left-truncate name!
@@ -29,6 +30,7 @@ def get_tty_handler():
   tty_handler.setFormatter(tty_formatter)
   return tty_handler
 
+
 def get_logger(account_id=None, purpose=None):
     """ Helper for abstracting away our logger names. """
     if account_id is None:
@@ -38,6 +40,7 @@ def get_logger(account_id=None, purpose=None):
             purpose = 'sync'
         return logging.getLogger('inbox.server.{1}.{0}'.format(
             account_id, purpose))
+
 
 def configure_general_logging():
     """ Configure the general server logger to output to screen if a TTY is
@@ -71,6 +74,7 @@ def configure_general_logging():
 
     return logger
 
+
 def configure_logging(account_id, purpose):
     # avoid import loop from config.py
     from .config import config
@@ -86,6 +90,7 @@ def configure_logging(account_id, purpose):
 
     return logger
 
+
 def configure_sync_logging(account_id):
     """ We log output for each sync instance to a different file than the
         main server log, for ease of debugging. Sync logs still go to screen
@@ -93,12 +98,13 @@ def configure_sync_logging(account_id):
     """
     return configure_logging(account_id, "sync")
 
-def configure_rolodex_logging(account_id):
-    """ We log output for each rolodex instance to a different file than the
-        main server log, for ease of debugging. Rolodex sync logs still go to
-        screen too, for now.
+
+def configure_contacts_logging(account_id):
+    """ We log output for each contacts sync instance to a different file than
+        the main server log, for ease of debugging. Contacts sync logs still go
+        to screen too, for now.
     """
-    return configure_logging(account_id, "rolodex")
+    return configure_logging(account_id, "contacts")
 
 
 class log_uncaught_errors(object):

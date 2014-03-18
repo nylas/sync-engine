@@ -231,6 +231,10 @@ class Contact(Base, HasRevisions):
                     email=self.email_address,
                     name=self.name)
 
+    def from_cereal(self, args):
+        self.name = args['name']
+        self.email_address = args['email']
+
     def __repr__(self):
         # XXX this won't work properly with unicode (e.g. in the name)
         return ('Contact({}, {}, {}, {})'

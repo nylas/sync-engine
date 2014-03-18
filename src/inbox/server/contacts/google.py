@@ -8,11 +8,12 @@ import time
 import gdata.auth
 import gdata.contacts.client
 
-from ..models import session_scope
-from ..models.tables import Contact, ImapAccount
-from ..oauth import INSTALLED_CLIENT_ID, INSTALLED_CLIENT_SECRET, OAUTH_SCOPE
-from ..pool import verify_imap_account
-from ..log import configure_logging
+from inbox.server.models import session_scope
+from inbox.server.models.tables import Contact, ImapAccount
+from inbox.server.oauth import (INSTALLED_CLIENT_ID, INSTALLED_CLIENT_SECRET,
+                                OAUTH_SCOPE)
+from inbox.server.pool import verify_imap_account
+from inbox.server.log import configure_logging
 
 SOURCE_APP_NAME = 'InboxApp Contact Sync Engine'
 
@@ -115,7 +116,7 @@ class GoogleContactsProvider(object):
                        g_id=g_id, name=name, updated_at=updated_at,
                        email_address=email_address)
 
-    def get_contacts(self, sync_from_time=None, max_results=0):
+    def get_contacts(self, sync_from_time=None, max_results=100000):
         """Fetches and parses fresh contact data.
 
         Parameters
@@ -125,7 +126,7 @@ class GoogleContactsProvider(object):
             that have been updated since this time. Otherwise fetch all contact
             data.
         max_results: int, optional
-            If nonzero, the maximum number of contact entries to fetch.
+            The maximum number of contact entries to fetch.
 
         Yields
         ------
@@ -134,10 +135,11 @@ class GoogleContactsProvider(object):
         """
         query = gdata.contacts.client.ContactsQuery()
         # TODO(emfree): Implement batch fetching
-        if max_results > 0:
-            query.max_results = max_results
+        # Note: The Google contacts API will only return 25 results if
+        # query.max_results is not explicitly set, so have to set it to a large
+        # number by default.
+        query.max_results = max_results
         query.updated_min = sync_from_time
-
         google_client = self._get_google_client()
         if google_client is None:
             # Return an empty generator if we couldn't create an API client

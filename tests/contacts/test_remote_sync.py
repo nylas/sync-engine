@@ -1,15 +1,40 @@
 import pytest
 
-from .util.base import config
-from .util.contacts import contacts_provider
+from ..util.base import config
 # Need to set up test config before we can import from
 # inbox.server.models.tables.
 config()
 from inbox.server.models.tables import Contact
-from inbox.server.rolodex import merge, poll, MergeError
+from inbox.server.contacts.remote_sync import merge, poll, MergeError
 
 ACCOUNT_ID = 1
 
+
+class ContactsProviderStub(object):
+    """Contacts provider stub to stand in for an actual provider.
+    When an instance's get_contacts() method is called, return an iterable of
+    Contact objects corresponding to the data it's been fed via
+    supply_contact().
+    """
+    def __init__(self):
+        self._contacts = []
+        self._next_g_id = 1
+
+    def supply_contact(self, name, email_address):
+        self._contacts.append(Contact(imapaccount_id=ACCOUNT_ID,
+                                      g_id=str(self._next_g_id),
+                                      source='remote',
+                                      name=name,
+                                      email_address=email_address))
+        self._next_g_id += 1
+
+    def get_contacts(self, *args, **kwargs):
+        return self._contacts
+
+
+@pytest.fixture(scope='function')
+def contacts_provider(config, db):
+    return ContactsProviderStub()
 
 def test_merge(config):
     """Test the basic logic of the merge() function."""

@@ -2,25 +2,12 @@ import datetime
 
 import gevent
 
-from .models import session_scope
-from .models.tables import Contact, ImapAccount
-from .log import configure_rolodex_logging, get_logger
-from .util.google_contacts import GoogleContactsProvider
-from ..util.misc import or_none
+from inbox.server.models import session_scope
+from inbox.server.models.tables import Contact, ImapAccount
+from inbox.server.log import configure_contacts_logging, get_logger
+from inbox.server.contacts.google import GoogleContactsProvider
+from inbox.util.misc import or_none
 log = get_logger()
-
-
-class ContactSyncService(object):
-    """ ZeroRPC interface to syncing. """
-    def __init__(self):
-        log.info('Updating contacts...')
-        with session_scope() as db_session:
-            for account in db_session.query(ImapAccount):
-                if account.provider != 'Gmail':
-                    # ONLY GMAIL CURRENTLY
-                    continue
-                contact_sync = ContactSync(account.id)
-                contact_sync.start()
 
 
 class ContactSync(gevent.Greenlet):
@@ -43,7 +30,7 @@ class ContactSync(gevent.Greenlet):
     def __init__(self, account_id, poll_frequency=300):
         self.account_id = account_id
         self.poll_frequency = poll_frequency
-        self.log = configure_rolodex_logging(account_id)
+        self.log = configure_contacts_logging(account_id)
         self.log.info('Begin syncing contacts...')
 
         gevent.Greenlet.__init__(self)
