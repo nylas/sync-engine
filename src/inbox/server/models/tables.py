@@ -7,7 +7,8 @@ from itertools import chain
 
 from sqlalchemy import Column, Integer, BigInteger, String, DateTime, Boolean
 from sqlalchemy import ForeignKey, Enum, Text, Index, func, event
-from sqlalchemy.orm import reconstructor, relationship, backref, deferred
+from sqlalchemy.orm import (reconstructor, relationship, backref, deferred,
+                            validates)
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.types import BLOB
@@ -198,6 +199,22 @@ class Transaction(Base, Revision):
 
 HasRevisions = gen_rev_role(Transaction)
 
+
+class SearchToken(Base):
+    """A token to prefix-match against for contacts search.
+    Right now these tokens consist of:
+    - the contact's full name
+    - the elements of the contact's name when split by whitespace
+    - the contact's email address.
+    """
+    token = Column(String(255))
+    source = Column('source', Enum('name', 'email_address'))
+    contact_id = Column(ForeignKey('contact.id', ondelete='CASCADE'))
+    contact = relationship('Contact', backref='token',
+                           cascade='all, delete-orphan',
+                           single_parent=True)
+
+
 class Contact(Base, HasRevisions):
     """Data for a user's contact."""
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
@@ -247,6 +264,33 @@ class Contact(Base, HasRevisions):
         self.g_id = src.g_id or self.g_id
         self.name = src.name or self.name
         self.email_address = src.email_address or self.email_address
+
+    @validates('name', include_backrefs=False)
+    def tokenize_name(self, key, name):
+        """ Update the associated search tokens whenever the contact's name is
+        updated."""
+        new_tokens = []
+        if name is not None:
+            new_tokens.extend(name.split())
+            new_tokens.append(name)
+        # Delete existing 'name' tokens
+        self.token = [token for token in self.token if token.source != 'name']
+        self.token.extend(SearchToken(token=token, source='name') for token in
+                          new_tokens)
+        return name
+
+    @validates('email_address', include_backrefs=False)
+    def tokenize_email_address(self, key, email_address):
+        """ Update the associated search tokens whenever the contact's email
+        address is updated."""
+        self.token = [token for token in self.token if token.source !=
+                      'email_address']
+        if email_address is not None:
+            new_token = SearchToken(token=email_address,
+                                    source='email_address')
+        self.token.append(new_token)
+        return email_address
+
 
 class Message(JSONSerializable, Base, HasRevisions):
     # XXX clean this up a lot - make a better constructor, maybe taking

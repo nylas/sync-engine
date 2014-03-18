@@ -1,5 +1,6 @@
 """API for Inbox contact sync service, exposed via ZeroRPC."""
 from inbox.server.api import jsonify
+from inbox.server.contacts import search_util
 from inbox.server.contacts.remote_sync import ContactSync
 from inbox.server.log import get_logger
 from inbox.server.models import session_scope
@@ -93,3 +94,11 @@ class ContactService(object):
             contact.from_cereal(contact_data)
             self.log.info("Updated contact {0}".format(contact.id))
             return 'OK'
+
+    @jsonify
+    def search(self, imapaccount_id, query, max_results=10):
+        """Search for contacts that match the given query."""
+        with session_scope() as db_session:
+            results = search_util.search(db_session, imapaccount_id, query,
+                                         int(max_results))
+            return [contact.cereal() for contact in results]

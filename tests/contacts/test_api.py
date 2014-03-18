@@ -42,3 +42,36 @@ def test_add_update(contact_client, db):
 def test_error_on_bad_update(contact_client, db):
     with pytest.raises(RemoteError):
         contact_client.update(ACCOUNT_ID, NONEXISTENT_CONTACT_ID)
+
+
+def test_search(contact_client, db):
+    """Basic smoke tests for search."""
+    search_data = [{'name': 'Some Dude',
+                    'email': 'some.dude@email.address'},
+                   {'name': 'Some Other Dude',
+                    'email': 'some.other.dude@email.address'},
+                   {'name': 'Somebody Else',
+                    'email': 'somebody.else@email.address'}]
+    for contact in search_data:
+        contact_client.add(ACCOUNT_ID, contact)
+
+    result = json.loads(contact_client.search(ACCOUNT_ID, 'Some'))
+    assert len(result) == 3
+
+    result = json.loads(contact_client.search(ACCOUNT_ID, 'Some', 1))
+    assert len(result) == 1
+
+    result = json.loads(contact_client.search(ACCOUNT_ID, 'Some Other'))
+    assert len(result) == 1
+    assert result[0]['name'] == 'Some Other Dude'
+    assert result[0]['email'] == 'some.other.dude@email.address'
+
+    result = json.loads(contact_client.search(ACCOUNT_ID, 'Other'))
+    assert len(result) == 1
+    assert result[0]['name'] == 'Some Other Dude'
+    assert result[0]['email'] == 'some.other.dude@email.address'
+
+    result = json.loads(contact_client.search(ACCOUNT_ID, 'somebody.else'))
+    assert len(result) == 1
+    assert result[0]['name'] == 'Somebody Else'
+    assert result[0]['email'] == 'somebody.else@email.address'
