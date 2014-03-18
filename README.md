@@ -48,9 +48,9 @@ Here's how to set up a development environment:
 
 7. `cd /vagrant`
 
-8. `sudo ./setup.sh` to install dependencies and create databases.
+8. `cp config-sample.cfg config.cfg` to setup a default configuration file.
 
-9. `cp config-sample.cfg config.cfg` to setup a default configuration file.
+9. `sudo ./setup.sh` to install dependencies and create databases.
 
 10. `./inbox debug`
 
