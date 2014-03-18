@@ -12,7 +12,7 @@ from inbox.util.misc import or_none, parse_ml_headers
 from inbox.util.addr import parse_email_address
 from inbox.util.file import mkdirp
 
-from inbox.server.models.tables.tables import Message, Block
+from inbox.server.models.tables.base import Message, Block
 
 from ..config import config
 

@@ -4,8 +4,8 @@ from hashlib import sha256
 
 from sqlalchemy import Column, Integer, String
 
-from ..config import config
-from ..log import get_logger
+from inbox.server.config import config
+from inbox.server.log import get_logger
 log = get_logger()
 
 STORE_MSG_ON_S3 = config.get('STORE_MESSAGES_ON_S3', None)

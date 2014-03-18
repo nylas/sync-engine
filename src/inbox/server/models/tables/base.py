@@ -2,12 +2,11 @@ import os
 import sys
 import json
 import traceback
-import uuid
 
 from itertools import chain
 from hashlib import sha256
 from sqlalchemy import (Column, Integer, BigInteger, String, DateTime, Boolean,
-    Enum, ForeignKey, Text, Index, func, event)
+                        Enum, ForeignKey, Text, func, event)
 from sqlalchemy.orm import (reconstructor, relationship, backref, deferred,
                             validates)
 from sqlalchemy.schema import UniqueConstraint
@@ -25,14 +24,24 @@ from inbox.util.file import Lock, mkdirp
 from inbox.util.html import plaintext2html
 from inbox.util.misc import strip_plaintext_quote, load_modules
 from inbox.util.cryptography import encrypt_aes, decrypt_aes
-from inbox.sqlalchemy.util import Base, JSON
+from inbox.sqlalchemy.util import JSON
 from inbox.sqlalchemy.revision import Revision, gen_rev_role
 from inbox.server.basicauth import AUTH_TYPES
 
 from inbox.server.models.roles import JSONSerializable, Blob
+from inbox.server.models import Base
+
+
+def register_backends():
+    # Find and import
+    import inbox.server.models.tables
+    load_modules(inbox.server.models.tables)
+
 
 # global
 class Account(Base):
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
     # user_id refers to Inbox's user id
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'),
             nullable=False)
@@ -41,7 +50,7 @@ class Account(Base):
     # http://stackoverflow.com/questions/386294/what-is-the-maximum-length-of-a-valid-email-address
     email_address = Column(String(254), nullable=True, index=True)
     provider = Column(Enum('Gmail', 'Outlook', 'Yahoo', 'EAS', 'Inbox'),
-        nullable=False)
+                      nullable=False)
 
     # local flags & data
     save_raw_messages = Column(Boolean, default=True)
@@ -124,7 +133,6 @@ class Account(Base):
         with open(self._keyfile, 'w+') as f:
             f.write(key[len(key)/2:])
 
-
     @property
     def _keyfile(self, create_dir=True):
         assert self.key
@@ -136,47 +144,50 @@ class Account(Base):
         key_filename = '{0}'.format(sha256(self.key).hexdigest())
         return os.path.join(key_dir, key_filename)
 
-    type = Column(String(16))
-    __mapper_args__ = {'polymorphic_on': type}
+    discriminator = Column('type', String(16))
+    __mapper_args__ = {'polymorphic_on': discriminator,
+                       'polymorphic_identity': 'account'}
 
-    __table_args__ = {'useexisting': True}
 
 class UserSession(Base):
     """ Inbox-specific sessions. """
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
     token = Column(String(40))
 
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'),
             nullable=False)
     user = relationship('User', backref='sessions')
 
-    __table_args__ = {'useexisting': True}
-
 
 class Namespace(Base):
     """ A way to do grouping / permissions, basically. """
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
     # NOTE: only root namespaces have IMAP accounts
     account_id = Column(Integer,
-            ForeignKey('account.id', ondelete='CASCADE'), nullable=True)
+                        ForeignKey('account.id', ondelete='CASCADE'),
+                        nullable=True)
     # really the root_namespace
     account = relationship('Account',
-            backref=backref('namespace', uselist=False))
+                           backref=backref('namespace', uselist=False))
 
     # invariant: imapaccount is non-null iff type is root
     type = Column(Enum('root', 'shared_folder'), nullable=False,
-        default='root')
+                  default='root')
 
     @property
     def email_address(self):
-        if self.imapaccount is not None:
-            return self.imapaccount.email_address
+        if self.account is not None:
+            return self.account.email_address
 
     def cereal(self):
         return dict(id=self.id, type=self.type)
 
-    __table_args__ = {'useexisting': True}
-
 
 class SharedFolder(Base):
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
     # Don't delete shared folders if the user that created them is deleted.
     user_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'),
             nullable=True)
@@ -192,19 +203,17 @@ class SharedFolder(Base):
     def cereal(self):
         return dict(id=self.id, name=self.display_name)
 
-    __table_args__ = {'useexisting': True}
-
 
 class User(Base):
+    id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(255))
-
-    __table_args__ = {'useexisting': True}
 
 # sharded (by namespace)
 
 
 class Transaction(Base, Revision):
     """ Transactional log to enable client syncing. """
+    id = Column(Integer, primary_key=True, autoincrement=True)
 
     # Do delete transactions if their associated namespace is deleted.
     namespace_id = Column(Integer, ForeignKey('namespace.id',
@@ -221,8 +230,6 @@ class Transaction(Base, Revision):
             log.info("Thread is: {0}".format(obj.thread_id))
             import pdb; pdb.set_trace()
             raise
-
-    __table_args__ = {'useexisting': True}
 
 HasRevisions = gen_rev_role(Transaction)
 
@@ -244,8 +251,10 @@ class SearchToken(Base):
 
 class Contact(Base, HasRevisions):
     """ Inbox-specific sessions. """
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
     account_id = Column(ForeignKey('account.id', ondelete='CASCADE'),
-            nullable=False)
+                        nullable=False)
     account = relationship("Account")
 
     g_id = Column(String(64))
@@ -259,8 +268,8 @@ class Contact(Base, HasRevisions):
                         onupdate=func.current_timestamp())
     created_at = Column(DateTime, default=func.now())
 
-    __table_args__ = (UniqueConstraint('g_id', 'source', 'account_id'),)
-    __table_args__ = {'useexisting': True}
+    __table_args__ = (UniqueConstraint('g_id', 'source', 'account_id'),
+                      {'extend_existing': True})
 
     @property
     def namespace(self):
@@ -278,7 +287,8 @@ class Contact(Base, HasRevisions):
     def __repr__(self):
         # XXX this won't work properly with unicode (e.g. in the name)
         return 'Contact({}, {}, {}, {})'.format(self.g_id, self.name,
-            self.email_address, self.source)
+                                                self.email_address,
+                                                self.source)
 
 
     @validates('name', include_backrefs=False)
@@ -309,6 +319,8 @@ class Contact(Base, HasRevisions):
 
 
 class Message(JSONSerializable, Base, HasRevisions):
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
     # XXX clean this up a lot - make a better constructor, maybe taking
     # a flanker object as an argument to prefill a lot of attributes
 
@@ -393,7 +405,7 @@ class Message(JSONSerializable, Base, HasRevisions):
                 # Misc other crap.
                 dtd = [item for item in soup.contents if isinstance(
                     item, Doctype)]
-                comments = soup.findAll(text=lambda text:isinstance(
+                comments = soup.findAll(text=lambda text: isinstance(
                     text, Comment))
                 for tag in chain(dtd, comments):
                     tag.extract()
@@ -424,9 +436,9 @@ class Message(JSONSerializable, Base, HasRevisions):
                                      '\n\n\n' + \
                                      full_traceback
 
-
                     # TODO have a better logging service for storing these
-                    errdir = os.path.join(config['LOGDIR'], 'bs_parsing_errors', )
+                    errdir = os.path.join(config['LOGDIR'],
+                                          'bs_parsing_errors', )
                     errfile = os.path.join(errdir, str(self.data_sha256))
                     mkdirp(errdir)
 
@@ -436,9 +448,8 @@ class Message(JSONSerializable, Base, HasRevisions):
                     with open("{0}_data".format(errfile), 'wb') as fh:
                         fh.write(html_part.encode("utf-8"))
 
-                    log.error("BeautifulSoup parsing error."\
-                        "Data logged to {0}_data and {0}_traceback".format(
-                            errfile))
+                    log.error("BeautifulSoup parsing error. Data logged to\
+                              {0}_data and {0}_traceback".format(errfile))
                     self.decode_error = True
 
                     # Not sanitized, but will still work
@@ -531,7 +542,6 @@ class Message(JSONSerializable, Base, HasRevisions):
 
         return json_headers
 
-    __table_args__ = {'useexisting': True}
 
 # These are the top 15 most common Content-Type headers
 # in my personal mail archive. --mg
@@ -554,6 +564,8 @@ common_content_types = ['text/plain',
 
 class Block(JSONSerializable, Blob, Base, HasRevisions):
     """ Metadata for message parts stored in s3 """
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
     message_id = Column(Integer, ForeignKey('message.id', ondelete='CASCADE'),
             nullable=False)
     message = relationship('Message',
@@ -574,8 +586,7 @@ class Block(JSONSerializable, Blob, Base, HasRevisions):
     # TODO: create a constructor that allows the 'content_type' keyword
 
     __table_args__ = (UniqueConstraint('message_id', 'walk_index',
-        'data_sha256'),)
-    __table_args__ = {'useexisting': True}
+                      'data_sha256'), {'extend_existing': True})
 
     def __init__(self, *args, **kwargs):
         self.content_type = None
@@ -623,6 +634,8 @@ class FolderItem(JSONSerializable, Base, HasRevisions):
     Threads in this table are the _Inbox_ datastore abstraction, which may
     be different from folder names in the actual account backends.
     """
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
     thread_id = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
             nullable=False)
     # thread relationship is on Thread to make delete-orphan cascade work
@@ -633,8 +646,8 @@ class FolderItem(JSONSerializable, Base, HasRevisions):
     def namespace(self):
         return self.thread.namespace
 
-    __table_args__ = (UniqueConstraint('folder_name', 'thread_id'),)
-    __table_args__ = {'useexisting': True}
+    __table_args__ = (UniqueConstraint('folder_name', 'thread_id'),
+                      {'extend_existing': True})
 
 
 class Thread(JSONSerializable, Base):
@@ -647,6 +660,8 @@ class Thread(JSONSerializable, Base):
         If you're attempting to display _all_ messages a la Gmail's All Mail,
         don't query based on folder!
     """
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
     subject = Column(Text, nullable=True)
     subjectdate = Column(DateTime, nullable=False)
     recentdate = Column(DateTime, nullable=False)
@@ -692,13 +707,13 @@ class Thread(JSONSerializable, Base):
         d['recentdate'] = self.recentdate
         return d
 
-    type = Column(String(16))
-    __mapper_args__ = {'polymorphic_on': type}
-
-    __table_args__ = {'useexisting': True}
+    discriminator = Column('type', String(16))
+    __mapper_args__ = {'polymorphic_on': discriminator}
 
 
 class FolderSync(Base):
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
     account_id = Column(ForeignKey('account.id', ondelete='CASCADE'),
             nullable=False)
     account = relationship('Account', backref='foldersyncs')
@@ -712,9 +727,8 @@ class FolderSync(Base):
                         'poll', 'poll uidinvalid', 'finish'),
                         default='initial', nullable=False)
 
-    __table_args__ = (UniqueConstraint('account_id', 'folder_name'),)
+    __table_args__ = (UniqueConstraint('account_id', 'folder_name'),
+                      {'extend_existing': True})
 
-    type = Column(String(16))
-    __mapper_args__ = {'polymorphic_on': type}
-
-    __table_args__ = {'useexisting': True}
+    discriminator = Column('type', String(16))
+    __mapper_args__ = {'polymorphic_on': discriminator}

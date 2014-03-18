@@ -67,7 +67,7 @@ def sync(args):
     import zerorpc
 
     from inbox.server.models import session_scope
-    from inbox.server.models.tables.tables import Account
+    from inbox.server.models.tables.base import Account
     from sqlalchemy.orm.exc import NoResultFound
 
     with session_scope() as db_session:
@@ -157,7 +157,7 @@ def auth(args):
     from inbox.util.url import NotSupportedError
     from inbox.server import session
     from inbox.server.models import session_scope, init_db
-    from inbox.server.models.tables.tables import Account
+    from inbox.server.models.tables.base import Account
     from inbox.server.auth.base import get_handler
 
     email_address = args.email_address

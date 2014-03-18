@@ -5,21 +5,25 @@ from bson import json_util
 
 import zerorpc
 
-from . import postel
-from . import actions
-from .config import config
-from .models import session_scope
-from .models.imapaccount import total_stored_data, total_stored_messages
-from .models.tables.tables import Message, SharedFolder, User, Account, Thread
-from .models.namespace import (threads_for_folder, archive_thread, move_thread,
-        copy_thread, delete_thread)
+from inbox.server import postel
+from inbox.server import actions
+from inbox.server.config import config
+from inbox.server.models import session_scope
+from inbox.server.models.imapaccount import (total_stored_data,
+                                             total_stored_messages)
+from inbox.server.models.tables.base import (Message, SharedFolder, User,
+                                             Account, Thread)
+from inbox.server.models.namespace import (threads_for_folder,
+                                           archive_thread, move_thread,
+                                           copy_thread, delete_thread)
 
-
-from .log import get_logger
+from inbox.server.log import get_logger
 log = get_logger()
+
 
 class NSAuthError(Exception):
     pass
+
 
 def namespace_auth(fn):
     """
@@ -30,7 +34,8 @@ def namespace_auth(fn):
         with session_scope() as db_session:
             self.user_id = user_id
             self.namespace_id = namespace_id
-            user = db_session.query(User).filter_by(id=user_id).join(Account).one()
+            user = db_session.query(User).filter_by(id=user_id).join(
+                Account).one()
             for account in user.imapaccounts:
                 if account.namespace.id == namespace_id:
                     self.namespace = account.namespace
@@ -42,9 +47,11 @@ def namespace_auth(fn):
                 if shared_ns.id == namespace_id:
                     return fn(self, *args, **kwargs)
 
-            raise NSAuthError("User '{0}' does not have access to namespace '{1}'".format(user_id, namespace_id))
+            raise NSAuthError("User '{0}' does not have access to namespace\
+                '{1}'".format(user_id, namespace_id))
 
     return namespace_auth_fn
+
 
 def jsonify(fn):
     """ decorator that JSONifies a function's return value """
@@ -52,6 +59,7 @@ def jsonify(fn):
         ret = fn(*args, **kwargs)
         return json.dumps(ret, default=json_util.default) # fixes serializing date.datetime
     return wrapper
+
 
 class API(object):
 
@@ -288,7 +296,8 @@ class API(object):
 
         # make local change
         with session_scope() as db_session:
-            delete_thread(self.namespace.id, db_session, thread_id, folder_name)
+            delete_thread(self.namespace.id, db_session, thread_id,
+                          folder_name)
 
         # sync it to the account backend
         q = actions.get_queue()

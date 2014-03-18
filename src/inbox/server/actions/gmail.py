@@ -33,8 +33,8 @@ We don't currently handle these operations on the special folders 'junk',
 from ..crispin import new_crispin
 
 from inbox.server.models import session_scope
-from inbox.server.models.tables.tables import Namespace
-from inbox.server.models.tables.imap import ImapAccount, ImapThread
+from inbox.server.models.tables.base import Namespace
+from inbox.server.models.tables.imap import ImapThread, ImapAccount
 
 class ActionError(Exception): pass
 

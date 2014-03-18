@@ -5,7 +5,7 @@ argument and make sure to limit the action based on it!
 """
 from sqlalchemy.orm.exc import NoResultFound
 
-from inbox.server.models.tables.tables import Thread, FolderItem
+from inbox.server.models.tables.base import Thread, FolderItem
 
 from inbox.util.file import Lock
 

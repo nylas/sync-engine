@@ -7,11 +7,11 @@ account object other than the ID, to limit the action.
 from sqlalchemy import distinct, func
 from sqlalchemy.orm.exc import NoResultFound
 
-from inbox.server.models.tables.tables import Block, Message, FolderItem
+from inbox.server.models.tables.base import Block, Message, FolderItem
 from inbox.server.models.tables.imap import ImapUid, UIDValidity, ImapThread
-from .message import create_message
+from inbox.server.models.message import create_message
 
-from ..log import get_logger
+from inbox.server.log import get_logger
 log = get_logger()
 
 def total_stored_data(account_id, session):

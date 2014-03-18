@@ -4,8 +4,8 @@ import sqlalchemy.orm.exc
 from inbox.server.log import get_logger
 log = get_logger()
 
-from inbox.server.models.tables.tables import (User, UserSession, Namespace,
-    Account)
+from inbox.server.models.tables.base import (User, UserSession, Namespace,
+                                             Account)
 
 
 def log_ignored(exc):

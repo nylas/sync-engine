@@ -79,7 +79,7 @@ from inbox.server.log import get_logger
 from inbox.server.crispin import new_crispin
 from inbox.server.models import session_scope
 from inbox.server.models import imapaccount as account
-from inbox.server.models.tables.tables import Namespace, FolderSync
+from inbox.server.models.tables.base import Namespace, FolderSync
 from inbox.server.models.tables.imap import ImapAccount
 from inbox.server.models.namespace import db_write_lock
 from inbox.server.mailsync.exc import UIDInvalid

@@ -80,14 +80,16 @@ def load_modules(base_module):
         The imported modules.
     """
     modules = []
-    dirnames = base_module.__path__
 
-    for importer, package_name, _ in pkgutil.iter_modules(dirnames):
-        full_package_name = os.path.join(importer.path, package_name)
+    base_name = base_module.__name__
+    base_path = base_module.__path__
 
-        if full_package_name not in sys.modules:
-            module = importer.find_module(package_name).load_module(
-                full_package_name)
+    for importer, module_name, _ in pkgutil.iter_modules(base_path):
+        full_module_name = '{0}.{1}'.format(base_name, module_name)
+
+        if full_module_name not in sys.modules:
+            module = importer.find_module(module_name).load_module(
+                full_module_name)
             modules.append(module)
 
     return modules

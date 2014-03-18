@@ -1,22 +1,27 @@
-from sqlalchemy import (Column, Integer, BigInteger, String, DateTime, Boolean,
-    Enum, ForeignKey, Text, Index, func, event)
-from sqlalchemy.orm import reconstructor, relationship, backref, deferred
+from sqlalchemy import (Column, Integer, BigInteger, String, Boolean,
+                        ForeignKey, Index)
 from sqlalchemy.schema import UniqueConstraint
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
-from inbox.sqlalchemy.util import Base, LittleJSON
+from inbox.sqlalchemy.util import LittleJSON
 
-from inbox.server.models.tables.tables import Account, Thread
+from inbox.server.log import get_logger
+log = get_logger()
+
+from inbox.server.models import Base
 from inbox.server.models.roles import JSONSerializable
+from inbox.server.models.tables.base import Account, Thread
 
 PROVIDER = 'Imap'
 
 
 class ImapAccount(Account):
     id = Column(Integer, ForeignKey('account.id'), primary_key=True)
+
     imap_host = Column(String(512))
 
-    __mapper_args__ = {'polymorphic_identity': 'imapaccount'}
+    __mapper_args__ = {'polymorphic_identity': 'imapthread'}
 
 
 class ImapUid(JSONSerializable, Base):
@@ -26,8 +31,10 @@ class ImapUid(JSONSerializable, Base):
         This table is used solely for bookkeeping by the IMAP mail sync
         backends.
     """
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
-            nullable=False)
+                            nullable=False)
     imapaccount = relationship("ImapAccount")
     # If we delete this uid, we also want the associated message to be deleted.
     # Buf if we delete the message, we _don't_ always want to delete the
@@ -36,7 +43,7 @@ class ImapUid(JSONSerializable, Base):
     # do not specify the "delete-orphan" cascade option here.
     message_id = Column(Integer, ForeignKey('message.id'), nullable=True)
     message = relationship('Message', cascade="all",
-            backref=backref('imapuid', uselist=False))
+                           backref=backref('imapuid', uselist=False))
     # nullable to allow the local data store to delete messages without
     # deleting the associated uid; we want to leave the uid entry there until
     # we notice the same delete from the backend, which helps our accounting
@@ -66,12 +73,12 @@ class ImapUid(JSONSerializable, Base):
     def update_imap_flags(self, new_flags, x_gm_labels=None):
         new_flags = set(new_flags)
         col_for_flag = {
-                u'\\Draft': 'is_draft',
-                u'\\Seen': 'is_seen',
-                u'\\Recent': 'is_recent',
-                u'\\Answered': 'is_answered',
-                u'\\Flagged': 'is_flagged',
-                }
+            u'\\Draft': 'is_draft',
+            u'\\Seen': 'is_seen',
+            u'\\Recent': 'is_recent',
+            u'\\Answered': 'is_answered',
+            u'\\Flagged': 'is_flagged',
+        }
         for flag, col in col_for_flag.iteritems():
             setattr(self, col, flag in new_flags)
             new_flags.discard(flag)
@@ -85,19 +92,21 @@ class ImapUid(JSONSerializable, Base):
         return self.imapaccount.namespace
 
     __table_args__ = (UniqueConstraint('folder_name', 'msg_uid',
-        'imapaccount_id',),)
+                      'imapaccount_id',),)
 
 # make pulling up all messages in a given folder fast
 Index('imapuid_imapaccount_id_folder_name', ImapUid.imapaccount_id,
-        ImapUid.folder_name)
+      ImapUid.folder_name)
 
 
 class UIDValidity(JSONSerializable, Base):
     """ UIDValidity has a per-folder value. If it changes, we need to
         re-map g_msgid to UID for that folder.
     """
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
-            nullable=False)
+                            nullable=False)
     imapaccount = relationship("ImapAccount")
     # maximum Gmail label length is 225 (tested empirically), but constraining
     # folder_name uniquely requires max length of 767 bytes under utf8mb4
@@ -135,7 +144,7 @@ class ImapThread(Thread):
         """
         try:
             thread = session.query(cls).filter_by(g_thrid=message.g_thrid,
-                    namespace=namespace).one()
+                                                  namespace=namespace).one()
             return thread.update_from_message(message)
         except NoResultFound:
             pass
@@ -144,9 +153,9 @@ class ImapThread(Thread):
                 message.g_thrid))
             raise
         thread = cls(subject=message.subject, g_thrid=message.g_thrid,
-                recentdate=message.received_date, namespace=namespace,
-                subjectdate=message.received_date,
-                mailing_list_headers=message.mailing_list_headers)
+                     recentdate=message.received_date, namespace=namespace,
+                     subjectdate=message.received_date,
+                     mailing_list_headers=message.mailing_list_headers)
         return thread
 
     __mapper_args__ = {'polymorphic_identity': 'imapthread'}

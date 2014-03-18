@@ -7,6 +7,7 @@ from inbox.server.models.tables import Contact, ImapAccount
 from inbox.server.log import configure_contacts_logging, get_logger
 from inbox.server.contacts.google import GoogleContactsProvider
 from inbox.util.misc import or_none
+
 log = get_logger()
 
 
