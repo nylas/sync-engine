@@ -1,4 +1,4 @@
-from sqlalchemy import (Column, Integer, BigInteger, String, Boolean,
+from sqlalchemy import (Column, Integer, BigInteger, String, Boolean, Enum,
                         ForeignKey, Index)
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm import relationship, backref
@@ -157,3 +157,21 @@ class ImapThread(Thread):
         return thread
 
     __mapper_args__ = {'polymorphic_identity': 'imapthread'}
+
+
+class FolderSync(Base):
+    account_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
+                        nullable=False)
+    account = relationship('ImapAccount', backref='foldersyncs')
+
+    # maximum Gmail label length is 225 (tested empirically), but constraining
+    # folder_name uniquely requires max length of 767 bytes under utf8mb4
+    # http://mathiasbynens.be/notes/mysql-utf8mb4
+    folder_name = Column(String(191), nullable=False)
+
+    # see state machine in mailsync/imap.py
+    state = Column(Enum('initial', 'initial uidinvalid',
+                   'poll', 'poll uidinvalid', 'finish'),
+                   default='initial', nullable=False)
+
+    __table_args__ = (UniqueConstraint('account_id', 'folder_name'),)

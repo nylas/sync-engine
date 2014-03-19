@@ -697,24 +697,3 @@ class Thread(JSONSerializable, Base):
 
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator}
-
-
-class FolderSync(Base):
-    account_id = Column(ForeignKey('account.id', ondelete='CASCADE'),
-            nullable=False)
-    account = relationship('Account', backref='foldersyncs')
-    # maximum Gmail label length is 225 (tested empirically), but constraining
-    # folder_name uniquely requires max length of 767 bytes under utf8mb4
-    # http://mathiasbynens.be/notes/mysql-utf8mb4
-    folder_name = Column(String(191), nullable=False)
-
-    # see state machine in mailsync/imap.py
-    state = Column(Enum('initial', 'initial uidinvalid',
-                        'poll', 'poll uidinvalid', 'finish'),
-                        default='initial', nullable=False)
-
-    __table_args__ = (UniqueConstraint('account_id', 'folder_name'),
-                      {'extend_existing': True})
-
-    discriminator = Column('type', String(16))
-    __mapper_args__ = {'polymorphic_on': discriminator}

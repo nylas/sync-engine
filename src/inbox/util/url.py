@@ -3,6 +3,7 @@ from urllib import urlencode
 import logging as log
 import re
 
+
 # http://www.regular-expressions.info/email.html
 EMAIL_REGEX = re.compile(r'[A-Z0-9._%+-]+@(?:[A-Z0-9-]+\.)+[A-Z]{2,4}',
     re.IGNORECASE)
@@ -163,7 +164,7 @@ def provider_from_address(email_address):
     if email_supports_yahoo(domain):
         return 'Yahoo'
 
-    raise NotSupportedError('Inbox currently only supports Gmail and Yahoo.')
+    return None
 
 
 # From tornado.httputil

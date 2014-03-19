@@ -33,11 +33,15 @@ def get_handler(email_address):
     provider = provider_from_address(email_address)
     auth_mod = AUTH_MOD_FOR.get(provider)
 
-    if auth_mod is None:
-        raise NotSupportedError('Inbox currently only supports Gmail and Yahoo.')
-        sys.exit(1)
+    if auth_mod is not None:
+        return auth_mod
 
-    return auth_mod
+    # Try as EAS
+    auth_mod = AUTH_MOD_FOR.get('EAS', None)
+    if auth_mod is not None:
+        return auth_mod
+
+    raise NotSupportedError('Inbox does not support the email provider.')
 
 
 def commit_account(db_session, account):

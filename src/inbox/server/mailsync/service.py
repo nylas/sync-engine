@@ -3,7 +3,7 @@ import socket
 
 from inbox.server.log import get_logger
 from inbox.server.models import session_scope
-from inbox.server.models.tables.imap import ImapAccount
+from inbox.server.models.tables.base import Account
 from inbox.server.mailsync.backends.base import register_backends
 
 
@@ -35,8 +35,8 @@ class SyncService(object):
         with session_scope() as db_session:
             # XXX: I think we can do some sqlalchemy magic to make it so we
             # can query on the attribute sync_active.
-            for account_id, in db_session.query(ImapAccount.id)\
-                    .filter(ImapAccount.sync_host!=None):
+            for account_id, in db_session.query(Account.id)\
+                    .filter(Account.sync_host != None):
                 self.start_sync(account_id)
 
     def start_sync(self, account_id=None):
@@ -47,14 +47,14 @@ class SyncService(object):
         if account_id:
             account_id = int(account_id)
         with session_scope() as db_session:
-            query = db_session.query(ImapAccount)
+            query = db_session.query(Account)
             if account_id is not None:
                 query = query.filter_by(id=account_id)
             fqdn = socket.getfqdn()
             for acc in query:
-                # ONLY GMAIL CURRENTLY
-                if acc.provider != 'Gmail':
-                    self.log.info('Inbox currently supports Gmail only!')
+                if (acc.provider != 'Gmail') and (acc.provider != 'EAS'):
+                    self.log.info('Inbox currently supports\
+                                  Gmail and EAS only!')
                     return
 
                 self.log.info("Starting sync for account {0}" \
@@ -102,7 +102,7 @@ class SyncService(object):
         if account_id:
             account_id = int(account_id)
         with session_scope() as db_session:
-            query = db_session.query(ImapAccount)
+            query = db_session.query(Account)
             if account_id is not None:
                 query = query.filter_by(id=account_id)
             fqdn = socket.getfqdn()

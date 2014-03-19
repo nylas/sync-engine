@@ -78,14 +78,15 @@ from inbox.util.itert import chunk, partition
 from inbox.server.log import get_logger
 from inbox.server.crispin import new_crispin
 from inbox.server.models import session_scope
-from inbox.server.models import imapaccount as account
-from inbox.server.models.tables.base import Namespace, FolderSync
-from inbox.server.models.tables.imap import ImapAccount
+#from inbox.server.models import imapaccount as account
+from inbox.server.models.tables.base import Namespace
+from inbox.server.models.tables.imap import ImapAccount, FolderSync
 from inbox.server.models.namespace import db_write_lock
 from inbox.server.mailsync.exc import UIDInvalid
 from inbox.server.mailsync.backends.base import (gevent_check_join, verify_db,
     save_folder_names)
 from inbox.server.mailsync.backends.base import BaseMailSyncMonitor
+from inbox.server.mailsync.backends import imapaccount as account
 
 PROVIDER = 'Imap'
 SYNC_MONITOR_CLS = 'ImapSyncMonitor'
