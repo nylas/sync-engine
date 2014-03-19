@@ -9,7 +9,7 @@ load_config()
 # log = get_logger()
 
 from inbox.server.models import session_scope
-from inbox.server.models.tables import Message, Block
+from inbox.server.models.tables.base import Message, Block
 
 PAGE_SIZE = 500
 

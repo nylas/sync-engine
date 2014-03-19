@@ -75,7 +75,7 @@ class GoogleContactsProvider(object):
 
         Returns
         -------
-        ..models.tables.Contact
+        ..models.tables.base.Contact
             A corresponding Inbox Contact instance.
 
         Raises
@@ -113,7 +113,7 @@ class GoogleContactsProvider(object):
         updated_at = datetime.datetime.fromtimestamp(
             time.mktime(updated_at.utctimetuple()))
 
-        return Contact(imapaccount_id=self.account_id, source='remote',
+        return Contact(account_id=self.account_id, source='remote',
                        g_id=g_id, name=name, updated_at=updated_at,
                        email_address=email_address)
 
@@ -131,7 +131,7 @@ class GoogleContactsProvider(object):
 
         Yields
         ------
-        ..models.tables.Contact
+        ..models.tables.base.Contact
             The contacts that have been updated since the last account sync.
         """
         query = gdata.contacts.client.ContactsQuery()

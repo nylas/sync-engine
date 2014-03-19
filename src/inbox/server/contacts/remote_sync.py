@@ -135,7 +135,7 @@ def merge(base, remote, dest):
 
     Parameters
     ----------
-    base, remote, dest: .models.tables.Contact
+    base, remote, dest: .models.tables.base.Contact
 
     Raises
     ------

@@ -217,7 +217,7 @@ def create_original_folder_imapuids(acc, folder_name, imapuids,
         original_imapuid = ImapUid(
                 imapaccount=acc, folder_name=folder_name,
                 msg_uid=original_uid, message=item.message)
-        original_imapuid.update_flags(
+        original_imapuid.update_imap_flags(
                 flags[original_uid]['flags'],
                 flags[original_uid]['labels'])
         original_imapuids.append(original_imapuid)
@@ -308,7 +308,7 @@ def add_new_imapuid(crispin_client, db_session, remote_g_metadata, uids, c):
                     folder_name=crispin_client.selected_folder_name,
                     msg_uid=uid, message=message_for[uid]) for uid in uids]
         for item in new_imapuids:
-            item.update_flags(flags[item.msg_uid]['flags'],
+            item.update_imap_flags(flags[item.msg_uid]['flags'],
                     flags[item.msg_uid]['labels'])
         db_session.add_all(new_imapuids)
         db_session.commit()
