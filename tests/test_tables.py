@@ -1,5 +1,6 @@
 def test_delete_cascades(db):
-    from inbox.server.models.tables import ImapUid, Message, Block
+    from inbox.server.models.tables.base import Message, Block
+    from inbox.server.models.tables.imap import ImapUid
 
     message = db.session.query(Message).join(ImapUid, Block).filter(
             Message.id==2).one()

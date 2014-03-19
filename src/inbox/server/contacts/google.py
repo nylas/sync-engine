@@ -9,7 +9,8 @@ import gdata.auth
 import gdata.contacts.client
 
 from inbox.server.models import session_scope
-from inbox.server.models.tables import Contact, ImapAccount
+from inbox.server.models.tables.base import Contact
+from inbox.server.models.tables.imap import ImapAccount
 from inbox.server.oauth import (INSTALLED_CLIENT_ID, INSTALLED_CLIENT_SECRET,
                                 OAUTH_SCOPE)
 from inbox.server.pool import verify_imap_account

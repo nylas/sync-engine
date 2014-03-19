@@ -18,7 +18,8 @@ def drop_everything(engine, with_users=False):
     tbs = []
     all_fks = []
 
-    user_tables = ['user', 'namespace', 'imapaccount', 'user_session']
+    user_tables = ['user', 'namespace', 'account', 'imapaccount',
+                   'user_session']
 
     for table_name in inspector.get_table_names():
         # NOTE: this also won't delete non-root namespaces, which may

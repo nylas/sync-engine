@@ -2,7 +2,7 @@
 # delivered back to us.
 
 def test_send(db):
-    from inbox.server.models.tables import ImapAccount
+    from inbox.server.models.tables.imap import ImapAccount
     from inbox.server.postel import SMTP
 
     account = db.session.query(ImapAccount).one()

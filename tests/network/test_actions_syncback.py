@@ -14,7 +14,8 @@ THREAD_ID=1
 
 def test_archive_move_syncback(db, config):
     from inbox.server.actions.gmail import archive, move, uidvalidity_cb
-    from inbox.server.models.tables import Thread, ImapAccount
+    from inbox.server.models.tables.base import Thread
+    from inbox.server.models.tables.imap import ImapAccount
 
     archive(ACCOUNT_ID, THREAD_ID)
 
@@ -42,7 +43,8 @@ def test_archive_move_syncback(db, config):
 
 def test_copy_delete_syncback(db, config):
     from inbox.server.actions.gmail import copy, delete, uidvalidity_cb
-    from inbox.server.models.tables import Thread, ImapAccount, Namespace
+    from inbox.server.models.tables.base import Thread, Namespace
+    from inbox.server.models.tables.imap import ImapAccount
 
     copy(ACCOUNT_ID, THREAD_ID, 'inbox', 'testlabel')
 

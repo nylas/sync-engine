@@ -126,7 +126,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         with session_scope() as db_session:
             saved_states = dict((saved_state.folder_name, saved_state.state) \
                     for saved_state in db_session.query(FolderSync).filter_by(
-                    imapaccount_id=self.account_id))
+                    account_id=self.account_id))
             crispin_client = new_crispin(self.account_id, self.provider)
             with crispin_client.pool.get() as c:
                 sync_folders = crispin_client.sync_folders(c)
@@ -176,11 +176,11 @@ class ImapFolderSyncMonitor(Greenlet):
         with session_scope() as db_session:
             try:
                 foldersync = db_session.query(FolderSync).filter_by(
-                        imapaccount_id=self.crispin_client.account_id,
+                        account_id=self.crispin_client.account_id,
                         folder_name=self.folder_name).one()
             except NoResultFound:
                 foldersync = FolderSync(
-                        imapaccount_id=self.crispin_client.account_id,
+                        account_id=self.crispin_client.account_id,
                         folder_name=self.folder_name)
                 db_session.add(foldersync)
                 db_session.commit()

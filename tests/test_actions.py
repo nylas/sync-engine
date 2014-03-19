@@ -11,7 +11,7 @@ class TestLocalClientActions(object):
         and that the local datastore looks good.
     """
     def test_local_archive(self, db, api_client, action_queue):
-        from inbox.server.models.tables import FolderItem
+        from inbox.server.models.tables.base import FolderItem
 
         result = api_client.archive(USER_ID, NAMESPACE_ID, 1)
         assert result == json.dumps("OK"), "archive API call failed"
@@ -27,7 +27,7 @@ class TestLocalClientActions(object):
         assert action_queue.count == 1, "sync-back event not queued"
 
     def test_local_move(self, db, api_client, action_queue):
-        from inbox.server.models.tables import FolderItem
+        from inbox.server.models.tables.base import FolderItem
 
         result = api_client.move(USER_ID, NAMESPACE_ID, 1, 'inbox',
                 'testlabel')
@@ -44,7 +44,7 @@ class TestLocalClientActions(object):
         assert action_queue.count == 1, "sync-back event not queued"
 
     def test_local_copy(self, db, api_client, action_queue):
-        from inbox.server.models.tables import FolderItem
+        from inbox.server.models.tables.base import FolderItem
 
         result = api_client.copy(USER_ID, NAMESPACE_ID, 1, 'inbox',
                 'testlabel')
@@ -61,7 +61,7 @@ class TestLocalClientActions(object):
         assert action_queue.count == 1, "sync-back event not queued"
 
     def test_local_delete(self, db, api_client, action_queue):
-        from inbox.server.models.tables import FolderItem
+        from inbox.server.models.tables.base import FolderItem
 
         result = api_client.delete(USER_ID, NAMESPACE_ID, 1, 'inbox')
         assert result == json.dumps("OK"), "delete API call failed"

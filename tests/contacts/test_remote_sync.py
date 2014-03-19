@@ -4,7 +4,7 @@ from ..util.base import config
 # Need to set up test config before we can import from
 # inbox.server.models.tables.
 config()
-from inbox.server.models.tables import Contact
+from inbox.server.models.tables.base import Contact
 from inbox.server.contacts.remote_sync import merge, poll, MergeError
 
 ACCOUNT_ID = 1
@@ -21,7 +21,7 @@ class ContactsProviderStub(object):
         self._next_g_id = 1
 
     def supply_contact(self, name, email_address):
-        self._contacts.append(Contact(imapaccount_id=ACCOUNT_ID,
+        self._contacts.append(Contact(account_id=ACCOUNT_ID,
                                       g_id=str(self._next_g_id),
                                       source='remote',
                                       name=name,
@@ -72,9 +72,9 @@ def test_add_contacts(contacts_provider, db):
 
     poll(ACCOUNT_ID, contacts_provider)
     local_contacts = db.session.query(Contact). \
-        filter_by(imapaccount_id=ACCOUNT_ID).filter_by(source='local').count()
+        filter_by(account_id=ACCOUNT_ID).filter_by(source='local').count()
     remote_contacts = db.session.query(Contact). \
-        filter_by(imapaccount_id=ACCOUNT_ID).filter_by(source='remote').count()
+        filter_by(account_id=ACCOUNT_ID).filter_by(source='remote').count()
     assert local_contacts == 2
     assert remote_contacts == 2
 

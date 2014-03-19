@@ -3,7 +3,7 @@ import datetime
 import gevent
 
 from inbox.server.models import session_scope
-from inbox.server.models.tables import Contact, ImapAccount
+from inbox.server.models.tables.base import Contact, Account
 from inbox.server.log import configure_contacts_logging, get_logger
 from inbox.server.contacts.google import GoogleContactsProvider
 from inbox.util.misc import or_none
@@ -63,10 +63,10 @@ def poll(account_id, provider):
         # Contact data reflecting any local modifications since the last sync
         # with the remote provider.
         local_contacts = db_session.query(Contact).filter_by(
-            source='local', imapaccount=account).all()
+            source='local', account=account).all()
         # Snapshot of contact data from immediately after last sync.
         cached_contacts = db_session.query(Contact).filter_by(
-            source='remote', imapaccount=account).all()
+            source='remote', account=account).all()
         log.info('Query: have {0} contacts, {1} cached.'.format(
             len(local_contacts), len(cached_contacts)))
 
@@ -81,7 +81,7 @@ def poll(account_id, provider):
                             datetime.datetime.isoformat)
         to_commit = []
         for remote_contact in provider.get_contacts(last_sync):
-            remote_contact.imapaccount = account
+            remote_contact.account = account
             assert remote_contact.g_id is not None, \
                 'Got remote contact with null g_id'
             cached_contact = cached_contact_dict.get(remote_contact.g_id)

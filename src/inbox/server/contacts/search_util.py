@@ -10,7 +10,7 @@ lowercased and stripped of punctuation. Given a search query string Q, a
 contact is considered a result if it has a token T such that Q is a prefix of
 T."""
 
-from inbox.server.models.tables import Contact, SearchToken
+from inbox.server.models.tables.base import Contact, SearchToken
 
 
 def rank_search_results(results):
@@ -18,9 +18,9 @@ def rank_search_results(results):
     return sorted(results, lambda lhs, rhs: cmp(lhs.name, rhs.name))
 
 
-def search(db_session, imapaccount_id, search_query, max_results):
+def search(db_session, account_id, search_query, max_results):
     query = db_session.query(Contact) \
-        .filter(Contact.imapaccount_id == imapaccount_id,
+        .filter(Contact.account_id == account_id,
                 Contact.source == 'local',
                 Contact.token.any(
                     SearchToken.token.startswith(search_query.lower())))

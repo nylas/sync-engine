@@ -71,7 +71,7 @@ def update_metadata(account_id, session, folder_name, uids, new_flags):
             ImapUid.folder_name==folder_name):
         flags = new_flags[item.msg_uid]['flags']
         labels = new_flags[item.msg_uid]['labels']
-        item.update_flags(flags, labels)
+        item.update_imap_flags(flags, labels)
         item.message.is_draft = item.is_draft
         # NOTE: If we're ever going to make our datastore API support "read"
         # status, this is the place to put update of that flag.
@@ -147,7 +147,7 @@ def create_imap_message(db_session, log, account, folder_name, uid,
     if new_msg:
         imapuid = ImapUid(imapaccount=account, folder_name=folder_name,
                 msg_uid=uid, message=new_msg)
-        imapuid.update_flags(flags)
+        imapuid.update_imap_flags(flags)
 
         new_msg.is_draft = imapuid.is_draft
         # NOTE: If we're going to make the Inbox datastore API support "read"
@@ -163,11 +163,11 @@ def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, x_gm_thrid,
     new_uid.message.g_msgid = x_gm_msgid
     # NOTE: g_thrid == g_msgid on the first message in the thread :)
     new_uid.message.g_thrid = x_gm_thrid
-    new_uid.update_flags(flags, x_gm_labels)
+    new_uid.update_imap_flags(flags, x_gm_labels)
 
     # NOTE: This code _requires_ autoflush=True, otherwise duplicate
     # threads may attempt to be created and crash.
-    thread = new_uid.message.thread = ImapThread.from_message(db_session,
+    thread = new_uid.message.thread = ImapThread.from_gmail_message(db_session,
             new_uid.imapaccount.namespace, new_uid.message)
     # make sure this thread has all the correct labels
     existing_labels = {l.folder_name.lower() for l in thread.folders}

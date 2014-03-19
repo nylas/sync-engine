@@ -239,13 +239,18 @@ class SearchToken(Base):
 
 
 class Contact(Base, HasRevisions):
-    """ Inbox-specific sessions. """
+    """Data for a user's contact."""
     account_id = Column(ForeignKey('account.id', ondelete='CASCADE'),
                         nullable=False)
-    account = relationship("Account")
+    account = relationship('Account', load_on_pending=True)
 
     g_id = Column(String(64))
-    source = Column("source", Enum("local", "remote"))
+    # We essentially maintain two copies of a user's contacts.
+    # The contacts with source 'remote' give the contact data as it was
+    # immediately after the last sync with the remote provider.
+    # The contacts with source 'local' also contain any subsequent local
+    # modifications to the data.
+    source = Column('source', Enum('local', 'remote'))
 
     email_address = Column(String(254), nullable=True, index=True)
     name = Column(Text)
@@ -255,12 +260,11 @@ class Contact(Base, HasRevisions):
                         onupdate=func.current_timestamp())
     created_at = Column(DateTime, default=func.now())
 
-    __table_args__ = (UniqueConstraint('g_id', 'source', 'account_id'),
-                      {'extend_existing': True})
+    __table_args__ = (UniqueConstraint('g_id', 'source', 'account_id'),)
 
     @property
     def namespace(self):
-        return self.imapaccount.namespace
+        return self.account.namespace
 
     def cereal(self):
         return dict(id=self.id,
@@ -273,10 +277,16 @@ class Contact(Base, HasRevisions):
 
     def __repr__(self):
         # XXX this won't work properly with unicode (e.g. in the name)
-        return 'Contact({}, {}, {}, {})'.format(self.g_id, self.name,
-                                                self.email_address,
-                                                self.source)
+        return ('Contact({}, {}, {}, {})'
+                .format(self.g_id, self.name, self.email_address, self.source))
 
+    def copy_from(self, src):
+        """ Copy non-null fields from src."""
+        self.account_id = src.account_id or self.account_id
+        self.account = src.account or self.account
+        self.g_id = src.g_id or self.g_id
+        self.name = src.name or self.name
+        self.email_address = src.email_address or self.email_address
 
     @validates('name', include_backrefs=False)
     def tokenize_name(self, key, name):

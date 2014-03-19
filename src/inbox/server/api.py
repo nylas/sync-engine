@@ -110,7 +110,7 @@ class API(object):
     @namespace_auth
     def send_mail(self, recipients, subject, body):
         """ Sends a message with the given objects """
-        account = self.namespace.imapaccount
+        account = self.namespace.account
         assert account is not None, "can't send mail with this namespace"
         if type(recipients) != list:
             recipients = [recipients]
@@ -218,7 +218,7 @@ class API(object):
     @jsonify
     def archive(self, thread_id):
         """ Archive thread locally and also sync back to the backend. """
-        account = self.namespace.imapaccount
+        account = self.namespace.account
         assert account is not None, "can't archive mail with this namespace"
 
         # make local change
@@ -243,7 +243,7 @@ class API(object):
     @jsonify
     def move(self, thread_id, from_folder, to_folder):
         """ Move thread locally and also sync back to the backend. """
-        account = self.namespace.imapaccount
+        account = self.namespace.account
         assert account is not None, "can't move mail with this namespace"
 
         # make local change
@@ -265,7 +265,7 @@ class API(object):
     @jsonify
     def copy(self, thread_id, from_folder, to_folder):
         """ Copy thread locally and also sync back to the backend. """
-        account = self.namespace.imapaccount
+        account = self.namespace.account
         assert account is not None, "can't copy mail with this namespace"
 
         # make local change
@@ -291,7 +291,7 @@ class API(object):
         This really just removes the entry from the folder. Message data that
         no longer belongs to any messages is garbage-collected asynchronously.
         """
-        account = self.namespace.imapaccount
+        account = self.namespace.account
         assert account is not None, "can't delete mail with this namespace"
 
         # make local change
