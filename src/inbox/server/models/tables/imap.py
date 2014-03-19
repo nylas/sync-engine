@@ -17,7 +17,8 @@ PROVIDER = 'Imap'
 
 
 class ImapAccount(Account):
-    id = Column(Integer, ForeignKey('account.id'), primary_key=True)
+    id = Column(Integer, ForeignKey('account.id', ondelete='CASCADE'),
+                primary_key=True)
 
     imap_host = Column(String(512))
 
@@ -119,7 +120,8 @@ class UIDValidity(JSONSerializable, Base):
 
 
 class ImapThread(Thread):
-    id = Column(Integer, ForeignKey('thread.id'), primary_key=True)
+    id = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
+                primary_key=True)
 
     # only on messages from Gmail
     # NOTE: The same message sent to multiple users will be given a
