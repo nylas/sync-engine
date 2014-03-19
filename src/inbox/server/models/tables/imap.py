@@ -21,7 +21,7 @@ class ImapAccount(Account):
 
     imap_host = Column(String(512))
 
-    __mapper_args__ = {'polymorphic_identity': 'imapthread'}
+    __mapper_args__ = {'polymorphic_identity': 'imapaccount'}
 
 
 class ImapUid(JSONSerializable, Base):

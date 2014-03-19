@@ -43,7 +43,7 @@ class Account(Base):
     # user_id refers to Inbox's user id
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'),
             nullable=False)
-    user = relationship('User', backref='imapaccounts')
+    user = relationship('User', backref='accounts')
 
     # http://stackoverflow.com/questions/386294/what-is-the-maximum-length-of-a-valid-email-address
     email_address = Column(String(254), nullable=True, index=True)
@@ -579,7 +579,7 @@ class Block(JSONSerializable, Blob, Base, HasRevisions):
     # TODO: create a constructor that allows the 'content_type' keyword
 
     __table_args__ = (UniqueConstraint('message_id', 'walk_index',
-                      'data_sha256'), {'extend_existing': True})
+                      'data_sha256'),)
 
     def __init__(self, *args, **kwargs):
         self.content_type = None
@@ -637,8 +637,7 @@ class FolderItem(JSONSerializable, Base, HasRevisions):
     def namespace(self):
         return self.thread.namespace
 
-    __table_args__ = (UniqueConstraint('folder_name', 'thread_id'),
-                      {'extend_existing': True})
+    __table_args__ = (UniqueConstraint('folder_name', 'thread_id'),)
 
 
 class Thread(JSONSerializable, Base):

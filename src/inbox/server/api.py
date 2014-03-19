@@ -36,7 +36,7 @@ def namespace_auth(fn):
             self.namespace_id = namespace_id
             user = db_session.query(User).filter_by(id=user_id).join(
                 Account).one()
-            for account in user.imapaccounts:
+            for account in user.accounts:
                 if account.namespace.id == namespace_id:
                     self.namespace = account.namespace
                     return fn(self, *args, **kwargs)
@@ -100,7 +100,7 @@ class API(object):
             for user in users:
                 status[user.id]['stored_data'] = 0
                 status[user.id]['stored_messages'] = 0
-                for account in user.imapaccounts:
+                for account in user.accounts:
                     status[user.id]['stored_data'] += \
                         total_stored_data(account.id, db_session)
                     status[user.id]['stored_messages'] += \
@@ -131,7 +131,7 @@ class API(object):
             user = db_session.query(User).join(Account)\
                     .filter_by(id=user_id).one()
 
-            for account in user.imapaccounts:
+            for account in user.accounts:
                 account_ns = account.namespace
                 nses['private'].append(account_ns.cereal())
 
