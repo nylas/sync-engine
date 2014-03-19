@@ -51,6 +51,8 @@ class Base(object):
     """Base class which provides automated table name
     and surrogate primary key column.
     """
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
     @declared_attr
     def __tablename__(cls):
         return cls.__name__.lower()

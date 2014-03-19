@@ -40,8 +40,6 @@ def register_backends():
 
 # global
 class Account(Base):
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
     # user_id refers to Inbox's user id
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'),
             nullable=False)
@@ -151,8 +149,6 @@ class Account(Base):
 
 class UserSession(Base):
     """ Inbox-specific sessions. """
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
     token = Column(String(40))
 
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'),
@@ -162,8 +158,6 @@ class UserSession(Base):
 
 class Namespace(Base):
     """ A way to do grouping / permissions, basically. """
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
     # NOTE: only root namespaces have IMAP accounts
     account_id = Column(Integer,
                         ForeignKey('account.id', ondelete='CASCADE'),
@@ -186,8 +180,6 @@ class Namespace(Base):
 
 
 class SharedFolder(Base):
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
     # Don't delete shared folders if the user that created them is deleted.
     user_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'),
             nullable=True)
@@ -205,7 +197,6 @@ class SharedFolder(Base):
 
 
 class User(Base):
-    id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(255))
 
 # sharded (by namespace)
@@ -213,8 +204,6 @@ class User(Base):
 
 class Transaction(Base, Revision):
     """ Transactional log to enable client syncing. """
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
     # Do delete transactions if their associated namespace is deleted.
     namespace_id = Column(Integer, ForeignKey('namespace.id',
         ondelete='CASCADE'), nullable=False)
@@ -251,8 +240,6 @@ class SearchToken(Base):
 
 class Contact(Base, HasRevisions):
     """ Inbox-specific sessions. """
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
     account_id = Column(ForeignKey('account.id', ondelete='CASCADE'),
                         nullable=False)
     account = relationship("Account")
@@ -319,8 +306,6 @@ class Contact(Base, HasRevisions):
 
 
 class Message(JSONSerializable, Base, HasRevisions):
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
     # XXX clean this up a lot - make a better constructor, maybe taking
     # a flanker object as an argument to prefill a lot of attributes
 
@@ -564,8 +549,6 @@ common_content_types = ['text/plain',
 
 class Block(JSONSerializable, Blob, Base, HasRevisions):
     """ Metadata for message parts stored in s3 """
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
     message_id = Column(Integer, ForeignKey('message.id', ondelete='CASCADE'),
             nullable=False)
     message = relationship('Message',
@@ -634,8 +617,6 @@ class FolderItem(JSONSerializable, Base, HasRevisions):
     Threads in this table are the _Inbox_ datastore abstraction, which may
     be different from folder names in the actual account backends.
     """
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
     thread_id = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
             nullable=False)
     # thread relationship is on Thread to make delete-orphan cascade work
@@ -660,8 +641,6 @@ class Thread(JSONSerializable, Base):
         If you're attempting to display _all_ messages a la Gmail's All Mail,
         don't query based on folder!
     """
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
     subject = Column(Text, nullable=True)
     subjectdate = Column(DateTime, nullable=False)
     recentdate = Column(DateTime, nullable=False)
@@ -712,8 +691,6 @@ class Thread(JSONSerializable, Base):
 
 
 class FolderSync(Base):
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
     account_id = Column(ForeignKey('account.id', ondelete='CASCADE'),
             nullable=False)
     account = relationship('Account', backref='foldersyncs')

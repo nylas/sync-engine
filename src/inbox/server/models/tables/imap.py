@@ -31,8 +31,6 @@ class ImapUid(JSONSerializable, Base):
         This table is used solely for bookkeeping by the IMAP mail sync
         backends.
     """
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
                             nullable=False)
     imapaccount = relationship("ImapAccount")
@@ -103,8 +101,6 @@ class UIDValidity(JSONSerializable, Base):
     """ UIDValidity has a per-folder value. If it changes, we need to
         re-map g_msgid to UID for that folder.
     """
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
                             nullable=False)
     imapaccount = relationship("ImapAccount")
