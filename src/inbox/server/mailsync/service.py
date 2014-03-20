@@ -52,12 +52,11 @@ class SyncService(object):
                 query = query.filter_by(id=account_id)
             fqdn = socket.getfqdn()
             for acc in query:
-                if (acc.provider != 'Gmail') and (acc.provider != 'EAS'):
-                    self.log.info('Inbox currently supports\
-                                  Gmail and EAS only!')
+                if acc.provider not in self.monitor_cls_for:
+                    self.log.info('Inbox does not currently support {0}\
+                        '.format(acc.provider))
                     return
-
-                self.log.info("Starting sync for account {0}" \
+                self.log.info('Starting sync for account {0}' \
                         .format(acc.email_address))
                 if acc.sync_host is not None and acc.sync_host != fqdn:
                     results[acc.id] = \
@@ -81,12 +80,12 @@ class SyncService(object):
                         acc.sync_host = fqdn
                         db_session.add(acc)
                         db_session.commit()
-                        results[acc.id] = "OK sync started"
+                        results[acc.id] = 'OK sync started'
                     except Exception as e:
                         self.log.error(e.message)
-                        results[acc.id] = "ERROR error encountered"
+                        results[acc.id] = 'ERROR error encountered'
                 else:
-                    results[acc.id] =  "OK sync already started"
+                    results[acc.id] =  'OK sync already started'
         if account_id:
             if account_id in results:
                 return results[account_id]

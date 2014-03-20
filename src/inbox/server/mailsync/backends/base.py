@@ -1,10 +1,14 @@
+from gc import collect as garbage_collect
+
 import zerorpc
 from gevent import Greenlet, joinall, sleep
 from gevent.queue import Queue, Empty
 
+from inbox.util.itert import partition
 from inbox.util.misc import load_modules
 from inbox.server.config import config
 from inbox.server.log import configure_sync_logging
+from inbox.server.models.tables.base import Account, Namespace
 from inbox.server.mailsync.exc import SyncException
 
 import inbox.server.mailsync.backends
@@ -96,6 +100,54 @@ def register_backends():
             monitor_cls_for[provider] = monitor_cls
 
     return monitor_cls_for
+
+
+def create_db_objects(account_id, db_session, log, folder_name, raw_messages,
+        msg_create_fn):
+    new_uids = []
+    # TODO: Detect which namespace to add message to. (shared folders)
+    # Look up message thread,
+    acc = db_session.query(Account).join(Namespace).filter_by(
+            id=account_id).one()
+    for msg in raw_messages:
+        uid = msg_create_fn(db_session, log, acc, folder_name, *msg)
+        if uid is not None:
+            new_uids.append(uid)
+
+    # imapuid, message, thread, labels
+    return new_uids
+
+
+def commit_uids(db_session, log, new_uids):
+    new_messages = [item.message for item in new_uids]
+
+    # Save message part blobs before committing changes to db.
+    for msg in new_messages:
+        threads = [Greenlet.spawn(part.save, part._data) \
+                for part in msg.parts if hasattr(part, '_data')]
+        # Fatally abort if part saves error out. Messages in this
+        # chunk will be retried when the sync is restarted.
+        gevent_check_join(log, threads,
+                "Could not save message parts to blob store!")
+        # clear data to save memory
+        for part in msg.parts:
+            part._data = None
+
+    garbage_collect()
+
+    db_session.add_all(new_uids)
+    db_session.commit()
+
+    # NOTE: indexing temporarily disabled because xapian is leaking fds :/
+    # trigger_index_update(self.account.namespace.id)
+
+
+def new_or_updated(uids, local_uids):
+    """ HIGHESTMODSEQ queries return a list of messages that are *either*
+        new *or* updated. We do different things with each, so we need to
+        sort out which is which.
+    """
+    return partition(lambda x: x in local_uids, uids)
 
 
 class BaseMailSyncMonitor(Greenlet):

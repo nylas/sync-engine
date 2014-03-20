@@ -78,15 +78,14 @@ from inbox.util.itert import chunk, partition
 from inbox.server.log import get_logger
 from inbox.server.crispin import new_crispin
 from inbox.server.models import session_scope
-#from inbox.server.models import imapaccount as account
 from inbox.server.models.tables.base import Namespace
 from inbox.server.models.tables.imap import ImapAccount, FolderSync
 from inbox.server.models.namespace import db_write_lock
 from inbox.server.mailsync.exc import UIDInvalid
-from inbox.server.mailsync.backends.base import (gevent_check_join, verify_db,
-    save_folder_names)
-from inbox.server.mailsync.backends.base import BaseMailSyncMonitor
 from inbox.server.mailsync.backends import imapaccount as account
+from inbox.server.mailsync.backends.base import (gevent_check_join, verify_db,
+    save_folder_names, create_db_objects, commit_uids, new_or_updated)
+from inbox.server.mailsync.backends.base import BaseMailSyncMonitor
 
 PROVIDER = 'Imap'
 SYNC_MONITOR_CLS = 'ImapSyncMonitor'
@@ -344,14 +343,6 @@ def uidvalidity_cb(db_session, account_id):
     return fn
 
 
-def new_or_updated(uids, local_uids):
-    """ HIGHESTMODSEQ queries return a list of messages that are *either*
-        new *or* updated. We do different things with each, so we need to
-        sort out which is which.
-    """
-    return partition(lambda x: x in local_uids, uids)
-
-
 def imap_initial_sync(crispin_client, db_session, log, folder_name,
         shared_state, local_uids, c):
     check_flags(crispin_client, db_session, log, folder_name, local_uids,
@@ -429,22 +420,6 @@ def safe_download(crispin_client, log, uids, c):
     return raw_messages
 
 
-def create_db_objects(account_id, db_session, log, folder_name, raw_messages,
-        msg_create_fn):
-    new_imapuids = []
-    # TODO: Detect which namespace to add message to. (shared folders)
-    # Look up message thread,
-    acc = db_session.query(ImapAccount).join(Namespace).filter_by(
-            id=account_id).one()
-    for msg in raw_messages:
-        uid = msg_create_fn(db_session, log, acc, folder_name, *msg)
-        if uid is not None:
-            new_imapuids.append(uid)
-
-    # imapuid, message, thread, labels
-    return new_imapuids
-
-
 def download_and_commit_uids(crispin_client, db_session, log, folder_name,
         uids, msg_create_fn, syncmanager_lock, c):
     raw_messages = safe_download(crispin_client, log, uids, c)
@@ -453,30 +428,6 @@ def download_and_commit_uids(crispin_client, db_session, log, folder_name,
                 log, folder_name, raw_messages, msg_create_fn)
         commit_uids(db_session, log, new_imapuids)
     return len(new_imapuids)
-
-
-def commit_uids(db_session, log, new_imapuids):
-    new_messages = [item.message for item in new_imapuids]
-
-    # Save message part blobs before committing changes to db.
-    for msg in new_messages:
-        threads = [Greenlet.spawn(part.save, part._data) \
-                for part in msg.parts if hasattr(part, '_data')]
-        # Fatally abort if part saves error out. Messages in this
-        # chunk will be retried when the sync is restarted.
-        gevent_check_join(log, threads,
-                "Could not save message parts to blob store!")
-        # clear data to save memory
-        for part in msg.parts:
-            part._data = None
-
-    garbage_collect()
-
-    db_session.add_all(new_imapuids)
-    db_session.commit()
-
-    # NOTE: indexing temporarily disabled because xapian is leaking fds :/
-    # trigger_index_update(self.account.namespace.id)
 
 
 def remove_deleted_uids(account_id, db_session, log, folder_name,

@@ -14,6 +14,7 @@ from inbox.server.models.message import create_message
 from inbox.server.log import get_logger
 log = get_logger()
 
+
 def total_stored_data(account_id, session):
     """ Computes the total size of the block data of emails in your
         account's IMAP folders
@@ -24,6 +25,7 @@ def total_stored_data(account_id, session):
             .group_by(Message.id, Block.id)
     return int(session.query(func.sum(subq.subquery().columns.size)).scalar())
 
+
 def total_stored_messages(account_id, session):
     """ Computes the number of emails in your account's IMAP folders """
     return session.query(Message) \
@@ -31,10 +33,12 @@ def total_stored_messages(account_id, session):
             .filter(ImapUid.imapaccount_id==account_id) \
             .group_by(Message.id).count()
 
+
 def all_uids(account_id, session, folder_name):
     return [uid for uid, in
             session.query(ImapUid.msg_uid).filter_by(
                 imapaccount_id=account_id, folder_name=folder_name)]
+
 
 def g_msgids(account_id, session, in_=None):
     query = session.query(distinct(Message.g_msgid)).join(ImapUid) \
@@ -43,6 +47,7 @@ def g_msgids(account_id, session, in_=None):
         in_ = [int(i) for i in in_]  # very slow if we send non-integers
         query = query.filter(Message.g_msgid.in_(in_))
     return sorted([g_msgid for g_msgid, in query], key=long)
+
 
 def g_metadata(account_id, session, folder_name):
     query = session.query(ImapUid.msg_uid, Message.g_msgid,
@@ -53,6 +58,7 @@ def g_metadata(account_id, session, folder_name):
 
     return dict([(int(uid), dict(msgid=g_msgid, thrid=g_thrid)) \
             for uid, g_msgid, g_thrid in query])
+
 
 def update_metadata(account_id, session, folder_name, uids, new_flags):
     """ Update flags (the only metadata that can change).
@@ -77,6 +83,7 @@ def update_metadata(account_id, session, folder_name, uids, new_flags):
         # status, this is the place to put update of that flag.
         # (is_seen == is_read)
 
+
 def remove_messages(account_id, session, uids, folder):
     """ Make sure you're holding a db write lock on the account. (We don't try
         to grab the lock in here in case the caller needs to put higher-level
@@ -95,6 +102,7 @@ def remove_messages(account_id, session, uids, folder):
     # the correct folders associated with them, or are deleted when they no
     # longer contain any messages.
 
+
 def get_uidvalidity(account_id, session, folder_name):
     try:
         # using .one() here may catch duplication bugs
@@ -102,6 +110,7 @@ def get_uidvalidity(account_id, session, folder_name):
                 imapaccount_id=account_id, folder_name=folder_name).one()
     except NoResultFound:
         return None
+
 
 def uidvalidity_valid(account_id, session, selected_uidvalidity, \
         folder_name, cached_uidvalidity=None):
@@ -120,6 +129,7 @@ def uidvalidity_valid(account_id, session, selected_uidvalidity, \
     else:
         return selected_uidvalidity >= cached_uidvalidity
 
+
 def update_uidvalidity(account_id, session, folder_name, uidvalidity,
         highestmodseq):
     cached_validity = get_uidvalidity(account_id, session, folder_name)
@@ -129,6 +139,7 @@ def update_uidvalidity(account_id, session, folder_name, uidvalidity,
     cached_validity.highestmodseq = highestmodseq
     cached_validity.uid_validity = uidvalidity
     session.add(cached_validity)
+
 
 def create_imap_message(db_session, log, account, folder_name, uid,
         internaldate, flags, body):
@@ -155,6 +166,7 @@ def create_imap_message(db_session, log, account, folder_name, uid,
         # new_msg.is_read = imapuid.is_seen.
 
         return imapuid
+
 
 def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, x_gm_thrid,
         x_gm_msgid, x_gm_labels):
@@ -193,6 +205,7 @@ def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, x_gm_thrid,
             db_session.add(item)
 
     return new_uid
+
 
 def create_gmail_message(db_session, log, account, folder_name, uid,
         internaldate, flags, body, x_gm_thrid, x_gm_msgid, x_gm_labels):

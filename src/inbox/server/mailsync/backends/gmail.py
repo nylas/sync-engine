@@ -26,18 +26,19 @@ from geventconnpool import retry
 
 from inbox.util.itert import chunk, partition
 from inbox.util.cache import set_cache, get_cache, rm_cache
-#from inbox.server.models import imapaccount as account
 from inbox.server.models.tables.base import Namespace, Message
 from inbox.server.models.tables.imap import ImapAccount, ImapUid
-from inbox.server.mailsync.backends.imap import (uidvalidity_cb,
-    new_or_updated, remove_deleted_uids)
-from inbox.server.mailsync.backends.imap import (chunked_uid_download,
-    update_metadata, resync_uids_from)
-from inbox.server.mailsync.backends.imap import (base_initial_sync, base_poll,
-    safe_download, commit_uids)
-from inbox.server.mailsync.backends.imap import (create_db_objects,
-    ImapSyncMonitor)
 from inbox.server.mailsync.backends import imapaccount as account
+from inbox.server.mailsync.backends.base import (create_db_objects,
+                                                 commit_uids, new_or_updated)
+from inbox.server.mailsync.backends.imap import (uidvalidity_cb,
+                                                 remove_deleted_uids,
+                                                 chunked_uid_download,
+                                                 update_metadata,
+                                                 resync_uids_from,
+                                                 base_initial_sync, base_poll,
+                                                 safe_download,
+                                                 ImapSyncMonitor)
 
 PROVIDER = 'Gmail'
 SYNC_MONITOR_CLS = 'GmailSyncMonitor'
