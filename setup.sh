@@ -32,7 +32,8 @@ apt-get -y install git \
                    python-lxml \
                    libmagickwand-dev \
                    tmux \
-                   curl
+                   curl \
+                   stunnel4
 
 pip install --upgrade setuptools
 

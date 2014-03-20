@@ -11,7 +11,7 @@ import gdata.contacts.client
 from inbox.server.models import session_scope
 from inbox.server.models.tables.base import Contact
 from inbox.server.models.tables.imap import ImapAccount
-from inbox.server.oauth import (INSTALLED_CLIENT_ID, INSTALLED_CLIENT_SECRET,
+from inbox.server.oauth import (GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET,
                                 OAUTH_SCOPE)
 from inbox.server.pool import verify_imap_account
 from inbox.server.log import configure_logging
@@ -51,8 +51,8 @@ class GoogleContactsProvider(object):
                 account = db_session.query(ImapAccount).get(self.account_id)
                 account = verify_imap_account(db_session, account)
                 two_legged_oauth_token = gdata.gauth.OAuth2Token(
-                    client_id=INSTALLED_CLIENT_ID,
-                    client_secret=INSTALLED_CLIENT_SECRET,
+                    client_id=GOOGLE_OAUTH_CLIENT_ID,
+                    client_secret=GOOGLE_OAUTH_CLIENT_SECRET,
                     scope=OAUTH_SCOPE,
                     user_agent=SOURCE_APP_NAME,
                     access_token=account.o_access_token,

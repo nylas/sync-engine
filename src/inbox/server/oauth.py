@@ -8,16 +8,17 @@ from inbox.server.config import config
 from inbox.server.basicauth import AuthError
 
 # Google OAuth app credentials
-INSTALLED_CLIENT_ID = config.get('INSTALLED_CLIENT_ID', None)
-INSTALLED_CLIENT_SECRET = config.get('INSTALLED_CLIENT_SECRET', None)
-assert INSTALLED_CLIENT_ID, 'Missing Google OAuth Client Id'
-assert INSTALLED_CLIENT_SECRET, 'Missing Google OAuth Client Secret'
+GOOGLE_OAUTH_CLIENT_ID = config.get('GOOGLE_OAUTH_CLIENT_ID', None)
+GOOGLE_OAUTH_CLIENT_SECRET = config.get('GOOGLE_OAUTH_CLIENT_SECRET', None)
+REDIRECT_URI = config.get('GOOGLE_OAUTH_REDIRECT_URI', None)
+assert GOOGLE_OAUTH_CLIENT_ID, 'Missing Google OAuth Client Id'
+assert GOOGLE_OAUTH_CLIENT_SECRET, 'Missing Google OAuth Client Secret'
+assert REDIRECT_URI, 'Missing Google OAuth redirect URI'
 
 OAUTH_AUTHENTICATE_URL = 'https://accounts.google.com/o/oauth2/auth'
 OAUTH_ACCESS_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token'
 OAUTH_TOKEN_VALIDATION_URL = 'https://www.googleapis.com/oauth2/v1/tokeninfo'
 USER_INFO_URL = 'https://www.googleapis.com/oauth2/v1/userinfo'
-REDIRECT_URI = 'urn:ietf:wg:oauth:2.0:oob'
 
 OAUTH_SCOPE = ' '.join([
     'https://www.googleapis.com/auth/userinfo.email',  # email address
@@ -39,7 +40,7 @@ class InvalidOAuthGrantError(OAuthError):
 def authorize_redirect_url(email_address=None):
     args = {
         'redirect_uri': REDIRECT_URI,
-        'client_id': INSTALLED_CLIENT_ID,
+        'client_id': GOOGLE_OAUTH_CLIENT_ID,
         'response_type': 'code',
         'scope': OAUTH_SCOPE,
         'access_type': 'offline',  # to get a refresh token
@@ -64,9 +65,9 @@ To authorize Inbox, visit this url and follow the directions:
 def get_authenticated_user(authorization_code):
     log.info('Getting oauth authenticated user...')
     args = {
-        'client_id': INSTALLED_CLIENT_ID,
+        'client_id': GOOGLE_OAUTH_CLIENT_ID,
         'code': authorization_code,
-        'client_secret': INSTALLED_CLIENT_SECRET,
+        'client_secret': GOOGLE_OAUTH_CLIENT_SECRET,
         'grant_type': 'authorization_code',
         'redirect_uri': REDIRECT_URI,
     }
@@ -97,8 +98,8 @@ def get_new_token(refresh_token):
     log.info('Getting new oauth token...')
     args = {
         'refresh_token': refresh_token,
-        'client_id': INSTALLED_CLIENT_ID,
-        'client_secret': INSTALLED_CLIENT_SECRET,
+        'client_id': GOOGLE_OAUTH_CLIENT_ID,
+        'client_secret': GOOGLE_OAUTH_CLIENT_SECRET,
         'grant_type': 'refresh_token'
     }
 
