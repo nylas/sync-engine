@@ -96,6 +96,7 @@ def sync(args):
             print contacts_client.stop_sync(account_id)
         elif args.cmd == 'stopall':
             print mailsync_client.stop_sync()
+            print contacts_client.stop_sync()
         elif args.cmd == 'status':
             print mailsync_client.sync_status()
         else:

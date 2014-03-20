@@ -14,7 +14,6 @@ class ContactService(object):
         self.monitors = {}
         self.start_sync()
 
-    @jsonify
     def start_sync(self, account_id=None):
         """Starts contact syncs for all accounts if account_id is None.
         If account_id is given, start sync only for that account.
@@ -42,14 +41,13 @@ class ContactService(object):
                 return 'OK no such user'
         return results
 
-    @jsonify
     def stop_sync(self, account_id=None):
         """Stops contact syncs for all accounts if account_id is None.
         If account_id is given, stop sync only for that account.
         If account_id doesn't exist, do nothing.
         """
         results = {}
-        with session_scope as db_session:
+        with session_scope() as db_session:
             query = db_session.query(Account)
             if account_id is not None:
                 account_id = int(account_id)
