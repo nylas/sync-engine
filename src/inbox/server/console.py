@@ -1,19 +1,21 @@
 from inbox.server.mailsync.backends.imap import uidvalidity_cb
-from .crispin import new_crispin
-from .models import session_scope
-from .models.tables.base import Account
+from inbox.server.crispin import new_crispin
+from inbox.server.models import session_scope
+from inbox.server.models.tables.base import Account
 import IPython
+
 
 def user_console(user_email_address):
     with session_scope() as db_session:
         account = db_session.query(Account).filter_by(
-                email_address=user_email_address).one()
+            email_address=user_email_address).one()
 
         crispin_client = new_crispin(account.id, account.provider,
-                conn_pool_size=1)
+                                     conn_pool_size=1)
         with crispin_client.pool.get() as c:
             crispin_client.select_folder(crispin_client.folder_names(c)['all'],
-                    uidvalidity_cb(db_session, account), c)
+                                         uidvalidity_cb(db_session, account),
+                                         c)
 
         server_uids = crispin_client.all_uids(c)
 
@@ -29,6 +31,7 @@ def user_console(user_email_address):
         """
 
         IPython.embed(banner1=banner)
+
 
 def start_console(user_email_address=None):
     # You can also do this with
