@@ -1,4 +1,4 @@
-from .mailsync.imap import uidvalidity_cb
+from inbox.server.mailsync.backends.imap import uidvalidity_cb
 from .crispin import new_crispin
 from .models import session_scope
 from .models.tables.base import Account
