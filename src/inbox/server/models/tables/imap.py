@@ -13,7 +13,8 @@ from inbox.server.models import Base
 from inbox.server.models.roles import JSONSerializable
 from inbox.server.models.tables.base import Account, Thread
 
-PROVIDER = 'Imap'
+# Note: Imap IS Gmail currently
+PROVIDER = 'Gmail'
 
 
 class ImapAccount(Account):

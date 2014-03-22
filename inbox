@@ -18,7 +18,7 @@ def debug(args=None):
 def start(args=None):
     # commit = subprocess.check_output(["git", "describe", "--tags"])
     from inbox.server.models import init_db
-    init_db()
+    table_mod_for = init_db()
 
     threads = []
 
@@ -59,6 +59,9 @@ def start(args=None):
      """
 
     log.info("Recursion limit: {0}".format(sys.getrecursionlimit()))
+
+    log.info('Providers currently supported by Inbox: '\
+             '{0}'.format(', '.join(table_mod_for.keys())))
 
     # hang out forever and run some services
     joinall(threads)

@@ -47,9 +47,11 @@ engine = create_engine(db_uri(), listeners=[ForceStrictMode()], echo=False)
 def init_db():
     """ Make the tables. """
     from inbox.server.models.tables.base import register_backends
-    register_backends()
+    table_mod_for = register_backends()
 
     Base.metadata.create_all(engine)
+
+    return table_mod_for
 
 Session = sessionmaker(bind=engine)
 

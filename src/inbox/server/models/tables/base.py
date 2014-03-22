@@ -33,9 +33,19 @@ from inbox.server.models import Base
 
 
 def register_backends():
-    # Find and import
     import inbox.server.models.tables
-    load_modules(inbox.server.models.tables)
+
+    # Find and import
+    modules = load_modules(inbox.server.models.tables)
+
+    # Create mapping
+    table_mod_for = {}
+    for module in modules:
+        if hasattr(module, 'PROVIDER'):
+            provider = module.PROVIDER
+            table_mod_for[provider] = module
+
+    return table_mod_for
 
 
 # global

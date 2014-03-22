@@ -22,7 +22,7 @@ def register_backends():
 
     # Create mapping
     for module in modules:
-        if getattr(module, 'PROVIDER', None) is not None:
+        if hasattr(module, 'PROVIDER'):
             provider = module.PROVIDER
             AUTH_MOD_FOR[provider] = module
 

@@ -89,10 +89,10 @@ def register_backends():
 
     # Create mapping
     for module in modules:
-        if getattr(module, 'PROVIDER', None) is not None:
+        if hasattr(module, 'PROVIDER'):
             provider = module.PROVIDER
 
-            assert getattr(module, 'SYNC_MONITOR_CLS', None) is not None
+            assert hasattr(module, 'SYNC_MONITOR_CLS')
             monitor_cls = getattr(module, module.SYNC_MONITOR_CLS, None)
 
             assert monitor_cls is not None
