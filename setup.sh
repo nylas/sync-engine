@@ -39,6 +39,12 @@ pip install --upgrade setuptools
 
 pip install -r requirements.txt
 pip install -e src
+if [ -d "../inbox-eas" ];
+    pip install -e ../inbox-eas
+fi
+if [ -d "../inbox-util" ];
+    pip install -e ../inbox-util
+fi
 
 echo '[InboxApp] Finished installing dependencies.'
 
