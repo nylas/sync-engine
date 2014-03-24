@@ -14,14 +14,16 @@ from inbox.util.file import mkdirp
 
 from inbox.server.models.tables.base import Message, Block
 
-from ..config import config
+from inbox.server.config import config
+
 
 def get_errfilename(account_id, folder_name, uid):
     errdir = os.path.join(config['LOGDIR'], str(account_id), 'errors',
-            folder_name)
+                          folder_name)
     errfile = os.path.join(errdir, str(uid))
     mkdirp(errdir)
     return errfile
+
 
 def log_decode_error(account_id, folder_name, uid, msg_string):
     """ msg_string is in the original encoding pulled off the wire """
@@ -29,52 +31,57 @@ def log_decode_error(account_id, folder_name, uid, msg_string):
     with open(errfile, 'w') as fh:
         fh.write(msg_string)
 
+
 def create_message(db_session, log, account, mid, folder_name, received_date,
-        flags, raw_message):
-    """ Parses message data, creates metadata database entries, and writes mail
-        parts to disk.
+                   flags, body_string):
+    """ Parses message data and writes out db metadata and MIME blocks.
 
-        Returns the new Message, which links to the new Block objects through
-        relationships. All new objects are uncommitted.
+    Returns the new Message, which links to the new Block objects through
+    relationships. All new objects are uncommitted.
 
-        Threads are not computed here; you gotta do that separately.
+    Threads are not computed here; you gotta do that separately.
 
-        Parameters
-        ----------
-        mid : int
-            The account backend-specific message identifier; it's only used for
-            logging errors.
+    Parameters
+    ----------
+    mid : int
+        The account backend-specific message identifier; it's only used for
+        logging errors.
 
-        raw_message : str
-            The full message including headers.
+    raw_message : str
+        The full message including headers (encoded).
     """
     # trickle-down bugs
     assert account is not None and account.namespace is not None
+    assert not isinstance(body_string, unicode)
     try:
-        parsed = mime.from_string(raw_message)
+        parsed = mime.from_string(body_string)
 
         mime_version = parsed.headers.get('Mime-Version')
-        # NOTE: sometimes MIME-Version is set to "1.0 (1.0)", hence the .startswith
+        # NOTE: sometimes MIME-Version is set to "1.0 (1.0)", hence the
+        # .startswith
         if mime_version is not None and not mime_version.startswith('1.0'):
             log.error("Unexpected MIME-Version: %s" % mime_version)
 
         new_msg = Message()
-        new_msg.data_sha256 = sha256(raw_message).hexdigest()
+        new_msg.data_sha256 = sha256(body_string).hexdigest()
 
         # clean_subject strips re:, fwd: etc.
         new_msg.subject = parsed.clean_subject
         new_msg.from_addr = parse_email_address(parsed.headers.get('From'))
         new_msg.sender_addr = parse_email_address(parsed.headers.get('Sender'))
         new_msg.reply_to = parse_email_address(parsed.headers.get('Reply-To'))
-        new_msg.to_addr = or_none(parsed.headers.getall('To'),
-                lambda tos: filter(lambda p: p is not None,
-                    [parse_email_address(t) for t in tos]))
-        new_msg.cc_addr = or_none(parsed.headers.getall('Cc'),
-                lambda ccs: filter(lambda p: p is not None,
-                    [parse_email_address(c) for c in ccs]))
-        new_msg.bcc_addr = or_none(parsed.headers.getall('Bcc'),
-                lambda bccs: filter(lambda p: p is not None,
-                    [parse_email_address(c) for c in bccs]))
+        new_msg.to_addr = or_none(
+            parsed.headers.getall('To'),
+            lambda tos: filter(lambda p: p is not None,
+                               [parse_email_address(t) for t in tos]))
+        new_msg.cc_addr = or_none(
+            parsed.headers.getall('Cc'),
+            lambda ccs: filter(lambda p: p is not None,
+                               [parse_email_address(c) for c in ccs]))
+        new_msg.bcc_addr = or_none(
+            parsed.headers.getall('Bcc'),
+            lambda bccs: filter(lambda p: p is not None,
+                                [parse_email_address(c) for c in bccs]))
         new_msg.in_reply_to = parsed.headers.get('In-Reply-To')
         new_msg.message_id_header = parsed.headers.get('Message-Id')
 
@@ -83,7 +90,7 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
         # Optional mailing list headers
         new_msg.mailing_list_headers = parse_ml_headers(parsed.headers)
 
-        new_msg.size = len(raw_message)  # includes headers text
+        new_msg.size = len(body_string)  # includes headers text
 
         i = 0  # for walk_index
 
@@ -100,7 +107,8 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
                 with_self=parsed.content_type.is_singlepart()):
             i += 1
             if mimepart.content_type.is_multipart():
-                log.warning("multipart sub-part found! on {0}".format(new_msg.g_msgid))
+                log.warning("multipart sub-part found! on {}"
+                            .format(new_msg.g_msgid))
                 continue  # TODO should we store relations?
 
             new_part = Block()
@@ -117,8 +125,8 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
                     errmsg = """
     Unknown Content-Disposition on message {0} found in {1}.
     Bad Content-Disposition was: '{2}'
-    Parsed Content-Disposition was: '{3}'""".format(mid, folder_name,
-        mimepart.content_disposition)
+    Parsed Content-Disposition was: '{3}'""".format(
+                        mid, folder_name, mimepart.content_disposition)
                     log.error(errmsg)
                     continue
                 else:
@@ -136,7 +144,7 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
                 data_to_write = ''
             # normalize mac/win/unix newlines
             data_to_write = data_to_write \
-                    .replace('\r\n', '\n').replace('\r', '\n')
+                .replace('\r\n', '\n').replace('\r', '\n')
 
             new_part.content_id = mimepart.headers.get('Content-Id')
 
@@ -146,14 +154,14 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
             new_msg.parts.append(new_part)
     except mime.DecodingError:
         # occasionally iconv will fail via maximum recursion depth
-        log_decode_error(account.id, folder_name, mid, raw_message)
-        log.error("DecodeError encountered, unparseable message logged to {0}" \
-                .format(get_errfilename(account.id, folder_name, mid)))
+        log_decode_error(account.id, folder_name, mid, body_string)
+        log.error("DecodeError encountered, unparseable message logged to {0}"
+                  .format(get_errfilename(account.id, folder_name, mid)))
         return
     except RuntimeError:
-        log_decode_error(account.id, folder_name, mid, raw_message)
-        log.error("RuntimeError encountered, probably due to iconv. Unparseable message logged to {0}" \
-                .format(get_errfilename(account.id, folder_name, mid)))
+        log_decode_error(account.id, folder_name, mid, body_string)
+        log.error("RuntimeError encountered, probably due to iconv. Unparseable message logged to {0}"
+                  .format(get_errfilename(account.id, folder_name, mid)))
         return
     new_msg.calculate_sanitized_body()
 

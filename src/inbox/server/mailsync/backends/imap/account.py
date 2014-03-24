@@ -145,14 +145,18 @@ def update_uidvalidity(account_id, session, folder_name, uidvalidity,
 
 def create_imap_message(db_session, log, account, folder_name, uid,
                         internaldate, flags, body):
-    """
-        Returns the new ImapUid, which links to new Message and Block
-        objects through relationships. All new objects are uncommitted.
+    """ IMAP-specific message creation logic.
 
-        This is the one function in this file that gets to take an account
-        object instead of an account_id, because we need to relate the
-        account to ImapUids for versioning to work, since it needs to look
-        up the namespace.
+    This is the one function in this file that gets to take an account
+    object instead of an account_id, because we need to relate the
+    account to ImapUids for versioning to work, since it needs to look
+    up the namespace.
+
+    Returns
+    -------
+    imapuid : inbox.server.models.tables.imap.ImapUid
+        New db object, which links to new Message and Block objects through
+        relationships. All new objects are uncommitted.
     """
     new_msg = create_message(db_session, log, account, uid, folder_name,
                              internaldate, flags, body)
@@ -212,6 +216,8 @@ def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, g_thrid,
 def create_gmail_message(db_session, log, account, folder_name, uid,
                          internaldate, flags, body, g_thrid, g_msgid,
                          g_labels):
+    """ Gmail-specific message creation logic. """
+
     new_uid = create_imap_message(db_session, log, account, folder_name, uid,
                                   internaldate, flags, body)
     if new_uid:
