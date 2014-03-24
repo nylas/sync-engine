@@ -9,8 +9,8 @@ from inbox.server import postel
 from inbox.server import actions
 from inbox.server.config import config
 from inbox.server.models import session_scope
-from inbox.server.mailsync.backends.imapaccount import (total_stored_data,
-                                                        total_stored_messages)
+from inbox.server.mailsync.backends.imap.account import (total_stored_data,
+                                                         total_stored_messages)
 from inbox.server.models.tables.base import (Message, SharedFolder, User,
                                              Account, Thread)
 from inbox.server.models.namespace import (threads_for_folder,

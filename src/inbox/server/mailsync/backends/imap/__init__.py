@@ -82,9 +82,11 @@ from inbox.server.models.tables.base import Namespace
 from inbox.server.models.tables.imap import ImapAccount, FolderSync
 from inbox.server.models.namespace import db_write_lock
 from inbox.server.mailsync.exc import UIDInvalid
-from inbox.server.mailsync.backends import imapaccount as account
-from inbox.server.mailsync.backends.base import (gevent_check_join, verify_db,
-    save_folder_names, create_db_objects, commit_uids, new_or_updated)
+from inbox.server.mailsync.backends.imap import account
+from inbox.server.mailsync.backends.base import (verify_db,
+                                                 save_folder_names,
+                                                 create_db_objects,
+                                                 commit_uids, new_or_updated)
 from inbox.server.mailsync.backends.base import BaseMailSyncMonitor
 
 PROVIDER = 'Imap'
