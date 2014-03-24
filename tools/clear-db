@@ -6,15 +6,23 @@ from inbox.util.db import drop_everything
 import sys
 import argparse
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', dest='config', default='config.cfg')
     parser.add_argument('-u', '--with-users', action='store_true',
-            dest='with_users', default=False)
+                        dest='with_users', default=False)
     args = parser.parse_args()
     load_config(args.config)
     from inbox.server.models import engine
-    drop_everything(engine, with_users=args.with_users)
+
+    if args.with_users:
+        keep_tables = []
+    else:
+        keep_tables = ['user', 'namespace', 'account', 'imapaccount',
+                       'user_session']
+
+    drop_everything(engine, keep_tables=keep_tables)
     return 0
 
 if __name__ == '__main__':
