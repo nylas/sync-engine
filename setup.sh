@@ -39,10 +39,10 @@ pip install --upgrade setuptools
 
 pip install -r requirements.txt
 pip install -e src
-if [ -d "../inbox-eas" ];
+if [ -d "../inbox-eas" ]; then
     pip install -e ../inbox-eas
 fi
-if [ -d "../inbox-util" ];
+if [ -d "../inbox-util" ]; then
     pip install -e ../inbox-util
 fi
 
