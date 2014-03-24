@@ -95,12 +95,12 @@ def configure_logging(account_id, purpose):
     return logger
 
 
-def configure_sync_logging(account_id):
-    """ We log output for each sync instance to a different file than the
+def configure_mailsync_logging(account_id):
+    """ We log output for each mail sync instance to a different file than the
         main server log, for ease of debugging. Sync logs still go to screen
         too, for now.
     """
-    return configure_logging(account_id, "sync")
+    return configure_logging(account_id, "mailsync")
 
 
 def configure_contacts_logging(account_id):

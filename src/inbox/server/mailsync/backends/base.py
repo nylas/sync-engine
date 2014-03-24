@@ -7,7 +7,7 @@ from gevent.queue import Queue, Empty
 from inbox.util.itert import partition
 from inbox.util.misc import load_modules
 from inbox.server.config import config
-from inbox.server.log import configure_sync_logging
+from inbox.server.log import configure_mailsync_logging
 from inbox.server.models.tables.base import Account, Namespace
 from inbox.server.mailsync.exc import SyncException
 
@@ -157,7 +157,7 @@ class BaseMailSyncMonitor(Greenlet):
         self.inbox = Queue()
         # how often to check inbox, in seconds
         self.heartbeat = heartbeat
-        self.log = configure_sync_logging(account_id)
+        self.log = configure_mailsync_logging(account_id)
         self.account_id = account_id
         self.email_address = email_address
         self.provider = provider
