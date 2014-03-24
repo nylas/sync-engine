@@ -36,7 +36,11 @@ from inbox.server.models import session_scope
 from inbox.server.models.tables.base import Namespace
 from inbox.server.models.tables.imap import ImapThread, ImapAccount
 
+PROVIDER = 'Gmail'
+
+
 class ActionError(Exception): pass
+
 
 def uidvalidity_cb(db_session, account_id):
     """ Gmail Syncback actions never ever touch the database and don't rely on
@@ -45,6 +49,7 @@ def uidvalidity_cb(db_session, account_id):
         UIDVALIDITY.
     """
     pass
+
 
 def _translate_folder_name(inbox_folder_name, crispin_client, c):
     """
@@ -59,6 +64,7 @@ def _translate_folder_name(inbox_folder_name, crispin_client, c):
     else:
         raise Exception("weird Gmail folder that's not special or a label: {0}".format(inbox_folder_name))
 
+
 def _syncback_action(fn, imapaccount_id, folder_name):
     """ `folder_name` is an Inbox folder name, not a Gmail folder name. """
     with session_scope() as db_session:
@@ -72,15 +78,18 @@ def _syncback_action(fn, imapaccount_id, folder_name):
                     uidvalidity_cb, c)
             fn(account, db_session, crispin_client, c)
 
+
 def _archive(g_thrid, crispin_client, c):
     assert crispin_client.selected_folder_name \
             == crispin_client.folder_names(c)['inbox'], "must select inbox first"
     crispin_client.archive_thread(g_thrid, c)
 
+
 def _get_g_thrid(namespace_id, thread_id, db_session):
     return db_session.query(ImapThread.g_thrid).filter_by(
             namespace_id=namespace_id,
             id=thread_id).one()[0]
+
 
 def archive(imapaccount_id, thread_id):
     def fn(account, db_session, crispin_client, c):
@@ -88,6 +97,7 @@ def archive(imapaccount_id, thread_id):
         return _archive(g_thrid, crispin_client, c)
 
     return _syncback_action(fn, imapaccount_id, 'inbox')
+
 
 def move(imapaccount_id, thread_id, from_folder, to_folder):
     if from_folder == to_folder:
@@ -143,6 +153,7 @@ def move(imapaccount_id, thread_id, from_folder, to_folder):
 
     return _syncback_action(fn, imapaccount_id, from_folder)
 
+
 def copy(imapaccount_id, thread_id, from_folder, to_folder):
     if from_folder == to_folder:
         return
@@ -158,6 +169,7 @@ def copy(imapaccount_id, thread_id, from_folder, to_folder):
         # copy a thread to all mail is a noop
 
     return _syncback_action(fn, imapaccount_id, from_folder)
+
 
 def delete(imapaccount_id, thread_id, folder_name):
     def fn(account, db_session, crispin_client, c):

@@ -25,12 +25,30 @@ at-least-once semantics.
 from redis import Redis
 from rq import Queue, Connection
 
-from . import gmail
-
+from inbox.util.misc import load_modules
 from inbox.server.util.concurrency import GeventWorker
 from inbox.server.config import config
+import inbox.server.actions
 
-mod_for = {'Gmail': gmail}
+ACTION_MOD_FOR = {}
+
+
+def register_backends():
+    """
+    Finds the action modules for the different providers
+    (in the actions/ directory) and imports them.
+
+    Creates a mapping of provider:actions_mod for each backend found.
+    """
+    # Find and import
+    modules = load_modules(inbox.server.actions)
+
+    # Create mapping
+    for module in modules:
+        if hasattr(module, 'PROVIDER'):
+            provider = module.PROVIDER
+            ACTION_MOD_FOR[provider] = module
+
 
 def get_queue():
     # The queue label is set via config to allow multiple distinct Inbox
@@ -40,17 +58,22 @@ def get_queue():
     assert label, "Must set ACTION_QUEUE_LABEL in config.cfg"
     return Queue(label, connection=Redis())
 
-def get_archive_fn(imapaccount):
-    return mod_for[imapaccount.provider].archive
 
-def get_move_fn(imapaccount):
-    return mod_for[imapaccount.provider].move
+def get_archive_fn(account):
+    return ACTION_MOD_FOR[account.provider].archive
 
-def get_copy_fn(imapaccount):
-    return mod_for[imapaccount.provider].copy
 
-def get_delete_fn(imapaccount):
-    return mod_for[imapaccount.provider].delete
+def get_move_fn(account):
+    return ACTION_MOD_FOR[account.provider].move
+
+
+def get_copy_fn(account):
+    return ACTION_MOD_FOR[account.provider].copy
+
+
+def get_delete_fn(account):
+    return ACTION_MOD_FOR[account.provider].delete
+
 
 # Later we're going to want to consider a pooling mechanism. We may want to
 # split actions queues by remote host, for example, and have workers for a
@@ -60,6 +83,8 @@ def rqworker(burst=False):
 
     More details on how workers work at: http://python-rq.org/docs/workers/
     """
+    register_backends()
+
     with Connection():
         q = get_queue()
 
