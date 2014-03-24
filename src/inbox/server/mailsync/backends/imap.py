@@ -252,7 +252,7 @@ def base_initial_sync(crispin_client, db_session, log, folder_name,
                                      c)
 
         initial_sync_fn(crispin_client, db_session, log, folder_name,
-                        shared_state, local_uids, c, uid_download_stack)
+                        shared_state, local_uids, c)
 
     verify_db(crispin_client, db_session)
 
@@ -360,7 +360,7 @@ def uidvalidity_cb(db_session, account_id):
 
 
 def imap_initial_sync(crispin_client, db_session, log, folder_name,
-                      shared_state, local_uids, c, uid_download_stack):
+                      shared_state, local_uids, c):
     check_flags(crispin_client, db_session, log, folder_name, local_uids,
                 shared_state['syncmanager_lock'], c)
 

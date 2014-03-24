@@ -67,7 +67,7 @@ def initial_sync(crispin_client, db_session, log, folder_name, shared_state):
 
 
 def gmail_initial_sync(crispin_client, db_session, log, folder_name,
-                       shared_state, local_uids, c, uid_download_stack):
+                       shared_state, local_uids, c):
     remote_g_metadata = get_g_metadata(crispin_client, db_session, log,
             folder_name, local_uids, shared_state['syncmanager_lock'], c)
     remote_uids = sorted(remote_g_metadata.keys(), key=int)
@@ -176,9 +176,9 @@ def chunked_thread_download(crispin_client, db_session, log, folder_name,
         needs to do next.
     """
     # X-GM-THRID is roughly ascending over time, so sort most-recent first
-    all_g_thrids = sorted(set([msg['thrid'] for uid, msg in \
-            g_metadata.iteritems() if uid in uids]), reverse=True)
-    folder_g_msgids = {msg['msgid'] for uid, msg in g_metadata.items() \
+    all_g_thrids = sorted({msg.thrid for uid, msg in \
+            g_metadata.iteritems() if uid in uids}, reverse=True)
+    folder_g_msgids = {msg.msgid for uid, msg in g_metadata.items() \
             if uid in uids}
     log.info("{0} threads found".format(len(all_g_thrids)))
 
