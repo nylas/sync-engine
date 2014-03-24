@@ -18,6 +18,8 @@ from inbox.util.cache import get_cache, set_cache
 __all__ = ['CrispinClient', 'DummyCrispinClient']
 
 GMetadata = namedtuple('GMetadata', 'msgid thrid')
+RawMessage = namedtuple('RawImapMessage',
+                        'uid internaldate flags body g_thrid g_msgid g_labels')
 
 
 ### main stuff
@@ -343,8 +345,10 @@ class YahooCrispinClient(CrispinClient):
         messages = []
         for uid in sorted(raw_messages.iterkeys(), key=int):
             msg = raw_messages[uid]
-            messages.append((int(uid), msg['INTERNALDATE'], msg['FLAGS'],
-                             msg['BODY[]']))
+            messages.append(RawMessage(uid=int(uid),
+                                       internaldate=msg['INTERNALDATE'],
+                                       flags=msg['FLAGS'],
+                                       body=msg['BODY[]']))
         return messages
 
     def _fetch_uids(self, uids, c):
@@ -457,9 +461,13 @@ class GmailCrispinClient(CrispinClient):
         messages = []
         for uid in sorted(raw_messages.iterkeys(), key=int):
             msg = raw_messages[uid]
-            messages.append((int(uid), msg['INTERNALDATE'], msg['FLAGS'],
-                             msg['BODY[]'], msg['X-GM-THRID'],
-                             msg['X-GM-MSGID'], msg['X-GM-LABELS']))
+            messages.append(RawMessage(uid=int(uid),
+                                       internaldate=msg['INTERNALDATE'],
+                                       flags=msg['FLAGS'],
+                                       body=msg['BODY[]'],
+                                       g_thrid=msg['X-GM-THRID'],
+                                       g_msgid=msg['X-GM-MSGID'],
+                                       g_labels=msg['X-GM-LABELS']))
         return messages
 
     def _fetch_uids(self, uids, c):

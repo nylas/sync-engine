@@ -170,14 +170,14 @@ def create_imap_message(db_session, log, account, folder_name, uid,
         return imapuid
 
 
-def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, x_gm_thrid,
-                    x_gm_msgid, x_gm_labels):
+def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, g_thrid,
+                    g_msgid, g_labels):
     """ Gmail-specific post-create-message bits."""
 
-    new_uid.message.g_msgid = x_gm_msgid
+    new_uid.message.g_msgid = g_msgid
     # NOTE: g_thrid == g_msgid on the first message in the thread :)
-    new_uid.message.g_thrid = x_gm_thrid
-    new_uid.update_imap_flags(flags, x_gm_labels)
+    new_uid.message.g_thrid = g_thrid
+    new_uid.update_imap_flags(flags, g_labels)
 
     # NOTE: This code _requires_ autoflush=True, otherwise duplicate
     # threads may attempt to be created and crash.
@@ -187,7 +187,7 @@ def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, x_gm_thrid,
     existing_labels = {l.folder_name.lower() for l in thread.folders}
     # convert things like \Inbox -> Inbox, \Important -> Important
     # also, gmail labels are case-insensitive
-    new_labels = {l.lstrip('\\').lower() for l in x_gm_labels} | \
+    new_labels = {l.lstrip('\\').lower() for l in g_labels} | \
         {folder_name.lower()}
     # remove labels that have been deleted -- note that the \Sent label is
     # per-message, not per-thread, but since we always work at the thread
@@ -210,10 +210,10 @@ def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, x_gm_thrid,
 
 
 def create_gmail_message(db_session, log, account, folder_name, uid,
-                         internaldate, flags, body, x_gm_thrid, x_gm_msgid,
-                         x_gm_labels):
+                         internaldate, flags, body, g_thrid, g_msgid,
+                         g_labels):
     new_uid = create_imap_message(db_session, log, account, folder_name, uid,
                                   internaldate, flags, body)
     if new_uid:
         return add_gmail_attrs(db_session, log, new_uid, flags, folder_name,
-                               x_gm_thrid, x_gm_msgid, x_gm_labels)
+                               g_thrid, g_msgid, g_labels)
