@@ -1,8 +1,11 @@
 """ Helper functions for actions that operate on accounts.
 
 These could be methods of ImapAccount, but separating them gives us more
-flexibility with calling code, as most don't need any attributes of the
-account object other than the ID, to limit the action.
+flexibility with calling code, as most don't need any attributes of the account
+object other than the ID, to limit the action.
+
+Eventually we're going to want a better way of ACLing functions that operate on
+accounts.
 """
 from sqlalchemy import distinct, func
 from sqlalchemy.orm.exc import NoResultFound
@@ -20,18 +23,18 @@ def total_stored_data(account_id, session):
         account's IMAP folders
     """
     subq = session.query(Block) \
-            .join(Block.message, Message.imapuid) \
-            .filter(ImapUid.imapaccount_id==account_id) \
-            .group_by(Message.id, Block.id)
+        .join(Block.message, Message.imapuid) \
+        .filter(ImapUid.imapaccount_id == account_id) \
+        .group_by(Message.id, Block.id)
     return int(session.query(func.sum(subq.subquery().columns.size)).scalar())
 
 
 def total_stored_messages(account_id, session):
     """ Computes the number of emails in your account's IMAP folders """
     return session.query(Message) \
-            .join(Message.imapuid) \
-            .filter(ImapUid.imapaccount_id==account_id) \
-            .group_by(Message.id).count()
+        .join(Message.imapuid) \
+        .filter(ImapUid.imapaccount_id == account_id) \
+        .group_by(Message.id).count()
 
 
 def all_uids(account_id, session, folder_name):
@@ -42,7 +45,7 @@ def all_uids(account_id, session, folder_name):
 
 def g_msgids(account_id, session, in_=None):
     query = session.query(distinct(Message.g_msgid)).join(ImapUid) \
-                .filter(ImapUid.imapaccount_id==account_id)
+        .filter(ImapUid.imapaccount_id == account_id)
     if in_ is not None and len(in_):
         in_ = [int(i) for i in in_]  # very slow if we send non-integers
         query = query.filter(Message.g_msgid.in_(in_))
@@ -50,14 +53,13 @@ def g_msgids(account_id, session, in_=None):
 
 
 def g_metadata(account_id, session, folder_name):
-    query = session.query(ImapUid.msg_uid, Message.g_msgid,
-                Message.g_thrid).filter(
-                        ImapUid.imapaccount_id==account_id,
-                        ImapUid.folder_name==folder_name,
-                        ImapUid.message_id==Message.id)
+    query = session.query(ImapUid.msg_uid, Message.g_msgid, Message.g_thrid)\
+        .filter(ImapUid.imapaccount_id == account_id,
+                ImapUid.folder_name == folder_name,
+                ImapUid.message_id == Message.id)
 
-    return dict([(int(uid), dict(msgid=g_msgid, thrid=g_thrid)) \
-            for uid, g_msgid, g_thrid in query])
+    return dict([(int(uid), dict(msgid=g_msgid, thrid=g_thrid))
+                 for uid, g_msgid, g_thrid in query])
 
 
 def update_metadata(account_id, session, folder_name, uids, new_flags):
@@ -72,9 +74,9 @@ def update_metadata(account_id, session, folder_name, uids, new_flags):
     # delete will eventually be synced back to the account backend, so it
     # doesn't matter if our flags get out-of-date in the meantime.
     for item in session.query(ImapUid).join(Message).filter(
-            ImapUid.imapaccount_id==account_id,
+            ImapUid.imapaccount_id == account_id,
             ImapUid.msg_uid.in_(uids),
-            ImapUid.folder_name==folder_name):
+            ImapUid.folder_name == folder_name):
         flags = new_flags[item.msg_uid]['flags']
         labels = new_flags[item.msg_uid]['labels']
         item.update_imap_flags(flags, labels)
@@ -90,9 +92,9 @@ def remove_messages(account_id, session, uids, folder):
         functionality in the lock.)
     """
     fm_query = session.query(ImapUid).filter(
-            ImapUid.imapaccount_id==account_id,
-            ImapUid.folder_name==folder,
-            ImapUid.msg_uid.in_(uids))
+        ImapUid.imapaccount_id == account_id,
+        ImapUid.folder_name == folder,
+        ImapUid.msg_uid.in_(uids))
     fm_query.delete(synchronize_session='fetch')
 
     # XXX TODO: Have a recurring worker permanently remove dangling
@@ -107,21 +109,21 @@ def get_uidvalidity(account_id, session, folder_name):
     try:
         # using .one() here may catch duplication bugs
         return session.query(UIDValidity).filter_by(
-                imapaccount_id=account_id, folder_name=folder_name).one()
+            imapaccount_id=account_id, folder_name=folder_name).one()
     except NoResultFound:
         return None
 
 
-def uidvalidity_valid(account_id, session, selected_uidvalidity, \
-        folder_name, cached_uidvalidity=None):
+def uidvalidity_valid(account_id, session, selected_uidvalidity, folder_name,
+                      cached_uidvalidity=None):
     """ Validate UIDVALIDITY on currently selected folder. """
     if cached_uidvalidity is None:
         cached_uidvalidity = get_uidvalidity(account_id,
-                session, folder_name).uid_validity
+                                             session, folder_name).uid_validity
         assert type(cached_uidvalidity) == type(selected_uidvalidity), \
-                "cached_validity: {0} / selected_uidvalidity: {1}".format(
-                        type(cached_uidvalidity),
-                        type(selected_uidvalidity))
+            "cached_validity: {0} / selected_uidvalidity: {1}".format(
+                type(cached_uidvalidity),
+                type(selected_uidvalidity))
 
     if cached_uidvalidity is None:
         # no row is basically equivalent to UIDVALIDITY == -inf
@@ -131,18 +133,18 @@ def uidvalidity_valid(account_id, session, selected_uidvalidity, \
 
 
 def update_uidvalidity(account_id, session, folder_name, uidvalidity,
-        highestmodseq):
+                       highestmodseq):
     cached_validity = get_uidvalidity(account_id, session, folder_name)
     if cached_validity is None:
         cached_validity = UIDValidity(imapaccount_id=account_id,
-                folder_name=folder_name)
+                                      folder_name=folder_name)
     cached_validity.highestmodseq = highestmodseq
     cached_validity.uid_validity = uidvalidity
     session.add(cached_validity)
 
 
 def create_imap_message(db_session, log, account, folder_name, uid,
-        internaldate, flags, body):
+                        internaldate, flags, body):
     """
         Returns the new ImapUid, which links to new Message and Block
         objects through relationships. All new objects are uncommitted.
@@ -153,11 +155,11 @@ def create_imap_message(db_session, log, account, folder_name, uid,
         up the namespace.
     """
     new_msg = create_message(db_session, log, account, uid, folder_name,
-            internaldate, flags, body)
+                             internaldate, flags, body)
 
     if new_msg:
         imapuid = ImapUid(imapaccount=account, folder_name=folder_name,
-                msg_uid=uid, message=new_msg)
+                          msg_uid=uid, message=new_msg)
         imapuid.update_imap_flags(flags)
 
         new_msg.is_draft = imapuid.is_draft
@@ -169,7 +171,7 @@ def create_imap_message(db_session, log, account, folder_name, uid,
 
 
 def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, x_gm_thrid,
-        x_gm_msgid, x_gm_labels):
+                    x_gm_msgid, x_gm_labels):
     """ Gmail-specific post-create-message bits."""
 
     new_uid.message.g_msgid = x_gm_msgid
@@ -179,20 +181,20 @@ def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, x_gm_thrid,
 
     # NOTE: This code _requires_ autoflush=True, otherwise duplicate
     # threads may attempt to be created and crash.
-    thread = new_uid.message.thread = ImapThread.from_gmail_message(db_session,
-            new_uid.imapaccount.namespace, new_uid.message)
+    thread = new_uid.message.thread = ImapThread.from_gmail_message(
+        db_session, new_uid.imapaccount.namespace, new_uid.message)
     # make sure this thread has all the correct labels
     existing_labels = {l.folder_name.lower() for l in thread.folders}
     # convert things like \Inbox -> Inbox, \Important -> Important
     # also, gmail labels are case-insensitive
     new_labels = {l.lstrip('\\').lower() for l in x_gm_labels} | \
-            {folder_name.lower()}
+        {folder_name.lower()}
     # remove labels that have been deleted -- note that the \Sent label is
     # per-message, not per-thread, but since we always work at the thread
     # level, _we_ apply the label to the whole thread. same goes for
     # \Important.
-    thread.folders = [l for l in thread.folders if l.folder_name in new_labels \
-            or l.folder_name in ('sent', 'important')]
+    thread.folders = [l for l in thread.folders if l.folder_name in new_labels
+                      or l.folder_name in ('sent', 'important')]
     # canonicalize "All Mail" to be "archive" in Inbox's data representation
     archive_folder_name = new_uid.imapaccount.archive_folder_name.lower()
     if archive_folder_name in new_labels:
@@ -208,9 +210,10 @@ def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, x_gm_thrid,
 
 
 def create_gmail_message(db_session, log, account, folder_name, uid,
-        internaldate, flags, body, x_gm_thrid, x_gm_msgid, x_gm_labels):
+                         internaldate, flags, body, x_gm_thrid, x_gm_msgid,
+                         x_gm_labels):
     new_uid = create_imap_message(db_session, log, account, folder_name, uid,
-            internaldate, flags, body)
+                                  internaldate, flags, body)
     if new_uid:
         return add_gmail_attrs(db_session, log, new_uid, flags, folder_name,
-                x_gm_thrid, x_gm_msgid, x_gm_labels)
+                               x_gm_thrid, x_gm_msgid, x_gm_labels)

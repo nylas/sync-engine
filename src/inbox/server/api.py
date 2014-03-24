@@ -42,7 +42,7 @@ def namespace_auth(fn):
                     return fn(self, *args, **kwargs)
 
             shared_nses = db_session.query(SharedFolder)\
-                    .filter(SharedFolder.user_id == user_id)
+                .filter(SharedFolder.user_id == user_id)
             for shared_ns in shared_nses:
                 if shared_ns.id == namespace_id:
                     return fn(self, *args, **kwargs)
@@ -57,14 +57,15 @@ def jsonify(fn):
     """ decorator that JSONifies a function's return value """
     def wrapper(*args, **kwargs):
         ret = fn(*args, **kwargs)
-        return json.dumps(ret, default=json_util.default) # fixes serializing date.datetime
+        # fixes serializing date.datetime
+        return json.dumps(ret, default=json_util.default)
     return wrapper
 
 
 class API(object):
-
     _zmq_search = None
     _sync = None
+
     @property
     def z_search(self):
         """ Proxy function for the ZeroMQ search service. """
@@ -125,18 +126,18 @@ class API(object):
 
             returns a list of tuples of display name, type, and id
         """
-        nses = {'private': [], 'shared': [] }
+        nses = {'private': [], 'shared': []}
 
         with session_scope() as db_session:
             user = db_session.query(User).join(Account)\
-                    .filter_by(id=user_id).one()
+                .filter_by(id=user_id).one()
 
             for account in user.accounts:
                 account_ns = account.namespace
                 nses['private'].append(account_ns.cereal())
 
             shared_nses = db_session.query(SharedFolder)\
-                    .filter(SharedFolder.user_id == user_id)
+                .filter(SharedFolder.user_id == user_id)
             for shared_ns in shared_nses:
                 nses['shared'].append(shared_ns.cereal())
 
@@ -163,8 +164,8 @@ class API(object):
             the requested folder.
         """
         with session_scope() as db_session:
-            return [t.cereal() for t in threads_for_folder(self.namespace.id,
-                        db_session, folder_name)]
+            return [t.cereal() for t in threads_for_folder(
+                self.namespace.id, db_session, folder_name)]
 
     @namespace_auth
     @jsonify
@@ -173,18 +174,18 @@ class API(object):
         # one namespace only.
         with session_scope() as db_session:
             message = db_session.query(Message).join(Message.parts) \
-                    .filter(Message.id==message_id).one()
-            return { 'data': message.prettified_body }
+                .filter(Message.id == message_id).one()
+            return {'data': message.prettified_body}
 
     # Headers API:
     @namespace_auth
     @jsonify
     def headers_for_message(self, message_id):
-        # TODO[kavya]: Take namespace into account, currently doesn't matter since
-        # one namespace only.
+        # TODO[kavya]: Take namespace into account, currently doesn't matter
+        # since one namespace only.
         with session_scope() as db_session:
             message = db_session.query(Message).filter(
-                Message.id==message_id).one()
+                Message.id == message_id).one()
             return message.headers
 
     # Mailing list API:
@@ -192,8 +193,8 @@ class API(object):
     def is_mailing_list_thread(self, thread_id):
         with session_scope() as db_session:
             thread = db_session.query(Thread).filter(
-                Thread.id==thread_id,
-                Thread.namespace_id==self.namespace.id).one()
+                Thread.id == thread_id,
+                Thread.namespace_id == self.namespace.id).one()
             return thread.is_mailing_list_thread()
 
     @namespace_auth
@@ -201,8 +202,8 @@ class API(object):
     def mailing_list_info_for_thread(self, thread_id):
         with session_scope() as db_session:
             thread = db_session.query(Thread).filter(
-                Thread.id==thread_id,
-                Thread.namespace_id==self.namespace.id).one()
+                Thread.id == thread_id,
+                Thread.namespace_id == self.namespace.id).one()
             return thread.mailing_list_info
 
     # For first_10_subjects example:
@@ -248,13 +249,13 @@ class API(object):
 
         # make local change
         with session_scope() as db_session:
-            move_thread(self.namespace.id, db_session, thread_id,
-                    from_folder, to_folder)
+            move_thread(self.namespace.id, db_session, thread_id, from_folder,
+                        to_folder)
 
         # sync it to the account backend
         q = actions.get_queue()
         q.enqueue(actions.get_move_fn(account), account.id, thread_id,
-                from_folder, to_folder)
+                  from_folder, to_folder)
 
         # XXX TODO register a failure handler that reverses the local state
         # change if the change fails to go through
@@ -271,12 +272,12 @@ class API(object):
         # make local change
         with session_scope() as db_session:
             copy_thread(self.namespace.id, db_session, thread_id,
-                    from_folder, to_folder)
+                        from_folder, to_folder)
 
         # sync it to the account backend
         q = actions.get_queue()
         q.enqueue(actions.get_copy_fn(account), account.id, thread_id,
-                from_folder, to_folder)
+                  from_folder, to_folder)
 
         # XXX TODO register a failure handler that reverses the local state
         # change if the change fails to go through
@@ -302,7 +303,7 @@ class API(object):
         # sync it to the account backend
         q = actions.get_queue()
         q.enqueue(actions.get_delete_fn(account), account.id, thread_id,
-                folder_name)
+                  folder_name)
 
         # XXX TODO register a failure handler that reverses the local state
         # change if the change fails to go through
