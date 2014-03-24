@@ -20,7 +20,7 @@ def main():
         keep_tables = []
     else:
         keep_tables = ['user', 'namespace', 'account', 'imapaccount',
-                       'user_session']
+                       'user_session', 'easaccount']
 
     drop_everything(engine, keep_tables=keep_tables)
     return 0
