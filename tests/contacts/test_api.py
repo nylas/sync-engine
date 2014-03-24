@@ -75,3 +75,10 @@ def test_search(contact_client, db):
     assert len(result) == 1
     assert result[0]['name'] == 'Somebody Else'
     assert result[0]['email'] == 'somebody.else@email.address'
+
+
+def test_search_missing_fields(contact_client, db):
+    contact_client.add(ACCOUNT_ID, {'name': 'Some Dude', 'email': None})
+    contact_client.add(ACCOUNT_ID, {'name': None, 'email': 'someemail'})
+    result = json.loads(contact_client.search(ACCOUNT_ID, 'Some'))
+    assert len(result) == 2

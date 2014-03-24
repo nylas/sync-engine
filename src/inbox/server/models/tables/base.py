@@ -303,13 +303,13 @@ class Contact(Base, HasRevisions):
         """ Update the associated search tokens whenever the contact's name is
         updated."""
         new_tokens = []
+        # Delete existing 'name' tokens
+        self.token = [token for token in self.token if token.source != 'name']
         if name is not None:
             new_tokens.extend(name.split())
             new_tokens.append(name)
-        # Delete existing 'name' tokens
-        self.token = [token for token in self.token if token.source != 'name']
-        self.token.extend(SearchToken(token=token, source='name') for token in
-                          new_tokens)
+            self.token.extend(SearchToken(token=token, source='name') for token
+                              in new_tokens)
         return name
 
     @validates('email_address', include_backrefs=False)
@@ -321,7 +321,7 @@ class Contact(Base, HasRevisions):
         if email_address is not None:
             new_token = SearchToken(token=email_address,
                                     source='email_address')
-        self.token.append(new_token)
+            self.token.append(new_token)
         return email_address
 
 
