@@ -5,17 +5,18 @@ import time
 import gevent
 import zerorpc
 
-from ..log import get_logger, log_uncaught_errors
-
 from rq import Worker, Queue
 from rq.worker import StopRequested, DequeueTimeout
 
+from inbox.server.log import get_logger, log_uncaught_errors
 log = get_logger()
+
 
 def make_zerorpc(cls, location):
     assert location, "Location to bind for %s cannot be none!" % cls
+
     def m():
-        """ Exposes the given class as a ZeroRPC server on the given address+port """
+        """ Exposes `cls` as a ZeroRPC server on the given address+port. """
         s = zerorpc.Server(cls())
         s.bind(location)
         log.info("ZeroRPC: Starting %s at %s" % (cls.__name__, location))
@@ -24,6 +25,7 @@ def make_zerorpc(cls, location):
     # will print the stacktrace to stderr and kill the greenlet. Here we're
     # wrapping m in order to also log uncaught errors to disk.
     return gevent.Greenlet.spawn(log_uncaught_errors(m, log))
+
 
 def print_dots():
     """This Greenlet prints dots to the console which is useful for making
@@ -34,6 +36,7 @@ def print_dots():
             sys.stdout.flush()
             time.sleep(.02)
     gevent.Greenlet.spawn(m)
+
 
 # Derived from https://github.com/nvie/rq/issues/303
 class GeventWorker(Worker):
@@ -76,7 +79,7 @@ class GeventWorker(Worker):
             # If shutdown is requested in the middle of a job, wait until
             # finish before shutting down
             self.log.debug('Stopping after all greenlets are finished. '
-                               'Press Ctrl+C again for a cold shutdown.')
+                           'Press Ctrl+C again for a cold shutdown.')
             self._stopped = True
             self.gevent_pool.join()
 
@@ -98,7 +101,7 @@ class GeventWorker(Worker):
 
             try:
                 job = Queue.dequeue_any(self.queues, timeout,
-                                         connection=self.connection)
+                                        connection=self.connection)
                 # make sure all child jobs finish if queue is empty in burst
                 # mode
                 if job is None and timeout is None:

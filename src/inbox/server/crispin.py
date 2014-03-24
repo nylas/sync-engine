@@ -9,11 +9,11 @@ import os
 
 from collections import namedtuple
 
-from .log import get_logger
-from .pool import get_connection_pool
+from inbox.server.log import get_logger
+from inbox.server.pool import get_connection_pool
 
-from ..util.misc import or_none, timed
-from ..util.cache import get_cache, set_cache
+from inbox.util.misc import or_none, timed
+from inbox.util.cache import get_cache, set_cache
 
 __all__ = ['CrispinClient', 'DummyCrispinClient']
 
@@ -23,12 +23,13 @@ GMetadata = namedtuple('GMetadata', 'msgid thrid')
 ### main stuff
 
 def new_crispin(account_id, provider, dummy=False, conn_pool_size=None,
-        readonly=True):
+                readonly=True):
     crispin_module_for = dict(Gmail=GmailCrispinClient, IMAP=CrispinClient,
-            Yahoo=YahooCrispinClient)
+                              Yahoo=YahooCrispinClient)
 
     cls = DummyCrispinClient if dummy else crispin_module_for[provider]
     return cls(account_id, conn_pool_size=conn_pool_size, readonly=readonly)
+
 
 class CrispinClientBase(object):
     """
@@ -51,13 +52,14 @@ class CrispinClientBase(object):
         self.cache = cache
 
     def set_cache(self, data, *keys):
-        key = os.path.join('account.{0}'.format(self.account_id),
-                *[str(key) for key in keys])
+        key = os.path.join('account.{0}'.format(self.account_id), *[str(key)
+                                                                    for key in
+                                                                    keys])
         return set_cache(key, data)
 
     def get_cache(self, *keys):
-        return get_cache(
-                os.path.join('account.{0}'.format(self.account_id), *keys))
+        return get_cache(os.path.join('account.{0}'.format(self.account_id),
+                                      *keys))
 
     def sync_folders(self, c):
         raise NotImplementedError
@@ -75,13 +77,12 @@ class CrispinClientBase(object):
 
     @property
     def selected_highestmodseq(self):
-        return or_none(self.selected_folder_info,
-                lambda i: i['HIGHESTMODSEQ'])
+        return or_none(self.selected_folder_info, lambda i: i['HIGHESTMODSEQ'])
 
     @property
     def selected_uidvalidity(self):
-        return or_none(self.selected_folder_info,
-                lambda i: long(i['UIDVALIDITY']))
+        return or_none(self.selected_folder_info, lambda i:
+                       long(i['UIDVALIDITY']))
 
     def select_folder(self, folder, uidvalidity_cb, c):
         """ Selects a given folder and makes sure to set the 'selected_folder'
@@ -124,6 +125,7 @@ class CrispinClientBase(object):
     def _fetch_new_and_updated_uids(self, modseq, c):
         raise NotImplementedError
 
+
 class DummyCrispinClient(CrispinClientBase):
     """ A crispin client that doesn't actually use IMAP at all. Instead, it
         retrieves cached data from disk and allows one to "replay" previously
@@ -136,41 +138,42 @@ class DummyCrispinClient(CrispinClientBase):
         cached_data = self.get_cache(folder, 'select_info')
 
         assert cached_data is not None, \
-                'no select_info cached for account {0} {1}'.format(
-                        self.account_id, folder)
+            'no select_info cached for account {0} {1}'.format(
+                self.account_id, folder)
         return cached_data
 
     def _fetch_folder_status(self, folder, c):
         cached_data = self.get_cache(folder, 'status')
 
         assert cached_data is not None, \
-                'no folder status cached for account {0} {1}'.format(
-                        self.account_id, folder)
+            'no folder status cached for account {0} {1}'.format(
+                self.account_id, folder)
         return cached_data
 
     def _fetch_all_uids(self, c):
         cached_data = self.get_cache(self.selected_folder_name, 'all_uids')
 
         assert cached_data is not None, \
-                'no all_uids cached for account {0} {1}'.format(
-                        self.account_id, self.selected_folder_name)
+            'no all_uids cached for account {0} {1}'\
+            .format(self.account_id, self.selected_folder_name)
         return cached_data
 
     def _fetch_g_metadata(self, uids, c):
         cached_data = self.get_cache(self.selected_folder_name, 'g_metadata')
 
         assert cached_data is not None, \
-                'no g_metadata cached for account {0} {1}'.format(
-                        self.account_id, self.selected_folder_name)
+            'no g_metadata cached for account {0} {1}'\
+            .format(self.account_id, self.selected_folder_name)
         return cached_data
 
     @timed
     def _fetch_new_and_updated_uids(self, modseq, c):
-        cached_data = self.get_cache(self.selected_folder_name, 'updated', modseq)
+        cached_data = self.get_cache(self.selected_folder_name, 'updated',
+                                     modseq)
 
         assert cached_data is not None, \
-                'no modseq uids cached for account {0} {1} modseq {2}'.format(
-                        self.account_id, self.selected_folder_name, modseq)
+            'no modseq uids cached for account {0} {1} modseq {2}'.format(
+                self.account_id, self.selected_folder_name, modseq)
         return cached_data
 
     def _fetch_flags(self, uids, c):
@@ -178,14 +181,14 @@ class DummyCrispinClient(CrispinClientBase):
         cached_data = dict()
         for uid in uids:
             cached_data[uid] = self.get_cache(
-                    self.selected_folder_name,
-                    self.selected_uidvalidity,
-                    self.selected_highestmodseq,
-                    uid, 'flags')
+                self.selected_folder_name,
+                self.selected_uidvalidity,
+                self.selected_highestmodseq,
+                uid, 'flags')
 
         assert cached_data, \
-                'no flags cached for account {0} {1} uids {2}'.format(
-                        self.account_id, self.selected_folder_name, uids)
+            'no flags cached for account {0} {1} uids {2}'.format(
+                self.account_id, self.selected_folder_name, uids)
 
         return cached_data
 
@@ -194,14 +197,14 @@ class DummyCrispinClient(CrispinClientBase):
         cached_data = dict()
         for uid in uids:
             cached_data[uid] = self.get_cache(
-                    self.selected_folder_name,
-                    self.selected_uidvalidity,
-                    self.selected_highestmodseq,
-                    uid, 'body')
+                self.selected_folder_name,
+                self.selected_uidvalidity,
+                self.selected_highestmodseq,
+                uid, 'body')
 
         assert cached_data, \
-                'no body cached for account {0} {1} uids {2}'.format(
-                        self.account_id, self.selected_folder_name, uids)
+            'no body cached for account {0} {1} uids {2}'.format(
+                self.account_id, self.selected_folder_name, uids)
 
         return cached_data
 
@@ -209,9 +212,10 @@ class DummyCrispinClient(CrispinClientBase):
         cached_data = self.get_cache('folders')
 
         assert cached_data is not None, \
-                'no folder list cached for account {0}'.format(self.account_id)
+            'no folder list cached for account {0}'.format(self.account_id)
 
         return cached_data
+
 
 class CrispinClient(CrispinClientBase):
     """ Methods must be called using a connection from the pool, e.g.
@@ -231,7 +235,7 @@ class CrispinClient(CrispinClientBase):
     CHUNK_SIZE = 1
 
     def __init__(self, account_id, conn_pool_size=None, readonly=True,
-            cache=False):
+                 cache=False):
         self.pool = get_connection_pool(account_id, conn_pool_size)
         self.readonly = readonly
         CrispinClientBase.__init__(self, account_id, cache)
@@ -300,18 +304,19 @@ class CrispinClient(CrispinClientBase):
 
         return folders
 
+
 class YahooCrispinClient(CrispinClient):
     def __init__(self, account_id, conn_pool_size=None, readonly=True,
-            cache=False):
+                 cache=False):
         CrispinClient.__init__(self, account_id, conn_pool_size=conn_pool_size,
-                readonly=readonly, cache=cache)
+                               readonly=readonly, cache=cache)
 
     def sync_folders(self, c):
         return self.folder_names(c)
 
     def flags(self, uids, c):
         return dict([(uid, msg['FLAGS'])
-            for uid, msg in self._fetch_flags(uids, c).iteritems()])
+                     for uid, msg in self._fetch_flags(uids, c).iteritems()])
 
     def _fetch_flags(self, uids, c):
         data = c.fetch(uids, ['FLAGS'])
@@ -320,10 +325,10 @@ class YahooCrispinClient(CrispinClient):
             # account.{{account_id}}/{{folder}}/{{uidvalidity}}/{{highestmodseq}}/{{uid}}/flags
             for uid in uids:
                 self.set_cache(data[uid],
-                        self.selected_folder_name,
-                        self.selected_uidvalidity,
-                        self.selected_highestmodseq,
-                        uid, 'flags')
+                               self.selected_folder_name,
+                               self.selected_uidvalidity,
+                               self.selected_highestmodseq,
+                               uid, 'flags')
 
         return data
 
@@ -339,12 +344,12 @@ class YahooCrispinClient(CrispinClient):
         for uid in sorted(raw_messages.iterkeys(), key=int):
             msg = raw_messages[uid]
             messages.append((int(uid), msg['INTERNALDATE'], msg['FLAGS'],
-                msg['BODY[]']))
+                             msg['BODY[]']))
         return messages
 
     def _fetch_uids(self, uids, c):
         data = c.fetch(uids,
-                ['BODY.PEEK[] INTERNALDATE FLAGS'])
+                       ['BODY.PEEK[] INTERNALDATE FLAGS'])
         for uid, msg in data.iteritems():
             # NOTE: flanker needs encoded bytestrings as its input, since to
             # deal properly with MIME-encoded email you need to do part
@@ -361,10 +366,10 @@ class YahooCrispinClient(CrispinClient):
             # account.{{account_id}}/{{folder}}/{{uidvalidity}}/{{highestmodseq}}/{{uid}}/body
             for uid in uids:
                 self.set_cache(data[uid],
-                        self.selected_folder_name,
-                        self.selected_uidvalidity,
-                        self.selected_highestmodseq,
-                        uid, 'body')
+                               self.selected_folder_name,
+                               self.selected_uidvalidity,
+                               self.selected_highestmodseq,
+                               uid, 'body')
 
         return data
 
@@ -374,11 +379,12 @@ class YahooCrispinClient(CrispinClient):
     def _expand_threads(self, thread_ids, c):
         NotImplementedError
 
+
 class GmailCrispinClient(CrispinClient):
     def __init__(self, account_id, conn_pool_size=None, readonly=True,
-            cache=False):
+                 cache=False):
         CrispinClient.__init__(self, account_id, conn_pool_size=conn_pool_size,
-                readonly=readonly, cache=cache)
+                               readonly=readonly, cache=cache)
 
     def sync_folders(self, c):
         """ In Gmail, every message is a subset of All Mail, so we only sync
@@ -389,9 +395,9 @@ class GmailCrispinClient(CrispinClient):
         return [self.folder_names(c)['inbox'], self.folder_names(c)['all']]
 
     def flags(self, uids, c):
-        """ Flags includes labels on Gmail because Gmail doesn't use \\Draft."""
+        """ Flags includes labels on Gmail because Gmail doesn't use \Draft."""
         return dict([(uid, dict(flags=msg['FLAGS'], labels=msg['X-GM-LABELS']))
-            for uid, msg in self._fetch_flags(uids, c).iteritems()])
+                     for uid, msg in self._fetch_flags(uids, c).iteritems()])
 
     def _fetch_flags(self, uids, c):
         data = c.fetch(uids, ['FLAGS X-GM-LABELS'])
@@ -400,10 +406,10 @@ class GmailCrispinClient(CrispinClient):
             # account.{{account_id}}/{{folder}}/{{uidvalidity}}/{{highestmodseq}}/{{uid}}/flags
             for uid in uids:
                 self.set_cache(data[uid],
-                        self.selected_folder_name,
-                        self.selected_uidvalidity,
-                        self.selected_highestmodseq,
-                        uid, 'flags')
+                               self.selected_folder_name,
+                               self.selected_uidvalidity,
+                               self.selected_highestmodseq,
+                               uid, 'flags')
 
         return data
 
@@ -426,13 +432,13 @@ class GmailCrispinClient(CrispinClient):
                     pass
                 elif '\\All' in flags:
                     self._folder_names['archive'] = name
-                    self._folder_names['all'] =  name
+                    self._folder_names['all'] = name
                 elif name.lower() == 'inbox':
                     self._folder_names[name.lower()] = name
                     continue
                 else:
                     for flag in ['\\Drafts', '\\Important', '\\Sent', '\\Junk',
-                            '\\Flagged', '\\Trash']:
+                                 '\\Flagged', '\\Trash']:
                         # find localized names for Gmail's special folders
                         if flag in flags:
                             k = flag.replace('\\', '').lower()
@@ -441,7 +447,7 @@ class GmailCrispinClient(CrispinClient):
                     else:
                         # everything else is a label
                         self._folder_names.setdefault('labels', list())\
-                                .append(name)
+                            .append(name)
             if 'labels' in self._folder_names:
                 self._folder_names['labels'].sort()
         return self._folder_names
@@ -452,14 +458,14 @@ class GmailCrispinClient(CrispinClient):
         for uid in sorted(raw_messages.iterkeys(), key=int):
             msg = raw_messages[uid]
             messages.append((int(uid), msg['INTERNALDATE'], msg['FLAGS'],
-                msg['BODY[]'], msg['X-GM-THRID'], msg['X-GM-MSGID'],
-                msg['X-GM-LABELS']))
+                             msg['BODY[]'], msg['X-GM-THRID'],
+                             msg['X-GM-MSGID'], msg['X-GM-LABELS']))
         return messages
 
     def _fetch_uids(self, uids, c):
         data = c.fetch(uids,
-                ['BODY.PEEK[] INTERNALDATE FLAGS', 'X-GM-THRID',
-                 'X-GM-MSGID', 'X-GM-LABELS'])
+                       ['BODY.PEEK[] INTERNALDATE FLAGS', 'X-GM-THRID',
+                        'X-GM-MSGID', 'X-GM-LABELS'])
         for uid, msg in data.iteritems():
             # NOTE: flanker needs encoded bytestrings as its input, since to
             # deal properly with MIME-encoded email you need to do part
@@ -476,10 +482,10 @@ class GmailCrispinClient(CrispinClient):
             # account.{{account_id}}/{{folder}}/{{uidvalidity}}/{{highestmodseq}}/{{uid}}/body
             for uid in uids:
                 self.set_cache(data[uid],
-                        self.selected_folder_name,
-                        self.selected_uidvalidity,
-                        self.selected_highestmodseq,
-                        uid, 'body')
+                               self.selected_folder_name,
+                               self.selected_uidvalidity,
+                               self.selected_highestmodseq,
+                               uid, 'body')
 
         return data
 
@@ -503,8 +509,8 @@ class GmailCrispinClient(CrispinClient):
         """
         self.log.info("Fetching X-GM-MSGID and X-GM-THRID mapping from server.")
         return dict([(long(uid), GMetadata(str(ret['X-GM-MSGID']),
-            str(ret['X-GM-THRID']))) \
-                for uid, ret in self._fetch_g_metadata(uids, c).iteritems()])
+                                           str(ret['X-GM-THRID']))) for uid,
+                     ret in self._fetch_g_metadata(uids, c).iteritems()])
 
     def _fetch_g_metadata(self, uids, c):
         data = c.fetch(uids, ['X-GM-MSGID', 'X-GM-THRID'])
@@ -525,8 +531,8 @@ class GmailCrispinClient(CrispinClient):
             All Mail UIDs, sorted most-recent first.
         """
         assert self.selected_folder_name == self.folder_names(c)['all'], \
-                "must select All Mail first ({0})".format(
-                        self.selected_folder_name)
+            "must select All Mail first ({0})".format(
+                self.selected_folder_name)
         # UIDs ascend over time; return in order most-recent first
         return sorted(self._expand_threads(g_thrids, c), reverse=True)
 
@@ -534,7 +540,7 @@ class GmailCrispinClient(CrispinClient):
         # The boolean IMAP queries use prefix notation for query params.
         # imaplib automatically adds parens.
         criteria = ('OR ' * (len(g_thrids)-1)) + ' '.join(
-                ['X-GM-THRID {0}'.format(thrid) for thrid in g_thrids])
+            ['X-GM-THRID {0}'.format(thrid) for thrid in g_thrids])
         data = c.search(['NOT DELETED', criteria])
 
         # if self.cache:
@@ -549,12 +555,19 @@ class GmailCrispinClient(CrispinClient):
         criteria = 'X-GM-THRID {0}'.format(g_thrid)
         return c.search(['NOT DELETED', criteria])
 
+    def _search_uids(self, criteria, c):
+        full_criteria = ['NOT DELETED']
+        if isinstance(criteria, list):
+            full_criteria.extend(criteria)
+        else:
+            full_criteria.append(criteria)
+        return c.search(full_criteria)
+
     ### the following methods WRITE to the IMAP account!
 
     def archive_thread(self, g_thrid, c):
         assert self.selected_folder_name == self.folder_names(c)['inbox'], \
-                "must select INBOX first ({0})".format(
-                        self.selected_folder_name)
+            "must select INBOX first ({0})".format(self.selected_folder_name)
         uids = self.find_messages(g_thrid, c)
         # delete from inbox == archive for Gmail
         if uids:
@@ -582,6 +595,6 @@ class GmailCrispinClient(CrispinClient):
         # Gmail won't even include the label of the selected folder (when the
         # selected folder is a laebl) in the list of labels for a UID, FYI.
         assert self.selected_folder_name != label_name, \
-                "Gmail doesn't support removing a selected label"
+            "Gmail doesn't support removing a selected label"
         uids = self.find_messages(g_thrid, c)
         c.remove_gmail_labels(uids, [label_name])

@@ -15,6 +15,7 @@ def notify(account_id, mtype, message):
     # self.log.info("message from {0}: [{1}] {2}".format(
     # account_id, mtype, message))
 
+
 class SyncService(object):
     def __init__(self):
         self.monitor_cls_for = register_backends()
@@ -26,7 +27,8 @@ class SyncService(object):
         # greenlets.
         # { 'account_id': { 'state': 'initial sync', 'status': '0'} }
         # 'state' can be ['initial sync', 'poll']
-        # 'status' is the percent-done for initial sync, polling start time otherwise
+        # 'status' is the percent-done for initial sync, polling start time
+        # otherwise
         # all data in here ought to be msgpack-serializable!
         self.statuses = dict()
 
@@ -56,25 +58,27 @@ class SyncService(object):
                     self.log.info('Inbox does not currently support {0}\
                         '.format(acc.provider))
                     return
-                self.log.info('Starting sync for account {0}' \
-                        .format(acc.email_address))
+                self.log.info('Starting sync for account {0}'
+                              .format(acc.email_address))
                 if acc.sync_host is not None and acc.sync_host != fqdn:
                     results[acc.id] = \
-                            'acc {0} is syncing on host {1}'.format(
-                                acc.email_address, acc.sync_host)
+                        'acc {0} is syncing on host {1}'.format(
+                            acc.email_address, acc.sync_host)
                 elif acc.id not in self.monitors:
                     try:
                         acc.sync_lock()
+
                         def update_status(account_id, state, status):
                             """ I really really wish I were a lambda """
                             folder, progress = status
                             self.statuses.setdefault(account_id,
-                                    dict())[folder] = (state, progress)
+                                                     dict())[folder] \
+                                = (state, progress)
                             notify(account_id, state, status)
 
-                        monitor = self.monitor_cls_for[acc.provider](acc.id,
-                                acc.namespace.id, acc.email_address,
-                                acc.provider, update_status)
+                        monitor = self.monitor_cls_for[acc.provider](
+                            acc.id, acc.namespace.id, acc.email_address,
+                            acc.provider, update_status)
                         self.monitors[acc.id] = monitor
                         monitor.start()
                         acc.sync_host = fqdn
@@ -85,7 +89,7 @@ class SyncService(object):
                         self.log.error(e.message)
                         results[acc.id] = 'ERROR error encountered'
                 else:
-                    results[acc.id] =  'OK sync already started'
+                    results[acc.id] = 'OK sync already started'
         if account_id:
             if account_id in results:
                 return results[account_id]
@@ -110,7 +114,8 @@ class SyncService(object):
                         (not acc.sync_active):
                     results[acc.id] = "OK sync stopped already"
                 try:
-                    assert acc.sync_host == fqdn, "sync host FQDN doesn't match"
+                    assert acc.sync_host == fqdn, \
+                        "sync host FQDN doesn't match"
                     # XXX Can processing this command fail in some way?
                     self.monitors[acc.id].inbox.put_nowait("shutdown")
                     acc.sync_host = None

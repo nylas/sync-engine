@@ -10,10 +10,12 @@ from inbox.server.config import config, load_config
 from inbox.server.log import configure_general_logging, get_logger
 log = get_logger()
 
+
 def debug(args=None):
     """ Run the server with autoreload. TODO add debug flag to startup."""
     from werkzeug.serving import run_with_reloader
     run_with_reloader(start)
+
 
 def start(args=None):
     # commit = subprocess.check_output(["git", "describe", "--tags"])
@@ -66,6 +68,7 @@ def start(args=None):
     # hang out forever and run some services
     joinall(threads)
 
+
 def sync(args):
     import zerorpc
 
@@ -76,7 +79,7 @@ def sync(args):
     with session_scope() as db_session:
         try:
             account_id = db_session.query(Account.id).filter_by(
-                    email_address=args.email_address).one()[0]
+                email_address=args.email_address).one()[0]
         except NoResultFound:
             log.error("No record of account {0}".format(args.email_address))
             return
@@ -107,8 +110,9 @@ def sync(args):
             sys.exit(1)
     except zerorpc.exceptions.TimeoutExpired:
         print >>sys.stderr, \
-                "Can't connect to sync service. Is it running? (./inbox start)"
+            "Can't connect to sync service. Is it running? (./inbox start)"
         sys.exit(1)
+
 
 def stop(args):
     print """
@@ -123,9 +127,11 @@ def stop(args):
     # os.system("stty echo")
     sys.exit(0)
 
+
 def console(args):
     from inbox.server.console import start_console
     start_console(args.email_address)
+
 
 def search(args):
     import zerorpc
@@ -140,8 +146,9 @@ def search(args):
         print c.search(args.namespace, args.query)
     except zerorpc.exceptions.TimeoutExpired:
         print >>sys.stderr, \
-                "Can't connect. Is the sync server running? (./inbox start)"
+            "Can't connect. Is the sync server running? (./inbox start)"
         sys.exit(1)
+
 
 def index(args):
     import zerorpc
@@ -153,13 +160,13 @@ def index(args):
         c.index(args.namespace)
     except zerorpc.exceptions.TimeoutExpired:
         print >>sys.stderr, \
-                "Can't connect. Is the sync server running? (./inbox start)"
+            "Can't connect. Is the sync server running? (./inbox start)"
         sys.exit(1)
+
 
 def auth(args):
     from sqlalchemy.orm.exc import NoResultFound
     from inbox.util.url import NotSupportedError
-    from inbox.server import session
     from inbox.server.models import session_scope, init_db
     from inbox.server.models.tables.base import Account
     from inbox.server.auth.base import get_handler
@@ -172,10 +179,10 @@ def auth(args):
 
         try:
             account = db_session.query(Account).filter_by(
-                    email_address=email_address).one()
+                email_address=email_address).one()
         except NoResultFound:
             account = auth_handler.create_auth_account(db_session,
-                email_address)
+                                                       email_address)
 
         try:
             verified_account = auth_handler.verify_account(db_session, account)
@@ -185,8 +192,10 @@ def auth(args):
 
     return verified_account
 
+
 def signal_handler(signal, frame):
     stop(None)
+
 
 def main():
     signal.signal(signal.SIGINT, signal_handler)
@@ -204,30 +213,35 @@ def main():
     parser_stop = subparsers.add_parser('stop')
     parser_stop.set_defaults(func=stop)
 
-    parser_auth = subparsers.add_parser('auth', description="Auth an email account")
-    parser_auth.add_argument('email_address', help="Specify the email account to auth")
+    parser_auth = subparsers.add_parser('auth',
+                                        description="Auth an email account")
+    parser_auth.add_argument('email_address',
+                             help="Specify the email account to auth")
     parser_auth.set_defaults(func=auth)
 
-    parser_console = subparsers.add_parser('console', description="REPL for crispin")
+    parser_console = subparsers.add_parser('console',
+                                           description="REPL for crispin")
     parser_console.add_argument('-e', '--email-address',
-            help='Start console with crispin client for a particular user')
+                                help='Start console with crispin client for a particular user')
     parser_console.set_defaults(func=console)
 
-    parser_sync = subparsers.add_parser('sync', description="Start/stop mail sync")
+    parser_sync = subparsers.add_parser('sync',
+                                        description="Start/stop mail sync")
     parser_sync.add_argument('cmd', help='start or stop')
-    parser_sync.add_argument('email_address', help='Email address of the account to sync')
-    parser_sync.add_argument('--dummy', action='store_true',
-            help="Don't connect to IMAP backend.", default=False)
+    parser_sync.add_argument('email_address',
+                             help='Email address of the account to sync')
+    parser_sync.add_argument('--dummy', action='store_true', default=False,
+                             help="Don't connect to IMAP backend.")
     parser_sync.set_defaults(func=sync)
 
     parser_index = subparsers.add_parser('index', description="Index mail")
     parser_index.add_argument('namespace',
-            help='id of namespace to index mail')
+                              help='id of namespace to index mail')
     parser_index.set_defaults(func=index)
 
     parser_search = subparsers.add_parser('search', description="Search mail")
     parser_search.add_argument('namespace',
-            help='id of namespace to search mail')
+                               help='id of namespace to search mail')
     parser_search.add_argument('query', help='Term(s) to search for')
     parser_search.set_defaults(func=search)
 
@@ -238,5 +252,5 @@ def main():
 
     args.func(args)
 
-if __name__=="__main__":
+if __name__ == "__main__":
     main()

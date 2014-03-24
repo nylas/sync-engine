@@ -22,7 +22,7 @@ def check_folder_name(log, inbox_folder, old_folder_name, new_folder_name):
     if old_folder_name is not None and \
             new_folder_name != old_folder_name:
         msg = "{0} folder name changed from '{1}' to '{2}'".format(
-                inbox_folder, old_folder_name, new_folder_name)
+            inbox_folder, old_folder_name, new_folder_name)
         raise SyncException(msg)
 
 
@@ -31,15 +31,15 @@ def save_folder_names(log, account, folder_names, db_session):
     # different backends may be case-sensitive or not. Code that references
     # saved folder names should canonicalize if needed when doing comparisons.
     assert 'inbox' in folder_names, 'account {0} has no detected Inbox'.format(
-            account.email_address)
+        account.email_address)
     check_folder_name(log, 'inbox', account.inbox_folder_name,
-            folder_names['inbox'])
+                      folder_names['inbox'])
     account.inbox_folder_name = folder_names['inbox']
 
-    assert 'drafts' in folder_names, 'account {0} has no detected drafts'.format(
-            account.email_address)
+    assert 'drafts' in folder_names, 'account {0} has no detected drafts'\
+        .format(account.email_address)
     check_folder_name(log, 'drafts', account.drafts_folder_name,
-            folder_names['drafts'])
+                      folder_names['drafts'])
     account.drafts_folder_name = folder_names['drafts']
 
     # We allow accounts not to have archive / sent folders; it's up to the mail
@@ -47,11 +47,11 @@ def save_folder_names(log, account, folder_names, db_session):
     # situation.
     if 'archive' in folder_names:
         check_folder_name(log, 'archive', account.archive_folder_name,
-                folder_names['archive'])
+                          folder_names['archive'])
         account.archive_folder_name = folder_names['archive']
     if 'sent' in folder_names:
         check_folder_name(log, 'sent', account.sent_folder_name,
-                folder_names['sent'])
+                          folder_names['sent'])
         account.sent_folder_name = folder_names['sent']
     db_session.commit()
 
@@ -67,7 +67,8 @@ def gevent_check_join(log, threads, errmsg):
         are not successful.
     """
     joinall(threads)
-    errors = [thread.exception for thread in threads if not thread.successful()]
+    errors = [thread.exception for thread in threads
+              if not thread.successful()]
     if errors:
         log.error(errmsg)
         for error in errors:
@@ -103,12 +104,12 @@ def register_backends():
 
 
 def create_db_objects(account_id, db_session, log, folder_name, raw_messages,
-        msg_create_fn):
+                      msg_create_fn):
     new_uids = []
     # TODO: Detect which namespace to add message to. (shared folders)
     # Look up message thread,
     acc = db_session.query(Account).join(Namespace).filter_by(
-            id=account_id).one()
+        id=account_id).one()
     for msg in raw_messages:
         uid = msg_create_fn(db_session, log, acc, folder_name, *msg)
         if uid is not None:
@@ -123,12 +124,12 @@ def commit_uids(db_session, log, new_uids):
 
     # Save message part blobs before committing changes to db.
     for msg in new_messages:
-        threads = [Greenlet.spawn(part.save, part._data) \
-                for part in msg.parts if hasattr(part, '_data')]
+        threads = [Greenlet.spawn(part.save, part._data) for part in msg.parts
+                   if hasattr(part, '_data')]
         # Fatally abort if part saves error out. Messages in this
         # chunk will be retried when the sync is restarted.
         gevent_check_join(log, threads,
-                "Could not save message parts to blob store!")
+                          "Could not save message parts to blob store!")
         # clear data to save memory
         for part in msg.parts:
             part._data = None
@@ -152,7 +153,7 @@ def new_or_updated(uids, local_uids):
 
 class BaseMailSyncMonitor(Greenlet):
     def __init__(self, account_id, email_address, provider, status_cb,
-            heartbeat=1):
+                 heartbeat=1):
         self.inbox = Queue()
         # how often to check inbox, in seconds
         self.heartbeat = heartbeat

@@ -6,29 +6,31 @@ for mail sync and contact sync.
 import logging
 from colorlog import ColoredFormatter
 
-from ..util.file import mkdirp
+from inbox.util.file import mkdirp
 
-import sys, os
+import sys
+import os
 
-file_formatter = logging.Formatter( "[%(levelname)-.1s %(asctime)s %(module)-8.8s:%(lineno)-4s] %(message)s")
+file_formatter = logging.Formatter(
+    "[%(levelname)-.1s %(asctime)s %(module)-8.8s:%(lineno)-4s] %(message)s")
 
 
 def get_tty_handler():
-  tty_formatter = ColoredFormatter(
-          # wish we could left-truncate name!
-          "%(name)-20.20s %(log_color)s[%(levelname)-.1s %(asctime)s %(module)-8.8s:%(lineno)-4s]%(reset)s %(message)s",
-          reset=True,
-          log_colors={
-                  'DEBUG':    'cyan',
-                  'INFO':     'green',
-                  'WARNING':  'yellow',
-                  'ERROR':    'red',
-                  'CRITICAL': 'red',
-          })
+    tty_formatter = ColoredFormatter(
+        # wish we could left-truncate name!
+        "%(name)-20.20s %(log_color)s[%(levelname)-.1s %(asctime)s %(module)-8.8s:%(lineno)-4s]%(reset)s %(message)s",
+        reset=True,
+        log_colors={
+            'DEBUG':    'cyan',
+            'INFO':     'green',
+            'WARNING':  'yellow',
+            'ERROR':    'red',
+            'CRITICAL': 'red',
+        })
 
-  tty_handler = logging.StreamHandler()
-  tty_handler.setFormatter(tty_formatter)
-  return tty_handler
+    tty_handler = logging.StreamHandler()
+    tty_handler.setFormatter(tty_formatter)
+    return tty_handler
 
 
 def get_logger(account_id=None, purpose=None):

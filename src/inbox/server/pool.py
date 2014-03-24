@@ -20,7 +20,7 @@ from inbox.server import oauth
 from inbox.server.auth.base import get_handler
 
 IMAP_HOSTS = {'Gmail': 'imap.gmail.com',
-                'Yahoo': 'imap.mail.yahoo.com'}
+              'Yahoo': 'imap.mail.yahoo.com'}
 
 # Memory cache for per-user IMAP connection pool.
 imapaccount_id_to_connection_pool = {}
@@ -42,7 +42,8 @@ def verify_gmail_account(account):
             # maybe refresh the access token
             with session_scope() as db_session:
                 account = verify_imap_account(db_session, account)
-                conn.oauth2_login(account.email_address, account.o_access_token)
+                conn.oauth2_login(account.email_address,
+                                  account.o_access_token)
 
     return conn
 
@@ -95,8 +96,8 @@ def verify_imap_account(db_session, account):
         assert 'access_token' in response
 
         auth_handler = get_handler(account.email_address)
-        account = auth_handler.create_account(db_session, account.email_address,
-            response)
+        account = auth_handler.create_account(db_session,
+                                              account.email_address, response)
         log.info('Updated token for imap account {0}'.format(
             account.email_address))
 
@@ -110,13 +111,13 @@ def get_connection_pool(account_id, pool_size=None):
     pool = imapaccount_id_to_connection_pool.get(account_id)
     if pool is None:
         pool = imapaccount_id_to_connection_pool[account_id] \
-                = IMAPConnectionPool(account_id, num_connections=pool_size)
+            = IMAPConnectionPool(account_id, num_connections=pool_size)
     return pool
 
 
 class IMAPConnectionPool(ConnectionPool):
     def __init__(self, account_id, num_connections=5):
-        log.info('Creating connection pool for account {0} with {1} '\
+        log.info('Creating connection pool for account {0} with {1} '
                  'connections'.format(account_id, num_connections))
         self.account_id = account_id
         self._set_account_info()
