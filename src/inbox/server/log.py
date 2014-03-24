@@ -50,11 +50,13 @@ def configure_general_logging():
     """
     # import here to avoid import loop from config.py
     from .config import config
+    assert 'LOGDIR' in config, "LOGDIR not specified in config file"
+    assert 'LOGLEVEL' in config, "LOGLEVEL not specified in config file"
     mkdirp(config['LOGDIR'])
 
     # configure properties that should cascade
     inbox_root_logger = logging.getLogger('inbox.server')
-    inbox_root_logger.setLevel(logging.INFO)
+    inbox_root_logger.setLevel(int(config['LOGLEVEL']))
     # don't pass messages up to the root root logger
     inbox_root_logger.propagate = False
 
