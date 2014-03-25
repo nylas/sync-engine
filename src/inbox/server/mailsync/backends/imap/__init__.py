@@ -343,7 +343,7 @@ def imap_highestmodseq_update(crispin_client, db_session, log, folder_name,
         uids, local_uids, status_cb, syncmanager_lock, c):
     chunked_uid_download(crispin_client, db_session, log, folder_name, uids, 0,
             len(uids), status_cb, download_and_commit_uids,
-            account.create_message, syncmanager_lock, c)
+            account.create_imap_message, syncmanager_lock, c)
 
 
 def uidvalidity_cb(db_session, account_id):
@@ -380,7 +380,7 @@ def imap_initial_sync(crispin_client, db_session, log, folder_name,
     chunked_uid_download(crispin_client, db_session, log, folder_name,
             unknown_uids, len(local_uids), len(remote_uids),
             shared_state['status_cb'], shared_state['syncmanager_lock'],
-            download_and_commit_uids, account.create_message, c)
+            download_and_commit_uids, account.create_imap_message, c)
 
 
 def check_flags(crispin_client, db_session, log, folder_name, local_uids,
