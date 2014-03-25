@@ -12,6 +12,7 @@ node_modules
 /tests/log
 /cache
 /src/flanker
+/src/inbox-util
 # virtualenv
 /include
 /local
