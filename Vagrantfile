@@ -22,6 +22,12 @@ end
 
 Vagrant.configure("2") do |config|
   config.vm.network "private_network", ip: "192.168.10.200"
-  config.vm.synced_folder "../inbox-eas", "/vagrant-eas"
-  config.vm.synced_folder "../inbox-util", "/vagrant-util"
+  if File.exist?("../inbox-eas")
+    puts 'Found EAS...'
+    config.vm.synced_folder "../inbox-eas", "/vagrant-eas"
+  end
+  if File.exist?("../inbox-util")
+    puts 'Found utils...'
+    config.vm.synced_folder "../inbox-util", "/vagrant-util"
+  end
 end
