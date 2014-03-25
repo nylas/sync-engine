@@ -19,7 +19,7 @@ class TestLocalClientActions(object):
         """Normally action backends only get registered when the actions
         rqworker starts. So we need to register them explicitly for these
         tests."""
-        from inbox.server.actions import register_backends
+        from inbox.server.actions.base import register_backends
         register_backends()
 
     def test_local_archive(self, db, api_client, action_queue):

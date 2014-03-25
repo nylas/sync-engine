@@ -30,7 +30,7 @@ the possible cases for IMAP message changes:
 We don't currently handle these operations on the special folders 'junk',
 'trash', 'sent', 'flagged'.
 """
-from ..crispin import new_crispin
+from inbox.server.crispin import new_crispin
 
 from inbox.server.models import session_scope
 from inbox.server.models.tables.base import Namespace

@@ -1,7 +1,7 @@
 """
-Per-provider backend modules.
+Per-provider auth modules.
 
-A backend module *must* meet the following requirement:
+An auth module *must* meet the following requirement:
 
 1. Specify the provider it implements as the module-level PROVIDER variable.
 For example, 'Gmail', 'Imap', 'EAS', 'Yahoo' etc.

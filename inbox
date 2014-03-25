@@ -45,7 +45,7 @@ def start(args=None):
     search_srv_loc = config.get('SEARCH_SERVER_LOC', None)
     threads.append(make_zerorpc(SearchService, search_srv_loc))
 
-    from inbox.server.actions import rqworker
+    from inbox.server.actions.base import rqworker
     threads.append(spawn(rqworker))
 
     print """

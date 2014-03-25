@@ -44,8 +44,8 @@ def db(request, config):
 
 @fixture(scope='function')
 def action_queue(request, config):
-    from inbox.server import actions
-    q = actions.get_queue()
+    from inbox.server.actions import base
+    q = base.get_queue()
     request.addfinalizer(q.empty)
     # make sure it's empty to start out with too
     q.empty()
