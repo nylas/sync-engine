@@ -12,6 +12,7 @@ from sqlalchemy.orm import (reconstructor, relationship, backref, deferred,
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.types import BLOB
+from sqlalchemy.sql.expression import text, true, false
 
 from bs4 import BeautifulSoup, Doctype, Comment
 
@@ -30,7 +31,6 @@ from inbox.server.basicauth import AUTH_TYPES
 
 from inbox.server.models.roles import JSONSerializable, Blob
 from inbox.server.models import Base
-
 
 def register_backends():
     import inbox.server.models.tables
@@ -61,7 +61,7 @@ class Account(Base):
                       nullable=False)
 
     # local flags & data
-    save_raw_messages = Column(Boolean, default=True)
+    save_raw_messages = Column(Boolean, server_default=true())
 
     sync_host = Column(String(255), nullable=True)
     last_synced_contacts = Column(DateTime, nullable=True)
@@ -178,7 +178,7 @@ class Namespace(Base):
 
     # invariant: imapaccount is non-null iff type is root
     type = Column(Enum('root', 'shared_folder'), nullable=False,
-                  default='root')
+                  server_default='root')
 
     @property
     def email_address(self):
@@ -345,12 +345,12 @@ class Message(JSONSerializable, Base, HasRevisions):
     message_id_header = Column(String(255), nullable=True)
     subject = Column(Text, nullable=True)
     received_date = Column(DateTime, nullable=False)
-    size = Column(Integer, default=0, nullable=False)
+    size = Column(Integer, nullable=False)
     data_sha256 = Column(String(255), nullable=True)
 
     mailing_list_headers = Column(JSON, nullable=True)
 
-    is_draft = Column(Boolean, default=False, nullable=False)
+    is_draft = Column(Boolean, server_default=false(), nullable=False)
 
     # Most messages are short and include a lot of quoted text. Preprocessing
     # just the relevant part out makes a big difference in how much data we
@@ -364,7 +364,7 @@ class Message(JSONSerializable, Base, HasRevisions):
 
     # we had to replace utf-8 errors before writing... this might be a
     # mail-parsing bug, or just a message from a bad client.
-    decode_error = Column(Boolean, default=False, nullable=False)
+    decode_error = Column(Boolean, server_default=false(), nullable=False)
 
     # only on messages from Gmail
     g_msgid = Column(BigInteger, nullable=True, index=True)
@@ -584,7 +584,7 @@ class Block(JSONSerializable, Blob, Base, HasRevisions):
     content_id = Column(String(255))  # For attachments
     misc_keyval = Column(JSON)
 
-    is_inboxapp_attachment = Column(Boolean, default=False)
+    is_inboxapp_attachment = Column(Boolean, server_default=false())
 
     # TODO: create a constructor that allows the 'content_type' keyword
 

@@ -3,6 +3,7 @@ from sqlalchemy import (Column, Integer, BigInteger, String, Boolean, Enum,
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
+from sqlalchemy.sql.expression import false
 
 from inbox.sqlalchemy.util import LittleJSON
 
@@ -58,15 +59,15 @@ class ImapUid(JSONSerializable, Base):
 
     ### Flags ###
     # Message has not completed composition (marked as a draft).
-    is_draft = Column(Boolean, default=False, nullable=False)
+    is_draft = Column(Boolean, server_default=false(), nullable=False)
     # Message has been read
-    is_seen = Column(Boolean, default=False, nullable=False)
+    is_seen = Column(Boolean, server_default=false(), nullable=False)
     # Message is "flagged" for urgent/special attention
-    is_flagged = Column(Boolean, default=False, nullable=False)
+    is_flagged = Column(Boolean, server_default=false(), nullable=False)
     # session is the first session to have been notified about this message
-    is_recent = Column(Boolean, default=False, nullable=False)
+    is_recent = Column(Boolean, server_default=false(), nullable=False)
     # Message has been answered
-    is_answered = Column(Boolean, default=False, nullable=False)
+    is_answered = Column(Boolean, server_default=false(), nullable=False)
     # things like: ['$Forwarded', 'nonjunk', 'Junk']
     extra_flags = Column(LittleJSON, nullable=False)
 
@@ -173,6 +174,6 @@ class FolderSync(Base):
     # see state machine in mailsync/imap.py
     state = Column(Enum('initial', 'initial uidinvalid',
                    'poll', 'poll uidinvalid', 'finish'),
-                   default='initial', nullable=False)
+                   server_default='initial', nullable=False)
 
     __table_args__ = (UniqueConstraint('account_id', 'folder_name'),)
