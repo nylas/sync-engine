@@ -1,15 +1,27 @@
 import json
 
+import pytest
+
 from .util.api import api_client
 from .util.base import action_queue
 
 USER_ID = 1
 NAMESPACE_ID = 1
 
+
+
 class TestLocalClientActions(object):
     """ Makes sure events are created properly (doesn't test action processing)
         and that the local datastore looks good.
     """
+    @pytest.fixture(autouse=True)
+    def register_action_backends(db):
+        """Normally action backends only get registered when the actions
+        rqworker starts. So we need to register them explicitly for these
+        tests."""
+        from inbox.server.actions import register_backends
+        register_backends()
+
     def test_local_archive(self, db, api_client, action_queue):
         from inbox.server.models.tables.base import FolderItem
 
