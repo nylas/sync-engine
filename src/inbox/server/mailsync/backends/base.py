@@ -111,7 +111,7 @@ def create_db_objects(account_id, db_session, log, folder_name, raw_messages,
     acc = db_session.query(Account).join(Namespace).filter_by(
         id=account_id).one()
     for msg in raw_messages:
-        uid = msg_create_fn(db_session, log, acc, folder_name, **msg._asdict())
+        uid = msg_create_fn(db_session, log, acc, folder_name, msg)
         if uid is not None:
             new_uids.append(uid)
 

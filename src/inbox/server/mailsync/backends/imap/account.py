@@ -143,8 +143,7 @@ def update_uidvalidity(account_id, session, folder_name, uidvalidity,
     session.add(cached_validity)
 
 
-def create_imap_message(db_session, log, account, folder_name, uid,
-                        internaldate, flags, body):
+def create_imap_message(db_session, log, account, folder_name, msg):
     """ IMAP-specific message creation logic.
 
     This is the one function in this file that gets to take an account
@@ -158,13 +157,13 @@ def create_imap_message(db_session, log, account, folder_name, uid,
         New db object, which links to new Message and Block objects through
         relationships. All new objects are uncommitted.
     """
-    new_msg = create_message(db_session, log, account, uid, folder_name,
-                             internaldate, flags, body)
+    new_msg = create_message(db_session, log, account, msg.uid, folder_name,
+                             msg.internaldate, msg.flags, msg.body)
 
     if new_msg:
         imapuid = ImapUid(imapaccount=account, folder_name=folder_name,
-                          msg_uid=uid, message=new_msg)
-        imapuid.update_imap_flags(flags)
+                          msg_uid=msg.uid, message=new_msg)
+        imapuid.update_imap_flags(msg.flags)
 
         new_msg.is_draft = imapuid.is_draft
         # NOTE: If we're going to make the Inbox datastore API support "read"
@@ -213,13 +212,12 @@ def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, g_thrid,
     return new_uid
 
 
-def create_gmail_message(db_session, log, account, folder_name, uid,
-                         internaldate, flags, body, g_thrid, g_msgid,
-                         g_labels):
+def create_gmail_message(db_session, log, account, folder_name, msg):
     """ Gmail-specific message creation logic. """
 
-    new_uid = create_imap_message(db_session, log, account, folder_name, uid,
-                                  internaldate, flags, body)
+    new_uid = create_imap_message(db_session, log, account, folder_name, msg)
+
     if new_uid:
-        return add_gmail_attrs(db_session, log, new_uid, flags, folder_name,
-                               g_thrid, g_msgid, g_labels)
+        return add_gmail_attrs(db_session, log, new_uid, msg.flags,
+                               folder_name, msg.g_thrid, msg.g_msgid,
+                               msg.g_labels)
