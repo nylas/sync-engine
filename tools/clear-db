@@ -18,11 +18,15 @@ def main():
 
     if args.with_users:
         keep_tables = []
+        reset_columns = {}
     else:
         keep_tables = ['user', 'namespace', 'account', 'imapaccount',
                        'user_session', 'easaccount']
 
-    drop_everything(engine, keep_tables=keep_tables)
+        reset_columns = {'easaccount': ['eas_account_sync_key']}
+
+    drop_everything(engine, keep_tables=keep_tables,
+                    reset_columns=reset_columns)
     return 0
 
 if __name__ == '__main__':
