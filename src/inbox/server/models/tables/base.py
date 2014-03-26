@@ -217,7 +217,7 @@ class Transaction(Base, Revision):
     # Do delete transactions if their associated namespace is deleted.
     namespace_id = Column(Integer, ForeignKey('namespace.id',
         ondelete='CASCADE'), nullable=False)
-    namespace = relationship('Namespace', backref='transactions')
+    namespace = relationship('Namespace')
 
     def set_extra_attrs(self, obj):
         try:
