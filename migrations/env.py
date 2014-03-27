@@ -14,8 +14,12 @@ config = context.config
 # This line sets up loggers basically.
 fileConfig(config.config_file_name)
 
-# Load Inbox server configuration.
-load_config()
+# If alembic was invoked with --tag=test, load the test Inbox config. Otherwise
+# load the default config.
+if context.get_tag_argument() == 'test':
+    load_config('tests/config.cfg')
+else:
+    load_config()
 
 # add your model's MetaData object here
 # for 'autogenerate' support
