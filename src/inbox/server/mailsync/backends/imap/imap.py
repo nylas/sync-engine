@@ -74,7 +74,7 @@ from gevent import Greenlet, sleep
 from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.util.itert import chunk
-from inbox.server.log import get_logger
+from inbox.server.log import get_logger, log_uncaught_errors
 from inbox.server.crispin import new_crispin
 from inbox.server.models import session_scope
 from inbox.server.models.tables.imap import ImapAccount, FolderSync
@@ -176,6 +176,9 @@ class ImapFolderSyncMonitor(Greenlet):
         Greenlet.__init__(self)
 
     def _run(self):
+        return log_uncaught_errors(self._run_impl, self.log)()
+
+    def _run_impl(self):
         with session_scope() as db_session:
             try:
                 foldersync = db_session.query(FolderSync).filter_by(

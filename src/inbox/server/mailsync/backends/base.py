@@ -7,7 +7,7 @@ from gevent.queue import Queue, Empty
 from inbox.util.itert import partition
 from inbox.util.misc import load_modules
 from inbox.server.config import config
-from inbox.server.log import configure_mailsync_logging
+from inbox.server.log import configure_mailsync_logging, log_uncaught_errors
 from inbox.server.models.tables.base import Account, Namespace
 from inbox.server.mailsync.exc import SyncException
 
@@ -124,8 +124,9 @@ def commit_uids(db_session, log, new_uids):
 
     # Save message part blobs before committing changes to db.
     for msg in new_messages:
-        threads = [Greenlet.spawn(part.save, part._data) for part in msg.parts
-                   if hasattr(part, '_data')]
+        threads = [Greenlet.spawn(log_uncaught_errors(part.save, log),
+                                  part._data)
+                   for part in msg.parts if hasattr(part, '_data')]
         # Fatally abort if part saves error out. Messages in this
         # chunk will be retried when the sync is restarted.
         gevent_check_join(log, threads,
@@ -172,7 +173,10 @@ class BaseMailSyncMonitor(Greenlet):
         Greenlet.__init__(self)
 
     def _run(self):
-        sync = Greenlet.spawn(self.sync)
+        return log_uncaught_errors(self._run_impl, self.log)()
+
+    def _run_impl(self):
+        sync = Greenlet.spawn(log_uncaught_errors(self.sync, self.log))
         while not sync.ready():
             try:
                 cmd = self.inbox.get_nowait()

@@ -27,7 +27,7 @@ def test_log_uncaught_errors(config, log):
     with pytest.raises(ValueError):
         def error_throwing_function():
             raise ValueError
-        log_uncaught_errors(error_throwing_function, log)()
+        log_uncaught_errors(error_throwing_function)()
     log_contents = open(os.path.join(config['LOGDIR'], 'server.log'),
                         'r').read()
     assert 'ValueError' in log_contents

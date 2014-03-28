@@ -120,12 +120,14 @@ class log_uncaught_errors(object):
         ----------
         func: function
             The function to wrap.
-        logger: logging.Logger
+
+        logger: logging.Logger, optional
+            The logging object to write to.
     """
 
-    def __init__(self, func, logger):
+    def __init__(self, func, logger=None):
         self.func = func
-        self.logger = logger
+        self.logger = logger or get_logger()
 
     def _log_failsafe(self, *args, **kwargs):
         # We wrap the logging call in a try/except block so that if it fails

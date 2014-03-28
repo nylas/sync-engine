@@ -4,7 +4,8 @@ import gevent
 
 from inbox.server.models import session_scope
 from inbox.server.models.tables.base import Contact, Account
-from inbox.server.log import configure_contacts_logging, get_logger
+from inbox.server.log import (configure_contacts_logging, get_logger,
+                              log_uncaught_errors)
 from inbox.server.contacts.google import GoogleContactsProvider
 from inbox.util.misc import or_none
 
@@ -37,6 +38,9 @@ class ContactSync(gevent.Greenlet):
         gevent.Greenlet.__init__(self)
 
     def _run(self):
+        return log_uncaught_errors(self._run_impl, self.log)()
+
+    def _run_impl(self):
         contacts_provider = GoogleContactsProvider(self.account_id)
         while True:
             poll(self.account_id, contacts_provider)

@@ -24,7 +24,7 @@ def make_zerorpc(cls, location):
     # By default, when an uncaught error is thrown inside a greenlet, gevent
     # will print the stacktrace to stderr and kill the greenlet. Here we're
     # wrapping m in order to also log uncaught errors to disk.
-    return gevent.Greenlet.spawn(log_uncaught_errors(m, log))
+    return gevent.Greenlet.spawn(log_uncaught_errors(m))
 
 
 def print_dots():
@@ -91,7 +91,8 @@ class GeventWorker(Worker):
     def fork_and_perform_job(self, job):
         """Spawns a gevent greenlet to perform the actual work.
         """
-        self.gevent_pool.spawn(self.perform_job, job)
+        self.gevent_pool.spawn(log_uncaught_errors(self.perform_job, self.log),
+                               job)
 
     def dequeue_job_and_maintain_ttl(self, timeout):
         while True:

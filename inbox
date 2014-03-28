@@ -7,7 +7,8 @@ import sys
 from setproctitle import setproctitle; setproctitle('inbox')
 
 from inbox.server.config import config, load_config
-from inbox.server.log import configure_general_logging, get_logger
+from inbox.server.log import (configure_general_logging, get_logger,
+                              log_uncaught_errors)
 log = get_logger()
 
 
@@ -46,7 +47,7 @@ def start(args=None):
     threads.append(make_zerorpc(SearchService, search_srv_loc))
 
     from inbox.server.actions.base import rqworker
-    threads.append(spawn(rqworker))
+    threads.append(spawn(log_uncaught_errors(rqworker)))
 
     print """
 \033[94m     Welcome to... \033[0m\033[1;95m
