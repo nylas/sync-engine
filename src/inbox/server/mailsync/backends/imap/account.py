@@ -91,11 +91,13 @@ def remove_messages(account_id, session, uids, folder):
         to grab the lock in here in case the caller needs to put higher-level
         functionality in the lock.)
     """
-    fm_query = session.query(ImapUid).filter(
+    deletes = session.query(ImapUid).filter(
         ImapUid.imapaccount_id == account_id,
         ImapUid.folder_name == folder,
-        ImapUid.msg_uid.in_(uids))
-    fm_query.delete(synchronize_session='fetch')
+        ImapUid.msg_uid.in_(uids)).all()
+
+    for d in deletes:
+        session.delete(d)
 
     # XXX TODO: Have a recurring worker permanently remove dangling
     # messages from the database and block store. (Probably too
