@@ -24,7 +24,7 @@ You can run Inbox almost anywhere. We've successfully built images for Docker, V
 
 ### Install from source
 
-Here's how to set up a development environment:
+Here's how to set up a development environment running on your local machine:
 
 1. [Install VirtualBox](https://www.virtualbox.org/wiki/Downloads)
 
