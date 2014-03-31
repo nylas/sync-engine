@@ -46,6 +46,8 @@ if [ -d "../inbox-util" ]; then
     pip install -e ../inbox-util
 fi
 
+echo 'export PYTHONIOENCODING=utf_8' >> ~/.bashrc
+
 echo '[InboxApp] Finished installing dependencies.'
 
 # mysql config
