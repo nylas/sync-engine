@@ -1,6 +1,39 @@
-#!/bin/sh
+#!/usr/bin/env sh
 set -e
 
+color() {
+      printf '\033[%sm%s\033[m\n' "$@"
+      # usage color "31;5" "string"
+      # 0 default
+      # 5 blink, 1 strong, 4 underlined
+      # fg: 31 red,  32 green, 33 yellow, 34 blue, 35 purple, 36 cyan, 37 white
+      # bg: 40 black, 41 red, 44 blue, 45 purple
+      }
+
+if [ ! -f ./config.cfg ]; then
+    color '31;1' 'config.cfg file not found!'
+    exit 1
+fi
+
+
+color '36;1' "
+      _____       _
+     |_   _|     | |
+       | |  _ __ | |__   _____  __
+       | | | '_ \| '_ \ / _ \ \/ /
+      _| |_| | | | |_) | (_) >  <
+     |_____|_| |_|_.__/ \___/_/\_\\
+
+     This script installs dependencies for Inbox.
+
+     For more details, visit:
+     https://www.github.com/inboxapp/inbox
+"
+
+color '35;1' "Press enter to continue..."
+read enterKey
+
+color '35;1' 'Updating packages...'
 apt-get update
 apt-get -y install python-software-properties
 
@@ -8,7 +41,8 @@ apt-get -y install python-software-properties
 echo "mysql-server mysql-server/root_password password root" | debconf-set-selections
 echo "mysql-server mysql-server/root_password_again password root" | debconf-set-selections
 
-# Dependencies
+
+color '35;1' 'Installing dependencies from apt-get...'
 apt-get -y install git \
                    wget \
                    supervisor \
@@ -35,8 +69,10 @@ apt-get -y install git \
                    curl \
                    stunnel4
 
-pip install --upgrade setuptools
 
+
+color '35;1' 'Installing dependencies from pip...'
+pip install --upgrade setuptools
 pip install -r requirements.txt
 pip install -e src
 if [ -d "../inbox-eas" ]; then
@@ -46,17 +82,30 @@ if [ -d "../inbox-util" ]; then
     pip install -e ../inbox-util
 fi
 
-echo 'export PYTHONIOENCODING=utf_8' >> ~/.bashrc
 
-echo '[InboxApp] Finished installing dependencies.'
+if ! grep -qe "^PYTHONIOENCODING=utf_8$" "~/.bashrc";
+then
+    echo "# Adding default Python IO encoding" >> ~/.bashrc
+    echo 'export PYTHONIOENCODING=utf_8' >> ~/.bashrc
+else
+    color '32;1' "# PYTHONIOENCODING already set to utf_8"
+fi
 
+
+color '35;1' 'Finished installing dependencies.'
 # mysql config
 cp ./etc/my.cnf /etc/mysql/conf.d/inboxapp.cnf
 
 mysqld_safe &
 sleep 10
 
+color '35;1' 'Creating databases...'
 python tools/create_db.py
+find . -name \*.pyc -delete
 
+color '35;1' 'Cleaning up...'
 apt-get -y purge build-essential
 apt-get -y autoremove
+
+color '35;1' 'Done!.'
+
