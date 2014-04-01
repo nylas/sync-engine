@@ -9,7 +9,7 @@ import iconvcodec
 from flanker import mime
 
 from inbox.util.misc import or_none, parse_ml_headers
-from inbox.util.addr import parse_email_address
+from inbox.util.addr import parse_email_address, parse_email_address_list
 from inbox.util.file import mkdirp
 
 from inbox.server.models.tables.base import Message, Block
@@ -69,19 +69,12 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
         new_msg.subject = parsed.clean_subject
         new_msg.from_addr = parse_email_address(parsed.headers.get('From'))
         new_msg.sender_addr = parse_email_address(parsed.headers.get('Sender'))
-        new_msg.reply_to = parse_email_address(parsed.headers.get('Reply-To'))
-        new_msg.to_addr = or_none(
-            parsed.headers.getall('To'),
-            lambda tos: filter(lambda p: p is not None,
-                               [parse_email_address(t) for t in tos]))
-        new_msg.cc_addr = or_none(
-            parsed.headers.getall('Cc'),
-            lambda ccs: filter(lambda p: p is not None,
-                               [parse_email_address(c) for c in ccs]))
-        new_msg.bcc_addr = or_none(
-            parsed.headers.getall('Bcc'),
-            lambda bccs: filter(lambda p: p is not None,
-                                [parse_email_address(c) for c in bccs]))
+        new_msg.reply_to = parse_email_address_list(parsed.headers.get('Reply-To'))
+
+        new_msg.to_addr = parse_email_address_list(parsed.headers.getall('To'))
+        new_msg.cc_addr = parse_email_address_list(parsed.headers.getall('Cc'))
+        new_msg.bcc_addr = parse_email_address_list(parsed.headers.getall('Bcc'))
+
         new_msg.in_reply_to = parsed.headers.get('In-Reply-To')
         new_msg.message_id_header = parsed.headers.get('Message-Id')
 
