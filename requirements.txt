@@ -30,7 +30,7 @@ zerorpc==0.4.4
 pyzmq==14.0.1
 gdata==2.0.18
 python-dateutil==2.1
--e git://github.com/inboxapp/flanker.git#egg=flanker
+-e git://github.com/inboxapp/flanker.git@master#egg=flanker
 imapclient==0.10.2
 rq-dashboard==0.3.3
 alembic==0.6.3
@@ -38,4 +38,4 @@ iconv==1.0
 pep8==1.4.6
 pyflakes==0.7.3
 pylint==1.1.0
--e git://github.com/inboxapp/inbox-util.git#egg=inbox-util
+-e git://github.com/inboxapp/inbox-util.git@master#egg=inbox-util
