@@ -39,3 +39,4 @@ pep8==1.4.6
 pyflakes==0.7.3
 pylint==1.1.0
 -e git://github.com/inboxapp/inbox-util.git@master#egg=inbox-util
+msgpack-python==0.4.1
