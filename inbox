@@ -293,14 +293,16 @@ def main():
 
         if current_revision != head_revision:
             log.error("Outdated database! Migrate using `alembic upgrade head`")
-            sys.exit()
+            return 1
         else:
             log.info('[OK] Database scheme matches latest')
     else:
         log.error("Un-stamped database! `create_db.py` should have done this... bailing.")
-
+        return 1
 
     args.func(args)
 
+    return 0
+
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
