@@ -103,10 +103,10 @@ def sync(args):
             log.error("No record of account {0}".format(args.email_address))
             return
 
-    mailsync_client = zerorpc.Client(timeout=5)
+    mailsync_client = zerorpc.Client(timeout=15)
     mailsync_srv_loc = config.get('CRISPIN_SERVER_LOC', None)
     mailsync_client.connect(mailsync_srv_loc)
-    contacts_client = zerorpc.Client(timeout=5)
+    contacts_client = zerorpc.Client(timeout=15)
     contacts_srv_loc = config.get('CONTACT_SERVER_LOC', None)
     contacts_client.connect(contacts_srv_loc)
     try:
@@ -123,7 +123,7 @@ def sync(args):
             print mailsync_client.stop_sync()
             print contacts_client.stop_sync()
         elif args.cmd == 'status':
-            print mailsync_client.sync_status()
+            print mailsync_client.sync_status(account_id)
         else:
             print >>sys.stderr, "No such command."
             sys.exit(1)
