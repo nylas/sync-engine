@@ -269,20 +269,22 @@ def main():
     load_config(args.config)
     configure_general_logging()
 
-
     # Check database revision
     from inbox.server.models import db_uri  # needs to be after load_config()
     inbox_db_engine = sqlalchemy.create_engine(db_uri())
 
-    alembic_ini_filename = config.get('ALEMBIC_INI', None)  # top-level, with setup.sh
+    # top-level, with setup.sh
+    alembic_ini_filename = config.get('ALEMBIC_INI', None)
     assert alembic_ini_filename, "Must set ALEMBIC_INI config var"
-    assert os.path.isfile(alembic_ini_filename), "Must have alembic.ini file at %s" % alembic_ini_filename
+    assert os.path.isfile(alembic_ini_filename), \
+        "Must have alembic.ini file at {}".format(alembic_ini_filename)
     alembic_cfg = alembic_config(alembic_ini_filename)
 
     if inbox_db_engine.dialect.has_table(inbox_db_engine, "alembic_version"):
         res = inbox_db_engine.execute("SELECT version_num from alembic_version")
         current_revision = [r for r in res][0][0]
-        assert current_revision, "Need current revision in alembic_version table..."
+        assert current_revision, \
+            "Need current revision in alembic_version table..."
 
         script = ScriptDirectory.from_config(alembic_cfg)
         head_revision = script.get_current_head()
