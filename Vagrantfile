@@ -26,8 +26,4 @@ Vagrant.configure("2") do |config|
     puts 'Found EAS...'
     config.vm.synced_folder "../inbox-eas", "/vagrant-eas"
   end
-  if File.exist?("../inbox-util")
-    puts 'Found utils...'
-    config.vm.synced_folder "../inbox-util", "/vagrant-util"
-  end
 end
