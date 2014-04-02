@@ -67,6 +67,9 @@ We'd love your help making Inbox better! Join the [Google
 Group](http://groups.google.com/group/inbox-dev) for project updates and feature
 discussion.
 
+Please sign the [Contributor License Agreement](https://www.inboxapp.com/cla.html)
+before submitting patches. (It's extremely simliar to other projects, like NodeJS.)
+
 We try to stick with pep8 and the [Google Python style
 guide](http://google-styleguide.googlecode.com/svn/trunk/pyguide.html).
 
@@ -77,6 +80,11 @@ We also group module imports separated by blank lines, starting with Python
 standard library imports, followed by 3rd-party modules and then Inbox modules
 (relative and absolute). Within these general groups, we group to the author's
 preference of visual consistency.
+
+## License
+
+This code is free software, licensed under the The GNU Affero General Public License (AGPL).
+See the `LICENSE` file for more details.
 
 #### Random notes
 
