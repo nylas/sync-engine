@@ -7,14 +7,37 @@ from hashlib import sha256
 
 import iconvcodec
 from flanker import mime
+from flanker.addresslib import address
 
 from inbox.util.misc import or_none, parse_ml_headers
-from inbox.util.addr import parse_email_address, parse_email_address_list
 from inbox.util.file import mkdirp
 
 from inbox.server.models.tables.base import Message, Block
 
 from inbox.server.config import config
+
+
+# TODO we should probably just store flanker's EmailAddress object
+# instead of doing this thing with quotes ourselves
+def strip_quotes(display_name):
+    if display_name.startswith('"') and display_name.endswith('"'):
+        return display_name[1:-1]
+    else:
+        return display_name
+
+
+def parse_email_address_list(email_addresses):
+    parsed = address.parse_list(email_addresses)
+    return [or_none(addr, lambda p:
+        (strip_quotes(p.display_name), p.address)) for addr in parsed]
+
+
+def parse_email_address(email_address):
+    parsed = parse_email_address_list(email_address)
+    if len(parsed) == 0: return None
+    assert len(parsed) == 1, 'Expected only one address' + str(parsed)
+    return parsed[0]
+
 
 
 def get_errfilename(account_id, folder_name, uid):
