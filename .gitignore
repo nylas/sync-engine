@@ -13,6 +13,7 @@ node_modules
 /cache
 /src/flanker
 /src/inbox-util
+/src/zerorpc
 # virtualenv
 /include
 /local

@@ -26,7 +26,7 @@ setproctitle==1.1.8
 rq==0.3.13
 # For ZeroRPC
 Cython==0.19.1
-zerorpc==0.4.4
+-e git://github.com/inboxapp/zerorpc-python.git@master#egg=zerorpc
 pyzmq==14.0.1
 gdata==2.0.18
 python-dateutil==2.1
