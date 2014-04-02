@@ -78,9 +78,6 @@ pip install -e src
 if [ -d "../inbox-eas" ]; then
     pip install -e ../inbox-eas
 fi
-if [ -d "../inbox-util" ]; then
-    pip install -e ../inbox-util
-fi
 
 
 if ! grep -qe "^PYTHONIOENCODING=utf_8$" "~/.bashrc";
