@@ -1,5 +1,5 @@
 import os, errno
-import msgpack
+import cPickle as pickle
 
 from .file import safe_filename, mkdirp, splitall
 
@@ -19,9 +19,8 @@ def set_cache(key, val):
     path = _path_from_key(key)
     dirname = os.path.dirname(path)
     mkdirp(dirname)
-    packed = msgpack.Packer(encoding=PACK_ENCODING).pack(val)
     with open(path, 'w') as f:
-        f.write(packed)
+        pickle.dump(val, f)
 
 
 def _unless_dne(fn, *args, **kwargs):
@@ -37,10 +36,9 @@ def get_cache(key):
 
 
 def _load_cache(path):
-    unpacker = msgpack.Unpacker()
     with open(path, 'r') as f:
-        unpacker.feed(f.read())
-    return unpacker.unpack()
+        d = pickle.load(f)
+    return d
 
 
 def rm_cache(key):
