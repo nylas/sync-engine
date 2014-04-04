@@ -11,6 +11,7 @@ from inbox.server.models.tables.imap import ImapAccount
 from inbox.server.config import config
 
 from inbox.server.auth.base import commit_account
+from inbox.util.misc import or_none, timed
 
 PROVIDER = 'Gmail'
 IMAP_HOST = 'imap.gmail.com'
@@ -87,6 +88,21 @@ def create_account(db_session, email_address, response):
     account.o_refresh_token = response['refresh_token']
     account.o_verified_email = response['verified_email']
     account.date = datetime.datetime.utcnow()
+
+    if 'given_name' in response:
+        account.given_name = response['given_name']
+    if 'family_name' in response:
+        account.family_name = response['family_name']
+    if 'locale' in response:
+        account.g_locale = response['locale']
+    if 'locale' in response:
+        account.picture = response['picture']
+    if 'gender' in response:
+        account.g_gender = response['gender']
+    if 'link' in response:
+        account.g_plus_url = response['link']
+    if 'id' in response:
+        account.google_id = response['id']
 
     return account
 

@@ -84,9 +84,12 @@ def get_authenticated_user(authorization_code):
 
     access_token = session_dict['access_token']
     validation_dict = validate_token(access_token)
+    userinfo_dict = user_info(access_token)
 
     z = session_dict.copy()
     z.update(validation_dict)
+    z.update(userinfo_dict)
+
     return z
 
     # TODO : get this data somewhere other than the auth module
@@ -148,6 +151,27 @@ def validate_token(access_token):
         return None
 
     return validation_dict
+
+def user_info(access_token):
+    log.info('Fetching user info...')
+
+    try:
+        response = requests.get(USER_INFO_URL +
+                                '?access_token=' + access_token)
+    except Exception, e:
+        log.error(e)
+        return None  # TODO better error handling here
+
+    userinfo_dict = response.json()
+
+    if 'error' in userinfo_dict:
+        assert userinfo_dict['error'] == 'invalid_token'
+        log.error('%s - %s' % (userinfo_dict['error'],
+                               userinfo_dict['error_description']))
+        return None
+
+    return userinfo_dict
+
 
 
 def oauth(email_address):

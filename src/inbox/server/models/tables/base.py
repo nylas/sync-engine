@@ -95,6 +95,18 @@ class Account(Base):
     o_refresh_token = Column(String(512))
     o_verified_email = Column(Boolean)
 
+    given_name = Column(String(255))
+    family_name = Column(String(255))
+    g_locale = Column(String(16))
+    g_picture_url = Column(String(255))
+    g_gender = Column(String(16))
+    g_plus_url = Column(String(255))
+    google_id = Column(String(255))
+
+    @property
+    def full_name(self):
+        return "{0} {1}".format(self.given_name, self.family_name)
+
     # used to verify key lifespan
     date = Column(DateTime)
 
