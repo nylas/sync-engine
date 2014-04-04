@@ -16,11 +16,13 @@ def main():
     load_config(args.config)
     from inbox.server.models import engine
 
-    if args.with_users:
-        keep_tables = []
-        reset_columns = {}
-    else:
-        keep_tables = ['user', 'namespace', 'account', 'imapaccount',
+    # Always keep the 'alembic_version' table
+    keep_tables = ['alembic_version']
+    reset_columns = {}
+
+    # '--with-users' NOT specified
+    if not args.with_users:
+        keep_tables += ['user', 'namespace', 'account', 'imapaccount',
                        'user_session', 'easaccount']
 
         reset_columns = {'easaccount': ['eas_account_sync_key']}

@@ -275,34 +275,34 @@ def main():
 
     # top-level, with setup.sh
     alembic_ini_filename = config.get('ALEMBIC_INI', None)
-    assert alembic_ini_filename, "Must set ALEMBIC_INI config var"
+    assert alembic_ini_filename, 'Must set ALEMBIC_INI config var'
     assert os.path.isfile(alembic_ini_filename), \
-        "Must have alembic.ini file at {}".format(alembic_ini_filename)
+        'Must have alembic.ini file at {}'.format(alembic_ini_filename)
     alembic_cfg = alembic_config(alembic_ini_filename)
 
-    if inbox_db_engine.dialect.has_table(inbox_db_engine, "alembic_version"):
-        res = inbox_db_engine.execute("SELECT version_num from alembic_version")
+    if inbox_db_engine.dialect.has_table(inbox_db_engine, 'alembic_version'):
+        res = inbox_db_engine.execute('SELECT version_num from alembic_version')
         current_revision = [r for r in res][0][0]
         assert current_revision, \
-            "Need current revision in alembic_version table..."
+            'Need current revision in alembic_version table...'
 
         script = ScriptDirectory.from_config(alembic_cfg)
         head_revision = script.get_current_head()
-        log.info("Head database revision: {0}".format(head_revision))
-        log.info("Current database revision: {0}".format(current_revision))
+        log.info('Head database revision: {0}'.format(head_revision))
+        log.info('Current database revision: {0}'.format(current_revision))
 
         if current_revision != head_revision:
-            log.error("Outdated database! Migrate using `alembic upgrade head`")
+            log.error('Outdated database! Migrate using `alembic upgrade head`')
             return 1
         else:
             log.info('[OK] Database scheme matches latest')
     else:
-        log.error("Un-stamped database! `create_db.py` should have done this... bailing.")
+        log.error('Un-stamped database! `create_db.py` should have done this... bailing.')
         return 1
 
     args.func(args)
 
     return 0
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     sys.exit(main())
