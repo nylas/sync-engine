@@ -88,6 +88,8 @@ from inbox.server.mailsync.backends.base import (verify_db,
 from inbox.server.mailsync.backends.base import BaseMailSyncMonitor
 
 
+IDLE_FOLDERS = ['inbox', 'sent mail']
+
 class ImapSyncMonitor(BaseMailSyncMonitor):
     """ Top-level controller for an account's mail sync. Spawns individual
         FolderSync greenlets for each folder.
@@ -95,7 +97,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         poll_frequency and heartbeat are in seconds.
     """
     def __init__(self, account_id, namespace_id, email_address, provider,
-                 status_cb, heartbeat=1, poll_frequency=30):
+                 status_cb, heartbeat=1, poll_frequency=300):
 
         self.shared_state = {
             # IMAP folders are kept up-to-date via polling
@@ -274,28 +276,61 @@ def base_poll(crispin_client, db_session, log, folder_name, shared_state,
         a user has visible in the UI as well, and whether or not a user
         is actually logged in on any devices.
     """
-    log.info("polling {0}".format(folder_name))
 
     with crispin_client.pool.get() as c:
         saved_validity = account.get_uidvalidity(crispin_client.account_id,
                                                  db_session, folder_name)
-        # we use status instead of select here because it's way faster and
-        # we're not sure we want to commit to an IMAP session yet
-        status = crispin_client.folder_status(folder_name, c)
+
+        # Start a session since we're going to IDLE below anyway...
+        status = crispin_client.select_folder(
+            folder_name,
+            uidvalidity_cb(db_session,
+                           crispin_client.account_id),
+            c)
+
         if status['HIGHESTMODSEQ'] > saved_validity.highestmodseq:
-            crispin_client.select_folder(folder_name,
-                                         uidvalidity_cb(db_session,
-                                                        crispin_client.account_id),
-                                         c)
             highestmodseq_update(crispin_client, db_session, log, folder_name,
                                  saved_validity.highestmodseq,
                                  shared_state['status_cb'], highestmodseq_fn,
                                  shared_state['syncmanager_lock'], c)
 
-        shared_state['status_cb'](
-            crispin_client.account_id, 'poll',
-            (folder_name, datetime.utcnow().isoformat()))
-        sleep(shared_state['poll_frequency'])
+        # We really only want to idle on a folder for new messages. Idling on
+        # `All Mail` won't tell us when messages are archived from the Inbox
+        # TODO make sure the server supports the IDLE command (Yahoo does not)
+
+        if folder_name.lower() in IDLE_FOLDERS:
+            shared_state['status_cb'](
+                crispin_client.account_id, 'idle',
+                (folder_name, datetime.utcnow().isoformat()))
+
+            status = crispin_client.select_folder(
+                folder_name,
+                uidvalidity_cb(db_session,
+                               crispin_client.account_id),
+                c)
+
+            log.info("Idling on {0} with {1} timeout".format(
+                folder_name, shared_state['poll_frequency']))
+            c.idle()
+            c.idle_check(timeout=shared_state['poll_frequency'])
+
+            # If we want to do soemthing with the response, but lousy
+            # because it uses sequence IDs instead of UIDs
+            # resp = c.idle_check(timeout=shared_state['poll_frequency'])
+            # r = dict( EXISTS=[], EXPUNGE=[])
+            # for msg_uid, cmd in resp:
+            #     r[cmd].append(msg_uid)
+            # print r
+
+            c.idle_done()
+            log.info("Done idling on {0}".format(folder_name))
+        else:
+            shared_state['status_cb'](
+                crispin_client.account_id, 'poll',
+                (folder_name, datetime.utcnow().isoformat()))
+            log.info("Sleeping on {0} for {1} seconds".format(
+                folder_name, shared_state['poll_frequency']))
+            sleep(shared_state['poll_frequency'])
 
     return 'poll'
 

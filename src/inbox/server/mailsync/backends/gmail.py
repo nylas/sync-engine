@@ -46,7 +46,7 @@ SYNC_MONITOR_CLS = 'GmailSyncMonitor'
 
 class GmailSyncMonitor(ImapSyncMonitor):
     def __init__(self, account_id, namespace_id, email_address, provider,
-                 status_cb, heartbeat=1, poll_frequency=30):
+                 status_cb, heartbeat=1, poll_frequency=300):
         self.folder_state_handlers = {
             'initial': initial_sync,
             'initial uidinvalid': resync_uids_from('initial'),
@@ -57,7 +57,7 @@ class GmailSyncMonitor(ImapSyncMonitor):
 
         ImapSyncMonitor.__init__(self, account_id, namespace_id, email_address,
                                  provider, status_cb, heartbeat=1,
-                                 poll_frequency=30)
+                                 poll_frequency=poll_frequency)
 
 
 @retry
@@ -155,6 +155,7 @@ def gmail_download_and_commit_uids(crispin_client, db_session, log,
         # downloaded some message(s) from this batch... check within the lock
         raw_messages = deduplicate_message_object_creation(
                 crispin_client.account_id, db_session, log, raw_messages)
+        log.info("Have {0} unsaved messages objects".format(len(raw_messages)))
         new_imapuids = create_db_objects(crispin_client.account_id, db_session,
                 log, folder_name, raw_messages, msg_create_fn)
         commit_uids(db_session, log, new_imapuids)
@@ -260,7 +261,7 @@ def download_threads(crispin_client, db_session, log, acc, folder_name,
 
 def deduplicate_message_object_creation(account_id, db_session, log,
                                         raw_messages):
-    log.debug("Deduplicating message object creation")
+    log.info("Deduplicating message object creation")
     new_g_msgids = {msg.g_msgid for msg in raw_messages}
     existing_g_msgids = set(account.g_msgids(account_id, db_session,
                                              in_=new_g_msgids))
