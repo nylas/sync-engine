@@ -87,6 +87,7 @@ then
 else
     color '32;1' "# PYTHONIOENCODING already set to utf_8"
 fi
+source ~/.bashrc
 
 
 color '35;1' 'Finished installing dependencies.'
