@@ -387,7 +387,7 @@ class Message(JSONSerializable, Base, HasRevisions):
         return self.thread.namespace
 
     def calculate_sanitized_body(self):
-        plain_part, html_part = self.body()
+        plain_part, html_part = self.body
         snippet_length = 191
         if html_part:
             assert '\r' not in html_part, "newlines not normalized"
@@ -487,6 +487,7 @@ class Message(JSONSerializable, Base, HasRevisions):
             self.sanitized_body = plaintext2html(stripped)
             self.snippet = stripped[:snippet_length]
 
+    @property
     def body(self):
         """ Returns (plaintext, html) body for the message, decoded. """
         assert self.parts, \
@@ -540,7 +541,6 @@ class Message(JSONSerializable, Base, HasRevisions):
         d['id'] = self.id
         d['thread_id'] = self.thread_id
         d['snippet'] = self.snippet
-        d['body'] = self.prettified_body
         d['mailing_list_info'] = self.mailing_list_headers
         return d
 
