@@ -12,7 +12,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.server.models.tables.base import Block, Message, FolderItem
 from inbox.server.models.tables.imap import ImapUid, UIDValidity, ImapThread
-from inbox.server.models.message import create_message
+from inbox.server.models.message import create_message, reconcile_message
 
 from inbox.server.log import get_logger
 log = get_logger()
@@ -160,7 +160,8 @@ def create_imap_message(db_session, log, account, folder_name, msg):
         relationships. All new objects are uncommitted.
     """
     new_msg = create_message(db_session, log, account, msg.uid, folder_name,
-                             msg.internaldate, msg.flags, msg.body)
+                             msg.internaldate, msg.flags, msg.body,
+                             msg.created)
 
     if new_msg:
         imapuid = ImapUid(imapaccount=account, folder_name=folder_name,
@@ -176,7 +177,7 @@ def create_imap_message(db_session, log, account, folder_name, msg):
 
 
 def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, g_thrid,
-                    g_msgid, g_labels):
+                    g_msgid, g_labels, created):
     """ Gmail-specific post-create-message bits."""
 
     new_uid.message.g_msgid = g_msgid
@@ -201,15 +202,21 @@ def add_gmail_attrs(db_session, log, new_uid, flags, folder_name, g_thrid,
     thread.folders = [l for l in thread.folders if l.folder_name in new_labels
                       or l.folder_name in ('sent', 'important')]
     # canonicalize "All Mail" to be "archive" in Inbox's data representation
-    archive_folder_name = new_uid.imapaccount.archive_folder_name.lower()
-    if archive_folder_name in new_labels:
-        new_labels.remove(archive_folder_name)
-        new_labels.add('archive')
+    if new_uid.imapaccount.archive_folder_name:
+        archive_folder_name = new_uid.imapaccount.archive_folder_name.lower()
+        if archive_folder_name in new_labels:
+            new_labels.remove(archive_folder_name)
+            new_labels.add('archive')
     # add new labels
     for label in new_labels:
         if label not in existing_labels:
             item = FolderItem(thread=thread, folder_name=label)
             db_session.add(item)
+
+    # Reconciliation for Sent Mail folder:
+    if 'sent' in new_labels and not created and new_uid.message.inbox_uid:
+        reconcile_message(db_session, log, new_uid.message.inbox_uid,
+                          new_uid.message)
 
     return new_uid
 
@@ -222,4 +229,4 @@ def create_gmail_message(db_session, log, account, folder_name, msg):
     if new_uid:
         return add_gmail_attrs(db_session, log, new_uid, msg.flags,
                                folder_name, msg.g_thrid, msg.g_msgid,
-                               msg.g_labels)
+                               msg.g_labels, msg.created)

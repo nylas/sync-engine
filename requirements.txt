@@ -39,3 +39,4 @@ iconv==1.0
 pep8==1.4.6
 pyflakes==0.7.3
 pylint==1.1.0
+html2text==2014.4.5

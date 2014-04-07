@@ -256,7 +256,7 @@ class Contact(Base, HasRevisions):
     # A server-provided unique ID.
     uid = Column(String(64), nullable=False)
     # A constant, unique identifier for the remote backend this contact came
-    # from. E.g., 'google', 'EAS', 'inbox'
+    # from. E.g., 'google', 'eas', 'inbox'
     provider_name = Column(String(64))
 
     # We essentially maintain two copies of a user's contacts.
@@ -302,6 +302,7 @@ class Contact(Base, HasRevisions):
         return ('Contact({}, {}, {}, {}, {}, {})'
                 .format(self.uid, self.name, self.email_address, self.source,
                         self.provider_name, self.deleted))
+
 
     def copy_from(self, src):
         """ Copy fields from src."""
@@ -384,6 +385,9 @@ class Message(JSONSerializable, Base, HasRevisions):
     # only on messages from Gmail
     g_msgid = Column(BigInteger, nullable=True, index=True)
     g_thrid = Column(BigInteger, nullable=True, index=True)
+
+    # The uid as set in the X-INBOX-ID header of a sent message we create
+    inbox_uid = Column(String(64), nullable=True)
 
     @property
     def namespace(self):
@@ -561,6 +565,30 @@ class Message(JSONSerializable, Base, HasRevisions):
         json_headers = json.JSONDecoder().decode(headers)
 
         return json_headers
+
+    discriminator = Column('type', String(16))
+    __mapper_args__ = {'polymorphic_on': discriminator,
+                       'polymorphic_identity': 'message'}
+
+
+class SpoolMessage(Message):
+    id = Column(Integer, ForeignKey('message.id', ondelete='CASCADE'),
+                primary_key=True)
+
+    created_date = Column(DateTime)
+    is_sent = Column(Boolean, server_default=false(), nullable=False)
+
+    # Null till reconciled.
+    resolved_message_id = Column(Integer,
+                                 ForeignKey('message.id', ondelete='CASCADE'),
+                                 nullable=True)
+    resolved_message = relationship(
+        'Message',
+        primaryjoin='SpoolMessage.resolved_message_id==Message.id',
+        backref=backref('spooled_message', uselist=False))
+
+    __mapper_args__ = {'polymorphic_identity': 'spoolmessage',
+                       'inherit_condition': id == Message.id}
 
 
 # These are the top 15 most common Content-Type headers

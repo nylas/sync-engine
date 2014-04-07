@@ -6,7 +6,6 @@ from bson import json_util
 
 import zerorpc
 
-from inbox.server import postel
 from inbox.server.actions import base as actions
 from inbox.server.config import config
 from inbox.server.contacts import search_util
@@ -18,9 +17,9 @@ from inbox.server.models.tables.base import (Message, SharedFolder, User,
 from inbox.server.models.namespace import (threads_for_folder,
                                            archive_thread, move_thread,
                                            copy_thread, delete_thread)
-
+from inbox.server.sendmail.base import send
 from inbox.server.log import get_logger
-log = get_logger()
+log = get_logger(purpose='api')
 
 # Provider name for contacts added via this API
 INBOX_PROVIDER_NAME = 'inbox'
@@ -71,6 +70,8 @@ class API(object):
     _zmq_search = None
     _sync = None
 
+    # Remember, ZeroRPC doesn't support keyword arguments in exposed methods
+
     @property
     def z_search(self):
         """ Proxy function for the ZeroMQ search service. """
@@ -114,15 +115,25 @@ class API(object):
             return status
 
     @namespace_auth
-    def send_mail(self, recipients, subject, body):
+    def send_mail(self, recipients, subject, body, attachments=None):
         """ Sends a message with the given objects """
         account = self.namespace.account
-        assert account is not None, "can't send mail with this namespace"
+        assert account is not None, "Can't send mail with this namespace"
+
         if type(recipients) != list:
             recipients = [recipients]
-        with postel.SMTP(account) as smtp:
-            smtp.send_mail(recipients, subject, body)
-        return "OK"
+
+        send(account, recipients, subject, body, attachments)
+
+        return 'OK'
+
+    # TODO[k]: Update this
+    @namespace_auth
+    def reply_to_thread(self, thread_id, body, attachments=None):
+        account = self.namespace.account
+        assert account is not None, "Can't send mail with this namespace"
+
+        raise NotImplementedError
 
     @jsonify
     def top_level_namespaces(self, user_id):

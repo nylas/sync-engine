@@ -87,8 +87,8 @@ def test_add_contacts(contacts_provider, db):
         filter_by(account_id=ACCOUNT_ID).filter_by(source='local').count()
     remote_contacts = db.session.query(Contact). \
         filter_by(account_id=ACCOUNT_ID).filter_by(source='remote').count()
-    assert local_contacts == 6
-    assert remote_contacts == 6
+    assert local_contacts == 2
+    assert remote_contacts == 2
 
 
 def test_update_contact(contacts_provider, db):

@@ -9,11 +9,13 @@ from inbox.server.config import config
 
 PACK_ENCODING='utf-8'
 
+
 def _path_from_key(key):
     parts = [safe_filename(part) for part in splitall(key)]
     cache_dir = config.get('CACHE_BASEDIR', None)
     assert cache_dir, "Need directory to store cache! Set CACHE_BASEDIR in config.cfg"
     return os.path.join(cache_dir, *parts)
+
 
 def set_cache(key, val):
     path = _path_from_key(key)
@@ -30,6 +32,7 @@ def _unless_dne(fn, *args, **kwargs):
         if e.errno == errno.ENOENT:
             return None
         else: raise
+
 
 def get_cache(key):
     return _unless_dne(lambda: _load_cache(_path_from_key(key)))

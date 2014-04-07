@@ -48,4 +48,4 @@ def commit_account(db_session, account):
     db_session.add(account)
     db_session.commit()
 
-    log.info("Stored new account {0}".format(account.email_address))
+    log.info('Stored new account {0}'.format(account.email_address))

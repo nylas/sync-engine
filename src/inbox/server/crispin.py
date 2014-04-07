@@ -18,8 +18,9 @@ from inbox.util.cache import get_cache, set_cache
 __all__ = ['CrispinClient', 'DummyCrispinClient']
 
 GMetadata = namedtuple('GMetadata', 'msgid thrid')
-RawMessage = namedtuple('RawImapMessage',
-                        'uid internaldate flags body g_thrid g_msgid g_labels')
+RawMessage = namedtuple(
+    'RawImapMessage',
+    'uid internaldate flags body g_thrid g_msgid g_labels created')
 
 
 ### main stuff
@@ -467,7 +468,8 @@ class GmailCrispinClient(CrispinClient):
                                        body=msg['BODY[]'],
                                        g_thrid=msg['X-GM-THRID'],
                                        g_msgid=msg['X-GM-MSGID'],
-                                       g_labels=msg['X-GM-LABELS']))
+                                       g_labels=msg['X-GM-LABELS'],
+                                       created=False))
         return messages
 
     def _fetch_uids(self, uids, c):

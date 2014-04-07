@@ -11,7 +11,6 @@ from inbox.server.models.tables.imap import ImapAccount
 from inbox.server.config import config
 
 from inbox.server.auth.base import commit_account
-from inbox.util.misc import or_none, timed
 
 PROVIDER = 'Gmail'
 IMAP_HOST = 'imap.gmail.com'

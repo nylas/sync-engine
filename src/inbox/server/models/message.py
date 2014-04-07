@@ -1,5 +1,4 @@
 """ Message-related functions. """
-
 import os
 import json
 
@@ -8,14 +7,12 @@ from hashlib import sha256
 import iconvcodec
 from flanker import mime
 from flanker.addresslib import address
+from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from inbox.util.misc import or_none, parse_ml_headers
 from inbox.util.file import mkdirp
-
-from inbox.server.models.tables.base import Message, Block
-
+from inbox.server.models.tables.base import Message, SpoolMessage, Block
 from inbox.server.config import config
-
 
 # TODO we should probably just store flanker's EmailAddress object
 # instead of doing this thing with quotes ourselves
@@ -29,12 +26,13 @@ def strip_quotes(display_name):
 def parse_email_address_list(email_addresses):
     parsed = address.parse_list(email_addresses)
     return [or_none(addr, lambda p:
-        (strip_quotes(p.display_name), p.address)) for addr in parsed]
+            (strip_quotes(p.display_name), p.address)) for addr in parsed]
 
 
 def parse_email_address(email_address):
     parsed = parse_email_address_list(email_address)
-    if len(parsed) == 0: return None
+    if len(parsed) == 0:
+        return None
     assert len(parsed) == 1, 'Expected only one address' + str(parsed)
     return parsed[0]
 
@@ -56,7 +54,7 @@ def log_decode_error(account_id, folder_name, uid, msg_string):
 
 
 def create_message(db_session, log, account, mid, folder_name, received_date,
-                   flags, body_string):
+                   flags, body_string, created):
     """ Parses message data and writes out db metadata and MIME blocks.
 
     Returns the new Message, which links to the new Block objects through
@@ -76,6 +74,7 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
     # trickle-down bugs
     assert account is not None and account.namespace is not None
     assert not isinstance(body_string, unicode)
+
     try:
         parsed = mime.from_string(body_string)
 
@@ -83,9 +82,9 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
         # NOTE: sometimes MIME-Version is set to "1.0 (1.0)", hence the
         # .startswith
         if mime_version is not None and not mime_version.startswith('1.0'):
-            log.error("Unexpected MIME-Version: %s" % mime_version)
+            log.error('Unexpected MIME-Version: {0}'.format(mime_version))
 
-        new_msg = Message()
+        new_msg = SpoolMessage() if created else Message()
         new_msg.data_sha256 = sha256(body_string).hexdigest()
 
         # clean_subject strips re:, fwd: etc.
@@ -105,6 +104,9 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
 
         # Optional mailing list headers
         new_msg.mailing_list_headers = parse_ml_headers(parsed.headers)
+
+        # Custom Inbox header
+        new_msg.inbox_uid = parsed.headers.get('X-INBOX-ID')
 
         new_msg.size = len(body_string)  # includes headers text
 
@@ -171,14 +173,30 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
     except mime.DecodingError:
         # occasionally iconv will fail via maximum recursion depth
         log_decode_error(account.id, folder_name, mid, body_string)
-        log.error("DecodeError encountered, unparseable message logged to {0}"
-                  .format(get_errfilename(account.id, folder_name, mid)))
+        log.error('DecodeError, msg logged to {0}'.format(
+            get_errfilename(account.id, folder_name, mid)))
         return
     except RuntimeError:
         log_decode_error(account.id, folder_name, mid, body_string)
-        log.error("RuntimeError encountered, probably due to iconv. Unparseable message logged to {0}"
-                  .format(get_errfilename(account.id, folder_name, mid)))
+        log.error('RuntimeError<iconv> msg logged to {0}'.format(
+            get_errfilename(account.id, folder_name, mid)))
         return
+
     new_msg.calculate_sanitized_body()
 
     return new_msg
+
+
+def reconcile_message(db_session, log, uid, new_msg):
+    try:
+        created = db_session.query(SpoolMessage).filter_by(
+            inbox_uid=uid).one()
+    except NoResultFound:
+        log.error('NoResultFound, inbox_uid: {0}'.format(uid))
+        raise
+    except MultipleResultsFound:
+        log.error('MultipleResultsFound, inbox_uid: {0}'.format(uid))
+        raise
+
+    created.resolved_message = new_msg
+    return

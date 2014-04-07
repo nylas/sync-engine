@@ -120,7 +120,7 @@ def get_connection_pool(account_id, pool_size=None):
 
 class IMAPConnectionPool(ConnectionPool):
     def __init__(self, account_id, num_connections=5):
-        log.info('Creating connection pool for account {0} with {1} '
+        log.info('Creating IMAP connection pool for account {0} with {1} '
                  'connections'.format(account_id, num_connections))
         self.account_id = account_id
         self._set_account_info()
