@@ -38,6 +38,7 @@ class GoogleContactsProvider(object):
     log: logging.Logger
         Logging handler.
     """
+    PROVIDER_NAME = 'google'
     def __init__(self, account_id):
         self.account_id = account_id
         self.log = configure_logging(account_id, 'googlecontacts')
@@ -115,6 +116,7 @@ class GoogleContactsProvider(object):
 
         return Contact(account_id=self.account_id, source='remote',
                        g_id=g_id, name=name, updated_at=updated_at,
+                       provider_name=self.PROVIDER_NAME,
                        email_address=email_address)
 
     def get_contacts(self, sync_from_time=None, max_results=100000):

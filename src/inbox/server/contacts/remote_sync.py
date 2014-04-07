@@ -58,25 +58,29 @@ def poll(account_id, provider):
     db_session: sqlalchemy.orm.session.Session
         Database session
 
-    provider: .util.google_contacts.GoogleContactsProvider
-        Interface to the remote contact data provider.
+    provider: Interface to the remote contact data provider.
+        Must have a PROVIDER_NAME attribute and implement the get_contacts()
+        method.
     """
+    provider_name = provider.PROVIDER_NAME
     with session_scope() as db_session:
         account = db_session.query(Account).get(account_id)
 
         # Contact data reflecting any local modifications since the last sync
         # with the remote provider.
         local_contacts = db_session.query(Contact).filter_by(
-            source='local', account=account).all()
+            source='local', account=account,
+            provider_name=provider_name).all()
         # Snapshot of contact data from immediately after last sync.
         cached_contacts = db_session.query(Contact).filter_by(
-            source='remote', account=account).all()
+            source='remote', account=account,
+            provider_name=provider_name).all()
         log.info('Query: have {0} contacts, {1} cached.'.format(
             len(local_contacts), len(cached_contacts)))
 
-        cached_contact_dict = {contact.g_id: contact for contact in
+        cached_contact_dict = {contact.uid: contact for contact in
                                cached_contacts}
-        local_contact_dict = {contact.g_id: contact for contact in
+        local_contact_dict = {contact.uid: contact for contact in
                               local_contacts}
 
         num_added_contacts = 0
@@ -86,10 +90,10 @@ def poll(account_id, provider):
         to_commit = []
         for remote_contact in provider.get_contacts(last_sync):
             remote_contact.account = account
-            assert remote_contact.g_id is not None, \
-                'Got remote contact with null g_id'
-            cached_contact = cached_contact_dict.get(remote_contact.g_id)
-            local_contact = local_contact_dict.get(remote_contact.g_id)
+            assert remote_contact.uid is not None, \
+                'Got remote contact with null uid'
+            cached_contact = cached_contact_dict.get(remote_contact.uid)
+            local_contact = local_contact_dict.get(remote_contact.uid)
             if cached_contact is not None:
                 # The provider gave an update to a contact we already have.
                 if local_contact is not None:
@@ -143,7 +147,7 @@ def merge(base, remote, dest):
 
     Raises
     ------
-    MergError
+    MergeError
         If there is a conflict.
     """
     # This must be updated when new fields are added to the Contact class.

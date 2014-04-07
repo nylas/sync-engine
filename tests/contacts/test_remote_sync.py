@@ -9,6 +9,7 @@ from inbox.server.contacts.remote_sync import merge, poll, MergeError
 
 ACCOUNT_ID = 1
 
+# STOPSHIP(emfree): Test multiple distinct remote providers
 
 class ContactsProviderStub(object):
     """Contacts provider stub to stand in for an actual provider.
@@ -16,17 +17,19 @@ class ContactsProviderStub(object):
     Contact objects corresponding to the data it's been fed via
     supply_contact().
     """
-    def __init__(self):
+    def __init__(self, provider_name='test_provider'):
         self._contacts = []
-        self._next_g_id = 1
+        self._next_uid = 1
+        self.PROVIDER_NAME = provider_name
 
     def supply_contact(self, name, email_address):
         self._contacts.append(Contact(account_id=ACCOUNT_ID,
-                                      g_id=str(self._next_g_id),
+                                      uid=str(self._next_uid),
                                       source='remote',
+                                      provider_name=self.PROVIDER_NAME,
                                       name=name,
                                       email_address=email_address))
-        self._next_g_id += 1
+        self._next_uid += 1
 
     def get_contacts(self, *args, **kwargs):
         return self._contacts
@@ -35,6 +38,12 @@ class ContactsProviderStub(object):
 @pytest.fixture(scope='function')
 def contacts_provider(config, db):
     return ContactsProviderStub()
+
+
+@pytest.fixture(scope='function')
+def alternate_contacts_provider(config, db):
+    return ContactsProviderStub('alternate_provider')
+
 
 def test_merge(config):
     """Test the basic logic of the merge() function."""
@@ -67,8 +76,10 @@ def test_merge_conflict(config):
 
 def test_add_contacts(contacts_provider, db):
     """Test that added contacts get stored."""
-    contacts_provider.supply_contact('Contact One', 'contact.one@email.address')
-    contacts_provider.supply_contact('Contact Two', 'contact.two@email.address')
+    contacts_provider.supply_contact('Contact One',
+                                     'contact.one@email.address')
+    contacts_provider.supply_contact('Contact Two',
+                                     'contact.two@email.address')
 
     poll(ACCOUNT_ID, contacts_provider)
     local_contacts = db.session.query(Contact). \
@@ -117,3 +128,20 @@ def test_uses_local_updates(contacts_provider, db):
     local_result = db.session.query(Contact).filter_by(source='local').one()
     assert local_result.name == 'New Name'
     assert local_result.email_address == 'new@email.address'
+
+
+def test_multiple_remotes(contacts_provider, alternate_contacts_provider, db):
+    contacts_provider.supply_contact('Name', 'name@email.address')
+    alternate_contacts_provider.supply_contact('Alternate Name',
+                                               'name@email.address')
+
+    poll(ACCOUNT_ID, contacts_provider)
+    poll(ACCOUNT_ID, alternate_contacts_provider)
+    result = db.session.query(Contact). \
+        filter_by(source='local', provider_name='test_provider').one()
+    alternate_result = db.session.query(Contact). \
+        filter_by(source='local', provider_name='alternate_provider').one()
+    # Check that both contacts were persisted, even though they have the same
+    # uid.
+    assert result.name == 'Name'
+    assert alternate_result.name == 'Alternate Name'

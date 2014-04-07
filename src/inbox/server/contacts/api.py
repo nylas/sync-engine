@@ -6,6 +6,9 @@ from inbox.server.log import get_logger
 from inbox.server.models import session_scope
 from inbox.server.models.tables.base import Account, Contact
 
+# Provider name for contacts added via this API
+INBOX_PROVIDER_NAME = 'inbox'
+
 class ContactService(object):
     """ ZeroRPC interface to the contacts service. """
     def __init__(self):
@@ -77,7 +80,8 @@ class ContactService(object):
         """Add a new contact to the specified IMAP account. Returns the ID of
         the added contact."""
         with session_scope() as db_session:
-            contact = Contact(account_id=account_id, source='local')
+            contact = Contact(account_id=account_id, source='local',
+                              provider_name=INBOX_PROVIDER_NAME)
             contact.from_cereal(contact_info)
             db_session.add(contact)
             db_session.commit()

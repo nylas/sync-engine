@@ -266,7 +266,12 @@ class Contact(Base, HasRevisions):
                         nullable=False)
     account = relationship('Account', load_on_pending=True)
 
-    g_id = Column(String(64))
+    # A server-provided unique ID.
+    uid = Column(String(64), nullable=False)
+    # A constant, unique identifier for the remote backend this contact came
+    # from. E.g., 'google', 'eas', 'inbox'
+    provider_name = Column(String(64))
+
     # We essentially maintain two copies of a user's contacts.
     # The contacts with source 'remote' give the contact data as it was
     # immediately after the last sync with the remote provider.
@@ -282,7 +287,8 @@ class Contact(Base, HasRevisions):
                         onupdate=func.current_timestamp())
     created_at = Column(DateTime, default=func.now())
 
-    __table_args__ = (UniqueConstraint('g_id', 'source', 'account_id'),)
+    __table_args__ = (UniqueConstraint('uid', 'source', 'account_id',
+                                       'provider_name'),)
 
     @property
     def namespace(self):
@@ -299,16 +305,18 @@ class Contact(Base, HasRevisions):
 
     def __repr__(self):
         # XXX this won't work properly with unicode (e.g. in the name)
-        return ('Contact({}, {}, {}, {})'
-                .format(self.g_id, self.name, self.email_address, self.source))
+        return ('Contact({}, {}, {}, {}, {})'
+                .format(self.uid, self.name, self.email_address, self.source,
+                        self.provider_name))
 
     def copy_from(self, src):
         """ Copy non-null fields from src."""
         self.account_id = src.account_id or self.account_id
         self.account = src.account or self.account
-        self.g_id = src.g_id or self.g_id
+        self.uid = src.uid or self.uid
         self.name = src.name or self.name
         self.email_address = src.email_address or self.email_address
+        self.provider_name = src.provider_name or self.provider_name
 
     @validates('name', include_backrefs=False)
     def tokenize_name(self, key, name):
