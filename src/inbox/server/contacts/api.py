@@ -1,4 +1,6 @@
 """API for Inbox contact sync service, exposed via ZeroRPC."""
+import uuid
+
 from inbox.server.api import jsonify
 from inbox.server.contacts import search_util
 from inbox.server.contacts.remote_sync import ContactSync
@@ -81,7 +83,8 @@ class ContactService(object):
         the added contact."""
         with session_scope() as db_session:
             contact = Contact(account_id=account_id, source='local',
-                              provider_name=INBOX_PROVIDER_NAME)
+                              provider_name=INBOX_PROVIDER_NAME,
+                              uid = uuid.uuid4())
             contact.from_cereal(contact_info)
             db_session.add(contact)
             db_session.commit()
