@@ -3,7 +3,7 @@ import json
 import pytest
 from zerorpc.exceptions import RemoteError
 
-from ..util.base import TestZeroRPC, db
+from tests.util.base import TestZeroRPC, db
 
 ACCOUNT_ID = 1
 NONEXISTENT_CONTACT_ID = 22222222

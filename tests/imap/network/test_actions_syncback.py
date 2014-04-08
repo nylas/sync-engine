@@ -1,5 +1,5 @@
-from ..util.crispin import crispin_client
-from ..util.api import api_client
+from tests.util.crispin import crispin_client
+from tests.util.api import api_client
 
 USER_ID=1
 ACCOUNT_ID=1

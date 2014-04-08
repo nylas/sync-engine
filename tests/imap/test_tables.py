@@ -7,17 +7,17 @@ def test_delete_cascades(db):
     uid_id = message.imapuid.id
 
     assert len(message.parts), \
-            "this test won't work properly since this message has no parts"
+        "this test won't work properly since this message has no parts"
 
     db.session.delete(message)
     db.session.commit()
 
     assert db.session.query(ImapUid).filter_by(id=uid_id).count(), \
-            "associated ImapUid should still be present"
+        'associated ImapUid should still be present'
     assert not db.session.query(Message).filter_by(id=2).count(), \
-            "Message should be deleted"
+        'Message should be deleted'
     assert not db.session.query(Block).filter_by(message_id=2).count(), \
-            "associated Blocks should be deleted by cascade"
+        'associated Blocks should be deleted by cascade'
 
     uid = db.session.query(ImapUid).filter_by(id=1).one()
     message_id = uid.message_id
@@ -25,4 +25,4 @@ def test_delete_cascades(db):
     db.session.delete(uid)
     db.session.commit()
     assert not db.session.query(Message).filter_by(id=message_id).count(), \
-            "associated Message should be deleted by cascade"
+            'associated Message should be deleted by cascade'

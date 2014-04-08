@@ -25,7 +25,7 @@ def main():
         keep_tables += ['user', 'namespace', 'account', 'imapaccount',
                        'user_session', 'easaccount']
 
-        reset_columns = {'easaccount': ['eas_account_sync_key']}
+        reset_columns = {'easaccount': ['eas_account_sync_key', 'eas_state']}
 
     drop_everything(engine, keep_tables=keep_tables,
                     reset_columns=reset_columns)

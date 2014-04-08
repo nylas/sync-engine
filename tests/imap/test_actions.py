@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from .util.api import api_client
-from .util.base import action_queue
+from tests.util.api import api_client
+from tests.util.base import action_queue
 
 USER_ID = 1
 NAMESPACE_ID = 1

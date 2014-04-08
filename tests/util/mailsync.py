@@ -1,6 +1,7 @@
 from pytest import fixture
 
-from .base import TestZeroRPC, db
+from tests.util.base import TestZeroRPC, db
+
 
 @fixture(scope='session')
 def sync_client(config, db):

@@ -351,9 +351,9 @@ class Message(JSONSerializable, Base, HasRevisions):
 
     # Do delete messages if their associated thread is deleted.
     thread_id = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
-            nullable=False)
-    thread = relationship('Thread', backref="messages",
-            order_by="Message.received_date")
+                       nullable=False)
+    thread = relationship('Thread', backref=backref('messages'),
+                          order_by='Message.received_date')
 
     from_addr = Column(JSON, nullable=True)
     sender_addr = Column(JSON, nullable=True)

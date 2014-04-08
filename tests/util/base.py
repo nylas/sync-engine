@@ -1,23 +1,30 @@
 import os, subprocess
-import zerorpc
 
+import zerorpc
 from shutil import rmtree
 from pytest import fixture
 
 from inbox.util.db import drop_everything
+from inbox.util.misc import load_modules
 
 TEST_CONFIG = os.path.join(
         os.path.dirname(os.path.realpath(__file__)), '..', 'config.cfg')
 
-# Dump file generated using mysqldump
-TEST_DATA = os.path.join(
-    os.path.dirname(os.path.realpath(__file__)), '..', 'data', 'base_dump.sql')
+
+def absolute_path(path):
+    """ Returns the absolute path for a path specified as relative to the
+        tests/ directory, needed for the dump file name in config.cfg
+    """
+    return os.path.abspath(\
+        os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', path))
+
 
 @fixture(scope='session', autouse=True)
 def config():
     from inbox.server.config import load_config, config
     load_config(filename=TEST_CONFIG)
     return config
+
 
 @fixture(scope='session')
 def log(request, config):
@@ -32,15 +39,27 @@ def log(request, config):
     request.addfinalizer(remove_logs)
     return configure_general_logging()
 
+
 @fixture(scope='function')
 def db(request, config):
     """ NOTE: You cannot rely on IMAP UIDs from the test db being correctly
         up-to-date. If you need to test sync functionality, start with a
         test database containing only an authed user, not this dump.
     """
-    testdb = TestDB(config)
-    request.addfinalizer(testdb.destroy)
+    dumpfile = request.param[0]
+    savedb = request.param[1]
+
+    testdb = TestDB(config, dumpfile)
+
+    def save():
+        testdb.save()
+        testdb.destroy()
+
+    request.addfinalizer(save) if savedb \
+        else request.addfinalizer(testdb.destroy)
+
     return testdb
+
 
 @fixture(scope='function')
 def action_queue(request, config):
@@ -51,25 +70,27 @@ def action_queue(request, config):
     q.empty()
     return q
 
+
 class TestDB(object):
-    def __init__(self, config):
+    def __init__(self, config, dumpfile):
         from inbox.server.models import new_db_session, init_db, engine
         # Set up test database
         init_db()
         self.session = new_db_session()
         self.engine = engine
         self.config = config
+        self.dumpfile = dumpfile
 
         # Populate with test data
         self.populate()
 
     def populate(self):
+        """ Populates database with data from the test dumpfile. """
         # Note: Since database is called test, all users have access to it;
         # don't need to read in the username + password from config.
         database = self.config.get('MYSQL_DATABASE')
-        dump_filename = TEST_DATA
 
-        cmd = 'mysql {0} < {1}'.format(database, dump_filename)
+        cmd = 'mysql {0} < {1}'.format(database, self.dumpfile)
         subprocess.check_call(cmd, shell=True)
 
     def new_session(self):
@@ -81,6 +102,14 @@ class TestDB(object):
         """ Removes all data from the test database. """
         self.session.close()
         drop_everything(self.engine)
+
+    def save(self):
+        """ Updates the test dumpfile. """
+        database = self.config.get('MYSQL_DATABASE')
+
+        cmd = 'mysqldump {0} > {1}'.format(database, self.dumpfile)
+        subprocess.check_call(cmd, shell=True)
+
 
 class TestZeroRPC(object):
     """ client/server handle for a ZeroRPC service """

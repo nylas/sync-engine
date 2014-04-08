@@ -1,6 +1,6 @@
 import pytest
 
-from ..util.base import config
+from tests.util.base import config
 # Need to set up test config before we can import from
 # inbox.server.models.tables.
 config()

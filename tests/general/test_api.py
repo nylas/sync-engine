@@ -2,9 +2,9 @@ import json
 from bson import json_util
 
 # pytest fixtures outside of conftest.py must be imported for discovery
-from .util.api import api_client
-from .util.mailsync import sync_client
-from .util.message import TEST_MSG
+from tests.util.api import api_client
+from tests.util.mailsync import sync_client
+from tests.data.messages.message import TEST_MSG
 
 USER_ID = 1
 NAMESPACE_ID = 1

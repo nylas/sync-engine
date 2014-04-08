@@ -15,6 +15,7 @@ def test_root_filelogger(config, log):
     # NOTE: This slurps the whole logfile. Hope it's not big.
     log_contents = open(os.path.join(config['LOGDIR'], 'server.log'),
                         'r').read()
+
     assert 'TEST LOG STATEMENT' in log_contents
     assert 'ROOT LOG STATEMENT' not in log_contents
 
@@ -30,6 +31,7 @@ def test_log_uncaught_errors(config, log):
         log_uncaught_errors(error_throwing_function)()
     log_contents = open(os.path.join(config['LOGDIR'], 'server.log'),
                         'r').read()
+
     assert 'ValueError' in log_contents
     # Check that the traceback is logged. The traceback stored in
     # sys.exc_info() contains an extra entry for the test_log_uncaught_errors
