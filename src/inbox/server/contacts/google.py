@@ -92,7 +92,7 @@ class GoogleContactsProvider(object):
         try:
             # The id.text field of a ContactEntry object takes the form
             # 'http://www.google.com/m8/feeds/contacts/<useremail>/base/<uid>'.
-            # We only want the <uid> part for g_id.
+            # We only want the <uid> part.
             raw_google_id = google_contact.id.text
             _, g_id = posixpath.split(raw_google_id)
             name = (google_contact.name.full_name.text if (google_contact.name
@@ -115,7 +115,7 @@ class GoogleContactsProvider(object):
             time.mktime(updated_at.utctimetuple()))
 
         return Contact(account_id=self.account_id, source='remote',
-                       g_id=g_id, name=name, updated_at=updated_at,
+                       uid=g_id, name=name, updated_at=updated_at,
                        provider_name=self.PROVIDER_NAME,
                        email_address=email_address)
 
