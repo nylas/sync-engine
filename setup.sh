@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 color() {
@@ -14,7 +14,6 @@ if [ ! -f ./config.cfg ]; then
     color '31;1' 'config.cfg file not found!'
     exit 1
 fi
-
 
 color '36;1' "
       _____       _
@@ -40,7 +39,6 @@ apt-get -y install python-software-properties
 # Preconfigure MySQL root password
 echo "mysql-server mysql-server/root_password password root" | debconf-set-selections
 echo "mysql-server mysql-server/root_password_again password root" | debconf-set-selections
-
 
 color '35;1' 'Installing dependencies from apt-get...'
 apt-get -y install git \
@@ -69,8 +67,6 @@ apt-get -y install git \
                    curl \
                    stunnel4
 
-
-
 color '35;1' 'Installing dependencies from pip...'
 pip install --upgrade setuptools
 pip install -r requirements.txt
@@ -80,7 +76,6 @@ if [ -d "../inbox-eas" ]; then
     pip install -e ../inbox-eas
 fi
 
-
 if ! grep -qe "^PYTHONIOENCODING=utf_8$" "~/.bashrc";
 then
     echo "# Adding default Python IO encoding" >> ~/.bashrc
@@ -89,7 +84,6 @@ else
     color '32;1' "# PYTHONIOENCODING already set to utf_8"
 fi
 source ~/.bashrc
-
 
 color '35;1' 'Finished installing dependencies.'
 # mysql config
@@ -107,4 +101,3 @@ apt-get -y purge build-essential
 apt-get -y autoremove
 
 color '35;1' 'Done!.'
-
