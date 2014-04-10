@@ -2,6 +2,7 @@
   "project_id" : "inbox",
   "conduit_uri" : "https://review.inboxapp.com/",
   "lint.engine" : "InboxServerLintEngine",
+  "unit.engine" : "PytestTestEngine",
   "load" : [
     "arclib"
   ]

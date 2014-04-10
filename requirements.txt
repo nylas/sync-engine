@@ -1,5 +1,6 @@
 argparse==1.2.1
 beautifulsoup4==4.3.2
+coverage==3.7.1
 httplib2==0.8
 pytest==2.3.4
 tornado==3.0.1

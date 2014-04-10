@@ -12,6 +12,7 @@ phutil_register_library_map(array(
   array(
     'InboxServerLintEngine' => 'src/InboxServerLintEngine.php',
     'MGArcanistPyLintLinter' => 'src/MGArcanistPyLintLinter.php',
+    'PytestTestEngine' => 'src/PytestTestEngine.php',
   ),
   'function' =>
   array(
@@ -20,5 +21,6 @@ phutil_register_library_map(array(
   array(
     'InboxServerLintEngine' => 'ArcanistLintEngine',
     'MGArcanistPyLintLinter' => 'ArcanistLinter',
+    'PytestTestEngine' => 'ArcanistBaseUnitTestEngine',
   ),
 ));

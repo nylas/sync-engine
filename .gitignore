@@ -10,6 +10,8 @@ node_modules
 # C extensions
 *.so
 /tests/log
+/tests/output
+/tests/coverage
 /cache
 /src/flanker
 /src/inbox-util
