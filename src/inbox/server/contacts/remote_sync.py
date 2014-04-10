@@ -92,6 +92,7 @@ def poll(account_id, provider):
             remote_contact.account = account
             assert remote_contact.uid is not None, \
                 'Got remote contact with null uid'
+            assert isinstance(remote_contact.uid, str)
             cached_contact = cached_contact_dict.get(remote_contact.uid)
             local_contact = local_contact_dict.get(remote_contact.uid)
             if cached_contact is not None:

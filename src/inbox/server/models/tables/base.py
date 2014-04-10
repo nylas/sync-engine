@@ -310,13 +310,13 @@ class Contact(Base, HasRevisions):
                         self.provider_name))
 
     def copy_from(self, src):
-        """ Copy non-null fields from src."""
-        self.account_id = src.account_id or self.account_id
-        self.account = src.account or self.account
-        self.uid = src.uid or self.uid
-        self.name = src.name or self.name
-        self.email_address = src.email_address or self.email_address
-        self.provider_name = src.provider_name or self.provider_name
+        """ Copy fields from src."""
+        self.account_id = src.account_id
+        self.account = src.account
+        self.uid = src.uid
+        self.name = src.name
+        self.email_address = src.email_address
+        self.provider_name = src.provider_name
 
     @validates('name', include_backrefs=False)
     def tokenize_name(self, key, name):
