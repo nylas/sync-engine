@@ -38,8 +38,8 @@ def debug(args=None):
 
 def start(args=None):
     # commit = subprocess.check_output(["git", "describe", "--tags"])
-    from inbox.server.models import init_db
-    table_mod_for = init_db()
+    from inbox.server.models.tables.base import register_backends
+    table_mod_for = register_backends()
 
     threads = []
 
@@ -186,13 +186,12 @@ def index(args):
 def auth(args):
     from sqlalchemy.orm.exc import NoResultFound
     from inbox.util.url import NotSupportedError
-    from inbox.server.models import session_scope, init_db
+    from inbox.server.models import session_scope
     from inbox.server.models.tables.base import Account
     from inbox.server.auth.base import get_handler
 
     email_address = args.email_address
 
-    init_db()
     with session_scope() as db_session:
         auth_handler = get_handler(email_address)
 
@@ -279,6 +278,12 @@ def main():
     assert os.path.isfile(alembic_ini_filename), \
         'Must have alembic.ini file at {}'.format(alembic_ini_filename)
     alembic_cfg = alembic_config(alembic_ini_filename)
+
+    try:
+        inbox_db_engine.dialect.has_table(inbox_db_engine, 'alembic_version')
+    except sqlalchemy.exc.OperationalError, e:
+        log.error("Databases don't exist! Run create_db.py")
+        return 1
 
     if inbox_db_engine.dialect.has_table(inbox_db_engine, 'alembic_version'):
         res = inbox_db_engine.execute('SELECT version_num from alembic_version')

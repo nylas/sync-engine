@@ -12,7 +12,8 @@ from inbox.sqlalchemy.revision import versioned_session
 from inbox.sqlalchemy.util import Base, ForceStrictMode
 
 
-def db_uri():
+def engine_uri(database=None):
+    """ By default doesn't include the specific database. """
 
     config_prefix = 'RDS' if is_prod() else 'MYSQL'
 
@@ -28,9 +29,6 @@ def db_uri():
     port = config.get('{0}_PORT'.format(config_prefix), None)
     assert port, "Must have database port to connect!"
 
-    database = config.get('{0}_DATABASE'.format(config_prefix), None)
-    assert host, "Must have database name to connect!"
-
     uri_template = 'mysql://{username}:{password}@{host}:{port}/{database}?charset=utf8mb4'
 
     return uri_template.format(
@@ -39,13 +37,27 @@ def db_uri():
         password=urlquote(password),
         host=host,
         port=port,
-        database=database)
+        database=database if database else '')
+
+
+def db_uri():
+    config_prefix = 'RDS' if is_prod() else 'MYSQL'
+    database = config.get('{0}_DATABASE'.format(config_prefix), None)
+    assert database, "Must have database name to connect!"
+    return engine_uri(database)
 
 engine = create_engine(db_uri(), listeners=[ForceStrictMode()], echo=False)
 
 
 def init_db():
-    """ Make the tables. """
+    """ Make the tables.
+
+    This is called only from create_db.py, which is run during setup.
+    Previously we allowed this to run everytime on startup, which broke some
+    alembic revisions by creating new tables before a migration was run.
+    From now on, we should ony be creating tables+columns via SQLalchemy *once*
+    and all subscequent changes done via migration scripts.
+    """
     from inbox.server.models.tables.base import register_backends
     table_mod_for = register_backends()
 
