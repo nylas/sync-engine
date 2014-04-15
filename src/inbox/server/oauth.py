@@ -146,11 +146,12 @@ def validate_token(access_token):
 
     if 'error' in validation_dict:
         assert validation_dict['error'] == 'invalid_token'
-        log.error('%s - %s' % (validation_dict['error'],
-                               validation_dict['error_description']))
+        log.error('{0} - {1}'.format(validation_dict['error'],
+                                     validation_dict['error_description']))
         return None
 
     return validation_dict
+
 
 def user_info(access_token):
     log.info('Fetching user info...')
@@ -173,7 +174,6 @@ def user_info(access_token):
     return userinfo_dict
 
 
-
 def oauth(email_address):
     auth_code = authorize_redirect_url(email_address)
 
@@ -185,4 +185,3 @@ def oauth(email_address):
         auth_response = get_authenticated_user(reentered_code)
 
     return auth_response
-

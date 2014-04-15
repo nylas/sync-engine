@@ -87,24 +87,27 @@ def test_add_contacts(contacts_provider, db):
         filter_by(account_id=ACCOUNT_ID).filter_by(source='local').count()
     remote_contacts = db.session.query(Contact). \
         filter_by(account_id=ACCOUNT_ID).filter_by(source='remote').count()
-    assert local_contacts == 2
-    assert remote_contacts == 2
+    assert local_contacts == 6
+    assert remote_contacts == 6
 
 
 def test_update_contact(contacts_provider, db):
     """Test that subsequent contact updates get stored."""
     contacts_provider.supply_contact('Old Name', 'old@email.address')
     poll(ACCOUNT_ID, contacts_provider)
-    result = db.session.query(Contact).filter_by(source='remote').one()
-
+    results = db.session.query(Contact).filter_by(source='remote').all()
     db.new_session()
-    assert result.email_address == 'old@email.address'
+    email_addresses = [r.email_address for r in results]
+    assert 'old@email.address' in email_addresses
+
     contacts_provider.__init__()
     contacts_provider.supply_contact('New Name', 'new@email.address')
     poll(ACCOUNT_ID, contacts_provider)
-    result = db.session.query(Contact).filter_by(source='remote').one()
-    assert result.name == 'New Name'
-    assert result.email_address == 'new@email.address'
+    results = db.session.query(Contact).filter_by(source='remote').all()
+    names = [r.name for r in results]
+    assert 'New Name' in names
+    email_addresses = [r.email_address for r in results]
+    assert 'new@email.address' in email_addresses
 
 
 def test_uses_local_updates(contacts_provider, db):
@@ -112,9 +115,9 @@ def test_uses_local_updates(contacts_provider, db):
     both get stored."""
     contacts_provider.supply_contact('Old Name', 'old@email.address')
     poll(ACCOUNT_ID, contacts_provider)
-    result = db.session.query(Contact).filter_by(source='local').one()
+    results = db.session.query(Contact).filter_by(source='local').all()
     # Fake a local contact update.
-    result.name = 'New Name'
+    results[-1].name = 'New Name'
     db.session.commit()
 
     db.new_session()
@@ -123,12 +126,17 @@ def test_uses_local_updates(contacts_provider, db):
     poll(ACCOUNT_ID, contacts_provider)
 
     db.new_session()
-    remote_result = db.session.query(Contact).filter_by(source='remote').one()
-    assert remote_result.name == 'New Name'
-    assert remote_result.email_address == 'new@email.address'
-    local_result = db.session.query(Contact).filter_by(source='local').one()
-    assert local_result.name == 'New Name'
-    assert local_result.email_address == 'new@email.address'
+    remote_results = db.session.query(Contact).filter_by(source='remote').all()
+    names = [r.name for r in remote_results]
+    assert 'New Name' in names
+    email_addresses = [r.email_address for r in remote_results]
+    assert 'new@email.address' in email_addresses
+
+    local_results = db.session.query(Contact).filter_by(source='local').all()
+    names = [r.name for r in local_results]
+    assert 'New Name' in names
+    email_addresses = [r.email_address for r in local_results]
+    assert 'new@email.address' in email_addresses
 
 
 def test_multiple_remotes(contacts_provider, alternate_contacts_provider, db):

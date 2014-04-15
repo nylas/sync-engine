@@ -24,6 +24,18 @@ class ImapAccount(Account):
 
     imap_host = Column(String(512))
 
+    given_name = Column(String(255))
+    family_name = Column(String(255))
+    g_locale = Column(String(16))
+    g_picture_url = Column(String(255))
+    g_gender = Column(String(16))
+    g_plus_url = Column(String(255))
+    google_id = Column(String(255))
+
+    @property
+    def full_name(self):
+        return '{0} {1}'.format(self.given_name, self.family_name)
+
     __mapper_args__ = {'polymorphic_identity': 'imapaccount'}
 
 

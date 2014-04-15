@@ -1,7 +1,7 @@
 from flanker import mime
 import json
 
-# Email from the sync dump exported to the 'test' db 
+# Email from the sync dump exported to the 'test' db
 message = '''Delivered-To: inboxapptest@gmail.com
 Received: by 10.112.78.5 with SMTP id x5csp319417lbw;
         Wed, 5 Feb 2014 18:07:03 -0800 (PST)
@@ -90,7 +90,7 @@ Resent-Date: Sat, 11 May 2013 09:12:02 +0000
 Resent-Message-ID: <handler.707777.B.13682633676382@bugs.debian.org>
 X-Debian-PR-Message: report 707777
 X-Debian-PR-Package: wnpp
-X-Debian-PR-Keywords: 
+X-Debian-PR-Keywords:
 Received: via spool by submit@bugs.debian.org id=B.13682633676382
           (code B); Sat, 11 May 2013 09:12:02 +0000
 Received: (at submit) by bugs.debian.org; 11 May 2013 09:09:27 +0000
@@ -197,15 +197,15 @@ parsed = mime.from_string(message)
 headers = json.dumps(parsed.headers.items())
 
 TEST_MSG = {
-	'msg_id': 2,
-	'thread_id': 2,
-	'mailing_list_headers': { "List-Id": "<debian-devel.lists.debian.org>", 
-		"List-Post": "<mailto:debian-devel@lists.debian.org>", 
-        "List-Owner": None, 
-        "List-Subscribe": "<mailto:debian-devel-request@lists.debian.org?subject=subscribe>", 
-        "List-Unsubscribe": "<mailto:debian-devel-request@lists.debian.org?subject=unsubscribe>", 
-        "List-Archive": None, 
-        "List-Help": "<mailto:debian-devel-request@lists.debian.org?subject=help>" 
+	'msg_id': 9,
+	'thread_id': 9,
+	'mailing_list_headers': { "List-Id": "<debian-devel.lists.debian.org>",
+		"List-Post": "<mailto:debian-devel@lists.debian.org>",
+        "List-Owner": None,
+        "List-Subscribe": "<mailto:debian-devel-request@lists.debian.org?subject=subscribe>",
+        "List-Unsubscribe": "<mailto:debian-devel-request@lists.debian.org?subject=unsubscribe>",
+        "List-Archive": None,
+        "List-Help": "<mailto:debian-devel-request@lists.debian.org?subject=help>"
         },
     'all_headers': headers
     }
