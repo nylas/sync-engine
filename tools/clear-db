@@ -15,6 +15,7 @@ def main():
     args = parser.parse_args()
     load_config(args.config)
     from inbox.server.models import engine
+    from inbox.server.models import init_db
 
     # Always keep the 'alembic_version' table
     keep_tables = ['alembic_version']
@@ -23,12 +24,14 @@ def main():
     # '--with-users' NOT specified
     if not args.with_users:
         keep_tables += ['user', 'namespace', 'account', 'imapaccount',
-                       'user_session', 'easaccount']
+                        'user_session', 'easaccount']
 
         reset_columns = {'easaccount': ['eas_account_sync_key', 'eas_state']}
 
     drop_everything(engine, keep_tables=keep_tables,
                     reset_columns=reset_columns)
+    # recreate dropped tables
+    init_db()
     return 0
 
 if __name__ == '__main__':
