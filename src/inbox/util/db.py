@@ -34,6 +34,8 @@ def drop_everything(engine, keep_tables=[], reset_columns={}):
                 column_names = reset_columns[table_name]
                 for c in inspector.get_columns(table_name):
                     if c['name'] in column_names:
+                        assert c['default']
+
                         q = "UPDATE {0} SET {1}={2};".\
                             format(table_name, c['name'], c['default'])
                         conn.execute(q)
