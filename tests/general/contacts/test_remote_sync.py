@@ -22,13 +22,14 @@ class ContactsProviderStub(object):
         self._next_uid = 1
         self.PROVIDER_NAME = provider_name
 
-    def supply_contact(self, name, email_address):
+    def supply_contact(self, name, email_address, deleted=False):
         self._contacts.append(Contact(account_id=ACCOUNT_ID,
                                       uid=str(self._next_uid),
                                       source='remote',
                                       provider_name=self.PROVIDER_NAME,
                                       name=name,
-                                      email_address=email_address))
+                                      email_address=email_address,
+                                      deleted=deleted))
         self._next_uid += 1
 
     def get_contacts(self, *args, **kwargs):
@@ -145,3 +146,17 @@ def test_multiple_remotes(contacts_provider, alternate_contacts_provider, db):
     # uid.
     assert result.name == 'Name'
     assert alternate_result.name == 'Alternate Name'
+
+
+def test_deletes(contacts_provider, db):
+    contacts_provider.supply_contact('Name', 'name@email.address')
+    poll(ACCOUNT_ID, contacts_provider)
+    results = db.session.query(Contact).all()
+    assert len(results) == 2
+
+    db.new_session()
+    contacts_provider.__init__()
+    contacts_provider.supply_contact(None, None, deleted=True)
+    poll(ACCOUNT_ID, contacts_provider)
+    results = db.session.query(Contact).all()
+    assert len(results) == 0

@@ -255,8 +255,7 @@ class SearchToken(Base):
     token = Column(String(255))
     source = Column('source', Enum('name', 'email_address'))
     contact_id = Column(ForeignKey('contact.id', ondelete='CASCADE'))
-    contact = relationship('Contact', backref='token',
-                           cascade='all, delete-orphan',
+    contact = relationship('Contact', backref='token', cascade='all',
                            single_parent=True)
 
 
@@ -287,6 +286,11 @@ class Contact(Base, HasRevisions):
                         onupdate=func.current_timestamp())
     created_at = Column(DateTime, default=func.now())
 
+    # Flag to set if the contact is deleted in a remote backend.
+    # (This is an unmapped attribute, i.e., it does not correspond to a
+    # database column.)
+    deleted = False
+
     __table_args__ = (UniqueConstraint('uid', 'source', 'account_id',
                                        'provider_name'),)
 
@@ -305,9 +309,9 @@ class Contact(Base, HasRevisions):
 
     def __repr__(self):
         # XXX this won't work properly with unicode (e.g. in the name)
-        return ('Contact({}, {}, {}, {}, {})'
+        return ('Contact({}, {}, {}, {}, {}, {})'
                 .format(self.uid, self.name, self.email_address, self.source,
-                        self.provider_name))
+                        self.provider_name, self.deleted))
 
     def copy_from(self, src):
         """ Copy fields from src."""

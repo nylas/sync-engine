@@ -1,4 +1,5 @@
 import datetime
+from collections import Counter
 
 import gevent
 
@@ -83,8 +84,7 @@ def poll(account_id, provider):
         local_contact_dict = {contact.uid: contact for contact in
                               local_contacts}
 
-        num_added_contacts = 0
-        num_updated_contacts = 0
+        change_counter = Counter()
         last_sync = or_none(account.last_synced_contacts,
                             datetime.datetime.isoformat)
         to_commit = []
@@ -95,6 +95,16 @@ def poll(account_id, provider):
             assert isinstance(remote_contact.uid, str)
             cached_contact = cached_contact_dict.get(remote_contact.uid)
             local_contact = local_contact_dict.get(remote_contact.uid)
+            # If the remote contact was deleted, purge the corresponding
+            # database entries.
+            if remote_contact.deleted:
+                if cached_contact is not None:
+                    db_session.delete(cached_contact)
+                    change_counter['deleted'] += 1
+                if local_contact is not None:
+                    db_session.delete(local_contact)
+                continue
+            # Otherwise, update the database.
             if cached_contact is not None:
                 # The provider gave an update to a contact we already have.
                 if local_contact is not None:
@@ -118,7 +128,7 @@ def poll(account_id, provider):
                     log.warning('Contact {0} already present as remote but '
                                 'not local contact'.format(cached_contact))
                     cached_contact.copy_from(remote_contact)
-                num_updated_contacts += 1
+                change_counter['updated'] += 1
             else:
                 # This is a new contact, create both local and remote DB
                 # entries.
@@ -127,12 +137,13 @@ def poll(account_id, provider):
                 local_contact.source = 'local'
                 to_commit.append(local_contact)
                 to_commit.append(remote_contact)
-                num_added_contacts += 1
+                change_counter['added'] += 1
 
         account.last_synced_contacts = datetime.datetime.now()
 
-        log.info('Added {0} contacts.'.format(num_added_contacts))
-        log.info('Updated {0} contacts.'.format(num_updated_contacts))
+        log.info('Added {0} contacts.'.format(change_counter['added']))
+        log.info('Updated {0} contacts.'.format(change_counter['updated']))
+        log.info('Deleted {0} contacts.'.format(change_counter['deleted']))
 
         db_session.add_all(to_commit)
         db_session.commit()

@@ -114,10 +114,13 @@ class GoogleContactsProvider(object):
         updated_at = datetime.datetime.fromtimestamp(
             time.mktime(updated_at.utctimetuple()))
 
+        deleted = google_contact.deleted is not None
+
         return Contact(account_id=self.account_id, source='remote',
                        uid=g_id, name=name, updated_at=updated_at,
                        provider_name=self.PROVIDER_NAME,
-                       email_address=email_address)
+                       email_address=email_address,
+                       deleted=deleted)
 
     def get_contacts(self, sync_from_time=None, max_results=100000):
         """Fetches and parses fresh contact data.
@@ -143,6 +146,7 @@ class GoogleContactsProvider(object):
         # number by default.
         query.max_results = max_results
         query.updated_min = sync_from_time
+        query.showdeleted = True
         google_client = self._get_google_client()
         if google_client is None:
             # Return an empty generator if we couldn't create an API client
