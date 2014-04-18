@@ -1,6 +1,7 @@
 """ ZeroRPC interface to syncing. """
 import socket
 
+from inbox.server.contacts.remote_sync import ContactSync
 from inbox.server.log import get_logger
 from inbox.server.models import session_scope
 from inbox.server.models.tables.base import Account
@@ -31,6 +32,8 @@ class SyncService(object):
         # otherwise
         # all data in here ought to be msgpack-serializable!
         self.statuses = dict()
+
+        self.contact_sync_monitors = dict()
 
         # Restart existing active syncs.
         # (Later we will want to partition these across different machines!)
@@ -81,6 +84,11 @@ class SyncService(object):
                             acc.provider, update_status)
                         self.monitors[acc.id] = monitor
                         monitor.start()
+                        # For Gmail accounts, also start contacts sync
+                        if acc.provider == 'Gmail':
+                            contact_sync = ContactSync(acc.id)
+                            self.contact_sync_monitors[acc.id] = contact_sync
+                            contact_sync.start()
                         acc.sync_host = fqdn
                         db_session.add(acc)
                         db_session.commit()
@@ -123,6 +131,10 @@ class SyncService(object):
                     db_session.commit()
                     acc.sync_unlock()
                     del self.monitors[acc.id]
+                    # Also stop contacts sync (only relevant for Gmail
+                    # accounts)
+                    if acc.id in self.contact_sync_monitors:
+                        del self.contact_sync_monitors[acc.id]
                     results[acc.id] = "OK sync stopped"
                 except:
                     results[acc.id] = "ERROR error encountered"

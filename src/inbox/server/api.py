@@ -1,4 +1,5 @@
 import json
+import uuid
 
 from functools import wraps
 from bson import json_util
@@ -8,17 +9,21 @@ import zerorpc
 from inbox.server import postel
 from inbox.server.actions import base as actions
 from inbox.server.config import config
+from inbox.server.contacts import search_util
 from inbox.server.models import session_scope
 from inbox.server.mailsync.backends.imap.account import (total_stored_data,
                                                          total_stored_messages)
 from inbox.server.models.tables.base import (Message, SharedFolder, User,
-                                             Account, Thread)
+                                             Account, Contact, Thread)
 from inbox.server.models.namespace import (threads_for_folder,
                                            archive_thread, move_thread,
                                            copy_thread, delete_thread)
 
 from inbox.server.log import get_logger
 log = get_logger()
+
+# Provider name for contacts added via this API
+INBOX_PROVIDER_NAME = 'inbox'
 
 
 class NSAuthError(Exception):
@@ -309,3 +314,37 @@ class API(object):
         # change if the change fails to go through
 
         return "OK"
+
+    def get_contact(self, contact_id):
+        """Get all data for an existing contact."""
+        with session_scope() as db_session:
+            contact = db_session.query(Contact).filter_by(id=contact_id).one()
+            return contact.cereal()
+
+    def add_contact(self, account_id, contact_info):
+        """Add a new contact to the specified IMAP account. Returns the ID of
+        the added contact."""
+        with session_scope() as db_session:
+            contact = Contact(account_id=account_id, source='local',
+                              provider_name=INBOX_PROVIDER_NAME,
+                              uid=uuid.uuid4())
+            contact.from_cereal(contact_info)
+            db_session.add(contact)
+            db_session.commit()
+            log.info("Added contact {0}".format(contact.id))
+            return contact.id
+
+    def update_contact(self, contact_id, contact_data):
+        """Update data for an existing contact."""
+        with session_scope() as db_session:
+            contact = db_session.query(Contact).filter_by(id=contact_id).one()
+            contact.from_cereal(contact_data)
+            log.info("Updated contact {0}".format(contact.id))
+            return 'OK'
+
+    def search_contacts(self, account_id, query, max_results=10):
+        """Search for contacts that match the given query."""
+        with session_scope() as db_session:
+            results = search_util.search(db_session, account_id, query,
+                                         int(max_results))
+            return [contact.cereal() for contact in results]
