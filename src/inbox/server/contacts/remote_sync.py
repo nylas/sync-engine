@@ -163,7 +163,7 @@ def merge(base, remote, dest):
         If there is a conflict.
     """
     # This must be updated when new fields are added to the Contact class.
-    attributes = ['name', 'email_address']
+    attributes = ['name', 'email_address', 'raw_data']
     for attr_name in attributes:
         base_attr = getattr(base, attr_name)
         remote_attr = getattr(remote, attr_name)

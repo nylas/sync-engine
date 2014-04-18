@@ -268,7 +268,7 @@ class Contact(Base, HasRevisions):
     # A server-provided unique ID.
     uid = Column(String(64), nullable=False)
     # A constant, unique identifier for the remote backend this contact came
-    # from. E.g., 'google', 'eas', 'inbox'
+    # from. E.g., 'google', 'EAS', 'inbox'
     provider_name = Column(String(64))
 
     # We essentially maintain two copies of a user's contacts.
@@ -281,6 +281,8 @@ class Contact(Base, HasRevisions):
     email_address = Column(String(254), nullable=True, index=True)
     name = Column(Text)
     # phone_number = Column(String(64))
+
+    raw_data = Column(Text)
 
     updated_at = Column(DateTime, default=func.now(),
                         onupdate=func.current_timestamp())
@@ -321,6 +323,7 @@ class Contact(Base, HasRevisions):
         self.name = src.name
         self.email_address = src.email_address
         self.provider_name = src.provider_name
+        self.raw_data = src.raw_data
 
     @validates('name', include_backrefs=False)
     def tokenize_name(self, key, name):

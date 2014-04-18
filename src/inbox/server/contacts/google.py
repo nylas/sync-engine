@@ -101,6 +101,10 @@ class GoogleContactsProvider(object):
                           google_contact.updated else None)
             email_address = (email_addresses[0].address if email_addresses else
                              None)
+
+            # The entirety of the raw contact data in XML string
+            # representation.
+            raw_data = google_contact.to_string()
         except AttributeError, e:
             self.log.error('Something is wrong with contact: {0}'
                     .format(google_contact))
@@ -119,8 +123,8 @@ class GoogleContactsProvider(object):
         return Contact(account_id=self.account_id, source='remote',
                        uid=g_id, name=name, updated_at=updated_at,
                        provider_name=self.PROVIDER_NAME,
-                       email_address=email_address,
-                       deleted=deleted)
+                       email_address=email_address, deleted=deleted,
+                       raw_data=raw_data)
 
     def get_contacts(self, sync_from_time=None, max_results=100000):
         """Fetches and parses fresh contact data.

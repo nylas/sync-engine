@@ -91,7 +91,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('169cac0cd87e');
+INSERT INTO `alembic_version` VALUES ('3b511977a01f');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -148,6 +148,7 @@ CREATE TABLE `contact` (
   `updated_at` datetime DEFAULT NULL,
   `created_at` datetime DEFAULT NULL,
   `provider_name` varchar(64) NOT NULL,
+  `raw_data` text,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uid` (`uid`,`source`,`account_id`,`provider_name`),
   KEY `account_id` (`account_id`),
@@ -707,4 +708,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-04-07 23:04:07
+-- Dump completed on 2014-04-16 22:23:51
