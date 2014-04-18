@@ -385,8 +385,6 @@ class Message(JSONSerializable, Base, HasRevisions):
     g_msgid = Column(BigInteger, nullable=True, index=True)
     g_thrid = Column(BigInteger, nullable=True, index=True)
 
-    is_created = Column(Boolean, server_default=false(), nullable=True)
-
     @property
     def namespace(self):
         return self.thread.namespace
