@@ -71,6 +71,8 @@ def verify_imap_account(db_session, account):
     # TODO check with expire date first
     # expire_date = issued_date + datetime.timedelta(seconds=expires_seconds)
 
+    auth_handler = get_handler(account.email_address)
+
     is_valid = oauth.validate_token(account.o_access_token)
 
     # TODO refresh tokens based on date instead of checking?
@@ -81,21 +83,22 @@ def verify_imap_account(db_session, account):
         refresh_token = account.o_refresh_token
 
         log.error('Getting new access token...')
-        response = oauth.get_new_token(refresh_token)  # TOFIX blocks
+
+        try:
+            response = oauth.get_new_token(refresh_token)  # TOFIX blocks
+        # Redo the entire OAuth process.
+        except oauth.InvalidOAuthGrantError:
+            account = auth_handler.create_auth_account(db_session,
+                                                       account.email_address)
+            return auth_handler.verify_account(db_session, account)
+
         response['refresh_token'] = refresh_token  # Propogate it through
 
         # TODO handling errors here for when oauth has been revoked
-        if 'error' in response:
-            log.error(response['error'])
-            if response['error'] == 'invalid_grant':
-                # Means we need to reset the entire oauth process.
-                log.error('Refresh token is invalid.')
-            return None
 
         # TODO Verify it and make sure it's valid.
         assert 'access_token' in response
 
-        auth_handler = get_handler(account.email_address)
         account = auth_handler.create_account(db_session,
                                               account.email_address, response)
         log.info('Updated token for imap account {0}'.format(

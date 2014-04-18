@@ -119,6 +119,7 @@ def get_new_token(refresh_token):
     session_dict = response.json()
     if u'error' in session_dict:
         if session_dict['error'] == 'invalid_grant':
+            log.error('Refresh token is invalid.')
             raise InvalidOAuthGrantError('Could not get new token')
         else:
             raise OAuthError(session_dict['error'])
