@@ -309,10 +309,12 @@ def base_poll(crispin_client, db_session, log, folder_name, shared_state,
                                crispin_client.account_id),
                 c)
 
+            idle_frequency = 1800  # 30min
+
             log.info("Idling on {0} with {1} timeout".format(
-                folder_name, shared_state['poll_frequency']))
+                folder_name, idle_frequency))
             c.idle()
-            c.idle_check(timeout=shared_state['poll_frequency'])
+            c.idle_check(timeout=idle_frequency)
 
             # If we want to do soemthing with the response, but lousy
             # because it uses sequence IDs instead of UIDs

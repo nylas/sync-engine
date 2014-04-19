@@ -12,7 +12,9 @@ def get_subjects(n):
     api_client = zerorpc.Client(timeout=5)
     api_client.connect(API_SERVER_LOC)
 
-    subjects = api_client.first_n_subjects(10)
+    user_id = 2
+    namespace_id = 2
+    subjects = api_client.first_n_subjects(user_id, namespace_id, 10)
 
     print """
 The first {0} emails in your inbox...

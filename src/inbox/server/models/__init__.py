@@ -46,7 +46,11 @@ def db_uri():
     assert database, "Must have database name to connect!"
     return engine_uri(database)
 
-engine = create_engine(db_uri(), listeners=[ForceStrictMode()], echo=False)
+engine = create_engine(db_uri(),
+                       listeners=[ForceStrictMode()],
+                       echo=False,
+                       pool_size=25,
+                       max_overflow=10)
 
 
 def init_db():

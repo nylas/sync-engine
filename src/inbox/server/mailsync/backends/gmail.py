@@ -26,6 +26,7 @@ from geventconnpool import retry
 
 from inbox.util.itert import chunk, partition
 from inbox.util.cache import set_cache, get_cache, rm_cache
+from inbox.server.crispin import GMetadata
 from inbox.server.models.tables.base import Namespace, Message
 from inbox.server.models.tables.imap import ImapAccount, ImapUid
 from inbox.server.mailsync.backends.base import (create_db_objects,
@@ -327,6 +328,11 @@ def retrieve_saved_g_metadata(crispin_client, db_session, log, folder_name,
     log.info('Attempting to retrieve remote_g_metadata from cache')
     remote_g_metadata = get_cache(remote_g_metadata_cache_file(
         crispin_client.account_id, folder_name))
+
+    # Rebuild namedtuples because msgpack
+    remote_g_metadata = dict(
+        [(k, GMetadata(v[0], v[1])) for k,v in remote_g_metadata.iteritems()])
+
     if remote_g_metadata is not None:
         log.info("Successfully retrieved remote_g_metadata cache")
         if crispin_client.selected_highestmodseq > \

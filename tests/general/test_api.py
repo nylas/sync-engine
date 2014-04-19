@@ -36,7 +36,7 @@ def test_mailing_list_info_for_thread(api_client):
     expected = json.dumps(TEST_MSG['mailing_list_headers'],
                           default=json_util.default)
 
-    assert (result == expected)
+    assert (json.dumps(result) == expected)
 
 
 def test_headers_for_message(api_client):
@@ -44,7 +44,7 @@ def test_headers_for_message(api_client):
                                             TEST_MSG['msg_id'])
     expected = TEST_MSG['all_headers']
 
-    assert (result == expected)
+    assert (json.dumps(result) == expected)
 
 
 def test_add_get_contact(api_client):

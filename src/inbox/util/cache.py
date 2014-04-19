@@ -1,11 +1,14 @@
 import os, errno
-import cPickle as pickle
+import msgpack
 
 from .file import safe_filename, mkdirp, splitall
 
 # A quick hack of a key-value cache of arbitrary data structures. Stores on disk.
 # XXX TODO: before prod deploy, make this configurable.
 from inbox.server.config import config
+from inbox.server.log import get_logger
+log = get_logger()
+
 
 PACK_ENCODING='utf-8'
 
@@ -21,8 +24,9 @@ def set_cache(key, val):
     path = _path_from_key(key)
     dirname = os.path.dirname(path)
     mkdirp(dirname)
+    log.info("Saving cache to {0}".format(dirname))
     with open(path, 'w') as f:
-        pickle.dump(val, f)
+        msgpack.pack(val, f)
 
 
 def _unless_dne(fn, *args, **kwargs):
@@ -35,12 +39,14 @@ def _unless_dne(fn, *args, **kwargs):
 
 
 def get_cache(key):
-    return _unless_dne(lambda: _load_cache(_path_from_key(key)))
+    cache_path = _path_from_key(key)
+    log.info("Loading cache to {0}".format(cache_path))
+    return _unless_dne(lambda: _load_cache(cache_path))
 
 
 def _load_cache(path):
     with open(path, 'r') as f:
-        d = pickle.load(f)
+        d = msgpack.unpack(f)
     return d
 
 

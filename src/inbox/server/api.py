@@ -81,7 +81,7 @@ class API(object):
             self._zmq_search = zerorpc.Client(search_srv_loc)
         return self._zmq_search.search
 
-    @jsonify
+
     def sync_status(self):
         """ Returns data representing the status of all syncing users, like:
 
@@ -195,7 +195,6 @@ class API(object):
 
     # Headers API:
     @namespace_auth
-    @jsonify
     def headers_for_message(self, message_id):
         # TODO[kavya]: Take namespace into account, currently doesn't matter
         # since one namespace only.
@@ -214,7 +213,6 @@ class API(object):
             return thread.is_mailing_list_thread()
 
     @namespace_auth
-    @jsonify
     def mailing_list_info_for_thread(self, thread_id):
         with session_scope() as db_session:
             thread = db_session.query(Thread).filter(
@@ -223,9 +221,11 @@ class API(object):
             return thread.mailing_list_info
 
     # For first_10_subjects example:
+    @namespace_auth
     def first_n_subjects(self, n):
         with session_scope() as db_session:
-            subjects = db_session.query(Thread.subject).limit(n).all()
+            subjects = db_session.query(Thread.subject).filter(
+                Thread.namespace_id == self.namespace.id).limit(n).all()
             return subjects
 
     ### actions that need to be synced back to the account backend
