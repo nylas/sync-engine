@@ -60,7 +60,7 @@ class SyncService(object):
                 if acc.provider not in self.monitor_cls_for:
                     self.log.info('Inbox does not currently support {0}\
                         '.format(acc.provider))
-                    return
+                    continue
                 self.log.info('Starting sync for account {0}'
                               .format(acc.email_address))
                 if acc.sync_host is not None and acc.sync_host != fqdn:
