@@ -5,11 +5,13 @@ for mail sync and contact sync.
 """
 import logging
 from colorlog import ColoredFormatter
+import os
+import sys
+
+from gevent import GreenletExit
 
 from inbox.util.file import mkdirp
 
-import sys
-import os
 
 file_formatter = logging.Formatter(
     "[%(levelname)-.1s %(asctime)s %(module)-8.8s:%(lineno)-4s] %(message)s")
@@ -141,8 +143,9 @@ class log_uncaught_errors(object):
         func = self.func
         try:
             return func(*args, **kwargs)
-        except:
-            self._log_failsafe("Uncaught error!")
+        except Exception, e:
+            if not isinstance(e, GreenletExit):
+                self._log_failsafe("Uncaught error!")
             raise
 
     def __str__(self):
