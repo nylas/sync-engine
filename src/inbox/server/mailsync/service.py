@@ -95,7 +95,7 @@ class SyncService(object):
                         results[acc.id] = 'OK sync started'
                     except Exception as e:
                         self.log.error(e.message)
-                        results[acc.id] = 'ERROR error encountered'
+                        results[acc.id] = 'ERROR error encountered' + str(e)
                 else:
                     results[acc.id] = 'OK sync already started'
         if account_id:
@@ -122,8 +122,12 @@ class SyncService(object):
                         (not acc.sync_active):
                     results[acc.id] = "OK sync stopped already"
                 try:
+                    if acc.sync_host is None:
+                        results[acc.id] = 'Sync not running'
+                        continue
                     assert acc.sync_host == fqdn, \
-                        "sync host FQDN doesn't match"
+                        "sync host FQDN doesn't match: {0} <--> {1}" \
+                        .format(acc.sync_host, fqdn)
                     # XXX Can processing this command fail in some way?
                     self.monitors[acc.id].inbox.put_nowait("shutdown")
                     acc.sync_host = None
@@ -136,8 +140,8 @@ class SyncService(object):
                     if acc.id in self.contact_sync_monitors:
                         del self.contact_sync_monitors[acc.id]
                     results[acc.id] = "OK sync stopped"
-                except:
-                    results[acc.id] = "ERROR error encountered"
+                except Exception as e:
+                    results[acc.id] = 'ERROR error encountered' + str(e)
         if account_id:
             if account_id in results:
                 return results[account_id]
