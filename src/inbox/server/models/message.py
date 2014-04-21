@@ -183,7 +183,6 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
         return
 
     new_msg.calculate_sanitized_body()
-
     return new_msg
 
 
@@ -191,12 +190,13 @@ def reconcile_message(db_session, log, uid, new_msg):
     try:
         created = db_session.query(SpoolMessage).filter_by(
             inbox_uid=uid).one()
-    except NoResultFound:
-        log.error('NoResultFound, inbox_uid: {0}'.format(uid))
-        raise
-    except MultipleResultsFound:
-        log.error('MultipleResultsFound, inbox_uid: {0}'.format(uid))
-        raise
+        created.resolved_message = new_msg
 
-    created.resolved_message = new_msg
-    return
+    except NoResultFound:
+        log.error("We don't have a record for this message, even though"
+                  " it has the inbox-sent header: {0}".format(uid))
+    except MultipleResultsFound:
+        log.error("MultipleResultsFound when reconciling message with"
+                  " inbox-sent header: {0}".format(uid))
+
+
