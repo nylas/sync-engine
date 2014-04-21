@@ -84,7 +84,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('f7dbd9bf4a6');
+INSERT INTO `alembic_version` VALUES ('563d405d1f99');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -142,6 +142,7 @@ CREATE TABLE `contact` (
   `created_at` datetime DEFAULT NULL,
   `provider_name` varchar(64) NOT NULL,
   `raw_data` text,
+  `score` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uid` (`uid`,`source`,`account_id`,`provider_name`),
   KEY `account_id` (`account_id`),
@@ -506,6 +507,33 @@ INSERT INTO `namespace` VALUES (1,1,'root');
 UNLOCK TABLES;
 
 --
+-- Table structure for table `searchsignal`
+--
+
+DROP TABLE IF EXISTS `searchsignal`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `searchsignal` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(40) DEFAULT NULL,
+  `value` int(11) DEFAULT NULL,
+  `contact_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `contact_id` (`contact_id`),
+  CONSTRAINT `searchsignal_ibfk_1` FOREIGN KEY (`contact_id`) REFERENCES `contact` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `searchsignal`
+--
+
+LOCK TABLES `searchsignal` WRITE;
+/*!40000 ALTER TABLE `searchsignal` DISABLE KEYS */;
+/*!40000 ALTER TABLE `searchsignal` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `searchtoken`
 --
 
@@ -738,4 +766,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-04-19  1:53:50
+-- Dump completed on 2014-04-21 18:07:49

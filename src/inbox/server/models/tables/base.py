@@ -9,6 +9,7 @@ from sqlalchemy import (Column, Integer, BigInteger, String, DateTime, Boolean,
                         Enum, ForeignKey, Text, func, event)
 from sqlalchemy.orm import (reconstructor, relationship, backref, deferred,
                             validates)
+from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.types import BLOB
@@ -247,6 +248,16 @@ class SearchToken(Base):
                            single_parent=True)
 
 
+class SearchSignal(Base):
+    """Represents a signal used for contacts search result ranking. Examples of
+    signals might include number of emails sent to or received from this
+    contact, or time since last interaction with the contact."""
+    name = Column(String(40))
+    value = Column(Integer)
+    contact_id = Column(ForeignKey('contact.id', ondelete='CASCADE'),
+                        nullable=False)
+
+
 class Contact(Base, HasRevisions):
     """Data for a user's contact."""
     account_id = Column(ForeignKey('account.id', ondelete='CASCADE'),
@@ -271,6 +282,13 @@ class Contact(Base, HasRevisions):
     # phone_number = Column(String(64))
 
     raw_data = Column(Text)
+    search_signals = relationship(
+        'SearchSignal', cascade='all',
+        collection_class=attribute_mapped_collection('name'))
+
+    # A score to use for ranking contact search results. This should be
+    # precomputed to facilitate performant search.
+    score = Column(Integer)
 
     updated_at = Column(DateTime, default=func.now(),
                         onupdate=func.current_timestamp())
