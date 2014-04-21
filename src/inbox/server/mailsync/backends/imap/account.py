@@ -10,6 +10,7 @@ accounts.
 from sqlalchemy import distinct, func
 from sqlalchemy.orm.exc import NoResultFound
 
+from inbox.server.mailsync.hooks import default_hook_manager
 from inbox.server.models.tables.base import Block, Message, FolderItem
 from inbox.server.models.tables.imap import ImapUid, UIDValidity, ImapThread
 from inbox.server.models.message import create_message, reconcile_message
@@ -227,6 +228,11 @@ def create_gmail_message(db_session, log, account, folder_name, msg):
     new_uid = create_imap_message(db_session, log, account, folder_name, msg)
 
     if new_uid:
-        return add_gmail_attrs(db_session, log, new_uid, msg.flags,
-                               folder_name, msg.g_thrid, msg.g_msgid,
-                               msg.g_labels, msg.created)
+        new_uid = add_gmail_attrs(db_session, log, new_uid, msg.flags,
+                                  folder_name, msg.g_thrid, msg.g_msgid,
+                                  msg.g_labels)
+
+        # Execute new-message hooks. We call this here and not in
+        # create_message() so that hooks have access to thread data.
+        default_hook_manager.execute_hooks(account.id, new_uid.message)
+        return new_uid
