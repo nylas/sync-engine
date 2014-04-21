@@ -37,6 +37,8 @@ def debug(args=None):
 
 
 def start(args=None):
+    check_db()
+
     # commit = subprocess.check_output(["git", "describe", "--tags"])
     from inbox.server.models.tables.base import register_backends
     table_mod_for = register_backends()
@@ -172,6 +174,8 @@ def index(args):
 
 
 def auth(args):
+    check_db()
+
     from sqlalchemy.orm.exc import NoResultFound
     from inbox.util.url import NotSupportedError
     from inbox.server.models import session_scope
@@ -197,6 +201,46 @@ def auth(args):
             sys.exit(1)
 
     return verified_account
+
+
+def check_db():
+
+    # Check database revision
+    from inbox.server.models import db_uri  # needs to be after load_config()
+    inbox_db_engine = sqlalchemy.create_engine(db_uri())
+
+    # top-level, with setup.sh
+    alembic_ini_filename = config.get('ALEMBIC_INI', None)
+    assert alembic_ini_filename, 'Must set ALEMBIC_INI config var'
+    assert os.path.isfile(alembic_ini_filename), \
+        'Must have alembic.ini file at {}'.format(alembic_ini_filename)
+    alembic_cfg = alembic_config(alembic_ini_filename)
+
+    try:
+        inbox_db_engine.dialect.has_table(inbox_db_engine, 'alembic_version')
+    except sqlalchemy.exc.OperationalError, e:
+        log.error("Databases don't exist! Run create_db.py")
+        return 1
+
+    if inbox_db_engine.dialect.has_table(inbox_db_engine, 'alembic_version'):
+        res = inbox_db_engine.execute('SELECT version_num from alembic_version')
+        current_revision = [r for r in res][0][0]
+        assert current_revision, \
+            'Need current revision in alembic_version table...'
+
+        script = ScriptDirectory.from_config(alembic_cfg)
+        head_revision = script.get_current_head()
+        log.info('Head database revision: {0}'.format(head_revision))
+        log.info('Current database revision: {0}'.format(current_revision))
+
+        if current_revision != head_revision:
+            log.error('Outdated database! Migrate using `alembic upgrade head`')
+            return 1
+        else:
+            log.info('[OK] Database scheme matches latest')
+    else:
+        log.error('Un-stamped database! `create_db.py` should have done this... bailing.')
+        return 1
 
 
 def signal_handler(signal, frame):
@@ -255,43 +299,6 @@ def main():
 
     load_config(args.config)
     configure_general_logging()
-
-    # Check database revision
-    from inbox.server.models import db_uri  # needs to be after load_config()
-    inbox_db_engine = sqlalchemy.create_engine(db_uri())
-
-    # top-level, with setup.sh
-    alembic_ini_filename = config.get('ALEMBIC_INI', None)
-    assert alembic_ini_filename, 'Must set ALEMBIC_INI config var'
-    assert os.path.isfile(alembic_ini_filename), \
-        'Must have alembic.ini file at {}'.format(alembic_ini_filename)
-    alembic_cfg = alembic_config(alembic_ini_filename)
-
-    try:
-        inbox_db_engine.dialect.has_table(inbox_db_engine, 'alembic_version')
-    except sqlalchemy.exc.OperationalError, e:
-        log.error("Databases don't exist! Run create_db.py")
-        return 1
-
-    if inbox_db_engine.dialect.has_table(inbox_db_engine, 'alembic_version'):
-        res = inbox_db_engine.execute('SELECT version_num from alembic_version')
-        current_revision = [r for r in res][0][0]
-        assert current_revision, \
-            'Need current revision in alembic_version table...'
-
-        script = ScriptDirectory.from_config(alembic_cfg)
-        head_revision = script.get_current_head()
-        log.info('Head database revision: {0}'.format(head_revision))
-        log.info('Current database revision: {0}'.format(current_revision))
-
-        if current_revision != head_revision:
-            log.error('Outdated database! Migrate using `alembic upgrade head`')
-            return 1
-        else:
-            log.info('[OK] Database scheme matches latest')
-    else:
-        log.error('Un-stamped database! `create_db.py` should have done this... bailing.')
-        return 1
 
     args.func(args)
 
