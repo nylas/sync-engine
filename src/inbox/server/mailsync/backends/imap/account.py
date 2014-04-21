@@ -230,7 +230,7 @@ def create_gmail_message(db_session, log, account, folder_name, msg):
     if new_uid:
         new_uid = add_gmail_attrs(db_session, log, new_uid, msg.flags,
                                   folder_name, msg.g_thrid, msg.g_msgid,
-                                  msg.g_labels)
+                                  msg.g_labels, msg.created)
 
         # Execute new-message hooks. We call this here and not in
         # create_message() so that hooks have access to thread data.
