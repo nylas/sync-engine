@@ -16,7 +16,7 @@ def canonicalize_address(address):
     domain = address[at_index + 1:]
     local_part = address[:at_index]
     if domain in ('gmail.com', 'googlemail.com'):
-        local_part = local_part.translate(None, '.')
+        local_part = local_part.replace('.', '')
     return '@'.join((local_part, domain))
 
 
@@ -64,6 +64,8 @@ def get_contact_objects(account_id, addresses, db_session):
     """Given a list `addresses` of (name, email) pairs, return existing
     contacts with matching email. Create and also return contact objects for
     any email without a match."""
+    if addresses is None:
+        return []
     contacts = []
     for address in addresses:
         if address is None:

@@ -20,6 +20,19 @@ def message():
                    bcc_addr=(('The NSA', 'spies@nsa.gov'),),
                    received_date=received_date)
 
+@pytest.fixture
+def gmail_message():
+    received_date = datetime.datetime.utcfromtimestamp(10**9 + 1)
+    return Message(to_addr=((u'Somebody ', u'some.body@gmail.com'),
+                            (u'The same person', u'somebody@gmail.com')),
+                   received_date=received_date)
+
+
+def test_canonicalization(config, gmail_message, db):
+    default_hook_manager.execute_hooks(ACCOUNT_ID, gmail_message)
+    contacts = db.session.query(Contact)
+    assert contacts.count() == 1
+
 
 def test_contact_hooks(config, message, db):
     default_hook_manager.execute_hooks(ACCOUNT_ID, message)
