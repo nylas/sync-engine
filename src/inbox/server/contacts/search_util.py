@@ -12,6 +12,8 @@ T.
 """
 from math import log
 
+import sqlalchemy
+
 from inbox.server.models.tables.base import Contact, SearchSignal, SearchToken
 
 
@@ -74,16 +76,13 @@ def score(contact):
     #   this nontrivial.)
 
 
-def rank_search_results(results):
-    return sorted(results, lambda lhs, rhs: cmp(lhs.score, rhs.score))
-
-
 def search(db_session, account_id, search_query, max_results):
     query = db_session.query(Contact) \
         .filter(Contact.account_id == account_id,
                 Contact.source == 'local',
                 Contact.token.any(
-                    SearchToken.token.startswith(search_query.lower())))
+                    SearchToken.token.startswith(search_query.lower()))) \
+        .order_by(sqlalchemy.desc(Contact.score))
     if max_results > 0:
         query = query.limit(max_results)
-    return rank_search_results(query.all())
+    return query.all()
