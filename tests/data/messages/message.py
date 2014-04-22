@@ -197,8 +197,8 @@ parsed = mime.from_string(message)
 headers = json.dumps(parsed.headers.items())
 
 TEST_MSG = {
-	'msg_id': 9,
-	'thread_id': 9,
+	'msg_id': 2,
+	'thread_id': 2,
 	'mailing_list_headers': { "List-Id": "<debian-devel.lists.debian.org>",
 		"List-Post": "<mailto:debian-devel@lists.debian.org>",
         "List-Owner": None,

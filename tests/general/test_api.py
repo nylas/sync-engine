@@ -18,7 +18,7 @@ NONEXISTENT_CONTACT_ID = 22222222
 def test_sync_status(api_client, sync_client):
     result = api_client.sync_status()
     # TODO(emfree): actually run a sync and test the result
-    expected = '{}'
+    expected = {}
     assert (result == expected)
 
 
