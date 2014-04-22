@@ -62,7 +62,7 @@ CREATE TABLE `account` (
 
 LOCK TABLES `account` WRITE;
 /*!40000 ALTER TABLE `account` DISABLE KEYS */;
-INSERT INTO `account` VALUES (1,1,'inboxapptest@gmail.com','Gmail',1,NULL,'2014-03-20 16:54:04','INBOX','[Gmail]/Drafts','[Gmail]/All Mail','[Gmail]/Sent Mail','986659776516-fg79mqbkbktf5ku10c215vdij918ra0a.apps.googleusercontent.com','115086935419017912828','ya29.1.AADtN_Unyn00Zyyfx-iQAoThA9QFY0-qNuo3x7rKUyEcflenPMWt0IaEb5mkM-1ERTxxJw','eyJhbGciOiJSUzI1NiIsImtpZCI6IjdmOWNjZmQ3MDZlYzliODFkMjJkZWY2NDFkYWE1YWY5ODdiMzMyMDYifQ.eyJpc3MiOiJhY2NvdW50cy5nb29nbGUuY29tIiwidG9rZW5faGFzaCI6IjAzNGp1ZHJMUzhZSnZwNV83Vm1YbEEiLCJhdF9oYXNoIjoiMDM0anVkckxTOFlKdnA1XzdWbVhsQSIsInZlcmlmaWVkX2VtYWlsIjoidHJ1ZSIsImVtYWlsX3ZlcmlmaWVkIjoidHJ1ZSIsImVtYWlsIjoiaW5ib3hhcHB0ZXN0QGdtYWlsLmNvbSIsImNpZCI6Ijk4NjY1OTc3NjUxNi1mZzc5bXFia2JrdGY1a3UxMGMyMTV2ZGlqOTE4cmEwYS5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbSIsImF6cCI6Ijk4NjY1OTc3NjUxNi1mZzc5bXFia2JrdGY1a3UxMGMyMTV2ZGlqOTE4cmEwYS5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbSIsImlkIjoiMTE1MDg2OTM1NDE5MDE3OTEyODI4Iiwic3ViIjoiMTE1MDg2OTM1NDE5MDE3OTEyODI4IiwiYXVkIjoiOTg2NjU5Nzc2NTE2LWZnNzltcWJrYmt0ZjVrdTEwYzIxNXZkaWo5MThyYTBhLmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwiaWF0IjoxMzk1MzM0MTI1LCJleHAiOjEzOTUzMzgwMjV9.jHi7OqE3EThE-TH2dFxLLcJKvtuXxYvy_kF2dXnX0UJtfzsJWRQvy-6M-hIx8lC_RXBu0lOIziP69C7ggiUjhP5iqbu-dvARgMeG7YtM3kEuXSmbUqck6Y7K_SPZC_Zf9xTEJHXyECvM3g_vJtF7uew1qmx-1dX0VZzFBibIeZo',3600,'offline','Bearer','986659776516-fg79mqbkbktf5ku10c215vdij918ra0a.apps.googleusercontent.com','https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile https://mail.google.com/ https://www.google.com/m8/feeds https://www.googleapis.com/auth/calendar','1/xj0YpI12eVSM_xGqR0ogBZKsWUgWQyODaDRI2hI7hCc',1,'2014-03-20 16:53:47',NULL,NULL,'imapaccount');
+INSERT INTO `account` VALUES (1,1,'inboxapptest@gmail.com','Gmail',1,NULL,'2014-03-20 16:54:04','INBOX','[Gmail]/Drafts','[Gmail]/All Mail','[Gmail]/Sent Mail','986659776516-fg79mqbkbktf5ku10c215vdij918ra0a.apps.googleusercontent.com','115086935419017912828','ya29.1.AADtN_X5FMfe0IR7pju_GkNlIQBrveyxXQZTsRKDqSQTYWpiAW68bycv0hZCn_g','eyJhbGciOiJSUzI1NiIsImtpZCI6IjNiMzNjYjQxNGZiN2EwMmU0MTExOTY4MmU5YzUwNTg5MDgwNjUwZmUifQ.eyJpc3MiOiJhY2NvdW50cy5nb29nbGUuY29tIiwiaWQiOiIxMTUwODY5MzU0MTkwMTc5MTI4MjgiLCJzdWIiOiIxMTUwODY5MzU0MTkwMTc5MTI4MjgiLCJhenAiOiI5ODY2NTk3NzY1MTYtZmc3OW1xYmtia3RmNWt1MTBjMjE1dmRpajkxOHJhMGEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJlbWFpbCI6ImluYm94YXBwdGVzdEBnbWFpbC5jb20iLCJhdF9oYXNoIjoiSVRhSnlHeGFNam94YTM0dzhFZUZxUSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJhdWQiOiI5ODY2NTk3NzY1MTYtZmc3OW1xYmtia3RmNWt1MTBjMjE1dmRpajkxOHJhMGEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJ0b2tlbl9oYXNoIjoiSVRhSnlHeGFNam94YTM0dzhFZUZxUSIsInZlcmlmaWVkX2VtYWlsIjp0cnVlLCJjaWQiOiI5ODY2NTk3NzY1MTYtZmc3OW1xYmtia3RmNWt1MTBjMjE1dmRpajkxOHJhMGEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJpYXQiOjEzOTgyMDUyMDUsImV4cCI6MTM5ODIwOTEwNX0.ho6VEdrvf8nQsve8Z4D1YmYtn5Io8ywZUB1RIvjQQ7fRRWGcmQovIQn6fFTysRf3gEImst-Ynn2bZCXQ25T-wrQZrP5K8B9xcLz2GfpzVceWjUqGOIaF2DHrkb_h_WMSX4JBdfUEMedaZ4lsk9JY8n0WwB9W_zEDyuP3M0OwW3w',3600,'offline','Bearer','986659776516-fg79mqbkbktf5ku10c215vdij918ra0a.apps.googleusercontent.com','https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile https://mail.google.com/ https://www.google.com/m8/feeds https://www.googleapis.com/auth/calendar','1/wLoQFTg-cPlgP4l1OVw7mMPia7iY4XGBOFdeqkwnvhQ',1,'2014-04-22 22:25:06',NULL,NULL,'imapaccount');
 /*!40000 ALTER TABLE `account` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -362,7 +362,7 @@ CREATE TABLE `imapaccount` (
 
 LOCK TABLES `imapaccount` WRITE;
 /*!40000 ALTER TABLE `imapaccount` DISABLE KEYS */;
-INSERT INTO `imapaccount` VALUES (1,'imap.gmail.com',NULL,NULL,NULL,NULL,NULL,NULL,NULL);
+INSERT INTO `imapaccount` VALUES (1,'imap.gmail.com','App','other','en',NULL,NULL,'Inbox','115086935419017912828');
 /*!40000 ALTER TABLE `imapaccount` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -766,4 +766,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-04-22  2:26:08
+-- Dump completed on 2014-04-22 22:25:09
