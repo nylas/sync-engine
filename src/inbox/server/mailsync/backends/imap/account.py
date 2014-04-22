@@ -38,6 +38,11 @@ def total_stored_messages(account_id, session):
         .group_by(Message.id).count()
 
 
+def num_uids(account_id, session, folder_name):
+    return session.query(ImapUid.msg_uid).filter_by(
+        imapaccount_id=account_id, folder_name=folder_name).count()
+
+
 def all_uids(account_id, session, folder_name):
     return [uid for uid, in
             session.query(ImapUid.msg_uid).filter_by(
@@ -78,8 +83,11 @@ def update_metadata(account_id, session, folder_name, uids, new_flags):
             ImapUid.imapaccount_id == account_id,
             ImapUid.msg_uid.in_(uids),
             ImapUid.folder_name == folder_name):
-        flags = new_flags[item.msg_uid]['flags']
-        labels = new_flags[item.msg_uid]['labels']
+        flags = new_flags[item.msg_uid].flags
+        if hasattr(new_flags[item.msg_uid], 'labels'):
+            labels = new_flags[item.msg_uid].labels
+        else:
+            labels = None
         item.update_imap_flags(flags, labels)
         item.message.is_draft = item.is_draft
         # NOTE: If we're ever going to make our datastore API support "read"

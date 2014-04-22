@@ -17,6 +17,10 @@ from inbox.util.cache import get_cache, set_cache
 
 __all__ = ['CrispinClient', 'DummyCrispinClient']
 
+# Unify flags API across IMAP and Gmail
+Flags = namedtuple("Flags", "flags")
+# Flags includes labels on Gmail because Gmail doesn't use \Draft.
+GmailFlags = namedtuple("GmailFlags", "flags labels")
 GMetadata = namedtuple('GMetadata', 'msgid thrid')
 RawMessage = namedtuple(
     'RawImapMessage',
@@ -88,20 +92,27 @@ class CrispinClientBase(object):
                        long(i['UIDVALIDITY']))
 
     def select_folder(self, folder, uidvalidity_cb, c):
-        """ Selects a given folder and makes sure to set the 'selected_folder'
-            attribute to a (folder_name, select_info) pair.
+        """ Selects a given folder.
 
-            Selecting a folder indicates the start of an IMAP session.
-            IMAP UIDs are only guaranteed valid for sessions, so the caller
-            must provide a callback that checks UID validity.
+        Makes sure to set the 'selected_folder' attribute to a
+        (folder_name, select_info) pair.
+
+        Selecting a folder indicates the start of an IMAP session.  IMAP UIDs
+        are only guaranteed valid for sessions, so the caller must provide a
+        callback that checks UID validity.
+
+        Is a NOOP if `folder` is already selected.
         """
-        select_info = self._do_select_folder(folder, c)
-        self.selected_folder = (folder, select_info)
-        # don't propagate cached information from previous session
-        self._folder_names = None
-        self.log.info('Selected folder {0} with {1} messages.'.format(
-            folder, select_info['EXISTS']))
-        return uidvalidity_cb(folder, select_info)
+        if self.selected_folder_name != folder:
+            select_info = self._do_select_folder(folder, c)
+            self.selected_folder = (folder, select_info)
+            # don't propagate cached information from previous session
+            self._folder_names = None
+            self.log.info('Selected folder {0} with {1} messages.'.format(
+                folder, select_info['EXISTS']))
+            return uidvalidity_cb(folder, select_info)
+        else:
+            return self.selected_folder_info
 
     def _do_select_folder(self, folder, c):
         raise NotImplementedError
@@ -110,6 +121,21 @@ class CrispinClientBase(object):
         return self._fetch_folder_status(folder, c)
 
     def _fetch_folder_status(self, folder, c):
+        raise NotImplementedError
+
+    def next_uid(self, folder, c):
+        status = self.folder_status(folder, c)
+        return status['UIDNEXT']
+
+    def search_uids(self, criteria, c):
+        """ Find not-deleted UIDs in this folder matching the criteria.
+
+        See http://tools.ietf.org/html/rfc3501.html#section-6.4.4 for valid
+        criteria.
+        """
+        return self._search_uids(criteria, c)
+
+    def _search_uids(self, criteria, c):
         raise NotImplementedError
 
     def all_uids(self, c):
@@ -236,6 +262,7 @@ class CrispinClient(CrispinClientBase):
     """
     # how many messages to download at a time
     CHUNK_SIZE = 1
+    PROVIDER = 'IMAP'
 
     def __init__(self, account_id, conn_pool_size=None, readonly=True,
                  cache=False):
@@ -253,7 +280,7 @@ class CrispinClient(CrispinClientBase):
 
     def _fetch_folder_status(self, folder, c):
         status = c.folder_status(folder,
-                ('UIDVALIDITY', 'HIGHESTMODSEQ'))
+                                 ('UIDVALIDITY', 'HIGHESTMODSEQ', 'UIDNEXT'))
 
         if self.cache:
             self.set_cache(status, folder, 'status')
@@ -318,7 +345,7 @@ class YahooCrispinClient(CrispinClient):
         return self.folder_names(c)
 
     def flags(self, uids, c):
-        return dict([(uid, msg['FLAGS'])
+        return dict([(uid, Flags(msg['FLAGS']))
                      for uid, msg in self._fetch_flags(uids, c).iteritems()])
 
     def _fetch_flags(self, uids, c):
@@ -386,6 +413,8 @@ class YahooCrispinClient(CrispinClient):
 
 
 class GmailCrispinClient(CrispinClient):
+    PROVIDER = 'Gmail'
+
     def __init__(self, account_id, conn_pool_size=None, readonly=True,
                  cache=False):
         CrispinClient.__init__(self, account_id, conn_pool_size=conn_pool_size,
@@ -400,8 +429,14 @@ class GmailCrispinClient(CrispinClient):
         return [self.folder_names(c)['inbox'], self.folder_names(c)['all']]
 
     def flags(self, uids, c):
-        """ Flags includes labels on Gmail because Gmail doesn't use \Draft."""
-        return dict([(uid, dict(flags=msg['FLAGS'], labels=msg['X-GM-LABELS']))
+        """ Gmail-specific flags.
+
+        Returns
+        -------
+        dict
+            Mapping of `uid` (str) : GmailFlags.
+        """
+        return dict([(uid, GmailFlags(msg['FLAGS'], msg['X-GM-LABELS']))
                      for uid, msg in self._fetch_flags(uids, c).iteritems()])
 
     def _fetch_flags(self, uids, c):
