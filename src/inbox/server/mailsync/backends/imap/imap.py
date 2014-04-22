@@ -72,6 +72,7 @@ from datetime import datetime
 from geventconnpool import retry
 from gevent import Greenlet, spawn, sleep
 from gevent.queue import LifoQueue
+from gevent.pool import Group
 from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.util.itert import chunk
@@ -107,7 +108,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             'syncmanager_lock': db_write_lock(namespace_id),
         }
 
-        self.folder_monitors = []
+        self.folder_monitors = Group()
         if not hasattr(self, 'folder_state_handlers'):
             self.folder_state_handlers = {
                 'initial': initial_sync,
@@ -147,21 +148,19 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                                                self.shared_state,
                                                self.folder_state_handlers)
                 thread.start()
-                self.folder_monitors.append(thread)
+                self.folder_monitors.add(thread)
                 while not self._thread_polling(thread) and \
                         not self._thread_finished(thread):
                     sleep(self.heartbeat)
                 # Allow individual folder sync monitors to shut themselves down
                 # after completing the initial sync.
                 if self._thread_finished(thread):
-                    self.log.info("Folder sync for {0} is done."
+                    self.log.info("Folder sync for {} is done."
                                   .format(folder))
-                    self.folder_monitors.pop()
+                    # NOTE: Greenlet is automatically removed from the group
+                    # after finishing.
 
-        # Just hang out. We don't want to block, but we don't want to return
-        # either, since that will let the threads go out of scope.
-        while True:
-            sleep(self.heartbeat)
+        self.folder_monitors.join()
 
 
 class ImapFolderSyncMonitor(Greenlet):
