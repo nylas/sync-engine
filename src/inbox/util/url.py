@@ -95,6 +95,10 @@ gmail_mx_servers = [
     'alt2.aspmx.l.google.com.',
     'alt3.aspmx.l.google.com.',
     'alt4.aspmx.l.google.com.',
+    'aspmx1.aspmx.l.google.com.',
+    'aspmx2.aspmx.l.google.com.',
+    'aspmx3.aspmx.l.google.com.',
+    'aspmx4.aspmx.l.google.com.',
 
     # Gmail
     'gmail-smtp-in.l.google.com.',
