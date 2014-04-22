@@ -18,7 +18,11 @@ geventconnpool==0.2
 gunicorn==17.5
 colorlog==1.8
 MySQL-python==1.2.5
-requests==2.0.0
+requests==2.2.1
+# pyopenssl, ndg, pyasn1 needed for requests TLS SNI support
+pyopenssl==0.14
+ndg-httpsclient==0.3.2
+pyasn1==0.1.7
 Fabric==1.7.0
 supervisor==3.0
 chardet==2.1.1
