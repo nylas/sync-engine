@@ -57,15 +57,6 @@ def namespace_auth(fn):
     return namespace_auth_fn
 
 
-def jsonify(fn):
-    """ decorator that JSONifies a function's return value """
-    def wrapper(*args, **kwargs):
-        ret = fn(*args, **kwargs)
-        # fixes serializing date.datetime
-        return json.dumps(ret, default=json_util.default)
-    return wrapper
-
-
 class API(object):
     _zmq_search = None
     _sync = None
@@ -135,7 +126,6 @@ class API(object):
 
         raise NotImplementedError
 
-    @jsonify
     def top_level_namespaces(self, user_id):
         """ For the user, get the namespaces for all the accounts associated as
             well as all the shared folder rows.
@@ -160,7 +150,6 @@ class API(object):
             return nses
 
     @namespace_auth
-    @jsonify
     def search_folder(self, search_query):
         log.info("Searching with query: {0}".format(search_query))
         results = self.z_search(self.namespace.id, search_query)
@@ -169,7 +158,6 @@ class API(object):
         return message_ids
 
     @namespace_auth
-    @jsonify
     def threads_for_folder(self, folder_name):
         """ Returns all threads in a given folder, together with associated
             messages. Supports shared folders and TODO namespaces as well, if
@@ -184,7 +172,6 @@ class API(object):
                 self.namespace.id, db_session, folder_name)]
 
     @namespace_auth
-    @jsonify
     def body_for_message(self, message_id):
         # TODO: Take namespace into account, currently doesn't matter since
         # one namespace only.
@@ -232,7 +219,6 @@ class API(object):
     ### (we use a task queue to ensure reliable syncing)
 
     @namespace_auth
-    @jsonify
     def archive(self, thread_id):
         """ Archive thread locally and also sync back to the backend. """
         account = self.namespace.account
@@ -257,7 +243,6 @@ class API(object):
         return "OK"
 
     @namespace_auth
-    @jsonify
     def move(self, thread_id, from_folder, to_folder):
         """ Move thread locally and also sync back to the backend. """
         account = self.namespace.account
@@ -279,7 +264,6 @@ class API(object):
         return "OK"
 
     @namespace_auth
-    @jsonify
     def copy(self, thread_id, from_folder, to_folder):
         """ Copy thread locally and also sync back to the backend. """
         account = self.namespace.account
@@ -301,7 +285,6 @@ class API(object):
         return "OK"
 
     @namespace_auth
-    @jsonify
     def delete(self, thread_id, folder_name):
         """ Delete thread locally and also sync back to the backend.
 
