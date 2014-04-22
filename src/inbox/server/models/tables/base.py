@@ -105,17 +105,27 @@ class Account(Base):
     password_aes = deferred(Column(BLOB(256)))
     key = deferred(Column(BLOB(128)))
 
-    @property
-    def _sync_lockfile_name(self):
-        return "/var/lock/inbox_sync/{0}.lock".format(self.id)
+    @classmethod
+    def _get_lock_object(cls, account_id, lock_for=dict()):
+        """ Make sure we only create one lock per account per process.
+
+        (Default args are initialized at import time, so `lock_for` acts as a
+        module-level memory cache.)
+        """
+        return lock_for.setdefault(account_id,
+                                   Lock(cls._sync_lockfile_name(account_id),
+                                        block=False))
+
+    @classmethod
+    def _sync_lockfile_name(cls, account_id):
+        return "/var/lock/inbox_sync/{}.lock".format(account_id)
 
     @property
     def _sync_lock(self):
-        return Lock(self._sync_lockfile_name, block=False)
+        return self._get_lock_object(self.id)
 
     def sync_lock(self):
-        """ Prevent the mailsync for this account from running more than once.
-        """
+        """ Prevent mailsync for this account from running more than once. """
         self._sync_lock.acquire()
 
     def sync_unlock(self):

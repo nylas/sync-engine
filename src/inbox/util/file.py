@@ -69,7 +69,10 @@ class Lock:
     adapted for context managers (the 'with' statement).
 
     Modified to be gevent-safe! Locks held by a given Greenlet may not be
-    taken by other Greenlets until released.
+    taken by other Greenlets until released, _as long as you only create one
+    Lock object per lockfile_. THIS IS VERY IMPORTANT. *Make sure* that you're
+    not creating multiple locks on the same file from the same process,
+    otherwise you'll bypass the gevent lock!
 
     Parameters
     ----------
