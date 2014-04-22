@@ -1,6 +1,7 @@
 import uuid
 
 from functools import wraps
+from collections import namedtuple
 
 import zerorpc
 
@@ -16,12 +17,27 @@ from inbox.server.models.tables.base import (Message, SharedFolder, User,
 from inbox.server.models.namespace import (threads_for_folder,
                                            archive_thread, move_thread,
                                            copy_thread, delete_thread)
-from inbox.server.sendmail.base import send
+from inbox.server.sendmail.base import send, reply
 from inbox.server.log import get_logger
 log = get_logger(purpose='api')
 
 # Provider name for contacts added via this API
 INBOX_PROVIDER_NAME = 'inbox'
+
+Recipients = namedtuple('Recipients', 'to cc bcc')
+
+
+def recipients(to, cc=None, bcc=None):
+    if to and not isinstance(to, list):
+        to = [to]
+
+    if cc and not isinstance(cc, list):
+        cc = [cc]
+
+    if bcc and not isinstance(bcc, list):
+        bcc = [bcc]
+
+    return Recipients(to=to, cc=cc, bcc=bcc)
 
 
 class NSAuthError(Exception):
@@ -105,25 +121,59 @@ class API(object):
             return status
 
     @namespace_auth
-    def send_mail(self, recipients, subject, body, attachments=None):
-        """ Sends a message with the given objects """
+    def send_new(self, to, subject, body, attachments=None, cc=None, bcc=None):
+        """
+        Send an email from the authorized user account for this namespace.
+
+        Parameters
+        ----------
+        to : list
+            a list of utf-8 encoded strings
+        subject : string
+            a utf-8 encoded string
+        body : string
+            a utf-8 encoded string
+        attachments: list, optional
+            a list of filenames
+        cc : list, optional
+            a list of utf-8 encoded strings
+        bcc : list, optional
+            a list of utf-8 encoded strings
+
+        """
         account = self.namespace.account
         assert account is not None, "Can't send mail with this namespace"
 
-        if type(recipients) != list:
-            recipients = [recipients]
-
-        send(account, recipients, subject, body, attachments)
+        send(account, recipients(to, cc, bcc), subject, body, attachments)
 
         return 'OK'
 
-    # TODO[k]: Update this
     @namespace_auth
-    def reply_to_thread(self, thread_id, body, attachments=None):
+    def send_reply(self, thread_id, to, subject, body,
+            attachments=None, cc=None, bcc=None):
+        """
+        Send an email reply from the authorized user account for this namespace.
+
+        Parameters
+        ----------
+        thread_id :
+        recipients : list
+            a list of utf-8 encoded strings
+        subject : string
+            a utf-8 encoded string
+        body : string
+            a utf-8 encoded string
+        attachments: list, optional
+            a list of filenames
+
+        """
         account = self.namespace.account
         assert account is not None, "Can't send mail with this namespace"
 
-        raise NotImplementedError
+        reply(account, thread_id, recipients(to, cc, bcc), subject, body,
+              attachments)
+
+        return 'OK'
 
     def top_level_namespaces(self, user_id):
         """ For the user, get the namespaces for all the accounts associated as

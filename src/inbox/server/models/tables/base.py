@@ -436,6 +436,9 @@ class Message(Base, HasRevisions, HasPublicID):
     # The uid as set in the X-INBOX-ID header of a sent message we create
     inbox_uid = Column(String(64), nullable=True)
 
+    # In accordance with JWZ
+    references = Column(JSON, nullable=True)
+
     @property
     def namespace(self):
         return self.thread.namespace
@@ -574,7 +577,7 @@ class Message(Base, HasRevisions, HasPublicID):
             prettified = html_data
         else:
             path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                "message_template.html")
+                                '..', 'message_template.html')
             with open(path, 'r') as f:
                 # template has %s in it. can't do format because python
                 # misinterprets css

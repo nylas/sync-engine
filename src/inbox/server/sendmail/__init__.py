@@ -4,7 +4,7 @@ Per-provider backend modules for sending mail.
 A backend module *must* meet the following requirements:
 
 1. Specify the provider it implements as the module-level `PROVIDER` variable.
-For example, 'Gmail', 'Imap', 'EAS', 'Yahoo' etc.
+For example, 'Gmail', 'EAS' etc.
 
 2. Specify the name of the sendmail class as the module-level
 `SENDMAIL_CLS` variable.

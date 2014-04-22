@@ -25,7 +25,7 @@ class SendMailError(Exception):
     pass
 
 
-def get_connection_pool(account_id, pool_size=None):
+def get_smtp_connection_pool(account_id, pool_size=None):
     pool_size = pool_size or DEFAULT_POOL_SIZE
 
     if account_id_to_connection_pool.get(account_id) is None:
@@ -56,11 +56,10 @@ class SMTPConnectionPool(ConnectionPool):
         with session_scope() as db_session:
             account = db_session.query(Account).get(self.account_id)
 
-            #self.full_name = account.full_name
-            self.full_name = 'TEST'
             self.email_address = account.email_address
             self.provider = account.provider
-
+            self.full_name = account.full_name if account.provider == 'Gmail'\
+                else ''
             self.auth_type = AUTH_TYPES.get(account.provider)
 
             if self.auth_type == 'OAuth':
@@ -133,9 +132,18 @@ class SMTPConnectionPool(ConnectionPool):
 
 
 class SMTPClient(object):
-    def __init__(self, account_id):
+    """
+    Base class for an SMTPClient.
+    The SMTPClient is responsible for creating/closing SMTP connections
+    and sending mail.
+
+    Subclasses must implement the send_mail function.
+
+    """
+    def __init__(self, account_id, account_namespace):
         self.account_id = account_id
-        self.pool = get_connection_pool(self.account_id)
+        self.namespace = account_namespace
+        self.pool = get_smtp_connection_pool(self.account_id)
         # Required for Gmail
         self.full_name = self.pool.full_name
         self.email_address = self.pool.email_address
@@ -150,9 +158,9 @@ class SMTPClient(object):
             try:
                 failures = c.sendmail(self.email_address, recipients, msg)
             # Sent to none successfully
+            # TODO[k]: Retry
             except smtplib.SMTPException as e:
                 self.log.error('Sending failed: Exception {0}'.format(e))
-                # TODO[k]: Retry
                 raise
 
             # Sent to all successfully
@@ -168,5 +176,23 @@ class SMTPClient(object):
                     self.email_address, r, e[0]))
                 return False
 
-    def send_mail(self, recipients, subject, body, attachments=None):
+    def _send_mail(self, recipients, mimemsg):
+        """
+        Send the email message, store it to the local data store.
+
+        The message is stored in the local data store so it is immediately
+        available to the user (for e.g. if they search the `sent` folder).
+        It is reconciled with the message we get from the remote backend
+        on a subsequent sync of that folder (see server/models/message.py)
+
+        """
+        raise NotImplementedError
+
+    def send_new(self, recipients, subject, body, attachments=None):
+        """ Send an email. """
+        raise NotImplementedError
+
+    def send_reply(self, thread_id, recipients, subject, body,
+                   attachments=None):
+        """ Send an email reply. """
         raise NotImplementedError

@@ -7,7 +7,7 @@ def register_backends():
     Finds the sendmail modules for the different providers
     (in the sendmail/ directory) and imports them.
 
-    Creates a mapping of provider:sendmail for each backend found.
+    Creates a mapping of provider:sendmail_cls for each backend found.
     """
     import inbox.server.sendmail
 
@@ -38,5 +38,18 @@ def send(account, recipients, subject, body, attachments=None):
     if not sendmail_cls:
         raise NotSupportedError('Inbox does not support the email provider.')
 
-    sendmail_client = sendmail_cls(account.id)
-    return sendmail_client.send_mail(recipients, subject, body, attachments)
+    sendmail_client = sendmail_cls(account.id, account.namespace)
+    return sendmail_client.send_new(recipients, subject, body, attachments)
+
+
+def reply(account, thread_id, recipients, subject, body, attachments=None):
+    sendmail_cls_for = register_backends()
+
+    sendmail_cls = sendmail_cls_for.get(account.provider)
+
+    if not sendmail_cls:
+        raise NotSupportedError('Inbox does not support the email provider.')
+
+    sendmail_client = sendmail_cls(account.id, account.namespace)
+    return sendmail_client.send_reply(thread_id, recipients, subject, body,
+                                      attachments)

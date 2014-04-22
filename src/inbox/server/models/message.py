@@ -9,7 +9,7 @@ from flanker import mime
 from flanker.addresslib import address
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
-from inbox.util.misc import or_none, parse_ml_headers
+from inbox.util.misc import or_none, parse_ml_headers, parse_references
 from inbox.util.file import mkdirp
 from inbox.server.models.tables.base import Message, SpoolMessage, Part
 from inbox.server.config import config
@@ -110,6 +110,11 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
         # Custom Inbox header
         new_msg.inbox_uid = parsed.headers.get('X-INBOX-ID')
 
+        # In accordance with JWZ
+        new_msg.references = parse_references(\
+            parsed.headers.get('References', ''),
+            parsed.headers.get('In-Reply-To', ''))
+
         new_msg.size = len(body_string)  # includes headers text
 
         i = 0  # for walk_index
@@ -197,10 +202,9 @@ def reconcile_message(db_session, log, uid, new_msg):
         created.resolved_message = new_msg
 
     except NoResultFound:
-        log.error("We don't have a record for this message, even though"
-                  " it has the inbox-sent header: {0}".format(uid))
+        log.error('NoResultFound for this message, even though '\
+                  'it has the inbox-sent header: {0}'.format(uid))
+
     except MultipleResultsFound:
-        log.error("MultipleResultsFound when reconciling message with"
-                  " inbox-sent header: {0}".format(uid))
-
-
+        log.error('MultipleResultsFound when reconciling message with '\
+                  'inbox-sent header: {0}'.format(uid))

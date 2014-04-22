@@ -10,10 +10,12 @@ def or_none(value, selector):
 
 
 def strip_plaintext_quote(text):
-    """ Strip out quoted text with no inline responses.
+    """
+    Strip out quoted text with no inline responses.
 
     TODO: Make sure that the line before the quote looks vaguely like
     a quote header. May be hard to do in an internationalized manner?
+
     """
     found_quote = False
     lines = text.strip().splitlines()
@@ -35,6 +37,7 @@ def parse_ml_headers(headers):
     """
     Parse the mailing list headers described in RFC 4021,
     these headers are optional (RFC 2369).
+
     """
     attrs = {}
     attrs['List-Archive'] = headers.get('List-Archive')
@@ -46,6 +49,28 @@ def parse_ml_headers(headers):
     attrs['List-Unsubscribe'] = headers.get('List-Unsubscribe')
 
     return attrs
+
+
+def parse_references(references, in_reply_to):
+    """
+    Determines the message_ids the message references, as per JWZ.
+    (http://www.jwz.org/doc/threading.html)
+
+    Returns
+    -------
+    str
+        references : a string of tab-separated message_ids.
+
+    """
+    replyto = in_reply_to.split()[0] if in_reply_to else in_reply_to
+
+    if not references:
+        return replyto
+
+    separator = '\t'
+    if replyto not in references:
+        references += (separator + replyto)
+    return references
 
 
 def timed(fn):
@@ -68,7 +93,8 @@ def timed(fn):
 
 # From: http://stackoverflow.com/a/8556471
 def load_modules(base_module):
-    """ Imports all modules underneath `base_module` in the module tree.
+    """
+    Imports all modules underneath `base_module` in the module tree.
 
     Note that if submodules are located in different directory trees, you
     need to use `pkgutil.extend_path` to make all the folders appear in
