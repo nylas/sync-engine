@@ -11,9 +11,8 @@ from sqlalchemy.orm import (reconstructor, relationship, backref, deferred,
                             validates)
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.schema import UniqueConstraint
-from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.types import BLOB
-from sqlalchemy.sql.expression import text, true, false
+from sqlalchemy.sql.expression import true, false
 
 from bs4 import BeautifulSoup, Doctype, Comment
 
@@ -32,6 +31,7 @@ from inbox.server.basicauth import AUTH_TYPES
 
 from inbox.server.models.roles import JSONSerializable, Blob
 from inbox.server.models import Base
+
 
 def register_backends():
     import inbox.server.models.tables
@@ -53,7 +53,7 @@ def register_backends():
 class Account(Base):
     # user_id refers to Inbox's user id
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'),
-            nullable=False)
+                     nullable=False)
     user = relationship('User', backref='accounts')
 
     # http://stackoverflow.com/questions/386294/what-is-the-maximum-length-of-a-valid-email-address
@@ -133,7 +133,7 @@ class Account(Base):
     @password.setter
     def password(self, value):
         assert AUTH_TYPES.get(self.provider) == 'Password'
-        assert value != None
+        assert value is not None
 
         key_size = int(config.get('KEY_SIZE', 128))
         self.password_aes, key = encrypt_aes(value, key_size)
@@ -163,7 +163,7 @@ class UserSession(Base):
     token = Column(String(40))
 
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'),
-            nullable=False)
+                     nullable=False)
     user = relationship('User', backref='sessions')
 
 
@@ -193,13 +193,13 @@ class Namespace(Base):
 class SharedFolder(Base):
     # Don't delete shared folders if the user that created them is deleted.
     user_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'),
-            nullable=True)
+                     nullable=True)
     user = relationship('User', backref='sharedfolders')
 
     namespace = relationship('Namespace', backref='sharedfolders')
     # Do delete shared folders if their associated namespace is deleted.
-    namespace_id = Column(Integer, ForeignKey('namespace.id',
-        ondelete='CASCADE'), nullable=False)
+    namespace_id = Column(Integer, ForeignKey(
+        'namespace.id', ondelete='CASCADE'), nullable=False)
 
     display_name = Column(String(40))
 
@@ -216,8 +216,9 @@ class User(Base):
 class Transaction(Base, Revision):
     """ Transactional log to enable client syncing. """
     # Do delete transactions if their associated namespace is deleted.
-    namespace_id = Column(Integer, ForeignKey('namespace.id',
-        ondelete='CASCADE'), nullable=False)
+    namespace_id = Column(Integer,
+                          ForeignKey('namespace.id', ondelete='CASCADE'),
+                          nullable=False)
     namespace = relationship('Namespace')
 
     def set_extra_attrs(self, obj):
@@ -228,7 +229,6 @@ class Transaction(Base, Revision):
                 self.table_name, self.record_id, self.command))
             log.info("Delta is {0}".format(self.delta))
             log.info("Thread is: {0}".format(obj.thread_id))
-            import pdb; pdb.set_trace()
             raise
 
 HasRevisions = gen_rev_role(Transaction)
@@ -320,7 +320,6 @@ class Contact(Base, HasRevisions):
         return ('Contact({}, {}, {}, {}, {}, {})'
                 .format(self.uid, self.name, self.email_address, self.source,
                         self.provider_name, self.deleted))
-
 
     def copy_from(self, src):
         """ Copy fields from src."""
@@ -453,30 +452,27 @@ class Message(JSONSerializable, Base, HasRevisions):
                     tag.extract()
                 self.sanitized_body = unicode(soup)
 
-
                 # trim for snippet
                 for tag in soup.findAll(['style', 'head', 'title']):
                     tag.extract()
                 self.snippet = soup.get_text(' ')[:191]
 
-
             except RuntimeError as exc:
                 err_prefix = 'maximum recursion depth exceeded'
                 # e.message is deprecated in Python 3
                 if exc.args[0].startswith(err_prefix):
-                    # err_snip = str(exc.args[0])[len(err_prefix):]
-                    full_traceback = 'Ignoring error: %s\nOuter stack:\n%s%s' % \
-                            (exc,
-                            ''.join(traceback.format_stack()[:-2]), \
-                            traceback.format_exc(exc))
+                    full_traceback = 'Ignoring error: {}\nOuter stack:\n{}{}'\
+                        .format(exc, ''.join(traceback.format_stack()[:-2]),
+                                traceback.format_exc(exc))
 
-                    # Note that python doesn't support tail call recursion optimizations
+                    # Note that python doesn't support tail call recursion
+                    # optimizations
                     # http://neopythonic.blogspot.com/2009/04/tail-recursion-elimination.html
                     full_traceback = 'Error in BeautifulSoup.' + \
-                                     'System recursion limit: {0}'.format(
-                                        sys.getrecursionlimit()) + \
-                                     '\n\n\n' + \
-                                     full_traceback
+                        'System recursion limit: {0}'.format(
+                            sys.getrecursionlimit()) + \
+                        '\n\n\n' + \
+                        full_traceback
 
                     # TODO have a better logging service for storing these
                     errdir = os.path.join(config['LOGDIR'],
@@ -486,7 +482,8 @@ class Message(JSONSerializable, Base, HasRevisions):
 
                     with open("{0}_traceback".format(errfile), 'w') as fh:
                         fh.write(full_traceback)
-                    # Write the file in binary mode, since it might also have decoding errors.
+                    # Write the file in binary mode, since it might also have
+                    # decoding errors.
                     with open("{0}_data".format(errfile), 'wb') as fh:
                         fh.write(html_part.encode("utf-8"))
 
@@ -503,7 +500,6 @@ class Message(JSONSerializable, Base, HasRevisions):
                         exc))
                     raise exc
 
-
         elif plain_part is None:
             self.sanitized_body = u''
             self.snippet = u''
@@ -516,7 +512,7 @@ class Message(JSONSerializable, Base, HasRevisions):
     def body(self):
         """ Returns (plaintext, html) body for the message, decoded. """
         assert self.parts, \
-                "Can't calculate body before parts have been parsed"
+            "Can't calculate body before parts have been parsed"
 
         plain_data = None
         html_data = None
@@ -534,7 +530,7 @@ class Message(JSONSerializable, Base, HasRevisions):
 
     def trimmed_subject(self):
         s = self.subject
-        if s[:4] == u'RE: ' or s[:4] == u'Re: ' :
+        if s[:4] == u'RE: ' or s[:4] == u'Re: ':
             s = s[4:]
         return s
 
@@ -548,7 +544,7 @@ class Message(JSONSerializable, Base, HasRevisions):
             prettified = html_data
         else:
             path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                    "message_template.html")
+                                "message_template.html")
             with open(path, 'r') as f:
                 # template has %s in it. can't do format because python
                 # misinterprets css
@@ -577,7 +573,7 @@ class Message(JSONSerializable, Base, HasRevisions):
     def headers(self):
         """ Returns headers for the message, decoded. """
         assert self.parts, \
-                "Can't provide headers before parts have been parsed"
+            "Can't provide headers before parts have been parsed"
 
         headers = self.parts[0].get_data()
         json_headers = json.JSONDecoder().decode(headers)
@@ -631,9 +627,10 @@ common_content_types = ['text/plain',
 class Block(JSONSerializable, Blob, Base, HasRevisions):
     """ Metadata for message parts stored in s3 """
     message_id = Column(Integer, ForeignKey('message.id', ondelete='CASCADE'),
-            nullable=False)
+                        nullable=False)
     message = relationship('Message',
-            backref=backref("parts", cascade="all, delete, delete-orphan"))
+                           backref=backref(
+                               "parts", cascade="all, delete, delete-orphan"))
 
     walk_index = Column(Integer)
     # Save some space with common content types
@@ -682,7 +679,7 @@ class Block(JSONSerializable, Blob, Base, HasRevisions):
         return self.message.namespace
 
 
-@event.listens_for(Block, 'before_insert', propagate = True)
+@event.listens_for(Block, 'before_insert', propagate=True)
 def serialize_before_insert(mapper, connection, target):
     if target.content_type in common_content_types:
         target._content_type_common = target.content_type
@@ -699,7 +696,7 @@ class FolderItem(JSONSerializable, Base, HasRevisions):
     be different from folder names in the actual account backends.
     """
     thread_id = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
-            nullable=False)
+                       nullable=False)
     # thread relationship is on Thread to make delete-orphan cascade work
 
     folder_name = Column(String(191), index=True)
@@ -726,11 +723,11 @@ class Thread(JSONSerializable, Base):
     recentdate = Column(DateTime, nullable=False)
 
     folders = relationship('FolderItem', backref="thread", single_parent=True,
-            order_by="FolderItem.folder_name",
-            cascade='all, delete, delete-orphan')
+                           order_by="FolderItem.folder_name",
+                           cascade='all, delete, delete-orphan')
 
     namespace_id = Column(ForeignKey('namespace.id', ondelete='CASCADE'),
-            nullable=False, index=True)
+                          nullable=False, index=True)
     namespace = relationship('Namespace', backref='threads')
 
     mailing_list_headers = Column(JSON, nullable=True)
@@ -753,7 +750,7 @@ class Thread(JSONSerializable, Base):
 
     def is_mailing_list_thread(self):
         for v in self.mailing_list_headers.itervalues():
-            if (v != None):
+            if (v is not None):
                 return True
         return False
 
