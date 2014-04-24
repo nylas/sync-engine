@@ -95,7 +95,7 @@ class SyncService(object):
                         results[acc.id] = 'OK sync started'
                     except Exception as e:
                         self.log.error(e.message)
-                        results[acc.id] = 'ERROR error encountered' + str(e)
+                        results[acc.id] = 'ERROR error encountered: {0}'.format(e)
                 else:
                     results[acc.id] = 'OK sync already started'
         if account_id:
@@ -141,7 +141,7 @@ class SyncService(object):
                         del self.contact_sync_monitors[acc.id]
                     results[acc.id] = "OK sync stopped"
                 except Exception as e:
-                    results[acc.id] = 'ERROR error encountered' + str(e)
+                    results[acc.id] = 'ERROR error encountered: {0}'.format(e)
         if account_id:
             if account_id in results:
                 return results[account_id]
