@@ -9,33 +9,12 @@ from flanker import mime
 from flanker.addresslib import address
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
-from inbox.util.misc import or_none, parse_ml_headers, parse_references
+from inbox.util.addr import (strip_quotes, parse_email_address_list,\
+    parse_email_address)
 from inbox.util.file import mkdirp
+from inbox.util.misc import or_none, parse_ml_headers, parse_references
 from inbox.server.models.tables.base import Message, SpoolMessage, Part
 from inbox.server.config import config
-
-# TODO we should probably just store flanker's EmailAddress object
-# instead of doing this thing with quotes ourselves
-def strip_quotes(display_name):
-    if display_name.startswith('"') and display_name.endswith('"'):
-        return display_name[1:-1]
-    else:
-        return display_name
-
-
-def parse_email_address_list(email_addresses):
-    parsed = address.parse_list(email_addresses)
-    return [or_none(addr, lambda p:
-            (strip_quotes(p.display_name), p.address)) for addr in parsed]
-
-
-def trim_filename(s, max_len=64, log=None):
-    if s and len(s) > max_len:
-        if log:
-            log.warning("field is too long. Truncating to {0}"
-                        "characters. {1}".format(max_len, s))
-        return s[:max_len-8] + s[-8:]  # Keep extension
-    return s
 
 
 def get_errfilename(account_id, folder_name, uid):
@@ -184,18 +163,29 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
         log_decode_error(account.id, folder_name, mid, body_string)
         log.error('DecodeError, msg logged to {0}'.format(
             get_errfilename(account.id, folder_name, mid)))
-        return
+        raise
     except RuntimeError:
         log_decode_error(account.id, folder_name, mid, body_string)
         log.error('RuntimeError<iconv> msg logged to {0}'.format(
             get_errfilename(account.id, folder_name, mid)))
-        return
+        raise
 
     new_msg.calculate_sanitized_body()
     return new_msg
 
 
 def reconcile_message(db_session, log, uid, new_msg):
+    """
+    Identify a `Sent Mail` (or corresponding) message synced from the
+    remote backend as one we sent and reconcile it with the message we
+    created and stored in the local data store at the time of sending.
+
+    Notes
+    -----
+    Our current reconciliation strategy is to keep both messages i.e.
+    the one we sent (SpoolMessage) and the one we synced (Message).
+
+    """
     try:
         created = db_session.query(SpoolMessage).filter_by(
             inbox_uid=uid).one()

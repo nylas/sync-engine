@@ -10,7 +10,7 @@ from tests.util.api import api_client
 USER_ID = 1
 ACCOUNT_ID = 1
 NAMESPACE_ID = 1
-THREAD_ID = 2
+THREAD_ID = 5
 
 
 @fixture(scope='function')
@@ -29,14 +29,7 @@ def message(db, config):
 @fixture(scope='function')
 def attach(config):
     filename = config.get('ATTACHMENT')
-
-    with open(filename, 'rb') as f:
-        data = f.read()
-        attachfile = dict(filename=filename,
-                          data=data,
-                          content_type=magic.from_buffer(data, mime=True))
-
-    return [attachfile]
+    return [filename]
 
 
 def test_send(db, config, api_client, message, attach):

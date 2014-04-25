@@ -2,8 +2,8 @@ import uuid
 
 from functools import wraps
 from collections import namedtuple
-
 import zerorpc
+import magic
 
 from inbox.server.actions import base as actions
 from inbox.server.config import config
@@ -28,6 +28,23 @@ Recipients = namedtuple('Recipients', 'to cc bcc')
 
 
 def recipients(to, cc=None, bcc=None):
+    """
+    Create a Recipients namedtuple.
+
+    Parameters
+    ----------
+    to : list
+        list of utf-8 encoded strings
+    cc : list, optional
+        list of utf-8 encoded strings
+    bcc: list, optional
+        list of utf-8 encoded strings
+
+    Returns
+    -------
+    Recipients(to, cc, bcc)
+
+    """
     if to and not isinstance(to, list):
         to = [to]
 
@@ -38,6 +55,35 @@ def recipients(to, cc=None, bcc=None):
         bcc = [bcc]
 
     return Recipients(to=to, cc=cc, bcc=bcc)
+
+
+def attach(attachments):
+    """
+    Get data from files to attach.
+
+    Parameters
+    ----------
+    attachments : list
+        list of filenames
+
+    Returns
+    -------
+    list of dicts
+        attachfiles : list of dicts(filename, data, content_type)
+
+    """
+    attachfiles = []
+
+    for filename in attachments:
+        with open(filename, 'rb') as f:
+            data = f.read()
+            attachfile = dict(filename=filename,
+                              data=data,
+                              content_type=magic.from_buffer(data, mime=True))
+
+            attachfiles.append(attachfile)
+
+    return attachfiles
 
 
 class NSAuthError(Exception):
@@ -134,7 +180,7 @@ class API(object):
         body : string
             a utf-8 encoded string
         attachments: list, optional
-            a list of filenames
+            a list of filenames to attach
         cc : list, optional
             a list of utf-8 encoded strings
         bcc : list, optional
@@ -144,7 +190,9 @@ class API(object):
         account = self.namespace.account
         assert account is not None, "Can't send mail with this namespace"
 
-        send(account, recipients(to, cc, bcc), subject, body, attachments)
+        attachfiles = attach(attachments) if attachments else attachments
+
+        send(account, recipients(to, cc, bcc), subject, body, attachfiles)
 
         return 'OK'
 
@@ -156,22 +204,28 @@ class API(object):
 
         Parameters
         ----------
-        thread_id :
-        recipients : list
+        thread_id : int
+        to : list
             a list of utf-8 encoded strings
         subject : string
             a utf-8 encoded string
         body : string
             a utf-8 encoded string
         attachments: list, optional
-            a list of filenames
+            a list of filenames to attach
+        cc : list, optional
+            a list of utf-8 encoded strings
+        bcc : list, optional
+            a list of utf-8 encoded strings
 
         """
         account = self.namespace.account
         assert account is not None, "Can't send mail with this namespace"
 
+        attachfiles = attach(attachments) if attachments else attachments
+
         reply(account, thread_id, recipients(to, cc, bcc), subject, body,
-              attachments)
+              attachfiles)
 
         return 'OK'
 

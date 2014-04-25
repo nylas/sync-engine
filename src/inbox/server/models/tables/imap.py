@@ -61,7 +61,7 @@ class ImapUid(Base):
     # we notice the same delete from the backend, which helps our accounting
     # of what is going on. otherwise, it wouldn't make sense to allow these
     # entries to decouple.
-    msg_uid = Column(Integer, nullable=True)
+    msg_uid = Column(BigInteger, nullable=True)
 
     # maximum Gmail label length is 225 (tested empirically), but constraining
     # folder_name uniquely requires max length of 767 bytes under utf8mb4

@@ -1,21 +1,19 @@
 from collections import namedtuple
 
 from inbox.server.models import new_db_session, session_scope
-from inbox.server.sendmail.postel import SMTPClient
-from inbox.server.sendmail.message import (create_gmail_email,
-                                           create_gmail_reply,
-                                           save_gmail_email,
-                                           SenderInfo)
 from inbox.server.models.tables.imap import ImapThread
+from inbox.server.sendmail.postel import SMTPClient
+from inbox.server.sendmail.message import SenderInfo, ReplyToMessage
+from inbox.server.sendmail.gmailmessage import (create_gmail_email,
+                                                create_gmail_reply,
+                                                save_gmail_email)
 
 PROVIDER = 'Gmail'
 SENDMAIL_CLS = 'GmailSMTPClient'
 
-ReplyToMessage = namedtuple('ReplyToMessage',
-                            'thread_id subject message_id references body')
-
 
 class GmailSMTPClient(SMTPClient):
+    """ SMTPClient for Gmail. """
     def _send_mail(self, smtpmsg):
         with session_scope() as db_session:
             # Save the email message to the local datastore

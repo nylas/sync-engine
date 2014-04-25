@@ -6,7 +6,7 @@ from inbox.server.log import get_logger
 from inbox.server.basicauth import AUTH_TYPES
 from inbox.server.auth.base import verify_imap_account
 from inbox.server.models import session_scope
-from inbox.server.models.tables.base import Account
+from inbox.server.models.tables.imap import ImapAccount
 
 SMTP_HOSTS = {'Gmail': 'smtp.gmail.com'}
 SMTP_PORT = 587
@@ -35,6 +35,17 @@ def get_smtp_connection_pool(account_id, pool_size=None):
     return account_id_to_connection_pool[account_id]
 
 
+class SMTPConnection():
+    def __init__(self, c):
+        self.connection = c
+
+    def __enter__(self):
+        return self.connection
+
+    def __exit__(self, type, value, traceback):
+        self.connection.quit()
+
+
 class SMTPConnectionPool(ConnectionPool):
     def __init__(self, account_id, num_connections=5, debug=False):
         self.log = get_logger(account_id, 'sendmail: connection_pool')
@@ -54,7 +65,7 @@ class SMTPConnectionPool(ConnectionPool):
 
     def _set_account_info(self):
         with session_scope() as db_session:
-            account = db_session.query(Account).get(self.account_id)
+            account = db_session.query(ImapAccount).get(self.account_id)
 
             self.email_address = account.email_address
             self.provider = account.provider
@@ -127,7 +138,6 @@ class SMTPConnectionPool(ConnectionPool):
 
     # Password authentication
     def smtp_password(self, c):
-        # TODO[k]
         raise NotImplementedError
 
 
@@ -137,7 +147,7 @@ class SMTPClient(object):
     The SMTPClient is responsible for creating/closing SMTP connections
     and sending mail.
 
-    Subclasses must implement the send_mail function.
+    Subclasses must implement the _send_mail, send_new and send_reply functions.
 
     """
     def __init__(self, account_id, account_namespace):
@@ -150,31 +160,31 @@ class SMTPClient(object):
 
         self.log = get_logger(account_id, 'sendmail')
 
-        # TODO[k]
-        # self.connection.quit()
-
     def _send(self, recipients, msg):
+        """ Send the email message over the network. """
         with self.pool.get() as c:
-            try:
-                failures = c.sendmail(self.email_address, recipients, msg)
-            # Sent to none successfully
-            # TODO[k]: Retry
-            except smtplib.SMTPException as e:
-                self.log.error('Sending failed: Exception {0}'.format(e))
-                raise
+            with SMTPConnection(c) as smtpconn:
+                try:
+                    failures = smtpconn.sendmail(self.email_address,
+                                                 recipients, msg)
+                # Sent to none successfully
+                # TODO[k]: Retry
+                except smtplib.SMTPException as e:
+                    self.log.error('Sending failed: Exception {0}'.format(e))
+                    raise
 
-            # Sent to all successfully
-            if not failures:
-                self.log.info('Sending successful: {0} to {1}'.format(
-                    self.email_address, ', '.join(recipients)))
-                return True
+                # Sent to all successfully
+                if not failures:
+                    self.log.info('Sending successful: {0} to {1}'.format(
+                        self.email_address, ', '.join(recipients)))
+                    return True
 
-            # Sent to atleast one successfully
-            # TODO[k]: Handle this!
-            for r, e in failures.iteritems():
-                self.log.error('Send failed: {0} to {1}, code: {2}'.format(
-                    self.email_address, r, e[0]))
-                return False
+                # Sent to atleast one successfully
+                # TODO[k]: Handle this!
+                for r, e in failures.iteritems():
+                    self.log.error('Send failed: {0} to {1}, code: {2}'.format(
+                        self.email_address, r, e[0]))
+                    return False
 
     def _send_mail(self, recipients, mimemsg):
         """
@@ -189,10 +199,39 @@ class SMTPClient(object):
         raise NotImplementedError
 
     def send_new(self, recipients, subject, body, attachments=None):
-        """ Send an email. """
+        """
+        Send an email from this user account.
+
+        Parameters
+        ----------
+        recipients: Recipients(to, cc, bcc) namedtuple
+            to, cc, bcc are a lists of utf-8 encoded strings or None.
+        subject : string
+            a utf-8 encoded string
+        body : string
+            a utf-8 encoded string
+        attachments: list of dicts, optional
+            a list of dicts(filename, data, content_type)
+
+        """
         raise NotImplementedError
 
     def send_reply(self, thread_id, recipients, subject, body,
                    attachments=None):
-        """ Send an email reply. """
+        """
+        Send an email reply from this user account.
+
+        Parameters
+        ----------
+        thread_id: int
+        recipients: Recipients(to, cc, bcc) namedtuple
+            to, cc, bcc are a lists of utf-8 encoded strings or None.
+        subject : string
+            a utf-8 encoded string
+        body : string
+            a utf-8 encoded string
+        attachments: list of dicts, optional
+            a list of dicts(filename, data, content_type)
+
+        """
         raise NotImplementedError
