@@ -61,6 +61,7 @@ apt-get -y install git \
                    libxml2-dev \
                    libxslt-dev \
                    lib32z1-dev \
+                   libffi-dev \
                    python-lxml \
                    libmagickwand-dev \
                    tmux \
