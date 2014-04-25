@@ -26,7 +26,7 @@ from collections import namedtuple
 
 from gevent import spawn
 from gevent.queue import LifoQueue
-from geventconnpool import retry
+from inbox.server.pool import retry_crispin
 
 from inbox.util.itert import chunk, partition
 from inbox.util.cache import set_cache, get_cache, rm_cache
@@ -73,7 +73,7 @@ class GmailSyncMonitor(ImapSyncMonitor):
                                  poll_frequency=poll_frequency)
 
 
-@retry
+@retry_crispin
 def initial_sync(crispin_client, db_session, log, folder_name, shared_state):
     return base_initial_sync(crispin_client, db_session, log, folder_name,
                              shared_state, gmail_initial_sync)
@@ -143,7 +143,7 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
     new_uid_poller.kill()
 
 
-@retry
+@retry_crispin
 def poll(crispin_client, db_session, log, folder_name, shared_state):
     return base_poll(crispin_client, db_session, log, folder_name,
                      shared_state, gmail_highestmodseq_update)
@@ -500,12 +500,14 @@ def retrieve_saved_g_metadata(crispin_client, db_session, log, folder_name,
     remote_g_metadata = get_cache(remote_g_metadata_cache_file(
         crispin_client.account_id, folder_name))
 
-    # Rebuild namedtuples because msgpack
-    remote_g_metadata = dict(
-        [(k, GMetadata(v[0], v[1])) for k,v in remote_g_metadata.iteritems()])
 
     if remote_g_metadata is not None:
-        log.info("Successfully retrieved remote_g_metadata cache")
+        # Rebuild namedtuples because msgpack
+        remote_g_metadata = {k: GMetadata(*v) for k, v in
+                             remote_g_metadata.iteritems()}
+
+        log.info("Successfully retrieved remote_g_metadata cache "
+                 "with {0} objects".format(len(remote_g_metadata)))
         if crispin_client.selected_highestmodseq > \
                 saved_validity.highestmodseq:
             update_saved_g_metadata(crispin_client, db_session, log,
@@ -531,6 +533,7 @@ def update_saved_g_metadata(crispin_client, db_session, log, folder_name,
     # are slow on large folders.
     modified = crispin_client.new_and_updated_uids(
         crispin_client.selected_highestmodseq, c)
+    log.info("Found {0} modified".format(len(modified)))
     new, updated = new_or_updated(modified, local_uids)
     log.info("{} new and {} updated UIDs".format(len(new), len(updated)))
     if new:

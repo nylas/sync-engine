@@ -3,6 +3,7 @@ from gc import collect as garbage_collect
 import zerorpc
 from gevent import Greenlet, joinall, sleep
 from gevent.queue import Queue, Empty
+from sqlalchemy.exc import DataError
 
 from inbox.util.itert import partition
 from inbox.util.misc import load_modules
@@ -139,6 +140,35 @@ def commit_uids(db_session, log, new_uids):
 
     db_session.add_all(new_uids)
     db_session.commit()
+
+    try:
+        log.info("Committing {0} UIDs".format(len(new_uids)))
+        db_session.add_all(new_uids)
+        db_session.commit()
+    except DataError as e:
+        db_session.rollback()
+        log.error("Issue inserting new UIDs into database. "
+                  "This probably means that an object's property is "
+                  "malformed or way too long, etc.")
+
+        for uid in new_uids:
+            log.error(uid)
+            import inspect
+            from pprint import pformat
+            log.error(inspect.getmembers(uid))
+            try:
+                log.error(pformat(uid.__dict__, indent=2))
+            except AttributeError:
+                pass
+
+            for part in uid.message.parts:
+                log.error(inspect.getmembers(part))
+                try:
+                    log.error(pformat(part.__dict__, indent=2))
+                except AttributeError:
+                    pass
+
+        raise e
 
     # NOTE: indexing temporarily disabled because xapian is leaking fds :/
     # trigger_index_update(self.account.namespace.id)

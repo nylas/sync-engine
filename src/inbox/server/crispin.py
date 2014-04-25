@@ -148,6 +148,7 @@ class CrispinClientBase(object):
     def _fetch_all_uids(self, c):
         raise NotImplementedError
 
+    @timed
     def new_and_updated_uids(self, modseq, c):
         return self._fetch_new_and_updated_uids(modseq, c)
 
@@ -195,7 +196,6 @@ class DummyCrispinClient(CrispinClientBase):
             .format(self.account_id, self.selected_folder_name)
         return cached_data
 
-    @timed
     def _fetch_new_and_updated_uids(self, modseq, c):
         cached_data = self.get_cache(self.selected_folder_name, 'updated',
                                      modseq)
@@ -249,7 +249,7 @@ class DummyCrispinClient(CrispinClientBase):
 class CrispinClient(CrispinClientBase):
     """ Methods must be called using a connection from the pool, e.g.
 
-        @retry
+        @retry_crispin
         def poll():
             with instance.pool.get() as c:
                 instance.all_uids(c)
@@ -266,6 +266,7 @@ class CrispinClient(CrispinClientBase):
 
     def __init__(self, account_id, conn_pool_size=None, readonly=True,
                  cache=False):
+        self.conn_pool_size = conn_pool_size
         self.pool = get_connection_pool(account_id, conn_pool_size)
         self.readonly = readonly
         CrispinClientBase.__init__(self, account_id, cache)

@@ -25,7 +25,7 @@ def update_contacts_from_message(account_id, message):
     ranking scores for all contacts in those fields."""
     with session_scope() as db_session:
         from_contacts = get_contact_objects(
-            account_id, [message.from_addr], db_session)
+            account_id, message.from_addr, db_session)
         to_contacts = get_contact_objects(
             account_id, message.to_addr, db_session)
         cc_contacts = get_contact_objects(

@@ -69,7 +69,7 @@ from __future__ import division
 
 from datetime import datetime
 
-from geventconnpool import retry
+from inbox.server.pool import retry_crispin
 from gevent import Greenlet, spawn, sleep
 from gevent.queue import LifoQueue
 from gevent.pool import Group
@@ -213,8 +213,8 @@ class ImapFolderSyncMonitor(Greenlet):
 
 
 def resync_uids_from(previous_state):
-    @retry
-    def resync_uids(crispin_client, log, db_session, folder_name,
+    @retry_crispin
+    def resync_uids(crispin_client, db_session, log, folder_name,
                     shared_state):
         """ Call this when UIDVALIDITY is invalid to fix up the database.
 
@@ -229,7 +229,7 @@ def resync_uids_from(previous_state):
     return resync_uids
 
 
-@retry
+@retry_crispin
 def initial_sync(crispin_client, db_session, log, folder_name, shared_state):
     return base_initial_sync(crispin_client, db_session, log, folder_name,
                              shared_state, imap_initial_sync)
@@ -271,7 +271,7 @@ def base_initial_sync(crispin_client, db_session, log, folder_name,
     return 'poll'
 
 
-@retry
+@retry_crispin
 def poll(crispin_client, db_session, log, folder_name, shared_state):
     return base_poll(crispin_client, db_session, log, folder_name,
                      shared_state, imap_highestmodseq_update)

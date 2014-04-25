@@ -29,13 +29,13 @@ def parse_email_address_list(email_addresses):
             (strip_quotes(p.display_name), p.address)) for addr in parsed]
 
 
-def parse_email_address(email_address):
-    parsed = parse_email_address_list(email_address)
-    if len(parsed) == 0:
-        return None
-    assert len(parsed) == 1, 'Expected only one address' + str(parsed)
-    return parsed[0]
-
+def trim_filename(s, max_len=64, log=None):
+    if s and len(s) > max_len:
+        if log:
+            log.warning("field is too long. Truncating to {0}"
+                        "characters. {1}".format(max_len, s))
+        return s[:max_len-8] + s[-8:]  # Keep extension
+    return s
 
 
 def get_errfilename(account_id, folder_name, uid):
@@ -89,8 +89,10 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
 
         # clean_subject strips re:, fwd: etc.
         new_msg.subject = parsed.clean_subject
-        new_msg.from_addr = parse_email_address(parsed.headers.get('From'))
-        new_msg.sender_addr = parse_email_address(parsed.headers.get('Sender'))
+        new_msg.from_addr = parse_email_address_list(
+            parsed.headers.get('From'))
+        new_msg.sender_addr = parse_email_address_list(
+            parsed.headers.get('Sender'))
         new_msg.reply_to = parse_email_address_list(parsed.headers.get('Reply-To'))
 
         new_msg.to_addr = parse_email_address_list(parsed.headers.getall('To'))
@@ -134,9 +136,12 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
             new_part.walk_index = i
             new_part.misc_keyval = mimepart.headers.items()  # everything
             new_part.content_type = mimepart.content_type.value
-            new_part.filename = mimepart.content_type.params.get('name')
+            new_part.filename = trim_filename(
+                mimepart.content_type.params.get('name'),
+                log=log)
+            # TODO maybe also trim other headers?
 
-            # Content-Disposition attachment; filename="floorplan.gif"
+
             if mimepart.content_disposition[0] is not None:
                 value, params = mimepart.content_disposition
                 if value not in ['inline', 'attachment']:
@@ -150,7 +155,9 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
                 else:
                     new_part.content_disposition = value
                     if value == 'attachment':
-                        new_part.filename = params.get('filename')
+                        new_part.filename = trim_filename(
+                            params.get('filename'),
+                            log=log)
 
             if mimepart.body is None:
                 data_to_write = ''

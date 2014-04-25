@@ -1,12 +1,8 @@
-# monkey-patch so geventconnpool's @retry recognizes errors
 import sys
+from functools import wraps
 
 from gevent import socket
 from geventconnpool import ConnectionPool
-
-import imaplib
-imaplib.IMAP4.error = socket.error
-imaplib.IMAP4.abort = socket.error
 
 from imapclient import IMAPClient
 
@@ -26,6 +22,32 @@ IMAP_HOSTS = {'Gmail': 'imap.gmail.com',
 imapaccount_id_to_connection_pool = {}
 
 DEFAULT_POOL_SIZE = 5
+
+
+# recognize errors and make a new crispin
+
+def retry_crispin(fn):
+    """
+    Replacement for geventconnpool's retry methd, that actually logs errors.
+    """
+    @wraps(fn)
+    # Explicitly set the args because we only support this use case
+    def deco(crispin_client, db_session, log, folder_name, shared_state):
+        while True:
+            try:
+                return fn(crispin_client, db_session, log,
+                          folder_name, shared_state)
+            except IMAPClient.Error as e:
+                log.error(e)
+                log.debug("Creating new crispin for the job...")
+                from inbox.server.crispin import new_crispin
+                crispin_client = new_crispin(
+                    crispin_client.account_id,
+                    crispin_client.PROVIDER,
+                    conn_pool_size=crispin_client.conn_pool_size,
+                    readonly=crispin_client.readonly)
+                continue
+    return deco
 
 
 def verify_gmail_account(account):
