@@ -138,9 +138,6 @@ def commit_uids(db_session, log, new_uids):
 
     garbage_collect()
 
-    db_session.add_all(new_uids)
-    db_session.commit()
-
     try:
         log.info("Committing {0} UIDs".format(len(new_uids)))
         db_session.add_all(new_uids)
