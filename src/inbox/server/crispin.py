@@ -70,6 +70,7 @@ class CrispinClient(object):
         Whether or not to open IMAP connections as readonly.
     """
     PROVIDER = 'IMAP'
+    CHUNK_SIZE = 1
 
     def __init__(self, account_id, conn_pool_size=None, readonly=True):
         self.log = get_logger(account_id)
