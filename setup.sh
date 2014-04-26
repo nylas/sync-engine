@@ -101,10 +101,10 @@ color '35;1' 'Cleaning up...'
 apt-get -y purge build-essential
 apt-get -y autoremove
 
-mkdir /var/lib/inboxapp
+mkdir -p /var/lib/inboxapp
 chown $SUDO_USER /var/lib/inboxapp
 
-mkdir /var/log/inboxapp
+mkdir -p /var/log/inboxapp
 chown $SUDO_USER /var/log/inboxapp
 
 color '35;1' 'Done!.'
