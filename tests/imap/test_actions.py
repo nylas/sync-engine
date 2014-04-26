@@ -1,5 +1,3 @@
-import json
-
 import pytest
 
 from tests.util.api import api_client
@@ -94,9 +92,6 @@ class TestLocalClientActions(object):
             thread_id=1, folder_name='inbox').count()
         assert inbox_items == 0, "inbox entry still there"
 
-        # I don't understand why we need to refresh the session here, but
-        # if we don't we get stale data. :/
-        db.new_session()
         archive_items = db.session.query(FolderItem).filter_by(
             thread_id=1, folder_name='archive').count()
         assert archive_items == 0, "archive entry still there"

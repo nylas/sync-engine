@@ -47,9 +47,6 @@ def test_send(db, config, api_client, message, attach):
                                   body, attachment)
     assert result == 'OK', 'send_mail API call failed'
 
-    # As in test_actions.py, don't know why we need to refresh the session but
-    # if we don't we get stale data.
-    db.new_session()
     sent_thrid = db.session.query(Message.thread_id).\
         filter_by(subject=subject).count()
 

@@ -9,6 +9,7 @@ from inbox.server.contacts.remote_sync import merge, poll, MergeError
 
 ACCOUNT_ID = 1
 
+
 # STOPSHIP(emfree): Test multiple distinct remote providers
 
 class ContactsProviderStub(object):
@@ -120,12 +121,10 @@ def test_uses_local_updates(contacts_provider, db):
     results[-1].name = 'New Name'
     db.session.commit()
 
-    db.new_session()
     contacts_provider.__init__()
     contacts_provider.supply_contact('Old Name', 'new@email.address')
     poll(ACCOUNT_ID, contacts_provider)
 
-    db.new_session()
     remote_results = db.session.query(Contact).filter_by(source='remote').all()
     names = [r.name for r in remote_results]
     assert 'New Name' in names
@@ -162,7 +161,6 @@ def test_deletes(contacts_provider, db):
     results = db.session.query(Contact).all()
     assert len(results) == 2
 
-    db.new_session()
     contacts_provider.__init__()
     contacts_provider.supply_contact(None, None, deleted=True)
     poll(ACCOUNT_ID, contacts_provider)
