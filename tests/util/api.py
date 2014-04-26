@@ -1,14 +1,14 @@
 from pytest import fixture
 
-from tests.util.base import TestZeroRPC, db
+from tests.util.base import TestZeroRPC
 
 
-@fixture(scope='function')
-def api_client(config, db):
+@fixture(scope='session')
+def api_client(config):
     api_service_loc = config.get('API_SERVER_LOC')
 
     from inbox.server.api import API
 
-    test = TestZeroRPC(config, db, API, api_service_loc)
+    test = TestZeroRPC(config, API, api_service_loc)
 
     return test.client

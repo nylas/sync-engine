@@ -15,14 +15,14 @@ ACCOUNT_ID = 1
 NONEXISTENT_CONTACT_ID = 22222222
 
 
-def test_sync_status(api_client, sync_client):
+def test_sync_status(db, api_client, sync_client):
     result = api_client.sync_status()
     # TODO(emfree): actually run a sync and test the result
     expected = {}
     assert (result == expected)
 
 
-def test_is_mailing_list_thread(api_client):
+def test_is_mailing_list_thread(db, api_client):
     result = api_client.is_mailing_list_thread(USER_ID, NAMESPACE_ID,
                                                TEST_MSG['thread_id'])
     expected = True
@@ -30,7 +30,7 @@ def test_is_mailing_list_thread(api_client):
     assert (result == expected)
 
 
-def test_mailing_list_info_for_thread(api_client):
+def test_mailing_list_info_for_thread(db, api_client):
     result = api_client.mailing_list_info_for_thread(USER_ID, NAMESPACE_ID,
                                                      TEST_MSG['thread_id'])
     expected = json.dumps(TEST_MSG['mailing_list_headers'],
@@ -39,7 +39,7 @@ def test_mailing_list_info_for_thread(api_client):
     assert (json.dumps(result) == expected)
 
 
-def test_headers_for_message(api_client):
+def test_headers_for_message(db, api_client):
     result = api_client.headers_for_message(USER_ID, NAMESPACE_ID,
                                             TEST_MSG['msg_id'])
     expected = TEST_MSG['all_headers']
@@ -47,7 +47,7 @@ def test_headers_for_message(api_client):
     assert (json.dumps(result) == expected)
 
 
-def test_add_get_contact(api_client):
+def test_add_get_contact(db, api_client):
     example_contact_data = {'name': 'New Contact',
                             'email': 'new.contact@email.address'}
     contact_id = api_client.add_contact(ACCOUNT_ID, example_contact_data)
@@ -56,7 +56,7 @@ def test_add_get_contact(api_client):
     assert result['email'] == example_contact_data['email']
 
 
-def test_add_update_contacte(api_client):
+def test_add_update_contacte(db, api_client):
     example_contact_data = {'name': 'New Contact',
                             'email': 'new.contact@email.address'}
     contact_id = api_client.add_contact(ACCOUNT_ID, example_contact_data)
@@ -67,12 +67,12 @@ def test_add_update_contacte(api_client):
     assert result['email'] == example_contact_data['email']
 
 
-def test_error_on_bad_contact_update(api_client):
+def test_error_on_bad_contact_update(db, api_client):
     with pytest.raises(RemoteError):
         api_client.update_contact(ACCOUNT_ID, NONEXISTENT_CONTACT_ID)
 
 
-def test_contact_search(api_client):
+def test_contact_search(db, api_client):
     """Basic smoke tests for search."""
     search_data = [{'name': 'Some Dude',
                     'email': 'some.dude@email.address'},
@@ -105,7 +105,7 @@ def test_contact_search(api_client):
     assert result[0]['email'] == 'somebody.else@email.address'
 
 
-def test_search_missing_fields(api_client):
+def test_search_missing_fields(db, api_client):
     api_client.add_contact(ACCOUNT_ID, {'name': 'Some Dude', 'email': None})
     api_client.add_contact(ACCOUNT_ID, {'name': None, 'email': 'someemail'})
     result = api_client.search_contacts(ACCOUNT_ID, 'Some')

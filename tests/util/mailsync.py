@@ -1,14 +1,14 @@
 from pytest import fixture
 
-from tests.util.base import TestZeroRPC, db
+from tests.util.base import TestZeroRPC
 
 
 @fixture(scope='session')
-def sync_client(config, db):
+def sync_client(config):
     sync_service_loc = config.get('CRISPIN_SERVER_LOC')
 
     from inbox.server.mailsync.service import SyncService
 
-    test = TestZeroRPC(config, db, SyncService, sync_service_loc)
+    test = TestZeroRPC(config, SyncService, sync_service_loc)
 
     return test.client

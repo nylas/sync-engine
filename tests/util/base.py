@@ -8,14 +8,14 @@ from inbox.util.db import drop_everything
 from inbox.util.misc import load_modules
 
 TEST_CONFIG = os.path.join(
-        os.path.dirname(os.path.realpath(__file__)), '..', 'config.cfg')
+    os.path.dirname(os.path.realpath(__file__)), '..', 'config.cfg')
 
 
 def absolute_path(path):
     """ Returns the absolute path for a path specified as relative to the
         tests/ directory, needed for the dump file name in config.cfg
     """
-    return os.path.abspath(\
+    return os.path.abspath(
         os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', path))
 
 
@@ -34,6 +34,7 @@ def log(request, config):
         Testing log directory is removed at the end of the test run!
     """
     from inbox.server.log import configure_general_logging
+
     def remove_logs():
         rmtree(config['LOGDIR'], ignore_errors=True)
     request.addfinalizer(remove_logs)
@@ -112,8 +113,7 @@ class TestDB(object):
 
 class TestZeroRPC(object):
     """ client/server handle for a ZeroRPC service """
-    def __init__(self, config, database, cls, service_loc):
-        self.db = database
+    def __init__(self, config, cls, service_loc):
 
         from inbox.server.util.concurrency import make_zerorpc
 
