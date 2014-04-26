@@ -85,11 +85,12 @@ class TestDB(object):
 
     def populate(self):
         """ Populates database with data from the test dumpfile. """
-        # Note: Since database is called test, all users have access to it;
-        # don't need to read in the username + password from config.
         database = self.config.get('MYSQL_DATABASE')
+        user = self.config.get('MYSQL_USER')
+        password = self.config.get('MYSQL_PASSWORD')
 
-        cmd = 'mysql {0} < {1}'.format(database, self.dumpfile)
+        cmd = 'mysql {0} -u{1} -p{2} < {3}'.format(database, user, password,
+                                                   self.dumpfile)
         subprocess.check_call(cmd, shell=True)
 
     def new_session(self):
