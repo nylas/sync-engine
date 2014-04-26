@@ -193,8 +193,10 @@ class CrispinClient(object):
 class YahooCrispinClient(CrispinClient):
     """ NOTE: This implementation is NOT FINISHED. """
     def __init__(self, account_id, conn_pool_size=None, readonly=True):
-        CrispinClient.__init__(self, account_id, conn_pool_size=conn_pool_size,
-                               readonly=readonly)
+        # CrispinClient.__init__(self, account_id, conn_pool_size=conn_pool_size,
+        #                        readonly=readonly)
+        # TODO: Remove this once this client is usable.
+        raise NotImplementedError
 
     def sync_folders(self, c):
         return self.folder_names(c)
