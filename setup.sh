@@ -77,7 +77,7 @@ if [ -d "../inbox-eas" ]; then
     pip install -e ../inbox-eas
 fi
 
-if ! grep -qe "^PYTHONIOENCODING=utf_8$" "~/.bashrc";
+if ! grep -qe "^export PYTHONIOENCODING=utf_8$" ~/.bashrc;
 then
     echo "# Adding default Python IO encoding" >> ~/.bashrc
     echo 'export PYTHONIOENCODING=utf_8' >> ~/.bashrc
