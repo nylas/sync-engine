@@ -48,6 +48,7 @@ def db_uri():
 
 engine = create_engine(db_uri(),
                        listeners=[ForceStrictMode()],
+                       isolation_level='READ COMMITTED',
                        echo=False,
                        pool_size=25,
                        max_overflow=10)
