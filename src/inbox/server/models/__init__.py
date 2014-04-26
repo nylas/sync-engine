@@ -89,7 +89,7 @@ def new_db_session():
     from inbox.server.models.tables.base import Transaction, HasRevisions
 
     return versioned_session(Session(autoflush=True, autocommit=False),
-            Transaction, HasRevisions)
+                             Transaction, HasRevisions)
 
 
 @contextmanager
@@ -98,6 +98,11 @@ def session_scope():
 
     Takes care of rolling back failed transactions and closing the session
     when it goes out of scope.
+
+    Note that sqlalchemy automatically starts a new database transaction when
+    the session is created, and restarts a new transaction after every commit()
+    on the session. Your database backend's transaction semantics are important
+    here when reasoning about concurrency.
 
     Yields
     ------
