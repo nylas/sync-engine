@@ -7,6 +7,8 @@ from sqlalchemy.types import TypeDecorator
 from sqlalchemy.interfaces import PoolListener
 
 from sqlalchemy.ext.declarative import as_declarative, declared_attr
+
+
 ### Column Types
 
 # http://docs.sqlalchemy.org/en/rel_0_9/core/types.html#marshal-json-strings
@@ -23,12 +25,15 @@ class JSON(TypeDecorator):
             return None
         return json.loads(value, object_hook=json_util.object_hook)
 
+
 class LittleJSON(JSON):
     impl = String(255)
+
 
 class BigJSON(JSON):
     # if all characters were 4-byte, this would fit in mysql's MEDIUMTEXT
     impl = Text(4194304)
+
 
 ### Other utilities
 
@@ -45,6 +50,7 @@ class ForceStrictMode(PoolListener):
         cur = dbapi_con.cursor()
         cur.execute("SET SESSION sql_mode='TRADITIONAL'")
         cur = None
+
 
 @as_declarative()
 class Base(object):

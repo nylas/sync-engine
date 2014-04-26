@@ -20,6 +20,7 @@ from sqlalchemy.ext.declarative import declared_attr
 
 from .util import BigJSON
 
+
 class Revision(object):
     """ All revision records in a single table (role). """
     # Which object are we recording changes to?
@@ -31,6 +32,7 @@ class Revision(object):
 
     def set_extra_attrs(self, obj):
         pass
+
 
 def gen_rev_role(rev_cls):
     """ Generate generic HasRevisions mixin.
@@ -44,24 +46,27 @@ def gen_rev_role(rev_cls):
         @declared_attr
         def revisions(cls):
             return relationship(rev_cls,
-                    primaryjoin="{0}.id=={1}.record_id".format(
-                        cls.__name__, rev_cls.__name__),
-                    foreign_keys=rev_cls.record_id, viewonly=True)
+                                primaryjoin="{0}.id=={1}.record_id".format(
+                                    cls.__name__, rev_cls.__name__),
+                                foreign_keys=rev_cls.record_id, viewonly=True)
 
     return HasRevisions
+
 
 def create_insert_revision(rev_cls, obj, session):
     d = delta(obj)
     assert d, "Can't insert object {0}:{1} with no delta".format(
-            obj.__tablename__, obj.id)
+        obj.__tablename__, obj.id)
     return rev_cls(command='insert', record_id=obj.id,
-            table_name=obj.__tablename__, delta=d)
+                   table_name=obj.__tablename__, delta=d)
+
 
 def create_delete_revision(rev_cls, obj, session):
     # NOTE: The application layer needs to deal with purging all history
     # related to the object at some point.
     return rev_cls(command='delete', record_id=obj.id,
-            table_name=obj.__tablename__)
+                   table_name=obj.__tablename__)
+
 
 def create_update_revision(rev_cls, obj, session):
     d = delta(obj)
@@ -69,7 +74,8 @@ def create_update_revision(rev_cls, obj, session):
     if not d:
         return
     return rev_cls(command='update', record_id=obj.id,
-            table_name=obj.__tablename__, delta=d)
+                   table_name=obj.__tablename__, delta=d)
+
 
 def delta(obj):
     obj_state = inspect(obj)
@@ -97,9 +103,8 @@ def delta(obj):
             if prop.key not in obj_state.dict:
                 getattr(obj, prop.key)
 
-            # import pytest
-            # pytest.set_trace()
-            added, unchanged, deleted = getattr(obj_state.attrs, prop.key).history
+            added, unchanged, deleted = getattr(
+                obj_state.attrs, prop.key).history
             if added:
                 # if the attribute had no value.
                 d[col.key] = added[0]
@@ -113,8 +118,8 @@ def delta(obj):
             # not changed, but we have relationships.  OK
             # check those too
             for prop in obj_state.mapper.iterate_properties:
-                if isinstance(prop, RelationshipProperty) and \
-                    getattr(obj_state.attrs, prop.key).history.has_changes():
+                if isinstance(prop, RelationshipProperty) and getattr(
+                        obj_state.attrs, prop.key).history.has_changes():
                     for p in prop.local_columns:
                         if p.foreign_keys:
                             obj_changed = True
@@ -126,6 +131,7 @@ def delta(obj):
             return
 
     return d
+
 
 def versioned_session(session, rev_cls, rev_role):
     def create_revision(session, obj, create_fn):
