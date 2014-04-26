@@ -212,6 +212,7 @@ def get_g_metadata(crispin_client, db_session, log, folder_name, uids,
 def gmail_download_and_commit_uids(crispin_client, db_session, log,
                                    folder_name, uids, msg_create_fn,
                                    syncmanager_lock, c):
+    log.debug("Downloading uids {}".format(uids))
     raw_messages = safe_download(crispin_client, log, uids, c)
     with syncmanager_lock:
         # there is the possibility that another green thread has already
@@ -383,18 +384,19 @@ def download_thread(crispin_client, db_session, log, syncmanager_lock,
                     thread_g_metadata, g_thrid, thread_uids, c):
     """ Download all messages in thread identified by `g_thrid`.
 
-    Messages are downloaded via All Mail, which allows us to get the entire
-    thread regardless of which folders it's in.
+    Messages are downloaded most-recent-first via All Mail, which allows us to
+    get the entire thread regardless of which folders it's in.
     """
     log.debug("Downloading thread {} with {} messages."
               .format(g_thrid, len(thread_uids)))
     to_download = deduplicate_message_download(crispin_client, db_session, log,
                                                thread_g_metadata, thread_uids,
                                                c)
-    gmail_download_and_commit_uids(crispin_client, db_session, log,
-                                   crispin_client.selected_folder_name,
-                                   to_download, account.create_gmail_message,
-                                   syncmanager_lock, c)
+    for uids in chunk(reversed(to_download), crispin_client.CHUNK_SIZE):
+        gmail_download_and_commit_uids(crispin_client, db_session, log,
+                                       crispin_client.selected_folder_name,
+                                       uids, account.create_gmail_message,
+                                       syncmanager_lock, c)
 
 
 def deduplicate_message_object_creation(account_id, db_session, log,

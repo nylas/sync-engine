@@ -1,5 +1,6 @@
 import itertools
 
+
 def chunk(iterable, size):
     """ Yield chunks of an iterable.
 
@@ -12,6 +13,7 @@ def chunk(iterable, size):
         if not group:
             break
         yield group
+
 
 def partition(pred, iterable):
     """ Use a predicate to partition entries into false entries and true

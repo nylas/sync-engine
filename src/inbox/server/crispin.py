@@ -70,6 +70,8 @@ class CrispinClient(object):
         Whether or not to open IMAP connections as readonly.
     """
     PROVIDER = 'IMAP'
+    # NOTE: Be *careful* changing this! Downloading too much at once may
+    # cause memory errors that only pop up in extreme edge cases.
     CHUNK_SIZE = 1
 
     def __init__(self, account_id, conn_pool_size=None, readonly=True):
