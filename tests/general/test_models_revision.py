@@ -20,13 +20,20 @@ class Monkey(Base, HasRevisions):
     name = Column(String(40), nullable=True)
     age = Column(Integer, nullable=False)
 
+    @property
+    def favorite_food(self):
+        return 'banana'
+
+    def get_versioned_properties(self):
+        return {'favorite_food': self.favorite_food}
+
 
 class Tree(Base):
     type = Column(Enum('maple', 'palm', 'fir'), nullable=False)
     location = Column(String(40), nullable=False)
 
 
-@fixture(scope='session')
+@fixture(scope='function')
 def db_session(request):
     # engine = create_engine('sqlite:///test.db')
     engine = create_engine('sqlite://')
@@ -83,5 +90,14 @@ def test_skip_rev_create(db_session):
     tree_txns = db_session.query(MonkeyRevision).filter_by(
         table_name='tree', record_id=tree.id).all()
     assert not tree_txns
+
+
+def test_save_additional_data(db_session):
+    db_session.add(Monkey(type='chimpanzee', name='Alice', age=22))
+    db_session.commit()
+
+    txn = db_session.query(MonkeyRevision).one()
+    assert txn.additional_data == {'favorite_food': 'banana'}
+
 
 # TODO: Test updates on objects with relationships.

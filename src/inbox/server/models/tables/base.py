@@ -590,6 +590,16 @@ class Message(JSONSerializable, Base, HasRevisions):
 
         return json_headers
 
+    @property
+    def folders(self):
+        return [folder.folder_name for folder in self.thread.folders]
+
+    # The return value of this method will be stored in the transaction log's
+    # `additional_data` column.
+    def get_versioned_properties(self):
+        return {'folders': self.folders,
+                'blocks': [block.cereal() for block in self.parts]}
+
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator,
                        'polymorphic_identity': 'message'}
@@ -667,7 +677,7 @@ class Block(JSONSerializable, Blob, Base, HasRevisions):
     def __repr__(self):
         return 'Block: %s' % self.__dict__
 
-    def client_json(self):
+    def cereal(self):
         d = {}
         d['g_id'] = self.message.g_msgid
         d['g_index'] = self.walk_index

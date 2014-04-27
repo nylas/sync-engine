@@ -30,8 +30,13 @@ class Revision(object):
     command = Column(Enum('insert', 'update', 'delete'), nullable=False)
     delta = Column(BigJSON, nullable=True)
 
+    additional_data = Column(BigJSON)
+
     def set_extra_attrs(self, obj):
         pass
+
+    def set_additional_data(self, obj):
+        self.additional_data = obj.get_versioned_properties()
 
 
 def gen_rev_role(rev_cls):
@@ -49,6 +54,12 @@ def gen_rev_role(rev_cls):
                                 primaryjoin="{0}.id=={1}.record_id".format(
                                     cls.__name__, rev_cls.__name__),
                                 foreign_keys=rev_cls.record_id, viewonly=True)
+
+        def get_versioned_properties(self):
+            """Subclasses which wish to store data in the transaction log's
+            `additional_data` field should implement this method, returning a
+            serializable dictionary."""
+            pass
 
     return HasRevisions
 
@@ -139,6 +150,7 @@ def versioned_session(session, rev_cls, rev_role):
             rev = create_fn(rev_cls, obj, session)
             if rev is not None:
                 rev.set_extra_attrs(obj)
+                rev.set_additional_data(obj)
                 session.add(rev)
 
     @event.listens_for(session, 'after_flush')
