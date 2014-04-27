@@ -14,7 +14,7 @@ ACCOUNT_ID = 1
 @pytest.fixture
 def message():
     received_date = datetime.datetime.utcfromtimestamp(10**9 + 1)
-    return Message(from_addr=('Some Dude', 'some.dude@email.address'),
+    return Message(from_addr=(('Some Dude', 'some.dude@email.address'),),
                    to_addr=(('Somebody Else', 'somebody.else@email.address'),),
                    cc_addr=(('A Bystander', 'bystander@email.address'),),
                    bcc_addr=(('The NSA', 'spies@nsa.gov'),),
