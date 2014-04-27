@@ -77,7 +77,7 @@ if [ -d "../inbox-eas" ]; then
     pip install -e ../inbox-eas
 fi
 
-if ! grep -qe "^PYTHONIOENCODING=utf_8$" "~/.bashrc";
+if ! grep -qe "^export PYTHONIOENCODING=utf_8$" ~/.bashrc;
 then
     echo "# Adding default Python IO encoding" >> ~/.bashrc
     echo 'export PYTHONIOENCODING=utf_8' >> ~/.bashrc
@@ -101,10 +101,10 @@ color '35;1' 'Cleaning up...'
 apt-get -y purge build-essential
 apt-get -y autoremove
 
-mkdir /var/lib/inboxapp
+mkdir -p /var/lib/inboxapp
 chown $SUDO_USER /var/lib/inboxapp
 
-mkdir /var/log/inboxapp
+mkdir -p /var/log/inboxapp
 chown $SUDO_USER /var/log/inboxapp
 
 color '35;1' 'Done!.'
