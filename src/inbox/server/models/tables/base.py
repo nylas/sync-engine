@@ -25,7 +25,7 @@ from inbox.util.file import Lock, mkdirp
 from inbox.util.html import plaintext2html
 from inbox.util.misc import strip_plaintext_quote, load_modules
 from inbox.util.cryptography import encrypt_aes, decrypt_aes
-from inbox.sqlalchemy.util import JSON
+from inbox.sqlalchemy.util import JSON, Base36UID, generate_public_id
 from inbox.sqlalchemy.revision import Revision, gen_rev_role
 from inbox.server.basicauth import AUTH_TYPES
 
@@ -49,8 +49,13 @@ def register_backends():
     return table_mod_for
 
 
+class HasPublicID(object):
+    public_id = Column(Base36UID, nullable=False,
+                       index=True, default=generate_public_id)
+
+
 # global
-class Account(Base):
+class Account(Base, HasPublicID):
     # user_id refers to Inbox's user id
     user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'),
                      nullable=False)
@@ -168,7 +173,7 @@ class Account(Base):
                        'polymorphic_identity': 'account'}
 
 
-class UserSession(Base):
+class UserSession(Base, HasPublicID):
     """ Inbox-specific sessions. """
     token = Column(String(40))
 
@@ -177,7 +182,7 @@ class UserSession(Base):
     user = relationship('User', backref='sessions')
 
 
-class Namespace(Base):
+class Namespace(Base, HasPublicID):
     """ A way to do grouping / permissions, basically. """
     # NOTE: only root namespaces have IMAP accounts
     account_id = Column(Integer,
@@ -200,7 +205,7 @@ class Namespace(Base):
         return dict(id=self.id, type=self.type)
 
 
-class SharedFolder(Base):
+class SharedFolder(Base, HasPublicID):
     # Don't delete shared folders if the user that created them is deleted.
     user_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'),
                      nullable=True)
@@ -217,7 +222,7 @@ class SharedFolder(Base):
         return dict(id=self.id, name=self.display_name)
 
 
-class User(Base):
+class User(Base, HasPublicID):
     name = Column(String(255))
 
 # sharded (by namespace)
@@ -268,7 +273,7 @@ class SearchSignal(Base):
                         nullable=False)
 
 
-class Contact(Base, HasRevisions):
+class Contact(Base, HasRevisions, HasPublicID):
     """Data for a user's contact."""
     account_id = Column(ForeignKey('account.id', ondelete='CASCADE'),
                         nullable=False)
@@ -368,7 +373,7 @@ class Contact(Base, HasRevisions):
         return email_address
 
 
-class Message(JSONSerializable, Base, HasRevisions):
+class Message(JSONSerializable, Base, HasRevisions, HasPublicID):
     # XXX clean this up a lot - make a better constructor, maybe taking
     # a flanker object as an argument to prefill a lot of attributes
 
@@ -565,10 +570,13 @@ class Message(JSONSerializable, Base, HasRevisions):
     def cereal(self):
         # TODO serialize more here for client API
         d = {}
+        d['id'] = 'message_{0}'.format(self.public_id)
+        d['object'] = 'message'
+        d['subject'] = self.subject
+
         d['from'] = self.from_addr
         d['to'] = self.to_addr
         d['date'] = self.received_date
-        d['subject'] = self.subject
         d['id'] = self.id
         d['thread_id'] = self.thread_id
         d['snippet'] = self.snippet
@@ -644,7 +652,7 @@ common_content_types = ['text/plain',
                         'image/jpg']
 
 
-class Block(JSONSerializable, Blob, Base, HasRevisions):
+class Block(JSONSerializable, Blob, Base, HasRevisions, HasPublicID):
     """ Metadata for message parts stored in s3 """
     message_id = Column(Integer, ForeignKey('message.id', ondelete='CASCADE'),
                         nullable=False)
@@ -676,6 +684,7 @@ class Block(JSONSerializable, Blob, Base, HasRevisions):
 
     def __repr__(self):
         return 'Block: %s' % self.__dict__
+
 
     def cereal(self):
         d = {}
@@ -728,7 +737,7 @@ class FolderItem(JSONSerializable, Base, HasRevisions):
     __table_args__ = (UniqueConstraint('folder_name', 'thread_id'),)
 
 
-class Thread(JSONSerializable, Base):
+class Thread(JSONSerializable, Base, HasPublicID):
     """ Threads are a first-class object in Inbox. This thread aggregates
         the relevant thread metadata from elsewhere so that clients can only
         query on threads.
@@ -777,10 +786,18 @@ class Thread(JSONSerializable, Base):
     def cereal(self):
         """ Threads are serialized with full message data. """
         d = {}
-        d['id'] = self.id
-        d['messages'] = [m.cereal() for m in self.messages]
+
+        d['id'] = 'thread_{0}'.format(self.public_id)
+        d['object'] = 'thread'
         d['subject'] = self.subject
-        d['recentdate'] = self.recentdate
+
+        d['participants'] = ['fooman', 'bargirl']
+        d['last_message_timestamp'] = self.recentdate
+
+        # if mailing list
+        #     d['mailing_list'] = "listphrase <listname@groups.google.com>"
+
+        d['messages'] = [m.cereal() for m in self.messages]
         return d
 
     discriminator = Column('type', String(16))
