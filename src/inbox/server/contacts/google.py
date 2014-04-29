@@ -11,9 +11,9 @@ import gdata.contacts.client
 from inbox.server.models import session_scope
 from inbox.server.models.tables.base import Contact
 from inbox.server.models.tables.imap import ImapAccount
-from inbox.server.oauth import (GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET,
-                                OAUTH_SCOPE)
-from inbox.server.pool import verify_imap_account
+from inbox.server.oauth import (GOOGLE_OAUTH_CLIENT_ID,
+                                GOOGLE_OAUTH_CLIENT_SECRET, OAUTH_SCOPE)
+from inbox.server.auth.base import verify_imap_account
 from inbox.server.log import configure_logging
 
 SOURCE_APP_NAME = 'InboxApp Contact Sync Engine'

@@ -1,11 +1,15 @@
 import datetime
+import socket
 import time
 
 import sqlalchemy.orm.exc
 import requests
 
+from imapclient import IMAPClient
+
 from inbox.server.oauth import oauth
-from inbox.server.pool import verify_gmail_account
+from inbox.server.auth.base import verify_imap_account
+from inbox.server.models import session_scope
 from inbox.server.models.tables.base import User, Namespace
 from inbox.server.models.tables.imap import ImapAccount
 from inbox.server.config import config
@@ -14,6 +18,26 @@ from inbox.server.auth.base import commit_account
 
 PROVIDER = 'Gmail'
 IMAP_HOST = 'imap.gmail.com'
+
+
+def verify_gmail_account(account):
+    try:
+        conn = IMAPClient(IMAP_HOST, use_uid=True, ssl=True)
+    except IMAPClient.Error as e:
+        raise socket.error(str(e))
+
+    conn.debug = False
+    try:
+        conn.oauth2_login(account.email_address, account.o_access_token)
+    except IMAPClient.Error as e:
+        if str(e) == '[ALERT] Invalid credentials (Failure)':
+            # maybe refresh the access token
+            with session_scope() as db_session:
+                account = verify_imap_account(db_session, account)
+                conn.oauth2_login(account.email_address,
+                                  account.o_access_token)
+
+    return conn
 
 
 def create_auth_account(db_session, email_address):

@@ -4,7 +4,7 @@ from geventconnpool import ConnectionPool
 
 from inbox.server.log import get_logger
 from inbox.server.basicauth import AUTH_TYPES
-from inbox.server.pool import verify_imap_account
+from inbox.server.auth.base import verify_imap_account
 from inbox.server.models import session_scope
 from inbox.server.models.tables.base import Account
 

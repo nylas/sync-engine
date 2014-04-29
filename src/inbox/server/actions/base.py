@@ -79,7 +79,7 @@ def get_delete_fn(account):
 # split actions queues by remote host, for example, and have workers for a
 # given host share a connection pool.
 def rqworker(burst=False):
-    """ Runs forever.
+    """ Runs forever unless burst=True.
 
     More details on how workers work at: http://python-rq.org/docs/workers/
     """

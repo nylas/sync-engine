@@ -1,5 +1,5 @@
 from inbox.server.mailsync.backends.imap import uidvalidity_cb
-from inbox.server.crispin import new_crispin
+from inbox.server.crispin import connection_pool
 from inbox.server.models import session_scope
 from inbox.server.models.tables.base import Account
 import IPython
@@ -10,27 +10,22 @@ def user_console(user_email_address):
         account = db_session.query(Account).filter_by(
             email_address=user_email_address).one()
 
-        crispin_client = new_crispin(account.id, account.provider,
-                                     conn_pool_size=1)
-        with crispin_client.pool.get() as c:
-            crispin_client.select_folder(crispin_client.folder_names(c)['all'],
-                                         uidvalidity_cb(db_session, account),
-                                         c)
+        with connection_pool(account.id, pool_size=1).get() as crispin_client:
+            crispin_client.select_folder(crispin_client.folder_names()['all'],
+                                         uidvalidity_cb(db_session, account))
 
-        server_uids = crispin_client.all_uids(c)
+            server_uids = crispin_client.all_uids()
 
-        banner = """
-        You can access the crispin instance with the 'crispin_client' variable.
-        You can access the IMAPClient connection with the 'c' variable.
-        AllMail message UIDs are in 'server_uids'.
-        You can refresh the session with 'refresh_crispin()'.
+            banner = """
+    You can access the crispin instance with the 'crispin_client' variable.
+    AllMail message UIDs are in 'server_uids'.
 
-        IMAPClient docs are at:
+    IMAPClient docs are at:
 
-            http://imapclient.readthedocs.org/en/latest/#imapclient-class-reference
-        """
+        http://imapclient.readthedocs.org/en/latest/#imapclient-class-reference
+    """
 
-        IPython.embed(banner1=banner)
+            IPython.embed(banner1=banner)
 
 
 def start_console(user_email_address=None):
