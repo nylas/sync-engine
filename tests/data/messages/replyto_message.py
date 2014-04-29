@@ -1,5 +1,5 @@
 from flanker import mime
-import json
+
 
 message = """Delivered-To: inboxapptest@gmail.com
 Received: by 10.112.190.1 with SMTP id gm1csp79080lbc;

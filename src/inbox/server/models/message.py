@@ -4,7 +4,6 @@ import json
 
 from hashlib import sha256
 
-import iconvcodec
 from flanker import mime
 from flanker.addresslib import address
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
@@ -35,7 +34,7 @@ def trim_filename(s, max_len=64, log=None):
         if log:
             log.warning("field is too long. Truncating to {0}"
                         "characters. {1}".format(max_len, s))
-        return s[:max_len-8] + s[-8:]  # Keep extension
+        return s[:max_len - 8] + s[-8:]  # Keep extension
     return s
 
 
@@ -94,11 +93,13 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
             parsed.headers.get('From'))
         new_msg.sender_addr = parse_email_address_list(
             parsed.headers.get('Sender'))
-        new_msg.reply_to = parse_email_address_list(parsed.headers.get('Reply-To'))
+        new_msg.reply_to = parse_email_address_list(
+            parsed.headers.get('Reply-To'))
 
         new_msg.to_addr = parse_email_address_list(parsed.headers.getall('To'))
         new_msg.cc_addr = parse_email_address_list(parsed.headers.getall('Cc'))
-        new_msg.bcc_addr = parse_email_address_list(parsed.headers.getall('Bcc'))
+        new_msg.bcc_addr = parse_email_address_list(
+            parsed.headers.getall('Bcc'))
 
         new_msg.in_reply_to = parsed.headers.get('In-Reply-To')
         new_msg.message_id_header = parsed.headers.get('Message-Id')
@@ -112,7 +113,7 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
         new_msg.inbox_uid = parsed.headers.get('X-INBOX-ID')
 
         # In accordance with JWZ (http://www.jwz.org/doc/threading.html)
-        new_msg.references = parse_references(\
+        new_msg.references = parse_references(
             parsed.headers.get('References', ''),
             parsed.headers.get('In-Reply-To', ''))
 
@@ -146,7 +147,6 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
                 mimepart.content_type.params.get('name'),
                 log=log)
             # TODO maybe also trim other headers?
-
 
             if mimepart.content_disposition[0] is not None:
                 value, params = mimepart.content_disposition
@@ -196,7 +196,7 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
     return new_msg
 
 
-def reconcile_message(db_session, log, uid, new_msg):
+def reconcile_message(db_session, log, inbox_uid, new_msg, thread_id):
     """
     Identify a `Sent Mail` (or corresponding) message synced from the
     remote backend as one we sent and reconcile it with the message we
@@ -209,14 +209,16 @@ def reconcile_message(db_session, log, uid, new_msg):
 
     """
     try:
-        created = db_session.query(SpoolMessage).filter_by(
-            inbox_uid=uid).one()
-        created.resolved_message = new_msg
+        spool_message = db_session.query(SpoolMessage).filter_by(
+            inbox_uid=inbox_uid).one()
+        spool_message.resolved_message = new_msg
+        spool_message.thread_id = thread_id
+        return spool_message
 
     except NoResultFound:
-        log.error('NoResultFound for this message, even though '\
-                  'it has the inbox-sent header: {0}'.format(uid))
+        log.error('NoResultFound for this message, even though '
+                  'it has the inbox-sent header: {0}'.format(inbox_uid))
 
     except MultipleResultsFound:
-        log.error('MultipleResultsFound when reconciling message with '\
-                  'inbox-sent header: {0}'.format(uid))
+        log.error('MultipleResultsFound when reconciling message with '
+                  'inbox-sent header: {0}'.format(inbox_uid))

@@ -120,5 +120,5 @@ class TestZeroRPC(object):
 
         self.server = make_zerorpc(cls, service_loc)
 
-        self.client = zerorpc.Client(timeout=60)
+        self.client = zerorpc.Client(timeout=120)
         self.client.connect(service_loc)

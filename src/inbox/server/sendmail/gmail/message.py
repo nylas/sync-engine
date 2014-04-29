@@ -4,12 +4,13 @@ from datetime import datetime
 from flanker.addresslib import address
 
 from inbox.server.crispin import RawMessage
+from inbox.server.models.tables.imap import ImapThread
 from inbox.server.mailsync.backends.base import create_db_objects, commit_uids
 from inbox.server.mailsync.backends.imap.account import create_gmail_message
 from inbox.server.sendmail.message import (create_email, add_reply_headers,
                                            rfc_transform)
 
-SMTPMessage = namedtuple('SMTPMessage', 'x_inbox_id msg recipients thread_id')
+SMTPMessage = namedtuple('SMTPMessage', 'inbox_uid msg recipients thread_id')
 
 
 def smtp_attrs(msg, thread_id=None):
@@ -30,7 +31,7 @@ def smtp_attrs(msg, thread_id=None):
     # Create an RFC-2821 compliant SMTP message
     rfcmsg = rfc_transform(msg)
 
-    smtpmsg = SMTPMessage(x_inbox_id=msg.headers.get('X-INBOX-ID'),
+    smtpmsg = SMTPMessage(inbox_uid=msg.headers.get('X-INBOX-ID'),
                           msg=rfcmsg,
                           recipients=recipients,
                           thread_id=thread_id)
@@ -78,11 +79,12 @@ def save_gmail_email(account_id, db_session, log, smtpmsg):
     # msg_uid for the corresponding ImapUid. The msg_uid is a SQL BigInteger
     # (20 bits), so we truncate the `X-INBOX-ID` to that size. Note that
     # this still provides a large enough ID space to make collisions rare.
-    uid = (int(smtpmsg.x_inbox_id, 16)) & (1 << 20) - 1
+    uid = (int(smtpmsg.inbox_uid, 16)) & (1 << 20) - 1
 
     date = datetime.utcnow()
     folder_name = 'sent'
 
+    # Create a new SpoolMessage:
     msg = RawMessage(uid=uid, internaldate=date, flags=set(),
                      body=smtpmsg.msg, g_thrid=smtpmsg.thread_id,
                      g_msgid=None, g_labels=set(), created=True)
@@ -92,6 +94,14 @@ def save_gmail_email(account_id, db_session, log, smtpmsg):
     assert len(new_uids) == 1
     new_uids[0].created_date = date
 
+    # If it's a reply, we need to update the original Message's is_answered
+    # flag after sending. Note we don't need to check the namespace again here.
+    original_uid = None
+    if smtpmsg.thread_id:
+        thread = db_session.query(ImapThread).filter(
+            ImapThread.g_thrid == smtpmsg.thread_id).one()
+        original_uid = thread.messages[0].imapuid
+
     commit_uids(db_session, log, new_uids)
 
-    return new_uids[0]
+    return (new_uids[0], original_uid)

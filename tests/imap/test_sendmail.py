@@ -1,6 +1,14 @@
 # XXX can we use mailgun to integrate tests? - have routes that get messages
 # delivered back to us.
+"""
+These tests verify the state of the local data store -
+they use the sendmail API calls (send, reply) and verify that the right
+SpoolMessage records are created in the database.
 
+They do not test syncback to the remote backend or reconciliation on a
+subsequent sync, see tests/imap/network for those.
+
+"""
 from pytest import fixture
 
 from tests.data.messages.replyto_message import TEST_MSG
