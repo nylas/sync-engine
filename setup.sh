@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 color() {
@@ -76,15 +76,6 @@ pip install -e src
 if [ -d "../inbox-eas" ]; then
     pip install -e ../inbox-eas
 fi
-
-if ! grep -qe "^export PYTHONIOENCODING=utf_8$" ~/.bashrc;
-then
-    echo "# Adding default Python IO encoding" >> ~/.bashrc
-    echo 'export PYTHONIOENCODING=utf_8' >> ~/.bashrc
-else
-    color '32;1' "# PYTHONIOENCODING already set to utf_8"
-fi
-source ~/.bashrc
 
 color '35;1' 'Finished installing dependencies.'
 # mysql config
