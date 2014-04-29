@@ -436,7 +436,7 @@ class Message(Base, HasRevisions, HasPublicID):
     # The uid as set in the X-INBOX-ID header of a sent message we create
     inbox_uid = Column(String(64), nullable=True)
 
-    # In accordance with JWZ
+    # In accordance with JWZ (http://www.jwz.org/doc/threading.html)
     references = Column(JSON, nullable=True)
 
     @property

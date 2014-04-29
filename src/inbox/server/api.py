@@ -3,7 +3,6 @@ import uuid
 from functools import wraps
 from collections import namedtuple
 import zerorpc
-import magic
 
 from inbox.server.actions import base as actions
 from inbox.server.config import config
@@ -17,73 +16,13 @@ from inbox.server.models.tables.base import (Message, SharedFolder, User,
 from inbox.server.models.namespace import (threads_for_folder,
                                            archive_thread, move_thread,
                                            copy_thread, delete_thread)
-from inbox.server.sendmail.base import send, reply
+from inbox.server.sendmail.base import (send, reply, recipients,
+                                        create_attachment_metadata)
 from inbox.server.log import get_logger
 log = get_logger(purpose='api')
 
 # Provider name for contacts added via this API
 INBOX_PROVIDER_NAME = 'inbox'
-
-Recipients = namedtuple('Recipients', 'to cc bcc')
-
-
-def recipients(to, cc=None, bcc=None):
-    """
-    Create a Recipients namedtuple.
-
-    Parameters
-    ----------
-    to : list
-        list of utf-8 encoded strings
-    cc : list, optional
-        list of utf-8 encoded strings
-    bcc: list, optional
-        list of utf-8 encoded strings
-
-    Returns
-    -------
-    Recipients(to, cc, bcc)
-
-    """
-    if to and not isinstance(to, list):
-        to = [to]
-
-    if cc and not isinstance(cc, list):
-        cc = [cc]
-
-    if bcc and not isinstance(bcc, list):
-        bcc = [bcc]
-
-    return Recipients(to=to, cc=cc, bcc=bcc)
-
-
-def attach(attachments):
-    """
-    Get data from files to attach.
-
-    Parameters
-    ----------
-    attachments : list
-        list of filenames
-
-    Returns
-    -------
-    list of dicts
-        attachfiles : list of dicts(filename, data, content_type)
-
-    """
-    attachfiles = []
-
-    for filename in attachments:
-        with open(filename, 'rb') as f:
-            data = f.read()
-            attachfile = dict(filename=filename,
-                              data=data,
-                              content_type=magic.from_buffer(data, mime=True))
-
-            attachfiles.append(attachfile)
-
-    return attachfiles
 
 
 class NSAuthError(Exception):
@@ -132,7 +71,6 @@ class API(object):
             assert search_srv_loc, "Where is the Search ZMQ service?"
             self._zmq_search = zerorpc.Client(search_srv_loc)
         return self._zmq_search.search
-
 
     def sync_status(self):
         """ Returns data representing the status of all syncing users, like:
@@ -190,7 +128,8 @@ class API(object):
         account = self.namespace.account
         assert account is not None, "Can't send mail with this namespace"
 
-        attachfiles = attach(attachments) if attachments else attachments
+        attachfiles = create_attachment_metadata(attachments) if attachments\
+            else attachments
 
         send(account, recipients(to, cc, bcc), subject, body, attachfiles)
 
@@ -198,9 +137,10 @@ class API(object):
 
     @namespace_auth
     def send_reply(self, thread_id, to, subject, body,
-            attachments=None, cc=None, bcc=None):
+                   attachments=None, cc=None, bcc=None):
         """
-        Send an email reply from the authorized user account for this namespace.
+        Send an email reply from the authorized user account for this
+        namespace.
 
         Parameters
         ----------
@@ -222,7 +162,8 @@ class API(object):
         account = self.namespace.account
         assert account is not None, "Can't send mail with this namespace"
 
-        attachfiles = attach(attachments) if attachments else attachments
+        attachfiles = create_attachment_metadata(attachments) if attachments\
+            else attachments
 
         reply(account, thread_id, recipients(to, cc, bcc), subject, body,
               attachfiles)

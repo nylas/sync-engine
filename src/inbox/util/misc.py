@@ -53,7 +53,7 @@ def parse_ml_headers(headers):
 
 def parse_references(references, in_reply_to):
     """
-    Determines the message_ids the message references, as per JWZ.
+    Determine the message_ids that the message references, as per JWZ.
     (http://www.jwz.org/doc/threading.html)
 
     Returns

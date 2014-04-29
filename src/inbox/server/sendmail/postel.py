@@ -147,7 +147,7 @@ class SMTPClient(object):
     The SMTPClient is responsible for creating/closing SMTP connections
     and sending mail.
 
-    Subclasses must implement the _send_mail, send_new and send_reply functions.
+    Subclasses must implement the _send_mail, send_new & send_reply functions.
 
     """
     def __init__(self, account_id, account_namespace):

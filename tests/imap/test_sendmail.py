@@ -2,7 +2,6 @@
 # delivered back to us.
 
 from pytest import fixture
-import magic
 
 from tests.data.messages.replyto_message import TEST_MSG
 from tests.util.api import api_client
@@ -10,7 +9,7 @@ from tests.util.api import api_client
 USER_ID = 1
 ACCOUNT_ID = 1
 NAMESPACE_ID = 1
-THREAD_ID = 5
+THREAD_ID = 6
 
 
 @fixture(scope='function')
@@ -44,9 +43,6 @@ def test_send(db, config, api_client, message, attach):
                                  body, attachment, cc, bcc)
     assert result == 'OK', 'send_mail API call failed'
 
-    # As in test_actions.py, don't know why we need to refresh the session but
-    # if we don't we get stale data.
-    db.new_session()
     sent_messages = db.session.query(SpoolMessage).\
         filter_by(subject=subject).all()
     assert len(sent_messages) == 1, 'sent message missing'
@@ -67,9 +63,6 @@ def test_reply(db, config, api_client, message, attach):
                                    recipients, subject, body, attachment)
     assert result == 'OK', 'send_reply API call failed'
 
-    # As in test_actions.py, don't know why we need to refresh the session but
-    # if we don't we get stale data.
-    db.new_session()
     sent_messages = db.session.query(SpoolMessage).\
         filter_by(thread_id=THREAD_ID).all()
     assert len(sent_messages) == 1, 'sent message missing'
@@ -79,10 +72,12 @@ def test_reply(db, config, api_client, message, attach):
     assert in_reply_to == expected_in_reply_to, 'incorrect in_reply_to header'
 
     separator = '\t'
-    expected_references = TEST_MSG['references'] + separator + TEST_MSG['message-id']
+    expected_references = TEST_MSG['references'] + separator +\
+        TEST_MSG['message-id']
     references = sent_messages[0].references
 
-    assert references.split() == expected_references.split(), 'incorrect references header'
+    assert references.split() == expected_references.split(),\
+        'incorrect references header'
 
     sent_thrid = sent_messages[0].thread_id
     sent_items = db.session.query(FolderItem).\

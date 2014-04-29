@@ -2,14 +2,16 @@
 import getpass
 
 AUTH_TYPES = {'Gmail': 'OAuth', 'Yahoo': 'Password', 'EAS': 'Password'}
-message = 'Password for {0}(hidden): '
+
+# Certain password auths flows (like EAS) provide their own message
+default_message = 'Password for {0}(hidden): '
 
 
 class AuthError(Exception):
     pass
 
 
-def password_auth(email_address, message=message):
+def password_auth(email_address, message=default_message):
     pw = getpass.getpass(message.format(email_address))
 
     if len(pw) <= 0:

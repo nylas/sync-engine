@@ -9,7 +9,7 @@ from inbox.server.mailsync.backends.imap.account import create_gmail_message
 from inbox.server.sendmail.message import (create_email, add_reply_headers,
                                            rfc_transform)
 
-SMTPMessage = namedtuple('SMTPMessage', 'uid msg recipients thread_id')
+SMTPMessage = namedtuple('SMTPMessage', 'x_inbox_id msg recipients thread_id')
 
 
 def smtp_attrs(msg, thread_id=None):
@@ -27,10 +27,10 @@ def smtp_attrs(msg, thread_id=None):
     # for now, we strip for all. Exchange does this too so it's not a big deal.
     msg.remove_headers('Bcc')
 
-    # Create an RFC compliant SMTP message
+    # Create an RFC-2821 compliant SMTP message
     rfcmsg = rfc_transform(msg)
 
-    smtpmsg = SMTPMessage(uid=msg.headers.get('X-INBOX-ID'),
+    smtpmsg = SMTPMessage(x_inbox_id=msg.headers.get('X-INBOX-ID'),
                           msg=rfcmsg,
                           recipients=recipients,
                           thread_id=thread_id)
@@ -39,7 +39,7 @@ def smtp_attrs(msg, thread_id=None):
 
 
 def create_gmail_email(sender_info, recipients, subject, body,
-        attachments=None):
+                       attachments=None):
     """ Create a Gmail email. """
     mimemsg = create_email(sender_info, recipients, subject, body, attachments)
 
@@ -47,7 +47,7 @@ def create_gmail_email(sender_info, recipients, subject, body,
 
 
 def create_gmail_reply(replyto, sender_info, recipients, subject, body,
-        attachments=None):
+                       attachments=None):
     """ Create a Gmail email reply. """
     mimemsg = create_email(sender_info, recipients, subject, body, attachments)
 
@@ -74,10 +74,11 @@ def save_gmail_email(account_id, db_session, log, smtpmsg):
     future sync.
 
     """
-    # Convert the generated `X-INBOX-ID` UUID of the message
-    # to a BigInteger (20 bits) and set it as the msg_uid for the
-    # corresponding ImapUid
-    uid = (int(smtpmsg.uid, 16)) & (1 << 20) - 1
+    # The generated `X-INBOX-ID` UUID of the message is too big to serve as the
+    # msg_uid for the corresponding ImapUid. The msg_uid is a SQL BigInteger
+    # (20 bits), so we truncate the `X-INBOX-ID` to that size. Note that
+    # this still provides a large enough ID space to make collisions rare.
+    uid = (int(smtpmsg.x_inbox_id, 16)) & (1 << 20) - 1
 
     date = datetime.utcnow()
     folder_name = 'sent'

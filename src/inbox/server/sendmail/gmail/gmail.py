@@ -1,15 +1,10 @@
-from collections import namedtuple
-
-from inbox.server.models import new_db_session, session_scope
+from inbox.server.models import session_scope
 from inbox.server.models.tables.imap import ImapThread
 from inbox.server.sendmail.postel import SMTPClient
 from inbox.server.sendmail.message import SenderInfo, ReplyToMessage
-from inbox.server.sendmail.gmailmessage import (create_gmail_email,
-                                                create_gmail_reply,
-                                                save_gmail_email)
-
-PROVIDER = 'Gmail'
-SENDMAIL_CLS = 'GmailSMTPClient'
+from inbox.server.sendmail.gmail.message import (create_gmail_email,
+                                                 create_gmail_reply,
+                                                 save_gmail_email)
 
 
 class GmailSMTPClient(SMTPClient):
@@ -38,7 +33,7 @@ class GmailSMTPClient(SMTPClient):
     def send_reply(self, thread_id, recipients, subject, body,
                    attachments=None):
         with session_scope() as db_session:
-            thread = db_session.query(ImapThread).filter(\
+            thread = db_session.query(ImapThread).filter(
                 ImapThread.id == thread_id,
                 ImapThread.namespace_id == self.namespace.id).one()
             g_thrid = thread.g_thrid
