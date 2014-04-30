@@ -2,6 +2,8 @@
 import calendar
 import uuid
 
+from flanker.addresslib import address
+
 from inbox.server.contacts import search_util
 from inbox.server.models.tables.base import Contact, MessageContactAssociation
 
@@ -13,17 +15,14 @@ SIGNAL_NAME_MAPPING = {
 }
 
 
-def canonicalize_address(address):
+def canonicalize_address(addr):
     """Gmail addresses with and without periods are the same, so we want to
     treat them as belonging to the same contact."""
-    # "foo@bar"@example.com is technically a valid email address, so you
-    # can't just do address.split('@').
-    at_index = address.rfind('@')
-    domain = address[at_index + 1:]
-    local_part = address[:at_index]
-    if domain in ('gmail.com', 'googlemail.com'):
+    parsed_address = address.parse(addr, addr_spec_only=True)
+    local_part = parsed_address.mailbox
+    if parsed_address.hostname in ('gmail.com', 'googlemail.com'):
         local_part = local_part.replace('.', '')
-    return '@'.join((local_part, domain))
+    return '@'.join((local_part, parsed_address.hostname))
 
 
 def update_contacts(db_session, account_id, message):
@@ -60,10 +59,10 @@ def get_contact_objects(db_session, account_id, addresses):
     if addresses is None:
         return []
     contacts = []
-    for address in addresses:
-        if address is None:
+    for addr in addresses:
+        if addr is None:
             continue
-        name, email = address
+        name, email = addr
         canonical_email = canonicalize_address(email)
         existing_contacts = db_session.query(Contact). \
             filter(Contact.email_address == canonical_email,
