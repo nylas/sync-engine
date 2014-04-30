@@ -273,6 +273,30 @@ class SearchSignal(Base):
                         nullable=False)
 
 
+class MessageContactAssociation(Base):
+    """Association table between messages and contacts.
+
+    Examples
+    --------
+    If m is a message, get the contacts in the to: field with
+    >>> [assoc.contact for assoc in m.contacts if assoc.field == 'to_addr']
+
+    If c is a contact, get messages sent to contact c with
+    >>> [assoc.message for assoc in c.message_associations if assoc.field ==
+    ...  'to_addr']
+    """
+    contact_id = Column(Integer, ForeignKey('contact.id'), primary_key=True)
+    message_id = Column(Integer, ForeignKey('message.id'), primary_key=True)
+    field = Column(Enum('from_addr', 'to_addr', 'cc_addr', 'bcc_addr'))
+    # Note: The `cascade` properties need to be a parameter of the backref
+    # here, and not of the relationship. Otherwise a sqlalchemy error is thrown
+    # when you try to delete a message or a contact.
+    contact = relationship('Contact', backref=backref('message_associations',
+                           cascade='all, delete-orphan'))
+    message = relationship('Message', backref=backref('contacts',
+                           cascade='all, delete-orphan'))
+
+
 class Contact(Base, HasRevisions, HasPublicID):
     """Data for a user's contact."""
     account_id = Column(ForeignKey('account.id', ondelete='CASCADE'),

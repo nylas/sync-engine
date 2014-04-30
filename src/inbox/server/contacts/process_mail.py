@@ -3,8 +3,14 @@ import calendar
 import uuid
 
 from inbox.server.contacts import search_util
-from inbox.server.models import session_scope
-from inbox.server.models.tables.base import Contact
+from inbox.server.models.tables.base import Contact, MessageContactAssociation
+
+SIGNAL_NAME_MAPPING = {
+    'to_addr': 'to_count',
+    'from_addr': 'from_count',
+    'cc_addr': 'cc_count',
+    'bcc_addr': 'bcc_count',
+}
 
 
 def canonicalize_address(address):
@@ -20,47 +26,34 @@ def canonicalize_address(address):
     return '@'.join((local_part, domain))
 
 
-def update_contacts_from_message(account_id, message):
+def update_contacts(db_session, account_id, message):
     """Add new contacts from the given message's to/from/cc fields, and update
     ranking scores for all contacts in those fields."""
-    with session_scope() as db_session:
-        from_contacts = get_contact_objects(
-            account_id, message.from_addr, db_session)
-        to_contacts = get_contact_objects(
-            account_id, message.to_addr, db_session)
-        cc_contacts = get_contact_objects(
-            account_id, message.cc_addr, db_session)
-        bcc_contacts = get_contact_objects(
-            account_id, message.bcc_addr, db_session)
+    msg_timestamp = calendar.timegm(message.received_date.utctimetuple())
 
-        msg_timestamp = calendar.timegm(message.received_date.utctimetuple())
+    for field in ['to_addr', 'cc_addr', 'bcc_addr', 'from_addr']:
+        addresses = getattr(message, field)
 
-        for contact in to_contacts:
-            search_util.increment_signal(contact, 'to_count')
+        contacts = get_contact_objects(db_session, account_id, addresses)
+
+        for contact in contacts:
+            search_util.increment_signal(contact, SIGNAL_NAME_MAPPING[field])
             search_util.update_timestamp_signal(contact, msg_timestamp)
-
-        for contact in cc_contacts:
-            search_util.increment_signal(contact, 'cc_count')
-            search_util.update_timestamp_signal(contact, msg_timestamp)
-
-        for contact in bcc_contacts:
-            search_util.increment_signal(contact, 'bcc_count')
-            search_util.update_timestamp_signal(contact, msg_timestamp)
-
-        for contact in from_contacts:
-            search_util.increment_signal(contact, 'from_count')
-            search_util.update_timestamp_signal(contact, msg_timestamp)
-
-        for contact in to_contacts + cc_contacts + from_contacts:
-            # TODO(emfree): We may be recomputing the score many more times
-            # than needed. If this has performance implications, hoist the
-            # score computation.
+            update_association(db_session, message, contact, field)
             search_util.score(contact)
 
-        db_session.commit()
+
+def update_association(db_session, message, contact, field):
+    with db_session.no_autoflush:
+        # We need to temporarily disable autoflush to prevent the sqlalchemy
+        # error `OperationalError: (OperationalError) (1364, "Field
+        # 'message_id' doesn't have a default value")`.
+        association = MessageContactAssociation(field=field)
+        association.contact = contact
+        message.contacts.append(association)
 
 
-def get_contact_objects(account_id, addresses, db_session):
+def get_contact_objects(db_session, account_id, addresses):
     """Given a list `addresses` of (name, email) pairs, return existing
     contacts with matching email. Create and also return contact objects for
     any email without a match."""
@@ -76,7 +69,8 @@ def get_contact_objects(account_id, addresses, db_session):
             filter(Contact.email_address == canonical_email,
                    Contact.account_id == account_id).all()
         if not existing_contacts:
-            new_contact = Contact(name=name, email_address=canonical_email,
+            new_contact = Contact(name=name,
+                                  email_address=canonical_email,
                                   account_id=account_id, source='local',
                                   provider_name='inbox', uid=uuid.uuid4())
             contacts.append(new_contact)

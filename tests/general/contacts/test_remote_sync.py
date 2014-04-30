@@ -78,18 +78,22 @@ def test_merge_conflict(config):
 
 def test_add_contacts(contacts_provider, db):
     """Test that added contacts get stored."""
+    num_original_local_contacts = db.session.query(Contact). \
+        filter_by(account_id=ACCOUNT_ID).filter_by(source='local').count()
+    num_original_remote_contacts = db.session.query(Contact). \
+        filter_by(account_id=ACCOUNT_ID).filter_by(source='remote').count()
     contacts_provider.supply_contact('Contact One',
                                      'contact.one@email.address')
     contacts_provider.supply_contact('Contact Two',
                                      'contact.two@email.address')
 
     poll(ACCOUNT_ID, contacts_provider)
-    local_contacts = db.session.query(Contact). \
+    num_current_local_contacts = db.session.query(Contact). \
         filter_by(account_id=ACCOUNT_ID).filter_by(source='local').count()
-    remote_contacts = db.session.query(Contact). \
+    num_current_remote_contacts = db.session.query(Contact). \
         filter_by(account_id=ACCOUNT_ID).filter_by(source='remote').count()
-    assert local_contacts == 2
-    assert remote_contacts == 2
+    assert num_current_local_contacts - num_original_local_contacts == 2
+    assert num_current_remote_contacts - num_original_remote_contacts == 2
 
 
 def test_update_contact(contacts_provider, db):
@@ -156,13 +160,14 @@ def test_multiple_remotes(contacts_provider, alternate_contacts_provider, db):
 
 
 def test_deletes(contacts_provider, db):
+    num_original_contacts = db.session.query(Contact).count()
     contacts_provider.supply_contact('Name', 'name@email.address')
     poll(ACCOUNT_ID, contacts_provider)
-    results = db.session.query(Contact).all()
-    assert len(results) == 2
+    num_current_contacts = db.session.query(Contact).count()
+    assert num_current_contacts - num_original_contacts == 2
 
     contacts_provider.__init__()
     contacts_provider.supply_contact(None, None, deleted=True)
     poll(ACCOUNT_ID, contacts_provider)
-    results = db.session.query(Contact).all()
-    assert len(results) == 0
+    num_current_contacts = db.session.query(Contact).count()
+    assert num_current_contacts == num_original_contacts

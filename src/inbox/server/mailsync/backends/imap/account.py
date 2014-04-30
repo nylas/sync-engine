@@ -10,10 +10,11 @@ accounts.
 from sqlalchemy import distinct, func
 from sqlalchemy.orm.exc import NoResultFound
 
-from inbox.server.mailsync.hooks import default_hook_manager
 from inbox.server.models.tables.base import Block, Message, FolderItem
 from inbox.server.models.tables.imap import ImapUid, UIDValidity, ImapThread
 from inbox.server.models.message import create_message, reconcile_message
+
+from inbox.server.contacts.process_mail import update_contacts
 
 from inbox.server.log import get_logger
 log = get_logger()
@@ -240,7 +241,5 @@ def create_gmail_message(db_session, log, account, folder_name, msg):
                                   folder_name, msg.g_thrid, msg.g_msgid,
                                   msg.g_labels, msg.created)
 
-        # Execute new-message hooks. We call this here and not in
-        # create_message() so that hooks have access to thread data.
-        default_hook_manager.execute_hooks(account.id, new_uid.message)
+        update_contacts(db_session, account.id, new_uid.message)
         return new_uid
