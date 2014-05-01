@@ -38,7 +38,7 @@ python-dateutil==2.1
 -e git://github.com/inboxapp/flanker.git@master#egg=flanker
 imapclient==0.10.2
 rq-dashboard==0.3.3
-alembic==0.6.3
+alembic==0.6.4
 iconv==1.0
 pep8==1.4.6
 pyflakes==0.7.3
