@@ -10,11 +10,6 @@ Create Date: 2014-04-28 23:52:05.449401
 revision = '223041bb858b'
 down_revision = '2c9f3a06de09'
 
-# Yes, this is a terrible hack. But tools/rerank_contacts.py already contains a
-# script to process contacts from messages, so it's very expedient.
-import sys
-sys.path.append('./tools')
-from rerank_contacts import rerank_contacts
 
 from alembic import op
 import sqlalchemy as sa
@@ -33,6 +28,13 @@ def upgrade():
         sa.ForeignKeyConstraint(['message_id'], ['message.id'], ),
         sa.PrimaryKeyConstraint('id', 'contact_id', 'message_id')
     )
+
+    # Yes, this is a terrible hack. But tools/rerank_contacts.py already
+    # contains a script to process contacts from messages, so it's very
+    # expedient.
+    import sys
+    sys.path.append('./tools')
+    from rerank_contacts import rerank_contacts
     rerank_contacts()
 
 
