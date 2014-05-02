@@ -73,13 +73,18 @@ def init_db():
 Session = sessionmaker(bind=engine)
 
 
-def new_db_session():
+def new_db_session(versioned=True):
     """ Create a new session.
 
     Most of the time you should be using session_scope() instead, since it
     handles cleanup properly. Sometimes you still need to use this function
     directly because of how context managers require all code using the
     created variable to be in a block; test setup is one example.
+
+    Parameters
+    ----------
+    versioned : bool
+        Do you want to enable the transaction log? (Almost always yes!)
 
     Returns
     -------
@@ -88,12 +93,16 @@ def new_db_session():
     """
     from inbox.server.models.tables.base import Transaction, HasRevisions
 
-    return versioned_session(Session(autoflush=True, autocommit=False),
-                             Transaction, HasRevisions)
+    sess = Session(autoflush=True, autocommit=False)
+
+    if versioned:
+        return versioned_session(sess, Transaction, HasRevisions)
+    else:
+        return sess
 
 
 @contextmanager
-def session_scope():
+def session_scope(versioned=True):
     """ Provide a transactional scope around a series of operations.
 
     Takes care of rolling back failed transactions and closing the session
@@ -104,12 +113,17 @@ def session_scope():
     on the session. Your database backend's transaction semantics are important
     here when reasoning about concurrency.
 
+    Parameters
+    ----------
+    versioned : bool
+        Do you want to enable the transaction log? (Almost always yes!)
+
     Yields
     ------
     sqlalchemy.orm.session.Session
         The created session.
     """
-    session = new_db_session()
+    session = new_db_session(versioned)
     try:
         yield session
         session.commit()
