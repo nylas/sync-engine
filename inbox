@@ -143,6 +143,14 @@ def console(args):
 
 
 def api_server(args):
+    import subprocess as sp
+    child = sp.Popen('./api/setup_stunnel', stdout=sp.PIPE)
+    child.communicate()[0]
+    rc = child.returncode
+    print 'return', rc
+    if rc:
+        log.error("Need to run this as root for SSL tunneling")
+        sys.exit()
     from api.srv import app
     app.run(host='0.0.0.0', port=int(args.port), debug=True)
 
