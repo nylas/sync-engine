@@ -61,6 +61,11 @@ def start(args=None):
     search_srv_loc = config.get('SEARCH_SERVER_LOC', None)
     threads.append(make_zerorpc(SearchService, search_srv_loc))
 
+    # start webhook service
+    from inbox.server.transactions.webhook import WebhookService
+    webhook_srv_loc = config.get('WEBHOOK_SERVER_LOC', None)
+    threads.append(make_zerorpc(WebhookService, webhook_srv_loc))
+
     from inbox.server.actions.base import rqworker
     threads.append(spawn(log_uncaught_errors(rqworker)))
 

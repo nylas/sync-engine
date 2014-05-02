@@ -30,6 +30,7 @@ from inbox.util.cryptography import encrypt_aes, decrypt_aes
 from inbox.sqlalchemy.util import JSON, Base36UID, generate_public_id
 from inbox.sqlalchemy.revision import Revision, gen_rev_role
 from inbox.server.basicauth import AUTH_TYPES
+from inbox.server.transactions.filter import TransactionDataFilter
 
 from inbox.server.models.roles import Blob
 from inbox.server.models import Base
@@ -603,9 +604,11 @@ class Message(Base, HasRevisions, HasPublicID):
     # The return value of this method will be stored in the transaction log's
     # `additional_data` column.
     def get_versioned_properties(self):
-        from inbox.server.models.kellogs import cereal
-        return {'folders': self.folders,
-                'blocks': [cereal(part) for part in self.parts]}
+        from inbox.server.models.kellogs import APIEncoder
+        encoder = APIEncoder()
+        return {'thread': encoder.default(self.thread),
+                'namespace_public_id': self.namespace.public_id,
+                'blocks': [encoder.default(part) for part in self.parts]}
 
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator,
@@ -807,3 +810,46 @@ class Thread(Base, HasPublicID):
 
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator}
+
+
+class WebhookParameters(Base, HasPublicID):
+    namespace_id = Column(ForeignKey('namespace.id', ondelete='CASCADE'),
+                          nullable=False, index=True)
+    namespace = relationship('Namespace')
+    callback_url = Column(Text, nullable=False)
+    failure_notify_url = Column(Text)
+
+    to_addr = Column(String(255))
+    from_addr = Column(String(255))
+    cc_addr = Column(String(255))
+    bcc_addr = Column(String(255))
+    email = Column(String(255))
+    subject = Column(String(255))
+    thread = Column(Base36UID)
+    filename = Column(String(255))
+    started_before = Column(DateTime)
+    started_after = Column(DateTime)
+    last_message_before = Column(DateTime)
+    last_message_after = Column(DateTime)
+
+    include_body = Column(Boolean, nullable=False)
+    max_retries = Column(Integer, nullable=False, server_default='3')
+    retry_interval = Column(Integer, nullable=False, server_default='60')
+    active = Column(Boolean, nullable=False, server_default=true())
+
+    min_processed_id = Column(Integer, nullable=False, server_default='0')
+
+    def create_filter(self):
+        return TransactionDataFilter(
+            to_addr=self.to_addr,
+            from_addr=self.from_addr,
+            cc_addr=self.cc_addr,
+            bcc_addr=self.bcc_addr,
+            email=self.email,
+            subject=self.subject,
+            thread=self.thread,
+            filename=self.filename,
+            started_before=self.started_before,
+            started_after=self.started_after,
+            last_message_after=self.last_message_after,
+            last_message_before=self.last_message_before)
