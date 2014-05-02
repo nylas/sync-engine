@@ -144,7 +144,34 @@ def console(args):
 
 def api_server(args):
     from api.srv import app
-    app.run(host='0.0.0.0', port=int(args.port), debug=True)
+    from gevent.wsgi import WSGIServer, WSGIHandler
+    from inbox.server.log import get_logger
+    from werkzeug.serving import run_with_reloader
+
+    # gevent.pywsgi bullshit. see
+    # http://stackoverflow.com/questions/9444405/gunicorn-and-websockets
+    def log_request(self):
+        log = self.server.log
+        if log:
+            if hasattr(log, "info"):
+                log.info(self.format_request())
+            elif hasattr(log, "debug"):
+                log.debug(self.format_request())
+            elif hasattr(log, "warning"):
+                log.warning(self.format_request())
+            elif hasattr(log, "error"):
+                log.error(self.format_request())
+            else:
+                log.write(self.format_request())
+    WSGIHandler.log_request = log_request
+
+    inbox_logger = get_logger(purpose='api')
+    @run_with_reloader
+    def s():
+        http_server = WSGIServer(('', int(args.port)), app, log=inbox_logger)
+        inbox_logger.info("Starting API server on port {0}".format(args.port))
+        http_server.serve_forever()
+    s()
 
 
 def search(args):

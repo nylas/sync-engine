@@ -3,10 +3,10 @@ import logging
 from inbox.server.log import get_logger
 inbox_logger = get_logger(purpose='api')
 
-
 # Override default werkzeug before it starts up
 werkzeug_log = logging.getLogger('werkzeug')
-werkzeug_log.setLevel(logging.INFO)
+for handler in werkzeug_log.handlers:
+    werkzeug_log.removeHandler(handler)
 werkzeug_log.addHandler(inbox_logger)
 
 from flask import Flask, request, Response, g
