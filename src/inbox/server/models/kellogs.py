@@ -9,6 +9,10 @@ from inbox.server.models.tables.base import (
     Contact, Thread, Namespace, Block)
 
 
+def format_address_list(addresses):
+    return [{'name': name, 'email': email} for name, email in addresses]
+
+
 # Flask's jsonify() doesn't handle datetimes or
 # json arrays as primary objects
 class APIEncoder(JSONEncoder):
@@ -38,10 +42,10 @@ class APIEncoder(JSONEncoder):
                 'object': 'message',
                 'ns': obj.namespace.public_id,
                 'subject': obj.subject,
-                'from': obj.from_addr,
-                'to': obj.to_addr,
-                'cc': obj.cc_addr,
-                'bcc': obj.bcc_addr,
+                'from': format_address_list(obj.from_addr),
+                'to': format_address_list(obj.to_addr),
+                'cc': format_address_list(obj.cc_addr),
+                'bcc': format_address_list(obj.bcc_addr),
                 'date': obj.received_date,
                 'thread': obj.thread.public_id,
                 'size': obj.size,
