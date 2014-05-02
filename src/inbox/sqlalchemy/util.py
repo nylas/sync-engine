@@ -3,14 +3,14 @@ import struct
 
 from bson import json_util
 
-from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy import String, Text
 from sqlalchemy.types import TypeDecorator, BINARY
 from sqlalchemy.interfaces import PoolListener
-from sqlalchemy.ext.declarative import as_declarative, declared_attr
 
 from inbox.util.encoding import base36encode, base36decode
 
 ### Column Types
+
 
 # http://docs.sqlalchemy.org/en/rel_0_9/core/types.html#marshal-json-strings
 class JSON(TypeDecorator):
@@ -93,19 +93,3 @@ class ForceStrictMode(PoolListener):
         cur = dbapi_con.cursor()
         cur.execute("SET SESSION sql_mode='TRADITIONAL'")
         cur = None
-
-
-@as_declarative()
-class Base(object):
-    """Base class which provides automated table name
-    and surrogate primary key column.
-    """
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
-    @declared_attr
-    def __tablename__(cls):
-        return cls.__name__.lower()
-
-    @declared_attr
-    def __table_args__(cls):
-        return {'extend_existing': True}

@@ -4,9 +4,18 @@ from pytest import fixture
 
 from sqlalchemy import create_engine, Column, Enum, String, Integer
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import as_declarative, declared_attr
 
 from inbox.sqlalchemy.revision import versioned_session, Revision, gen_rev_role
-from inbox.sqlalchemy.util import Base
+
+
+@as_declarative()
+class Base(object):
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    @declared_attr
+    def __tablename__(cls):
+        return cls.__name__.lower()
 
 
 class MonkeyRevision(Base, Revision):

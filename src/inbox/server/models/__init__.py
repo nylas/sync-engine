@@ -1,5 +1,6 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, Column, Integer
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import as_declarative, declared_attr
 
 from urllib import quote_plus as urlquote
 from contextlib import contextmanager
@@ -9,7 +10,23 @@ from inbox.server.log import get_logger
 log = get_logger()
 
 from inbox.sqlalchemy.revision import versioned_session
-from inbox.sqlalchemy.util import Base, ForceStrictMode
+from inbox.sqlalchemy.util import ForceStrictMode
+
+
+@as_declarative()
+class Base(object):
+    """Base class which provides automated table name
+    and surrogate primary key column.
+    """
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    @declared_attr
+    def __tablename__(cls):
+        return cls.__name__.lower()
+
+    @declared_attr
+    def __table_args__(cls):
+        return {'extend_existing': True}
 
 
 def engine_uri(database=None):
