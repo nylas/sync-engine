@@ -2,12 +2,12 @@ Title: Drafts
 
 A draft is a special kind of message which has not been sent, and therefore its body is mutable. Throughout the API, you can identify messages which are drafts by looking for the `is_draft` attribute on message objects.
 
-## Requesting all drafts
+# Requesting all drafts
 
     GET https://api.inboxapp.com/n/<namespace_id>/labels/drafts
 
 
-## Creating a new draft
+# Creating a new draft
 
     POST https://api.inboxapp.com/n/<namespace_id>/labels/drafts
 
@@ -30,7 +30,7 @@ If the draft is in response to a message on an existing thread, you should provi
 If successful, the server will return 200 with a new message object.
 
 
-## Updating a draft
+# Updating a draft
 
     PUT https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>
 

@@ -32,13 +32,12 @@ DocPage = namedtuple("DocPage", "anchor title content")
 md = markdown.Markdown(extensions=[
     'fenced_code',
     'tables',
-    # 'toc(anchorlink=True)',
     'codehilite(guess_lang=False)',
     'smart_strong',
     'meta',
     'nl2br',
     'sane_lists',
-    'headerid(level=2)',
+    'headerid(level=3)',
     'wikilinks(base_url=/d/, end_url=)',
     'smarty'])
 

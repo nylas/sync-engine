@@ -21,10 +21,11 @@
     <div id="wrapper">
 
         <!-- Sidebar -->
-        <div id="sidebar-wrapper">
+        <div id="sidebar-wrapper" class="scroll">
           <nav id="navbar">
             <ul class="nav sidebar-nav">
-                <li class="sidebar-brand">{{ title }}</li>
+                <li class="sidebar-brand">
+                  <a href="#">{{ title }}</a></li>
             {% for d in docs %}
                 <li><a href="#{{d.anchor}}">{{ d.title }}</a></li>
             {% endfor %}
@@ -47,9 +48,8 @@
                     </section>
 
                     {% for d in docs %}
-                      <section id="{{d.anchor}}" class="doc_container">
-                        <h2 class="page-header">{{d.title}}</h2>
-
+                      <section  class="doc_container">
+                        <h2 id="{{d.anchor}}">{{d.title}}</h2>
                           {% autoescape false %}
                             {{ d.content }}
                           {% endautoescape %}
@@ -87,6 +87,21 @@
       }
     }, 400);
   });
+
+
+  $(window).load(function(){
+    var $div = $('.scroll');
+    $div.on('mousewheel DOMMouseScroll', function(e) {
+        var d = e.originalEvent.wheelDelta || -e.originalEvent.detail,
+            dir = d > 0 ? 'up' : 'down',
+            stop = (dir == 'up' && this.scrollTop == 0) || (dir == 'down' && this.scrollTop == this.scrollHeight-this.offsetHeight);
+        stop && e.preventDefault();
+    });
+  });
+
+
+
+
 
 </script>
 

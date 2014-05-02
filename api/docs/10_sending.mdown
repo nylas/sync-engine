@@ -14,13 +14,13 @@ There are several ways to deliver messages, depending on whether the message has
 ```
 
 
-## Sending a new message
+# Sending a new message
 
     POST https://api.inboxapp.com/n/<namespace_id>/send
 
 Delivers a new message that has not been previously drafted. 
 
-## Replying to an existing thread
+# Replying to an existing thread
 
 <a name="reply_thread"></a> If the message is in response to an existing thread, you **MUST** include the `to_thread` parameter and mark the message as belonging to the thread. Note that messages are always appended to threads, regardless of which message they are based on. Messages in response to existing messages on a thread should not include any quoted text.
 
@@ -45,7 +45,7 @@ Note that any files you want to attach to the message must have already been upl
 }   
 ```
 
-## Sending a draft
+# Sending a draft
 
     POST https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>/send
 

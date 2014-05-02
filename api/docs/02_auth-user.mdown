@@ -5,7 +5,7 @@ Before you can request an access token for a user, your client application must 
 This authentication flow is often referred to as *3-legged OAuth2*. We recommend using an [existing client library](http://oauth.net/2/) to connect. 
 
 
-## 1. Redirect user to login page
+# 1. Redirect user to login page
 
 Within your application, direct the user to `https://api.inboxapp.com/a/login` with the URL parameters below.
     
@@ -23,7 +23,7 @@ Depending on the user's email provider, Inbox will either direct them to Gmail's
 
 
 
-## 2. Received authenticated callback Inbox
+# 2. Received authenticated callback Inbox
 
 Once the user has provided their account credentials, Inbox will redirect to `CALLBACK_URL?code=CODE` specified in your application's settings. 
 
@@ -36,7 +36,7 @@ Seriously. Port 80 is actually closed on the API servers. We know this isn't an 
 For development environments, we recommend proxying HTTPS traffic to your application with [stunnel](https://www.stunnel.org/index.html) and a self-signed SSL certificate. By default, Inbox does not attempt to verify the certificate chain. 
 
 
-## 3. Request `access_token`
+# 3. Request `access_token`
 
 After receiving the callback in step2, your application should exchange `code` for an `access_token`. 
 
@@ -69,7 +69,7 @@ If `client_id` and `client_secret` are valid, server will invoke a callback on `
 Store these values. You can now use the `access_token` to initiate Inbox API requests for the authenticated user.
 
 
-## 4. Refreshing the `access_token`
+# 4. Refreshing the `access_token`
 
 By default, the `access_token` returned in step 3 has a limited lifetime  denoted by the `expire_in` paramter. 
 

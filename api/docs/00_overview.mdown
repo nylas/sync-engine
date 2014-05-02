@@ -1,0 +1,11 @@
+Title:   Overview
+
+Inbox is a layer on top of existing email providers that makes it easy for apps to integrate with a user's email data. It eliminates the complexity of old protocols like IMAP and MIME, and allows you to interact with email via a modern, RESTful JSON API. 
+
+If you need help, check out out our answers to some [common questions](#FAQ) or chat live with our engineering team in `#inbox` on [freenode](http://webchat.freenode.net/).
+
+The Inbox API is designed around the [REST](http://en.wikipedia.org/wiki/Representational_State_Transfer) ideology, providing simple and predictable URIs to access and modify objects. Response bodies are always UTF-8 encoded JSON objects, unless explicitly documented otherwise.
+
+Inbox structures data around threads as a first-class object, allowing you to build beautiful mail applications that behave the way users have come to expect. Threads are the primary mechanism for moving/archiving/deleting mail. See [threads](#threads) for more info.
+
+Inbox uses [OAuth2](http://oauth.net/documentation/getting-started/) for authentication with a specific user's account. Subsequent API requests are made with an `access_token` for that user, secured by HTTP basic auth over SSL (TLS).

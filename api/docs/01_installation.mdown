@@ -1,0 +1,40 @@
+Title:   Installation
+
+You can run Inbox almost anywhere. We've successfully built images for Docker, VMware Fusion, VirtualBox, AWS, and DigitalOcean. The easiest way to get started is to install from source within VirtualBox. Here's how to set up a development environment running on your local machine:
+
+1. [Install VirtualBox](https://www.virtualbox.org/wiki/Downloads)
+
+2. [Install Vagrant](http://www.vagrantup.com/downloads.html)
+
+3. `git clone git@github.com:inboxapp/inbox.git`
+
+4. `cd inbox`
+
+5. `vagrant up`
+
+    Feel free to check out the `Vagrantfile` while this starts up. It creates a host-only network for the VM at `192.168.10.200`.
+
+6. `vagrant ssh`
+
+    At this point you should be SSH'd into a shiny new Ubuntu 12.04 VM. The
+    `inbox` directory you started with should be synced to `/vagrant`.
+
+    If not, run `vagrant reload` and `vagrant ssh` again. You should see the
+    shared folder now.
+
+7. `cd /vagrant`
+
+8. `cp config-sample.cfg config.cfg` to setup a default configuration file.
+
+9. `sudo ./setup.sh` to install dependencies and create databases.
+
+10. `./inbox debug`
+
+And _voilà_! Auth an account via the command line and start syncing:
+
+```
+  ./inbox auth ben.bitdiddle1861@gmail.com
+  ./inbox sync start ben.bitdiddle1861@gmail.com
+```
+
+You can start the API server by running `./inbox api`.

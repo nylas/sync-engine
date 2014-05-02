@@ -83,12 +83,8 @@ padding: 0;
   font-size: 18px;
 }
 
-.sidebar-nav > .sidebar-brand a {
-  color: #999999;
-}
 
 .sidebar-nav > .sidebar-brand a:hover {
-  color: #fff;
   background: none;
 }
 
@@ -144,8 +140,6 @@ padding: 0;
 
 
 
-
-
 body {
   font-family: "source-sans-pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
   /*font-size: 110%;*/
@@ -156,7 +150,9 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
   font-family: "aktiv-grotesk-std", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  font-weight: 500;
-  padding-top: 30px;
+  font-weight: 400;
+  margin-top: 20px;
+  padding-top: 20px;
+  padding-bottom: 10px;
  }
 

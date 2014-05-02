@@ -73,7 +73,7 @@ If `file_id` is set, this will retrieve metadata for a particular file attachmen
 }
 ```
 
-## Uploading a new file
+# Uploading a new file
 
     POST https://api.inboxapp.com//n/<namespace_id>/files
 

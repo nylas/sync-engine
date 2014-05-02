@@ -74,7 +74,7 @@ Optionally add `?body=1` to include the message bodies in response.
 }
 ```
 
-#####POST https://api.inboxapp.com/v1/n/`:id`/thread/`:thread_id`/`:operation`
+###POST https://api.inboxapp.com/v1/n/`:id`/thread/`:thread_id`/`:operation`
 
 Modify a thread, applying the change specified by :operation. In some cases, operations require additional parameters. Valid operation types and parameters are defined below.
 
@@ -85,7 +85,7 @@ Modify a thread, applying the change specified by :operation. In some cases, ope
     * `destination_folder_id`: Required. The destination folder ID.
 
 
-#####DELETE https://api.inboxapp.com/v1/n/`:id`/thread/`:thread_id`
+###DELETE https://api.inboxapp.com/v1/n/`:id`/thread/`:thread_id`
 
 Delete a thread.
 
@@ -99,6 +99,6 @@ Delete a thread.
 ```
 
 
-## Reply
+# Reply
 
 See [Replying to an existing thread](#reply_thread).

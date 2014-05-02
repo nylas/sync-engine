@@ -32,11 +32,11 @@ For a list of all folders, replace `<folder_id>` with `all`.
 Potentially filter by `folder_type` or
 
 
-## CREATE
+# CREATE
 TODO
 
-## UPDATE
+# UPDATE
 TODO
 
-## Delete
+# Delete
 eek, don't support yet!
