@@ -21,9 +21,8 @@ Vagrant::Config.run do |config|
 end
 
 Vagrant.configure("2") do |config|
-  config.vm.network "private_network", ip: "192.168.10.200"
   config.vm.network "forwarded_port", guest: 5555, host: 5555
-  config.vm.network "forwarded_port", guest: 443, host: 443
+  config.vm.network "forwarded_port", guest: 30000, host:30000
   if File.exist?("../inbox-eas")
     puts 'Found EAS...'
     config.vm.synced_folder "../inbox-eas", "/inbox-eas"
