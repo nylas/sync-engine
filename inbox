@@ -142,6 +142,11 @@ def console(args):
     start_console(args.email_address)
 
 
+def api_server(args):
+    from api.srv import app
+    app.run(host='0.0.0.0', port=int(args.port), debug=True)
+
+
 def search(args):
     import zerorpc
 
@@ -253,6 +258,10 @@ def main():
     parser = argparse.ArgumentParser(description="Inbox App")
     parser.add_argument('-c', '--config', dest='config', default='config.cfg')
     subparsers = parser.add_subparsers()
+
+    parser_api = subparsers.add_parser('api')
+    parser_api.add_argument('-p', '--port', dest='port', default=5555)
+    parser_api.set_defaults(func=api_server)
 
     parser_start = subparsers.add_parser('start')
     parser_start.set_defaults(func=start)

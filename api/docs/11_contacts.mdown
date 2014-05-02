@@ -1,0 +1,24 @@
+Title: Contacts
+
+The Inbox API provides access to the user's contacts, making it easy to add contact autocomplete, address book integration, and more to your application. 
+
+    GET https://api.inboxapp.com/n/<namespace_id>/contacts/<contact_id>
+
+Fetch the user's contact list. This API supports query parameters which make it easy to search the user's contacts. Available query parameters are listed below:
+
+**Options:**
+
+* `filter` - A name and email address filter string 
+ 
+**Response:**
+
+```
+:::json
+[
+    {
+        "name": "Ben Bitdiddle",
+        "email_address": "ben.bitdiddle@mit.edu",
+    },
+    ....
+]
+```

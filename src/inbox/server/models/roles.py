@@ -16,55 +16,55 @@ if STORE_MSG_ON_S3:
 
 from inbox.util.file import mkdirp, remove_file
 
-class JSONSerializable(object):
-    def cereal(self):
-        """ Override this and return a string of the object serialized for
-            the web client.
-        """
-        raise NotImplementedError("cereal not implemented")
 
 class Blob(object):
+
     """ A blob of data that can be saved to local or remote (S3) disk. """
+
     size = Column(Integer, default=0)
     data_sha256 = Column(String(64))
-    def save(self, data):
-        assert data is not None, \
-                "Blob can't have NoneType data (can be zero-length, though!)"
-        assert type(data) is not unicode, "Blob bytes must be encoded"
-        self.size = len(data)
-        self.data_sha256 = sha256(data).hexdigest()
-        if self.size > 0:
-            if STORE_MSG_ON_S3:
-                self._save_to_s3(data)
-            else:
-                self._save_to_disk(data)
-        else:
-            log.warning("Not saving 0-length {1} {0}".format(
-                self.id, self.__class__.__name__))
 
-    def get_data(self):
+    @property
+    def data(self):
         if self.size == 0:
             log.warning("block size is 0")
             # NOTE: This is a placeholder for "empty bytes". If this doesn't
             # work as intended, it will trigger the hash assertion later.
-            data = ""
+            value = ""
         elif hasattr(self, '_data'):
             # on initial download we temporarily store data in memory
-            data = self._data
+            value = self._data
         elif STORE_MSG_ON_S3:
-            data = self._get_from_s3()
+            value = self._get_from_s3()
         else:
-            data = self._get_from_disk()
+            value = self._get_from_disk()
 
-	if data is None:
+        if value is None:
             log.error("Couldn't find data on disk!")
-            return data
+            return value
 
-        assert self.data_sha256 == sha256(data).hexdigest(), \
-                "Returned data doesn't match stored hash!"
-        return data
+        assert self.data_sha256 == sha256(value).hexdigest(), \
+            "Returned data doesn't match stored hash!"
+        return value
 
-    def delete_data(self):
+    @data.setter
+    def data(self, value):
+        assert value is not None, \
+            "Blob can't have NoneType data (can be zero-length, though!)"
+        assert type(value) is not unicode, "Blob bytes must be encoded"
+        self.size = len(value)
+        self.data_sha256 = sha256(value).hexdigest()
+        if self.size > 0:
+            if STORE_MSG_ON_S3:
+                self._save_to_s3(value)
+            else:
+                self._save_to_disk(value)
+        else:
+            log.warning("Not saving 0-length {1} {0}".format(
+                self.id, self.__class__.__name__))
+
+    @data.deleter
+    def data(self):
         if self.size == 0:
             # nothing to do here
             return
@@ -72,9 +72,8 @@ class Blob(object):
             self._delete_from_s3()
         else:
             self._delete_from_disk()
-        # TODO should we clear these fields?
-        # self.size = None
-        # self.data_sha256 = None
+        self.size = None
+        self.data_sha256 = None
 
     def _save_to_s3(self, data):
         assert len(data) > 0, "Need data to save!"
@@ -82,7 +81,7 @@ class Blob(object):
         assert 'AWS_ACCESS_KEY_ID' in config, "Need AWS key!"
         assert 'AWS_SECRET_ACCESS_KEY' in config, "Need AWS secret!"
         assert 'MESSAGE_STORE_BUCKET_NAME' in config, \
-                "Need bucket name to store message data!"
+            "Need bucket name to store message data!"
         # Boto pools connections at the class level
         conn = S3Connection(config.get('AWS_ACCESS_KEY_ID'),
                             config.get('AWS_SECRET_ACCESS_KEY'))
@@ -133,7 +132,7 @@ class Blob(object):
         root = config.get('MSG_PARTS_DIRECTORY', None)
         assert root, "Need root path for saving data"
         return os.path.join(root,
-                h[0], h[1], h[2], h[3], h[4], h[5])
+                            h[0], h[1], h[2], h[3], h[4], h[5])
 
     @property
     def _data_file_path(self):

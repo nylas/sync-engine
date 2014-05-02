@@ -15,17 +15,18 @@ import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
 import os.path
 
-from inbox.server.config import load_config
-load_config()
-from inbox.server.models import session_scope, engine
-from inbox.server.models.tables.imap import ImapAccount
-from inbox.server.auth.base import commit_account
-import inbox.server.auth.gmail as gmail
-
 
 SQL_DUMP_FILENAME = 'alphasync_rds_inbox_imapaccount.sql'
 
 def upgrade():
+
+    from inbox.server.config import load_config
+    load_config()
+    from inbox.server.models import session_scope, engine
+    from inbox.server.models.tables.imap import ImapAccount
+    from inbox.server.auth.base import commit_account
+    import inbox.server.auth.gmail as gmail
+
 
     # Assert we have the dump file
     if not os.path.isfile(SQL_DUMP_FILENAME):

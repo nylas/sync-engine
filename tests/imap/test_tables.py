@@ -1,8 +1,8 @@
 def test_delete_cascades(db):
-    from inbox.server.models.tables.base import Message, Block
+    from inbox.server.models.tables.base import Message, Part
     from inbox.server.models.tables.imap import ImapUid
 
-    message = db.session.query(Message).join(ImapUid, Block).filter(
+    message = db.session.query(Message).join(ImapUid, Part).filter(
             Message.id==2).one()
     uid_id = message.imapuid.id
 
@@ -16,7 +16,7 @@ def test_delete_cascades(db):
         'associated ImapUid should still be present'
     assert not db.session.query(Message).filter_by(id=2).count(), \
         'Message should be deleted'
-    assert not db.session.query(Block).filter_by(message_id=2).count(), \
+    assert not db.session.query(Part).filter_by(message_id=2).count(), \
         'associated Blocks should be deleted by cascade'
 
     uid = db.session.query(ImapUid).filter_by(id=1).one()

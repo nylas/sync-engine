@@ -1,0 +1,124 @@
+Title: Files
+
+
+    GET https://api.inboxapp.com//n/files/<file_id>
+
+Fetch a list of file attachments in a given account. This API supports query parameters, allowing you to fetch all files matching specific criteria.
+
+**Options:**
+
+* `filename_matching` - A valid Regex expression to match
+* `from` - A comma-separated list of email addresses
+* `date_received` - A specific date
+* `extension` - A file extension
+* `file_size_min` - Minimum attachment size to return, in bytes
+* `file_size_max` - Maximum attachment size to return, in bytes
+
+**Response:**
+
+```
+:::json
+[
+    {
+        "id": "file_t7tuaygasdffdasdfskd",
+        "object": "file",
+        
+        "filename": "House-Blueprints.zip",
+        "size": 3145728,  // in bytes
+        "content-type": "application/zip",
+        
+        "date": <unix timestamp of date received>,
+        "from": person who sent the file
+        "is_embedded": <bool>,  // whether the file is inline or not
+    
+        // Tentative
+        "download_url": "https://www.inboxusercontent.com/d/9y8734rhoirlkwqbfq",
+    },
+    ....
+]
+```
+
+If `file_id` is set, this will retrieve metadata for a particular file attachment. To fetch the attachment file itself, see the `download_url` included in the metadata. Note that download URLs may or may not expire, and should not be shared with third parties or used as a persistent link to the file.
+
+
+```
+:::json
+{
+    "id": "file_t7tuaygasdffdasdfskd",
+    "object": "file",
+
+    "from": ["Ben Bitdiddle <ben@foocorp.com"],
+    "to": ["Ben Bitdiddle <ben@foocorp.com>", "cc-address@gmail.com"],
+    "bcc": ["bcc-address@yahoo.com"],
+
+    "subject": "Dinner at 7 tonight?",
+    "html": "<html><body>....</body></html>",
+    "files": [<file_id>, <file_id>, ...],
+
+    // Optional
+    "track_opened": false,
+    
+    "filename": "House-Blueprints.zip",
+    "size": 3145728,  // in bytes
+    "content-type": "application/zip",
+    
+    "date": <unix timestamp of date received>,
+    "from": person who sent the file
+    "is_embedded": <bool>,  // whether the file is inline or not
+
+    // Tentative
+    "download_url": "https://www.inboxusercontent.com/d/9y8734rhoirlkwqbfq",
+
+    ...
+}
+```
+
+## Uploading a new file
+
+    POST https://api.inboxapp.com//n/<namespace_id>/files
+
+Push a new attachment to Inbox. Generally, this API is used to transfer files to Inbox as a user attaches them to a draft message. After calling this method, add the returned ID to the draft's file list. 
+
+This request should POST multipart-form data with a single file field named `file`. (TODO multiple?) An example of a correct request is shown below:
+
+    POST https://api.inboxapp.com/v1/n/account_123ad123512/files HTTP/1.1
+    Accept-Encoding: gzip, deflate
+    Content-Type: multipart/form-data; boundary=---------------------------41184676334
+    Content-Length: 29278
+    
+    -----------------------------41184676334
+    Content-Disposition: form-data; name="file"; filename="GrandCanyon.jpg"
+    Content-Type: image/jpeg
+    
+    (Binary data not shown)
+
+
+**Response:**
+
+```
+:::json
+{
+
+    "id": "file_t7tuaygasdffdasdfskd",
+    "object": "file",
+    
+    "filename": <uploaded file name>,
+    "size": 3145728,
+    "content-type": "application/zip",
+    
+    "date": <unix timestamp of date received>,
+
+    // TODO
+    "download_url": "https://www.inboxusercontent.com/d/9y8734rhoirlkwqbfq",
+
+    "from": ["Ben Bitdiddle <ben@foocorp.com"],
+    "to_thread": <thread_id>,
+
+    // Optional
+    "add_recipients": ["foo@gmail.com.com"],
+    "remove_recipients": ["bar@gmail.com"],
+
+    "html": "<html><body>....</body></html>",
+    "files": [<file_id>, <file_id>, ...],
+}
+```

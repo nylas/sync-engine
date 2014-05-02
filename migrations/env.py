@@ -21,6 +21,10 @@ if context.get_tag_argument() == 'test':
 else:
     load_config()
 
+from inbox.server.models.tables.base import register_backends
+table_mod_for = register_backends()
+
+
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel

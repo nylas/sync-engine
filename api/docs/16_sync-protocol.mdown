@@ -1,0 +1,14 @@
+Title: Sync protocol
+SkipDoc: True
+
+TODO someday soon.
+
+For sync you need the client_id and the account_id to sync. This returns new events to update your local cache
+
+    https://sync.inboxapp.com/<client_id>/notify_for/<account_id>/since/<timestamp>
+
+Hanging notifications: remain open until new sync data is available.
+
+    https://sync.inboxapp.com/<client_id>/notify_for/<account_id>
+
+

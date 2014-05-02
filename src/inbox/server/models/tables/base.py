@@ -5,6 +5,7 @@ import traceback
 
 from itertools import chain
 from hashlib import sha256
+
 from sqlalchemy import (Column, Integer, BigInteger, String, DateTime, Boolean,
                         Enum, ForeignKey, Text, func, event)
 from sqlalchemy.orm import (reconstructor, relationship, backref, deferred,
@@ -29,7 +30,7 @@ from inbox.sqlalchemy.util import JSON, Base36UID, generate_public_id
 from inbox.sqlalchemy.revision import Revision, gen_rev_role
 from inbox.server.basicauth import AUTH_TYPES
 
-from inbox.server.models.roles import JSONSerializable, Blob
+from inbox.server.models.roles import Blob
 from inbox.server.models import Base
 
 
@@ -152,10 +153,10 @@ class Account(Base, HasPublicID):
 
         key_size = int(config.get('KEY_SIZE', 128))
         self.password_aes, key = encrypt_aes(value, key_size)
-        self.key = key[:len(key)/2]
+        self.key = key[:len(key) / 2]
 
         with open(self._keyfile, 'w+') as f:
-            f.write(key[len(key)/2:])
+            f.write(key[len(key) / 2:])
 
     @property
     def _keyfile(self, create_dir=True):
@@ -201,9 +202,6 @@ class Namespace(Base, HasPublicID):
         if self.account is not None:
             return self.account.email_address
 
-    def cereal(self):
-        return dict(id=self.id, type=self.type)
-
 
 class SharedFolder(Base, HasPublicID):
     # Don't delete shared folders if the user that created them is deleted.
@@ -217,9 +215,6 @@ class SharedFolder(Base, HasPublicID):
         'namespace.id', ondelete='CASCADE'), nullable=False)
 
     display_name = Column(String(40))
-
-    def cereal(self):
-        return dict(id=self.id, name=self.display_name)
 
 
 class User(Base, HasPublicID):
@@ -274,15 +269,16 @@ class SearchSignal(Base):
 
 
 class MessageContactAssociation(Base):
+
     """Association table between messages and contacts.
 
     Examples
     --------
     If m is a message, get the contacts in the to: field with
-    >>> [assoc.contact for assoc in m.contacts if assoc.field == 'to_addr']
+    [assoc.contact for assoc in m.contacts if assoc.field == 'to_addr']
 
     If c is a contact, get messages sent to contact c with
-    >>> [assoc.message for assoc in c.message_associations if assoc.field ==
+    [assoc.message for assoc in c.message_associations if assoc.field ==
     ...  'to_addr']
     """
     contact_id = Column(Integer, ForeignKey('contact.id'), primary_key=True)
@@ -291,10 +287,12 @@ class MessageContactAssociation(Base):
     # Note: The `cascade` properties need to be a parameter of the backref
     # here, and not of the relationship. Otherwise a sqlalchemy error is thrown
     # when you try to delete a message or a contact.
-    contact = relationship('Contact', backref=backref('message_associations',
-                           cascade='all, delete-orphan'))
-    message = relationship('Message', backref=backref('contacts',
-                           cascade='all, delete-orphan'))
+    contact = relationship('Contact',
+                           backref=backref('message_associations',
+                                           cascade='all, delete-orphan'))
+    message = relationship('Message',
+                           backref=backref('contacts',
+                                           cascade='all, delete-orphan'))
 
 
 class Contact(Base, HasRevisions, HasPublicID):
@@ -345,15 +343,6 @@ class Contact(Base, HasRevisions, HasPublicID):
     def namespace(self):
         return self.account.namespace
 
-    def cereal(self):
-        return dict(id=self.id,
-                    email=self.email_address,
-                    name=self.name)
-
-    def from_cereal(self, args):
-        self.name = args['name']
-        self.email_address = args['email']
-
     def __repr__(self):
         # XXX this won't work properly with unicode (e.g. in the name)
         return ('Contact({}, {}, {}, {}, {}, {})'
@@ -397,7 +386,7 @@ class Contact(Base, HasRevisions, HasPublicID):
         return email_address
 
 
-class Message(JSONSerializable, Base, HasRevisions, HasPublicID):
+class Message(Base, HasRevisions, HasPublicID):
     # XXX clean this up a lot - make a better constructor, maybe taking
     # a flanker object as an argument to prefill a lot of attributes
 
@@ -558,11 +547,11 @@ class Message(JSONSerializable, Base, HasRevisions, HasPublicID):
 
         for part in self.parts:
             if part.content_type == 'text/html':
-                html_data = part.get_data().decode('utf-8')
+                html_data = part.data.decode('utf-8')
                 break
         for part in self.parts:
             if part.content_type == 'text/plain':
-                plain_data = part.get_data().decode('utf-8')
+                plain_data = part.data.decode('utf-8')
                 break
 
         return plain_data, html_data
@@ -591,22 +580,6 @@ class Message(JSONSerializable, Base, HasRevisions, HasPublicID):
 
         return prettified
 
-    def cereal(self):
-        # TODO serialize more here for client API
-        d = {}
-        d['id'] = 'message_{0}'.format(self.public_id)
-        d['object'] = 'message'
-        d['subject'] = self.subject
-
-        d['from'] = self.from_addr
-        d['to'] = self.to_addr
-        d['date'] = self.received_date
-        d['id'] = self.id
-        d['thread_id'] = self.thread_id
-        d['snippet'] = self.snippet
-        d['mailing_list_info'] = self.mailing_list_headers
-        return d
-
     @property
     def mailing_list_info(self):
         return self.mailing_list_headers
@@ -617,7 +590,7 @@ class Message(JSONSerializable, Base, HasRevisions, HasPublicID):
         assert self.parts, \
             "Can't provide headers before parts have been parsed"
 
-        headers = self.parts[0].get_data()
+        headers = self.parts[0].data
         json_headers = json.JSONDecoder().decode(headers)
 
         return json_headers
@@ -629,8 +602,9 @@ class Message(JSONSerializable, Base, HasRevisions, HasPublicID):
     # The return value of this method will be stored in the transaction log's
     # `additional_data` column.
     def get_versioned_properties(self):
+        from inbox.server.models.kellogs import cereal
         return {'folders': self.folders,
-                'blocks': [block.cereal() for block in self.parts]}
+                'blocks': [cereal(part) for part in self.parts]}
 
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator,
@@ -676,31 +650,15 @@ common_content_types = ['text/plain',
                         'image/jpg']
 
 
-class Block(JSONSerializable, Blob, Base, HasRevisions, HasPublicID):
-    """ Metadata for message parts stored in s3 """
-    message_id = Column(Integer, ForeignKey('message.id', ondelete='CASCADE'),
-                        nullable=False)
-    message = relationship('Message',
-                           backref=backref(
-                               "parts", cascade="all, delete, delete-orphan"))
+class Block(Blob, Base, HasRevisions, HasPublicID):
+    """ Metadata for any file that we store """
 
-    walk_index = Column(Integer)
     # Save some space with common content types
     _content_type_common = Column(Enum(*common_content_types))
     _content_type_other = Column(String(255))
     filename = Column(String(255))
 
-    content_disposition = Column(Enum('inline', 'attachment'))
-    content_id = Column(String(255))  # For attachments
-    misc_keyval = Column(JSON)
-
-    is_inboxapp_attachment = Column(Boolean, server_default=false())
-
     # TODO: create a constructor that allows the 'content_type' keyword
-
-    __table_args__ = (UniqueConstraint('message_id', 'walk_index',
-                      'data_sha256'),)
-
     def __init__(self, *args, **kwargs):
         self.content_type = None
         self.size = 0
@@ -709,16 +667,10 @@ class Block(JSONSerializable, Blob, Base, HasRevisions, HasPublicID):
     def __repr__(self):
         return 'Block: %s' % self.__dict__
 
-
-    def cereal(self):
-        d = {}
-        d['g_id'] = self.message.g_msgid
-        d['g_index'] = self.walk_index
-        d['content_type'] = self.content_type
-        d['content_disposition'] = self.content_disposition
-        d['size'] = self.size
-        d['filename'] = self.filename
-        return d
+    namespace_id = Column(Integer,
+                          ForeignKey('namespace.id', ondelete='CASCADE'),
+                          nullable=False)
+    namespace = relationship('Namespace', backref=backref('blocks'))
 
     @reconstructor
     def init_on_load(self):
@@ -726,10 +678,6 @@ class Block(JSONSerializable, Blob, Base, HasRevisions, HasPublicID):
             self.content_type = self._content_type_common
         else:
             self.content_type = self._content_type_other
-
-    @property
-    def namespace(self):
-        return self.message.namespace
 
 
 @event.listens_for(Block, 'before_insert', propagate=True)
@@ -742,7 +690,46 @@ def serialize_before_insert(mapper, connection, target):
         target._content_type_other = target.content_type
 
 
-class FolderItem(JSONSerializable, Base, HasRevisions):
+class Part(Block):
+    """ Part is a section of a specific message. This includes message bodies
+        as well as attachments.
+    """
+
+    id = Column(Integer, ForeignKey('block.id', ondelete='CASCADE'),
+                primary_key=True)
+
+    message_id = Column(Integer, ForeignKey('message.id', ondelete='CASCADE'))
+    message = relationship('Message',
+                           backref=backref(
+                               "parts", cascade="all, delete, delete-orphan"))
+
+    walk_index = Column(Integer)
+    content_disposition = Column(Enum('inline', 'attachment'))
+    content_id = Column(String(255))  # For attachments
+    misc_keyval = Column(JSON)
+
+    is_inboxapp_attachment = Column(Boolean, server_default=false())
+
+    __table_args__ = (UniqueConstraint('message_id', 'walk_index'),)
+
+    @property
+    def thread_id(self):
+        if not self.message:
+            return None
+        return self.message.thread_id
+
+    @property
+    def is_attachment(self):
+        return self.content_disposition is not None
+
+    @property
+    def namespace(self):
+        if not self.message:
+            return None
+        return self.message.namespace
+
+
+class FolderItem(Base, HasRevisions):
     """ Maps threads to folders.
 
     Threads in this table are the _Inbox_ datastore abstraction, which may
@@ -761,7 +748,7 @@ class FolderItem(JSONSerializable, Base, HasRevisions):
     __table_args__ = (UniqueConstraint('folder_name', 'thread_id'),)
 
 
-class Thread(JSONSerializable, Base, HasPublicID):
+class Thread(Base, HasPublicID):
     """ Threads are a first-class object in Inbox. This thread aggregates
         the relevant thread metadata from elsewhere so that clients can only
         query on threads.
@@ -807,22 +794,13 @@ class Thread(JSONSerializable, Base, HasPublicID):
                 return True
         return False
 
-    def cereal(self):
-        """ Threads are serialized with full message data. """
-        d = {}
-
-        d['id'] = 'thread_{0}'.format(self.public_id)
-        d['object'] = 'thread'
-        d['subject'] = self.subject
-
-        d['participants'] = ['fooman', 'bargirl']
-        d['last_message_timestamp'] = self.recentdate
-
-        # if mailing list
-        #     d['mailing_list'] = "listphrase <listname@groups.google.com>"
-
-        d['messages'] = [m.cereal() for m in self.messages]
-        return d
+    @property
+    def participants(self):
+        p = {}
+        for m in self.messages:
+            for name, addr in m.from_addr + m.sender_addr + \
+                    m.to_addr + m.cc_addr + m.bcc_addr:
+                p[addr] = [name, addr]
 
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator}

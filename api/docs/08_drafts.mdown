@@ -1,0 +1,37 @@
+Title: Drafts
+
+A draft is a special kind of message which has not been sent, and therefore its body is mutable. Throughout the API, you can identify messages which are drafts by looking for the `is_draft` attribute on message objects.
+
+## Requesting all drafts
+
+    GET https://api.inboxapp.com/n/<namespace_id>/labels/drafts
+
+
+## Creating a new draft
+
+    POST https://api.inboxapp.com/n/<namespace_id>/labels/drafts
+
+If the draft is in response to a message on an existing thread, you should provide the thread ID in the `to_thread` field. Messages you create or send should not include quoted text when they are in reply to an existing thread.
+
+```
+:::json
+{
+    "from": ["Ben Bitdiddle <ben@foocorp.com"],
+    "to": ["Ben Bitdiddle <ben@foocorp.com>", "cc-address@gmail.com"],
+    "to_thread": "thread_123as1235opq" // for replying to an existing thread
+    "bcc": ["bcc-address@yahoo.com"],
+    "subject": "Dinner at 7 tonight?",
+    "html": "<html><body>....</body></html>",
+    "files" : ["file_id_1", "file_id_2"]
+    ...
+}   
+```
+
+If successful, the server will return 200 with a new message object.
+
+
+## Updating a draft
+
+    PUT https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>
+
+Update a message. The message must be marked as `is_draft` or the update will fail. The provided JSON may include modifications to the from/to/bcc fields, as well as the subject, html or attached file IDs.

@@ -1,8 +1,6 @@
-import json
 import uuid
 
 from functools import wraps
-from bson import json_util
 
 import zerorpc
 
@@ -10,6 +8,7 @@ from inbox.server.actions import base as actions
 from inbox.server.config import config
 from inbox.server.contacts import search_util
 from inbox.server.models import session_scope
+from inbox.server.models.kellogs import cereal
 from inbox.server.mailsync.backends.imap.account import (total_stored_data,
                                                          total_stored_messages)
 from inbox.server.models.tables.base import (Message, SharedFolder, User,
@@ -140,12 +139,14 @@ class API(object):
 
             for account in user.accounts:
                 account_ns = account.namespace
-                nses['private'].append(account_ns.cereal())
+                nses['private'].append(
+                    cereal(account_ns))
 
             shared_nses = db_session.query(SharedFolder)\
                 .filter(SharedFolder.user_id == user_id)
             for shared_ns in shared_nses:
-                nses['shared'].append(shared_ns.cereal())
+                nses['shared'].append(
+                    cereal(shared_ns))
 
             return nses
 
@@ -168,7 +169,7 @@ class API(object):
             the requested folder.
         """
         with session_scope() as db_session:
-            return [t.cereal() for t in threads_for_folder(
+            return [cereal(t) for t in threads_for_folder(
                 self.namespace.id, db_session, folder_name)]
 
     @namespace_auth
@@ -313,7 +314,7 @@ class API(object):
         """Get all data for an existing contact."""
         with session_scope() as db_session:
             contact = db_session.query(Contact).filter_by(id=contact_id).one()
-            return contact.cereal()
+            return cereal(contact)
 
     def add_contact(self, account_id, contact_info):
         """Add a new contact to the specified IMAP account. Returns the ID of
@@ -322,17 +323,19 @@ class API(object):
             contact = Contact(account_id=account_id, source='local',
                               provider_name=INBOX_PROVIDER_NAME,
                               uid=uuid.uuid4())
-            contact.from_cereal(contact_info)
+            contact.name = contact_info['name']
+            contact.email_address = contact_info['email']
             db_session.add(contact)
             db_session.commit()
             log.info("Added contact {0}".format(contact.id))
             return contact.id
 
-    def update_contact(self, contact_id, contact_data):
+    def update_contact(self, contact_id, contact_info):
         """Update data for an existing contact."""
         with session_scope() as db_session:
             contact = db_session.query(Contact).filter_by(id=contact_id).one()
-            contact.from_cereal(contact_data)
+            contact.name = contact_info['name']
+            contact.email_address = contact_info['email']
             log.info("Updated contact {0}".format(contact.id))
             return 'OK'
 
@@ -341,4 +344,4 @@ class API(object):
         with session_scope() as db_session:
             results = search_util.search(db_session, account_id, query,
                                          int(max_results))
-            return [contact.cereal() for contact in results]
+            return [cereal(contact) for contact in results]

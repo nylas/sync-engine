@@ -11,7 +11,6 @@ from inbox.server.log import get_logger
 log = get_logger()
 
 from inbox.server.models import Base
-from inbox.server.models.roles import JSONSerializable
 from inbox.server.models.tables.base import Account, Thread
 
 # Note: Imap IS Gmail currently
@@ -39,7 +38,7 @@ class ImapAccount(Account):
     __mapper_args__ = {'polymorphic_identity': 'imapaccount'}
 
 
-class ImapUid(JSONSerializable, Base):
+class ImapUid(Base):
     """ This maps UIDs to the IMAP folder they belong to, and extra metadata
         such as flags.
 
@@ -112,7 +111,7 @@ Index('imapuid_imapaccount_id_folder_name', ImapUid.imapaccount_id,
       ImapUid.folder_name)
 
 
-class UIDValidity(JSONSerializable, Base):
+class UIDValidity(Base):
     """ UIDValidity has a per-folder value. If it changes, we need to
         re-map g_msgid to UID for that folder.
     """

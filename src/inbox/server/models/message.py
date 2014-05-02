@@ -11,7 +11,7 @@ from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from inbox.util.misc import or_none, parse_ml_headers
 from inbox.util.file import mkdirp
-from inbox.server.models.tables.base import Message, SpoolMessage, Block
+from inbox.server.models.tables.base import Message, SpoolMessage, Part
 from inbox.server.config import config
 
 # TODO we should probably just store flanker's EmailAddress object
@@ -115,12 +115,11 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
         i = 0  # for walk_index
 
         # Store all message headers as object with index 0
-        headers_part = Block()
+        headers_part = Part()
+        headers_part.namespace_id = account.namespace.id
         headers_part.message = new_msg
         headers_part.walk_index = i
-        headers_part._data = json.dumps(parsed.headers.items())
-        headers_part.size = len(headers_part._data)
-        headers_part.data_sha256 = sha256(headers_part._data).hexdigest()
+        headers_part.data = json.dumps(parsed.headers.items())
         new_msg.parts.append(headers_part)
 
         for mimepart in parsed.walk(
@@ -131,7 +130,8 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
                             .format(new_msg.g_msgid))
                 continue  # TODO should we store relations?
 
-            new_part = Block()
+            new_part = Part()
+            new_part.namespace_id = account.namespace.id
             new_part.message = new_msg
             new_part.walk_index = i
             new_part.misc_keyval = mimepart.headers.items()  # everything
@@ -163,19 +163,16 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
                 data_to_write = ''
             elif new_part.content_type.startswith('text'):
                 data_to_write = mimepart.body.encode('utf-8', 'strict')
+                # normalize mac/win/unix newlines
+                data_to_write = data_to_write \
+                    .replace('\r\n', '\n').replace('\r', '\n')
             else:
                 data_to_write = mimepart.body
             if data_to_write is None:
                 data_to_write = ''
-            # normalize mac/win/unix newlines
-            data_to_write = data_to_write \
-                .replace('\r\n', '\n').replace('\r', '\n')
 
             new_part.content_id = mimepart.headers.get('Content-Id')
-
-            new_part._data = data_to_write
-            new_part.size = len(data_to_write)
-            new_part.data_sha256 = sha256(data_to_write).hexdigest()
+            new_part.data = data_to_write
             new_msg.parts.append(new_part)
     except mime.DecodingError:
         # occasionally iconv will fail via maximum recursion depth

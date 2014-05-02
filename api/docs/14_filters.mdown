@@ -1,0 +1,34 @@
+Title: Filters
+
+Filters can can be appended to most API calls.
+
+* **`subject`** match, supports regex if string starts with `/`
+
+* **`email`** (string) address. filters by any messages sent, received from, or also sent to this address.
+
+
+* **`to`** all messages sent to an address
+
+* **`from`** all messages from an address
+
+* **`cc`** all messages cc'd to an address (by anyone)
+
+* **`bcc`** all messages bcc'd to an address (likely by you, since that header is removed by SMTP gateways)
+
+* **`thread`** the given identifier for a thread
+
+* **`folder`** or **`label`** (string) This parameter can be the complete folder name with the appropriate hierarchy delimiter for the mail server being queried (eg. Inbox/My folder) or the "symbolic name" of the folder. The symbolic will be resolved to the localized-version of the special folder in the mailbox. Options include `all`, `archive`, `drafts`, `flagged`, `junk`, `sent`, and `trash`. These are based on [RFC-6154](http://tools.ietf.org/html/rfc6154). Note that in Gmail, `flagged` is the same as the Starred folder.
+
+* **`file`** id of a file in a message/thread
+
+* **`active_before`** (integer, unix time) Get threads with at least one message dated before this timestamp. The value this filter is applied to is the Date: header of the message which refers to the time the message is sent from the origin.
+
+* **`active_after`** (integer, unix time) Get threads with at least one message dated after this timestamp. The value this filter is applied to is the Date: header of the message which refers to the time the message is sent from the origin.
+
+* **`started_before`** (integer, unix time) Get threads whose first message is dated before this timestamp. The value this filter is applied to is the Date: header of the message which refers to the time the message is sent from the origin.
+
+* **`started_after`** (integer, unix time) Get threads whose first message is dated after this timestamp. The value this filter is applied to is the Date: header of the message which refers to the time the message is sent from the origin.
+
+* **`limit`** (integer) this defaults to 100 for performance. Set 0 for no limit.
+
+* **`offset`** (integer) zero-based offset to be used with limit for pagination of results

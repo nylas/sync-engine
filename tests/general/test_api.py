@@ -52,8 +52,9 @@ def test_add_get_contact(db, api_client):
                             'email': 'new.contact@email.address'}
     contact_id = api_client.add_contact(ACCOUNT_ID, example_contact_data)
     result = api_client.get_contact(contact_id)
-    assert result['name'] == example_contact_data['name']
-    assert result['email'] == example_contact_data['email']
+    parsed = json.loads(result)
+    assert parsed['name'] == example_contact_data['name']
+    assert parsed['email_address'] == example_contact_data['email']
 
 
 def test_add_update_contacte(db, api_client):
@@ -63,8 +64,9 @@ def test_add_update_contacte(db, api_client):
     example_contact_data['email'] = 'some.other@email.address'
     api_client.update_contact(contact_id, example_contact_data)
     result = api_client.get_contact(contact_id)
-    assert result['name'] == example_contact_data['name']
-    assert result['email'] == example_contact_data['email']
+    parsed = json.loads(result)
+    assert parsed['name'] == example_contact_data['name']
+    assert parsed['email_address'] == example_contact_data['email']
 
 
 def test_error_on_bad_contact_update(db, api_client):
@@ -90,19 +92,21 @@ def test_contact_search(db, api_client):
     assert len(result) == 1
 
     result = api_client.search_contacts(ACCOUNT_ID, 'Some Other')
-    assert len(result) == 1
-    assert result[0]['name'] == 'Some Other Dude'
-    assert result[0]['email'] == 'some.other.dude@email.address'
+    parsed = json.loads(result[0])
+    assert parsed['name'] == 'Some Other Dude'
+    assert parsed['email_address'] == 'some.other.dude@email.address'
 
     result = api_client.search_contacts(ACCOUNT_ID, 'Other')
     assert len(result) == 1
-    assert result[0]['name'] == 'Some Other Dude'
-    assert result[0]['email'] == 'some.other.dude@email.address'
+    parsed = json.loads(result[0])
+    assert parsed['name'] == 'Some Other Dude'
+    assert parsed['email_address'] == 'some.other.dude@email.address'
 
     result = api_client.search_contacts(ACCOUNT_ID, 'somebody.else')
     assert len(result) == 1
-    assert result[0]['name'] == 'Somebody Else'
-    assert result[0]['email'] == 'somebody.else@email.address'
+    parsed = json.loads(result[0])
+    assert parsed['name'] == 'Somebody Else'
+    assert parsed['email_address'] == 'somebody.else@email.address'
 
 
 def test_search_missing_fields(db, api_client):

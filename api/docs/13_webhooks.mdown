@@ -1,0 +1,24 @@
+Title: Webhooks
+
+    GET https://api.inboxapp.com/n/<account_id>/webhooks/<webhook_id>
+
+```
+:::json
+[
+  {
+
+    "id": "webhook_t7tuaygasd23423132skd",
+    "object": "webhook",
+    "callback_url": "https://www.yourapp.com/webhook_callback",
+    "failure_notif_url": "https://www.yourapp.com/webhook_callback_failure",
+    "active": true,
+    "failure": false, // whether the hook failed and aborted
+
+    "filter": a string of query parameters to trigger the webhook,
+    ...
+  },
+  ...
+]
+```
+
+Webhooks support [Filters](#filters).

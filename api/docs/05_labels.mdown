@@ -1,0 +1,42 @@
+Title: Labels
+
+Fetch information about the labels in a user's mailbox. Note that only basic folder operations are permitted. Because some providers (such as Gmail) represent folders as tags, the behavior of this API may have unexpected results.
+
+    GET https://api.inboxapp.com/n/<namespace_id>/folders/<folder_id>
+
+
+For convenience, Inbox exposes several hardcoded folder ids which map to universally available folders. In many cases, you can avoid retrieving and filtering through the user's folders by using these shortcuts:
+
+ * `__inbox__`
+ * `__drafts__`
+ * `__sentmail__`
+
+**Response**
+
+```
+:::json
+{
+    "id": "folder_t7tuaygskdflajskd",
+    "object": "folder",
+    "folder_name": "Sent Mail",
+    "folder_type": "sent",
+    "thread_count": 284934,
+    "threads_unread": 273,
+    "sync_status": "poll",
+    "last_sync": 1398219759,
+    ...
+}
+```
+
+For a list of all folders, replace `<folder_id>` with `all`.
+Potentially filter by `folder_type` or
+
+
+## CREATE
+TODO
+
+## UPDATE
+TODO
+
+## Delete
+eek, don't support yet!

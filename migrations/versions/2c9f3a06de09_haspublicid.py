@@ -13,32 +13,32 @@ revision = '2c9f3a06de09'
 down_revision = '5093433b073'
 
 import sys
+from gc import collect as garbage_collect
 
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import mysql
 
-from inbox.server.config import load_config
-load_config()
-from inbox.sqlalchemy.util import generate_public_id
-from inbox.server.models import session_scope
-
-from gc import collect as garbage_collect
-
-
-# These all inherit HasPublicID
-from inbox.server.models.tables.base import (
-    Account, Block, Contact, Message, Namespace,
-    SharedFolder, Thread, User, UserSession, HasPublicID)
-
-classes = [
-    Account, Block, Contact, Message, Namespace,
-    SharedFolder, Thread, User, UserSession]
 
 chunk_size = 500
 
 
 def upgrade():
+
+    from inbox.server.config import load_config
+    load_config()
+    from inbox.sqlalchemy.util import generate_public_id
+    from inbox.server.models import session_scope
+
+    # These all inherit HasPublicID
+    from inbox.server.models.tables.base import (
+        Account, Block, Contact, Message, Namespace,
+        SharedFolder, Thread, User, UserSession, HasPublicID)
+
+    classes = [
+        Account, Block, Contact, Message, Namespace,
+        SharedFolder, Thread, User, UserSession]
+
     for c in classes:
         assert issubclass(c, HasPublicID)
         print '[{0}] adding public_id column... '.format(c.__tablename__),
@@ -84,6 +84,19 @@ def upgrade():
 
 
 def downgrade():
+
+    from inbox.server.config import load_config
+    load_config()
+
+    # These all inherit HasPublicID
+    from inbox.server.models.tables.base import (
+        Account, Block, Contact, Message, Namespace,
+        SharedFolder, Thread, User, UserSession, HasPublicID)
+
+    classes = [
+        Account, Block, Contact, Message, Namespace,
+        SharedFolder, Thread, User, UserSession]
+
     for c in classes:
         assert issubclass(c, HasPublicID)
         print '[{0}] Dropping public_id column... '.format(c.__tablename__),

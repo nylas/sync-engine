@@ -61,9 +61,9 @@ def archive_thread(namespace_id, session, thread_id):
             session.add(archive_item)
         session.commit()
 
-
 # NOTE: move/copy/delete are not idempotent, but archive is. This could be
 # confusing. How can we make it better?
+
 
 def move_thread(namespace_id, session, thread_id, from_folder, to_folder):
     """ Move thread in the local datastore (*not* the account backend). """
@@ -72,8 +72,8 @@ def move_thread(namespace_id, session, thread_id, from_folder, to_folder):
                     session.query(FolderItem).join(Thread).filter(
                         Thread.namespace_id == namespace_id,
                         FolderItem.thread_id == thread_id,
-                        FolderItem.folder_name.in_(
-                            [from_folder, to_folder])).all()}
+                        FolderItem.folder_name.in_([from_folder, to_folder]))
+                    .all()}
         if to_folder not in listings:
             listings[from_folder].folder_name = to_folder
             session.commit()

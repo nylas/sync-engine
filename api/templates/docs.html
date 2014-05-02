@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<link href="/static/bootstrap.min.css" rel="stylesheet">
+
+<link rel="stylesheet" type="text/css" href="/static/github-layout.css">
+<link rel="stylesheet" type="text/css" href="/static/github-syntax.css">
+
+<link rel="stylesheet" type="text/css" href="/static/layout.css">
+
+<title>{{ title }}</title>
+
+</head>
+
+<body data-spy="scroll" data-target="#navbar">
+
+    <div id="wrapper">
+
+        <!-- Sidebar -->
+        <div id="sidebar-wrapper">
+          <nav id="navbar">
+            <ul class="nav sidebar-nav">
+                <li class="sidebar-brand">{{ title }}</li>
+            {% for d in docs %}
+                <li><a href="#{{d.anchor}}">{{ d.title }}</a></li>
+            {% endfor %}
+
+            </ul>
+          </nav>
+        </div>
+
+        <!-- Page content -->
+        <div id="page-content-wrapper" >
+
+            <!-- Keep all page content within the page-content inset div! -->
+            <div class="page-content inset">
+                <div class="row">
+
+                    <section class="doc_container">
+                      <h1>
+                          {{ title }}
+                      </h1>
+                    </section>
+
+                    {% for d in docs %}
+                      <section id="{{d.anchor}}" class="doc_container">
+                        <h2 class="page-header">{{d.title}}</h2>
+
+                          {% autoescape false %}
+                            {{ d.content }}
+                          {% endautoescape %}
+                        </section>
+                    {% endfor %}
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+
+
+<script type='text/javascript' src="/static/jquery.min.js"></script>
+
+<script type='text/javascript' src="/static/bootstrap.min.js"></script>
+
+<script type="text/javascript">
+
+
+
+  var scrollTimeout;
+  $(window).on('activate.bs.scrollspy', function (e) {
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(function() {
+
+      var newHash = $("a[href^='#']", e.target).attr("href") || location.hash
+
+      if(history.pushState) {
+          history.pushState(null, null, newHash);
+      }
+      else {
+          location.hash = newHash;
+      }
+    }, 400);
+  });
+
+</script>
+
+</body>
+</html>

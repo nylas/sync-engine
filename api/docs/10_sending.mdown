@@ -1,0 +1,52 @@
+Title: Sending
+
+
+There are several ways to deliver messages, depending on whether the message has already been drafted or is part of an existing thread.
+
+```
+:::json
+{
+    "name": "Ben Bitdiddle",
+    "email_address": "ben.bitdiddle@mit.edu",
+
+    // Other optional stuff here later, like photo
+}
+```
+
+
+## Sending a new message
+
+    POST https://api.inboxapp.com/n/<namespace_id>/send
+
+Delivers a new message that has not been previously drafted. 
+
+## Replying to an existing thread
+
+<a name="reply_thread"></a> If the message is in response to an existing thread, you **MUST** include the `to_thread` parameter and mark the message as belonging to the thread. Note that messages are always appended to threads, regardless of which message they are based on. Messages in response to existing messages on a thread should not include any quoted text.
+
+Note that any files you want to attach to the message must have already been uploaded via the files API. Inline attachments are not currently supported.
+
+
+```
+:::json
+{
+    "from": ["Ben Bitdiddle <ben@foocorp.com"],
+    "to": ["Ben Bitdiddle <ben@foocorp.com>", "cc-address@gmail.com"],
+    "to_thread": <thread_id>,
+    "bcc": ["bcc-address@yahoo.com"],
+    
+    "subject": "Dinner at 7 tonight?",
+    "html": "<html><body>....</body></html>",
+    "files": [<file_id>, <file_id>, ...],
+    
+    // Optional
+    "track_opened": false,
+    ...
+}   
+```
+
+## Sending a draft
+
+    POST https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>/send
+
+Delivers a message that has already been drafted and saved to Inbox. Note that you can only send messages which are drafts. Attempts to deliver any other messages will return a 400 error.
