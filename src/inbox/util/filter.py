@@ -1,9 +1,10 @@
 from datetime import datetime
 
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, asc
 
 from inbox.server.models.tables.base import (
     Block, Contact, Message, MessageContactAssociation, Thread)
+from inbox.util.misc import or_none
 
 
 def maybe_refine_query(query, subquery):
@@ -39,14 +40,14 @@ class DatabaseFilter(object):
         self.cc_addr = cc_addr
         self.bcc_addr = bcc_addr
         self.email = email
-        self.started_before = started_before
-        self.started_after = started_after
-        self.last_message_after = last_message_after
-        self.last_message_before = last_message_before
+        self.started_before = or_none(started_before, int)
+        self.started_after = or_none(started_after, int)
+        self.last_message_after = or_none(last_message_after, int)
+        self.last_message_before = or_none(last_message_before, int)
         self.thread_id = thread_id
         self.filename = filename
-        self.limit = limit
-        self.offset = offset
+        self.limit = or_none(limit, int)
+        self.offset = or_none(offset, int)
 
     def message_query(self, db_session):
         """Return a query object which filters messages by the instance's query
@@ -54,7 +55,8 @@ class DatabaseFilter(object):
         self.db_session = db_session
         query = self._message_subquery()
         subquery = self._thread_subquery()
-        query = maybe_refine_query(query, subquery).distinct()
+        query = maybe_refine_query(query, subquery).distinct(). \
+            order_by(asc(Message.id))
         if self.limit > 0:
             return query.limit(self.limit).offset(self.offset)
         return query
@@ -67,7 +69,8 @@ class DatabaseFilter(object):
         subquery = self._message_subquery()
         # TODO(emfree): If there are no message-specific parameters, we may be
         # doing a join on all messages here. Not ideal.
-        query = maybe_refine_query(query, subquery).distinct()
+        query = maybe_refine_query(query, subquery).distinct(). \
+            order_by(asc(Thread.id))
         if self.limit > 0:
             return query.limit(self.limit).offset(self.offset)
         return query

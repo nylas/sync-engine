@@ -7,6 +7,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from inbox.server.models.tables.base import (Message, Block, Part,
                                              Contact, Thread, Namespace)
 from inbox.server.models.kellogs import jsonify
+from inbox.util.filter import DatabaseFilter
 
 from err import err
 
@@ -67,6 +68,22 @@ def start():
     g.namespace = g.db_session.query(Namespace) \
         .filter(Namespace.public_id == g.namespace_public_id).one()
 
+    g.filter = DatabaseFilter(
+        namespace_id=g.namespace.id,
+        subject=request.args.get('subject'),
+        to_addr=request.args.get('to'),
+        from_addr=request.args.get('from'),
+        cc_addr=request.args.get('cc'),
+        bcc_addr=request.args.get('bcc'),
+        email=request.args.get('email'),
+        started_before=request.args.get('started_before'),
+        started_after=request.args.get('started_after'),
+        last_message_before=request.args.get('last_message_before'),
+        last_message_after=request.args.get('last_message_after'),
+        filename=request.args.get('filename'),
+        limit=request.args.get('limit'),
+        offset=request.args.get('offset'))
+
 
 ##
 # General namespace info
@@ -94,6 +111,11 @@ def folder_api(public_id):
 ##
 # Threads
 ##
+@app.route('/threads')
+def thread_query_api():
+    return jsonify(g.filter.thread_query(g.db_session).all())
+
+
 @app.route('/threads/<public_id>')
 def thread_api(public_id):
     public_id = public_id.lower()
@@ -172,6 +194,11 @@ def thread_operation_api(public_id, operation):
 ##
 # Messages
 ##
+@app.route('/messages')
+def message_query_api():
+    return jsonify(g.filter.message_query(g.db_session).all())
+
+
 @app.route('/messages/<public_id>')
 def message_api(public_id):
     if public_id == 'all':

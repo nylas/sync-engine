@@ -43,7 +43,6 @@ class APIEncoder(JSONEncoder):
                 'cc': obj.cc_addr,
                 'bcc': obj.bcc_addr,
                 'date': obj.received_date,
-                'subjectdate': obj.subjectdate,
                 'thread': obj.thread.public_id,
                 'size': obj.size,
                 'files': [],  # TODO calculate attachments from blocks
@@ -63,6 +62,7 @@ class APIEncoder(JSONEncoder):
                 'subject':  obj.subject,
                 'participants':  obj.participants,
                 'recent_date':  obj.recentdate,
+                'subject_date': obj.subjectdate,
                 'messages':  [m.public_id for m in obj.messages]  # for now
             }
 
