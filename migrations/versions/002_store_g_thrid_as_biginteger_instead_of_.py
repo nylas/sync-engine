@@ -1,4 +1,4 @@
-"""store g_thrid as BigInteger instead of string
+""" Change g_thrid as BigInteger instead of string
 
 Revision ID: 297aa1e1acc7
 Revises: 217431caacc7
