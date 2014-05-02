@@ -71,6 +71,7 @@ def start():
     g.filter = DatabaseFilter(
         namespace_id=g.namespace.id,
         subject=request.args.get('subject'),
+        thread_id=request.args.get('thread'),
         to_addr=request.args.get('to'),
         from_addr=request.args.get('from'),
         cc_addr=request.args.get('cc'),

@@ -19,7 +19,7 @@ Filters can can be appended to most API calls.
 
 * **`thread`** the given identifier for a thread
 
-* **`folder`** or **`label`** (string) This parameter can be the complete folder name with the appropriate hierarchy delimiter for the mail server being queried (eg. Inbox/My folder) or the "symbolic name" of the folder. The symbolic will be resolved to the localized-version of the special folder in the mailbox. Options include `all`, `archive`, `drafts`, `flagged`, `junk`, `sent`, and `trash`. These are based on [RFC-6154](http://tools.ietf.org/html/rfc6154). Note that in Gmail, `flagged` is the same as the Starred folder.
+* **`folder`** or **`label`** (string)  **TODO(emfree) not supported yet** This parameter can be the complete folder name with the appropriate hierarchy delimiter for the mail server being queried (eg. Inbox/My folder) or the "symbolic name" of the folder. The symbolic will be resolved to the localized-version of the special folder in the mailbox. Options include `all`, `archive`, `drafts`, `flagged`, `junk`, `sent`, and `trash`. These are based on [RFC-6154](http://tools.ietf.org/html/rfc6154). Note that in Gmail, `flagged` is the same as the Starred folder.
 
 * **`filename`** name of a file in a message/thread
 
