@@ -1,3 +1,4 @@
+import itertools
 import os
 import sys
 import json
@@ -796,11 +797,13 @@ class Thread(Base, HasPublicID):
 
     @property
     def participants(self):
-        p = {}
+        p = set()
         for m in self.messages:
-            for name, addr in m.from_addr + m.sender_addr + \
-                    m.to_addr + m.cc_addr + m.bcc_addr:
-                p[addr] = [name, addr]
+            p.update(tuple(entry) for entry in
+                       itertools.chain(m.from_addr, m.to_addr,
+                                       m.cc_addr, m.bcc_addr))
+        return p
+
 
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator}

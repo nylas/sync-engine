@@ -64,7 +64,7 @@ class APIEncoder(JSONEncoder):
                 'object':  'thread',
                 'ns':  obj.namespace.public_id,
                 'subject':  obj.subject,
-                'participants':  obj.participants,
+                'participants':  format_address_list(obj.participants),
                 'recent_date':  obj.recentdate,
                 'subject_date': obj.subjectdate,
                 'messages':  [m.public_id for m in obj.messages]  # for now
