@@ -114,18 +114,13 @@ def folder_api(public_id):
 ##
 @app.route('/threads')
 def thread_query_api():
-    return jsonify(g.filter.thread_query(g.db_session).all())
+    return jsonify(g.filter.thread_query(g.db_session).filter(
+            Thread.namespace_id == g.namespace.id).all())
 
 
 @app.route('/threads/<public_id>')
 def thread_api(public_id):
     public_id = public_id.lower()
-    if public_id == 'all':
-        # TODO assert limit query parameter
-        all_threads = g.db_session.query(Thread).filter(
-            Thread.namespace_id == g.namespace.id).all()
-        return jsonify(all_threads)
-
     try:
         thread = g.db_session.query(Thread).filter(
             Thread.public_id == public_id,
@@ -133,7 +128,7 @@ def thread_api(public_id):
         return jsonify(thread)
 
     except NoResultFound:
-        return err(404, "Couldn't find thread with id {0} "
+        return err(404, "Couldn't find thread with id `{0}` "
                    "on namespace {1}".format(public_id, g.namespace.id))
 
 
