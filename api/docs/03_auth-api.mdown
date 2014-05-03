@@ -1,13 +1,14 @@
 Title: Making authenticated API requests
 
+*Note: In the development version of Inbox, you can use any value for `access_token`. OAuth is intentionally disabled to support a development environment.*
 
 API authentication is handled by [HTTP Basic Auth](http://en.wikipedia.org/wiki/Basic_access_authentication) as defined in [RFC-1945](http://tools.ietf.org/html/rfc1945). The user `access_token` should be provided as the basic auth username, with no accompanying password.
 
-This is easy to test using the command-like utility [curl](http://curl.haxx.se/docs/manpage.html). Here is a request to fetch information about a specific user. 
+This is easy to test using the command-like utility [curl](http://curl.haxx.se/docs/manpage.html). For example, here is a request to fetch information about a specific user. 
 
     curl https://api.inboxapp.com/u/52483924   \
           -u access_token_7yoasildufhoagysdhfads76ftiguasdfl:
 
 
-*Note: The trailing comma tells curl to not ask for a passowrd.*
+*Note: The trailing comma tells curl to not ask for a passoword. Inbox API authentication does not require the password field.*
 

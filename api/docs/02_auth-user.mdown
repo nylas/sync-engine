@@ -1,5 +1,7 @@
 Title: Obtaining a User Access Token
 
+*Note: this section refers to the hosted version of Inbox. Development environments can authenticate accounts through the command line tools.*
+
 Before you can request an access token for a user, your client application must be registered in order to receive an `app_token` and `app_secret`.
 
 This authentication flow is often referred to as *3-legged OAuth2*. We recommend using an [existing client library](http://oauth.net/2/) to connect. 

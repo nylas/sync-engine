@@ -2,7 +2,7 @@ Title: Namespaces
 
 Namespaces are essentially references to linked accounts. They are the top-level unit of a user's data. For example, a user who has one Exchange account and two Gmail accounts linked to Inbox will have three distinct namespaces.
 
-This API call returns information about the namespace with the given id.
+The top-level URI will return information about a namespace with the given `namespace_id`.
 
 
     GET https://api.inboxapp.com/n/<namespace_id>
