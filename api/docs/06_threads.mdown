@@ -1,104 +1,89 @@
 Title: Threads
 
 
-Threads are the main object in Inbox. They can be read, archived, and deleted. All messages are part of a thread, even if that thread has only one message. Many operations, like flagging and marking as read, are done at the thread level.
+Threads are the main object in Inbox. They can be read, archived, and deleted. All messages are part of a thread, even if that thread has only one message. Operations like flagging and marking as read are only done at the thread level.
 
-    GET https://api.inboxapp.com/n/<namespace_id>/threads
 
-Fetch a list of all thread IDs matching specific criteria.
+# Requesting a specific thread
 
-**Options:**
 
-* Add `?body=1` to include individual message bodies.
+    GET https://api.inboxapp.com/n/<namespace_id>/threads/<thread_id>
 
-* This API supports the query parameters documented below, making it easy to return a subset of threads matching your needs. In most cases, you should specify one or more query parameters to return threads in a specific folder, from a specific sender, etc.
+Fetch a given thread, including the subject line, participants, and time the last message was sent. By default, an array of message metadata objects are returned. Message objects with full message bodies can be returned by request.
+ 
+ 
+**Sample response:**
+
+```
+:::json
+{
+    "id": "evh5uy0shhpm5d0le89goor17",
+    "object": "thread",
+    "namespace": "awa6ltos76vz5hvphkp8k17nt"
+    "subject": "Dinner Party on Friday",
+    "last_message_timestamp": 1398229259,
+    "participants": [
+        {
+            "name": "Ben Bitdiddle"
+            "email": "ben.bitdiddle@gmail.com",
+        },
+        {
+            "name": ""
+            "email": "ben.bitdiddle@gmail.com",
+        },
+        {
+            "email": "wrogers@mit.edu",
+            "name": "Bill Rogers"
+        }
+    ],
+    "snippet": "Hey Bill, Looking forward to getting together for dinner on Friday. Want can I bring? I have a couple bottles of wine or could put together",
+    "tags": [
+        {
+            "name": "inbox",
+            "id": "f0idlvozkrpj3ihxze7obpivh",
+            "namespace": "awa6ltos76vz5hvphkp8k17nt"
+        },
+        {
+            'name': 'drafts',
+            'id': 8keda28h8ijj2nogpj83yjep8,
+            "namespace": "awa6ltos76vz5hvphkp8k17nt"
+        }
+    ],
+    "messages": [
+        "251r594smznew6yhiocht2v29",
+        "7upzl8ss738iz8xf48lm84q3e",
+        "ah5wuphj3t83j260jqucm9a28",
+        ...
+    ],
+}
+```
+
+
+
+# Requesting several threads
+
+    GET https://api.inboxapp.com/n/<namespace_id>/threads?<filter_string>
+
+This API supports [Filters](#filters), making it easy to return a subset of threads matching your needs. You should specify one or more filter parameters to return threads in a specific folder, from a specific sender, etc.
 
 **Response:**
 
 ```
 :::json
 [
-    'thread_t7tuaygskdflajskd',
-    'thread_t7tuayadfsgdh3424'
+    <thread_object>,
+    <thread_object>,
+    <thread_object>,
     ...
 ]   
 ```
 
 
-    GET https://api.inboxapp.com/v1/n/`:id`/threads/`:thread_id`
+# Archiving, Starring, and Deleting threads
 
-Fetch a given thread, including the subject line, participants, and time the last message was sent. By default, an array of message metadata objects are returned. Message objects with full message bodies can be returned by request.
-
-**Options:**
-
- 
-**Response:**
-
-Threads are the main object in Inbox. They can be read, archived, and deleted. All messages are part of a thread, even if that thread has only one message.
-
-    GET https://api.inboxapp.com/account_id/threads/<thread_id>/
-
-Optionally add `?body=1` to include the message bodies in response.
+These actions are expressed as applying specific tags to a thread. See [Tags](#tags) for more details.
 
 
-```
-:::json
-{
-    "id": "thread_t7tuaygskdflajskd",
-    "object": "thread",
-    "subject": "Dinner Party on Friday",
-    "participants": ["foo@gmail.com", "bar@gmail.com", ...],
-    "last_message_timestamp": 1398229259,
-    "mailing_list": "Golden Gate Fridge <golden-gate-fridge@googlegroups.com>",
-    messages: [
-        {
-            "id": "message_t7tuaygasdffdasdfskd",
-            "from": "bar@gmail.com",
-            "reply_to" "bar@gmail.com",
-            "to": ["foo@gmail.com"],
-            "cc_addr": ["foo-boss@gmail.com", "foo-coworker@gmail.com"],
-            "bcc_addr": [],
-            "subject": "Re: Dinner Party on Friday",
-            "size": 1234,
-            "snippet": "Hey guys - I'm not sure I'll be able to make it.",
-            "body" "Hey guys - I'm not sure I'll be able to make it. My girlfriend called
-            in sick to work and now she wants me to watch our puppy. Rawr.\r\r- Bar"
-            "received_date": "1398229259",
-            "files": [
-                ...
-                one or more file objects
-            ],
-        },
-        ...
-    ]
-}
-```
+# Replying to threads
 
-###POST https://api.inboxapp.com/v1/n/`:id`/thread/`:thread_id`/`:operation`
-
-Modify a thread, applying the change specified by :operation. In some cases, operations require additional parameters. Valid operation types and parameters are defined below.
-
-**Valid Operations:**
-
- * `archive`: Archive the messages in this thread. 
- * `move`: Move this thread to the folder provided.
-    * `destination_folder_id`: Required. The destination folder ID.
-
-
-###DELETE https://api.inboxapp.com/v1/n/`:id`/thread/`:thread_id`
-
-Delete a thread.
-
-**Response:**
-
-```
-:::json
-{
-    "success": true
-}
-```
-
-
-# Reply
-
-See [Replying to an existing thread](#reply_thread).
+See [Drafts & Sending](#drafts).

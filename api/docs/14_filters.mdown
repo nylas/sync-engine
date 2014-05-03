@@ -1,11 +1,10 @@
 Title: Filters
 
-Filters can can be appended to most API calls.
+Filters allow you to refine your query for mail data to specific parameters. The more specific you can make the request, the faster it will perform. They can be appended to API requests on [Messages](#messages) and [Threads](#threads). Note that values must use [percent-encodeding](http://en.wikipedia.org/wiki/Percent-encoding) (also known as URL encoding).
 
 * **`subject`** match, supports regex if string starts with `/`
 
 * **`email`** (string) address. filters by any messages sent, received from, or also sent to this address.
-
 
 * **`to`** all messages sent to an address
 
@@ -19,17 +18,17 @@ Filters can can be appended to most API calls.
 
 * **`thread`** the given identifier for a thread
 
-* **`folder`** or **`label`** (string)  **TODO(emfree) not supported yet** This parameter can be the complete folder name with the appropriate hierarchy delimiter for the mail server being queried (eg. Inbox/My folder) or the "symbolic name" of the folder. The symbolic will be resolved to the localized-version of the special folder in the mailbox. Options include `all`, `archive`, `drafts`, `flagged`, `junk`, `sent`, and `trash`. These are based on [RFC-6154](http://tools.ietf.org/html/rfc6154). Note that in Gmail, `flagged` is the same as the Starred folder.
+* **`tag`** (string) Only return threads with the given tag. This can include user-added labels, provider-specific labels for existing folder names, or Inbox's cannonical symbolic names. See [Tags](#tags) for more details.
+    
+* **`filename`** name of a file
 
-* **`filename`** name of a file in a message/thread
+* **`last_message_before`** (integer, unix time) Get threads whose most recent message was received before this timestamp.
 
-* **`last_message_before`** (integer, unix time) Get threads whose most recent message is dated before this timestamp. The value this filter is applied to is the Date: header of the message which refers to the time the message is sent from the origin.
+* **`last_message_after`** (integer, unix time) Get threads whose most recent message was received after this timestamp.
 
-* **`last_message_after`** (integer, unix time) Get threads whose most recent message is dated after this timestamp. The value this filter is applied to is the Date: header of the message which refers to the time the message is sent from the origin.
+* **`started_before`** (integer, unix time) Get threads whose first message was received before this timestamp.
 
-* **`started_before`** (integer, unix time) Get threads whose first message is dated before this timestamp. The value this filter is applied to is the Date: header of the message which refers to the time the message is sent from the origin.
-
-* **`started_after`** (integer, unix time) Get threads whose first message is dated after this timestamp. The value this filter is applied to is the Date: header of the message which refers to the time the message is sent from the origin.
+* **`started_after`** (integer, unix time) Get threads whose first message was received after this timestamp.
 
 * **`limit`** (integer) this defaults to 100 for performance. Set 0 for no limit.
 

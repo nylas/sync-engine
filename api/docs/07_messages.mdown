@@ -1,40 +1,40 @@
 Title: Messages
 
-Messages are a sub-object of threads. The content of a message is immutable (with the exception being [drafts](#drafts)). Inbox does not support operations such as move or delete on individual messages—those operations should be performed on the message's thread. All messages are part of a thread, even if that thread has only one message.
+Messages are a sub-object of threads. The content of a message is immutable (with the exception being [drafts](#drafts)). Inbox does not support operations such as move or delete on individual messages; those operations should be performed on the message's thread. All messages are part of a thread, even if that thread has only one message.
 
 Fetch a list of messages matching the criteria specified.
 
-    GET  https://api.inboxapp.com/account_id/messages/<message_id>
+    GET  https://api.inboxapp.com/<account_id>/messages/<message_id>
 
-**Options:**
-
-* This API supports the query parameters documented below, making it easy to return a subset of messages matching your needs. In most cases, you should specify one or more query parameters to return messages in a specific folder, from a specific sender, etc.
-* Include `?body=1` to include the message body in the response.
-
+**Sample Response**
 ```
 :::json
 [
     {
-        "id": "message_t7tuaygasdffdasdfskd",
+        "id": "84umizq7c4jtrew491brpa6iu",
         "object": "message",
         "subject": "Re: Dinner on Friday?"
-        "from": ["foo@bar.com"],
-        "to": ["someone@example.com"],  // includes CC recipients
-        "date": <unix timestamp>,
-        "thread": <thread_id>,
-        "size": <body_size_in_bytes>,
-        "files": [
-            ...
-            one or more file objects
+        "from": [
+            {
+                "name": "Ben Bitdiddle"
+                "email": "ben.bitdiddle@gmail.com",
+            }
         ],
-        // Optional
+        "to": [
+            {
+                "name": "Bill Rogers"
+                "email": "wrogers@mit.edu",
+            }
+        ],
+        "cc": [],
+        "bcc": [],
+        "to": ["someone@example.com"],
+        "date": 1370084645,
+        "thread": "5vryyrki4fqt7am31uso27t3f",
+        "files": [
+            "1g76i48k34wqbf6qgp285nw0o",
+        ],
         "body": "<html><body>....</body></html>"
-    },
-    ...
+    }
 ]
 ```
-
-
-TODO include BCC?
-
-Note: if one of the user's email address is not present in the `to` field, then the message was either BCC'd to them, or copied into their mailbox by another means.

@@ -25,7 +25,7 @@ class APIEncoder(JSONEncoder):
             return {
                 'id':  obj.public_id,
                 'object': 'namepace',
-                'ns':  obj.public_id,
+                'namespace':  obj.public_id,
 
                 # Account specific
                 'account':  obj.account.public_id,
@@ -40,7 +40,7 @@ class APIEncoder(JSONEncoder):
             resp = {
                 'id':  obj.public_id,
                 'object': 'message',
-                'ns': obj.namespace.public_id,
+                'namespace': obj.namespace.public_id,
                 'subject': obj.subject,
                 'from': format_address_list(obj.from_addr),
                 'to': format_address_list(obj.to_addr),
@@ -48,8 +48,7 @@ class APIEncoder(JSONEncoder):
                 'bcc': format_address_list(obj.bcc_addr),
                 'date': obj.received_date,
                 'thread': obj.thread.public_id,
-                'size': obj.size,
-                'files': [],  # TODO calculate attachments from blocks
+                'files': [p.public_id for p in obj.parts if p.is_attachment],
                 'body': obj.sanitized_body,
                 # 'snippet'     : obj.snippet,
                 # 'list_info'   : obj.mailing_list_headers
@@ -62,10 +61,10 @@ class APIEncoder(JSONEncoder):
             return {
                 'id':  obj.public_id,
                 'object':  'thread',
-                'ns':  obj.namespace.public_id,
+                'namespace':  obj.namespace.public_id,
                 'subject':  obj.subject,
                 'participants':  format_address_list(obj.participants),
-                'recent_date':  obj.recentdate,
+                'last_message_timestamp':  obj.recentdate,
                 'subject_date': obj.subjectdate,
                 'messages':  [m.public_id for m in obj.messages]  # for now
             }
@@ -74,7 +73,7 @@ class APIEncoder(JSONEncoder):
             return {
                 'id': obj.public_id,
                 'object': 'contact',
-                'ns': obj.namespace.public_id,
+                'namespace': obj.namespace.public_id,
                 'name': obj.name,
                 'email_address': obj.email_address
             }
@@ -83,12 +82,12 @@ class APIEncoder(JSONEncoder):
             return {
                 'id': obj.public_id,
                 'object': 'file',
-                'ns': obj.namespace.public_id,
+                'namespace': obj.namespace.public_id,
                 'content_type': obj.content_type,
                 'size': obj.size,
                 'filename': obj.filename or obj.content_id,
-                'is_inline': obj.content_disposition is not None
-                and obj.content_disposition.lower() == 'inline',
+                'is_embedded': obj.content_disposition is not None
+                    and obj.content_disposition.lower() == 'inline',
                 'message': obj.message.public_id
             }
 
@@ -97,7 +96,7 @@ class APIEncoder(JSONEncoder):
             return {
                 'id': obj.public_id,
                 'object': 'file',
-                'ns': obj.namespace.public_id,
+                'namespace': obj.namespace.public_id,
                 'content_type': obj.content_type,
                 'size': obj.size,
             }

@@ -13,14 +13,18 @@ This API call returns information about the namespace with the given id.
 ```
 :::json
 {
-	"id": "n_t679giwuaysgduyoflasdft67if",
+	"id": "awa6ltos76vz5hvphkp8k17nt",
 	"object": "namespace",
+    "namespace": "awa6ltos76vz5hvphkp8k17nt",
+    "account": "c5zc216uat483slypx67mu8i3",
 	"email_adddress": "ben.bitdiddle@gmail.com",
 	"provider": "Gmail",
+    "scope": ["mail", "contacts"],
 	"status": "active",
 	"last_sync": 1398219759,
-	"scope": ["mail", "contacts"],
+    "scope": ["mail", "files"]
 }
 ```
 
-TOOD: what are other `status` values?
+* `status` can either be `syncing`, `inactive`, `error`
+* `scope` defines what types of data your application can access. See the [authentication flow](#auth-user) for more details.

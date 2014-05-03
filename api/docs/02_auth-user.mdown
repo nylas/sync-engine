@@ -13,7 +13,7 @@ Within your application, direct the user to `https://api.inboxapp.com/a/login` w
 * `client_id` — your application's token [insert here]
 * `redirect_uri`
 * `response_type` must be `code`
-* `scope` — the scopes, like `['mail', 'contacts']` your application requires.
+* `scope` — array of scopes you are reqeusting. Must include at least one. Options are `mail`, `contacts`, and `files`.
 * `state` — optional unique identifier to protect against CSRF
 
 Depending on the user's email provider, Inbox will either direct them to Gmail's OAuth page or request their email account credentials directly.
@@ -71,7 +71,9 @@ Store these values. You can now use the `access_token` to initiate Inbox API req
 
 # 4. Refreshing the `access_token`
 
-By default, the `access_token` returned in step 3 has a limited lifetime  denoted by the `expire_in` paramter. 
+The `access_token` returned in step 3 has a limited lifetime, denoted by the `expire_in` paramter. 
+
+This is done because the `access_token` may frequently be exposed on the wire, but if snooped, the snooper has only brief access and cannot extend the access period. The refresh token is exposed less often, but is valid for a long time. It's like a client-specific revocable subpassword.
 
 If an expired token is used for an API request, the server will respond with an error. This means your application must use the `refresh_token` to request a new `access_token`. 
 
