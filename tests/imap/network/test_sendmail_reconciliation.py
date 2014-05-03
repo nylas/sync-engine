@@ -11,7 +11,7 @@ syncback to the remote backend, tests/imap/network/test_sendmail_syncback.py
 import uuid
 
 from pytest import fixture
-from gevent import Greenlet
+from gevent import Greenlet, killall
 
 from tests.util.crispin import crispin_client
 from tests.util.api import api_client
@@ -20,7 +20,7 @@ from tests.util.mailsync import sync_client
 USER_ID = 1
 ACCOUNT_ID = 1
 NAMESPACE_ID = 1
-THREAD_ID = 6
+THREAD_ID = 16
 THREAD_TOPIC = 'Golden Gate Park next Sat'
 
 
@@ -67,6 +67,8 @@ def test_send_reconcile(db, config, message, api_client, sync_client):
     inbox_uid = spool_messages[0].inbox_uid
     thread_id = spool_messages[0].thread_id
 
+    killall(synclet)
+
     reconciled_message = db.session.query(Message).get(resolved_message_id)
     assert reconciled_message.inbox_uid == inbox_uid,\
         'spool message, reconciled message have different inbox_uids'
@@ -94,6 +96,7 @@ def test_reply_reconcile(db, config, message, api_client, sync_client):
     synclet = Greenlet(sync_client.start_sync, ACCOUNT_ID)
     synclet.start()
 
+    print '\nSyncing...'
     Greenlet.join(synclet, timeout=60)
 
     sync_client.stop_sync(ACCOUNT_ID)
@@ -108,6 +111,8 @@ def test_reply_reconcile(db, config, message, api_client, sync_client):
     inbox_uid = spool_messages[0].inbox_uid
     thread_id = spool_messages[0].thread_id
     g_thrid = spool_messages[0].g_thrid
+
+    killall(synclet)
 
     reconciled_message = db.session.query(Message).get(resolved_message_id)
     assert reconciled_message.inbox_uid == inbox_uid,\

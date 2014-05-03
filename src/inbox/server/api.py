@@ -1,7 +1,6 @@
 import uuid
 
 from functools import wraps
-from collections import namedtuple
 import zerorpc
 
 from inbox.server.actions import base as actions

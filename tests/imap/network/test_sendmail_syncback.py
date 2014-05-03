@@ -19,7 +19,7 @@ from tests.util.mailsync import sync_client
 USER_ID = 1
 ACCOUNT_ID = 1
 NAMESPACE_ID = 1
-THREAD_ID = 6
+THREAD_ID = 16
 THREAD_TOPIC = 'Golden Gate Park next Sat'
 
 
@@ -48,20 +48,19 @@ def test_send_syncback(db, config, message):
 
     send(account, recipients(to, cc, bcc), subject, body, attachments)
 
-    client = crispin_client(account.id, account.provider)
-    with client.pool.get() as c:
+    with crispin_client(account.id, account.provider) as c:
         # Ensure the sent email message is present in the test account,
         # in both the Inbox and Sent folders:
         criteria = ['NOT DELETED', 'SUBJECT "{0}"'.format(subject)]
 
-        c.select_folder(account.inbox_folder_name, None)
-        inbox_uids = c.search(criteria)
+        c.select_folder(account.inbox_folder_name, lambda x, y: None)
+        inbox_uids = c.conn.search(criteria)
         assert inbox_uids, 'Message missing from Inbox'
 
         #c.delete_messages(inbox_uids)
 
-        c.select_folder(account.sent_folder_name, None)
-        sent_uids = c.search(criteria)
+        c.select_folder(account.sent_folder_name, lambda x, y: None)
+        sent_uids = c.conn.search(criteria)
         assert sent_uids, 'Message missing from Sent'
 
         #c.delete_messages(sent_uids)
@@ -80,21 +79,20 @@ def test_reply_syncback(db, config, message, sync_client):
     reply(account, THREAD_ID, recipients(to, cc, bcc), subject, body,
           attachments)
 
-    client = crispin_client(account.id, account.provider)
-    with client.pool.get() as c:
+    with crispin_client(account.id, account.provider) as c:
         # Ensure the sent email message is present in the test account,
         # in both the Inbox and Sent folders:
         criteria = ['NOT DELETED', 'SUBJECT "{0}"'.format(THREAD_TOPIC)]
 
-        c.select_folder(account.inbox_folder_name, None)
-        inbox_uids = c.search(criteria)
+        c.select_folder(account.inbox_folder_name, lambda x, y: None)
+        inbox_uids = c.conn.search(criteria)
         assert inbox_uids > 1, 'Reply missing from Inbox'
 
         # TODO[k]: Don't delete original
         #c.delete_messages(inbox_uids)
 
-        c.select_folder(account.sent_folder_name, None)
-        sent_uids = c.search(criteria)
+        c.select_folder(account.sent_folder_name, lambda x, y: None)
+        sent_uids = c.conn.search(criteria)
         assert sent_uids, 'Message missing from Sent'
 
         #c.delete_messages(sent_uids)

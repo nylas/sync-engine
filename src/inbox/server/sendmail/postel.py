@@ -43,7 +43,10 @@ class SMTPConnection():
         return self.connection
 
     def __exit__(self, type, value, traceback):
-        self.connection.quit()
+        try:
+            self.connection.quit()
+        except smtplib.SMTPServerDisconnected:
+            return
 
 
 class SMTPConnectionPool(ConnectionPool):
@@ -169,7 +172,8 @@ class SMTPClient(object):
                                                  recipients, msg)
                 # Sent to none successfully
                 # TODO[k]: Retry
-                except smtplib.SMTPException as e:
+                except (smtplib.SMTPException, smtplib.SMTPServerDisconnected)\
+                        as e:
                     self.log.error('Sending failed: Exception {0}'.format(e))
                     raise
 
