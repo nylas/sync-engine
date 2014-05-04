@@ -53,13 +53,15 @@ class EventData(object):
     """Keeps track of the data from a single transaction log entry, together
     with some bookkeeping for retrying."""
     def __init__(self, transaction):
-        self.data = transaction.delta.copy()
-        if transaction.additional_data is not None:
-            self.data.update(transaction.additional_data)
         self.id = transaction.id
-
         self.retry_ts = 0
         self.retry_count = 0
+
+        if transaction.delta:
+            self.data = transaction.delta.copy()
+            if transaction.additional_data is not None:
+                self.data.update(transaction.additional_data)
+
 
     def __cmp__(self, other):
         return cmp(self.retry_ts, other.retry_ts)
@@ -158,6 +160,7 @@ class WebhookService(gevent.Greenlet):
                 filter(Transaction.table_name == 'message',
                        Transaction.id > self.minimum_id). \
                 order_by(asc(Transaction.id)).yield_per(self.chunk_size)
+            self.log.debug("Total of {0} transactions to process".format(query.count()))
             for transaction in query:
                 namespace_id = transaction.namespace_id
                 event_data = EventData(transaction)
@@ -167,6 +170,7 @@ class WebhookService(gevent.Greenlet):
                         # each queue.
                         hook.enqueue(copy.copy(event_data))
                 self.minimum_id = transaction.id
+            self.log.debug("processed tx. setting min id to {0}".format(self.minimum_id))
 
     def load_hooks(self):
         """Load stored hook parameters from the database. Run once on
