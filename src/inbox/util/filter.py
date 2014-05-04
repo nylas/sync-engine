@@ -81,7 +81,7 @@ class DatabaseFilter(object):
     def _message_subquery(self):
         query = self.db_session.query(Message)
         if self.subject is not None:
-            import pdb; pdb.set_trace()
+            # import pdb; pdb.set_trace()
             query = query.filter(Message.subject == self.subject)
 
         query = maybe_refine_query(query, self._from_subquery())
