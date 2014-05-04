@@ -4,13 +4,11 @@ Title: Threads
 Threads are the main object in Inbox. They can be read, archived, and deleted. All messages are part of a thread, even if that thread has only one message. Operations like flagging and marking as read are only done at the thread level.
 
 
-# Requesting a specific thread
-
+# The thread object
 
     GET https://api.inboxapp.com/n/<namespace_id>/threads/<thread_id>
 
-Fetch a given thread, including the subject line, participants, and time the last message was sent. By default, an array of message metadata objects are returned. Message objects with full message bodies can be returned by request.
- 
+The thread object includes useful information like subject, participants, and time of the most recenly received message.
  
 **Sample response:**
 

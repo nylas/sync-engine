@@ -1,24 +1,101 @@
 Title: Webhooks
 
+Webhooks allow your application to receive callbacks based on specific filter parameters. 
+
+# The webhook object
+
     GET https://api.inboxapp.com/n/<account_id>/webhooks/<webhook_id>
+
+**Response:**
 
 ```
 :::json
-[
-  {
-
-    "id": "webhook_t7tuaygasd23423132skd",
+{
+    "id": "1dp2eu6n25u3rpejmpfm67d8g",
     "object": "webhook",
-    "callback_url": "https://www.yourapp.com/webhook_callback",
-    "failure_notif_url": "https://www.yourapp.com/webhook_callback_failure",
-    "active": true,
-    "failure": false, // whether the hook failed and aborted
+    "namespace": "awa6ltos76vz5hvphkp8k17nt",
 
-    "filter": a string of query parameters to trigger the webhook,
-    ...
-  },
+    "callback_url": "https://www.example.com/webhook_callback",
+    "failure_notify_url": "https://www.example.com/webhook_failure",
+
+    "include_body": true,
+    "active": true,
+
+    "to_addr": "*@salesforce.com",
+    "from_addr": null,
+    "cc_addr": null,
+    "bcc_addr": null,
+    "email_address": null,
+    "subject": null,
+    "thread": "8vvuy9octntkxdc944ogdi71i",
+    "filename": null,
+    "started_before": null,
+    "started_after": null,
+    "last_message_before": null,
+    "last_message_after": null,
+}
+```
+
+Note that the specified `callback_url` and `failure_notify_url` *must* support HTTPS. Attempts to create or modify a webhook with a non-https endpoint will fail.
+
+# Creating a new webhook
+
+    POST https://api.inboxapp.com/n/<account_id>/webhooks
+
+
+**Sample post body** 
+```
+:::json
+{
+    "callback_url": "https://www.example.com/webhook_callback",
+    "failure_notify_url": "https://www.example.com/webhook_failure",
+
+    "include_body": true,
+    "active": true,
+
+    "to_addr": "*@salesforce.com",
+    "from_addr": null,
+    "cc_addr": null,
+    "bcc_addr": null,
+    "email_address": null,
+    "subject": null,
+    "thread": "8vvuy9octntkxdc944ogdi71i",
+    "filename": null,
+    "started_before": null,
+    "started_after": null,
+    "last_message_before": null,
+    "last_message_after": null,
+}
+```
+
+* `active` defaults to `true`
+* `include_body` defaults to `false`
+* all filter params defulat to `null`
+
+# Modifying a webhook
+
+Updating a webhook is as simple as issuing a PUT request to the webhooks's URI.
+
+    PUT https://api.inboxapp.com/n/<account_id>/webhooks/<webhook_id>
+
+Any fields in the body of the request will override previous webhook values. For example, to turn off a webhook, your application would post 
+
+```
+{
+  "active": false
+}
+```
+
+# Listing all webhooks
+
+    GET https://api.inboxapp.com/n/<account_id>/webhooks
+
+**Response:**
+```
+[
+  <webhook_object>,
+  <webhook_object>,
+  <webhook_object>,
   ...
 ]
 ```
-
-Webhooks support [Filters](#filters).

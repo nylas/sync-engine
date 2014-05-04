@@ -6,7 +6,7 @@ from flask import Response
 
 from inbox.server.models.tables.base import (
     Message, SharedFolder, User, Account, Part,
-    Contact, Thread, Namespace, Block)
+    Contact, Thread, Namespace, Block, WebhookParameters)
 
 
 def format_address_list(addresses):
@@ -50,7 +50,6 @@ class APIEncoder(JSONEncoder):
                 'thread': obj.thread.public_id,
                 'files': [p.public_id for p in obj.parts if p.is_attachment],
                 'body': obj.sanitized_body,
-                # 'snippet'     : obj.snippet,
                 # 'list_info'   : obj.mailing_list_headers
             }
             if obj.is_draft:
@@ -111,6 +110,32 @@ class APIEncoder(JSONEncoder):
                 # TOD
             }
             raise NotImplementedError
+
+        elif isinstance(obj, WebhookParameters):
+            return {
+                'id': obj.public_id,
+                'object': 'webhook',
+                'namespace': obj.namespace.public_id,
+
+                'callback_url': obj.callback_url,
+                'failure_notify_url': obj.failure_notify_url,
+
+                'include_body': obj.include_body,
+                'active': obj.active,
+
+                'to_addr': obj.to_addr,
+                'from_addr': obj.from_addr,
+                'cc_addr': obj.cc_addr,
+                'bcc_addr': obj.bcc_addr,
+                'email_address': obj.email,
+                'subject': obj.subject,
+                'thread': obj.thread,
+                'filename': obj.filename,
+                'started_before': obj.started_before,
+                'started_after': obj.started_after,
+                'last_message_before': obj.last_message_before,
+                'last_message_after': obj.last_message_after,
+            }
 
         elif isinstance(obj, Account):
             # Shouldn't ever need to serialize these...
