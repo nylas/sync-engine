@@ -395,8 +395,8 @@ class Message(Base, HasRevisions, HasPublicID):
     # Do delete messages if their associated thread is deleted.
     thread_id = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
                        nullable=False)
-    thread = relationship('Thread', backref=backref('messages'),
-                          order_by='Message.received_date')
+    thread = relationship('Thread', backref=backref('messages',
+                          order_by='Message.received_date'))
 
     from_addr = Column(JSON, nullable=True)
     sender_addr = Column(JSON, nullable=True)
@@ -799,14 +799,20 @@ class Thread(Base, HasPublicID):
         return False
 
     @property
+    def snippet(self):
+        if len(self.messages):
+            # Get the snippet from the most recent message
+            return self.messages[-1].snippet
+        return ""
+
+    @property
     def participants(self):
         p = set()
         for m in self.messages:
             p.update(tuple(entry) for entry in
-                       itertools.chain(m.from_addr, m.to_addr,
-                                       m.cc_addr, m.bcc_addr))
+                     itertools.chain(m.from_addr, m.to_addr,
+                                     m.cc_addr, m.bcc_addr))
         return p
-
 
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator}

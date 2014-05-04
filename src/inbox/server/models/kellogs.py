@@ -66,6 +66,7 @@ class APIEncoder(JSONEncoder):
                 'participants':  format_address_list(obj.participants),
                 'last_message_timestamp':  obj.recentdate,
                 'subject_date': obj.subjectdate,
+                'snippet': obj.snippet,
                 'messages':  [m.public_id for m in obj.messages]  # for now
             }
 
