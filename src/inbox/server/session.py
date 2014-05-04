@@ -14,7 +14,7 @@ def log_ignored(exc):
 
 
 def create_session(db_session, user):
-    new_session = UserSession(user=user, token=str(uuid.uuid1()))
+    new_session = UserSession(user=user, token=uuid.uuid4().hex)
     db_session.add(new_session)
     db_session.commit()
     log.info('Created new session with token: {0}'.format(new_session.token))

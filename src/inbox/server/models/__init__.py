@@ -46,7 +46,7 @@ def engine_uri(database=None):
     port = config.get('{0}_PORT'.format(config_prefix), None)
     assert port, "Must have database port to connect!"
 
-    uri_template = 'mysql://{username}:{password}@{host}:{port}/{database}?charset=utf8mb4'
+    uri_template = 'mysql+pymysql://{username}:{password}@{host}:{port}/{database}?charset=utf8mb4'
 
     return uri_template.format(
         username=username,
@@ -68,7 +68,8 @@ engine = create_engine(db_uri(),
                        isolation_level='READ COMMITTED',
                        echo=False,
                        pool_size=25,
-                       max_overflow=10)
+                       max_overflow=10,
+                       connect_args = {'charset':'utf8mb4'})
 
 
 def init_db():

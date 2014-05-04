@@ -366,7 +366,7 @@ class API(object):
         with session_scope() as db_session:
             contact = Contact(account_id=account_id, source='local',
                               provider_name=INBOX_PROVIDER_NAME,
-                              uid=uuid.uuid4())
+                              uid=uuid.uuid4().hex)
             contact.name = contact_info['name']
             contact.email_address = contact_info['email']
             db_session.add(contact)
