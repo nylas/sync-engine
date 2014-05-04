@@ -34,4 +34,4 @@ You can run Inbox almost anywhere. Here's how to install install a development e
 
         ./inbox sync start ben.bitdiddle1861@gmail.com
 
-11. In a separate shell, start the API server by running `./inbox api`. You're now read to make requests! 
+11. In a separate shell, start the API server by running `./inbox api`. You're now ready to make requests! 

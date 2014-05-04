@@ -4,9 +4,9 @@ Inbox is a layer on top of existing email providers that makes it easy to integr
 
 If you need help, check out out our answers to some [common questions](#FAQ) or chat live with our engineering team in `##inbox` on [freenode](http://webchat.freenode.net/).
 
-The Inbox API is designed around the [REST](http://en.wikipedia.org/wiki/Representational_State_Transfer) ideology, providing simple and predictable URIs to access and modify objects. Response bodies are always UTF-8 encoded JSON objects, unless explicitly documented otherwise.
+The Inbox API is designed around the [REST](http://en.wikipedia.org/wiki/Representational_State_Transfer) ideology, providing simple and predictable URIs to access and modify objects. Requests support standard HTTP methods like GET, PUT, POST, and DELETE. Response bodies are always UTF-8 encoded JSON objects, unless explicitly documented otherwise.
 
-[Threads](#threads) as a first-class object in Inbox, allowing you to build beautiful mail applications that behave the way users have come to expect. Threads are the primary mechanism for moving/archiving/deleting mail.
+[Threads](#threads) as a first-class object in Inbox, allowing you to build beautiful mail applications that behave the way users have come to expect. Actions like archiving or deleting are performed on threads, not individual messages.
 
 [Tags](#tags) are used to group threads. A given thread can have zero or more tags. Tags are also used to represent state, such as `sending`. Note: tags are not equivalent to IMAP folders or Gmail labels, although these properties may be accessed via tags.
 
