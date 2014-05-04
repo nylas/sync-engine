@@ -4,7 +4,7 @@ Filters allow you to refine your query for mail data to specific parameters. The
 
 * **`subject`** match, supports regex if string starts with `/`
 
-* **`email`** (string) address. filters by any messages sent, received from, or also sent to this address.
+* **`email`** (string) address. filters by any messages sent, received from, or also sent to the given address.
 
 * **`to`** all messages sent to an address
 
