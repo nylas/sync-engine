@@ -9,7 +9,7 @@ for handler in werkzeug_log.handlers:
     werkzeug_log.removeHandler(handler)
 werkzeug_log.addHandler(inbox_logger)
 
-from flask import Flask, request, Response, g
+from flask import Flask, request, Response, g, make_response
 from flask import jsonify as flask_jsonify
 
 from werkzeug.exceptions import default_exceptions
@@ -78,6 +78,14 @@ def auth():
              'Basic realm="Please enter your access_token as the '
              'username and leave the password field blank."'})
 
+    # if request.method == 'OPTIONS':
+    #     # Validate that this URL is a registered app origin
+    #     r = make_response('', 200)
+    #     origin = request.headers.get('origin')
+    #     if not origin:
+    #         raise  # TODO
+
+
     g.db_session = new_db_session()
 
     # user_sk = auth['username']
@@ -98,10 +106,21 @@ def auth():
     #     .filter_by(id=user_id).one()
 
 
-@ns_api.after_request
+@app.after_request
 def finish(response):
-    g.db_session.commit()
-    g.db_session.close()
+    session = g.get('db_session')
+    if session:
+        session.commit()
+        session.close()
+
+    origin = request.headers.get('origin')
+    if origin:  # means it's just a regular request
+        response.headers['Access-Control-Allow-Origin'] = origin  # Just echo origin
+        response.headers['Access-Control-Allow-Headers'] = 'Authorization'
+        response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+
+    app.logger.info("Sending response {0}".format(response))
     return response
 
 
