@@ -65,8 +65,12 @@ def start():
     #     private_ns.append(account_ns)
     # g.namespaces = private_ns
 
-    g.namespace = g.db_session.query(Namespace) \
-        .filter(Namespace.public_id == g.namespace_public_id).one()
+    try:
+        g.namespace = g.db_session.query(Namespace) \
+            .filter(Namespace.public_id == g.namespace_public_id).one()
+    except NoResultFound:
+        return err(404, "Couldn't find namespace {}".
+                   format(g.namespace_public_id))
 
     g.filter = DatabaseFilter(
         namespace_id=g.namespace.id,
