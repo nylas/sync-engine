@@ -41,7 +41,7 @@ def users_api():
         return err(
             404,
             "Couldn't find user with id {0}".format(
-                g.public_user_id, g.namespace_id))
+                g.public_user_id, g.namespace_public_id))
 
 
 @app.route('/logout')

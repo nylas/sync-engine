@@ -132,7 +132,7 @@ def thread_api(public_id):
 
     except NoResultFound:
         return err(404, "Couldn't find thread with id `{0}` "
-                   "on namespace {1}".format(public_id, g.namespace.id))
+                   "on namespace {1}".format(public_id, g.namespace_public_id))
 
 
 # Update thread, ie: change labels/flags
@@ -216,7 +216,7 @@ def message_api(public_id):
     except NoResultFound:
         return err(404,
                    "Couldn't find message with id {0} "
-                   "on namespace {1}".format(public_id, g.namespace.id))
+                   "on namespace {1}".format(public_id, g.namespace_public_id))
 
 
 ##
@@ -262,7 +262,7 @@ def files_api(public_id):
 
     except NoResultFound:
         return err(404, "Couldn't find file with id {0} "
-                   "on namespace {1}".format(public_id, g.namespace.id))
+                   "on namespace {1}".format(public_id, g.namespace_public_id))
 
 
 #
@@ -278,7 +278,7 @@ def file_download_api(public_id):
         assert int(f.namespace_id) == int(g.namespace.id)
     except NoResultFound:
         return err(404, "Couldn't find file with id {0} "
-                   "on namespace {1}".format(public_id, g.namespace.id))
+                   "on namespace {1}".format(public_id, g.namespace_public_id))
 
     # Here we figure out the filename.extension given the
     # properties which were set on the original attachment
