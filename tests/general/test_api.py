@@ -15,13 +15,6 @@ ACCOUNT_ID = 1
 NONEXISTENT_CONTACT_ID = 22222222
 
 
-def test_sync_status(db, api_client, sync_client):
-    result = api_client.sync_status()
-    # TODO(emfree): actually run a sync and test the result
-    expected = {}
-    assert (result == expected)
-
-
 def test_is_mailing_list_thread(db, api_client):
     result = api_client.is_mailing_list_thread(USER_ID, NAMESPACE_ID,
                                                TEST_MSG['thread_id'])

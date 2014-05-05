@@ -71,38 +71,6 @@ class API(object):
             self._zmq_search = zerorpc.Client(search_srv_loc)
         return self._zmq_search.search
 
-    def sync_status(self):
-        """ Returns data representing the status of all syncing users, like:
-
-            user_id: {
-                state: 'initial sync',
-                stored_data: '12127227',
-                stored_messages: '50000',
-                status: '56%',
-            }
-            user_id: {
-                state: 'poll',
-                stored_data: '1000000000',
-                stored_messages: '200000',
-                status: '2013-06-08 14:00',
-            }
-        """
-        if not self._sync:
-            self._sync = zerorpc.Client(config.get('CRISPIN_SERVER_LOC', None))
-        status = self._sync.status()
-        user_ids = status.keys()
-        with session_scope() as db_session:
-            users = db_session.query(User).filter(User.id.in_(user_ids))
-            for user in users:
-                status[user.id]['stored_data'] = 0
-                status[user.id]['stored_messages'] = 0
-                for account in user.accounts:
-                    status[user.id]['stored_data'] += \
-                        total_stored_data(account.id, db_session)
-                    status[user.id]['stored_messages'] += \
-                        total_stored_messages(account.id, db_session)
-            return status
-
     @namespace_auth
     def send_new(self, to, subject, body, attachments=None, cc=None, bcc=None):
         """
