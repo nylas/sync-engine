@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 import calendar
 
 from tests.data.messages.message import (subject, delivered_to, sender,
@@ -29,17 +29,10 @@ def test_filters(db):
     assert filter.message_query(db.session).count() == 1
     assert filter.thread_query(db.session).count() == 1
 
-    timetuple = received_date.utctimetuple()
-
-    early = datetime(timetuple.tm_year, timetuple.tm_mon, timetuple.tm_mday,
-                     timetuple.tm_hour, timetuple.tm_min,
-                     timetuple.tm_sec).utctimetuple()
-    early_ts = calendar.timegm(early)
-
-    late = datetime(timetuple.tm_year, timetuple.tm_mon, timetuple.tm_mday,
-                    timetuple.tm_hour, timetuple.tm_min + 1,
-                    timetuple.tm_sec).utctimetuple()
-    late_ts = calendar.timegm(late)
+    early_time = received_date - datetime.timedelta(hours=1)
+    late_time = received_date + datetime.timedelta(hours=1)
+    early_ts = calendar.timegm(early_time.utctimetuple())
+    late_ts = calendar.timegm(late_time.utctimetuple())
 
     filter = DatabaseFilter(namespace_id=NAMESPACE_ID,
                             subject=subject,
@@ -86,7 +79,7 @@ def test_filters(db):
     assert filter.message_query(db.session).count() == 1
 
     filter = DatabaseFilter(namespace_id=NAMESPACE_ID,
-                            to_addr=to_addr,
+                            to_addr='inboxapptest@gmail.com',
                             limit=3)
-    assert filter.thread_query(db.session).count() == 1
-    assert filter.message_query(db.session).count() == 1
+    assert filter.thread_query(db.session).count() == 3
+    assert filter.message_query(db.session).count() == 3
