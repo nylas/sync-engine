@@ -241,33 +241,43 @@ class WebhookWorker(gevent.Greenlet):
         ----------
         event: EventData
         """
-        assert urlparse.urlparse.scheme == 'https', \
+        assert urlparse.urlparse(self.callback_url).scheme == 'https', \
             'callback_url MUST be https!'
         # OMG WTF TODO (emfree): Do NOT set verify=False in prod!
-        r = requests.post(self.callback_url,
-                          data=format_output(event.data, self.include_body),
-                          verify=False)
-        if r.status_code == requests.status_codes.codes.ok:
-            if self.retry_queue.empty():
-                self.set_min_processed_id(event.id)
-        else:
-            self.log.info('Hook {0} failed at transaction {1}'.
-                          format(self.id, event.id))
-            if self.failure_notify_url is not None:
-                timestamp = int(time.time())
-                failure_output = format_failure_output(
-                    hook_id=self.public_id,
-                    timestamp=timestamp,
-                    status_code=r.status_code)
+        try:
+            r = requests.post(
+                self.callback_url,
+                data=format_output(event.data, self.include_body),
+                verify=False)
+            if r.status_code == requests.status_codes.codes.ok:
+                if self.retry_queue.empty():
+                    self.set_min_processed_id(event.id)
+                return True
+        except requests.ConnectionError:
+            # Handle this failure in the code below, in the same way we do for
+            # response codes other than 200.
+            pass
+        self.log.info('Hook {0} failed at transaction {1}'.
+                      format(self.id, event.id))
+        if self.failure_notify_url is not None:
+            timestamp = int(time.time())
+            failure_output = format_failure_output(
+                hook_id=self.public_id,
+                timestamp=timestamp,
+                status_code=r.status_code)
+            try:
                 requests.post(self.failure_notify_url,
                               data=failure_output)
-            event.note_failure()
-            if event.retry_count < self.max_retries:
-                try:
-                    self.retry_queue.put_nowait(event)
-                except gevent.queue.Full:
-                    self.suspended = True
-            return False
+            except requests.ConnectionError:
+                # Don't do anything special if this request fails.
+                pass
+        event.note_failure()
+        if event.retry_count < self.max_retries:
+            try:
+                self.retry_queue.put_nowait(event)
+            except gevent.queue.Full:
+                self.suspended = True
+        return False
 
     def match(self, event):
         if event.data is None:
