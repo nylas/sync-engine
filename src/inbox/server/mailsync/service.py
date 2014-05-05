@@ -1,6 +1,8 @@
 """ ZeroRPC interface to syncing. """
 import socket
 
+from collections import defaultdict
+
 from inbox.server.contacts.remote_sync import ContactSync
 from inbox.server.log import get_logger
 from inbox.server.models import session_scope
@@ -31,7 +33,7 @@ class SyncService(object):
         # 'status' is the percent-done for initial sync, polling start time
         # otherwise
         # all data in here ought to be msgpack-serializable!
-        self.statuses = dict()
+        self.statuses = defaultdict(dict)
 
         self.contact_sync_monitors = dict()
 
@@ -74,8 +76,7 @@ class SyncService(object):
                         def update_status(account_id, state, status):
                             """ I really really wish I were a lambda """
                             folder, progress = status
-                            self.statuses.setdefault(account_id,
-                                                     dict())[folder] \
+                            self.statuses[account_id][folder] \
                                 = (state, progress)
                             notify(account_id, state, status)
 

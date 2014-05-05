@@ -22,7 +22,7 @@ from __future__ import division
 
 import os
 
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 
 from gevent import spawn
 from gevent.queue import LifoQueue
@@ -366,9 +366,9 @@ def download_queued_threads(crispin_client, db_session, log, folder_name,
 
 
 def group_uids_by_thread(uids, thread_g_metadata):
-    uids_for = dict()
+    uids_for = defaultdict(list)
     for uid in uids:
-        uids_for.setdefault(thread_g_metadata[uid].thrid, []).append(uid)
+        uids_for[thread_g_metadata[uid].thrid].append(uid)
     return uids_for
 
 
