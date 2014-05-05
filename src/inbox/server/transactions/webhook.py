@@ -56,6 +56,7 @@ class EventData(object):
         self.id = transaction.id
         self.retry_ts = 0
         self.retry_count = 0
+        self.data = None
 
         if transaction.delta:
             self.data = transaction.delta.copy()
@@ -269,6 +270,8 @@ class WebhookWorker(gevent.Greenlet):
             return False
 
     def match(self, event):
+        if event.data is None:
+            return
         try:
             return self.filter.match(event.data)
         except KeyError:
