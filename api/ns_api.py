@@ -114,8 +114,7 @@ def folder_api(public_id):
 ##
 @app.route('/threads')
 def thread_query_api():
-    return jsonify(g.filter.thread_query(g.db_session).filter(
-            Thread.namespace_id == g.namespace.id).all())
+    return jsonify(g.filter.thread_query(g.db_session).all())
 
 
 @app.route('/threads/<public_id>')
