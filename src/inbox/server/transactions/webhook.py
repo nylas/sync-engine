@@ -271,7 +271,7 @@ class WebhookWorker(gevent.Greenlet):
             except requests.ConnectionError:
                 # Don't do anything special if this request fails.
                 pass
-        event.note_failure()
+        event.note_failure(self.retry_interval)
         if event.retry_count < self.max_retries:
             try:
                 self.retry_queue.put_nowait(event)
