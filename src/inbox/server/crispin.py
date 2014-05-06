@@ -476,8 +476,6 @@ class GmailCrispinClient(CrispinClient):
         ----------
         uids : list
             UIDs to fetch data for. Must be from the selected folder.
-        c : IMAPClient
-            IMAP connection to use.
 
         Returns
         -------
