@@ -12,7 +12,7 @@ def user_console(user_email_address):
 
         with connection_pool(account.id, pool_size=1).get() as crispin_client:
             crispin_client.select_folder(crispin_client.folder_names()['all'],
-                                         uidvalidity_cb(db_session, account))
+                                         uidvalidity_cb(db_session, account.id))
 
             server_uids = crispin_client.all_uids()
 
