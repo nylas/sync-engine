@@ -1099,21 +1099,27 @@ class Lens(Base, HasPublicID):
     #
     # Methods related to creating a sqlalchemy filter
 
-    def message_query(self, db_session, limit=LENS_LIMIT_DEFAULT, offset=0):
+    def message_query(self, db_session, limit=None, offset=None):
         """Return a query object which filters messages by the instance's query
         parameters."""
+        limit = limit or LENS_LIMIT_DEFAULT
+        offset = offset or 0
         self.db_session = db_session
         query = self._message_subquery()
         subquery = self._thread_subquery()
         query = maybe_refine_query(query, subquery).distinct(). \
             order_by(asc(Message.id))
         if limit > 0:
-            return query.limit(limit).offset(offset)
+            query = query.limit(limit)
+        if offset > 0:
+            query = query.offset(offset)
         return query
 
-    def thread_query(self, db_session, limit=LENS_LIMIT_DEFAULT, offset=0):
+    def thread_query(self, db_session, limit=None, offset=None):
         """Return a query object which filters threads by the instance's query
         parameters."""
+        limit = limit or LENS_LIMIT_DEFAULT
+        offset = offset or 0
         self.db_session = db_session
         query = self._thread_subquery()
         subquery = self._message_subquery()
@@ -1122,7 +1128,9 @@ class Lens(Base, HasPublicID):
         query = maybe_refine_query(query, subquery).distinct(). \
             order_by(asc(Thread.id))
         if limit > 0:
-            return query.limit(limit).offset(offset)
+            query = query.limit(limit)
+        if offset > 0:
+            query = query.offset(offset)
         return query
 
     # The following private methods return individual parts of the eventual

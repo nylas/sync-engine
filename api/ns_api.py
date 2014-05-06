@@ -71,7 +71,7 @@ def start():
         return err(404, "Couldn't find namespace {}".
                    format(g.namespace_public_id))
 
-    g.filter = Lens(
+    g.lens = Lens(
         namespace_id=g.namespace.id,
         subject=request.args.get('subject'),
         thread_public_id=request.args.get('thread'),
@@ -85,9 +85,9 @@ def start():
         last_message_before=request.args.get('last_message_before'),
         last_message_after=request.args.get('last_message_after'),
         filename=request.args.get('filename'),
-        limit=request.args.get('limit'),
-        offset=request.args.get('offset'),
         detached=True)
+    g.lens_limit = request.args.get('limit')
+    g.lens_offset = request.args.get('offset')
 
 
 ##
@@ -118,7 +118,8 @@ def folder_api(public_id):
 ##
 @app.route('/threads')
 def thread_query_api():
-    return jsonify(g.filter.thread_query(g.db_session).all())
+    return jsonify(g.lens.thread_query(g.db_session, limit=g.lens_limit,
+                                       offset=g.lens_offset).all())
 
 
 @app.route('/threads/<public_id>')
@@ -195,7 +196,8 @@ def thread_operation_api(public_id, operation):
 ##
 @app.route('/messages')
 def message_query_api():
-    return jsonify(g.filter.message_query(g.db_session).all())
+    return jsonify(g.lens.message_query(g.db_session, limit=g.lens_limit,
+                                        offset=g.lens_offset).all())
 
 
 @app.route('/messages/<public_id>')
