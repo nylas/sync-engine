@@ -4,6 +4,7 @@ from datetime import datetime
 from flanker.addresslib import address
 
 from inbox.server.crispin import RawMessage
+from inbox.server.models.tables.base import Account
 from inbox.server.models.tables.imap import ImapThread
 from inbox.server.mailsync.backends.base import create_db_objects, commit_uids
 from inbox.server.mailsync.backends.imap.account import create_gmail_message
@@ -65,7 +66,7 @@ def create_gmail_reply(replyto, sender_info, recipients, subject, body,
     return smtp_attrs(reply, replyto.thread_id)
 
 
-def save_gmail_email(account_id, db_session, log, smtpmsg):
+def save_gmail_email(account_id, sent_folder, db_session, log, smtpmsg):
     """
     Save the email message to the local data store.
 
@@ -80,28 +81,18 @@ def save_gmail_email(account_id, db_session, log, smtpmsg):
     # (20 bits), so we truncate the `X-INBOX-ID` to that size. Note that
     # this still provides a large enough ID space to make collisions rare.
     uid = (int(smtpmsg.inbox_uid, 16)) & (1 << 20) - 1
-
     date = datetime.utcnow()
-    folder_name = 'sent'
 
     # Create a new SpoolMessage:
     msg = RawMessage(uid=uid, internaldate=date, flags=set(),
                      body=smtpmsg.msg, g_thrid=smtpmsg.thread_id,
                      g_msgid=None, g_labels=set(), created=True)
-    new_uids = create_db_objects(account_id, db_session, log, folder_name,
+    new_uids = create_db_objects(account_id, db_session, log, sent_folder,
                                  [msg], create_gmail_message)
 
     assert len(new_uids) == 1
     new_uids[0].created_date = date
 
-    # If it's a reply, we need to update the original Message's is_answered
-    # flag after sending. Note we don't need to check the namespace again here.
-    original_uid = None
-    if smtpmsg.thread_id:
-        thread = db_session.query(ImapThread).filter(
-            ImapThread.g_thrid == smtpmsg.thread_id).one()
-        original_uid = thread.messages[0].imapuid
-
     commit_uids(db_session, log, new_uids)
 
-    return (new_uids[0], original_uid)
+    return new_uids[0]

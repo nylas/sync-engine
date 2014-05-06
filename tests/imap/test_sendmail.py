@@ -40,7 +40,8 @@ def attach(config):
 
 
 def test_send(db, config, api_client, message, attach):
-    from inbox.server.models.tables.base import SpoolMessage, FolderItem
+    from inbox.server.models.tables.base import (SpoolMessage, FolderItem,
+                                                 Folder, Account)
 
     recipients, subject, body = message
     attachment = attach
@@ -56,13 +57,17 @@ def test_send(db, config, api_client, message, attach):
     assert len(sent_messages) == 1, 'sent message missing'
 
     sent_thrid = sent_messages[0].thread_id
-    sent_items = db.session.query(FolderItem).\
-        filter_by(thread_id=sent_thrid, folder_name='sent').count()
+
+    sent_folder = db.session.query(Account).get(ACCOUNT_ID).sent_folder.name
+    sent_items = db.session.query(FolderItem).join(Folder).filter(
+        FolderItem.thread_id == sent_thrid,
+        Folder.name == sent_folder).count()
     assert sent_items == 1, 'sent folder entry missing'
 
 
 def test_reply(db, config, api_client, message, attach):
-    from inbox.server.models.tables.base import SpoolMessage, FolderItem
+    from inbox.server.models.tables.base import (SpoolMessage, FolderItem,
+                                                 Folder, Account)
 
     recipients, subject, body = message
     attachment = attach
@@ -88,6 +93,8 @@ def test_reply(db, config, api_client, message, attach):
         'incorrect references header'
 
     sent_thrid = sent_messages[0].thread_id
-    sent_items = db.session.query(FolderItem).\
-        filter_by(thread_id=sent_thrid, folder_name='sent').all()
-    assert len(sent_items) == 1, 'sent folder entry missing'
+    sent_folder = db.session.query(Account).get(ACCOUNT_ID).sent_folder.name
+    sent_items = db.session.query(FolderItem).join(Folder).filter(
+        FolderItem.thread_id == sent_thrid,
+        Folder.name == sent_folder).count()
+    assert sent_items == 1, 'sent folder entry missing'

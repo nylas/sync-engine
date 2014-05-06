@@ -169,6 +169,8 @@ class SMTPConnectionPool(ConnectionPool):
             self.provider = account.provider
             self.full_name = account.full_name if account.provider == 'Gmail'\
                 else ''
+            self.sent_folder = account.sent_folder.name
+
             self.auth_type = AUTH_TYPES.get(account.provider)
 
             if self.auth_type == 'OAuth':
@@ -220,6 +222,7 @@ class SMTPClient(object):
         # Required for Gmail
         self.full_name = self.pool.full_name
         self.email_address = self.pool.email_address
+        self.sent_folder = self.pool.sent_folder
 
         self.log = get_logger(account_id, 'sendmail')
 

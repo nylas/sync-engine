@@ -12,16 +12,16 @@ class GmailSMTPClient(SMTPClient):
     def _send_mail(self, smtpmsg):
         with session_scope() as db_session:
             # Save the email message to the local datastore
-            new_uid, original_uid = save_gmail_email(self.account_id,
-                                                     db_session, self.log,
-                                                     smtpmsg)
+            new_uid = save_gmail_email(self.account_id,
+                                       self.sent_folder,
+                                       db_session,
+                                       self.log,
+                                       smtpmsg)
 
             # Send it using SMTP
             result = self._send(smtpmsg.recipients, smtpmsg.msg)
 
             new_uid.message.is_sent = result
-            if original_uid:
-                original_uid.message.is_answered = True
 
             db_session.commit()
 
