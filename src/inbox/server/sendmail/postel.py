@@ -1,4 +1,6 @@
 import base64
+from collections import namedtuple
+
 import smtplib
 from geventconnpool import ConnectionPool
 
@@ -11,7 +13,7 @@ from inbox.server.models.tables.imap import ImapAccount
 SMTP_HOSTS = {'Gmail': 'smtp.gmail.com'}
 SMTP_PORT = 587
 
-DEFAULT_POOL_SIZE = 5
+DEFAULT_POOL_SIZE = 2
 
 # Memory cache for per-user SMTP connection pool.
 account_id_to_connection_pool = {}
@@ -19,6 +21,9 @@ account_id_to_connection_pool = {}
 # TODO[k]: Other types (LOGIN, XOAUTH, PLAIN-CLIENTTOKEN, CRAM-MD5)
 AUTH_EXTNS = {'OAuth': 'XOAUTH2',
               'Password': 'PLAIN'}
+
+AccountInfo = namedtuple('AccountInfo',
+                         'id email provider full_name auth_type auth_token')
 
 
 class SendMailError(Exception):
@@ -36,10 +41,26 @@ def get_smtp_connection_pool(account_id, pool_size=None):
 
 
 class SMTPConnection():
-    def __init__(self, c):
+    def __init__(self, account, c, log):
+        self.account_id = account.id
+        self.email_address = account.email
+        self.provider = account.provider
+        self.full_name = account.full_name
+        self.auth_type = account.auth_type
+        self.auth_token = account.auth_token
+
         self.connection = c
 
+        self.log = log
+        self.auth_handlers = {'OAuth': self.smtp_oauth,
+                              'Password': self.smtp_password}
+
+        self.setup()
+
     def __enter__(self):
+        if not self.is_connected():
+            self.reconnect()
+
         return self.connection
 
     def __exit__(self, type, value, traceback):
@@ -48,9 +69,86 @@ class SMTPConnection():
         except smtplib.SMTPServerDisconnected:
             return
 
+    def setup(self):
+        connection = self.connection
+
+        # Put the SMTP connection in TLS mode
+        connection.ehlo()
+
+        if not connection.has_extn('starttls'):
+            raise SendMailError('Required SMTP STARTTLS not supported.')
+
+        connection.starttls()
+        connection.ehlo()
+
+        # Auth the connection
+        self.auth_connection()
+
+    def auth_connection(self):
+        c = self.connection
+
+        # Auth mechanisms supported by the server
+        if not c.has_extn('auth'):
+            raise SendMailError('Required SMTP AUTH not supported.')
+
+        supported_types = c.esmtp_features['auth'].strip().split()
+
+        # Auth mechanism needed for this account
+        if AUTH_EXTNS.get(self.auth_type) not in supported_types:
+            raise SendMailError('Required SMTP Auth mechanism not supported.')
+
+        auth_handler = self.auth_handlers.get(self.auth_type)
+        auth_handler()
+
+    # OAuth2 authentication
+    def smtp_oauth(self):
+        c = self.connection
+
+        try:
+            auth_string = 'user={0}\1auth=Bearer {1}\1\1'.\
+                format(self.email_address, self.auth_token)
+            c.docmd('AUTH', 'XOAUTH2 {0}'.format(
+                base64.b64encode(auth_string)))
+        except smtplib.SMTPAuthenticationError as e:
+            self.log.error('SMTP Auth failed for: {0}'.format(
+                self.email_address))
+            raise e
+
+        self.log.info('SMTP Auth success for: {0}'.format(self.email_address))
+
+    # Password authentication
+    def smtp_password(self):
+        raise NotImplementedError
+
+    def is_connected(self):
+        try:
+            status = self.connection.noop()[0]
+        except smtplib.SMTPServerDisconnected:
+            return False
+
+        return (status == 250)
+
+    def reconnect(self):
+        try:
+            self.connection.connect(SMTP_HOSTS[self.provider], SMTP_PORT)
+        except smtplib.SMTPConnectError:
+            self.log.error('SMTPConnectError')
+            raise
+
+        self.setup()
+
+    def keepalive(self):
+        try:
+            self.connection.noop()
+        except smtplib.SMTPServerDisconnected:
+            self.reconnect()
+
+    def sendmail(self, email_address, recipients, msg):
+        return self.connection.sendmail(email_address, recipients, msg)
+
 
 class SMTPConnectionPool(ConnectionPool):
-    def __init__(self, account_id, num_connections=5, debug=False):
+    def __init__(self, account_id, num_connections, debug=False):
         self.log = get_logger(account_id, 'sendmail: connection_pool')
         self.log.info('Creating SMTP connection pool for account {0} with {1} '
                       'connections'.format(account_id, num_connections))
@@ -59,9 +157,6 @@ class SMTPConnectionPool(ConnectionPool):
         self._set_account_info()
 
         self.debug = debug
-
-        self.auth_handlers = {'OAuth': self.smtp_oauth,
-                              'Password': self.smtp_password}
 
         # 1200s == 20min
         ConnectionPool.__init__(self, num_connections, keepalive=1200)
@@ -93,55 +188,20 @@ class SMTPConnectionPool(ConnectionPool):
 
         connection.set_debuglevel(self.debug)
 
-        # Put the SMTP connection in TLS mode
-        connection.ehlo()
+        auth_token = self.o_access_token if self.o_access_token else\
+            self.password
+        account_info = AccountInfo(id=self.account_id,
+                                   email=self.email_address,
+                                   provider=self.provider,
+                                   full_name=self.full_name,
+                                   auth_type=self.auth_type,
+                                   auth_token=auth_token)
 
-        if not connection.has_extn('starttls'):
-            raise SendMailError('Required SMTP STARTTLS not supported.')
-
-        connection.starttls()
-        connection.ehlo()
-
-        # Auth the connection
-        authed_connection = self.auth_connection(connection)
-
-        return authed_connection
+        smtp_connection = SMTPConnection(account_info, connection, self.log)
+        return smtp_connection
 
     def _keepalive(self, c):
-        c.noop()
-
-    def auth_connection(self, c):
-        # Auth mechanisms supported by the server
-        if not c.has_extn('auth'):
-            raise SendMailError('Required SMTP AUTH not supported.')
-
-        supported_types = c.esmtp_features['auth'].strip().split()
-
-        # Auth mechanism needed for this account
-        if AUTH_EXTNS.get(self.auth_type) not in supported_types:
-            raise SendMailError('Required SMTP Auth mechanism not supported.')
-
-        auth_handler = self.auth_handlers.get(self.auth_type)
-        return auth_handler(c)
-
-    # OAuth2 authentication
-    def smtp_oauth(self, c):
-        try:
-            auth_string = 'user={0}\1auth=Bearer {1}\1\1'.\
-                format(self.email_address, self.o_access_token)
-            c.docmd('AUTH', 'XOAUTH2 {0}'.format(
-                base64.b64encode(auth_string)))
-        except smtplib.SMTPAuthenticationError as e:
-            self.log.error('SMTP Auth failed for: {0}'.format(
-                self.email_address))
-            raise e
-
-        self.log.info('SMTP Auth success for: {0}'.format(self.email_address))
-        return c
-
-    # Password authentication
-    def smtp_password(self, c):
-        raise NotImplementedError
+        c.keepalive()
 
 
 class SMTPClient(object):
@@ -165,8 +225,8 @@ class SMTPClient(object):
 
     def _send(self, recipients, msg):
         """ Send the email message over the network. """
-        with self.pool.get() as c:
-            with SMTPConnection(c) as smtpconn:
+        with self.pool.get() as smtpconn:
+            with smtpconn:
                 try:
                     failures = smtpconn.sendmail(self.email_address,
                                                  recipients, msg)
