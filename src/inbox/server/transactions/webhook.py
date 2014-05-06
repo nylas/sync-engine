@@ -6,7 +6,7 @@ greenlet.
 
 Now say an API client registers a webhook W. The API server calls
 WebhookService.register_hook via ZeroRPC with the webhook data. We then insert
-a row into the WebhookParameters table of the database, containing the webhook
+a row into the Webhook table of the database, containing the webhook
 data. We start a corresponding WebhookWorker, which also runs continuously as
 its own greenlet.
 
@@ -15,7 +15,7 @@ events that match the filter parameters for W to the corresponding
 WebhookWorker's queue. The WebhookWorker continuously monitors its queue; when
 it receives a transaction, it attempts to post to the stored callback_url. If
 this succeeds, we increment the min_processed_id column of the associated
-WebhookParameters row, indicating that the webhook has successfully processed
+Webhook row, indicating that the webhook has successfully processed
 all transaction log entries with id less than or equal to min_processed_id.
 
 If the post request fails, the worker places the transaction in a bounded-size
@@ -46,7 +46,7 @@ from sqlalchemy import asc
 from inbox.server.log import get_logger, log_uncaught_errors
 from inbox.server.models import session_scope
 from inbox.server.models.kellogs import cereal
-from inbox.server.models.tables.base import Transaction, WebhookParameters
+from inbox.server.models.tables.base import Transaction, Webhook
 
 
 class EventData(object):
@@ -125,12 +125,12 @@ class WebhookService(gevent.Greenlet):
             Dictionary of the hook parameters.
         """
         with session_scope() as db_session:
-            hook_params = WebhookParameters(namespace_id=namespace_id,
-                                            min_processed_id=self.minimum_id,
-                                            **parameter_dict)
-            db_session.add(hook_params)
+            hook = Webhook(namespace_id=namespace_id,
+                           min_processed_id=self.minimum_id,
+                           **parameter_dict)
+            db_session.add(hook)
             db_session.commit()
-            hook = WebhookWorker(hook_params)
+            hook = WebhookWorker(hook)
             # TODO(emfree) handle inactive webhooks
         self.hooks[namespace_id].add(hook)
         if not hook.started:
@@ -177,26 +177,26 @@ class WebhookService(gevent.Greenlet):
         """Load stored hook parameters from the database. Run once on
         startup."""
         with session_scope() as db_session:
-            stored_hook_params = db_session.query(WebhookParameters).all()
-            for hook_params in stored_hook_params:
+            all_hooks = db_session.query(Webhook).all()
+            for hook_params in all_hooks:
                 namespace_id = hook_params.namespace_id
                 self.hooks[namespace_id].add(WebhookWorker(hook_params))
-            if stored_hook_params:
+            if all_hooks:
                 self.minimum_id = min(params.min_processed_id for params in
-                                      stored_hook_params)
+                                      all_hooks)
 
 
 class WebhookWorker(gevent.Greenlet):
-    def __init__(self, hook_parameters, max_queue_size=22):
-        self.id = hook_parameters.id
-        self.public_id = hook_parameters.public_id
-        self.filter = hook_parameters.create_filter()
-        self.min_processed_id = hook_parameters.min_processed_id
-        self.include_body = hook_parameters.include_body
-        self.callback_url = hook_parameters.callback_url
-        self.failure_notify_url = hook_parameters.failure_notify_url
-        self.max_retries = hook_parameters.max_retries
-        self.retry_interval = hook_parameters.retry_interval
+    def __init__(self, hook, max_queue_size=22):
+        self.id = hook.id
+        self.public_id = hook.public_id
+        self.lens = hook.lens
+        self.min_processed_id = hook.min_processed_id
+        self.include_body = hook.include_body
+        self.callback_url = hook.callback_url
+        self.failure_notify_url = hook.failure_notify_url
+        self.max_retries = hook.max_retries
+        self.retry_interval = hook.retry_interval
 
         self.suspended = False
 
@@ -283,7 +283,7 @@ class WebhookWorker(gevent.Greenlet):
         if event.data is None:
             return
         try:
-            return self.filter.match(event.data)
+            return self.lens.match(event.data)
         except KeyError:
             self.log.error("Could not filter data for transaction {}".
                            format(event.id))
@@ -293,7 +293,7 @@ class WebhookWorker(gevent.Greenlet):
             return
         self.min_processed_id = new_id
         with session_scope() as db_session:
-            stored_params = db_session.query(WebhookParameters). \
+            stored_params = db_session.query(Webhook). \
                 filter_by(id=self.id).one()
             stored_params.min_processed_id = self.min_processed_id
             db_session.commit()

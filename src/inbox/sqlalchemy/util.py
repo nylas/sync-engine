@@ -93,3 +93,9 @@ class ForceStrictMode(PoolListener):
         cur = dbapi_con.cursor()
         cur.execute("SET SESSION sql_mode='TRADITIONAL'")
         cur = None
+
+
+def maybe_refine_query(query, subquery):
+    if subquery is None:
+        return query
+    return query.join(subquery.subquery())

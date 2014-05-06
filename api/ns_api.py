@@ -5,9 +5,8 @@ from flask import request, g, Blueprint, make_response, current_app
 from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.server.models.tables.base import (Message, Block, Part,
-                                             Contact, Thread, Namespace)
+                                             Contact, Thread, Namespace, Lens)
 from inbox.server.models.kellogs import jsonify
-from inbox.util.filter import DatabaseFilter
 
 from err import err
 
@@ -72,22 +71,23 @@ def start():
         return err(404, "Couldn't find namespace {}".
                    format(g.namespace_public_id))
 
-    g.filter = DatabaseFilter(
+    g.filter = Lens(
         namespace_id=g.namespace.id,
         subject=request.args.get('subject'),
-        thread_id=request.args.get('thread'),
+        thread_public_id=request.args.get('thread'),
         to_addr=request.args.get('to'),
         from_addr=request.args.get('from'),
         cc_addr=request.args.get('cc'),
         bcc_addr=request.args.get('bcc'),
-        email=request.args.get('email'),
+        any_email=request.args.get('email'),
         started_before=request.args.get('started_before'),
         started_after=request.args.get('started_after'),
         last_message_before=request.args.get('last_message_before'),
         last_message_after=request.args.get('last_message_after'),
         filename=request.args.get('filename'),
         limit=request.args.get('limit'),
-        offset=request.args.get('offset'))
+        offset=request.args.get('offset'),
+        detached=True)
 
 
 ##

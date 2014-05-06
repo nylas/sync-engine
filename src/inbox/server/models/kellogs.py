@@ -6,7 +6,7 @@ from flask import Response
 
 from inbox.server.models.tables.base import (
     Message, SharedFolder, User, Account, Part,
-    Contact, Thread, Namespace, Block, WebhookParameters)
+    Contact, Thread, Namespace, Block, Webhook)
 
 
 def format_address_list(addresses):
@@ -87,7 +87,7 @@ class APIEncoder(JSONEncoder):
                 'size': obj.size,
                 'filename': obj.filename or obj.content_id,
                 'is_embedded': obj.content_disposition is not None
-                    and obj.content_disposition.lower() == 'inline',
+                and obj.content_disposition.lower() == 'inline',
                 'message': obj.message.public_id
             }
 
@@ -111,7 +111,7 @@ class APIEncoder(JSONEncoder):
             }
             raise NotImplementedError
 
-        elif isinstance(obj, WebhookParameters):
+        elif isinstance(obj, Webhook):
             return {
                 'id': obj.public_id,
                 'object': 'webhook',

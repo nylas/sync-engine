@@ -86,7 +86,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('519e462df171');
+INSERT INTO `alembic_version` VALUES ('2c313b6ddd9b');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -433,6 +433,46 @@ LOCK TABLES `imapuid` WRITE;
 /*!40000 ALTER TABLE `imapuid` DISABLE KEYS */;
 INSERT INTO `imapuid` VALUES (1,1,NULL,26,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(2,1,1,380,'INBOX',0,0,0,0,0,'[]'),(3,1,NULL,387,'[Gmail]/All Mail',0,1,0,0,0,'[]'),(4,1,2,943,'INBOX',0,1,0,0,0,'[]'),(5,1,NULL,1,'[Gmail]/All Mail',0,1,0,0,0,'[]'),(6,1,3,934,'INBOX',0,1,0,0,0,'[]'),(7,1,NULL,16,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(8,1,4,555,'INBOX',0,0,0,0,0,'[]'),(9,1,NULL,27,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(10,1,5,554,'INBOX',0,0,0,0,0,'[]'),(11,1,NULL,34,'[Gmail]/All Mail',0,1,0,0,0,'[]'),(12,1,6,406,'INBOX',0,1,0,0,0,'[]'),(13,1,NULL,28,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(14,1,7,385,'INBOX',0,0,0,0,0,'[]'),(15,1,NULL,33,'[Gmail]/All Mail',0,1,0,0,0,'[]'),(16,1,8,378,'INBOX',0,1,0,0,0,'[]'),(17,1,NULL,36,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(18,1,9,377,'INBOX',0,0,0,0,0,'[]'),(19,1,NULL,4,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(20,1,10,375,'INBOX',0,0,0,0,0,'[]'),(21,1,11,341,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(22,1,12,339,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(23,1,13,338,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(24,1,14,320,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(25,1,15,316,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(26,1,16,184,'[Gmail]/All Mail',0,1,0,0,0,'[]');
 /*!40000 ALTER TABLE `imapuid` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `lens`
+--
+
+DROP TABLE IF EXISTS `lens`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `lens` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `public_id` binary(16) NOT NULL,
+  `namespace_id` int(11) NOT NULL,
+  `subject` varchar(255) DEFAULT NULL,
+  `thread_public_id` binary(16) DEFAULT NULL,
+  `started_before` datetime DEFAULT NULL,
+  `started_after` datetime DEFAULT NULL,
+  `last_message_before` datetime DEFAULT NULL,
+  `last_message_after` datetime DEFAULT NULL,
+  `any_email` varchar(255) DEFAULT NULL,
+  `to_addr` varchar(255) DEFAULT NULL,
+  `from_addr` varchar(255) DEFAULT NULL,
+  `cc_addr` varchar(255) DEFAULT NULL,
+  `bcc_addr` varchar(255) DEFAULT NULL,
+  `filename` varchar(255) DEFAULT NULL,
+  `tag` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ix_lens_namespace_id` (`namespace_id`),
+  KEY `ix_lens_public_id` (`public_id`),
+  CONSTRAINT `lens_ibfk_1` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `lens`
+--
+
+LOCK TABLES `lens` WRITE;
+/*!40000 ALTER TABLE `lens` DISABLE KEYS */;
+/*!40000 ALTER TABLE `lens` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -841,49 +881,41 @@ LOCK TABLES `usersession` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `webhookparameters`
+-- Table structure for table `webhook`
 --
 
-DROP TABLE IF EXISTS `webhookparameters`;
+DROP TABLE IF EXISTS `webhook`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `webhookparameters` (
+CREATE TABLE `webhook` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `public_id` binary(16) NOT NULL,
   `namespace_id` int(11) NOT NULL,
   `callback_url` text NOT NULL,
   `failure_notify_url` text,
-  `to_addr` varchar(255) DEFAULT NULL,
-  `from_addr` varchar(255) DEFAULT NULL,
-  `cc_addr` varchar(255) DEFAULT NULL,
-  `bcc_addr` varchar(255) DEFAULT NULL,
-  `email` varchar(255) DEFAULT NULL,
-  `subject` varchar(255) DEFAULT NULL,
-  `thread` binary(16) DEFAULT NULL,
-  `filename` varchar(255) DEFAULT NULL,
-  `started_before` datetime DEFAULT NULL,
-  `started_after` datetime DEFAULT NULL,
-  `last_message_before` datetime DEFAULT NULL,
-  `last_message_after` datetime DEFAULT NULL,
   `include_body` tinyint(1) NOT NULL,
   `max_retries` int(11) NOT NULL DEFAULT '3',
   `retry_interval` int(11) NOT NULL DEFAULT '60',
   `active` tinyint(1) NOT NULL DEFAULT '1',
   `min_processed_id` int(11) NOT NULL DEFAULT '0',
+  `lens_id` int(11) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `namespace_id` (`namespace_id`),
-  KEY `ix_webhookparameters_public_id` (`public_id`),
-  CONSTRAINT `webhookparameters_ibfk_1` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE
+  KEY `ix_webhook_namespace_id` (`namespace_id`),
+  KEY `ix_webhook_public_id` (`public_id`),
+  KEY `ix_webhook_lens_id` (`lens_id`),
+  CONSTRAINT `webhooks_ibfk_1` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `webhook_ibfk_1` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `webhookparameters`
+-- Dumping data for table `webhook`
 --
 
-LOCK TABLES `webhookparameters` WRITE;
-/*!40000 ALTER TABLE `webhookparameters` DISABLE KEYS */;
-/*!40000 ALTER TABLE `webhookparameters` ENABLE KEYS */;
+LOCK TABLES `webhook` WRITE;
+/*!40000 ALTER TABLE `webhook` DISABLE KEYS */;
+/*!40000 ALTER TABLE `webhook` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -895,4 +927,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-05-04  7:07:57
+-- Dump completed on 2014-05-04 10:31:26
