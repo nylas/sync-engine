@@ -1,6 +1,6 @@
 Title: Drafts
 
-A draft is a special kind of message which has not been sent, and therefore its body is mutable. 
+A draft is a special kind of message which has not been sent, and therefore its body is mutable.
 
 To get a list of all threads with drafts, use the [Threads](#threads) API call with a tag [filter](#filters) that specifies `draft`, like so:
 
@@ -8,10 +8,10 @@ To get a list of all threads with drafts, use the [Threads](#threads) API call w
 
 # Creating a new draft
 
-    POST https://api.inboxapp.com/n/create_draft
+    POST https://api.inboxapp.com/n/<namespace_id>/create_draft
 
 
-**Sample post body** 
+**Sample post body**
 ```
 :::json
 {

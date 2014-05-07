@@ -4,7 +4,7 @@ Messages are a sub-object of threads. The content of a message is immutable (wit
 
 Fetch a list of messages matching the criteria specified.
 
-    GET  https://api.inboxapp.com/<account_id>/messages/<message_id>
+    GET  https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>
 
 **Sample Response**
 ```

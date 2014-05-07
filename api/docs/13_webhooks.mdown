@@ -1,10 +1,10 @@
 Title: Webhooks
 
-Webhooks allow your application to receive callbacks based on specific filter parameters. 
+Webhooks allow your application to receive callbacks based on specific filter parameters.
 
 # The webhook object
 
-    GET https://api.inboxapp.com/n/<account_id>/webhooks/<webhook_id>
+    GET https://api.inboxapp.com/n/<namespace_id>/webhooks/<webhook_id>
 
 **Response:**
 
@@ -40,10 +40,10 @@ Note that the specified `callback_url` and `failure_notify_url` *must* support H
 
 # Creating a new webhook
 
-    POST https://api.inboxapp.com/n/<account_id>/webhooks
+    POST https://api.inboxapp.com/n/<namespace_id>/webhooks
 
 
-**Sample post body** 
+**Sample post body**
 ```
 :::json
 {
@@ -76,9 +76,9 @@ Note that the specified `callback_url` and `failure_notify_url` *must* support H
 
 Updating a webhook is as simple as issuing a PUT request to the webhooks's URI.
 
-    PUT https://api.inboxapp.com/n/<account_id>/webhooks/<webhook_id>
+    PUT https://api.inboxapp.com/n/<namespace_id>/webhooks/<webhook_id>
 
-Any fields in the body of the request will override previous webhook values. For example, to turn off a webhook, your application would post 
+Any fields in the body of the request will override previous webhook values. For example, to turn off a webhook, your application would post
 
 ```
 {
@@ -88,7 +88,7 @@ Any fields in the body of the request will override previous webhook values. For
 
 # Listing all webhooks
 
-    GET https://api.inboxapp.com/n/<account_id>/webhooks
+    GET https://api.inboxapp.com/n/<namespace_id>/webhooks
 
 **Response:**
 ```

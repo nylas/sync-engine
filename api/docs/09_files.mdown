@@ -1,8 +1,8 @@
 Title: Files
 
-# Fetch a specific file from the given namespace 
+# Fetch a specific file from the given namespace
 
-    GET https://api.inboxapp.com/n/files/<file_id>
+    GET https://api.inboxapp.com/n/<namespace_id>/files/<file_id>
 
 **Response:**
 
@@ -48,11 +48,11 @@ This API is used to transfer files to Inbox in order to add them to a draft mess
     Accept-Encoding: gzip, deflate
     Content-Type: multipart/form-data; boundary=---------------------------41184676334
     Content-Length: 29278
-    
+
     -----------------------------41184676334
     Content-Disposition: form-data; name="file"; filename="GrandCanyon.jpg"
     Content-Type: image/jpeg
-    
+
     <<<Binary data here>>>
 
 A successful upload will return a file object. This object's ID should be added to subsequent [draft updates](#drafts) to attach the file to a draft before sending..
