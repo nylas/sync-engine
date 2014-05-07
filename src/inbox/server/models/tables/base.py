@@ -1050,8 +1050,8 @@ class Lens(Base, HasPublicID):
             return flatten_field(message['bcc_addr'])
 
         def get_emails(message):
-            return itertools.chain(func(message) for func in
-                                   (get_to, get_from, get_cc, get_bcc))
+            return itertools.chain.from_iterable(
+                func(message) for func in (get_to, get_from, get_cc, get_bcc))
 
         def get_filenames(message):
             return (block['filename'] for block in message['blocks']

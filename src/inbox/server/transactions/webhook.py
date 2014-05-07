@@ -30,7 +30,6 @@ cannot also reasonably guarantee exactly-once delivery, and so clients that
 require exactly-once semantics must deduplicate received data themselves.
 """
 
-import calendar
 import copy
 from collections import defaultdict
 import itertools
@@ -46,7 +45,7 @@ from sqlalchemy import asc
 from inbox.server.log import get_logger, log_uncaught_errors
 from inbox.server.models import session_scope
 from inbox.server.models.kellogs import cereal
-from inbox.server.models.tables.base import Transaction, Webhook
+from inbox.server.models.tables.base import Transaction, Webhook, Lens
 
 
 class EventData(object):
@@ -62,7 +61,6 @@ class EventData(object):
             self.data = transaction.delta.copy()
             if transaction.additional_data is not None:
                 self.data.update(transaction.additional_data)
-
 
     def __cmp__(self, other):
         return cmp(self.retry_ts, other.retry_ts)
@@ -105,7 +103,7 @@ class WebhookService(gevent.Greenlet):
     """Asynchronously consumes the transaction log and executes registered
     webhooks."""
     def __init__(self, poll_interval=1, chunk_size=22, run_immediately=True):
-        self.hooks = defaultdict(set)
+        self.workers = defaultdict(set)
         self.log = get_logger(purpose='webhooks')
         self.poll_interval = poll_interval
         self.chunk_size = chunk_size
@@ -114,75 +112,130 @@ class WebhookService(gevent.Greenlet):
         if run_immediately:
             self.start()
 
-    def register_hook(self, namespace_id, parameter_dict):
+    def register_hook(self, namespace_id, parameters):
         """Register a new webhook.
 
         Parameters
         ----------
         namespace_id: int
             ID for the namespace to apply the webhook on.
-        hook_parameters: dictionary
+        parameters: dictionary
             Dictionary of the hook parameters.
         """
         with session_scope() as db_session:
-            hook = Webhook(namespace_id=namespace_id,
-                           min_processed_id=self.minimum_id,
-                           **parameter_dict)
+            lens = Lens(
+                namespace_id=namespace_id,
+                subject=parameters.get('subject'),
+                thread_public_id=parameters.get('thread'),
+                to_addr=parameters.get('to'),
+                from_addr=parameters.get('from'),
+                cc_addr=parameters.get('cc'),
+                bcc_addr=parameters.get('bcc'),
+                any_email=parameters.get('any_email'),
+                started_before=parameters.get('started_before'),
+                started_after=parameters.get('started_after'),
+                last_message_before=parameters.get('last_message_before'),
+                last_message_after=parameters.get('last_message_after'),
+                filename=parameters.get('filename'))
+
+            hook = Webhook(
+                namespace_id=namespace_id,
+                lens=lens,
+                callback_url=parameters.get('callback_url'),
+                failure_notify_url=parameters.get('failure_notify_url'),
+                include_body=parameters.get('include_body', True),
+                active=parameters.get('active', True),
+                min_processed_id=self.minimum_id)
+
             db_session.add(hook)
+            db_session.add(lens)
             db_session.commit()
-            hook = WebhookWorker(hook)
-            # TODO(emfree) handle inactive webhooks
-        self.hooks[namespace_id].add(hook)
-        if not hook.started:
-            hook.start()
+            if hook.active:
+                worker = WebhookWorker(hook)
+                self.workers[namespace_id].add(worker)
+                if not worker.started:
+                    worker.start()
+            return cereal(hook, pretty=True)
+
+    def start_hook(self, hook_public_id):
+        self.log.info('Starting hook with public id {}'.format(hook_public_id))
+        with session_scope() as db_session:
+            hook = db_session.query(Webhook). \
+                filter_by(public_id=hook_public_id).one()
+            if hook.active:
+                # Hook is already running
+                return 'OK hook already running'
+            hook.min_processed_id = self.minimum_id
+            hook.active = True
+            namespace_id = hook.namespace_id
+            worker = WebhookWorker(hook)
+            self.workers[namespace_id].add(worker)
+            if not worker.started:
+                worker.start()
+            db_session.commit()
+            return 'OK hook started'
+
+    def stop_hook(self, hook_public_id):
+        self.log.info('Stopping hook with public id {}'.format(hook_public_id))
+        with session_scope() as db_session:
+            hook = db_session.query(Webhook). \
+                filter_by(public_id=hook_public_id).one()
+            hook.active = False
+            for worker in self.workers[hook.namespace_id]:
+                if worker.public_id == hook_public_id:
+                    self.workers[hook.namespace_id].remove(worker)
+                    del worker
+                    return 'OK hook stopped'
 
     def _run(self):
-        self.log.info("Running the webhook service")
+        self.log.info('Running the webhook service')
         log_uncaught_errors(self._run_impl, self.log)()
 
     def _run_impl(self):
-        self.load_hooks()
-        for worker in itertools.chain(*self.hooks.values()):
+        self._load_hooks()
+        for worker in itertools.chain(*self.workers.values()):
             if not worker.started:
                 worker.start()
-        # Needed for workers to actually start
+        # Needed for workers to actually start.
         gevent.sleep(0)
         while True:
-            self.process_log()
+            self._process_log()
             gevent.sleep(self.poll_interval)
 
-    def process_log(self):
+    def _process_log(self):
         """Scan the transaction log `self.chunk_size` entries at a time,
         publishing matching events to registered hooks."""
         with session_scope() as db_session:
-            self.log.info("scanning tx log from id: {}".
+            self.log.info('Scanning tx log from id: {}'.
                           format(self.minimum_id))
             query = db_session.query(Transaction). \
                 filter(Transaction.table_name == 'message',
                        Transaction.id > self.minimum_id). \
                 order_by(asc(Transaction.id)).yield_per(self.chunk_size)
-            self.log.debug("Total of {0} transactions to process".format(query.count()))
+            self.log.debug('Total of {0} transactions to process'.
+                           format(query.count()))
             for transaction in query:
                 namespace_id = transaction.namespace_id
                 event_data = EventData(transaction)
-                for hook in self.hooks[namespace_id]:
-                    if hook.match(event_data):
+                for worker in self.workers[namespace_id]:
+                    if worker.match(event_data):
                         # It's important to put a separate class instance on
                         # each queue.
-                        hook.enqueue(copy.copy(event_data))
+                        worker.enqueue(copy.copy(event_data))
                 self.minimum_id = transaction.id
-            self.log.debug("processed tx. setting min id to {0}".format(self.minimum_id))
+            self.log.debug('Processed tx. setting min id to {0}'.
+                           format(self.minimum_id))
 
-    def load_hooks(self):
+    def _load_hooks(self):
         """Load stored hook parameters from the database. Run once on
         startup."""
         with session_scope() as db_session:
-            all_hooks = db_session.query(Webhook).all()
-            for hook_params in all_hooks:
-                namespace_id = hook_params.namespace_id
-                self.hooks[namespace_id].add(WebhookWorker(hook_params))
+            all_hooks = db_session.query(Webhook).filter_by(active=True).all()
+            for hook in all_hooks:
+                namespace_id = hook.namespace_id
+                self.workers[namespace_id].add(WebhookWorker(hook))
             if all_hooks:
-                self.minimum_id = min(params.min_processed_id for params in
+                self.minimum_id = min(hook.min_processed_id for hook in
                                       all_hooks)
 
 
@@ -198,7 +251,12 @@ class WebhookWorker(gevent.Greenlet):
         self.max_retries = hook.max_retries
         self.retry_interval = hook.retry_interval
 
-        self.suspended = False
+        # 'frozen' means that the worker has accumulated too large of a failure
+        # backlog, and that we aren't enqueueing new events.
+        # This is not to be confused with the 'Webhook.active' attribute: an
+        # inactive webhook is one that has been manually suspended, and has no
+        # associated worker.
+        self.frozen = False
 
         self.retry_queue = gevent.queue.Queue(max_queue_size)
         self.queue = gevent.queue.Queue(max_queue_size)
@@ -226,10 +284,10 @@ class WebhookWorker(gevent.Greenlet):
                 event = self.retry_queue.get()
                 result = self.execute(event)
                 if result:
-                    self.suspended = False
+                    self.frozen = False
 
     def enqueue(self, data):
-        if not self.suspended:
+        if not self.frozen:
             self.queue.put(data)
 
     def execute(self, event):
@@ -244,6 +302,12 @@ class WebhookWorker(gevent.Greenlet):
         assert urlparse.urlparse(self.callback_url).scheme == 'https', \
             'callback_url MUST be https!'
         # OMG WTF TODO (emfree): Do NOT set verify=False in prod!
+
+        if event.id < self.min_processed_id:
+            # We've already successfully processed this event. This can happen
+            # if the service is restarted -- it will consume the log starting
+            # at the minimum across all min_processed_id values.
+            return True
         try:
             r = requests.post(
                 self.callback_url,
@@ -276,16 +340,16 @@ class WebhookWorker(gevent.Greenlet):
             try:
                 self.retry_queue.put_nowait(event)
             except gevent.queue.Full:
-                self.suspended = True
+                self.frozen = True
         return False
 
     def match(self, event):
         if event.data is None:
-            return
+            return False
         try:
             return self.lens.match(event.data)
         except KeyError:
-            self.log.error("Could not filter data for transaction {}".
+            self.log.error('Could not filter data for transaction {}'.
                            format(event.id))
 
     def set_min_processed_id(self, new_id):

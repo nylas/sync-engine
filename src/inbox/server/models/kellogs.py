@@ -6,7 +6,7 @@ from flask import Response
 
 from inbox.server.models.tables.base import (
     Message, SharedFolder, User, Account, Part,
-    Contact, Thread, Namespace, Block, Webhook)
+    Contact, Thread, Namespace, Block, Webhook, Lens)
 
 
 def format_address_list(addresses):
@@ -112,7 +112,10 @@ class APIEncoder(JSONEncoder):
             raise NotImplementedError
 
         elif isinstance(obj, Webhook):
-            return {
+            resp = self.default(obj.lens)
+            # resp is deliberately created in this order so that the 'id' and
+            # 'object' values of the webhook and not the lens are returned.
+            resp.update({
                 'id': obj.public_id,
                 'object': 'webhook',
                 'namespace': obj.namespace.public_id,
@@ -122,14 +125,22 @@ class APIEncoder(JSONEncoder):
 
                 'include_body': obj.include_body,
                 'active': obj.active,
+            })
+            return resp
 
-                'to_addr': obj.to_addr,
-                'from_addr': obj.from_addr,
-                'cc_addr': obj.cc_addr,
-                'bcc_addr': obj.bcc_addr,
-                'email_address': obj.email,
+        elif isinstance(obj, Lens):
+            return {
+                'id': obj.public_id,
+                'object': 'lens',
+                'namespace': obj.namespace.public_id,
+
+                'to': obj.to_addr,
+                'from': obj.from_addr,
+                'cc': obj.cc_addr,
+                'bcc': obj.bcc_addr,
+                'any_email': obj.any_email,
                 'subject': obj.subject,
-                'thread': obj.thread,
+                'thread': obj.thread_public_id,
                 'filename': obj.filename,
                 'started_before': obj.started_before,
                 'started_after': obj.started_after,

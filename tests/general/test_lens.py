@@ -79,9 +79,9 @@ def test_lens_db_filter(db):
     assert filter.message_query(db.session).count() == 1
 
     filter = Lens(namespace_id=NAMESPACE_ID,
-                  to_addr=to_addr)
-    assert filter.thread_query(db.session, limit=3).count() == 1
-    assert filter.message_query(db.session).count() == 1
+                  to_addr='inboxapptest@gmail.com')
+    assert filter.thread_query(db.session, limit=3).count() == 3
+    assert filter.message_query(db.session, limit=3).count() == 3
 
 
 @pytest.fixture
@@ -191,6 +191,9 @@ def test_lens_tx(message_data):
 
     filter = Lens(subject='/Calaveras/', any_email='Nobody')
     assert not filter.match(message_data)
+
+    filter = Lens(subject='/Calaveras/', any_email='/freemaneben/')
+    assert filter.match(message_data)
 
     thread_public_id = '2fk859tx6jarr8uxgg84fbw0z'
 
