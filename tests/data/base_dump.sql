@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.35, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.34, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.5.35-0ubuntu0.12.04.2-log
+-- Server version	5.5.34-0ubuntu0.12.04.1-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -86,7 +86,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('2c313b6ddd9b');
+INSERT INTO `alembic_version` VALUES ('4e04f752b7ad');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -407,8 +407,8 @@ DROP TABLE IF EXISTS `imapuid`;
 CREATE TABLE `imapuid` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `imapaccount_id` int(11) NOT NULL,
-  `message_id` int(11) DEFAULT NULL,
-  `msg_uid` bigint(20) DEFAULT NULL,
+  `message_id` int(11) NOT NULL,
+  `msg_uid` bigint(20) NOT NULL,
   `folder_name` varchar(191) DEFAULT NULL,
   `is_draft` tinyint(1) NOT NULL DEFAULT '0',
   `is_seen` tinyint(1) NOT NULL DEFAULT '0',
@@ -431,7 +431,7 @@ CREATE TABLE `imapuid` (
 
 LOCK TABLES `imapuid` WRITE;
 /*!40000 ALTER TABLE `imapuid` DISABLE KEYS */;
-INSERT INTO `imapuid` VALUES (1,1,NULL,26,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(2,1,1,380,'INBOX',0,0,0,0,0,'[]'),(3,1,NULL,387,'[Gmail]/All Mail',0,1,0,0,0,'[]'),(4,1,2,943,'INBOX',0,1,0,0,0,'[]'),(5,1,NULL,1,'[Gmail]/All Mail',0,1,0,0,0,'[]'),(6,1,3,934,'INBOX',0,1,0,0,0,'[]'),(7,1,NULL,16,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(8,1,4,555,'INBOX',0,0,0,0,0,'[]'),(9,1,NULL,27,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(10,1,5,554,'INBOX',0,0,0,0,0,'[]'),(11,1,NULL,34,'[Gmail]/All Mail',0,1,0,0,0,'[]'),(12,1,6,406,'INBOX',0,1,0,0,0,'[]'),(13,1,NULL,28,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(14,1,7,385,'INBOX',0,0,0,0,0,'[]'),(15,1,NULL,33,'[Gmail]/All Mail',0,1,0,0,0,'[]'),(16,1,8,378,'INBOX',0,1,0,0,0,'[]'),(17,1,NULL,36,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(18,1,9,377,'INBOX',0,0,0,0,0,'[]'),(19,1,NULL,4,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(20,1,10,375,'INBOX',0,0,0,0,0,'[]'),(21,1,11,341,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(22,1,12,339,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(23,1,13,338,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(24,1,14,320,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(25,1,15,316,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(26,1,16,184,'[Gmail]/All Mail',0,1,0,0,0,'[]');
+INSERT INTO `imapuid` VALUES (2,1,1,380,'INBOX',0,0,0,0,0,'[]'),(4,1,2,943,'INBOX',0,1,0,0,0,'[]'),(6,1,3,934,'INBOX',0,1,0,0,0,'[]'),(8,1,4,555,'INBOX',0,0,0,0,0,'[]'),(10,1,5,554,'INBOX',0,0,0,0,0,'[]'),(12,1,6,406,'INBOX',0,1,0,0,0,'[]'),(14,1,7,385,'INBOX',0,0,0,0,0,'[]'),(16,1,8,378,'INBOX',0,1,0,0,0,'[]'),(18,1,9,377,'INBOX',0,0,0,0,0,'[]'),(20,1,10,375,'INBOX',0,0,0,0,0,'[]'),(21,1,11,341,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(22,1,12,339,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(23,1,13,338,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(24,1,14,320,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(25,1,15,316,'[Gmail]/All Mail',0,0,0,0,0,'[]'),(26,1,16,184,'[Gmail]/All Mail',0,1,0,0,0,'[]');
 /*!40000 ALTER TABLE `imapuid` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -927,4 +927,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-05-04 10:31:26
+-- Dump completed on 2014-05-08 21:38:01
