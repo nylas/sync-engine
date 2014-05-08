@@ -615,9 +615,6 @@ def remove_deleted_uids(account_id, db_session, log, folder_name,
 
     to_delete = set(local_uids) - set(remote_uids)
     if to_delete:
-        # We need to grab the lock for this because deleting ImapUids may
-        # cascade to Messages and FolderItems and Threads. No one else messes
-        # with ImapUids, but the exposed datastore elements are another story.
         with syncmanager_lock:
             account.remove_messages(account_id, db_session, to_delete,
                                     folder_name)

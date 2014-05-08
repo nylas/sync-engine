@@ -1,7 +1,7 @@
 from sqlalchemy import (Column, Integer, BigInteger, String, Boolean, Enum,
                         ForeignKey, Index)
 from sqlalchemy.schema import UniqueConstraint
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.sql.expression import false
 
@@ -48,20 +48,10 @@ class ImapUid(Base):
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
                             nullable=False)
     imapaccount = relationship("ImapAccount")
-    # If we delete this uid, we also want the associated message to be deleted.
-    # Buf if we delete the message, we _don't_ always want to delete the
-    # associated uid, we want to be explicit about that (this makes the
-    # local data/remote data synchronization work properly). this is why we
-    # do not specify the "delete-orphan" cascade option here.
-    message_id = Column(Integer, ForeignKey('message.id'), nullable=True)
-    message = relationship('Message', cascade="all",
-                           backref=backref('imapuid', uselist=False))
-    # nullable to allow the local data store to delete messages without
-    # deleting the associated uid; we want to leave the uid entry there until
-    # we notice the same delete from the backend, which helps our accounting
-    # of what is going on. otherwise, it wouldn't make sense to allow these
-    # entries to decouple.
-    msg_uid = Column(BigInteger, nullable=True)
+
+    message_id = Column(Integer, ForeignKey('message.id'), nullable=False)
+    message = relationship('Message', backref='imapuids')
+    msg_uid = Column(BigInteger, nullable=False)
 
     # maximum Gmail label length is 225 (tested empirically), but constraining
     # folder_name uniquely requires max length of 767 bytes under utf8mb4

@@ -426,8 +426,13 @@ def deduplicate_message_download(crispin_client, db_session, log,
     if imapuid_only:
         log.info("Skipping {0} uids already downloaded"
                  .format(len(imapuid_only)))
-        add_new_imapuids(crispin_client, db_session, syncmanager_lock,
-                         remote_g_metadata, imapuid_only)
+        # Since we always download messages via All Mail and create the
+        # relevant All Mail ImapUids too at that time, we don't need to create
+        # them again here if we're deduping All Mail downloads.
+        if crispin_client.selected_folder_name != \
+                crispin_client.folder_names()['all']:
+            add_new_imapuids(crispin_client, db_session, syncmanager_lock,
+                             remote_g_metadata, imapuid_only)
 
     return full_download
 
