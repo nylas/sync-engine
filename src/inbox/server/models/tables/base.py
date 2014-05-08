@@ -14,6 +14,7 @@ from sqlalchemy import (Column, Integer, BigInteger, String, DateTime, Boolean,
 from sqlalchemy.orm import (reconstructor, relationship, backref, deferred,
                             validates, object_session)
 from sqlalchemy.orm.collections import attribute_mapped_collection
+from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.types import BLOB
 from sqlalchemy.sql.expression import true, false
@@ -77,14 +78,37 @@ class Account(Base, HasPublicID):
     sync_host = Column(String(255), nullable=True)
     last_synced_contacts = Column(DateTime, nullable=True)
 
-    # 'Required' folder name mappings for the Inbox datastore API
-    inbox_folder_name = Column(String(255), nullable=True)
-    drafts_folder_name = Column(String(255), nullable=True)
-    # NOTE: Spam, Trash might be added later
+    # Folder mappings for the data we sync back to the account backend.  All
+    # account backends will not provide all of these. This may mean that Inbox
+    # creates some folders on the remote backend, for example to provide
+    # "archive" functionality on non-Gmail remotes.
+    inbox_folder_id = Column(Integer, ForeignKey('folder.id'), nullable=True)
+    inbox_folder = relationship('Folder', post_update=True,
+                                foreign_keys='Account.inbox_folder_id')
+    sent_folder_id = Column(Integer, ForeignKey('folder.id'), nullable=True)
+    sent_folder = relationship('Folder', post_update=True,
+                               foreign_keys='Account.sent_folder_id')
 
-    # Optional folder name mappings
-    archive_folder_name = Column(String(255), nullable=True)
-    sent_folder_name = Column(String(255), nullable=True)
+    drafts_folder_id = Column(Integer, ForeignKey('folder.id'), nullable=True)
+    drafts_folder = relationship('Folder', post_update=True,
+                                 foreign_keys='Account.drafts_folder_id')
+    spam_folder_id = Column(Integer, ForeignKey('folder.id'), nullable=True)
+    spam_folder = relationship('Folder', post_update=True,
+                               foreign_keys='Account.spam_folder_id')
+    trash_folder_id = Column(Integer, ForeignKey('folder.id'), nullable=True)
+    trash_folder = relationship('Folder', post_update=True,
+                                foreign_keys='Account.trash_folder_id')
+    archive_folder_id = Column(Integer, ForeignKey('folder.id'),
+                               nullable=True)
+    archive_folder = relationship('Folder', post_update=True,
+                                  foreign_keys='Account.archive_folder_id')
+    all_folder_id = Column(Integer, ForeignKey('folder.id'), nullable=True)
+    all_folder = relationship('Folder', post_update=True,
+                              foreign_keys='Account.all_folder_id')
+    starred_folder_id = Column(Integer, ForeignKey('folder.id'),
+                               nullable=True)
+    starred_folder = relationship('Folder', post_update=True,
+                                  foreign_keys='Account.starred_folder_id')
 
     @property
     def sync_active(self):
@@ -189,7 +213,7 @@ class UserSession(Base, HasPublicID):
 
 class Namespace(Base, HasPublicID):
     """ A way to do grouping / permissions, basically. """
-    # NOTE: only root namespaces have IMAP accounts
+    # NOTE: only root namespaces have account backends
     account_id = Column(Integer,
                         ForeignKey('account.id', ondelete='CASCADE'),
                         nullable=True)
@@ -604,7 +628,7 @@ class Message(Base, HasRevisions, HasPublicID):
 
     @property
     def folders(self):
-        return [folder.folder_name for folder in self.thread.folders]
+        return {item.folder.name for item in self.thread.folderitems}
 
     # The return value of this method will be stored in the transaction log's
     # `additional_data` column.
@@ -744,25 +768,6 @@ class Part(Block):
         return self.message.namespace
 
 
-class FolderItem(Base, HasRevisions):
-    """ Maps threads to folders.
-
-    Threads in this table are the _Inbox_ datastore abstraction, which may
-    be different from folder names in the actual account backends.
-    """
-    thread_id = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
-                       nullable=False)
-    # thread relationship is on Thread to make delete-orphan cascade work
-
-    folder_name = Column(String(191), index=True)
-
-    @property
-    def namespace(self):
-        return self.thread.namespace
-
-    __table_args__ = (UniqueConstraint('folder_name', 'thread_id'),)
-
-
 class Thread(Base, HasPublicID):
     """ Threads are a first-class object in Inbox. This thread aggregates
         the relevant thread metadata from elsewhere so that clients can only
@@ -777,9 +782,9 @@ class Thread(Base, HasPublicID):
     subjectdate = Column(DateTime, nullable=False)
     recentdate = Column(DateTime, nullable=False)
 
-    folders = relationship('FolderItem', backref="thread", single_parent=True,
-                           order_by="FolderItem.folder_name",
-                           cascade='all, delete, delete-orphan')
+    folderitems = relationship('FolderItem', backref="thread",
+                               single_parent=True,
+                               cascade='all, delete, delete-orphan')
 
     namespace_id = Column(ForeignKey('namespace.id', ondelete='CASCADE'),
                           nullable=False, index=True)
@@ -1227,3 +1232,105 @@ class Lens(Base, HasPublicID):
                         datetime.utcfromtimestamp(self.last_message_after))
 
         return self.db_session.query(Thread).filter(pred)
+
+
+class Folder(Base, HasRevisions):
+    """ Folders from the remote account backend (IMAP/Exchange). """
+    # `use_alter` required here to avoid circular dependency w/Account
+    account_id = Column(Integer,
+                        ForeignKey('account.id', use_alter=True,
+                                   name='folder_fk1',
+                                   ondelete='CASCADE'), nullable=False)
+    account = relationship('Account', foreign_keys='Folder.account_id',
+                           backref='folders')
+    # Explicitly set collation to be case insensitive. This is mysql's default,
+    # but never trust defaults! This allows us to store the original casing to
+    # not confuse users when displaying it, but still only allow a single
+    # folder with any specific name, canonicalized to lowercase.
+    name = Column(String(191, collation='utf8mb4_general_ci'))
+
+    @property
+    def namespace(self):
+        return self.account.namespace
+
+    @classmethod
+    def find_or_create(cls, session, account, name):
+        try:
+            obj = session.query(cls).filter(
+                Folder.account == account,
+                func.lower(Folder.name) == func.lower(name)).one()
+        except NoResultFound:
+            obj = cls(account=account, name=name)
+        except MultipleResultsFound:
+            log.info("Duplicate folder rows for folder {} for account {}"
+                     .format(name, account.id))
+            raise
+        return obj
+
+    __table_args__ = (UniqueConstraint('account_id', 'name'),)
+
+
+class FolderItem(Base, HasRevisions):
+    """ Mapping of threads to account backend folders.
+
+    Used to provide a read-only copy of these backend folders/labels and,
+    (potentially), to sync local datastore changes to these folders back to
+    the IMAP/Exchange server.
+
+    Note that a thread may appear in more than one folder, as may be the case
+    with Gmail labels.
+    """
+    thread_id = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
+                       nullable=False)
+    # thread relationship is on Thread to make delete-orphan cascade work
+
+    # Might be different from what we've synced from IMAP. (Local datastore
+    # changes.)
+    folder_id = Column(Integer, ForeignKey('folder.id', ondelete='CASCADE'),
+                       nullable=False)
+    # We almost always need the folder name too, so eager load by default.
+    folder = relationship('Folder', backref='threads', lazy='joined')
+
+    @classmethod
+    def create(cls, session, thread, folder_name):
+        folder = Folder.find_or_create(session, thread.namespace.account,
+                                       folder_name)
+        return cls(thread=thread, folder=folder)
+
+    @property
+    def account(self):
+        return self.folder.account
+
+    @property
+    def namespace(self):
+        return self.thread.namespace
+
+
+class InternalTag(Base, HasRevisions, HasPublicID):
+    """ User-created Inbox tags.
+
+    These tags are *not* replicated back to the remote backend.
+    """
+    SYSTEM_NAMES = {'inbox', 'all', 'archive', 'drafts', 'send', 'sending',
+                    'sent', 'spam', 'starred', 'unstarred', 'read', 'replied',
+                    'trash', 'file', 'attachment'}
+
+    # TODO: take a user_id instead, and include *all* accounts belonging to it
+    @classmethod
+    def name_allowed(cls, session, account_id, tag_name):
+        user_folders = {n for n, in session.query(Folder.name).filter_by(
+            account_id=account_id)}
+        return tag_name not in \
+            cls.SYSTEM_NAMES | user_folders
+
+    namespace = relationship('Namespace', backref='tags')
+    namespace_id = Column(Integer, ForeignKey(
+        'namespace.id', ondelete='CASCADE'), nullable=False)
+
+    name = Column(String(191), nullable=False)
+
+    thread_id = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
+                       nullable=False)
+    thread = relationship('Thread', backref='tags')
+
+    __table_args__ = (UniqueConstraint('namespace_id', 'name'),)

@@ -32,7 +32,7 @@ from inbox.util.cache import set_cache, get_cache, rm_cache
 
 from inbox.server.crispin import GMetadata, connection_pool, retry_crispin
 from inbox.server.models import session_scope
-from inbox.server.models.tables.base import Namespace, Message
+from inbox.server.models.tables.base import Namespace, Message, Folder
 from inbox.server.models.tables.imap import ImapAccount, ImapUid
 from inbox.server.mailsync.backends.base import (create_db_objects,
                                                  commit_uids, new_or_updated)
@@ -455,7 +455,8 @@ def add_new_imapuid(db_session, gmessage, folder_name, acc):
         message = db_session.query(Message).filter_by(
             g_msgid=gmessage.g_metadata.msgid).one()
         new_imapuid = ImapUid(
-            imapaccount=acc, folder_name=folder_name,
+            imapaccount=acc,
+            folder=Folder.find_or_create(db_session, acc, folder_name),
             msg_uid=gmessage.uid, message=message)
         new_imapuid.update_imap_flags(gmessage.flags, gmessage.labels)
         db_session.add(new_imapuid)
@@ -496,7 +497,8 @@ def add_new_imapuids(crispin_client, db_session, remote_g_metadata,
                 id=crispin_client.account_id).one()
             new_imapuids = [ImapUid(
                 imapaccount=acc,
-                folder_name=crispin_client.selected_folder_name,
+                folder=Folder.find_or_create(
+                    db_session, acc, crispin_client.selected_folder_name),
                 msg_uid=uid, message=message_for[uid]) for uid in uids]
             for item in new_imapuids:
                 item.update_imap_flags(flags[item.msg_uid].flags,

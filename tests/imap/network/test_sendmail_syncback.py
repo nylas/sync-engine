@@ -53,13 +53,13 @@ def test_send_syncback(db, config, message):
         # in both the Inbox and Sent folders:
         criteria = ['NOT DELETED', 'SUBJECT "{0}"'.format(subject)]
 
-        c.select_folder(account.inbox_folder_name, lambda x, y: None)
+        c.select_folder(account.inbox_folder.name, lambda x, y: None)
         inbox_uids = c.conn.search(criteria)
         assert inbox_uids, 'Message missing from Inbox'
 
         #c.delete_messages(inbox_uids)
 
-        c.select_folder(account.sent_folder_name, lambda x, y: None)
+        c.select_folder(account.sent_folder.name, lambda x, y: None)
         sent_uids = c.conn.search(criteria)
         assert sent_uids, 'Message missing from Sent'
 
@@ -84,14 +84,14 @@ def test_reply_syncback(db, config, message, sync_client):
         # in both the Inbox and Sent folders:
         criteria = ['NOT DELETED', 'SUBJECT "{0}"'.format(THREAD_TOPIC)]
 
-        c.select_folder(account.inbox_folder_name, lambda x, y: None)
+        c.select_folder(account.inbox_folder.name, lambda x, y: None)
         inbox_uids = c.conn.search(criteria)
         assert inbox_uids > 1, 'Reply missing from Inbox'
 
         # TODO[k]: Don't delete original
         #c.delete_messages(inbox_uids)
 
-        c.select_folder(account.sent_folder_name, lambda x, y: None)
+        c.select_folder(account.sent_folder.name, lambda x, y: None)
         sent_uids = c.conn.search(criteria)
         assert sent_uids, 'Message missing from Sent'
 

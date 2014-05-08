@@ -14,48 +14,54 @@ THREAD_ID = 2
 
 
 def test_archive_move_syncback(db, config):
-    from inbox.server.actions.gmail import archive, move, uidvalidity_cb
+    from inbox.server.actions.gmail import (remote_archive, remote_move,
+                                            uidvalidity_cb)
     from inbox.server.models.tables.imap import ImapAccount, ImapThread
 
-    archive(ACCOUNT_ID, THREAD_ID)
+    remote_archive(ACCOUNT_ID, THREAD_ID)
 
     g_thrid = db.session.query(ImapThread.g_thrid).filter_by(
         id=THREAD_ID, namespace_id=NAMESPACE_ID).one()[0]
     account = db.session.query(ImapAccount).get(ACCOUNT_ID)
+    assert account.inbox_folder_id and account.all_folder_id, \
+        "`inbox_folder_id` and `all_folder_id` cannot be NULL"
     with crispin_client(account.id, account.provider) as client:
-        client.select_folder(account.inbox_folder_name, uidvalidity_cb)
+        client.select_folder(account.inbox_folder.name, uidvalidity_cb)
         inbox_uids = client.find_messages(g_thrid)
         assert not inbox_uids, "thread still present in inbox"
-        client.select_folder(account.archive_folder_name, uidvalidity_cb)
+        client.select_folder(account.all_folder.name, uidvalidity_cb)
         archive_uids = client.find_messages(g_thrid)
         assert archive_uids, "thread missing from archive"
 
         # and put things back the way they were :)
-        move(ACCOUNT_ID, THREAD_ID, 'archive', 'inbox')
-        client.select_folder(account.inbox_folder_name, uidvalidity_cb)
+        remote_move(ACCOUNT_ID, THREAD_ID, account.all_folder.name,
+                    account.inbox_folder.name)
+        client.select_folder(account.inbox_folder.name, uidvalidity_cb)
         inbox_uids = client.find_messages(g_thrid)
         assert inbox_uids, "thread missing from inbox"
-        client.select_folder(account.archive_folder_name, uidvalidity_cb)
+        client.select_folder(account.all_folder.name, uidvalidity_cb)
         archive_uids = client.find_messages(g_thrid)
         assert archive_uids, "thread missing from archive"
 
 
 def test_copy_delete_syncback(db, config):
-    from inbox.server.actions.gmail import copy, delete, uidvalidity_cb
+    from inbox.server.actions.gmail import (remote_copy, remote_delete,
+                                            uidvalidity_cb)
     from inbox.server.models.tables.base import Namespace
     from inbox.server.models.tables.imap import ImapAccount, ImapThread
-
-    copy(ACCOUNT_ID, THREAD_ID, 'inbox', 'testlabel')
 
     g_thrid = db.session.query(ImapThread.g_thrid).filter_by(
         id=THREAD_ID, namespace_id=NAMESPACE_ID).one()[0]
     account = db.session.query(ImapAccount).join(Namespace) \
         .filter_by(id=ACCOUNT_ID).one()
+
+    remote_copy(ACCOUNT_ID, THREAD_ID, account.inbox_folder.name, 'testlabel')
+
     with crispin_client(account.id, account.provider) as client:
-        client.select_folder(account.inbox_folder_name, uidvalidity_cb)
+        client.select_folder(account.inbox_folder.name, uidvalidity_cb)
         inbox_uids = client.find_messages(g_thrid)
         assert inbox_uids, "thread missing from inbox"
-        client.select_folder(account.archive_folder_name, uidvalidity_cb)
+        client.select_folder(account.all_folder.name, uidvalidity_cb)
         archive_uids = client.find_messages(g_thrid)
         assert archive_uids, "thread missing from archive"
         client.select_folder('testlabel', uidvalidity_cb)
@@ -63,11 +69,11 @@ def test_copy_delete_syncback(db, config):
         assert testlabel_uids, "thread missing from testlabel"
 
         # and put things back the way they were :)
-        delete(ACCOUNT_ID, THREAD_ID, 'testlabel')
-        client.select_folder(account.inbox_folder_name, uidvalidity_cb)
+        remote_delete(ACCOUNT_ID, THREAD_ID, 'testlabel')
+        client.select_folder(account.inbox_folder.name, uidvalidity_cb)
         inbox_uids = client.find_messages(g_thrid)
         assert inbox_uids, "thread missing from inbox"
-        client.select_folder(account.archive_folder_name, uidvalidity_cb)
+        client.select_folder(account.all_folder.name, uidvalidity_cb)
         archive_uids = client.find_messages(g_thrid)
         assert archive_uids, "thread missing from archive"
         client.select_folder('testlabel', uidvalidity_cb)
@@ -79,18 +85,28 @@ def test_copy_delete_syncback(db, config):
 # Higher-level tests.
 
 
-def test_queue_running(db, api_client):
+def test_queue_running(db):
     """ Just the very minimal basics for now: makes sure that the methods run
         without raising an exception. You can use rq-dashboard and a Gmail
         browser window to look in more depth. We'll want to add some
         automatic verification of the behaviour here eventually (see the
         previous tests), but for now I'm leaving it lean and fast.
     """
-    from inbox.server.actions.base import rqworker, register_backends
+    from inbox.server.actions.base import (archive, move, copy, delete,
+                                           rqworker, register_backends)
+    from inbox.server.models.tables.base import Namespace
+    from inbox.server.models.tables.imap import ImapAccount
+    from inbox.server.models import session_scope
     register_backends()
-    # "Tips for using Gmail" thread (avoiding all the "Postel lives!" ones)
-    api_client.archive(USER_ID, NAMESPACE_ID, 8)
-    api_client.move(USER_ID, NAMESPACE_ID, 8, 'archive', 'inbox')
+
+    account = db.session.query(ImapAccount).join(Namespace) \
+        .filter_by(id=ACCOUNT_ID).one()
+
+    with session_scope() as db_session:
+        # "Tips for using Gmail" thread (avoiding all the "Postel lives!" ones)
+        archive(db_session, ACCOUNT_ID, 8)
+        move(db_session, ACCOUNT_ID, 8, account.all_folder.name,
+             account.inbox_folder.name)
     # process actions queue
     rqworker(burst=True)
 

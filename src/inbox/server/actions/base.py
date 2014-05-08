@@ -27,6 +27,7 @@ from rq import Queue, Connection
 
 from inbox.util.misc import load_modules
 from inbox.server.util.concurrency import GeventWorker
+from inbox.server.models.tables.base import Account, Namespace
 from inbox.server.config import config
 import inbox.server.actions
 
@@ -59,20 +60,81 @@ def get_queue():
     return Queue(label, connection=Redis())
 
 
-def get_archive_fn(account):
-    return ACTION_MOD_FOR[account.provider].archive
+def archive(db_session, account_id, thread_id):
+    """ Archive thread locally and also sync back to the backend. """
+
+    account = db_session.query(Account).join(Namespace).filter(
+        Account.id == account_id).one()
+
+    # make local change
+    local_archive = ACTION_MOD_FOR[account.provider].local_archive
+    local_archive(db_session, account, thread_id)
+
+    # sync it to the account backend
+    q = get_queue()
+    remote_archive = ACTION_MOD_FOR[account.provider].remote_archive
+    q.enqueue(remote_archive, account.id, thread_id)
 
 
-def get_move_fn(account):
-    return ACTION_MOD_FOR[account.provider].move
+def move(db_session, account_id, thread_id, from_folder, to_folder):
+    """ Move thread locally and also sync back to the backend. """
+
+    account = db_session.query(Account).join(Namespace).filter(
+        Account.id == account_id).one()
+
+    # make local change
+    local_move = ACTION_MOD_FOR[account.provider].local_move
+    local_move(db_session, account, thread_id, from_folder, to_folder)
+
+    # sync it to the account backend
+    q = get_queue()
+    remote_move = ACTION_MOD_FOR[account.provider].remote_move
+    q.enqueue(remote_move, account.id, thread_id, from_folder, to_folder)
+
+    # XXX TODO register a failure handler that reverses the local state
+    # change if the change fails to go through?
 
 
-def get_copy_fn(account):
-    return ACTION_MOD_FOR[account.provider].copy
+def copy(db_session, account_id, thread_id, from_folder, to_folder):
+    """ Copy thread locally and also sync back to the backend. """
+
+    account = db_session.query(Account).join(Namespace).filter(
+        Account.id == account_id).one()
+
+    # make local change
+    local_copy = ACTION_MOD_FOR[account.provider].local_copy
+    # make local change
+    local_copy(db_session, account, thread_id, from_folder, to_folder)
+
+    # sync it to the account backend
+    q = get_queue()
+    remote_copy = ACTION_MOD_FOR[account.provider].remote_copy
+    q.enqueue(remote_copy, account.id, thread_id, from_folder, to_folder)
+
+    # XXX TODO register a failure handler that reverses the local state
+    # change if the change fails to go through?
 
 
-def get_delete_fn(account):
-    return ACTION_MOD_FOR[account.provider].delete
+def delete(db_session, account_id, thread_id, folder_name):
+    """ Delete thread locally and also sync back to the backend.
+
+    This really just removes the entry from the folder. Message data that
+    no longer belongs to any messages is garbage-collected asynchronously.
+    """
+    account = db_session.query(Account).join(Namespace).filter(
+        Account.id == account_id).one()
+
+    # make local change
+    local_delete = ACTION_MOD_FOR[account.provider].local_delete
+    local_delete(db_session, account, thread_id, folder_name)
+
+    # sync it to the account backend
+    q = get_queue()
+    remote_delete = ACTION_MOD_FOR[account.provider].remote_delete
+    q.enqueue(remote_delete, account.id, thread_id, folder_name)
+
+    # XXX TODO register a failure handler that reverses the local state
+    # change if the change fails to go through?
 
 
 # Later we're going to want to consider a pooling mechanism. We may want to

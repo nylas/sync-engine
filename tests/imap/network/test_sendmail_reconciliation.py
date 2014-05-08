@@ -140,10 +140,10 @@ def _delete_emails(db, account_id, subject):
         # in both the Inbox and Sent folders:
         criteria = ['NOT DELETED', 'SUBJECT "{0}"'.format(subject)]
 
-        c.select_folder(account.inbox_folder_name, None)
+        c.select_folder(account.inbox_folder.name, None)
         inbox_uids = c.search(criteria)
         c.delete_messages(inbox_uids)
 
-        c.select_folder(account.sent_folder_name, None)
+        c.select_folder(account.sent_folder.name, None)
         sent_uids = c.search(criteria)
         c.delete_messages(sent_uids)

@@ -133,9 +133,8 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                 sync_folders = crispin_client.sync_folders()
                 imapaccount = db_session.query(ImapAccount)\
                     .get(self.account_id)
-                folder_names = crispin_client.folder_names()
-                save_folder_names(self.log, imapaccount, folder_names,
-                                  db_session)
+                save_folder_names(self.log, imapaccount,
+                                  crispin_client.folder_names(), db_session)
         for folder in sync_folders:
             if saved_states.get(folder) != 'finish':
                 self.log.info("Initializing folder sync for {0}"

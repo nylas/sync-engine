@@ -1,10 +1,10 @@
 import pytest
 
-from tests.util.api import api_client
 from tests.util.base import action_queue
 
-USER_ID = 1
-NAMESPACE_ID = 1
+# Note that we're only testing GMAIL local actions right now, this account
+# MUST be a Gmail account.
+ACCOUNT_ID = 1
 
 
 class TestLocalClientActions(object):
@@ -19,81 +19,96 @@ class TestLocalClientActions(object):
         from inbox.server.actions.base import register_backends
         register_backends()
 
-    def test_local_archive(self, db, api_client, action_queue):
-        from inbox.server.models.tables.base import FolderItem
+    def test_local_archive(self, db, action_queue):
+        from inbox.server.models.tables.base import Account, FolderItem
+        from inbox.server.actions.base import archive
 
-        result = api_client.archive(USER_ID, NAMESPACE_ID, 1)
-        assert result == "OK", "archive API call failed"
+        account = db.session.query(Account).get(ACCOUNT_ID)
 
-        inbox_items = db.session.query(FolderItem).filter_by(
-            thread_id=1, folder_name='inbox').count()
+        archive(db.session, ACCOUNT_ID, 1)
+
+        inbox_items = db.session.query(FolderItem).filter(
+            FolderItem.thread_id == 1,
+            FolderItem.folder_id == account.inbox_folder_id).count()
         assert inbox_items == 0, "inbox entry still present"
 
-        archive_items = db.session.query(FolderItem).filter_by(
-            thread_id=1, folder_name='archive').count()
-        assert archive_items == 1, "archive entry missing"
+        archive_items = db.session.query(FolderItem).filter(
+            FolderItem.thread_id == 1,
+            FolderItem.folder_id == account.all_folder_id).count()
+        assert archive_items == 1, "all entry missing"
 
         assert action_queue.count == 1, "sync-back event not queued"
 
-    def test_local_move(self, db, api_client, action_queue):
-        from inbox.server.models.tables.base import FolderItem
+    def test_local_move(self, db, action_queue):
+        from inbox.server.models.tables.base import Account, FolderItem, Folder
+        from inbox.server.actions.base import move
 
-        result = api_client.move(USER_ID, NAMESPACE_ID, 1, 'inbox',
-                                 'testlabel')
-        assert result == "OK", "move API call failed"
+        account = db.session.query(Account).get(ACCOUNT_ID)
 
-        inbox_items = db.session.query(FolderItem).filter_by(
-            thread_id=1, folder_name='inbox').count()
+        move(db.session, ACCOUNT_ID, 1, account.inbox_folder.name, 'testlabel')
+
+        inbox_items = db.session.query(FolderItem).filter(
+            FolderItem.thread_id == 1,
+            FolderItem.folder_id == account.inbox_folder_id).count()
         assert inbox_items == 0, "inbox entry still present"
 
-        testlabel_items = db.session.query(FolderItem).filter_by(
-            thread_id=1, folder_name='testlabel').count()
+        testlabel_items = db.session.query(FolderItem).join(Folder).filter(
+            FolderItem.thread_id == 1,
+            Folder.name == 'testlabel').count()
         assert testlabel_items == 1, "testlabel entry not present"
 
         assert action_queue.count == 1, "sync-back event not queued"
 
-    def test_local_copy(self, db, api_client, action_queue):
-        from inbox.server.models.tables.base import FolderItem
+    def test_local_copy(self, db, action_queue):
+        from inbox.server.models.tables.base import Account, FolderItem, Folder
+        from inbox.server.actions.base import copy
 
-        result = api_client.copy(USER_ID, NAMESPACE_ID, 1, 'inbox',
-                                 'testlabel')
-        assert result == "OK", "copy API call failed"
+        account = db.session.query(Account).get(ACCOUNT_ID)
 
-        inbox_items = db.session.query(FolderItem).filter_by(
-            thread_id=1, folder_name='inbox').count()
+        copy(db.session, ACCOUNT_ID, 1, account.inbox_folder.name, 'testlabel')
+
+        inbox_items = db.session.query(FolderItem).filter(
+            FolderItem.thread_id == 1,
+            FolderItem.folder_id == account.inbox_folder_id).count()
         assert inbox_items == 1, "inbox entry missing"
 
-        testlabel_items = db.session.query(FolderItem).filter_by(
-            thread_id=1, folder_name='testlabel').count()
+        testlabel_items = db.session.query(FolderItem).join(Folder).filter(
+            FolderItem.thread_id == 1,
+            Folder.name == 'testlabel').count()
         assert testlabel_items == 1, "testlabel entry missing"
 
         assert action_queue.count == 1, "sync-back event not queued"
 
-    def test_local_delete(self, db, api_client, action_queue):
-        from inbox.server.models.tables.base import FolderItem
+    def test_local_delete(self, db, action_queue):
+        from inbox.server.models.tables.base import Account, FolderItem
+        from inbox.server.actions.base import delete
 
-        result = api_client.delete(USER_ID, NAMESPACE_ID, 1, 'inbox')
-        assert result == "OK", "delete API call failed"
+        account = db.session.query(Account).get(ACCOUNT_ID)
 
-        inbox_items = db.session.query(FolderItem).filter_by(
-            thread_id=1, folder_name='inbox').count()
+        delete(db.session, ACCOUNT_ID, 1, account.inbox_folder.name)
+
+        inbox_items = db.session.query(FolderItem).filter(
+            FolderItem.thread_id == 1,
+            FolderItem.folder_id == account.inbox_folder_id).count()
         assert inbox_items == 0, "inbox entry still there"
 
-        archive_items = db.session.query(FolderItem).filter_by(
-            thread_id=1, folder_name='archive').count()
-        assert archive_items == 1, "archive entry missing"
+        archive_items = db.session.query(FolderItem).filter(
+            FolderItem.thread_id == 1,
+            FolderItem.folder_id == account.all_folder_id).count()
+        assert archive_items == 1, "all entry missing"
 
         assert action_queue.count == 1, "sync-back event not queued"
 
-        result = api_client.delete(USER_ID, NAMESPACE_ID, 1, 'archive')
-        assert result == "OK", "delete API call failed"
+        delete(db.session, ACCOUNT_ID, 1, account.all_folder.name)
 
-        inbox_items = db.session.query(FolderItem).filter_by(
-            thread_id=1, folder_name='inbox').count()
+        inbox_items = db.session.query(FolderItem).filter(
+            FolderItem.thread_id == 1,
+            FolderItem.folder_id == account.inbox_folder_id).count()
         assert inbox_items == 0, "inbox entry still there"
 
-        archive_items = db.session.query(FolderItem).filter_by(
-            thread_id=1, folder_name='archive').count()
+        archive_items = db.session.query(FolderItem).filter(
+            FolderItem.thread_id == 1,
+            FolderItem.folder_id == account.all_folder_id).count()
         assert archive_items == 0, "archive entry still there"
 
         assert action_queue.count == 2, "sync-back event not queued"

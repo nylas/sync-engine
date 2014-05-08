@@ -53,10 +53,9 @@ class ImapUid(Base):
     message = relationship('Message', backref='imapuids')
     msg_uid = Column(BigInteger, nullable=False)
 
-    # maximum Gmail label length is 225 (tested empirically), but constraining
-    # folder_name uniquely requires max length of 767 bytes under utf8mb4
-    # http://mathiasbynens.be/notes/mysql-utf8mb4
-    folder_name = Column(String(191))
+    folder_id = Column(Integer, ForeignKey('folder.id'), nullable=False)
+    # We almost always need the folder name too, so eager load by default.
+    folder = relationship('Folder', backref='uids', lazy='joined')
 
     ### Flags ###
     # Message has not completed composition (marked as a draft).
@@ -93,12 +92,12 @@ class ImapUid(Base):
     def namespace(self):
         return self.imapaccount.namespace
 
-    __table_args__ = (UniqueConstraint('folder_name', 'msg_uid',
+    __table_args__ = (UniqueConstraint('folder_id', 'msg_uid',
                       'imapaccount_id',),)
 
 # make pulling up all messages in a given folder fast
 Index('imapuid_imapaccount_id_folder_name', ImapUid.imapaccount_id,
-      ImapUid.folder_name)
+      ImapUid.folder_id)
 
 
 class UIDValidity(Base):

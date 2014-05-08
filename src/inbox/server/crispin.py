@@ -416,10 +416,9 @@ class GmailCrispinClient(CrispinClient):
                     # just '[Gmail]'
                     pass
                 elif '\\All' in flags:
-                    self._folder_names['archive'] = name
                     self._folder_names['all'] = name
                 elif name.lower() == 'inbox':
-                    self._folder_names[name.lower()] = name
+                    self._folder_names[name.lower()] = name.capitalize()
                     continue
                 else:
                     for flag in ['\\Drafts', '\\Important', '\\Sent', '\\Junk',
@@ -427,7 +426,12 @@ class GmailCrispinClient(CrispinClient):
                         # find localized names for Gmail's special folders
                         if flag in flags:
                             k = flag.replace('\\', '').lower()
-                            self._folder_names[k] = name
+                            if k == 'flagged':
+                                self._folder_names['starred'] = name
+                            elif k == 'junk':
+                                self._folder_names['spam'] = name
+                            else:
+                                self._folder_names[k] = name
                             break
                     else:
                         # everything else is a label

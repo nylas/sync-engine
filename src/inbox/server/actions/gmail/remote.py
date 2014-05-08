@@ -36,8 +36,6 @@ from inbox.server.models import session_scope
 from inbox.server.models.tables.base import Namespace
 from inbox.server.models.tables.imap import ImapThread, ImapAccount
 
-PROVIDER = 'Gmail'
-
 
 class ActionError(Exception):
     pass
@@ -52,36 +50,17 @@ def uidvalidity_cb(db_session, account_id):
     pass
 
 
-def _translate_folder_name(inbox_folder_name, crispin_client):
-    """
-    Folder names are *Inbox* datastore folder names; it's the responsibility
-    of syncback API functions to translate that back to the proper Gmail folder
-    name.
-    """
-    if inbox_folder_name in crispin_client.folder_names()['labels']:
-        return inbox_folder_name
-    elif inbox_folder_name in crispin_client.folder_names():
-        return crispin_client.folder_names()[inbox_folder_name]
-    else:
-        raise Exception("weird Gmail folder that's not special or a label: {}"
-                        .format(inbox_folder_name))
-
-
 def _syncback_action(fn, imapaccount_id, folder_name):
-    """ `folder_name` is an Inbox folder name, not a Gmail folder name. """
+    """ `folder_name` is a Gmail folder name. """
     with session_scope() as db_session:
         account = db_session.query(ImapAccount).join(Namespace).filter_by(
             id=imapaccount_id).one()
         with writable_connection_pool(imapaccount_id).get() as crispin_client:
-            crispin_client.select_folder(
-                _translate_folder_name(folder_name, crispin_client),
-                uidvalidity_cb)
+            crispin_client.select_folder(folder_name, uidvalidity_cb)
             fn(account, db_session, crispin_client)
 
 
 def _archive(g_thrid, crispin_client):
-    assert crispin_client.selected_folder_name \
-        == crispin_client.folder_names()['inbox'], "must select inbox first"
     crispin_client.archive_thread(g_thrid)
 
 
@@ -91,57 +70,61 @@ def _get_g_thrid(namespace_id, thread_id, db_session):
         id=thread_id).one()[0]
 
 
-def archive(imapaccount_id, thread_id):
+def remote_archive(imapaccount_id, thread_id):
     def fn(account, db_session, crispin_client):
         g_thrid = _get_g_thrid(account.namespace.id, thread_id, db_session)
         return _archive(g_thrid, crispin_client)
 
-    return _syncback_action(fn, imapaccount_id, 'inbox')
+    with session_scope() as db_session:
+        inbox_folder = db_session.query(ImapAccount)\
+            .join(ImapAccount.inbox_folder).filter(
+                ImapAccount.id == imapaccount_id).one().inbox_folder
+        assert inbox_folder is not None
+        inbox_folder_name = inbox_folder.name
+
+    return _syncback_action(fn, imapaccount_id, inbox_folder_name)
 
 
-def move(imapaccount_id, thread_id, from_folder, to_folder):
+def remote_move(imapaccount_id, thread_id, from_folder, to_folder):
+    """ NOTE: We are not planning to use this function yet since Inbox never
+        modifies Gmail IMAP labels.
+    """
     if from_folder == to_folder:
         return
 
     def fn(account, db_session, crispin_client):
-        if from_folder == 'inbox':
-            if to_folder == 'archive':
+        inbox_folder = crispin_client.folder_names()['inbox']
+        all_folder = crispin_client.folder_names()['all']
+        if from_folder == inbox_folder:
+            if to_folder == all_folder:
                 return _archive(thread_id, crispin_client)
             else:
                 g_thrid = _get_g_thrid(account.namespace.id, thread_id,
                                        db_session)
                 _archive(g_thrid, crispin_client)
-                crispin_client.add_label(
-                    g_thrid, _translate_folder_name(to_folder, crispin_client))
+                crispin_client.add_label(g_thrid, to_folder)
         elif from_folder in crispin_client.folder_names()['labels']:
             if to_folder in crispin_client.folder_names()['labels']:
                 g_thrid = _get_g_thrid(account.namespace.id, thread_id,
                                        db_session)
-                crispin_client.add_label(
-                    g_thrid, _translate_folder_name(to_folder, crispin_client))
-                crispin_client.select_folder(
-                    crispin_client.folder_names()['all'],
-                    uidvalidity_cb)
-                crispin_client.remove_label(
-                    g_thrid,
-                    _translate_folder_name(from_folder, crispin_client))
-            elif to_folder == 'inbox':
+                crispin_client.add_label(g_thrid, to_folder)
+            elif to_folder == inbox_folder:
                 g_thrid = _get_g_thrid(account.namespace.id, thread_id,
                                        db_session)
-                crispin_client.copy_thread(
-                    g_thrid, _translate_folder_name(to_folder, crispin_client))
-            elif to_folder != 'archive':
+                crispin_client.copy_thread(g_thrid, to_folder)
+            elif to_folder != all_folder:
                 raise Exception("Should never get here! to_folder: {}"
                                 .format(to_folder))
+            crispin_client.select_folder(crispin_client.folder_names()['all'],
+                                         uidvalidity_cb)
+            crispin_client.remove_label(g_thrid, from_folder)
             # do nothing if moving to all mail
-        elif from_folder == 'archive':
+        elif from_folder == all_folder:
             g_thrid = _get_g_thrid(account.namespace.id, thread_id, db_session)
             if to_folder in crispin_client.folder_names()['labels']:
-                crispin_client.add_label(
-                    g_thrid, _translate_folder_name(to_folder, crispin_client))
-            elif to_folder == 'inbox':
-                crispin_client.copy_thread(
-                    g_thrid, _translate_folder_name(to_folder, crispin_client))
+                crispin_client.add_label(g_thrid, to_folder)
+            elif to_folder == inbox_folder:
+                crispin_client.copy_thread(g_thrid, to_folder)
             else:
                 raise Exception("Should never get here! to_folder: {}"
                                 .format(to_folder))
@@ -151,34 +134,38 @@ def move(imapaccount_id, thread_id, from_folder, to_folder):
     return _syncback_action(fn, imapaccount_id, from_folder)
 
 
-def copy(imapaccount_id, thread_id, from_folder, to_folder):
+def remote_copy(imapaccount_id, thread_id, from_folder, to_folder):
+    """ NOTE: We are not planning to use this function yet since Inbox never
+        modifies Gmail IMAP labels.
+    """
     if from_folder == to_folder:
         return
 
     def fn(account, db_session, crispin_client):
+        inbox_folder = crispin_client.folder_names()['inbox']
+        all_folder = crispin_client.folder_names()['all']
         g_thrid = _get_g_thrid(account.namespace.id, thread_id, db_session)
-        if to_folder == 'inbox':
-            crispin_client.copy_thread(
-                g_thrid, _translate_folder_name(to_folder, crispin_client))
-        elif to_folder != 'archive':
-            crispin_client.add_label(
-                g_thrid, _translate_folder_name(to_folder, crispin_client))
+        if to_folder == inbox_folder:
+            crispin_client.copy_thread(g_thrid, to_folder)
+        elif to_folder != all_folder:
+            crispin_client.add_label(g_thrid, to_folder)
         # copy a thread to all mail is a noop
 
     return _syncback_action(fn, imapaccount_id, from_folder)
 
 
-def delete(imapaccount_id, thread_id, folder_name):
+def remote_delete(imapaccount_id, thread_id, folder_name):
     def fn(account, db_session, crispin_client):
+        inbox_folder = crispin_client.folder_names()['inbox']
+        all_folder = crispin_client.folder_names()['all']
         g_thrid = _get_g_thrid(account.namespace.id, thread_id, db_session)
-        if folder_name == 'inbox':
+        if folder_name == inbox_folder:
             return _archive(g_thrid, crispin_client)
         elif folder_name in crispin_client.folder_names()['labels']:
             crispin_client.select_folder(
                 crispin_client.folder_names()['all'], uidvalidity_cb)
-            crispin_client.remove_label(
-                g_thrid, _translate_folder_name(folder_name, crispin_client))
-        elif folder_name == 'archive':
+            crispin_client.remove_label(g_thrid, folder_name)
+        elif folder_name == all_folder:
             # delete thread from all mail: really delete it (move it to trash
             # where it will be permanently deleted after 30 days, see
             # https://support.google.com/mail/answer/78755?hl=en)

@@ -9,7 +9,7 @@ from inbox.util.itert import partition
 from inbox.util.misc import load_modules
 from inbox.server.config import config
 from inbox.server.log import configure_mailsync_logging, log_uncaught_errors
-from inbox.server.models.tables.base import Account, Namespace
+from inbox.server.models.tables.base import Account, Namespace, Folder
 from inbox.server.mailsync.exc import SyncException
 
 import inbox.server.mailsync.backends
@@ -19,41 +19,76 @@ def verify_db(crispin_client, db_session):
     pass
 
 
-def check_folder_name(log, inbox_folder, old_folder_name, new_folder_name):
-    if old_folder_name is not None and \
-            new_folder_name != old_folder_name:
-        msg = "{0} folder name changed from '{1}' to '{2}'".format(
-            inbox_folder, old_folder_name, new_folder_name)
-        raise SyncException(msg)
+def verify_folder_name(account_id, old, new):
+    if old is not None and old != new:
+        raise SyncException(
+            "Core folder on account {} changed name from {} to {}".format(
+                account_id, old, new))
+    return new
 
 
 def save_folder_names(log, account, folder_names, db_session):
     # NOTE: We don't do anything like canonicalizing to lowercase because
     # different backends may be case-sensitive or not. Code that references
     # saved folder names should canonicalize if needed when doing comparisons.
-    assert 'inbox' in folder_names, 'account {0} has no detected Inbox'.format(
-        account.email_address)
-    check_folder_name(log, 'inbox', account.inbox_folder_name,
-                      folder_names['inbox'])
-    account.inbox_folder_name = folder_names['inbox']
-
-    assert 'drafts' in folder_names, 'account {0} has no detected drafts'\
+    assert 'inbox' in folder_names, 'Account {} has no detected inbox folder'\
         .format(account.email_address)
-    check_folder_name(log, 'drafts', account.drafts_folder_name,
-                      folder_names['drafts'])
-    account.drafts_folder_name = folder_names['drafts']
+    inbox_folder = Folder.find_or_create(db_session, account,
+                                         folder_names['inbox'])
+    account.inbox_folder = verify_folder_name(
+        account.id, account.inbox_folder, inbox_folder)
 
-    # We allow accounts not to have archive / sent folders; it's up to the mail
-    # sync code for the account type to figure out what to do in this
-    # situation.
+    assert 'drafts' in folder_names, \
+        'Account {} has no detected drafts folder'\
+        .format(account.email_address)
+    drafts_folder = Folder.find_or_create(db_session, account,
+                                          folder_names['drafts'])
+    account.drafts_folder = verify_folder_name(
+        account.id, account.drafts_folder, drafts_folder)
+
+    assert 'sent' in folder_names, 'Account {} has no detected sent folder'\
+        .format(account.email_address)
+    sent_folder = Folder.find_or_create(db_session, account,
+                                        folder_names['sent'])
+    account.sent_folder = verify_folder_name(
+        account.id, account.sent_folder, sent_folder)
+
+    assert 'spam' in folder_names, \
+        'Account {} has no detected spam folder'\
+        .format(account.email_address)
+    spam_folder = Folder.find_or_create(db_session, account,
+                                        folder_names['spam'])
+    account.spam_folder = verify_folder_name(
+        account.id, account.spam_folder, spam_folder)
+
+    assert 'trash' in folder_names, \
+        'Account {} has no detected trash folder'\
+        .format(account.email_address)
+    trash_folder = Folder.find_or_create(db_session, account,
+                                         folder_names['trash'])
+    account.trash_folder = verify_folder_name(
+        account.id, account.trash_folder, trash_folder)
+
+    assert 'starred' in folder_names, \
+        'Account {} has no detected starred folder'\
+        .format(account.email_address)
+    starred_folder = Folder.find_or_create(db_session, account,
+                                           folder_names['starred'])
+    account.starred_folder = verify_folder_name(
+        account.id, account.starred_folder, starred_folder)
+
     if 'archive' in folder_names:
-        check_folder_name(log, 'archive', account.archive_folder_name,
-                          folder_names['archive'])
-        account.archive_folder_name = folder_names['archive']
-    if 'sent' in folder_names:
-        check_folder_name(log, 'sent', account.sent_folder_name,
-                          folder_names['sent'])
-        account.sent_folder_name = folder_names['sent']
+        archive_folder = Folder.find_or_create(db_session, account,
+                                               folder_names['archive'])
+        account.archive_folder = verify_folder_name(
+            account.id, account.archive_folder, archive_folder)
+
+    if 'all' in folder_names:
+        all_folder = Folder.find_or_create(db_session, account,
+                                           folder_names['all'])
+        account.all_folder = verify_folder_name(
+            account.id, account.all_folder, all_folder)
+
     db_session.commit()
 
 
@@ -111,8 +146,9 @@ def create_db_objects(account_id, db_session, log, folder_name, raw_messages,
     # Look up message thread,
     acc = db_session.query(Account).join(Namespace).filter_by(
         id=account_id).one()
+    folder = Folder.find_or_create(db_session, acc, folder_name)
     for msg in raw_messages:
-        uid = msg_create_fn(db_session, log, acc, folder_name, msg)
+        uid = msg_create_fn(db_session, log, acc, folder, msg)
         if uid is not None:
             new_uids.append(uid)
 

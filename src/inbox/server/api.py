@@ -3,7 +3,6 @@ import uuid
 from functools import wraps
 import zerorpc
 
-from inbox.server.actions import base as actions
 from inbox.server.config import config
 from inbox.server.contacts import search_util
 from inbox.server.models import session_scope
@@ -12,9 +11,7 @@ from inbox.server.mailsync.backends.imap.account import (total_stored_data,
                                                          total_stored_messages)
 from inbox.server.models.tables.base import (Message, SharedFolder, User,
                                              Account, Contact, Thread)
-from inbox.server.models.namespace import (threads_for_folder,
-                                           archive_thread, move_thread,
-                                           copy_thread, delete_thread)
+from inbox.server.models.namespace import threads_for_folder
 from inbox.server.sendmail.base import (send, reply, recipients,
                                         create_attachment_metadata)
 from inbox.server.log import get_logger
@@ -228,94 +225,38 @@ class API(object):
                 Thread.namespace_id == self.namespace.id).limit(n).all()
             return subjects
 
-    ### actions that need to be synced back to the account backend
-    ### (we use a task queue to ensure reliable syncing)
-
-    @namespace_auth
-    def archive(self, thread_id):
-        """ Archive thread locally and also sync back to the backend. """
-        account = self.namespace.account
-        assert account is not None, "can't archive mail with this namespace"
-
-        # make local change
+    def get_contact(self, contact_id):
+        """Get all data for an existing contact."""
         with session_scope() as db_session:
-            archive_thread(self.namespace.id, db_session, thread_id)
+            contact = db_session.query(Contact).filter_by(id=contact_id).one()
+            return cereal(contact)
 
-        # sync it to the account backend
-        q = actions.get_queue()
-        q.enqueue(actions.get_archive_fn(account), account.id, thread_id)
-
-        # XXX TODO register a failure handler that reverses the local state
-        # change if the change fails to go through---this could cause our
-        # repository to get out of sync with the remote if another client
-        # does the same change in the meantime and we apply that change and
-        # *then* the change reversal goes through... but we can make this
-        # eventually consistent by doing a full comparison once a day or
-        # something.
-
-        return "OK"
-
-    @namespace_auth
-    def move(self, thread_id, from_folder, to_folder):
-        """ Move thread locally and also sync back to the backend. """
-        account = self.namespace.account
-        assert account is not None, "can't move mail with this namespace"
-
-        # make local change
+    def add_contact(self, account_id, contact_info):
+        """Add a new contact to the specified IMAP account. Returns the ID of
+        the added contact."""
         with session_scope() as db_session:
-            move_thread(self.namespace.id, db_session, thread_id, from_folder,
-                        to_folder)
+            contact = Contact(account_id=account_id, source='local',
+                              provider_name=INBOX_PROVIDER_NAME,
+                              uid=uuid.uuid4().hex)
+            contact.name = contact_info['name']
+            contact.email_address = contact_info['email']
+            db_session.add(contact)
+            db_session.commit()
+            log.info("Added contact {0}".format(contact.id))
+            return contact.id
 
-        # sync it to the account backend
-        q = actions.get_queue()
-        q.enqueue(actions.get_move_fn(account), account.id, thread_id,
-                  from_folder, to_folder)
-
-        # XXX TODO register a failure handler that reverses the local state
-        # change if the change fails to go through
-
-        return "OK"
-
-    @namespace_auth
-    def copy(self, thread_id, from_folder, to_folder):
-        """ Copy thread locally and also sync back to the backend. """
-        account = self.namespace.account
-        assert account is not None, "can't copy mail with this namespace"
-
-        # make local change
+    def update_contact(self, contact_id, contact_info):
+        """Update data for an existing contact."""
         with session_scope() as db_session:
-            copy_thread(self.namespace.id, db_session, thread_id,
-                        from_folder, to_folder)
+            contact = db_session.query(Contact).filter_by(id=contact_id).one()
+            contact.name = contact_info['name']
+            contact.email_address = contact_info['email']
+            log.info("Updated contact {0}".format(contact.id))
+            return 'OK'
 
-        # sync it to the account backend
-        q = actions.get_queue()
-        q.enqueue(actions.get_copy_fn(account), account.id, thread_id,
-                  from_folder, to_folder)
-
-        # XXX TODO register a failure handler that reverses the local state
-        # change if the change fails to go through
-
-        return "OK"
-
-    @namespace_auth
-    def delete(self, thread_id, folder_name):
-        """ Delete thread locally and also sync back to the backend.
-
-        This really just removes the entry from the folder. Message data that
-        no longer belongs to any messages is garbage-collected asynchronously.
-        """
-        account = self.namespace.account
-        assert account is not None, "can't delete mail with this namespace"
-
-        # make local change
+    def search_contacts(self, account_id, query, max_results=10):
+        """Search for contacts that match the given query."""
         with session_scope() as db_session:
-            delete_thread(self.namespace.id, db_session, thread_id,
-                          folder_name)
-
-        # sync it to the account backend
-        q = actions.get_queue()
-        q.enqueue(actions.get_delete_fn(account), account.id, thread_id,
-                  folder_name)
-
-        # XXX TODO register a failure handler that reverses the local state
-        # change if the change fails to go through
+            results = search_util.search(db_session, account_id, query,
+                                         int(max_results))
+            return [cereal(contact) for contact in results]
