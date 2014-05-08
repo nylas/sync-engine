@@ -1,6 +1,6 @@
 Title: Sending
 
-In order to send a message, it must first be created as a draft message. There is no direct API call for sending a message that is not alread draft. See [Drafts](#drafts) for more details on creating draft messages.
+In order to send a message, it must first be created as a draft message. There is no direct API call for sending a message that is not already a draft. See [Drafts](#drafts) for more details on creating draft messages.
 
 If a message has the `draft` tag, then it can be sent by simply applying the `send` tag via the [Tag API](#tags). Inbox will detect this specific change, remove the `draft` tag, and send the message through the user's mail provider.
 

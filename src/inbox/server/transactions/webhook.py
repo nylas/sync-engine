@@ -143,7 +143,7 @@ class WebhookService(gevent.Greenlet):
                 lens=lens,
                 callback_url=parameters.get('callback_url'),
                 failure_notify_url=parameters.get('failure_notify_url'),
-                include_body=parameters.get('include_body', True),
+                include_body=parameters.get('include_body', False),
                 active=parameters.get('active', True),
                 min_processed_id=self.minimum_id)
 

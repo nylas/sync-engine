@@ -68,23 +68,28 @@ Note that the specified `callback_url` and `failure_notify_url` *must* support H
 }
 ```
 
+* `callback_url` must be specified
+* all other fields are optional
 * `active` defaults to `true`
 * `include_body` defaults to `false`
-* all filter params defulat to `null`
+* all filter params default to `null`
 
-# Modifying a webhook
+# Starting and stopping a webhook
 
-Updating a webhook is as simple as issuing a PUT request to the webhooks's URI.
+Webhooks can be stopped or restarted by issuing a PUT request to the webhook's
+URI with the new value of the `active` parameter in the body.
 
     PUT https://api.inboxapp.com/n/<namespace_id>/webhooks/<webhook_id>
 
-Any fields in the body of the request will override previous webhook values. For example, to turn off a webhook, your application would post
-
+** Sample post body
 ```
 {
   "active": false
 }
 ```
+
+All other properties of a webhook are immutable; to change the filters or
+callback URL, delete the webhook and create a new one.
 
 # Listing all webhooks
 

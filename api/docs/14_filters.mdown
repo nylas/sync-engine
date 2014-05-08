@@ -1,6 +1,6 @@
 Title: Filters
 
-Filters allow you to refine your query for mail data to specific parameters. The more specific you can make the request, the faster it will perform. They can be appended to API requests on [Messages](#messages) and [Threads](#threads). Note that values must use [percent-encodeding](http://en.wikipedia.org/wiki/Percent-encoding) (also known as URL encoding).
+Filters allow you to refine your query for mail data to specific parameters. The more specific you can make the request, the faster it will perform. They can be appended to API requests on [Messages](#messages) and [Threads](#threads). Note that values must use [percent-encoding](http://en.wikipedia.org/wiki/Percent-encoding) (also known as URL encoding).
 
 * **`subject`** match, supports regex if string starts with `/`
 
