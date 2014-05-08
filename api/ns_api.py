@@ -10,6 +10,7 @@ from inbox.server.models.tables.base import (
     Message, Block, Part, Contact, Thread, Namespace, Lens, Webhook)
 from inbox.server.models.kellogs import jsonify
 from inbox.server.config import config
+from inbox.server import contacts
 
 from err import err
 
@@ -227,22 +228,51 @@ def message_api(public_id):
 ##
 # Contacts
 ##
-@app.route('/contacts/<public_id>', methods=['GET', 'POST', 'PUT'])
-def contact_api(public_id):
+@app.route('/contacts', methods=['GET'])
+def contact_search_api():
+    filter = request.args.get('filter', '')
+    limit = request.args.get('limit', 10)
+    # TODO(emfree) support offset as well
+    results = contacts.search_util.search(g.db_session, g.namespace.account_id,
+                                          filter, limit)
+    return jsonify(results)
+
+
+@app.route('/contacts', methods=['POST'])
+def contact_create_api():
+    # TODO(emfree) Detect attempts at duplicate insertions.
+    try:
+        data = json.loads(request.data)
+    except ValueError:
+        return err(400, 'Malformed contact request')
+    name = data.get('name')
+    email = data.get('email')
+    if not any((name, email)):
+        return err(400, 'Contact name and email cannot both be null.')
+    new_contact = contacts.crud.create(g.namespace, g.db_session,
+                                       name, email)
+    return jsonify(new_contact)
+
+
+@app.route('/contacts/<public_id>', methods=['GET'])
+def contact_read_api(public_id):
     # TODO auth with account object
+    # Get all data for an existing contact.
+    result = contacts.crud.read(g.namespace, g.db_session, public_id)
+    if result is None:
+        return err(404, "Couldn't find contact with id {0}".
+                   format(public_id))
+    return jsonify(result)
 
-    if request.method == 'GET':  # retreive
-        # Get all data for an existing contact.
-        # TODO add filter ability for searching contacts
-        contact = g.db_session.query(Contact) \
-            .filter_by(public_id=public_id).one()
-        return jsonify(contact)
 
-    elif request.method == 'POST':  # create contact
-        raise NotImplementedError  # TODO
+@app.route('/contacts/<public_id>', methods=['PUT'])
+def contact_update_api(public_id):
+    raise NotImplementedError
 
-    elif request.method == 'PUT':  # update contact
-        raise NotImplementedError
+
+@app.route('/contacts/<public_id>', methods=['DELETE'])
+def contact_delete_api(public_id):
+    raise NotImplementedError
 
 
 ##

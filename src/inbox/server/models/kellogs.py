@@ -75,7 +75,7 @@ class APIEncoder(JSONEncoder):
                 'object': 'contact',
                 'namespace': obj.namespace.public_id,
                 'name': obj.name,
-                'email_address': obj.email_address
+                'email': obj.email_address
             }
 
         elif isinstance(obj, Part):  # ie: Attachments
