@@ -1,6 +1,6 @@
 Title: Obtaining a User Access Token
 
-*Note: this section refers to the hosted version of Inbox. Development environments can authenticate accounts through the command line tools.*
+*Note: this section refers to the hosted version of Inbox. Development environments can authenticate accounts through the command line tools. See the `README` for details.*
 
 Before you can request an access token for a user, your client application must be registered in order to receive an `app_token` and `app_secret`.
 
@@ -15,7 +15,7 @@ Within your application, direct the user to `https://api.inboxapp.com/a/login` w
 * `client_id` — your application's token [insert here]
 * `redirect_uri`
 * `response_type` must be `code`
-* `scope` — array of scopes you are requesting. Options are `mail`, `contacts`, and `files`. Your must include at least one scope to access data.
+* `scope` — a list of space-delimited, case-sensitive strings that define your application's requested level of access. Options are `mail`, `contacts`, and `files`. Your must include at least one scope to access data.
 * `state` — optional unique identifier to protect against CSRF
 
 Depending on the user's email provider, Inbox will either direct them to Gmail's OAuth page or request their email account credentials directly.

@@ -58,22 +58,8 @@ def pull_lang_code(endpoint, values):
 @app.before_request
 def start():
     g.log = current_app.logger
-    # TODO implement namespace + auth token check
-    g.log.error("Havent implemented namespace auth!")
-
-    # user = db_session.query(User).join(Account)\
-    #     .filter(Account.id == g.user_id).one()
-    # for account in user.accounts:
-    #     account_ns = account.namespace
-    #     private_ns.append(account_ns)
-    # g.namespaces = private_ns
-
-    try:
-        g.namespace = g.db_session.query(Namespace) \
-            .filter(Namespace.public_id == g.namespace_public_id).one()
-    except NoResultFound:
-        return err(404, "Couldn't find namespace {}".
-                   format(g.namespace_public_id))
+    g.namespace = g.db_session.query(Namespace) \
+        .filter(Namespace.public_id == g.namespace_public_id).one()
 
     g.lens = Lens(
         namespace_id=g.namespace.id,
@@ -139,14 +125,9 @@ def thread_api(public_id):
         return err(404, "Couldn't find thread with id `{0}` "
                    "on namespace {1}".format(public_id, g.namespace_public_id))
 
-
-# Update thread, ie: change labels/flags
-# curl -u secret_key_234uoihlnsfkjansdf:  \
-# http://192.168.10.200:5555/n/1/threads/cr0va02sv28nxqrvrvyjlhfeh \
-# -X PUT \
-# -H 'Content-Type: application/json' \
-# -d '{"lables":"archive"}'
-##
+#
+# Update thread
+#
 @app.route('/threads/<public_id>', methods=['PUT'])
 def thread_api_update(public_id):
 
@@ -165,34 +146,13 @@ def thread_api_update(public_id):
 
 
 #
-#  Delete mail
+#  Delete thread
 #
-# XXX TODO register a failure handler that reverses the local state
-# change if the change fails to go through---this could cause our
-# repository to get out of sync with the remote if another client
-# does the same change in the meantime and we apply that change and
-# *then* the change reversal goes through... but we can make this
-# eventually consistent by doing a full comparison once a day or
-# something.
 @app.route('/threads/<public_id>', methods=['DELETE'])
 def thread_api_delete(public_id):
     """ Moves the thread to the trash """
     raise NotImplementedError
 
-
-#
-#  Convienence methods for changing the labels on a thread
-#
-@app.route('/threads/<public_id>/<operation>')
-def thread_operation_api(public_id, operation):
-    operation = operation.lower()
-
-    thread = g.db_session.query(Thread).filter(
-        Thread.public_id == public_id,
-        Thread.namespace_id == g.namespace.id).one()
-
-    if not int(thread.namespace.id) == int(g.namespace.id):
-        return err(410, "No access")  # todo better error
 
 
 ##
@@ -225,7 +185,7 @@ def message_api(public_id):
                    "on namespace {1}".format(public_id, g.namespace_public_id))
 
 
-##
+#
 # Contacts
 ##
 @app.route('/contacts', methods=['GET'])
@@ -275,9 +235,9 @@ def contact_delete_api(public_id):
     raise NotImplementedError
 
 
-##
+#
 # Files
-##
+#
 @app.route('/files/<public_id>')
 def files_api(public_id):
     if public_id == 'all':
@@ -301,9 +261,28 @@ def files_api(public_id):
 
 
 #
-# Download file
-# consider hosting this behind a separate url like
-# https://www.inboxusercontent.com/d/9y8734rhoirlkwqbfq
+# Upload file
+#
+@app.route('/files/upload', methods=['POST'])
+def file_upload_api():
+    all_files = []
+    for name, uploaded in request.files.iteritems():
+        g.log.info("Processing upload '{0}'".format(name))
+        f = Block()
+        f.namespace = g.namespace
+        f.content_type = uploaded.content_type
+        f.filename = uploaded.filename
+        f.data = uploaded.read()
+        all_files.append(f)
+
+    g.db_session.add_all(all_files)
+    g.db_session.commit()  # to generate public_ids
+    return jsonify(all_files)
+
+
+#
+# File downloads
+#
 @app.route('/files/<public_id>/download')
 def file_download_api(public_id):
 
@@ -349,78 +328,6 @@ def file_download_api(public_id):
     g.log.info(response.headers)
     return response
 
-
-#
-# Upload file
-#
-@app.route('/files/upload', methods=['POST'])
-def file_upload_api():
-    all_files = []
-    for name, uploaded in request.files.iteritems():
-        g.log.info("Processing upload '{0}'".format(name))
-        f = Block()
-        f.namespace = g.namespace
-        f.content_type = uploaded.content_type
-        f.filename = uploaded.filename
-        f.data = uploaded.read()
-        all_files.append(f)
-
-    g.db_session.add_all(all_files)
-    g.db_session.commit()  # to generate public_ids
-    return jsonify(all_files)
-
-
-#
-# Send
-#
-@app.route('/send', methods=['POST'])
-def send_api():
-    # TODO
-    # Verify all attachments have been uploaded
-    # from inbox.server.sendmail.base import send
-    pass
-
-    """ Send a new message. Posted body should ben
-    {
-    "from": ["Ben Bitdiddle <ben@foocorp.com"],
-    "to": ["Ben Bitdiddle <ben@foocorp.com>", "cc-address@gmail.com"],
-    "bcc": ["bcc-address@yahoo.com"],
-
-    "subject": "Dinner at 7 tonight?",
-    "html": "<html><body>....</body></html>",
-    "files": [<file_id>, <file_id>, ...],
-
-    // Optional
-    "track_opened": false,
-    ...
-    }
-
-    of if replying to an existing thread
-
-
-    {
-    "from": ["Ben Bitdiddle <ben@foocorp.com"],
-    "to_thread": <thread_id>,
-
-    // Optional
-    "add_recipients": ["foo@gmail.com.com"],
-    "remove_recipients": ["bar@gmail.com"],
-
-    "html": "<html><body>....</body></html>",
-    "files": [<file_id>, <file_id>, ...],
-
-<!--    // Optional
-    "track_opened": false,
-    "append_quoted_text": true,
---> ...
-}
-
-    # if type(recipients) != list:
-    #     recipients = [recipients]
-
-    # send(account, recipients, subject, body, attachments)
-
-"""
 
 
 ##

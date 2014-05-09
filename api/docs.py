@@ -1,10 +1,11 @@
-from flask import render_template, Blueprint, redirect, url_for
-import markdown
+from collections import namedtuple
 import os
 import ntpath
 
-from inbox.server.log import get_logger
+from flask import render_template, Blueprint, redirect, url_for
+import markdown
 
+from inbox.server.log import get_logger
 log = get_logger(purpose='api')
 
 
@@ -12,19 +13,20 @@ tmpl_dir = os.path.join(os.path.dirname(
     os.path.abspath(__file__)),
     'templates')
 
+static_dir = os.path.join(os.path.dirname(
+    os.path.abspath(__file__)),
+    'static')
+
+docs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'docs')
 
 app = Blueprint(
     'docs',
     __name__,
     url_prefix='/docs',
     template_folder=tmpl_dir,
-    static_folder='static')
+    static_folder=static_dir)
 
-root_dir = os.path.expanduser('docs')
 
-docs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'docs')
-
-from collections import namedtuple
 DocPage = namedtuple("DocPage", "anchor title content")
 
 
@@ -46,8 +48,7 @@ md = markdown.Markdown(extensions=[
 def catch_all(slug):
     return redirect(url_for(".homepage"))
 
-
-@app.route("")
+@app.route("/")
 def homepage():
 
     docs = {}

@@ -1,6 +1,7 @@
 Title: Making authenticated API requests
 
-*Note: In the development version of Inbox, you can use any value for `access_token`. OAuth is intentionally disabled to support a development environment.*
+*Note: this section refers to the hosted version of Inbox. The development VM requires no authentication token.*
+
 
 API authentication is handled by [HTTP Basic Auth](http://en.wikipedia.org/wiki/Basic_access_authentication) as defined in [RFC-1945](http://tools.ietf.org/html/rfc1945). The user `access_token` should be provided as the basic auth username, with no accompanying password.
 

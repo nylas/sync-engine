@@ -4,14 +4,17 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<link rel="shortcut icon" href="{{ url_for('docs.static', filename='favicon.ico') }}">
 
-<link href="/static/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('docs.static', filename='bootstrap.min.css') }}">
 
-<link rel="stylesheet" type="text/css" href="/static/github-layout.css">
-<link rel="stylesheet" type="text/css" href="/static/github-syntax.css">
+<link rel="stylesheet" type="text/css" href="{{ url_for('docs.static', filename='github-layout.css') }}">
 
-<link rel="stylesheet" type="text/css" href="/static/layout.css">
+<link rel="stylesheet" type="text/css" href="{{ url_for('docs.static', filename='github-syntax.css') }}">
+
+<link rel="stylesheet" type="text/css" href="{{ url_for('docs.static', filename='layout.css') }}">
+
+
 
 <title>{{ title }}</title>
 
@@ -64,14 +67,12 @@
     </div>
 
 
+<script type='text/javascript' src="{{ url_for('docs.static', filename='jquery.min.js') }}"></script>
 
-<script type='text/javascript' src="/static/jquery.min.js"></script>
+<script type='text/javascript' src="{{ url_for('docs.static', filename='bootstrap.min.js') }}"></script>
 
-<script type='text/javascript' src="/static/bootstrap.min.js"></script>
 
 <script type="text/javascript">
-
-
 
   var scrollTimeout;
   $(window).on('activate.bs.scrollspy', function (e) {
@@ -99,10 +100,6 @@
         stop && e.preventDefault();
     });
   });
-
-
-
-
 
 </script>
 
