@@ -164,7 +164,10 @@ def upgrade():
         for folderitem in db_session.query(FolderItem).join(Thread).join(
                 Namespace).yield_per(CHUNK_SIZE):
             account_id = folderitem.thread.namespace.account_id
-            new_folder_name = folder_name_subst_map[folderitem.folder_name]
+            if folderitem.folder_name in folder_name_subst_map:
+                new_folder_name = folder_name_subst_map[folderitem.folder_name]
+            else:
+                new_folder_name = folderitem.folder_name
             if (account_id, new_folder_name) in folders:
                 f = folders[(account_id, new_folder_name)]
             else:
