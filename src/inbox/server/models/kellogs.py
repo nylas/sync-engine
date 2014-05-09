@@ -5,7 +5,7 @@ from json import JSONEncoder, dumps
 from flask import Response
 
 from inbox.server.models.tables.base import (
-    Message, SharedFolder, User, Account, Part,
+    Message, Account, Part,
     Contact, Thread, Namespace, Block, Webhook, Lens)
 
 
@@ -101,16 +101,6 @@ class APIEncoder(JSONEncoder):
                 'size': obj.size,
             }
 
-        elif isinstance(obj, User):
-            return {
-                'id': obj.public_id,
-                'object': 'user',
-                'name': obj.name,
-                'namespaces': [a.namespace.public_id for a in obj.accounts]
-                # TOD
-            }
-            raise NotImplementedError
-
         elif isinstance(obj, Webhook):
             resp = self.default(obj.lens)
             # resp is deliberately created in this order so that the 'id' and
@@ -150,9 +140,6 @@ class APIEncoder(JSONEncoder):
 
         elif isinstance(obj, Account):
             # Shouldn't ever need to serialize these...
-            raise NotImplementedError
-
-        elif isinstance(obj, SharedFolder):
             raise NotImplementedError
 
         # elif isinstance(obj, Webhook):

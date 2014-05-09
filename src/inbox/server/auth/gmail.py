@@ -10,7 +10,7 @@ from imapclient import IMAPClient
 from inbox.server.oauth import oauth
 from inbox.server.auth.base import verify_imap_account
 from inbox.server.models import session_scope
-from inbox.server.models.tables.base import User, Namespace
+from inbox.server.models.tables.base import Namespace
 from inbox.server.models.tables.imap import ImapAccount
 from inbox.server.config import config
 
@@ -91,9 +91,8 @@ def create_account(db_session, email_address, response):
         account = db_session.query(ImapAccount).filter_by(
             email_address=email_address).one()
     except sqlalchemy.orm.exc.NoResultFound:
-        user = User()
         namespace = Namespace()
-        account = ImapAccount(user=user, namespace=namespace)
+        account = ImapAccount(namespace=namespace)
 
     account.provider = 'Gmail'
     account.imap_host = IMAP_HOST

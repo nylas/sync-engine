@@ -283,7 +283,7 @@ class SMTPClient(object):
         """
         raise NotImplementedError
 
-    def send_reply(self, thread_id, recipients, subject, body,
+    def send_reply(self, namespace_id, thread_id, recipients, subject, body,
                    attachments=None):
         """
         Send an email reply from this user account.

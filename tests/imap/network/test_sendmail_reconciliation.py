@@ -17,7 +17,6 @@ from tests.util.crispin import crispin_client
 from tests.util.api import api_client
 from tests.util.mailsync import sync_client
 
-USER_ID = 1
 ACCOUNT_ID = 1
 NAMESPACE_ID = 1
 THREAD_ID = 16
@@ -46,7 +45,7 @@ def test_send_reconcile(db, config, message, api_client, sync_client):
     bcc = None
 
     # Create email message, store a local copy + send it:
-    api_client.send_new(USER_ID, NAMESPACE_ID, to, subject, body, attachment,
+    api_client.send_new(NAMESPACE_ID, to, subject, body, attachment,
                         cc, bcc)
 
     # Sync to verify reconciliation:
@@ -89,7 +88,7 @@ def test_reply_reconcile(db, config, message, api_client, sync_client):
     bcc = None
 
     # Create email message, store a local copy + send it:
-    api_client.send_reply(USER_ID, NAMESPACE_ID, THREAD_ID, to, subject, body,
+    api_client.send_reply(NAMESPACE_ID, THREAD_ID, to, subject, body,
                           attachment, cc, bcc)
 
     # Sync to verify reconciliation:

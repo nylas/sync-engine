@@ -7,7 +7,7 @@ import sqlalchemy.orm.exc
 from imapclient import IMAPClient
 
 from inbox.server.basicauth import password_auth
-from inbox.server.models.tables.base import User, Namespace
+from inbox.server.models.tables.base import Namespace
 from inbox.server.models.tables.imap import ImapAccount
 
 from inbox.server.auth.base import commit_account
@@ -32,9 +32,8 @@ def create_account(db_session, email_address, response):
         account = db_session.query(ImapAccount).filter_by(
             email_address=email_address).one()
     except sqlalchemy.orm.exc.NoResultFound:
-        user = User()
         namespace = Namespace()
-        account = ImapAccount(user=user, namespace=namespace)
+        account = ImapAccount(namespace=namespace)
 
     account.provider = 'Yahoo'
     account.imap_host = IMAP_HOST

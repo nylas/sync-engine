@@ -16,7 +16,6 @@ from tests.util.crispin import crispin_client
 from tests.util.api import api_client
 from tests.util.mailsync import sync_client
 
-USER_ID = 1
 ACCOUNT_ID = 1
 NAMESPACE_ID = 1
 THREAD_ID = 16

@@ -108,7 +108,8 @@ def send(account, recipients, subject, body, attachments=None):
     return sendmail_client.send_new(recipients, subject, body, attachments)
 
 
-def reply(account, thread_id, recipients, subject, body, attachments=None):
+def reply(namespace_id, account, thread_id, recipients, subject,
+          body, attachments=None):
     sendmail_cls_for = register_backends()
 
     sendmail_cls = sendmail_cls_for.get(account.provider)
@@ -117,5 +118,5 @@ def reply(account, thread_id, recipients, subject, body, attachments=None):
         raise NotSupportedError('Inbox does not support the email provider.')
 
     sendmail_client = sendmail_cls(account.id, account.namespace)
-    return sendmail_client.send_reply(thread_id, recipients, subject, body,
-                                      attachments)
+    return sendmail_client.send_reply(namespace_id, thread_id, recipients,
+                                      subject, body, attachments)

@@ -70,7 +70,6 @@ def start():
         return err(404, "Couldn't find namespace with id `{0}` "
                 .format(g.namespace_public_id))
 
-
     g.lens = Lens(
         namespace_id=g.namespace.id,
         subject=request.args.get('subject'),

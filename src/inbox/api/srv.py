@@ -17,7 +17,6 @@ from inbox.server.models import session_scope
 from inbox.server.models.kellogs import jsonify
 
 from ns_api import app as ns_api
-from u_api import app as u_api
 from docs import app as docs_blueprint
 
 # Provider name for contacts added via this API
@@ -25,7 +24,6 @@ INBOX_PROVIDER_NAME = 'inbox'
 
 app = Flask(__name__)
 app.register_blueprint(ns_api)  # /n/<namespace_id>/...
-app.register_blueprint(u_api)   # /u/<user_id>/...
 app.register_blueprint(docs_blueprint)   # /docs
 
 

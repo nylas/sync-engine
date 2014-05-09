@@ -14,7 +14,6 @@ from pytest import fixture
 from tests.data.messages.replyto_message import TEST_MSG
 from tests.util.api import api_client
 
-USER_ID = 1
 ACCOUNT_ID = 1
 NAMESPACE_ID = 1
 THREAD_ID = 16
@@ -48,7 +47,7 @@ def test_send(db, config, api_client, message, attach):
     cc = 'ben.bitdiddle1861@gmail.com'
     bcc = None
 
-    result = api_client.send_new(USER_ID, NAMESPACE_ID, recipients, subject,
+    result = api_client.send_new(NAMESPACE_ID, recipients, subject,
                                  body, attachment, cc, bcc)
     assert result == 'OK', 'send_mail API call failed'
 
@@ -72,7 +71,7 @@ def test_reply(db, config, api_client, message, attach):
     recipients, subject, body = message
     attachment = attach
 
-    result = api_client.send_reply(USER_ID, NAMESPACE_ID, THREAD_ID,
+    result = api_client.send_reply(NAMESPACE_ID, THREAD_ID,
                                    recipients, subject, body, attachment)
     assert result == 'OK', 'send_reply API call failed'
 

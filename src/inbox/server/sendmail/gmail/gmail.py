@@ -34,12 +34,12 @@ class GmailSMTPClient(SMTPClient):
 
         return self._send_mail(smtpmsg)
 
-    def send_reply(self, thread_id, recipients, subject, body,
+    def send_reply(self, namespace_id, thread_id, recipients, subject, body,
                    attachments=None):
         with session_scope() as db_session:
             thread = db_session.query(ImapThread).filter(
                 ImapThread.id == thread_id,
-                ImapThread.namespace_id == self.namespace.id).one()
+                ImapThread.namespace_id == namespace_id).one()
             g_thrid = thread.g_thrid
             thread_subject = thread.subject
             # The first message is the latest message we have for this thread

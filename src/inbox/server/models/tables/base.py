@@ -62,10 +62,6 @@ class HasPublicID(object):
 
 # global
 class Account(Base, HasPublicID):
-    # user_id refers to Inbox's user id
-    user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'),
-                     nullable=False)
-    user = relationship('User', backref='accounts')
 
     # http://stackoverflow.com/questions/386294/what-is-the-maximum-length-of-a-valid-email-address
     email_address = Column(String(254), nullable=True, index=True)
@@ -202,15 +198,6 @@ class Account(Base, HasPublicID):
                        'polymorphic_identity': 'account'}
 
 
-class UserSession(Base, HasPublicID):
-    """ Inbox-specific sessions. """
-    token = Column(String(40))
-
-    user_id = Column(Integer, ForeignKey('user.id', ondelete='CASCADE'),
-                     nullable=False)
-    user = relationship('User', backref='sessions')
-
-
 class Namespace(Base, HasPublicID):
     """ A way to do grouping / permissions, basically. """
     # NOTE: only root namespaces have account backends
@@ -229,26 +216,6 @@ class Namespace(Base, HasPublicID):
     def email_address(self):
         if self.account is not None:
             return self.account.email_address
-
-
-class SharedFolder(Base, HasPublicID):
-    # Don't delete shared folders if the user that created them is deleted.
-    user_id = Column(Integer, ForeignKey('user.id', ondelete='SET NULL'),
-                     nullable=True)
-    user = relationship('User', backref='sharedfolders')
-
-    namespace = relationship('Namespace', backref='sharedfolders')
-    # Do delete shared folders if their associated namespace is deleted.
-    namespace_id = Column(Integer, ForeignKey(
-        'namespace.id', ondelete='CASCADE'), nullable=False)
-
-    display_name = Column(String(40))
-
-
-class User(Base, HasPublicID):
-    name = Column(String(255))
-
-# sharded (by namespace)
 
 
 class Transaction(Base, Revision):
