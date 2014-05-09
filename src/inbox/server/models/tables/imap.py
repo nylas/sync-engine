@@ -96,8 +96,7 @@ class ImapUid(Base):
                       'imapaccount_id',),)
 
 # make pulling up all messages in a given folder fast
-Index('imapuid_imapaccount_id_folder_name', ImapUid.imapaccount_id,
-      ImapUid.folder_id)
+Index('imapaccount_id_folder_id', ImapUid.imapaccount_id, ImapUid.folder_id)
 
 
 class UIDValidity(Base):
