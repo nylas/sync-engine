@@ -17,7 +17,7 @@ static_dir = os.path.join(os.path.dirname(
     os.path.abspath(__file__)),
     'static')
 
-docs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'docs')
+docs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../docs')
 
 app = Blueprint(
     'docs',

@@ -148,7 +148,7 @@ def console(args):
 
 
 def api_server(args):
-    from api.srv import app
+    from inbox.api.srv import app
     from gevent.wsgi import WSGIServer, WSGIHandler
     from inbox.server.log import get_logger
     from werkzeug.serving import run_with_reloader
