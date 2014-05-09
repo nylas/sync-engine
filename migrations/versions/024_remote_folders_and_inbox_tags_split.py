@@ -153,7 +153,7 @@ def upgrade():
 
     class ImapUid(Base):
         __table__ = Base.metadata.tables['imapuid']
-        folder = relationship('Folder', backref='uids', lazy='joined')
+        folder = relationship('Folder', backref='imapuids', lazy='joined')
 
     print 'Creating Folder rows and migrating FolderItems...'
     # not many folders per account, so shouldn't grow that big
