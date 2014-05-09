@@ -47,7 +47,7 @@ class ImapUid(Base):
     """
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
                             nullable=False)
-    imapaccount = relationship("ImapAccount")
+    imapaccount = relationship('ImapAccount')
 
     message_id = Column(Integer, ForeignKey('message.id'), nullable=False)
     message = relationship('Message', backref='imapuids')
@@ -55,7 +55,7 @@ class ImapUid(Base):
 
     folder_id = Column(Integer, ForeignKey('folder.id'), nullable=False)
     # We almost always need the folder name too, so eager load by default.
-    folder = relationship('Folder', backref='uids', lazy='joined')
+    folder = relationship('Folder', backref='imapuids', lazy='joined')
 
     ### Flags ###
     # Message has not completed composition (marked as a draft).
