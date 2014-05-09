@@ -38,9 +38,10 @@ def load_config(filename='config.cfg'):
         log.info('Loaded configuration from {0}'.format(filename))
 
         # This is pretty hacky...
-        config['MSG_PARTS_DIRECTORY'] = os.path.expanduser(
-            config['MSG_PARTS_DIRECTORY'])
-        config['LOGDIR'] = os.path.expanduser(config['LOGDIR'])
+        paths_to_normalize = ('MSG_PARTS_DIRECTORY', 'LOGDIR', 'CACHE_BASEDIR', 'KEY_DIR')
+        for p in paths_to_normalize:
+            if p in config:
+                config[p] = os.path.expanduser(config[p])
 
     except NoSectionError:
         print >>sys.stderr, "Couldn't load configuration from {0}". \
