@@ -1,16 +1,19 @@
 import os
 import json
 
-from flask import request, g, Blueprint, make_response, current_app, Response
 import zerorpc
-
+from flask import request, g, Blueprint, make_response, current_app, Response
+from flask import jsonify as flask_jsonify
 from sqlalchemy.orm.exc import NoResultFound
+from werkzeug.exceptions import default_exceptions
+from werkzeug.exceptions import HTTPException
 
 from inbox.server.models.tables.base import (
     Message, Block, Part, Contact, Thread, Namespace, Lens, Webhook)
 from inbox.server.models.kellogs import jsonify
 from inbox.server.config import config
 from inbox.server import contacts
+from inbox.server.models import new_db_session
 
 from err import err
 
@@ -57,9 +60,16 @@ def pull_lang_code(endpoint, values):
 
 @app.before_request
 def start():
+    g.db_session = new_db_session()
+
     g.log = current_app.logger
-    g.namespace = g.db_session.query(Namespace) \
-        .filter(Namespace.public_id == g.namespace_public_id).one()
+    try:
+        g.namespace = g.db_session.query(Namespace) \
+            .filter(Namespace.public_id == g.namespace_public_id).one()
+    except NoResultFound:
+        return err(404, "Couldn't find namespace with id `{0}` "
+                .format(g.namespace_public_id))
+
 
     g.lens = Lens(
         namespace_id=g.namespace.id,
@@ -80,17 +90,53 @@ def start():
     g.lens_offset = request.args.get('offset')
 
 
-##
+@app.after_request
+def finish(response):
+    g.db_session.commit()
+    g.db_session.close()
+    return response
+
+
+@app.record
+def record_auth(setup_state):
+    # Runs when the Blueprint binds to the main application
+    app = setup_state.app
+
+    def default_json_error(ex):
+        """ Exception -> flask JSON responder """
+        app.logger.error("Uncaught error thrown by Flask/Werkzeug: {0}"
+                         .format(ex))
+        response = flask_jsonify(message=str(ex), type='api_error')
+        response.status_code = (ex.code
+                                if isinstance(ex, HTTPException)
+                                else 500)
+        return response
+
+
+    # Patch all error handlers in werkzeug
+    for code in default_exceptions.iterkeys():
+        app.error_handler_spec[None][code] = default_json_error
+
+
+@app.errorhandler(NotImplementedError)
+def handle_not_implemented_error(error):
+    response = flask_jsonify(message="API endpoint not yet implemented.",
+                             type='api_error')
+    response.status_code = 501
+    return response
+
+
+#
 # General namespace info
-##
-@app.route('')
+#
+@app.route('/')
 def index():
     return jsonify(g.namespace)
 
 
-##
+#
 # Folders/labels TODO
-##
+#
 @app.route('/labels/<public_id>')
 def folder_api(public_id):
 
@@ -103,9 +149,9 @@ def folder_api(public_id):
     raise NotImplementedError
 
 
-##
+#
 # Threads
-##
+#
 @app.route('/threads')
 def thread_query_api():
     return jsonify(g.lens.thread_query(g.db_session, limit=g.lens_limit,
@@ -152,7 +198,6 @@ def thread_api_update(public_id):
 def thread_api_delete(public_id):
     """ Moves the thread to the trash """
     raise NotImplementedError
-
 
 
 ##
