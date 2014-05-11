@@ -83,7 +83,7 @@ def start(args=None):
 
     log.info("Recursion limit: {0}".format(sys.getrecursionlimit()))
 
-    log.info('Providers currently supported by Inbox: '\
+    log.info('Providers currently supported: '\
              '{0}'.format(', '.join(table_mod_for.keys())))
 
     # hang out forever and run some services
@@ -120,12 +120,9 @@ def sync(args):
         elif args.cmd == 'status':
             print mailsync_client.sync_status(account_id)
         else:
-            print >>sys.stderr, "No such command."
-            sys.exit(1)
+            sys.exit("No such command." )
     except zerorpc.exceptions.TimeoutExpired:
-        print >>sys.stderr, \
-            "Can't connect to sync service. Is it running? (./inbox start)"
-        sys.exit(1)
+        sys.exit("Can't connect to sync service. Is it running? (./inbox start)")
 
 
 def stop(args):
@@ -191,9 +188,7 @@ def search(args):
         # or something
         print c.search(args.namespace, args.query)
     except zerorpc.exceptions.TimeoutExpired:
-        print >>sys.stderr, \
-            "Can't connect. Is the sync server running? (./inbox start)"
-        sys.exit(1)
+        sys.exit("Can't connect. Is the sync server running? (./inbox start)")
 
 
 def index(args):
@@ -205,9 +200,7 @@ def index(args):
         c.connect(search_srv_loc)
         c.index(args.namespace)
     except zerorpc.exceptions.TimeoutExpired:
-        print >>sys.stderr, \
-            "Can't connect. Is the sync server running? (./inbox start)"
-        sys.exit(1)
+        sys.exit("Can't connect. Is the sync server running? (./inbox start)")
 
 
 def auth(args):
@@ -255,9 +248,8 @@ def check_db():
 
     try:
         inbox_db_engine.dialect.has_table(inbox_db_engine, 'alembic_version')
-    except sqlalchemy.exc.OperationalError, e:
-        log.error("Databases don't exist! Run create_db.py")
-        return 1
+    except sqlalchemy.exc.OperationalError:
+        sys.exit("Databases don't exist! Run create_db.py")
 
     if inbox_db_engine.dialect.has_table(inbox_db_engine, 'alembic_version'):
         res = inbox_db_engine.execute('SELECT version_num from alembic_version')
@@ -271,8 +263,7 @@ def check_db():
         log.info('Current database revision: {0}'.format(current_revision))
 
         if current_revision != head_revision:
-            log.error('Outdated database! Migrate using `alembic upgrade head`')
-            return 1
+            sys.exit('Outdated database! Migrate using `alembic upgrade head`')
         else:
             log.info('[OK] Database scheme matches latest')
     else:
