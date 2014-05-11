@@ -4,7 +4,7 @@ import getpass
 AUTH_TYPES = {'Gmail': 'OAuth', 'Yahoo': 'Password', 'EAS': 'Password'}
 
 # Certain password auths flows (like EAS) provide their own message
-default_message = 'Password for {0}(hidden): '
+default_message = 'Password for {0} (hidden): '
 
 
 class AuthError(Exception):
