@@ -34,6 +34,8 @@ folder_name_subst_map = {'archive': u'[Gmail]/All Mail',
 
 
 def upgrade():
+    easupdate = 0
+
     print 'Creating new tables and columns...'
     op.create_table('folder',
                     sa.Column('id', sa.Integer(), nullable=False),
@@ -107,7 +109,31 @@ def upgrade():
 
     from inbox.server.models import engine, session_scope
 
-    print 'Reflecting old table schemas'
+    Base = declarative_base()
+    Base.metadata.reflect(engine)
+
+    if 'easuid' in Base.metadata.tables:
+        easupdate = 1
+        print 'Adding new EASUid columns...'
+
+        op.add_column('easuid',
+                      sa.Column('fld_uid', sa.Integer(), nullable=True))
+
+        op.add_column('easuid',
+                      sa.Column('folder_id', sa.Integer(), nullable=True))
+
+        op.create_foreign_key('easuid_ibfk_3', 'easuid', 'folder',
+                              ['folder_id'], ['id'])
+
+        op.create_unique_constraint(
+            'uq_easuid_folder_id_msg_uid_easaccount_id',
+            'easuid',
+            ['folder_id', 'msg_uid', 'easaccount_id'])
+
+        op.create_index('easuid_easaccount_id_folder_id', 'easuid',
+                        ['easaccount_id', 'folder_id'])
+
+    # Include our changes to the EASUid table:
     Base = declarative_base()
     Base.metadata.reflect(engine)
 
@@ -155,6 +181,12 @@ def upgrade():
         __table__ = Base.metadata.tables['imapuid']
         folder = relationship('Folder', backref='imapuids', lazy='joined')
 
+    if easupdate:
+        class EASUid(Base):
+            __table__ = Base.metadata.tables['easuid']
+            folder = relationship('Folder', foreign_keys='EASUid.folder_id',
+                                  backref='easuids', lazy='joined')
+
     print 'Creating Folder rows and migrating FolderItems...'
     # not many folders per account, so shouldn't grow that big
     with session_scope(versioned=False) as db_session:
@@ -164,10 +196,15 @@ def upgrade():
         for folderitem in db_session.query(FolderItem).join(Thread).join(
                 Namespace).yield_per(CHUNK_SIZE):
             account_id = folderitem.thread.namespace.account_id
-            if folderitem.folder_name in folder_name_subst_map:
-                new_folder_name = folder_name_subst_map[folderitem.folder_name]
-            else:
-                new_folder_name = folderitem.folder_name
+            if folderitem.thread.namespace.account.provider == 'Gmail':
+                if folderitem.folder_name in folder_name_subst_map:
+                    new_folder_name = folder_name_subst_map[
+                        folderitem.folder_name]
+                else:
+                    new_folder_name = folderitem.folder_name
+            elif folderitem.thread.namespace.account.provider == 'EAS':
+                new_folder_name = folderitem.folder_name.title()
+
             if (account_id, new_folder_name) in folders:
                 f = folders[(account_id, new_folder_name)]
             else:
@@ -200,6 +237,26 @@ def upgrade():
                 db_session.commit()
                 count = 0
         db_session.commit()
+
+        if easupdate:
+            print 'Migrating EASUids to reference Folder rows...'
+
+            for easuid in db_session.query(EASUid).yield_per(CHUNK_SIZE):
+                account_id = easuid.easaccount_id
+                new_folder_name = easuid.folder_name
+
+                if (account_id, new_folder_name) in folders:
+                    f = folders[(account_id, new_folder_name)]
+                else:
+                    f = Folder(account_id=account_id,
+                               name=new_folder_name)
+                    folders[(account_id, new_folder_name)] = f
+                easuid.folder = f
+                count += 1
+                if count > CHUNK_SIZE:
+                    db_session.commit()
+                    count = 0
+            db_session.commit()
 
         print 'Migrating *_folder_name fields to reference Folder rows...'
         for account in db_session.query(Account).filter_by(provider='Gmail'):
@@ -239,20 +296,66 @@ def upgrade():
                         name=account.archive_folder_name)
         db_session.commit()
 
+        if easupdate:
+            print "Migrating EAS accounts' *_folder_name fields to reference "\
+                  "Folder rows..."
+
+            for account in db_session.query(Account).filter_by(provider='EAS'):
+                if account.inbox_folder_name:
+                    k = (account.id, account.inbox_folder_name)
+                    if k in folders:
+                        account.inbox_folder = folders[k]
+                    else:
+                        account.inbox_folder = Folder(
+                            account_id=account.id,
+                            name=account.inbox_folder_name)
+                if account.sent_folder_name:
+                    k = (account.id, account.sent_folder_name)
+                    if k in folders:
+                        account.sent_folder = folders[k]
+                    else:
+                        account.sent_folder = Folder(
+                            account_id=account.id,
+                            name=account.sent_folder_name)
+                if account.drafts_folder_name:
+                    k = (account.id, account.drafts_folder_name)
+                    if k in folders:
+                        account.drafts_folder = folders[k]
+                    else:
+                        account.drafts_folder = Folder(
+                            account_id=account.id,
+                            name=account.drafts_folder_name)
+                if account.archive_folder_name:
+                    k = (account.id, account.archive_folder_name)
+                    if k in folders:
+                        account.archive_folder = folders[k]
+                    else:
+                        account.archive_folder = Folder(
+                            account_id=account.id,
+                            name=account.archive_folder_name)
+            db_session.commit()
+
     print 'Final schema tweaks and new constraint enforcement'
     op.alter_column('folderitem', 'folder_id', existing_type=sa.Integer(),
                     nullable=False)
     op.drop_constraint('folder_name', 'folderitem', type_='unique')
     op.drop_constraint('folder_name', 'imapuid', type_='unique')
-    op.create_unique_constraint("uq_imapuid_folder_id_msg_uid_imapaccount_id",
-                                "imapuid",
-                                ["folder_id", "msg_uid", "imapaccount_id"])
+    op.create_unique_constraint('uq_imapuid_folder_id_msg_uid_imapaccount_id',
+                                'imapuid',
+                                ['folder_id', 'msg_uid', 'imapaccount_id'])
     op.drop_column('folderitem', 'folder_name')
     op.drop_column('imapuid', 'folder_name')
     op.drop_column('account', 'inbox_folder_name')
     op.drop_column('account', 'drafts_folder_name')
     op.drop_column('account', 'sent_folder_name')
     op.drop_column('account', 'archive_folder_name')
+
+    if easupdate:
+        print 'Dropping old EASUid columns...'
+
+        op.drop_constraint('folder_name', 'easuid', type_='unique')
+        op.drop_index('easuid_easaccount_id_folder_name', 'easuid')
+        op.drop_column('easuid', 'folder_name')
 
 
 def downgrade():
