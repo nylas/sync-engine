@@ -34,7 +34,7 @@ folder_name_subst_map = {'archive': u'[Gmail]/All Mail',
 
 
 def upgrade():
-    easupdate = 0
+    easupdate = False
 
     print 'Creating new tables and columns...'
     op.create_table('folder',
@@ -113,7 +113,7 @@ def upgrade():
     Base.metadata.reflect(engine)
 
     if 'easuid' in Base.metadata.tables:
-        easupdate = 1
+        easupdate = True
         print 'Adding new EASUid columns...'
 
         op.add_column('easuid',
