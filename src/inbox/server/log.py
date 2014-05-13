@@ -3,11 +3,15 @@
 We configure separate loggers for general server logging and per-user loggers
 for mail sync and contact sync.
 """
-import logging
-from colorlog import ColoredFormatter
 import os
 import sys
+import socket
+import logging
+import traceback
 
+import requests
+
+from colorlog import ColoredFormatter
 from gevent import GreenletExit
 
 from inbox.util.file import mkdirp
@@ -113,6 +117,38 @@ def configure_contacts_logging(account_id):
     return configure_logging(account_id, "contacts")
 
 
+def email_exception(logger, etype, evalue, tb):
+    """ Send stringified exception to configured email address. """
+
+    from inbox.server.config import config
+
+    exc_email_addr = config.get('EXCEPTION_EMAIL_ADDRESS')
+    if exc_email_addr is None:
+        logger.error("No EXCEPTION_EMAIL_ADDRESS configured!")
+    mailgun_api_endpoint = config.get('MAILGUN_API_ENDPOINT')
+    if mailgun_api_endpoint is None:
+        logger.error("No MAILGUN_API_ENDPOINT configured!")
+    mailgun_api_key = config.get('MAILGUN_API_KEY')
+    if mailgun_api_key is None:
+        logger.error("No MAILGUN_API_KEY configured!")
+
+    r = requests.post(
+        mailgun_api_endpoint,
+        auth=("api", mailgun_api_key),
+        data={"from": "Inbox App Server <{}>".format(exc_email_addr),
+              "to": [exc_email_addr],
+              "subject": "Uncaught error!",
+              "text": u"""
+    Something went wrong on {}. Please investigate. :)
+
+    {}
+
+    """.format(socket.getfqdn(),
+               '\t'.join(traceback.format_exception(etype, evalue, tb)))})
+    if r.status_code != requests.codes.ok:
+        logger.error("Couldn't send exception email: {}".format(r.json()))
+
+
 class log_uncaught_errors(object):
     """ Helper to log uncaught exceptions raised within the wrapped function.
 
@@ -140,12 +176,16 @@ class log_uncaught_errors(object):
             pass
 
     def __call__(self, *args, **kwargs):
+        from inbox.server.config import is_prod, is_staging
         func = self.func
         try:
             return func(*args, **kwargs)
         except Exception, e:
             if not isinstance(e, GreenletExit):
                 self._log_failsafe("Uncaught error!")
+                exc_type, exc_value, exc_tb = sys.exc_info()
+                if is_prod() or is_staging():
+                    email_exception(self.logger, exc_type, exc_value, exc_tb)
             raise
 
     def __str__(self):

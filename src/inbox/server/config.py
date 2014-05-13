@@ -14,6 +14,10 @@ except IOError:
 def is_prod():
     return server_type == 'production'
 
+
+def is_staging():
+    return server_type == 'staging'
+
 config = dict(SERVER_TYPE=server_type)
 
 
