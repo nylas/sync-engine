@@ -65,7 +65,8 @@ And _voilà_! Auth an account via the commandline and start syncing:
 
 We'd love your help making Inbox better! Join the [Google
 Group](http://groups.google.com/group/inbox-dev) for project updates and feature
-discussion.
+discussion. We also hang out in `##inbox` on `irc.freenode.net`. (Be patient,
+IRC is not our primary dev channel.)
 
 Please sign the [Contributor License Agreement](https://www.inboxapp.com/cla.html)
 before submitting patches. (It's extremely simliar to other projects, like NodeJS.)
