@@ -171,7 +171,7 @@ class ImapFolderSyncMonitor(Greenlet):
         self.state_handlers = state_handlers
         self.state = None
 
-        self.log = get_logger(account_id, 'sync')
+        self.log = get_logger(account_id, 'mailsync')
 
         Greenlet.__init__(self)
 
