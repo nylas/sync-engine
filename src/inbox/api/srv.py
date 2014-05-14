@@ -17,21 +17,14 @@ from inbox.server.models import session_scope
 from inbox.server.models.kellogs import jsonify
 
 from ns_api import app as ns_api
-from docs import app as docs_blueprint
-
-# Provider name for contacts added via this API
-INBOX_PROVIDER_NAME = 'inbox'
 
 app = Flask(__name__)
 app.register_blueprint(ns_api)  # /n/<namespace_id>/...
-app.register_blueprint(docs_blueprint)   # /docs
-
 
 # Set flask logger as ours
 for handler in app.logger.handlers:
     app.logger.removeHandler(handler)
 app.logger.addHandler(inbox_logger)
-
 
 
 @app.before_request
