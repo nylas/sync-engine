@@ -109,6 +109,7 @@ def remove_messages(account_id, session, uids, folder):
 
     for d in deletes:
         session.delete(d)
+    session.commit()
 
     # XXX TODO: Have a recurring worker permanently remove dangling
     # messages from the database and block store. (Probably too

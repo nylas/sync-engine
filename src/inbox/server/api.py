@@ -8,7 +8,8 @@ from inbox.server.models import session_scope
 from inbox.server.models.kellogs import cereal
 from inbox.server.mailsync.backends.imap.account import (total_stored_data,
                                                          total_stored_messages)
-from inbox.server.models.tables.base import (Message, Contact, Thread)
+from inbox.server.models.tables.base import (Message, Contact, Thread,
+                                             Namespace, Account)
 from inbox.server.models.namespace import threads_for_folder
 from inbox.server.sendmail.base import (send, reply, recipients,
                                         create_attachment_metadata)
@@ -38,7 +39,8 @@ class API(object):
             self._zmq_search = zerorpc.Client(search_srv_loc)
         return self._zmq_search.search
 
-    def send_new(self, to, subject, body, attachments=None, cc=None, bcc=None):
+    def send_new(self, namespace_id, to, subject, body, attachments=None,
+                 cc=None, bcc=None):
         """
         Send an email from the authorized user account for this namespace.
 
@@ -58,13 +60,14 @@ class API(object):
             a list of utf-8 encoded strings
 
         """
-        account = self.namespace.account
-        assert account is not None, "Can't send mail with this namespace"
+        with session_scope() as db_session:
+            account = db_session.query(Namespace).join(Account).filter(
+                Namespace.id == namespace_id).one().account
 
-        attachfiles = create_attachment_metadata(attachments) if attachments\
-            else attachments
+            attachfiles = create_attachment_metadata(attachments) if attachments\
+                else attachments
 
-        send(account, recipients(to, cc, bcc), subject, body, attachfiles)
+            send(account, recipients(to, cc, bcc), subject, body, attachfiles)
 
         return 'OK'
 
@@ -91,14 +94,15 @@ class API(object):
             a list of utf-8 encoded strings
 
         """
-        account = self.namespace.account
-        assert account is not None, "Can't send mail with this namespace"
+        with session_scope() as db_session:
+            account = db_session.query(Namespace).join(Account).filter(
+                Namespace.id == namespace_id).one().account
 
-        attachfiles = create_attachment_metadata(attachments) if attachments\
-            else attachments
+            attachfiles = create_attachment_metadata(attachments) if \
+                attachments else attachments
 
-        reply(account, thread_id, recipients(to, cc, bcc), subject, body,
-              attachfiles)
+            reply(namespace_id, account, thread_id, recipients(to, cc, bcc),
+                  subject, body, attachfiles)
 
         return 'OK'
 

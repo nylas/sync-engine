@@ -74,9 +74,9 @@ def action_queue(request, config):
 
 class TestDB(object):
     def __init__(self, config, dumpfile):
-        from inbox.server.models import new_db_session, engine
+        from inbox.server.models import InboxSession, engine
         # Set up test database
-        self.session = new_db_session()
+        self.session = InboxSession(versioned=False)
         self.engine = engine
         self.config = config
         self.dumpfile = dumpfile
@@ -94,10 +94,11 @@ class TestDB(object):
                                                    self.dumpfile)
         subprocess.check_call(cmd, shell=True)
 
-    def new_session(self):
-        from inbox.server.models import new_db_session
+    def new_session(self, ignore_soft_deletes=True):
+        from inbox.server.models import InboxSession
         self.session.close()
-        self.session = new_db_session()
+        self.session = InboxSession(versioned=False,
+                                    ignore_soft_deletes=ignore_soft_deletes)
 
     def destroy(self):
         """ Removes all data from the test database. """

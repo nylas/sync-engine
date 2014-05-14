@@ -1,9 +1,14 @@
-from sqlalchemy import create_engine, Column, Integer
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import as_declarative, declared_attr
-
 from urllib import quote_plus as urlquote
+from datetime import datetime
 from contextlib import contextmanager
+
+from sqlalchemy import create_engine, Column, Integer, DateTime
+from sqlalchemy.orm.session import Session
+from sqlalchemy.orm.interfaces import MapperOption
+from sqlalchemy.ext.declarative import as_declarative, declared_attr
+from sqlalchemy.orm.exc import NoResultFound
+
+import sqlalchemy.orm.session
 
 from inbox.server.config import config, is_prod
 from inbox.server.log import get_logger
@@ -15,10 +20,18 @@ from inbox.sqlalchemy.util import ForceStrictMode
 
 @as_declarative()
 class Base(object):
-    """Base class which provides automated table name
-    and surrogate primary key column.
+    """
+    Provides automated table name, primary key column, and audit timestamps.
     """
     id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # We do all default/update in Python not SQL for these because MySQL
+    # < 5.6 doesn't support multiple TIMESTAMP cols per table, and can't
+    # do function defaults or update triggers on DATETIME rows.
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow,
+                        onupdate=datetime.utcnow, nullable=False)
+    deleted_at = Column(DateTime, nullable=True)
 
     @declared_attr
     def __tablename__(cls):
@@ -27,6 +40,16 @@ class Base(object):
     @declared_attr
     def __table_args__(cls):
         return {'extend_existing': True}
+
+    @property
+    def is_deleted(self):
+        return self.deleted_at is not None
+
+    def mark_deleted(self):
+        """
+        Safer object deletion: mark as deleted and garbage collect later.
+        """
+        self.deleted_at = datetime.utcnow()
 
 
 def engine_uri(database=None):
@@ -69,7 +92,7 @@ engine = create_engine(db_uri(),
                        echo=False,
                        pool_size=25,
                        max_overflow=10,
-                       connect_args = {'charset':'utf8mb4'})
+                       connect_args={'charset': 'utf8mb4'})
 
 
 def init_db():
@@ -88,39 +111,133 @@ def init_db():
 
     return table_mod_for
 
-Session = sessionmaker(bind=engine)
+
+class IgnoreSoftDeletesOption(MapperOption):
+    """
+    Automatically exclude soft-deleted objects from query results, including
+    child objects on relationships.
+
+    Based on:
+
+        https://bitbucket.org/zzzeek/sqlalchemy/wiki/UsageRecipes/GlobalFilter
+    """
+    propagate_to_loaders = True
+
+    def process_query_conditionally(self, query):
+        """process query during a lazyload"""
+        query._params = query._params.union(dict(
+            deleted_at=None,
+        ))
+
+    def process_query(self, query):
+        """process query during a primary user query"""
+
+        # apply bindparam values
+        self.process_query_conditionally(query)
+
+        # requires a query against a single mapper
+        parent_cls = query._mapper_zero().class_
+        filter_crit = parent_cls.deleted_at == None
+
+        if query._criterion is None:
+            query._criterion = filter_crit
+        else:
+            query._criterion &= filter_crit
 
 
-def new_db_session(versioned=True):
-    """ Create a new session.
+class InboxQuery(sqlalchemy.orm.query.Query):
 
-    Most of the time you should be using session_scope() instead, since it
-    handles cleanup properly. Sometimes you still need to use this function
-    directly because of how context managers require all code using the
-    created variable to be in a block; test setup is one example.
+    def delete(self, *args):
+        """ Not supported because we'd have to use internal APIs. """
+        raise Exception("Not supported, use `session.delete()` instead!")
+
+    def get(self, ident):
+        """Can't use regular `.get()` on a query w/options already applied."""
+        cls = self._mapper_zero().class_
+        try:
+            return self.filter(cls.id == ident).one()
+        except NoResultFound:
+            return None
+
+
+class InboxSession(object):
+    """ Inbox custom ORM (with SQLAlchemy compatible API).
 
     Parameters
     ----------
     versioned : bool
-        Do you want to enable the transaction log? (Almost always yes!)
-
-    Returns
-    -------
-    sqlalchemy.orm.session.Session
-        The created session.
+        Do you want to enable the transaction log?
+    ignore_soft_deletes : bool
+        Whether or not to ignore soft-deleted objects in query results.
+    namespace_id : int
+        Namespace to limit query results with.
     """
-    from inbox.server.models.tables.base import Transaction, HasRevisions
+    def __init__(self, versioned=True, ignore_soft_deletes=True,
+                 namespace_id=None):
+        # TODO: support limiting on namespaces
+        args = dict(bind=engine, autoflush=True, autocommit=False)
+        self.ignore_soft_deletes = ignore_soft_deletes
+        if ignore_soft_deletes:
+            args['query_cls'] = InboxQuery
+        sqlalchemy_session = Session(**args)
+        if versioned:
+            from inbox.server.models.tables.base import (Transaction,
+                                                         HasRevisions)
+            self._session = versioned_session(
+                sqlalchemy_session, Transaction, HasRevisions)
+        else:
+            self._session = sqlalchemy_session
 
-    sess = Session(autoflush=True, autocommit=False)
+    def query(self, *args, **kwargs):
+        q = self._session.query(*args, **kwargs)
+        if self.ignore_soft_deletes:
+            return q.options(IgnoreSoftDeletesOption())
+        else:
+            return q
 
-    if versioned:
-        return versioned_session(sess, Transaction, HasRevisions)
-    else:
-        return sess
+    def add(self, instance):
+        if not instance.is_deleted or not self.ignore_soft_deletes:
+            self._session.add(instance)
+        else:
+            raise Exception("Why are you adding a deleted object?")
+
+    def add_all(self, instances):
+        if not True in [i.is_deleted for i in instances] or \
+                not self.ignore_soft_deletes:
+            self._session.add_all(instances)
+        else:
+            raise Exception("Why are you adding a deleted object?")
+
+    def delete(self, instance):
+        if self.ignore_soft_deletes:
+            instance.mark_deleted()
+            # just to make sure
+            self._session.add(instance)
+        else:
+            self._session.delete(instance)
+
+    def begin(self):
+        self._session.begin()
+
+    def commit(self):
+        self._session.commit()
+
+    def rollback(self):
+        self._session.rollback()
+
+    def flush(self):
+        self._session.flush()
+
+    def close(self):
+        self._session.close()
+
+    @property
+    def no_autoflush(self):
+        return self._session.no_autoflush
 
 
 @contextmanager
-def session_scope(versioned=True):
+def session_scope(versioned=True, ignore_soft_deletes=True, namespace_id=None):
     """ Provide a transactional scope around a series of operations.
 
     Takes care of rolling back failed transactions and closing the session
@@ -134,14 +251,18 @@ def session_scope(versioned=True):
     Parameters
     ----------
     versioned : bool
-        Do you want to enable the transaction log? (Almost always yes!)
+        Do you want to enable the transaction log?
+    ignore_soft_deletes : bool
+        Whether or not to ignore soft-deleted objects in query results.
+    namespace_id : int
+        Namespace to limit query results with.
 
     Yields
     ------
-    sqlalchemy.orm.session.Session
+    InboxSession
         The created session.
     """
-    session = new_db_session(versioned)
+    session = InboxSession(versioned, ignore_soft_deletes, namespace_id)
     try:
         yield session
         session.commit()

@@ -13,7 +13,7 @@ from inbox.server.models.tables.base import (
 from inbox.server.models.kellogs import jsonify
 from inbox.server.config import config
 from inbox.server import contacts
-from inbox.server.models import new_db_session
+from inbox.server.models import InboxSession
 
 from err import err
 
@@ -60,7 +60,7 @@ def pull_lang_code(endpoint, values):
 
 @app.before_request
 def start():
-    g.db_session = new_db_session()
+    g.db_session = InboxSession()
 
     g.log = current_app.logger
     try:

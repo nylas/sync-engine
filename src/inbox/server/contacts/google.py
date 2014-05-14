@@ -97,8 +97,6 @@ class GoogleContactsProvider(object):
             _, g_id = posixpath.split(raw_google_id)
             name = (google_contact.name.full_name.text if (google_contact.name
                     and google_contact.name.full_name) else None)
-            updated_at = (dateutil.parser.parse(google_contact.updated.text) if
-                          google_contact.updated else None)
             email_address = (email_addresses[0].address if email_addresses else
                              None)
 
@@ -110,19 +108,10 @@ class GoogleContactsProvider(object):
                     .format(google_contact))
             raise e
 
-        # TOFIX BUG
-        # This rounds down the modified timestamp to not include fractional
-        # seconds.  There's an open patch for the MySQLdb, but I don't think
-        # it's worth adding just for this.
-        # http://sourceforge.net/p/mysql-python/feature-requests/24/
-        updated_at = datetime.datetime.fromtimestamp(
-            time.mktime(updated_at.utctimetuple()))
-
         deleted = google_contact.deleted is not None
 
         return Contact(account_id=self.account_id, source='remote',
-                       uid=g_id, name=name, updated_at=updated_at,
-                       provider_name=self.PROVIDER_NAME,
+                       uid=g_id, name=name, provider_name=self.PROVIDER_NAME,
                        email_address=email_address, deleted=deleted,
                        raw_data=raw_data)
 

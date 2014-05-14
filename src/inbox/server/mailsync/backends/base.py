@@ -20,10 +20,10 @@ def verify_db(crispin_client, db_session):
 
 
 def verify_folder_name(account_id, old, new):
-    if old is not None and old != new:
+    if old is not None and old.name != new.name:
         raise SyncException(
-            "Core folder on account {} changed name from {} to {}".format(
-                account_id, old, new))
+            "Core folder on account {} changed name from '{}' to '{}'".format(
+                account_id, old.name, new.name))
     return new
 
 

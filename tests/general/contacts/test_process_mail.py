@@ -5,19 +5,10 @@ from tests.util.base import config
 config()
 
 from inbox.server.contacts.process_mail import update_contacts
-import inbox.server.models
 from inbox.server.models.tables.base import Contact, Message, register_backends
 register_backends()
 
 ACCOUNT_ID = 1
-
-
-@pytest.fixture(autouse=True)
-def no_versioning(monkeypatch):
-    # The versioned session is a huge pain for this test, so turn it off.
-    monkeypatch.setattr(inbox.server.models, 'new_db_session',
-                        lambda: inbox.server.models.Session(autoflush=True,
-                                                            autocommit=False))
 
 
 @pytest.fixture
