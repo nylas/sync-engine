@@ -21,9 +21,9 @@ THREAD_ID = 16
 
 @fixture(scope='function')
 def message(db, config):
-    from inbox.server.models.tables.imap import Account
+    from inbox.server.models.tables.imap import ImapAccount
 
-    account = db.session.query(Account).get(ACCOUNT_ID)
+    account = db.session.query(ImapAccount).get(ACCOUNT_ID)
     recipients = u'"\u2605The red-haired mermaid\u2605" <{0}>'.\
         format(account.email_address)
     subject = unicode('\xc3\xa4\xc3\xb6\xc3\xbcWakeup', 'utf-8')
@@ -57,7 +57,7 @@ def test_send(db, config, api_client, message, attach):
 
     sent_thrid = sent_messages[0].thread_id
 
-    sent_folder = db.session.query(Account).get(ACCOUNT_ID).sent_folder_name
+    sent_folder = db.session.query(Account).get(ACCOUNT_ID).sent_folder.name
     sent_items = db.session.query(FolderItem).join(Folder).filter(
         FolderItem.thread_id == sent_thrid,
         Folder.name == sent_folder).count()
@@ -66,7 +66,7 @@ def test_send(db, config, api_client, message, attach):
 
 def test_reply(db, config, api_client, message, attach):
     from inbox.server.models.tables.base import (SpoolMessage, FolderItem,
-                                                 Account)
+                                                 Folder, Account)
 
     recipients, subject, body = message
     attachment = attach
@@ -92,8 +92,8 @@ def test_reply(db, config, api_client, message, attach):
         'incorrect references header'
 
     sent_thrid = sent_messages[0].thread_id
-    sent_folder_id = db.session.query(Account).get(ACCOUNT_ID).sent_folder_id
-    sent_items = db.session.query(FolderItem).filter(
+    sent_folder = db.session.query(Account).get(ACCOUNT_ID).sent_folder.name
+    sent_items = db.session.query(FolderItem).join(Folder).filter(
         FolderItem.thread_id == sent_thrid,
-        FolderItem.folder_id == sent_folder_id).count()
+        Folder.name == sent_folder).count()
     assert sent_items == 1, 'sent folder entry missing'
