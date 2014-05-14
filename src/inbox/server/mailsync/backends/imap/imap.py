@@ -179,7 +179,11 @@ class ImapFolderSyncMonitor(Greenlet):
         return log_uncaught_errors(self._run_impl, self.log)()
 
     def _run_impl(self):
-        with session_scope() as db_session:
+        # We do NOT ignore soft deletes in the mail sync because it gets real
+        # complicated handling e.g. when backends reuse imapids. ImapUid
+        # objects are the only objects deleted by the mail sync backends
+        # anyway.
+        with session_scope(ignore_soft_deletes=False) as db_session:
             try:
                 foldersync = db_session.query(FolderSync).filter_by(
                     account_id=self.account_id,
