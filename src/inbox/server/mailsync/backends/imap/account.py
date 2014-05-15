@@ -4,6 +4,8 @@ These could be methods of ImapAccount, but separating them gives us more
 flexibility with calling code, as most don't need any attributes of the account
 object other than the ID, to limit the action.
 
+Types returned for data are the column types defined via SQLAlchemy.
+
 Eventually we're going to want a better way of ACLing functions that operate on
 accounts.
 """
@@ -27,7 +29,7 @@ def total_stored_data(account_id, session):
         .join(Block.message, Message.imapuid) \
         .filter(ImapUid.imapaccount_id == account_id) \
         .group_by(Message.id, Block.id)
-    return int(session.query(func.sum(subq.subquery().columns.size)).scalar())
+    return session.query(func.sum(subq.subquery().columns.size)).scalar()
 
 
 def total_stored_messages(account_id, session):
@@ -54,9 +56,9 @@ def g_msgids(account_id, session, in_=None):
     query = session.query(distinct(Message.g_msgid)).join(ImapUid) \
         .filter(ImapUid.imapaccount_id == account_id)
     if in_ is not None and len(in_):
-        in_ = [int(i) for i in in_]  # very slow if we send non-integers
+        in_ = [long(i) for i in in_]  # very slow if we send non-integers
         query = query.filter(Message.g_msgid.in_(in_))
-    return sorted([g_msgid for g_msgid, in query], key=long)
+    return sorted([g_msgid for g_msgid, in query])
 
 
 def g_metadata(account_id, session, folder_name):
@@ -65,7 +67,7 @@ def g_metadata(account_id, session, folder_name):
                 Folder.name == folder_name,
                 ImapUid.message_id == Message.id)
 
-    return dict([(int(uid), dict(msgid=int(g_msgid), thrid=int(g_thrid)))
+    return dict([(uid, dict(msgid=g_msgid, thrid=g_thrid))
                  for uid, g_msgid, g_thrid in query])
 
 

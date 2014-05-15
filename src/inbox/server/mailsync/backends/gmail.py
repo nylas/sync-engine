@@ -291,7 +291,7 @@ def check_new_g_thrids(account_id, provider, folder_name, log,
                                      flags[new_uid].labels))
 
                 message_download_stack.queue = sorted(
-                    new_message_download_stack, key=lambda m: int(m.uid))
+                    new_message_download_stack, key=lambda m: m.uid)
 
             log.info("Idling on {0} with {1} timeout".format(
                 folder_name, poll_frequency))
