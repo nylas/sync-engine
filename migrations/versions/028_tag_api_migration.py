@@ -71,8 +71,6 @@ def upgrade():
         __table__ = Base.metadata.tables['folder']
         account = relationship('Account', foreign_keys='Folder.account_id',
                                backref='folders')
-        # This is a pretty gnarly hack to
-        is_deleted = False
 
     class FolderItem(Base):
         __table__ = Base.metadata.tables['folderitem']
@@ -155,6 +153,9 @@ def upgrade():
             elif folder.name == '[Gmail]/Important':
                 folder.public_id = 'important'
                 folder.exposed_name = 'important'
+            elif folder.name == 'Inbox':
+                folder.public_id = 'inbox'
+                folder.exposed_name = 'inbox'
             else:
                 folder.exposed_name = '-'.join(('gmail', folder.name.lower()))
 
