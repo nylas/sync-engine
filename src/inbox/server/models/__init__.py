@@ -196,7 +196,7 @@ class InboxSession(object):
             return q
 
     def add(self, instance):
-        if not instance.is_deleted or not self.ignore_soft_deletes:
+        if not self.ignore_soft_deletes or not instance.is_deleted:
             self._session.add(instance)
         else:
             raise Exception("Why are you adding a deleted object?")
