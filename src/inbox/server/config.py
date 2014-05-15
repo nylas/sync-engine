@@ -28,9 +28,10 @@ def transform_bools(v):
 
 def load_config(filename='config.cfg'):
     if not os.path.isfile(filename):
-        print >>sys.stderr, ("Configuration file {0} does not exist. Either "
-            "create it or specify a different file (./inbox --config "
-            "path/to/your/config.cfg).".format(filename))
+        print >>sys.stderr, \
+            ("Configuration file {0} does not exist. Either "
+             "create it or specify a different file (./inbox --config "
+             "path/to/your/config.cfg).".format(filename))
         sys.exit(1)
 
     global config
@@ -42,7 +43,8 @@ def load_config(filename='config.cfg'):
         log.info('Loaded configuration from {0}'.format(filename))
 
         # This is pretty hacky...
-        paths_to_normalize = ('MSG_PARTS_DIRECTORY', 'LOGDIR', 'CACHE_BASEDIR', 'KEY_DIR')
+        paths_to_normalize = ('MSG_PARTS_DIRECTORY', 'LOGDIR', 'CACHE_BASEDIR',
+                              'KEY_DIR')
         for p in paths_to_normalize:
             if p in config:
                 config[p] = os.path.expanduser(config[p])
@@ -51,3 +53,4 @@ def load_config(filename='config.cfg'):
         print >>sys.stderr, "Couldn't load configuration from {0}". \
             format(filename)
         sys.exit(1)
+    return config
