@@ -31,10 +31,12 @@ def save_folder_names(log, account, folder_names, db_session):
     # NOTE: We don't do anything like canonicalizing to lowercase because
     # different backends may be case-sensitive or not. Code that references
     # saved folder names should canonicalize if needed when doing comparisons.
+
+    # TODO(emfree) Can simplify this stuff
     assert 'inbox' in folder_names, 'Account {} has no detected inbox folder'\
         .format(account.email_address)
     inbox_folder = Folder.find_or_create(db_session, account,
-                                         folder_names['inbox'])
+                                         folder_names['inbox'], 'inbox')
     account.inbox_folder = verify_folder_name(
         account.id, account.inbox_folder, inbox_folder)
 
@@ -42,14 +44,14 @@ def save_folder_names(log, account, folder_names, db_session):
         'Account {} has no detected drafts folder'\
         .format(account.email_address)
     drafts_folder = Folder.find_or_create(db_session, account,
-                                          folder_names['drafts'])
+                                          folder_names['drafts'], 'drafts')
     account.drafts_folder = verify_folder_name(
         account.id, account.drafts_folder, drafts_folder)
 
     assert 'sent' in folder_names, 'Account {} has no detected sent folder'\
         .format(account.email_address)
     sent_folder = Folder.find_or_create(db_session, account,
-                                        folder_names['sent'])
+                                        folder_names['sent'], 'sent')
     account.sent_folder = verify_folder_name(
         account.id, account.sent_folder, sent_folder)
 
@@ -57,7 +59,7 @@ def save_folder_names(log, account, folder_names, db_session):
         'Account {} has no detected spam folder'\
         .format(account.email_address)
     spam_folder = Folder.find_or_create(db_session, account,
-                                        folder_names['spam'])
+                                        folder_names['spam'], 'spam')
     account.spam_folder = verify_folder_name(
         account.id, account.spam_folder, spam_folder)
 
@@ -65,7 +67,7 @@ def save_folder_names(log, account, folder_names, db_session):
         'Account {} has no detected trash folder'\
         .format(account.email_address)
     trash_folder = Folder.find_or_create(db_session, account,
-                                         folder_names['trash'])
+                                         folder_names['trash'], 'trash')
     account.trash_folder = verify_folder_name(
         account.id, account.trash_folder, trash_folder)
 
@@ -73,9 +75,18 @@ def save_folder_names(log, account, folder_names, db_session):
         'Account {} has no detected starred folder'\
         .format(account.email_address)
     starred_folder = Folder.find_or_create(db_session, account,
-                                           folder_names['starred'])
+                                           folder_names['starred'], 'starred')
     account.starred_folder = verify_folder_name(
         account.id, account.starred_folder, starred_folder)
+
+    assert 'important' in folder_names, \
+        'Account {} has no detected important folder'\
+        .format(account.email_address)
+    important_folder = Folder.find_or_create(db_session, account,
+                                             folder_names['important'],
+                                             'important')
+    account.important_folder = verify_folder_name(
+        account.id, account.important_folder, important_folder)
 
     if 'archive' in folder_names:
         archive_folder = Folder.find_or_create(db_session, account,
@@ -85,7 +96,7 @@ def save_folder_names(log, account, folder_names, db_session):
 
     if 'all' in folder_names:
         all_folder = Folder.find_or_create(db_session, account,
-                                           folder_names['all'])
+                                           folder_names['all'], 'all')
         account.all_folder = verify_folder_name(
             account.id, account.all_folder, all_folder)
 

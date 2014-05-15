@@ -4,10 +4,8 @@ from datetime import datetime
 from flanker.addresslib import address
 
 from inbox.server.crispin import RawMessage
-from inbox.server.models.tables.base import Account
-from inbox.server.models.tables.imap import ImapThread
 from inbox.server.mailsync.backends.base import create_db_objects, commit_uids
-from inbox.server.mailsync.backends.imap.account import create_gmail_message
+from inbox.server.mailsync.backends.gmail import create_gmail_message
 from inbox.server.sendmail.message import (create_email, add_reply_headers,
                                            rfc_transform)
 

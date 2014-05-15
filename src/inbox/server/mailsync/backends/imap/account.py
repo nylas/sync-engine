@@ -10,11 +10,10 @@ accounts.
 from sqlalchemy import distinct, func
 from sqlalchemy.orm.exc import NoResultFound
 
-from inbox.server.models.tables.base import Block, Message, FolderItem, Folder
-from inbox.server.models.tables.imap import ImapUid, UIDValidity, ImapThread
-from inbox.server.models.message import create_message, reconcile_message
+from inbox.server.models.tables.base import Block, Message, Folder
+from inbox.server.models.tables.imap import ImapUid, UIDValidity
+from inbox.server.models.message import create_message
 
-from inbox.server.contacts.process_mail import update_contacts
 
 from inbox.server.log import get_logger
 log = get_logger()
@@ -189,81 +188,3 @@ def create_imap_message(db_session, log, account, folder, msg):
         # non-Gmail backends.
 
         return imapuid
-
-
-def add_gmail_attrs(db_session, log, new_uid, flags, folder, g_thrid, g_msgid,
-                    g_labels, created):
-    """ Gmail-specific post-create-message bits."""
-
-    new_uid.message.g_msgid = g_msgid
-    # NOTE: g_thrid == g_msgid on the first message in the thread :)
-    new_uid.message.g_thrid = g_thrid
-    new_uid.update_imap_flags(flags, g_labels)
-
-    # If we don't disable autoflush here, the thread query may flush a
-    # message to the database with a NULL thread_id, causing a crash.
-    with db_session.no_autoflush:
-        thread = new_uid.message.thread = ImapThread.from_gmail_message(
-            db_session, new_uid.imapaccount.namespace, new_uid.message)
-
-    # make sure this thread has all the correct labels
-    existing_labels = {l.folder.name.lower() for l in thread.folderitems}
-    # convert things like \Inbox -> Inbox, \Important -> Important
-    new_labels = {l.lstrip('\\') for l in g_labels} | {folder.name}
-    # The IMAP folder name for the inbox on Gmail is INBOX, but there's ALSO
-    # a flag called '\Inbox' on all messages in it... that only appears when
-    # you look at the message with a folder OTHER than INBOX selected.
-    # Standardize on keeping \Inbox in our database.
-    if 'Inbox' in new_labels or 'INBOX' in new_labels:
-        new_labels.discard('INBOX')
-        new_labels.discard('Inbox')
-        new_labels.add('Inbox')
-    # NOTE: Gmail labels are case-insensitive, though we store them in the
-    # original case in the db to not confuse users when displayed.
-    new_labels_ci = {l.lower() for l in new_labels}
-
-    # Remove labels that have been deleted -- note that the \Inbox, \Sent,
-    # \Important, and \Drafts labels are per-message, not per-thread, but since
-    # we always work at the thread level, _we_ apply the label to the whole
-    # thread.
-    thread.folderitems = [l for l in thread.folderitems if
-                          l.folder.name.lower() in new_labels_ci or
-                          l.folder.name.lower() in
-                          ('inbox', 'sent', 'drafts', 'important')]
-    # add new labels
-    for label in new_labels:
-        if label.lower() not in existing_labels:
-            item = FolderItem.create(
-                db_session, thread=thread, folder_name=label)
-            db_session.add(item)
-
-    # Reconciliation for Sent Mail folder:
-    if 'sent' in new_labels_ci and not created and new_uid.message.inbox_uid:
-        if not thread.id:
-            db_session.flush()
-        reconcile_gmail_message(db_session, log, new_uid.message.inbox_uid,
-                                new_uid.message, thread.id, g_thrid)
-
-    return new_uid
-
-
-def create_gmail_message(db_session, log, account, folder, msg):
-    """ Gmail-specific message creation logic. """
-
-    new_uid = create_imap_message(db_session, log, account, folder, msg)
-
-    if new_uid:
-        new_uid = add_gmail_attrs(db_session, log, new_uid, msg.flags,
-                                  folder, msg.g_thrid, msg.g_msgid,
-                                  msg.g_labels, msg.created)
-
-        update_contacts(db_session, account.id, new_uid.message)
-        return new_uid
-
-
-def reconcile_gmail_message(db_session, log, inbox_uid, new_msg, thread_id,
-                            g_thrid):
-    spool_message = reconcile_message(db_session, log, inbox_uid, new_msg,
-                                      thread_id)
-    if spool_message:
-        spool_message.g_thrid = g_thrid

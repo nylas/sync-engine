@@ -30,10 +30,12 @@ from gevent.queue import LifoQueue
 from inbox.util.itert import chunk, partition
 from inbox.util.cache import set_cache, get_cache, rm_cache
 
+from inbox.server.contacts.process_mail import update_contacts
 from inbox.server.crispin import GMetadata, connection_pool, retry_crispin
 from inbox.server.models import session_scope
+from inbox.server.models.message import reconcile_message
 from inbox.server.models.tables.base import Namespace, Message, Folder
-from inbox.server.models.tables.imap import ImapAccount, ImapUid
+from inbox.server.models.tables.imap import ImapAccount, ImapUid, ImapThread
 from inbox.server.mailsync.backends.base import (create_db_objects,
                                                  commit_uids, new_or_updated)
 from inbox.server.mailsync.backends.imap import (account,
@@ -49,6 +51,7 @@ from inbox.server.mailsync.backends.imap import (account,
                                                  uid_list_to_stack,
                                                  report_progress,
                                                  ImapSyncMonitor)
+
 
 PROVIDER = 'Gmail'
 SYNC_MONITOR_CLS = 'GmailSyncMonitor'
@@ -133,7 +136,7 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
                              len(remote_uids), shared_state['status_cb'],
                              shared_state['syncmanager_lock'],
                              gmail_download_and_commit_uids,
-                             account.create_gmail_message)
+                             create_gmail_message)
 
     # Complete X-GM-MSGID mapping is no longer needed after initial sync.
     rm_cache(remote_g_metadata_cache_file(crispin_client.account_id,
@@ -170,7 +173,7 @@ def gmail_highestmodseq_update(crispin_client, db_session, log, folder_name,
                              uid_download_stack, 0, uid_download_stack.qsize(),
                              status_cb, syncmanager_lock,
                              gmail_download_and_commit_uids,
-                             account.create_gmail_message)
+                             create_gmail_message)
 
 
 def remote_g_metadata_cache_file(account_id, folder_name):
@@ -392,7 +395,7 @@ def download_thread(crispin_client, db_session, log, syncmanager_lock,
     for uids in chunk(reversed(to_download), crispin_client.CHUNK_SIZE):
         gmail_download_and_commit_uids(crispin_client, db_session, log,
                                        crispin_client.selected_folder_name,
-                                       uids, account.create_gmail_message,
+                                       uids, create_gmail_message,
                                        syncmanager_lock)
 
 
@@ -573,3 +576,98 @@ def update_saved_g_metadata(crispin_client, db_session, log, folder_name,
         log.info("Updated metadata for modified messages")
     else:
         log.info("No modified messages to update metadata for")
+
+
+def create_gmail_message(db_session, log, acct, folder, msg):
+    """ Gmail-specific message creation logic. """
+
+    new_uid = account.create_imap_message(db_session, log, acct, folder, msg)
+
+    if new_uid:
+        new_uid = add_gmail_attrs(db_session, log, new_uid, msg.flags,
+                                  folder, msg.g_thrid, msg.g_msgid,
+                                  msg.g_labels, msg.created)
+
+        update_contacts(db_session, acct.id, new_uid.message)
+        return new_uid
+
+
+def reconcile_gmail_message(db_session, log, inbox_uid, new_msg, thread_id,
+                            g_thrid):
+    spool_message = reconcile_message(db_session, log, inbox_uid, new_msg,
+                                      thread_id)
+    if spool_message:
+        spool_message.g_thrid = g_thrid
+
+
+def add_gmail_attrs(db_session, log, new_uid, flags, folder, g_thrid, g_msgid,
+                    g_labels, created):
+    """ Gmail-specific post-create-message bits."""
+
+    new_uid.message.g_msgid = g_msgid
+    # NOTE: g_thrid == g_msgid on the first message in the thread :)
+    new_uid.message.g_thrid = g_thrid
+    new_uid.update_imap_flags(flags, g_labels)
+
+    # If we don't disable autoflush here, the thread query may flush a
+    # message to the database with a NULL thread_id, causing a crash.
+    with db_session.no_autoflush:
+        thread = new_uid.message.thread = ImapThread.from_gmail_message(
+            db_session, new_uid.imapaccount.namespace, new_uid.message)
+
+    # make sure this thread has all the correct labels
+    existing_labels = {folder.name.lower() for folder in thread.folders}
+    # convert things like \Inbox -> Inbox, \Important -> Important
+    new_labels = {l.lstrip('\\') for l in g_labels} | {folder.name}
+    # The IMAP folder name for the inbox on Gmail is INBOX, but there's ALSO a
+    # flag called '\Inbox' on all messages in it... that only appears when you
+    # look at the message with a folder OTHER than INBOX selected.  Standardize
+    # on keeping \Inbox in our database.
+    if 'Inbox' in new_labels or 'INBOX' in new_labels:
+        new_labels.discard('INBOX')
+        new_labels.discard('Inbox')
+        new_labels.add('Inbox')
+    # NOTE: Gmail labels are case-insensitive, though we store them in the
+    # original case in the db to not confuse users when displayed.
+    new_labels_ci = {l.lower() for l in new_labels}
+
+    # Remove labels that have been deleted -- note that the \Inbox, \Sent,
+    # \Important, and \Drafts labels are per-message, not per-thread, but since
+    # we always work at the thread level, _we_ apply the label to the whole
+    # thread.
+    thread.folders = {folder for folder in thread.folders if
+                      folder.name.lower() in new_labels_ci or
+                      folder.name.lower() in ('inbox', 'sent', 'drafts',
+                                              'important')}
+
+    # add new labels
+    for label in new_labels:
+        if label.lower() not in existing_labels:
+            # The problem here is that Gmail's attempt to squash labels and
+            # IMAP folders into the same abstraction doesn't work perfectly. In
+            # particular, there is a '[Gmail]/Sent' folder, but *also* a 'Sent'
+            # label, and so on. We handle this by only maintaining one folder
+            # object that encapsulates both of these.
+            if label == 'Sent':
+                thread.folders.add(thread.namespace.account.sent_folder)
+            elif label == 'Draft':
+                thread.folders.add(thread.namespace.account.drafts_folder)
+            elif label == 'Starred':
+                thread.folders.add(thread.namespace.account.starred_folder)
+            elif label == 'Important':
+                thread.folders.add(thread.namespace.account.important_folder)
+            else:
+                folder = Folder.find_or_create(db_session,
+                                               thread.namespace.account,
+                                               label)
+                thread.folders.add(folder)
+
+    # Reconciliation for Sent Mail folder:
+    if ('sent' in new_labels_ci and not created and
+            new_uid.message.inbox_uid):
+        if not thread.id:
+            db_session.flush()
+        reconcile_gmail_message(db_session, log, new_uid.message.inbox_uid,
+                                new_uid.message, thread.id, g_thrid)
+
+    return new_uid

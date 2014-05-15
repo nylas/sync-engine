@@ -11,7 +11,8 @@ from datetime import datetime
 
 from sqlalchemy import (Column, Integer, BigInteger, String, DateTime, Boolean,
                         Enum, ForeignKey, Text, func, event, and_, or_, asc)
-from sqlalchemy.orm import (reconstructor, backref, relationship, deferred,
+from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy.orm import (reconstructor, relationship, backref, deferred,
                             validates, object_session)
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
@@ -66,6 +67,12 @@ class Account(Base, HasPublicID):
     provider = Column(Enum('Gmail', 'Outlook', 'Yahoo', 'EAS', 'Inbox'),
                       nullable=False)
 
+    # We prefix user-created folder with this string when we expose them as
+    # tags through the API. E.g., a 'jobs' folder/label on a Gmail backend is
+    # exposed as 'gmail-jobs'.
+    # Any value stored here should also be in UserTag.RESERVED_PROVIDER_NAMES.
+    provider_prefix = Column(String(64), nullable=False)
+
     # local flags & data
     save_raw_messages = Column(Boolean, server_default=true())
 
@@ -77,38 +84,60 @@ class Account(Base, HasPublicID):
     # creates some folders on the remote backend, for example to provide
     # "archive" functionality on non-Gmail remotes.
     inbox_folder_id = Column(Integer, ForeignKey('folder.id'), nullable=True)
-    inbox_folder = relationship('Folder', post_update=True,
-                                primaryjoin='and_(Account.inbox_folder_id == Folder.id, Folder.deleted_at == None, Account.deleted_at == None)')
+    inbox_folder = relationship(
+        'Folder', post_update=True,
+        primaryjoin='and_(Account.inbox_folder_id == Folder.id, '
+                    'Folder.deleted_at == None, Account.deleted_at == None)')
     sent_folder_id = Column(Integer, ForeignKey('folder.id'), nullable=True)
-    sent_folder = relationship('Folder', post_update=True,
-                               primaryjoin='and_(Account.sent_folder_id == Folder.id, Folder.deleted_at == None)')
+    sent_folder = relationship(
+        'Folder', post_update=True,
+        primaryjoin='and_(Account.sent_folder_id == Folder.id, '
+                    'Folder.deleted_at == None)')
 
     drafts_folder_id = Column(Integer, ForeignKey('folder.id'), nullable=True)
-    drafts_folder = relationship('Folder', post_update=True,
-                                 primaryjoin='and_(Account.drafts_folder_id == Folder.id, Folder.deleted_at == None, Account.deleted_at == None)')
+    drafts_folder = relationship(
+        'Folder', post_update=True,
+        primaryjoin='and_(Account.drafts_folder_id == Folder.id, '
+                    'Folder.deleted_at == None, Account.deleted_at == None)')
 
     spam_folder_id = Column(Integer, ForeignKey('folder.id'), nullable=True)
-    spam_folder = relationship('Folder', post_update=True,
-                               primaryjoin='and_(Account.spam_folder_id == Folder.id, Folder.deleted_at == None, Account.deleted_at == None)')
+    spam_folder = relationship(
+        'Folder', post_update=True,
+        primaryjoin='and_(Account.spam_folder_id == Folder.id, '
+                    'Folder.deleted_at == None, Account.deleted_at == None)')
 
     trash_folder_id = Column(Integer, ForeignKey('folder.id'), nullable=True)
-    trash_folder = relationship('Folder', post_update=True,
-                                primaryjoin='and_(Account.trash_folder_id == Folder.id, Folder.deleted_at == None, Account.deleted_at == None)')
+    trash_folder = relationship(
+        'Folder', post_update=True,
+        primaryjoin='and_(Account.trash_folder_id == Folder.id, '
+                    'Folder.deleted_at == None, Account.deleted_at == None)')
 
     archive_folder_id = Column(Integer, ForeignKey('folder.id'),
                                nullable=True)
-    archive_folder = relationship('Folder', post_update=True,
-                                  primaryjoin='and_(Account.archive_folder_id == Folder.id, Folder.deleted_at == None, Account.deleted_at == None)')
+    archive_folder = relationship(
+        'Folder', post_update=True,
+        primaryjoin='and_(Account.archive_folder_id == Folder.id, '
+                    'Folder.deleted_at == None, Account.deleted_at == None)')
 
     all_folder_id = Column(Integer, ForeignKey('folder.id'), nullable=True)
-    all_folder = relationship('Folder', post_update=True,
-                              primaryjoin='and_(Account.all_folder_id == Folder.id, Folder.deleted_at == None, Account.deleted_at == None)')
+    all_folder = relationship(
+        'Folder', post_update=True,
+        primaryjoin='and_(Account.all_folder_id == Folder.id, '
+                    'Folder.deleted_at == None, Account.deleted_at == None)')
 
     starred_folder_id = Column(Integer, ForeignKey('folder.id'),
                                nullable=True)
-    starred_folder = relationship('Folder', post_update=True,
-                                  primaryjoin='and_(Account.starred_folder_id == Folder.id, Folder.deleted_at == None, Account.deleted_at == None)')
+    starred_folder = relationship(
+        'Folder', post_update=True,
+        primaryjoin='and_(Account.starred_folder_id == Folder.id, '
+                    'Folder.deleted_at == None, Account.deleted_at == None)')
 
+    important_folder_id = Column(Integer, ForeignKey('folder.id'),
+                                 nullable=True)
+    important_folder = relationship(
+        'Folder', post_update=True,
+        primaryjoin='and_(Account.important_folder_id == Folder.id, '
+                    'Folder.deleted_at == None, Account.deleted_at == None)')
 
     @property
     def sync_active(self):
@@ -209,9 +238,11 @@ class Namespace(Base, HasPublicID):
                         ForeignKey('account.id', ondelete='CASCADE'),
                         nullable=True)
     # really the root_namespace
-    account = relationship('Account',
-                           primaryjoin='and_(Namespace.account_id == Account.id, Account.deleted_at == None, Namespace.deleted_at == None)',
-                           backref=backref('namespace', uselist=False))
+    account = relationship(
+        'Account', backref=backref('namespace', uselist=False),
+        primaryjoin='and_(Namespace.account_id == Account.id, '
+                    'Account.deleted_at == None, '
+                    'Namespace.deleted_at == None)')
 
     # invariant: imapaccount is non-null iff type is root
     type = Column(Enum('root', 'shared_folder'), nullable=False,
@@ -229,8 +260,11 @@ class Transaction(Base, Revision):
     namespace_id = Column(Integer,
                           ForeignKey('namespace.id', ondelete='CASCADE'),
                           nullable=False)
-    namespace = relationship('Namespace',
-                             primaryjoin='and_(Transaction.namespace_id == Namespace.id, Namespace.deleted_at == None, Transaction.deleted_at == None)')
+    namespace = relationship(
+        'Namespace',
+        primaryjoin='and_(Transaction.namespace_id == Namespace.id, '
+                    'Namespace.deleted_at == None, '
+                    'Transaction.deleted_at == None)')
 
     def set_extra_attrs(self, obj):
         try:
@@ -255,9 +289,11 @@ class SearchToken(Base):
     token = Column(String(255))
     source = Column('source', Enum('name', 'email_address'))
     contact_id = Column(ForeignKey('contact.id', ondelete='CASCADE'))
-    contact = relationship('Contact', backref='token', cascade='all',
-                           primaryjoin='and_(SearchToken.contact_id == Contact.id, Contact.deleted_at == None, SearchToken.deleted_at)',
-                           single_parent=True)
+    contact = relationship(
+        'Contact', backref='token', cascade='all',
+        primaryjoin='and_(SearchToken.contact_id == Contact.id, '
+                    'Contact.deleted_at == None, SearchToken.deleted_at)',
+        single_parent=True)
 
 
 class SearchSignal(Base):
@@ -288,22 +324,28 @@ class MessageContactAssociation(Base):
     # Note: The `cascade` properties need to be a parameter of the backref
     # here, and not of the relationship. Otherwise a sqlalchemy error is thrown
     # when you try to delete a message or a contact.
-    contact = relationship('Contact',
-                           primaryjoin='and_(MessageContactAssociation.contact_id == Contact.id, Contact.deleted_at == None, MessageContactAssociation.deleted_at == None)',
-                           backref=backref('message_associations',
-                                           cascade='all, delete-orphan'))
-    message = relationship('Message',
-                           primaryjoin='and_(MessageContactAssociation.message_id == Message.id, Message.deleted_at == None, MessageContactAssociation.deleted_at == None)',
-                           backref=backref('contacts',
-                                           cascade='all, delete-orphan'))
+    contact = relationship(
+        'Contact',
+        primaryjoin='and_(MessageContactAssociation.contact_id == Contact.id, '
+                    'Contact.deleted_at == None, '
+                    'MessageContactAssociation.deleted_at == None)',
+        backref=backref('message_associations', cascade='all, delete-orphan'))
+    message = relationship(
+        'Message',
+        primaryjoin='and_(MessageContactAssociation.message_id == Message.id, '
+                    'Message.deleted_at == None, '
+                    'MessageContactAssociation.deleted_at == None)',
+        backref=backref('contacts', cascade='all, delete-orphan'))
 
 
 class Contact(Base, HasRevisions, HasPublicID):
     """Data for a user's contact."""
     account_id = Column(ForeignKey('account.id', ondelete='CASCADE'),
                         nullable=False)
-    account = relationship('Account', load_on_pending=True,
-                           primaryjoin='and_(Contact.account_id == Account.id, Account.deleted_at == None, Contact.deleted_at == None)')
+    account = relationship(
+        'Account', load_on_pending=True,
+        primaryjoin='and_(Contact.account_id == Account.id, '
+                    'Account.deleted_at == None, Contact.deleted_at == None)')
 
     # A server-provided unique ID.
     uid = Column(String(64), nullable=False)
@@ -325,7 +367,9 @@ class Contact(Base, HasRevisions, HasPublicID):
     raw_data = Column(Text)
     search_signals = relationship(
         'SearchSignal', cascade='all',
-        primaryjoin='and_(SearchSignal.contact_id == Contact.id, SearchSignal.deleted_at == None, Contact.deleted_at == None)',
+        primaryjoin='and_(SearchSignal.contact_id == Contact.id, '
+                    'SearchSignal.deleted_at == None, '
+                    'Contact.deleted_at == None)',
         collection_class=attribute_mapped_collection('name'))
 
     # A score to use for ranking contact search results. This should be
@@ -394,10 +438,11 @@ class Message(Base, HasRevisions, HasPublicID):
     # Do delete messages if their associated thread is deleted.
     thread_id = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
                        nullable=False)
-    thread = relationship('Thread',
-                          primaryjoin='and_(Message.thread_id == Thread.id, Thread.deleted_at == None, Message.deleted_at == None)',
-                          backref=backref('messages',
-                                          order_by='Message.received_date'))
+    thread = relationship(
+        'Thread',
+        primaryjoin='and_(Message.thread_id == Thread.id, '
+                    'Thread.deleted_at == None, Message.deleted_at == None)',
+        backref=backref('messages', order_by='Message.received_date'))
 
     from_addr = Column(JSON, nullable=True)
     sender_addr = Column(JSON, nullable=True)
@@ -638,7 +683,9 @@ class SpoolMessage(Message):
                                  nullable=True)
     resolved_message = relationship(
         'Message',
-        primaryjoin='and_(SpoolMessage.resolved_message_id==remote(Message.id), remote(Message.deleted_at)==None, SpoolMessage.deleted_at == None)',
+        primaryjoin='and_(SpoolMessage.resolved_message_id==remote(Message.id), '
+                    'remote(Message.deleted_at)==None, '
+                    'SpoolMessage.deleted_at == None)',
         backref=backref('spooled_message', uselist=False))
 
     __mapper_args__ = {'polymorphic_identity': 'spoolmessage',
@@ -684,9 +731,10 @@ class Block(Blob, Base, HasRevisions, HasPublicID):
     namespace_id = Column(Integer,
                           ForeignKey('namespace.id', ondelete='CASCADE'),
                           nullable=False)
-    namespace = relationship('Namespace',
-                             primaryjoin='and_(Block.namespace_id==Namespace.id, Namespace.deleted_at==None, Block.deleted_at == None)',
-                             backref=backref('blocks'))
+    namespace = relationship(
+        'Namespace', backref='blocks',
+        primaryjoin='and_(Block.namespace_id==Namespace.id, '
+                    'Namespace.deleted_at==None, Block.deleted_at == None)')
 
     @reconstructor
     def init_on_load(self):
@@ -715,10 +763,11 @@ class Part(Block):
                 primary_key=True)
 
     message_id = Column(Integer, ForeignKey('message.id', ondelete='CASCADE'))
-    message = relationship('Message',
-                           primaryjoin='and_(Part.message_id==Message.id, Message.deleted_at==None, Part.deleted_at == None)',
-                           backref=backref(
-                               "parts", cascade="all, delete, delete-orphan"))
+    message = relationship(
+        'Message',
+        primaryjoin='and_(Part.message_id==Message.id, '
+                    'Message.deleted_at==None, Part.deleted_at == None)',
+        backref=backref("parts", cascade="all, delete, delete-orphan"))
 
     walk_index = Column(Integer)
     content_disposition = Column(Enum('inline', 'attachment'))
@@ -760,16 +809,27 @@ class Thread(Base, HasPublicID):
     subjectdate = Column(DateTime, nullable=False)
     recentdate = Column(DateTime, nullable=False)
 
-    folderitems = relationship('FolderItem', backref="thread",
-                               primaryjoin='and_(FolderItem.thread_id==Thread.id, FolderItem.deleted_at==None, Thread.deleted_at==None)',
-                               single_parent=True,
-                               cascade='all, delete, delete-orphan')
+    folderitems = relationship(
+        'FolderItem', backref='thread',
+        primaryjoin='and_(FolderItem.thread_id==Thread.id, '
+                    'FolderItem.deleted_at==None, Thread.deleted_at==None)',
+        single_parent=True, collection_class=set, cascade='all, delete-orphan')
+
+    folders = association_proxy(
+        'folderitems', 'folder',
+        creator=lambda folder: FolderItem(folder=folder))
+
+    usertags = association_proxy(
+        'usertagitems', 'usertag',
+        creator=lambda tag: UserTagItem(usertag=tag))
 
     namespace_id = Column(ForeignKey('namespace.id', ondelete='CASCADE'),
                           nullable=False, index=True)
-    namespace = relationship('Namespace',
-                             primaryjoin='and_(Thread.namespace_id==Namespace.id, Namespace.deleted_at==None, Thread.deleted_at == None)',
-                             backref='threads')
+    namespace = relationship(
+        'Namespace',
+        primaryjoin='and_(Thread.namespace_id==Namespace.id, '
+                    'Namespace.deleted_at==None, Thread.deleted_at == None)',
+        backref='threads')
 
     mailing_list_headers = Column(JSON, nullable=True)
 
@@ -811,6 +871,10 @@ class Thread(Base, HasPublicID):
                                      m.cc_addr, m.bcc_addr))
         return p
 
+    @property
+    def all_tags(self):
+        return list(self.usertags.union(self.folders))
+
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator}
 
@@ -820,14 +884,17 @@ class Webhook(Base, HasPublicID):
 
     namespace_id = Column(ForeignKey('namespace.id', ondelete='CASCADE'),
                           nullable=False, index=True)
-    namespace = relationship('Namespace',
-                             primaryjoin='and_(Webhook.namespace_id==Namespace.id, Namespace.deleted_at==None, Webhook.deleted_at == None)')
-
+    namespace = relationship(
+        'Namespace',
+        primaryjoin='and_(Webhook.namespace_id==Namespace.id, '
+                    'Namespace.deleted_at==None, Webhook.deleted_at == None)')
 
     lens_id = Column(ForeignKey('lens.id', ondelete='CASCADE'),
                      nullable=False, index=True)
-    lens = relationship('Lens',
-                        primaryjoin='and_(Webhook.lens_id==Lens.id, Lens.deleted_at==None, Webhook.deleted_at==None)')
+    lens = relationship(
+        'Lens',
+        primaryjoin='and_(Webhook.lens_id==Lens.id, Lens.deleted_at==None, '
+                    'Webhook.deleted_at==None)')
 
     callback_url = Column(Text, nullable=False)
     failure_notify_url = Column(Text)
@@ -909,8 +976,10 @@ class Lens(Base, HasPublicID):
 
     namespace_id = Column(ForeignKey('namespace.id', ondelete='CASCADE'),
                           nullable=False, index=True)
-    namespace = relationship('Namespace',
-                             primaryjoin='and_(Lens.namespace_id==Namespace.id, Namespace.deleted_at==None, Lens.deleted_at==None)')
+    namespace = relationship(
+        'Namespace',
+        primaryjoin='and_(Lens.namespace_id==Namespace.id, '
+                    'Namespace.deleted_at==None, Lens.deleted_at==None)')
 
     subject = Column(String(255))
     thread_public_id = Column(Base36UID)
@@ -1096,9 +1165,8 @@ class Lens(Base, HasPublicID):
         offset = offset or 0
         self.db_session = db_session
         query = self._message_subquery()
-        subquery = self._thread_subquery()
-        query = maybe_refine_query(query, subquery).distinct(). \
-            order_by(asc(Message.id))
+        query = maybe_refine_query(query, self._thread_subquery())
+        query = query.distinct().order_by(asc(Message.id))
         if limit > 0:
             query = query.limit(limit)
         if offset > 0:
@@ -1112,11 +1180,10 @@ class Lens(Base, HasPublicID):
         offset = offset or 0
         self.db_session = db_session
         query = self._thread_subquery()
-        subquery = self._message_subquery()
         # TODO(emfree): If there are no message-specific parameters, we may be
-        # doing a join on all messages here. Not ideal.
-        query = maybe_refine_query(query, subquery).distinct(). \
-            order_by(asc(Thread.id))
+        # doing a join on all messages here. Not good.
+        query = maybe_refine_query(query, self._message_subquery())
+        query = query.distinct().order_by(asc(Thread.id))
         if limit > 0:
             query = query.limit(limit)
         if offset > 0:
@@ -1195,9 +1262,26 @@ class Lens(Base, HasPublicID):
         return self.db_session.query(Block). \
             filter(Block.filename == self.filename)
 
+    def _tag_subquery(self):
+        if self.tag is None:
+            return None
+        # TODO(emfree): we should also be able to filter on public IDs of user
+        # tags. Needs some care since self.tag can be any string, but
+        # sqlalchemy would attempt to b36-decode it to compare to the
+        # public_id.
+        return self.db_session.query(UserTagItem).join(UserTag). \
+            filter(UserTag.name == self.tag)
+
+    def _folder_subquery(self):
+        return self.db_session.query(FolderItem).join(Folder). \
+            filter(or_(Folder.exposed_name == self.tag,
+                       Folder.public_id == self.tag))
+
     def _thread_subquery(self):
         pred = and_(Thread.namespace_id == self.namespace_id)
         if self.thread_public_id is not None:
+            # TODO(emfree): currently this may return a 500 if
+            # thread_public_id isn't b36-decodable.
             pred = and_(pred, Thread.public_id == self.thread_public_id)
 
         if self.started_before is not None:
@@ -1216,7 +1300,11 @@ class Lens(Base, HasPublicID):
             pred = and_(pred, Thread.recentdate >
                         datetime.utcfromtimestamp(self.last_message_after))
 
-        return self.db_session.query(Thread).filter(pred)
+        query = self.db_session.query(Thread).filter(pred)
+        query = maybe_refine_query(query, self._tag_subquery()).union(
+            maybe_refine_query(query, self._folder_subquery()))
+
+        return query
 
 
 class Folder(Base, HasRevisions):
@@ -1226,26 +1314,49 @@ class Folder(Base, HasRevisions):
                         ForeignKey('account.id', use_alter=True,
                                    name='folder_fk1',
                                    ondelete='CASCADE'), nullable=False)
-    account = relationship('Account', backref='folders',
-                           primaryjoin='and_(Folder.account_id==Account.id, Account.deleted_at==None, Folder.deleted_at==None)')
+    account = relationship(
+        'Account', backref='folders',
+        primaryjoin='and_(Folder.account_id==Account.id, '
+                    'Account.deleted_at==None, Folder.deleted_at==None)')
     # Explicitly set collation to be case insensitive. This is mysql's default
     # but never trust defaults! This allows us to store the original casing to
     # not confuse users when displaying it, but still only allow a single
     # folder with any specific name, canonicalized to lowercase.
     name = Column(String(191, collation='utf8mb4_general_ci'))
 
+    # Here's the deal. Folders have a public_id; however, this is *not* an
+    # autogenerated base36-encoded uuid. Instead, for special folders
+    # ('drafts', 'sent', etc.), it's the canonical tag name. For other remote
+    # folders (arbitrary user-created ones), public_id is null.
+    public_id = Column(String(191), nullable=True)
+
+    # For special folders, exposed_name is currently the same as the public_id,
+    # but could eventually be the localized tag name (e.g., 'gesendet'). For
+    # other remote folders, it's the mangled folder name that we expose (e.g.,
+    # for the Gmail label 'jobslist', this would be 'gmail-jobslist').
+    exposed_name = Column(String(255))
+
     @property
     def namespace(self):
         return self.account.namespace
 
+    def _set_exposed_name(self):
+        provider_prefix = self.account.provider_prefix
+        self.exposed_name = '-'.join((provider_prefix, self.name.lower()))
+
     @classmethod
-    def find_or_create(cls, session, account, name):
+    def find_or_create(cls, session, account, name, special_folder_type=None):
         try:
             obj = session.query(cls).filter(
                 Folder.account == account,
                 func.lower(Folder.name) == func.lower(name)).one()
         except NoResultFound:
             obj = cls(account=account, name=name)
+            if special_folder_type is not None:
+                obj.exposed_name = special_folder_type
+                obj.public_id = special_folder_type
+            else:
+                obj._set_exposed_name()
         except MultipleResultsFound:
             log.info("Duplicate folder rows for folder {} for account {}"
                      .format(name, account.id))
@@ -1274,14 +1385,10 @@ class FolderItem(Base, HasRevisions):
     folder_id = Column(Integer, ForeignKey('folder.id', ondelete='CASCADE'),
                        nullable=False)
     # We almost always need the folder name too, so eager load by default.
-    folder = relationship('Folder', backref='threads', lazy='joined',
-                          primaryjoin='and_(FolderItem.folder_id==Folder.id, Folder.deleted_at==None, FolderItem.deleted_at==None)')
-
-    @classmethod
-    def create(cls, session, thread, folder_name):
-        folder = Folder.find_or_create(session, thread.namespace.account,
-                                       folder_name)
-        return cls(thread=thread, folder=folder)
+    folder = relationship(
+        'Folder', backref='threads', lazy='joined',
+        primaryjoin='and_(FolderItem.folder_id==Folder.id, '
+                    'Folder.deleted_at==None, FolderItem.deleted_at==None)')
 
     @property
     def account(self):
@@ -1292,33 +1399,62 @@ class FolderItem(Base, HasRevisions):
         return self.thread.namespace
 
 
-class InternalTag(Base, HasRevisions, HasPublicID):
-    """ User-created Inbox tags.
+class UserTag(Base, HasRevisions, HasPublicID):
+    """ User-created tags. These tags are *not* replicated back to the remote
+    backend."""
 
-    These tags are *not* replicated back to the remote backend.
-    """
-    SYSTEM_NAMES = {'inbox', 'all', 'archive', 'drafts', 'send', 'sending',
-                    'sent', 'spam', 'starred', 'unstarred', 'read', 'replied',
-                    'trash', 'file', 'attachment'}
-
-    # TODO: take a user_id instead, and include *all* accounts belonging to it
-    @classmethod
-    def name_allowed(cls, session, account_id, tag_name):
-        user_folders = {n for n, in session.query(Folder.name).filter_by(
-            account_id=account_id)}
-        return tag_name not in \
-            cls.SYSTEM_NAMES | user_folders
-
+    namespace = relationship(
+        'Namespace', backref=backref('usertags', collection_class=set),
+        primaryjoin='and_(UserTag.namespace_id==Namespace.id, '
+                    'Namespace.deleted_at==None, UserTag.deleted_at==None)')
     namespace_id = Column(Integer, ForeignKey(
         'namespace.id', ondelete='CASCADE'), nullable=False)
-    namespace = relationship('Namespace', backref='tags',
-                             primaryjoin='and_(InternalTag.namespace_id==Namespace.id, Namespace.deleted_at==None, InternalTag.deleted_at==None)')
 
     name = Column(String(191), nullable=False)
 
-    thread_id = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
-                       nullable=False)
-    thread = relationship('Thread', backref='tags',
-                          primaryjoin='and_(InternalTag.thread_id==Thread.id, Thread.deleted_at==None, InternalTag.deleted_at==None)')
+    RESERVED_PROVIDER_NAMES = ['gmail', 'outlook', 'yahoo', 'exchange',
+                               'inbox', 'icloud', 'aol']
+
+    RESERVED_TAG_NAMES = ['inbox', 'all', 'archive', 'drafts', 'send',
+                          'sending', 'sent', 'spam', 'starred', 'unstarred',
+                          'read', 'replied', 'trash', 'file', 'attachment']
+
+    @classmethod
+    def name_available(cls, name, namespace_id, db_session):
+        if any(name.lower().startswith(provider) for provider in
+               cls.RESERVED_PROVIDER_NAMES):
+            return False
+
+        if name in cls.RESERVED_TAG_NAMES:
+            return False
+
+        if (name,) in db_session.query(UserTag.name). \
+                filter(UserTag.namespace_id == namespace_id):
+            return False
+
+        return True
 
     __table_args__ = (UniqueConstraint('namespace_id', 'name'),)
+
+
+class UserTagItem(Base, HasRevisions):
+    """Mapping between user tags and threads."""
+    thread_id = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
+                       nullable=False)
+    usertag_id = Column(Integer, ForeignKey('usertag.id', ondelete='CASCADE'),
+                        nullable=False)
+    thread = relationship(
+        'Thread', backref=backref('usertagitems',
+                                  collection_class=set,
+                                  cascade='all, delete-orphan'),
+        primaryjoin='and_(UserTagItem.thread_id==Thread.id, '
+                    'Thread.deleted_at==None, UserTagItem.deleted_at==None)')
+    usertag = relationship(
+        'UserTag',
+        backref=backref('threads', cascade='all, delete-orphan'),
+        primaryjoin='and_(UserTagItem.usertag_id==UserTag.id, '
+                    'UserTag.deleted_at==None, UserTagItem.deleted_at==None)')
+
+    @property
+    def namespace(self):
+        return self.thread.namespace

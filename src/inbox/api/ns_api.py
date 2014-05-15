@@ -1,5 +1,4 @@
 import os
-import json
 
 import zerorpc
 from flask import request, g, Blueprint, make_response, current_app, Response
@@ -9,7 +8,7 @@ from werkzeug.exceptions import default_exceptions
 from werkzeug.exceptions import HTTPException
 
 from inbox.server.models.tables.base import (
-    Message, Block, Part, Contact, Thread, Namespace, Lens, Webhook)
+    Message, Block, Part, Thread, Namespace, Lens, Webhook, UserTag)
 from inbox.server.models.kellogs import jsonify
 from inbox.server.config import config
 from inbox.server import contacts
@@ -68,7 +67,7 @@ def start():
             .filter(Namespace.public_id == g.namespace_public_id).one()
     except NoResultFound:
         return err(404, "Couldn't find namespace with id `{0}` "
-                .format(g.namespace_public_id))
+                   .format(g.namespace_public_id))
 
     g.lens = Lens(
         namespace_id=g.namespace.id,
@@ -84,6 +83,7 @@ def start():
         last_message_before=request.args.get('last_message_before'),
         last_message_after=request.args.get('last_message_after'),
         filename=request.args.get('filename'),
+        tag=request.args.get('tag'),
         detached=True)
     g.lens_limit = request.args.get('limit')
     g.lens_offset = request.args.get('offset')
@@ -91,7 +91,8 @@ def start():
 
 @app.after_request
 def finish(response):
-    g.db_session.commit()
+    if response.status_code == 200:
+        g.db_session.commit()
     g.db_session.close()
     return response
 
@@ -133,19 +134,27 @@ def index():
     return jsonify(g.namespace)
 
 
-#
-# Folders/labels TODO
-#
-@app.route('/labels/<public_id>')
-def folder_api(public_id):
+##
+# Tags
+##
+@app.route('/tags')
+def tag_query_api():
+    results = list(g.namespace.usertags.union(g.namespace.account.folders))
+    return jsonify(results)
 
-    if public_id.lower() in SPECIAL_LABELS:
-        pass  # TODO handle here
-        raise NotImplementedError
 
-    # else, we fetch it using the label table/object
-    # TODO add full CRUD
-    raise NotImplementedError
+@app.route('/tags', methods=['POST'])
+def tag_create_api():
+    data = request.get_json(force=True)
+    if data.keys() != ['name']:
+        return err(400, 'Malformed tag request')
+    tag_name = data['name']
+    if not UserTag.name_available(tag_name, g.namespace.id, g.db_session):
+        return err(409, 'Tag name not available')
+
+    tag = UserTag(name=tag_name, namespace=g.namespace)
+    g.db_session.commit()
+    return jsonify(tag)
 
 
 #
@@ -170,24 +179,46 @@ def thread_api(public_id):
         return err(404, "Couldn't find thread with id `{0}` "
                    "on namespace {1}".format(public_id, g.namespace_public_id))
 
-#
-# Update thread
-#
+
 @app.route('/threads/<public_id>', methods=['PUT'])
 def thread_api_update(public_id):
+    try:
+        thread = g.db_session.query(Thread).filter(
+            Thread.public_id == public_id,
+            Thread.namespace_id == g.namespace.id).one()
+    except NoResultFound:
+        return err(404, "Couldn't find thread with id `{0}` "
+                   "on namespace {1}".format(public_id, g.namespace_public_id))
+    data = request.get_json(force=True)
+    if not set(data).issubset({'add_tags', 'remove_tags'}):
+        return err(400, 'Can only add or remove tags from thread.')
 
-    # force ignores the Content-Type header, which really should
-    # be set as application/json
-    j = request.get_json(force=True, silent=True)
-    if j is None:
-        return err(409, "Badly formed JSON for a thread object. "
-                   "For more details about modifying threads, see "
-                   "https://www.inboxapp.com/docs#threads")
+    removals = data.get('remove_tags', [])
 
-    raise NotImplementedError
-    # TODO verify JSON objects to update thread.
-    # Only thing that can change is labels
-    # return jsonify(j)  # TODO don't just echo
+    # TODO(emfree) Currently trying to add/remove a read-only tag (i.e.,
+    # anything but a UserTag) will give a "no tag found" error.
+
+    for tag_name in removals:
+        try:
+            tag = g.db_session.query(UserTag).filter(
+                UserTag.namespace_id == g.namespace.id,
+                UserTag.name == tag_name).one()
+            thread.usertags.discard(tag)
+        except NoResultFound:
+            return err(404, 'No tag found with name {}'.  format(tag_name))
+
+    additions = data.get('add_tags', [])
+    for tag_name in additions:
+        try:
+            tag = g.db_session.query(UserTag).filter(
+                UserTag.namespace_id == g.namespace.id,
+                UserTag.name == tag_name).one()
+            thread.usertags.add(tag)
+        except NoResultFound:
+            return err(404, 'No tag found with name {}'.  format(tag_name))
+
+    g.db_session.commit()
+    return jsonify(thread)
 
 
 #
@@ -245,10 +276,7 @@ def contact_search_api():
 @app.route('/contacts', methods=['POST'])
 def contact_create_api():
     # TODO(emfree) Detect attempts at duplicate insertions.
-    try:
-        data = json.loads(request.data)
-    except ValueError:
-        return err(400, 'Malformed contact request')
+    data = request.get_json(force=True)
     name = data.get('name')
     email = data.get('email')
     if not any((name, email)):
@@ -402,10 +430,10 @@ def webhooks_read_all_api():
 @app.route('/webhooks', methods=['POST'])
 def webhooks_create_api():
     try:
-        parameters = json.loads(request.data)
+        parameters = request.get_json(force=True)
         result = get_webhook_client().register_hook(g.namespace.id, parameters)
         return Response(result, mimetype='application/json')
-    except (zerorpc.RemoteError, ValueError):
+    except zerorpc.RemoteError:
         return err(400, 'Malformed webhook request')
 
 
@@ -422,22 +450,17 @@ def webhooks_read_update_api(public_id):
                        .format(public_id))
 
     if request.method == 'PUT':
+        data = request.get_json(force=True)
+        # We only support updates to the 'active' flag.
+        if data.keys() != ['active']:
+            return err(400, 'Malformed webhook request')
 
         try:
-            data = json.loads(request.data)
-            # We only support updates to the 'active' flag.
-            if data.keys() != ['active']:
-                raise ValueError
-
             if data['active']:
                 get_webhook_client().start_hook(public_id)
             else:
                 get_webhook_client().stop_hook(public_id)
             return jsonify({"success": True})
-
-        except ValueError:
-            return err(400, 'Malformed webhook request')
-
         except zerorpc.RemoteError:
             return err(404, "Couldn't find webhook with id {}"
                        .format(public_id))

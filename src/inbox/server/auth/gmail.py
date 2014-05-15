@@ -18,6 +18,7 @@ from inbox.server.auth.base import commit_account
 
 PROVIDER = 'Gmail'
 IMAP_HOST = 'imap.gmail.com'
+PROVIDER_PREFIX = 'gmail'
 
 
 def verify_gmail_account(account):
@@ -95,6 +96,7 @@ def create_account(db_session, email_address, response):
         account = ImapAccount(namespace=namespace)
 
     account.provider = 'Gmail'
+    account.provider_prefix = PROVIDER_PREFIX
     account.imap_host = IMAP_HOST
     account.email_address = response['email']
     account.o_token_issued_to = response['issued_to']
