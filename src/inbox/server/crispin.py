@@ -486,7 +486,9 @@ class GmailCrispinClient(CrispinClient):
         dict
             uid: GMetadata(msgid, thrid)
         """
-        self.log.info("Fetching X-GM-MSGID and X-GM-THRID mapping from server.")
+        self.log.debug(
+            "Fetching X-GM-MSGID and X-GM-THRID for {} uids."
+            .format(len(uids)))
         return dict([(long(uid), GMetadata(str(ret['X-GM-MSGID']),
                                            str(ret['X-GM-THRID']))) for uid,
                      ret in self.conn.fetch(uids, ['X-GM-MSGID',
