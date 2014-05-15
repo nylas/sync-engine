@@ -182,6 +182,13 @@ class CrispinClient(object):
     SELECT a folder until the connection is closed or another folder is
     selected.
 
+    Crispin clients *always* return long ints rather than strings for number
+    data types, such as message UIDs, Google message IDs, and Google thread
+    IDs.
+
+    All inputs are coerced to strings before being passed off to the IMAPClient
+    connection.
+
     You should really be interfacing with this class via a connection pool,
     see `connection_pool()`.
 
@@ -223,6 +230,9 @@ class CrispinClient(object):
         if self.selected_folder_name != folder:
             select_info = self.conn.select_folder(
                 folder, readonly=self.readonly)
+            select_info['UIDVALIDITY'] = long(select_info['UIDVALIDITY'])
+            select_info['HIGHESTMODSEQ'] = long(select_info['HIGHESTMODSEQ'])
+            select_info['UIDNEXT'] = long(select_info['UIDNEXT'])
             self.selected_folder = (folder, select_info)
             # don't propagate cached information from previous session
             self._folder_names = None
@@ -246,8 +256,7 @@ class CrispinClient(object):
 
     @property
     def selected_uidvalidity(self):
-        return or_none(self.selected_folder_info, lambda i:
-                       long(i['UIDVALIDITY']))
+        return or_none(self.selected_folder_info, lambda i: i['UIDVALIDITY'])
 
     def sync_folders(self):
         # TODO: probabaly all of the folders
@@ -280,9 +289,8 @@ class CrispinClient(object):
         return folders
 
     def folder_status(self, folder):
-        status = self.conn.folder_status(folder,
-                                         ('UIDVALIDITY',
-                                          'HIGHESTMODSEQ', 'UIDNEXT'))
+        status = [long(val) for val in self.conn.folder_status(
+            folder, ('UIDVALIDITY', 'HIGHESTMODSEQ', 'UIDNEXT'))]
 
         return status
 
@@ -301,7 +309,7 @@ class CrispinClient(object):
             full_criteria.extend(criteria)
         else:
             full_criteria.append(criteria)
-        return self.conn.search(full_criteria)
+        return sorted([long(uid) for uid in self.conn.search(full_criteria)])
 
     def all_uids(self):
         """ Fetch all UIDs associated with the currently selected folder.
@@ -316,7 +324,8 @@ class CrispinClient(object):
 
     @timed
     def new_and_updated_uids(self, modseq):
-        return self.conn.search(['NOT DELETED', "MODSEQ {0}".format(modseq)])
+        return sorted([long(s) for s in self.conn.search(
+            ['NOT DELETED', "MODSEQ {}".format(modseq)])])
 
 
 class YahooCrispinClient(CrispinClient):
@@ -330,8 +339,9 @@ class YahooCrispinClient(CrispinClient):
         return self.folder_names()
 
     def flags(self, uids):
+        uids = [str(u) for u in uids]
         data = self.conn.fetch(uids, ['FLAGS'])
-        return dict([(uid, Flags(msg['FLAGS']))
+        return dict([(long(uid), Flags(msg['FLAGS']))
                      for uid, msg in data.iteritems()])
 
     def folder_names(self):
@@ -341,6 +351,7 @@ class YahooCrispinClient(CrispinClient):
         return self._folder_names
 
     def uids(self, uids):
+        uids = [str(u) for u in uids]
         raw_messages = self.conn.fetch(uids,
                                        ['BODY.PEEK[] INTERNALDATE FLAGS'])
         for uid, msg in raw_messages.iteritems():
@@ -356,9 +367,9 @@ class YahooCrispinClient(CrispinClient):
             msg['BODY[]'] = msg['BODY[]'].encode('latin-1')
 
         messages = []
-        for uid in sorted(raw_messages.iterkeys(), key=int):
+        for uid in sorted(raw_messages.iterkeys(), key=long):
             msg = raw_messages[uid]
-            messages.append(RawMessage(uid=int(uid),
+            messages.append(RawMessage(uid=long(uid),
                                        internaldate=msg['INTERNALDATE'],
                                        flags=msg['FLAGS'],
                                        body=msg['BODY[]']))
@@ -394,8 +405,9 @@ class GmailCrispinClient(CrispinClient):
         dict
             Mapping of `uid` (str) : GmailFlags.
         """
+        uids = [str(u) for u in uids]
         data = self.conn.fetch(uids, ['FLAGS X-GM-LABELS'])
-        return dict([(uid, GmailFlags(msg['FLAGS'], msg['X-GM-LABELS']))
+        return dict([(long(uid), GmailFlags(msg['FLAGS'], msg['X-GM-LABELS']))
                      for uid, msg in data.iteritems()])
 
     def folder_names(self):
@@ -442,6 +454,7 @@ class GmailCrispinClient(CrispinClient):
         return self._folder_names
 
     def uids(self, uids):
+        uids = [str(u) for u in uids]
         raw_messages = self.conn.fetch(uids, ['BODY.PEEK[] INTERNALDATE FLAGS',
                                               'X-GM-THRID', 'X-GM-MSGID',
                                               'X-GM-LABELS'])
@@ -458,14 +471,14 @@ class GmailCrispinClient(CrispinClient):
             msg['BODY[]'] = msg['BODY[]'].encode('latin-1')
 
         messages = []
-        for uid in sorted(raw_messages.iterkeys(), key=int):
+        for uid in sorted(raw_messages.iterkeys(), key=long):
             msg = raw_messages[uid]
-            messages.append(RawMessage(uid=int(uid),
+            messages.append(RawMessage(uid=long(uid),
                                        internaldate=msg['INTERNALDATE'],
                                        flags=msg['FLAGS'],
                                        body=msg['BODY[]'],
-                                       g_thrid=msg['X-GM-THRID'],
-                                       g_msgid=msg['X-GM-MSGID'],
+                                       g_thrid=long(msg['X-GM-THRID']),
+                                       g_msgid=long(msg['X-GM-MSGID']),
                                        g_labels=msg['X-GM-LABELS'],
                                        created=False))
         return messages
@@ -486,11 +499,12 @@ class GmailCrispinClient(CrispinClient):
         dict
             uid: GMetadata(msgid, thrid)
         """
+        uids = [str(u) for u in uids]
         self.log.debug(
             "Fetching X-GM-MSGID and X-GM-THRID for {} uids."
             .format(len(uids)))
-        return dict([(long(uid), GMetadata(str(ret['X-GM-MSGID']),
-                                           str(ret['X-GM-THRID']))) for uid,
+        return dict([(long(uid), GMetadata(long(ret['X-GM-MSGID']),
+                                           long(ret['X-GM-THRID']))) for uid,
                      ret in self.conn.fetch(uids, ['X-GM-MSGID',
                                                    'X-GM-THRID']).iteritems()])
 
@@ -505,12 +519,12 @@ class GmailCrispinClient(CrispinClient):
             All Mail UIDs (as integers), sorted most-recent first.
         """
         assert self.selected_folder_name == self.folder_names()['all'], \
-            "must select All Mail first ({0})".format(
+            "must select All Mail first ({})".format(
                 self.selected_folder_name)
         criteria = ('OR ' * (len(g_thrids)-1)) + ' '.join(
-            ['X-GM-THRID {0}'.format(thrid) for thrid in g_thrids])
-        uids = [int(uid) for uid in self.conn.search(['NOT DELETED',
-                                                      criteria])]
+            ['X-GM-THRID {}'.format(thrid) for thrid in g_thrids])
+        uids = [long(uid) for uid in self.conn.search(['NOT DELETED',
+                                                       criteria])]
         # UIDs ascend over time; return in order most-recent first
         return sorted(uids, reverse=True)
 
@@ -518,8 +532,9 @@ class GmailCrispinClient(CrispinClient):
         """ Get UIDs for the [sub]set of messages belonging to the given thread
             that are in the current folder.
         """
-        criteria = 'X-GM-THRID {0}'.format(g_thrid)
-        return self.conn.search(['NOT DELETED', criteria])
+        criteria = 'X-GM-THRID {}'.format(g_thrid)
+        return sorted([long(uid) for uid in
+                       self.conn.search(['NOT DELETED', criteria])])
 
     ### the following methods WRITE to the IMAP account!
 

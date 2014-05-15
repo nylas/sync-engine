@@ -65,7 +65,7 @@ def g_metadata(account_id, session, folder_name):
                 Folder.name == folder_name,
                 ImapUid.message_id == Message.id)
 
-    return dict([(int(uid), dict(msgid=g_msgid, thrid=g_thrid))
+    return dict([(int(uid), dict(msgid=int(g_msgid), thrid=int(g_thrid)))
                  for uid, g_msgid, g_thrid in query])
 
 

@@ -392,6 +392,7 @@ def download_thread(crispin_client, db_session, log, syncmanager_lock,
     to_download = deduplicate_message_download(crispin_client, db_session, log,
                                                syncmanager_lock,
                                                thread_g_metadata, thread_uids)
+    log.debug("{} deduplicated messages to download.".format(len(to_download)))
     for uids in chunk(reversed(to_download), crispin_client.CHUNK_SIZE):
         gmail_download_and_commit_uids(crispin_client, db_session, log,
                                        crispin_client.selected_folder_name,
