@@ -46,7 +46,12 @@ def finish(response):
 
 @app.route('/')
 def home():
-    return "Maybe you're looking for the <a href='docs'>Docs</a>?"
+    return """
+<html><body>
+    Check out the <strong><pre style="display:inline">docs</pre></strong> folder
+    for how to use this API.
+</body></html>
+"""
 
 
 @app.route('/n/')
