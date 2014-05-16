@@ -52,14 +52,3 @@ def home():
     for how to use this API.
 </body></html>
 """
-
-
-@app.route('/n/')
-def ns_all():
-    """
-    Display a listing of all namespaces at /n/
-    This is done to help with development, along with no authentication.
-    """
-    with session_scope() as db_session:
-        namespaces = db_session.query(Namespace).all()
-        return jsonify(namespaces)
