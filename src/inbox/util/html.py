@@ -1,6 +1,16 @@
 import re
 import cgi
 
+# talon has not been released yet; if it's not available, don't do quote
+# extraction or signature detection.
+try:
+    from talon.quotations import (register_xpath_extensions, extract_from_html,
+                                  extract_from_plain)
+    register_xpath_extensions()
+except ImportError:
+    extract_from_html = lambda html: html
+    extract_from_plain = lambda plain: plain
+
 from HTMLParser import HTMLParser
 
 # http://stackoverflow.com/questions/753052/strip-html-from-strings-in-python

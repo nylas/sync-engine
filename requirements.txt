@@ -1,5 +1,4 @@
 argparse==1.2.1
-beautifulsoup4==4.3.2
 coverage==3.7.1
 httplib2==0.8
 pytest==2.3.4
@@ -51,3 +50,4 @@ Pygments==1.6
 greenlet==0.4.2
 PyMySQL==0.6.2
 click==0.7
+talon==1.0
