@@ -458,7 +458,7 @@ def add_new_imapuid(db_session, log, gmessage, folder_name, acc):
         Which account to associate the message with. (Not looking this up
         within this function is a db access optimization.)
     """
-    if not db_session.query(ImapUid.msg_uid).filter(
+    if not db_session.query(ImapUid.msg_uid).join(Folder).filter(
             Folder.name == folder_name,
             ImapUid.msg_uid == gmessage.uid).all():
         message = db_session.query(Message).filter_by(
