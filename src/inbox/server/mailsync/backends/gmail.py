@@ -282,6 +282,8 @@ def check_new_g_thrids(account_id, provider, folder_name, log,
                             local_with_pending_uids]
                 flags = crispin_client.flags(new_uids)
                 g_metadata = crispin_client.g_metadata(new_uids)
+                log.info("Adding {} new messages to the download queue for {}"
+                         .format(min(len(flags), len(g_metadata)), folder_name))
                 for new_uid in new_uids:
                     # could have disappeared from the folder in the meantime
                     if new_uid in flags and new_uid in g_metadata:
@@ -362,9 +364,11 @@ def download_queued_threads(crispin_client, db_session, log, folder_name,
             with syncmanager_lock:
                 # Since we download msgs from All Mail, we need to separately
                 # make sure we have ImapUids recorded for this folder (used in
-                # progress tracking and delete detection).
+                # progress tracking, queuing, and delete detection).
+                log.debug("Adding {} imapuid rows for {} processed messages"
+                          .format(folder_name, len(processed_msgs)))
                 for msg in processed_msgs:
-                    add_new_imapuid(db_session, msg, folder_name, acc)
+                    add_new_imapuid(db_session, log, msg, folder_name, acc)
             report_progress(crispin_client, db_session, log, folder_name,
                             message_download_stack.qsize(), status_cb)
         log.info("Message download queue emptied")
@@ -441,7 +445,7 @@ def deduplicate_message_download(crispin_client, db_session, log,
     return full_download
 
 
-def add_new_imapuid(db_session, gmessage, folder_name, acc):
+def add_new_imapuid(db_session, log, gmessage, folder_name, acc):
     """ Add ImapUid object for this GMessage if we don't already have one.
 
     Parameters
@@ -466,6 +470,9 @@ def add_new_imapuid(db_session, gmessage, folder_name, acc):
         new_imapuid.update_imap_flags(gmessage.flags, gmessage.labels)
         db_session.add(new_imapuid)
         db_session.commit()
+    else:
+        log.debug("Skipping {} imapuid creation for UID {}".format(
+            folder_name, gmessage.uid))
 
 
 def add_new_imapuids(crispin_client, db_session, remote_g_metadata,
