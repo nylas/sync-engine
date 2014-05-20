@@ -249,7 +249,7 @@ def check_new_g_thrids(account_id, provider, folder_name, log,
     Runs until killed. (Intended to be run in a greenlet.)
     """
     with connection_pool(account_id).get() as crispin_client:
-        with session_scope() as db_session:
+        with session_scope(ignore_soft_deletes=False) as db_session:
             crispin_client.select_folder(folder_name,
                                          uidvalidity_cb(
                                              db_session,
@@ -260,7 +260,7 @@ def check_new_g_thrids(account_id, provider, folder_name, log,
             # We lock this section to make sure no messages are being modified
             # in the database while we make sure the queue is in a good state.
             with syncmanager_lock:
-                with session_scope() as db_session:
+                with session_scope(ignore_soft_deletes=False) as db_session:
                     local_uids = set(account.all_uids(account_id, db_session,
                                                       folder_name))
                     stack_uids = {gm.uid for gm in
