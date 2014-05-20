@@ -443,8 +443,8 @@ def deduplicate_message_download(crispin_client, db_session, log,
         # them again here if we're deduping All Mail downloads.
         if crispin_client.selected_folder_name != \
                 crispin_client.folder_names()['all']:
-            add_new_imapuids(crispin_client, log, db_session, syncmanager_lock,
-                             remote_g_metadata, imapuid_only)
+            add_new_imapuids(crispin_client, log, db_session, remote_g_metadata,
+                             syncmanager_lock, imapuid_only)
 
     return full_download
 
@@ -494,8 +494,9 @@ def add_new_imapuids(crispin_client, log, db_session, remote_g_metadata,
         # Since we prioritize download for messages in certain threads, we may
         # already have ImapUid entries despite calling this method.
         local_folder_uids = {uid for uid, in
-                             db_session.query(ImapUid.msg_uid).filter(
-                                 ImapUid.folder_name ==
+                             db_session.query(ImapUid.msg_uid).join(Folder)
+                             .filter(
+                                 Folder.name ==
                                  crispin_client.selected_folder_name,
                                  ImapUid.msg_uid.in_(uids))}
         uids = [uid for uid in uids if uid not in local_folder_uids]
@@ -511,16 +512,18 @@ def add_new_imapuids(crispin_client, log, db_session, remote_g_metadata,
                                     Message.g_msgid.in_(imapuid_g_msgids))])
 
             acc = db_session.query(ImapAccount).get(crispin_client.account_id)
-            new_imapuids = [ImapUid(
-                imapaccount=acc,
-                folder=Folder.find_or_create(
-                    db_session, acc, crispin_client.selected_folder_name),
-                msg_uid=uid, message=message_for[uid]) for uid in uids]
-            for item in new_imapuids:
-                item.update_imap_flags(flags[item.msg_uid].flags,
-                                       flags[item.msg_uid].labels)
-                db_session.add_all(new_imapuids)
-                db_session.commit()
+            # Folder.find_or_create()'s query will otherwise trigger a flush.
+            with db_session.no_autoflush:
+                new_imapuids = [ImapUid(
+                    imapaccount=acc,
+                    folder=Folder.find_or_create(
+                        db_session, acc, crispin_client.selected_folder_name),
+                    msg_uid=uid, message=message_for[uid]) for uid in uids]
+                for item in new_imapuids:
+                    item.update_imap_flags(flags[item.msg_uid].flags,
+                                           flags[item.msg_uid].labels)
+            db_session.add_all(new_imapuids)
+            db_session.commit()
 
 
 def retrieve_saved_g_metadata(crispin_client, db_session, log, folder_name,
