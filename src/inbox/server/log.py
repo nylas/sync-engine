@@ -137,7 +137,7 @@ def email_exception(logger, etype, evalue, tb):
         auth=("api", mailgun_api_key),
         data={"from": "Inbox App Server <{}>".format(exc_email_addr),
               "to": [exc_email_addr],
-              "subject": "Uncaught error!",
+              "subject": "Uncaught error! {} {}".format(etype, evalue),
               "text": u"""
     Something went wrong on {}. Please investigate. :)
 
