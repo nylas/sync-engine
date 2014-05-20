@@ -254,10 +254,13 @@ class BaseMailSyncMonitor(Greenlet):
             try:
                 cmd = self.inbox.get_nowait()
                 if not self.process_command(cmd):
+                    # ctrl-c, basically!
                     self.log.info("Stopping sync for {0}".format(
                         self.email_address))
-                    # ctrl-c, basically!
-                    for monitor in self.folder_monitors:
+                    # Can't use a for loop here because `folder_monitors` may'
+                    # be modified during iteration.
+                    while self.folder_monitors:
+                        monitor = self.folder_monitors.pop()
                         monitor.kill(block=True)
                     sync.kill(block=True)
                     return
