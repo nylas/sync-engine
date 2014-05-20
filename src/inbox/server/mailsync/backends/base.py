@@ -9,7 +9,7 @@ from inbox.util.itert import partition
 from inbox.util.misc import load_modules
 from inbox.server.config import config
 from inbox.server.log import configure_mailsync_logging, log_uncaught_errors
-from inbox.server.models.tables.base import Account, Namespace, Folder
+from inbox.server.models.tables.base import Account, Folder
 from inbox.server.mailsync.exc import SyncException
 
 import inbox.server.mailsync.backends
@@ -155,8 +155,7 @@ def create_db_objects(account_id, db_session, log, folder_name, raw_messages,
     new_uids = []
     # TODO: Detect which namespace to add message to. (shared folders)
     # Look up message thread,
-    acc = db_session.query(Account).join(Namespace).filter_by(
-        id=account_id).one()
+    acc = db_session.query(Account).get(account_id)
     folder = Folder.find_or_create(db_session, acc, folder_name)
     for msg in raw_messages:
         uid = msg_create_fn(db_session, log, acc, folder, msg)

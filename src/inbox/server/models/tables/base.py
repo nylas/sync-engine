@@ -237,6 +237,7 @@ class Namespace(Base, HasPublicID):
     # really the root_namespace
     account = relationship(
         'Account', backref=backref('namespace', uselist=False),
+        lazy='joined',
         primaryjoin='and_(Namespace.account_id == Account.id, '
                     'Account.deleted_at == None, '
                     'Namespace.deleted_at == None)')

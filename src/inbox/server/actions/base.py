@@ -27,7 +27,7 @@ from rq import Queue, Connection
 
 from inbox.util.misc import load_modules
 from inbox.server.util.concurrency import GeventWorker
-from inbox.server.models.tables.base import Account, Namespace
+from inbox.server.models.tables.base import Account
 from inbox.server.config import config
 import inbox.server.actions
 
@@ -62,9 +62,7 @@ def get_queue():
 
 def archive(db_session, account_id, thread_id):
     """ Archive thread locally and also sync back to the backend. """
-
-    account = db_session.query(Account).join(Namespace).filter(
-        Account.id == account_id).one()
+    account = db_session.query(Account).get(account_id)
 
     # make local change
     local_archive = ACTION_MOD_FOR[account.provider].local_archive
@@ -88,9 +86,7 @@ def set_unread(db_session, account, thread, unread):
 
 def move(db_session, account_id, thread_id, from_folder, to_folder):
     """ Move thread locally and also sync back to the backend. """
-
-    account = db_session.query(Account).join(Namespace).filter(
-        Account.id == account_id).one()
+    account = db_session.query(Account).get(account_id)
 
     # make local change
     local_move = ACTION_MOD_FOR[account.provider].local_move
@@ -107,9 +103,7 @@ def move(db_session, account_id, thread_id, from_folder, to_folder):
 
 def copy(db_session, account_id, thread_id, from_folder, to_folder):
     """ Copy thread locally and also sync back to the backend. """
-
-    account = db_session.query(Account).join(Namespace).filter(
-        Account.id == account_id).one()
+    account = db_session.query(Account).get(account_id)
 
     # make local change
     local_copy = ACTION_MOD_FOR[account.provider].local_copy
@@ -131,8 +125,7 @@ def delete(db_session, account_id, thread_id, folder_name):
     This really just removes the entry from the folder. Message data that
     no longer belongs to any messages is garbage-collected asynchronously.
     """
-    account = db_session.query(Account).join(Namespace).filter(
-        Account.id == account_id).one()
+    account = db_session.query(Account).get(account_id)
 
     # make local change
     local_delete = ACTION_MOD_FOR[account.provider].local_delete

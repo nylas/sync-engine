@@ -34,7 +34,7 @@ from inbox.server.contacts.process_mail import update_contacts
 from inbox.server.crispin import GMetadata, connection_pool, retry_crispin
 from inbox.server.models import session_scope
 from inbox.server.models.message import reconcile_message
-from inbox.server.models.tables.base import Namespace, Message, Folder
+from inbox.server.models.tables.base import Message, Folder
 from inbox.server.models.tables.imap import ImapAccount, ImapUid, ImapThread
 from inbox.server.mailsync.backends.base import (create_db_objects,
                                                  commit_uids, new_or_updated)
@@ -336,8 +336,7 @@ def download_queued_threads(crispin_client, db_session, log, folder_name,
         # already have the UID in the given GMessage downloaded, we may not
         # have _every_ message in the thread. We have to expand it and make
         # sure we have all messages.
-        acc = db_session.query(ImapAccount).join(Namespace).filter_by(
-            id=crispin_client.account_id).one()
+        acc = db_session.query(ImapAccount).get(crispin_client.account_id)
         while not message_download_stack.empty():
             message = message_download_stack.get_nowait()
             # Don't try to re-download any messages that are in the same
@@ -505,8 +504,7 @@ def add_new_imapuids(crispin_client, db_session, remote_g_metadata,
                                 db_session.query(Message).filter(
                                     Message.g_msgid.in_(imapuid_g_msgids))])
 
-            acc = db_session.query(ImapAccount).join(Namespace).filter_by(
-                id=crispin_client.account_id).one()
+            acc = db_session.query(ImapAccount).get(crispin_client.account_id)
             new_imapuids = [ImapUid(
                 imapaccount=acc,
                 folder=Folder.find_or_create(
