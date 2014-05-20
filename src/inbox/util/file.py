@@ -82,6 +82,8 @@ class Lock:
         Whether to block or throw IOError if the lock is grabbed multiple
         times.
     """
+    TIMEOUT = 60
+
     def __init__(self, f, block=True):
         if isinstance(f, file):
             self.filename = f.name
@@ -98,10 +100,10 @@ class Lock:
         self.gevent_lock = BoundedSemaphore(1)
 
     def acquire(self):
-        fcntl.flock(self.handle, self.lock_op)
         got_gevent_lock = self.gevent_lock.acquire(blocking=self.block)
         if not got_gevent_lock:
-            raise IOError("Gevent lock is taken")
+            raise IOError("cannot acquire gevent lock")
+        fcntl.flock(self.handle, self.lock_op)
 
     def release(self):
         fcntl.flock(self.handle, fcntl.LOCK_UN)

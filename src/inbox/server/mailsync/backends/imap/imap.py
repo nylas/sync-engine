@@ -360,9 +360,11 @@ def highestmodseq_update(crispin_client, db_session, log, folder_name,
         new, updated = new_or_updated(changed_uids, local_uids)
         log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
         local_uids += new
-        deleted_uids = remove_deleted_uids(account_id, db_session, log,
-                                           folder_name, local_uids,
-                                           remote_uids, syncmanager_lock)
+        with syncmanager_lock:
+            log.debug("highestmodseq_update acquired syncmanager_lock")
+            deleted_uids = remove_deleted_uids(account_id, db_session, log,
+                                               folder_name, local_uids,
+                                               remote_uids)
 
         local_uids = set(local_uids) - deleted_uids
         update_metadata(crispin_client, db_session, log, folder_name,
@@ -373,8 +375,10 @@ def highestmodseq_update(crispin_client, db_session, log, folder_name,
     else:
         log.info("No new or updated messages")
 
-    remove_deleted_uids(crispin_client.account_id, db_session, log,
-                        folder_name, local_uids, remote_uids, syncmanager_lock)
+    with syncmanager_lock:
+        log.debug("highestmodseq_update acquired syncmanager_lock")
+        remove_deleted_uids(crispin_client.account_id, db_session, log,
+                            folder_name, local_uids, remote_uids)
     account.update_uidvalidity(account_id, db_session, folder_name,
                                new_uidvalidity, new_highestmodseq)
     db_session.commit()
@@ -434,9 +438,11 @@ def imap_initial_sync(crispin_client, db_session, log, folder_name,
                                                     folder_name))
     log.info("Already have {0} UIDs".format(len(local_uids)))
 
-    deleted_uids = remove_deleted_uids(
-        crispin_client.account_id, db_session, log, folder_name,
-        local_uids, remote_uids, shared_state['syncmanager_lock'])
+    with shared_state['syncmanager_lock']:
+        log.debug("imap_initial_sync acquired syncmanager_lock")
+        deleted_uids = remove_deleted_uids(
+            crispin_client.account_id, db_session, log, folder_name,
+            local_uids, remote_uids)
     local_uids = set(local_uids) - deleted_uids
 
     add_uids_to_stack(set(remote_uids) - set(local_uids), uid_download_stack)
@@ -481,18 +487,17 @@ def check_new_uids(account_id, provider, folder_name, log, uid_download_stack,
         while True:
             remote_uids = set(crispin_client.all_uids())
             # We lock this section to make sure no messages are being
-            # downloaded while we make sure the queue is in a good state.
+            # created while we make sure the queue is in a good state.
             with syncmanager_lock:
-                with session_scope() as db_session:
+                log.debug("check_new_uids acquired syncmanager_lock")
+                with session_scope(ignore_soft_deletes=False) as db_session:
                     local_uids = set(account.all_uids(account_id, db_session,
                                                       folder_name))
                     stack_uids = set(uid_download_stack.queue)
                     local_with_pending_uids = local_uids | stack_uids
                     deleted_uids = remove_deleted_uids(
-                        account_id, db_session, log, folder_name,
-                        local_uids, remote_uids, syncmanager_lock)
-                    # XXX This double-grabs syncmanager_lock, does that cause
-                    # a deadlock?
+                        account_id, db_session, log, folder_name, local_uids,
+                        remote_uids)
                     log.info("Removed {} deleted UIDs from {}".format(
                         len(deleted_uids), folder_name))
 
@@ -596,6 +601,7 @@ def download_and_commit_uids(crispin_client, db_session, log, folder_name,
                              uids, msg_create_fn, syncmanager_lock):
     raw_messages = safe_download(crispin_client, log, uids)
     with syncmanager_lock:
+        log.debug("download_and_commit_uids acquired syncmanager_lock")
         new_imapuids = create_db_objects(crispin_client.account_id, db_session,
                                          log, folder_name, raw_messages,
                                          msg_create_fn)
@@ -603,14 +609,19 @@ def download_and_commit_uids(crispin_client, db_session, log, folder_name,
     return len(new_imapuids)
 
 
-def remove_deleted_uids(account_id, db_session, log, folder_name,
-                        local_uids, remote_uids, syncmanager_lock):
-    """ Works as follows:
+def remove_deleted_uids(account_id, db_session, log, folder_name, local_uids,
+                        remote_uids):
+    """ Remove imapuid entries that no longer exist on the remote.
+
+    Works as follows:
         1. Do a LIST on the current folder to see what messages are on the
             server.
         2. Compare to message uids stored locally.
         3. Purge messages we have locally but not on the server. Ignore
             messages we have on the server that aren't local.
+
+    Make SURE to be holding `syncmanager_lock` when calling this function;
+    we do not grab it here to allow callers to lock higher level functionality.
     """
     if len(remote_uids) > 0 and len(local_uids) > 0:
         for elt in remote_uids:
@@ -618,10 +629,8 @@ def remove_deleted_uids(account_id, db_session, log, folder_name,
 
     to_delete = set(local_uids) - set(remote_uids)
     if to_delete:
-        with syncmanager_lock:
-            account.remove_messages(account_id, db_session, to_delete,
-                                    folder_name)
-            db_session.commit()
+        account.remove_messages(account_id, db_session, to_delete, folder_name)
+        db_session.commit()
 
         log.info("Deleted {0} removed messages from {1}".format(
             len(to_delete), folder_name))
@@ -639,6 +648,7 @@ def update_metadata(crispin_client, db_session, log, folder_name, uids,
             "server uids != local uids"
         log.info("new flags: {0}".format(new_flags))
         with syncmanager_lock:
+            log.debug("update_metadata acquired syncmanager_lock")
             account.update_metadata(crispin_client.account_id, db_session,
                                     folder_name, uids, new_flags)
             db_session.commit()

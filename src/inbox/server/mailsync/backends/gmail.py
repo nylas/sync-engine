@@ -92,9 +92,11 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
     if folder_name == crispin_client.folder_names()['all']:
         log.info("Already have {0} UIDs".format(len(local_uids)))
 
-    deleted_uids = remove_deleted_uids(
-        crispin_client.account_id, db_session, log, folder_name,
-        local_uids, remote_uids, shared_state['syncmanager_lock'])
+    with shared_state['syncmanager_lock']:
+        log.debug("gmail_initial_sync grabbed syncmanager_lock")
+        deleted_uids = remove_deleted_uids(
+            crispin_client.account_id, db_session, log, folder_name,
+            local_uids, remote_uids)
     local_uids = set(local_uids) - deleted_uids
     unknown_uids = set(remote_uids) - local_uids
 
@@ -218,6 +220,7 @@ def gmail_download_and_commit_uids(crispin_client, db_session, log,
     log.debug("Downloading uids {}".format(uids))
     raw_messages = safe_download(crispin_client, log, uids)
     with syncmanager_lock:
+        log.debug("gmail_download_and_commit_uids acquired syncmanager_lock")
         # there is the possibility that another green thread has already
         # downloaded some message(s) from this batch... check within the lock
         raw_messages = deduplicate_message_object_creation(
@@ -260,6 +263,7 @@ def check_new_g_thrids(account_id, provider, folder_name, log,
             # We lock this section to make sure no messages are being modified
             # in the database while we make sure the queue is in a good state.
             with syncmanager_lock:
+                log.debug("check_new_g_thrids acquired syncmanager_lock")
                 with session_scope(ignore_soft_deletes=False) as db_session:
                     local_uids = set(account.all_uids(account_id, db_session,
                                                       folder_name))
@@ -267,10 +271,8 @@ def check_new_g_thrids(account_id, provider, folder_name, log,
                                   message_download_stack.queue}
                     local_with_pending_uids = local_uids | stack_uids
                     deleted_uids = remove_deleted_uids(
-                        account_id, db_session, log, folder_name,
-                        local_uids, remote_uids, syncmanager_lock)
-                    # NOTE: This double-grabs syncmanager_lock, but that
-                    # seems to work just fine in the same greenlet.
+                        account_id, db_session, log, folder_name, local_uids,
+                        remote_uids)
                     log.info("Removed {} deleted UIDs from {}".format(
                         len(deleted_uids), folder_name))
 
@@ -363,6 +365,7 @@ def download_queued_threads(crispin_client, db_session, log, folder_name,
             # entries for a non-All Mail folder, but grab the lock anyway
             # to be safe.
             with syncmanager_lock:
+                log.debug("download_queued_threads acquired syncmanager_lock")
                 # Since we download msgs from All Mail, we need to separately
                 # make sure we have ImapUids recorded for this folder (used in
                 # progress tracking, queuing, and delete detection).
@@ -440,7 +443,7 @@ def deduplicate_message_download(crispin_client, db_session, log,
         # them again here if we're deduping All Mail downloads.
         if crispin_client.selected_folder_name != \
                 crispin_client.folder_names()['all']:
-            add_new_imapuids(crispin_client, db_session, syncmanager_lock,
+            add_new_imapuids(crispin_client, log, db_session, syncmanager_lock,
                              remote_g_metadata, imapuid_only)
 
     return full_download
@@ -476,7 +479,7 @@ def add_new_imapuid(db_session, log, gmessage, folder_name, acc):
             folder_name, gmessage.uid))
 
 
-def add_new_imapuids(crispin_client, db_session, remote_g_metadata,
+def add_new_imapuids(crispin_client, log, db_session, remote_g_metadata,
                      syncmanager_lock, uids):
     """ Add ImapUid entries only for (already-downloaded) messages.
 
@@ -487,6 +490,7 @@ def add_new_imapuids(crispin_client, db_session, remote_g_metadata,
     flags = crispin_client.flags(uids)
 
     with syncmanager_lock:
+        log.debug("add_new_imapuids acquired syncmanager_lock")
         # Since we prioritize download for messages in certain threads, we may
         # already have ImapUid entries despite calling this method.
         local_folder_uids = {uid for uid, in
