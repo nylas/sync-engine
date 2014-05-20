@@ -212,8 +212,9 @@ class WebhookService(gevent.Greenlet):
                 filter(Transaction.table_name == 'message',
                        Transaction.id > self.minimum_id). \
                 order_by(asc(Transaction.id)).yield_per(self.chunk_size)
-            self.log.debug('Total of {0} transactions to process'.
-                           format(query.count()))
+            if query.count():
+                self.log.debug('Total of {0} transactions to process'.
+                               format(query.count()))
             for transaction in query:
                 namespace_id = transaction.namespace_id
                 event_data = EventData(transaction)
