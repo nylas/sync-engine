@@ -10,6 +10,7 @@ Eventually we're going to want a better way of ACLing functions that operate on
 accounts.
 """
 from sqlalchemy import distinct, func
+from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.server.models.tables.base import Block, Message, Folder
@@ -78,14 +79,10 @@ def update_metadata(account_id, session, folder_name, uids, new_flags):
     to grab the lock in here in case the caller needs to put higher-level
     functionality in the lock.)
     """
-    # The join here means we won't update flags on messages that have been
-    # deleted locally (but the delete hasn't propagated yet), That's A-OK: that
-    # delete will eventually be synced back to the account backend, so it
-    # doesn't matter if our flags get out-of-date in the meantime.
-    for item in session.query(ImapUid).join(Message).join(Folder).filter(
-            ImapUid.imapaccount_id == account_id,
-            ImapUid.msg_uid.in_(uids),
-            Folder.name == folder_name):
+    for item in session.query(ImapUid).join(Folder)\
+            .filter(ImapUid.imapaccount_id == account_id,
+                    ImapUid.msg_uid.in_(uids), Folder.name == folder_name)\
+            .options(joinedload(ImapUid.message)):
         flags = new_flags[item.msg_uid].flags
         if hasattr(new_flags[item.msg_uid], 'labels'):
             labels = new_flags[item.msg_uid].labels
