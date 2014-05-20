@@ -168,8 +168,10 @@ def test_lens_tx(message_data):
     filter = Lens(cc_addr='/Daniel/')
     assert filter.match(message_data)
 
-    early_ts = datetime.datetime(2014, 04, 22, 20, 10, 00)
-    late_ts = datetime.datetime(2014, 04, 30, 00, 00, 00)
+    early_ts = calendar.timegm(
+        datetime.datetime(2014, 04, 22, 20, 10, 00).utctimetuple())
+    late_ts = calendar.timegm(
+        datetime.datetime(2014, 04, 30, 00, 00, 00).utctimetuple())
 
     filter = Lens(started_before=late_ts)
     assert filter.match(message_data)
