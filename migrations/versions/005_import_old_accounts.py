@@ -24,7 +24,6 @@ def upgrade():
     load_config()
     from inbox.server.models import session_scope, engine
     from inbox.server.models.tables.imap import ImapAccount
-    from inbox.server.auth.base import commit_account
     import inbox.server.auth.gmail as gmail
 
 
@@ -78,7 +77,8 @@ def upgrade():
 
             # Note that this doesn't verify **anything** about the account.
             # We're just doing the migration now
-            commit_account(db_session, new_account)
+            db_session.add(new_account)
+            db_session.commit()
             migrated_accounts.append(new_account)
 
         print '\nDone! Imported {0} accounts.'.format(len(migrated_accounts))

@@ -10,7 +10,6 @@ from inbox.server.basicauth import password_auth
 from inbox.server.models.tables.base import Namespace
 from inbox.server.models.tables.imap import ImapAccount
 
-from inbox.server.auth.base import commit_account
 
 PROVIDER = 'Yahoo'
 IMAP_HOST = 'imap.mail.yahoo.com'
@@ -48,7 +47,8 @@ def create_account(db_session, email_address, response):
 
 def verify_account(db_session, account):
     verify_yahoo_account(account)
-    commit_account(db_session, account)
+    db_session.add(account)
+    db_session.commit()
 
     return account
 

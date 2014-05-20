@@ -14,7 +14,6 @@ from inbox.server.models.tables.base import Namespace
 from inbox.server.models.tables.imap import ImapAccount
 from inbox.server.config import config
 
-from inbox.server.auth.base import commit_account
 
 PROVIDER = 'Gmail'
 IMAP_HOST = 'imap.gmail.com'
@@ -133,6 +132,7 @@ def create_account(db_session, email_address, response):
 
 def verify_account(db_session, account):
     verify_gmail_account(account)
-    commit_account(db_session, account)
+    db_session.add(account)
+    db_session.commit()
 
     return account

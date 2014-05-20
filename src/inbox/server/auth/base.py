@@ -43,13 +43,6 @@ def get_handler(email_address):
     raise NotSupportedError('Inbox does not support the email provider.')
 
 
-def commit_account(db_session, account):
-    db_session.add(account)
-    db_session.commit()
-
-    log.info('Stored new account {0}'.format(account.email_address))
-
-
 def verify_imap_account(db_session, account):
     # issued_date = credentials.date
     # expires_seconds = credentials.o_expires_in
