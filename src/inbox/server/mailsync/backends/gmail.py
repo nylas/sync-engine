@@ -153,11 +153,13 @@ def poll(crispin_client, db_session, log, folder_name, shared_state):
 
 def gmail_highestmodseq_update(crispin_client, db_session, log, folder_name,
                                uids, local_uids, status_cb, syncmanager_lock):
+    g_metadata = crispin_client.g_metadata(uids)
+    to_download = deduplicate_message_download(
+        crispin_client, db_session, log, syncmanager_lock, g_metadata, uids)
     if folder_name != crispin_client.folder_names()['all']:
-        flags = crispin_client.flags(uids)
-        g_metadata = crispin_client.g_metadata(uids)
+        flags = crispin_client.flags(to_download)
         message_download_stack = LifoQueue()
-        for uid in uids:
+        for uid in to_download:
             if uid in flags and uid in g_metadata:
                 # IMAP will just return no data for a UID if it's disappeared
                 # from the folder in the meantime.
@@ -167,7 +169,7 @@ def gmail_highestmodseq_update(crispin_client, db_session, log, folder_name,
                                 message_download_stack, status_cb,
                                 syncmanager_lock)
     else:
-        uid_download_stack = uid_list_to_stack(uids)
+        uid_download_stack = uid_list_to_stack(to_download)
 
         download_queued_uids(crispin_client, db_session, log, folder_name,
                              uid_download_stack, 0, uid_download_stack.qsize(),
