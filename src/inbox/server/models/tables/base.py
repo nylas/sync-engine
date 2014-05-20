@@ -468,6 +468,7 @@ class Message(Base, HasRevisions, HasPublicID):
     # NOTE: always HTML :)
     sanitized_body = Column(Text(length=26214400), nullable=False)
     snippet = Column(String(191), nullable=False)
+    SNIPPET_LENGTH = 191
 
     # we had to replace utf-8 errors before writing... this might be a
     # mail-parsing bug, or just a message from a bad client.
@@ -489,20 +490,28 @@ class Message(Base, HasRevisions, HasPublicID):
 
     def calculate_sanitized_body(self):
         plain_part, html_part = self.body
-        snippet_length = 191
         # TODO: also strip signatures.
         if html_part:
             assert '\r' not in html_part, "newlines not normalized"
             stripped = extract_from_html(html_part).strip()
             self.sanitized_body = unicode(stripped)
-            self.snippet = strip_tags(self.sanitized_body)[:snippet_length]
+            self.calculate_html_snippet(self.sanitized_body)
         elif plain_part:
             stripped = extract_from_plain(plain_part).strip()
-            self.sanitized_body = plaintext2html(stripped)
-            self.snippet = stripped[:snippet_length]
+            self.sanitized_body = plaintext2html(stripped, False)
+            self.calculate_plaintext_snippet(stripped)
         else:
             self.sanitized_body = u''
             self.snippet = u''
+
+    def calculate_html_snippet(self, text):
+        text = text.replace('<br>', ' ').replace('<br/>', ' '). \
+            replace('<br />', ' ')
+        text = strip_tags(text)
+        self.calculate_plaintext_snippet(text)
+
+    def calculate_plaintext_snippet(self, text):
+        self.snippet = ' '.join(text.split())[:self.SNIPPET_LENGTH]
 
     @property
     def body(self):
