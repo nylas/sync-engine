@@ -289,7 +289,8 @@ class SearchToken(Base):
     contact = relationship(
         'Contact', backref='token', cascade='all',
         primaryjoin='and_(SearchToken.contact_id == Contact.id, '
-                    'Contact.deleted_at == None, SearchToken.deleted_at)',
+                    'Contact.deleted_at == None, '
+                    'SearchToken.deleted_at == None)',
         single_parent=True)
 
 
