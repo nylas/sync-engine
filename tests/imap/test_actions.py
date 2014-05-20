@@ -39,6 +39,18 @@ class TestLocalClientActions(object):
 
         assert action_queue.count == 1, "sync-back event not queued"
 
+    def test_set_local_unread(self, db, action_queue):
+        from inbox.server.models.tables.base import Account, Thread
+        from inbox.server.actions.base import set_unread
+        thread = db.session.query(Thread).filter_by(id=1).one()
+        account = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
+
+        set_unread(db.session, account, thread, True)
+        assert not any(message.is_read for message in thread.messages)
+
+        set_unread(db.session, account, thread, False)
+        assert all(message.is_read for message in thread.messages)
+
     def test_local_move(self, db, action_queue):
         from inbox.server.models.tables.base import Account, FolderItem, Folder
         from inbox.server.actions.base import move

@@ -33,7 +33,7 @@ We don't currently handle these operations on the special folders 'junk',
 from inbox.server.crispin import writable_connection_pool
 
 from inbox.server.models import session_scope
-from inbox.server.models.tables.base import Namespace
+from inbox.server.models.tables.base import Namespace, Account
 from inbox.server.models.tables.imap import ImapThread, ImapAccount
 
 
@@ -83,6 +83,17 @@ def remote_archive(imapaccount_id, thread_id):
         inbox_folder_name = inbox_folder.name
 
     return _syncback_action(fn, imapaccount_id, inbox_folder_name)
+
+
+def set_remote_unread(account_id, thread_id, unread):
+    def fn(account, db_session, crispin_client):
+        g_thrid = _get_g_thrid(account.namespace.id, thread_id, db_session)
+        crispin_client.set_unread(g_thrid, unread)
+
+    with session_scope() as db_session:
+        all_mail_folder_name = db_session.query(Account).filter(
+            Account.id == account_id).one().all_folder.name
+    return _syncback_action(fn, account_id, all_mail_folder_name)
 
 
 def remote_move(imapaccount_id, thread_id, from_folder, to_folder):

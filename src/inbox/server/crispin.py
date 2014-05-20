@@ -571,3 +571,10 @@ class GmailCrispinClient(CrispinClient):
             "Gmail doesn't support removing a selected label"
         uids = self.find_messages(g_thrid)
         self.conn.remove_gmail_labels(uids, [label_name])
+
+    def set_unread(self, g_thrid, unread):
+        uids = self.find_messages(g_thrid)
+        if unread:
+            self.conn.remove_flags(uids, '\\Seen')
+        else:
+            self.conn.add_flags(uids, '\\Seen')

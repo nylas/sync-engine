@@ -458,6 +458,7 @@ class Message(Base, HasRevisions, HasPublicID):
     mailing_list_headers = Column(JSON, nullable=True)
 
     is_draft = Column(Boolean, server_default=false(), nullable=False)
+    is_read = Column(Boolean, server_default=false(), nullable=False)
 
     # Most messages are short and include a lot of quoted text. Preprocessing
     # just the relevant part out makes a big difference in how much data we

@@ -93,9 +93,7 @@ def update_metadata(account_id, session, folder_name, uids, new_flags):
             labels = None
         item.update_imap_flags(flags, labels)
         item.message.is_draft = item.is_draft
-        # NOTE: If we're ever going to make our datastore API support "read"
-        # status, this is the place to put update of that flag.
-        # (is_seen == is_read)
+        item.message.is_read = item.is_seen
 
 
 def remove_messages(account_id, session, uids, folder):
@@ -182,9 +180,7 @@ def create_imap_message(db_session, log, account, folder, msg):
         imapuid.update_imap_flags(msg.flags)
 
         new_msg.is_draft = imapuid.is_draft
-        # NOTE: If we're going to make the Inbox datastore API support "read"
-        # status, this is the place to add that data to Message, e.g.
-        # new_msg.is_read = imapuid.is_seen.
+        new_msg.is_read = imapuid.is_seen
 
         # NOTE: This might be a good place to add FolderItem entries for
         # non-Gmail backends.

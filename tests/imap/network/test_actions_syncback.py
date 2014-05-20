@@ -46,13 +46,11 @@ def test_archive_move_syncback(db, config):
 def test_copy_delete_syncback(db, config):
     from inbox.server.actions.gmail import (remote_copy, remote_delete,
                                             uidvalidity_cb)
-    from inbox.server.models.tables.base import Namespace
     from inbox.server.models.tables.imap import ImapAccount, ImapThread
 
-    g_thrid = db.session.query(ImapThread.g_thrid).filter_by(
-        id=THREAD_ID, namespace_id=NAMESPACE_ID).one()[0]
-    account = db.session.query(ImapAccount).join(Namespace) \
-        .filter_by(id=ACCOUNT_ID).one()
+    g_thrid = db.session.query(ImapThread.g_thrid). \
+        filter_by(id=THREAD_ID, namespace_id=NAMESPACE_ID).one()[0]
+    account = db.session.query(ImapAccount).get(ACCOUNT_ID)
 
     remote_copy(ACCOUNT_ID, THREAD_ID, account.inbox_folder.name, 'testlabel')
 
@@ -79,6 +77,32 @@ def test_copy_delete_syncback(db, config):
         testlabel_uids = client.find_messages(g_thrid)
         assert not testlabel_uids, "thread still present in testlabel"
 
+
+def test_remote_unread_syncback(db, config):
+    from inbox.server.actions.gmail import set_remote_unread, uidvalidity_cb
+    from inbox.server.models.tables.imap import ImapAccount, ImapThread
+
+    g_thrid, = db.session.query(ImapThread.g_thrid).filter_by(
+        id=THREAD_ID, namespace_id=NAMESPACE_ID).one()
+    account = db.session.query(ImapAccount).get(ACCOUNT_ID)
+
+    set_remote_unread(ACCOUNT_ID, THREAD_ID, True)
+
+    with crispin_client(account.id, account.provider) as client:
+        client.select_folder(account.all_folder.name, uidvalidity_cb)
+        uids = client.find_messages(g_thrid)
+        assert not any('\\Seen' in flags for flags, _ in
+                       client.flags(uids).values())
+
+        set_remote_unread(ACCOUNT_ID, THREAD_ID, False)
+        assert all('\\Seen' in flags for flags, _ in
+                   client.flags(uids).values())
+
+        set_remote_unread(ACCOUNT_ID, THREAD_ID, True)
+        assert not any('\\Seen' in flags for flags, _ in
+                       client.flags(uids).values())
+
+
 # TODO: Test more of the different cases here.
 
 # Higher-level tests.
@@ -93,13 +117,11 @@ def test_queue_running(db):
     """
     from inbox.server.actions.base import (archive, move, copy, delete,
                                            rqworker, register_backends)
-    from inbox.server.models.tables.base import Namespace
     from inbox.server.models.tables.imap import ImapAccount
     from inbox.server.models import session_scope
     register_backends()
 
-    account = db.session.query(ImapAccount).join(Namespace) \
-        .filter_by(id=ACCOUNT_ID).one()
+    account = db.session.query(ImapAccount).get(ACCOUNT_ID)
 
     with session_scope() as db_session:
         # "Tips for using Gmail" thread (avoiding all the "Postel lives!" ones)

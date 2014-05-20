@@ -31,6 +31,12 @@ def local_archive(db_session, account, thread_id):
         db_session.commit()
 
 
+def set_local_unread(db_session, account, thread, unread):
+    with db_write_lock(account.namespace.id):
+        for message in thread.messages:
+            message.is_read = not unread
+
+
 def local_move(db_session, account, thread_id, from_folder, to_folder):
     """ Move thread in the local datastore (*not* the account backend).
 

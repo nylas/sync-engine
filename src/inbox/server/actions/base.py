@@ -76,6 +76,16 @@ def archive(db_session, account_id, thread_id):
     q.enqueue(remote_archive, account.id, thread_id)
 
 
+def set_unread(db_session, account, thread, unread):
+    ACTION_MOD_FOR[account.provider].set_local_unread(
+        db_session, account, thread, unread)
+
+    q = get_queue()
+    set_remote_unread = ACTION_MOD_FOR[account.provider]. \
+        set_remote_unread
+    q.enqueue(set_remote_unread, account.id, thread.id, unread)
+
+
 def move(db_session, account_id, thread_id, from_folder, to_folder):
     """ Move thread locally and also sync back to the backend. """
 
