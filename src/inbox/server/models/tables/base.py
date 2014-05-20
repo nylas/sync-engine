@@ -22,6 +22,7 @@ log = get_logger()
 
 from inbox.server.config import config
 
+from inbox.util.encoding import base36decode
 from inbox.util.file import Lock, mkdirp
 from inbox.util.html import (plaintext2html, strip_tags, extract_from_html,
                              extract_from_plain)
@@ -915,6 +916,38 @@ class Lens(Base, HasPublicID):
     # TODO make tags a reference to the actual column
     tag = Column(String(255))
 
+    # Lenses are constructed from user input, so we need to validate all
+    # fields.
+
+    @validates('subject', 'any_email', 'to_addr', 'from_addr', 'cc_addr',
+               'bcc_addr', 'filename', 'tag')
+    def validate_length(self, key, value):
+        if value is None:
+            return
+        if len(value) > 255:
+            raise ValueError('Value for {} is too long'.format(key))
+        return value
+
+    @validates('thread_public_id')
+    def validate_thread_id(self, key, value):
+        if value is None:
+            return
+        try:
+            base36decode(value)
+        except ValueError:
+            raise ValueError('Invalid thread id')
+        return value
+
+    @validates('started_before', 'started_after', 'last_message_before',
+               'last_message_after')
+    def validate_timestamps(self, key, value):
+        if value is None:
+            return
+        try:
+            return datetime.utcfromtimestamp(int(value))
+        except ValueError:
+            raise ValueError('Invalid timestamp value for {}'.format(key))
+
     # TODO add reference to tags within a filter
     # a = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
     #                    nullable=False)
@@ -1200,20 +1233,16 @@ class Lens(Base, HasPublicID):
             pred = and_(pred, Thread.public_id == self.thread_public_id)
 
         if self.started_before is not None:
-            pred = and_(pred, Thread.subjectdate <
-                        datetime.utcfromtimestamp(self.started_before))
+            pred = and_(pred, Thread.subjectdate < self.started_before)
 
         if self.started_after is not None:
-            pred = and_(pred, Thread.subjectdate >
-                        datetime.utcfromtimestamp(self.started_after))
+            pred = and_(pred, Thread.subjectdate > self.started_after)
 
         if self.last_message_before is not None:
-            pred = and_(pred, Thread.recentdate <
-                        datetime.utcfromtimestamp(self.last_message_before))
+            pred = and_(pred, Thread.recentdate < self.last_message_before)
 
         if self.last_message_after is not None:
-            pred = and_(pred, Thread.recentdate >
-                        datetime.utcfromtimestamp(self.last_message_after))
+            pred = and_(pred, Thread.recentdate > self.last_message_after)
 
         query = self.db_session.query(Thread).filter(pred)
         query = maybe_refine_query(query, self._tag_subquery()).union(

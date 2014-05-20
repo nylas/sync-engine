@@ -83,24 +83,27 @@ def start():
         return err(404, "Couldn't find namespace with id `{0}` "
                    .format(g.namespace_public_id))
 
-    g.lens = Lens(
-        namespace_id=g.namespace.id,
-        subject=request.args.get('subject'),
-        thread_public_id=request.args.get('thread'),
-        to_addr=request.args.get('to'),
-        from_addr=request.args.get('from'),
-        cc_addr=request.args.get('cc'),
-        bcc_addr=request.args.get('bcc'),
-        any_email=request.args.get('any_email'),
-        started_before=request.args.get('started_before'),
-        started_after=request.args.get('started_after'),
-        last_message_before=request.args.get('last_message_before'),
-        last_message_after=request.args.get('last_message_after'),
-        filename=request.args.get('filename'),
-        tag=request.args.get('tag'),
-        detached=True)
-    g.lens_limit = request.args.get('limit')
-    g.lens_offset = request.args.get('offset')
+    try:
+        g.lens = Lens(
+            namespace_id=g.namespace.id,
+            subject=request.args.get('subject'),
+            thread_public_id=request.args.get('thread'),
+            to_addr=request.args.get('to'),
+            from_addr=request.args.get('from'),
+            cc_addr=request.args.get('cc'),
+            bcc_addr=request.args.get('bcc'),
+            any_email=request.args.get('any_email'),
+            started_before=request.args.get('started_before'),
+            started_after=request.args.get('started_after'),
+            last_message_before=request.args.get('last_message_before'),
+            last_message_after=request.args.get('last_message_after'),
+            filename=request.args.get('filename'),
+            tag=request.args.get('tag'),
+            detached=True)
+        g.lens_limit = request.args.get('limit')
+        g.lens_offset = request.args.get('offset')
+    except ValueError as e:
+        return err(400, e.message)
 
 
 @app.after_request
