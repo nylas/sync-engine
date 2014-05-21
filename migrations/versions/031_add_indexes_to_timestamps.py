@@ -14,25 +14,34 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import mysql
 
+from sqlalchemy.ext.declarative import declarative_base
+
+
 def upgrade():
+    from inbox.server.models import engine
+    Base = declarative_base()
+    Base.metadata.reflect(engine)
+
     op.create_index('ix_account_created_at', 'account', ['created_at'], unique=False)
     op.create_index('ix_account_deleted_at', 'account', ['deleted_at'], unique=False)
     op.create_index('ix_account_updated_at', 'account', ['updated_at'], unique=False)
-
     op.create_index('ix_block_created_at', 'block', ['created_at'], unique=False)
     op.create_index('ix_block_deleted_at', 'block', ['deleted_at'], unique=False)
     op.create_index('ix_block_updated_at', 'block', ['updated_at'], unique=False)
     op.create_index('ix_contact_created_at', 'contact', ['created_at'], unique=False)
     op.create_index('ix_contact_deleted_at', 'contact', ['deleted_at'], unique=False)
     op.create_index('ix_contact_updated_at', 'contact', ['updated_at'], unique=False)
-    op.create_index('ix_easfoldersync_created_at', 'easfoldersync', ['created_at'], unique=False)
-    op.create_index('ix_easfoldersync_deleted_at', 'easfoldersync', ['deleted_at'], unique=False)
-    op.create_index('ix_easfoldersync_updated_at', 'easfoldersync', ['updated_at'], unique=False)
 
-    op.create_index('easuid_easaccount_id_folder_id', 'easuid', ['easaccount_id', 'folder_id'], unique=False)
-    op.create_index('ix_easuid_created_at', 'easuid', ['created_at'], unique=False)
-    op.create_index('ix_easuid_deleted_at', 'easuid', ['deleted_at'], unique=False)
-    op.create_index('ix_easuid_updated_at', 'easuid', ['updated_at'], unique=False)
+    if 'easfoldersync' in Base.metadata.tables:
+        op.create_index('ix_easfoldersync_created_at', 'easfoldersync', ['created_at'], unique=False)
+        op.create_index('ix_easfoldersync_deleted_at', 'easfoldersync', ['deleted_at'], unique=False)
+        op.create_index('ix_easfoldersync_updated_at', 'easfoldersync', ['updated_at'], unique=False)
+
+    if 'easuid' in Base.metadata.tables:
+        op.create_index('easuid_easaccount_id_folder_id', 'easuid', ['easaccount_id', 'folder_id'], unique=False)
+        op.create_index('ix_easuid_created_at', 'easuid', ['created_at'], unique=False)
+        op.create_index('ix_easuid_deleted_at', 'easuid', ['deleted_at'], unique=False)
+        op.create_index('ix_easuid_updated_at', 'easuid', ['updated_at'], unique=False)
 
     op.create_index('ix_folder_created_at', 'folder', ['created_at'], unique=False)
     op.create_index('ix_folder_deleted_at', 'folder', ['deleted_at'], unique=False)
@@ -144,14 +153,20 @@ def downgrade():
     op.drop_index('ix_folder_deleted_at', table_name='folder')
     op.drop_index('ix_folder_created_at', table_name='folder')
 
-    op.drop_index('ix_easuid_updated_at', table_name='easuid')
-    op.drop_index('ix_easuid_deleted_at', table_name='easuid')
-    op.drop_index('ix_easuid_created_at', table_name='easuid')
-    op.drop_index('easuid_easaccount_id_folder_id', table_name='easuid')
+    from inbox.server.models import engine
+    Base = declarative_base()
+    Base.metadata.reflect(engine)
 
-    op.drop_index('ix_easfoldersync_updated_at', table_name='easfoldersync')
-    op.drop_index('ix_easfoldersync_deleted_at', table_name='easfoldersync')
-    op.drop_index('ix_easfoldersync_created_at', table_name='easfoldersync')
+    if 'easuid' in Base.metadata.tables:
+        op.drop_index('ix_easuid_updated_at', table_name='easuid')
+        op.drop_index('ix_easuid_deleted_at', table_name='easuid')
+        op.drop_index('ix_easuid_created_at', table_name='easuid')
+        op.drop_index('easuid_easaccount_id_folder_id', table_name='easuid')
+
+    if 'easfoldersync' in Base.metadata.tables:
+        op.drop_index('ix_easfoldersync_updated_at', table_name='easfoldersync')
+        op.drop_index('ix_easfoldersync_deleted_at', table_name='easfoldersync')
+        op.drop_index('ix_easfoldersync_created_at', table_name='easfoldersync')
     op.drop_index('ix_contact_updated_at', table_name='contact')
     op.drop_index('ix_contact_deleted_at', table_name='contact')
     op.drop_index('ix_contact_created_at', table_name='contact')
