@@ -1,7 +1,7 @@
 from gc import collect as garbage_collect
 
 import zerorpc
-from gevent import Greenlet, joinall, sleep
+from gevent import Greenlet, joinall, sleep, killall
 from gevent.queue import Queue, Empty
 from sqlalchemy.exc import DataError
 
@@ -257,12 +257,10 @@ class BaseMailSyncMonitor(Greenlet):
                     # ctrl-c, basically!
                     self.log.info("Stopping sync for {0}".format(
                         self.email_address))
-                    # Can't use a for loop here because `folder_monitors` may'
-                    # be modified during iteration.
-                    while self.folder_monitors:
-                        monitor = self.folder_monitors.pop()
-                        monitor.kill(block=True)
+                    # make sure the parent can't start/stop any folder monitors
+                    # first
                     sync.kill(block=True)
+                    killall(self.folder_monitors)
                     return
             except Empty:
                 sleep(self.heartbeat)
