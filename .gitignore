@@ -2,6 +2,7 @@
 /config.cfg
 /packer_cache
 /log
+/man
 # Vagrant
 /.vagrant
 node_modules
