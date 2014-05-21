@@ -28,10 +28,10 @@ class Base(object):
     # We do all default/update in Python not SQL for these because MySQL
     # < 5.6 doesn't support multiple TIMESTAMP cols per table, and can't
     # do function defaults or update triggers on DATETIME rows.
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow,
-                        onupdate=datetime.utcnow, nullable=False)
-    deleted_at = Column(DateTime, nullable=True)
+                        onupdate=datetime.utcnow, nullable=False, index=True)
+    deleted_at = Column(DateTime, nullable=True, index=True)
 
     @declared_attr
     def __tablename__(cls):
