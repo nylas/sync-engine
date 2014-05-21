@@ -1,7 +1,7 @@
 from sqlalchemy import (Column, Integer, BigInteger, String, Boolean, Enum,
                         ForeignKey, Index)
 from sqlalchemy.schema import UniqueConstraint
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.sql.expression import false
 
@@ -48,17 +48,30 @@ class ImapUid(Base):
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
                             nullable=False)
     imapaccount = relationship('ImapAccount',
-                               primaryjoin='and_(ImapUid.imapaccount_id == ImapAccount.id, ImapAccount.deleted_at == None, ImapUid.deleted_at==None)')
+                               primaryjoin='and_('
+                               'ImapUid.imapaccount_id == ImapAccount.id, '
+                               'ImapAccount.deleted_at == None)')
 
     message_id = Column(Integer, ForeignKey('message.id'), nullable=False)
-    message = relationship('Message', backref='imapuids',
-                           primaryjoin='and_(ImapUid.message_id == Message.id, Message.deleted_at == None, ImapUid.deleted_at == None)')
+    message = relationship('Message',
+                           backref=backref('imapuids',
+                                           primaryjoin='and_('
+                                           'Message.id == ImapUid.message_id, '
+                                           'ImapUid.deleted_at == None)'),
+                           primaryjoin='and_('
+                           'ImapUid.message_id == Message.id,'
+                           'Message.deleted_at == None)')
     msg_uid = Column(BigInteger, nullable=False)
 
     folder_id = Column(Integer, ForeignKey('folder.id'), nullable=False)
     # We almost always need the folder name too, so eager load by default.
-    folder = relationship('Folder', backref='imapuids', lazy='joined',
-                          primaryjoin='and_(ImapUid.folder_id == Folder.id, Folder.deleted_at == None, ImapUid.deleted_at == None)')
+    folder = relationship('Folder', lazy='joined',
+                          backref=backref('imapuids', primaryjoin='and_('
+                                          'Folder.id == ImapUid.folder_id, '
+                                          'ImapUid.deleted_at == None)'),
+                          primaryjoin='and_('
+                          'ImapUid.folder_id == Folder.id, '
+                          'Folder.deleted_at == None)')
 
     ### Flags ###
     # Message has not completed composition (marked as a draft).
@@ -109,7 +122,9 @@ class UIDValidity(Base):
     imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
                             nullable=False)
     imapaccount = relationship("ImapAccount",
-                               primaryjoin='and_(UIDValidity.imapaccount_id == ImapAccount.id, ImapAccount.deleted_at == None, UIDValidity.deleted_at==None)')
+                               primaryjoin='and_('
+                               'UIDValidity.imapaccount_id == ImapAccount.id, '
+                               'ImapAccount.deleted_at == None)')
     # maximum Gmail label length is 225 (tested empirically), but constraining
     # folder_name uniquely requires max length of 767 bytes under utf8mb4
     # http://mathiasbynens.be/notes/mysql-utf8mb4
@@ -167,8 +182,14 @@ class ImapThread(Thread):
 class FolderSync(Base):
     account_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
                         nullable=False)
-    account = relationship('ImapAccount', backref='foldersyncs',
-                           primaryjoin='and_(FolderSync.account_id == ImapAccount.id, ImapAccount.deleted_at == None, FolderSync.deleted_at == None)')
+    account = relationship('ImapAccount', backref=backref(
+        'foldersyncs',
+        primaryjoin='and_('
+        'FolderSync.account_id == ImapAccount.id, '
+        'FolderSync.deleted_at == None)'),
+        primaryjoin='and_('
+        'FolderSync.account_id == ImapAccount.id, '
+        'ImapAccount.deleted_at == None)')
 
     # maximum Gmail label length is 225 (tested empirically), but constraining
     # folder_name uniquely requires max length of 767 bytes under utf8mb4

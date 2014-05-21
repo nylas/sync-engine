@@ -14,7 +14,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import mysql
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 
 
 def upgrade():
@@ -38,11 +38,14 @@ def upgrade():
 
     class ImapUid(Base):
         __table__ = Base.metadata.tables['imapuid']
-        message = relationship(
-            'Message', backref='imapuids',
-            primaryjoin='and_(ImapUid.message_id == Message.id, '
-                        'Message.deleted_at == None, '
-                        'ImapUid.deleted_at == None)')
+        message = relationship('Message',
+                               backref=backref('imapuids',
+                                               primaryjoin='and_('
+                                               'Message.id == ImapUid.message_id, '
+                                               'ImapUid.deleted_at == None)'),
+                               primaryjoin='and_('
+                               'ImapUid.message_id == Message.id,'
+                               'Message.deleted_at == None)')
 
     with session_scope(versioned=False, ignore_soft_deletes=False) as db_session:
         for uid in db_session.query(ImapUid).yield_per(500):
