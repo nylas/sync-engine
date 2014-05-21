@@ -50,4 +50,5 @@ Pygments==1.6
 greenlet==0.4.2
 PyMySQL==0.6.2
 click==0.7
-talon==1.0
+# talon hasn't been released yet, uncomment after release
+#talon==1.0
