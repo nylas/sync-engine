@@ -13,7 +13,6 @@ import uuid
 from pytest import fixture
 
 from tests.util.crispin import crispin_client
-from tests.util.mailsync import sync_client
 
 ACCOUNT_ID = 1
 NAMESPACE_ID = 1
@@ -64,7 +63,7 @@ def test_send_syncback(db, config, message):
         #c.delete_messages(sent_uids)
 
 
-def test_reply_syncback(db, config, message, sync_client):
+def test_reply_syncback(db, config, message):
     from inbox.server.sendmail.base import reply, recipients
     from inbox.server.models.tables.imap import ImapAccount
 
@@ -74,8 +73,8 @@ def test_reply_syncback(db, config, message, sync_client):
     cc = 'ben.bitdiddle1861@gmail.com'
     bcc = None
 
-    reply(account, THREAD_ID, recipients(to, cc, bcc), subject, body,
-          attachments)
+    reply(NAMESPACE_ID, account, THREAD_ID, recipients(to, cc, bcc), subject,
+          body, attachments)
 
     with crispin_client(account.id, account.provider) as c:
         # Ensure the sent email message is present in the test account,

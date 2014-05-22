@@ -10,9 +10,10 @@ subsequent sync, see tests/imap/network for those.
 
 """
 from pytest import fixture
+from inbox.server.sendmail.base import (send, reply, recipients,
+                                        create_attachment_metadata)
 
 from tests.data.messages.replyto_message import TEST_MSG
-from tests.util.api import api_client
 
 ACCOUNT_ID = 1
 NAMESPACE_ID = 1
@@ -38,18 +39,17 @@ def attach(config):
     return [filename]
 
 
-def test_send(db, config, api_client, message, attach):
+def test_send(db, config, message, attach):
     from inbox.server.models.tables.base import (SpoolMessage, FolderItem,
                                                  Folder, Account)
 
-    recipients, subject, body = message
-    attachment = attach
+    to, subject, body = message
     cc = 'ben.bitdiddle1861@gmail.com'
     bcc = None
+    attachfiles = create_attachment_metadata(attach)
 
-    result = api_client.send_new(NAMESPACE_ID, recipients, subject,
-                                 body, attachment, cc, bcc)
-    assert result == 'OK', 'send_mail API call failed'
+    account = db.session.query(Account).get(ACCOUNT_ID)
+    send(account, recipients(to, cc, bcc), subject, body, attachfiles)
 
     sent_messages = db.session.query(SpoolMessage).\
         filter_by(subject=subject).all()
@@ -64,16 +64,16 @@ def test_send(db, config, api_client, message, attach):
     assert sent_items == 1, 'sent folder entry missing'
 
 
-def test_reply(db, config, api_client, message, attach):
+def test_reply(db, config, message, attach):
     from inbox.server.models.tables.base import (SpoolMessage, FolderItem,
                                                  Folder, Account)
 
-    recipients, subject, body = message
-    attachment = attach
+    to, subject, body = message
+    attachfiles = create_attachment_metadata(attach)
 
-    result = api_client.send_reply(NAMESPACE_ID, THREAD_ID,
-                                   recipients, subject, body, attachment)
-    assert result == 'OK', 'send_reply API call failed'
+    account = db.session.query(Account).get(ACCOUNT_ID)
+    reply(NAMESPACE_ID, account, THREAD_ID, recipients(to, None, None),
+          subject, body, attachfiles)
 
     sent_messages = db.session.query(SpoolMessage).\
         filter_by(thread_id=THREAD_ID).all()
