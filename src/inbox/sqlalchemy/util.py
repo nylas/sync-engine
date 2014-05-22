@@ -1,13 +1,40 @@
 import uuid
 import struct
+import time
 
 from bson import json_util
 
-from sqlalchemy import String, Text
+from sqlalchemy import String, Text, event
 from sqlalchemy.types import TypeDecorator, BINARY
 from sqlalchemy.interfaces import PoolListener
+from sqlalchemy.engine import Engine
 
 from inbox.util.encoding import base36encode, base36decode
+
+from inbox.server.log import get_logger
+log = get_logger()
+
+
+SLOW_QUERY_THRESHOLD_MS = 250
+
+
+@event.listens_for(Engine, "before_cursor_execute")
+def before_cursor_execute(conn, cursor, statement,
+                          parameters, context, executemany):
+    context._query_start_time = time.time()
+
+
+@event.listens_for(Engine, "after_cursor_execute")
+def after_cursor_execute(conn, cursor, statement,
+                         parameters, context, executemany):
+    total = time.time() - context._query_start_time
+    total *= 1000
+    # We only care about slow reads here
+    if total > SLOW_QUERY_THRESHOLD_MS and statement.startswith('SELECT'):
+        statement = ' '.join(statement.split())
+        log.warning("Slow query took {0:.2f}ms: {1} with params {2} "
+                    .format(total, statement, parameters))
+
 
 ### Column Types
 
