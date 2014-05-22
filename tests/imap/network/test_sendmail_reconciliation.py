@@ -14,7 +14,6 @@ from pytest import fixture
 from gevent import Greenlet, killall
 
 from tests.util.crispin import crispin_client
-from tests.util.api import api_client
 from tests.util.mailsync import sync_client
 
 ACCOUNT_ID = 1
@@ -36,8 +35,10 @@ def message(db, config):
     return (to, subject, body)
 
 
-def test_send_reconcile(db, config, message, api_client, sync_client):
+def test_send_reconcile(db, config, message, sync_client):
     from inbox.server.models.tables.base import Message, SpoolMessage
+    from inbox.server.models.tables.imap import ImapAccount
+    from inbox.server.sendmail.base import send, recipients
 
     to, subject, body = message
     attachment = None
@@ -45,8 +46,8 @@ def test_send_reconcile(db, config, message, api_client, sync_client):
     bcc = None
 
     # Create email message, store a local copy + send it:
-    api_client.send_new(NAMESPACE_ID, to, subject, body, attachment,
-                        cc, bcc)
+    account = db.sesson.query(ImapAccount).get(ACCOUNT_ID)
+    send(account, recipients(to, cc, bcc), subject, body, attachment)
 
     # Sync to verify reconciliation:
     synclet = Greenlet(sync_client.start_sync, ACCOUNT_ID)
@@ -79,17 +80,21 @@ def test_send_reconcile(db, config, message, api_client, sync_client):
     #_delete_emails(db, ACCOUNT_ID, subject)
 
 
-def test_reply_reconcile(db, config, message, api_client, sync_client):
+def test_reply_reconcile(db, config, message, sync_client):
     from inbox.server.models.tables.base import Message, SpoolMessage
+    from inbox.server.models.tables.imap import ImapAccount
+    from inbox.server.sendmail.base import reply, recipients
 
     to, subject, body = message
     attachment = None
     cc = 'ben.bitdiddle1861@gmail.com'
     bcc = None
 
+    account = db.session.query(ImapAccount).get(ACCOUNT_ID)
+
     # Create email message, store a local copy + send it:
-    api_client.send_reply(NAMESPACE_ID, THREAD_ID, to, subject, body,
-                          attachment, cc, bcc)
+    reply(NAMESPACE_ID, account, THREAD_ID, recipients(to, cc, bcc),
+          subject, body, attachment)
 
     # Sync to verify reconciliation:
     synclet = Greenlet(sync_client.start_sync, ACCOUNT_ID)

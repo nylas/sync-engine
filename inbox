@@ -47,9 +47,6 @@ def start(args=None):
 
     # Start ZeroRPC api server service
     from inbox.server.util.concurrency import make_zerorpc
-    from inbox.server.api import API
-    api_srv_loc = config.get('API_SERVER_LOC', None)
-    threads.append(make_zerorpc(API, api_srv_loc))
 
     # Start ZeroRPC mail sync server service
     from inbox.server.mailsync.service import SyncService
