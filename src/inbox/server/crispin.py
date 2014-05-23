@@ -225,22 +225,21 @@ class CrispinClient(object):
         are only guaranteed valid for sessions, so the caller must provide a
         callback that checks UID validity.
 
-        Is a NOOP if `folder` is already selected.
+        Starts a new session even if `folder` is already selected, since
+        this does things like e.g. makes sure we're not getting
+        cached/out-of-date values for HIGHESTMODSEQ from the IMAP server.
         """
-        if self.selected_folder_name != folder:
-            select_info = self.conn.select_folder(
-                folder, readonly=self.readonly)
-            select_info['UIDVALIDITY'] = long(select_info['UIDVALIDITY'])
-            select_info['HIGHESTMODSEQ'] = long(select_info['HIGHESTMODSEQ'])
-            select_info['UIDNEXT'] = long(select_info['UIDNEXT'])
-            self.selected_folder = (folder, select_info)
-            # don't propagate cached information from previous session
-            self._folder_names = None
-            self.log.info('Selected folder {0} with {1} messages.'.format(
-                folder, select_info['EXISTS']))
-            return uidvalidity_cb(folder, select_info)
-        else:
-            return self.selected_folder_info
+        select_info = self.conn.select_folder(
+            folder, readonly=self.readonly)
+        select_info['UIDVALIDITY'] = long(select_info['UIDVALIDITY'])
+        select_info['HIGHESTMODSEQ'] = long(select_info['HIGHESTMODSEQ'])
+        select_info['UIDNEXT'] = long(select_info['UIDNEXT'])
+        self.selected_folder = (folder, select_info)
+        # don't propagate cached information from previous session
+        self._folder_names = None
+        self.log.info('Selected folder {0} with {1} messages.'.format(
+            folder, select_info['EXISTS']))
+        return uidvalidity_cb(folder, select_info)
 
     @property
     def selected_folder_name(self):

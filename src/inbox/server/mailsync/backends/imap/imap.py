@@ -295,6 +295,9 @@ def base_poll(crispin_client, db_session, log, folder_name, shared_state,
         uidvalidity_cb(db_session,
                        crispin_client.account_id))
 
+    log.debug("POLL current modseq: {} | saved modseq: {}".format(
+        status['HIGHESTMODSEQ'], saved_validity.highestmodseq))
+
     if status['HIGHESTMODSEQ'] > saved_validity.highestmodseq:
         highestmodseq_update(crispin_client, db_session, log, folder_name,
                              saved_validity.highestmodseq,
