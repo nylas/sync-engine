@@ -66,24 +66,6 @@ def poll(account_id, provider):
     provider_name = provider.PROVIDER_NAME
     with session_scope() as db_session:
         account = db_session.query(Account).get(account_id)
-
-        # Contact data reflecting any local modifications since the last sync
-        # with the remote provider.
-        local_contacts = db_session.query(Contact).filter_by(
-            source='local', account=account,
-            provider_name=provider_name).all()
-        # Snapshot of contact data from immediately after last sync.
-        cached_contacts = db_session.query(Contact).filter_by(
-            source='remote', account=account,
-            provider_name=provider_name).all()
-        log.info('Query: have {0} contacts, {1} cached.'.format(
-            len(local_contacts), len(cached_contacts)))
-
-        cached_contact_dict = {contact.uid: contact for contact in
-                               cached_contacts}
-        local_contact_dict = {contact.uid: contact for contact in
-                              local_contacts}
-
         change_counter = Counter()
         last_sync = or_none(account.last_synced_contacts,
                             datetime.datetime.isoformat)
@@ -93,8 +75,17 @@ def poll(account_id, provider):
             assert remote_contact.uid is not None, \
                 'Got remote contact with null uid'
             assert isinstance(remote_contact.uid, str)
-            cached_contact = cached_contact_dict.get(remote_contact.uid)
-            local_contact = local_contact_dict.get(remote_contact.uid)
+            matching_contacts = db_session.query(Contact).filter(
+                Contact.account == account,
+                Contact.provider_name == provider_name,
+                Contact.uid == remote_contact.uid)
+            # Snapshot of contact data from immediately after last sync:
+            cached_contact = matching_contacts. \
+                filter(Contact.source == 'remote').first()
+            # Contact data reflecting any local modifications since the last
+            # sync with the remote provider:
+            local_contact = matching_contacts. \
+                filter(Contact.source == 'local').first()
             # If the remote contact was deleted, purge the corresponding
             # database entries.
             if remote_contact.deleted:
