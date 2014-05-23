@@ -61,7 +61,7 @@ class ImapUid(Base):
                            primaryjoin='and_('
                            'ImapUid.message_id == Message.id,'
                            'Message.deleted_at == None)')
-    msg_uid = Column(BigInteger, nullable=False)
+    msg_uid = Column(BigInteger, nullable=False, index=True)
 
     folder_id = Column(Integer, ForeignKey('folder.id'), nullable=False)
     # We almost always need the folder name too, so eager load by default.

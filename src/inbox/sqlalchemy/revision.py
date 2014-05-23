@@ -24,7 +24,7 @@ from .util import BigJSON
 class Revision(object):
     """ All revision records in a single table (role). """
     # Which object are we recording changes to?
-    table_name = Column(String(20), nullable=False)
+    table_name = Column(String(20), nullable=False, index=True)
     record_id = Column(Integer, nullable=False)
 
     command = Column(Enum('insert', 'update', 'delete'), nullable=False)
