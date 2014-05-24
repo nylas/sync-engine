@@ -101,6 +101,11 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
     local_uids = set(local_uids) - deleted_uids
     unknown_uids = set(remote_uids) - local_uids
 
+    # folders that don't get thread expanded
+    uid_download_folders = [crispin_client.folder_names()[tag] for tag in
+                            ('trash', 'spam', 'all') if tag in
+                            crispin_client.folder_names()]
+
     if folder_name == crispin_client.folder_names()['inbox']:
         # We don't do an initial dedupe for Inbox because we do thread
         # expansion, which means even if we have a given msgid downloaded, we
@@ -122,9 +127,7 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
                                 message_download_stack,
                                 shared_state['status_cb'],
                                 shared_state['syncmanager_lock'])
-    elif folder_name in (crispin_client.folder_names()['trash'],
-                         crispin_client.folder_names()['spam'],
-                         crispin_client.folder_names()['all']):
+    elif folder_name in uid_download_folders:
         full_download = deduplicate_message_download(
             crispin_client, db_session, log, shared_state['syncmanager_lock'],
             remote_g_metadata, unknown_uids)
