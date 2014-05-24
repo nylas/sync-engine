@@ -39,14 +39,22 @@ def save_folder_names(log, account, folder_names, db_session):
     assert 'inbox' in folder_names, 'Account {} has no detected inbox folder'\
         .format(account.email_address)
 
+    folders = dict([(f.name.lower(), f) for f in
+                    db_session.query(Folder).filter_by(account=account).all()])
+
     for tag in ['inbox', 'drafts', 'sent', 'spam', 'trash', 'starred',
                 'important', 'archive', 'all']:
-        if tag in folder_names:
-            folder = Folder.find_or_create(db_session, account,
-                                           folder_names[tag], tag)
+        if tag in folder_names and folder_names[tag].lower() not in folders:
+            folder = Folder.create(account, folder_names[tag], tag)
             attr_name = '{}_folder'.format(tag)
             setattr(account, attr_name, verify_folder_name(
                 account.id, getattr(account, attr_name), folder))
+
+    # Gmail labels, user-created IMAP/EAS folders, etc.
+    if 'extra' in folder_names:
+        for name in folder_names['extra']:
+            if name.lower() not in folders:
+                db_session.add(Folder.create(account, name))
 
     db_session.commit()
 

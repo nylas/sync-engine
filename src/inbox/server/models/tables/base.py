@@ -1334,18 +1334,23 @@ class Folder(Base, HasRevisions):
         self.exposed_name = '-'.join((provider_prefix, self.name.lower()))
 
     @classmethod
+    def create(cls, account, name, special_folder_type=None):
+        obj = cls(account=account, name=name)
+        if special_folder_type is not None:
+            obj.exposed_name = special_folder_type
+            obj.public_id = special_folder_type
+        else:
+            obj._set_exposed_name()
+        return obj
+
+    @classmethod
     def find_or_create(cls, session, account, name, special_folder_type=None):
         try:
             obj = session.query(cls).filter(
                 Folder.account == account,
                 func.lower(Folder.name) == func.lower(name)).one()
         except NoResultFound:
-            obj = cls(account=account, name=name)
-            if special_folder_type is not None:
-                obj.exposed_name = special_folder_type
-                obj.public_id = special_folder_type
-            else:
-                obj._set_exposed_name()
+            obj = cls.create(account, name, special_folder_type)
         except MultipleResultsFound:
             log.info("Duplicate folder rows for folder {} for account {}"
                      .format(name, account.id))
