@@ -135,8 +135,8 @@ class IgnoreSoftDeletesOption(MapperOption):
         # apply bindparam values
         self.process_query_conditionally(query)
 
-        # requires a query against a single mapper
         parent_cls = query._mapper_zero().class_
+        assert parent_cls is not None, "query against a single mapper required"
         filter_crit = parent_cls.deleted_at == None
 
         if query._criterion is None:
