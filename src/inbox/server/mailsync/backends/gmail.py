@@ -37,7 +37,8 @@ from inbox.server.models.message import reconcile_message
 from inbox.server.models.tables.base import Message, Folder
 from inbox.server.models.tables.imap import ImapAccount, ImapUid, ImapThread
 from inbox.server.mailsync.backends.base import (create_db_objects,
-                                                 commit_uids, new_or_updated)
+                                                 commit_uids, new_or_updated,
+                                                 MailsyncError)
 from inbox.server.mailsync.backends.imap import (account,
                                                  uidvalidity_cb,
                                                  remove_deleted_uids,
@@ -100,7 +101,7 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
     local_uids = set(local_uids) - deleted_uids
     unknown_uids = set(remote_uids) - local_uids
 
-    if folder_name != crispin_client.folder_names()['all']:
+    if folder_name == crispin_client.folder_names()['inbox']:
         # We don't do an initial dedupe for non-All Mail folders because
         # we do thread expansion, which means even if we have a given msgid
         # downloaded, we miiight not have the whole thread. This means that
@@ -122,7 +123,9 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
                                 message_download_stack,
                                 shared_state['status_cb'],
                                 shared_state['syncmanager_lock'])
-    else:
+    elif folder_name in (crispin_client.folder_names()['trash'],
+                         crispin_client.folder_names()['spam'],
+                         crispin_client.folder_names()['all']):
         full_download = deduplicate_message_download(
             crispin_client, db_session, log, shared_state['syncmanager_lock'],
             remote_g_metadata, unknown_uids)
@@ -139,6 +142,9 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
                              shared_state['syncmanager_lock'],
                              gmail_download_and_commit_uids,
                              create_gmail_message)
+    else:
+        raise MailsyncError(
+            "Unknown Gmail sync folder: {}".format(folder_name))
 
     # Complete X-GM-MSGID mapping is no longer needed after initial sync.
     rm_cache(remote_g_metadata_cache_file(crispin_client.account_id,

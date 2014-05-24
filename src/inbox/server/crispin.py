@@ -384,8 +384,9 @@ class GmailCrispinClient(CrispinClient):
     def sync_folders(self):
         """ Gmail-specific list of folders to sync.
 
-        In Gmail, every message is a subset of All Mail, so we only sync that
-        folder + Inbox (for quickly downloading initial inbox messages and
+        In Gmail, every message is a subset of All Mail, with the exception of
+        the Trash and Spam folders. So we only sync All Mail, Trash, Spam,
+        and Inbox (for quickly downloading initial inbox messages and
         continuing to receive new Inbox messages while a large mail archive is
         downloading).
 
@@ -394,7 +395,13 @@ class GmailCrispinClient(CrispinClient):
         list
             Folders to sync (as strings).
         """
-        return [self.folder_names()['inbox'], self.folder_names()['all']]
+        folders = [self.folder_names()['inbox'], self.folder_names()['all']]
+        # Gmail allows users to configure which folders appear in the IMAP
+        # interface, so accounts MAY NOT have these folders available to sync!
+        for tag in ('trash', 'spam'):
+            if tag in self.folder_names():
+                folders.append(self.folder_names()[tag])
+        return folders
 
     def flags(self, uids):
         """ Gmail-specific flags.

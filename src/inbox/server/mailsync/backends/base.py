@@ -15,6 +15,10 @@ from inbox.server.mailsync.exc import SyncException
 import inbox.server.mailsync.backends
 
 
+class MailsyncError(Exception):
+    pass
+
+
 def verify_db(crispin_client, db_session):
     pass
 
