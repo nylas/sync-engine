@@ -40,7 +40,7 @@ import urlparse
 import gevent
 import gevent.queue
 import requests
-from sqlalchemy import asc
+from sqlalchemy import asc, func
 
 from inbox.server.log import get_logger, log_uncaught_errors
 from inbox.server.models import session_scope
@@ -208,14 +208,17 @@ class WebhookService(gevent.Greenlet):
         with session_scope() as db_session:
             self.log.info('Scanning tx log from id: {}'.
                           format(self.minimum_id))
-            query = db_session.query(Transaction). \
-                filter(Transaction.table_name == 'message',
-                       Transaction.id > self.minimum_id). \
-                order_by(asc(Transaction.id)).yield_per(self.chunk_size)
-            if query.count():
+            unprocessed_txn_count = db_session.query(
+                func.count(Transaction.id)).filter(
+                Transaction.table_name == 'message',
+                Transaction.id > self.minimum_id).scalar()
+            if unprocessed_txn_count:
                 self.log.debug('Total of {0} transactions to process'.
-                               format(query.count()))
-            for transaction in query:
+                               format(unprocessed_txn_count))
+            for transaction in db_session.query(Transaction) \
+                    .filter(Transaction.table_name == 'message',
+                            Transaction.id > self.minimum_id)\
+                    .order_by(asc(Transaction.id)).yield_per(self.chunk_size):
                 namespace_id = transaction.namespace_id
                 event_data = EventData(transaction)
                 for worker in self.workers[namespace_id]:
