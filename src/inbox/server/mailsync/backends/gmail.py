@@ -102,11 +102,10 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
     unknown_uids = set(remote_uids) - local_uids
 
     if folder_name == crispin_client.folder_names()['inbox']:
-        # We don't do an initial dedupe for non-All Mail folders because
-        # we do thread expansion, which means even if we have a given msgid
-        # downloaded, we miiight not have the whole thread. This means that
-        # restarts cause duplicate work, but hopefully these folders aren't
-        # too huge.
+        # We don't do an initial dedupe for Inbox because we do thread
+        # expansion, which means even if we have a given msgid downloaded, we
+        # miiight not have the whole thread. This means that restarts cause
+        # duplicate work, but hopefully these folders aren't too huge.
         message_download_stack = LifoQueue()
         flags = crispin_client.flags(unknown_uids)
         for uid in unknown_uids:
