@@ -1,14 +1,31 @@
 #!/usr/bin/env python
 from gevent import monkey; monkey.patch_all()
-from gevent import joinall, spawn
-import argparse
-import signal
 import sys
 import os
-from setproctitle import setproctitle; setproctitle('inbox')
-import sqlalchemy
-from alembic.config import Config as alembic_config
-from alembic.script import ScriptDirectory
+from pkg_resources import require, DistributionNotFound, VersionConflict
+
+# Check our requirements package
+failed_deps = []
+requirements_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                       'requirements.txt')
+with open(requirements_path, 'r') as f:
+    for x in f:
+        x = x.strip()
+        if not x or x.startswith('#') or x.startswith('-e '):
+            continue
+        try:
+            require(x)
+        except (DistributionNotFound, VersionConflict):
+            failed_deps.append(x)
+
+if failed_deps:
+    sys.exit("\nPython module dependency verification failed! \n\n"
+             "The following dependencies are either missing or out of "
+             "date: \n\t{}\n\nYou probably need to run --> sudo pip "
+             "install -r requirements.txt\n"
+             .format("\n\t".join(failed_deps)))
+else:
+    print 'Dependencies OK!'
 
 
 # Keep it clean for development
@@ -23,6 +40,15 @@ for root, dir, files in os.walk('./src'):
 # TOFIX DEBUG PROD OMGWTFBBQ
 sys.dont_write_bytecode = True
 
+
+
+from gevent import joinall, spawn
+import argparse
+import signal
+from setproctitle import setproctitle; setproctitle('inbox')
+import sqlalchemy
+from alembic.config import Config as alembic_config
+from alembic.script import ScriptDirectory
 
 from inbox.server.config import config, load_config
 from inbox.server.log import (configure_general_logging, get_logger,
