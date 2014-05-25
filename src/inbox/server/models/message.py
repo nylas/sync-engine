@@ -18,8 +18,8 @@ from inbox.server.config import config
 def trim_filename(s, max_len=64, log=None):
     if s and len(s) > max_len:
         if log:
-            log.warning("field is too long. Truncating to {0}"
-                        "characters. {1}".format(max_len, s))
+            log.warning(u"field is too long. Truncating to {}"
+                        u"characters. {}".format(max_len, s))
         return s[:max_len - 8] + s[-8:]  # Keep extension
     return s
 
