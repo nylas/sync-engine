@@ -1409,6 +1409,9 @@ class FolderItem(Base, HasRevisions):
     folder = relationship(
         'Folder', uselist=False,
         backref=backref('threads',
+                        # If associated folder is deleted, don't load child
+                        # objects and let database-level cascade do its thing.
+                        passive_deletes=True,
                         primaryjoin='and_(FolderItem.folder_id==Folder.id, '
                         'FolderItem.deleted_at==None)'),
         lazy='joined',

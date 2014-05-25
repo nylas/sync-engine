@@ -67,7 +67,9 @@ class ImapUid(Base):
                        nullable=False)
     # We almost always need the folder name too, so eager load by default.
     folder = relationship('Folder', lazy='joined',
-                          backref=backref('imapuids', primaryjoin='and_('
+                          backref=backref('imapuids',
+                                          passive_deletes=True,
+                                          primaryjoin='and_('
                                           'Folder.id == ImapUid.folder_id, '
                                           'ImapUid.deleted_at.is_(None))'),
                           primaryjoin='and_('
