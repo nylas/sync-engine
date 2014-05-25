@@ -79,7 +79,7 @@ def timed(fn):
         start_time = time.time()
         ret = fn(self, *args, **kwargs)
 
-        # TOFIX the gmail.py module doesn't have self.lgoger
+        # TODO some modules like gmail.py don't have self.logger
         try:
             if self.log:
                 fn_logger = self.log

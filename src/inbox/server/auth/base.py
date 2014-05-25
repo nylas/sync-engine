@@ -64,7 +64,7 @@ def verify_imap_account(db_session, account):
         log.error('Getting new access token...')
 
         try:
-            response = oauth.get_new_token(refresh_token)  # TOFIX blocks
+            response = oauth.get_new_token(refresh_token)
         # Redo the entire OAuth process.
         except oauth.InvalidOAuthGrantError:
             account = auth_handler.create_auth_account(db_session,

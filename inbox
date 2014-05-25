@@ -37,7 +37,6 @@ for root, dir, files in os.walk('./src'):
             full_path = os.path.join(root, filename)
             print 'removing {0}'.format(full_path)
             os.remove(full_path)
-# TOFIX DEBUG PROD OMGWTFBBQ
 sys.dont_write_bytecode = True
 
 
@@ -57,7 +56,7 @@ log = get_logger()
 
 
 def debug(args=None):
-    """ Run the server with autoreload. TODO add debug flag to startup."""
+    """ Run the server with autoreload."""
     from werkzeug.serving import run_with_reloader
     run_with_reloader(start)
 
