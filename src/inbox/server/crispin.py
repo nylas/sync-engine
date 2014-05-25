@@ -14,6 +14,7 @@ from collections import namedtuple
 from gevent import socket
 import imaplib
 imaplib.IMAP4.error = socket.error
+imaplib.IMAP4.abort = socket.error
 
 from geventconnpool import ConnectionPool
 
