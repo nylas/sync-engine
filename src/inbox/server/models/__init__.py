@@ -152,7 +152,11 @@ class InboxQuery(sqlalchemy.orm.query.Query):
         raise Exception("Not supported, use `session.delete()` instead!")
 
     def get(self, ident):
-        """Can't use regular `.get()` on a query w/options already applied."""
+        """Can't use regular `.get()` on a query w/options already applied.
+
+        Note that our semantics here are different from that of a regular
+        query, in that we do not fetch directly from the session identity map.
+        """
         cls = self._mapper_zero().class_
         try:
             return self.filter(cls.id == ident).one()
