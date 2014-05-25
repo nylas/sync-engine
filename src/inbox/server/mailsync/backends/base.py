@@ -57,7 +57,8 @@ def save_folder_names(log, account, folder_names, db_session):
                 attr_name = '{}_folder'.format(tag)
                 setattr(account, attr_name, verify_folder_name(
                     account.id, getattr(account, attr_name), folder))
-            del folders[folder_names[tag].lower()]
+            if folder_names[tag].lower() in folders:
+                del folders[folder_names[tag].lower()]
 
     # Gmail labels, user-created IMAP/EAS folders, etc.
     if 'extra' in folder_names:
@@ -66,7 +67,8 @@ def save_folder_names(log, account, folder_names, db_session):
             if name.lower() not in folders:
                 folder = Folder.create(account, name)
                 db_session.add(folder)
-            del folders[name.lower()]
+            if name.lower() in folders:
+                del folders[name.lower()]
 
     # This may cascade to FolderItems and ImapUid (ONLY), which is what we
     # want--doing the update here short-circuits us syncing that change later.
