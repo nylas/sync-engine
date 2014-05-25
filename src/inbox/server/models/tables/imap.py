@@ -50,17 +50,17 @@ class ImapUid(Base):
     imapaccount = relationship('ImapAccount',
                                primaryjoin='and_('
                                'ImapUid.imapaccount_id == ImapAccount.id, '
-                               'ImapAccount.deleted_at == None)')
+                               'ImapAccount.deleted_at.is_(None))')
 
     message_id = Column(Integer, ForeignKey('message.id'), nullable=False)
     message = relationship('Message',
                            backref=backref('imapuids',
                                            primaryjoin='and_('
                                            'Message.id == ImapUid.message_id, '
-                                           'ImapUid.deleted_at == None)'),
+                                           'ImapUid.deleted_at.is_(None))'),
                            primaryjoin='and_('
                            'ImapUid.message_id == Message.id,'
-                           'Message.deleted_at == None)')
+                           'Message.deleted_at.is_(None))')
     msg_uid = Column(BigInteger, nullable=False, index=True)
 
     folder_id = Column(Integer, ForeignKey('folder.id'), nullable=False)
@@ -68,10 +68,10 @@ class ImapUid(Base):
     folder = relationship('Folder', lazy='joined',
                           backref=backref('imapuids', primaryjoin='and_('
                                           'Folder.id == ImapUid.folder_id, '
-                                          'ImapUid.deleted_at == None)'),
+                                          'ImapUid.deleted_at.is_(None))'),
                           primaryjoin='and_('
                           'ImapUid.folder_id == Folder.id, '
-                          'Folder.deleted_at == None)')
+                          'Folder.deleted_at.is_(None))')
 
     ### Flags ###
     # Message has not completed composition (marked as a draft).
@@ -124,7 +124,7 @@ class UIDValidity(Base):
     imapaccount = relationship("ImapAccount",
                                primaryjoin='and_('
                                'UIDValidity.imapaccount_id == ImapAccount.id, '
-                               'ImapAccount.deleted_at == None)')
+                               'ImapAccount.deleted_at.is_(None))')
     # maximum Gmail label length is 225 (tested empirically), but constraining
     # folder_name uniquely requires max length of 767 bytes under utf8mb4
     # http://mathiasbynens.be/notes/mysql-utf8mb4
@@ -186,10 +186,10 @@ class FolderSync(Base):
         'foldersyncs',
         primaryjoin='and_('
         'FolderSync.account_id == ImapAccount.id, '
-        'FolderSync.deleted_at == None)'),
+        'FolderSync.deleted_at.is_(None))'),
         primaryjoin='and_('
         'FolderSync.account_id == ImapAccount.id, '
-        'ImapAccount.deleted_at == None)')
+        'ImapAccount.deleted_at.is_(None))')
 
     # maximum Gmail label length is 225 (tested empirically), but constraining
     # folder_name uniquely requires max length of 767 bytes under utf8mb4

@@ -43,7 +43,7 @@ class SyncService(object):
             # XXX: I think we can do some sqlalchemy magic to make it so we
             # can query on the attribute sync_active.
             for account_id, in db_session.query(Account.id)\
-                    .filter(Account.sync_host != None):
+                    .filter(~Account.sync_host.is_(None)):
                 self.start_sync(account_id)
 
     def start_sync(self, account_id=None):

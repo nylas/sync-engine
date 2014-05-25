@@ -137,7 +137,7 @@ class IgnoreSoftDeletesOption(MapperOption):
 
         parent_cls = query._mapper_zero().class_
         assert parent_cls is not None, "query against a single mapper required"
-        filter_crit = parent_cls.deleted_at == None
+        filter_crit = parent_cls.deleted_at.is_(None)
 
         if query._criterion is None:
             query._criterion = filter_crit
