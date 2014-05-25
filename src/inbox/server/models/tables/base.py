@@ -28,13 +28,13 @@ from inbox.util.html import (plaintext2html, strip_tags, extract_from_html,
                              extract_from_plain)
 from inbox.util.misc import load_modules
 from inbox.util.cryptography import encrypt_aes, decrypt_aes
-from inbox.sqlalchemy.util import (JSON, Base36UID,
-                                   generate_public_id, maybe_refine_query)
+from inbox.sqlalchemy.util import JSON, Base36UID, maybe_refine_query
 from inbox.sqlalchemy.revision import Revision, gen_rev_role
 from inbox.server.basicauth import AUTH_TYPES
 
 from inbox.server.models.roles import Blob
 from inbox.server.models import Base
+from inbox.server.models.mixins import HasPublicID
 
 
 def register_backends():
@@ -52,10 +52,6 @@ def register_backends():
 
     return table_mod_for
 
-
-class HasPublicID(object):
-    public_id = Column(Base36UID, nullable=False,
-                       index=True, default=generate_public_id)
 
 
 class Account(Base, HasPublicID):

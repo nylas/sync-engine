@@ -1,8 +1,6 @@
-from urllib import quote_plus as urlquote
-from datetime import datetime
 from contextlib import contextmanager
 
-from sqlalchemy import create_engine, Column, Integer, DateTime
+from sqlalchemy import Column, Integer
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.interfaces import MapperOption
 from sqlalchemy.ext.declarative import as_declarative, declared_attr
@@ -10,28 +8,20 @@ from sqlalchemy.orm.exc import NoResultFound
 
 import sqlalchemy.orm.session
 
-from inbox.server.config import config, is_prod
 from inbox.server.log import get_logger
 log = get_logger()
 
 from inbox.sqlalchemy.revision import versioned_session
-from inbox.sqlalchemy.util import ForceStrictMode
+from inbox.server.models.mixins import AutoTimestampMixin
 
 
 @as_declarative()
-class Base(object):
+class Base(AutoTimestampMixin):
     """
     Provides automated table name, primary key column, and audit timestamps.
     """
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    # We do all default/update in Python not SQL for these because MySQL
-    # < 5.6 doesn't support multiple TIMESTAMP cols per table, and can't
-    # do function defaults or update triggers on DATETIME rows.
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
-    updated_at = Column(DateTime, default=datetime.utcnow,
-                        onupdate=datetime.utcnow, nullable=False, index=True)
-    deleted_at = Column(DateTime, nullable=True, index=True)
 
     @declared_attr
     def __tablename__(cls):
@@ -40,76 +30,6 @@ class Base(object):
     @declared_attr
     def __table_args__(cls):
         return {'extend_existing': True}
-
-    @property
-    def is_deleted(self):
-        return self.deleted_at is not None
-
-    def mark_deleted(self):
-        """
-        Safer object deletion: mark as deleted and garbage collect later.
-        """
-        self.deleted_at = datetime.utcnow()
-
-
-def engine_uri(database=None):
-    """ By default doesn't include the specific database. """
-
-    config_prefix = 'RDS' if is_prod() else 'MYSQL'
-
-    username = config.get('{0}_USER'.format(config_prefix), None)
-    assert username, "Must have database username to connect!"
-
-    password = config.get('{0}_PASSWORD'.format(config_prefix), None)
-    assert password, "Must have database password to connect!"
-
-    host = config.get('{0}_HOSTNAME'.format(config_prefix), None)
-    assert host, "Must have database to connect!"
-
-    port = config.get('{0}_PORT'.format(config_prefix), None)
-    assert port, "Must have database port to connect!"
-
-    uri_template = 'mysql+pymysql://{username}:{password}@{host}:{port}/{database}?charset=utf8mb4'
-
-    return uri_template.format(
-        username=username,
-        # http://stackoverflow.com/questions/15728290/sqlalchemy-valueerror-for-slash-in-password-for-create-engine (also applicable to '+' sign)
-        password=urlquote(password),
-        host=host,
-        port=port,
-        database=database if database else '')
-
-
-def db_uri():
-    config_prefix = 'RDS' if is_prod() else 'MYSQL'
-    database = config.get('{0}_DATABASE'.format(config_prefix), None)
-    assert database, "Must have database name to connect!"
-    return engine_uri(database)
-
-engine = create_engine(db_uri(),
-                       listeners=[ForceStrictMode()],
-                       isolation_level='READ COMMITTED',
-                       echo=False,
-                       pool_size=25,
-                       max_overflow=10,
-                       connect_args={'charset': 'utf8mb4'})
-
-
-def init_db():
-    """ Make the tables.
-
-    This is called only from create_db.py, which is run during setup.
-    Previously we allowed this to run everytime on startup, which broke some
-    alembic revisions by creating new tables before a migration was run.
-    From now on, we should ony be creating tables+columns via SQLalchemy *once*
-    and all subscequent changes done via migration scripts.
-    """
-    from inbox.server.models.tables.base import register_backends
-    table_mod_for = register_backends()
-
-    Base.metadata.create_all(engine)
-
-    return table_mod_for
 
 
 class IgnoreSoftDeletesOption(MapperOption):
@@ -179,6 +99,9 @@ class InboxSession(object):
     def __init__(self, versioned=True, ignore_soft_deletes=True,
                  namespace_id=None):
         # TODO: support limiting on namespaces
+        # TODO this uses our global engine here :(
+        from inbox.server.models.ignition import engine
+
         args = dict(bind=engine, autoflush=True, autocommit=False)
         self.ignore_soft_deletes = ignore_soft_deletes
         if ignore_soft_deletes:

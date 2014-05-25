@@ -28,8 +28,10 @@ table_mod_for = register_backends()
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
-from inbox.server.models import Base, db_uri
+from inbox.server.models import Base
 target_metadata = Base.metadata
+
+from inbox.server.models.ignition import db_uri
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

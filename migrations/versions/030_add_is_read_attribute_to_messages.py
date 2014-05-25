@@ -29,7 +29,7 @@ def upgrade():
                     existing_type=mysql.DATETIME(), nullable=False)
 
     from inbox.server.models import session_scope
-    from inbox.server.models import engine
+    from inbox.server.models.ignition import engine
     Base = declarative_base()
     Base.metadata.reflect(engine)
 

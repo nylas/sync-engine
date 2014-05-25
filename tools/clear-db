@@ -14,8 +14,7 @@ def main():
                         dest='with_users', default=False)
     args = parser.parse_args()
     load_config(args.config)
-    from inbox.server.models import engine
-    from inbox.server.models import init_db
+    from inbox.server.models.ignition import engine, init_db
 
     # Always keep the 'alembic_version' table
     keep_tables = ['alembic_version']

@@ -107,7 +107,8 @@ def upgrade():
     from inbox.server.config import load_config
     load_config()
 
-    from inbox.server.models import engine, session_scope
+    from inbox.server.models import session_scope
+    from inbox.server.models.ignition import engine
 
     Base = declarative_base()
     Base.metadata.reflect(engine)

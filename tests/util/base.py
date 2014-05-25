@@ -74,7 +74,8 @@ def action_queue(request, config):
 
 class TestDB(object):
     def __init__(self, config, dumpfile):
-        from inbox.server.models import InboxSession, engine
+        from inbox.server.models import InboxSession
+        from inbox.server.models.ignition import engine
         # Set up test database
         self.session = InboxSession(versioned=False)
         self.engine = engine

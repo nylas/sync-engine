@@ -1,6 +1,8 @@
 from ConfigParser import SafeConfigParser, NoSectionError
 import sys
 import os
+from urllib import quote_plus as urlquote
+
 
 from .log import get_logger
 log = get_logger()
@@ -54,3 +56,39 @@ def load_config(filename='config.cfg'):
             format(filename)
         sys.exit(1)
     return config
+
+
+def engine_uri(database=None):
+    """ By default doesn't include the specific database. """
+
+    config_prefix = 'RDS' if is_prod() else 'MYSQL'
+
+    username = config.get('{0}_USER'.format(config_prefix), None)
+    assert username, "Must have database username to connect!"
+
+    password = config.get('{0}_PASSWORD'.format(config_prefix), None)
+    assert password, "Must have database password to connect!"
+
+    host = config.get('{0}_HOSTNAME'.format(config_prefix), None)
+    assert host, "Must have database to connect!"
+
+    port = config.get('{0}_PORT'.format(config_prefix), None)
+    assert port, "Must have database port to connect!"
+
+    uri_template = 'mysql+pymysql://{username}:{password}@{host}' +\
+                   ':{port}/{database}?charset=utf8mb4'
+
+    return uri_template.format(
+        username=username,
+        # http://stackoverflow.com/a/15728440 (also applicable to '+' sign)
+        password=urlquote(password),
+        host=host,
+        port=port,
+        database=database if database else '')
+
+
+def db_uri():
+    config_prefix = 'RDS' if is_prod() else 'MYSQL'
+    database = config.get('{0}_DATABASE'.format(config_prefix), None)
+    assert database, "Must have database name to connect!"
+    return engine_uri(database)

@@ -4,11 +4,11 @@ import sqlalchemy
 from alembic.config import Config as alembic_config
 from alembic import command as alembic_command
 
-from inbox.server.config import load_config
+from inbox.server.config import load_config, engine_uri
 load_config()
 
-from inbox.server.models import init_db, engine_uri
-from inbox.server.models import engine as inbox_db_engine
+from inbox.server.models.ignition import init_db
+from inbox.server.models.ignition import engine as inbox_db_engine
 from inbox.sqlalchemy.util import ForceStrictMode
 
 basic_engine = sqlalchemy.create_engine(engine_uri(), listeners=[ForceStrictMode()], echo=False)

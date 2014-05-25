@@ -24,7 +24,9 @@ def upgrade():
     from inbox.server.config import load_config
     load_config()
 
-    from inbox.server.models import session_scope, engine, Session
+    from inbox.server.models import session_scope, Session
+    from inbox.server.models.ignition import engine
+
     from inbox.server.models.tables.base import (Part, Namespace,
                                                  Message, Thread)
     from inbox.sqlalchemy.util import JSON

@@ -258,7 +258,7 @@ def auth(args):
 def check_db():
 
     # Check database revision
-    from inbox.server.models import db_uri  # needs to be after load_config()
+    from inbox.server.models.ignition import db_uri  # needs to be after load_config()
     inbox_db_engine = sqlalchemy.create_engine(db_uri())
 
     # top-level, with setup.sh
