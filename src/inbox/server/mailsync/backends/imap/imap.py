@@ -290,6 +290,8 @@ def base_poll(crispin_client, db_session, log, folder_name, shared_state,
                                              db_session, folder_name)
 
     # Start a session since we're going to IDLE below anyway...
+    # This also resets the folder name cache, which we want in order to
+    # detect folder/label additions and deletions.
     status = crispin_client.select_folder(
         folder_name,
         uidvalidity_cb(db_session,
@@ -299,6 +301,8 @@ def base_poll(crispin_client, db_session, log, folder_name, shared_state,
         status['HIGHESTMODSEQ'], saved_validity.highestmodseq))
 
     if status['HIGHESTMODSEQ'] > saved_validity.highestmodseq:
+        acc = db_session.query(ImapAccount).get(crispin_client.account_id)
+        save_folder_names(log, acc, crispin_client.folder_names(), db_session)
         highestmodseq_update(crispin_client, db_session, log, folder_name,
                              saved_validity.highestmodseq,
                              shared_state['status_cb'], highestmodseq_fn,
