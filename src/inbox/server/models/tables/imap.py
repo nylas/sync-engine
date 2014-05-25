@@ -63,7 +63,8 @@ class ImapUid(Base):
                            'Message.deleted_at.is_(None))')
     msg_uid = Column(BigInteger, nullable=False, index=True)
 
-    folder_id = Column(Integer, ForeignKey('folder.id'), nullable=False)
+    folder_id = Column(Integer, ForeignKey('folder.id', ondelete='CASCADE'),
+                       nullable=False)
     # We almost always need the folder name too, so eager load by default.
     folder = relationship('Folder', lazy='joined',
                           backref=backref('imapuids', primaryjoin='and_('

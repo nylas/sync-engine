@@ -80,56 +80,71 @@ class Account(Base, HasPublicID):
     # account backends will not provide all of these. This may mean that Inbox
     # creates some folders on the remote backend, for example to provide
     # "archive" functionality on non-Gmail remotes.
-    inbox_folder_id = Column(Integer, ForeignKey('folder.id'), nullable=True)
+    inbox_folder_id = Column(Integer,
+                             ForeignKey('folder.id', ondelete='SET NULL'),
+                             nullable=True)
     inbox_folder = relationship(
         'Folder', post_update=True,
         primaryjoin='and_(Account.inbox_folder_id == Folder.id, '
                     'Folder.deleted_at.is_(None))')
-    sent_folder_id = Column(Integer, ForeignKey('folder.id'), nullable=True)
+    sent_folder_id = Column(Integer,
+                            ForeignKey('folder.id', ondelete='SET NULL'),
+                            nullable=True)
     sent_folder = relationship(
         'Folder', post_update=True,
         primaryjoin='and_(Account.sent_folder_id == Folder.id, '
                     'Folder.deleted_at.is_(None))')
 
-    drafts_folder_id = Column(Integer, ForeignKey('folder.id'), nullable=True)
+    drafts_folder_id = Column(Integer,
+                              ForeignKey('folder.id', ondelete='SET NULL'),
+                              nullable=True)
     drafts_folder = relationship(
         'Folder', post_update=True,
         primaryjoin='and_(Account.drafts_folder_id == Folder.id, '
                     'Folder.deleted_at.is_(None))')
 
-    spam_folder_id = Column(Integer, ForeignKey('folder.id'), nullable=True)
+    spam_folder_id = Column(Integer,
+                            ForeignKey('folder.id', ondelete='SET NULL'),
+                            nullable=True)
     spam_folder = relationship(
         'Folder', post_update=True,
         primaryjoin='and_(Account.spam_folder_id == Folder.id, '
                     'Folder.deleted_at.is_(None))')
 
-    trash_folder_id = Column(Integer, ForeignKey('folder.id'), nullable=True)
+    trash_folder_id = Column(Integer,
+                             ForeignKey('folder.id', ondelete='SET NULL'),
+                             nullable=True)
     trash_folder = relationship(
         'Folder', post_update=True,
         primaryjoin='and_(Account.trash_folder_id == Folder.id, '
                     'Folder.deleted_at.is_(None))')
 
-    archive_folder_id = Column(Integer, ForeignKey('folder.id'),
+    archive_folder_id = Column(Integer,
+                               ForeignKey('folder.id', ondelete='SET NULL'),
                                nullable=True)
     archive_folder = relationship(
         'Folder', post_update=True,
         primaryjoin='and_(Account.archive_folder_id == Folder.id, '
                     'Folder.deleted_at.is_(None))')
 
-    all_folder_id = Column(Integer, ForeignKey('folder.id'), nullable=True)
+    all_folder_id = Column(Integer,
+                           ForeignKey('folder.id', ondelete='SET NULL'),
+                           nullable=True)
     all_folder = relationship(
         'Folder', post_update=True,
         primaryjoin='and_(Account.all_folder_id == Folder.id, '
                     'Folder.deleted_at.is_(None))')
 
-    starred_folder_id = Column(Integer, ForeignKey('folder.id'),
+    starred_folder_id = Column(Integer,
+                               ForeignKey('folder.id', ondelete='SET NULL'),
                                nullable=True)
     starred_folder = relationship(
         'Folder', post_update=True,
         primaryjoin='and_(Account.starred_folder_id == Folder.id, '
                     'Folder.deleted_at.is_(None))')
 
-    important_folder_id = Column(Integer, ForeignKey('folder.id'),
+    important_folder_id = Column(Integer,
+                                 ForeignKey('folder.id', ondelete='SET NULL'),
                                  nullable=True)
     important_folder = relationship(
         'Folder', post_update=True,

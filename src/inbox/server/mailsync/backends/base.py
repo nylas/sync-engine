@@ -9,7 +9,8 @@ from inbox.util.itert import partition
 from inbox.util.misc import load_modules
 from inbox.server.config import config
 from inbox.server.log import configure_mailsync_logging, log_uncaught_errors
-from inbox.server.models.tables.base import Account, Folder
+from inbox.server.models.tables.base import (Account, Folder,
+                                             MAX_FOLDER_NAME_LENGTH)
 from inbox.server.mailsync.exc import SyncException
 
 import inbox.server.mailsync.backends
@@ -32,6 +33,12 @@ def verify_folder_name(account_id, old, new):
 
 
 def save_folder_names(log, account, folder_names, db_session):
+    """
+    Create Folder objects & map special folder names on Account objects.
+
+    Folders that belong to an account and no longer exist in `folder_names`
+    ARE DELETED.
+    """
     # NOTE: We don't do anything like canonicalizing to lowercase because
     # different backends may be case-sensitive or not. Code that references
     # saved folder names should canonicalize if needed when doing comparisons.
@@ -44,17 +51,28 @@ def save_folder_names(log, account, folder_names, db_session):
 
     for tag in ['inbox', 'drafts', 'sent', 'spam', 'trash', 'starred',
                 'important', 'archive', 'all']:
-        if tag in folder_names and folder_names[tag].lower() not in folders:
-            folder = Folder.create(account, folder_names[tag], tag)
-            attr_name = '{}_folder'.format(tag)
-            setattr(account, attr_name, verify_folder_name(
-                account.id, getattr(account, attr_name), folder))
+        if tag in folder_names:
+            if folder_names[tag].lower() not in folders:
+                folder = Folder.create(account, folder_names[tag], tag)
+                attr_name = '{}_folder'.format(tag)
+                setattr(account, attr_name, verify_folder_name(
+                    account.id, getattr(account, attr_name), folder))
+            del folders[folder_names[tag].lower()]
 
     # Gmail labels, user-created IMAP/EAS folders, etc.
     if 'extra' in folder_names:
         for name in folder_names['extra']:
+            name = name[:MAX_FOLDER_NAME_LENGTH]
             if name.lower() not in folders:
-                db_session.add(Folder.create(account, name))
+                folder = Folder.create(account, name)
+                db_session.add(folder)
+            del folders[name.lower()]
+
+    # This may cascade to FolderItems and ImapUid (ONLY), which is what we
+    # want--doing the update here short-circuits us syncing that change later.
+    log.info("Folders were deleted from the remote: {}".format(folders.keys()))
+    for folder in folders.values():
+        db_session.delete(folder)
 
     db_session.commit()
 
