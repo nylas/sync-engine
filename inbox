@@ -70,7 +70,6 @@ def start(args=None):
 
     threads = []
 
-    # Start ZeroRPC api server service
     from inbox.server.util.concurrency import make_zerorpc
 
     # Start ZeroRPC mail sync server service
