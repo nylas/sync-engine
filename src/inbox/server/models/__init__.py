@@ -158,6 +158,9 @@ class InboxSession(object):
     def close(self):
         self._session.close()
 
+    def expunge(self, obj):
+        self._session.expunge(obj)
+
     @property
     def no_autoflush(self):
         return self._session.no_autoflush
