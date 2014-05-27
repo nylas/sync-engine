@@ -11,7 +11,7 @@ from collections import namedtuple
 # Monkeypatch imaplib errors to derive from `socket` so `geventconnpool`
 # correctly recreates bad pool connections. (imapclient/imaplib catch
 # socket.error and throw imaplib.IMAP4.error exceptions instead.)
-from gevent import socket
+from gevent import socket, sleep
 import imaplib
 imaplib.IMAP4.error = socket.error
 imaplib.IMAP4.abort = socket.error
@@ -151,14 +151,20 @@ def retry_crispin(f):
     """
     @wraps(f)
     def deco(*args, **kwargs):
-        # TODO: backoff!
+        MAX_FAILURES = 10
+        failures = 0
         while True:
             try:
                 return f(*args, **kwargs)
             except socket.error as e:
                 log.error(e)
-                log.debug("Creating new crispin for the job...")
-                continue
+                log.debug("Creating new crispin for the job ({} failures so far)."
+                          .format(failures))
+            failures += 1
+            if failures > MAX_FAILURES:
+                log.error("Max number of crispin retries reached. Aborting.")
+                raise
+            sleep(5)
     return deco
 
 
