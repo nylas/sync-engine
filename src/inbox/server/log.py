@@ -45,7 +45,7 @@ def get_logger(account_id=None, purpose=None):
         return logging.getLogger('inbox.server.general')
     else:
         if purpose is None:
-            purpose = 'sync'
+            purpose = 'mailsync'
         return logging.getLogger('inbox.server.{1}.{0}'.format(
             account_id, purpose))
 
