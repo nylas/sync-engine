@@ -240,7 +240,9 @@ class BaseMailSyncMonitor(Greenlet):
                     return
             except Empty:
                 sleep(self.heartbeat)
-        assert not sync.successful(), "mail sync should run forever!"
+        assert not sync.successful(), \
+            "mail sync for {} account {} should run forever!"\
+            .format(self.provider, self.account_id)
         raise sync.exception
 
     def process_command(self, cmd):
