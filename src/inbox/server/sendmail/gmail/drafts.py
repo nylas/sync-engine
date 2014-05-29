@@ -231,21 +231,6 @@ def send(db_session, account, draft_public_id):
                                           attachments)
 
 
-def send_thread(db_session, account, thread_public_id):
-    """ Send the draft with thread_id = thread_public_id. """
-    thread = db_session.query(Thread).filter(
-        Thread.public_id == thread_public_id).one()
-
-    assert len(thread.messages) == 1
-
-    message = thread.messages[0]
-
-    assert isinstance(message, SpoolMessage)
-    assert message.is_draft and not message.is_sent
-
-    return send(db_session, account, message.public_id)
-
-
 def _create_gmail_draft(sender_info, recipients, subject, body, attachments,
                         original_draft=None, reply_to=None):
     """ Create a draft email message. """
