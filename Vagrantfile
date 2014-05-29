@@ -21,10 +21,21 @@ Vagrant::Config.run do |config|
 end
 
 Vagrant.configure("2") do |config|
+  config.vm.network "forwarded_port", guest: 5000, host: 5000
+  config.vm.network "forwarded_port", guest: 8000, host: 8000
   config.vm.network "forwarded_port", guest: 5555, host: 5555
   config.vm.network "forwarded_port", guest: 30000, host:30000
-  if File.exist?("../inbox-eas")
-    puts 'Found EAS...'
-    config.vm.synced_folder "../inbox-eas", "/inbox-eas"
+
+  # This will share any folder in the parent directory that
+  # has the name share-*
+  # It mounts it at the root without the 'share-' prefix
+  share_prefix = "share-"
+  Dir['../*/'].each do |fname|
+    basename = File.basename(fname)
+    if basename.start_with?(share_prefix)
+      mount_path = "/" + basename[share_prefix.length..-1]
+      puts "Mounting share for #{fname} at #{mount_path}"
+      config.vm.synced_folder fname, mount_path
+    end
   end
 end
