@@ -1,11 +1,33 @@
 from collections import namedtuple
 
 import magic
+from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.util.misc import load_modules
 from inbox.util.url import NotSupportedError
+from inbox.server.log import get_logger
+from inbox.server.models.tables.base import SpoolMessage, Thread
 
 Recipients = namedtuple('Recipients', 'to cc bcc')
+
+
+class SendMailException(Exception):
+    pass
+
+
+class SendError(SendMailException):
+    def __init__(self, msg=None, failures=None):
+        assert msg or failures
+        self.msg = msg
+        self.failures = failures
+
+    def __str__(self):
+        if not self.failures:
+            return 'Send failed, message: {0}'.format(self.msg)
+
+        e = ['(to: {0}, error: {1})'.format(k, v[0]) for
+             k, v in self.failures.iteritems()]
+        return 'Send failed, failures: {0}'.format(', '.join(e))
 
 
 def register_backends():
@@ -42,7 +64,7 @@ def get_function(provider, fn):
     if not sendmail_mod:
         raise NotSupportedError('Inbox does not support the email provider.')
 
-    return getattr(sendmail_mod, fn)
+    return getattr(sendmail_mod, fn, None)
 
 
 def _parse_recipients(dicts_list):
@@ -120,18 +142,48 @@ def create_attachment_metadata(attachments):
 
 def get_draft(db_session, account, draft_public_id):
     """ Get the draft with public_id = draft_public_id. """
-    get_fn = get_function(account.provider, 'get')
-    return get_fn(db_session, account, draft_public_id)
+    # Don't really want a fn, merely do the provider check
+    get_function(account.provider, '')
+
+    log = get_logger(account.id, 'drafts')
+    try:
+        draft = db_session.query(SpoolMessage).join(Thread).filter(
+            SpoolMessage.public_id == draft_public_id,
+            Thread.namespace_id == account.namespace.id).one()
+    except NoResultFound:
+        log.info('NoResultFound for account: {0}, draft_public_id: {1}'.format(
+            account.id, draft_public_id))
+        return None
+
+    return draft
 
 
 def get_all_drafts(db_session, account):
-    """ Get all the drafts for the account. """
-    get_all_fn = get_function(account.provider, 'get_all')
-    return get_all_fn(db_session, account)
+    """ Get all the draft messages for the account. """
+    # Don't really want a fn, merely do the provider check
+    get_function(account.provider, '')
+
+    log = get_logger(account.id, 'drafts')
+    drafts = []
+    try:
+        drafts = db_session.query(SpoolMessage).join(Thread).filter(
+            SpoolMessage.state == 'draft',
+            Thread.namespace_id == account.namespace.id).all()
+    except NoResultFound:
+        log.info('No drafts found for account: {0}'.format(account.id))
+        pass
+
+    return drafts
 
 
 def create_draft(db_session, account, to=None, subject=None, body=None,
                  attachments=None, cc=None, bcc=None, thread_public_id=None):
+    """
+    Create a new draft. If `thread_public_id` is specified, the draft is a
+    reply to the last message in the thread; otherwise, it is an independant
+    draft.
+
+    """
     if thread_public_id is None:
         draft = _create_new_draft(db_session, account, to, subject, body,
                                   attachments, cc, bcc)
@@ -191,7 +243,7 @@ def _create_reply_draft(db_session, account, thread_public_id, to=None,
 def update_draft(db_session, account, draft_public_id, to=None, subject=None,
                  body=None, attachments=None, cc=None, bcc=None):
     """
-    Update the draft with public_id = draft_public_id.
+    Update the draft with public_id = `draft_public_id`.
 
     To maintain our messages are immutable invariant, we create a new draft
     message object.
@@ -222,15 +274,36 @@ def update_draft(db_session, account, draft_public_id, to=None, subject=None,
 
 
 def delete_draft(db_session, account, draft_public_id):
-    """ Delete the draft with public_id = draft_public_id."""
-    delete_fn = get_function(account.provider, 'delete')
-    return delete_fn(db_session, account, draft_public_id)
+    """ Delete the draft with public_id = draft_public_id. """
+    # Don't really want a fn, merely do the provider check
+    get_function(account.provider, '')
+
+    draft = db_session.query(SpoolMessage).filter(
+        SpoolMessage.public_id == draft_public_id).one()
+
+    _delete_all(db_session, draft.id)
+
+
+def _delete_all(db_session, draft_id):
+    draft = db_session.query(SpoolMessage).get(draft_id)
+
+    assert draft.is_draft
+
+    if draft.parent_draft_id:
+        _delete_all(db_session, draft.parent_draft_id)
+
+    db_session.delete(draft)
 
 
 def send_draft(db_session, account, draft_public_id=None, to=None,
                subject=None, body=None, attachments=None, cc=None, bcc=None,
                thread_public_id=None):
-    """ Send the draft with public_id = draft_public_id. """
+    """
+    Send the draft with public_id = `draft_public_id` or
+    if `draft_public_id` is not specified, create a draft and send it - in
+    this case, a `to` address must be specified.
+
+    """
     assert draft_public_id or to
 
     send_fn = get_function(account.provider, 'send')

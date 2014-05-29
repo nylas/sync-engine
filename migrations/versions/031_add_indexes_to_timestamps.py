@@ -1,4 +1,4 @@
-"""Adds indexes to columns created_ad, deleted_at, updated_at
+"""Adds indexes to columns created_at, deleted_at, updated_at
 
 Revision ID: 55f0ff54c776
 Revises: 1b6ceae51b43

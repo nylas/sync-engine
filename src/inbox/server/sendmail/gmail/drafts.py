@@ -4,10 +4,9 @@ from collections import namedtuple
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from inbox.server.log import get_logger
-log = get_logger(purpose='drafts')
 from inbox.server.models.tables.base import SpoolMessage, Thread, DraftThread
 from inbox.server.actions.base import save_draft
-from inbox.server.sendmail.base import all_recipients
+from inbox.server.sendmail.base import all_recipients, SendMailException
 from inbox.server.sendmail.message import create_email, SenderInfo
 from inbox.server.sendmail.gmail.gmail import GmailSMTPClient
 
@@ -16,38 +15,6 @@ DraftMessage = namedtuple(
 
 ReplyToAttrs = namedtuple(
     'ReplyToAttrs', 'subject message_id_header references body')
-
-
-class SendMailException(Exception):
-    pass
-
-
-def get(db_session, account, draft_public_id):
-    """ Get the draft with public_id = draft_public_id. """
-    try:
-        draft = db_session.query(SpoolMessage).join(Thread).filter(
-            SpoolMessage.public_id == draft_public_id,
-            Thread.namespace_id == account.namespace.id).one()
-    except NoResultFound:
-        log.info('NoResultFound for account: {0}, draft_public_id: {1}'.format(
-            account.id, draft_public_id))
-        return None
-
-    return draft
-
-
-def get_all(db_session, account):
-    """ Get all the draft messages for the account. """
-    drafts = []
-    try:
-        drafts = db_session.query(SpoolMessage).join(Thread).filter(
-            SpoolMessage.state == 'draft',
-            Thread.namespace_id == account.namespace.id).all()
-    except NoResultFound:
-        log.info('No drafts found for account: {0}'.format(account.id))
-        pass
-
-    return drafts
 
 
 def new(db_session, account, recipients=None, subject=None, body=None,
@@ -145,30 +112,10 @@ def update(db_session, account, draft_public_id, recipients=None, subject=None,
     return newuid.message
 
 
-def delete(db_session, account, draft_public_id):
-    """ Delete the draft with public_id = draft_public_id. """
-    draft = db_session.query(SpoolMessage).filter(
-        SpoolMessage.public_id == draft_public_id).one()
-
-    _delete_all(db_session, draft.id)
-
-
-# The logic here is provider agnostic, this function should live
-# in a common file.
-def _delete_all(db_session, draft_id):
-    draft = db_session.query(SpoolMessage).get(draft_id)
-
-    assert draft.is_draft
-
-    if draft.parent_draft_id:
-        _delete_all(db_session, draft.parent_draft_id)
-
-    db_session.delete(draft)
-
-
 # TODO[k]: Attachments handling
 def send(db_session, account, draft_public_id):
     """ Send the draft with public_id = draft_public_id. """
+    log = get_logger(account.id, 'drafts')
     sendmail_client = GmailSMTPClient(account.id, account.namespace)
 
     try:
@@ -260,5 +207,6 @@ def _save_gmail_draft(db_session, account_id, draftmsg):
     sync it to the remote backend too.
 
     """
+    log = get_logger(account_id, 'drafts')
     imapuid = save_draft(db_session, log, account_id, draftmsg)
     return imapuid

@@ -1,5 +1,4 @@
-from inbox.server.models.tables.base import Account
-from inbox.server.models.tables.imap import ImapUid
+from inbox.server.models.tables.imap import ImapAccount, ImapUid
 from inbox.server.actions.gmail import local_move
 from inbox.server.sendmail.postel import SMTPClient, SendError
 from inbox.server.sendmail.message import SenderInfo
@@ -15,7 +14,7 @@ class GmailSMTPClient(SMTPClient):
         store.
 
         """
-        account = db_session.query(Account).get(self.account_id)
+        account = db_session.query(ImapAccount).get(self.account_id)
         draftuid = db_session.query(ImapUid).get(imapuid.id)
 
         draftuid.message.state = 'sending'

@@ -11,6 +11,7 @@ from inbox.server.basicauth import AUTH_TYPES
 from inbox.server.auth.base import verify_imap_account
 from inbox.server.models import session_scope
 from inbox.server.models.tables.imap import ImapAccount
+from inbox.server.sendmail.base import SendMailException, SendError
 log = get_logger(purpose='sendmail')
 
 SMTP_HOSTS = {'Gmail': 'smtp.gmail.com'}
@@ -27,20 +28,6 @@ AUTH_EXTNS = {'OAuth': 'XOAUTH2',
 
 AccountInfo = namedtuple('AccountInfo',
                          'id email provider full_name auth_type auth_token')
-
-
-class SendMailError(Exception):
-    pass
-
-
-class SendError(SendMailError):
-    def __init__(self, failures=None):
-        self.failures = failures
-
-    def __str__(self):
-        e = ['(to: {0}, error: {1})'.format(k, v[0]) for
-             k, v in self.failures.iteritems()]
-        return 'Send failures: {0}'.format(', '.join(e))
 
 
 def get_smtp_connection_pool(account_id, pool_size=None):
@@ -121,7 +108,7 @@ class SMTPConnection():
         connection.ehlo()
 
         if not connection.has_extn('starttls'):
-            raise SendMailError('Required SMTP STARTTLS not supported.')
+            raise SendMailException('Required SMTP STARTTLS not supported.')
 
         connection.starttls()
         connection.ehlo()
@@ -134,13 +121,14 @@ class SMTPConnection():
 
         # Auth mechanisms supported by the server
         if not c.has_extn('auth'):
-            raise SendMailError('Required SMTP AUTH not supported.')
+            raise SendMailException('Required SMTP AUTH not supported.')
 
         supported_types = c.esmtp_features['auth'].strip().split()
 
         # Auth mechanism needed for this account
         if AUTH_EXTNS.get(self.auth_type) not in supported_types:
-            raise SendMailError('Required SMTP Auth mechanism not supported.')
+            raise SendMailException(
+                'Required SMTP Auth mechanism not supported.')
 
         auth_handler = self.auth_handlers.get(self.auth_type)
         auth_handler()
