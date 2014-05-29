@@ -4,7 +4,6 @@ from datetime import datetime
 import pytest
 
 from tests.util.crispin import crispin_client
-from tests.util.api import api_client
 
 ACCOUNT_ID = 1
 NAMESPACE_ID = 1
