@@ -6,9 +6,12 @@ To get a list of all threads with drafts, use the [Threads](#threads) API call w
 
     https://api.inboxapp.com/n/<namespace_id>/threads?tag=drafts
 
+# Get a draft 
+
+
 # Creating a new draft
 
-    POST https://api.inboxapp.com/n/<namespace_id>/create_draft
+    POST https://api.inboxapp.com/n/<namespace_id>/drafts
 
 
 **Sample post body**
@@ -30,19 +33,21 @@ To get a list of all threads with drafts, use the [Threads](#threads) API call w
 }
 ```
 
-A successful response will contain the newly created [Message](#message) object.
+A successful response will contain the newly created [Draft](#draft) object.
 
-Note that creating a draft will fail if the referenced `file` ids have not been uploaded. See [Files](#files) for more details on how to upload and reference attachments.
+Note that `subject`, `to`, `body`, `files` are all optional fields.
+
+Also note that creating a draft will fail if the referenced `files` ids have not been uploaded. See [Files](#files) for more details on how to upload and reference attachments.
 
 
 # Replies to an existing thread
 
-If the draft is a response to a previous message or thread, you should provide the object's ID in the `reply_to` parameter and omit the `subject` parameter. Messages you create or send __should not include quoted text__ when they are in reply to an existing thread.
+If the draft is a response to a message in a thread, you should provide the thread's ID in the `reply_to_thread` parameter and omit the `subject` parameter. Messages you create or send __should not include quoted text__ when they are in reply to an existing thread.
 
 ```
 :::json
 {
-    "reply_to": <thread_or_message_id>,
+    "reply_to_thread": <thread_id>,
     "body": "<html><body>....</body></html>"
     "files": [
         <file_object>,
@@ -54,8 +59,16 @@ If the draft is a response to a previous message or thread, you should provide t
 
 # Updating a draft
 
-Updating a draft is as simple as issuing a PUT request to the message's URI.
+Updating a draft is as simple as issuing a POST request to the draft's URI.
 
-    PUT https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>
+    POST https://api.inboxapp.com/n/<namespace_id>/drafts/<draft_id>
 
-Any fields in the body of the request will overwrite previous values. If you attempt to modify properties on a message that does not have the `draft` flag, this request will fail.
+Any fields in the body of the request will overwrite previous values. If you attempt to modify properties on a draft that does not exist, this request will fail.
+
+# Deleting a draft
+
+To delete a draft simply issue a DELETE request to the draft's URI.
+
+    DELETE https://api.inboxapp.com/n/<namespace_id>/drafts/<draft_id>
+
+If the draft does not exist, this request will fail.

@@ -23,9 +23,9 @@ from html2text import html2text
 
 VERSION = pkg_resources.get_distribution('inbox').version
 
+REPLYSTR = 'Re: '
+
 SenderInfo = namedtuple('SenderInfo', 'name email')
-ReplyToMessage = namedtuple('ReplyToMessage',
-                            'thread_id subject message_id references body')
 
 
 def create_email(sender_info, recipients, subject, html, attachments):
@@ -50,6 +50,7 @@ def create_email(sender_info, recipients, subject, html, attachments):
     to = address.parse_list(recipients.to)
     cc = address.parse_list(recipients.cc)
     bcc = address.parse_list(recipients.bcc)
+    html = html if html else ''
     plaintext = html2text(html)
 
     # Create a multipart/alternative message
@@ -75,7 +76,7 @@ def create_email(sender_info, recipients, subject, html, attachments):
                 filename=a['filename'],
                 disposition='attachment'))
 
-    msg.headers['Subject'] = subject
+    msg.headers['Subject'] = subject if subject else ''
 
     # Gmail sets the From: header to the default sending account. We can
     # however set our own custom phrase i.e. the name that appears next to the
@@ -96,7 +97,8 @@ def create_email(sender_info, recipients, subject, html, attachments):
     msg.headers['Cc'] = u', '.join([addr.full_spec() for addr in cc])
     msg.headers['Bcc'] = u', '.join([addr.full_spec() for addr in bcc])
 
-    add_inbox_headers(msg)
+    if 'X-INBOX-ID' not in msg.headers:
+        add_inbox_headers(msg)
 
     return msg
 
@@ -116,7 +118,6 @@ def add_inbox_headers(msg):
     string (random, does not compromise privacy).
 
     """
-
     # Set our own custom header for tracking in `Sent Mail` folder
     msg.headers['X-INBOX-ID'] = str(uuid.uuid4().hex)
 
@@ -127,12 +128,12 @@ def add_inbox_headers(msg):
 def add_reply_headers(replyto, msg):
     """ Add reply specific headers. """
     # Set the In-Reply-To header of the reply:
-    msg.headers['In-Reply-To'] = replyto.message_id
+    msg.headers['In-Reply-To'] = replyto.message_id_header
 
     # Set the 'References' header of the reply:
     separator = '\t'
     msg.headers['References'] = replyto.references + separator +\
-        replyto.message_id
+        replyto.message_id_header
 
     return msg
 

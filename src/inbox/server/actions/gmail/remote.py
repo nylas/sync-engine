@@ -189,3 +189,11 @@ def remote_delete(imapaccount_id, thread_id, folder_name):
             raise Exception("Unknown folder_name '{0}'".format(folder_name))
 
     return _syncback_action(fn, imapaccount_id, folder_name)
+
+
+def remote_save_draft(imapaccount_id, folder_name, message, flags=None,
+                      date=None):
+    def fn(account, db_session, crispin_client):
+        crispin_client.save_draft(message, flags, date)
+
+    return _syncback_action(fn, imapaccount_id, folder_name)

@@ -163,16 +163,17 @@ class ImapThread(Thread):
         Returns the updated or new thread, and adds the message to the thread.
         Doesn't commit.
         """
-        try:
-            thread = session.query(cls).filter_by(g_thrid=message.g_thrid,
-                                                  namespace=namespace).one()
-            return thread.update_from_message(message)
-        except NoResultFound:
-            pass
-        except MultipleResultsFound:
-            log.info("Duplicate thread rows for thread {0}".format(
-                message.g_thrid))
-            raise
+        if message.g_thrid is not None:
+            try:
+                thread = session.query(cls).filter_by(
+                    g_thrid=message.g_thrid, namespace=namespace).one()
+                return thread.update_from_message(message)
+            except NoResultFound:
+                pass
+            except MultipleResultsFound:
+                log.info('Duplicate thread rows for thread {0}'.format(
+                    message.g_thrid))
+                raise
         thread = cls(subject=message.subject, g_thrid=message.g_thrid,
                      recentdate=message.received_date, namespace=namespace,
                      subjectdate=message.received_date,

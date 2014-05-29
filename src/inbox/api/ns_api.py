@@ -13,6 +13,7 @@ from inbox.server.models.kellogs import jsonify
 from inbox.server.config import config
 from inbox.server import contacts
 from inbox.server.models import InboxSession
+from inbox.server import sendmail
 
 from err import err
 
@@ -80,8 +81,8 @@ def start():
         g.namespace = g.db_session.query(Namespace) \
             .filter(Namespace.public_id == g.namespace_public_id).one()
     except NoResultFound:
-        return err(404, "Couldn't find namespace with id `{0}` "
-                   .format(g.namespace_public_id))
+        return err(404, "Couldn't find namespace with id `{0}` ".format(
+            g.namespace_public_id))
 
     try:
         g.lens = Lens(
@@ -128,7 +129,6 @@ def record_auth(setup_state):
                                 if isinstance(ex, HTTPException)
                                 else 500)
         return response
-
 
     # Patch all error handlers in werkzeug
     for code in default_exceptions.iterkeys():
@@ -197,6 +197,9 @@ def thread_api(public_id):
                    "on namespace {1}".format(public_id, g.namespace_public_id))
 
 
+#
+# Update thread
+#
 @app.route('/threads/<public_id>', methods=['PUT'])
 def thread_api_update(public_id):
     try:
@@ -418,7 +421,6 @@ def file_download_api(public_id):
     return response
 
 
-
 ##
 # Calendar
 ##
@@ -486,3 +488,93 @@ def webhooks_read_update_api(public_id):
 @app.route('/webhooks/<public_id>', methods=['DELETE'])
 def webhooks_delete_api(public_id):
     raise NotImplementedError
+
+
+##
+# Drafts
+##
+@app.route('/drafts', methods=['GET'])
+def draft_get_all_api():
+    drafts = sendmail.get_all_drafts(g.db_session, g.namespace.account)
+    return jsonify(drafts)
+
+
+@app.route('/drafts/<public_id>', methods=['GET'])
+def draft_get_api(public_id):
+    draft = sendmail.get_draft(g.db_session, g.namespace.account, public_id)
+    return jsonify(draft)
+
+
+@app.route('/drafts', methods=['POST'])
+def draft_create_api():
+    try:
+        data = request.get_json(force=True)
+    except ValueError:
+        return err(400, 'Malformed request')
+
+    to = data.get('to')
+    cc = data.get('cc')
+    bcc = data.get('bcc')
+    subject = data.get('subject')
+    body = data.get('body')
+    files = data.get('files')
+
+    thread_public_id = data.get('reply_to_thread')
+
+    draft = sendmail.create_draft(g.db_session, g.namespace.account, to,
+                                  subject, body, files, cc, bcc,
+                                  thread_public_id)
+
+    return jsonify(draft)
+
+
+@app.route('/drafts/<public_id>', methods=['POST'])
+def draft_update_api(public_id):
+    try:
+        data = request.get_json(force=True)
+    except ValueError:
+        return err(400, 'Malformed request')
+
+    to = data.get('to')
+    cc = data.get('cc')
+    bcc = data.get('bcc')
+    subject = data.get('subject')
+    body = data.get('body')
+    files = data.get('files')
+
+    draft = sendmail.update_draft(g.db_session, g.namespace.account, public_id,
+                                  to, subject, body, files, cc, bcc)
+
+    return jsonify(draft)
+
+
+@app.route('/drafts/<public_id>', methods=['DELETE'])
+def draft_delete_api(public_id):
+    result = sendmail.delete_draft(g.db_session, g.namespace.account,
+                                   public_id)
+    return jsonify(result)
+
+
+@app.route('/send', methods=['POST'])
+def draft_send_api():
+    try:
+        data = request.get_json(force=True)
+    except ValueError:
+        return err(400, 'Malformed request')
+
+    draft_public_id = data.get('draft_id')
+
+    to = data.get('to')
+    cc = data.get('cc')
+    bcc = data.get('bcc')
+    subject = data.get('subject')
+    body = data.get('body')
+    files = data.get('files')
+
+    if not draft_public_id or to:
+        return err(400, 'Malformed request')
+
+    result = sendmail.send_draft(g.db_session, g.namespace.account,
+                                 draft_public_id, to, subject, body, files,
+                                 cc, bcc)
+    return jsonify(result)

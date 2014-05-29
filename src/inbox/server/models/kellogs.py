@@ -6,7 +6,7 @@ from flask import Response
 
 from inbox.server.models.tables.base import (
     Message, Account, Part, Folder,
-    Contact, Thread, Namespace, Block, Webhook, Lens, UserTag)
+    Contact, Thread, Namespace, Block, Webhook, Lens, UserTag, SpoolMessage)
 
 
 def format_address_list(addresses):
@@ -23,22 +23,47 @@ class APIEncoder(JSONEncoder):
 
         elif isinstance(obj, Namespace):
             return {
-                'id':  obj.public_id,
+                'id': obj.public_id,
                 'object': 'namepace',
-                'namespace':  obj.public_id,
+                'namespace': obj.public_id,
 
                 # Account specific
-                'account':  obj.account.public_id,
-                'email_address':  obj.account.email_address,
-                'provider':  obj.account.provider,
+                'account': obj.account.public_id,
+                'email_address': obj.account.email_address,
+                'provider': obj.account.provider,
                 # 'status':  'syncing',  # TODO what are values here
                 # 'last_sync':  1398790077,  # tuesday 4/29
                 # 'scope': ['mail', 'contacts']
             }
 
+        elif isinstance(obj, SpoolMessage):
+            resp = {
+                'id': obj.public_id,
+                'namespace': obj.namespace.public_id,
+                'subject': obj.subject,
+                'from': format_address_list(obj.from_addr),
+                'to': format_address_list(obj.to_addr),
+                'cc': format_address_list(obj.cc_addr),
+                'bcc': format_address_list(obj.bcc_addr),
+                'date': obj.received_date,
+                'files': [p.public_id for p in obj.parts if p.is_attachment],
+                'body': obj.sanitized_body,
+                'state': obj.state
+            }
+            # draft, sending, sending failed
+            if obj.state != 'sent':
+                resp['object'] = 'draft'
+            # sent
+            else:
+                resp['object'] = 'message'
+                resp['thread'] = obj.thread.public_id
+                resp['tags'] = obj.thread.all_tags
+
+            return resp
+
         elif isinstance(obj, Message):
             resp = {
-                'id':  obj.public_id,
+                'id': obj.public_id,
                 'object': 'message',
                 'namespace': obj.namespace.public_id,
                 'subject': obj.subject,
@@ -53,21 +78,19 @@ class APIEncoder(JSONEncoder):
                 'tags': obj.thread.all_tags
                 # 'list_info'   : obj.mailing_list_headers
             }
-            if obj.is_draft:
-                resp['is_draft'] = obj.is_draft
             return resp
 
         elif isinstance(obj, Thread):
             return {
-                'id':  obj.public_id,
-                'object':  'thread',
-                'namespace':  obj.namespace.public_id,
-                'subject':  obj.subject,
-                'participants':  format_address_list(obj.participants),
-                'last_message_timestamp':  obj.recentdate,
+                'id': obj.public_id,
+                'object': 'thread',
+                'namespace': obj.namespace.public_id,
+                'subject': obj.subject,
+                'participants': format_address_list(obj.participants),
+                'last_message_timestamp': obj.recentdate,
                 'subject_date': obj.subjectdate,
                 'snippet': obj.snippet,
-                'messages':  [m.public_id for m in obj.messages],  # for now
+                'messages': [m.public_id for m in obj.messages],  # for now
                 'tags': [self.default(tag) for tag in obj.all_tags]
             }
 

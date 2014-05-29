@@ -3,9 +3,12 @@
 Handles Gmail's special semantics involving "All Mail".
 """
 from sqlalchemy.orm.exc import NoResultFound
-from inbox.server.models.tables.base import FolderItem, Folder, Thread
 
+from inbox.server.models.tables.base import FolderItem, Folder, Thread
 from inbox.server.models.namespace import db_write_lock
+from inbox.server.crispin import RawMessage
+from inbox.server.mailsync.backends.base import create_db_objects, commit_uids
+from inbox.server.mailsync.backends.gmail import create_gmail_message
 
 
 class LocalActionError(Exception):
@@ -53,6 +56,7 @@ def local_move(db_session, account, thread_id, from_folder, to_folder):
                         FolderItem.thread_id == thread_id,
                         Folder.name.in_([from_folder, to_folder]))
                     .all()}
+
         if from_folder not in listings:
             raise LocalActionError("thread {} does not exist in folder {}"
                                    .format(thread_id, from_folder))
@@ -107,3 +111,35 @@ def local_delete(db_session, account, thread_id, folder_name):
         except NoResultFound:
             raise LocalActionError("thread {} does not exist in folder {}"
                                    .format(thread_id, folder_name))
+
+
+def local_save_draft(db_session, log, account_id, drafts_folder, draftmsg):
+    """
+    Save the draft email message to the local data store.
+
+    Notes
+    -----
+    The message is stored as a SpoolMessage.
+
+    """
+    msg = RawMessage(uid=draftmsg.uid, internaldate=draftmsg.date,
+                     flags=draftmsg.flags, body=draftmsg.msg, g_thrid=None,
+                     g_msgid=None, g_labels=set(), created=True)
+
+    new_uids = create_db_objects(account_id, db_session, log,
+                                 drafts_folder, [msg],
+                                 create_gmail_message)
+
+    assert len(new_uids) == 1
+    new_uid = new_uids[0]
+
+    new_uid.created_date = draftmsg.date
+
+    # Set SpoolMessage's special draft attributes
+    new_uid.message.state = 'draft'
+    new_uid.message.parent_draft = draftmsg.original_draft
+    new_uid.message.replyto_thread_id = draftmsg.reply_to
+
+    commit_uids(db_session, log, new_uids)
+
+    return new_uid

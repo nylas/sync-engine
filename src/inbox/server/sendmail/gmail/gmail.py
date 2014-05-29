@@ -1,58 +1,74 @@
-from inbox.server.models import session_scope
-from inbox.server.models.tables.imap import ImapThread
-from inbox.server.sendmail.postel import SMTPClient
-from inbox.server.sendmail.message import SenderInfo, ReplyToMessage
+from inbox.server.models.tables.base import Account
+from inbox.server.models.tables.imap import ImapUid
+from inbox.server.actions.gmail import local_move
+from inbox.server.sendmail.postel import SMTPClient, SendError
+from inbox.server.sendmail.message import SenderInfo
 from inbox.server.sendmail.gmail.message import (create_gmail_email,
-                                                 create_gmail_reply,
-                                                 save_gmail_email)
+                                                 create_gmail_reply)
 
 
 class GmailSMTPClient(SMTPClient):
     """ SMTPClient for Gmail. """
-    def _send_mail(self, smtpmsg):
-        with session_scope() as db_session:
-            # Save the email message to the local datastore
-            new_uid = save_gmail_email(self.account_id,
-                                       self.sent_folder,
-                                       db_session,
-                                       self.log,
-                                       smtpmsg)
+    def _send_mail(self, db_session, imapuid, smtpmsg):
+        """
+        Send the email message, update the message stored in the local data
+        store.
 
-            # Send it using SMTP
+        """
+        account = db_session.query(Account).get(self.account_id)
+        draftuid = db_session.query(ImapUid).get(imapuid.id)
+
+        draftuid.message.state = 'sending'
+
+        # Send it using SMTP:
+        try:
             result = self._send(smtpmsg.recipients, smtpmsg.msg)
+        except SendError as e:
+            self.log.error(str(e))
+            raise
 
-            new_uid.message.is_sent = result
+        # Update saved message in local data store:
+        # Update ImapUid
+        draftuid.folder = account.sent_folder
+        draftuid.is_draft = False
 
-            db_session.commit()
+        # Update SpoolMessage
+        draftuid.message.is_sent = result
+        draftuid.message.is_draft = False
+        draftuid.message.state = 'sent'
 
-            return result
+        draftuid.message.in_reply_to = smtpmsg.in_reply_to
+        draftuid.message.references = smtpmsg.references
+        draftuid.message.subject = smtpmsg.subject
 
-    def send_new(self, recipients, subject, body, attachments=None):
+        # Move thread locally
+        local_move(db_session, account, draftuid.message.thread_id,
+                   account.drafts_folder.name, account.sent_folder.name)
+
+        db_session.commit()
+
+        return result
+
+    def send_new(self, db_session, imapuid, recipients, subject, body,
+                 attachments=None):
+        """
+        Send a previously created + saved draft email from this user account.
+
+        """
         sender_info = SenderInfo(name=self.full_name, email=self.email_address)
         smtpmsg = create_gmail_email(sender_info, recipients, subject, body,
                                      attachments)
+        return self._send_mail(db_session, imapuid, smtpmsg)
 
-        return self._send_mail(smtpmsg)
+    def send_reply(self, db_session, imapuid, replyto, recipients, subject,
+                   body, attachments=None):
+        """
+        Send a previously created + saved draft email reply from this user
+        account.
 
-    def send_reply(self, namespace_id, thread_id, recipients, subject, body,
-                   attachments=None):
-        with session_scope() as db_session:
-            thread = db_session.query(ImapThread).filter(
-                ImapThread.id == thread_id,
-                ImapThread.namespace_id == namespace_id).one()
-            g_thrid = thread.g_thrid
-            thread_subject = thread.subject
-            # The first message is the latest message we have for this thread
-            message_id = thread.messages[0].message_id_header
-            # The references are JWZ compliant
-            references = thread.messages[0].references
-            body = thread.messages[0].prettified_body
-
-        replyto = ReplyToMessage(thread_id=g_thrid, subject=thread_subject,
-                                 message_id=message_id, references=references,
-                                 body=body)
+        """
         sender_info = SenderInfo(name=self.full_name, email=self.email_address)
-
-        smtpmsg = create_gmail_reply(replyto, sender_info, recipients, subject,
+        smtpmsg = create_gmail_reply(sender_info, replyto, recipients, subject,
                                      body, attachments)
-        return self._send_mail(smtpmsg)
+
+        return self._send_mail(db_session, imapuid, smtpmsg)

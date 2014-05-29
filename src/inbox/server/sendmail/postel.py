@@ -1,14 +1,17 @@
 import base64
 from collections import namedtuple
+from functools import wraps
 
 import smtplib
 from geventconnpool import ConnectionPool
+from gevent import socket, sleep
 
 from inbox.server.log import get_logger
 from inbox.server.basicauth import AUTH_TYPES
 from inbox.server.auth.base import verify_imap_account
 from inbox.server.models import session_scope
 from inbox.server.models.tables.imap import ImapAccount
+log = get_logger(purpose='sendmail')
 
 SMTP_HOSTS = {'Gmail': 'smtp.gmail.com'}
 SMTP_PORT = 587
@@ -30,6 +33,16 @@ class SendMailError(Exception):
     pass
 
 
+class SendError(SendMailError):
+    def __init__(self, failures=None):
+        self.failures = failures
+
+    def __str__(self):
+        e = ['(to: {0}, error: {1})'.format(k, v[0]) for
+             k, v in self.failures.iteritems()]
+        return 'Send failures: {0}'.format(', '.join(e))
+
+
 def get_smtp_connection_pool(account_id, pool_size=None):
     pool_size = pool_size or DEFAULT_POOL_SIZE
 
@@ -38,6 +51,38 @@ def get_smtp_connection_pool(account_id, pool_size=None):
             SMTPConnectionPool(account_id, num_connections=pool_size)
 
     return account_id_to_connection_pool[account_id]
+
+
+def smtpconn_retry(f):
+    """
+    Decorator to automatically reexecute a function if the connection is
+    broken for any reason.
+
+    Note that the wrapped function MUST grab a new connection from the pool
+    at the beginning, otherwise retrying is pointless, since you will try
+    again with the bad connection.
+
+    This function is verbatim copied from `geventconnpool` and instrumented
+    for debug purposes.
+    """
+    @wraps(f)
+    def deco(*args, **kwargs):
+        MAX_FAILURES = 10
+        failures = 0
+        while True:
+            try:
+                return f(*args, **kwargs)
+            except socket.error as e:
+                log.error(e)
+                log.debug('Creating new SMTPConnection for the job '
+                          '({0} failures so far)'.format(failures))
+            failures += 1
+            if failures > MAX_FAILURES:
+                log.error('Max number of SMTPConnection retries reached.'
+                          'Aborting.')
+                raise
+            sleep(5)
+    return deco
 
 
 class SMTPConnection():
@@ -184,9 +229,12 @@ class SMTPConnectionPool(ConnectionPool):
     def _new_connection(self):
         try:
             connection = smtplib.SMTP(SMTP_HOSTS[self.provider], SMTP_PORT)
+        # Convert to a socket.error so geventconnpool will retry automatically
+        # to establish new connections. We do this so the pool is resistant to
+        # temporary connection errors.
         except smtplib.SMTPConnectError as e:
-            self.log.error('SMTPConnectError')
-            raise e
+            self.log.error(str(e))
+            raise socket.error('SMTPConnectError')
 
         connection.set_debuglevel(self.debug)
 
@@ -226,6 +274,7 @@ class SMTPClient(object):
 
         self.log = get_logger(account_id, 'sendmail')
 
+    @smtpconn_retry
     def _send(self, recipients, msg):
         """ Send the email message over the network. """
         with self.pool.get() as smtpconn:
@@ -234,43 +283,47 @@ class SMTPClient(object):
                     failures = smtpconn.sendmail(self.email_address,
                                                  recipients, msg)
                 # Sent to none successfully
-                # TODO[k]: Retry
+                except smtplib.SMTPRecipientsRefused:
+                    raise SendError(failures)
+
                 except (smtplib.SMTPException, smtplib.SMTPServerDisconnected)\
                         as e:
                     self.log.error('Sending failed: Exception {0}'.format(e))
-                    raise
+                    raise socket.error(
+                        'Sending failed: Exception {0}'.format(e))
+                # Send to at least one failed
+                if failures:
+                    raise SendError(failures)
 
                 # Sent to all successfully
-                if not failures:
-                    self.log.info('Sending successful: {0} to {1}'.format(
-                        self.email_address, ', '.join(recipients)))
-                    return True
-
-                # Sent to atleast one successfully
-                # TODO[k]: Handle this!
-                for r, e in failures.iteritems():
-                    self.log.error('Send failed: {0} to {1}, code: {2}'.format(
-                        self.email_address, r, e[0]))
-                    return False
+                self.log.info('Sending successful: {0} to {1}'.format(
+                    self.email_address, ', '.join(recipients)))
+                return True
 
     def _send_mail(self, recipients, mimemsg):
         """
-        Send the email message, store it to the local data store.
+        Send the email message, update the message stored in the local data
+        store.
 
-        The message is stored in the local data store so it is immediately
-        available to the user (for e.g. if they search the `sent` folder).
+        The message is stored in the local data store as a draft message and
+        is converted to a sent message so it is immediately available to the
+        user as such (for e.g. if they search the `sent` folder).
         It is reconciled with the message we get from the remote backend
-        on a subsequent sync of that folder (see server/models/message.py)
+        on a subsequent sync of the folder (see server/models/message.py)
 
         """
         raise NotImplementedError
 
-    def send_new(self, recipients, subject, body, attachments=None):
+    def send_new(self, db_session, imapuid, recipients, subject, body,
+                 attachments=None):
         """
-        Send an email from this user account.
+        Send a previously created + saved draft email from this user account.
 
         Parameters
         ----------
+        db_session
+        imapuid : models.tables.imap.ImapUid object
+            imapuid of the draft message to send.
         recipients: Recipients(to, cc, bcc) namedtuple
             to, cc, bcc are a lists of utf-8 encoded strings or None.
         subject : string
@@ -283,14 +336,19 @@ class SMTPClient(object):
         """
         raise NotImplementedError
 
-    def send_reply(self, namespace_id, thread_id, recipients, subject, body,
-                   attachments=None):
+    def send_reply(self, db_session, imapuid, replyto, recipients, subject,
+                   body, attachments=None):
         """
-        Send an email reply from this user account.
+        Send a previously created + saved draft email reply from this user
+        account.
 
         Parameters
         ----------
-        thread_id: int
+        db_session
+        imapuid : models.tables.imap.ImapUid object
+            imapuid of the draft message to send.
+        replyto: ReplyToAttrs(subject, message_id_header, references, body)
+            namedtuple
         recipients: Recipients(to, cc, bcc) namedtuple
             to, cc, bcc are a lists of utf-8 encoded strings or None.
         subject : string

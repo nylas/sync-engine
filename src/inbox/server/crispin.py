@@ -593,3 +593,10 @@ class GmailCrispinClient(CrispinClient):
             self.conn.remove_flags(uids, '\\Seen')
         else:
             self.conn.add_flags(uids, '\\Seen')
+
+    def save_draft(self, message, flags=None, date=None):
+        self.selected_folder_name == self.folder_names()['drafts'], \
+            'Must select drafts folder first ({0})'.format(
+                self.selected_folder_name)
+
+        self.conn.append(self.selected_folder_name, message, flags, date)

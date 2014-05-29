@@ -36,6 +36,12 @@ from inbox.server.models.roles import Blob
 from inbox.server.models import Base
 from inbox.server.models.mixins import HasPublicID
 
+# The maximum Gmail label length is 225 (tested empirically). Exchange folder
+# names can be up to upto 225 characters too (tested empirically). However,
+# constraining Folder.`name` uniquely requires max length of 767 bytes under
+# utf8mb4: http://mathiasbynens.be/notes/mysql-utf8mb4
+MAX_FOLDER_NAME_LENGTH = 191
+
 
 def register_backends():
     import inbox.server.models.tables
@@ -51,7 +57,6 @@ def register_backends():
             table_mod_for[provider] = module
 
     return table_mod_for
-
 
 
 class Account(Base, HasPublicID):
@@ -620,7 +625,7 @@ class Message(Base, HasRevisions, HasPublicID):
 
 class SpoolMessage(Message):
     """
-    Messages sent from this client.
+    Messages created by this client.
 
     Stored so they are immediately available to the user. They are reconciled
     with the messages we get from the remote backend in a subsequent sync.
@@ -631,9 +636,12 @@ class SpoolMessage(Message):
     created_date = Column(DateTime)
     is_sent = Column(Boolean, server_default=false(), nullable=False)
 
+    state = Column(Enum('draft', 'sending', 'sending failed', 'sent'),
+                   server_default='draft', nullable=False)
+
     # Null till reconciled.
     resolved_message_id = Column(Integer,
-                                 ForeignKey('message.id', ondelete='CASCADE'),
+                                 ForeignKey('message.id'),
                                  nullable=True)
     resolved_message = relationship(
         'Message',
@@ -645,9 +653,160 @@ class SpoolMessage(Message):
                         'remote(SpoolMessage.deleted_at)==None)',
                         uselist=False))
 
+    ## FOR DRAFTS:
+
+    # For non-conflict draft updates: versioning
+    parent_draft_id = Column(Integer,
+                             ForeignKey('spoolmessage.id', ondelete='CASCADE'),
+                             nullable=True)
+    parent_draft = relationship(
+        'SpoolMessage',
+        remote_side=[id],
+        primaryjoin='and_('
+        'SpoolMessage.parent_draft_id==remote(SpoolMessage.id), '
+        'remote(SpoolMessage.deleted_at)==None)',
+        backref=backref(
+            'child_draft', primaryjoin='and_('
+            'remote(SpoolMessage.parent_draft_id)==SpoolMessage.id,'
+            'remote(SpoolMessage.deleted_at)==None)',
+            uselist=False))
+
+    # For conflict draft updates: copy of the original is created
+    # We don't cascade deletes because deleting a draft should not delete
+    # the other drafts that are updates to the same original.
+    draft_copied_from = Column(Integer,
+                               ForeignKey('spoolmessage.id'),
+                               nullable=True)
+
+    # For draft replies: the 'copy' of the thread it is a reply to.
+    replyto_thread_id = Column(Integer, ForeignKey('draftthread.id',
+                               ondelete='CASCADE'), nullable=True)
+    replyto_thread = relationship(
+        'DraftThread', primaryjoin='and_('
+        'SpoolMessage.replyto_thread_id==remote(DraftThread.id),'
+        'remote(DraftThread.deleted_at)==None)',
+        backref=backref(
+            'draftmessage', primaryjoin='and_('
+            'remote(SpoolMessage.replyto_thread_id)==DraftThread.id,'
+            'remote(SpoolMessage.deleted_at)==None)',
+            uselist=False))
+
+    @classmethod
+    def get_or_copy(cls, session, draft_public_id):
+        try:
+            draft = session.query(cls).filter(
+                SpoolMessage.public_id == draft_public_id).one()
+        except NoResultFound:
+            log.info('NoResultFound for draft with public_id {0}'.
+                     format(draft_public_id))
+            raise
+        except MultipleResultsFound:
+            log.info('MultipleResultsFound for draft with public_id {0}'.
+                     format(draft_public_id))
+            raise
+
+        # For non-conflict draft updates i.e. the draft that has not
+        # already been updated, simply return the draft. This is set as the
+        # parent of the new draft we create (updating really creates a new
+        # draft because drafts are immutable)
+        if not draft.child_draft:
+            return draft
+
+        # For conflict draft updates i.e. the draft has already been updated,
+        # return a copy of the draft, which is set as the parent of the new
+        # draft created.
+        assert not draft.draft_copied_from, 'Copy of a copy!'
+
+        # TODO[k]: Check inbox_uid to be skipped?
+        # We *must not* copy the following attributes:
+        # 'id', 'public_id', 'child_draft', 'draft_copied_from',
+        # 'replyto_thread_id', 'replyto_thread', '_sa_instance_state',
+        # 'inbox_uid'
+
+        copy_attrs = ['decode_error', 'resolved_message_id',
+                      'updated_at', 'sender_addr', 'thread_id',
+                      'bcc_addr', 'cc_addr', 'references', 'discriminator',
+                      'deleted_at', 'sanitized_body', 'subject', 'g_msgid',
+                      'from_addr', 'g_thrid', 'snippet', 'is_sent',
+                      'message_id_header', 'received_date', 'size', 'to_addr',
+                      'mailing_list_headers', 'is_read', 'parent_draft_id',
+                      'in_reply_to', 'is_draft', 'created_at', 'data_sha256',
+                      'created_date', 'reply_to']
+
+        draft_copy = cls()
+        for attr in draft.__dict__:
+            if attr in copy_attrs:
+                setattr(draft_copy, attr, getattr(draft, attr))
+
+        draft_copy.thread = draft.thread
+        draft_copy.resolved_message = draft.resolved_message
+        draft_copy.parts = draft.parts
+        draft_copy.contacts = draft.contacts
+
+        draft_copy.parent_draft = draft.parent_draft
+
+        draft_copy.draft_copied_from = draft.id
+
+        if draft.replyto_thread:
+            draft_copy.replyto_thread = DraftThread.create_copy(
+                draft.replyto_thread)
+
+        return draft_copy
+
     __mapper_args__ = {'polymorphic_identity': 'spoolmessage',
                        'inherit_condition': id == Message.id}
 
+
+class DraftThread(Base, HasPublicID):
+    """
+    For a reply draft message, holds references to the message it is
+    created in reply to (thread_id, message_id)
+
+    Used instead of creating a copy of the thread and appending the draft to
+    the copy.
+    """
+    master_public_id = Column(Base36UID, nullable=False)
+    thread_id = Column(Integer, ForeignKey('thread.id'), nullable=False)
+    thread = relationship(
+        'Thread', primaryjoin='and_('
+        'DraftThread.thread_id==remote(Thread.id),'
+        'remote(Thread.deleted_at)==None)',
+        backref=backref(
+            'draftthreads', primaryjoin='and_('
+            'remote(DraftThread.thread_id)==Thread.id,'
+            'remote(DraftThread.deleted_at)==None)'))
+    message_id = Column(Integer, ForeignKey('message.id'),
+                        nullable=False)
+
+    @classmethod
+    def create(cls, session, original):
+        assert original
+
+        # We always create a copy so don't raise, simply log.
+        try:
+            draftthread = session.query(cls).filter(
+                DraftThread.master_public_id == original.public_id).one()
+        except NoResultFound:
+            log.info('NoResultFound for draft with public_id {0}'.
+                     format(original.public_id))
+        except MultipleResultsFound:
+            log.info('MultipleResultsFound for draft with public_id {0}'.
+                     format(original.public_id))
+
+        draftthread = cls(master_public_id=original.public_id,
+                          thread=original,
+                          message_id=original.messages[0].id)
+        return draftthread
+
+    @classmethod
+    def create_copy(cls, draftthread):
+        draftthread_copy = cls(
+            master_public_id=draftthread.master_public_id,
+            thread=draftthread.thread,
+            message_id=draftthread.message_id
+        )
+
+        return draftthread_copy
 
 # These are the top 15 most common Content-Type headers
 # in my personal mail archive. --mg
@@ -804,6 +963,9 @@ class Thread(Base, HasPublicID):
     mailing_list_headers = Column(JSON, nullable=True)
 
     def update_from_message(self, message):
+        if isinstance(message, SpoolMessage):
+            return self
+
         if message.received_date > self.recentdate:
             self.recentdate = message.received_date
         # subject is subject of original message in the thread
@@ -1303,10 +1465,7 @@ class Lens(Base, HasPublicID):
 
         return query
 
-# The maximum Gmail label length is 225 (tested empirically), but
-# constraining `name` uniquely requires max length of 767 bytes under
-# utf8mb4.
-MAX_FOLDER_NAME_LENGTH = 191
+
 class Folder(Base, HasRevisions):
     """ Folders from the remote account backend (IMAP/Exchange). """
     # `use_alter` required here to avoid circular dependency w/Account

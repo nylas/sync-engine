@@ -1,18 +1,16 @@
 from collections import namedtuple
-from datetime import datetime
 
 from flanker.addresslib import address
 
-from inbox.server.crispin import RawMessage
-from inbox.server.mailsync.backends.base import create_db_objects, commit_uids
-from inbox.server.mailsync.backends.gmail import create_gmail_message
 from inbox.server.sendmail.message import (create_email, add_reply_headers,
-                                           rfc_transform)
+                                           rfc_transform, REPLYSTR)
 
-SMTPMessage = namedtuple('SMTPMessage', 'inbox_uid msg recipients thread_id')
+SMTPMessage = namedtuple(
+    'SMTPMessage',
+    'inbox_uid msg recipients in_reply_to references subject')
 
 
-def smtp_attrs(msg, thread_id=None):
+def smtp_attrs(msg):
     """ Generate the SMTP recipients, RFC compliant SMTP message. """
     # SMTP recipients include addresses in To-, Cc- and Bcc-
     all_recipients = u', '.\
@@ -30,10 +28,15 @@ def smtp_attrs(msg, thread_id=None):
     # Create an RFC-2821 compliant SMTP message
     rfcmsg = rfc_transform(msg)
 
+    in_reply_to = msg.headers['In-Reply-To']
+    references = msg.headers['References']
+    subject = msg.headers['Subject']
     smtpmsg = SMTPMessage(inbox_uid=msg.headers.get('X-INBOX-ID'),
                           msg=rfcmsg,
                           recipients=recipients,
-                          thread_id=thread_id)
+                          in_reply_to=in_reply_to,
+                          references=references,
+                          subject=subject)
 
     return smtpmsg
 
@@ -46,7 +49,7 @@ def create_gmail_email(sender_info, recipients, subject, body,
     return smtp_attrs(mimemsg)
 
 
-def create_gmail_reply(replyto, sender_info, recipients, subject, body,
+def create_gmail_reply(sender_info, replyto, recipients, subject, body,
                        attachments=None):
     """ Create a Gmail email reply. """
     mimemsg = create_email(sender_info, recipients, subject, body, attachments)
@@ -58,39 +61,6 @@ def create_gmail_reply(replyto, sender_info, recipients, subject, body,
     # Gmail requires the same subject as the original (adding Re:/Fwd: is fine
     # though) to group messages in the same conversation,
     # See: https://support.google.com/mail/answer/5900?hl=en
-    replystr = 'Re: '
-    reply.headers['Subject'] = replystr + replyto.subject
+    reply.headers['Subject'] = REPLYSTR + replyto.subject
 
-    return smtp_attrs(reply, replyto.thread_id)
-
-
-def save_gmail_email(account_id, sent_folder, db_session, log, smtpmsg):
-    """
-    Save the email message to the local data store.
-
-    Notes
-    -----
-    The message is stored as a SpoolMessage, to be reconciled at a
-    future sync.
-
-    """
-    # The generated `X-INBOX-ID` UUID of the message is too big to serve as the
-    # msg_uid for the corresponding ImapUid. The msg_uid is a SQL BigInteger
-    # (20 bits), so we truncate the `X-INBOX-ID` to that size. Note that
-    # this still provides a large enough ID space to make collisions rare.
-    uid = (int(smtpmsg.inbox_uid, 16)) & (1 << 20) - 1
-    date = datetime.utcnow()
-
-    # Create a new SpoolMessage:
-    msg = RawMessage(uid=uid, internaldate=date, flags=set(),
-                     body=smtpmsg.msg, g_thrid=smtpmsg.thread_id,
-                     g_msgid=None, g_labels=set(), created=True)
-    new_uids = create_db_objects(account_id, db_session, log, sent_folder,
-                                 [msg], create_gmail_message)
-
-    assert len(new_uids) == 1
-    new_uids[0].created_date = date
-
-    commit_uids(db_session, log, new_uids)
-
-    return new_uids[0]
+    return smtp_attrs(reply)
