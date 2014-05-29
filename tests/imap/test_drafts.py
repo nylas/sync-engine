@@ -11,8 +11,6 @@ ACCOUNT_ID = 1
 NAMESPACE_ID = 1
 THREAD_ID = 16
 
-skip = 'False'
-
 
 @pytest.fixture(scope='function')
 def message(db, config):
@@ -56,7 +54,6 @@ def cleanup(account, subject):
             c.conn.expunge()
 
 
-@pytest.mark.skipif(skip)
 def test_get(db, config, action_queue, message, attach):
     from inbox.server.sendmail.base import create_draft, get_draft
     from inbox.server.models.tables.base import SpoolMessage, Account
@@ -84,7 +81,6 @@ def test_get(db, config, action_queue, message, attach):
         'returned draft has incorrect state'
 
 
-@pytest.mark.skipif(skip)
 def test_get_all(db, config, action_queue, message, attach):
     from inbox.server.sendmail.base import create_draft, get_all_drafts
     from inbox.server.models.tables.base import Account
@@ -124,7 +120,6 @@ def test_get_all(db, config, action_queue, message, attach):
         'second draft has incorrect state'
 
 
-@pytest.mark.skipif(skip)
 def test_create(db, config, action_queue, message, attach):
     from inbox.server.sendmail.base import create_draft
     from inbox.server.models.tables.base import (SpoolMessage, FolderItem,
@@ -166,7 +161,6 @@ def test_create(db, config, action_queue, message, attach):
     cleanup(account, subject)
 
 
-@pytest.mark.skipif(skip)
 def test_update(db, config, action_queue, message, attach):
     from inbox.server.sendmail.base import create_draft, update_draft
     from inbox.server.models.tables.base import Account
@@ -209,7 +203,6 @@ def test_update(db, config, action_queue, message, attach):
     cleanup(account, subject)
 
 
-@pytest.mark.skipif(skip)
 def test_delete(db, config, action_queue, message, attach):
     from inbox.server.sendmail.base import (create_draft, update_draft,
                                             delete_draft)
@@ -252,7 +245,6 @@ def test_delete(db, config, action_queue, message, attach):
     cleanup(account, subject)
 
 
-@pytest.mark.skipif(skip)
 def test_send(db, config, action_queue, message, attach):
     from inbox.server.sendmail.base import create_draft, send_draft
     from inbox.server.models.tables.base import (SpoolMessage, Account,
@@ -301,7 +293,6 @@ def test_send(db, config, action_queue, message, attach):
     cleanup(account, subject)
 
 
-@pytest.mark.skipif(skip)
 def test_create_reply(db, config, action_queue, message, attach):
     from inbox.server.sendmail.base import create_draft
     from inbox.server.models.tables.base import (SpoolMessage, Account,
@@ -369,7 +360,6 @@ def test_create_reply(db, config, action_queue, message, attach):
     cleanup(account, subject)
 
 
-@pytest.mark.skipif(skip)
 def test_update_reply(db, config, action_queue, message, attach):
     from inbox.server.sendmail.base import create_draft, update_draft
     from inbox.server.models.tables.base import Account, Thread, DraftThread
@@ -436,13 +426,11 @@ def test_update_reply(db, config, action_queue, message, attach):
     cleanup(account, subject)
 
 
-@pytest.mark.skipif(skip)
 @pytest.mark.xfail
 def test_delete_reply():
     raise NotImplementedError
 
 
-@pytest.mark.skipif(skip)
 def test_send_reply(db, config, action_queue, message, attach):
     from inbox.server.sendmail.base import create_draft, send_draft
     from inbox.server.models.tables.base import (SpoolMessage, Account,
