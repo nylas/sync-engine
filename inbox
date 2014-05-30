@@ -4,10 +4,16 @@ import sys
 import os
 from pkg_resources import require, DistributionNotFound, VersionConflict
 
+
+# Don't trounce all over permissions.
+if os.getuid() == 0:
+    sys.exit("\nDon't run Inbox as root!\n")
+
+
 # Check our requirements package
 failed_deps = []
 requirements_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                       'requirements.txt')
+                                 'requirements.txt')
 with open(requirements_path, 'r') as f:
     for x in f:
         x = x.strip()
