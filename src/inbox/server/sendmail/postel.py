@@ -1,4 +1,5 @@
 import base64
+import functools
 from collections import namedtuple
 
 import smtplib
@@ -39,8 +40,8 @@ def get_smtp_connection_pool(account_id, pool_size=None):
     return account_id_to_connection_pool[account_id]
 
 
-# We might customize some options on this later.
-smtpconn_retry = geventconnpool.retry
+smtpconn_retry = functools.partial(
+    geventconnpool.retry, logger=log, interval=5, max_failures=5)
 
 
 class SMTPConnection():
