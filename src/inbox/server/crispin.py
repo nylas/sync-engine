@@ -210,7 +210,6 @@ class CrispinClient(object):
         this does things like e.g. makes sure we're not getting
         cached/out-of-date values for HIGHESTMODSEQ from the IMAP server.
         """
-        raise imaplib.IMAP4.abort("fail fail fail")
         select_info = self.conn.select_folder(
             folder, readonly=self.readonly)
         select_info['UIDVALIDITY'] = long(select_info['UIDVALIDITY'])
