@@ -5,18 +5,14 @@ have to shunt off dealing with the connection pool to the caller or we'll end
 up trying to execute calls with the wrong folder selected some amount of the
 time. That's why functions take a connection argument.
 """
-from functools import wraps
+import imaplib
+import functools
+
 from collections import namedtuple
 
-# Monkeypatch imaplib errors to derive from `socket` so `geventconnpool`
-# correctly recreates bad pool connections. (imapclient/imaplib catch
-# socket.error and throw imaplib.IMAP4.error exceptions instead.)
-from gevent import socket, sleep
-import imaplib
-imaplib.IMAP4.error = socket.error
-imaplib.IMAP4.abort = socket.error
+from gevent import socket
 
-from geventconnpool import ConnectionPool
+import geventconnpool
 
 from inbox.util.misc import or_none, timed
 from inbox.server.auth.base import verify_imap_account
@@ -79,8 +75,10 @@ def writable_connection_pool(account_id, pool_size=2,
                                     readonly=False)
     return pool
 
+CONN_DISCARD_EXC_CLASSES = (socket.error, imaplib.IMAP4.error)
 
-class CrispinConnectionPool(ConnectionPool):
+
+class CrispinConnectionPool(geventconnpool.ConnectionPool):
     """
     Connection pool for Crispin clients.
 
@@ -102,7 +100,9 @@ class CrispinConnectionPool(ConnectionPool):
         self.readonly = readonly
         self._set_account_info()
         # 1200s == 20min
-        ConnectionPool.__init__(self, num_connections, keepalive=1200)
+        geventconnpool.ConnectionPool.__init__(
+            self, num_connections, keepalive=1200,
+            exc_classes=CONN_DISCARD_EXC_CLASSES)
 
     def _set_account_info(self):
         with session_scope() as db_session:
@@ -137,35 +137,9 @@ class CrispinConnectionPool(ConnectionPool):
         c.conn.noop()
 
 
-def retry_crispin(f):
-    """
-    Decorator to automatically reexecute a function if the connection is
-    broken for any reason.
-
-    Note that the wrapped function MUST grab a new connection from the pool
-    at the beginning, otherwise retrying is pointless, since you will try
-    again with the bad connection.
-
-    This function is verbatim copied from `geventconnpool`.  and instrumented
-    for debug purposes.
-    """
-    @wraps(f)
-    def deco(*args, **kwargs):
-        MAX_FAILURES = 10
-        failures = 0
-        while True:
-            try:
-                return f(*args, **kwargs)
-            except socket.error as e:
-                log.error(e)
-                log.debug("Creating new crispin for the job ({} failures so far)."
-                          .format(failures))
-            failures += 1
-            if failures > MAX_FAILURES:
-                log.error("Max number of crispin retries reached. Aborting.")
-                raise
-            sleep(5)
-    return deco
+retry_crispin = functools.partial(
+    geventconnpool.retry, exc_classes=CONN_DISCARD_EXC_CLASSES, logger=log,
+    interval=5, max_failures=5)
 
 
 def new_crispin(account_id, provider, conn, readonly=True):
@@ -236,6 +210,7 @@ class CrispinClient(object):
         this does things like e.g. makes sure we're not getting
         cached/out-of-date values for HIGHESTMODSEQ from the IMAP server.
         """
+        raise imaplib.IMAP4.abort("fail fail fail")
         select_info = self.conn.select_folder(
             folder, readonly=self.readonly)
         select_info['UIDVALIDITY'] = long(select_info['UIDVALIDITY'])

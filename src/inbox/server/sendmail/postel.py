@@ -1,10 +1,9 @@
 import base64
 from collections import namedtuple
-from functools import wraps
 
 import smtplib
-from geventconnpool import ConnectionPool
-from gevent import socket, sleep
+import geventconnpool
+from gevent import socket
 
 from inbox.server.log import get_logger
 from inbox.server.basicauth import AUTH_TYPES
@@ -40,36 +39,8 @@ def get_smtp_connection_pool(account_id, pool_size=None):
     return account_id_to_connection_pool[account_id]
 
 
-def smtpconn_retry(f):
-    """
-    Decorator to automatically reexecute a function if the connection is
-    broken for any reason.
-
-    Note that the wrapped function MUST grab a new connection from the pool
-    at the beginning, otherwise retrying is pointless, since you will try
-    again with the bad connection.
-
-    This function is verbatim copied from `geventconnpool` and instrumented
-    for debug purposes.
-    """
-    @wraps(f)
-    def deco(*args, **kwargs):
-        MAX_FAILURES = 10
-        failures = 0
-        while True:
-            try:
-                return f(*args, **kwargs)
-            except socket.error as e:
-                log.error(e)
-                log.debug('Creating new SMTPConnection for the job '
-                          '({0} failures so far)'.format(failures))
-            failures += 1
-            if failures > MAX_FAILURES:
-                log.error('Max number of SMTPConnection retries reached.'
-                          'Aborting.')
-                raise
-            sleep(5)
-    return deco
+# We might customize some options on this later.
+smtpconn_retry = geventconnpool.retry
 
 
 class SMTPConnection():
@@ -180,7 +151,7 @@ class SMTPConnection():
         return self.connection.sendmail(email_address, recipients, msg)
 
 
-class SMTPConnectionPool(ConnectionPool):
+class SMTPConnectionPool(geventconnpool.ConnectionPool):
     def __init__(self, account_id, num_connections, debug=False):
         self.log = get_logger(account_id, 'sendmail: connection_pool')
         self.log.info('Creating SMTP connection pool for account {0} with {1} '
@@ -192,7 +163,8 @@ class SMTPConnectionPool(ConnectionPool):
         self.debug = debug
 
         # 1200s == 20min
-        ConnectionPool.__init__(self, num_connections, keepalive=1200)
+        geventconnpool.ConnectionPool.__init__(
+            self, num_connections, keepalive=1200)
 
     def _set_account_info(self):
         with session_scope() as db_session:
