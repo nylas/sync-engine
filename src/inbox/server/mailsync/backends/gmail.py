@@ -82,6 +82,12 @@ def initial_sync(crispin_client, db_session, log, folder_name, shared_state):
                              shared_state, gmail_initial_sync)
 
 
+def uid_download_folders(crispin_client):
+    """ Folders that don't get thread-expanded. """
+    return [crispin_client.folder_names()[tag] for tag in
+            ('trash', 'spam', 'all') if tag in crispin_client.folder_names()]
+
+
 def gmail_initial_sync(crispin_client, db_session, log, folder_name,
                        shared_state, local_uids, uid_download_stack):
     remote_g_metadata = get_g_metadata(crispin_client, db_session, log,
@@ -100,11 +106,6 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
             local_uids, remote_uids)
     local_uids = set(local_uids) - deleted_uids
     unknown_uids = set(remote_uids) - local_uids
-
-    # folders that don't get thread expanded
-    uid_download_folders = [crispin_client.folder_names()[tag] for tag in
-                            ('trash', 'spam', 'all') if tag in
-                            crispin_client.folder_names()]
 
     if folder_name == crispin_client.folder_names()['inbox']:
         # We don't do an initial dedupe for Inbox because we do thread
@@ -127,7 +128,7 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
                                 message_download_stack,
                                 shared_state['status_cb'],
                                 shared_state['syncmanager_lock'])
-    elif folder_name in uid_download_folders:
+    elif folder_name in uid_download_folders(crispin_client):
         full_download = deduplicate_message_download(
             crispin_client, db_session, log, shared_state['syncmanager_lock'],
             remote_g_metadata, unknown_uids)
@@ -166,7 +167,7 @@ def gmail_highestmodseq_update(crispin_client, db_session, log, folder_name,
     g_metadata = crispin_client.g_metadata(uids)
     to_download = deduplicate_message_download(
         crispin_client, db_session, log, syncmanager_lock, g_metadata, uids)
-    if folder_name != crispin_client.folder_names()['all']:
+    if folder_name == crispin_client.folder_names()['inbox']:
         flags = crispin_client.flags(to_download)
         message_download_stack = LifoQueue()
         for uid in to_download:
@@ -178,7 +179,7 @@ def gmail_highestmodseq_update(crispin_client, db_session, log, folder_name,
         download_queued_threads(crispin_client, db_session, log, folder_name,
                                 message_download_stack, status_cb,
                                 syncmanager_lock)
-    else:
+    elif folder_name in uid_download_folders(crispin_client):
         uid_download_stack = uid_list_to_stack(to_download)
 
         download_queued_uids(crispin_client, db_session, log, folder_name,
@@ -186,6 +187,9 @@ def gmail_highestmodseq_update(crispin_client, db_session, log, folder_name,
                              status_cb, syncmanager_lock,
                              gmail_download_and_commit_uids,
                              create_gmail_message)
+    else:
+        raise MailsyncError(
+            "Unknown Gmail sync folder: {}".format(folder_name))
 
 
 def remote_g_metadata_cache_file(account_id, folder_name):
