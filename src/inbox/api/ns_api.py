@@ -12,7 +12,7 @@ from inbox.server.models.tables.base import (
 from inbox.server.models.kellogs import jsonify
 from inbox.server.config import config
 from inbox.server import contacts
-from inbox.server.models import InboxSession
+from inbox.server.models import InboxSession, session_scope
 from inbox.server import sendmail
 
 from err import err
@@ -68,8 +68,10 @@ def record_auth(setup_state):
         """ Return all namespaces """
         # We do this outside the blueprint to support the case of an empty public_id.
         # However, this means the before_request isn't run, so we need to make our own session
-        namespaces = InboxSession().query(Namespace).all()
-        return jsonify(namespaces)
+        with session_scope() as db_session:
+            namespaces = db_session.query(Namespace).all()
+            result = jsonify(namespaces)
+        return result
 
 
 @app.before_request
