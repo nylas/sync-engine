@@ -16,6 +16,7 @@ node_modules
 /tests/coverage
 /cache
 /src/flanker
+/src/geventconnpool
 /src/inbox-util
 /src/zerorpc
 # virtualenv
