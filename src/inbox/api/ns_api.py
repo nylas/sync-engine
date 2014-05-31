@@ -3,12 +3,13 @@ import os
 import zerorpc
 from flask import request, g, Blueprint, make_response, current_app, Response
 from flask import jsonify as flask_jsonify
+from sqlalchemy import asc
 from sqlalchemy.orm.exc import NoResultFound
 from werkzeug.exceptions import default_exceptions
 from werkzeug.exceptions import HTTPException
 
 from inbox.server.models.tables.base import (
-    Message, Block, Part, Thread, Namespace, Lens, Webhook, UserTag)
+    Message, Block, Part, Thread, Namespace, Lens, Webhook, UserTag, Contact)
 from inbox.server.models.kellogs import jsonify
 from inbox.server.config import config
 from inbox.server import contacts
@@ -288,10 +289,27 @@ def message_api(public_id):
 @app.route('/contacts', methods=['GET'])
 def contact_search_api():
     filter = request.args.get('filter', '')
-    limit = request.args.get('limit', 10)
-    # TODO(emfree) support offset as well
-    results = contacts.search_util.search(g.db_session, g.namespace.account_id,
-                                          filter, limit)
+    try:
+        limit = int(request.args.get('limit', 10))
+        offset = int(request.args.get('offset', 0))
+    except ValueError:
+        return err(400, 'limit and offset parameters must be integers')
+    if limit < 0 or offset < 0:
+        return err(400, 'limit and offset parameters must be nonnegative '
+                        'integers')
+    if limit > 1000:
+        return err(400, 'cannot request more than 1000 contacts at once.')
+    order = request.args.get('order')
+    if order == 'rank':
+        results = contacts.search_util.search(g.db_session,
+                                              g.namespace.account_id, filter,
+                                              limit, offset)
+    else:
+        results = g.db_session.query(Contact). \
+            filter(Contact.account_id == g.namespace.account_id,
+                   Contact.source == 'local'). \
+            order_by(asc(Contact.id)).limit(limit).offset(offset).all()
+
     return jsonify(results)
 
 

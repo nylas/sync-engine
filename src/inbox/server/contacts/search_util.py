@@ -76,7 +76,7 @@ def score(contact):
     #   this nontrivial.)
 
 
-def search(db_session, account_id, search_query, max_results):
+def search(db_session, account_id, search_query, max_results, offset=0):
     query = db_session.query(Contact) \
         .filter(Contact.account_id == account_id,
                 Contact.source == 'local',
@@ -85,4 +85,6 @@ def search(db_session, account_id, search_query, max_results):
         .order_by(sqlalchemy.desc(Contact.score))
     if max_results > 0:
         query = query.limit(max_results)
+    if offset:
+        query = query.offset(offset)
     return query.all()
