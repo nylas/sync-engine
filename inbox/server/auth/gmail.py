@@ -43,38 +43,9 @@ def verify_gmail_account(account):
 def create_auth_account(db_session, email_address):
 
     uri = config.get('GOOGLE_OAUTH_REDIRECT_URI', None)
-    assert uri, 'Must define GOOGLE_OAUTH_REDIRECT_URI'
 
-    def is_alive():
-        try:
-            # Note that we're using a self-signed SSL cert, so we disable
-            # verification of the cert chain
-            resp = requests.get(uri + '/alive', verify=False)
-            if resp.status_code is 200:
-                return True
-            else:
-                raise Exception('OAuth callback server detected, \
-                    but returned {0}'.format(resp.status_code))
-        except requests.exceptions.ConnectionError:
-            return False
-
-    if uri != 'urn:ietf:wg:oauth:2.0:oob' and not is_alive():
-        print """\033[93m \n\n
-Hey you! It looks like you're not using the Google oauth 'installed'
-app type, meaning you need a web oauth callback. The easiest way
-to do this is to run the stub flask app. :\n
-        sudo tools/oauth_callback_server/start \n
-Make sure that {0} is directed to your VM by editing /etc/hosts
-on the host machine\n
-Go ahead and start it. I'll wait for a minute...\n
-\033[0m""".format(uri)
-
-        while True:
-            if is_alive():
-                print 'Good to go!'
-                break
-            else:
-                time.sleep(.5)
+    if uri != 'urn:ietf:wg:oauth:2.0:oob':
+        raise NotImplementedError("callback-based OAuth is not supported")
 
     response = auth_account(email_address)
     account = create_account(db_session, email_address, response)

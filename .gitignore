@@ -23,15 +23,6 @@ node_modules
 /include
 /local
 
-# Dev HTTPS oauth callback server
-/tools/oauth_callback_server/server.crt
-/tools/oauth_callback_server/server.key
-/tools/oauth_callback_server/dev_https
-
-/api/server.crt
-/api/server.key
-/api/dev_https
-
 # Packages
 *.egg
 *.egg-info
