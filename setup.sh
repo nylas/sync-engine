@@ -74,7 +74,7 @@ color '35;1' 'Installing dependencies from pip...'
 pip install --upgrade setuptools
 pip install -r requirements.txt
 
-pip install -e src
+pip install -e .
 if [ -d "../inbox-eas" ]; then
     pip install -e ../inbox-eas
 fi
