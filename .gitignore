@@ -15,10 +15,10 @@ node_modules
 /tests/output
 /tests/coverage
 /cache
-/src/flanker
-/src/geventconnpool
-/src/inbox-util
-/src/zerorpc
+
+# location for editable pip installs
+/src
+
 # virtualenv
 /include
 /local
