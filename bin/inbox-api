@@ -15,7 +15,8 @@ log = get_logger()
 parser = argparse.ArgumentParser(description="REPL for crispin")
 parser.add_argument('-p', '--port', dest='port', default=5555)
 parser.add_argument('--prod', action='store_true', default=False,
-                         help="Enable autoreloader. Defaults to true")
+                         help="Disables the autoreloader and potentially other"
+                         " non-production features.")
 args = parser.parse_args()
 
 from inbox.api.srv import app

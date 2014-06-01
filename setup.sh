@@ -87,7 +87,7 @@ mysqld_safe &
 sleep 10
 
 color '35;1' 'Creating databases...'
-python bin/create_db
+python bin/create-db
 find . -name \*.pyc -delete
 
 color '35;1' 'Cleaning up...'

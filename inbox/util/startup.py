@@ -50,7 +50,7 @@ def check_db():
     try:
         inbox_db_engine.dialect.has_table(inbox_db_engine, 'alembic_version')
     except sqlalchemy.exc.OperationalError:
-        sys.exit("Databases don't exist! Run create_db.py")
+        sys.exit("Databases don't exist! Run bin/create-db")
 
     if inbox_db_engine.dialect.has_table(inbox_db_engine, 'alembic_version'):
         res = inbox_db_engine.execute('SELECT version_num from alembic_version')
@@ -68,7 +68,7 @@ def check_db():
         else:
             log.info('[OK] Database scheme matches latest')
     else:
-        raise Exception('Un-stamped database! `create_db.py` should have done this... bailing.')
+        raise Exception('Un-stamped database! `bin/create-db` should have done this... bailing.')
 
 
 def check_sudo():

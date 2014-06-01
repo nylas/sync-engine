@@ -21,7 +21,8 @@ preflight()
 parser = argparse.ArgumentParser(description="Inbox sync service")
 
 parser.add_argument('--prod', action='store_true', default=False,
-                         help="Enable autoreloader. Defaults to true")
+                         help="Disables the autoreloader and potentially other"
+                         " non-production features.")
 args = parser.parse_args()
 
 
