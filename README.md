@@ -52,13 +52,13 @@ Here's how to set up a development environment running on your local machine:
 
 9. `sudo ./setup.sh` to install dependencies and create databases.
 
-10. `./inbox debug`
+10. `bin/inbox-start`
 
 And _voilà_! Auth an account via the commandline and start syncing:
 
 ```
-  ./inbox auth ben.bitdiddle1861@gmail.com
-  ./inbox sync start ben.bitdiddle1861@gmail.com
+  bin/inbox-auth ben.bitdiddle1861@gmail.com
+  bin/inbox-sync start ben.bitdiddle1861@gmail.com
 ```
 
 ## Contributing

@@ -1,0 +1,78 @@
+#!/usr/bin/env python
+from gevent import monkey; monkey.patch_all()
+import sys
+import argparse
+
+from inbox.server.config import config, load_config
+load_config('./config.cfg')
+
+from inbox.util.startup import preflight
+
+from gevent import joinall, spawn
+from setproctitle import setproctitle; setproctitle('inbox')
+
+from inbox.server.log import (configure_general_logging, get_logger,
+                              log_uncaught_errors)
+configure_general_logging()
+log = get_logger()
+preflight()
+
+
+parser = argparse.ArgumentParser(description="Inbox sync service")
+
+parser.add_argument('--prod', action='store_true', default=False,
+                         help="Enable autoreloader. Defaults to true")
+args = parser.parse_args()
+
+
+def start():
+    from inbox.server.models.tables.base import register_backends
+    table_mod_for = register_backends()
+
+    threads = []
+
+    from inbox.server.util.concurrency import make_zerorpc
+
+    # Start ZeroRPC mail sync server service
+    from inbox.server.mailsync.service import SyncService
+    sync_srv_loc = config.get('CRISPIN_SERVER_LOC', None)
+    threads.append(make_zerorpc(SyncService, sync_srv_loc))
+
+    # start ZeroRPC search server service
+    from inbox.server.search import SearchService
+    search_srv_loc = config.get('SEARCH_SERVER_LOC', None)
+    threads.append(make_zerorpc(SearchService, search_srv_loc))
+
+    # start webhook service
+    from inbox.server.transactions.webhook import WebhookService
+    webhook_srv_loc = config.get('WEBHOOK_SERVER_LOC', None)
+    threads.append(make_zerorpc(WebhookService, webhook_srv_loc))
+
+    from inbox.server.actions.base import rqworker
+    threads.append(spawn(log_uncaught_errors(rqworker)))
+
+    print """
+    \033[94m     Welcome to... \033[0m\033[1;95m
+      _____       _
+     |_   _|     | |
+       | |  _ __ | |__   _____  __
+       | | | '_ \| '_ \ / _ \ \/ /
+      _| |_| | | | |_) | (_) >  <
+     |_____|_| |_|_.__/ \___/_/\_\\  \033[0m
+
+     Use CTRL-C to stop.
+     """
+
+    log.info("Recursion limit: {0}".format(sys.getrecursionlimit()))
+
+    log.info('Providers currently supported: '\
+             '{0}'.format(', '.join(table_mod_for.keys())))
+
+    # hang out forever and run some services
+    joinall(threads)
+
+if not args.prod:
+    from werkzeug.serving import run_with_reloader
+    run_with_reloader(start)
+else:
+    start()
