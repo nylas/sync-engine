@@ -18,6 +18,8 @@ from inbox.server import sendmail
 
 from err import err
 
+from inbox.server.models.ignition import engine
+
 
 DEFAULT_LIMIT = 50
 SPECIAL_LABELS = [
@@ -69,15 +71,13 @@ def record_auth(setup_state):
         """ Return all namespaces """
         # We do this outside the blueprint to support the case of an empty public_id.
         # However, this means the before_request isn't run, so we need to make our own session
-        with session_scope() as db_session:
-            namespaces = db_session.query(Namespace).all()
-            result = jsonify(namespaces)
-        return result
+        namespaces = InboxSession(engine).query(Namespace).all()
+        return jsonify(namespaces)
 
 
 @app.before_request
 def start():
-    g.db_session = InboxSession()
+    g.db_session = InboxSession(engine)
 
     g.log = current_app.logger
     try:

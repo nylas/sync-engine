@@ -89,6 +89,8 @@ class InboxSession(object):
 
     Parameters
     ----------
+    engine : <sqlalchemy.engine.Engine>
+        A configured database engine to use for this session
     versioned : bool
         Do you want to enable the transaction log?
     ignore_soft_deletes : bool
@@ -96,11 +98,10 @@ class InboxSession(object):
     namespace_id : int
         Namespace to limit query results with.
     """
-    def __init__(self, versioned=True, ignore_soft_deletes=True,
+    def __init__(self, engine, versioned=True, ignore_soft_deletes=True,
                  namespace_id=None):
         # TODO: support limiting on namespaces
-        # TODO this uses our global engine here :(
-        from inbox.server.models.ignition import engine
+        assert engine, "Must set the database engine"
 
         args = dict(bind=engine, autoflush=True, autocommit=False)
         self.ignore_soft_deletes = ignore_soft_deletes
@@ -166,6 +167,8 @@ class InboxSession(object):
         return self._session.no_autoflush
 
 
+cached_engine = None
+
 @contextmanager
 def session_scope(versioned=True, ignore_soft_deletes=True, namespace_id=None):
     """ Provide a transactional scope around a series of operations.
@@ -192,7 +195,17 @@ def session_scope(versioned=True, ignore_soft_deletes=True, namespace_id=None):
     InboxSession
         The created session.
     """
-    session = InboxSession(versioned, ignore_soft_deletes, namespace_id)
+
+    global cached_engine
+    if cached_engine is None:
+        log.info("Don't yet have engine... creating default from ignition")
+        from inbox.server.models.ignition import engine as main_engine
+        cached_engine = main_engine
+
+    session = InboxSession(cached_engine,
+                           versioned=versioned,
+                           ignore_soft_deletes=ignore_soft_deletes,
+                           namespace_id=namespace_id)
     try:
         yield session
         session.commit()

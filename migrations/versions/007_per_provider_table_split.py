@@ -16,8 +16,6 @@ import sqlalchemy as sa
 from sqlalchemy.sql import table, column
 from sqlalchemy.ext.declarative import declarative_base
 
-from inbox.server.config import load_config
-load_config()
 from inbox.server.models import session_scope
 from inbox.server.models.ignition import engine
 

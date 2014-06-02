@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-from inbox.server.config import load_config
-load_config()
 from inbox.server.models import session_scope
 from inbox.server.contacts.process_mail import update_contacts
 from inbox.server.models.tables.base import (Message, SearchSignal,

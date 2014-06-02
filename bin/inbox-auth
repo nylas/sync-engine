@@ -2,9 +2,6 @@
 import sys
 import argparse
 
-from inbox.server.config import load_config
-load_config('./config.cfg')
-
 from setproctitle import setproctitle; setproctitle('inbox-syncmgr')
 
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 from gevent import monkey; monkey.patch_all()
 import sys
+import os
 import argparse
 
-from inbox.server.config import config, load_config
-load_config('./config.cfg')
+from inbox.server.config import config
 
 from inbox.util.startup import preflight
 
@@ -23,7 +23,15 @@ parser = argparse.ArgumentParser(description="Inbox sync service")
 parser.add_argument('--prod', action='store_true', default=False,
                          help="Disables the autoreloader and potentially other"
                          " non-production features.")
+parser.add_argument('-c', '--config', dest='config', default=None,
+                         help="Path to JSON configuration file.")
 args = parser.parse_args()
+
+if args.config:
+    from inbox.util.startup import load_overrides
+    config_path = os.path.abspath(args.config)
+    # TODO expand to full path
+    load_overrides(config_path)
 
 
 def start():

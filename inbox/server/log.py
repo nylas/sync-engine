@@ -176,7 +176,7 @@ class log_uncaught_errors(object):
             pass
 
     def __call__(self, *args, **kwargs):
-        from inbox.server.config import is_prod, is_staging
+        from inbox.server.config import config
         func = self.func
         try:
             return func(*args, **kwargs)
@@ -184,7 +184,7 @@ class log_uncaught_errors(object):
             if not isinstance(e, GreenletExit):
                 self._log_failsafe("Uncaught error!")
                 exc_type, exc_value, exc_tb = sys.exc_info()
-                if is_prod() or is_staging():
+                if config.get('EMAIL_EXCEPTIONS'):
                     email_exception(self.logger, exc_type, exc_value, exc_tb)
             raise
 

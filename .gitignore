@@ -1,5 +1,4 @@
 # Inbox-specific
-/config.cfg
 /packer_cache
 /log
 /man
@@ -15,6 +14,7 @@ node_modules
 /tests/output
 /tests/coverage
 /cache
+/config.json
 
 # location for editable pip installs
 /src

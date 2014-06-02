@@ -5,10 +5,6 @@ from shutil import rmtree
 from pytest import fixture
 
 from inbox.util.db import drop_everything
-from inbox.util.misc import load_modules
-
-TEST_CONFIG = os.path.join(
-    os.path.dirname(os.path.realpath(__file__)), '..', 'config.cfg')
 
 
 def absolute_path(path):
@@ -21,8 +17,29 @@ def absolute_path(path):
 
 @fixture(scope='session', autouse=True)
 def config():
-    from inbox.server.config import load_config, config
-    load_config(filename=TEST_CONFIG)
+    from inbox.server.config import config
+    test_config = dict(
+        MYSQL_USER='inboxtest',
+        MYSQL_PASSWORD='inboxtest',
+        MYSQL_HOSTNAME='localhost',
+        MYSQL_PORT=3306,
+        MYSQL_DATABASE='test',
+
+        ACTION_QUEUE_LABEL='actions_test',
+
+        # Dump file name, relative to tests/:
+        BASE_DUMP="data/base_dump.sql",
+        ATTACHMENT='tests/data/muir.jpg',
+
+        # File that stores password encryption keys
+        KEY_DIR='/inbox-eas/tests/data/keys',
+        KEY_SIZE=128,
+
+        EMAIL_EXCEPTIONS=False
+
+    )
+    config.update(test_config)
+
     return config
 
 
@@ -77,7 +94,7 @@ class TestDB(object):
         from inbox.server.models import InboxSession
         from inbox.server.models.ignition import engine
         # Set up test database
-        self.session = InboxSession(versioned=False)
+        self.session = InboxSession(engine, versioned=False)
         self.engine = engine
         self.config = config
         self.dumpfile = dumpfile
@@ -98,7 +115,8 @@ class TestDB(object):
     def new_session(self, ignore_soft_deletes=True):
         from inbox.server.models import InboxSession
         self.session.close()
-        self.session = InboxSession(versioned=False,
+        self.session = InboxSession(self.engine,
+                                    versioned=False,
                                     ignore_soft_deletes=ignore_soft_deletes)
 
     def destroy(self):

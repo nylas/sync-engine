@@ -3,18 +3,14 @@
 import os
 import shutil
 
-from inbox.server.config import load_config
+from inbox.server.config import config
 
 import click
 
 
 @click.command()
-@click.option('-c', '--config', default='config.cfg',
-              help='config file to use')
-def clear_cache(config):
-    loaded_config = load_config(config)
-
-    cache_basedir = loaded_config['CACHE_BASEDIR']
+def clear_cache():
+    cache_basedir = config.get('CACHE_BASEDIR')
 
     print "Removing all contents of {}...".format(cache_basedir),
     shutil.rmtree(cache_basedir)

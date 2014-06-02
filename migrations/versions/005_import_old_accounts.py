@@ -19,14 +19,10 @@ import os.path
 SQL_DUMP_FILENAME = 'alphasync_rds_inbox_imapaccount.sql'
 
 def upgrade():
-
-    from inbox.server.config import load_config
-    load_config()
     from inbox.server.models import session_scope
     from inbox.server.models.ignition import engine
     from inbox.server.models.tables.imap import ImapAccount
     import inbox.server.auth.gmail as gmail
-
 
     # Assert we have the dump file
     if not os.path.isfile(SQL_DUMP_FILENAME):

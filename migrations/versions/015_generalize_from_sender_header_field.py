@@ -14,10 +14,6 @@ down_revision = '563d405d1f99'
 
 
 def upgrade():
-
-    from inbox.server.config import load_config
-    load_config()
-
     from inbox.server.models import session_scope
     from inbox.server.models.tables.base import Message
 
@@ -30,11 +26,6 @@ def upgrade():
 
 
 def downgrade():
-    # MOVE:
-
-    from inbox.server.config import load_config
-    load_config()
-
     from inbox.server.models import session_scope
     from inbox.server.models.tables.base import Message
 

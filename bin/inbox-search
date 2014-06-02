@@ -2,8 +2,7 @@
 import sys
 import zerorpc
 import argparse
-from inbox.server.config import load_config, config
-load_config('./config.cfg')
+from inbox.server.config import config
 
 parser = argparse.ArgumentParser(description="Inbox search service")
 parser.add_argument('namespace',

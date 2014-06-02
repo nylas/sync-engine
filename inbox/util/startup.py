@@ -1,6 +1,7 @@
 import os
 import sys
 import subprocess
+import json
 from pkg_resources import require, DistributionNotFound, VersionConflict
 
 from setproctitle import setproctitle; setproctitle('inbox')
@@ -36,8 +37,8 @@ def check_requirements(requirements_path):
 
 
 def check_db():
-    # Check database revision
-    from inbox.server.models.ignition import db_uri  # needs to be after load_config()
+    """ Checks the database revision against the known alembic migrations """
+    from inbox.server.models.ignition import db_uri
     inbox_db_engine = sqlalchemy.create_engine(db_uri())
 
     # top-level, with setup.sh
@@ -93,6 +94,29 @@ def git_rev():
     return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'])
 
 
+def load_overrides(file_path):
+    """
+    Convenience function for overriding default configuration.
+
+    file_path : <string> the full path to a file containing valid
+                JSON for configuration overrides
+    """
+    with open(file_path) as data_file:
+        try:
+            overrides = json.load(data_file)
+        except ValueError:
+            sys.exit("Failed parsing configuration file at {}"
+                     .format(file_path))
+        if not overrides:
+            log.debug("No config overrides found.")
+            return
+        assert isinstance(overrides, dict), \
+            "overrides must be dictionary"
+        config.update(overrides)
+        log.debug("Imported config overrides {}".format(
+            overrides.keys()))
+
+
 def preflight():
     check_sudo()
     requirements_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -100,5 +124,4 @@ def preflight():
     check_requirements(requirements_path)
     clean_pyc()
     check_db()
-
-    log.debug("Current rev: {}".format(git_rev()))
+    log.debug("Current git revision: {}".format(git_rev().strip()))

@@ -1,67 +1,70 @@
-from ConfigParser import SafeConfigParser, NoSectionError
-import sys
 import os
 from urllib import quote_plus as urlquote
 
-
-from .log import get_logger
+from inbox.server.log import get_logger
 log = get_logger()
 
-try:
-    server_type = open('/etc/inbox/server_type', 'r').read().strip()
-except IOError:
-    server_type = 'development'
+
+config = dict()
+
+__all__ = ['config', 'engine_uri', 'db_uri']
 
 
-def is_prod():
-    return server_type == 'production'
+config_prefix = 'MYSQL'
 
 
-def is_staging():
-    return server_type == 'staging'
-
-config = dict(SERVER_TYPE=server_type)
+def _p(path):
+    return os.path.expanduser(path)
 
 
-def transform_bools(v):
-    mapping = dict(true=True, false=False, yes=True, no=False)
-    return mapping[v] if v in mapping else v
+# If you need to override configuration values for your environment,
+# you may do so by either importing this module and extending the config
+# dictionary, or passing a config file parameter to `inbox-start`.
 
+config = dict(
+    API_SERVER_LOC='tcp://0.0.0.0:9999',
+    APP_SERVER_LOC='tcp://0.0.0.0:9998',
+    CRISPIN_SERVER_LOC='tcp://0.0.0.0:9997',
+    BLOCK_SERVER_LOC='tcp://0.0.0.0:9996',
+    SEARCH_SERVER_LOC='tcp://0.0.0.0:9995',
+    WEBHOOK_SERVER_LOC='tcp://0.0.0.0:9994',
 
-def load_config(filename='config.cfg'):
-    if not os.path.isfile(filename):
-        print >>sys.stderr, \
-            ("Configuration file {0} does not exist. Either "
-             "create it or specify a different file (./inbox --config "
-             "path/to/your/config.cfg).".format(filename))
-        sys.exit(1)
+    STORE_MESSAGES_ON_S3=False,
 
-    global config
-    try:
-        parser = SafeConfigParser()
-        parser.read([filename])
-        config.update({k.upper(): transform_bools(v) for k, v in
-                       parser.items('inboxserver')})
-        log.info('Loaded configuration from {0}'.format(filename))
+    MYSQL_USER='root',
+    MYSQL_PASSWORD='root',
+    MYSQL_HOSTNAME='localhost',
+    MYSQL_PORT=3306,
+    MYSQL_DATABASE='inbox',
 
-        # This is pretty hacky...
-        paths_to_normalize = ('MSG_PARTS_DIRECTORY', 'LOGDIR', 'CACHE_BASEDIR',
-                              'KEY_DIR')
-        for p in paths_to_normalize:
-            if p in config:
-                config[p] = os.path.expanduser(config[p])
+    ALEMBIC_INI=_p('./alembic.ini'),
 
-    except NoSectionError:
-        print >>sys.stderr, "Couldn't load configuration from {0}". \
-            format(filename)
-        sys.exit(1)
-    return config
+    MSG_PARTS_DIRECTORY='/var/lib/inboxapp/parts',
+    CACHE_BASEDIR='/var/lib/inboxapp/cache',
+    LOGDIR='/var/log/inboxapp',
+
+    # http://docs.python.org/2/library/logging.html#logging-levels
+    # (currently defaulting to DEBUG for development)
+    LOGLEVEL=10,
+    ACTION_QUEUE_LABEL='action',
+
+    # Google OAuth app credentials for app registered through ben.bitdiddle
+    # address for debugging
+    GOOGLE_OAUTH_CLIENT_ID='986659776516-fg79mqbkbktf5ku10c215vdij918ra0a' +
+                           '.apps.googleusercontent.com',
+    GOOGLE_OAUTH_CLIENT_SECRET='zgY9wgwML0kmQ6mmYHYJE05d',
+    GOOGLE_OAUTH_REDIRECT_URI='urn:ietf:wg:oauth:2.0:oob',
+
+    # File that stores password encryption keys
+    KEY_DIR='/var/lib/inboxapp/keys',
+    KEY_SIZE=128,
+
+    EMAIL_EXCEPTIONS=False,
+)
 
 
 def engine_uri(database=None):
     """ By default doesn't include the specific database. """
-
-    config_prefix = 'RDS' if is_prod() else 'MYSQL'
 
     username = config.get('{0}_USER'.format(config_prefix), None)
     assert username, "Must have database username to connect!"
@@ -88,7 +91,6 @@ def engine_uri(database=None):
 
 
 def db_uri():
-    config_prefix = 'RDS' if is_prod() else 'MYSQL'
     database = config.get('{0}_DATABASE'.format(config_prefix), None)
     assert database, "Must have database name to connect!"
     return engine_uri(database)

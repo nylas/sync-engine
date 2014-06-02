@@ -24,9 +24,6 @@ chunk_size = 500
 
 
 def upgrade():
-
-    from inbox.server.config import load_config
-    load_config()
     from inbox.sqlalchemy.util import generate_public_id
     from inbox.server.models import session_scope
 
@@ -84,10 +81,6 @@ def upgrade():
 
 
 def downgrade():
-
-    from inbox.server.config import load_config
-    load_config()
-
     # These all inherit HasPublicID
     from inbox.server.models.tables.base import (
         Account, Block, Contact, Message, Namespace,
