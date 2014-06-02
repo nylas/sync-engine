@@ -71,8 +71,9 @@ def record_auth(setup_state):
         """ Return all namespaces """
         # We do this outside the blueprint to support the case of an empty public_id.
         # However, this means the before_request isn't run, so we need to make our own session
-        namespaces = InboxSession(engine).query(Namespace).all()
-        return jsonify(namespaces)
+        with session_scope() as db_session:
+            namespaces = InboxSession(engine).query(Namespace).all()
+            return jsonify(namespaces)
 
 
 @app.before_request
