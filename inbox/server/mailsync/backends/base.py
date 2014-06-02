@@ -236,7 +236,7 @@ class BaseMailSyncMonitor(Greenlet):
                     # make sure the parent can't start/stop any folder monitors
                     # first
                     sync.kill(block=True)
-                    killall(self.folder_monitors)
+                    self.folder_monitors.kill()
                     return
             except Empty:
                 sleep(self.heartbeat)
