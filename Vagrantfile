@@ -7,7 +7,14 @@
 Vagrant::Config.run do |config|
 
   config.vm.box = 'ubuntu'
-  config.vm.box_url = "http://files.vagrantup.com/precise64.box"
+
+  config.provider :vmware_fusion do |vmware|
+    config.vm.box_url = "http://files.vagrantup.com/precise64_vmware.box"
+  end
+  config.provider :virtualbox do |vb|
+    vb.box_url = "http://files.vagrantup.com/precise64.box"
+  end
+
   config.ssh.forward_agent = true
 
   config.vm.customize [
