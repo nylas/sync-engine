@@ -25,20 +25,28 @@ def config():
         MYSQL_PORT=3306,
         MYSQL_DATABASE='test',
 
+        MSG_PARTS_DIRECTORY='tests/data/parts',
+        CACHE_BASEDIR='tests/cache',
+        LOGDIR='tests/log',
+
         ACTION_QUEUE_LABEL='actions_test',
 
         # Dump file name, relative to tests/:
-        BASE_DUMP="data/base_dump.sql",
-        ATTACHMENT='tests/data/muir.jpg',
+        BASE_DUMP='data/base_dump.sql',
 
         # File that stores password encryption keys
         KEY_DIR='/inbox-eas/tests/data/keys',
         KEY_SIZE=128,
 
+        # Attachment file name for sendmail tests
+        ATTACHMENT='tests/data/muir.jpg',
+
         EMAIL_EXCEPTIONS=False
 
     )
     config.update(test_config)
+
+    print 'config = ', config
 
     return config
 
