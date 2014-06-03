@@ -9,6 +9,12 @@ from inbox.server.log import get_logger
 log = get_logger()
 
 STORE_MSG_ON_S3 = config.get('STORE_MESSAGES_ON_S3', None)
+# Enable by defining these in your config
+# "STORE_MESSAGES_ON_S3" : false,
+# "AWS_ACCESS_KEY_ID": "XXXXXXXXXXXXXXXXXX",
+# "AWS_SECRET_ACCESS_KEY": "XXXXXXXXXXXXXXXXXX",
+# "MESSAGE_STORE_BUCKET_NAME": "XXXXXXXXXXXXXXXXXX",
+
 
 if STORE_MSG_ON_S3:
     from boto.s3.connection import S3Connection
