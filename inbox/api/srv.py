@@ -10,21 +10,19 @@ for handler in werkzeug_log.handlers:
 werkzeug_log.addHandler(inbox_logger)
 
 from flask import Flask, request
+from flask import logging as flask_logging
+def mock_create_logger(app):
+    return inbox_logger
+flask_logging.create_logger = mock_create_logger
 
-from inbox.server.models.tables.base import register_backends, Namespace
+from inbox.server.models.tables.base import register_backends
 table_mod_for = register_backends()
-from inbox.server.models import session_scope
-from inbox.server.models.kellogs import jsonify
 
 from ns_api import app as ns_api
 
+
 app = Flask(__name__)
 app.register_blueprint(ns_api)  # /n/<namespace_id>/...
-
-# Set flask logger as ours
-for handler in app.logger.handlers:
-    app.logger.removeHandler(handler)
-app.logger.addHandler(inbox_logger)
 
 
 @app.before_request
