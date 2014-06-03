@@ -215,18 +215,22 @@ class WebhookService(gevent.Greenlet):
             if unprocessed_txn_count:
                 self.log.debug('Total of {0} transactions to process'.
                                format(unprocessed_txn_count))
-            for transaction in db_session.query(Transaction) \
-                    .filter(Transaction.table_name == 'message',
-                            Transaction.id > self.minimum_id)\
-                    .order_by(asc(Transaction.id)).yield_per(self.chunk_size):
-                namespace_id = transaction.namespace_id
-                event_data = EventData(transaction)
-                for worker in self.workers[namespace_id]:
-                    if worker.match(event_data):
-                        # It's important to put a separate class instance on
-                        # each queue.
-                        worker.enqueue(copy.copy(event_data))
-                self.minimum_id = transaction.id
+
+            max_tx_id, = db_session.query(func.max(Transaction.id)).one()
+            for pointer in range(self.minimum_id, max_tx_id, self.chunk_size):
+                for transaction in db_session.query(Transaction). \
+                        filter(Transaction.table_name == 'message',
+                               Transaction.id > pointer,
+                               Transaction.id <= pointer + self.chunk_size). \
+                        order_by(asc(Transaction.id)):
+                    namespace_id = transaction.namespace_id
+                    event_data = EventData(transaction)
+                    for worker in self.workers[namespace_id]:
+                        if worker.match(event_data):
+                            # It's important to put a separate class instance
+                            # on each queue.
+                            worker.enqueue(copy.copy(event_data))
+                    self.minimum_id = transaction.id
             self.log.debug('Processed tx. setting min id to {0}'.
                            format(self.minimum_id))
 
