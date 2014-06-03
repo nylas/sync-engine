@@ -2,7 +2,7 @@
 from gevent import monkey; monkey.patch_all()
 import argparse
 
-from setproctitle import setproctitle; setproctitle('inbox-console')
+from setproctitle import setproctitle; setproctitle('inbox-api')
 
 from inbox.server.log import configure_general_logging, get_logger
 configure_general_logging()
