@@ -917,7 +917,7 @@ class Part(Block):
         return self.message.namespace
 
 
-class Thread(Base, HasPublicID):
+class Thread(Base, HasPublicID, HasRevisions):
     """ Threads are a first-class object in Inbox. This thread aggregates
         the relevant thread metadata from elsewhere so that clients can only
         query on threads.
@@ -1015,6 +1015,10 @@ class Thread(Base, HasPublicID):
                      itertools.chain(m.from_addr, m.to_addr,
                                      m.cc_addr, m.bcc_addr))
         return p
+
+    # STOPSHIP(emfree) make this work with new versioned properties thing
+    def get_versioned_properties(self):
+        return {"tags": [tag.public_id for tag in self.tags]}
 
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator}
@@ -1653,7 +1657,7 @@ class Tag(Base, HasRevisions):
                       UniqueConstraint('namespace_id', 'public_id'))
 
 
-class TagItem(Base, HasRevisions):
+class TagItem(Base):
     """Mapping between user tags and threads."""
     thread_id = Column(Integer, ForeignKey('thread.id'), nullable=False)
     tag_id = Column(Integer, ForeignKey('tag.id'), nullable=False)
@@ -1663,7 +1667,9 @@ class TagItem(Base, HasRevisions):
                         collection_class=set,
                         cascade='all, delete-orphan',
                         primaryjoin='and_(TagItem.thread_id==Thread.id, '
-                                    'TagItem.deleted_at.is_(None))'),
+                                    'TagItem.deleted_at.is_(None))',
+                        info={'versioned_properties': ['tag_id',
+                                                       'action_pending']}),
         primaryjoin='and_(TagItem.thread_id==Thread.id, '
         'Thread.deleted_at.is_(None))')
     tag = relationship(
