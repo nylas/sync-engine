@@ -365,7 +365,12 @@ def files_api(public_id):
     try:
         f = g.db_session.query(Block).filter(
             Block.public_id == public_id).one()
-        assert int(f.message.namespace.id) == int(g.namespace.id)
+        if hasattr(f, 'message'):
+            assert int(f.message.namespace.id) == int(g.namespace.id)
+            g.log.info("block's message namespace matches api context namespace")
+        else:
+            g.log.debug("This block doesn't have a corresponding message: {}"
+                        .format(f.public_id))
         return jsonify(f)
 
     except NoResultFound:
@@ -374,9 +379,10 @@ def files_api(public_id):
 
 
 #
-# Upload file
-#
-@app.route('/files/upload', methods=['POST'])
+# Upload file API. This actually supports multiple files at once
+# You can test with
+# curl http://localhost:5555/n/4s4iz36h36w17kumggi36ha2b/files --form upload=@dancingbaby.gif
+@app.route('/files', methods=['POST'])
 def file_upload_api():
     all_files = []
     for name, uploaded in request.files.iteritems():
