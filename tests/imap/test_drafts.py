@@ -273,12 +273,10 @@ def test_send(db, config, action_queue, message, attach):
     assert message.imapuids[0].folder.name == account.sent_folder.name, \
         'message.imapuid.folder is not set to sent folder'
 
-    sent_thrid = message.thread_id
-    sent_folder = db.session.query(Account).get(ACCOUNT_ID).sent_folder.name
-    sent_items = db.session.query(FolderItem).join(Folder).filter(
-        FolderItem.thread_id == sent_thrid,
-        Folder.name == sent_folder).count()
-    assert sent_items == 1, 'sent folder entry missing'
+    thread = message.thread
+    sent_tag = thread.namespace.tags['sent']
+    sent_items = sent_tag.tagitems
+    assert len(sent_items) == 1, 'sent folder entry missing'
 
     # Check not-draft
     assert not message.is_draft, 'message.is_draft still set to True'
@@ -288,6 +286,8 @@ def test_send(db, config, action_queue, message, attach):
     draft_items = db.session.query(FolderItem).join(Folder).filter(
         FolderItem.thread_id == draft_thrid,
         Folder.name == draft_folder).count()
+    # TODO(emfree) fix by only modifying the draft tag (not the folder)
+    # locally.
     assert draft_items == 0, 'draft folder entry still present'
 
     cleanup(account, subject)
@@ -461,12 +461,10 @@ def test_send_reply(db, config, action_queue, message, attach):
     assert message.imapuids[0].folder.name == account.sent_folder.name, \
         'message.imapuid.folder is not set to sent folder'
 
-    sent_thrid = message.thread_id
-    sent_folder = db.session.query(Account).get(ACCOUNT_ID).sent_folder.name
-    sent_items = db.session.query(FolderItem).join(Folder).filter(
-        FolderItem.thread_id == sent_thrid,
-        Folder.name == sent_folder).count()
-    assert sent_items == 1, 'sent folder entry missing'
+    thread = message.thread
+    sent_tag = thread.namespace.tags['sent']
+    sent_items = sent_tag.tagitems
+    assert len(sent_items) == 1, 'sent folder entry missing'
 
     assert message.inbox_uid, 'sent message.inbox_uid missing'
 
@@ -490,6 +488,8 @@ def test_send_reply(db, config, action_queue, message, attach):
     draft_items = db.session.query(FolderItem).join(Folder).filter(
         FolderItem.thread_id == draft_thrid,
         Folder.name == draft_folder).count()
+    # TODO(emfree) fix by only modifying the draft tag (not the folder)
+    # locally.
     assert draft_items == 0, 'draft folder entry still present'
 
     cleanup(account, subject)

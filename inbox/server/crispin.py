@@ -564,13 +564,20 @@ class GmailCrispinClient(CrispinClient):
     def set_unread(self, g_thrid, unread):
         uids = self.find_messages(g_thrid)
         if unread:
-            self.conn.remove_flags(uids, '\\Seen')
+            self.conn.remove_flags(uids, ['\\Seen'])
         else:
-            self.conn.add_flags(uids, '\\Seen')
+            self.conn.add_flags(uids, ['\\Seen'])
 
-    def save_draft(self, message, flags=None, date=None):
+    def set_starred(self, g_thrid, starred):
+        uids = self.find_messages(g_thrid)
+        if starred:
+            self.conn.add_flags(uids, ['\\Starred'])
+        else:
+            self.conn.remove_flags(uids, ['\\Starred'])
+
+    def save_draft(self, message, date=None):
         self.selected_folder_name == self.folder_names()['drafts'], \
             'Must select drafts folder first ({0})'.format(
                 self.selected_folder_name)
 
-        self.conn.append(self.selected_folder_name, message, flags, date)
+        self.conn.append(self.selected_folder_name, message, ['\\Draft'], date)
