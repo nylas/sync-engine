@@ -4,6 +4,7 @@ import argparse
 
 from setproctitle import setproctitle; setproctitle('inbox-api')
 
+from inbox.server.config import config
 from inbox.server.log import configure_general_logging, get_logger
 from inbox.util.startup import preflight
 configure_general_logging()
@@ -16,7 +17,15 @@ parser.add_argument('-p', '--port', dest='port', default=5555)
 parser.add_argument('--prod', action='store_true', default=False,
                          help="Disables the autoreloader and potentially other"
                          " non-production features.")
+parser.add_argument('-c', '--config', dest='config', default=None,
+                         help="Path to JSON configuration file.")
 args = parser.parse_args()
+
+if args.config:
+    from inbox.util.startup import load_overrides
+    config_path = os.path.abspath(args.config)
+    # TODO expand to full path
+    load_overrides(config_path)
 
 from inbox.api.srv import app
 from gevent.wsgi import WSGIServer, WSGIHandler
@@ -42,6 +51,12 @@ WSGIHandler.log_request = log_request
 inbox_logger = get_logger(purpose='api')
 
 def start():
+    # start actions service
+    from inbox.server.util.concurrency import make_zerorpc
+    from inbox.server.transactions.actions import SyncbackService
+    action_srv_loc = config.get('ACTION_SERVER_LOC', None)
+    make_zerorpc(SyncbackService, action_srv_loc)
+
     http_server = WSGIServer(('', int(args.port)), app, log=inbox_logger)
     inbox_logger.info("Starting API server on port {0}".format(args.port))
     http_server.serve_forever()
@@ -52,4 +67,3 @@ if not args.prod:
     run_with_reloader(start)
 else:
     start()
-

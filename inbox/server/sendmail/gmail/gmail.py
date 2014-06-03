@@ -1,5 +1,5 @@
+from inbox.server.models.namespace import db_write_lock
 from inbox.server.models.tables.imap import ImapAccount, ImapUid
-from inbox.server.actions.gmail import local_move
 from inbox.server.sendmail.postel import SMTPClient, SendError
 from inbox.server.sendmail.message import SenderInfo
 from inbox.server.sendmail.gmail.message import (create_gmail_email,
@@ -16,8 +16,6 @@ class GmailSMTPClient(SMTPClient):
         """
         account = db_session.query(ImapAccount).get(self.account_id)
         draftuid = db_session.query(ImapUid).get(imapuid.id)
-
-        draftuid.message.state = 'sending'
 
         # Send it using SMTP:
         try:
@@ -40,9 +38,17 @@ class GmailSMTPClient(SMTPClient):
         draftuid.message.references = smtpmsg.references
         draftuid.message.subject = smtpmsg.subject
 
-        # Move thread locally
-        local_move(db_session, account, draftuid.message.thread_id,
-                   account.drafts_folder.name, account.sent_folder.name)
+        # Update thread
+        sent_tag = self.namespace.tags['sent']
+        draftuid.message.thread.apply_tag(sent_tag)
+
+        # Remove from drafts folder
+        # TODO(emfree) don't put it in the drafts folder in the first place --
+        # just apply the drafts tag on creation.
+
+        with db_write_lock(self.namespace.id):
+            drafts_folder = account.drafts_folder
+            draftuid.message.thread.folders.discard(drafts_folder)
 
         db_session.commit()
 

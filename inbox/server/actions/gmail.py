@@ -32,9 +32,9 @@ We don't currently handle these operations on the special folders 'junk',
 """
 from inbox.server.crispin import writable_connection_pool
 
-from inbox.server.models import session_scope
-from inbox.server.models.tables.base import Namespace, Account
-from inbox.server.models.tables.imap import ImapThread, ImapAccount
+from inbox.server.models.tables.imap import ImapThread
+
+PROVIDER = 'Gmail'
 
 
 class ActionError(Exception):
@@ -50,14 +50,11 @@ def uidvalidity_cb(db_session, account_id):
     pass
 
 
-def _syncback_action(fn, imapaccount_id, folder_name):
+def _syncback_action(fn, account, folder_name, db_session):
     """ `folder_name` is a Gmail folder name. """
-    with session_scope() as db_session:
-        account = db_session.query(ImapAccount).join(Namespace).filter_by(
-            id=imapaccount_id).one()
-        with writable_connection_pool(imapaccount_id).get() as crispin_client:
-            crispin_client.select_folder(folder_name, uidvalidity_cb)
-            fn(account, db_session, crispin_client)
+    with writable_connection_pool(account.id).get() as crispin_client:
+        crispin_client.select_folder(folder_name, uidvalidity_cb)
+        fn(account, db_session, crispin_client)
 
 
 def _archive(g_thrid, crispin_client):
@@ -70,32 +67,40 @@ def _get_g_thrid(namespace_id, thread_id, db_session):
         id=thread_id).one()[0]
 
 
-def remote_archive(imapaccount_id, thread_id):
+def set_remote_archived(account, thread_id, archived, db_session):
+    if not archived:
+        # For now, implement unarchive as a move from all mail to inbox.
+        return remote_move(account, thread_id, account.all_folder,
+                           account.inbox_folder, db_session)
+
     def fn(account, db_session, crispin_client):
         g_thrid = _get_g_thrid(account.namespace.id, thread_id, db_session)
-        return _archive(g_thrid, crispin_client)
+        _archive(g_thrid, crispin_client)
 
-    with session_scope() as db_session:
-        inbox_folder = db_session.query(ImapAccount).get(imapaccount_id). \
-            inbox_folder
-        assert inbox_folder is not None
-        inbox_folder_name = inbox_folder.name
+    inbox_folder = account.inbox_folder
+    assert inbox_folder is not None
+    inbox_folder_name = inbox_folder.name
 
-    return _syncback_action(fn, imapaccount_id, inbox_folder_name)
+    return _syncback_action(fn, account, inbox_folder_name, db_session)
 
 
-def set_remote_unread(account_id, thread_id, unread):
+def set_remote_starred(account, thread_id, starred, db_session):
+    def fn(account, db_session, crispin_client):
+        g_thrid = _get_g_thrid(account.namespace.id, thread_id, db_session)
+        crispin_client.set_starred(g_thrid, starred)
+
+    return _syncback_action(fn, account, account.all_folder.name, db_session)
+
+
+def set_remote_unread(account, thread_id, unread, db_session):
     def fn(account, db_session, crispin_client):
         g_thrid = _get_g_thrid(account.namespace.id, thread_id, db_session)
         crispin_client.set_unread(g_thrid, unread)
 
-    with session_scope() as db_session:
-        all_mail_folder_name = db_session.query(Account).filter(
-            Account.id == account_id).one().all_folder.name
-    return _syncback_action(fn, account_id, all_mail_folder_name)
+    return _syncback_action(fn, account, account.all_folder.name, db_session)
 
 
-def remote_move(imapaccount_id, thread_id, from_folder, to_folder):
+def remote_move(account, thread_id, from_folder, to_folder, db_session):
     """ NOTE: We are not planning to use this function yet since Inbox never
         modifies Gmail IMAP labels.
     """
@@ -141,10 +146,10 @@ def remote_move(imapaccount_id, thread_id, from_folder, to_folder):
         else:
             raise Exception("Unknown from_folder '{}'".format(from_folder))
 
-    return _syncback_action(fn, imapaccount_id, from_folder)
+    return _syncback_action(fn, account, from_folder, db_session)
 
 
-def remote_copy(imapaccount_id, thread_id, from_folder, to_folder):
+def remote_copy(account, thread_id, from_folder, to_folder, db_session):
     """ NOTE: We are not planning to use this function yet since Inbox never
         modifies Gmail IMAP labels.
     """
@@ -161,10 +166,10 @@ def remote_copy(imapaccount_id, thread_id, from_folder, to_folder):
             crispin_client.add_label(g_thrid, to_folder)
         # copy a thread to all mail is a noop
 
-    return _syncback_action(fn, imapaccount_id, from_folder)
+    return _syncback_action(fn, account, from_folder, db_session)
 
 
-def remote_delete(imapaccount_id, thread_id, folder_name):
+def remote_delete(account, thread_id, folder_name, db_session):
     def fn(account, db_session, crispin_client):
         inbox_folder = crispin_client.folder_names()['inbox']
         all_folder = crispin_client.folder_names()['all']
@@ -187,12 +192,11 @@ def remote_delete(imapaccount_id, thread_id, folder_name):
         else:
             raise Exception("Unknown folder_name '{0}'".format(folder_name))
 
-    return _syncback_action(fn, imapaccount_id, folder_name)
+    return _syncback_action(fn, account, folder_name, db_session)
 
 
-def remote_save_draft(imapaccount_id, folder_name, message, flags=None,
-                      date=None):
+def remote_save_draft(account, folder_name, message, db_session, date=None):
     def fn(account, db_session, crispin_client):
-        crispin_client.save_draft(message, flags, date)
+        crispin_client.save_draft(message, date)
 
-    return _syncback_action(fn, imapaccount_id, folder_name)
+    return _syncback_action(fn, account, folder_name, db_session)

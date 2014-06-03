@@ -17,8 +17,8 @@ def message(db, config):
     from inbox.server.models.tables.imap import ImapAccount
 
     account = db.session.query(ImapAccount).get(ACCOUNT_ID)
-    to = u'"The red-haired mermaid" <{0}>'.\
-        format(account.email_address)
+    to = [{"name": "The red-haired mermaid",
+           "email": account.email_address}]
     subject = 'Draft test: ' + str(uuid.uuid4().hex)
     body = '<html><body><h2>Sea, birds, yoga and sand.</h2></body></html>'
 
@@ -61,7 +61,7 @@ def test_get(db, config, action_queue, message, attach):
     account = db.session.query(Account).get(ACCOUNT_ID)
     to, subject, body = message
     attachment = attach
-    cc = 'ben.bitdiddle1861@gmail.com'
+    cc = [{'name': 'Ben', 'email': 'ben.bitdiddle1861@gmail.com'}]
     bcc = None
 
     created = create_draft(db.session, account, to, subject, body,
@@ -88,7 +88,7 @@ def test_get_all(db, config, action_queue, message, attach):
     account = db.session.query(Account).get(ACCOUNT_ID)
     to, subject, body = message
     attachment = attach
-    cc = 'ben.bitdiddle1861@gmail.com'
+    cc = [{'name': 'Ben', 'email': 'ben.bitdiddle1861@gmail.com'}]
     bcc = None
 
     draft = create_draft(db.session, account, to, subject, body,
@@ -128,7 +128,7 @@ def test_create(db, config, action_queue, message, attach):
     account = db.session.query(Account).get(ACCOUNT_ID)
     to, subject, body = message
     attachment = attach
-    cc = 'ben.bitdiddle1861@gmail.com'
+    cc = [{'name': 'Ben', 'email': 'ben.bitdiddle1861@gmail.com'}]
     bcc = None
 
     created = create_draft(db.session, account, to, subject, body,
@@ -168,7 +168,7 @@ def test_update(db, config, action_queue, message, attach):
     account = db.session.query(Account).get(ACCOUNT_ID)
     to, subject, body = message
     attachment = attach
-    cc = 'ben.bitdiddle1861@gmail.com'
+    cc = [{'name': 'Ben', 'email': 'ben.bitdiddle1861@gmail.com'}]
     bcc = None
 
     original_draft = create_draft(db.session, account, None,
@@ -211,7 +211,7 @@ def test_delete(db, config, action_queue, message, attach):
     account = db.session.query(Account).get(ACCOUNT_ID)
     to, subject, body = message
     attachment = attach
-    cc = 'ben.bitdiddle1861@gmail.com'
+    cc = [{'name': 'Ben', 'email': 'ben.bitdiddle1861@gmail.com'}]
     bcc = None
 
     original_draft = create_draft(db.session, account, None,
@@ -253,17 +253,21 @@ def test_send(db, config, action_queue, message, attach):
     account = db.session.query(Account).get(ACCOUNT_ID)
     to, subject, body = message
     attachment = attach
-    cc = 'ben.bitdiddle1861@gmail.com'
+    cc = [{'name': 'Ben', 'email': 'ben.bitdiddle1861@gmail.com'}]
     bcc = None
 
     draft = create_draft(db.session, account, to, subject, body,
                          attachment, cc, bcc)
-    draft_id = draft.public_id
 
-    send_draft(db.session, account, draft_id)
+    send_draft(account.id, draft.id)
 
+    # Since the send_draft call uses its own session, we need to start a new
+    # session to see its effects.
+    db.new_session()
+
+    account = db.session.query(Account).get(ACCOUNT_ID)
     message = db.session.query(SpoolMessage).filter(
-        SpoolMessage.public_id == draft_id).one()
+        SpoolMessage.public_id == draft.public_id).one()
 
     # Check sent
     assert message.inbox_uid, 'sent message.inbox_uid missing'
@@ -273,12 +277,10 @@ def test_send(db, config, action_queue, message, attach):
     assert message.imapuids[0].folder.name == account.sent_folder.name, \
         'message.imapuid.folder is not set to sent folder'
 
-    sent_thrid = message.thread_id
-    sent_folder = db.session.query(Account).get(ACCOUNT_ID).sent_folder.name
-    sent_items = db.session.query(FolderItem).join(Folder).filter(
-        FolderItem.thread_id == sent_thrid,
-        Folder.name == sent_folder).count()
-    assert sent_items == 1, 'sent folder entry missing'
+    thread = message.thread
+    sent_tag = thread.namespace.tags['sent']
+    sent_items = sent_tag.tagitems
+    assert len(sent_items) == 1, 'sent folder entry missing'
 
     # Check not-draft
     assert not message.is_draft, 'message.is_draft still set to True'
@@ -288,6 +290,8 @@ def test_send(db, config, action_queue, message, attach):
     draft_items = db.session.query(FolderItem).join(Folder).filter(
         FolderItem.thread_id == draft_thrid,
         Folder.name == draft_folder).count()
+    # TODO(emfree) fix by only modifying the draft tag (not the folder)
+    # locally.
     assert draft_items == 0, 'draft folder entry still present'
 
     cleanup(account, subject)
@@ -301,7 +305,7 @@ def test_create_reply(db, config, action_queue, message, attach):
     account = db.session.query(Account).get(ACCOUNT_ID)
     to, subject, body = message
     attachment = attach
-    cc = 'ben.bitdiddle1861@gmail.com'
+    cc = [{'name': 'Ben', 'email': 'ben.bitdiddle1861@gmail.com'}]
     bcc = None
 
     thread = db.session.query(Thread).filter(
@@ -367,7 +371,7 @@ def test_update_reply(db, config, action_queue, message, attach):
     account = db.session.query(Account).get(ACCOUNT_ID)
     to, subject, body = message
     attachment = attach
-    cc = 'ben.bitdiddle1861@gmail.com'
+    cc = [{'name': 'Ben', 'email': 'ben.bitdiddle1861@gmail.com'}]
     bcc = None
 
     thread = db.session.query(Thread).filter(
@@ -440,7 +444,7 @@ def test_send_reply(db, config, action_queue, message, attach):
     account = db.session.query(Account).get(ACCOUNT_ID)
     to, subject, body = message
     attachment = attach
-    cc = 'ben.bitdiddle1861@gmail.com'
+    cc = [{'name': 'Ben', 'email': 'ben.bitdiddle1861@gmail.com'}]
     bcc = None
 
     thread = db.session.query(Thread).filter(
@@ -450,8 +454,14 @@ def test_send_reply(db, config, action_queue, message, attach):
 
     draft = create_draft(db.session, account, to, subject, body, attachment,
                          cc, bcc, thread_public_id)
-    send_draft(db.session, account, draft.public_id)
 
+    send_draft(account.id, draft.id)
+
+    # Since the send_draft call uses its own session, we need to start a new
+    # session to see its effects.
+    db.new_session()
+
+    account = db.session.query(Account).get(ACCOUNT_ID)
     message = db.session.query(SpoolMessage).filter(
         SpoolMessage.public_id == draft.public_id).one()
 
@@ -461,12 +471,10 @@ def test_send_reply(db, config, action_queue, message, attach):
     assert message.imapuids[0].folder.name == account.sent_folder.name, \
         'message.imapuid.folder is not set to sent folder'
 
-    sent_thrid = message.thread_id
-    sent_folder = db.session.query(Account).get(ACCOUNT_ID).sent_folder.name
-    sent_items = db.session.query(FolderItem).join(Folder).filter(
-        FolderItem.thread_id == sent_thrid,
-        Folder.name == sent_folder).count()
-    assert sent_items == 1, 'sent folder entry missing'
+    thread = message.thread
+    sent_tag = thread.namespace.tags['sent']
+    sent_items = sent_tag.tagitems
+    assert len(sent_items) == 1, 'sent folder entry missing'
 
     assert message.inbox_uid, 'sent message.inbox_uid missing'
 
@@ -490,6 +498,8 @@ def test_send_reply(db, config, action_queue, message, attach):
     draft_items = db.session.query(FolderItem).join(Folder).filter(
         FolderItem.thread_id == draft_thrid,
         Folder.name == draft_folder).count()
+    # TODO(emfree) fix by only modifying the draft tag (not the folder)
+    # locally.
     assert draft_items == 0, 'draft folder entry still present'
 
     cleanup(account, subject)

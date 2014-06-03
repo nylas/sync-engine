@@ -13,9 +13,9 @@ This is because not all servers support 8BIT and so flanker drops to b64.
 http://www.w3.org/Protocols/rfc1341/5_Content-Transfer-Encoding.html
 
 """
+from collections import namedtuple
 import uuid
 import pkg_resources
-from collections import namedtuple
 
 from flanker import mime
 from flanker.addresslib import address
@@ -26,9 +26,11 @@ VERSION = pkg_resources.get_distribution('inbox').version
 REPLYSTR = 'Re: '
 
 SenderInfo = namedtuple('SenderInfo', 'name email')
+Recipients = namedtuple('Recipients', 'to cc bcc')
 
 
-def create_email(sender_info, recipients, subject, html, attachments):
+def create_email(sender_info, recipients, subject, html,
+                 attachments):
     """
     Creates a MIME email message (both body and sets the needed headers).
 
@@ -47,9 +49,19 @@ def create_email(sender_info, recipients, subject, html, attachments):
     """
     full_name = sender_info.name if sender_info.name else ''
     email_address = sender_info.email
-    to = address.parse_list(recipients.to)
-    cc = address.parse_list(recipients.cc)
-    bcc = address.parse_list(recipients.bcc)
+
+    if recipients.to is not None:
+        to = [address.EmailAddress(*addr) for addr in recipients.to]
+    else:
+        to = []
+    if recipients.cc is not None:
+        cc = [address.EmailAddress(*addr) for addr in recipients.cc]
+    else:
+        cc = []
+    if recipients.bcc is not None:
+        bcc = [address.EmailAddress(*addr) for addr in recipients.bcc]
+    else:
+        bcc = []
     html = html if html else ''
     plaintext = html2text(html)
 
@@ -83,8 +95,7 @@ def create_email(sender_info, recipients, subject, html, attachments):
     # email address (useful if the user has multiple aliases and wants to
     # specify which to send as), see: http://lee-phillips.org/gmailRewriting/
     # For other providers, we simply use full_name = ''
-    from_addr = u'"{0}" <{1}>'.format(full_name, email_address)
-    from_addr = address.parse(from_addr)
+    from_addr = address.EmailAddress(full_name, email_address)
     msg.headers['From'] = from_addr.full_spec()
 
     # Need to set these headers so recipients know we sent the email to them:

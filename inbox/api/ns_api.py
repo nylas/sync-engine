@@ -9,7 +9,8 @@ from werkzeug.exceptions import default_exceptions
 from werkzeug.exceptions import HTTPException
 
 from inbox.server.models.tables.base import (
-    Message, Block, Part, Thread, Namespace, Lens, Webhook, Tag, Contact)
+    Message, Block, Part, Thread, Namespace, Lens, Webhook, Tag, SpoolMessage,
+    Contact)
 from inbox.server.models.kellogs import jsonify
 from inbox.server.config import config
 from inbox.server import contacts
@@ -22,16 +23,6 @@ from inbox.server.models.ignition import engine
 
 
 DEFAULT_LIMIT = 50
-SPECIAL_LABELS = [
-    'inbox',
-    'all',
-    'archive',
-    'drafts'
-    'sent',
-    'spam',
-    'starred',
-    'trash',
-    'attachment']
 
 
 app = Blueprint(
@@ -160,7 +151,7 @@ def index():
 ##
 @app.route('/tags')
 def tag_query_api():
-    results = list(g.namespace.tags)
+    results = list(g.namespace.tags.values())
     return jsonify(results)
 
 
@@ -219,25 +210,29 @@ def thread_api_update(public_id):
 
     removals = data.get('remove_tags', [])
 
+    # TODO(emfree) possibly also support adding/removing tags by tag public id,
+    # not just name.
+
     for tag_name in removals:
-        try:
-            tag = g.db_session.query(Tag).filter(
-                Tag.namespace_id == g.namespace.id,
-                Tag.name == tag_name).one()
-            # TODO(emfree) do this via a validation interface
-            thread.tags.discard(tag)
-        except NoResultFound:
+        tag = g.db_session.query(Tag).filter(
+            Tag.namespace_id == g.namespace.id,
+            Tag.name == tag_name).first()
+        if tag is None:
             return err(404, 'No tag found with name {}'.  format(tag_name))
+        if not tag.user_mutable:
+            return err(400, 'Cannot remove tag {}'.format(tag_name))
+        thread.remove_tag(tag, execute_action=True)
 
     additions = data.get('add_tags', [])
     for tag_name in additions:
-        try:
-            tag = g.db_session.query(Tag).filter(
-                Tag.namespace_id == g.namespace.id,
-                Tag.name == tag_name).one()
-            thread.tags.add(tag)
-        except NoResultFound:
-            return err(404, 'No tag found with name {}'.  format(tag_name))
+        tag = g.db_session.query(Tag).filter(
+            Tag.namespace_id == g.namespace.id,
+            Tag.name == tag_name).first()
+        if tag is None:
+            return err(404, 'No tag found with name {}'.format(tag_name))
+        if not tag.user_mutable:
+            return err(400, 'Cannot remove tag {}'.format(tag_name))
+        thread.apply_tag(tag, execute_action=True)
 
     g.db_session.commit()
     return jsonify(thread)
@@ -518,6 +513,10 @@ def webhooks_delete_api(public_id):
 ##
 # Drafts
 ##
+
+# TODO(emfree, kavya): Systematically validate user input, and return
+# meaningful errors for invalid input.
+
 @app.route('/drafts', methods=['GET'])
 def draft_get_all_api():
     drafts = sendmail.get_all_drafts(g.db_session, g.namespace.account)
@@ -527,15 +526,14 @@ def draft_get_all_api():
 @app.route('/drafts/<public_id>', methods=['GET'])
 def draft_get_api(public_id):
     draft = sendmail.get_draft(g.db_session, g.namespace.account, public_id)
+    if draft is None:
+        return err(404, 'No draft found with id {}'.format(public_id))
     return jsonify(draft)
 
 
 @app.route('/drafts', methods=['POST'])
 def draft_create_api():
-    try:
-        data = request.get_json(force=True)
-    except ValueError:
-        return err(400, 'Malformed request')
+    data = request.get_json(force=True)
 
     to = data.get('to')
     cc = data.get('cc')
@@ -555,10 +553,7 @@ def draft_create_api():
 
 @app.route('/drafts/<public_id>', methods=['POST'])
 def draft_update_api(public_id):
-    try:
-        data = request.get_json(force=True)
-    except ValueError:
-        return err(400, 'Malformed request')
+    data = request.get_json(force=True)
 
     to = data.get('to')
     cc = data.get('cc')
@@ -582,12 +577,33 @@ def draft_delete_api(public_id):
 
 @app.route('/send', methods=['POST'])
 def draft_send_api():
-    try:
-        data = request.get_json(force=True)
-    except ValueError:
-        return err(400, 'Malformed request')
+    data = request.get_json(force=True)
+    if data.get('draft_id') is None and data.get('to') is None:
+        return err(400, 'Must specify either draft id or message recipients.')
 
     draft_public_id = data.get('draft_id')
+    if draft_public_id is not None:
+        try:
+            draft = g.db_session.query(SpoolMessage).filter(
+                SpoolMessage.public_id == draft_public_id).one()
+        except NoResultFound:
+            return err(404, 'No draft found with public_id {}'.
+                       format(draft_public_id))
+
+        if draft.namespace != g.namespace:
+            return err(404, 'No draft found with public_id {}'.
+                       format(draft_public_id))
+
+        if draft.is_sent or not draft.is_draft:
+            return err(400, 'Message with public id {} is not a draft'.
+                       format(draft_public_id))
+
+        if not draft.to_addr:
+            return err(400, "No 'to:' recipients_specified")
+
+        # Mark draft for sending
+        draft.state = 'sending'
+        return jsonify(draft)
 
     to = data.get('to')
     cc = data.get('cc')
@@ -596,10 +612,8 @@ def draft_send_api():
     body = data.get('body')
     files = data.get('files')
 
-    if not draft_public_id or to:
-        return err(400, 'Malformed request')
-
-    result = sendmail.send_draft(g.db_session, g.namespace.account,
-                                 draft_public_id, to, subject, body, files,
-                                 cc, bcc)
-    return jsonify(result)
+    draft = sendmail.create_draft(g.db_session, g.namespace.account, to,
+                                  subject, body, files, cc, bcc)
+    # Mark draft for sending
+    draft.state = 'sending'
+    return jsonify(draft)

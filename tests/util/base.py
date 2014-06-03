@@ -1,8 +1,9 @@
-import os, subprocess
+import os
+import subprocess
 
 import zerorpc
 from shutil import rmtree
-from pytest import fixture
+from pytest import fixture, yield_fixture
 
 from inbox.util.db import drop_everything
 
@@ -66,7 +67,7 @@ def log(request, config):
     return configure_general_logging()
 
 
-@fixture(scope='function')
+@yield_fixture(scope='function')
 def db(request, config):
     """ NOTE: You cannot rely on IMAP UIDs from the test db being correctly
         up-to-date. If you need to test sync functionality, start with a
@@ -75,16 +76,16 @@ def db(request, config):
     dumpfile = request.param[0]
     savedb = request.param[1]
 
-    testdb = TestDB(config, dumpfile)
-
     def save():
         testdb.save()
         testdb.destroy()
 
-    request.addfinalizer(save) if savedb \
-        else request.addfinalizer(testdb.destroy)
+    testdb = TestDB(config, dumpfile)
+    yield testdb
 
-    return testdb
+    if savedb:
+        testdb.save()
+    testdb.destroy()
 
 
 @fixture(scope='function')
@@ -95,6 +96,14 @@ def action_queue(request, config):
     # make sure it's empty to start out with too
     q.empty()
     return q
+
+
+# TODO(emfree) can we make this into a yield_fixture without the tests hanging?
+@yield_fixture
+def api_client(db):
+    from inbox.api.srv import app
+    app.config['TESTING'] = True
+    yield app.test_client()
 
 
 class TestDB(object):
