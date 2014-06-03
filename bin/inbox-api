@@ -5,8 +5,10 @@ import argparse
 from setproctitle import setproctitle; setproctitle('inbox-api')
 
 from inbox.server.log import configure_general_logging, get_logger
+from inbox.util.startup import preflight
 configure_general_logging()
 log = get_logger()
+preflight()
 
 
 parser = argparse.ArgumentParser(description="REPL for crispin")
