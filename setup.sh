@@ -11,11 +11,6 @@ color() {
       # bg: 40 black, 41 red, 44 blue, 45 purple
       }
 
-if [ ! -f ./config.cfg ]; then
-    color '31;1' 'config.cfg file not found!'
-    exit 1
-fi
-
 color '36;1' "
       _____       _
      |_   _|     | |
