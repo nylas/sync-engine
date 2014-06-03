@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.35, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.37, for debian-linux-gnu (x86_64)
 --
--- Host: localhost    Database: inbox
+-- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.5.35-0ubuntu0.12.04.2-log
+-- Server version	5.5.37-0ubuntu0.12.04.1-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -111,7 +111,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('24e085e152c0');
+INSERT INTO `alembic_version` VALUES ('21878b1b3d4b');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -365,8 +365,7 @@ CREATE TABLE `folder` (
   `created_at` datetime NOT NULL,
   `updated_at` datetime NOT NULL,
   `deleted_at` datetime DEFAULT NULL,
-  `exposed_name` varchar(255) DEFAULT NULL,
-  `public_id` varchar(191) DEFAULT NULL,
+  `canonical_name` varchar(191) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_id` (`account_id`,`name`),
   KEY `ix_folder_created_at` (`created_at`),
@@ -382,7 +381,7 @@ CREATE TABLE `folder` (
 
 LOCK TABLES `folder` WRITE;
 /*!40000 ALTER TABLE `folder` DISABLE KEYS */;
-INSERT INTO `folder` VALUES (1,1,'[Gmail]/Important','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'important','important'),(2,1,'Inbox','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'inbox','inbox'),(3,1,'[Gmail]/All Mail','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'all','all'),(4,1,'[Gmail]/Sent Mail','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'sent','sent'),(5,1,'[Gmail]/Drafts','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'drafts','drafts');
+INSERT INTO `folder` VALUES (1,1,'[Gmail]/Important','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'important'),(2,1,'Inbox','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'inbox'),(3,1,'[Gmail]/All Mail','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'all'),(4,1,'[Gmail]/Sent Mail','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'sent'),(5,1,'[Gmail]/Drafts','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'drafts');
 /*!40000 ALTER TABLE `folder` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -873,6 +872,78 @@ LOCK TABLES `spoolmessage` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `tag`
+--
+
+DROP TABLE IF EXISTS `tag`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tag` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `namespace_id` int(11) NOT NULL,
+  `public_id` varchar(191) NOT NULL,
+  `name` varchar(191) NOT NULL,
+  `user_created` tinyint(1) NOT NULL DEFAULT '0',
+  `user_mutable` tinyint(1) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `namespace_id` (`namespace_id`,`name`),
+  UNIQUE KEY `namespace_id_2` (`namespace_id`,`public_id`),
+  KEY `ix_tag_created_at` (`created_at`),
+  KEY `ix_tag_deleted_at` (`deleted_at`),
+  KEY `ix_tag_updated_at` (`updated_at`),
+  CONSTRAINT `tag_ibfk_1` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tag`
+--
+
+LOCK TABLES `tag` WRITE;
+/*!40000 ALTER TABLE `tag` DISABLE KEYS */;
+INSERT INTO `tag` VALUES (1,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'replied','replied',0,1),(2,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'sending','sending',0,1),(3,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'all','all',0,1),(4,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'trash','trash',0,1),(5,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'drafts','drafts',0,1),(6,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'spam','spam',0,1),(7,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'unstarred','unstarred',0,1),(8,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'send','send',0,1),(9,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'inbox','inbox',0,1),(10,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'file','file',0,1),(11,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'starred','starred',0,1),(12,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'unread','unread',0,1),(13,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'archive','archive',0,1),(14,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'sent','sent',0,1),(15,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'attachment','attachment',0,1),(16,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'important','important',0,1);
+/*!40000 ALTER TABLE `tag` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tagitem`
+--
+
+DROP TABLE IF EXISTS `tagitem`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tagitem` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `thread_id` int(11) NOT NULL,
+  `tag_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `tag_id` (`tag_id`),
+  KEY `thread_id` (`thread_id`),
+  KEY `ix_tagitem_created_at` (`created_at`),
+  KEY `ix_tagitem_deleted_at` (`deleted_at`),
+  KEY `ix_tagitem_updated_at` (`updated_at`),
+  CONSTRAINT `tagitem_ibfk_1` FOREIGN KEY (`tag_id`) REFERENCES `tag` (`id`),
+  CONSTRAINT `tagitem_ibfk_2` FOREIGN KEY (`thread_id`) REFERENCES `thread` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tagitem`
+--
+
+LOCK TABLES `tagitem` WRITE;
+/*!40000 ALTER TABLE `tagitem` DISABLE KEYS */;
+INSERT INTO `tagitem` VALUES (1,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,16),(2,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,9),(3,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,3),(4,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,2,16),(5,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,2,9),(6,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,2,3),(7,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,3,16),(8,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,3,9),(9,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,3,3),(10,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,4,16),(11,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,4,9),(12,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,4,3),(13,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,5,16),(14,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,5,9),(15,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,5,3),(16,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,6,16),(17,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,6,9),(18,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,6,3),(19,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,7,16),(20,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,7,9),(21,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,7,3),(22,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,8,16),(23,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,8,9),(24,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,8,3),(25,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,9,16),(26,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,9,9),(27,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,9,3),(28,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,10,9),(29,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,10,3),(30,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,11,3),(31,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,12,3),(32,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,13,3),(33,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,14,3),(34,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,15,3),(35,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,16,16),(36,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,16,3);
+/*!40000 ALTER TABLE `tagitem` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `thread`
 --
 
@@ -984,77 +1055,6 @@ INSERT INTO `uidvalidity` VALUES (1,1,'INBOX',1,106957,'2014-05-13 02:19:13','20
 UNLOCK TABLES;
 
 --
--- Table structure for table `usertag`
---
-
-DROP TABLE IF EXISTS `usertag`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `usertag` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `public_id` binary(16) NOT NULL,
-  `namespace_id` int(11) NOT NULL,
-  `name` varchar(191) NOT NULL,
-  `thread_id` int(11) NOT NULL,
-  `created_at` datetime NOT NULL,
-  `updated_at` datetime NOT NULL,
-  `deleted_at` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `namespace_id` (`namespace_id`,`name`),
-  KEY `thread_id` (`thread_id`),
-  KEY `ix_usertag_created_at` (`created_at`),
-  KEY `ix_usertag_deleted_at` (`deleted_at`),
-  KEY `ix_usertag_public_id` (`public_id`),
-  KEY `ix_usertag_updated_at` (`updated_at`),
-  CONSTRAINT `usertag_ibfk_1` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `usertag_ibfk_2` FOREIGN KEY (`thread_id`) REFERENCES `thread` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `usertag`
---
-
-LOCK TABLES `usertag` WRITE;
-/*!40000 ALTER TABLE `usertag` DISABLE KEYS */;
-/*!40000 ALTER TABLE `usertag` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `usertagitem`
---
-
-DROP TABLE IF EXISTS `usertagitem`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `usertagitem` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `thread_id` int(11) NOT NULL,
-  `usertag_id` int(11) NOT NULL,
-  `created_at` datetime NOT NULL,
-  `updated_at` datetime NOT NULL,
-  `deleted_at` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `thread_id` (`thread_id`),
-  KEY `usertag_id` (`usertag_id`),
-  KEY `ix_usertagitem_created_at` (`created_at`),
-  KEY `ix_usertagitem_deleted_at` (`deleted_at`),
-  KEY `ix_usertagitem_updated_at` (`updated_at`),
-  CONSTRAINT `usertagitem_ibfk_1` FOREIGN KEY (`thread_id`) REFERENCES `thread` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `usertagitem_ibfk_2` FOREIGN KEY (`usertag_id`) REFERENCES `usertag` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `usertagitem`
---
-
-LOCK TABLES `usertagitem` WRITE;
-/*!40000 ALTER TABLE `usertagitem` DISABLE KEYS */;
-/*!40000 ALTER TABLE `usertagitem` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `webhook`
 --
 
@@ -1107,4 +1107,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-05-22 18:49:05
+-- Dump completed on 2014-05-29 20:34:34

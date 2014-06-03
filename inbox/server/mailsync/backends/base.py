@@ -20,10 +20,6 @@ class MailsyncError(Exception):
     pass
 
 
-def verify_db(crispin_client, db_session):
-    pass
-
-
 def verify_folder_name(account_id, old, new):
     if old is not None and old.name != new.name:
         raise SyncException(
@@ -46,26 +42,29 @@ def save_folder_names(log, account, folder_names, db_session):
     assert 'inbox' in folder_names, 'Account {} has no detected inbox folder'\
         .format(account.email_address)
 
-    folders = dict([(f.name.lower(), f) for f in
-                    db_session.query(Folder).filter_by(account=account).all()])
+    folders = {f.name.lower(): f for f in
+               db_session.query(Folder).filter_by(account=account)}
 
-    for tag in ['inbox', 'drafts', 'sent', 'spam', 'trash', 'starred',
-                'important', 'archive', 'all']:
-        if tag in folder_names:
-            if folder_names[tag].lower() not in folders:
-                folder = Folder.create(account, folder_names[tag], tag)
-                attr_name = '{}_folder'.format(tag)
+    for canonical_name in ['inbox', 'drafts', 'sent', 'spam', 'trash',
+                           'starred', 'important', 'archive', 'all']:
+        if canonical_name in folder_names:
+            backend_folder_name = folder_names[canonical_name].lower()
+            if backend_folder_name not in folders:
+                folder = Folder.create(account, folder_names[canonical_name],
+                                       db_session,
+                                       canonical_name)
+                attr_name = '{}_folder'.format(canonical_name)
                 setattr(account, attr_name, verify_folder_name(
                     account.id, getattr(account, attr_name), folder))
-            if folder_names[tag].lower() in folders:
-                del folders[folder_names[tag].lower()]
+            else:
+                del folders[backend_folder_name]
 
     # Gmail labels, user-created IMAP/EAS folders, etc.
     if 'extra' in folder_names:
         for name in folder_names['extra']:
             name = name[:MAX_FOLDER_NAME_LENGTH]
             if name.lower() not in folders:
-                folder = Folder.create(account, name)
+                folder = Folder.create(account, name, db_session)
                 db_session.add(folder)
             if name.lower() in folders:
                 del folders[name.lower()]

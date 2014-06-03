@@ -1,7 +1,7 @@
 """Add columns for drafts support to SpoolMessage
 
 Revision ID: 24e085e152c0
-Revises: 59b42d0ac749
+Revises: 350a08df27ee
 Create Date: 2014-05-13 22:50:03.938446
 
 """

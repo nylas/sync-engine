@@ -82,8 +82,7 @@ from inbox.server.models.tables.imap import ImapAccount, FolderSync
 from inbox.server.models.namespace import db_write_lock
 from inbox.server.mailsync.exc import UIDInvalid
 from inbox.server.mailsync.backends.imap import account
-from inbox.server.mailsync.backends.base import (verify_db,
-                                                 save_folder_names,
+from inbox.server.mailsync.backends.base import (save_folder_names,
                                                  create_db_objects,
                                                  commit_uids, new_or_updated)
 from inbox.server.mailsync.backends.base import BaseMailSyncMonitor
@@ -265,8 +264,6 @@ def base_initial_sync(crispin_client, db_session, log, folder_name,
 
     initial_sync_fn(crispin_client, db_session, log, folder_name,
                     shared_state, local_uids, uid_download_stack)
-
-    verify_db(crispin_client, db_session)
 
     return 'poll'
 

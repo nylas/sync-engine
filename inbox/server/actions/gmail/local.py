@@ -24,11 +24,8 @@ def local_archive(db_session, account, thread_id):
     """
     with db_write_lock(account.namespace.id):
         try:
-            inbox_item = db_session.query(FolderItem).join(Thread).filter(
-                Thread.namespace_id == account.namespace.id,
-                FolderItem.thread_id == thread_id,
-                FolderItem.folder_id == account.inbox_folder_id).one()
-            db_session.delete(inbox_item)
+            thread = db_session.query(Thread).get(thread_id)
+            thread.folders.discard(account.inbox_folder)
         except NoResultFound:
             pass
         db_session.commit()

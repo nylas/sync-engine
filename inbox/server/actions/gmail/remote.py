@@ -76,9 +76,8 @@ def remote_archive(imapaccount_id, thread_id):
         return _archive(g_thrid, crispin_client)
 
     with session_scope() as db_session:
-        inbox_folder = db_session.query(ImapAccount)\
-            .join(ImapAccount.inbox_folder).filter(
-                ImapAccount.id == imapaccount_id).one().inbox_folder
+        inbox_folder = db_session.query(ImapAccount).get(imapaccount_id). \
+            inbox_folder
         assert inbox_folder is not None
         inbox_folder_name = inbox_folder.name
 

@@ -9,7 +9,7 @@ from werkzeug.exceptions import default_exceptions
 from werkzeug.exceptions import HTTPException
 
 from inbox.server.models.tables.base import (
-    Message, Block, Part, Thread, Namespace, Lens, Webhook, UserTag, Contact)
+    Message, Block, Part, Thread, Namespace, Lens, Webhook, Tag, Contact)
 from inbox.server.models.kellogs import jsonify
 from inbox.server.config import config
 from inbox.server import contacts
@@ -160,7 +160,7 @@ def index():
 ##
 @app.route('/tags')
 def tag_query_api():
-    results = list(g.namespace.usertags.union(g.namespace.account.folders))
+    results = list(g.namespace.tags)
     return jsonify(results)
 
 
@@ -170,10 +170,10 @@ def tag_create_api():
     if data.keys() != ['name']:
         return err(400, 'Malformed tag request')
     tag_name = data['name']
-    if not UserTag.name_available(tag_name, g.namespace.id, g.db_session):
+    if not Tag.name_available(tag_name, g.namespace.id, g.db_session):
         return err(409, 'Tag name not available')
 
-    tag = UserTag(name=tag_name, namespace=g.namespace)
+    tag = Tag(name=tag_name, namespace=g.namespace, user_created=True)
     g.db_session.commit()
     return jsonify(tag)
 
@@ -219,25 +219,23 @@ def thread_api_update(public_id):
 
     removals = data.get('remove_tags', [])
 
-    # TODO(emfree) Currently trying to add/remove a read-only tag (i.e.,
-    # anything but a UserTag) will give a "no tag found" error.
-
     for tag_name in removals:
         try:
-            tag = g.db_session.query(UserTag).filter(
-                UserTag.namespace_id == g.namespace.id,
-                UserTag.name == tag_name).one()
-            thread.usertags.discard(tag)
+            tag = g.db_session.query(Tag).filter(
+                Tag.namespace_id == g.namespace.id,
+                Tag.name == tag_name).one()
+            # TODO(emfree) do this via a validation interface
+            thread.tags.discard(tag)
         except NoResultFound:
             return err(404, 'No tag found with name {}'.  format(tag_name))
 
     additions = data.get('add_tags', [])
     for tag_name in additions:
         try:
-            tag = g.db_session.query(UserTag).filter(
-                UserTag.namespace_id == g.namespace.id,
-                UserTag.name == tag_name).one()
-            thread.usertags.add(tag)
+            tag = g.db_session.query(Tag).filter(
+                Tag.namespace_id == g.namespace.id,
+                Tag.name == tag_name).one()
+            thread.tags.add(tag)
         except NoResultFound:
             return err(404, 'No tag found with name {}'.  format(tag_name))
 
