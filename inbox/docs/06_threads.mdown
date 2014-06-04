@@ -4,7 +4,7 @@ Title: Threads
 Threads are the main object in Inbox. They can be read, archived, and deleted. All messages are part of a thread, even if that thread has only one message. Operations like flagging and marking as read are only done at the thread level.
 
 
-# The thread object
+# Retrieving a Thread
 
     GET https://api.inboxapp.com/n/<namespace_id>/threads/<thread_id>
 
@@ -38,13 +38,11 @@ The thread object includes useful information like subject, participants, and ti
     "tags": [
         {
             "name": "inbox",
-            "id": "f0idlvozkrpj3ihxze7obpivh",
-            "namespace": "awa6ltos76vz5hvphkp8k17nt"
+            "id": "f0idlvozkrpj3ihxze7obpivh"
         },
         {
-            'name': 'drafts',
-            'id': 8keda28h8ijj2nogpj83yjep8,
-            "namespace": "awa6ltos76vz5hvphkp8k17nt"
+            'name': "unread",
+            'id': "8keda28h8ijj2nogpj83yjep8"
         }
     ],
     "messages": [
@@ -53,16 +51,22 @@ The thread object includes useful information like subject, participants, and ti
         "ah5wuphj3t83j260jqucm9a28",
         ...
     ],
+    "drafts": [
+        "251r594smznew6yhi12312saq"
+    ]
 }
 ```
 
 
 
-# Requesting several threads
+# Retrieving Many Threads
 
     GET https://api.inboxapp.com/n/<namespace_id>/threads?<filter_string>
 
-This API supports [Filters](#filters), making it easy to return a subset of threads matching your needs. You should specify one or more filter parameters to return threads in a specific folder, from a specific sender, etc.
+This API supports [Filters](#filters), making it easy to return a subset of threads matching your needs. You should specify one or more filter parameters to return threads in a specific folder, from a specific sender, etc. For example, this request would return the threads in the user's inbox:
+
+    GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=inbox
+
 
 **Response:**
 
@@ -75,7 +79,6 @@ This API supports [Filters](#filters), making it easy to return a subset of thre
     ...
 ]   
 ```
-
 
 # Archiving, Starring, and Deleting threads
 

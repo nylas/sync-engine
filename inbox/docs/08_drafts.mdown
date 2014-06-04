@@ -6,15 +6,19 @@ To get a list of all threads with drafts, use the [Threads](#threads) API call w
 
     https://api.inboxapp.com/n/<namespace_id>/threads?tag=drafts
 
-# Get a draft 
+# Retrieving Drafts
+
+    GET  https://api.inboxapp.com/n/<namespace_id>/drafts
+    GET  https://api.inboxapp.com/n/<namespace_id>/drafts/<draft_id>
 
 
-# Creating a new draft
+# Creating a draft
 
     POST https://api.inboxapp.com/n/<namespace_id>/drafts
 
 
-**Sample post body**
+**Sample Post Body**
+
 ```
 :::json
 {
@@ -40,7 +44,7 @@ Note that `subject`, `to`, `body`, `files` are all optional fields.
 Also note that creating a draft will fail if the referenced `files` ids have not been uploaded. See [Files](#files) for more details on how to upload and reference attachments.
 
 
-# Replies to an existing thread
+### Creating a reply to an existing thread
 
 If the draft is a response to a message in a thread, you should provide the thread's ID in the `reply_to_thread` parameter and omit the `subject` parameter. Messages you create or send __should not include quoted text__ when they are in reply to an existing thread.
 
@@ -65,6 +69,8 @@ Updating a draft is as simple as issuing a POST request to the draft's URI.
 
 Any fields in the body of the request will overwrite previous values. If you attempt to modify properties on a draft that does not exist, this request will fail.
 
+Updating a draft returns a new draft object, with a new ID. When submitting subsequent send or save actions, you must use this new ID. Returning a new draft revision with a new ID is important in case multiple clients have queued, but not successfully sent, changes to the same draft. In these cases, the draft is forked into two separate drafts.
+
 # Deleting a draft
 
 To delete a draft simply issue a DELETE request to the draft's URI.
@@ -72,3 +78,8 @@ To delete a draft simply issue a DELETE request to the draft's URI.
     DELETE https://api.inboxapp.com/n/<namespace_id>/drafts/<draft_id>
 
 If the draft does not exist, this request will fail.
+
+
+# Sending a draft
+
+The Inbox API provides a single API for sending new messages and draft messages. See [Sending](#sending) for more information.
