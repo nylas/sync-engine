@@ -124,4 +124,9 @@ def preflight():
     check_requirements(requirements_path)
     clean_pyc()
     check_db()
+
+    # Print a traceback when the process receives signal SIGSEGV, SIGFPE,
+    # SIGABRT, SIGBUS or SIGILL
+    import faulthandler
+    faulthandler.enable()
     log.debug("Current git revision: {}".format(git_rev().strip()))
