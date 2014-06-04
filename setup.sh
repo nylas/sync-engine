@@ -25,9 +25,6 @@ color '36;1' "
      https://www.github.com/inboxapp/inbox
 "
 
-color '35;1' "Press enter to continue..."
-read enterKey
-
 color '35;1' 'Updating packages...'
 apt-get update
 apt-get -y install python-software-properties
