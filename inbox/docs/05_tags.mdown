@@ -27,7 +27,7 @@ Tags are the primary way of storing metadata on a specific thread. They are gene
 
     POST https://api.inboxapp.com/n/<namespace_id>/tags
 
-**Sample post body**
+**Request body**
 ```
 ::json
 {
@@ -35,7 +35,7 @@ Tags are the primary way of storing metadata on a specific thread. They are gene
 }
 ```
 
-# Adding a tag to a thread
+# Modifying tags on a thread
 
     PUT https://api.inboxapp.com/n/<namespace_id>/thread/<thread_id>
 
@@ -84,4 +84,5 @@ Adding certain tags will cause an action to be performed on the thread.
 
 * adding **`archive`** will remove the thread from `inbox`
 * adding **`delete`** will remove all tags, and queue the message for deletion
+* adding or removing **`unread`** will mark the thread as read or unread, respectively.
 
