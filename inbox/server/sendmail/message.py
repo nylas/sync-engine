@@ -13,9 +13,9 @@ This is because not all servers support 8BIT and so flanker drops to b64.
 http://www.w3.org/Protocols/rfc1341/5_Content-Transfer-Encoding.html
 
 """
-from collections import namedtuple
 import uuid
 import pkg_resources
+from collections import namedtuple
 
 from flanker import mime
 from flanker.addresslib import address
@@ -26,11 +26,9 @@ VERSION = pkg_resources.get_distribution('inbox').version
 REPLYSTR = 'Re: '
 
 SenderInfo = namedtuple('SenderInfo', 'name email')
-Recipients = namedtuple('Recipients', 'to cc bcc')
 
 
-def create_email(sender_info, recipients, subject, html,
-                 attachments):
+def create_email(sender_info, recipients, subject, html, attachments):
     """
     Creates a MIME email message (both body and sets the needed headers).
 

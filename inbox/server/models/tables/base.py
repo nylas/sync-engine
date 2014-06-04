@@ -943,9 +943,9 @@ class Thread(Base, HasPublicID, HasRevisions):
             folder = folderitem.folder
             tag = folder.get_associated_tag(object_session(self))
             if is_remove:
-                self.remove_tag(tag)
+                self.tags.discard(tag)
             else:
-                self.apply_tag(tag)
+                self.tags.add(tag)
         return folderitem
 
     folderitems = relationship(
@@ -988,12 +988,6 @@ class Thread(Base, HasPublicID, HasRevisions):
 
         if len(message.mailing_list_headers) > len(self.mailing_list_headers):
             self.mailing_list_headers = message.mailing_list_headers
-
-        unread_tag = self.namespace.tags['unread']
-        if all(message.is_read for message in self.messages):
-            self.remove_tag(unread_tag)
-        else:
-            self.apply_tag(unread_tag)
         return self
 
     @property
@@ -1021,65 +1015,6 @@ class Thread(Base, HasPublicID, HasRevisions):
                      itertools.chain(m.from_addr, m.to_addr,
                                      m.cc_addr, m.bcc_addr))
         return p
-
-    def apply_tag(self, tag, execute_action=False):
-        """Add the given Tag instance to this thread. Does nothing if the tag
-        is already applied. Contains extra logic for validating input and
-        triggering dependent changes. Callers should use this method instead of
-        directly calling Thread.tags.add(tag).
-
-        Parameters
-        ----------
-        tag: Tag instance
-        execute_action: bool
-            True if adding the tag should trigger a syncback action.
-        """
-        if tag in self.tags:
-            return
-        # We need to directly access the tagitem object here in order to set
-        # the 'action_pending' flag.
-        tagitem = TagItem(thread=self, tag=tag)
-        tagitem.action_pending = execute_action
-        self.tagitems.add(tagitem)
-
-        # Add or remove dependent tags.
-        # TODO(emfree) this should eventually live in its own utility function.
-        inbox_tag = self.namespace.tags['inbox']
-        archive_tag = self.namespace.tags['archive']
-        if tag == inbox_tag:
-            self.tags.discard(archive_tag)
-        elif tag == archive_tag:
-            self.tags.discard(inbox_tag)
-
-    def remove_tag(self, tag, execute_action=False):
-        """Remove the given Tag instance from this thread. Does nothing if the
-        tag isn't present. Contains extra logic for validating input and
-        triggering dependent changes. Callers should use this method instead of
-        directly calling Thread.tags.discard(tag).
-
-        Parameters
-        ----------
-        tag: Tag instance
-        execute_action: bool
-            True if removing the tag should trigger a syncback action.
-        """
-        if tag not in self.tags:
-            return
-        # We need to directly access the tagitem object here in order to set
-        # the 'action_pending' flag.
-        tagitem = object_session(self).query(TagItem). \
-            filter(TagItem.thread == self,
-                   TagItem.tag == tag).one()
-        tagitem.action_pending = True
-        self.tags.remove(tag)
-
-        # Add or remove dependent tags.
-        inbox_tag = self.namespace.tags['inbox']
-        archive_tag = self.namespace.tags['archive']
-        if tag == inbox_tag:
-            self.tags.add(archive_tag)
-        elif tag == archive_tag:
-            self.tags.add(inbox_tag)
 
     # STOPSHIP(emfree) make this work with new versioned properties thing
     def get_versioned_properties(self):
@@ -1599,10 +1534,7 @@ class Folder(Base, HasRevisions):
                     filter(Tag.namespace == self.account.namespace,
                            Tag.public_id == self.canonical_name).one()
             except NoResultFound:
-                # Explicitly set the namespace_id instead of the namespace
-                # attribute to avoid autoflush-induced IntegrityErrors where
-                # the namespace_id is null on flush.
-                tag = Tag(namespace_id=self.account.namespace.id,
+                tag = Tag(namespace=self.account.namespace,
                           name=self.canonical_name,
                           public_id=self.canonical_name,
                           user_mutable=True)
@@ -1617,10 +1549,7 @@ class Folder(Base, HasRevisions):
                     filter(Tag.namespace == self.account.namespace,
                            Tag.name == tag_name).one()
             except NoResultFound:
-                # Explicitly set the namespace_id instead of the namespace
-                # attribute to avoid autoflush-induced IntegrityErrors where
-                # the namespace_id is null on flush.
-                tag = Tag(namespace_id=self.account.namespace.id,
+                tag = Tag(namespace=self.account.namespace,
                           name=tag_name,
                           user_mutable=False)
                 db_session.add(tag)
@@ -1686,17 +1615,13 @@ class Tag(Base, HasRevisions):
     """
 
     namespace = relationship(
-        'Namespace', backref=backref(
-            'tags',
-            primaryjoin='and_(Tag.namespace_id == Namespace.id, '
-                        'Tag.deleted_at.is_(None))',
-            collection_class=attribute_mapped_collection('public_id')),
+        'Namespace', backref=backref('tags',
+                                     primaryjoin='and_('
+                                     'Tag.namespace_id == Namespace.id, '
+                                     'Tag.deleted_at.is_(None))',
+                                     collection_class=set),
         primaryjoin='and_(Tag.namespace_id==Namespace.id, '
-        'Namespace.deleted_at.is_(None))',
-        load_on_pending=True)
-    # (Because this class inherits from HasRevisions, we need
-    # load_on_pending=True here so that setting Transaction.namespace in
-    # Transaction.set_extra_attrs() doesn't raise an IntegrityError.)
+        'Namespace.deleted_at.is_(None))')
     namespace_id = Column(Integer, ForeignKey(
         'namespace.id', ondelete='CASCADE'), nullable=False)
 
@@ -1711,23 +1636,7 @@ class Tag(Base, HasRevisions):
 
     RESERVED_TAG_NAMES = ['inbox', 'all', 'archive', 'drafts', 'send',
                           'sending', 'sent', 'spam', 'starred', 'unstarred',
-                          'unread', 'replied', 'trash', 'file', 'attachment']
-
-    @classmethod
-    def create_canonical_tags(cls, namespace, db_session):
-        """If they don't already exist yet, create tags that should always
-        exist."""
-        existing_canonical_tags = db_session.query(Tag).filter(
-            Tag.namespace == namespace,
-            Tag.public_id.in_(cls.RESERVED_TAG_NAMES)).all()
-        missing_canonical_names = set(cls.RESERVED_TAG_NAMES).difference(
-            {tag.public_id for tag in existing_canonical_tags})
-        for canonical_name in missing_canonical_names:
-            tag = Tag(namespace=namespace,
-                      public_id=canonical_name,
-                      name=canonical_name,
-                      user_mutable=True)
-            db_session.add(tag)
+                          'read', 'replied', 'trash', 'file', 'attachment']
 
     @classmethod
     def name_available(cls, name, namespace_id, db_session):

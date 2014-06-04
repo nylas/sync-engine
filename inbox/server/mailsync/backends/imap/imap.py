@@ -78,7 +78,6 @@ from inbox.util.itert import chunk
 from inbox.server.log import get_logger, log_uncaught_errors
 from inbox.server.crispin import connection_pool, retry_crispin
 from inbox.server.models import session_scope
-from inbox.server.models.tables.base import Tag
 from inbox.server.models.tables.imap import ImapAccount, FolderSync
 from inbox.server.models.namespace import db_write_lock
 from inbox.server.mailsync.exc import UIDInvalid
@@ -135,7 +134,6 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                     .get(self.account_id)
                 save_folder_names(self.log, imapaccount,
                                   crispin_client.folder_names(), db_session)
-                Tag.create_canonical_tags(imapaccount.namespace, db_session)
         for folder in sync_folders:
             if saved_states.get(folder) != 'finish':
                 self.log.info("Initializing folder sync for {0}"

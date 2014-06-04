@@ -28,7 +28,6 @@ config = dict(
     BLOCK_SERVER_LOC='tcp://0.0.0.0:9996',
     SEARCH_SERVER_LOC='tcp://0.0.0.0:9995',
     WEBHOOK_SERVER_LOC='tcp://0.0.0.0:9994',
-    ACTION_SERVER_LOC='tcp://0.0.0.0:9993',
 
     STORE_MESSAGES_ON_S3=False,
 

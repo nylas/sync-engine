@@ -15,8 +15,8 @@ from pkgutil import extend_path
 __path__ = extend_path(__path__, __name__)
 
 from inbox.server.sendmail.base import (create_draft, update_draft,
-                                        delete_draft, get_draft,
+                                        delete_draft, send_draft, get_draft,
                                         get_all_drafts)
 
-__all__ = ['create_draft', 'update_draft', 'delete_draft',
+__all__ = ['create_draft', 'update_draft', 'delete_draft', 'send_draft',
            'get_draft', 'get_all_drafts']

@@ -178,8 +178,6 @@ class ImapThread(Thread):
                      recentdate=message.received_date, namespace=namespace,
                      subjectdate=message.received_date,
                      mailing_list_headers=message.mailing_list_headers)
-        if not message.is_read:
-            thread.apply_tag(namespace.tags['unread'])
         return thread
 
     __mapper_args__ = {'polymorphic_identity': 'imapthread'}

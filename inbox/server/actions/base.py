@@ -27,10 +27,8 @@ from rq import Queue, Connection
 
 from inbox.util.misc import load_modules
 from inbox.server.util.concurrency import GeventWorker
-from inbox.server.models import session_scope
-from inbox.server.models.tables.base import Account, SpoolMessage
+from inbox.server.models.tables.base import Account
 from inbox.server.config import config
-from inbox.server.sendmail.message import create_email, SenderInfo, Recipients
 import inbox.server.actions
 
 ACTION_MODULES = {}
@@ -62,91 +60,107 @@ def get_queue():
     return Queue(label, connection=Redis())
 
 
-def archive(account_id, thread_id):
-    """Sync an archive action back to the backend. """
-    with session_scope() as db_session:
-        account = db_session.query(Account).get(account_id)
+def archive(db_session, account_id, thread_id):
+    """ Archive thread locally and also sync back to the backend. """
+    account = db_session.query(Account).get(account_id)
 
-        set_remote_archived = ACTION_MODULES[account.provider]. \
-            set_remote_archived
-        set_remote_archived(account, thread_id, True, db_session)
+    # make local change
+    local_archive = ACTION_MODULES[account.provider].local_archive
+    local_archive(db_session, account, thread_id)
 
-
-def unarchive(account_id, thread_id):
-    with session_scope() as db_session:
-        account = db_session.query(Account).get(account_id)
-
-        set_remote_archived = ACTION_MODULES[account.provider]. \
-            set_remote_archived
-        set_remote_archived(account, thread_id, False, db_session)
+    # sync it to the account backend
+    q = get_queue()
+    remote_archive = ACTION_MODULES[account.provider].remote_archive
+    q.enqueue(remote_archive, account.id, thread_id)
 
 
-def star(account_id, thread_id):
-    with session_scope() as db_session:
-        account = db_session.query(Account).get(account_id)
+def set_unread(db_session, account, thread, unread):
+    ACTION_MODULES[account.provider].set_local_unread(
+        db_session, account, thread, unread)
 
-        set_remote_starred = ACTION_MODULES[account.provider]. \
-            set_remote_starred
-        set_remote_starred(account, thread_id, True, db_session)
-
-
-def unstar(account_id, thread_id):
-    with session_scope() as db_session:
-        account = db_session.query(Account).get(account_id)
-
-        set_remote_starred = ACTION_MODULES[account.provider]. \
-            set_remote_starred
-        set_remote_starred(account, thread_id, False, db_session)
+    q = get_queue()
+    set_remote_unread = ACTION_MODULES[account.provider]. \
+        set_remote_unread
+    q.enqueue(set_remote_unread, account.id, thread.id, unread)
 
 
-def mark_unread(account_id, thread_id):
-    with session_scope() as db_session:
-        account = db_session.query(Account).get(account_id)
-        set_remote_unread = ACTION_MODULES[account.provider]. \
-            set_remote_unread
-        set_remote_unread(account, thread_id, True, db_session)
+def move(db_session, account_id, thread_id, from_folder, to_folder):
+    """ Move thread locally and also sync back to the backend. """
+    account = db_session.query(Account).get(account_id)
+
+    # make local change
+    local_move = ACTION_MODULES[account.provider].local_move
+    local_move(db_session, account, thread_id, from_folder, to_folder)
+
+    # sync it to the account backend
+    q = get_queue()
+    remote_move = ACTION_MODULES[account.provider].remote_move
+    q.enqueue(remote_move, account.id, thread_id, from_folder, to_folder)
+
+    # XXX TODO register a failure handler that reverses the local state
+    # change if the change fails to go through?
 
 
-def mark_read(account_id, thread_id):
-    with session_scope() as db_session:
-        account = db_session.query(Account).get(account_id)
-        set_remote_unread = ACTION_MODULES[account.provider]. \
-            set_remote_unread
-        set_remote_unread(account, thread_id, False, db_session)
+def copy(db_session, account_id, thread_id, from_folder, to_folder):
+    """ Copy thread locally and also sync back to the backend. """
+    account = db_session.query(Account).get(account_id)
+
+    # make local change
+    local_copy = ACTION_MODULES[account.provider].local_copy
+    # make local change
+    local_copy(db_session, account, thread_id, from_folder, to_folder)
+
+    # sync it to the account backend
+    q = get_queue()
+    remote_copy = ACTION_MODULES[account.provider].remote_copy
+    q.enqueue(remote_copy, account.id, thread_id, from_folder, to_folder)
+
+    # XXX TODO register a failure handler that reverses the local state
+    # change if the change fails to go through?
 
 
-def mark_spam(account_id, thread_id):
-    raise NotImplementedError
+def delete(db_session, account_id, thread_id, folder_name):
+    """ Delete thread locally and also sync back to the backend.
+
+    This really just removes the entry from the folder. Message data that
+    no longer belongs to any messages is garbage-collected asynchronously.
+    """
+    account = db_session.query(Account).get(account_id)
+
+    # make local change
+    local_delete = ACTION_MODULES[account.provider].local_delete
+    local_delete(db_session, account, thread_id, folder_name)
+
+    # sync it to the account backend
+    q = get_queue()
+    remote_delete = ACTION_MODULES[account.provider].remote_delete
+    q.enqueue(remote_delete, account.id, thread_id, folder_name)
+
+    # XXX TODO register a failure handler that reverses the local state
+    # change if the change fails to go through?
 
 
-def unmark_spam(account_id, thread_id):
-    raise NotImplementedError
+def save_draft(db_session, log, account_id, draftmsg):
+    """ Save draft locally and also sync back to the backend. """
+    register_backends()
 
+    account = db_session.query(Account).get(account_id)
 
-def mark_trash(account_id, thread_id):
-    raise NotImplementedError
+    # Make local change
+    local_save_draft = ACTION_MODULES[account.provider].local_save_draft
+    imapuid = local_save_draft(db_session, log, account.id,
+                               account.drafts_folder.name, draftmsg)
 
+    # Sync it to the account backend
+    q = get_queue()
+    remote_save_draft = ACTION_MODULES[account.provider].remote_save_draft
+    q.enqueue(remote_save_draft, account.id, account.drafts_folder.name,
+              draftmsg.msg, draftmsg.flags, draftmsg.date)
 
-def unmark_trash(account_id, thread_id):
-    raise NotImplementedError
+    # XXX TODO register a failure handler that reverses the local state
+    # change if the change fails to go through?
 
-
-def save_draft(account_id, message_id):
-    """ Sync a new/updated draft back to the backend. """
-    with session_scope() as db_session:
-        account = db_session.query(Account).get(account_id)
-        message = db_session.query(SpoolMessage).get(message_id)
-
-        sender_info = SenderInfo(account.full_name, account.email_address)
-        recipients = Recipients(message.to_addr, message.cc_addr,
-                                message.bcc_addr)
-
-        mime_message = create_email(sender_info, recipients, message.subject,
-                                    message.sanitized_body, None)
-
-        remote_save_draft = ACTION_MODULES[account.provider].remote_save_draft
-        remote_save_draft(account, account.drafts_folder.name,
-                          mime_message.to_string(), message.created_date)
+    return imapuid
 
 
 # Later we're going to want to consider a pooling mechanism. We may want to
