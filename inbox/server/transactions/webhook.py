@@ -217,6 +217,8 @@ class WebhookService(gevent.Greenlet):
                                format(unprocessed_txn_count))
 
             max_tx_id, = db_session.query(func.max(Transaction.id)).one()
+            if max_tx_id is None:
+                max_tx_id = 0
             for pointer in range(self.minimum_id, max_tx_id, self.chunk_size):
                 for transaction in db_session.query(Transaction). \
                         filter(Transaction.table_name == 'message',
