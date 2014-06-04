@@ -9,54 +9,6 @@ generating corresponding "history" tables with historical versions, we have one
 master Revision table that logs deltas as JSON.
 
 Requires sqlalchemy 0.8, for the inspect API.
-
-Revisions of related collections are optionally recorded if the relationship's
-'info' dictionary contains a 'versioned_properties' key. Specifically,
-info['versioned_properties'] should be a list of properties on the related
-object to record (in the revision log entry for the parent) whenever the
-collection changes. The following example illustrates.
-
-This code:
-----------------------------------------
-class SomeClass(Base, HasRevisions):
-    related_id = Column(Integer, ForeignKey('SomeRelated.id'))
-
-    related = relationship('SomeRelated', info={'versioned_properties':
-                                                ['name', 'value']})
-
-class SomeRelated(Base):
-    someclass_id = Column(Integer, ForeignKey('SomeClass.id'))
-
-    someclass = relationship('SomeClass',
-                             backref=backref('somerelated',
-                                             info={'versioned_properties':
-                                                   ['name', 'value']}))
-    name = Column(String(64))
-    value = Column(Integer)
-    other = Column(String(64))
-
-
-s = SomeClass()
-r1 = SomeRelated(name='foo', value=22, other='fluff')
-r2 = SomeRelated(name='bar', value=2222, other='more fluff')
-s.related.append(r1)
-s.related.append(r2)
-
-session.add(s)
-session.commit()
-----------------------------------------
-
-would produce this delta in the transaction log:
-
-----------------------------------------
-{'related': {'added': [{'name': 'foo', 'value': 22},
-                       {'name': 'bar', 'value': 2222}],
-             'unchanged': [],
-             'deleted': []}}
-----------------------------------------
-
-The versioned properties of unchanged and deleted children appear similarly.
-See the tests for more examples. (TODO(emfree): actually write some tests.)
 """
 
 from sqlalchemy import Column, Integer, String, Enum
@@ -136,33 +88,11 @@ def create_update_revision(rev_cls, obj, session):
                    table_name=obj.__tablename__, delta=d)
 
 
-def _get_properties(properties, items):
-    return [{prop: getattr(item, prop) for prop in properties}
-            for item in items]
-
-
 def delta(obj):
     obj_state = inspect(obj)
 
     obj_changed = False
     d = {}
-
-    for prop in obj_state.mapper.iterate_properties:
-        if (isinstance(prop, RelationshipProperty) and
-                'versioned_properties' in prop.info):
-            history = getattr(obj_state.attrs, prop.key).history
-            if not history.has_changes():
-                continue
-            changes = {}
-            versioned_properties = prop.info['versioned_properties']
-            changes['added'] = _get_properties(versioned_properties,
-                                               history.added)
-            changes['unchanged'] = _get_properties(versioned_properties,
-                                                   history.unchanged)
-            changes['deleted'] = _get_properties(versioned_properties,
-                                                 history.deleted)
-            d[prop.key] = changes
-            obj_changed = True
 
     for m in obj_state.mapper.iterate_to_root():
         for col in m.local_table.c:
