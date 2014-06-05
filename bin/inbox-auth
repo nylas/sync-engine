@@ -1,17 +1,22 @@
 #!/usr/bin/env python
+from gevent import monkey; monkey.patch_all()
+
 import sys
 import argparse
 
-from setproctitle import setproctitle; setproctitle('inbox-syncmgr')
-
+from setproctitle import setproctitle; setproctitle('inbox-auth')
 
 from sqlalchemy.orm.exc import NoResultFound
+
+from inbox.util.startup import preflight
+preflight()
+
 from inbox.util.url import NotSupportedError
 from inbox.server.models import session_scope
 from inbox.server.models.tables.base import Account
 from inbox.server.auth.base import get_handler
 
-parser = argparse.ArgumentParser(description="Auth an email account")
+parser = argparse.ArgumentParser(description='Auth an email account')
 parser.add_argument('email_address',
                     help='Email address of the account to authenticate')
 args = parser.parse_args()

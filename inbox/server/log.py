@@ -1,7 +1,9 @@
-""" Logging configuration.
+"""
+Logging configuration.
 
 We configure separate loggers for general server logging and per-user loggers
 for mail sync and contact sync.
+
 """
 import os
 import sys
@@ -10,7 +12,6 @@ import logging
 import traceback
 
 import requests
-
 from colorlog import ColoredFormatter
 from gevent import GreenletExit
 
@@ -119,7 +120,6 @@ def configure_contacts_logging(account_id):
 
 def email_exception(logger, etype, evalue, tb):
     """ Send stringified exception to configured email address. """
-
     from inbox.server.config import config
 
     exc_email_addr = config.get('EXCEPTION_EMAIL_ADDRESS')

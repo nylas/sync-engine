@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 from inbox.util.db import drop_everything
 
 import sys

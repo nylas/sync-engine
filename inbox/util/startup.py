@@ -29,15 +29,16 @@ def check_requirements(requirements_path):
                 failed_deps.append(x)
 
     if failed_deps:
-        raise ImportError("\nPython module dependency verification failed! \n\n"
-                 "The following dependencies are either missing or out of "
-                 "date: \n\t{}\n\nYou probably need to run --> sudo pip "
-                 "install -r requirements.txt\n"
-                 .format("\n\t".join(failed_deps)))
+        raise ImportError(
+            '\nPython module dependency verification failed! \n\n'
+            'The following dependencies are either missing or out of '
+            'date: \n\t{}\n\nYou probably need to run --> sudo pip '
+            'install -r requirements.txt\n'
+            .format('\n\t'.join(failed_deps)))
 
 
 def check_db():
-    """ Checks the database revision against the known alembic migrations """
+    """ Checks the database revision against the known alembic migrations. """
     from inbox.server.models.ignition import db_uri
     inbox_db_engine = sqlalchemy.create_engine(db_uri())
 
@@ -65,11 +66,13 @@ def check_db():
         log.info('Current database revision: {0}'.format(current_revision))
 
         if current_revision != head_revision:
-            raise Exception('Outdated database! Migrate using `alembic upgrade head`')
+            raise Exception(
+                'Outdated database! Migrate using `alembic upgrade head`')
         else:
             log.info('[OK] Database scheme matches latest')
     else:
-        raise Exception('Un-stamped database! `bin/create-db` should have done this... bailing.')
+        raise Exception(
+            'Un-stamped database! `bin/create-db` should have done this... bailing.')
 
 
 def check_sudo():
@@ -86,7 +89,7 @@ def clean_pyc():
                 full_path = os.path.join(root, filename)
                 log.info('removing {0}'.format(full_path))
                 os.remove(full_path)
-    log.debug("Not writing pyc bytecode for this exectution")
+    log.debug('Not writing pyc bytecode for this exectution')
     sys.dont_write_bytecode = True
 
 
@@ -105,22 +108,22 @@ def load_overrides(file_path):
         try:
             overrides = json.load(data_file)
         except ValueError:
-            sys.exit("Failed parsing configuration file at {}"
+            sys.exit('Failed parsing configuration file at {}'
                      .format(file_path))
         if not overrides:
-            log.debug("No config overrides found.")
+            log.debug('No config overrides found.')
             return
         assert isinstance(overrides, dict), \
-            "overrides must be dictionary"
+            'overrides must be dictionary'
         config.update(overrides)
-        log.debug("Imported config overrides {}".format(
+        log.debug('Imported config overrides {}'.format(
             overrides.keys()))
 
 
 def preflight():
     check_sudo()
-    requirements_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                     '../../requirements.txt')
+    requirements_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), '../../requirements.txt')
     check_requirements(requirements_path)
     clean_pyc()
     check_db()
@@ -129,4 +132,4 @@ def preflight():
     # SIGABRT, SIGBUS or SIGILL
     import faulthandler
     faulthandler.enable()
-    log.debug("Current git revision: {}".format(git_rev().strip()))
+    log.debug('Current git revision: {}'.format(git_rev().strip()))

@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 from gevent import monkey; monkey.patch_all()
+
+import os
 import argparse
 
 from setproctitle import setproctitle; setproctitle('inbox-api')
@@ -12,13 +14,13 @@ log = get_logger()
 preflight()
 
 
-parser = argparse.ArgumentParser(description="REPL for crispin")
+parser = argparse.ArgumentParser(description='REPL for crispin')
 parser.add_argument('-p', '--port', dest='port', default=5555)
 parser.add_argument('--prod', action='store_true', default=False,
-                         help="Disables the autoreloader and potentially other"
-                         " non-production features.")
+                    help='Disables the autoreloader and potentially other'
+                    ' non-production features.')
 parser.add_argument('-c', '--config', dest='config', default=None,
-                         help="Path to JSON configuration file.")
+                    help='Path to JSON configuration file.')
 args = parser.parse_args()
 
 if args.config:
@@ -30,6 +32,7 @@ if args.config:
 from inbox.api.srv import app
 from gevent.wsgi import WSGIServer, WSGIHandler
 from inbox.server.log import get_logger
+
 
 # gevent.pywsgi bullshit. see
 # http://stackoverflow.com/questions/9444405/gunicorn-and-websockets
@@ -49,6 +52,7 @@ def log_request(self, *args):
 WSGIHandler.log_request = log_request
 
 inbox_logger = get_logger(purpose='api')
+
 
 def start():
     # start actions service
