@@ -1614,7 +1614,7 @@ class Folder(Base, HasRevisions):
             tag_name = '-'.join((provider_prefix, self.name.lower()))
             try:
                 return db_session.query(Tag). \
-                    filter(Tag.namespace_id == self.namespace_id,
+                    filter(Tag.namespace_id == self.namespace.id,
                            Tag.name == tag_name).one()
             except NoResultFound:
                 # Explicitly set the namespace_id instead of the namespace
