@@ -41,18 +41,20 @@ def smtp_attrs(msg):
     return smtpmsg
 
 
-def create_gmail_email(sender_info, recipients, subject, body,
+def create_gmail_email(sender_info, inbox_uid, recipients, subject, body,
                        attachments=None):
     """ Create a Gmail email. """
-    mimemsg = create_email(sender_info, recipients, subject, body, attachments)
+    mimemsg = create_email(sender_info, inbox_uid, recipients, subject, body,
+                           attachments)
 
     return smtp_attrs(mimemsg)
 
 
-def create_gmail_reply(sender_info, replyto, recipients, subject, body,
-                       attachments=None):
+def create_gmail_reply(sender_info, replyto, inbox_uid, recipients, subject,
+                       body, attachments=None):
     """ Create a Gmail email reply. """
-    mimemsg = create_email(sender_info, recipients, subject, body, attachments)
+    mimemsg = create_email(sender_info, inbox_uid, recipients, subject, body,
+                           attachments)
 
     # Add general reply headers:
     reply = add_reply_headers(replyto, mimemsg)

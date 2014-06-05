@@ -298,8 +298,9 @@ def check_new_g_thrids(account_id, provider, folder_name, log,
                             local_with_pending_uids]
                 flags = crispin_client.flags(new_uids)
                 g_metadata = crispin_client.g_metadata(new_uids)
-                log.info("Adding {} new messages to the download queue for {}"
-                         .format(min(len(flags), len(g_metadata)), folder_name))
+                log.info('Adding {} new messages to the download queue for {}'
+                         .format(min(len(flags), len(g_metadata)),
+                                 folder_name))
                 for new_uid in new_uids:
                     # could have disappeared from the folder in the meantime
                     if new_uid in flags and new_uid in g_metadata:
@@ -598,7 +599,7 @@ def update_saved_g_metadata(crispin_client, db_session, log, folder_name,
     if updated:
         # It's easy and fast to just update these here and now.
         # Bigger chunk because the data being fetched here is very small.
-        for uids in chunk(updated, 5*crispin_client.CHUNK_SIZE):
+        for uids in chunk(updated, 5 * crispin_client.CHUNK_SIZE):
             update_metadata(crispin_client, db_session, log, folder_name, uids,
                             syncmanager_lock)
         log.info("Updated metadata for modified messages")
@@ -618,14 +619,6 @@ def create_gmail_message(db_session, log, acct, folder, msg):
 
         update_contacts(db_session, acct.id, new_uid.message)
         return new_uid
-
-
-def reconcile_gmail_message(db_session, log, inbox_uid, new_msg, thread_id,
-                            g_thrid):
-    spool_message = reconcile_message(db_session, log, inbox_uid, new_msg,
-                                      thread_id)
-    if spool_message:
-        spool_message.g_thrid = g_thrid
 
 
 def add_gmail_attrs(db_session, log, new_uid, flags, folder, g_thrid, g_msgid,
@@ -690,12 +683,10 @@ def add_gmail_attrs(db_session, log, new_uid, flags, folder, g_thrid, g_msgid,
                                                label)
                 thread.folders.add(folder)
 
-    # Reconciliation for Sent Mail folder:
-    if ('sent' in new_labels_ci and not created and
-            new_uid.message.inbox_uid):
-        if not thread.id:
-            db_session.flush()
-        reconcile_gmail_message(db_session, log, new_uid.message.inbox_uid,
-                                new_uid.message, thread.id, g_thrid)
+    # Reconciliation for Drafts, Sent Mail folders:
+    if ('drafts' in new_labels_ci or 'sent' in new_labels_ci) and not created \
+            and new_uid.message.inbox_uid:
+        reconcile_message(db_session, log, new_uid.message.inbox_uid,
+                          new_uid.message)
 
     return new_uid

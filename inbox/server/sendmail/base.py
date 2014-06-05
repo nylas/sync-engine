@@ -1,20 +1,19 @@
 from collections import namedtuple
-from datetime import datetime
 
 import magic
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from inbox.util.misc import load_modules
 from inbox.util.url import NotSupportedError
-from inbox.server.crispin import RawMessage
 from inbox.server.log import get_logger
-from inbox.server.mailsync.backends.base import (create_db_objects,
-                                                 commit_uids)
 from inbox.server.models import session_scope
-from inbox.server.models.tables.base import (Account, SpoolMessage, Thread,
-                                             DraftThread)
-from inbox.server.sendmail.message import create_email, SenderInfo, Recipients
+from inbox.server.models.tables.base import (SpoolMessage, Thread, DraftThread,
+                                             Account)
+from inbox.server.sendmail.message import Recipients
 
+
+# Message attributes of a message we're creating a reply to,
+# needed to correctly set headers in the reply.
 ReplyToAttrs = namedtuple(
     'ReplyToAttrs', 'subject message_id_header references body')
 
@@ -68,11 +67,22 @@ def get_function(provider, fn):
     sendmail_mod_for = register_backends()
 
     sendmail_mod = sendmail_mod_for.get(provider)
-
     if not sendmail_mod:
         raise NotSupportedError('Inbox does not support the email provider.')
 
     return getattr(sendmail_mod, fn, None)
+
+
+def get_sendmail_client(account):
+    sendmail_mod_for = register_backends()
+
+    sendmail_mod = sendmail_mod_for.get(account.provider)
+    if not sendmail_mod:
+        raise NotSupportedError('Inbox does not support the email provider.')
+
+    sendmail_cls = getattr(sendmail_mod, sendmail_mod.SENDMAIL_CLS)
+    sendmail_client = sendmail_cls(account.id, account.namespace)
+    return sendmail_client
 
 
 def _parse_recipients(dicts_list):
@@ -142,7 +152,7 @@ def create_attachment_metadata(attachments):
 
 
 def get_draft(db_session, account, draft_public_id):
-    """ Get the draft with public_id = draft_public_id. """
+    """ Get the draft with public_id = `draft_public_id`, or None. """
     return db_session.query(SpoolMessage).join(Thread).filter(
         SpoolMessage.public_id == draft_public_id,
         Thread.namespace_id == account.namespace.id).first()
@@ -155,33 +165,52 @@ def get_all_drafts(db_session, account):
         Thread.namespace_id == account.namespace.id).all()
 
 
+# TODO: ATTACHMENTS
 def create_draft(db_session, account, to=None, subject=None, body=None,
                  attachments=None, cc=None, bcc=None, thread_public_id=None):
+    """
+    Create a new draft. If `thread_public_id` is specified, the draft is a
+    reply to the last message in the thread; otherwise, it is an independant
+    draft.
+
+    Returns
+    -------
+    SpoolMessage
+        The created draft message object.
+
+    """
     to_addr = _parse_recipients(to) if to else to
     cc_addr = _parse_recipients(cc) if cc else cc
     bcc_addr = _parse_recipients(bcc) if bcc else bcc
 
+    # For independant drafts
+    replyto_thread_id = None
+
+    # For reply drafts
     if thread_public_id is not None:
         thread = db_session.query(Thread).filter(
             Thread.public_id == thread_public_id).one()
+
         assert thread.namespace == account.namespace
 
         draft_thread = DraftThread.create(db_session, thread)
         db_session.add(draft_thread)
         db_session.commit()
-        draft_thread_id = draft_thread.id
-    else:
-        draft_thread_id = None
 
-    return _create_and_save_draft(db_session, account, to_addr, subject, body,
-                                  attachments, cc_addr, bcc_addr,
-                                  draft_thread_id)
+        replyto_thread_id = draft_thread.id
+
+    create_and_save_fn = get_function(account.provider,
+                                      'create_and_save_draft')
+    return create_and_save_fn(db_session, account, to_addr, subject, body,
+                              attachments, cc_addr, bcc_addr,
+                              replyto_thread_id)
 
 
+# TODO[k]: ATTACHMENTS
 def update_draft(db_session, account, draft_public_id, to=None, subject=None,
                  body=None, attachments=None, cc=None, bcc=None):
     """
-    Update the draft with public_id equal to draft_public_id.
+    Update the draft with public_id = `draft_public_id`.
 
     To maintain our messages are immutable invariant, we create a new draft
     message object.
@@ -190,7 +219,8 @@ def update_draft(db_session, account, draft_public_id, to=None, subject=None,
     Returns
     -------
     SpoolMessage
-    The updated draft object.
+        The new draft message object.
+
 
     Notes
     -----
@@ -209,113 +239,62 @@ def update_draft(db_session, account, draft_public_id, to=None, subject=None,
     bcc_addr = _parse_recipients(bcc) if bcc else draft.bcc_addr
     subject = subject or draft.subject
 
-    # TODO(emfree) also handle attachments
-
-    draft_thread_id = draft.replyto_thread_id
-
-    return _create_and_save_draft(db_session, account, to_addr, subject, body,
-                                  attachments, cc_addr, bcc_addr,
-                                  draft_thread_id, draft.id)
-
-
-def _create_and_save_draft(db_session, account, to_addr=None, subject=None,
-                           body=None, attachments=None, cc_addr=None,
-                           bcc_addr=None, draft_thread_id=None,
-                           parent_draft_id=None):
-    """ Creates a new draft object and commits it to the database.
-
-    Returns
-    -------
-    The created SpoolMessage instance.
-    """
-    log = get_logger(account.id, purpose='drafts')
-
-    sender_info = SenderInfo(account.full_name, account.email_address)
-    recipients = all_recipients(to_addr, cc_addr, bcc_addr)
-
-    attachments = create_attachment_metadata(attachments)
-
-    mimemsg = create_email(sender_info, recipients, subject, body, attachments)
-    msg_body = mimemsg.to_string()
-
-    # The generated `X-INBOX-ID` UUID of the message is too big to serve as the
-    # msg_uid for the corresponding ImapUid. The msg_uid is a SQL BigInteger
-    # (20 bits), so we truncate the `X-INBOX-ID` to that size. Note that
-    # this still provides a large enough ID space to make collisions rare.
-    x_inbox_id = mimemsg.headers.get('X-INBOX-ID')
-    uid = int(x_inbox_id, 16) & (1 << 20) - 1
-
-    date = datetime.utcnow()
-    flags = [u'\\Draft']
-
-    msg = RawMessage(uid=uid, internaldate=date,
-                     flags=flags, body=msg_body, g_thrid=None,
-                     g_msgid=None, g_labels=set(), created=True)
-
-    message_create_function = get_function(account.provider,
-                                           'create_database_message')
-
-    # TODO(emfree): this breaks the 'folders just mirror the backend'
-    # assumption we want to be able to make.
-    new_uids = create_db_objects(account.id, db_session, log,
-                                 account.drafts_folder.name, [msg],
-                                 message_create_function)
-    new_uid = new_uids[0]
-
-    new_uid.created_date = date
-
-    # Set SpoolMessage's special draft attributes
-    new_uid.message.state = 'draft'
-    new_uid.message.parent_draft_id = parent_draft_id
-    new_uid.message.replyto_thread_id = draft_thread_id
-
-    commit_uids(db_session, log, new_uids)
-
-    return new_uid.message
+    create_and_save_fn = get_function(account.provider,
+                                      'create_and_save_draft')
+    return create_and_save_fn(db_session, account, to_addr, subject, body,
+                              attachments, cc_addr, bcc_addr,
+                              draft.replyto_thread_id, draft.id)
 
 
 def delete_draft(db_session, account, draft_public_id):
-    """ Delete the draft with public_id = draft_public_id. """
+    """ Delete the draft with public_id = `draft_public_id`. """
     draft = db_session.query(SpoolMessage).filter(
         SpoolMessage.public_id == draft_public_id).one()
 
-    _delete_all(db_session, draft.id)
-
-
-def _delete_all(db_session, draft_id):
-    draft = db_session.query(SpoolMessage).get(draft_id)
-
     assert draft.is_draft
 
+    # Delete locally, make sure to delete all previous versions of this draft
+    # present locally too.
+    _delete_draft_versions(db_session, draft.id)
+
+
+def _delete_draft_versions(db_session, draft_id):
+    draft = db_session.query(SpoolMessage).get(draft_id)
+
     if draft.parent_draft_id:
-        _delete_all(db_session, draft.parent_draft_id)
+        _delete_draft_versions(db_session, draft.parent_draft_id)
 
     db_session.delete(draft)
+    # TODO[k]: Ensure this causes a delete on the remote too for draft of
+    # draft_id only!
 
 
-# TODO[k]: Attachments handling
+# TODO[k]: ATTACHMENTS
 def send_draft(account_id, draft_id):
+    """
+    Send the draft with id = `draft_id` or
+    if `draft_public_id` is not specified, create a draft and send it - in
+    this case, a `to` address must be specified.
+
+    """
     with session_scope() as db_session:
-        """ Send the draft with id equal to draft_id. """
         account = db_session.query(Account).get(account_id)
-        log = get_logger(account_id, 'drafts')
-        get_sendmail_client = get_function(account.provider,
-                                           'get_sendmail_client')
-        sendmail_client = get_sendmail_client(account.id, account.namespace)
+
+        log = get_logger(account.id, 'drafts')
+        sendmail_client = get_sendmail_client(account)
 
         try:
             draft = db_session.query(SpoolMessage).filter(
                 SpoolMessage.id == draft_id).one()
+
         except NoResultFound:
-            log.info('NoResultFound for draft with public_id {0}'.format(
-                draft_id))
-            raise SendMailException('No draft with public_id {0} found'.
-                                    format(draft_id))
+            log.info('NoResultFound for draft_id {0}'.format(draft_id))
+            raise SendMailException('No draft with id {0}'.format(draft_id))
+
         except MultipleResultsFound:
-            log.info('MultipleResultsFound for draft with public_id {0}'.
-                     format(draft_id))
-            raise SendMailException('Multiple drafts with public_id {0} found'.
-                                    format(draft_id))
+            log.info('MultipleResultsFound for draft_id {0}'.format(draft_id))
+            raise SendMailException('Multiple drafts with id {0}'.format(
+                draft_id))
 
         assert draft.is_draft and not draft.is_sent
 
@@ -324,6 +303,7 @@ def send_draft(account_id, draft_id):
 
         if not draft.replyto_thread:
             return sendmail_client.send_new(db_session, draft.imapuids[0],
+                                            draft.inbox_uid,
                                             recipients, draft.subject,
                                             draft.sanitized_body,
                                             attachments)
@@ -351,7 +331,7 @@ def send_draft(account_id, draft_id):
                                          body=body)
 
             return sendmail_client.send_reply(db_session, draft.imapuids[0],
-                                              replyto_attrs, recipients,
-                                              draft.subject,
+                                              replyto_attrs, draft.inbox_uid,
+                                              recipients, draft.subject,
                                               draft.sanitized_body,
                                               attachments)

@@ -510,7 +510,7 @@ class GmailCrispinClient(CrispinClient):
         assert self.selected_folder_name == self.folder_names()['all'], \
             "must select All Mail first ({})".format(
                 self.selected_folder_name)
-        criteria = ('OR ' * (len(g_thrids)-1)) + ' '.join(
+        criteria = ('OR ' * (len(g_thrids) - 1)) + ' '.join(
             ['X-GM-THRID {}'.format(thrid) for thrid in g_thrids])
         uids = [long(uid) for uid in self.conn.search(['NOT DELETED',
                                                        criteria])]
@@ -579,5 +579,37 @@ class GmailCrispinClient(CrispinClient):
         self.selected_folder_name == self.folder_names()['drafts'], \
             'Must select drafts folder first ({0})'.format(
                 self.selected_folder_name)
-
         self.conn.append(self.selected_folder_name, message, ['\\Draft'], date)
+
+    def delete_draft(self, inbox_uid):
+        """
+        Remove the `\Draft label` and add the `Trash` flag.
+        Need both since that is the intended behaviour i.e. so the message is
+        removed from the user's `Drafts` folder and into the `Trash` folder.
+
+        Parameters
+        ----------
+        inbox_uid : str
+            The public_id of the draft we want to delete on the remote,
+            which is its X-INBOX-ID header too.
+
+        Notes
+        -----
+        Need the public_id == inbox_uid since that is the only unique
+        identifier for the message that both we and the remote know.
+
+        """
+        label_name = '\Draft'
+
+        criteria = ['DRAFT', 'NOT DELETED',
+                    'HEADER X-INBOX-ID {0}'.format(inbox_uid)]
+        draft_uids = self.conn.search(criteria)
+        if draft_uids:
+            assert len(draft_uids) == 1
+
+            # Remove Gmail's `Draft` label
+            self.conn.remove_gmail_labels(draft_uids, [label_name])
+
+            # Move to Gmail's `Trash` folder
+            self.conn.delete_messages(draft_uids)
+            self.conn.expunge()

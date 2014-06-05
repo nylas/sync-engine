@@ -1,9 +1,7 @@
 from inbox.server.sendmail.gmail.gmail import GmailSMTPClient
-from inbox.server.sendmail.gmail.drafts import (create_database_message,
-                                                get_sendmail_client)
+from inbox.server.sendmail.gmail.drafts import create_and_save_draft
 
-# delete_draft, get_draft, get_all_drafts are provider agnostic
-__all__ = ['GmailSMTPClient', 'get_sendmail_client', 'create_database_message']
+__all__ = ['GmailSMTPClient', 'create_and_save_draft']
 
 PROVIDER = 'Gmail'
 SENDMAIL_CLS = 'GmailSMTPClient'

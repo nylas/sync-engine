@@ -97,6 +97,9 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
 
         # Custom Inbox header
         new_msg.inbox_uid = parsed.headers.get('X-INBOX-ID')
+        if created and new_msg.inbox_uid:
+            assert isinstance(new_msg, SpoolMessage)
+            new_msg.public_id = new_msg.inbox_uid
 
         # In accordance with JWZ (http://www.jwz.org/doc/threading.html)
         new_msg.references = parse_references(
@@ -182,7 +185,7 @@ def create_message(db_session, log, account, mid, folder_name, received_date,
     return new_msg
 
 
-def reconcile_message(db_session, log, inbox_uid, new_msg, thread_id):
+def reconcile_message(db_session, log, inbox_uid, new_msg):
     """
     Identify a `Sent Mail` (or corresponding) message synced from the
     remote backend as one we sent and reconcile it with the message we
@@ -198,7 +201,6 @@ def reconcile_message(db_session, log, inbox_uid, new_msg, thread_id):
         spool_message = db_session.query(SpoolMessage).filter_by(
             inbox_uid=inbox_uid).one()
         spool_message.resolved_message = new_msg
-        spool_message.thread_id = thread_id
         return spool_message
 
     except NoResultFound:

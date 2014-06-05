@@ -18,7 +18,7 @@ from inbox.server.models.tables.base import (SpoolMessage, Tag, Thread,
                                              Transaction)
 from inbox.server.actions.base import (get_queue, mark_read, mark_unread,
                                        archive, unarchive, star, unstar,
-                                       save_draft, rqworker)
+                                       save_draft, delete_draft, rqworker)
 from inbox.server.sendmail.base import send_draft
 
 
@@ -107,6 +107,8 @@ class SyncbackService(gevent.Greenlet):
                 self.minimum_id = transaction.id
                 if transaction.table_name == 'spoolmessage':
                     # TODO(emfree) handle deleted messages here
+                    # Note: For deletes, only syncback for SpoolMessages that
+                    # do not have a child_draft --kavya
                     message = db_session.query(SpoolMessage). \
                         get(transaction.record_id)
                     account_id = message.namespace.account_id
@@ -117,7 +119,10 @@ class SyncbackService(gevent.Greenlet):
                     elif (transaction.command == 'update' and
                           transaction.delta.get('state') == 'sending'):
                         self.queue.enqueue(send_draft, account_id, message.id)
-
+                    elif (transaction.command == 'update' and
+                          transaction.delta.get('state') == 'sent'):
+                        self.queue.enqueue(delete_draft, account_id,
+                                           message.inbox_uid)
                     continue
                 thread = db_session.query(Thread).get(transaction.record_id)
                 account_id = thread.namespace.account_id
@@ -127,8 +132,9 @@ class SyncbackService(gevent.Greenlet):
                     continue
                 added_tag_ids = [entry['tag_id'] for entry in tagitems['added']
                                  if entry['action_pending']]
-                removed_tag_ids = [entry['tag_id'] for entry in tagitems['deleted']
-                                   if entry['action_pending']]
+                removed_tag_ids = [entry['tag_id'] for entry in
+                                   tagitems['deleted'] if
+                                   entry['action_pending']]
                 for tag_id in added_tag_ids:
                     tag = db_session.query(Tag).get(tag_id)
                     for action in self.actions.on_apply(tag.public_id):

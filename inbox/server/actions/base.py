@@ -131,8 +131,9 @@ def unmark_trash(account_id, thread_id):
     raise NotImplementedError
 
 
+# TODO: ATTACHMENTS
 def save_draft(account_id, message_id):
-    """ Sync a new/updated draft back to the backend. """
+    """ Sync a new/updated draft back to the remote backend. """
     with session_scope() as db_session:
         account = db_session.query(Account).get(account_id)
         message = db_session.query(SpoolMessage).get(message_id)
@@ -140,13 +141,25 @@ def save_draft(account_id, message_id):
         sender_info = SenderInfo(account.full_name, account.email_address)
         recipients = Recipients(message.to_addr, message.cc_addr,
                                 message.bcc_addr)
-
-        mime_message = create_email(sender_info, recipients, message.subject,
-                                    message.sanitized_body, None)
+        mimemsg = create_email(sender_info, message.inbox_uid, recipients,
+                               message.subject, message.sanitized_body, None)
 
         remote_save_draft = ACTION_MODULES[account.provider].remote_save_draft
         remote_save_draft(account, account.drafts_folder.name,
-                          mime_message.to_string(), message.created_date)
+                          mimemsg.to_string(), message.created_date)
+
+        if message.parent_draft:
+            return delete_draft(account_id, message.parent_draft.inbox_uid)
+
+
+def delete_draft(account_id, inbox_uid):
+    """ Delete a draft from the remote backend. """
+    with session_scope() as db_session:
+        account = db_session.query(Account).get(account_id)
+        remote_delete_draft = \
+            ACTION_MODULES[account.provider].remote_delete_draft
+        remote_delete_draft(account, account.drafts_folder.name, inbox_uid,
+                            db_session)
 
 
 # Later we're going to want to consider a pooling mechanism. We may want to

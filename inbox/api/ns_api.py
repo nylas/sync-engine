@@ -570,6 +570,21 @@ def draft_update_api(public_id):
 
 @app.route('/drafts/<public_id>', methods=['DELETE'])
 def draft_delete_api(public_id):
+    try:
+        draft = g.db_session.query(SpoolMessage).filter(
+            SpoolMessage.public_id == public_id).one()
+    except NoResultFound:
+        return err(404, 'No draft found with public_id {}'.
+                   format(draft_public_id))
+
+    if draft.namespace != g.namespace:
+        return err(404, 'No draft found with public_id {}'.
+                   format(draft_public_id))
+
+    if draft.is_draft:
+        return err(400, 'Message with public id {} is not a draft'.
+                   format(draft_public_id))
+
     result = sendmail.delete_draft(g.db_session, g.namespace.account,
                                    public_id)
     return jsonify(result)

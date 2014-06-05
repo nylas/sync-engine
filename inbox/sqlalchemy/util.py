@@ -100,7 +100,7 @@ def b36_to_bin(b36_string):
 
 
 def generate_public_id():
-    """ Returns at base-36 string UUID """
+    """ Returns a base-36 string UUID """
     u = uuid.uuid4().bytes
     return int128_to_b36(u)
 

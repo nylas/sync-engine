@@ -640,6 +640,10 @@ class SpoolMessage(Message):
                    server_default='draft', nullable=False)
 
     # Null till reconciled.
+    # Deletes should not be cascaded! i.e. delete on remote -> delete the
+    # resolved_message *only*, not the original SpoolMessage we created.
+    # We need this to correctly maintain draft versions (created on
+    # update_draft())
     resolved_message_id = Column(Integer,
                                  ForeignKey('message.id'),
                                  nullable=True)
@@ -648,10 +652,9 @@ class SpoolMessage(Message):
         primaryjoin='and_('
         'SpoolMessage.resolved_message_id==remote(Message.id), '
         'remote(Message.deleted_at)==None)',
-        backref=backref('spooled_message', primaryjoin='and_('
+        backref=backref('spooled_messages', primaryjoin='and_('
                         'remote(SpoolMessage.resolved_message_id)==Message.id,'
-                        'remote(SpoolMessage.deleted_at)==None)',
-                        uselist=False))
+                        'remote(SpoolMessage.deleted_at)==None)'))
 
     ## FOR DRAFTS:
 
@@ -717,12 +720,10 @@ class SpoolMessage(Message):
         # draft created.
         assert not draft.draft_copied_from, 'Copy of a copy!'
 
-        # TODO[k]: Check inbox_uid to be skipped?
         # We *must not* copy the following attributes:
         # 'id', 'public_id', 'child_draft', 'draft_copied_from',
         # 'replyto_thread_id', 'replyto_thread', '_sa_instance_state',
         # 'inbox_uid'
-
         copy_attrs = ['decode_error', 'resolved_message_id',
                       'updated_at', 'sender_addr', 'thread_id',
                       'bcc_addr', 'cc_addr', 'references', 'discriminator',

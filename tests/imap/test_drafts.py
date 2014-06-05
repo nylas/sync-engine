@@ -43,11 +43,23 @@ def register_action_backends(db):
 
 
 def cleanup(account, subject):
+    """ Delete emails in remote. """
     with crispin_client(account.id, account.provider) as c:
         criteria = ['NOT DELETED', 'SUBJECT "{0}"'.format(subject)]
 
         c.conn.select_folder(account.drafts_folder.name, readonly=False)
+        draft_uids = c.conn.search(criteria)
+        if draft_uids:
+            c.conn.delete_messages(draft_uids)
+            c.conn.expunge()
 
+        c.conn.select_folder(account.sent_folder.name, readonly=False)
+        sent_uids = c.conn.search(criteria)
+        if sent_uids:
+            c.conn.delete_messages(sent_uids)
+            c.conn.expunge()
+
+        c.conn.select_folder(account.inbox_folder.name, readonly=False)
         inbox_uids = c.conn.search(criteria)
         if inbox_uids:
             c.conn.delete_messages(inbox_uids)
@@ -144,6 +156,10 @@ def test_create(db, config, action_queue, message, attach):
     assert draft.public_id == public_id,\
         'draft message has incorrect public_id: expected {0}, got {1}'.format(
             public_id, draft.public_id)
+
+    assert draft.inbox_uid == draft.public_id,\
+        'draft message has incorrect inbox_uid: expected {0}, got {1}'.format(
+            draft.public_id, draft.inbox_uid)
 
     draftuid = draft.imapuids[0]
     assert draft.state == 'draft' and draftuid.is_draft,\

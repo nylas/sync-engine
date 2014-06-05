@@ -47,8 +47,6 @@ def config():
     )
     config.update(test_config)
 
-    print 'config = ', config
-
     return config
 
 

@@ -197,6 +197,15 @@ def remote_delete(account, thread_id, folder_name, db_session):
 
 def remote_save_draft(account, folder_name, message, db_session, date=None):
     def fn(account, db_session, crispin_client):
+        assert folder_name == crispin_client.folder_names()['drafts']
         crispin_client.save_draft(message, date)
+
+    return _syncback_action(fn, account, folder_name, db_session)
+
+
+def remote_delete_draft(account, folder_name, inbox_uid, db_session):
+    def fn(account, db_session, crispin_client):
+        assert folder_name == crispin_client.folder_names()['drafts']
+        crispin_client.delete_draft(inbox_uid)
 
     return _syncback_action(fn, account, folder_name, db_session)

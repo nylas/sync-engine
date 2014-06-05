@@ -45,35 +45,34 @@ class GmailSMTPClient(SMTPClient):
         # Remove from drafts folder
         # TODO(emfree) don't put it in the drafts folder in the first place --
         # just apply the drafts tag on creation.
-
         with db_write_lock(self.namespace.id):
             drafts_folder = account.drafts_folder
             draftuid.message.thread.folders.discard(drafts_folder)
 
         db_session.commit()
 
-        return result
+        return draftuid.message
 
-    def send_new(self, db_session, imapuid, recipients, subject, body,
-                 attachments=None):
+    def send_new(self, db_session, imapuid, inbox_uid, recipients, subject,
+                 body, attachments=None):
         """
         Send a previously created + saved draft email from this user account.
 
         """
         sender_info = SenderInfo(name=self.full_name, email=self.email_address)
-        smtpmsg = create_gmail_email(sender_info, recipients, subject, body,
-                                     attachments)
+        smtpmsg = create_gmail_email(sender_info, inbox_uid, recipients,
+                                     subject, body, attachments)
         return self._send_mail(db_session, imapuid, smtpmsg)
 
-    def send_reply(self, db_session, imapuid, replyto, recipients, subject,
-                   body, attachments=None):
+    def send_reply(self, db_session, imapuid, replyto, inbox_uid, recipients,
+                   subject, body, attachments=None):
         """
         Send a previously created + saved draft email reply from this user
         account.
 
         """
         sender_info = SenderInfo(name=self.full_name, email=self.email_address)
-        smtpmsg = create_gmail_reply(sender_info, replyto, recipients, subject,
-                                     body, attachments)
+        smtpmsg = create_gmail_reply(sender_info, replyto, inbox_uid,
+                                     recipients, subject, body, attachments)
 
         return self._send_mail(db_session, imapuid, smtpmsg)
