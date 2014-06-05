@@ -111,7 +111,11 @@ def test_actions_syncback(api_client):
     from inbox.server.actions.base import (mark_read, mark_unread, archive,
                                            unarchive, star, unstar)
     from gevent import monkey
-    monkey.patch_all()
+    # aggressive=False used to avoid AttributeError in other tests, see
+    # https://groups.google.com/forum/#!topic/gevent/IzWhGQHq7n0
+    # TODO(emfree): It's totally whack that monkey-patching here would affect
+    # other tests. Can we make this not happen?
+    monkey.patch_all(aggressive=False)
     s = SyncbackService(poll_interval=0)
     s.queue = MockQueue()
     s.start()
