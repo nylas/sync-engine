@@ -203,8 +203,6 @@ class WebhookService():
                     worker.kill()
                     break
 
-        import pdb; pdb.set_trace()
-
         if not set.union(*self.workers.values()):
             # Kill the transaction log poller if there are no active hooks.
             self._stop_polling()
