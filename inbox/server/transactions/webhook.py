@@ -129,6 +129,9 @@ class WebhookService():
         parameters: dictionary
             Dictionary of the hook parameters.
         """
+        if not urlparse.urlparse(self.callback_url).scheme == 'https':
+            raise ValueError('callback_url MUST be https!')
+
         with session_scope() as db_session:
             lens = Lens(
                 namespace_id=namespace_id,
@@ -337,9 +340,6 @@ class WebhookWorker(gevent.Greenlet):
         ----------
         event: EventData
         """
-        assert urlparse.urlparse(self.callback_url).scheme == 'https', \
-            'callback_url MUST be https!'
-
         if event.id < self.min_processed_id:
             # We've already successfully processed this event. This can happen
             # if the service is restarted -- it will consume the log starting
