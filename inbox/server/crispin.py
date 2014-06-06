@@ -37,7 +37,7 @@ RawMessage = namedtuple(
     'uid internaldate flags body g_thrid g_msgid g_labels created')
 
 
-def connection_pool(account_id, pool_size=4, connection_pool_for=dict()):
+def connection_pool(account_id, pool_size=8, connection_pool_for=dict()):
     """ Per-account crispin connection pool.
 
     Use like this:
@@ -58,7 +58,7 @@ def connection_pool(account_id, pool_size=4, connection_pool_for=dict()):
     return pool
 
 
-def writable_connection_pool(account_id, pool_size=2,
+def writable_connection_pool(account_id, pool_size=4,
                              connection_pool_for=dict()):
     """ Per-account crispin connection pool, with *read-write* connections.
 
