@@ -362,6 +362,7 @@ def files_api(public_id):
             assert int(f.message.namespace.id) == int(g.namespace.id)
             g.log.info("block's message namespace matches api context namespace")
         else:
+            # Block was likely uploaded via file API and not yet sent in a message
             g.log.debug("This block doesn't have a corresponding message: {}"
                         .format(f.public_id))
         return jsonify(f)
