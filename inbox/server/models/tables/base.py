@@ -40,8 +40,10 @@ from inbox.server.models.mixins import HasPublicID
 # names can be up to upto 225 characters too (tested empirically). However,
 # constraining Folder.`name` uniquely requires max length of 767 bytes under
 # utf8mb4: http://mathiasbynens.be/notes/mysql-utf8mb4
-MAX_FOLDER_NAME_LENGTH = 191
-
+# There are apparently ways to get around this by using innodb_large_prefix in your
+# MySQL configuration, but I'm not sure how to do that with RDS.
+MAX_INDEXABLE_LENGTH = 191
+MAX_FOLDER_NAME_LENGTH = MAX_INDEXABLE_LENGTH
 
 def register_backends():
     import inbox.server.models.tables
@@ -61,7 +63,7 @@ def register_backends():
 
 class Account(Base, HasPublicID):
     # http://stackoverflow.com/questions/386294/what-is-the-maximum-length-of-a-valid-email-address
-    email_address = Column(String(254, collation='utf8_bin'), nullable=True, index=True)
+    email_address = Column(String(MAX_INDEXABLE_LENGTH), nullable=True, index=True)
     provider = Column(Enum('Gmail', 'Outlook', 'Yahoo', 'EAS', 'Inbox'),
                       nullable=False)
 
@@ -387,7 +389,7 @@ class Contact(Base, HasRevisions, HasPublicID):
     # modifications to the data.
     source = Column('source', Enum('local', 'remote'))
 
-    email_address = Column(String(254, collation='utf8_bin'), nullable=True, index=True)
+    email_address = Column(String(MAX_INDEXABLE_LENGTH), nullable=True, index=True)
     name = Column(Text)
     # phone_number = Column(String(64))
 
