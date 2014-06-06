@@ -61,7 +61,7 @@ def register_backends():
 
 class Account(Base, HasPublicID):
     # http://stackoverflow.com/questions/386294/what-is-the-maximum-length-of-a-valid-email-address
-    email_address = Column(String(254), nullable=True, index=True)
+    email_address = Column(String(254, collation='utf8_bin'), nullable=True, index=True)
     provider = Column(Enum('Gmail', 'Outlook', 'Yahoo', 'EAS', 'Inbox'),
                       nullable=False)
 
@@ -387,7 +387,7 @@ class Contact(Base, HasRevisions, HasPublicID):
     # modifications to the data.
     source = Column('source', Enum('local', 'remote'))
 
-    email_address = Column(String(254), nullable=True, index=True)
+    email_address = Column(String(254, collation='utf8_bin'), nullable=True, index=True)
     name = Column(Text)
     # phone_number = Column(String(64))
 
