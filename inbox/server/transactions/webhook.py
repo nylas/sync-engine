@@ -99,18 +99,25 @@ def format_failure_output(hook_id, timestamp, status_code):
     return json.dumps(response)
 
 
-class WebhookService(gevent.Greenlet):
+class WebhookService():
     """Asynchronously consumes the transaction log and executes registered
     webhooks."""
-    def __init__(self, poll_interval=1, chunk_size=22, run_immediately=True):
+    def __init__(self, poll_interval=1, chunk_size=22):
         self.workers = defaultdict(set)
         self.log = get_logger(purpose='webhooks')
         self.poll_interval = poll_interval
         self.chunk_size = chunk_size
         self.minimum_id = -1
-        gevent.Greenlet.__init__(self)
-        if run_immediately:
-            self.start()
+        self.poller = None
+        self.polling = False
+        self._on_startup()
+
+    @property
+    def all_active_workers(self):
+        worker_sets = self.workers.values()
+        if not worker_sets:
+            return set()
+        return set.union(*worker_sets)
 
     def register_hook(self, namespace_id, parameters):
         """Register a new webhook.
@@ -151,29 +158,31 @@ class WebhookService(gevent.Greenlet):
             db_session.add(lens)
             db_session.commit()
             if hook.active:
-                worker = WebhookWorker(hook)
-                self.workers[namespace_id].add(worker)
-                if not worker.started:
-                    worker.start()
+                self._start_hook(hook, db_session)
             return cereal(hook, pretty=True)
 
     def start_hook(self, hook_public_id):
-        self.log.info('Starting hook with public id {}'.format(hook_public_id))
         with session_scope() as db_session:
             hook = db_session.query(Webhook). \
                 filter_by(public_id=hook_public_id).one()
-            if hook.active:
-                # Hook is already running
-                return 'OK hook already running'
-            hook.min_processed_id = self.minimum_id
-            hook.active = True
-            namespace_id = hook.namespace_id
-            worker = WebhookWorker(hook)
-            self.workers[namespace_id].add(worker)
-            if not worker.started:
-                worker.start()
-            db_session.commit()
-            return 'OK hook started'
+            self._start_hook(hook, db_session)
+
+    def _start_hook(self, hook, db_session):
+        self.log.info('Starting hook with public id {}'.format(hook.public_id))
+        if any(worker.id == hook.id for worker in self.all_active_workers):
+            # Hook already has a worker
+            return 'OK hook already running'
+        hook.min_processed_id = self.minimum_id
+        hook.active = True
+        namespace_id = hook.namespace_id
+        worker = WebhookWorker(hook)
+        self.workers[namespace_id].add(worker)
+        if not worker.started:
+            worker.start()
+        db_session.commit()
+        if not self.polling:
+            self._start_polling()
+        return 'OK hook started'
 
     def stop_hook(self, hook_public_id):
         self.log.info('Stopping hook with public id {}'.format(hook_public_id))
@@ -184,20 +193,41 @@ class WebhookService(gevent.Greenlet):
             for worker in self.workers[hook.namespace_id]:
                 if worker.public_id == hook_public_id:
                     self.workers[hook.namespace_id].remove(worker)
-                    del worker
-                    return 'OK hook stopped'
+                    worker.kill()
+                    break
 
-    def _run(self):
-        self.log.info('Running the webhook service')
-        log_uncaught_errors(self._run_impl, self.log)()
+        import pdb; pdb.set_trace()
 
-    def _run_impl(self):
+        if not set.union(*self.workers.values()):
+            # Kill the transaction log poller if there are no active hooks.
+            self._stop_polling()
+        return 'OK hook stopped'
+
+    def _on_startup(self):
         self._load_hooks()
         for worker in itertools.chain(*self.workers.values()):
             if not worker.started:
                 worker.start()
-        # Needed for workers to actually start.
+        # Needed for workers to actually start up.
         gevent.sleep(0)
+        if self.all_active_workers:
+            self._start_polling()
+
+    def _start_polling(self):
+        self.log.info('Start polling')
+        self.minimum_id = min(hook.min_processed_id for hook in
+                              self.all_active_workers)
+        self.poller = gevent.spawn(self._poll)
+        self.polling = True
+
+    def _stop_polling(self):
+        self.log.info('Stop polling')
+        self.poller.kill()
+        self.polling = False
+
+    def _poll(self):
+        """Poll the transaction log forever and publish events. Only runs when
+        there are actually active webhooks."""
         while True:
             self._process_log()
             gevent.sleep(self.poll_interval)
@@ -244,9 +274,6 @@ class WebhookService(gevent.Greenlet):
             for hook in all_hooks:
                 namespace_id = hook.namespace_id
                 self.workers[namespace_id].add(WebhookWorker(hook))
-            if all_hooks:
-                self.minimum_id = min(hook.min_processed_id for hook in
-                                      all_hooks)
 
 
 class WebhookWorker(gevent.Greenlet):
@@ -260,6 +287,7 @@ class WebhookWorker(gevent.Greenlet):
         self.failure_notify_url = hook.failure_notify_url
         self.max_retries = hook.max_retries
         self.retry_interval = hook.retry_interval
+        self.hook_updated_at = hook.updated_at
 
         # 'frozen' means that the worker has accumulated too large of a failure
         # backlog, and that we aren't enqueueing new events.
@@ -311,7 +339,6 @@ class WebhookWorker(gevent.Greenlet):
         """
         assert urlparse.urlparse(self.callback_url).scheme == 'https', \
             'callback_url MUST be https!'
-        # OMG WTF TODO (emfree): Do NOT set verify=False in prod!
 
         if event.id < self.min_processed_id:
             # We've already successfully processed this event. This can happen
@@ -319,6 +346,9 @@ class WebhookWorker(gevent.Greenlet):
             # at the minimum across all min_processed_id values.
             return True
         try:
+            self.log.info('Posting event {0} to webhook {1}'.
+                          format(event.id, self.id))
+            # OMG WTF TODO (emfree): Do NOT set verify=False in prod!
             r = requests.post(
                 self.callback_url,
                 data=format_output(event.data, self.include_body),
@@ -355,6 +385,13 @@ class WebhookWorker(gevent.Greenlet):
 
     def match(self, event):
         if event.data is None:
+            return False
+        msg_received_date = event.data.get('received_date')
+        if msg_received_date is None:
+            return False
+        if (msg_received_date.utctimetuple() <
+                self.hook_updated_at.utctimetuple()):
+            # Don't match messages that preceded the hook being activated.
             return False
         try:
             return self.lens.match(event.data)

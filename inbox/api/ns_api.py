@@ -464,7 +464,7 @@ def get_webhook_client():
 @app.route('/webhooks', methods=['GET'])
 def webhooks_read_all_api():
     return jsonify(g.db_session.query(Webhook).
-                   filter(Webhook.namespace_id == g.namespace_id).all())
+                   filter(Webhook.namespace_id == g.namespace.id).all())
 
 
 @app.route('/webhooks', methods=['POST'])
