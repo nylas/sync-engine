@@ -129,7 +129,11 @@ class WebhookService():
         parameters: dictionary
             Dictionary of the hook parameters.
         """
-        if not urlparse.urlparse(self.callback_url).scheme == 'https':
+
+        # TODO(emfree) do more meaningful parameter validation here
+        # (or in the calling code in the API)
+
+        if urlparse.urlparse(parameters.get('callback_url')).scheme != 'https':
             raise ValueError('callback_url MUST be https!')
 
         with session_scope() as db_session:
