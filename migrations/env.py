@@ -4,8 +4,6 @@ from sqlalchemy import create_engine, pool
 
 from logging.config import fileConfig
 
-from inbox.server.config import config
-
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 alembic_config = context.config
@@ -15,28 +13,8 @@ fileConfig(alembic_config.config_file_name)
 
 # If alembic was invoked with --tag=test, override these main config values
 if context.get_tag_argument() == 'test':
-    test_config = dict(
-        MYSQL_USER='inboxtest',
-        MYSQL_PASSWORD='inboxtest',
-        MYSQL_HOSTNAME='localhost',
-        MYSQL_PORT=3306,
-        MYSQL_DATABASE='test',
-
-        ACTION_QUEUE_LABEL='actions_test',
-
-        # Dump file name, relative to tests/:
-        BASE_DUMP="data/base_dump.sql",
-        ATTACHMENT='tests/data/muir.jpg',
-
-        # File that stores password encryption keys
-        KEY_DIR='/inbox-eas/tests/data/keys',
-        KEY_SIZE=128,
-
-        EMAIL_EXCEPTIONS=False
-
-    )
-    config.update(test_config)
-
+    from inbox.server.config import load_test_config
+    load_test_config()
 
 
 from inbox.server.models.tables.base import register_backends

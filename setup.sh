@@ -92,4 +92,10 @@ chown $SUDO_USER /var/lib/inboxapp
 mkdir -p /var/log/inboxapp
 chown $SUDO_USER /var/log/inboxapp
 
+mkdir -p /etc/inboxapp
+chown $SUDO_USER /etc/inboxapp
+
+color '35;1' 'Copying default development configuration to /etc/inboxapp'
+cp ./etc/config-dev.json /etc/inboxapp/config.json
+
 color '35;1' 'Done!.'

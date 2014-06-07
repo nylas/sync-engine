@@ -18,35 +18,8 @@ def absolute_path(path):
 
 @fixture(scope='session', autouse=True)
 def config():
-    from inbox.server.config import config
-    test_config = dict(
-        MYSQL_USER='inboxtest',
-        MYSQL_PASSWORD='inboxtest',
-        MYSQL_HOSTNAME='localhost',
-        MYSQL_PORT=3306,
-        MYSQL_DATABASE='test',
-
-        MSG_PARTS_DIRECTORY='tests/data/parts',
-        CACHE_BASEDIR='tests/cache',
-        LOGDIR='tests/log',
-
-        ACTION_QUEUE_LABEL='actions_test',
-
-        # Dump file name, relative to tests/:
-        BASE_DUMP='data/base_dump.sql',
-
-        # File that stores password encryption keys
-        KEY_DIR='/inbox-eas/tests/data/keys',
-        KEY_SIZE=128,
-
-        # Attachment file name for sendmail tests
-        ATTACHMENT='tests/data/muir.jpg',
-
-        EMAIL_EXCEPTIONS=False
-
-    )
-    config.update(test_config)
-
+    from inbox.server.config import config, load_test_config
+    load_test_config()
     return config
 
 
