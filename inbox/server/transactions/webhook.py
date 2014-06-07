@@ -197,6 +197,7 @@ class WebhookService():
             hook = db_session.query(Webhook). \
                 filter_by(public_id=hook_public_id).one()
             hook.active = False
+            db_session.commit()
             for worker in self.workers[hook.namespace_id]:
                 if worker.public_id == hook_public_id:
                     self.workers[hook.namespace_id].remove(worker)
@@ -373,7 +374,8 @@ class WebhookWorker(gevent.Greenlet):
                 status_code=r.status_code)
             try:
                 requests.post(self.failure_notify_url,
-                              data=failure_output)
+                              data=failure_output,
+                              headers={'content-type': 'application/json'})
             except requests.ConnectionError:
                 # Don't do anything special if this request fails.
                 pass
