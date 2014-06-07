@@ -561,11 +561,10 @@ def draft_update_api(public_id):
     bcc = data.get('bcc')
     subject = data.get('subject')
     body = data.get('body')
-    files = data.get('files')
+    block_public_ids = data.get('files')
 
     draft = sendmail.update_draft(g.db_session, g.namespace.account, public_id,
-                                  to, subject, body, files, cc, bcc)
-
+                                  to, subject, body, block_public_ids, cc, bcc)
     return jsonify(draft)
 
 
@@ -576,15 +575,15 @@ def draft_delete_api(public_id):
             SpoolMessage.public_id == public_id).one()
     except NoResultFound:
         return err(404, 'No draft found with public_id {}'.
-                   format(draft_public_id))
+                   format(public_id))
 
     if draft.namespace != g.namespace:
         return err(404, 'No draft found with public_id {}'.
-                   format(draft_public_id))
+                   format(public_id))
 
     if draft.is_draft:
         return err(400, 'Message with public id {} is not a draft'.
-                   format(draft_public_id))
+                   format(public_id))
 
     result = sendmail.delete_draft(g.db_session, g.namespace.account,
                                    public_id)
@@ -626,10 +625,10 @@ def draft_send_api():
     bcc = data.get('bcc')
     subject = data.get('subject')
     body = data.get('body')
-    files = data.get('files')
+    block_public_ids = data.get('files')
 
     draft = sendmail.create_draft(g.db_session, g.namespace.account, to,
-                                  subject, body, files, cc, bcc)
+                                  subject, body, block_public_ids, cc, bcc)
     # Mark draft for sending
     draft.state = 'sending'
     return jsonify(draft)

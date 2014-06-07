@@ -1,5 +1,6 @@
 from inbox.server.models.namespace import db_write_lock
 from inbox.server.models.tables.imap import ImapAccount, ImapUid
+from inbox.server.sendmail.base import generate_attachments
 from inbox.server.sendmail.postel import SMTPClient, SendError
 from inbox.server.sendmail.message import SenderInfo
 from inbox.server.sendmail.gmail.message import (create_gmail_email,
@@ -54,23 +55,25 @@ class GmailSMTPClient(SMTPClient):
         return draftuid.message
 
     def send_new(self, db_session, imapuid, inbox_uid, recipients, subject,
-                 body, attachments=None):
+                 body, block_public_ids=None):
         """
         Send a previously created + saved draft email from this user account.
 
         """
+        attachments = generate_attachments(block_public_ids)
         sender_info = SenderInfo(name=self.full_name, email=self.email_address)
         smtpmsg = create_gmail_email(sender_info, inbox_uid, recipients,
                                      subject, body, attachments)
         return self._send_mail(db_session, imapuid, smtpmsg)
 
     def send_reply(self, db_session, imapuid, replyto, inbox_uid, recipients,
-                   subject, body, attachments=None):
+                   subject, body, block_public_ids=None):
         """
         Send a previously created + saved draft email reply from this user
         account.
 
         """
+        attachments = generate_attachments(block_public_ids)
         sender_info = SenderInfo(name=self.full_name, email=self.email_address)
         smtpmsg = create_gmail_reply(sender_info, replyto, inbox_uid,
                                      recipients, subject, body, attachments)

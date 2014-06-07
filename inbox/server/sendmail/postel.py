@@ -276,7 +276,7 @@ class SMTPClient(object):
         raise NotImplementedError
 
     def send_new(self, db_session, imapuid, recipients, subject, body,
-                 attachments=None):
+                 block_public_ids=None):
         """
         Send a previously created + saved draft email from this user account.
 
@@ -291,14 +291,14 @@ class SMTPClient(object):
             a utf-8 encoded string
         body : string
             a utf-8 encoded string
-        attachments: list of dicts, optional
-            a list of dicts(filename, data, content_type)
+        block_public_ids: list of public_ids for Block objects (files)
+            which will be attached to the message
 
         """
         raise NotImplementedError
 
     def send_reply(self, db_session, imapuid, replyto, recipients, subject,
-                   body, attachments=None):
+                   body, block_public_ids=None):
         """
         Send a previously created + saved draft email reply from this user
         account.
@@ -316,8 +316,8 @@ class SMTPClient(object):
             a utf-8 encoded string
         body : string
             a utf-8 encoded string
-        attachments: list of dicts, optional
-            a list of dicts(filename, data, content_type)
+        block_public_ids: list of public_ids for Block objects (files)
+            which will be attached to the message
 
         """
         raise NotImplementedError

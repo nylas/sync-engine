@@ -1,11 +1,12 @@
 import uuid
-
+import os
 import pytest
 from sqlalchemy.orm.exc import NoResultFound
 
 from tests.data.messages.replyto_message import TEST_MSG
 from tests.util.base import action_queue
 from tests.util.crispin import crispin_client
+from inbox.server.models.tables.base import Block
 
 ACCOUNT_ID = 1
 NAMESPACE_ID = 1
@@ -26,9 +27,28 @@ def message(db, config):
 
 
 @pytest.fixture(scope='function')
-def attach(config):
-    filename = config.get('ATTACHMENT')
-    return [filename]
+def attach(db, config):
+    test_data = [('muir.jpg', 'image/jpeg'),
+                 ('LetMeSendYouEmail.wav', 'audio/vnd.wave'),
+                 ('first-attachment.jpg', 'image/jpeg')]
+
+    new_attachments = []
+    for _, (test_attachment_filename, ct) in enumerate(test_data):
+
+        test_attachment_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            '..', 'data', test_attachment_filename)
+
+        with open(test_attachment_path, 'r') as f:
+            b = Block(namespace_id=NAMESPACE_ID,
+                      filename=test_attachment_filename,
+                      data=f.read())
+            b.content_type = ct  # for now because of lousy _content_type enum
+            db.session.add(b)
+            db.session.commit()
+            new_attachments.append(b.public_id)
+
+    return new_attachments
 
 
 @pytest.fixture(autouse=True)

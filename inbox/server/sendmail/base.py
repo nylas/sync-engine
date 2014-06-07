@@ -1,6 +1,5 @@
 from collections import namedtuple
 
-import magic
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from inbox.util.misc import load_modules
@@ -8,8 +7,9 @@ from inbox.util.url import NotSupportedError
 from inbox.server.log import get_logger
 from inbox.server.models import session_scope
 from inbox.server.models.tables.base import (SpoolMessage, Thread, DraftThread,
-                                             Account)
+                                             Account, Block)
 from inbox.server.sendmail.message import Recipients
+from inbox.sqlalchemy.util import b36_to_bin
 
 
 # Message attributes of a message we're creating a reply to,
@@ -119,38 +119,6 @@ def all_recipients(to, cc=None, bcc=None):
     return Recipients(to=to, cc=cc, bcc=bcc)
 
 
-def create_attachment_metadata(attachments):
-    """
-    Given local filenames to attach, create the required metadata;
-    this includes both file data and file type.
-
-    Parameters
-    ----------
-    attachments : list
-        list of local filenames
-
-    Returns
-    -------
-    list of dicts
-        attachfiles : list of dicts(filename, data, content_type)
-
-    """
-    if not attachments:
-        return
-
-    attachfiles = []
-    for filename in attachments:
-        with open(filename, 'rb') as f:
-            data = f.read()
-            attachfile = dict(filename=filename,
-                              data=data,
-                              content_type=magic.from_buffer(data, mime=True))
-
-            attachfiles.append(attachfile)
-
-    return attachfiles
-
-
 def get_draft(db_session, account, draft_public_id):
     """ Get the draft with public_id = `draft_public_id`, or None. """
     return db_session.query(SpoolMessage).join(Thread).filter(
@@ -165,9 +133,9 @@ def get_all_drafts(db_session, account):
         Thread.namespace_id == account.namespace.id).all()
 
 
-# TODO: ATTACHMENTS
-def create_draft(db_session, account, to=None, subject=None, body=None,
-                 attachments=None, cc=None, bcc=None, thread_public_id=None):
+def create_draft(db_session, account, to=None, subject=None,
+                 body=None, block_public_ids=None, cc=None, bcc=None,
+                 thread_public_id=None):
     """
     Create a new draft. If `thread_public_id` is specified, the draft is a
     reply to the last message in the thread; otherwise, it is an independant
@@ -182,6 +150,7 @@ def create_draft(db_session, account, to=None, subject=None, body=None,
     to_addr = _parse_recipients(to) if to else to
     cc_addr = _parse_recipients(cc) if cc else cc
     bcc_addr = _parse_recipients(bcc) if bcc else bcc
+    verify_blocks(block_public_ids, account.namespace.id)
 
     # For independant drafts
     replyto_thread_id = None
@@ -202,13 +171,12 @@ def create_draft(db_session, account, to=None, subject=None, body=None,
     create_and_save_fn = get_function(account.provider,
                                       'create_and_save_draft')
     return create_and_save_fn(db_session, account, to_addr, subject, body,
-                              attachments, cc_addr, bcc_addr,
+                              block_public_ids, cc_addr, bcc_addr,
                               replyto_thread_id)
 
 
-# TODO[k]: ATTACHMENTS
 def update_draft(db_session, account, draft_public_id, to=None, subject=None,
-                 body=None, attachments=None, cc=None, bcc=None):
+                 body=None, block_public_ids=None, cc=None, bcc=None):
     """
     Update the draft with public_id = `draft_public_id`.
 
@@ -238,11 +206,15 @@ def update_draft(db_session, account, draft_public_id, to=None, subject=None,
     cc_addr = _parse_recipients(cc) if cc else draft.cc_addr
     bcc_addr = _parse_recipients(bcc) if bcc else draft.bcc_addr
     subject = subject or draft.subject
+    body = body or draft.sanitized_body
+    block_public_ids = block_public_ids or \
+        [p.public_id for p in draft.parts if p.is_attachment]
+    verify_blocks(block_public_ids, account.namespace.id)
 
     create_and_save_fn = get_function(account.provider,
                                       'create_and_save_draft')
     return create_and_save_fn(db_session, account, to_addr, subject, body,
-                              attachments, cc_addr, bcc_addr,
+                              block_public_ids, cc_addr, bcc_addr,
                               draft.replyto_thread_id, draft.id)
 
 
@@ -269,7 +241,6 @@ def _delete_draft_versions(db_session, draft_id):
     # draft_id only!
 
 
-# TODO[k]: ATTACHMENTS
 def send_draft(account_id, draft_id):
     """
     Send the draft with id = `draft_id` or
@@ -299,14 +270,15 @@ def send_draft(account_id, draft_id):
         assert draft.is_draft and not draft.is_sent
 
         recipients = Recipients(draft.to_addr, draft.cc_addr, draft.bcc_addr)
-        attachments = None
+        attachment_public_ids = [p.public_id for p in draft.parts
+                                 if p.is_attachment]
 
         if not draft.replyto_thread:
             return sendmail_client.send_new(db_session, draft.imapuids[0],
                                             draft.inbox_uid,
                                             recipients, draft.subject,
                                             draft.sanitized_body,
-                                            attachments)
+                                            attachment_public_ids)
         else:
             assert isinstance(draft.replyto_thread, DraftThread)
             thread = draft.replyto_thread.thread
@@ -334,4 +306,43 @@ def send_draft(account_id, draft_id):
                                               replyto_attrs, draft.inbox_uid,
                                               recipients, draft.subject,
                                               draft.sanitized_body,
-                                              attachments)
+                                              attachment_public_ids)
+
+
+def verify_blocks(block_public_ids, namespace_id):
+    """ Verifies that the provided block_public_ids exist and are
+        within the given namesapce_id
+    """
+    if not block_public_ids:
+        return
+    if not namespace_id:
+        raise ValueError("Need a namespace to check!")
+    with session_scope() as db_session:
+        for block_public_id in block_public_ids:
+            try:
+                b36_to_bin(block_public_id)
+                block = db_session.query(Block).filter(
+                    Block.public_id == block_public_id).one()
+                assert block.namespace_id == namespace_id
+            except (ValueError, NoResultFound, AssertionError):
+                raise SendMailException(
+                    'The given block public_ids {} are  not part of '
+                    'namespace {}'.format(block_public_ids,
+                                          namespace_id))
+
+
+def generate_attachments(block_public_ids):
+    if not block_public_ids:
+        return
+    with session_scope() as db_session:
+        all_files = db_session.query(Block).filter(
+            Block.public_id.in_(block_public_ids)).all()
+
+        # In the future we may consider discovering the filetype from the data
+        # by using #magic.from_buffer(data, mime=True))
+        attachments = [
+            dict(filename=b.filename,
+                 data=b.data,
+                 content_type=b.content_type)
+            for b in all_files]
+        return attachments

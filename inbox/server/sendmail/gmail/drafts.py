@@ -6,13 +6,12 @@ from inbox.server.crispin import RawMessage
 from inbox.server.mailsync.backends.base import (create_db_objects,
                                                  commit_uids)
 from inbox.server.mailsync.backends.gmail import create_gmail_message
-from inbox.server.sendmail.base import (all_recipients,
-                                        create_attachment_metadata)
+from inbox.server.sendmail.base import all_recipients, generate_attachments
 from inbox.server.sendmail.message import create_email, SenderInfo
 
 
 def create_and_save_draft(db_session, account, to_addr=None, subject=None,
-                          body=None, attachments=None, cc_addr=None,
+                          body=None, block_public_ids=None, cc_addr=None,
                           bcc_addr=None, replyto_thread_id=None,
                           parent_draft_id=None):
     """
@@ -27,7 +26,7 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
 
     sender_info = SenderInfo(account.full_name, account.email_address)
     recipients = all_recipients(to_addr, cc_addr, bcc_addr)
-    attachments = create_attachment_metadata(attachments)
+    attachments = generate_attachments(block_public_ids)
 
     mimemsg = create_email(sender_info, None, recipients, subject, body,
                            attachments)

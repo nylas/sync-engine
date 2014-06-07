@@ -131,7 +131,6 @@ def unmark_trash(account_id, thread_id):
     raise NotImplementedError
 
 
-# TODO: ATTACHMENTS
 def save_draft(account_id, message_id):
     """ Sync a new/updated draft back to the remote backend. """
     with session_scope() as db_session:
@@ -141,8 +140,11 @@ def save_draft(account_id, message_id):
         sender_info = SenderInfo(account.full_name, account.email_address)
         recipients = Recipients(message.to_addr, message.cc_addr,
                                 message.bcc_addr)
+        attachment_public_ids = [p.public_id for p in message.parts
+                                 if p.is_attachment]
         mimemsg = create_email(sender_info, message.inbox_uid, recipients,
-                               message.subject, message.sanitized_body, None)
+                               message.subject, message.sanitized_body,
+                               attachment_public_ids)
 
         remote_save_draft = ACTION_MODULES[account.provider].remote_save_draft
         remote_save_draft(account, account.drafts_folder.name,
