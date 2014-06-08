@@ -72,7 +72,14 @@ if [ -d "../inbox-eas" ]; then
 fi
 
 color '35;1' 'Finished installing dependencies.'
-# mysql config
+
+mkdir -p /etc/inboxapp
+chown $SUDO_USER /etc/inboxapp
+
+color '35;1' 'Copying default development configuration to /etc/inboxapp'
+cp ./etc/config-dev.json /etc/inboxapp/config.json
+
+# Mysql config
 cp ./etc/my.cnf /etc/mysql/conf.d/inboxapp.cnf
 
 mysqld_safe &
@@ -91,11 +98,5 @@ chown $SUDO_USER /var/lib/inboxapp
 
 mkdir -p /var/log/inboxapp
 chown $SUDO_USER /var/log/inboxapp
-
-mkdir -p /etc/inboxapp
-chown $SUDO_USER /etc/inboxapp
-
-color '35;1' 'Copying default development configuration to /etc/inboxapp'
-cp ./etc/config-dev.json /etc/inboxapp/config.json
 
 color '35;1' 'Done!.'
