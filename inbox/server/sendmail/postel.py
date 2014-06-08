@@ -275,30 +275,25 @@ class SMTPClient(object):
         """
         raise NotImplementedError
 
-    def send_new(self, db_session, imapuid, recipients, subject, body,
-                 block_public_ids=None):
+    def send_new(self, db_session, draft, recipients, block_public_ids=None):
         """
         Send a previously created + saved draft email from this user account.
 
         Parameters
         ----------
         db_session
-        imapuid : models.tables.imap.ImapUid object
-            imapuid of the draft message to send.
+        draft : models.tables.base.SpoolMessage object
+            the draft message to send.
         recipients: Recipients(to, cc, bcc) namedtuple
             to, cc, bcc are a lists of utf-8 encoded strings or None.
-        subject : string
-            a utf-8 encoded string
-        body : string
-            a utf-8 encoded string
         block_public_ids: list of public_ids for Block objects (files)
             which will be attached to the message
 
         """
         raise NotImplementedError
 
-    def send_reply(self, db_session, imapuid, replyto, recipients, subject,
-                   body, block_public_ids=None):
+    def send_reply(self, db_session, draft, replyto, recipients,
+                   block_public_ids=None):
         """
         Send a previously created + saved draft email reply from this user
         account.
@@ -306,16 +301,12 @@ class SMTPClient(object):
         Parameters
         ----------
         db_session
-        imapuid : models.tables.imap.ImapUid object
-            imapuid of the draft message to send.
+        draft : models.tables.base.SpoolMessage object
+            the draft message to send.
         replyto: ReplyToAttrs(subject, message_id_header, references, body)
             namedtuple
         recipients: Recipients(to, cc, bcc) namedtuple
             to, cc, bcc are a lists of utf-8 encoded strings or None.
-        subject : string
-            a utf-8 encoded string
-        body : string
-            a utf-8 encoded string
         block_public_ids: list of public_ids for Block objects (files)
             which will be attached to the message
 

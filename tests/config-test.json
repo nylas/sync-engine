@@ -15,6 +15,6 @@
 "BASE_DUMP": "data/base_dump.sql",
 "KEY_DIR": "/inbox-eas/tests/data/keys",
 
-"EMAIL_EXCEPTIONS": false,
+"EMAIL_EXCEPTIONS": false
 
 }

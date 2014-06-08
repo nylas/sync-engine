@@ -52,15 +52,18 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
     new_uids = create_db_objects(account.id, db_session, log,
                                  account.drafts_folder.name, [msg],
                                  create_gmail_message)
-    new_uid = new_uids[0]
+    if new_uids:
+        assert len(new_uids) == 1
+        new_uid = new_uids[0]
 
-    new_uid.created_date = date
+        new_uid.created_date = date
 
-    # Set SpoolMessage's special draft attributes
-    new_uid.message.state = 'draft'
-    new_uid.message.parent_draft_id = parent_draft_id
-    new_uid.message.replyto_thread_id = replyto_thread_id
+        # Set SpoolMessage's special draft attributes
+        new_uid.message.state = 'draft'
+        new_uid.message.parent_draft_id = parent_draft_id
+        new_uid.message.replyto_thread_id = replyto_thread_id
 
-    commit_uids(db_session, log, new_uids)
+        commit_uids(db_session, log, new_uids)
 
-    return new_uid.message
+        return new_uid.message
+

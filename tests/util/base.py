@@ -1,16 +1,20 @@
 import os
+import sys
 import subprocess
 
 import zerorpc
 from shutil import rmtree
 from pytest import fixture, yield_fixture
+import json
 
 from inbox.util.db import drop_everything
 
 
 def absolute_path(path):
-    """ Returns the absolute path for a path specified as relative to the
-        tests/ directory, needed for the dump file name in config.cfg
+    """
+    Returns the absolute path for a path specified as relative to the
+    tests/ directory, needed for the dump file name in config.cfg
+
     """
     return os.path.abspath(
         os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', path))
@@ -18,17 +22,31 @@ def absolute_path(path):
 
 @fixture(scope='session', autouse=True)
 def config():
-    from inbox.server.config import config, load_test_config
-    load_test_config()
+    from inbox.server.config import config
+
+    filename = absolute_path('config-test.json')
+    try:
+        f = open(filename)
+    except IOError:
+        sys.exit('Missing test config at {0}'.format(filename))
+    else:
+        with f:
+            test_config = json.load(f)
+            config.update(test_config)
+            if not config.get('MYSQL_HOSTNAME') == 'localhost':
+                sys.exit('Tests should only be run on localhost DB!')
+
     return config
 
 
 @fixture(scope='session')
 def log(request, config):
-    """ Returns root server logger. For others loggers, use this fixture
-        for setup but then call inbox.server.log.get_logger().
+    """
+    Returns root server logger. For others loggers, use this fixture
+    for setup but then call inbox.server.log.get_logger().
 
-        Testing log directory is removed at the end of the test run!
+    Testing log directory is removed at the end of the test run!
+
     """
     from inbox.server.log import configure_general_logging
 
@@ -121,9 +139,8 @@ class TestDB(object):
 
 
 class TestZeroRPC(object):
-    """ client/server handle for a ZeroRPC service """
+    """ Client/server handle for a ZeroRPC service """
     def __init__(self, config, cls, service_loc):
-
         from inbox.server.util.concurrency import make_zerorpc
 
         self.server = make_zerorpc(cls, service_loc)

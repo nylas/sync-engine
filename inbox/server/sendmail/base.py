@@ -274,11 +274,8 @@ def send_draft(account_id, draft_id):
                                  if p.is_attachment]
 
         if not draft.replyto_thread:
-            return sendmail_client.send_new(db_session, draft.imapuids[0],
-                                            draft.inbox_uid,
-                                            recipients, draft.subject,
-                                            draft.sanitized_body,
-                                            attachment_public_ids)
+            return sendmail_client.send_new(db_session, draft,
+                                            recipients, attachment_public_ids)
         else:
             assert isinstance(draft.replyto_thread, DraftThread)
             thread = draft.replyto_thread.thread
@@ -302,10 +299,8 @@ def send_draft(account_id, draft_id):
                                          references=references,
                                          body=body)
 
-            return sendmail_client.send_reply(db_session, draft.imapuids[0],
-                                              replyto_attrs, draft.inbox_uid,
-                                              recipients, draft.subject,
-                                              draft.sanitized_body,
+            return sendmail_client.send_reply(db_session, draft, replyto_attrs,
+                                              recipients,
                                               attachment_public_ids)
 
 
