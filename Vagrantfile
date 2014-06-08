@@ -1,19 +1,12 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
-# Stripped-down Vagrantfile for development
+# Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
+VAGRANTFILE_API_VERSION = "2"
 
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
-Vagrant::Config.run do |config|
-
-  config.vm.box = 'ubuntu'
-
-  config.provider :vmware_fusion do |vmware|
-    config.vm.box_url = "http://files.vagrantup.com/trusty64_vmware.box"
-  end
-  config.provider :virtualbox do |vb|
-    vb.box_url = "http://files.vagrantup.com/trusty64.box"
-  end
+  config.vm.box = "ubuntu/trusty64"
 
   config.ssh.forward_agent = true
 
@@ -25,9 +18,7 @@ Vagrant::Config.run do |config|
   ]
 
   # config.vm.provision :shell, :inline => "apt-get update -q && cd /vagrant && /bin/sh setup.sh"
-end
 
-Vagrant.configure("2") do |config|
   config.vm.network "forwarded_port", guest: 5000, host: 5000
   config.vm.network "forwarded_port", guest: 8000, host: 8000
   config.vm.network "forwarded_port", guest: 5555, host: 5555
