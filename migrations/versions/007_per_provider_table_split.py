@@ -16,8 +16,8 @@ import sqlalchemy as sa
 from sqlalchemy.sql import table, column
 from sqlalchemy.ext.declarative import declarative_base
 
-from inbox.server.models import session_scope
-from inbox.server.models.ignition import engine
+from inbox.models import session_scope
+from inbox.models.ignition import engine
 
 Base = declarative_base()
 Base.metadata.reflect(engine)

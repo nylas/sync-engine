@@ -21,8 +21,8 @@ import sqlalchemy as sa
 
 
 def upgrade():
-    from inbox.server.models import session_scope
-    from inbox.server.models.ignition import engine
+    from inbox.models import session_scope
+    from inbox.models.ignition import engine
 
     Base = declarative_base()
     Base.metadata.reflect(engine)

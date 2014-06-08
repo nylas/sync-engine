@@ -2,7 +2,7 @@
 import os
 import shutil
 
-from inbox.server.config import config
+from inbox.config import config
 
 import click
 

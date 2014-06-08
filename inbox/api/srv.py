@@ -1,6 +1,6 @@
 import logging
 
-from inbox.server.log import get_logger
+from inbox.log import get_logger
 inbox_logger = get_logger(purpose='api')
 
 # Override default werkzeug before it starts up
@@ -15,7 +15,7 @@ def mock_create_logger(app):
     return inbox_logger
 flask_logging.create_logger = mock_create_logger
 
-from inbox.server.models.tables.base import register_backends
+from inbox.models.tables.base import register_backends
 table_mod_for = register_backends()
 
 from ns_api import app as ns_api

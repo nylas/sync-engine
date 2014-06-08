@@ -6,8 +6,8 @@ import argparse
 
 from setproctitle import setproctitle; setproctitle('inbox-api')
 
-from inbox.server.config import config
-from inbox.server.log import configure_general_logging, get_logger
+from inbox.config import config
+from inbox.log import configure_general_logging, get_logger
 from inbox.util.startup import preflight
 configure_general_logging()
 log = get_logger()
@@ -31,7 +31,7 @@ if args.config:
 
 from inbox.api.srv import app
 from gevent.wsgi import WSGIServer, WSGIHandler
-from inbox.server.log import get_logger
+from inbox.log import get_logger
 
 
 # gevent.pywsgi bullshit. see
@@ -56,8 +56,8 @@ inbox_logger = get_logger(purpose='api')
 
 def start():
     # start actions service
-    from inbox.server.util.concurrency import make_zerorpc
-    from inbox.server.transactions.actions import SyncbackService
+    from inbox.util.concurrency import make_zerorpc
+    from inbox.transactions.actions import SyncbackService
     action_srv_loc = config.get('ACTION_SERVER_LOC', None)
     make_zerorpc(SyncbackService, action_srv_loc)
 

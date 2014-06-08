@@ -42,7 +42,7 @@ def kill_greenlets():
 
 
 def test_get_tags(api_client):
-    from inbox.server.models.tables.base import Tag
+    from inbox.models.tables.base import Tag
     tags = get_data(api_client, '/tags')
     assert set(Tag.RESERVED_TAG_NAMES).issubset({tag['name'] for tag in tags})
 
@@ -106,9 +106,9 @@ def test_actions_syncback(api_client):
     """Add and remove tags that should trigger syncback actions, and check that
     the appropriate actions get put on the queue (doesn't test the
     implementation of the actual syncback methods in
-    inbox/server/actions/base.py)."""
-    from inbox.server.transactions.actions import SyncbackService
-    from inbox.server.actions.base import (mark_read, mark_unread, archive,
+    inbox/actions/base.py)."""
+    from inbox.transactions.actions import SyncbackService
+    from inbox.actions.base import (mark_read, mark_unread, archive,
                                            unarchive, star, unstar)
     from gevent import monkey
     # aggressive=False used to avoid AttributeError in other tests, see

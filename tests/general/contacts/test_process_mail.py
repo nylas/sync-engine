@@ -4,8 +4,8 @@ import pytest
 from tests.util.base import config
 config()
 
-from inbox.server.contacts.process_mail import update_contacts
-from inbox.server.models.tables.base import Contact, Message, register_backends
+from inbox.contacts.process_mail import update_contacts
+from inbox.models.tables.base import Contact, Message, register_backends
 register_backends()
 
 ACCOUNT_ID = 1

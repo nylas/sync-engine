@@ -15,7 +15,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 
 def upgrade():
-    from inbox.server.models.ignition import engine
+    from inbox.models.ignition import engine
     Base = declarative_base()
     Base.metadata.reflect(engine)
 
@@ -29,7 +29,7 @@ def upgrade():
 
 
 def downgrade():
-    from inbox.server.models.ignition import engine
+    from inbox.models.ignition import engine
     Base = declarative_base()
     Base.metadata.reflect(engine)
 

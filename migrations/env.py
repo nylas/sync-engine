@@ -13,21 +13,21 @@ fileConfig(alembic_config.config_file_name)
 
 # If alembic was invoked with --tag=test, override these main config values
 if context.get_tag_argument() == 'test':
-    from inbox.server.config import load_test_config
+    from inbox.config import load_test_config
     load_test_config()
 
 
-from inbox.server.models.tables.base import register_backends
+from inbox.models.tables.base import register_backends
 table_mod_for = register_backends()
 
 
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
-from inbox.server.models import Base
+from inbox.models import Base
 target_metadata = Base.metadata
 
-from inbox.server.models.ignition import db_uri
+from inbox.models.ignition import db_uri
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

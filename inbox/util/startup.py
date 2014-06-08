@@ -9,9 +9,9 @@ import sqlalchemy
 from alembic.config import Config as alembic_config
 from alembic.script import ScriptDirectory
 
-from inbox.server.config import config
+from inbox.config import config
 
-from inbox.server.log import get_logger
+from inbox.log import get_logger
 log = get_logger()
 
 
@@ -39,7 +39,7 @@ def check_requirements(requirements_path):
 
 def check_db():
     """ Checks the database revision against the known alembic migrations. """
-    from inbox.server.models.ignition import db_uri
+    from inbox.models.ignition import db_uri
     inbox_db_engine = sqlalchemy.create_engine(db_uri())
 
     # top-level, with setup.sh

@@ -6,7 +6,7 @@ from sqlalchemy import create_engine, Column, Enum, String, Integer
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import as_declarative, declared_attr
 
-from inbox.sqlalchemy.revision import versioned_session, Revision, gen_rev_role
+from inbox.sqlalchemy_ext.revision import versioned_session, Revision, gen_rev_role
 
 
 @as_declarative()

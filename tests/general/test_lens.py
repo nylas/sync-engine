@@ -7,7 +7,7 @@ from tests.data.messages.message import (subject, delivered_to, sender,
 from tests.util.base import config
 config()
 
-from inbox.server.models.tables.base import register_backends, Lens
+from inbox.models.tables.base import register_backends, Lens
 register_backends()
 
 NAMESPACE_ID = 1

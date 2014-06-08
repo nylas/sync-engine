@@ -2,10 +2,10 @@ import pytest
 
 from tests.util.base import config
 # Need to set up test config before we can import from
-# inbox.server.models.tables.
+# inbox.models.tables.
 config()
-from inbox.server.models.tables.base import Contact
-from inbox.server.contacts.remote_sync import merge, poll, MergeError
+from inbox.models.tables.base import Contact
+from inbox.contacts.remote_sync import merge, poll, MergeError
 
 ACCOUNT_ID = 1
 

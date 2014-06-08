@@ -10,8 +10,8 @@ ACCOUNT_ID = 1
 
 
 def test_soft_delete(db, config):
-    from inbox.server.models.tables.base import Folder, Message
-    from inbox.server.models.tables.imap import ImapUid
+    from inbox.models.tables.base import Folder, Message
+    from inbox.models.tables.imap import ImapUid
     f = Folder(name='DOES NOT EXIST', account_id=ACCOUNT_ID)
     db.session.add(f)
     db.session.flush()

@@ -18,7 +18,7 @@ import sqlalchemy as sa
 
 
 def upgrade():
-    from inbox.sqlalchemy.util import Base36UID
+    from inbox.sqlalchemy_ext.util import Base36UID
 
     print "Rename WebhookParameters -> Webhook"
     op.rename_table('webhookparameters', 'webhook')

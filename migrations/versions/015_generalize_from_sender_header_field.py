@@ -14,8 +14,8 @@ down_revision = '563d405d1f99'
 
 
 def upgrade():
-    from inbox.server.models import session_scope
-    from inbox.server.models.tables.base import Message
+    from inbox.models import session_scope
+    from inbox.models.tables.base import Message
 
     with session_scope() as db_session:
         results = db_session.query(Message).all()
@@ -26,8 +26,8 @@ def upgrade():
 
 
 def downgrade():
-    from inbox.server.models import session_scope
-    from inbox.server.models.tables.base import Message
+    from inbox.models import session_scope
+    from inbox.models.tables.base import Message
 
     with session_scope() as db_session:
         results = db_session.query(Message).all()

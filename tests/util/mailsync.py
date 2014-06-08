@@ -7,7 +7,7 @@ from tests.util.base import TestZeroRPC
 def sync_client(config):
     sync_service_loc = config.get('CRISPIN_SERVER_LOC')
 
-    from inbox.server.mailsync.service import SyncService
+    from inbox.mailsync.service import SyncService
 
     test = TestZeroRPC(config, SyncService, sync_service_loc)
 

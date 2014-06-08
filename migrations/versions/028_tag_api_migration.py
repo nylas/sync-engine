@@ -20,7 +20,7 @@ from datetime import datetime
 
 
 def upgrade():
-    from inbox.server.models.ignition import engine
+    from inbox.models.ignition import engine
 
     Session = sessionmaker(bind=engine)
 

@@ -6,7 +6,7 @@ from logging import getLogger
 import pytest
 from gevent import GreenletExit
 
-from inbox.server.log import log_uncaught_errors
+from inbox.log import log_uncaught_errors
 
 
 def test_root_filelogger(config, log):

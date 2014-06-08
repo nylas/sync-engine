@@ -22,7 +22,7 @@ def absolute_path(path):
 
 @fixture(scope='session', autouse=True)
 def config():
-    from inbox.server.config import config
+    from inbox.config import config
 
     filename = absolute_path('config-test.json')
     try:
@@ -43,12 +43,12 @@ def config():
 def log(request, config):
     """
     Returns root server logger. For others loggers, use this fixture
-    for setup but then call inbox.server.log.get_logger().
+    for setup but then call inbox.log.get_logger().
 
     Testing log directory is removed at the end of the test run!
 
     """
-    from inbox.server.log import configure_general_logging
+    from inbox.log import configure_general_logging
 
     def remove_logs():
         rmtree(config['LOGDIR'], ignore_errors=True)
@@ -79,7 +79,7 @@ def db(request, config):
 
 @fixture(scope='function')
 def action_queue(request, config):
-    from inbox.server.actions import base
+    from inbox.actions import base
     q = base.get_queue()
     request.addfinalizer(q.empty)
     # make sure it's empty to start out with too
@@ -97,8 +97,8 @@ def api_client(db):
 
 class TestDB(object):
     def __init__(self, config, dumpfile):
-        from inbox.server.models import InboxSession
-        from inbox.server.models.ignition import engine
+        from inbox.models import InboxSession
+        from inbox.models.ignition import engine
         # Set up test database
         self.session = InboxSession(engine, versioned=False)
         self.engine = engine
@@ -119,7 +119,7 @@ class TestDB(object):
         subprocess.check_call(cmd, shell=True)
 
     def new_session(self, ignore_soft_deletes=True):
-        from inbox.server.models import InboxSession
+        from inbox.models import InboxSession
         self.session.close()
         self.session = InboxSession(self.engine,
                                     versioned=False,
@@ -141,7 +141,7 @@ class TestDB(object):
 class TestZeroRPC(object):
     """ Client/server handle for a ZeroRPC service """
     def __init__(self, config, cls, service_loc):
-        from inbox.server.util.concurrency import make_zerorpc
+        from inbox.util.concurrency import make_zerorpc
 
         self.server = make_zerorpc(cls, service_loc)
 

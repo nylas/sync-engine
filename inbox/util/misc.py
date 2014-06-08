@@ -1,5 +1,5 @@
 import os, sys, pkgutil, time
-from inbox.server.log import get_logger
+from inbox.log import get_logger
 
 
 def or_none(value, selector):

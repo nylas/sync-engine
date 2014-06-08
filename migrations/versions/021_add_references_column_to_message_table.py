@@ -13,7 +13,7 @@ down_revision = '10ef1d46f016'
 from alembic import op
 import sqlalchemy as sa
 
-from inbox.sqlalchemy.util import JSON
+from inbox.sqlalchemy_ext.util import JSON
 
 
 def upgrade():

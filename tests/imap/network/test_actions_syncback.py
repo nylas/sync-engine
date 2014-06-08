@@ -12,9 +12,9 @@ THREAD_ID = 2
 
 
 def test_archive_move_syncback(db, config):
-    from inbox.server.actions.gmail import (remote_archive, remote_move,
+    from inbox.actions.gmail import (remote_archive, remote_move,
                                             uidvalidity_cb)
-    from inbox.server.models.tables.imap import ImapAccount, ImapThread
+    from inbox.models.tables.imap import ImapAccount, ImapThread
 
     remote_archive(ACCOUNT_ID, THREAD_ID)
 
@@ -43,9 +43,9 @@ def test_archive_move_syncback(db, config):
 
 
 def test_copy_delete_syncback(db, config):
-    from inbox.server.actions.gmail import (remote_copy, remote_delete,
+    from inbox.actions.gmail import (remote_copy, remote_delete,
                                             uidvalidity_cb)
-    from inbox.server.models.tables.imap import ImapAccount, ImapThread
+    from inbox.models.tables.imap import ImapAccount, ImapThread
 
     g_thrid = db.session.query(ImapThread.g_thrid). \
         filter_by(id=THREAD_ID, namespace_id=NAMESPACE_ID).one()[0]
@@ -78,8 +78,8 @@ def test_copy_delete_syncback(db, config):
 
 
 def test_remote_unread_syncback(db, config):
-    from inbox.server.actions.gmail import set_remote_unread, uidvalidity_cb
-    from inbox.server.models.tables.imap import ImapAccount, ImapThread
+    from inbox.actions.gmail import set_remote_unread, uidvalidity_cb
+    from inbox.models.tables.imap import ImapAccount, ImapThread
 
     g_thrid, = db.session.query(ImapThread.g_thrid).filter_by(
         id=THREAD_ID, namespace_id=NAMESPACE_ID).one()
@@ -114,10 +114,10 @@ def test_queue_running(db):
         automatic verification of the behaviour here eventually (see the
         previous tests), but for now I'm leaving it lean and fast.
     """
-    from inbox.server.actions.base import (archive, move, copy, delete,
+    from inbox.actions.base import (archive, move, copy, delete,
                                            rqworker, register_backends)
-    from inbox.server.models.tables.imap import ImapAccount
-    from inbox.server.models import session_scope
+    from inbox.models.tables.imap import ImapAccount
+    from inbox.models import session_scope
     register_backends()
 
     account = db.session.query(ImapAccount).get(ACCOUNT_ID)

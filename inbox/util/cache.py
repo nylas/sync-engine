@@ -5,8 +5,8 @@ from .file import safe_filename, mkdirp, splitall
 
 # A quick hack of a key-value cache of arbitrary data structures. Stores on disk.
 # XXX TODO: before prod deploy, make this configurable.
-from inbox.server.config import config
-from inbox.server.log import get_logger
+from inbox.config import config
+from inbox.log import get_logger
 log = get_logger()
 
 

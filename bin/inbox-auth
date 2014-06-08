@@ -12,9 +12,9 @@ from inbox.util.startup import preflight
 preflight()
 
 from inbox.util.url import NotSupportedError
-from inbox.server.models import session_scope
-from inbox.server.models.tables.base import Account
-from inbox.server.auth.base import get_handler
+from inbox.models import session_scope
+from inbox.models.tables.base import Account
+from inbox.auth.base import get_handler
 
 parser = argparse.ArgumentParser(description='Auth an email account')
 parser.add_argument('email_address',
