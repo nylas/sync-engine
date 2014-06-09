@@ -14,7 +14,7 @@ Inbox is a set of tools to make it simple and quick to develop apps and services
 - All UTF-8 and JSON sanitized
 - Contacts list sync
 
-These features are exposed via a clean REST API. See the [docs] (src/inbox/docs) folder for details.
+These features are exposed via a clean REST API. See the [docs] (inbox/docs) folder for details.
 
 
 ## Getting Started
