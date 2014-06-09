@@ -1,42 +1,7 @@
 Title: Webhooks
 
-Webhooks allow your application to receive callbacks based on specific filter parameters.
+Webhooks allow your application to receive callbacks when specific events happen. Similar to other APIs, you the callback criteria is specified by filter parameters. 
 
-# The webhook object
-
-    GET https://api.inboxapp.com/n/<namespace_id>/webhooks/<webhook_id>
-
-**Response:**
-
-```
-:::json
-{
-    "id": "1dp2eu6n25u3rpejmpfm67d8g",
-    "object": "webhook",
-    "namespace": "awa6ltos76vz5hvphkp8k17nt",
-
-    "callback_url": "https://www.example.com/webhook_callback",
-    "failure_notify_url": "https://www.example.com/webhook_failure",
-
-    "include_body": true,
-    "active": true,
-
-    "to": "*@salesforce.com",
-    "from": null,
-    "cc": null,
-    "bcc": null,
-    "any_email": null,
-    "subject": null,
-    "thread": "8vvuy9octntkxdc944ogdi71i",
-    "filename": null,
-    "started_before": null,
-    "started_after": null,
-    "last_message_before": null,
-    "last_message_after": null,
-}
-```
-
-Note that the specified `callback_url` and `failure_notify_url` *must* support HTTPS. Attempts to create or modify a webhook with a non-https endpoint will fail.
 
 # Creating a new webhook
 
@@ -74,6 +39,46 @@ Note that the specified `callback_url` and `failure_notify_url` *must* support H
 * `include_body` defaults to `false`
 * all filter params default to `null`
 
+Note that the specified `callback_url` and `failure_notify_url` *must* support HTTPS. Attempts to create or modify a webhook with a non-https endpoint will fail.
+
+
+
+# Requesting webhook details
+
+    GET https://api.inboxapp.com/n/<namespace_id>/webhooks/<webhook_id>
+
+**Response:**
+
+```
+:::json
+{
+    "id": "1dp2eu6n25u3rpejmpfm67d8g",
+    "object": "webhook",
+    "namespace": "awa6ltos76vz5hvphkp8k17nt",
+
+    "callback_url": "https://www.example.com/webhook_callback",
+    "failure_notify_url": "https://www.example.com/webhook_failure",
+
+    "include_body": true,
+    "active": true,
+
+    "to": "*@salesforce.com",
+    "from": null,
+    "cc": null,
+    "bcc": null,
+    "any_email": null,
+    "subject": null,
+    "thread": "8vvuy9octntkxdc944ogdi71i",
+    "filename": null,
+    "started_before": null,
+    "started_after": null,
+    "last_message_before": null,
+    "last_message_after": null,
+}
+```
+
+
+
 # Starting and stopping a webhook
 
 Webhooks can be stopped or restarted by issuing a PUT request to the webhook's
@@ -81,7 +86,7 @@ URI with the new value of the `active` parameter in the body.
 
     PUT https://api.inboxapp.com/n/<namespace_id>/webhooks/<webhook_id>
 
-** Sample post body
+## Sample post body
 ```
 {
   "active": false
@@ -93,6 +98,8 @@ callback URL, delete the webhook and create a new one.
 
 # Listing all webhooks
 
+    //Again, don't just pose code, post some text content/context too. No matter how obvious it may be. It's good documentation experience and you want to be consistent too.
+ 
     GET https://api.inboxapp.com/n/<namespace_id>/webhooks
 
 **Response:**

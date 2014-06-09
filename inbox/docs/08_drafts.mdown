@@ -1,6 +1,6 @@
 Title: Drafts
 
-A draft is a special kind of message which has not been sent, and therefore its body is mutable.
+A draft is a special kind of message which has not been sent, and therefore its body contents are mutable. Once sent, the body cannot be changed.
 
 To get a list of all threads with drafts, use the [Threads](#threads) API call with a tag [filter](#filters) that specifies `draft`, like so:
 
@@ -15,6 +15,17 @@ To get a list of all threads with drafts, use the [Threads](#threads) API call w
 # Creating a draft
 
     POST https://api.inboxapp.com/n/<namespace_id>/drafts
+
+
+Post body paramters: 
+
+* `subject`
+* `to`
+* `reply_to_thread`
+* `body`
+* `files`
+
+Note that all of these paramters are optional. If omitted, and empty draft will still be created.
 
 
 **Sample Post Body**
@@ -39,14 +50,12 @@ To get a list of all threads with drafts, use the [Threads](#threads) API call w
 
 A successful response will contain the newly created [Draft](#draft) object.
 
-Note that `subject`, `to`, `body`, `files` are all optional fields.
-
 Also note that creating a draft will fail if the referenced `files` ids have not been uploaded. See [Files](#files) for more details on how to upload and reference attachments.
 
 
 ### Creating a reply to an existing thread
 
-If the draft is a response to a message in a thread, you should provide the thread's ID in the `reply_to_thread` parameter and omit the `subject` parameter. Messages you create or send __should not include quoted text__ when they are in reply to an existing thread.
+If the draft is a response to an existing thread, you should provide the thread's ID in the `reply_to_thread` parameter and omit the `subject` parameter. Messages you create or send __should not include quoted text__ when they are in reply to an existing thread.
 
 ```
 :::json
@@ -67,7 +76,7 @@ Updating a draft is as simple as issuing a POST request to the draft's URI.
 
     POST https://api.inboxapp.com/n/<namespace_id>/drafts/<draft_id>
 
-Any fields in the body of the request will overwrite previous values. If you attempt to modify properties on a draft that does not exist, this request will fail.
+Any fields in the body of the request will overwrite previous values.
 
 Updating a draft returns a new draft object, with a new ID. When submitting subsequent send or save actions, you must use this new ID. Returning a new draft revision with a new ID is important in case multiple clients have queued, but not successfully sent, changes to the same draft. In these cases, the draft is forked into two separate drafts.
 
@@ -82,4 +91,4 @@ If the draft does not exist, this request will fail.
 
 # Sending a draft
 
-The Inbox API provides a single API for sending new messages and draft messages. See [Sending](#sending) for more information.
+The Inbox API provides a single API for sending both new messages and existing drafts. See [Sending](#sending) for more information.

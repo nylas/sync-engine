@@ -1,6 +1,6 @@
 Title: Tags
 
-Tags are the primary way of storing metadata on a specific thread. They are generally used to group threads with some criteria.
+Tags are the primary way of storing metadata on a specific thread. They are generally used to group threads with some criteria, such as those unread or within a specific provider folder.
 
 # Getting all tags
 
@@ -49,7 +49,7 @@ Tags are the primary way of storing metadata on a specific thread. They are gene
 
 # Canonical tags
 
-These are an extended version of [RFC-6154](http://tools.ietf.org/html/rfc6154), mapped to the relevant values in backend providers (if any).
+These are an extended version of [RFC-6154](http://tools.ietf.org/html/rfc6154), mapped to the relevant values in backend providers. Some will not be used if unsupported by the user's provider. (e.g. `spam`)
 
 * **`inbox`**
 * **`archive`** (alias for message without tag `inbox`)

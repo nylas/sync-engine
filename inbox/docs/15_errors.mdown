@@ -1,6 +1,5 @@
 Title: Errors
 
-
 Inbox uses conventional HTTP response codes to indicate the success or failure of an API request.
 
 Code | Description
