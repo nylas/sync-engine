@@ -99,4 +99,6 @@ chown $SUDO_USER /var/lib/inboxapp
 mkdir -p /var/log/inboxapp
 chown $SUDO_USER /var/log/inboxapp
 
+git config branch.master.rebase true
+
 color '35;1' 'Done!.'
