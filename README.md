@@ -65,22 +65,16 @@ And _voilà_! Auth an account via the commandline and start syncing:
 
 We'd love your help making Inbox better! Join the [Google
 Group](http://groups.google.com/group/inbox-dev) for project updates and feature
-discussion. We also hang out in `##inbox` on `irc.freenode.net`. (Be patient,
-IRC is not our primary dev channel.)
+discussion. We also hang out in `##inbox` on `irc.freenode.net`, or you can email 
+[help@inboxapp.com](mailto:help@inboxapp.com).
 
 Please sign the [Contributor License Agreement](https://www.inboxapp.com/cla.html)
-before submitting patches. (It's extremely simliar to other projects, like NodeJS.)
+before submitting patches. (It's simliar to other projects, like NodeJS.)
 
-We try to stick with pep8 and the [Google Python style
-guide](http://google-styleguide.googlecode.com/svn/trunk/pyguide.html).
-
-For docstrings, we're using the [numpy docstring
+We maintain strict code style, following [pep8](http://legacy.python.org/dev/peps/pep-0008/), the [Google Python style
+guide](http://google-styleguide.googlecode.com/svn/trunk/pyguide.html), and [numpy docstring
 conventions](https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt).
 
-We also group module imports separated by blank lines, starting with Python
-standard library imports, followed by 3rd-party modules and then Inbox modules
-(relative and absolute). Within these general groups, we group to the author's
-preference of visual consistency.
 
 ## License
 
