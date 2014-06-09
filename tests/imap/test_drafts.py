@@ -18,8 +18,8 @@ def message(db, config):
     from inbox.models.tables.imap import ImapAccount
 
     account = db.session.query(ImapAccount).get(ACCOUNT_ID)
-    to = [{"name": "The red-haired mermaid",
-           "email": account.email_address}]
+    to = [{'name': 'The red-haired mermaid',
+           'email': account.email_address}]
     subject = 'Draft test: ' + str(uuid.uuid4().hex)
     body = '<html><body><h2>Sea, birds, yoga and sand.</h2></body></html>'
 

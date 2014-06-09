@@ -198,8 +198,8 @@ def reconcile_message(db_session, log, inbox_uid, new_msg):
 
     """
     try:
-        spool_message = db_session.query(SpoolMessage).filter_by(
-            inbox_uid=inbox_uid).one()
+        spool_message = db_session.query(SpoolMessage).filter(
+            SpoolMessage.inbox_uid == inbox_uid).one()
         spool_message.resolved_message = new_msg
         return spool_message
 

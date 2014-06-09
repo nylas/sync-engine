@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.37, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.35, for debian-linux-gnu (x86_64)
 --
--- Host: localhost    Database: test
+-- Host: localhost    Database: inbox
 -- ------------------------------------------------------
--- Server version	5.5.37-0ubuntu0.12.04.1-log
+-- Server version	5.5.35-0ubuntu0.12.04.2-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -25,7 +25,7 @@ DROP TABLE IF EXISTS `account`;
 CREATE TABLE `account` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `public_id` binary(16) NOT NULL,
-  `email_address` varchar(254) DEFAULT NULL,
+  `email_address` varchar(191) DEFAULT NULL,
   `provider` enum('Gmail','Outlook','Yahoo','EAS','Inbox') NOT NULL,
   `save_raw_messages` tinyint(1) DEFAULT '1',
   `sync_host` varchar(255) DEFAULT NULL,
@@ -60,7 +60,7 @@ CREATE TABLE `account` (
   `important_folder_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `ix_account_public_id` (`public_id`),
-  KEY `ix_account_email_address` (`email_address`(191)),
+  KEY `ix_account_email_address` (`email_address`),
   KEY `account_ibfk_2` (`inbox_folder_id`),
   KEY `account_ibfk_3` (`sent_folder_id`),
   KEY `account_ibfk_4` (`drafts_folder_id`),
@@ -111,7 +111,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('21878b1b3d4b');
+INSERT INTO `alembic_version` VALUES ('1d7374c286c5');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -168,7 +168,7 @@ CREATE TABLE `contact` (
   `uid` varchar(64) NOT NULL,
   `provider_name` varchar(64) DEFAULT NULL,
   `source` enum('local','remote') DEFAULT NULL,
-  `email_address` varchar(254) DEFAULT NULL,
+  `email_address` varchar(191) DEFAULT NULL,
   `name` text,
   `raw_data` text,
   `score` int(11) DEFAULT NULL,
@@ -179,7 +179,7 @@ CREATE TABLE `contact` (
   UNIQUE KEY `uid` (`uid`,`source`,`account_id`,`provider_name`),
   KEY `account_id` (`account_id`),
   KEY `ix_contact_public_id` (`public_id`),
-  KEY `ix_contact_email_address` (`email_address`(191)),
+  KEY `ix_contact_email_address` (`email_address`),
   KEY `ix_contact_created_at` (`created_at`),
   KEY `ix_contact_deleted_at` (`deleted_at`),
   KEY `ix_contact_updated_at` (`updated_at`),
@@ -1107,4 +1107,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-05-29 20:34:34
+-- Dump completed on 2014-06-09 18:13:38

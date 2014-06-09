@@ -13,13 +13,24 @@ THREAD_ID = 2
 # back to the state it started in when the test is done.
 
 
+@pytest.fixture(autouse=True)
+def register_action_backends(db):
+    """
+    Normally action backends only get registered when the actions
+    rqworker starts. So we need to register them explicitly for these
+    tests.
+    """
+    from inbox.server.actions.base import register_backends
+    register_backends()
+
+
 @pytest.fixture(scope='function')
 def message(db, config):
     from inbox.models.tables.imap import ImapAccount
 
     account = db.session.query(ImapAccount).get(ACCOUNT_ID)
-    to = [{"name": u'"\u2605The red-haired mermaid\u2605"',
-           "email": account.email_address}]
+    to = [{'name': u'"\u2605The red-haired mermaid\u2605"',
+           'email': account.email_address}]
     subject = 'Draft test: ' + str(uuid.uuid4().hex)
     body = '<html><body><h2>Sea, birds, yoga and sand.</h2></body></html>'
 
@@ -31,9 +42,9 @@ def test_remote_save_draft(db, config, message):
     from inbox.actions.gmail import remote_save_draft
     from inbox.sendmail.base import _parse_recipients, all_recipients
     from inbox.sendmail.message import create_email, SenderInfo
-    from inbox.models.tables.imap import ImapAccount
+    from inbox.models.tables.base import Account
 
-    account = db.session.query(ImapAccount).get(ACCOUNT_ID)
+    account = db.session.query(Account).get(ACCOUNT_ID)
     sender_info = SenderInfo(name=account.full_name,
                              email=account.email_address)
     to, subject, body = message
@@ -68,9 +79,9 @@ def test_remote_delete_draft(db, config, message):
                                             remote_delete_draft)
     from inbox.sendmail.base import _parse_recipients, all_recipients
     from inbox.sendmail.message import create_email, SenderInfo
-    from inbox.models.tables.imap import ImapAccount
+    from inbox.models.tables.base import Account
 
-    account = db.session.query(ImapAccount).get(ACCOUNT_ID)
+    account = db.session.query(Account).get(ACCOUNT_ID)
     sender_info = SenderInfo(name=account.full_name,
                              email=account.email_address)
     to, subject, body = message

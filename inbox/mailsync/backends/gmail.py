@@ -684,7 +684,7 @@ def add_gmail_attrs(db_session, log, new_uid, flags, folder, g_thrid, g_msgid,
                 thread.folders.add(folder)
 
     # Reconciliation for Drafts, Sent Mail folders:
-    if ('drafts' in new_labels_ci or 'sent' in new_labels_ci) and not created \
+    if ('draft' in new_labels_ci or 'sent' in new_labels_ci) and not created \
             and new_uid.message.inbox_uid:
         reconcile_message(db_session, log, new_uid.message.inbox_uid,
                           new_uid.message)
