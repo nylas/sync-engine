@@ -74,6 +74,11 @@ def save_folder_names(log, account, folder_names, db_session):
     log.info("Folders were deleted from the remote: {}".format(folders.keys()))
     for folder in folders.values():
         db_session.delete(folder)
+        # TODO(emfree) delete associated tag
+
+    # Create associated tags for any new folders.
+    for folder in account.folders:
+        folder.get_associated_tag(db_session)
 
     db_session.commit()
 

@@ -1574,9 +1574,6 @@ class Folder(Base, HasRevisions):
             name = name[:MAX_FOLDER_NAME_LENGTH]
         obj = cls(account=account, name=name,
                   canonical_name=canonical_name)
-        # Check if the corresponding tag exists; if not, create and add it
-        # to the session.
-        obj.get_associated_tag(session)
         return obj
 
     @classmethod
