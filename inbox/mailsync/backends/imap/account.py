@@ -54,12 +54,12 @@ def all_uids(account_id, session, folder_name):
 
 
 def g_msgids(account_id, session, in_=None):
-    query = session.query(distinct(Message.g_msgid)).join(ImapUid) \
-        .filter(ImapUid.imapaccount_id == account_id)
-    if in_ is not None and len(in_):
-        in_ = [long(i) for i in in_]  # very slow if we send non-integers
-        query = query.filter(Message.g_msgid.in_(in_))
-    return sorted([g_msgid for g_msgid, in query])
+    query = session.query(Message.g_msgid).join(ImapUid) \
+        .filter(ImapUid.imapaccount_id == account_id).all()
+    # in some cases, in_ can contain +100k items, when the query only
+    # returns a few thousand. we shouldn't pass them all to MySQL
+    in_ = {long(i) for i in in_}  # in case they are strings
+    return sorted([g_msgid for g_msgid, in query if g_msgid in in_])
 
 
 def g_metadata(account_id, session, folder_name):

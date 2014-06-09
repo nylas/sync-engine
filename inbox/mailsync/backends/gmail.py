@@ -442,9 +442,9 @@ def deduplicate_message_download(crispin_client, db_session, log,
     """
     local_g_msgids = set(account.g_msgids(crispin_client.account_id,
                                           db_session,
-                                          in_=[remote_g_metadata[uid].msgid for
+                                          in_={remote_g_metadata[uid].msgid for
                                                uid in uids if uid in
-                                               remote_g_metadata]))
+                                               remote_g_metadata}))
     full_download, imapuid_only = partition(
         lambda uid: uid in remote_g_metadata and
         remote_g_metadata[uid].msgid in local_g_msgids,
