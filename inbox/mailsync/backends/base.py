@@ -151,8 +151,8 @@ def commit_uids(db_session, log, new_uids):
 
     # Save message part blobs before committing changes to db.
     for msg in new_messages:
-        threads = [Greenlet.spawn(retry_wrapper(lambda: part.save(part._data),
-                                                log))
+        threads = [Greenlet.spawn(retry_wrapper, lambda: part.save(part._data),
+                                  log)
                    for part in msg.parts if hasattr(part, '_data')]
         # Fatally abort if part saves error out. Messages in this
         # chunk will be retried when the sync is restarted.
@@ -226,10 +226,10 @@ class BaseMailSyncMonitor(Greenlet):
         Greenlet.__init__(self)
 
     def _run(self):
-        return retry_wrapper(self._run_impl, self.log)()
+        return retry_wrapper(self._run_impl, self.log)
 
     def _run_impl(self):
-        sync = Greenlet.spawn(retry_wrapper(self.sync, self.log))
+        sync = Greenlet.spawn(retry_wrapper, self.sync, self.log)
         while not sync.ready():
             try:
                 cmd = self.inbox.get_nowait()

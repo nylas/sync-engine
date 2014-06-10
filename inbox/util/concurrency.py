@@ -131,8 +131,8 @@ class GeventWorker(Worker):
     def fork_and_perform_job(self, job):
         """Spawns a gevent greenlet to perform the actual work.
         """
-        self.gevent_pool.spawn(log_uncaught_errors(self.perform_job, self.log),
-                               job)
+        self.gevent_pool.spawn(retry_wrapper, lambda: self.perform_job(job),
+                               self.log)
 
     def dequeue_job_and_maintain_ttl(self, timeout):
         while True:
