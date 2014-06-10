@@ -528,7 +528,7 @@ class Message(Base, HasRevisions, HasPublicID):
         # TODO: also strip signatures.
         if html_part:
             assert '\r' not in html_part, "newlines not normalized"
-            stripped = extract_from_html(html_part).strip()
+            stripped = extract_from_html(html_part.encode('utf-8')).decode('utf-8').strip()
             self.sanitized_body = unicode(stripped)
             self.calculate_html_snippet(self.sanitized_body)
         elif plain_part:
