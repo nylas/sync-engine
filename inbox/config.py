@@ -1,26 +1,12 @@
-import sys
 import json
 from urllib import quote_plus as urlquote
 
 
-__all__ = ['config', 'engine_uri', 'db_uri', 'load_test_config']
+__all__ = ['config', 'engine_uri', 'db_uri']
 
 
 with open('/etc/inboxapp/config.json') as f:
     config = json.load(f)
-
-
-def load_test_config():
-    try:
-        f = open('/etc/inboxapp/config-test.json')
-    except IOError:
-        sys.exit("Missing test config at /etc/inboxapp/config-test.json")
-    else:
-        with f:
-            test_config = json.load(f)
-            config.update(test_config)
-            if not config.get('MYSQL_HOSTNAME') == "localhost":
-                sys.exit("Tests should only be run on localhost DB!")
 
 
 def engine_uri(database=None):

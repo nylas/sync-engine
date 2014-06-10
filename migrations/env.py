@@ -1,4 +1,6 @@
 from __future__ import with_statement
+import json
+import sys
 from alembic import context
 from sqlalchemy import create_engine, pool
 
@@ -13,8 +15,11 @@ fileConfig(alembic_config.config_file_name)
 
 # If alembic was invoked with --tag=test, override these main config values
 if context.get_tag_argument() == 'test':
-    from inbox.config import load_test_config
-    load_test_config()
+    from inbox.config import config
+    with open('./tests/config-test.json') as f:
+        config.update(json.load(f))
+        if not config.get('MYSQL_HOSTNAME') == "localhost":
+            sys.exit("Tests should only be run on localhost DB!")
 
 
 from inbox.models.tables.base import register_backends
