@@ -1,6 +1,6 @@
 Title: Webhooks
 
-Webhooks allow your application to receive callbacks when specific events happen. Similar to other APIs, you the callback criteria is specified by filter parameters. 
+Webhooks allow your application to receive callbacks when specific events happen. Similar to other APIs, the callback criteria is specified by filter parameters.
 
 
 # Creating a new webhook
@@ -99,7 +99,7 @@ callback URL, delete the webhook and create a new one.
 # Listing all webhooks
 
     //Again, don't just pose code, post some text content/context too. No matter how obvious it may be. It's good documentation experience and you want to be consistent too.
- 
+
     GET https://api.inboxapp.com/n/<namespace_id>/webhooks
 
 **Response:**

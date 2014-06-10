@@ -1,6 +1,6 @@
 Title:   Overview
 
-Inbox is a modern API that words with existing email providers. It makes it easy to integrate with your users' email data, and eliminates the complexity of old protocols like IMAP and MIME. 
+Inbox is a modern API that works with existing email providers. It makes it easy to integrate with your users' email data, and eliminates the complexity of old protocols like IMAP and MIME.
 
 The Inbox API is designed around the [REST](http://en.wikipedia.org/wiki/Representational_State_Transfer) ideology, providing simple and predictable URIs to access and modify objects. Requests support standard HTTP methods like GET, PUT, POST, and DELETE. Response bodies are always UTF-8 encoded JSON objects, unless explicitly documented otherwise.
 

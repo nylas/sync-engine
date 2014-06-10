@@ -17,15 +17,17 @@ To get a list of all threads with drafts, use the [Threads](#threads) API call w
     POST https://api.inboxapp.com/n/<namespace_id>/drafts
 
 
-Post body paramters: 
+Post body parameters:
 
 * `subject`
 * `to`
+* `cc`
+* `bcc`
 * `reply_to_thread`
 * `body`
 * `files`
 
-Note that all of these paramters are optional. If omitted, and empty draft will still be created.
+Note that all of these parameters are optional. If omitted, an empty draft will still be created.
 
 
 **Sample Post Body**

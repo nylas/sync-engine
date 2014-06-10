@@ -14,20 +14,20 @@ You can run Inbox almost anywhere. Here's how to install install a development e
 
 6. `vagrant ssh`
 
-    At this point you should be SSH'd into a shiny new Ubuntu 12.04 VM. 
+    At this point you should be SSH'd into a shiny new Ubuntu 12.04 VM.
 
 7. `cd /vagrant`
 
-    The `inbox` directory you started with should be synced to `/vagrant`. If this directory is empty, then logout and run `vagrant reload` and `vagrant ssh` again. 
-    
+    The `inbox` directory you started with should be synced to `/vagrant`. If this directory is empty, then logout and run `vagrant reload` and `vagrant ssh` again.
+
 8. `sudo ./setup.sh` to install dependencies, copy configuration, and create databases.
 
-9. `bin/inbox-start` starts the sync server.  
+9. `bin/inbox-start` starts the sync server.
 
 10. Authenticate an account via the command line and start the sync:
 
         bin/inbox-auth ben.bitdiddle1861@gmail.com
 
-        bin/inbox-auth start ben.bitdiddle1861@gmail.com
+        bin/inbox-sync start ben.bitdiddle1861@gmail.com
 
-11. In a separate shell, start the API server by running `bin/inbox-api`. **You're now ready to make requests!** 
+11. In a separate shell, start the API server by running `bin/inbox-api`. **You're now ready to make requests!**
