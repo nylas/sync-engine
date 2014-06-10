@@ -42,7 +42,8 @@ import gevent.queue
 import requests
 from sqlalchemy import asc, func
 
-from inbox.log import get_logger, log_uncaught_errors
+from inbox.util.concurrency import retry_wrapper
+from inbox.log import get_logger
 from inbox.models import session_scope
 from inbox.models.kellogs import cereal
 from inbox.models.tables.base import Transaction, Webhook, Lens
@@ -308,8 +309,8 @@ class WebhookWorker(gevent.Greenlet):
         gevent.Greenlet.__init__(self)
 
     def _run(self):
-        gevent.spawn(log_uncaught_errors(self.retry_failed, self.log))
-        log_uncaught_errors(self._run_impl, self.log)()
+        gevent.spawn(retry_wrapper, self.retry_failed, self.log)
+        retry_wrapper(self._run_impl, self.log)
 
     def _run_impl(self):
         self.log.info("Starting worker for hook id {}".format(self.id))

@@ -12,6 +12,46 @@ from inbox.log import get_logger, log_uncaught_errors
 log = get_logger()
 
 
+def resettable_counter(max_count=3, reset_interval=300):
+    """Iterator which yields max_count times before returning, but resets if
+    not called for reset_interval seconds."""
+    count = 0
+    last_increment_at = time.time()
+    while count < max_count:
+        yield
+        if time.time() - last_increment_at > reset_interval:
+            count = 1
+        else:
+            count += 1
+        last_increment_at = time.time()
+
+
+def retry_wrapper(func, logger=None, failure_counter=None, *args, **kwargs):
+    """Executes the callable func, logging and retrying on uncaught exceptions.
+
+    Arguments
+    ---------
+    func: function
+    logger: Logger instance, optional
+    failure_counter: iterator, optional
+        Can be used to configure retry behavior. falure_counter.next() is
+        invoked on each failure; the call to func will be retried until
+        StopIteration is raised from failure_counter. Defaults to an instance
+        of resettable_counter.
+    """
+    logger = logger or get_logger()
+    failure_counter = failure_counter or resettable_counter()
+
+    for _ in failure_counter:
+        try:
+            return func(*args, **kwargs)
+        except Exception, e:
+            if isinstance(e, gevent.GreenletExit):
+                return e
+            log_uncaught_errors(logger)
+    raise
+
+
 def make_zerorpc(cls, location):
     assert location, "Location to bind for %s cannot be none!" % cls
 
@@ -24,7 +64,7 @@ def make_zerorpc(cls, location):
     # By default, when an uncaught error is thrown inside a greenlet, gevent
     # will print the stacktrace to stderr and kill the greenlet. Here we're
     # wrapping m in order to also log uncaught errors to disk.
-    return gevent.Greenlet.spawn(log_uncaught_errors(m))
+    return gevent.Greenlet.spawn(retry_wrapper, m)
 
 
 def print_dots():

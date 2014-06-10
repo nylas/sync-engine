@@ -74,8 +74,9 @@ from gevent.queue import LifoQueue
 from gevent.pool import Group
 from sqlalchemy.orm.exc import NoResultFound
 
+from inbox.util.concurrency import retry_wrapper
 from inbox.util.itert import chunk
-from inbox.log import get_logger, log_uncaught_errors
+from inbox.log import get_logger
 from inbox.crispin import connection_pool, retry_crispin
 from inbox.models import session_scope
 from inbox.models.tables.base import Tag
@@ -177,7 +178,7 @@ class ImapFolderSyncMonitor(Greenlet):
         Greenlet.__init__(self)
 
     def _run(self):
-        return log_uncaught_errors(self._run_impl, self.log)()
+        return retry_wrapper(self._run_impl, self.log)
 
     def _run_impl(self):
         # We do NOT ignore soft deletes in the mail sync because it gets real

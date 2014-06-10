@@ -13,8 +13,8 @@ import traceback
 
 import requests
 from colorlog import ColoredFormatter
-from gevent import GreenletExit
 
+from inbox.config import config
 from inbox.util.file import mkdirp
 
 
@@ -57,8 +57,6 @@ def configure_general_logging():
 
         Logs are output to a directory configurable via LOGDIR.
     """
-    # import here to avoid import loop from config.py
-    from .config import config
     assert 'LOGDIR' in config, "LOGDIR not specified in config file"
     assert 'LOGLEVEL' in config, "LOGLEVEL not specified in config file"
     mkdirp(config['LOGDIR'])
@@ -87,8 +85,6 @@ def configure_general_logging():
 
 
 def configure_logging(account_id, purpose):
-    # avoid import loop from config.py
-    from .config import config
     logger = get_logger(account_id, purpose)
     logger.propagate = True
 
@@ -120,8 +116,6 @@ def configure_contacts_logging(account_id):
 
 def email_exception(logger, etype, evalue, tb):
     """ Send stringified exception to configured email address. """
-    from inbox.config import config
-
     exc_email_addr = config.get('EXCEPTION_EMAIL_ADDRESS')
     if exc_email_addr is None:
         logger.error("No EXCEPTION_EMAIL_ADDRESS configured!")
@@ -149,44 +143,18 @@ def email_exception(logger, etype, evalue, tb):
         logger.error("Couldn't send exception email: {}".format(r.json()))
 
 
-class log_uncaught_errors(object):
-    """ Helper to log uncaught exceptions raised within the wrapped function.
-
-        Modeled after gevent.util.wrap_errors.
+def log_uncaught_errors(logger=None):
+    """ Helper to log uncaught exceptions.
 
         Parameters
         ----------
-        func: function
-            The function to wrap.
-
         logger: logging.Logger, optional
             The logging object to write to.
     """
-
-    def __init__(self, func, logger=None):
-        self.func = func
-        self.logger = logger or get_logger()
-
-    def _log_failsafe(self, *args, **kwargs):
-        # We wrap the logging call in a try/except block so that if it fails
-        # for any reason, the *original* error still gets propagated.
-        try:
-            self.logger.exception(*args, **kwargs)
-        except:
-            pass
-
-    def __call__(self, *args, **kwargs):
-        from inbox.config import config
-        func = self.func
-        try:
-            return func(*args, **kwargs)
-        except Exception, e:
-            if not isinstance(e, GreenletExit):
-                self._log_failsafe("Uncaught error!")
-                exc_type, exc_value, exc_tb = sys.exc_info()
-                if config.get('EMAIL_EXCEPTIONS'):
-                    email_exception(self.logger, exc_type, exc_value, exc_tb)
-            raise
+    logger = logger or get_logger()
+    logger.exception('Uncaught error')
+    if config.get('EMAIL_EXCEPTIONS'):
+        email_exception(logger, *sys.exc_info())
 
     def __str__(self):
         return str(self.func)

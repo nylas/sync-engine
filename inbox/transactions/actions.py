@@ -12,7 +12,8 @@ from collections import defaultdict
 import gevent
 from sqlalchemy import asc, or_, func
 
-from inbox.log import get_logger, log_uncaught_errors
+from inbox.util.concurrency import retry_wrapper
+from inbox.log import get_logger
 from inbox.models import session_scope
 from inbox.models.tables.base import (SpoolMessage, Tag, Thread,
                                              Transaction)
@@ -157,10 +158,10 @@ class SyncbackService(gevent.Greenlet):
         self.log.info('Starting action service')
         self.register_default_actions()
         # Start the workers
-        gevent.spawn(log_uncaught_errors(rqworker))
+        gevent.spawn(retry_wrapper, rqworker)
         while True:
             self._process_log()
             gevent.sleep(self.poll_interval)
 
     def _run(self):
-        log_uncaught_errors(self._run_impl, self.log)()
+        retry_wrapper(self._run_impl, self.log)

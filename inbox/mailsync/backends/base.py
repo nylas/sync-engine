@@ -1,16 +1,16 @@
 from gc import collect as garbage_collect
 
 import zerorpc
-from gevent import Greenlet, joinall, sleep, killall
+from gevent import Greenlet, joinall, sleep
 from gevent.queue import Queue, Empty
 from sqlalchemy.exc import DataError
 
+from inbox.util.concurrency import retry_wrapper
 from inbox.util.itert import partition
 from inbox.util.misc import load_modules
 from inbox.config import config
-from inbox.log import configure_mailsync_logging, log_uncaught_errors
-from inbox.models.tables.base import (Account, Folder,
-                                             MAX_FOLDER_NAME_LENGTH)
+from inbox.log import configure_mailsync_logging
+from inbox.models.tables.base import (Account, Folder, MAX_FOLDER_NAME_LENGTH)
 from inbox.mailsync.exc import SyncException
 
 import inbox.mailsync.backends
@@ -151,8 +151,8 @@ def commit_uids(db_session, log, new_uids):
 
     # Save message part blobs before committing changes to db.
     for msg in new_messages:
-        threads = [Greenlet.spawn(log_uncaught_errors(part.save, log),
-                                  part._data)
+        threads = [Greenlet.spawn(retry_wrapper(lambda: part.save(part._data),
+                                                log))
                    for part in msg.parts if hasattr(part, '_data')]
         # Fatally abort if part saves error out. Messages in this
         # chunk will be retried when the sync is restarted.
@@ -226,10 +226,10 @@ class BaseMailSyncMonitor(Greenlet):
         Greenlet.__init__(self)
 
     def _run(self):
-        return log_uncaught_errors(self._run_impl, self.log)()
+        return retry_wrapper(self._run_impl, self.log)()
 
     def _run_impl(self):
-        sync = Greenlet.spawn(log_uncaught_errors(self.sync, self.log))
+        sync = Greenlet.spawn(retry_wrapper(self.sync, self.log))
         while not sync.ready():
             try:
                 cmd = self.inbox.get_nowait()

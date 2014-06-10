@@ -9,11 +9,11 @@ from inbox.config import config
 
 from inbox.util.startup import preflight
 
-from gevent import joinall, spawn
+from gevent import joinall
 from setproctitle import setproctitle; setproctitle('inbox')
 
-from inbox.log import (configure_general_logging, get_logger,
-                              log_uncaught_errors)
+from inbox.log import configure_general_logging, get_logger
+
 configure_general_logging()
 log = get_logger()
 preflight()
@@ -57,9 +57,6 @@ def start():
     from inbox.transactions.webhook import WebhookService
     webhook_srv_loc = config.get('WEBHOOK_SERVER_LOC', None)
     threads.append(make_zerorpc(WebhookService, webhook_srv_loc))
-
-    from inbox.actions.base import rqworker
-    threads.append(spawn(log_uncaught_errors(rqworker)))
 
     print """
     \033[94m     Welcome to... \033[0m\033[1;95m

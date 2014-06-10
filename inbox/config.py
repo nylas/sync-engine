@@ -2,9 +2,6 @@ import sys
 import json
 from urllib import quote_plus as urlquote
 
-from inbox.log import get_logger
-log = get_logger()
-
 
 __all__ = ['config', 'engine_uri', 'db_uri', 'load_test_config']
 

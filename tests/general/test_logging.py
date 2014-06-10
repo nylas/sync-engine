@@ -3,9 +3,6 @@ import sys
 import traceback
 from logging import getLogger
 
-import pytest
-from gevent import GreenletExit
-
 from inbox.log import log_uncaught_errors
 
 
@@ -31,14 +28,11 @@ def error_throwing_function():
     raise ValueError
 
 
-def simulate_greenlet_exit():
-    raise GreenletExit
-
-
 def test_log_uncaught_errors(config, log):
-    with pytest.raises(ValueError):
-        log_uncaught_errors(error_throwing_function)()
-    log_uncaught_errors(simulate_greenlet_exit)
+    try:
+        error_throwing_function()
+    except:
+        log_uncaught_errors()
     log_contents = open(os.path.join(config['LOGDIR'], 'server.log'),
                         'r').read()
 
