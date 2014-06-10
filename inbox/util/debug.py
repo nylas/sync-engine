@@ -20,6 +20,6 @@ def pause_on_exception(exception_type):
                 return func(*args, **kwargs)
             except exception_type:
                 log_uncaught_errors()
-                pdb.set_trace()
+                pdb.post_mortem()
         return wrapped
     return wrapper
