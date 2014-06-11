@@ -624,69 +624,71 @@ def create_gmail_message(db_session, log, acct, folder, msg):
 def add_gmail_attrs(db_session, log, new_uid, flags, folder, g_thrid, g_msgid,
                     g_labels, created):
     """ Gmail-specific post-create-message bits."""
-
-    new_uid.message.g_msgid = g_msgid
-    # NOTE: g_thrid == g_msgid on the first message in the thread :)
-    new_uid.message.g_thrid = g_thrid
-    new_uid.update_imap_flags(flags, g_labels)
-
-    # If we don't disable autoflush here, the thread query may flush a
-    # message to the database with a NULL thread_id, causing a crash.
+    # Disable autoflush so we don't try to flush a message with null
+    # thread_id, causing a crash, and so that we don't flush on each
+    # added/removed label.
     with db_session.no_autoflush:
+        new_uid.message.g_msgid = g_msgid
+        # NOTE: g_thrid == g_msgid on the first message in the thread :)
+        new_uid.message.g_thrid = g_thrid
+        new_uid.update_imap_flags(flags, g_labels)
+
         thread = new_uid.message.thread = ImapThread.from_gmail_message(
             db_session, new_uid.imapaccount.namespace, new_uid.message)
 
-    # make sure this thread has all the correct labels
-    existing_labels = {folder.name.lower() for folder in thread.folders}
-    # convert things like \Inbox -> Inbox, \Important -> Important
-    new_labels = {l.lstrip('\\') for l in g_labels} | {folder.name}
-    # The IMAP folder name for the inbox on Gmail is INBOX, but there's ALSO a
-    # flag called '\Inbox' on all messages in it... that only appears when you
-    # look at the message with a folder OTHER than INBOX selected.  Standardize
-    # on keeping \Inbox in our database.
-    if 'Inbox' in new_labels or 'INBOX' in new_labels:
-        new_labels.discard('INBOX')
-        new_labels.discard('Inbox')
-        new_labels.add('Inbox')
-    # NOTE: Gmail labels are case-insensitive, though we store them in the
-    # original case in the db to not confuse users when displayed.
-    new_labels_ci = {l.lower() for l in new_labels}
+        # make sure this thread has all the correct labels
+        existing_labels = {folder.name.lower() for folder in thread.folders}
+        # convert things like \Inbox -> Inbox, \Important -> Important
+        new_labels = {l.lstrip('\\') for l in g_labels} | {folder.name}
+        # The IMAP folder name for the inbox on Gmail is INBOX, but there's
+        # ALSO a flag called '\Inbox' on all messages in it... that only
+        # appears when you look at the message with a folder OTHER than INBOX
+        # selected.  Standardize on keeping \Inbox in our database.
+        if 'Inbox' in new_labels or 'INBOX' in new_labels:
+            new_labels.discard('INBOX')
+            new_labels.discard('Inbox')
+            new_labels.add('Inbox')
+        # NOTE: Gmail labels are case-insensitive, though we store them in the
+        # original case in the db to not confuse users when displayed.
+        new_labels_ci = {l.lower() for l in new_labels}
 
-    # Remove labels that have been deleted -- note that the \Inbox, \Sent,
-    # \Important, and \Drafts labels are per-message, not per-thread, but since
-    # we always work at the thread level, _we_ apply the label to the whole
-    # thread.
-    thread.folders = {folder for folder in thread.folders if
-                      folder.name.lower() in new_labels_ci or
-                      folder.name.lower() in ('inbox', 'sent', 'drafts',
-                                              'important')}
+        # Remove labels that have been deleted -- note that the \Inbox, \Sent,
+        # \Important, and \Drafts labels are per-message, not per-thread, but
+        # since we always work at the thread level, _we_ apply the label to the
+        # whole thread.
+        thread.folders = {folder for folder in thread.folders if
+                          folder.name.lower() in new_labels_ci or
+                          folder.name.lower() in ('inbox', 'sent', 'drafts',
+                                                  'important')}
 
-    # add new labels
-    for label in new_labels:
-        if label.lower() not in existing_labels:
-            # The problem here is that Gmail's attempt to squash labels and
-            # IMAP folders into the same abstraction doesn't work perfectly. In
-            # particular, there is a '[Gmail]/Sent' folder, but *also* a 'Sent'
-            # label, and so on. We handle this by only maintaining one folder
-            # object that encapsulates both of these.
-            if label == 'Sent':
-                thread.folders.add(thread.namespace.account.sent_folder)
-            elif label == 'Draft':
-                thread.folders.add(thread.namespace.account.drafts_folder)
-            elif label == 'Starred':
-                thread.folders.add(thread.namespace.account.starred_folder)
-            elif label == 'Important':
-                thread.folders.add(thread.namespace.account.important_folder)
-            else:
-                folder = Folder.find_or_create(db_session,
-                                               thread.namespace.account,
-                                               label)
-                thread.folders.add(folder)
+        # add new labels
+        for label in new_labels:
+            if label.lower() not in existing_labels:
+                # The problem here is that Gmail's attempt to squash labels and
+                # IMAP folders into the same abstraction doesn't work
+                # perfectly. In particular, there is a '[Gmail]/Sent' folder,
+                # but *also* a 'Sent' label, and so on. We handle this by only
+                # maintaining one folder object that encapsulates both of
+                # these.
+                if label == 'Sent':
+                    thread.folders.add(thread.namespace.account.sent_folder)
+                elif label == 'Draft':
+                    thread.folders.add(thread.namespace.account.drafts_folder)
+                elif label == 'Starred':
+                    thread.folders.add(thread.namespace.account.starred_folder)
+                elif label == 'Important':
+                    thread.folders.add(
+                        thread.namespace.account.important_folder)
+                else:
+                    folder = Folder.find_or_create(db_session,
+                                                   thread.namespace.account,
+                                                   label)
+                    thread.folders.add(folder)
 
-    # Reconciliation for Drafts, Sent Mail folders:
-    if ('draft' in new_labels_ci or 'sent' in new_labels_ci) and not created \
-            and new_uid.message.inbox_uid:
-        reconcile_message(db_session, log, new_uid.message.inbox_uid,
-                          new_uid.message)
+        # Reconciliation for Drafts, Sent Mail folders:
+        if (('draft' in new_labels_ci or 'sent' in new_labels_ci) and not
+                created and new_uid.message.inbox_uid):
+            reconcile_message(db_session, log, new_uid.message.inbox_uid,
+                              new_uid.message)
 
-    return new_uid
+        return new_uid
