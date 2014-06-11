@@ -78,13 +78,11 @@ class Revision(object):
     command = Column(Enum('insert', 'update', 'delete'), nullable=False)
     delta = Column(BigJSON, nullable=True)
 
-    additional_data = Column(BigJSON)
-
     def set_extra_attrs(self, obj):
         pass
 
-    def set_additional_data(self, obj):
-        self.additional_data = obj.get_versioned_properties()
+    def take_snapshot(self, obj):
+        pass
 
 
 def gen_rev_role(rev_cls):
@@ -102,12 +100,6 @@ def gen_rev_role(rev_cls):
                                 primaryjoin="{0}.id=={1}.record_id".format(
                                     cls.__name__, rev_cls.__name__),
                                 foreign_keys=rev_cls.record_id, viewonly=True)
-
-        def get_versioned_properties(self):
-            """Subclasses which wish to store data in the transaction log's
-            `additional_data` field should implement this method, returning a
-            serializable dictionary."""
-            pass
 
     return HasRevisions
 
@@ -129,7 +121,6 @@ def create_delete_revision(rev_cls, obj, session):
 
 def create_update_revision(rev_cls, obj, session):
     d = delta(obj)
-    # sqlalchemy objects can be dirty even if they haven't changed
     if not d:
         return
     return rev_cls(command='update', record_id=obj.id,
@@ -146,23 +137,6 @@ def delta(obj):
 
     obj_changed = False
     d = {}
-
-    for prop in obj_state.mapper.iterate_properties:
-        if (isinstance(prop, RelationshipProperty) and
-                'versioned_properties' in prop.info):
-            history = getattr(obj_state.attrs, prop.key).history
-            if not history.has_changes():
-                continue
-            changes = {}
-            versioned_properties = prop.info['versioned_properties']
-            changes['added'] = _get_properties(versioned_properties,
-                                               history.added)
-            changes['unchanged'] = _get_properties(versioned_properties,
-                                                   history.unchanged)
-            changes['deleted'] = _get_properties(versioned_properties,
-                                                 history.deleted)
-            d[prop.key] = changes
-            obj_changed = True
 
     for m in obj_state.mapper.iterate_to_root():
         for col in m.local_table.c:
@@ -195,21 +169,24 @@ def delta(obj):
                 obj_changed = True
             # do nothing for unchanged
 
-        if not obj_changed:
-            # not changed, but we have relationships.  OK
-            # check those too
-            for prop in obj_state.mapper.iterate_properties:
-                if isinstance(prop, RelationshipProperty) and getattr(
-                        obj_state.attrs, prop.key).history.has_changes():
-                    for p in prop.local_columns:
-                        if p.foreign_keys:
-                            obj_changed = True
-                            break
-                    if obj_changed is True:
-                        break
+    # Check relationships which have versioned properties defined.
+    for prop in obj_state.mapper.iterate_properties:
+        if (isinstance(prop, RelationshipProperty) and 'versioned_properties'
+                in prop.info):
+            history = getattr(obj_state.attrs, prop.key).history
+            if not history.has_changes():
+                continue
+            changes = {}
+            versioned_properties = prop.info['versioned_properties']
+            changes['added'] = _get_properties(versioned_properties,
+                                               history.added)
+            changes['deleted'] = _get_properties(versioned_properties,
+                                                 history.deleted)
+            d[prop.key] = changes
+            obj_changed = True
 
-        if not obj_changed:
-            return
+    if not obj_changed:
+        return
 
     return d
 
@@ -220,7 +197,7 @@ def versioned_session(session, rev_cls, rev_role):
             rev = create_fn(rev_cls, obj, session)
             if rev is not None:
                 rev.set_extra_attrs(obj)
-                rev.set_additional_data(obj)
+                rev.take_snapshot(obj)
                 session.add(rev)
 
     @event.listens_for(session, 'after_flush')

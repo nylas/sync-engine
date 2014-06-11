@@ -1,33 +1,9 @@
 """Exercise the tags API."""
-import json
 import gevent
 from tests.util.base import api_client
 
 
 # Utility functions to simplify hitting the API.
-
-def full_path(api_client, path):
-    """For testing purposes, replace a path such as '/tags' by
-    '/n/<ns_id>/tags', where <ns_id> is the id of the first result of a call to
-    '/n/'."""
-    namespace_id = json.loads(api_client.get('/n/').data)[0]['id']
-    return '/n/{}'.format(namespace_id) + path
-
-
-def get_data(client, short_path):
-    path = full_path(client, short_path)
-    return json.loads(client.get(path).data)
-
-
-def post_data(client, short_path, data):
-    path = full_path(client, short_path)
-    return client.post(path, data=json.dumps(data))
-
-
-def put_data(client, short_path, data):
-    path = full_path(client, short_path)
-    return client.put(path, data=json.dumps(data))
-
 
 def get_tag_names(thread):
     return [tag['name'] for tag in thread['tags']]
@@ -43,47 +19,47 @@ def kill_greenlets():
 
 def test_get_tags(api_client):
     from inbox.models.tables.base import Tag
-    tags = get_data(api_client, '/tags')
+    tags = api_client.get_data('/tags')
     assert set(Tag.RESERVED_TAG_NAMES).issubset({tag['name'] for tag in tags})
 
 
 def test_create_tag(api_client):
-    post_data(api_client, '/tags', {'name': 'foo'})
-    assert 'foo' in [tag['name'] for tag in get_data(api_client, '/tags')]
+    api_client.post_data('/tags', {'name': 'foo'})
+    assert 'foo' in [tag['name'] for tag in api_client.get_data('/tags')]
 
 
 def test_cant_create_existing_tag(api_client):
-    post_data(api_client, '/tags', {'name': 'foo'})
-    r = post_data(api_client, '/tags', {'name': 'foo'})
+    api_client.post_data('/tags', {'name': 'foo'})
+    r = api_client.post_data('/tags', {'name': 'foo'})
     assert r.status_code == 409
 
 
 def test_add_remove_tags(api_client):
-    assert 'foo' not in [tag['name'] for tag in get_data(api_client, '/tags')]
-    assert 'bar' not in [tag['name'] for tag in get_data(api_client, '/tags')]
+    assert 'foo' not in [tag['name'] for tag in api_client.get_data('/tags')]
+    assert 'bar' not in [tag['name'] for tag in api_client.get_data('/tags')]
 
-    post_data(api_client, '/tags', {'name': 'foo'})
-    post_data(api_client, '/tags', {'name': 'bar'})
+    api_client.post_data('/tags', {'name': 'foo'})
+    api_client.post_data('/tags', {'name': 'bar'})
 
-    thread_id = get_data(api_client, '/threads')[0]['id']
+    thread_id = api_client.get_data('/threads')[0]['id']
     thread_path = '/threads/{}'.format(thread_id)
-    put_data(api_client, thread_path, {'add_tags': ['foo']})
-    put_data(api_client, thread_path, {'add_tags': ['bar']})
+    api_client.put_data(thread_path, {'add_tags': ['foo']})
+    api_client.put_data(thread_path, {'add_tags': ['bar']})
 
     tag_names = [tag['name'] for tag in
-                 get_data(api_client, thread_path)['tags']]
+                 api_client.get_data(thread_path)['tags']]
     assert 'foo' in tag_names
     assert 'bar' in tag_names
 
     # Check that tag was only applied to this thread
-    another_thread_id = get_data(api_client, '/threads')[1]['id']
-    tag_names = get_tag_names(get_data(api_client, '/threads/{}'.
-                                       format(another_thread_id)))
+    another_thread_id = api_client.get_data('/threads')[1]['id']
+    tag_names = get_tag_names(
+        api_client.get_data('/threads/{}'.format(another_thread_id)))
     assert 'foo' not in tag_names
 
-    put_data(api_client, thread_path, {'remove_tags': ['foo']})
-    put_data(api_client, thread_path, {'remove_tags': ['bar']})
-    tag_names = get_tag_names(get_data(api_client, thread_path))
+    api_client.put_data(thread_path, {'remove_tags': ['foo']})
+    api_client.put_data(thread_path, {'remove_tags': ['bar']})
+    tag_names = get_tag_names(api_client.get_data(thread_path))
     assert 'foo' not in tag_names
     assert 'bar' not in tag_names
 
@@ -122,24 +98,24 @@ def test_actions_syncback(api_client):
     gevent.sleep()
     assert len(s.queue) == 0
 
-    thread_id = get_data(api_client, '/threads')[0]['id']
+    thread_id = api_client.get_data('/threads')[0]['id']
     thread_path = '/threads/{}'.format(thread_id)
 
     # Make sure tags are removed to start with
-    put_data(api_client, thread_path, {'remove_tags': ['unread']})
-    put_data(api_client, thread_path, {'remove_tags': ['archive']})
-    put_data(api_client, thread_path, {'remove_tags': ['starred']})
+    api_client.put_data(thread_path, {'remove_tags': ['unread']})
+    api_client.put_data(thread_path, {'remove_tags': ['archive']})
+    api_client.put_data(thread_path, {'remove_tags': ['starred']})
 
     # Add and remove tags that should trigger actions
 
-    put_data(api_client, thread_path, {'add_tags': ['unread']})
-    put_data(api_client, thread_path, {'remove_tags': ['unread']})
+    api_client.put_data(thread_path, {'add_tags': ['unread']})
+    api_client.put_data(thread_path, {'remove_tags': ['unread']})
 
-    put_data(api_client, thread_path, {'add_tags': ['archive']})
-    put_data(api_client, thread_path, {'remove_tags': ['archive']})
+    api_client.put_data(thread_path, {'add_tags': ['archive']})
+    api_client.put_data(thread_path, {'remove_tags': ['archive']})
 
-    put_data(api_client, thread_path, {'add_tags': ['starred']})
-    put_data(api_client, thread_path, {'remove_tags': ['starred']})
+    api_client.put_data(thread_path, {'add_tags': ['starred']})
+    api_client.put_data(thread_path, {'remove_tags': ['starred']})
 
     gevent.sleep()
 

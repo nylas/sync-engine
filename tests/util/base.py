@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 import subprocess
@@ -92,7 +93,40 @@ def action_queue(request, config):
 def api_client(db):
     from inbox.api.srv import app
     app.config['TESTING'] = True
-    yield app.test_client()
+    with app.test_client() as c:
+        yield TestAPIClient(c)
+
+
+class TestAPIClient(object):
+    """Provide more convenient access to the API for testing purposes."""
+    def __init__(self, test_client):
+        self.client = test_client
+        self.ns_public_ids = {}
+
+    def full_path(self, path, ns_id):
+        """For testing purposes, replace a path such as '/tags' by
+        '/n/<ns_id>/tags', where <ns_id> is the id of the first result of a
+        call to '/n/'."""
+        if ns_id in self.ns_public_ids:
+            ns_public_id = self.ns_public_ids[ns_id]
+        else:
+            # Get the public id corresponding to ns_id and cache it for future
+            # use.
+            ns_public_id = json.loads(self.client.get('/n/').data)[0]['id']
+            self.ns_public_ids[ns_id] = ns_public_id
+        return '/n/{}'.format(ns_public_id) + path
+
+    def get_data(self, short_path, ns_id=1):
+        path = self.full_path(short_path, ns_id)
+        return json.loads(self.client.get(path).data)
+
+    def post_data(self, short_path, data, ns_id=1):
+        path = self.full_path(short_path, ns_id)
+        return self.client.post(path, data=json.dumps(data))
+
+    def put_data(self, short_path, data, ns_id=1):
+        path = self.full_path(short_path, ns_id)
+        return self.client.put(path, data=json.dumps(data))
 
 
 class TestDB(object):

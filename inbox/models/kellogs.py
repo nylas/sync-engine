@@ -5,8 +5,8 @@ from json import JSONEncoder, dumps
 from flask import Response
 
 from inbox.models.tables.base import (
-    Message, Account, Part, Folder,
-    Contact, Thread, Namespace, Block, Webhook, Lens, Tag, SpoolMessage)
+    Message, Account, Part, Contact, Thread, Namespace, Block, Webhook, Lens,
+    Tag, SpoolMessage)
 
 
 def format_address_list(addresses):
@@ -48,7 +48,8 @@ class APIEncoder(JSONEncoder):
                 'date': obj.received_date,
                 'files': [p.public_id for p in obj.parts if p.is_attachment],
                 'body': obj.sanitized_body,
-                'state': obj.state
+                'state': obj.state,
+                'tags': [self.default(tag) for tag in obj.thread.tags]
             }
             # draft, sending, sending failed
             if obj.state != 'sent':
@@ -57,7 +58,6 @@ class APIEncoder(JSONEncoder):
             else:
                 resp['object'] = 'message'
                 resp['thread'] = obj.thread.public_id
-                resp['tags'] = obj.thread.all_tags
 
             return resp
 
@@ -166,6 +166,7 @@ class APIEncoder(JSONEncoder):
         elif isinstance(obj, Tag):
             return {
                 'id': obj.public_id,
+                'object': 'tag',
                 'name': obj.name,
             }
 

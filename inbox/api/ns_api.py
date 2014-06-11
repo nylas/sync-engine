@@ -15,6 +15,7 @@ from inbox.models.kellogs import jsonify
 from inbox.config import config
 from inbox import contacts, sendmail
 from inbox.models import InboxSession, session_scope
+from inbox.transactions import client_sync
 
 from err import err
 
@@ -631,3 +632,41 @@ def draft_send_api():
     # Mark draft for sending
     draft.state = 'sending'
     return jsonify(draft)
+
+
+##
+# Client syncing
+##
+
+@app.route('/sync/events')
+def sync_events():
+    start_stamp = request.args.get('stamp')
+    try:
+        limit = int(request.args.get('limit', 100))
+    except ValueError:
+        return err(400, 'Invalid limit parameter')
+    if limit <= 0:
+        return err(400, 'Invalid limit parameter')
+    if start_stamp is None:
+        return err(400, 'No stamp parameter in sync request.')
+
+    try:
+        results = client_sync.get_entries_from_public_id(
+            g.namespace.id, start_stamp, g.db_session, limit)
+        return jsonify(results)
+    except ValueError:
+        return err(404, 'Invalid stamp parameter')
+
+
+@app.route('/sync/generate_stamp', methods=['POST'])
+def generate_stamp():
+    data = request.get_json(force=True)
+    if data.keys() != ['start'] or not isinstance(data['start'], int):
+        return err(400, 'generate_stamp request body must have the format '
+                        '{"start": <Unix timestamp>}')
+
+    timestamp = int(data['start'])
+    stamp = client_sync.get_public_id_from_ts(g.namespace.id,
+                                              timestamp,
+                                              g.db_session)
+    return jsonify({'stamp': stamp})

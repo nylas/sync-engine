@@ -5,6 +5,7 @@ import json
 
 from hashlib import sha256
 from datetime import datetime
+import bson
 
 from sqlalchemy import (Column, Integer, BigInteger, String, DateTime, Boolean,
                         Enum, ForeignKey, Text, func, event, and_, or_, asc)
@@ -28,7 +29,8 @@ from inbox.util.html import (plaintext2html, strip_tags, extract_from_html,
                              extract_from_plain)
 from inbox.util.misc import load_modules
 from inbox.util.cryptography import encrypt_aes, decrypt_aes
-from inbox.sqlalchemy_ext.util import JSON, Base36UID, maybe_refine_query
+from inbox.sqlalchemy_ext.util import (JSON, BigJSON, Base36UID,
+                                       maybe_refine_query)
 from inbox.sqlalchemy_ext.revision import Revision, gen_rev_role
 from inbox.basicauth import AUTH_TYPES
 
@@ -274,7 +276,7 @@ class Namespace(Base, HasPublicID):
             return self.account.email_address
 
 
-class Transaction(Base, Revision):
+class Transaction(Base, Revision, HasPublicID):
     """ Transactional log to enable client syncing. """
     # Do delete transactions if their associated namespace is deleted.
     namespace_id = Column(Integer,
@@ -285,6 +287,15 @@ class Transaction(Base, Revision):
         primaryjoin='and_(Transaction.namespace_id == Namespace.id, '
                     'Namespace.deleted_at.is_(None))')
 
+    object_public_id = Column(String(191), nullable=True)
+
+    # The API representation of the object at the time the transaction is
+    # generated.
+    public_snapshot = Column(BigJSON)
+    # Dictionary of any additional properties we wish to snapshot when the
+    # transaction is generated.
+    private_snapshot = Column(BigJSON)
+
     def set_extra_attrs(self, obj):
         try:
             self.namespace = obj.namespace
@@ -294,6 +305,26 @@ class Transaction(Base, Revision):
             log.info("Delta is {0}".format(self.delta))
             log.info("Thread is: {0}".format(obj.thread_id))
             raise
+        object_public_id = getattr(obj, 'public_id', None)
+        if object_public_id is not None:
+            self.object_public_id = object_public_id
+
+    def take_snapshot(self, obj):
+        """Record the API's representation of `obj` at the time this
+        transaction is generated, as well as any other properties we want to
+        have available in the transaction log. Used for client syncing and
+        webhooks."""
+        from inbox.models.kellogs import APIEncoder
+        encoder = APIEncoder()
+        self.public_snapshot = encoder.default(obj)
+
+        if isinstance(obj, Message):
+            self.private_snapshot = {
+                'recentdate': obj.thread.recentdate,
+                'subjectdate': obj.thread.subjectdate,
+                'filenames': [part.filename for part in obj.parts if
+                              part.is_attachment]}
+
 
 HasRevisions = gen_rev_role(Transaction)
 
@@ -474,7 +505,8 @@ class Message(Base, HasRevisions, HasPublicID):
                         primaryjoin='and_('
                         'Message.thread_id == Thread.id, '
                         'Message.deleted_at.is_(None))',
-                        order_by='Message.received_date'))
+                        order_by='Message.received_date',
+                        info={'versioned_properties': ['id']}))
 
     from_addr = Column(JSON, nullable=True)
     sender_addr = Column(JSON, nullable=True)
@@ -610,15 +642,6 @@ class Message(Base, HasRevisions, HasPublicID):
     @property
     def folders(self):
         return self.thread.folders
-
-    # The return value of this method will be stored in the transaction log's
-    # `additional_data` column.
-    def get_versioned_properties(self):
-        from inbox.models.kellogs import APIEncoder
-        encoder = APIEncoder()
-        return {'thread': encoder.default(self.thread),
-                'namespace_public_id': self.namespace.public_id,
-                'blocks': [encoder.default(part) for part in self.parts]}
 
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator,
@@ -1084,10 +1107,6 @@ class Thread(Base, HasPublicID, HasRevisions):
         elif tag == archive_tag:
             self.tags.add(inbox_tag)
 
-    # STOPSHIP(emfree) make this work with new versioned properties thing
-    def get_versioned_properties(self):
-        return {"tags": [tag.public_id for tag in self.tags]}
-
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator}
 
@@ -1240,15 +1259,12 @@ class Lens(Base, HasPublicID):
         if value is None:
             return
         try:
-            return datetime.utcfromtimestamp(int(value))
+            dt = datetime.utcfromtimestamp(int(value))
+            # Need to set tzinfo so that we can compare to datetimes that were
+            # deserialized using bson.json_util.
+            return dt.replace(tzinfo=bson.tz_util.utc)
         except ValueError:
             raise ValueError('Invalid timestamp value for {}'.format(key))
-
-    # TODO add reference to tags within a filter
-    # a = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
-    #                    nullable=False)
-    # thread = relationship('Thread', backref=backref('messages',
-    #                       order_by='Message.received_date'))
 
     def __init__(self, namespace_id=None, subject=None, thread_public_id=None,
                  started_before=None, started_after=None,
@@ -1299,8 +1315,8 @@ class Lens(Base, HasPublicID):
             else:
                 predicate = lambda candidate: filter_string == candidate
 
-            def matcher(message):
-                field = selector(message)
+            def matcher(message_tx):
+                field = selector(message_tx)
                 if isinstance(field, basestring):
                     if not predicate(field):
                         return False
@@ -1314,15 +1330,15 @@ class Lens(Base, HasPublicID):
         #
         # Methods related to creating a transactional lens. use `match()`
 
-        def get_subject(message):
-            return message['subject']
+        def get_subject(message_tx):
+            return message_tx.public_snapshot['subject']
 
-        def get_tags(message):
-            return message['thread']['tags']
+        def get_tags(message_tx):
+            return [tag['name'] for tag in message_tx.public_snapshot['tags']]
 
         def flatten_field(field):
-            """Given a list of (name, email) pairs, return an iterator over all
-            the names and emails. If field is None, return the empty iterator.
+            """Given a list of dictionaries, return an iterator over all the
+            dictionary values. If field is None, return the empty iterator.
 
             Parameters
             ----------
@@ -1334,31 +1350,41 @@ class Lens(Base, HasPublicID):
 
             Example
             -------
-            >>> list(flatten_field([('Name', 'email'),
-            ...                     ('Another Name', 'another email')]))
+            >>> list(flatten_field([{'name': 'Some Name',
+            ...                      'email': 'some email'},
+            ...                     {'name': 'Another Name',
+            ...                      'email': 'another email'}]))
             ['Name', 'email', 'Another Name', 'another email']
             """
-            return itertools.chain(*field) if field is not None else ()
+            if field is not None:
+                return itertools.chain.from_iterable(d.itervalues() for d in
+                                                     field)
+            return ()
 
-        def get_to(message):
-            return flatten_field(message['to_addr'])
+        def get_to(message_tx):
+            return flatten_field(message_tx.public_snapshot['to'])
 
-        def get_from(message):
-            return flatten_field(message['from_addr'])
+        def get_from(message_tx):
+            return flatten_field(message_tx.public_snapshot['from'])
 
-        def get_cc(message):
-            return flatten_field(message['cc_addr'])
+        def get_cc(message_tx):
+            return flatten_field(message_tx.public_snapshot['cc'])
 
-        def get_bcc(message):
-            return flatten_field(message['bcc_addr'])
+        def get_bcc(message_tx):
+            return flatten_field(message_tx.public_snapshot['bcc'])
 
-        def get_emails(message):
+        def get_emails(message_tx):
             return itertools.chain.from_iterable(
-                func(message) for func in (get_to, get_from, get_cc, get_bcc))
+                func(message_tx) for func in (get_to, get_from, get_cc, get_bcc))
 
-        def get_filenames(message):
-            return (block['filename'] for block in message['blocks']
-                    if block['filename'] is not None)
+        def get_filenames(message_tx):
+            return message_tx.private_snapshot['filenames']
+
+        def get_subject_date(message_tx):
+            return message_tx.private_snapshot['subjectdate']
+
+        def get_recent_date(message_tx):
+            return message_tx.private_snapshot['recentdate']
 
         add_string_filter(self.subject, get_subject)
         add_string_filter(self.to_addr, get_to)
@@ -1371,33 +1397,34 @@ class Lens(Base, HasPublicID):
 
         if self.thread_public_id is not None:
             self.filters.append(
-                lambda message: message['thread']['id']
+                lambda message_tx: message_tx.public_snapshot['thread']
                 == self.thread_public_id)
 
         if self.started_before is not None:
+            # STOPSHIP(emfree)
             self.filters.append(
-                lambda message: (message['thread']['subject_date'] <
-                                 self.started_before))
+                lambda message_tx: (get_subject_date(message_tx) <
+                                    self.started_before))
 
         if self.started_after is not None:
             self.filters.append(
-                lambda message: (message['thread']['subject_date'] >
-                                 self.started_after))
+                lambda message_tx: (get_subject_date(message_tx) >
+                                    self.started_after))
 
         if self.last_message_before is not None:
             self.filters.append(
-                lambda message: (message['thread']['recent_date'] <
-                                 self.last_message_before))
+                lambda message_tx: (get_recent_date(message_tx) <
+                                    self.last_message_before))
 
         if self.last_message_after is not None:
             self.filters.append(
-                lambda message: (message['thread']['recent_date'] >
-                                 self.last_message_after))
+                lambda message_tx: (get_recent_date(message_tx) >
+                                    self.last_message_after))
 
-    def match(self, message_dict):
+    def match(self, message_tx):
         """Returns True if and only if the given message matches all
         filtering criteria."""
-        return all(filter(message_dict) for filter in self.filters)
+        return all(filter(message_tx) for filter in self.filters)
 
     #
     # Methods related to creating a sqlalchemy filter
@@ -1538,7 +1565,7 @@ class Lens(Base, HasPublicID):
         return query
 
 
-class Folder(Base, HasRevisions):
+class Folder(Base):
     """ Folders from the remote account backend (IMAP/Exchange). """
     # `use_alter` required here to avoid circular dependency w/Account
     account_id = Column(Integer,

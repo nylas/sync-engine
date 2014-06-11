@@ -6,6 +6,7 @@ from sqlalchemy import create_engine, Column, Enum, String, Integer
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import as_declarative, declared_attr
 
+from inbox.sqlalchemy_ext.util import BigJSON
 from inbox.sqlalchemy_ext.revision import versioned_session, Revision, gen_rev_role
 
 
@@ -19,7 +20,10 @@ class Base(object):
 
 
 class MonkeyRevision(Base, Revision):
-    pass
+    public_snapshot = Column(BigJSON)
+
+    def take_snapshot(self, obj):
+        self.public_snapshot = {'favorite_food': obj.favorite_food}
 
 HasRevisions = gen_rev_role(MonkeyRevision)
 
@@ -32,9 +36,6 @@ class Monkey(Base, HasRevisions):
     @property
     def favorite_food(self):
         return 'banana'
-
-    def get_versioned_properties(self):
-        return {'favorite_food': self.favorite_food}
 
 
 class Tree(Base):
@@ -101,12 +102,12 @@ def test_skip_rev_create(db_session):
     assert not tree_txns
 
 
-def test_save_additional_data(db_session):
+def test_take_snapshot(db_session):
     db_session.add(Monkey(type='chimpanzee', name='Alice', age=22))
     db_session.commit()
 
     txn = db_session.query(MonkeyRevision).one()
-    assert txn.additional_data == {'favorite_food': 'banana'}
+    assert txn.public_snapshot == {'favorite_food': 'banana'}
 
 
 # TODO: Test updates on objects with relationships.

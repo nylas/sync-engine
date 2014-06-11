@@ -30,7 +30,6 @@ cannot also reasonably guarantee exactly-once delivery, and so clients that
 require exactly-once semantics must deduplicate received data themselves.
 """
 
-import copy
 from collections import defaultdict
 import itertools
 import json
@@ -56,12 +55,7 @@ class EventData(object):
         self.id = transaction.id
         self.retry_ts = 0
         self.retry_count = 0
-        self.data = None
-
-        if transaction.delta:
-            self.data = transaction.delta.copy()
-            if transaction.additional_data is not None:
-                self.data.update(transaction.additional_data)
+        self.snapshot = transaction.public_snapshot
 
     def __cmp__(self, other):
         return cmp(self.retry_ts, other.retry_ts)
@@ -71,24 +65,12 @@ class EventData(object):
         self.retry_ts = int(time.time() + retry_interval)
 
 
-def format_output(transaction_data, include_body):
-    response = {
-        'id': transaction_data['public_id'],
-        'object': 'message',
-        'ns': transaction_data['namespace_public_id'],
-        'subject': transaction_data['subject'],
-        'from': transaction_data['from_addr'],
-        'to': transaction_data['to_addr'],
-        'cc': transaction_data['cc_addr'],
-        'bcc': transaction_data['bcc_addr'],
-        'date': transaction_data['received_date'],
-        'thread': transaction_data['thread']['id'],
-        'size': transaction_data['size'],
-        # TODO(emfree): also store block/attachment info.
-    }
-    if include_body:
-        response['body'] = transaction_data['sanitized_body']
-    return cereal(response)
+def format_output(public_snapshot, include_body):
+    # Because we're using a snapshot of the message API representation in the
+    # transaction log, we can just return that directly (without the 'body'
+    # field if include_body is False).
+    return cereal({k: v for k, v in public_snapshot.iteritems()
+                   if k != 'body' or include_body})
 
 
 def format_failure_output(hook_id, timestamp, status_code):
@@ -257,18 +239,18 @@ class WebhookService():
             if max_tx_id is None:
                 max_tx_id = 0
             for pointer in range(self.minimum_id, max_tx_id, self.chunk_size):
+                # TODO(emfree) add the right index to make this query more
+                # performant.
                 for transaction in db_session.query(Transaction). \
                         filter(Transaction.table_name == 'message',
+                               Transaction.command == 'insert',
                                Transaction.id > pointer,
                                Transaction.id <= pointer + self.chunk_size). \
                         order_by(asc(Transaction.id)):
                     namespace_id = transaction.namespace_id
-                    event_data = EventData(transaction)
                     for worker in self.workers[namespace_id]:
-                        if worker.match(event_data):
-                            # It's important to put a separate class instance
-                            # on each queue.
-                            worker.enqueue(copy.copy(event_data))
+                        if worker.match(transaction):
+                            worker.enqueue(EventData(transaction))
                     self.minimum_id = transaction.id
             self.log.debug('Processed tx. setting min id to {0}'.
                            format(self.minimum_id))
@@ -355,7 +337,7 @@ class WebhookWorker(gevent.Greenlet):
             # OMG WTF TODO (emfree): Do NOT set verify=False in prod!
             r = requests.post(
                 self.callback_url,
-                data=format_output(event.data, self.include_body),
+                data=format_output(event.snapshot, self.include_body),
                 verify=False)
             if r.status_code == requests.status_codes.codes.ok:
                 if self.retry_queue.empty():
@@ -388,10 +370,10 @@ class WebhookWorker(gevent.Greenlet):
                 self.frozen = True
         return False
 
-    def match(self, event):
-        if event.data is None:
+    def match(self, transaction):
+        if transaction.public_snapshot is None:
             return False
-        msg_received_date = event.data.get('received_date')
+        msg_received_date = transaction.public_snapshot.get('date')
         if msg_received_date is None:
             return False
         if (msg_received_date.utctimetuple() <
@@ -399,10 +381,10 @@ class WebhookWorker(gevent.Greenlet):
             # Don't match messages that preceded the hook being activated.
             return False
         try:
-            return self.lens.match(event.data)
+            return self.lens.match(transaction)
         except KeyError:
             self.log.error('Could not filter data for transaction {}'.
-                           format(event.id))
+                           format(transaction.id))
 
     def set_min_processed_id(self, new_id):
         if new_id <= self.min_processed_id:
