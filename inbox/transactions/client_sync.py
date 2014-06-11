@@ -30,7 +30,8 @@ def should_publish_transaction(transaction, db_session):
                    Transaction.id < transaction.id). \
             order_by(desc(Transaction.id)).first()
 
-        if prev_revision is not None:
+        if (prev_revision is not None and prev_revision.public_snapshot is not
+                None):
             public_delta = dict_delta(transaction.public_snapshot,
                                       prev_revision.public_snapshot)
             if not public_delta:
