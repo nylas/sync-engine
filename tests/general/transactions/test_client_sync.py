@@ -5,7 +5,7 @@ from tests.util.base import api_client
 
 def test_invalid_input(api_client):
     stamp_response = api_client.post_data('/sync/generate_stamp',
-                                          {'before': "I'm not a timestamp!"})
+                                          {'start': "I'm not a timestamp!"})
     assert stamp_response.status_code == 400
 
     sync_response = api_client.client.get(api_client.full_path(
@@ -20,7 +20,7 @@ def test_event_generation(api_client):
     api_client.post_data('/tags', {'name': 'foo'})
 
     stamp_response = api_client.post_data('/sync/generate_stamp',
-                                          {'before': ts})
+                                          {'start': ts})
     stamp = json.loads(stamp_response.data)['stamp']
 
     sync_data = api_client.get_data('/sync/events?stamp={}'.format(stamp))
@@ -48,7 +48,7 @@ def test_event_generation(api_client):
         api_client.put_data(thread_path, {'add_tags': ['foo']})
 
     stamp_response = api_client.post_data('/sync/generate_stamp',
-                                          {'before': ts})
+                                          {'start': ts})
     stamp = json.loads(stamp_response.data)['stamp']
 
     sync_data = api_client.get_data('/sync/events?stamp={0}&limit={1}'.
