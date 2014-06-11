@@ -1,6 +1,7 @@
 import uuid
 import struct
 import time
+import traceback
 
 from bson import json_util
 
@@ -32,8 +33,13 @@ def after_cursor_execute(conn, cursor, statement,
     # We only care about slow reads here
     if total > SLOW_QUERY_THRESHOLD_MS and statement.startswith('SELECT'):
         statement = ' '.join(statement.split())
-        log.warning("Slow query took {0:.2f}ms: {1} with params {2} "
-                    .format(total, statement, parameters))
+        # Log stack trace, but remove the uninteresting parts.
+        tb = ''.join([line for line in traceback.format_stack() if 'inbox' in
+                      line][:-1])
+        log.warning("Slow query took {0:.2f}ms: {1} with params {2} at "
+                    "location: \n{3}"
+                    .format(total, statement, parameters, tb))
+
 
 
 ### Column Types
