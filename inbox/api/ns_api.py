@@ -98,6 +98,7 @@ def start():
             detached=True)
         g.lens_limit = request.args.get('limit')
         g.lens_offset = request.args.get('offset')
+        g.lens_order = request.args.get('order')
     except ValueError as e:
         return err(400, e.message)
 
@@ -175,7 +176,8 @@ def tag_create_api():
 @app.route('/threads')
 def thread_query_api():
     return jsonify(g.lens.thread_query(g.db_session, limit=g.lens_limit,
-                                       offset=g.lens_offset).all())
+                                       offset=g.lens_offset,
+                                       order=g.lens_order).all())
 
 
 @app.route('/threads/<public_id>')
@@ -253,7 +255,8 @@ def thread_api_delete(public_id):
 @app.route('/messages')
 def message_query_api():
     return jsonify(g.lens.message_query(g.db_session, limit=g.lens_limit,
-                                        offset=g.lens_offset).all())
+                                        offset=g.lens_offset,
+                                        order=g.lens_order).all())
 
 
 @app.route('/messages/<public_id>')

@@ -8,7 +8,8 @@ from datetime import datetime
 import bson
 
 from sqlalchemy import (Column, Integer, BigInteger, String, DateTime, Boolean,
-                        Enum, ForeignKey, Text, func, event, and_, or_, asc)
+                        Enum, ForeignKey, Text, func, event, and_, or_, asc,
+                        desc)
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import (reconstructor, relationship, backref, deferred,
                             validates, object_session)
@@ -1429,7 +1430,7 @@ class Lens(Base, HasPublicID):
     #
     # Methods related to creating a sqlalchemy filter
 
-    def message_query(self, db_session, limit=None, offset=None):
+    def message_query(self, db_session, limit=None, offset=None, order=None):
         """Return a query object which filters messages by the instance's query
         parameters."""
         limit = limit or LENS_LIMIT_DEFAULT
@@ -1437,14 +1438,21 @@ class Lens(Base, HasPublicID):
         self.db_session = db_session
         query = self._message_subquery()
         query = maybe_refine_query(query, self._thread_subquery())
-        query = query.distinct().order_by(asc(Message.id))
+        query = query.distinct()
+        if order == 'subject':
+            query = query.order_by(asc(Message.subject))
+        elif order == 'date':
+            query = query.order_by(desc(Message.received_date))
+        else:
+            query = query.order_by(asc(Message.id))
+
         if limit > 0:
             query = query.limit(limit)
         if offset > 0:
             query = query.offset(offset)
         return query
 
-    def thread_query(self, db_session, limit=None, offset=None):
+    def thread_query(self, db_session, limit=None, offset=None, order=None):
         """Return a query object which filters threads by the instance's query
         parameters."""
         limit = limit or LENS_LIMIT_DEFAULT
@@ -1454,7 +1462,14 @@ class Lens(Base, HasPublicID):
         # TODO(emfree): If there are no message-specific parameters, we may be
         # doing a join on all messages here. Not good.
         query = maybe_refine_query(query, self._message_subquery())
-        query = query.distinct().order_by(asc(Thread.id))
+        query = query.distinct()
+        if order == 'subject':
+            query = query.order_by(asc(Thread.subject))
+        elif order == 'date':
+            query = query.order_by(desc(Thread.recentdate))
+        else:
+            query = query.order_by(asc(Thread.id))
+
         if limit > 0:
             query = query.limit(limit)
         if offset > 0:

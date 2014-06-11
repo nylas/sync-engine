@@ -31,3 +31,5 @@ Filters allow you to refine your query for mail data to specific parameters. The
 * **`limit`** (integer) this defaults to 100 for performance. Set 0 for no limit.
 
 * **`offset`** (integer) zero-based offset to be used with limit for pagination of results
+
+* **`order`** (string, optional) Either 'subject' or 'date'. If given, return results ordered either alphabetically by subject or most-recent-first, respectively.
