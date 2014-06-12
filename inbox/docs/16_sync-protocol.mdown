@@ -19,9 +19,11 @@ downloading all threads and messages.
 }
 ```
 
+If there are currently no events after the given timestamp, the response is `{"stamp": null}`.
+
 # Requesting changes
 
-    GET https://api.inboxapp.com/n/<namespace_id>/sync/events?type=thread,message&stamp=<stamp>
+    GET https://api.inboxapp.com/n/<namespace_id>/sync/events?stamp=<stamp>
 
 **Sample response:**
 ```
@@ -73,3 +75,8 @@ downloading all threads and messages.
      ]
  }
 }
+
+If `next_event` is given in the response, then more events are available. Fetch
+the next set of events by issuing another query with `stamp` parameter equal to
+the value of `next_event`:
+    GET https://api.inboxapp.com/n/<namespace_id>/sync/events?stamp=<next_event value>
