@@ -47,7 +47,6 @@ apt-get -y install git \
                    build-essential \
                    libmysqlclient-dev \
                    gcc \
-                   python-xapian \
                    libzmq-dev \
                    python-zmq \
                    libxml2-dev \

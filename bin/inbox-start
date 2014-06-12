@@ -48,11 +48,6 @@ def start():
     sync_srv_loc = config.get('CRISPIN_SERVER_LOC', None)
     threads.append(make_zerorpc(SyncService, sync_srv_loc))
 
-    # start ZeroRPC search server service
-    from inbox.search import SearchService
-    search_srv_loc = config.get('SEARCH_SERVER_LOC', None)
-    threads.append(make_zerorpc(SearchService, search_srv_loc))
-
     # start webhook service
     from inbox.transactions.webhook import WebhookService
     webhook_srv_loc = config.get('WEBHOOK_SERVER_LOC', None)

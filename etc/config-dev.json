@@ -3,7 +3,6 @@
 "APP_SERVER_LOC": "tcp://0.0.0.0:9998",
 "CRISPIN_SERVER_LOC": "tcp://0.0.0.0:9997",
 "BLOCK_SERVER_LOC": "tcp://0.0.0.0:9996",
-"SEARCH_SERVER_LOC": "tcp://0.0.0.0:9995",
 "WEBHOOK_SERVER_LOC": "tcp://0.0.0.0:9994",
 "ACTION_SERVER_LOC": "tcp://0.0.0.0:9993",
 
