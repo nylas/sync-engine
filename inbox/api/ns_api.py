@@ -98,7 +98,7 @@ def start():
             detached=True)
         g.lens_limit = request.args.get('limit')
         g.lens_offset = request.args.get('offset')
-        g.lens_order = request.args.get('order')
+        g.lens_order = request.args.get('order_by')
     except ValueError as e:
         return err(400, e.message)
 
@@ -296,7 +296,7 @@ def contact_search_api():
                         'integers')
     if limit > 1000:
         return err(400, 'cannot request more than 1000 contacts at once.')
-    order = request.args.get('order')
+    order = request.args.get('order_by')
     if order == 'rank':
         results = contacts.search_util.search(g.db_session,
                                               g.namespace.account_id, filter,
