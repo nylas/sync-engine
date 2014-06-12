@@ -338,6 +338,7 @@ class WebhookWorker(gevent.Greenlet):
             r = requests.post(
                 self.callback_url,
                 data=format_output(event.snapshot, self.include_body),
+                headers={'content-type': 'application/json'},
                 verify=False)
             if r.status_code == requests.status_codes.codes.ok:
                 if self.retry_queue.empty():
