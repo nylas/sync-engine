@@ -28,8 +28,7 @@ def upgrade():
 
 def downgrade():
     if 'easfoldersync' in Base.metadata.tables:
-        # Still rename the badly named constraint
-        op.create_unique_constraint('uq_account_id_folder_name',
+        op.create_unique_constraint('account_id',
                                     'easfoldersync',
                                     ['account_id', 'folder_name'])
         op.drop_constraint('uq_account_id_eas_folder_id', 'easfoldersync',
