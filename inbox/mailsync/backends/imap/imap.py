@@ -84,9 +84,8 @@ from inbox.models.tables.imap import ImapAccount, FolderSync
 from inbox.models.namespace import db_write_lock
 from inbox.mailsync.exc import UIDInvalid
 from inbox.mailsync.backends.imap import account
-from inbox.mailsync.backends.base import (save_folder_names,
-                                                 create_db_objects,
-                                                 commit_uids, new_or_updated)
+from inbox.mailsync.backends.base import (save_folder_names, create_db_objects,
+                                          commit_uids, new_or_updated)
 from inbox.mailsync.backends.base import BaseMailSyncMonitor
 
 
@@ -172,6 +171,7 @@ class ImapFolderSyncMonitor(Greenlet):
         self.shared_state = shared_state
         self.state_handlers = state_handlers
         self.state = None
+        self.conn_pool = connection_pool(self.account_id)
 
         self.log = get_logger(account_id, 'mailsync')
 
@@ -199,26 +199,25 @@ class ImapFolderSyncMonitor(Greenlet):
             # NOTE: The parent ImapSyncMonitor handler could kill us at any
             # time if it receives a shutdown command. The shutdown command is
             # equivalent to ctrl-c.
-            with connection_pool(self.account_id).get() as crispin_client:
-                while True:
-                    try:
-                        self.state = foldersync.state = \
-                            self.state_handlers[foldersync.state](
-                                crispin_client, db_session, self.log,
-                                self.folder_name, self.shared_state)
-                    except UIDInvalid:
-                        self.state = foldersync.state = \
-                            self.state + ' uidinvalid'
-                    # State handlers are idempotent, so it's okay if we're
-                    # killed between the end of the handler and the commit.
-                    db_session.commit()
-                    if self.state == 'finish':
-                        return
+            while True:
+                try:
+                    self.state = foldersync.state = \
+                        self.state_handlers[foldersync.state](
+                            self.conn_pool, db_session, self.log,
+                            self.folder_name, self.shared_state)
+                except UIDInvalid:
+                    self.state = foldersync.state = \
+                        self.state + ' uidinvalid'
+                # State handlers are idempotent, so it's okay if we're
+                # killed between the end of the handler and the commit.
+                db_session.commit()
+                if self.state == 'finish':
+                    return
 
 
 def resync_uids_from(previous_state):
     @retry_crispin
-    def resync_uids(crispin_client, db_session, log, folder_name,
+    def resync_uids(conn_pool, db_session, log, folder_name,
                     shared_state):
         """ Call this when UIDVALIDITY is invalid to fix up the database.
 
@@ -234,9 +233,10 @@ def resync_uids_from(previous_state):
 
 
 @retry_crispin
-def initial_sync(crispin_client, db_session, log, folder_name, shared_state):
-    return base_initial_sync(crispin_client, db_session, log, folder_name,
-                             shared_state, imap_initial_sync)
+def initial_sync(conn_pool, db_session, log, folder_name, shared_state):
+    with conn_pool.get() as crispin_client:
+        return base_initial_sync(crispin_client, db_session, log, folder_name,
+                                 shared_state, imap_initial_sync)
 
 
 def base_initial_sync(crispin_client, db_session, log, folder_name,
@@ -272,9 +272,10 @@ def base_initial_sync(crispin_client, db_session, log, folder_name,
 
 
 @retry_crispin
-def poll(crispin_client, db_session, log, folder_name, shared_state):
-    return base_poll(crispin_client, db_session, log, folder_name,
-                     shared_state, imap_highestmodseq_update)
+def poll(conn_pool, db_session, log, folder_name, shared_state):
+    with conn_pool.get() as crispin_client:
+        return base_poll(crispin_client, db_session, log, folder_name,
+                         shared_state, imap_highestmodseq_update)
 
 
 def base_poll(crispin_client, db_session, log, folder_name, shared_state,

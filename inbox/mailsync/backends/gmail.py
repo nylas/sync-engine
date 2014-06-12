@@ -37,21 +37,21 @@ from inbox.models.message import reconcile_message
 from inbox.models.tables.base import Message, Folder
 from inbox.models.tables.imap import ImapAccount, ImapUid, ImapThread
 from inbox.mailsync.backends.base import (create_db_objects,
-                                                 commit_uids, new_or_updated,
-                                                 MailsyncError)
+                                          commit_uids, new_or_updated,
+                                          MailsyncError)
 from inbox.mailsync.backends.imap import (account,
-                                                 uidvalidity_cb,
-                                                 remove_deleted_uids,
-                                                 download_queued_uids,
-                                                 update_metadata,
-                                                 resync_uids_from,
-                                                 base_initial_sync, base_poll,
-                                                 safe_download,
-                                                 add_uids_to_stack,
-                                                 check_new_uids,
-                                                 uid_list_to_stack,
-                                                 report_progress,
-                                                 ImapSyncMonitor)
+                                          uidvalidity_cb,
+                                          remove_deleted_uids,
+                                          download_queued_uids,
+                                          update_metadata,
+                                          resync_uids_from,
+                                          base_initial_sync, base_poll,
+                                          safe_download,
+                                          add_uids_to_stack,
+                                          check_new_uids,
+                                          uid_list_to_stack,
+                                          report_progress,
+                                          ImapSyncMonitor)
 
 
 PROVIDER = 'Gmail'
@@ -77,9 +77,10 @@ class GmailSyncMonitor(ImapSyncMonitor):
 
 
 @retry_crispin
-def initial_sync(crispin_client, db_session, log, folder_name, shared_state):
-    return base_initial_sync(crispin_client, db_session, log, folder_name,
-                             shared_state, gmail_initial_sync)
+def initial_sync(conn_pool, db_session, log, folder_name, shared_state):
+    with conn_pool.get() as crispin_client:
+        return base_initial_sync(crispin_client, db_session, log, folder_name,
+                                 shared_state, gmail_initial_sync)
 
 
 def uid_download_folders(crispin_client):
@@ -157,9 +158,10 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
 
 
 @retry_crispin
-def poll(crispin_client, db_session, log, folder_name, shared_state):
-    return base_poll(crispin_client, db_session, log, folder_name,
-                     shared_state, gmail_highestmodseq_update)
+def poll(conn_pool, db_session, log, folder_name, shared_state):
+    with conn_pool.get() as crispin_client:
+        return base_poll(crispin_client, db_session, log, folder_name,
+                         shared_state, gmail_highestmodseq_update)
 
 
 def gmail_highestmodseq_update(crispin_client, db_session, log, folder_name,
