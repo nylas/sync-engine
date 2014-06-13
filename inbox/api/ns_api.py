@@ -584,7 +584,7 @@ def draft_delete_api(public_id):
         return err(404, 'No draft found with public_id {}'.
                    format(public_id))
 
-    if draft.is_draft:
+    if not draft.is_draft:
         return err(400, 'Message with public id {} is not a draft'.
                    format(public_id))
 
