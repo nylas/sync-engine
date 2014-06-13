@@ -14,8 +14,8 @@ def dict_delta(current_dict, previous_dict):
 
 
 def should_publish_transaction(transaction, db_session):
-    """Returns True if the given transaction contains should actually be
-    published by the client sync API."""
+    """Returns True if the given transaction should actually be published by
+    the client sync API."""
     if transaction.object_public_id is None:
         return False
     if 'object' not in transaction.public_snapshot:
@@ -90,27 +90,29 @@ def get_public_id_from_ts(namespace_id, timestamp, db_session):
 
     dt = datetime.utcfromtimestamp(timestamp)
     transaction = db_session.query(Transaction). \
-        order_by(asc(Transaction.id)). \
-        filter(Transaction.created_at >= dt,
+        order_by(desc(Transaction.id)). \
+        filter(Transaction.created_at < dt,
                Transaction.namespace_id == namespace_id).first()
     if transaction is None:
-        return None
+        # If there are no earlier events, use '0' as a special stamp parameter
+        # to signal 'process from the start of the log'.
+        return '0'
     return transaction.public_id
 
 
 def get_entries_from_public_id(namespace_id, events_start, db_session,
                                result_limit):
     """Returns up to result_limit processed transaction log entries for the
-    given namespace_id. Begins processing the log at the transaction with
+    given namespace_id. Begins processing the log after the transaction with
     public_id equal to the events_start parameter.
 
     Arguments
     ---------
     namespace_id: int
     events_start: string
-        The public_id of the transaction log entry at which to begin
+        The public_id of the transaction log entry after which to begin
         processing. Normally this should be the return value of a previous call
-        to get_public_id_from_ts, or the value of 'next_event' from a previous
+        to get_public_id_from_ts, or the value of 'events_end' from a previous
         call to this function.
     db_session: InboxSession
     result_limit: int
@@ -121,46 +123,48 @@ def get_entries_from_public_id(namespace_id, events_start, db_session,
     Dictionary with keys:
      - 'events_start'
      - 'events': list of serialized add/modify/delete events
-     - (optional) 'next_event': the public_id of the next transaction log entry
-       after the returned events, if available. This value can be passed as
+     - (optional) 'events_end': the public_id of the last transaction log entry
+       in the returned events, if available. This value can be passed as
        events_start in a subsequent call to this function to get the next page
        of results.
 
     Raises
     ------
     ValueError
-        If events_start is not a valid public_id of a transaction entry for
-        the given namespace.
+        If events_start is invalid.
     """
     try:
-        # Check that events_start could be a public id
-        int(events_start, 36)
-        internal_start_id, = db_session.query(Transaction.id). \
-            filter(Transaction.public_id == events_start,
-                   Transaction.namespace_id == namespace_id).one()
+        # Check that events_start can be a public id, and interpret the special
+        # stamp value '0'.
+        int_value = int(events_start, 36)
+        if not int_value:
+            internal_start_id = 0
+        else:
+            internal_start_id, = db_session.query(Transaction.id). \
+                filter(Transaction.public_id == events_start,
+                       Transaction.namespace_id == namespace_id).one()
     except (ValueError, NoResultFound):
         raise ValueError('Invalid first_public_id parameter: {}'.
                          format(events_start))
     query = db_session.query(Transaction). \
         order_by(asc(Transaction.id)). \
         filter(Transaction.namespace_id == namespace_id,
-               Transaction.id >= internal_start_id)
+               Transaction.id > internal_start_id)
     events = []
-    next_event = None
+    events_end = events_start
     for transaction in query.yield_per(result_limit):
 
         if should_publish_transaction(transaction, db_session):
             event = create_event(transaction)
-            if len(events) == result_limit:
-                next_event = transaction.public_id
-                break
             events.append(event)
+            events_end = transaction.public_id
+            if len(events) == result_limit:
+                break
 
     result = {
         'events_start': events_start,
-        'events': events
+        'events': events,
+        'events_end': events_end
     }
-    # Only return a next_event value if there are more transactions available.
-    if next_event is not None:
-        result['next_event'] = next_event
+
     return result

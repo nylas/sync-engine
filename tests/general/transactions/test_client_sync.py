@@ -55,6 +55,6 @@ def test_event_generation(api_client):
                                     format(stamp, 8))
     assert len(sync_data['events']) == 8
 
-    stamp = sync_data['next_event']
+    stamp = sync_data['events_end']
     sync_data = api_client.get_data('/sync/events?stamp={0}'.format(stamp))
     assert len(sync_data['events']) == 2

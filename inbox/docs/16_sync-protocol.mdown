@@ -19,8 +19,6 @@ downloading all threads and messages.
 }
 ```
 
-If there are currently no events after the given timestamp, the response is `{"stamp": null}`.
-
 # Requesting changes
 
     GET https://api.inboxapp.com/n/<namespace_id>/sync/events?stamp=<stamp>
@@ -30,7 +28,7 @@ If there are currently no events after the given timestamp, the response is `{"s
 :::json
 {
      "events_start": "aqb0llc2ioo0bclh7uxkim9z6",
-     "next_event": "5u9kwbgyq8wgq0iqdakqt7kjl"
+     "events_end": "5u9kwbgyq8wgq0iqdakqt7kjl"
      "events": [
          {
          "object_id": "aqb0llc2ioo0bclh7uxkim9z6",
@@ -76,7 +74,6 @@ If there are currently no events after the given timestamp, the response is `{"s
  }
 }
 
-If `next_event` is given in the response, then more events are available. Fetch
-the next set of events by issuing another query with `stamp` parameter equal to
-the value of `next_event`:
-    GET https://api.inboxapp.com/n/<namespace_id>/sync/events?stamp=<next_event value>
+Fetch the next set of events by issuing another query with `stamp` parameter
+equal to the value of `events_end`:
+    GET https://api.inboxapp.com/n/<namespace_id>/sync/events?stamp=<events_end value>
