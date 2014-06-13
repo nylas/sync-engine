@@ -75,8 +75,7 @@ def writable_connection_pool(account_id, pool_size=4,
                                     readonly=False)
     return pool
 
-CONN_DISCARD_EXC_CLASSES = (socket.error, imaplib.IMAP4.error,
-                            imaplib.IMAP4.abort)
+CONN_DISCARD_EXC_CLASSES = (socket.error, imaplib.IMAP4.error)
 
 
 class CrispinConnectionPool(geventconnpool.ConnectionPool):
