@@ -72,6 +72,46 @@ def g_metadata(account_id, session, folder_name):
                  for uid, g_msgid, g_thrid in query])
 
 
+def update_thread_labels(thread, folder_name, g_labels, db_session):
+    existing_labels = {folder.name.lower() for folder in thread.folders}
+    new_labels = {l.lstrip('\\').lower() for l in g_labels}
+    new_labels.add(folder_name.lower())
+
+    # Remove labels that have been deleted -- note that the \Inbox, \Sent,
+    # \Important, and \Drafts labels are per-message, not per-thread, but
+    # since we always work at the thread level, _we_ apply the label to the
+    # whole thread.
+    thread.folders = {folder for folder in thread.folders if
+                      folder.name.lower() in new_labels or
+                      folder.name.lower() in ('inbox', 'sent', 'drafts',
+                                              'important')}
+
+    # add new labels
+    for label in new_labels:
+        if label.lower() not in existing_labels:
+            # The problem here is that Gmail's attempt to squash labels and
+            # IMAP folders into the same abstraction doesn't work
+            # perfectly. In particular, there is a '[Gmail]/Sent' folder,
+            # but *also* a 'Sent' label, and so on. We handle this by only
+            # maintaining one folder object that encapsulates both of
+            # these.
+            if label == 'Sent':
+                thread.folders.add(thread.namespace.account.sent_folder)
+            elif label == 'Draft':
+                thread.folders.add(thread.namespace.account.drafts_folder)
+            elif label == 'Starred':
+                thread.folders.add(thread.namespace.account.starred_folder)
+            elif label == 'Important':
+                thread.folders.add(
+                    thread.namespace.account.important_folder)
+            else:
+                folder = Folder.find_or_create(db_session,
+                                               thread.namespace.account,
+                                               label)
+                thread.folders.add(folder)
+    return new_labels
+
+
 def update_metadata(account_id, session, folder_name, uids, new_flags):
     """ Update flags (the only metadata that can change).
 
@@ -86,6 +126,8 @@ def update_metadata(account_id, session, folder_name, uids, new_flags):
         flags = new_flags[item.msg_uid].flags
         if hasattr(new_flags[item.msg_uid], 'labels'):
             labels = new_flags[item.msg_uid].labels
+            thread = item.message.thread
+            update_thread_labels(thread, folder_name, labels, session)
         else:
             labels = None
         item.update_imap_flags(flags, labels)
