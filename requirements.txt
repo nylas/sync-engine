@@ -20,7 +20,6 @@ colorlog==1.8
 MySQL-python==1.2.5
 requests==2.3.0
 Fabric==1.7.0
-supervisor==3.0
 chardet==2.1.1
 Wand==0.3.5
 setproctitle==1.1.8
