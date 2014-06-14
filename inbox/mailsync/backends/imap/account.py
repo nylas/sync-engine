@@ -15,7 +15,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.models.tables.base import Block, Message, Folder
 from inbox.models.tables.imap import ImapUid, UIDValidity
-from inbox.models.message import create_message
+from inbox.models.message_util import create_message
 
 
 from inbox.log import get_logger

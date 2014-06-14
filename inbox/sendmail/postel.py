@@ -270,7 +270,7 @@ class SMTPClient(object):
         is converted to a sent message so it is immediately available to the
         user as such (for e.g. if they search the `sent` folder).
         It is reconciled with the message we get from the remote backend
-        on a subsequent sync of the folder (see inbox.models.message.py)
+        on a subsequent sync of the folder (see inbox.models.message_util.py)
 
         """
         raise NotImplementedError
