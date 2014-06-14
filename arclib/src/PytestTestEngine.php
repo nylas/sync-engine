@@ -30,7 +30,7 @@ final class PytestTestEngine extends ArcanistBaseUnitTestEngine {
     # We want to run the tests inside the VM.
     # `vagrant ssh -c` will return the exit code of whatever command you pass,
     # but we need it to always return 0. Hence the `|| true`.
-    $cmd_line = csprintf('vagrant ssh -c \'cd /vagrant; coverage run --source /vagrant/src -m py.test --junitxml /vagrant/tests/output /vagrant/tests || true\'');
+    $cmd_line = csprintf('vagrant ssh -c \'cd /vagrant; coverage run --source /vagrant/inbox -m py.test --junitxml /vagrant/tests/output /vagrant/tests || true\'');
 
     return new ExecFuture('%C', $cmd_line);
   }
