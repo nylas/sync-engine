@@ -104,6 +104,7 @@ def gen_rev_role(rev_cls):
     return HasRevisions
 
 
+
 def create_insert_revision(rev_cls, obj, session):
     d = delta(obj)
     assert d, "Can't insert object {0}:{1} with no delta".format(

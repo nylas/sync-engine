@@ -14,7 +14,7 @@ from math import log
 
 import sqlalchemy
 
-from inbox.models.tables.base import Contact, SearchSignal, SearchToken
+from inbox.models import Contact, SearchSignal, SearchToken
 
 
 def get_signal(contact, signal_name):

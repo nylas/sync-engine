@@ -5,7 +5,7 @@ from tests.util.base import config
 config()
 
 from inbox.contacts.process_mail import update_contacts
-from inbox.models.tables.base import Contact, Message, register_backends
+from inbox.models import Contact, Message, register_backends
 register_backends()
 
 ACCOUNT_ID = 1
@@ -14,33 +14,37 @@ ACCOUNT_ID = 1
 @pytest.fixture
 def message():
     received_date = datetime.datetime.utcfromtimestamp(10**9 + 1)
-    return Message(from_addr=(('Some Dude', 'some.dude@email.address'),),
-                   to_addr=(('Somebody Else',
-                             'somebody.else@email.address'),),
-                   cc_addr=(('A Bystander',
-                             'bystander@email.address'),),
-                   bcc_addr=(('The NSA', 'spies@nsa.gov'),),
-                   thread_id=1,
-                   size=22,
-                   is_draft=False,
-                   decode_error=False,
-                   sanitized_body='Are you there?',
-                   snippet='Are you there?',
-                   received_date=received_date)
+    new_msg = Message()
+    new_msg.from_addr = (('Some Dude', 'some.dude@email.address'),)
+    new_msg.to_addr = (('Somebody Else',
+                        'somebody.else@email.address'),)
+    new_msg.cc_addr = (('A Bystander',
+                        'bystander@email.address'),)
+    new_msg.bcc_addr = (('The NSA', 'spies@nsa.gov'),)
+    new_msg.thread_id = 1
+    new_msg.size = 22
+    new_msg.is_draft = False
+    new_msg.decode_error = False
+    new_msg.sanitized_body = 'Are you there?'
+    new_msg.snippet = 'Are you there?'
+    new_msg.received_date = received_date
+    return new_msg
 
 
 @pytest.fixture
 def gmail_message():
     received_date = datetime.datetime.utcfromtimestamp(10**9 + 1)
-    return Message(to_addr=((u'Somebody', u'some.body@gmail.com'),
-                            (u'Somebody', u'somebody@gmail.com'),),
-                   thread_id=1,
-                   size=22,
-                   is_draft=False,
-                   decode_error=False,
-                   sanitized_body='Are you there?',
-                   snippet='Are you there?',
-                   received_date=received_date)
+    new_msg = Message()
+    new_msg.to_addr = ((u'Somebody', u'some.body@gmail.com'),
+                       (u'Somebody', u'somebody@gmail.com'),)
+    new_msg.thread_id = 1
+    new_msg.size = 22
+    new_msg.is_draft = False
+    new_msg.decode_error = False
+    new_msg.sanitized_body = 'Are you there?'
+    new_msg.snippet = 'Are you there?'
+    new_msg.received_date = received_date
+    return new_msg
 
 
 def test_canonicalization(config, gmail_message, db):

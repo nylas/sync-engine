@@ -8,8 +8,8 @@ from setproctitle import setproctitle; setproctitle('inbox-syncmgr')
 import zerorpc
 import argparse
 
-from inbox.models import session_scope
-from inbox.models.tables.base import Account
+from inbox.models.session import session_scope
+from inbox.models import Account
 from sqlalchemy.orm.exc import NoResultFound
 
 

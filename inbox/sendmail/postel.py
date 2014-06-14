@@ -9,8 +9,8 @@ from gevent import socket
 from inbox.log import get_logger
 from inbox.basicauth import AUTH_TYPES
 from inbox.auth.base import verify_imap_account
-from inbox.models import session_scope
-from inbox.models.tables.imap import ImapAccount
+from inbox.models.session import session_scope
+from inbox.models.backends.imap import ImapAccount
 from inbox.sendmail.base import SendMailException, SendError
 log = get_logger(purpose='sendmail')
 
@@ -270,7 +270,7 @@ class SMTPClient(object):
         is converted to a sent message so it is immediately available to the
         user as such (for e.g. if they search the `sent` folder).
         It is reconciled with the message we get from the remote backend
-        on a subsequent sync of the folder (see inbox.models.message_util.py)
+        on a subsequent sync of the folder (see inbox.models.util.py)
 
         """
         raise NotImplementedError

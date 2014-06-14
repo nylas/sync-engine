@@ -21,7 +21,7 @@ def mock_create_logger(app):
     return inbox_logger
 flask_logging.create_logger = mock_create_logger
 
-from inbox.models.tables.base import register_backends
+from inbox.models import register_backends
 table_mod_for = register_backends()
 
 from ns_api import app as ns_api

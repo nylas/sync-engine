@@ -8,18 +8,18 @@ from sqlalchemy.orm.exc import NoResultFound
 from werkzeug.exceptions import default_exceptions
 from werkzeug.exceptions import HTTPException
 
-from inbox.models.tables.base import (
+from inbox.models import (
     Message, Block, Part, Thread, Namespace, Lens, Webhook, Tag, SpoolMessage,
     Contact)
-from inbox.models.kellogs import jsonify
+from inbox.api.kellogs import jsonify
 from inbox.config import config
 from inbox import contacts, sendmail
-from inbox.models import InboxSession, session_scope
+from inbox.models.session import InboxSession, session_scope
 from inbox.transactions import client_sync
 
 from err import err
 
-from inbox.models.ignition import engine
+from inbox.ignition import engine
 
 
 DEFAULT_LIMIT = 50

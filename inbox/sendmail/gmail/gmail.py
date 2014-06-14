@@ -1,5 +1,5 @@
-from inbox.models.namespace import db_write_lock
-from inbox.models.tables.imap import ImapAccount, ImapUid
+from inbox.models.util import db_write_lock
+from inbox.models.backends.imap import ImapAccount, ImapUid
 from inbox.sendmail.base import generate_attachments, SendError
 from inbox.sendmail.postel import SMTPClient
 from inbox.sendmail.message import SenderInfo

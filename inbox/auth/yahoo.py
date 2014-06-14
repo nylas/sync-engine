@@ -7,8 +7,8 @@ import sqlalchemy.orm.exc
 from imapclient import IMAPClient
 
 from inbox.basicauth import password_auth
-from inbox.models.tables.base import Namespace
-from inbox.models.tables.imap import ImapAccount
+from inbox.models import Namespace
+from inbox.models.backends.imap import ImapAccount
 
 
 PROVIDER = 'Yahoo'

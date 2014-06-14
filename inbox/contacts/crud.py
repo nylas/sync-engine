@@ -2,7 +2,7 @@
 Called by the API."""
 import uuid
 
-from inbox.models.tables.base import Contact
+from inbox.models import Contact
 
 INBOX_PROVIDER_NAME = 'inbox'
 

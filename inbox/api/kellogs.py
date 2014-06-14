@@ -4,7 +4,7 @@ from json import JSONEncoder, dumps
 
 from flask import Response
 
-from inbox.models.tables.base import (
+from inbox.models import (
     Message, Account, Part, Contact, Thread, Namespace, Block, Webhook, Lens,
     Tag, SpoolMessage)
 

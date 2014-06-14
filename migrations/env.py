@@ -22,17 +22,17 @@ if context.get_tag_argument() == 'test':
             sys.exit("Tests should only be run on localhost DB!")
 
 
-from inbox.models.tables.base import register_backends
+from inbox.models import register_backends
 table_mod_for = register_backends()
 
 
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
-from inbox.models import MailSyncBase
+from inbox.models.base import MailSyncBase
 target_metadata = MailSyncBase.metadata
 
-from inbox.models.ignition import db_uri
+from inbox.ignition import db_uri
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

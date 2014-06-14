@@ -10,7 +10,7 @@ from inbox.util.itert import partition
 from inbox.util.misc import load_modules
 from inbox.config import config
 from inbox.log import configure_mailsync_logging
-from inbox.models.tables.base import (Account, Folder, MAX_FOLDER_NAME_LENGTH)
+from inbox.models import (Account, Folder, MAX_FOLDER_NAME_LENGTH)
 from inbox.mailsync.exc import SyncException
 
 import inbox.mailsync.backends

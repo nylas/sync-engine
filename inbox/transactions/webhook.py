@@ -43,9 +43,9 @@ from sqlalchemy import asc, func
 
 from inbox.util.concurrency import retry_wrapper
 from inbox.log import get_logger
-from inbox.models import session_scope
-from inbox.models.kellogs import cereal
-from inbox.models.tables.base import Transaction, Webhook, Lens
+from inbox.models.session import session_scope
+from inbox.api.kellogs import cereal
+from inbox.models import Transaction, Webhook, Lens
 
 
 class EventData(object):

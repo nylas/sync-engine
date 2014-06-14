@@ -5,7 +5,7 @@ import uuid
 from flanker.addresslib import address
 
 from inbox.contacts import search_util
-from inbox.models.tables.base import Contact, MessageContactAssociation
+from inbox.models import Contact, MessageContactAssociation
 
 SIGNAL_NAME_MAPPING = {
     'to_addr': 'to_count',

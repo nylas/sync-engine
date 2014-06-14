@@ -64,12 +64,12 @@ def upgrade():
 
     op.drop_column('folder', u'exposed_name')
 
-    from inbox.models import session_scope
+    from inbox.models.session import session_scope
     # Doing this ties this migration to the state of the code at the time
     # of this commit. However, the alternative is to have a crazy long,
     # involved and error-prone recreation of the models and their behavior
     # here. (I tried it, and decided this way was better.)
-    from inbox.models.tables.base import FolderItem, Tag, Namespace
+    from inbox.models import FolderItem, Tag, Namespace
 
     with session_scope(versioned=False, ignore_soft_deletes=False) as db_session:
         # create canonical tags that don't already exist.

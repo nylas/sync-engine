@@ -3,8 +3,8 @@ from collections import Counter
 
 import gevent
 
-from inbox.models import session_scope
-from inbox.models.tables.base import Contact, Account
+from inbox.models.session import session_scope
+from inbox.models import Contact, Account
 from inbox.log import configure_contacts_logging, get_logger
 from inbox.contacts.google import GoogleContactsProvider
 from inbox.util.concurrency import retry_wrapper

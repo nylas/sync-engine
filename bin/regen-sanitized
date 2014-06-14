@@ -5,8 +5,8 @@
 # configure_general_logging()
 # log = get_logger()
 
-from inbox.models import session_scope
-from inbox.models.tables.base import Message, Block
+from inbox.models.session import session_scope
+from inbox.models import Message, Block
 
 PAGE_SIZE = 500
 

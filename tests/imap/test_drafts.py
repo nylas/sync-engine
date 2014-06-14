@@ -6,7 +6,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from tests.data.messages.replyto_message import TEST_MSG
 from tests.util.base import action_queue
 from tests.util.crispin import crispin_client
-from inbox.models.tables.base import Block
+from inbox.models import Block
 
 ACCOUNT_ID = 1
 NAMESPACE_ID = 1
@@ -15,7 +15,7 @@ THREAD_ID = 16
 
 @pytest.fixture(scope='function')
 def message(db, config):
-    from inbox.models.tables.imap import ImapAccount
+    from inbox.models.backends.imap import ImapAccount
 
     account = db.session.query(ImapAccount).get(ACCOUNT_ID)
     to = [{'name': 'The red-haired mermaid',
@@ -88,7 +88,7 @@ def cleanup(account, subject):
 
 def test_get(db, config, action_queue, message, attach):
     from inbox.sendmail.base import create_draft, get_draft
-    from inbox.models.tables.base import SpoolMessage, Account
+    from inbox.models import SpoolMessage, Account
 
     account = db.session.query(Account).get(ACCOUNT_ID)
     to, subject, body = message
@@ -115,7 +115,7 @@ def test_get(db, config, action_queue, message, attach):
 
 def test_get_all(db, config, action_queue, message, attach):
     from inbox.sendmail.base import create_draft, get_all_drafts
-    from inbox.models.tables.base import Account
+    from inbox.models import Account
 
     account = db.session.query(Account).get(ACCOUNT_ID)
     to, subject, body = message
@@ -154,7 +154,7 @@ def test_get_all(db, config, action_queue, message, attach):
 
 def test_create(db, config, action_queue, message, attach):
     from inbox.sendmail.base import create_draft
-    from inbox.models.tables.base import (SpoolMessage, FolderItem,
+    from inbox.models import (SpoolMessage, FolderItem,
                                                  Folder, Account)
 
     account = db.session.query(Account).get(ACCOUNT_ID)
@@ -199,7 +199,7 @@ def test_create(db, config, action_queue, message, attach):
 
 def test_update(db, config, action_queue, message, attach):
     from inbox.sendmail.base import create_draft, update_draft
-    from inbox.models.tables.base import Account
+    from inbox.models import Account
 
     account = db.session.query(Account).get(ACCOUNT_ID)
     to, subject, body = message
@@ -242,7 +242,7 @@ def test_update(db, config, action_queue, message, attach):
 def test_delete(db, config, action_queue, message, attach):
     from inbox.sendmail.base import (create_draft, update_draft,
                                             delete_draft)
-    from inbox.models.tables.base import SpoolMessage, Account
+    from inbox.models import SpoolMessage, Account
 
     account = db.session.query(Account).get(ACCOUNT_ID)
     to, subject, body = message
@@ -283,7 +283,7 @@ def test_delete(db, config, action_queue, message, attach):
 
 def test_send(db, config, action_queue, message, attach):
     from inbox.sendmail.base import create_draft, send_draft
-    from inbox.models.tables.base import (SpoolMessage, Account,
+    from inbox.models import (SpoolMessage, Account,
                                                  FolderItem, Folder)
 
     account = db.session.query(Account).get(ACCOUNT_ID)
@@ -335,7 +335,7 @@ def test_send(db, config, action_queue, message, attach):
 
 def test_create_reply(db, config, action_queue, message, attach):
     from inbox.sendmail.base import create_draft
-    from inbox.models.tables.base import (SpoolMessage, Account,
+    from inbox.models import (SpoolMessage, Account,
                                                  Message, Thread, DraftThread)
 
     account = db.session.query(Account).get(ACCOUNT_ID)
@@ -402,7 +402,7 @@ def test_create_reply(db, config, action_queue, message, attach):
 
 def test_update_reply(db, config, action_queue, message, attach):
     from inbox.sendmail.base import create_draft, update_draft
-    from inbox.models.tables.base import Account, Thread, DraftThread
+    from inbox.models import Account, Thread, DraftThread
 
     account = db.session.query(Account).get(ACCOUNT_ID)
     to, subject, body = message
@@ -473,7 +473,7 @@ def test_delete_reply():
 
 def test_send_reply(db, config, action_queue, message, attach):
     from inbox.sendmail.base import create_draft, send_draft
-    from inbox.models.tables.base import (SpoolMessage, Account,
+    from inbox.models import (SpoolMessage, Account,
                                                  Thread, FolderItem,
                                                  Folder)
 

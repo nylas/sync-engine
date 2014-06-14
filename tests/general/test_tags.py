@@ -18,7 +18,7 @@ def kill_greenlets():
 
 
 def test_get_tags(api_client):
-    from inbox.models.tables.base import Tag
+    from inbox.models import Tag
     tags = api_client.get_data('/tags')
     assert set(Tag.RESERVED_TAG_NAMES).issubset({tag['name'] for tag in tags})
 

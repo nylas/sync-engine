@@ -5,9 +5,10 @@ from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from inbox.util.misc import load_modules
 from inbox.util.url import NotSupportedError
 from inbox.log import get_logger
-from inbox.models import session_scope
-from inbox.models.tables.base import (SpoolMessage, Thread, DraftThread,
+from inbox.models.session import session_scope
+from inbox.models import (SpoolMessage, Thread, DraftThread,
                                              Account, Block)
+from inbox.models.util import get_or_copy_draft
 from inbox.sendmail.message import Recipients
 from inbox.sqlalchemy_ext.util import b36_to_bin
 
@@ -197,7 +198,7 @@ def update_draft(db_session, account, draft_public_id, to=None, subject=None,
     return its public_id (which is different than the original's).
 
     """
-    draft = SpoolMessage.get_or_copy(db_session, draft_public_id)
+    draft = get_or_copy_draft(db_session, draft_public_id)
 
     db_session.add(draft)
     db_session.commit()

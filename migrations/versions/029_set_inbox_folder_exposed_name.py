@@ -14,8 +14,8 @@ from sqlalchemy.ext.declarative import declarative_base
 
 
 def upgrade():
-    from inbox.models import session_scope
-    from inbox.models.ignition import engine
+    from inbox.models.session import session_scope
+    from inbox.ignition import engine
     Base = declarative_base()
     Base.metadata.reflect(engine)
 

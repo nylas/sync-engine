@@ -32,10 +32,10 @@ from inbox.util.cache import set_cache, get_cache, rm_cache
 
 from inbox.contacts.process_mail import update_contacts
 from inbox.crispin import GMetadata, connection_pool, retry_crispin
-from inbox.models import session_scope
-from inbox.models.message_util import reconcile_message
-from inbox.models.tables.base import Message, Folder
-from inbox.models.tables.imap import ImapAccount, ImapUid, ImapThread
+from inbox.models.session import session_scope
+from inbox.models.util import reconcile_message
+from inbox.models import Message, Folder
+from inbox.models.backends.imap import ImapAccount, ImapUid, ImapThread
 from inbox.mailsync.backends.base import (create_db_objects,
                                           commit_uids, new_or_updated,
                                           MailsyncError)

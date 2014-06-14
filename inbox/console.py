@@ -1,7 +1,7 @@
 from inbox.mailsync.backends.imap import uidvalidity_cb
 from inbox.crispin import connection_pool
-from inbox.models import session_scope
-from inbox.models.tables.base import Account
+from inbox.models.session import session_scope
+from inbox.models import Account
 import IPython
 
 

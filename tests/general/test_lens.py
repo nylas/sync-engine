@@ -9,7 +9,7 @@ from tests.data.messages.message import (subject, delivered_to, sender,
 from tests.util.base import config, api_client
 config()
 
-from inbox.models.tables.base import (register_backends, Lens, SpoolMessage,
+from inbox.models import (register_backends, Lens, SpoolMessage,
                                       Transaction)
 register_backends()
 

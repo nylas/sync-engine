@@ -26,7 +26,7 @@ def register_action_backends(db):
 
 @pytest.fixture(scope='function')
 def message(db, config):
-    from inbox.models.tables.imap import ImapAccount
+    from inbox.models.backends.imap import ImapAccount
 
     account = db.session.query(ImapAccount).get(ACCOUNT_ID)
     to = [{'name': u'"\u2605The red-haired mermaid\u2605"',
@@ -42,7 +42,7 @@ def test_remote_save_draft(db, config, message):
     from inbox.actions.gmail import remote_save_draft
     from inbox.sendmail.base import _parse_recipients, all_recipients
     from inbox.sendmail.message import create_email, SenderInfo
-    from inbox.models.tables.base import Account
+    from inbox.models import Account
 
     account = db.session.query(Account).get(ACCOUNT_ID)
     sender_info = SenderInfo(name=account.full_name,
@@ -79,7 +79,7 @@ def test_remote_delete_draft(db, config, message):
                                             remote_delete_draft)
     from inbox.sendmail.base import _parse_recipients, all_recipients
     from inbox.sendmail.message import create_email, SenderInfo
-    from inbox.models.tables.base import Account
+    from inbox.models import Account
 
     account = db.session.query(Account).get(ACCOUNT_ID)
     sender_info = SenderInfo(name=account.full_name,

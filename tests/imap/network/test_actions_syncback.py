@@ -14,7 +14,7 @@ THREAD_ID = 2
 def test_archive_move_syncback(db, config):
     from inbox.actions.gmail import (set_remote_archived, remote_move,
                                      uidvalidity_cb)
-    from inbox.models.tables.imap import ImapAccount, ImapThread
+    from inbox.models.backends.imap import ImapAccount, ImapThread
     g_thrid = db.session.query(ImapThread.g_thrid).filter_by(
         id=THREAD_ID, namespace_id=NAMESPACE_ID).one()[0]
     account = db.session.query(ImapAccount).get(ACCOUNT_ID)
@@ -45,7 +45,7 @@ def test_archive_move_syncback(db, config):
 def test_copy_delete_syncback(db, config):
     from inbox.actions.gmail import (remote_copy, remote_delete,
                                      uidvalidity_cb)
-    from inbox.models.tables.imap import ImapAccount, ImapThread
+    from inbox.models.backends.imap import ImapAccount, ImapThread
 
     g_thrid = db.session.query(ImapThread.g_thrid). \
         filter_by(id=THREAD_ID, namespace_id=NAMESPACE_ID).one()[0]
@@ -80,7 +80,7 @@ def test_copy_delete_syncback(db, config):
 
 def test_remote_unread_syncback(db, config):
     from inbox.actions.gmail import set_remote_unread, uidvalidity_cb
-    from inbox.models.tables.imap import ImapAccount, ImapThread
+    from inbox.models.backends.imap import ImapAccount, ImapThread
 
     account = db.session.query(ImapAccount).get(ACCOUNT_ID)
     g_thrid, = db.session.query(ImapThread.g_thrid). \

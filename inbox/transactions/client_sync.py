@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import asc, desc
 from sqlalchemy.orm.exc import NoResultFound
 
-from inbox.models.tables.base import Transaction
+from inbox.models import Transaction
 
 
 def dict_delta(current_dict, previous_dict):

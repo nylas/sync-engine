@@ -25,10 +25,10 @@ chunk_size = 500
 
 def upgrade():
     from inbox.sqlalchemy_ext.util import generate_public_id
-    from inbox.models import session_scope
+    from inbox.models.session import session_scope
 
     # These all inherit HasPublicID
-    from inbox.models.tables.base import (
+    from inbox.models import (
         Account, Block, Contact, Message, Namespace,
         SharedFolder, Thread, User, UserSession, HasPublicID)
 
@@ -82,7 +82,7 @@ def upgrade():
 
 def downgrade():
     # These all inherit HasPublicID
-    from inbox.models.tables.base import (
+    from inbox.models import (
         Account, Block, Contact, Message, Namespace,
         SharedFolder, Thread, User, UserSession, HasPublicID)
 

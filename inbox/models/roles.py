@@ -1,5 +1,4 @@
 import os
-
 from hashlib import sha256
 
 from sqlalchemy import Column, Integer, String
@@ -11,9 +10,9 @@ log = get_logger()
 STORE_MSG_ON_S3 = config.get('STORE_MESSAGES_ON_S3', None)
 # Enable by defining these in your config
 # "STORE_MESSAGES_ON_S3" : false,
-# "AWS_ACCESS_KEY_ID": "XXXXXXXXXXXXXXXXXX",
-# "AWS_SECRET_ACCESS_KEY": "XXXXXXXXXXXXXXXXXX",
-# "MESSAGE_STORE_BUCKET_NAME": "XXXXXXXXXXXXXXXXXX",
+# "AWS_ACCESS_KEY_ID": "<YOUR_AWS_ACCESS_KEY>"
+# "AWS_SECRET_ACCESS_KEY": "<YOUR_AWS_ACCESS_KEY>",
+# "MESSAGE_STORE_BUCKET_NAME": "<YOUR_AWS_ACCESS_KEY>",
 
 
 if STORE_MSG_ON_S3:

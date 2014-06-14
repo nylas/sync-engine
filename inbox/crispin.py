@@ -19,8 +19,8 @@ from inbox.auth.base import verify_imap_account
 from inbox.auth.gmail import verify_gmail_account
 from inbox.auth.yahoo import verify_yahoo_account
 from inbox.basicauth import AUTH_TYPES
-from inbox.models import session_scope
-from inbox.models.tables.imap import ImapAccount
+from inbox.models.session import session_scope
+from inbox.models.backends.imap import ImapAccount
 from inbox.log import get_logger
 log = get_logger()
 

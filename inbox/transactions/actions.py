@@ -14,8 +14,8 @@ from sqlalchemy import asc, or_, func
 
 from inbox.util.concurrency import retry_wrapper
 from inbox.log import get_logger
-from inbox.models import session_scope
-from inbox.models.tables.base import (SpoolMessage, Tag, Thread,
+from inbox.models.session import session_scope
+from inbox.models import (SpoolMessage, Tag, Thread,
                                              Transaction)
 from inbox.actions.base import (get_queue, mark_read, mark_unread,
                                        archive, unarchive, star, unstar,

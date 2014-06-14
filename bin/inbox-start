@@ -36,7 +36,7 @@ if args.config:
 
 
 def start():
-    from inbox.models.tables.base import register_backends
+    from inbox.models import register_backends
     table_mod_for = register_backends()
 
     threads = []

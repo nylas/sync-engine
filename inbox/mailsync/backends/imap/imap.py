@@ -78,10 +78,10 @@ from inbox.util.concurrency import retry_wrapper
 from inbox.util.itert import chunk
 from inbox.log import get_logger
 from inbox.crispin import connection_pool, retry_crispin
-from inbox.models import session_scope
-from inbox.models.tables.base import Tag
-from inbox.models.tables.imap import ImapAccount, FolderSync
-from inbox.models.namespace import db_write_lock
+from inbox.models.session import session_scope
+from inbox.models import Tag
+from inbox.models.backends.imap import ImapAccount, FolderSync
+from inbox.models.util import db_write_lock
 from inbox.mailsync.exc import UIDInvalid
 from inbox.mailsync.backends.imap import account
 from inbox.mailsync.backends.base import (save_folder_names, create_db_objects,

@@ -10,15 +10,18 @@ from inbox.sqlalchemy_ext.util import LittleJSON
 from inbox.log import get_logger
 log = get_logger()
 
-from inbox.models import MailSyncBase
-from inbox.models.tables.base import Account, Thread
+from inbox.models.base import MailSyncBase
+from inbox.models.account import Account
+from inbox.models.thread import Thread
+from inbox.models.message import Message
+from inbox.models.folder import Folder
 
 # Note: Imap IS Gmail currently
 PROVIDER = 'Gmail'
 
 
 class ImapAccount(Account):
-    id = Column(Integer, ForeignKey('account.id', ondelete='CASCADE'),
+    id = Column(Integer, ForeignKey(Account.id, ondelete='CASCADE'),
                 primary_key=True)
 
     imap_host = Column(String(512))
@@ -45,14 +48,14 @@ class ImapUid(MailSyncBase):
         This table is used solely for bookkeeping by the IMAP mail sync
         backends.
     """
-    imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
+    imapaccount_id = Column(ForeignKey(ImapAccount.id, ondelete='CASCADE'),
                             nullable=False)
     imapaccount = relationship('ImapAccount',
                                primaryjoin='and_('
                                'ImapUid.imapaccount_id == ImapAccount.id, '
                                'ImapAccount.deleted_at.is_(None))')
 
-    message_id = Column(Integer, ForeignKey('message.id'), nullable=False)
+    message_id = Column(Integer, ForeignKey(Message.id), nullable=False)
     message = relationship('Message',
                            backref=backref('imapuids',
                                            primaryjoin='and_('
@@ -63,7 +66,7 @@ class ImapUid(MailSyncBase):
                            'Message.deleted_at.is_(None))')
     msg_uid = Column(BigInteger, nullable=False, index=True)
 
-    folder_id = Column(Integer, ForeignKey('folder.id', ondelete='CASCADE'),
+    folder_id = Column(Integer, ForeignKey(Folder.id, ondelete='CASCADE'),
                        nullable=False)
     # We almost always need the folder name too, so eager load by default.
     folder = relationship('Folder', lazy='joined',
@@ -122,7 +125,7 @@ class UIDValidity(MailSyncBase):
     """ UIDValidity has a per-folder value. If it changes, we need to
         re-map g_msgid to UID for that folder.
     """
-    imapaccount_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
+    imapaccount_id = Column(ForeignKey(ImapAccount.id, ondelete='CASCADE'),
                             nullable=False)
     imapaccount = relationship("ImapAccount",
                                primaryjoin='and_('
@@ -143,7 +146,7 @@ class UIDValidity(MailSyncBase):
 
 
 class ImapThread(Thread):
-    id = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
+    id = Column(Integer, ForeignKey(Thread.id, ondelete='CASCADE'),
                 primary_key=True)
 
     # only on messages from Gmail
@@ -186,7 +189,7 @@ class ImapThread(Thread):
 
 
 class FolderSync(MailSyncBase):
-    account_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
+    account_id = Column(ForeignKey(ImapAccount.id, ondelete='CASCADE'),
                         nullable=False)
     account = relationship('ImapAccount', backref=backref(
         'foldersyncs',

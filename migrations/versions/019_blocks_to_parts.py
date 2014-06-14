@@ -20,10 +20,10 @@ chunk_size = 250
 
 
 def upgrade():
-    from inbox.models import session_scope, Session
-    from inbox.models.ignition import engine
+    from inbox.models.session import session_scope, Session
+    from inbox.ignition import engine
 
-    from inbox.models.tables.base import (Part, Namespace,
+    from inbox.models import (Part, Namespace,
                                                  Message, Thread)
     from inbox.sqlalchemy_ext.util import JSON
 

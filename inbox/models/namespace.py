@@ -1,29 +1,33 @@
-""" Namespace-specific functions.
+from sqlalchemy import Column, Integer, Enum, ForeignKey
+from sqlalchemy.orm import relationship, backref
 
-All functions in this file should take `namespace_id` as their first
-argument and make sure to limit the action based on it!
-"""
-from inbox.models.tables.base import Thread, Folder, FolderItem
-
-from inbox.util.file import Lock
+from inbox.models.base import MailSyncBase
+from inbox.models.mixins import HasPublicID
 
 
-def _db_write_lockfile_name(account_id):
-    return "/var/lock/inbox_datastore/{0}.lock".format(account_id)
+class Namespace(MailSyncBase, HasPublicID):
+    """ A way to do grouping / permissions, basically. """
+    # NOTE: only root namespaces have account backends
+    account_id = Column(Integer,
+                        ForeignKey('account.id', ondelete='CASCADE'),
+                        nullable=True)
+    # really the root_namespace
+    account = relationship('Account',
+                           lazy='joined',
+                           backref=backref('namespace', uselist=False,
+                                           primaryjoin='and_('
+                                           'Account.id==Namespace.account_id, '
+                                           'Namespace.deleted_at.is_(None))'),
+                           uselist=False,
+                           primaryjoin='and_('
+                           'Namespace.account_id == Account.id, '
+                           'Account.deleted_at.is_(None))')
 
+    # invariant: imapaccount is non-null iff type is root
+    type = Column(Enum('root', 'shared_folder'), nullable=False,
+                  server_default='root')
 
-def db_write_lock(namespace_id):
-    """ Protect updating this namespace's Inbox datastore data.
-
-    Note that you should also use this to wrap any code that _figures
-    out_ what to update the datastore with, because outside the lock
-    you can't guarantee no one is updating the data behind your back.
-    """
-    return Lock(_db_write_lockfile_name(namespace_id), block=True)
-
-
-def threads_for_folder(namespace_id, session, folder_name):
-    """ NOTE: Does not work for shared folders. """
-    return session.query(Thread).join(FolderItem).join(Folder).filter(
-        Thread.namespace_id == namespace_id,
-        Folder.name == folder_name)
+    @property
+    def email_address(self):
+        if self.account is not None:
+            return self.account.email_address

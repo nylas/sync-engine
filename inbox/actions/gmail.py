@@ -32,7 +32,7 @@ We don't currently handle these operations on the special folders 'junk',
 """
 from inbox.crispin import writable_connection_pool
 
-from inbox.models.tables.imap import ImapThread
+from inbox.models.backends.imap import ImapThread
 
 PROVIDER = 'Gmail'
 

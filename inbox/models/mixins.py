@@ -4,6 +4,11 @@ from sqlalchemy import Column, DateTime
 from inbox.sqlalchemy_ext.util import Base36UID, generate_public_id
 
 
+class HasPublicID(object):
+    public_id = Column(Base36UID, nullable=False,
+                       index=True, default=generate_public_id)
+
+
 class AutoTimestampMixin(object):
     # We do all default/update in Python not SQL for these because MySQL
     # < 5.6 doesn't support multiple TIMESTAMP cols per table, and can't
@@ -24,7 +29,3 @@ class AutoTimestampMixin(object):
         """
         self.deleted_at = datetime.utcnow()
 
-
-class HasPublicID(object):
-    public_id = Column(Base36UID, nullable=False,
-                       index=True, default=generate_public_id)

@@ -39,7 +39,7 @@ def check_requirements(requirements_path):
 
 def check_db():
     """ Checks the database revision against the known alembic migrations. """
-    from inbox.models.ignition import db_uri
+    from inbox.ignition import db_uri
     inbox_db_engine = sqlalchemy.create_engine(db_uri())
 
     # top-level, with setup.sh

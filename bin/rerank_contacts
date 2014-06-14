@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-from inbox.models import session_scope
+from inbox.models.session import session_scope
 from inbox.contacts.process_mail import update_contacts
-from inbox.models.tables.base import (Message, SearchSignal,
+from inbox.models import (Message, SearchSignal,
                                              register_backends)
 register_backends()
 
