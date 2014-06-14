@@ -1,4 +1,8 @@
+from gevent import monkey; monkey.patch_all()
+
 import logging
+
+from gevent.pywsgi import WSGIHandler
 
 from inbox.log import get_logger
 inbox_logger = get_logger(purpose='api')
@@ -11,6 +15,8 @@ werkzeug_log.addHandler(inbox_logger)
 
 from flask import Flask, request
 from flask import logging as flask_logging
+
+
 def mock_create_logger(app):
     return inbox_logger
 flask_logging.create_logger = mock_create_logger
@@ -20,9 +26,26 @@ table_mod_for = register_backends()
 
 from ns_api import app as ns_api
 
-
 app = Flask(__name__)
 app.register_blueprint(ns_api)  # /n/<namespace_id>/...
+
+
+# gevent.pywsgi bullshit. see
+# http://stackoverflow.com/questions/9444405/gunicorn-and-websockets
+def log_request(self, *args):
+    log = self.server.log
+    if log:
+        if hasattr(log, "info"):
+            log.info(self.format_request(*args))
+        elif hasattr(log, "debug"):
+            log.debug(self.format_request(*args))
+        elif hasattr(log, "warning"):
+            log.warning(self.format_request(*args))
+        elif hasattr(log, "error"):
+            log.error(self.format_request(*args))
+        else:
+            log.write(self.format_request(*args))
+WSGIHandler.log_request = log_request
 
 
 @app.before_request

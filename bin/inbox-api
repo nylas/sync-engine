@@ -30,26 +30,8 @@ if args.config:
     load_overrides(config_path)
 
 from inbox.api.srv import app
-from gevent.wsgi import WSGIServer, WSGIHandler
+from gevent.pywsgi import WSGIServer
 from inbox.log import get_logger
-
-
-# gevent.pywsgi bullshit. see
-# http://stackoverflow.com/questions/9444405/gunicorn-and-websockets
-def log_request(self, *args):
-    log = self.server.log
-    if log:
-        if hasattr(log, "info"):
-            log.info(self.format_request(*args))
-        elif hasattr(log, "debug"):
-            log.debug(self.format_request(*args))
-        elif hasattr(log, "warning"):
-            log.warning(self.format_request(*args))
-        elif hasattr(log, "error"):
-            log.error(self.format_request(*args))
-        else:
-            log.write(self.format_request(*args))
-WSGIHandler.log_request = log_request
 
 inbox_logger = get_logger(purpose='api')
 
