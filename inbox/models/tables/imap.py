@@ -10,7 +10,7 @@ from inbox.sqlalchemy_ext.util import LittleJSON
 from inbox.log import get_logger
 log = get_logger()
 
-from inbox.models import Base
+from inbox.models import MailSyncBase
 from inbox.models.tables.base import Account, Thread
 
 # Note: Imap IS Gmail currently
@@ -38,7 +38,7 @@ class ImapAccount(Account):
     __mapper_args__ = {'polymorphic_identity': 'imapaccount'}
 
 
-class ImapUid(Base):
+class ImapUid(MailSyncBase):
     """ This maps UIDs to the IMAP folder they belong to, and extra metadata
         such as flags.
 
@@ -118,7 +118,7 @@ class ImapUid(Base):
 Index('imapaccount_id_folder_id', ImapUid.imapaccount_id, ImapUid.folder_id)
 
 
-class UIDValidity(Base):
+class UIDValidity(MailSyncBase):
     """ UIDValidity has a per-folder value. If it changes, we need to
         re-map g_msgid to UID for that folder.
     """
@@ -185,7 +185,7 @@ class ImapThread(Thread):
     __mapper_args__ = {'polymorphic_identity': 'imapthread'}
 
 
-class FolderSync(Base):
+class FolderSync(MailSyncBase):
     account_id = Column(ForeignKey('imapaccount.id', ondelete='CASCADE'),
                         nullable=False)
     account = relationship('ImapAccount', backref=backref(

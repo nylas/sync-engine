@@ -29,8 +29,8 @@ table_mod_for = register_backends()
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
-from inbox.models import Base
-target_metadata = Base.metadata
+from inbox.models import MailSyncBase
+target_metadata = MailSyncBase.metadata
 
 from inbox.models.ignition import db_uri
 

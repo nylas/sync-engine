@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 
-from sqlalchemy import Column, Integer
+from sqlalchemy import Column, Integer, MetaData
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.interfaces import MapperOption
 from sqlalchemy.ext.declarative import as_declarative, declared_attr
@@ -30,6 +30,12 @@ class Base(AutoTimestampMixin):
     @declared_attr
     def __table_args__(cls):
         return {'extend_existing': True}
+
+
+# These are used to identify which mapper corresponds to which engine
+class MailSyncBase(Base):
+    __abstract__ = True
+    metadata = MetaData()
 
 
 class IgnoreSoftDeletesOption(MapperOption):

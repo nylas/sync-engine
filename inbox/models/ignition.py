@@ -5,7 +5,7 @@ log = get_logger()
 
 from inbox.sqlalchemy_ext.util import ForceStrictMode
 
-from inbox.models import Base
+from inbox.models import MailSyncBase
 from inbox.config import db_uri
 
 engine = create_engine(db_uri(),
@@ -29,6 +29,6 @@ def init_db():
     from inbox.models.tables.base import register_backends
     table_mod_for = register_backends()
 
-    Base.metadata.create_all(engine)
+    MailSyncBase.metadata.create_all(engine)
 
     return table_mod_for

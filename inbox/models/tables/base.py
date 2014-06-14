@@ -36,7 +36,7 @@ from inbox.sqlalchemy_ext.revision import Revision, gen_rev_role
 from inbox.basicauth import AUTH_TYPES
 
 from inbox.models.roles import Blob
-from inbox.models import Base
+from inbox.models import MailSyncBase
 from inbox.models.mixins import HasPublicID
 
 # The maximum Gmail label length is 225 (tested empirically). Exchange folder
@@ -64,7 +64,7 @@ def register_backends():
     return table_mod_for
 
 
-class Account(Base, HasPublicID):
+class Account(MailSyncBase, HasPublicID):
     # http://stackoverflow.com/questions/386294/what-is-the-maximum-length-of-a-valid-email-address
     email_address = Column(String(MAX_INDEXABLE_LENGTH), nullable=True, index=True)
     provider = Column(Enum('Gmail', 'Outlook', 'Yahoo', 'EAS', 'Inbox'),
@@ -249,7 +249,7 @@ class Account(Base, HasPublicID):
                        'polymorphic_identity': 'account'}
 
 
-class Namespace(Base, HasPublicID):
+class Namespace(MailSyncBase, HasPublicID):
     """ A way to do grouping / permissions, basically. """
     # NOTE: only root namespaces have account backends
     account_id = Column(Integer,
@@ -277,7 +277,7 @@ class Namespace(Base, HasPublicID):
             return self.account.email_address
 
 
-class Transaction(Base, Revision, HasPublicID):
+class Transaction(MailSyncBase, Revision, HasPublicID):
     """ Transactional log to enable client syncing. """
     # Do delete transactions if their associated namespace is deleted.
     namespace_id = Column(Integer,
@@ -330,7 +330,7 @@ class Transaction(Base, Revision, HasPublicID):
 HasRevisions = gen_rev_role(Transaction)
 
 
-class SearchToken(Base):
+class SearchToken(MailSyncBase):
     """A token to prefix-match against for contacts search.
     Right now these tokens consist of:
     - the contact's full name
@@ -351,7 +351,7 @@ class SearchToken(Base):
         single_parent=True)
 
 
-class SearchSignal(Base):
+class SearchSignal(MailSyncBase):
     """Represents a signal used for contacts search result ranking. Examples of
     signals might include number of emails sent to or received from this
     contact, or time since last interaction with the contact."""
@@ -361,7 +361,7 @@ class SearchSignal(Base):
                         nullable=False)
 
 
-class MessageContactAssociation(Base):
+class MessageContactAssociation(MailSyncBase):
     """Association table between messages and contacts.
 
     Examples
@@ -399,7 +399,7 @@ class MessageContactAssociation(Base):
                         cascade='all, delete-orphan'))
 
 
-class Contact(Base, HasRevisions, HasPublicID):
+class Contact(MailSyncBase, HasRevisions, HasPublicID):
     """Data for a user's contact."""
     account_id = Column(ForeignKey('account.id', ondelete='CASCADE'),
                         nullable=False)
@@ -491,7 +491,7 @@ class Contact(Base, HasRevisions, HasPublicID):
         return email_address
 
 
-class Message(Base, HasRevisions, HasPublicID):
+class Message(MailSyncBase, HasRevisions, HasPublicID):
     # XXX clean this up a lot - make a better constructor, maybe taking
     # a flanker object as an argument to prefill a lot of attributes
 
@@ -784,7 +784,7 @@ class SpoolMessage(Message):
                        'inherit_condition': id == Message.id}
 
 
-class DraftThread(Base, HasPublicID):
+class DraftThread(MailSyncBase, HasPublicID):
     """
     For a reply draft message, holds references to the message it is
     created in reply to (thread_id, message_id)
@@ -854,7 +854,7 @@ common_content_types = ['text/plain',
                         'image/jpg']
 
 
-class Block(Blob, Base, HasRevisions, HasPublicID):
+class Block(Blob, MailSyncBase, HasRevisions, HasPublicID):
     """ Metadata for any file that we store """
 
     # Save some space with common content types
@@ -866,7 +866,7 @@ class Block(Blob, Base, HasRevisions, HasPublicID):
     def __init__(self, *args, **kwargs):
         self.content_type = None
         self.size = 0
-        Base.__init__(self, *args, **kwargs)
+        MailSyncBase.__init__(self, *args, **kwargs)
 
     def __repr__(self):
         return 'Block: %s' % self.__dict__
@@ -944,7 +944,7 @@ class Part(Block):
         return self.message.namespace
 
 
-class Thread(Base, HasPublicID, HasRevisions):
+class Thread(MailSyncBase, HasPublicID, HasRevisions):
     """ Threads are a first-class object in Inbox. This thread aggregates
         the relevant thread metadata from elsewhere so that clients can only
         query on threads.
@@ -1112,7 +1112,7 @@ class Thread(Base, HasPublicID, HasRevisions):
     __mapper_args__ = {'polymorphic_on': discriminator}
 
 
-class Webhook(Base, HasPublicID):
+class Webhook(MailSyncBase, HasPublicID):
     """ hooks that run on new messages/events """
 
     namespace_id = Column(ForeignKey('namespace.id', ondelete='CASCADE'),
@@ -1142,7 +1142,7 @@ class Webhook(Base, HasPublicID):
 LENS_LIMIT_DEFAULT = 100
 
 
-class Lens(Base, HasPublicID):
+class Lens(MailSyncBase, HasPublicID):
     """
     The container for a filter to match over data.
 
@@ -1580,7 +1580,7 @@ class Lens(Base, HasPublicID):
         return query
 
 
-class Folder(Base):
+class Folder(MailSyncBase):
     """ Folders from the remote account backend (IMAP/Exchange). """
     # `use_alter` required here to avoid circular dependency w/Account
     account_id = Column(Integer,
@@ -1671,7 +1671,7 @@ class Folder(Base):
     __table_args__ = (UniqueConstraint('account_id', 'name'),)
 
 
-class FolderItem(Base):
+class FolderItem(MailSyncBase):
     """ Mapping of threads to account backend folders.
 
     Used to provide a read-only copy of these backend folders/labels and,
@@ -1712,7 +1712,7 @@ class FolderItem(Base):
         return self.thread.namespace
 
 
-class Tag(Base, HasRevisions):
+class Tag(MailSyncBase, HasRevisions):
     """Tags represent extra data associated with threads.
 
     A note about the schema. The 'public_id' of a tag is immutable. For
@@ -1790,7 +1790,7 @@ class Tag(Base, HasRevisions):
                       UniqueConstraint('namespace_id', 'public_id'))
 
 
-class TagItem(Base):
+class TagItem(MailSyncBase):
     """Mapping between user tags and threads."""
     thread_id = Column(Integer, ForeignKey('thread.id'), nullable=False)
     tag_id = Column(Integer, ForeignKey('tag.id'), nullable=False)
