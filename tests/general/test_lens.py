@@ -32,8 +32,8 @@ def test_lens_db_filter(db):
     assert filter.message_query(db.session).count() == 1
     assert filter.thread_query(db.session).count() == 1
 
-    early_time = received_date - datetime.timedelta(hours=1)
-    late_time = received_date + datetime.timedelta(hours=1)
+    early_time = received_date - datetime.timedelta(days=1)
+    late_time = received_date + datetime.timedelta(days=1)
     early_ts = calendar.timegm(early_time.utctimetuple())
     late_ts = calendar.timegm(late_time.utctimetuple())
 
