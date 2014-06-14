@@ -36,10 +36,11 @@ def after_cursor_execute(conn, cursor, statement,
         # Log stack trace, but remove the uninteresting parts.
         tb = ''.join([line for line in traceback.format_stack() if 'inbox' in
                       line][:-1])
-        log.warning("Slow query took {0:.2f}ms: {1} with params {2} at "
-                    "location: \n{3}"
+        log.warning("Slow query took {0:.2f}ms: \n"
+                    "\033[1;30;40m {1} \033[0m \n"
+                    "Params: \033[1;30;40m {2} \033[0m \n"
+                    "Trace: \033[1;30;40m {3} \033[0m "
                     .format(total, statement, parameters, tb))
-
 
 
 ### Column Types
