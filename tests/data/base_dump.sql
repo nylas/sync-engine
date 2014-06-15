@@ -111,7 +111,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('1edbd63582c2');
+INSERT INTO `alembic_version` VALUES ('1c72d8a0120e');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -279,7 +279,7 @@ CREATE TABLE `easfoldersync` (
   `remote_uid_count` int(11) DEFAULT NULL,
   `uid_checked_date` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `account_id` (`account_id`,`folder_name`),
+  UNIQUE KEY `uq_account_id_eas_folder_id` (`account_id`,`eas_folder_id`),
   CONSTRAINT `easfoldersync_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `easaccount` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1111,4 +1111,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-06-10 22:16:52
+-- Dump completed on 2014-06-15 22:36:12

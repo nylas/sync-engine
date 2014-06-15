@@ -4,36 +4,41 @@ import calendar
 
 from sqlalchemy import desc
 
-from tests.data.messages.message import (subject, delivered_to, sender,
-                                         to_addr, from_addr, received_date)
 from tests.util.base import config, api_client
 config()
 
-from inbox.models import (register_backends, Lens, SpoolMessage,
-                                      Transaction)
+from inbox.models import (register_backends, Lens, Message, SpoolMessage,
+                          Transaction)
 register_backends()
 
 NAMESPACE_ID = 1
 
 
 def test_lens_db_filter(db):
+    message = db.session.query(Message).filter_by(id=2).one()
+
+    subject = message.subject
+    to_addr = message.to_addr[0][1]
+    from_addr = message.from_addr[0][1]
+    received_date = message.received_date
+
     filter = Lens(namespace_id=NAMESPACE_ID,
                   subject=subject)
     assert filter.message_query(db.session).count() == 1
     assert filter.thread_query(db.session).count() == 1
 
     filter = Lens(namespace_id=NAMESPACE_ID,
-                  any_email=delivered_to)
+                  any_email='inboxapptest@gmail.com')
     assert filter.message_query(db.session).count() > 1
     assert filter.thread_query(db.session).count() > 1
 
     filter = Lens(namespace_id=NAMESPACE_ID,
-                  any_email=sender)
+                  any_email=from_addr)
     assert filter.message_query(db.session).count() == 1
     assert filter.thread_query(db.session).count() == 1
 
-    early_time = received_date - datetime.timedelta(days=1)
-    late_time = received_date + datetime.timedelta(days=1)
+    early_time = received_date - datetime.timedelta(seconds=1)
+    late_time = received_date + datetime.timedelta(seconds=1)
     early_ts = calendar.timegm(early_time.utctimetuple())
     late_ts = calendar.timegm(late_time.utctimetuple())
 
