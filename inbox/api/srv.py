@@ -1,5 +1,3 @@
-from gevent import monkey; monkey.patch_all()
-
 import logging
 
 from gevent.pywsgi import WSGIHandler
