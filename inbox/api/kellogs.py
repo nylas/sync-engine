@@ -36,31 +36,6 @@ class APIEncoder(JSONEncoder):
                 # 'scope': ['mail', 'contacts']
             }
 
-        elif isinstance(obj, SpoolMessage):
-            resp = {
-                'id': obj.public_id,
-                'namespace': obj.namespace.public_id,
-                'subject': obj.subject,
-                'from': format_address_list(obj.from_addr),
-                'to': format_address_list(obj.to_addr),
-                'cc': format_address_list(obj.cc_addr),
-                'bcc': format_address_list(obj.bcc_addr),
-                'date': obj.received_date,
-                'files': [p.public_id for p in obj.parts if p.is_attachment],
-                'body': obj.sanitized_body,
-                'state': obj.state,
-                'tags': [self.default(tag) for tag in obj.thread.tags]
-            }
-            # draft, sending, sending failed
-            if obj.state != 'sent':
-                resp['object'] = 'draft'
-            # sent
-            else:
-                resp['object'] = 'message'
-                resp['thread'] = obj.thread.public_id
-
-            return resp
-
         elif isinstance(obj, Message):
             resp = {
                 'id': obj.public_id,
@@ -75,9 +50,16 @@ class APIEncoder(JSONEncoder):
                 'thread': obj.thread.public_id,
                 'files': [p.public_id for p in obj.parts if p.is_attachment],
                 'body': obj.sanitized_body,
-                'tags': [self.default(tag) for tag in obj.thread.tags]
-                # 'list_info'   : obj.mailing_list_headers
+                'unread': not obj.is_read,
             }
+
+            if isinstance(obj, SpoolMessage):
+                resp['state'] = obj.state
+                if obj.state != 'sent':
+                    # Don't expose thread id on drafts for now.
+                    del resp['thread']
+                    resp['object'] = 'draft'
+
             return resp
 
         elif isinstance(obj, Thread):
