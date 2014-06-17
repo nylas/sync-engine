@@ -14,10 +14,6 @@ from setproctitle import setproctitle; setproctitle('inbox')
 
 from inbox.log import configure_general_logging, get_logger
 
-configure_general_logging()
-log = get_logger()
-preflight()
-
 
 parser = argparse.ArgumentParser(description="Inbox sync service")
 
@@ -33,6 +29,10 @@ if args.config:
     config_path = os.path.abspath(args.config)
     # TODO expand to full path
     load_overrides(config_path)
+
+configure_general_logging()
+log = get_logger()
+preflight()
 
 
 def start():

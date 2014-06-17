@@ -1,17 +1,14 @@
 #!/usr/bin/env python
-from gevent import monkey; monkey.patch_all()
-
 import os
 import argparse
 
 from setproctitle import setproctitle; setproctitle('inbox-api')
+from gevent import monkey; monkey.patch_all()
+from gevent.pywsgi import WSGIServer
 
 from inbox.config import config
 from inbox.log import configure_general_logging, get_logger
-from inbox.util.startup import preflight
-configure_general_logging()
-log = get_logger()
-preflight()
+from inbox.util.startup import preflight, load_overrides
 
 
 parser = argparse.ArgumentParser(description='REPL for crispin')
@@ -24,14 +21,18 @@ parser.add_argument('-c', '--config', dest='config', default=None,
 args = parser.parse_args()
 
 if args.config:
-    from inbox.util.startup import load_overrides
     config_path = os.path.abspath(args.config)
     # TODO expand to full path
     load_overrides(config_path)
 
+# We need to import this down here, because this in turn imports
+# ignition.engine, which has to happen *after* we read any config overrides for
+# the database parameters. Boo for imports with side-effects.
 from inbox.api.srv import app
-from gevent.pywsgi import WSGIServer
-from inbox.log import get_logger
+
+configure_general_logging()
+log = get_logger()
+preflight()
 
 inbox_logger = get_logger(purpose='api')
 
