@@ -6,9 +6,6 @@ import subprocess
 import zerorpc
 from shutil import rmtree
 from pytest import fixture, yield_fixture
-import json
-
-from inbox.util.db import drop_everything
 
 
 def absolute_path(path):
@@ -66,16 +63,12 @@ def db(request, config):
     dumpfile = request.param[0]
     savedb = request.param[1]
 
-    def save():
-        testdb.save()
-        testdb.destroy()
-
     testdb = TestDB(config, dumpfile)
     yield testdb
 
     if savedb:
         testdb.save()
-    testdb.destroy()
+    testdb.teardown()
 
 
 @fixture(scope='function')
@@ -159,10 +152,11 @@ class TestDB(object):
                                     versioned=False,
                                     ignore_soft_deletes=ignore_soft_deletes)
 
-    def destroy(self):
-        """ Removes all data from the test database. """
+    def teardown(self):
+        """Closes the session. We need to explicitly do this to prevent certain
+        tests from hanging. Note that we don't need to actually destroy or
+        rolback the database because we create it anew on each test."""
         self.session.close()
-        drop_everything(self.engine)
 
     def save(self):
         """ Updates the test dumpfile. """
