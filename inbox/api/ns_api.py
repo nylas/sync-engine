@@ -150,13 +150,13 @@ def index():
 ##
 # Tags
 ##
-@app.route('/tags')
+@app.route('/tags/')
 def tag_query_api():
     results = list(g.namespace.tags.values())
     return jsonify(results)
 
 
-@app.route('/tags', methods=['POST'])
+@app.route('/tags/', methods=['POST'])
 def tag_create_api():
     data = request.get_json(force=True)
     if data.keys() != ['name']:
@@ -173,7 +173,7 @@ def tag_create_api():
 #
 # Threads
 #
-@app.route('/threads')
+@app.route('/threads/')
 def thread_query_api():
     return jsonify(g.lens.thread_query(g.db_session, limit=g.lens_limit,
                                        offset=g.lens_offset,
@@ -252,7 +252,7 @@ def thread_api_delete(public_id):
 ##
 # Messages
 ##
-@app.route('/messages')
+@app.route('/messages/')
 def message_query_api():
     return jsonify(g.lens.message_query(g.db_session, limit=g.lens_limit,
                                         offset=g.lens_offset,
@@ -283,7 +283,7 @@ def message_api(public_id):
 #
 # Contacts
 ##
-@app.route('/contacts', methods=['GET'])
+@app.route('/contacts/', methods=['GET'])
 def contact_search_api():
     filter = request.args.get('filter', '')
     try:
@@ -310,7 +310,7 @@ def contact_search_api():
     return jsonify(results)
 
 
-@app.route('/contacts', methods=['POST'])
+@app.route('/contacts/', methods=['POST'])
 def contact_create_api():
     # TODO(emfree) Detect attempts at duplicate insertions.
     data = request.get_json(force=True)
@@ -379,7 +379,7 @@ def files_api(public_id):
 # Upload file API. This actually supports multiple files at once
 # You can test with
 # curl http://localhost:5555/n/4s4iz36h36w17kumggi36ha2b/files --form upload=@dancingbaby.gif
-@app.route('/files', methods=['POST'])
+@app.route('/files/', methods=['POST'])
 def file_upload_api():
     all_files = []
     for name, uploaded in request.files.iteritems():
@@ -464,13 +464,13 @@ def get_webhook_client():
     return g.webhook_client
 
 
-@app.route('/webhooks', methods=['GET'])
+@app.route('/webhooks/', methods=['GET'])
 def webhooks_read_all_api():
     return jsonify(g.db_session.query(Webhook).
                    filter(Webhook.namespace_id == g.namespace.id).all())
 
 
-@app.route('/webhooks', methods=['POST'])
+@app.route('/webhooks/', methods=['POST'])
 def webhooks_create_api():
     try:
         parameters = request.get_json(force=True)
@@ -521,7 +521,7 @@ def webhooks_delete_api(public_id):
 # TODO(emfree, kavya): Systematically validate user input, and return
 # meaningful errors for invalid input.
 
-@app.route('/drafts', methods=['GET'])
+@app.route('/drafts/', methods=['GET'])
 def draft_get_all_api():
     drafts = sendmail.get_all_drafts(g.db_session, g.namespace.account)
     return jsonify(drafts)
@@ -535,7 +535,7 @@ def draft_get_api(public_id):
     return jsonify(draft)
 
 
-@app.route('/drafts', methods=['POST'])
+@app.route('/drafts/', methods=['POST'])
 def draft_create_api():
     data = request.get_json(force=True)
 

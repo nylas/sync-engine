@@ -17,7 +17,7 @@ def test_event_generation(api_client):
     """Tests that events are returned in response to client sync API calls.
     Doesn't test formatting of individual events in the response."""
     ts = int(time.time())
-    api_client.post_data('/tags', {'name': 'foo'})
+    api_client.post_data('/tags/', {'name': 'foo'})
 
     stamp_response = api_client.post_data('/sync/generate_stamp',
                                           {'start': ts})
@@ -25,13 +25,13 @@ def test_event_generation(api_client):
 
     sync_data = api_client.get_data('/sync/events?stamp={}'.format(stamp))
     assert len(sync_data['events']) == 1
-    api_client.post_data('/contacts', {'name': 'test',
-                                       'email': 'test@example.com'})
+    api_client.post_data('/contacts/', {'name': 'test',
+                                        'email': 'test@example.com'})
 
     sync_data = api_client.get_data('/sync/events?stamp={}'.format(stamp))
     assert len(sync_data['events']) == 2
 
-    thread_id = api_client.get_data('/threads')[0]['id']
+    thread_id = api_client.get_data('/threads/')[0]['id']
     thread_path = '/threads/{}'.format(thread_id)
     api_client.put_data(thread_path, {'add_tags': ['foo']})
 

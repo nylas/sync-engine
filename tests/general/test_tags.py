@@ -19,29 +19,29 @@ def kill_greenlets():
 
 def test_get_tags(api_client):
     from inbox.models import Tag
-    tags = api_client.get_data('/tags')
+    tags = api_client.get_data('/tags/')
     assert set(Tag.RESERVED_TAG_NAMES).issubset({tag['name'] for tag in tags})
 
 
 def test_create_tag(api_client):
-    api_client.post_data('/tags', {'name': 'foo'})
-    assert 'foo' in [tag['name'] for tag in api_client.get_data('/tags')]
+    api_client.post_data('/tags/', {'name': 'foo'})
+    assert 'foo' in [tag['name'] for tag in api_client.get_data('/tags/')]
 
 
 def test_cant_create_existing_tag(api_client):
-    api_client.post_data('/tags', {'name': 'foo'})
-    r = api_client.post_data('/tags', {'name': 'foo'})
+    api_client.post_data('/tags/', {'name': 'foo'})
+    r = api_client.post_data('/tags/', {'name': 'foo'})
     assert r.status_code == 409
 
 
 def test_add_remove_tags(api_client):
-    assert 'foo' not in [tag['name'] for tag in api_client.get_data('/tags')]
-    assert 'bar' not in [tag['name'] for tag in api_client.get_data('/tags')]
+    assert 'foo' not in [tag['name'] for tag in api_client.get_data('/tags/')]
+    assert 'bar' not in [tag['name'] for tag in api_client.get_data('/tags/')]
 
-    api_client.post_data('/tags', {'name': 'foo'})
-    api_client.post_data('/tags', {'name': 'bar'})
+    api_client.post_data('/tags/', {'name': 'foo'})
+    api_client.post_data('/tags/', {'name': 'bar'})
 
-    thread_id = api_client.get_data('/threads')[0]['id']
+    thread_id = api_client.get_data('/threads/')[0]['id']
     thread_path = '/threads/{}'.format(thread_id)
     api_client.put_data(thread_path, {'add_tags': ['foo']})
     api_client.put_data(thread_path, {'add_tags': ['bar']})
@@ -52,7 +52,7 @@ def test_add_remove_tags(api_client):
     assert 'bar' in tag_names
 
     # Check that tag was only applied to this thread
-    another_thread_id = api_client.get_data('/threads')[1]['id']
+    another_thread_id = api_client.get_data('/threads/')[1]['id']
     tag_names = get_tag_names(
         api_client.get_data('/threads/{}'.format(another_thread_id)))
     assert 'foo' not in tag_names
@@ -98,7 +98,7 @@ def test_actions_syncback(api_client):
     gevent.sleep()
     assert len(s.queue) == 0
 
-    thread_id = api_client.get_data('/threads')[0]['id']
+    thread_id = api_client.get_data('/threads/')[0]['id']
     thread_path = '/threads/{}'.format(thread_id)
 
     # Make sure tags are removed to start with

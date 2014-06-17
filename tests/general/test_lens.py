@@ -93,7 +93,7 @@ def test_lens_db_filter(db):
 
 
 def test_lens_tx(api_client, db):
-    api_client.post_data('/drafts', {
+    api_client.post_data('/drafts/', {
         'subject': 'Calaveras Dome / Hammer Dome',
         'to': [{'name': 'Somebody', 'email': 'somebody@example.com'}],
         'cc': [{'name': 'Another Person', 'email': 'another@example.com'}]
