@@ -86,6 +86,44 @@ def cleanup(account, subject):
             c.conn.expunge()
 
 
+def test_drafts_in_thread(db, config, action_queue, message, attach):
+    from inbox.sendmail.base import create_draft
+    from inbox.models import Account, Thread
+
+    account = db.session.query(Account).get(ACCOUNT_ID)
+    to, subject, body = message
+    attachment = None
+    cc = [{'name': 'Ben', 'email': 'ben.bitdiddle1861@gmail.com'}]
+    bcc = None
+
+    thread = db.session.query(Thread).filter(
+        Thread.namespace_id == NAMESPACE_ID,
+        Thread.id == THREAD_ID).one()
+    thread_public_id = thread.public_id
+
+    # Verify original messages, drafts:
+    original_messages = [m.public_id for m in thread.messages
+                         if m.discriminator == 'message']
+    original_drafts = [m.public_id for m in thread.drafts]
+    assert len(original_messages) != 0 and len(original_drafts) == 0, \
+        'original thread has incorrect messages/ drafts'
+
+    draft = create_draft(db.session, account, to, subject, body,
+                         attachment, cc, bcc, thread_public_id)
+    public_id = draft.public_id
+
+    # Verify post draft reply creation messages, drafts:
+    messages = [m.public_id for m in thread.messages
+                if m.discriminator == 'message']
+    drafts = [m.public_id for m in thread.drafts]
+
+    assert len(messages) == len(original_messages), \
+        'thread has incorrect messages'
+
+    assert len(drafts) == 1 and drafts[0] == public_id, \
+        'thread has incorrect drafts'
+
+
 def test_get(db, config, action_queue, message, attach):
     from inbox.sendmail.base import create_draft, get_draft
     from inbox.models import SpoolMessage, Account
@@ -155,7 +193,7 @@ def test_get_all(db, config, action_queue, message, attach):
 def test_create(db, config, action_queue, message, attach):
     from inbox.sendmail.base import create_draft
     from inbox.models import (SpoolMessage, FolderItem,
-                                                 Folder, Account)
+                              Folder, Account)
 
     account = db.session.query(Account).get(ACCOUNT_ID)
     to, subject, body = message
@@ -241,7 +279,7 @@ def test_update(db, config, action_queue, message, attach):
 
 def test_delete(db, config, action_queue, message, attach):
     from inbox.sendmail.base import (create_draft, update_draft,
-                                            delete_draft)
+                                     delete_draft)
     from inbox.models import SpoolMessage, Account
 
     account = db.session.query(Account).get(ACCOUNT_ID)
@@ -283,8 +321,7 @@ def test_delete(db, config, action_queue, message, attach):
 
 def test_send(db, config, action_queue, message, attach):
     from inbox.sendmail.base import create_draft, send_draft
-    from inbox.models import (SpoolMessage, Account,
-                                                 FolderItem, Folder)
+    from inbox.models import SpoolMessage, Account, FolderItem, Folder
 
     account = db.session.query(Account).get(ACCOUNT_ID)
     to, subject, body = message
@@ -335,8 +372,8 @@ def test_send(db, config, action_queue, message, attach):
 
 def test_create_reply(db, config, action_queue, message, attach):
     from inbox.sendmail.base import create_draft
-    from inbox.models import (SpoolMessage, Account,
-                                                 Message, Thread, DraftThread)
+    from inbox.models import (SpoolMessage, Account, Message, Thread,
+                              DraftThread)
 
     account = db.session.query(Account).get(ACCOUNT_ID)
     to, subject, body = message
@@ -473,9 +510,8 @@ def test_delete_reply():
 
 def test_send_reply(db, config, action_queue, message, attach):
     from inbox.sendmail.base import create_draft, send_draft
-    from inbox.models import (SpoolMessage, Account,
-                                                 Thread, FolderItem,
-                                                 Folder)
+    from inbox.models import (SpoolMessage, Account, Thread,
+                              FolderItem, Folder)
 
     account = db.session.query(Account).get(ACCOUNT_ID)
     to, subject, body = message

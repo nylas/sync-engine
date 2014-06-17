@@ -187,6 +187,11 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         elif tag == archive_tag:
             self.tags.add(inbox_tag)
 
+    @property
+    def drafts(self):
+        return [m for m in self.messages if m.is_draft] + \
+            [draftthread.draftmessage for draftthread in self.draftthreads]
+
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator}
 
@@ -198,6 +203,7 @@ class DraftThread(MailSyncBase, HasPublicID):
 
     Used instead of creating a copy of the thread and appending the draft to
     the copy.
+
     """
     master_public_id = Column(Base36UID, nullable=False)
     thread_id = Column(Integer, ForeignKey(Thread.id), nullable=False)

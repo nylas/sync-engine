@@ -72,7 +72,9 @@ class APIEncoder(JSONEncoder):
                 'last_message_timestamp': obj.recentdate,
                 'subject_date': obj.subjectdate,
                 'snippet': obj.snippet,
-                'messages':  [m.public_id for m in obj.messages],  # for now
+                'messages': [m.public_id for m in obj.messages
+                             if m.discriminator == 'message'],  # for now
+                'drafts': [m.public_id for m in obj.drafts],
                 'tags': [self.default(tag) for tag in obj.tags]
             }
 

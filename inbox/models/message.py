@@ -391,6 +391,7 @@ class SpoolMessage(Message):
 
     Stored so they are immediately available to the user. They are reconciled
     with the messages we get from the remote backend in a subsequent sync.
+
     """
     id = Column(Integer, ForeignKey('message.id', ondelete='CASCADE'),
                 primary_key=True)
