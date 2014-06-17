@@ -13,7 +13,6 @@ from inbox.models.message import Message, SpoolMessage
 from inbox.models.namespace import Namespace
 from inbox.models.search import SearchToken, SearchSignal
 from inbox.models.tag import Tag
-# from inbox.models.tagitem import TagItem
 from inbox.models.thread import Thread, DraftThread, TagItem
 from inbox.models.transaction import Transaction
 from inbox.models.webhook import Webhook

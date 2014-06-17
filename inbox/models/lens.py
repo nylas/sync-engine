@@ -19,7 +19,7 @@ from inbox.models.mixins import HasPublicID
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
 from inbox.models.message import Message
-from inbox.models.thread import Thread
+from inbox.models.thread import Thread, TagItem
 from inbox.models.contact import Contact, MessageContactAssociation
 from inbox.models.block import Block
 from inbox.models.tag import Tag
@@ -438,7 +438,6 @@ class Lens(MailSyncBase, HasPublicID):
     def _tag_subquery(self):
         if self.tag is None:
             return None
-        from inbox.models.tagitem import TagItem
         return self.db_session.query(TagItem).join(Tag). \
             filter(or_(Tag.name == self.tag,
                        Tag.public_id == self.tag))
