@@ -26,17 +26,18 @@ table_mod_for = init_db()
 
 # Stamp initial alembic revision
 if inbox_db_engine.dialect.has_table(inbox_db_engine, "alembic_version"):
-	res = inbox_db_engine.execute("SELECT version_num from alembic_version")
-	current_revision = [r for r in res][0][0]
-	assert current_revision, "Need current revision in alembic_version table..."
-	print 'Already revisioned by alembic %s' % current_revision
+    res = inbox_db_engine.execute("SELECT version_num from alembic_version")
+    current_revision = [r for r in res][0][0]
+    assert current_revision, 'Need current revision in alembic_version table.'
+    print 'Already revisioned by alembic {0}'.format(current_revision)
 else:
-	alembic_ini_filename = 'alembic.ini'  # top-level, with setup.sh
-	assert os.path.isfile(alembic_ini_filename), "Must have alembic.ini file at %s" % alembic_ini_filename
-	alembic_cfg = alembic_config(alembic_ini_filename)
+    alembic_ini_filename = 'alembic.ini'  # top-level, with setup.sh
+    assert os.path.isfile(alembic_ini_filename), \
+        'Must have alembic.ini file at {0}'.format(alembic_ini_filename)
+    alembic_cfg = alembic_config(alembic_ini_filename)
 
-	print 'Stamping with alembic revision'
-	alembic_command.stamp(alembic_cfg, "head")
+    print 'Stamping with alembic revision'
+    alembic_command.stamp(alembic_cfg, "head")
 
 
 print 'Finished setting up database'

@@ -13,7 +13,7 @@ from inbox.models import Account
 from sqlalchemy.orm.exc import NoResultFound
 
 
-parser = argparse.ArgumentParser(description="Start/stop mail sync")
+parser = argparse.ArgumentParser(description='Start/stop mail sync')
 parser.add_argument('cmd', help='start or stop')
 parser.add_argument('email_address',
                     help='Email address of the account to start/stop')
@@ -26,7 +26,7 @@ with session_scope() as db_session:
         account_id = db_session.query(Account.id).filter_by(
             email_address=args.email_address).one()[0]
     except NoResultFound:
-        sys.exit("No record of account {0}".format(args.email_address))
+        sys.exit('No record of account {0}'.format(args.email_address))
 
 mailsync_client = zerorpc.Client(timeout=15)
 mailsync_srv_loc = config.get('CRISPIN_SERVER_LOC', None)
@@ -43,8 +43,6 @@ try:
     elif args.cmd == 'status':
         print mailsync_client.sync_status(account_id)
     else:
-        sys.exit("No such command." )
+        sys.exit('No such command.')
 except zerorpc.exceptions.TimeoutExpired:
     sys.exit("Can't connect to sync service. Is it running? (./inbox start)")
-
-

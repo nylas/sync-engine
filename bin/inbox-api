@@ -45,7 +45,7 @@ def start():
     make_zerorpc(SyncbackService, action_srv_loc)
 
     http_server = WSGIServer(('', int(args.port)), app, log=inbox_logger)
-    inbox_logger.info("Starting API server on port {0}".format(args.port))
+    inbox_logger.info('Starting API server on port {0}'.format(args.port))
     http_server.serve_forever()
 
 

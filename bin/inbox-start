@@ -15,13 +15,13 @@ from setproctitle import setproctitle; setproctitle('inbox')
 from inbox.log import configure_general_logging, get_logger
 
 
-parser = argparse.ArgumentParser(description="Inbox sync service")
+parser = argparse.ArgumentParser(description='Inbox sync service')
 
 parser.add_argument('--prod', action='store_true', default=False,
-                         help="Disables the autoreloader and potentially other"
-                         " non-production features.")
+                    help='Disables the autoreloader and potentially other'
+                    ' non-production features.')
 parser.add_argument('-c', '--config', dest='config', default=None,
-                         help="Path to JSON configuration file.")
+                    help='Path to JSON configuration file.')
 args = parser.parse_args()
 
 if args.config:
@@ -65,9 +65,9 @@ def start():
      Use CTRL-C to stop.
      """
 
-    log.info("Recursion limit: {0}".format(sys.getrecursionlimit()))
+    log.info('Recursion limit: {0}'.format(sys.getrecursionlimit()))
 
-    log.info('Providers currently supported: '\
+    log.info('Providers currently supported: '
              '{0}'.format(', '.join(table_mod_for.keys())))
 
     # hang out forever and run some services

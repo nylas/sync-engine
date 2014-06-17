@@ -8,11 +8,12 @@ from inbox.log import configure_general_logging, get_logger
 configure_general_logging()
 log = get_logger()
 
-parser = argparse.ArgumentParser(description="REPL for crispin")
+parser = argparse.ArgumentParser(description='REPL for crispin')
 parser.add_argument('email_address', nargs='?', default=None,
-                    help='Start console with crispin client for a particular user')
+                    help='Start console with crispin client for a particular '
+                    'user')
 args = parser.parse_args()
 
 from inbox.console import start_console
-log.debug("Starting console...")
+log.debug('Starting console...')
 start_console(args.email_address)
