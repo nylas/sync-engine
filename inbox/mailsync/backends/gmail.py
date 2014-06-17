@@ -22,7 +22,7 @@ from __future__ import division
 
 import os
 
-from collections import namedtuple, defaultdict
+from collections import namedtuple
 
 from gevent import spawn
 from gevent.queue import LifoQueue
@@ -394,13 +394,6 @@ def download_queued_threads(crispin_client, db_session, log, folder_name,
     # Intentionally don't report which UIDVALIDITY we've saved messages to
     # because we have All Mail selected and don't have the UIDVALIDITY for
     # the folder we're actually downloading messages for.
-
-
-def group_uids_by_thread(uids, thread_g_metadata):
-    uids_for = defaultdict(list)
-    for uid in uids:
-        uids_for[thread_g_metadata[uid].thrid].append(uid)
-    return uids_for
 
 
 def download_thread(crispin_client, db_session, log, syncmanager_lock,
