@@ -17,10 +17,6 @@ final class PytestTestEngine extends ArcanistBaseUnitTestEngine {
     $future = $this->buildTestFuture($test_output, $cover_output);
     $future->resolvex();
 
-    $future = new ExecFuture('coverage xml -i -o %s', $cover_output);
-    $future->setCWD($this->project_root);
-    $future->resolvex();
-
     return $this->parseTestResults($test_output, $cover_output);
   }
 
@@ -30,7 +26,7 @@ final class PytestTestEngine extends ArcanistBaseUnitTestEngine {
     # We want to run the tests inside the VM.
     # `vagrant ssh -c` will return the exit code of whatever command you pass,
     # but we need it to always return 0. Hence the `|| true`.
-    $cmd_line = csprintf('vagrant ssh -c \'cd /vagrant; coverage run --source /vagrant/inbox -m py.test --junitxml /vagrant/tests/output /vagrant/tests || true\'');
+    $cmd_line = csprintf('vagrant ssh -c \'cd /vagrant; coverage run --source /vagrant/inbox -m py.test --junitxml /vagrant/tests/output /vagrant/tests; coverage xml -i -o /vagrant/tests/coverage; true\'');
 
     return new ExecFuture('%C', $cmd_line);
   }
@@ -40,11 +36,9 @@ final class PytestTestEngine extends ArcanistBaseUnitTestEngine {
     $results = $parser->parseTestResults(
       Filesystem::readFile($test_output));
 
-    if ($this->getEnableCoverage() !== false) {
-      $coverage_report = $this->readCoverage($cover_output);
-      foreach ($results as $result) {
-          $result->setCoverage($coverage_report);
-      }
+    $coverage_report = $this->readCoverage($cover_output);
+    foreach ($results as $result) {
+        $result->setCoverage($coverage_report);
     }
 
     return $results;
