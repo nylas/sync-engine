@@ -25,6 +25,9 @@ table_mod_for = register_backends()
 from ns_api import app as ns_api
 
 app = Flask(__name__)
+# Handle both /endpoint and /endpoint/ without redirecting.
+# Note that we need to set this *before* registering the blueprint.
+app.url_map.strict_slashes = False
 app.register_blueprint(ns_api)  # /n/<namespace_id>/...
 
 
