@@ -166,7 +166,7 @@ class Account(MailSyncBase, HasPublicID):
 
     @password.setter
     def password(self, value):
-        assert AUTH_TYPES.get(self.provider) == 'Password'
+        assert AUTH_TYPES.get(self.provider) == 'password', self.provider
         assert value is not None
 
         key_size = int(config.get('KEY_SIZE', 128))
