@@ -14,6 +14,7 @@ class Namespace(MailSyncBase, HasPublicID):
     # really the root_namespace
     account = relationship('Account',
                            lazy='joined',
+                           single_parent=True,
                            backref=backref('namespace', uselist=False,
                                            primaryjoin='and_('
                                            'Account.id==Namespace.account_id, '

@@ -10,7 +10,7 @@ import gdata.contacts.client
 
 from inbox.models.session import session_scope
 from inbox.models import Contact
-from inbox.models.backends.imap import ImapAccount
+from inbox.models.backends.gmail import GmailAccount
 from inbox.auth.oauth import (GOOGLE_OAUTH_CLIENT_ID,
                               GOOGLE_OAUTH_CLIENT_SECRET, OAUTH_SCOPE)
 from inbox.auth.base import verify_imap_account
@@ -28,7 +28,7 @@ class GoogleContactsProvider(object):
     db_session: sqlalchemy.orm.session.Session
         Database session.
 
-    account: ..models.tables.ImapAccount
+    account: inbox.models.gmail.GmailAccount
         The user account for which to fetch contact data.
 
     Attributes
@@ -49,15 +49,15 @@ class GoogleContactsProvider(object):
         # credentials as needed
         with session_scope() as db_session:
             try:
-                account = db_session.query(ImapAccount).get(self.account_id)
+                account = db_session.query(GmailAccount).get(self.account_id)
                 account = verify_imap_account(db_session, account)
                 two_legged_oauth_token = gdata.gauth.OAuth2Token(
                     client_id=GOOGLE_OAUTH_CLIENT_ID,
                     client_secret=GOOGLE_OAUTH_CLIENT_SECRET,
                     scope=OAUTH_SCOPE,
                     user_agent=SOURCE_APP_NAME,
-                    access_token=account.o_access_token,
-                    refresh_token=account.o_refresh_token)
+                    access_token=account.access_token,
+                    refresh_token=account.refresh_token)
                 google_client = gdata.contacts.client.ContactsClient(
                     source=SOURCE_APP_NAME)
                 google_client.auth_token = two_legged_oauth_token

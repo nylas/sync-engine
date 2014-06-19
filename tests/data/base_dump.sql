@@ -26,22 +26,9 @@ CREATE TABLE `account` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `public_id` binary(16) NOT NULL,
   `email_address` varchar(191) DEFAULT NULL,
-  `provider` enum('Gmail','Outlook','Yahoo','EAS','Inbox') NOT NULL,
   `save_raw_messages` tinyint(1) DEFAULT '1',
   `sync_host` varchar(255) DEFAULT NULL,
   `last_synced_contacts` datetime DEFAULT NULL,
-  `o_token_issued_to` varchar(512) DEFAULT NULL,
-  `o_user_id` varchar(512) DEFAULT NULL,
-  `o_access_token` varchar(1024) DEFAULT NULL,
-  `o_id_token` varchar(1024) DEFAULT NULL,
-  `o_expires_in` int(11) DEFAULT NULL,
-  `o_access_type` varchar(512) DEFAULT NULL,
-  `o_token_type` varchar(512) DEFAULT NULL,
-  `o_audience` varchar(512) DEFAULT NULL,
-  `o_scope` varchar(512) DEFAULT NULL,
-  `o_refresh_token` varchar(512) DEFAULT NULL,
-  `o_verified_email` tinyint(1) DEFAULT NULL,
-  `date` datetime DEFAULT NULL,
   `password_aes` blob,
   `key` tinyblob,
   `type` varchar(16) DEFAULT NULL,
@@ -56,7 +43,6 @@ CREATE TABLE `account` (
   `created_at` datetime NOT NULL,
   `updated_at` datetime NOT NULL,
   `deleted_at` datetime DEFAULT NULL,
-  `provider_prefix` varchar(64) NOT NULL,
   `important_folder_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `ix_account_public_id` (`public_id`),
@@ -89,7 +75,7 @@ CREATE TABLE `account` (
 
 LOCK TABLES `account` WRITE;
 /*!40000 ALTER TABLE `account` DISABLE KEYS */;
-INSERT INTO `account` VALUES (1,'����hPID','inboxapptest@gmail.com','Gmail',1,'precise64','2014-05-03 01:15:03','986659776516-fg79mqbkbktf5ku10c215vdij918ra0a.apps.googleusercontent.com','115086935419017912828','ya29.1.AADtN_WBwJ3JfESfm174VwtqekfY6YKDV2xjsUQ3iMkz-4qlKLwWxyceOfj9Uv_z7aoi5Q','eyJhbGciOiJSUzI1NiIsImtpZCI6IjU3YjcwYzNhMTM4MjA5OTliZjhlNmIxYTBkMDdkYjRlNDVhMmE3NzMifQ.eyJpc3MiOiJhY2NvdW50cy5nb29nbGUuY29tIiwiaWQiOiIxMTUwODY5MzU0MTkwMTc5MTI4MjgiLCJzdWIiOiIxMTUwODY5MzU0MTkwMTc5MTI4MjgiLCJhenAiOiI5ODY2NTk3NzY1MTYtZmc3OW1xYmtia3RmNWt1MTBjMjE1dmRpajkxOHJhMGEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJlbWFpbCI6ImluYm94YXBwdGVzdEBnbWFpbC5jb20iLCJhdF9oYXNoIjoiS090Q0hvQ01mSjNQcmdGSVIwNDFtQSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJhdWQiOiI5ODY2NTk3NzY1MTYtZmc3OW1xYmtia3RmNWt1MTBjMjE1dmRpajkxOHJhMGEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJ0b2tlbl9oYXNoIjoiS090Q0hvQ01mSjNQcmdGSVIwNDFtQSIsInZlcmlmaWVkX2VtYWlsIjp0cnVlLCJjaWQiOiI5ODY2NTk3NzY1MTYtZmc3OW1xYmtia3RmNWt1MTBjMjE1dmRpajkxOHJhMGEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJpYXQiOjEzOTkwNzk0MDIsImV4cCI6MTM5OTA4MzMwMn0.CFnCmsz3XCK196CF6PQ19z9IUxEeffZ_eu3JVdJE1rDHc1i5h44l1ioNouJinyJhqV4QQmaXDGJ3oggogfF0TGuUbRwcOWs0_oR01ZxuplY0U7s_g96LcZt667L-ZPFZosPM3APvGof2tvDQViyFd0V6rGu3ok49HqatZ8PT5eo',3600,'offline','Bearer','986659776516-fg79mqbkbktf5ku10c215vdij918ra0a.apps.googleusercontent.com','https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile https://mail.google.com/ https://www.google.com/m8/feeds https://www.googleapis.com/auth/calendar','1/Suk6oy9J-n4Ng-hgsZmNZ7I7HqtOSfYCSyXq7Q8GD3I',1,'2014-05-03 01:15:02',NULL,NULL,'imapaccount',2,4,5,NULL,NULL,NULL,3,NULL,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'gmail',NULL);
+INSERT INTO `account` VALUES (1,'����hPID','inboxapptest@gmail.com',1,'precise64','2014-05-03 01:15:03',NULL,NULL,'gmailaccount',2,4,5,NULL,NULL,NULL,3,NULL,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL);
 /*!40000 ALTER TABLE `account` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -111,7 +97,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('1c72d8a0120e');
+INSERT INTO `alembic_version` VALUES ('4085dd542739');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -455,6 +441,47 @@ INSERT INTO `foldersync` VALUES (1,1,'INBOX','poll','2014-05-13 02:19:12','2014-
 UNLOCK TABLES;
 
 --
+-- Table structure for table `gmailaccount`
+--
+
+DROP TABLE IF EXISTS `gmailaccount`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `gmailaccount` (
+  `id` int(11) NOT NULL,
+  `access_token` varchar(512) DEFAULT NULL,
+  `refresh_token` varchar(512) DEFAULT NULL,
+  `scope` varchar(512) DEFAULT NULL,
+  `expires_in` int(11) DEFAULT NULL,
+  `token_type` varchar(64) DEFAULT NULL,
+  `access_type` varchar(64) DEFAULT NULL,
+  `family_name` varchar(256) DEFAULT NULL,
+  `given_name` varchar(256) DEFAULT NULL,
+  `name` varchar(256) DEFAULT NULL,
+  `gender` varchar(16) DEFAULT NULL,
+  `g_id` varchar(32) DEFAULT NULL,
+  `g_id_token` varchar(1024) DEFAULT NULL,
+  `g_user_id` varchar(32) DEFAULT NULL,
+  `link` varchar(256) DEFAULT NULL,
+  `locale` varchar(8) DEFAULT NULL,
+  `picture` varchar(1024) DEFAULT NULL,
+  `home_domain` varchar(256) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `gmailaccount_ibfk_1` FOREIGN KEY (`id`) REFERENCES `imapaccount` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `gmailaccount`
+--
+
+LOCK TABLES `gmailaccount` WRITE;
+/*!40000 ALTER TABLE `gmailaccount` DISABLE KEYS */;
+INSERT INTO `gmailaccount` VALUES (1,'ya29.1.AADtN_WBwJ3JfESfm174VwtqekfY6YKDV2xjsUQ3iMkz-4qlKLwWxyceOfj9Uv_z7aoi5Q','1/Suk6oy9J-n4Ng-hgsZmNZ7I7HqtOSfYCSyXq7Q8GD3I','https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile https://mail.google.com/ https://www.google.com/m8/feeds https://www.googleapis.com/auth/calendar',3600,'Bearer','offline','App','Inbox',NULL,'other','115086935419017912828','eyJhbGciOiJSUzI1NiIsImtpZCI6IjU3YjcwYzNhMTM4MjA5OTliZjhlNmIxYTBkMDdkYjRlNDVhMmE3NzMifQ.eyJpc3MiOiJhY2NvdW50cy5nb29nbGUuY29tIiwiaWQiOiIxMTUwODY5MzU0MTkwMTc5MTI4MjgiLCJzdWIiOiIxMTUwODY5MzU0MTkwMTc5MTI4MjgiLCJhenAiOiI5ODY2NTk3NzY1MTYtZmc3OW1xYmtia3RmNWt1MTBjMjE1dmRpajkxOHJhMGEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJlbWFpbCI6ImluYm94YXBwdGVzdEBnbWFpbC5jb20iLCJhdF9oYXNoIjoiS090Q0hvQ01mSjNQcmdGSVIwNDFtQSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJhdWQiOiI5ODY2NTk3NzY1MTYtZmc3OW1xYmtia3RmNWt1MTBjMjE1dmRpajkxOHJhMGEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJ0b2tlbl9oYXNoIjoiS090Q0hvQ01mSjNQcmdGSVIwNDFtQSIsInZlcmlmaWVkX2VtYWlsIjp0cnVlLCJjaWQiOiI5ODY2NTk3NzY1MTYtZmc3OW1xYmtia3RmNWt1MTBjMjE1dmRpajkxOHJhMGEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJpYXQiOjEzOTkwNzk0MDIsImV4cCI6MTM5OTA4MzMwMn0.CFnCmsz3XCK196CF6PQ19z9IUxEeffZ_eu3JVdJE1rDHc1i5h44l1ioNouJinyJhqV4QQmaXDGJ3oggogfF0TGuUbRwcOWs0_oR01ZxuplY0U7s_g96LcZt667L-ZPFZosPM3APvGof2tvDQViyFd0V6rGu3ok49HqatZ8PT5eo','115086935419017912828',NULL,'en',NULL,NULL);
+/*!40000 ALTER TABLE `gmailaccount` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `imapaccount`
 --
 
@@ -464,13 +491,6 @@ DROP TABLE IF EXISTS `imapaccount`;
 CREATE TABLE `imapaccount` (
   `id` int(11) NOT NULL,
   `imap_host` varchar(512) DEFAULT NULL,
-  `given_name` varchar(255) DEFAULT NULL,
-  `family_name` varchar(255) DEFAULT NULL,
-  `g_locale` varchar(16) DEFAULT NULL,
-  `g_picture_url` varchar(255) DEFAULT NULL,
-  `g_gender` varchar(16) DEFAULT NULL,
-  `g_plus_url` varchar(255) DEFAULT NULL,
-  `google_id` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   CONSTRAINT `imapaccount_ibfk_1` FOREIGN KEY (`id`) REFERENCES `account` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -482,7 +502,7 @@ CREATE TABLE `imapaccount` (
 
 LOCK TABLES `imapaccount` WRITE;
 /*!40000 ALTER TABLE `imapaccount` DISABLE KEYS */;
-INSERT INTO `imapaccount` VALUES (1,'imap.gmail.com','Inbox','App','en',NULL,'other',NULL,'115086935419017912828');
+INSERT INTO `imapaccount` VALUES (1,'imap.gmail.com');
 /*!40000 ALTER TABLE `imapaccount` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1111,4 +1131,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-06-15 22:36:12
+-- Dump completed on 2014-06-19  1:57:10

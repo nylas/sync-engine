@@ -3,5 +3,5 @@ from inbox.sendmail.gmail.drafts import create_and_save_draft
 
 __all__ = ['GmailSMTPClient', 'create_and_save_draft']
 
-PROVIDER = 'Gmail'
+PROVIDER = 'gmail'
 SENDMAIL_CLS = 'GmailSMTPClient'

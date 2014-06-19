@@ -35,7 +35,8 @@ from inbox.crispin import GMetadata, connection_pool, retry_crispin
 from inbox.models.session import session_scope
 from inbox.models.util import reconcile_message
 from inbox.models import Message, Folder
-from inbox.models.backends.imap import ImapAccount, ImapUid, ImapThread
+from inbox.models.backends.gmail import GmailAccount
+from inbox.models.backends.imap import ImapUid, ImapThread
 from inbox.mailsync.backends.base import (create_db_objects,
                                           commit_uids, new_or_updated,
                                           MailsyncError)
@@ -54,7 +55,7 @@ from inbox.mailsync.backends.imap import (account,
                                           ImapSyncMonitor)
 
 
-PROVIDER = 'Gmail'
+PROVIDER = 'gmail'
 SYNC_MONITOR_CLS = 'GmailSyncMonitor'
 
 GMessage = namedtuple('GMessage', 'uid g_metadata flags labels')
@@ -355,7 +356,7 @@ def download_queued_threads(crispin_client, db_session, log, folder_name,
         # already have the UID in the given GMessage downloaded, we may not
         # have _every_ message in the thread. We have to expand it and make
         # sure we have all messages.
-        acc = db_session.query(ImapAccount).get(crispin_client.account_id)
+        acc = db_session.query(GmailAccount).get(crispin_client.account_id)
         while not message_download_stack.empty():
             message = message_download_stack.get_nowait()
             # Don't try to re-download any messages that are in the same
@@ -467,7 +468,7 @@ def add_new_imapuid(db_session, log, gmessage, folder_name, acc):
         Message to add ImapUid for.
     folder_name : str
         Which folder to add the ImapUid in.
-    acc : ImapAccount
+    acc : GmailAccount
         Which account to associate the message with. (Not looking this up
         within this function is a db access optimization.)
     """
@@ -520,7 +521,7 @@ def add_new_imapuids(crispin_client, log, db_session, remote_g_metadata,
                                 db_session.query(Message).filter(
                                     Message.g_msgid.in_(imapuid_g_msgids))])
 
-            acc = db_session.query(ImapAccount).get(crispin_client.account_id)
+            acc = db_session.query(GmailAccount).get(crispin_client.account_id)
             # Folder.find_or_create()'s query will otherwise trigger a flush.
             with db_session.no_autoflush:
                 new_imapuids = [ImapUid(

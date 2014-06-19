@@ -109,9 +109,9 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
             account = db_session.query(ImapAccount).get(self.account_id)
 
             # Refresh token if need be, for OAuthed accounts
-            if AUTH_TYPES.get(account.provider) == 'OAuth':
+            if AUTH_TYPES.get(account.provider) == 'oauth':
                 account = verify_imap_account(db_session, account)
-                self.o_access_token = account.o_access_token
+                self.access_token = account.access_token
 
             self.email_address = account.email_address
             self.provider = account.provider
@@ -121,15 +121,16 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
         with session_scope() as db_session:
             account = db_session.query(ImapAccount).get(self.account_id)
 
-            if (account.provider == 'Gmail'):
+            if (account.provider == 'gmail'):
                 conn = verify_gmail_account(account)
 
-            elif (account.provider == 'Yahoo'):
+            elif (account.provider == 'yahoo'):
                 conn = verify_yahoo_account(account)
 
             # Reads from db, therefore shouldn't get here
             else:
-                raise
+                raise Exception(
+                    "Couldn't find provider {}".format(account.provider))
 
         return new_crispin(self.account_id, self.provider, conn, self.readonly)
 
@@ -143,8 +144,8 @@ retry_crispin = functools.partial(
 
 
 def new_crispin(account_id, provider, conn, readonly=True):
-    crispin_module_for = dict(Gmail=GmailCrispinClient, IMAP=CrispinClient,
-                              Yahoo=YahooCrispinClient)
+    crispin_module_for = dict(gmail=GmailCrispinClient, imap=CrispinClient,
+                              yahoo=YahooCrispinClient)
 
     cls = crispin_module_for[provider]
     return cls(account_id, conn, readonly=readonly)
@@ -360,7 +361,7 @@ class YahooCrispinClient(CrispinClient):
 
 
 class GmailCrispinClient(CrispinClient):
-    PROVIDER = 'Gmail'
+    PROVIDER = 'gmail'
 
     def sync_folders(self):
         """ Gmail-specific list of folders to sync.

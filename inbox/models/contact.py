@@ -25,7 +25,7 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID):
     # A server-provided unique ID.
     uid = Column(String(64), nullable=False)
     # A constant, unique identifier for the remote backend this contact came
-    # from. E.g., 'google', 'EAS', 'inbox'
+    # from. E.g., 'google', 'eas', 'inbox'
     provider_name = Column(String(64))
 
     # We essentially maintain two copies of a user's contacts.

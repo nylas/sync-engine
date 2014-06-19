@@ -14,7 +14,7 @@ from inbox.models.backends.imap import ImapAccount
 from inbox.sendmail.base import SendMailException, SendError
 log = get_logger(purpose='sendmail')
 
-SMTP_HOSTS = {'Gmail': 'smtp.gmail.com'}
+SMTP_HOSTS = {'gmail': 'smtp.gmail.com'}
 SMTP_PORT = 587
 
 DEFAULT_POOL_SIZE = 2
@@ -23,8 +23,8 @@ DEFAULT_POOL_SIZE = 2
 account_id_to_connection_pool = {}
 
 # TODO[k]: Other types (LOGIN, XOAUTH, PLAIN-CLIENTTOKEN, CRAM-MD5)
-AUTH_EXTNS = {'OAuth': 'XOAUTH2',
-              'Password': 'PLAIN'}
+AUTH_EXTNS = {'oauth': 'XOAUTH2',
+              'password': 'PLAIN'}
 
 AccountInfo = namedtuple('AccountInfo',
                          'id email provider full_name auth_type auth_token')
@@ -56,8 +56,8 @@ class SMTPConnection():
         self.connection = c
 
         self.log = log
-        self.auth_handlers = {'OAuth': self.smtp_oauth,
-                              'Password': self.smtp_password}
+        self.auth_handlers = {'oauth': self.smtp_oauth,
+                              'password': self.smtp_password}
 
         self.setup()
 
@@ -173,18 +173,18 @@ class SMTPConnectionPool(geventconnpool.ConnectionPool):
 
             self.email_address = account.email_address
             self.provider = account.provider
-            self.full_name = account.full_name if account.provider == 'Gmail'\
+            self.full_name = account.full_name if account.provider == 'gmail'\
                 else ''
             self.sent_folder = account.sent_folder.name
 
             self.auth_type = AUTH_TYPES.get(account.provider)
 
-            if self.auth_type == 'OAuth':
+            if self.auth_type == 'oauth':
                 # Refresh OAuth token if need be
                 account = verify_imap_account(db_session, account)
-                self.o_access_token = account.o_access_token
+                self.access_token = account.access_token
             else:
-                assert self.auth_type == 'Password'
+                assert self.auth_type == 'password'
                 self.password = account.password
 
     def _new_connection(self):
@@ -199,7 +199,7 @@ class SMTPConnectionPool(geventconnpool.ConnectionPool):
 
         connection.set_debuglevel(self.debug)
 
-        auth_token = self.o_access_token if self.o_access_token else\
+        auth_token = self.access_token if self.access_token else\
             self.password
         account_info = AccountInfo(id=self.account_id,
                                    email=self.email_address,

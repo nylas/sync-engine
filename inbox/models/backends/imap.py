@@ -16,8 +16,7 @@ from inbox.models.thread import Thread
 from inbox.models.message import Message
 from inbox.models.folder import Folder
 
-# Note: Imap IS Gmail currently
-PROVIDER = 'Gmail'
+PROVIDER = 'imap'
 
 
 class ImapAccount(Account):
@@ -25,20 +24,11 @@ class ImapAccount(Account):
                 primary_key=True)
 
     imap_host = Column(String(512))
-
-    given_name = Column(String(255))
-    family_name = Column(String(255))
-    g_locale = Column(String(16))
-    g_picture_url = Column(String(255))
-    g_gender = Column(String(16))
-    g_plus_url = Column(String(255))
-    google_id = Column(String(255))
+    __mapper_args__ = {'polymorphic_identity': 'imapaccount'}
 
     @property
-    def full_name(self):
-        return '{0} {1}'.format(self.given_name, self.family_name)
-
-    __mapper_args__ = {'polymorphic_identity': 'imapaccount'}
+    def provider(self):
+        return PROVIDER.lower()
 
 
 class ImapUid(MailSyncBase):
@@ -50,13 +40,13 @@ class ImapUid(MailSyncBase):
     """
     imapaccount_id = Column(ForeignKey(ImapAccount.id, ondelete='CASCADE'),
                             nullable=False)
-    imapaccount = relationship('ImapAccount',
+    imapaccount = relationship(ImapAccount,
                                primaryjoin='and_('
                                'ImapUid.imapaccount_id == ImapAccount.id, '
                                'ImapAccount.deleted_at.is_(None))')
 
     message_id = Column(Integer, ForeignKey(Message.id), nullable=False)
-    message = relationship('Message',
+    message = relationship(Message,
                            backref=backref('imapuids',
                                            primaryjoin='and_('
                                            'Message.id == ImapUid.message_id, '
@@ -69,7 +59,7 @@ class ImapUid(MailSyncBase):
     folder_id = Column(Integer, ForeignKey(Folder.id, ondelete='CASCADE'),
                        nullable=False)
     # We almost always need the folder name too, so eager load by default.
-    folder = relationship('Folder', lazy='joined',
+    folder = relationship(Folder, lazy='joined',
                           backref=backref('imapuids',
                                           passive_deletes=True,
                                           primaryjoin='and_('
@@ -127,7 +117,7 @@ class UIDValidity(MailSyncBase):
     """
     imapaccount_id = Column(ForeignKey(ImapAccount.id, ondelete='CASCADE'),
                             nullable=False)
-    imapaccount = relationship("ImapAccount",
+    imapaccount = relationship(ImapAccount,
                                primaryjoin='and_('
                                'UIDValidity.imapaccount_id == ImapAccount.id, '
                                'ImapAccount.deleted_at.is_(None))')
@@ -191,7 +181,7 @@ class ImapThread(Thread):
 class FolderSync(MailSyncBase):
     account_id = Column(ForeignKey(ImapAccount.id, ondelete='CASCADE'),
                         nullable=False)
-    account = relationship('ImapAccount', backref=backref(
+    account = relationship(ImapAccount, backref=backref(
         'foldersyncs',
         primaryjoin='and_('
         'FolderSync.account_id == ImapAccount.id, '

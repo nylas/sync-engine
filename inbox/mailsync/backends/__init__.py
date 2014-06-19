@@ -4,7 +4,7 @@ Per-provider backend modules.
 A backend module *must* meet the following requirements:
 
 1. Specify the provider it implements as the module-level `PROVIDER` variable.
-For example, 'Gmail', 'Imap', 'EAS', 'Yahoo' etc.
+For example, 'gmail', 'imap', 'eas', 'yahoo' etc.
 
 2. Implement a sync monitor class which inherits from the
 BaseMailSyncMonitor class.

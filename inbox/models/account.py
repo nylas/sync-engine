@@ -1,10 +1,9 @@
 import os
 from hashlib import sha256
-from sqlalchemy import (Column, Integer, String, DateTime, Boolean, Enum,
-                        ForeignKey)
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
 from sqlalchemy.orm import relationship, deferred
-from sqlalchemy.types import BLOB
 from sqlalchemy.sql.expression import true
+from sqlalchemy.types import BLOB
 
 from inbox.config import config
 from inbox.util.file import Lock, mkdirp
@@ -14,22 +13,30 @@ from inbox.basicauth import AUTH_TYPES
 from inbox.models.mixins import HasPublicID
 from inbox.models.base import MailSyncBase
 from inbox.models.folder import Folder
-
 from inbox.models.base import MAX_INDEXABLE_LENGTH
 
 
 class Account(MailSyncBase, HasPublicID):
+    discriminator = Column('type', String(16))
+    __mapper_args__ = {'polymorphic_identity': 'account',
+                       'polymorphic_on': discriminator}
+
     # http://stackoverflow.com/questions/386294
     email_address = Column(String(MAX_INDEXABLE_LENGTH),
                            nullable=True, index=True)
-    provider = Column(Enum('Gmail', 'Outlook', 'Yahoo', 'EAS', 'Inbox'),
-                      nullable=False)
 
-    # We prefix user-created folder with this string when we expose them as
-    # tags through the API. E.g., a 'jobs' folder/label on a Gmail backend is
-    # exposed as 'gmail-jobs'.
-    # Any value stored here should also be in Tag.RESERVED_PROVIDER_NAMES.
-    provider_prefix = Column(String(64), nullable=False)
+    @property
+    def provider(self):
+        """ A constant, unique lowercase identifier for the account provider
+        (e.g., 'gmail', 'eas'). Subclasses should override this.
+
+        We prefix provider folders with this string when we expose them as
+        tags through the API. E.g., a 'jobs' folder/label on a Gmail
+        backend is exposed as 'gmail-jobs'. Any value returned here
+        should also be in Tag.RESERVED_PROVIDER_NAMES.
+
+        """
+        raise NotImplementedError
 
     # local flags & data
     save_raw_messages = Column(Boolean, server_default=true())
@@ -116,31 +123,6 @@ class Account(MailSyncBase, HasPublicID):
     def sync_active(self):
         return self.sync_host is not None
 
-    # oauth stuff (most providers support oauth at this point, shockingly)
-    # TODO figure out the actual lengths of these
-    # XXX we probably don't actually need to save all of this crap
-    # XXX encrypt some of this crap?
-    o_token_issued_to = Column(String(512))
-    o_user_id = Column(String(512))
-    o_access_token = Column(String(1024))
-    o_id_token = Column(String(1024))
-    o_expires_in = Column(Integer)
-    o_access_type = Column(String(512))
-    o_token_type = Column(String(512))
-    o_audience = Column(String(512))
-    o_scope = Column(String(512))
-    o_refresh_token = Column(String(512))
-    o_verified_email = Column(Boolean)
-
-    # used to verify key lifespan
-    date = Column(DateTime)
-
-    # Password stuff
-    # 'deferred' loads these large binary fields into memory only when needed
-    # i.e. on direct access.
-    password_aes = deferred(Column(BLOB(256)))
-    key = deferred(Column(BLOB(128)))
-
     @classmethod
     def _get_lock_object(cls, account_id, lock_for=dict()):
         """ Make sure we only create one lock per account per process.
@@ -166,6 +148,12 @@ class Account(MailSyncBase, HasPublicID):
 
     def sync_unlock(self):
         self._sync_lock.release()
+
+    # Password stuff
+    # 'deferred' loads these large binary fields into memory only when needed
+    # i.e. on direct access.
+    password_aes = deferred(Column(BLOB(256)))
+    key = deferred(Column(BLOB(128)))
 
     @property
     def password(self):

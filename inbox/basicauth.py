@@ -1,7 +1,7 @@
 # TODO perhaps move this to normal auth module...
 import getpass
 
-AUTH_TYPES = {'Gmail': 'OAuth', 'Yahoo': 'Password', 'EAS': 'Password'}
+AUTH_TYPES = {'gmail': 'oauth', 'yahoo': 'password', 'eas': 'password'}
 
 # Certain password auths flows (like EAS) provide their own message
 default_message = 'Password for {0} (hidden): '

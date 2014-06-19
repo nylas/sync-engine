@@ -11,9 +11,8 @@ from inbox.models import Namespace
 from inbox.models.backends.imap import ImapAccount
 
 
-PROVIDER = 'Yahoo'
+PROVIDER = 'yahoo'
 IMAP_HOST = 'imap.mail.yahoo.com'
-PROVIDER_PREFIX = 'yahoo'
 
 
 def create_auth_account(db_session, email_address):
@@ -35,8 +34,6 @@ def create_account(db_session, email_address, response):
         namespace = Namespace()
         account = ImapAccount(namespace=namespace)
 
-    account.provider = 'Yahoo'
-    account.provider_prefix = PROVIDER_PREFIX
     account.imap_host = IMAP_HOST
     account.email_address = response['email']
     account.password = response['password']

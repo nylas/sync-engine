@@ -163,10 +163,10 @@ def provider_from_address(email_address):
     domain = email_address.split('@')[1].lower()
 
     if email_supports_gmail(domain):
-        return 'Gmail'
+        return 'gmail'
 
     if email_supports_yahoo(domain):
-        return 'Yahoo'
+        return 'yahoo'
 
     return None
 

@@ -17,6 +17,9 @@ class Folder(MailSyncBase):
                         ForeignKey('account.id', use_alter=True,
                                    name='folder_fk1',
                                    ondelete='CASCADE'), nullable=False)
+
+    # TOFIX this causes an import error due to circular dependencies
+    # from inbox.models.account import Account
     account = relationship(
         'Account', backref=backref('folders',
                                    primaryjoin='and_('
@@ -83,7 +86,7 @@ class Folder(MailSyncBase):
                 return tag
 
         else:
-            provider_prefix = self.account.provider_prefix
+            provider_prefix = self.account.provider
             tag_name = '-'.join((provider_prefix, self.name.lower()))
             try:
                 return db_session.query(Tag). \

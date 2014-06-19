@@ -5,6 +5,7 @@ from sqlalchemy.sql.expression import true
 from inbox.models.mixins import HasPublicID
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
+from inbox.models.lens import Lens
 
 
 class Webhook(MailSyncBase, HasPublicID):
@@ -13,14 +14,14 @@ class Webhook(MailSyncBase, HasPublicID):
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           nullable=False, index=True)
     namespace = relationship(
-        'Namespace',
+        Namespace,
         primaryjoin='and_(Webhook.namespace_id==Namespace.id, '
         'Namespace.deleted_at==None)')
 
-    lens_id = Column(ForeignKey('lens.id', ondelete='CASCADE'),
+    lens_id = Column(ForeignKey(Lens.id, ondelete='CASCADE'),
                      nullable=False, index=True)
     lens = relationship(
-        'Lens',
+        Lens,
         primaryjoin='and_(Webhook.lens_id==Lens.id, Lens.deleted_at==None)')
 
     callback_url = Column(Text, nullable=False)

@@ -1,5 +1,6 @@
 from inbox.models.util import db_write_lock
-from inbox.models.backends.imap import ImapAccount, ImapUid
+from inbox.models.backends.gmail import GmailAccount
+from inbox.models.backends.imap import ImapUid
 from inbox.sendmail.base import generate_attachments, SendError
 from inbox.sendmail.postel import SMTPClient
 from inbox.sendmail.message import SenderInfo
@@ -15,7 +16,7 @@ class GmailSMTPClient(SMTPClient):
         store.
 
         """
-        account = db_session.query(ImapAccount).get(self.account_id)
+        account = db_session.query(GmailAccount).get(self.account_id)
         draftuid = db_session.query(ImapUid).get(imapuid.id)
 
         # Send it using SMTP:

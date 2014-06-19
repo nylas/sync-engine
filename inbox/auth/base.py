@@ -37,7 +37,7 @@ def get_handler(email_address):
         return auth_mod
 
     # Try as EAS
-    auth_mod = AUTH_MOD_FOR.get('EAS', None)
+    auth_mod = AUTH_MOD_FOR.get('eas', None)
     if auth_mod is not None:
         return auth_mod
 
@@ -53,14 +53,14 @@ def verify_imap_account(db_session, account):
 
     auth_handler = get_handler(account.email_address)
 
-    is_valid = validate_token(account.o_access_token)
+    is_valid = validate_token(account.access_token)
 
     # TODO refresh tokens based on date instead of checking?
     # if not is_valid or expire_date > datetime.datetime.utcnow():
     if not is_valid:
         log.error('Need to update access token!')
 
-        refresh_token = account.o_refresh_token
+        refresh_token = account.refresh_token
 
         log.error('Getting new access token...')
 

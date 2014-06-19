@@ -1,10 +1,6 @@
 from sqlalchemy import create_engine
 
-from inbox.log import get_logger
-log = get_logger()
-
 from inbox.sqlalchemy_ext.util import ForceStrictMode
-
 from inbox.config import db_uri
 
 engine = create_engine(db_uri(),

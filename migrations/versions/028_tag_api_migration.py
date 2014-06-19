@@ -82,9 +82,9 @@ def upgrade():
     print "setting provider_prefix for current accounts"
     with basic_session() as db_session:
         for account in db_session.query(Account):
-            if account.provider == 'Gmail':
+            if account.provider == 'gmail':
                 account.provider_prefix = 'gmail'
-            elif account.provider == 'EAS':
+            elif account.provider == 'eas':
                 account.provider_prefix = 'exchange'
         db_session.commit()
 
@@ -94,7 +94,7 @@ def upgrade():
                             ('Starred', '[Gmail]/Starred'),
                             ('Important', '[Gmail]/Important')]:
             for account in db_session.query(Account):
-                if account.provider != 'Gmail':
+                if account.provider != 'gmail':
                     continue
 
                 src = db_session.query(Folder).filter(
@@ -129,7 +129,7 @@ def upgrade():
     print "Adding public_id and exposed_name to folders."
     with basic_session() as db_session:
         for folder in db_session.query(Folder):
-            if folder.account.provider != 'Gmail':
+            if folder.account.provider != 'gmail':
                 # punt on non-Gmail providers for now
                 continue
             if folder.name == '[Gmail]/All Mail':

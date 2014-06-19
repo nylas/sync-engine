@@ -28,4 +28,3 @@ class AutoTimestampMixin(object):
         Safer object deletion: mark as deleted and garbage collect later.
         """
         self.deleted_at = datetime.utcnow()
-

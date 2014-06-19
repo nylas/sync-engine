@@ -194,13 +194,13 @@ def upgrade():
         for folderitem in db_session.query(FolderItem).join(Thread).join(
                 Namespace).yield_per(CHUNK_SIZE):
             account_id = folderitem.thread.namespace.account_id
-            if folderitem.thread.namespace.account.provider == 'Gmail':
+            if folderitem.thread.namespace.account.provider == 'gmail':
                 if folderitem.folder_name in folder_name_subst_map:
                     new_folder_name = folder_name_subst_map[
                         folderitem.folder_name]
                 else:
                     new_folder_name = folderitem.folder_name
-            elif folderitem.thread.namespace.account.provider == 'EAS':
+            elif folderitem.thread.namespace.account.provider == 'eas':
                 new_folder_name = folderitem.folder_name.title()
 
             if (account_id, new_folder_name) in folders:
@@ -257,7 +257,7 @@ def upgrade():
             db_session.commit()
 
         print 'Migrating *_folder_name fields to reference Folder rows...'
-        for account in db_session.query(Account).filter_by(provider='Gmail'):
+        for account in db_session.query(Account).filter_by(provider='gmail'):
             if account.inbox_folder_name:
                 # hard replace INBOX with canonicalized caps
                 k = (account.id, 'Inbox')
@@ -298,7 +298,7 @@ def upgrade():
             print "Migrating EAS accounts' *_folder_name fields to reference "\
                   "Folder rows..."
 
-            for account in db_session.query(Account).filter_by(provider='EAS'):
+            for account in db_session.query(Account).filter_by(provider='eas'):
                 if account.inbox_folder_name:
                     k = (account.id, account.inbox_folder_name)
                     if k in folders:

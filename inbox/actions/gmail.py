@@ -34,7 +34,7 @@ from inbox.crispin import writable_connection_pool
 
 from inbox.models.backends.imap import ImapThread
 
-PROVIDER = 'Gmail'
+PROVIDER = 'gmail'
 
 
 class ActionError(Exception):

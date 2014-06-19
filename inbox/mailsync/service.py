@@ -86,7 +86,7 @@ class SyncService(object):
                         self.monitors[acc.id] = monitor
                         monitor.start()
                         # For Gmail accounts, also start contacts sync
-                        if acc.provider == 'Gmail':
+                        if acc.provider == 'gmail':
                             contact_sync = ContactSync(acc.id)
                             self.contact_sync_monitors[acc.id] = contact_sync
                             contact_sync.start()
