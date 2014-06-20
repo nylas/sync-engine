@@ -48,11 +48,9 @@ Here's how to set up a development environment running on your local machine:
 
 7. `cd /vagrant`
 
-8. `cp config-sample.cfg config.cfg` to setup a default configuration file.
+8. `sudo ./setup.sh` to install dependencies and create databases.
 
-9. `sudo ./setup.sh` to install dependencies and create databases.
-
-10. `bin/inbox-start`
+9. `bin/inbox-start`
 
 And _voilà_! Auth an account via the commandline and start syncing:
 
