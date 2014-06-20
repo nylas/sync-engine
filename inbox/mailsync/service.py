@@ -1,7 +1,7 @@
 """ ZeroRPC interface to syncing. """
-import socket
-
 from collections import defaultdict
+
+import socket
 
 from inbox.contacts.remote_sync import ContactSync
 from inbox.log import get_logger
@@ -47,8 +47,10 @@ class SyncService(object):
                 self.start_sync(account_id)
 
     def start_sync(self, account_id=None):
-        """ Starts all syncs if account_id not specified.
-            If account_id doesn't exist, does nothing.
+        """
+        Starts all syncs if account_id not specified.
+        If account_id doesn't exist, does nothing.
+
         """
         results = {}
         if account_id:
@@ -94,21 +96,26 @@ class SyncService(object):
                         db_session.add(acc)
                         db_session.commit()
                         results[acc.id] = 'OK sync started'
+
                     except Exception as e:
                         self.log.error(e.message)
-                        results[acc.id] = 'ERROR error encountered: {0}'.format(e)
+                        results[acc.id] = 'ERROR error encountered: {0}'.\
+                            format(e)
                 else:
                     results[acc.id] = 'OK sync already started'
+
         if account_id:
             if account_id in results:
                 return results[account_id]
             else:
-                return "OK no such user"
+                return 'OK no such user'
         return results
 
     def stop_sync(self, account_id=None):
-        """ Stops all syncs if account_id not specified.
-            If account_id doesn't exist, does nothing.
+        """
+        Stops all syncs if account_id not specified.
+        If account_id doesn't exist, does nothing.
+
         """
         results = {}
         if account_id:
@@ -121,16 +128,17 @@ class SyncService(object):
             for acc in query:
                 if (not acc.id in self.monitors) or \
                         (not acc.sync_active):
-                    results[acc.id] = "OK sync stopped already"
+                    results[acc.id] = 'OK sync stopped already'
                 try:
                     if acc.sync_host is None:
                         results[acc.id] = 'Sync not running'
                         continue
+
                     assert acc.sync_host == fqdn, \
                         "sync host FQDN doesn't match: {0} <--> {1}" \
                         .format(acc.sync_host, fqdn)
                     # XXX Can processing this command fail in some way?
-                    self.monitors[acc.id].inbox.put_nowait("shutdown")
+                    self.monitors[acc.id].inbox.put_nowait('shutdown')
                     acc.sync_host = None
                     db_session.add(acc)
                     db_session.commit()
@@ -140,14 +148,17 @@ class SyncService(object):
                     # accounts)
                     if acc.id in self.contact_sync_monitors:
                         del self.contact_sync_monitors[acc.id]
-                    results[acc.id] = "OK sync stopped"
+                    results[acc.id] = 'OK sync stopped'
+
                 except Exception as e:
                     results[acc.id] = 'ERROR error encountered: {0}'.format(e)
+                    # TODO[k]: What happens here? Is it actually stopped or
+                    # what?
         if account_id:
             if account_id in results:
                 return results[account_id]
             else:
-                return "OK no such user"
+                return 'OK no such user'
         return results
 
     def sync_status(self, account_id):

@@ -61,6 +61,7 @@ And _voilà_! Auth an account via the commandline and start syncing:
   bin/inbox-sync start ben.bitdiddle1861@gmail.com
 ```
 
+
 ## Contributing
 
 We'd love your help making Inbox better! Join the [Google
@@ -75,11 +76,14 @@ We maintain strict code style, following [pep8](http://legacy.python.org/dev/pep
 guide](http://google-styleguide.googlecode.com/svn/trunk/pyguide.html), and [numpy docstring
 conventions](https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt).
 
+We standardize on single-quotes for strings literals e.g. 'my-identifier', but use double-quotes for strings that are likely to contain single-quote characters as part of the string itself (such as error messages, or any strings containing natural language), e.g. "You've got an error!".
+
 
 ## License
 
 This code is free software, licensed under the The GNU Affero General Public License (AGPL).
 See the `LICENSE` file for more details.
+
 
 #### Random notes
 

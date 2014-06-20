@@ -9,7 +9,7 @@ Types returned for data are the column types defined via SQLAlchemy.
 Eventually we're going to want a better way of ACLing functions that operate on
 accounts.
 """
-from sqlalchemy import distinct, func
+from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -22,8 +22,10 @@ log = get_logger()
 
 
 def total_stored_data(account_id, session):
-    """ Computes the total size of the block data of emails in your
-        account's IMAP folders
+    """
+    Computes the total size of the block data of emails in your
+    account's IMAP folders.
+
     """
     subq = session.query(Block) \
         .join(Block.message, Message.imapuid) \
@@ -33,7 +35,7 @@ def total_stored_data(account_id, session):
 
 
 def total_stored_messages(account_id, session):
-    """ Computes the number of emails in your account's IMAP folders """
+    """ Computes the number of emails in your account's IMAP folders. """
     return session.query(Message) \
         .join(Message.imapuid) \
         .filter(ImapUid.imapaccount_id == account_id) \

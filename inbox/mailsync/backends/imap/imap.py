@@ -423,9 +423,11 @@ def uidvalidity_cb(db_session, account_id):
                                                  selected_uidvalidity, folder,
                                                  saved_validity.uid_validity)
             if not is_valid:
-                raise UIDInvalid("folder: {}, remote uidvalidity: {}, cached uidvalidity: {}"
-                                 .format(folder, selected_uidvalidity,
-                                         saved_validity.uid_validity))
+                raise UIDInvalid(
+                    'folder: {}, remote uidvalidity: {}, '
+                    'cached uidvalidity: {}'.format(
+                        folder, selected_uidvalidity,
+                        saved_validity.uid_validity))
         return select_info
     return fn
 
@@ -517,7 +519,6 @@ def check_new_uids(account_id, provider, folder_name, log, uid_download_stack,
                 for uid in remote_uids:
                     if uid not in local_with_pending_uids:
                         new_uid_download_stack.add(uid)
-
                 uid_download_stack.queue = sorted(new_uid_download_stack,
                                                   key=int)
             sleep(poll_frequency)
@@ -650,7 +651,7 @@ def update_metadata(crispin_client, db_session, log, folder_name, uids,
                     syncmanager_lock):
     """ Update flags (the only metadata that can change). """
     # bigger chunk because the data being fetched here is very small
-    for uids in chunk(uids, 5*crispin_client.CHUNK_SIZE):
+    for uids in chunk(uids, 5 * crispin_client.CHUNK_SIZE):
         new_flags = crispin_client.flags(uids)
         assert sorted(uids, key=int) == sorted(new_flags.keys(), key=int), \
             "server uids != local uids"
