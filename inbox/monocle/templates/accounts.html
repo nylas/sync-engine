@@ -8,10 +8,10 @@
 <table class='table table-striped table-bordered  table-condensed' id='status_table'>
   <thead>
     <tr>
-      <td>Account Id:<br></td>
-      <td>Email Address:<br></td>
-      <td>Provider:<br></td>
-      <td>State<br>(Active/ Inactive):<br></td>
+      <th>Account Id:<br></th>
+      <th>Email Address:<br></th>
+      <th>Provider:<br></th>
+      <th>State<br>(Active/ Inactive):<br></th>
     </tr>
   </thead>
   <tbody>
@@ -35,7 +35,7 @@
               content += '<td>' + item.id + '</td>';
               content += '<td>' + item.email + '</td>';
               content += '<td>' + item.provider + '</td>';
-              content += '<td>' + item.state + '</td>';
+              content += '<td>' + (item.state ? 'Active' : 'Inactive') + '</td>';
               content += '</tr>';
           });
           $('#status_table tbody').html(content);
@@ -52,6 +52,5 @@
   $(document).delegate('.ui-page', 'pagehide', function () {
       clearInterval(callback);
   });
-
 </script>
 {% endblock %}

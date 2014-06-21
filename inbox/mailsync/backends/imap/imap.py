@@ -632,23 +632,16 @@ def update_metadata(crispin_client, db_session, log, folder_name, uids,
             db_session.commit()
 
 
-def update_uid_counts(db_session, log, account_id, folder_name,
-                      remote_uid_count=None, download_uid_count=None,
-                      update_uid_count=None, delete_uid_count=None,
-                      sync_type=None):
+def update_uid_counts(db_session, log, account_id, folder_name, **kwargs):
     foldersync = db_session.query(FolderSync).filter(
         FolderSync.account_id == account_id,
         FolderSync.folder_name == folder_name).one()
 
-    metrics = dict(remote_uid_count=remote_uid_count,
-                   download_uid_count=download_uid_count,
-                   update_uid_count=update_uid_count,
-                   delete_uid_count=delete_uid_count,
-                   sync_type=sync_type,
-                   # Record time we saved these counts
-                   uid_checked_timestamp=datetime.utcnow(),
-                   # Track num downloaded since `uid_checked_timestamp`
+    # Record time we saved these counts +
+    # Track num downloaded since `uid_checked_timestamp`
+    metrics = dict(uid_checked_timestamp=datetime.utcnow(),
                    num_downloaded_since_timestamp=0)
+    metrics.update(kwargs)
 
     foldersync.update_sync_status(metrics)
 
