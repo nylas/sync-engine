@@ -22,6 +22,19 @@ node_modules
 # virtualenv
 /include
 /local
+bin/py*
+bin/nose*
+bin/coverage*
+bin/activate*
+bin/easy*
+bin/pip*
+bin/pep8
+bin/ndg_httpclient
+bin/mprof
+bin/zerorpc
+bin/symilar
+bin/f2py
+bin/epylint
 
 # Packages
 *.egg
