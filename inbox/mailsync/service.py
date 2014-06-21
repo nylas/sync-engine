@@ -1,7 +1,7 @@
 """ ZeroRPC interface to syncing. """
 from collections import defaultdict
 
-import socket
+import platform
 
 from inbox.contacts.remote_sync import ContactSync
 from inbox.log import get_logger
@@ -49,7 +49,7 @@ class SyncService(object):
             query = db_session.query(Account)
             if account_id is not None:
                 query = query.filter_by(id=account_id)
-            fqdn = socket.getfqdn()
+            fqdn = platform.node()
             for acc in query:
                 if acc.provider not in self.monitor_cls_for:
                     self.log.info('Inbox does not currently support {0}\
@@ -115,7 +115,7 @@ class SyncService(object):
             query = db_session.query(Account)
             if account_id is not None:
                 query = query.filter_by(id=account_id)
-            fqdn = socket.getfqdn()
+            fqdn = platform.node()
             for acc in query:
                 if (not acc.id in self.monitors) or \
                         (not acc.sync_active):
