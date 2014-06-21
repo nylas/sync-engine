@@ -1,0 +1,77 @@
+{% extends 'layout.html' %}
+
+{% block title %} Monocle - Account {{ account.id }} {% endblock %}
+
+{% block content %}
+<h2 class='sub-header text-primary text-center'>MailSync Status Info: Account {{ account.id }}</h2>
+<div class='table-responsive'>
+<table class='table table-striped' id='status_table'>
+  <thead>
+    <tr>
+      <td>Folder<br></td>
+      <td>State<br></td>
+      <td>Type (new/resumed)<br></td>
+      <td>Num messages on remote<br></td>
+      <td>As of<br></td>
+      <td>Num updated<br></td>
+      <td>As of<br></td>
+      <td>Num deleted<br></td>
+      <td>As of<br></td>
+      <td>Num to download<br></td>
+      <td>As of<br></td>
+      <td>Num downloaded since then<br></td>
+      <td>Num left to download<br></td>
+      <td>As of<br></td>
+    </tr>
+  </thead>
+  <tbody>
+  </tbody>
+</table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type=text/javascript>
+  var callback;
+  var interval = 10;
+  var callback_fn = function() {                        
+      $.getJSON(                            
+        $SCRIPT_ROOT + '/_accounts/' + {{ account.id }},              
+        {},                                 
+        function(data) {
+          var content = '';
+          $.each(data, function(i, item) {
+              timestamp = item.uid_checked_timestamp
+              content += '<tr>';
+              content += '<td>' + item.name + '</td>';
+              content += '<td>' + item.state + '</td>';
+              content += '<td>' + item.sync_type + '</td>';
+              content += '<td>' + item.remote_uid_count + '</td>';
+              content += '<td>' + timestamp + '</td>';
+              content += '<td>' + item.update_uid_count + '</td>';
+              content += '<td>' + timestamp + '</td>';
+              content += '<td>' + item.delete_uid_count + '</td>';
+              content += '<td>' + timestamp + '</td>';
+              content += '<td>' + item.download_uid_count + '</td>';
+              content += '<td>' + timestamp + '</td>';
+              content += '<td>' + item.num_downloaded_since_timestamp + '</td>';
+              content += '<td>' + item.current_download_queue_size + '</td>';
+              content += '<td>' + item.queue_checked_at + '</td>';
+              content += '</tr>';
+          });
+          $('#status_table tbody').html(content);
+        });
+  };
+
+  $(function() {
+    callback_fn();
+    callback = setInterval(callback_fn, interval*1000); 
+
+    console.log('Callback set up.');
+  });
+
+  $(document).delegate('.ui-page', 'pagehide', function () {
+      clearInterval(callback);
+  });
+</script>
+{% endblock %}

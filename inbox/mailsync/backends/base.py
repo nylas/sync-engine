@@ -19,6 +19,33 @@ class MailsyncError(Exception):
     pass
 
 
+def register_backends():
+    """
+    Finds the monitor modules for the different providers
+    (in the backends directory) and imports them.
+
+    Creates a mapping of provider:monitor for each backend found.
+    """
+    monitor_cls_for = {}
+
+    # Find and import
+    modules = load_modules(inbox.mailsync.backends)
+
+    # Create mapping
+    for module in modules:
+        if hasattr(module, 'PROVIDER'):
+            provider = module.PROVIDER
+
+            assert hasattr(module, 'SYNC_MONITOR_CLS')
+            monitor_cls = getattr(module, module.SYNC_MONITOR_CLS, None)
+
+            assert monitor_cls is not None
+
+            monitor_cls_for[provider] = (monitor_cls, module)
+
+    return monitor_cls_for
+
+
 def verify_folder_name(account_id, old, new):
     if old is not None and old.name != new.name:
         raise SyncException(
@@ -100,33 +127,6 @@ def gevent_check_join(log, threads, errmsg):
         for error in errors:
             log.error(error)
         raise SyncException("Fatal error encountered")
-
-
-def register_backends():
-    """
-    Finds the monitor modules for the different providers
-    (in the backends directory) and imports them.
-
-    Creates a mapping of provider:monitor for each backend found.
-    """
-    monitor_cls_for = {}
-
-    # Find and import
-    modules = load_modules(inbox.mailsync.backends)
-
-    # Create mapping
-    for module in modules:
-        if hasattr(module, 'PROVIDER'):
-            provider = module.PROVIDER
-
-            assert hasattr(module, 'SYNC_MONITOR_CLS')
-            monitor_cls = getattr(module, module.SYNC_MONITOR_CLS, None)
-
-            assert monitor_cls is not None
-
-            monitor_cls_for[provider] = monitor_cls
-
-    return monitor_cls_for
 
 
 def create_db_objects(account_id, db_session, log, folder_name, raw_messages,

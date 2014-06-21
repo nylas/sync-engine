@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.37, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.35, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.5.37-0ubuntu0.12.04.1-log
+-- Server version	5.5.35-0ubuntu0.12.04.2-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -97,7 +97,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('4085dd542739');
+INSERT INTO `alembic_version` VALUES ('159609404baf');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -264,6 +264,7 @@ CREATE TABLE `easfoldersync` (
   `eas_parent_id` varchar(64) DEFAULT NULL,
   `remote_uid_count` int(11) DEFAULT NULL,
   `uid_checked_date` datetime DEFAULT NULL,
+  `_sync_status` text,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_account_id_eas_folder_id` (`account_id`,`eas_folder_id`),
   CONSTRAINT `easfoldersync_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `easaccount` (`id`) ON DELETE CASCADE
@@ -421,6 +422,7 @@ CREATE TABLE `foldersync` (
   `created_at` datetime NOT NULL,
   `updated_at` datetime NOT NULL,
   `deleted_at` datetime DEFAULT NULL,
+  `_sync_status` text,
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_id` (`account_id`,`folder_name`),
   KEY `ix_foldersync_created_at` (`created_at`),
@@ -436,7 +438,7 @@ CREATE TABLE `foldersync` (
 
 LOCK TABLES `foldersync` WRITE;
 /*!40000 ALTER TABLE `foldersync` DISABLE KEYS */;
-INSERT INTO `foldersync` VALUES (1,1,'INBOX','poll','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(2,1,'[Gmail]/All Mail','poll','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL);
+INSERT INTO `foldersync` VALUES (1,1,'INBOX','poll','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL),(2,1,'[Gmail]/All Mail','poll','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL);
 /*!40000 ALTER TABLE `foldersync` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1131,4 +1133,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-06-19  1:57:10
+-- Dump completed on 2014-06-21  0:47:16

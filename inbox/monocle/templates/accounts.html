@@ -1,0 +1,57 @@
+{% extends 'layout.html' %}
+
+{% block title %} Monocle - Accounts {% endblock %}
+
+{% block content %}
+<h2 class='sub-header text-primary text-center'>MailSync Status Info: All Accounts</h2>
+<div class='table-responsive'>
+<table class='table table-striped table-bordered  table-condensed' id='status_table'>
+  <thead>
+    <tr>
+      <td>Account Id:<br></td>
+      <td>Email Address:<br></td>
+      <td>Provider:<br></td>
+      <td>State<br>(Active/ Inactive):<br></td>
+    </tr>
+  </thead>
+  <tbody>
+  </tbody>
+</table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type=text/javascript>
+  var callback;
+  var interval = 30;
+  var callback_fn = function() {                        
+      $.getJSON(                            
+        $SCRIPT_ROOT + '/_accounts',              
+        {},                                 
+        function(data) {
+          var content = '';
+          $.each(data, function(i, item) {
+              content += '<tr>';
+              content += '<td>' + item.id + '</td>';
+              content += '<td>' + item.email + '</td>';
+              content += '<td>' + item.provider + '</td>';
+              content += '<td>' + item.state + '</td>';
+              content += '</tr>';
+          });
+          $('#status_table tbody').html(content);
+        });
+  };
+
+  $(function() {
+    callback_fn();
+    callback = setInterval(callback_fn, interval*1000); 
+
+    console.log('Callback set up.');
+  });
+
+  $(document).delegate('.ui-page', 'pagehide', function () {
+      clearInterval(callback);
+  });
+
+</script>
+{% endblock %}

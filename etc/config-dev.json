@@ -29,5 +29,9 @@
 "STORE_MESSAGES_ON_S3": false,
 "MSG_PARTS_DIRECTORY": "/var/lib/inboxapp/parts",
 
-"EMAIL_EXCEPTIONS": false
+"EMAIL_EXCEPTIONS": false,
+
+"REDIS_HOST": "localhost",
+"REDIS_PORT": 6379
+
 }

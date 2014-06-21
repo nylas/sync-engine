@@ -5,7 +5,7 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.sql.expression import false
 
-from inbox.sqlalchemy_ext.util import LittleJSON
+from inbox.sqlalchemy_ext.util import LittleJSON, JSON, MutableDict
 
 from inbox.log import get_logger
 log = get_logger()
@@ -199,5 +199,31 @@ class FolderSync(MailSyncBase):
     state = Column(Enum('initial', 'initial uidinvalid',
                    'poll', 'poll uidinvalid', 'finish'),
                    server_default='initial', nullable=False)
+
+    # For sync status reporting:
+    _sync_status = Column(MutableDict.as_mutable(JSON), nullable=True)
+
+    @property
+    def sync_status(self):
+        return self._sync_status or {}
+
+    def update_sync_status(self, metrics):
+        sync_status_metrics = ['remote_uid_count', 'delete_uid_count',
+                               'update_uid_count', 'download_uid_count',
+                               'uid_checked_timestamp',
+                               'num_downloaded_since_timestamp',
+                               'current_download_queue_size',
+                               'queue_checked_at', 'sync_type']
+
+        assert isinstance(metrics, dict)
+        for k in metrics.iterkeys():
+            assert k in sync_status_metrics, k
+            if k == 'sync_type':
+                assert metrics[k] in ('new', 'resumed')
+
+        if self._sync_status is not None:
+            self._sync_status.update(metrics)
+        else:
+            self._sync_status = metrics
 
     __table_args__ = (UniqueConstraint('account_id', 'folder_name'),)

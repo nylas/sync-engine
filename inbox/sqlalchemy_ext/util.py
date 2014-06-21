@@ -9,6 +9,7 @@ from sqlalchemy import String, Text, event
 from sqlalchemy.types import TypeDecorator, BINARY
 from sqlalchemy.interfaces import PoolListener
 from sqlalchemy.engine import Engine
+from sqlalchemy.ext.mutable import Mutable
 
 from inbox.util.encoding import base36encode, base36decode
 
@@ -80,6 +81,45 @@ class Base36UID(TypeDecorator):
 
     def process_result_value(self, value, dialect):
         return int128_to_b36(value)
+
+
+# http://docs.sqlalchemy.org/en/rel_0_9/orm/extensions/mutable.html#sqlalchemy.ext.mutable.Mutable.as_mutable
+# Can simply use this as is because though we use bson.json_util, loads()
+# dumps() return standard Python dicts like the json.* equivalents
+# (because these are simply called under the hood)
+class MutableDict(Mutable, dict):
+    @classmethod
+    def coerce(cls, key, value):
+        """ Convert plain dictionaries to MutableDict. """
+        if not isinstance(value, MutableDict):
+            if isinstance(value, dict):
+                return MutableDict(value)
+
+            # this call will raise ValueError
+            return Mutable.coerce(key, value)
+        else:
+            return value
+
+    def __setitem__(self, key, value):
+        """ Detect dictionary set events and emit change events. """
+        dict.__setitem__(self, key, value)
+        self.changed()
+
+    def __delitem__(self, key):
+        """ Detect dictionary del events and emit change events. """
+        dict.__delitem__(self, key)
+        self.changed()
+
+    def update(self, *args, **kwargs):
+        for k, v in dict(*args, **kwargs).iteritems():
+            self[k] = v
+
+    # To support pickling:
+    def __getstate__(self):
+        return dict(self)
+
+    def __setstate__(self, state):
+        self.update(state)
 
 
 def int128_to_b36(int128):

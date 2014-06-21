@@ -314,10 +314,6 @@ def base_poll(crispin_client, db_session, log, folder_name, shared_state,
     # TODO make sure the server supports the IDLE command (Yahoo does not)
 
     if folder_name.lower() in IDLE_FOLDERS:
-        shared_state['status_cb'](
-            crispin_client.account_id, 'idle',
-            (folder_name, datetime.utcnow().isoformat()))
-
         status = crispin_client.select_folder(
             folder_name,
             uidvalidity_cb(db_session,
@@ -330,7 +326,7 @@ def base_poll(crispin_client, db_session, log, folder_name, shared_state,
         crispin_client.conn.idle()
         crispin_client.conn.idle_check(timeout=idle_frequency)
 
-        # If we want to do soemthing with the response, but lousy
+        # If we want to do something with the response, but lousy
         # because it uses sequence IDs instead of UIDs
         # resp = c.idle_check(timeout=shared_state['poll_frequency'])
         # r = dict( EXISTS=[], EXPUNGE=[])
@@ -342,9 +338,6 @@ def base_poll(crispin_client, db_session, log, folder_name, shared_state,
         log.info("IDLE triggered poll or timeout reached on {0}"
                  .format(folder_name))
     else:
-        shared_state['status_cb'](
-            crispin_client.account_id, 'poll',
-            (folder_name, datetime.utcnow().isoformat()))
         log.info("Sleeping on {0} for {1} seconds".format(
             folder_name, shared_state['poll_frequency']))
         sleep(shared_state['poll_frequency'])
@@ -377,6 +370,12 @@ def highestmodseq_update(crispin_client, db_session, log, folder_name,
         local_uids = set(local_uids) - deleted_uids
         update_metadata(crispin_client, db_session, log, folder_name,
                         updated, syncmanager_lock)
+
+        update_uid_counts(db_session, log, account_id, folder_name,
+                          remote_uid_count=len(remote_uids),
+                          download_uid_count=len(new),
+                          update_uid_count=len(updated),
+                          delete_uid_count=len(deleted_uids))
 
         highestmodseq_fn(crispin_client, db_session, log, folder_name,
                          changed_uids, local_uids, status_cb, syncmanager_lock)
@@ -543,38 +542,6 @@ def check_flags(crispin_client, db_session, log, folder_name, local_uids,
                                 updated, syncmanager_lock)
 
 
-def report_progress(crispin_client, db_session, log, folder_name,
-                    num_remaining_messages, status_cb):
-    """ Inform listeners of sync progress.
-
-    It turns out that progress reporting with a download queue over IMAP is
-    shockingly hard. :/ Sometimes the IMAP server caches the response to
-    `crispin_client.num_uids()` and we can end up reporting a progress of
-    > 100%. Not sure if there's a good way to kick the connection and make
-    it recalculate. (We could do that via the IDLE thread if we had a ref
-    to the crispin client.)
-
-    Even if the UID doesn't appear in `crispin_client.all_uids()` though, we
-    can still fetch it. So this behaviour doesn't affect actually downloading
-    the new mail.
-    """
-    assert crispin_client.selected_folder_name == folder_name
-    # NOTE: Reporting percentage-based progress is slow, so disable it for now.
-    # num_local_messages = account.num_uids(crispin_client.account_id,
-    #                                       db_session, folder_name)
-    # num_total_messages = len(crispin_client.all_uids(c))
-    # percent_done = num_local_messages / num_total_messages
-    # status_cb(crispin_client.account_id, 'initial',
-    #           (folder_name, percent_done))
-    # log.info("Syncing {} -- {:.2%} ({}/{}), {} msgs in queue".format(
-    #     folder_name, percent_done, num_local_messages, num_total_messages,
-    #     num_remaining_messages))
-    status_cb(crispin_client.account_id, 'initial',
-              (folder_name, num_remaining_messages))
-    log.info("Syncing {} -- {} msgs in queue".format(
-        folder_name, num_remaining_messages))
-
-
 def download_queued_uids(crispin_client, db_session, log,
                          folder_name, uid_download_stack, num_local_messages,
                          num_total_messages, status_cb, syncmanager_lock,
@@ -589,11 +556,13 @@ def download_queued_uids(crispin_client, db_session, log,
 
         report_progress(crispin_client, db_session, log,
                         crispin_client.selected_folder_name,
-                        uid_download_stack.qsize(), status_cb)
+                        1, uid_download_stack.qsize())
 
-    log.info("Saved all messages and metadata on {} to UIDVALIDITY {} / HIGHESTMODSEQ {}"
-             .format(folder_name, crispin_client.selected_uidvalidity,
-                     crispin_client.selected_highestmodseq))
+    log.info(
+        'Saved all messages and metadata on {} to UIDVALIDITY {} / '
+        'HIGHESTMODSEQ {}'.format(folder_name,
+                                  crispin_client.selected_uidvalidity,
+                                  crispin_client.selected_highestmodseq))
 
 
 def safe_download(crispin_client, log, uids):
@@ -661,3 +630,65 @@ def update_metadata(crispin_client, db_session, log, folder_name, uids,
             account.update_metadata(crispin_client.account_id, db_session,
                                     folder_name, uids, new_flags)
             db_session.commit()
+
+
+def update_uid_counts(db_session, log, account_id, folder_name,
+                      remote_uid_count=None, download_uid_count=None,
+                      update_uid_count=None, delete_uid_count=None,
+                      sync_type=None):
+    foldersync = db_session.query(FolderSync).filter(
+        FolderSync.account_id == account_id,
+        FolderSync.folder_name == folder_name).one()
+
+    metrics = dict(remote_uid_count=remote_uid_count,
+                   download_uid_count=download_uid_count,
+                   update_uid_count=update_uid_count,
+                   delete_uid_count=delete_uid_count,
+                   sync_type=sync_type,
+                   # Record time we saved these counts
+                   uid_checked_timestamp=datetime.utcnow(),
+                   # Track num downloaded since `uid_checked_timestamp`
+                   num_downloaded_since_timestamp=0)
+
+    foldersync.update_sync_status(metrics)
+
+    db_session.commit()
+
+
+# TODO[k]: Periodically only?
+def report_progress(crispin_client, db_session, log, folder_name,
+                    downloaded_uid_count, num_remaining_messages):
+    """
+    Inform listeners of sync progress.
+
+    It turns out that progress reporting with a download queue over IMAP is
+    shockingly hard. :/ Sometimes the IMAP server caches the response to
+    `crispin_client.num_uids()` and we can end up reporting a progress of
+    > 100%. Not sure if there's a good way to kick the connection and make
+    it recalculate. (We could do that via the IDLE thread if we had a ref
+    to the crispin client.)
+
+    Even if the UID doesn't appear in `crispin_client.all_uids()` though, we
+    can still fetch it. So this behaviour doesn't affect actually downloading
+    the new mail.
+
+    """
+    assert crispin_client.selected_folder_name == folder_name
+
+    foldersync = db_session.query(FolderSync).filter(
+        FolderSync.account_id == crispin_client.account_id,
+        FolderSync.folder_name == folder_name).one()
+
+    previous_count = foldersync.sync_status.get(
+        'num_downloaded_since_timestamp', 0)
+    metrics = dict(num_downloaded_since_timestamp=(previous_count +
+                   downloaded_uid_count),
+                   current_download_queue_size=num_remaining_messages,
+                   queue_checked_at=datetime.utcnow())
+
+    foldersync.update_sync_status(metrics)
+
+    db_session.commit()
+
+    log.info('Syncing {} -- {} msgs in queue'.format(
+        folder_name, num_remaining_messages))

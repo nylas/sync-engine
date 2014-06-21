@@ -10,15 +10,6 @@ from inbox.models import Account
 from inbox.mailsync.backends.base import register_backends
 
 
-def notify(account_id, mtype, message):
-    """ Pass a message on to the notification dispatcher which deals with
-        pubsub stuff for connected clients.
-    """
-    pass
-    # self.log.info("message from {0}: [{1}] {2}".format(
-    # account_id, mtype, message))
-
-
 class SyncService(object):
     def __init__(self):
         self.monitor_cls_for = register_backends()
@@ -26,6 +17,7 @@ class SyncService(object):
         self.log = get_logger()
         # { account_id: MailSyncMonitor() }
         self.monitors = dict()
+        self.contact_sync_monitors = dict()
         # READ ONLY from API calls, writes happen from callbacks from monitor
         # greenlets.
         # { 'account_id': { 'state': 'initial sync', 'status': '0'} }
@@ -34,8 +26,6 @@ class SyncService(object):
         # otherwise
         # all data in here ought to be msgpack-serializable!
         self.statuses = defaultdict(dict)
-
-        self.contact_sync_monitors = dict()
 
         # Restart existing active syncs.
         # (Later we will want to partition these across different machines!)
@@ -65,24 +55,25 @@ class SyncService(object):
                     self.log.info('Inbox does not currently support {0}\
                         '.format(acc.provider))
                     continue
-                self.log.info('Starting sync for account {0}'
-                              .format(acc.email_address))
+
+                self.log.info('Starting sync for account {0}'.format(
+                    acc.email_address))
+
                 if acc.sync_host is not None and acc.sync_host != fqdn:
                     results[acc.id] = \
                         'acc {0} is syncing on host {1}'.format(
                             acc.email_address, acc.sync_host)
+
                 elif acc.id not in self.monitors:
                     try:
                         acc.sync_lock()
 
-                        def update_status(account_id, state, status):
+                        def update_status(account_id, folder_name,
+                                          status_info):
                             """ I really really wish I were a lambda """
-                            folder, progress = status
-                            self.statuses[account_id][folder] \
-                                = (state, progress)
-                            notify(account_id, state, status)
+                            return
 
-                        monitor = self.monitor_cls_for[acc.provider](
+                        monitor = self.monitor_cls_for[acc.provider][0](
                             acc.id, acc.namespace.id, acc.email_address,
                             acc.provider, update_status)
                         self.monitors[acc.id] = monitor
