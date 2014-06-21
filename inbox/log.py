@@ -52,10 +52,9 @@ def get_logger(account_id=None, purpose=None):
 
 
 def configure_general_logging():
-    """ Configure the general server logger to output to screen if a TTY is
-        attached, and server.log always.
+    """ Configure the general server logger to output to screen and server.log.
 
-        Logs are output to a directory configurable via LOGDIR.
+    Logs are output to a directory configurable via LOGDIR.
     """
     assert 'LOGDIR' in config, "LOGDIR not specified in config file"
     assert 'LOGLEVEL' in config, "LOGLEVEL not specified in config file"
