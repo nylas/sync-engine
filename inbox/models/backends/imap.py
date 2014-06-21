@@ -205,7 +205,10 @@ class FolderSync(MailSyncBase):
 
     @property
     def sync_status(self):
-        return self._sync_status or {}
+        status = dict(name=self.folder_name, state=self.state)
+        status.update(self._sync_status or {})
+
+        return status
 
     def update_sync_status(self, metrics):
         sync_status_metrics = ['remote_uid_count', 'delete_uid_count',

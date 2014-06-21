@@ -53,7 +53,10 @@ def for_account(account_id):
 
     acct_info = account_status(g.db_session, account, and_folders=False)
 
-    return render_template('for_account.html',
+    template = 'for_account.html' if account.provider != 'eas' else \
+        'for_eas_account.html'
+
+    return render_template(template,
                            account=acct_info)
 
 

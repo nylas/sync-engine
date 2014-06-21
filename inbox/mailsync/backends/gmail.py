@@ -63,11 +63,6 @@ SYNC_MONITOR_CLS = 'GmailSyncMonitor'
 GMessage = namedtuple('GMessage', 'uid g_metadata flags labels')
 
 
-def num_uids(db_session, foldersync):
-    return account.num_uids(foldersync.account_id, db_session,
-                            foldersync.folder_name)
-
-
 class GmailSyncMonitor(ImapSyncMonitor):
     def __init__(self, account_id, namespace_id, email_address, provider,
                  status_cb, heartbeat=1, poll_frequency=300):
