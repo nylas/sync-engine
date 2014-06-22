@@ -32,13 +32,23 @@
           var content = '';
           $.each(data, function(i, item) {
               content += '<tr>';
-              content += '<td>' + item.id + '</td>';
+              content += '<td class=account_id>' + item.id + '</td>';
               content += '<td>' + item.email + '</td>';
               content += '<td>' + item.provider + '</td>';
               content += '<td>' + (item.state ? 'Active' : 'Inactive') + '</td>';
               content += '</tr>';
           });
+          
           $('#status_table tbody').html(content);
+          
+          var cells = $('.account_id');
+          for (var i = 0, len = cells.length; i < len; i++){
+              cells[i].onclick = function(){
+                  // Open in a new tab
+                  var win = window.open($SCRIPT_ROOT + '/accounts/' + this.innerHTML, '_blank');
+                  win.focus();
+              }
+          }
         });
   };
 
