@@ -11,16 +11,14 @@ VAGRANTFILE_API_VERSION = "2"
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   config.vm.box = "precise64"
+  config.vm.box_url = "http://files.vagrantup.com/precise64.box"
+
 
   config.vm.provider :vmware_fusion do |vmware|
     vmware.box_url = "http://files.vagrantup.com/precise64_vmware_fusion.box"
     vmware.vmx["memsize"] = "1024"
     vmware.vmx["numvcpus"] = "2"
   end
-  config.vm.provider :virtualbox do |vb|
-    vb.box_url = "http://files.vagrantup.com/precise64.box"
-  end
-
 
   config.ssh.forward_agent = true
 
