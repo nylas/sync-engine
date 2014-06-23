@@ -1,9 +1,6 @@
-import datetime
 import socket
-import time
 
 import sqlalchemy.orm.exc
-import requests
 
 from imapclient import IMAPClient
 
