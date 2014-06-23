@@ -14,7 +14,7 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
 
-from inbox.models.ignition import engine
+from inbox.ignition import engine
 from inbox.sqlalchemy_ext.util import JSON, MutableDict
 Base = declarative_base()
 Base.metadata.reflect(engine)

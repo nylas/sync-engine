@@ -5,8 +5,8 @@ from flask import Flask, g, render_template
 
 from sqlalchemy.orm.exc import NoResultFound
 
+from inbox.ignition import engine
 from inbox.models.session import InboxSession
-from inbox.models.ignition import engine
 from inbox.models import register_backends, Account
 register_backends()
 from inbox.mailsync.reporting import account_status
