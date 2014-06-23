@@ -261,13 +261,6 @@ def message_query_api():
 
 @app.route('/messages/<public_id>')
 def message_api(public_id):
-    if public_id == 'all':
-        # TODO assert limit query parameter
-
-        all_messages = g.db_session.query(Message).join(Thread).filter(
-            Thread.namespace_id == g.namespace.id).limit(DEFAULT_LIMIT).all()
-        return jsonify(all_messages)
-
     try:
         m = g.db_session.query(Message).filter(
             Message.public_id == public_id).one()
@@ -347,17 +340,19 @@ def contact_delete_api(public_id):
 #
 # Files
 #
-@app.route('/files/<public_id>')
-def files_api(public_id):
-    if public_id == 'all':
-        # TODO assert limit query parameter
-        # TODO perhaps return just if content_disposition == 'attachment'
-        all_files = g.db_session.query(Part) \
-            .filter(Part.namespace_id == g.namespace.id) \
-            .filter(Part.content_disposition is not None) \
-            .limit(DEFAULT_LIMIT).all()
-        return jsonify(all_files)
+@app.route('/files/', methods=['GET'])
+def files_api():
+    # TODO perhaps return just if content_disposition == 'attachment'
+    # TODO(emfree) support query parameters per docs
+    all_files = g.db_session.query(Part) \
+        .filter(Part.namespace_id == g.namespace.id) \
+        .filter(Part.content_disposition is not None) \
+        .limit(DEFAULT_LIMIT).all()
+    return jsonify(all_files)
 
+
+@app.route('/files/<public_id>')
+def file_read_api(public_id):
     try:
         f = g.db_session.query(Block).filter(
             Block.public_id == public_id).one()
