@@ -41,8 +41,7 @@ def test_retry_wrapper():
 def test_no_logging_on_greenlet_exit():
     logger = MockLogger()
     failing_function = FailingFunction(GreenletExit)
-    with pytest.raises(GreenletExit):
-        retry_wrapper(failing_function, logger=logger)
+    retry_wrapper(failing_function, logger=logger)
     assert logger.call_count == 0
     assert failing_function.call_count == 1
 

@@ -22,26 +22,27 @@ def test_mutable_json_type(db, config):
         FolderSync.account_id == ACCOUNT_ID,
         FolderSync.folder_name == account.inbox_folder.name).one()
 
+    # Original status
     original_status = foldersync.sync_status
 
+    # Update status
     metrics = dict(current_download_queue_size=10,
                    queue_checked_at=datetime.utcnow())
-
     foldersync.update_sync_status(metrics)
 
     updated_status = foldersync.sync_status
 
+    metrics.update(original_status)
     assert updated_status != original_status and updated_status == metrics, \
         'sync_status not updated correctly'
 
+    # Reupdate status
     new_metrics = dict(delete_uid_count=50,
                        current_download_queue_size=100,
                        queue_checked_at=datetime.utcnow())
-
     foldersync.update_sync_status(new_metrics)
 
     latest_status = foldersync.sync_status
 
     metrics.update(new_metrics)
-
     assert latest_status == metrics, 'sync_status not re-updated correctly'
