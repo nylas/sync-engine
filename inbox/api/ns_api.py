@@ -14,6 +14,7 @@ from inbox.models import (
 from inbox.api.kellogs import jsonify
 from inbox.config import config
 from inbox import contacts, sendmail
+from inbox.models.base import MAX_INDEXABLE_LENGTH
 from inbox.models.session import InboxSession, session_scope
 from inbox.transactions import client_sync
 
@@ -164,6 +165,8 @@ def tag_create_api():
     tag_name = data['name']
     if not Tag.name_available(tag_name, g.namespace.id, g.db_session):
         return err(409, 'Tag name not available')
+    if len(tag_name) > MAX_INDEXABLE_LENGTH:
+        return err(400, 'Tag name is too long.')
 
     tag = Tag(name=tag_name, namespace=g.namespace, user_created=True)
     g.db_session.commit()

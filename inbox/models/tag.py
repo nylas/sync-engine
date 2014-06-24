@@ -10,7 +10,7 @@ from sqlalchemy.schema import UniqueConstraint
 from inbox.sqlalchemy_ext.util import generate_public_id
 
 from inbox.models.transaction import HasRevisions
-from inbox.models.base import MailSyncBase
+from inbox.models.base import MailSyncBase, MAX_INDEXABLE_LENGTH
 from inbox.models.namespace import Namespace
 
 
@@ -44,8 +44,9 @@ class Tag(MailSyncBase, HasRevisions):
     namespace_id = Column(Integer, ForeignKey(
         'namespace.id', ondelete='CASCADE'), nullable=False)
 
-    public_id = Column(String(191), nullable=False, default=generate_public_id)
-    name = Column(String(191), nullable=False)
+    public_id = Column(String(MAX_INDEXABLE_LENGTH), nullable=False,
+                       default=generate_public_id)
+    name = Column(String(MAX_INDEXABLE_LENGTH), nullable=False)
 
     user_created = Column(Boolean, server_default=false(), nullable=False)
     user_mutable = Column(Boolean, server_default=true(), nullable=False)

@@ -5,7 +5,7 @@ from sqlalchemy.schema import UniqueConstraint
 
 from inbox.models.base import MailSyncBase
 from inbox.models.tag import Tag
-from inbox.models.base import MAX_FOLDER_NAME_LENGTH
+from inbox.models.base import MAX_FOLDER_NAME_LENGTH, MAX_INDEXABLE_LENGTH
 from inbox.log import get_logger
 log = get_logger()
 
@@ -87,7 +87,8 @@ class Folder(MailSyncBase):
 
         else:
             provider_prefix = self.account.provider
-            tag_name = '-'.join((provider_prefix, self.name.lower()))
+            tag_name = '-'.join((provider_prefix,
+                                 self.name.lower()))[:MAX_INDEXABLE_LENGTH]
             try:
                 return db_session.query(Tag). \
                     filter(Tag.namespace_id == self.namespace.id,
