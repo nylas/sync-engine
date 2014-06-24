@@ -63,6 +63,7 @@ These are an extended version of [RFC-6154](http://tools.ietf.org/html/rfc6154),
 * **`replied`**
 * **`trash`**
 * **`file`**
+* **`unseen`**
 
 
 # Read-only tags
@@ -85,4 +86,4 @@ Adding certain tags will cause an action to be performed on the thread.
 * adding **`archive`** will remove the thread from `inbox`
 * adding **`delete`** will remove all tags, and queue the message for deletion
 * adding or removing **`unread`** will mark the thread as read or unread, respectively.
-
+* removing the **`unseen`** tag signals that the thread has been displayed to the user. Clients can remove the **`unseen`** tag, but not add it. Removing **`unread`** will automatically also remove the **`unseen`** tag.

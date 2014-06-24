@@ -87,6 +87,19 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
 
         if message.received_date > self.recentdate:
             self.recentdate = message.received_date
+            # Only update the thread's unread/unseen properties if this is the
+            # most recent message we have synced in the thread.
+            # This is so that if a user has already marked the thread as read
+            # or seen via the API, but we later sync older messages in the
+            # thread, it doesn't become re-unseen.
+            unread_tag = self.namespace.tags['unread']
+            unseen_tag = self.namespace.tags['unseen']
+            if message.is_read:
+                self.remove_tag(unread_tag)
+            else:
+                self.apply_tag(unread_tag)
+                self.apply_tag(unseen_tag)
+
         # subject is subject of original message in the thread
         if message.received_date < self.recentdate:
             self.subject = message.subject
@@ -94,12 +107,6 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
 
         if len(message.mailing_list_headers) > len(self.mailing_list_headers):
             self.mailing_list_headers = message.mailing_list_headers
-
-        unread_tag = self.namespace.tags['unread']
-        if all(message.is_read for message in self.messages):
-            self.remove_tag(unread_tag)
-        else:
-            self.apply_tag(unread_tag)
         return self
 
     @property
@@ -182,6 +189,11 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         # Add or remove dependent tags.
         inbox_tag = self.namespace.tags['inbox']
         archive_tag = self.namespace.tags['archive']
+        unread_tag = self.namespace.tags['unread']
+        unseen_tag = self.namespace.tags['unseen']
+        if tag == unread_tag:
+            # Remove the 'unseen' tag when the unread tag is removed.
+            self.tags.discard(unseen_tag)
         if tag == inbox_tag:
             self.tags.add(archive_tag)
         elif tag == archive_tag:

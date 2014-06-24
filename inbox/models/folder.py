@@ -80,8 +80,7 @@ class Folder(MailSyncBase):
                 # the namespace_id is null on flush.
                 tag = Tag(namespace_id=self.account.namespace.id,
                           name=self.canonical_name,
-                          public_id=self.canonical_name,
-                          user_mutable=True)
+                          public_id=self.canonical_name)
                 db_session.add(tag)
                 return tag
 
@@ -98,8 +97,7 @@ class Folder(MailSyncBase):
                 # attribute to avoid autoflush-induced IntegrityErrors where
                 # the namespace_id is null on flush.
                 tag = Tag(namespace_id=self.account.namespace.id,
-                          name=tag_name,
-                          user_mutable=False)
+                          name=tag_name)
                 db_session.add(tag)
                 return tag
 

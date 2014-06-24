@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.35, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.37, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.5.35-0ubuntu0.12.04.2-log
+-- Server version	5.5.37-0ubuntu0.12.04.1-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -97,7 +97,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('159609404baf');
+INSERT INTO `alembic_version` VALUES ('459dbc29648');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -479,7 +479,7 @@ CREATE TABLE `gmailaccount` (
 
 LOCK TABLES `gmailaccount` WRITE;
 /*!40000 ALTER TABLE `gmailaccount` DISABLE KEYS */;
-INSERT INTO `gmailaccount` VALUES (1,'ya29.1.AADtN_WBwJ3JfESfm174VwtqekfY6YKDV2xjsUQ3iMkz-4qlKLwWxyceOfj9Uv_z7aoi5Q','1/Suk6oy9J-n4Ng-hgsZmNZ7I7HqtOSfYCSyXq7Q8GD3I','https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile https://mail.google.com/ https://www.google.com/m8/feeds https://www.googleapis.com/auth/calendar',3600,'Bearer','offline','App','Inbox',NULL,'other','115086935419017912828','eyJhbGciOiJSUzI1NiIsImtpZCI6IjU3YjcwYzNhMTM4MjA5OTliZjhlNmIxYTBkMDdkYjRlNDVhMmE3NzMifQ.eyJpc3MiOiJhY2NvdW50cy5nb29nbGUuY29tIiwiaWQiOiIxMTUwODY5MzU0MTkwMTc5MTI4MjgiLCJzdWIiOiIxMTUwODY5MzU0MTkwMTc5MTI4MjgiLCJhenAiOiI5ODY2NTk3NzY1MTYtZmc3OW1xYmtia3RmNWt1MTBjMjE1dmRpajkxOHJhMGEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJlbWFpbCI6ImluYm94YXBwdGVzdEBnbWFpbC5jb20iLCJhdF9oYXNoIjoiS090Q0hvQ01mSjNQcmdGSVIwNDFtQSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJhdWQiOiI5ODY2NTk3NzY1MTYtZmc3OW1xYmtia3RmNWt1MTBjMjE1dmRpajkxOHJhMGEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJ0b2tlbl9oYXNoIjoiS090Q0hvQ01mSjNQcmdGSVIwNDFtQSIsInZlcmlmaWVkX2VtYWlsIjp0cnVlLCJjaWQiOiI5ODY2NTk3NzY1MTYtZmc3OW1xYmtia3RmNWt1MTBjMjE1dmRpajkxOHJhMGEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJpYXQiOjEzOTkwNzk0MDIsImV4cCI6MTM5OTA4MzMwMn0.CFnCmsz3XCK196CF6PQ19z9IUxEeffZ_eu3JVdJE1rDHc1i5h44l1ioNouJinyJhqV4QQmaXDGJ3oggogfF0TGuUbRwcOWs0_oR01ZxuplY0U7s_g96LcZt667L-ZPFZosPM3APvGof2tvDQViyFd0V6rGu3ok49HqatZ8PT5eo','115086935419017912828',NULL,'en',NULL,NULL);
+INSERT INTO `gmailaccount` VALUES (1,'ya29.1.AADtN_WBwJ3JfESfm174VwtqekfY6YKDV2xjsUQ3iMkz-4qlKLwWxyceOfj9Uv_z7aoi5Q','1/XUcATARUuEjFSFk9M2ZkIHExnCcFCi5E8veIj2jKetA','https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile https://mail.google.com/ https://www.google.com/m8/feeds https://www.googleapis.com/auth/calendar',3600,'Bearer','offline','App','Inbox',NULL,'other','115086935419017912828','eyJhbGciOiJSUzI1NiIsImtpZCI6IjU3YjcwYzNhMTM4MjA5OTliZjhlNmIxYTBkMDdkYjRlNDVhMmE3NzMifQ.eyJpc3MiOiJhY2NvdW50cy5nb29nbGUuY29tIiwiaWQiOiIxMTUwODY5MzU0MTkwMTc5MTI4MjgiLCJzdWIiOiIxMTUwODY5MzU0MTkwMTc5MTI4MjgiLCJhenAiOiI5ODY2NTk3NzY1MTYtZmc3OW1xYmtia3RmNWt1MTBjMjE1dmRpajkxOHJhMGEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJlbWFpbCI6ImluYm94YXBwdGVzdEBnbWFpbC5jb20iLCJhdF9oYXNoIjoiS090Q0hvQ01mSjNQcmdGSVIwNDFtQSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJhdWQiOiI5ODY2NTk3NzY1MTYtZmc3OW1xYmtia3RmNWt1MTBjMjE1dmRpajkxOHJhMGEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJ0b2tlbl9oYXNoIjoiS090Q0hvQ01mSjNQcmdGSVIwNDFtQSIsInZlcmlmaWVkX2VtYWlsIjp0cnVlLCJjaWQiOiI5ODY2NTk3NzY1MTYtZmc3OW1xYmtia3RmNWt1MTBjMjE1dmRpajkxOHJhMGEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJpYXQiOjEzOTkwNzk0MDIsImV4cCI6MTM5OTA4MzMwMn0.CFnCmsz3XCK196CF6PQ19z9IUxEeffZ_eu3JVdJE1rDHc1i5h44l1ioNouJinyJhqV4QQmaXDGJ3oggogfF0TGuUbRwcOWs0_oR01ZxuplY0U7s_g96LcZt667L-ZPFZosPM3APvGof2tvDQViyFd0V6rGu3ok49HqatZ8PT5eo','115086935419017912828',NULL,'en',NULL,NULL);
 /*!40000 ALTER TABLE `gmailaccount` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -909,7 +909,6 @@ CREATE TABLE `tag` (
   `public_id` varchar(191) NOT NULL,
   `name` varchar(191) NOT NULL,
   `user_created` tinyint(1) NOT NULL DEFAULT '0',
-  `user_mutable` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
   UNIQUE KEY `namespace_id` (`namespace_id`,`name`),
   UNIQUE KEY `namespace_id_2` (`namespace_id`,`public_id`),
@@ -926,7 +925,7 @@ CREATE TABLE `tag` (
 
 LOCK TABLES `tag` WRITE;
 /*!40000 ALTER TABLE `tag` DISABLE KEYS */;
-INSERT INTO `tag` VALUES (1,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'replied','replied',0,1),(2,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'sending','sending',0,1),(3,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'all','all',0,1),(4,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'trash','trash',0,1),(5,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'drafts','drafts',0,1),(6,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'spam','spam',0,1),(7,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'unstarred','unstarred',0,1),(8,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'send','send',0,1),(9,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'inbox','inbox',0,1),(10,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'file','file',0,1),(11,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'starred','starred',0,1),(12,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'unread','unread',0,1),(13,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'archive','archive',0,1),(14,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'sent','sent',0,1),(15,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'attachment','attachment',0,1),(16,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'important','important',0,1);
+INSERT INTO `tag` VALUES (1,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'replied','replied',0),(2,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'sending','sending',0),(3,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'all','all',0),(4,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'trash','trash',0),(5,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'drafts','drafts',0),(6,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'spam','spam',0),(7,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'unstarred','unstarred',0),(8,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'send','send',0),(9,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'inbox','inbox',0),(10,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'file','file',0),(11,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'starred','starred',0),(12,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'unread','unread',0),(13,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'archive','archive',0),(14,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'sent','sent',0),(15,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'attachment','attachment',0),(16,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'important','important',0),(17,'2014-05-29 20:13:16','2014-05-29 20:13:16',NULL,1,'unseen','unseen',0);
 /*!40000 ALTER TABLE `tag` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1133,4 +1132,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-06-21  0:47:16
+-- Dump completed on 2014-06-24  2:06:07

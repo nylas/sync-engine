@@ -10,34 +10,32 @@ Messages are a sub-object of threads. The content of a message is immutable (wit
 
 ```
 :::json
-[
-    {
-        "id": "84umizq7c4jtrew491brpa6iu",
-        "object": "message",
-        "subject": "Re: Dinner on Friday?"
-        "from": [
-            {
-                "name": "Ben Bitdiddle"
-                "email": "ben.bitdiddle@gmail.com",
-            }
-        ],
-        "to": [
-            {
-                "name": "Bill Rogers"
-                "email": "wrogers@mit.edu",
-            }
-        ],
-        "cc": [],
-        "bcc": [],
-        "to": ["someone@example.com"],
-        "date": 1370084645,
-        "thread": "5vryyrki4fqt7am31uso27t3f",
-        "files": [
-            "1g76i48k34wqbf6qgp285nw0o",
-        ],
-        "body": "<html><body>....</body></html>"
-    }
-]
+{
+    "id": "84umizq7c4jtrew491brpa6iu",
+    "object": "message",
+    "subject": "Re: Dinner on Friday?"
+    "from": [
+        {
+            "name": "Ben Bitdiddle"
+            "email": "ben.bitdiddle@gmail.com",
+        }
+    ],
+    "to": [
+        {
+            "name": "Bill Rogers"
+            "email": "wrogers@mit.edu",
+        }
+    ],
+    "cc": [],
+    "bcc": [],
+    "to": ["someone@example.com"],
+    "date": 1370084645,
+    "thread": "5vryyrki4fqt7am31uso27t3f",
+    "files": [
+        "1g76i48k34wqbf6qgp285nw0o",
+    ],
+    "body": "<html><body>....</body></html>"
+}
 ```
 
 # Retrieving Many Messages
@@ -64,3 +62,10 @@ The messages endpoint supports [Filters](#filters), making it easy to return a s
 One of the filter parameters available on messages is `thread`. Given a `thread_id` value, the API call will will return all messages in the thread.
 
     GET  https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>?thread=<thread_id>
+
+# Marking a message as unread
+
+    PUT https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>
+    {
+        "unread": false
+    }

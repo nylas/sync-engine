@@ -224,7 +224,7 @@ def thread_api_update(public_id):
             Tag.name == tag_name).first()
         if tag is None:
             return err(404, 'No tag found with name {}'.  format(tag_name))
-        if not tag.user_mutable:
+        if not tag.user_removable:
             return err(400, 'Cannot remove tag {}'.format(tag_name))
         thread.remove_tag(tag, execute_action=True)
 
@@ -235,8 +235,8 @@ def thread_api_update(public_id):
             Tag.name == tag_name).first()
         if tag is None:
             return err(404, 'No tag found with name {}'.format(tag_name))
-        if not tag.user_mutable:
-            return err(400, 'Cannot remove tag {}'.format(tag_name))
+        if not tag.user_addable:
+            return err(400, 'Cannot add tag {}'.format(tag_name))
         thread.apply_tag(tag, execute_action=True)
 
     g.db_session.commit()
@@ -262,18 +262,38 @@ def message_query_api():
                                         order=g.lens_order).all())
 
 
-@app.route('/messages/<public_id>')
+@app.route('/messages/<public_id>', methods=['GET', 'PUT'])
 def message_api(public_id):
     try:
-        m = g.db_session.query(Message).filter(
+        message = g.db_session.query(Message).filter(
             Message.public_id == public_id).one()
-        assert int(m.namespace.id) == int(g.namespace.id)
-        return jsonify(m)
+        assert int(message.namespace.id) == int(g.namespace.id)
 
     except NoResultFound:
         return err(404,
                    "Couldn't find message with id {0} "
                    "on namespace {1}".format(public_id, g.namespace_public_id))
+    if request.method == 'GET':
+        return jsonify(message)
+    elif request.method == 'PUT':
+        data = request.get_json(force=True)
+        if data.keys() != ['unread'] or not isinstance(data['unread'], bool):
+            return err(400,
+                       'Can only change the unread attribute of a message')
+
+        # TODO(emfree): Shouldn't allow this on messages that are actually
+        # drafts.
+
+        unread_tag = message.namespace.tags['unread']
+        unseen_tag = message.namespace.tags['unseen']
+        if data.keys['unread']:
+            message.is_read = False
+            message.thread.apply_tag(unread_tag)
+        else:
+            message.is_read = True
+            message.thread.remove_tag(unseen_tag)
+            if all(m.is_read for m in message.thread.messages):
+                message.thread.remove_tag(unread_tag)
 
 
 #

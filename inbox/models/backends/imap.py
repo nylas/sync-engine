@@ -173,6 +173,7 @@ class ImapThread(Thread):
                      mailing_list_headers=message.mailing_list_headers)
         if not message.is_read:
             thread.apply_tag(namespace.tags['unread'])
+            thread.apply_tag(namespace.tags['unseen'])
         return thread
 
     __mapper_args__ = {'polymorphic_identity': 'imapthread'}

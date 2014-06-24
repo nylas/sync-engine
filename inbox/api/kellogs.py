@@ -56,8 +56,6 @@ class APIEncoder(JSONEncoder):
             if isinstance(obj, SpoolMessage):
                 resp['state'] = obj.state
                 if obj.state != 'sent':
-                    # Don't expose thread id on drafts for now.
-                    del resp['thread']
                     resp['object'] = 'draft'
 
             return resp

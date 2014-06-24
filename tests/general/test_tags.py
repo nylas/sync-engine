@@ -1,5 +1,6 @@
 """Exercise the tags API."""
 import gevent
+import pytest
 from tests.util.base import api_client
 
 
@@ -15,6 +16,17 @@ def kill_greenlets():
     for obj in gc.get_objects():
         if isinstance(obj, gevent.Greenlet):
             obj.kill()
+
+
+@pytest.fixture(autouse=True)
+def create_canonical_tags(db):
+    """Ensure that all canonical tags exist for the namespace we're testing
+    against. This is normally done when an account sync starts."""
+    from inbox.models import Namespace, Tag, register_backends
+    register_backends()
+    namespace = db.session.query(Namespace).first()
+    Tag.create_canonical_tags(namespace, db.session)
+    db.session.commit()
 
 
 def test_get_tags(api_client):
@@ -64,6 +76,47 @@ def test_add_remove_tags(api_client):
     assert 'bar' not in tag_names
 
 
+def test_tag_permissions(api_client, db):
+    from inbox.models import Tag
+    thread_id = api_client.get_data('/threads/')[0]['id']
+    thread_path = '/threads/{}'.format(thread_id)
+    for canonical_name in Tag.RESERVED_TAG_NAMES:
+        r = api_client.put_data(thread_path, {'add_tags': [canonical_name]})
+        if canonical_name in Tag.USER_MUTABLE_TAGS:
+            assert r.status_code == 200
+        else:
+            assert r.status_code == 400
+
+    # Test special permissions of the 'unseen' tag
+    r = api_client.put_data(thread_path, {'add_tags': ['unseen']})
+    assert r.status_code == 400
+
+    r = api_client.put_data(thread_path, {'remove_tags': ['unseen']})
+    assert r.status_code == 200
+
+
+def test_read_implies_seen(api_client, db):
+    thread_id = api_client.get_data('/threads/')[0]['id']
+    thread_path = '/threads/{}'.format(thread_id)
+    # Do some setup: cheat by making sure the unseen and unread tags are
+    # already on the thread.
+    from inbox.models import Namespace, Thread
+    namespace = db.session.query(Namespace).first()
+    unseen_tag = namespace.tags['unseen']
+    unread_tag = namespace.tags['unread']
+    thread = db.session.query(Thread).filter_by(public_id=thread_id).one()
+    thread.tags.add(unseen_tag)
+    thread.tags.add(unread_tag)
+    db.session.commit()
+
+    r = api_client.get_data(thread_path)
+    assert {'unread', 'unseen'}.issubset({tag['id'] for tag in r['tags']})
+
+    r = api_client.put_data(thread_path, {'remove_tags': ['unread']})
+    r = api_client.get_data(thread_path)
+    assert not any(tag['id'] in ['unread', 'unseen'] for tag in r['tags'])
+
+
 def test_tag_deletes_cascade_to_threads():
     # TODO(emfree)
     pass
@@ -84,8 +137,8 @@ def test_actions_syncback(api_client):
     implementation of the actual syncback methods in
     inbox/actions/base.py)."""
     from inbox.transactions.actions import SyncbackService
-    from inbox.actions.base import (mark_read, mark_unread, archive,
-                                           unarchive, star, unstar)
+    from inbox.actions.base import (mark_read, mark_unread, archive, unarchive,
+                                    star, unstar)
     from gevent import monkey
     # aggressive=False used to avoid AttributeError in other tests, see
     # https://groups.google.com/forum/#!topic/gevent/IzWhGQHq7n0

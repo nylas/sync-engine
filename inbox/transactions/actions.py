@@ -133,6 +133,7 @@ class SyncbackService(gevent.Greenlet):
                     continue
                 added_tag_ids = [entry['tag_id'] for entry in tagitems['added']
                                  if entry['action_pending']]
+
                 removed_tag_ids = [entry['tag_id'] for entry in
                                    tagitems['deleted'] if
                                    entry['action_pending']]
