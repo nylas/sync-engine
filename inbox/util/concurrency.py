@@ -10,7 +10,6 @@ from rq.worker import StopRequested, DequeueTimeout
 
 from inbox.log import get_logger, log_uncaught_errors
 log = get_logger()
-from inbox.mailsync.reporting import report_exit
 
 
 def resettable_counter(max_count=3, reset_interval=300):
@@ -27,8 +26,7 @@ def resettable_counter(max_count=3, reset_interval=300):
         last_increment_at = time.time()
 
 
-def retry_wrapper(func, logger=None, failure_counter=None, account_id=None,
-                  folder=None, *args, **kwargs):
+def retry_wrapper(func, logger=None, failure_counter=None, *args, **kwargs):
     """Executes the callable func, logging and retrying on uncaught exceptions.
 
     Arguments
@@ -48,12 +46,9 @@ def retry_wrapper(func, logger=None, failure_counter=None, account_id=None,
         try:
             return func(*args, **kwargs)
         except gevent.GreenletExit, e:
-            report_exit('stopped', account_id, folder)
             return e
         except Exception, e:
             log_uncaught_errors(logger)
-
-    report_exit('killed', account_id, folder)
     raise
 
 

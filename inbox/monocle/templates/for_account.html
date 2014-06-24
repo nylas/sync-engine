@@ -9,22 +9,19 @@
   <thead>
     <tr>
       <th>Folder<br></th>
-      <th>State (running/ stopped/ killed):<br></th>
-      <th>Sync Start Time:<br></th>
-      <th>Sync End Time:<br></th>
-      <th>Sync State (initial/ poll/ finish):<br></th>
-      <th>Type (new/resumed):<br></th>
-      <th>Num messages on remote:<br></th>
-      <th>As of:<br></th>
-      <th>Num updated:<br></th>
-      <th>As of:<br></th>
-      <th>Num deleted:<br></th>
-      <th>As of:<br></th>
-      <th>Num to download:<br></th>
-      <th>As of:<br></th>
-      <th>Num downloaded since then:<br></th>
-      <th>Num left to download:<br></th>
-      <th>As of:<br></th>
+      <th>State<br></th>
+      <th>Type (new/resumed)<br></th>
+      <th>Num messages on remote<br></th>
+      <th>As of<br></th>
+      <th>Num updated<br></th>
+      <th>As of<br></th>
+      <th>Num deleted<br></th>
+      <th>As of<br></th>
+      <th>Num to download<br></th>
+      <th>As of<br></th>
+      <th>Num downloaded since then<br></th>
+      <th>Num left to download<br></th>
+      <th>As of<br></th>
     </tr>
   </thead>
   <tbody>
@@ -47,9 +44,6 @@
               timestamp = item.uid_checked_timestamp
               content += '<tr>';
               content += '<td>' + item.name + '</td>';
-              content += '<td>' + item.run_state + '</td>';
-              content += '<td>' + item.sync_start_time + '</td>';
-              content += '<td>' + item.sync_end_time + '</td>';
               content += '<td>' + item.state + '</td>';
               content += '<td>' + item.sync_type + '</td>';
               content += '<td>' + item.remote_uid_count + '</td>';

@@ -225,12 +225,10 @@ class BaseMailSyncMonitor(Greenlet):
         Greenlet.__init__(self)
 
     def _run(self):
-        return retry_wrapper(self._run_impl, self.log,
-                             account_id=self.account_id)
+        return retry_wrapper(self._run_impl, self.log)
 
     def _run_impl(self):
-        sync = Greenlet.spawn(retry_wrapper, self.sync, self.log,
-                              account_id=self.account_id)
+        sync = Greenlet.spawn(retry_wrapper, self.sync, self.log)
         while not sync.ready():
             try:
                 cmd = self.inbox.get_nowait()

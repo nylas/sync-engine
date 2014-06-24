@@ -178,9 +178,7 @@ class ImapFolderSyncMonitor(Greenlet):
         Greenlet.__init__(self)
 
     def _run(self):
-        return retry_wrapper(self._run_impl, self.log,
-                             account_id=self.account_id,
-                             folder=self.folder_name)
+        return retry_wrapper(self._run_impl, self.log)
 
     def _run_impl(self):
         # We do NOT ignore soft deletes in the mail sync because it gets real
@@ -197,12 +195,6 @@ class ImapFolderSyncMonitor(Greenlet):
                                         folder_name=self.folder_name)
                 db_session.add(foldersync)
                 db_session.commit()
-
-            foldersync.update_sync_status(
-                dict(run_state='running',
-                     sync_start_time=datetime.utcnow(),
-                     sync_end_time=None))
-
             self.state = foldersync.state
             # NOTE: The parent ImapSyncMonitor handler could kill us at any
             # time if it receives a shutdown command. The shutdown command is
