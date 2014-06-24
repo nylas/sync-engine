@@ -11,7 +11,10 @@
       <th>Account Id:<br></th>
       <th>Email Address:<br></th>
       <th>Provider:<br></th>
-      <th>State<br>(Active/ Inactive):<br></th>
+      <th>Is Enabled?<br>(enabled/ not enabled):<br></th>
+      <th>State<br>(running/ stopped/ killed):<br></th>
+      <th>Sync Start Time:<br></th>
+      <th>Sync End Time:<br></th>
     </tr>
   </thead>
   <tbody>
@@ -35,7 +38,10 @@
               content += '<td class=account_id>' + item.id + '</td>';
               content += '<td>' + item.email + '</td>';
               content += '<td>' + item.provider + '</td>';
-              content += '<td>' + (item.state ? 'Active' : 'Inactive') + '</td>';
+              content += '<td>' + (item.is_enabled ? 'enabled' : 'not enabled') + '</td>';
+              content += '<td>' + item.state + '</td>';
+              content += '<td>' + item.sync_start_time + '</td>';
+              content += '<td>' + item.sync_end_time + '</td>';
               content += '</tr>';
           });
           

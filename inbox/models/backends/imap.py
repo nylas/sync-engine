@@ -217,13 +217,16 @@ class FolderSync(MailSyncBase):
                                'uid_checked_timestamp',
                                'num_downloaded_since_timestamp',
                                'current_download_queue_size',
-                               'queue_checked_at', 'sync_type']
+                               'queue_checked_at', 'sync_type',
+                               'run_state', 'sync_start_time', 'sync_end_time']
 
         assert isinstance(metrics, dict)
         for k in metrics.iterkeys():
             assert k in sync_status_metrics, k
             if k == 'sync_type':
                 assert metrics[k] in ('new', 'resumed')
+            if k == 'run_state':
+                assert metrics[k] in ('running', 'stopped', 'killed')
 
         if self._sync_status is not None:
             self._sync_status.update(metrics)
