@@ -1,5 +1,6 @@
 """ ZeroRPC interface to syncing. """
 from collections import defaultdict
+from datetime import datetime
 
 import platform
 
@@ -31,7 +32,7 @@ class SyncService(object):
         # (Later we will want to partition these across different machines!)
         with session_scope() as db_session:
             # XXX: I think we can do some sqlalchemy magic to make it so we
-            # can query on the attribute sync_active.
+            # can query on the attribute sync_enabled.
             for account_id, in db_session.query(Account.id)\
                     .filter(~Account.sync_host.is_(None)):
                 self.start_sync(account_id)
@@ -84,14 +85,19 @@ class SyncService(object):
                             self.contact_sync_monitors[acc.id] = contact_sync
                             contact_sync.start()
                         acc.sync_host = fqdn
+                        acc.sync_state = 'running'
+                        acc.sync_start_time = datetime.utcnow()
+                        acc.sync_end_time = None
                         db_session.add(acc)
                         db_session.commit()
                         results[acc.id] = 'OK sync started'
-
                     except Exception as e:
                         self.log.error(e.message)
                         results[acc.id] = 'ERROR error encountered: {0}'.\
                             format(e)
+                        # Check if monitor has been started + running,
+                        # if so -> fine
+                        # else -> rewrite db entry
                 else:
                     results[acc.id] = 'OK sync already started'
 
@@ -118,7 +124,7 @@ class SyncService(object):
             fqdn = platform.node()
             for acc in query:
                 if (not acc.id in self.monitors) or \
-                        (not acc.sync_active):
+                        (not acc.sync_enabled):
                     results[acc.id] = 'OK sync stopped already'
                 try:
                     if acc.sync_host is None:
@@ -131,6 +137,8 @@ class SyncService(object):
                     # XXX Can processing this command fail in some way?
                     self.monitors[acc.id].inbox.put_nowait('shutdown')
                     acc.sync_host = None
+                    acc.sync_state = 'stopped'
+                    acc.sync_end_time = datetime.utcnow()
                     db_session.add(acc)
                     db_session.commit()
                     acc.sync_unlock()

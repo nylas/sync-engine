@@ -1,6 +1,7 @@
 import os
 from hashlib import sha256
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
+from sqlalchemy import (Column, Integer, String, DateTime, Boolean, ForeignKey,
+                        Enum)
 from sqlalchemy.orm import relationship, deferred
 from sqlalchemy.sql.expression import true
 from sqlalchemy.types import BLOB
@@ -41,7 +42,6 @@ class Account(MailSyncBase, HasPublicID):
     # local flags & data
     save_raw_messages = Column(Boolean, server_default=true())
 
-    sync_host = Column(String(255), nullable=True)
     last_synced_contacts = Column(DateTime, nullable=True)
 
     # Folder mappings for the data we sync back to the account backend.  All
@@ -119,9 +119,24 @@ class Account(MailSyncBase, HasPublicID):
         primaryjoin='and_(Account.important_folder_id == Folder.id, '
                     'Folder.deleted_at.is_(None))')
 
+    sync_host = Column(String(255), nullable=True)
+    sync_state = Column(Enum('running', 'stopped', 'killed'), nullable=True)
+    sync_start_time = Column(DateTime, nullable=True)
+    sync_end_time = Column(DateTime, nullable=True)
+
     @property
-    def sync_active(self):
+    def sync_enabled(self):
         return self.sync_host is not None
+
+    @property
+    def sync_status(self):
+        return dict(id=self.id,
+                    email=self.email_address,
+                    provider=self.provider,
+                    is_enabled=self.sync_enabled,
+                    state=self.sync_state,
+                    sync_start_time=self.sync_start_time,
+                    sync_end_time=self.sync_end_time)
 
     @classmethod
     def _get_lock_object(cls, account_id, lock_for=dict()):

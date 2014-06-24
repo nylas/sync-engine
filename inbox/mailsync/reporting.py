@@ -1,14 +1,27 @@
-def account_status(db_session, account, and_folders=False):
-    folders_info = folder_statuses(db_session, account)
-    acct_info = dict(id=account.id,
-                     email=account.email_address,
-                     provider=account.provider,
-                     state=account.sync_active)
-    if and_folders:
-        return [acct_info, folders_info]
-    else:
-        return acct_info
+from datetime import datetime
+
+from inbox.models.session import session_scope
+from inbox.models.account import Account
 
 
-def folder_statuses(db_session, account):
-    return [foldersync.sync_status for foldersync in account.foldersyncs]
+def report_exit(state, account_id=None, folder=None):
+    if account_id is not None:
+        assert state in ('stopped', 'killed')
+
+        with session_scope() as db_session:
+            account = db_session.query(Account).get(account_id)
+
+            if folder is None:
+                # MailSyncMonitor for account
+                account.sync_host = None
+                account.sync_state = state
+                account.sync_end_time = datetime.utcnow()
+            else:
+                # FolderSyncMonitor for account's folder
+                for f in account.foldersyncs:
+                    if f.folder_name == folder:
+                        f.update_sync_status(
+                            dict(run_state=state,
+                                 sync_end_time=datetime.utcnow()))
+
+            db_session.commit()
