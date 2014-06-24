@@ -45,9 +45,9 @@ def retry_wrapper(func, logger=None, failure_counter=None, *args, **kwargs):
     for _ in failure_counter:
         try:
             return func(*args, **kwargs)
+        except gevent.GreenletExit, e:
+            return e
         except Exception, e:
-            if isinstance(e, gevent.GreenletExit):
-                return e
             log_uncaught_errors(logger)
     raise
 
