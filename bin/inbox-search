@@ -19,7 +19,7 @@ if args.index:
         c.connect(search_srv_loc)
         c.index(args.namespace)
     except zerorpc.exceptions.TimeoutExpired:
-        sys.exit("Can't connect. Is the sync server running? (./inbox start)")
+        sys.exit("Can't connect. Is the sync server running? (./bin/inbox-start)")
 else:
     try:
         c = zerorpc.Client(timeout=5)
@@ -30,4 +30,4 @@ else:
         # or something
         print c.search(args.namespace, args.query)
     except zerorpc.exceptions.TimeoutExpired:
-        sys.exit("Can't connect. Is the sync server running? (./inbox start)")
+        sys.exit("Can't connect. Is the sync server running? (./bin/inbox-start)")

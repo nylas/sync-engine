@@ -45,4 +45,4 @@ try:
     else:
         sys.exit('No such command.')
 except zerorpc.exceptions.TimeoutExpired:
-    sys.exit("Can't connect to sync service. Is it running? (./inbox start)")
+    sys.exit("Can't connect to sync service. Is it running? (./bin/inbox-start)")
