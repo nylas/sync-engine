@@ -40,8 +40,6 @@ try:
         print mailsync_client.stop_sync(account_id)
     elif args.cmd == 'stopall':
         print mailsync_client.stop_sync()
-    elif args.cmd == 'status':
-        print mailsync_client.sync_status(account_id)
     else:
         sys.exit('No such command.')
 except zerorpc.exceptions.TimeoutExpired:

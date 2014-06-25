@@ -18,13 +18,6 @@ class SyncService(object):
         # { account_id: MailSyncMonitor() }
         self.monitors = dict()
         self.contact_sync_monitors = dict()
-        # READ ONLY from API calls, writes happen from callbacks from monitor
-        # greenlets.
-        # { 'account_id': { 'state': 'initial sync', 'status': '0'} }
-        # 'state' can be ['initial sync', 'poll']
-        # 'status' is the percent-done for initial sync, polling start time
-        # otherwise
-        # all data in here ought to be msgpack-serializable!
 
         # Restart existing active syncs.
         # (Later we will want to partition these across different machines!)
