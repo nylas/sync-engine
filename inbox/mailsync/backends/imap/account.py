@@ -96,13 +96,13 @@ def update_thread_labels(thread, folder_name, g_labels, db_session):
             # but *also* a 'Sent' label, and so on. We handle this by only
             # maintaining one folder object that encapsulates both of
             # these.
-            if label == 'Sent':
+            if label == 'sent':
                 thread.folders.add(thread.namespace.account.sent_folder)
-            elif label == 'Draft':
+            elif label == 'draft':
                 thread.folders.add(thread.namespace.account.drafts_folder)
-            elif label == 'Starred':
+            elif label == 'starred':
                 thread.folders.add(thread.namespace.account.starred_folder)
-            elif label == 'Important':
+            elif label == 'important':
                 thread.folders.add(
                     thread.namespace.account.important_folder)
             else:
