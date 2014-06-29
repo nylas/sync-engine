@@ -1,0 +1,30 @@
+Title: Namespaces
+
+Namespaces are essentially references to linked accounts. They are the top-level unit of a user's data. For example, a user who has one Exchange account and two Gmail accounts linked to Inbox will have three distinct namespaces.
+
+The top-level URI will return information about a namespace with the given `namespace_id`.
+
+
+    GET https://api.inboxapp.com/n/<namespace_id>
+
+
+**Response**
+
+```
+:::json
+{
+	"id": "awa6ltos76vz5hvphkp8k17nt",
+	"object": "namespace",
+    "namespace": "awa6ltos76vz5hvphkp8k17nt",
+    "account": "c5zc216uat483slypx67mu8i3",
+	"email_adddress": "ben.bitdiddle@gmail.com",
+	"provider": "Gmail",
+    "scope": ["mail", "contacts"],
+	"status": "active",
+	"last_sync": 1398219759,
+    "scope": ["mail", "files"]
+}
+```
+
+* `status` can either be `syncing`, `inactive`, `error`
+* `scope` defines what types of data your application can access. See the [authentication flow](#auth-user) for more details.

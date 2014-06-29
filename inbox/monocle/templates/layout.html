@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang='en'>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <div class='main'>
+      <h1 class='page-header text-danger text-center'>Monocle<br><small>The Inbox Admin Dashboard</small></h1>
+    </div>
+    <div>
+      <title>{% block title %}{% endblock %}</title>
+    </div>
+    <link rel='stylesheet' href='//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css'>
+    <!-- Custom styles for this template -->
+    <link rel='stylesheet' type='text/css' href="{{ url_for('static', filename='dashboard.css') }}">
+  </head>
+  <body>
+    <div class='page'>{% block content %}{% endblock %}</div>
+  </body>
+  <script src='//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js'></script>
+  <script type=text/javascript>
+  	$SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+  </script>
+  {% block scripts %}{% endblock %}
+</html>

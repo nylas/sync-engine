@@ -1,0 +1,90 @@
+Title: Threads
+
+
+Threads are the main object in Inbox. They can be read, archived, and deleted. All messages are part of a thread, even if that thread has only one message. Operations like flagging and marking as read are only done at the thread level.
+
+
+# Retrieving a Thread
+
+    GET https://api.inboxapp.com/n/<namespace_id>/threads/<thread_id>
+
+The thread object includes useful information like subject, participants, and time of the most recenly received message.
+ 
+**Sample response:**
+
+```
+:::json
+{
+    "id": "evh5uy0shhpm5d0le89goor17",
+    "object": "thread",
+    "namespace": "awa6ltos76vz5hvphkp8k17nt"
+    "subject": "Dinner Party on Friday",
+    "last_message_timestamp": 1398229259,
+    "participants": [
+        {
+            "name": "Ben Bitdiddle"
+            "email": "ben.bitdiddle@gmail.com",
+        },
+        {
+            "name": ""
+            "email": "ben.bitdiddle@gmail.com",
+        },
+        {
+            "email": "wrogers@mit.edu",
+            "name": "Bill Rogers"
+        }
+    ],
+    "snippet": "Hey Bill, Looking forward to getting together for dinner on Friday. Want can I bring? I have a couple bottles of wine or could put together",
+    "tags": [
+        {
+            "name": "inbox",
+            "id": "f0idlvozkrpj3ihxze7obpivh"
+        },
+        {
+            'name': "unread",
+            'id': "8keda28h8ijj2nogpj83yjep8"
+        }
+    ],
+    "messages": [
+        "251r594smznew6yhiocht2v29",
+        "7upzl8ss738iz8xf48lm84q3e",
+        "ah5wuphj3t83j260jqucm9a28",
+        ...
+    ],
+    "drafts": [
+        "251r594smznew6yhi12312saq"
+    ]
+}
+```
+
+
+
+# Retrieving Many Threads
+
+    GET https://api.inboxapp.com/n/<namespace_id>/threads?<filter_string>
+
+This API supports [Filters](#filters), making it easy to return a subset of threads matching your needs. You should specify one or more filter parameters to return threads in a specific folder, from a specific sender, etc. For example, this request would return the threads in the user's inbox:
+
+    GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=inbox
+
+
+**Response:**
+
+```
+:::json
+[
+    <thread_object>,
+    <thread_object>,
+    <thread_object>,
+    ...
+]   
+```
+
+# Archiving, Starring, and Deleting threads
+
+These actions are expressed as applying specific tags to a thread. See [Tags](#tags) for more details.
+
+
+# Replying to threads
+
+See [Drafts & Sending](#drafts).

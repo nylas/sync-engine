@@ -1,29 +1,40 @@
-# Project-specific
-/database.db
-/uploads
-/man
-/src
-/errors
-/config.cfg
-/config-dev.cfg
-/cache
+# Inbox-specific
+/packer_cache
 /log
+/man
+# Vagrant
 /.vagrant
-/node_modules
-
-.DS_Store
+node_modules
 *.py[cod]
+*.dat
+.DS_Store
+# C extensions
+*.so
+/tests/log
+/tests/output
+/tests/coverage
+/cache
+/config.json
 
-# Wand
-README.rst
+# location for editable pip installs
+/src
 
 # virtualenv
-activate/
-deactivate
-.Python
-local
-include
-share
+/include
+/local
+bin/py*
+bin/nose*
+bin/coverage*
+bin/activate*
+bin/easy*
+bin/pip*
+bin/pep8
+bin/ndg_httpclient
+bin/mprof
+bin/zerorpc
+bin/symilar
+bin/f2py
+bin/epylint
 
 # Packages
 *.egg
@@ -32,12 +43,11 @@ dist
 build
 eggs
 parts
-bin
 var
 sdist
 develop-eggs
 .installed.cfg
-/lib
+lib
 lib64
 __pycache__
 
@@ -56,14 +66,4 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
-.elasticbeanstalk/
 
-# Xapian
-packages/xapian*
-
-# Emacs
-*~
-*#*
-
-# Keys
-*.pem

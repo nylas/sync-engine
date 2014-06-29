@@ -1,0 +1,20 @@
+#!/usr/bin/env python
+import os
+import shutil
+
+from inbox.config import config
+
+import click
+
+
+@click.command()
+def clear_cache():
+    cache_basedir = config.get('CACHE_BASEDIR')
+
+    print 'Removing all contents of {}...'.format(cache_basedir),
+    shutil.rmtree(cache_basedir)
+    os.mkdir(cache_basedir)
+    print 'done!'
+
+if __name__ == '__main__':
+    clear_cache()

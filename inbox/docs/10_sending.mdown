@@ -1,0 +1,34 @@
+Title: Sending
+
+Inbox provides a single API for sending mail:
+
+    POST https://api.inboxapp.com/n/<namespace_id>/send
+    
+You can use this API in two ways:
+
+####Send a drafted message
+
+Send the POST body below to send an existing draft by ID. During the process of sending a message through provider's gateway, the message will have the `sending` tag. After it has successfuly sent, the message will have the `sent` tag. Usually this process happens very quickly. If you notice messages that continue to have the `sending` tag, you should check the status of the [namespace](#namespaces). The draft object is hidden once the message has been successfully sent.
+
+
+```
+:::json
+{
+	"draft_id": "asdasdas"
+}
+```
+
+####Sending a new message
+
+You can send messages without saving them as drafts beforehand. Instead of providing a draft ID,
+simply provide the JSON of the message object you want to send.
+
+```
+:::json
+{
+	"to": [ {"name": "Ben", "email": "bengotow@gmail.com"}],
+	"body" : "....."
+	....
+}
+
+```

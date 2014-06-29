@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Inbox</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+
+<link rel="stylesheet" href="/static/css/home_style.css"/>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+
+
+<script type='text/javascript'>
+
+  function openAuth(email_address) {
+    var leftPosition = window.screenX + (window.outerWidth/2-300);
+    var topPosition = window.screenY + (window.outerHeight/2-300);
+    var windowOptions = 'toolbar=no, location=no, directories=no, status=no,' +
+                        'menubar=no, scrollbars=no, resizable=no, copyhistory=no,' +
+                        'width=600, height=600,' +
+                        'left=' + leftPosition + ', top=' + topPosition;
+    var authWindow = window.open( '/auth/authstart?email_address='+email_address,'Authenticate with Google', windowOptions);
+    var timer = setInterval(function() {
+        if(authWindow.closed) {
+            clearInterval(timer);
+              if (document.cookie.indexOf("session") >= 0) {
+              // window.location.reload();
+                window.location.replace("/app/");
+              } else {
+                alert("You didn't authenticate correctly...")
+              }
+        }
+    }, 250);
+  };
+
+  $(function() {  // document ready
+    $("#login_username").keypress(function(e) {
+        if ((e.keyCode || e.which) == 13) {
+            // Enter key pressed
+            e.preventDefault();
+            openAuth($('#login_username').val());
+        }
+    });
+
+    $("#start_auth").click(function() {
+        openAuth($('#login_username').val());
+    });
+
+    // Placeholder text JS
+    $('#login_username').data('holder',$('#login_username').attr('placeholder'));
+    $('#login_username').focusin(function(){
+        $(this).attr('placeholder','');
+    });
+    $('#login_username').focusout(function(){
+        $(this).attr('placeholder',$(this).data('holder'));
+    });
+
+    $('#login_username').val('');
+  });
+
+
+</script>
+</head>
+<body>
+  <div id="container">
+
+  <img src="/static/img/letter.png"/>
+
+  <div class="subhead">
+     {% if logged_in %}
+           <div id="status">You are logged in as:</div>
+           {{ name }}
+        <br/>
+         <a class="button" href="/app/">Launch Inbox</a>
+          <br/><br/>
+         <a class="button" href="/auth/logout">Logout</a>
+
+      {% else %}
+
+      <form>
+        <input type="text" name="login_username" id="login_username" placeholder="ben.bitdiddle@gmail.com" autocomplete="off" spellcheck="false" tabindex=1>
+      </form>
+      <a class="button" id="start_auth" tabindex=2>Connect</a>
+
+      {% endif %}
+  </div>
+
+
+  </div>
+</body>
+
+</html>
+

@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+import sys
+
+from inbox.config import config
+
+from setproctitle import setproctitle; setproctitle('inbox-syncmgr')
+
+import zerorpc
+import argparse
+
+from inbox.models.session import session_scope
+from inbox.models import Account
+from sqlalchemy.orm.exc import NoResultFound
+
+
+parser = argparse.ArgumentParser(description='Start/stop mail sync')
+parser.add_argument('cmd', help='start or stop')
+parser.add_argument('email_address',
+                    help='Email address of the account to start/stop')
+parser.add_argument('--dummy', action='store_true', default=False,
+                    help="Don't connect to IMAP backend.")
+args = parser.parse_args()
+
+with session_scope() as db_session:
+    try:
+        account_id = db_session.query(Account.id).filter_by(
+            email_address=args.email_address).one()[0]
+    except NoResultFound:
+        sys.exit('No record of account {0}'.format(args.email_address))
+
+mailsync_client = zerorpc.Client(timeout=15)
+mailsync_srv_loc = config.get('CRISPIN_SERVER_LOC', None)
+mailsync_client.connect(mailsync_srv_loc)
+try:
+    if args.cmd == 'start':
+        print mailsync_client.start_sync(account_id, dummy=args.dummy)
+    elif args.cmd == 'startall':
+        print mailsync_client.start_sync(dummy=args.dummy)
+    elif args.cmd == 'stop':
+        print mailsync_client.stop_sync(account_id)
+    elif args.cmd == 'stopall':
+        print mailsync_client.stop_sync()
+    else:
+        sys.exit('No such command.')
+except zerorpc.exceptions.TimeoutExpired:
+    sys.exit("Can't connect to sync service. Is it running? (./bin/inbox-start)")

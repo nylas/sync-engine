@@ -1,41 +1,50 @@
 argparse==1.2.1
-beautifulsoup4==4.1.3
+coverage==3.7.1
 httplib2==0.8
-pytest==2.3.4
+pytest==2.5.2
 tornado==3.0.1
 wsgiref==0.1.2
 futures==2.1.3
 jsonrpclib==0.1.3
-SQLAlchemy==0.8.3
+SQLAlchemy==0.9.6
 pymongo==2.5.2  # For json_util in bson
 dnspython==1.11.0
 boto==2.10.0
 ipython==1.0.0
 Flask==0.10.1
+gevent==1.0.1
 gevent-socketio==0.3.5-rc2
-geventconnpool==0.2
-gunicorn==17.5
+geventconnpool==0.2.1
+gunicorn==19.0.0
 colorlog==1.8
-MySQL-python==1.2.4
-requests==2.0.0
+MySQL-python==1.2.5
+requests==2.3.0
 Fabric==1.7.0
-supervisor==3.0
 chardet==2.1.1
-PIL==1.1.7
 Wand==0.3.5
-setproctitle==1.1.7#
+setproctitle==1.1.8
+rq==0.3.13
 # For ZeroRPC
 Cython==0.19.1
-zerorpc==0.4.3
+-e git://github.com/inboxapp/zerorpc-python.git@master#egg=zerorpc
+pyzmq==14.0.1
 gdata==2.0.18
 python-dateutil==2.1
-lxml==3.2.4
-flanker==0.3.3
-git+https://github.com/zeromq/pyzmq.git@v13.1.0#egg=zmq
-git+https://github.com/inboxapp/imapclient.git#egg=imapclient
-git+https://github.com/inboxapp/bleach.git#egg=bleach
-git+https://github.com/inboxapp/iconv.git#egg=iconv
-
-
-# Do this when we start running the server
-# -e inbox-server
+-e git://github.com/inboxapp/flanker.git@master#egg=flanker
+imapclient==0.11
+rq-dashboard==0.3.3
+alembic==0.6.4
+iconv==1.0
+pep8==1.4.6
+pyflakes==0.7.3
+pylint==1.1.0
+html2text==2014.4.5
+python-magic==0.4.6
+Markdown==2.4
+Pygments==1.6
+greenlet==0.4.2
+PyMySQL==0.6.2
+click==0.7
+faulthandler==2.3
+# talon hasn't been released yet, uncomment after release
+#talon==1.0

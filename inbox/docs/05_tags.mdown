@@ -1,0 +1,89 @@
+Title: Tags
+
+Tags are the primary way of storing metadata on a specific thread. They are generally used to group threads with some criteria, such as those unread or within a specific provider folder.
+
+# Getting all tags
+
+    GET https://api.inboxapp.com/n/<namespace_id>/tags
+
+**Response**
+```
+[
+    {
+        "name": "inbox",
+        "id": "4zv7pgvihjvuptbwv57kiz62",
+        "namespace": "awa6ltos76vz5hvphkp8k17nt"
+    },
+    {
+        "name": "drafts",
+        "id": "76zrfd8ln5zo2swalu1yojhty",
+        "namespace": "awa6ltos76vz5hvphkp8k17nt"
+    },
+    ...
+]
+```
+
+# Creating a new tag
+
+    POST https://api.inboxapp.com/n/<namespace_id>/tags
+
+**Request body**
+```
+::json
+{
+    "name": <new tag name>
+}
+```
+
+# Modifying tags on a thread
+
+    PUT https://api.inboxapp.com/n/<namespace_id>/thread/<thread_id>
+
+**Request body**
+```
+{
+    "add_tags": ["housing-search", "craigslist"]
+    "remove_tags": ["unread"]
+}
+```
+
+# Canonical tags
+
+These are an extended version of [RFC-6154](http://tools.ietf.org/html/rfc6154), mapped to the relevant values in backend providers. Some will not be used if unsupported by the user's provider. (e.g. `spam`)
+
+* **`inbox`**
+* **`archive`** (alias for message without tag `inbox`)
+* **`drafts`**
+* **`send`**
+* **`sending`**
+* **`sent`**
+* **`spam`**
+* **`starred`**
+* **`unread`**
+* **`replied`**
+* **`trash`**
+* **`file`**
+* **`unseen`**
+
+
+# Read-only tags
+
+* **`drafts`** is set by Inbox, and cannot be modified. See [Drafts](#drafts) for creating and updating drafts.
+
+* **`sending`**
+
+* **`sent`**
+
+* **`files`**
+
+* There are a number of provider-prefixed tags which are managed by Inbox. These tags can be read, but any attempt to modify them will fail. They are of the format `<provider>-<value>`, so a "homework" label in Gmail will appear as the tag `gmail-homework`. Current reserved providers include `gmail`, `exchange`, `yahoo`, `hotmail`, `icloud`, and `aol`.
+
+
+# Tag actions
+
+Adding certain tags will cause an action to be performed on the thread.
+
+* adding **`archive`** will remove the thread from `inbox`
+* adding **`delete`** will remove all tags, and queue the message for deletion
+* adding or removing **`unread`** will mark the thread as read or unread, respectively.
+* removing the **`unseen`** tag signals that the thread has been displayed to the user. Clients can remove the **`unseen`** tag, but not add it. Removing **`unread`** will automatically also remove the **`unseen`** tag.

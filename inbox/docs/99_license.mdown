@@ -1,0 +1,5 @@
+Title: License
+
+This code is free software, licensed under the The [GNU Affero General Public License (AGPL)](http://en.wikipedia.org/wiki/Affero_General_Public_License). See the `LICENSE` file for more details.
+
+Made with &#10084; in San Francisco, California.

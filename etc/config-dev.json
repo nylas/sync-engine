@@ -1,0 +1,37 @@
+{
+"API_SERVER_LOC": "tcp://0.0.0.0:9999",
+"APP_SERVER_LOC": "tcp://0.0.0.0:9998",
+"CRISPIN_SERVER_LOC": "tcp://0.0.0.0:9997",
+"BLOCK_SERVER_LOC": "tcp://0.0.0.0:9996",
+"WEBHOOK_SERVER_LOC": "tcp://0.0.0.0:9994",
+"ACTION_SERVER_LOC": "tcp://0.0.0.0:9993",
+
+"MYSQL_DATABASE": "inbox",
+"MYSQL_USER": "root",
+"MYSQL_PASSWORD": "root",
+"MYSQL_HOSTNAME": "localhost",
+"MYSQL_PORT": 3306,
+
+"ALEMBIC_INI": "/vagrant/alembic.ini",
+
+"CACHE_BASEDIR" : "/var/lib/inboxapp/cache",
+"LOGDIR": "/var/log/inboxapp",
+"LOGLEVEL": 10,
+"ACTION_QUEUE_LABEL": "action",
+
+"GOOGLE_OAUTH_CLIENT_ID": "986659776516-fg79mqbkbktf5ku10c215vdij918ra0a.apps.googleusercontent.com",
+"GOOGLE_OAUTH_CLIENT_SECRET": "zgY9wgwML0kmQ6mmYHYJE05d",
+"GOOGLE_OAUTH_REDIRECT_URI": "urn:ietf:wg:oauth:2.0:oob",
+
+"KEY_DIR": "/var/lib/inboxapp/keys",
+"KEY_SIZE": 128,
+
+"STORE_MESSAGES_ON_S3": false,
+"MSG_PARTS_DIRECTORY": "/var/lib/inboxapp/parts",
+
+"EMAIL_EXCEPTIONS": false,
+
+"REDIS_HOST": "localhost",
+"REDIS_PORT": 6379
+
+}

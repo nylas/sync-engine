@@ -1,0 +1,79 @@
+Title: Sync protocol
+
+The sync protocol allows clients to get recent changes to a namespace without
+downloading all threads and messages.
+
+
+# Obtaining a sync stamp
+
+    POST https://api.inboxapp.com/n/<namespace_id>/sync/generate_stamp
+    {
+        "start": "1401132646" // get events after this Unix timestamp
+    }
+
+**Sample response:**
+```
+:::json
+{
+   "stamp": "aqb0llc2ioo0bclh7uxkim9z6"
+}
+```
+
+# Requesting changes
+
+    GET https://api.inboxapp.com/n/<namespace_id>/sync/events?stamp=<stamp>
+
+**Sample response:**
+```
+:::json
+{
+     "events_start": "aqb0llc2ioo0bclh7uxkim9z6",
+     "events_end": "5u9kwbgyq8wgq0iqdakqt7kjl"
+     "events": [
+         {
+         "object_id": "aqb0llc2ioo0bclh7uxkim9z6",
+         "event": "modify",
+         "type": "thread",
+         "attributes": {
+              "tags": ["inbox"]
+          }
+      },
+      {
+          "id": "2fhs446h1uiomjg2sa7r5n1w6",
+          "event": "create",
+          "type": "thread",
+          "attributes": {
+              "id": "2fhs446h1uiomjg2sa7r5n1w6",
+              "last_message_timestamp": 1401132649,
+              "messages": [
+                  "ebszclpialarlf32m1hxdcckk",
+                   "duknijxbjxtonwi59p7wd17ew",
+                   "e89w5zrh5o7oklc8cp9vjup69"
+               ],
+               "namespace": "ebaa9877yhmaeamqodbmq7rqa",
+               "object": "thread",
+               "participants": [
+               {
+                    "email": "zulip@zulip.com",
+                    "name": "Michael Grinich"
+                },
+                {
+                    "email": "ben@inboxapp.com",
+                    "name": ""
+                 }],
+                 "subject": "Missed Zulip from Michael Grinich",
+                 "subject_date":1401132649
+             }
+         },
+         {
+             "event": "delete",
+             "id": "2312313",
+             "type": "5oly0nmkfbgnjhw00xa4i0k5l"
+         }
+     ]
+ }
+}
+
+Fetch the next set of events by issuing another query with `stamp` parameter
+equal to the value of `events_end`:
+    GET https://api.inboxapp.com/n/<namespace_id>/sync/events?stamp=<events_end value>

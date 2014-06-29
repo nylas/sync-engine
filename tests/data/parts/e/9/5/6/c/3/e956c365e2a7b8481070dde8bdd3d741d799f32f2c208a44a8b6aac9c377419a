@@ -1,0 +1,166 @@
+
+
+
+
+
+
+
+
+  <html lang="en">
+    <body style="margin:0; padding: 0;">
+
+  <table bgcolor="#f1f1f1" width="100%" height="100%" align="center" height="60" style="border-collapse: collapse"  border="0" cellspacing="0" cellpadding="0">
+    <tr align="center">
+      <td valign="top">
+
+
+        <table bgcolor="#f1f1f1" height="60" style="border-collapse: collapse"  border="0" cellspacing="0" cellpadding="0">
+          <tr valign="middle" height="40">
+
+
+          <td width="9"></td>
+
+
+          <td width="217" valign="middle">
+            <img src="cid:google" border="0" alt="Google Accounts" style="display: block;" height="40">
+          </td>
+
+
+          <td width="327" style="font-size: 13px; font-family: arial, sans-serif; color: #777777; text-align: right">
+
+              Inbox App
+
+          </td>
+
+
+          <td width="10"></td>
+
+
+
+            <td><img src="cid:profilephoto" /></td>
+
+
+
+          <td width="10"></td>
+
+
+          </tr>
+        </table>
+
+
+        <table border="1" bordercolor="#e5e5e5" cellspacing="0" cellpadding="0" bgcolor="#ffffff" style="text-align: left">
+
+
+          <tr>
+            <td height="15" style="border-top: none; border-bottom: none; border-left: none; border-right: none;">
+            </td>
+          </tr>
+
+          <tr>
+
+            <td width="15" style="border-top: none; border-bottom: none; border-left: none; border-right: none;">
+            </td>
+
+
+            <td width="568" valign="top" style="font-size: 83%; border-top: none; border-bottom: none; border-left: none; border-right: none; font-size: 13px; font-family: arial, sans-serif; color: #222222; line-height: 18px">
+
+              Hi Inbox,
+              <br />
+              <br />
+
+
+
+The recovery phone number for your Google Account - inboxapptest@gmail.com - was recently changed. If you made this change, you don't need to do anything more.
+
+<br />
+<br />
+
+If you didn't change your recovery phone, someone may have broken into your account. Visit this link for more information: <a href="https://support.google.com/accounts/bin/answer.py?answer=2450236" style="text-decoration: none; color: #4D90FE">https://support.google.com/accounts/bin/answer.py?answer=2450236</a>.
+
+<br />
+<br />
+
+If you are having problems accessing your account, reset your password by clicking the button below:
+
+<br />
+<br />
+
+<a href="https://accounts.google.com/RecoverAccount?fpOnly=1&source=ancrppe&Email=inboxapptest@gmail.com" target="_blank" style="text-align: center; font-size: 11px; font-family: arial, sans-serif; color: white; font-weight: bold; border-color: #3079ed; background-color: #4d90fe; background-image: linear-gradient(top,#4d90fe,#4787ed); text-decoration: none; display:inline-block; height: 27px; padding-left: 8px; padding-right: 8px; line-height: 27px; border-radius: 2px; border-width: 1px;">
+  <span style="color: white;">
+
+      Reset password
+
+  </span>
+</a>
+
+
+                <br />
+                <br />
+
+                  Sincerely,<br />
+                  The Google Accounts team
+
+                </td>
+
+                <td width="15" style="border-top: none; border-bottom: none; border-left: none; border-right: none;">
+                </td>
+
+              </tr>
+
+              <tr>
+                <td height="15" style="border-top: none; border-bottom: none; border-left: none; border-right: none;">
+                </td>
+              </tr>
+
+
+              <tr>
+
+
+                <td width="15" style="border-top: none; border-bottom: none; border-left: none; border-right: none;"></td>
+
+
+                <td width="568" style="font-size: 11px; font-family: arial, sans-serif; color: #777777; border-top: none; border-bottom: none; border-left: none; border-right: none;">
+
+                  This email can't receive replies. For more information, visit the <a href="https://support.google.com/accounts/bin/answer.py?answer=2450236" style="text-decoration: none; color: #4D90FE"><span style="color: #4D90FE;">Google Accounts Help Center</span></a>.
+
+                </td>
+
+
+                <td width="15" style="border-top: none; border-bottom: none; border-left: none; border-right: none;"></td>
+              </tr>
+
+
+              <tr>
+                <td height="15" style="border-top: none; border-bottom: none; border-left: none; border-right: none;">
+                </td>
+              </tr>
+            </table>
+
+
+            <table bgcolor="#f1f1f1" height="80" style="text-align: left">
+              <tr valign="middle">
+
+
+                <td style="font-size: 11px; font-family: arial, sans-serif; color: #777777;">
+
+                    You received this mandatory email service announcement to update you about important changes to your Google product or account.
+
+                  <br />
+                  <br />
+                  <div style="direction: ltr;">
+
+                    &copy; 2013 Google Inc., 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA
+
+                  </div>
+                </td>
+
+
+              </tr>
+            </table>
+
+          </td>
+        </tr>
+      </table>
+
+    </body>
+  </html>

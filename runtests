@@ -1,0 +1,48 @@
+#!/usr/bin/env python
+import os
+import argparse
+import subprocess
+
+
+def main():
+    parser = argparse.ArgumentParser(description="""
+        Inbox test runner. All unknown arguments are passed on to py.test.
+        """)
+    parser.add_argument('-a', '--all', dest='all', action='store_true')
+    parser.add_argument('-i', '--imap', dest='imap', action='store_true')
+    parser.add_argument('-e', '--eas', dest='eas', action='store_true')
+    parser.add_argument('extra', nargs='?')
+
+    args, extra_args = parser.parse_known_args()
+
+    dirname = os.path.dirname(os.path.realpath(__file__))
+    eastestspath = '{0}-eas/tests/eas'.format(dirname)
+
+    testrunner = ['py.test']
+
+    # Only imap tests
+    if args.imap:
+        testrunner.append('tests/imap')
+
+    # Only eas tests
+    elif args.eas and os.path.exists(eastestspath):
+        testrunner.append(eastestspath)
+
+    # All tests
+    elif args.all:
+        testrunner += ['tests/general', 'tests/imap']
+
+        if os.path.exists(eastestspath):
+            testrunner.append(eastestspath)
+
+     # Only general tests (Default)
+    else:
+        testrunner.append('tests/general')
+
+    print 'Running tests in {0}'.format(', '.join(d for d in testrunner[1:]))
+
+    testrunner.extend(extra_args)
+    subprocess.check_call(testrunner)
+
+if __name__=="__main__":
+    main()

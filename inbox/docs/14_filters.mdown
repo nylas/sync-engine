@@ -1,0 +1,35 @@
+Title: Filters
+
+Filters allow you to refine your query for mail data to specific parameters. The more specific you can make the request, the faster it will perform. They can be appended to API requests on [Messages](#messages) and [Threads](#threads). Note that values must use [percent-encoding](http://en.wikipedia.org/wiki/Percent-encoding) (also known as URL encoding).
+
+* **`subject`** match, supports regex if string starts with `/`
+
+* **`any_email`** (string) address. filters by any messages sent, received from, or also sent to the given address.
+
+* **`to`** all messages sent to an address
+
+* **`from`** all messages from an address
+
+* **`cc`** all messages cc'd to an address (by anyone)
+
+* **`bcc`** all messages bcc'd to an address (likely by you, since that header is removed by SMTP gateways)
+
+* **`thread`** the given identifier for a thread
+
+* **`tag`** (string) Only return threads with the given tag. This can include user-added labels, provider-specific labels for existing folder names, or Inbox's cannonical symbolic names. See [Tags](#tags) for more details.
+
+* **`filename`** name of a file
+
+* **`last_message_before`** (integer, unix time) Get threads whose most recent message was received before this timestamp.
+
+* **`last_message_after`** (integer, unix time) Get threads whose most recent message was received after this timestamp.
+
+* **`started_before`** (integer, unix time) Get threads whose first message was received before this timestamp.
+
+* **`started_after`** (integer, unix time) Get threads whose first message was received after this timestamp.
+
+* **`limit`** (integer) this defaults to 100 for performance. Set 0 for no limit.
+
+* **`offset`** (integer) zero-based offset to be used with limit for pagination of results
+
+* **`order_by`** (string, optional) Either 'subject' or 'date'. If given, return results ordered either alphabetically by subject or most-recent-first, respectively.

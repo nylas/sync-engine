@@ -1,27 +1,38 @@
 from __future__ import with_statement
+import json
+import sys
 from alembic import context
 from sqlalchemy import create_engine, pool
 
 from logging.config import fileConfig
 
-from inbox.server.config import config as load_config
-
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
-config = context.config
-
+alembic_config = context.config
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
-fileConfig(config.config_file_name)
+fileConfig(alembic_config.config_file_name)
 
-# Load Inbox server configuration.
-load_config()
+# If alembic was invoked with --tag=test, override these main config values
+if context.get_tag_argument() == 'test':
+    from inbox.config import config
+    with open('./tests/config-test.json') as f:
+        config.update(json.load(f))
+        if not config.get('MYSQL_HOSTNAME') == "localhost":
+            sys.exit("Tests should only be run on localhost DB!")
+
+
+from inbox.models import register_backends
+table_mod_for = register_backends()
+
 
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
-from inbox.server import models, db_uri
-target_metadata = models.Base.metadata
+from inbox.models.base import MailSyncBase
+target_metadata = MailSyncBase.metadata
+
+from inbox.ignition import db_uri
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

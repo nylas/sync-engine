@@ -1,0 +1,42 @@
+#!/usr/bin/env python
+from gevent import monkey; monkey.patch_all()
+
+import sys
+import argparse
+
+from setproctitle import setproctitle; setproctitle('inbox-auth')
+
+from sqlalchemy.orm.exc import NoResultFound
+
+from inbox.util.startup import preflight
+preflight()
+
+from inbox.util.url import NotSupportedError
+from inbox.models.session import session_scope
+from inbox.models import Account
+from inbox.auth.base import get_handler
+
+parser = argparse.ArgumentParser(description='Auth an email account')
+parser.add_argument('email_address',
+                    help='Email address of the account to authenticate')
+args = parser.parse_args()
+
+email_address = args.email_address
+
+with session_scope() as db_session:
+    auth_handler = get_handler(email_address)
+
+    try:
+        account = db_session.query(Account).filter_by(
+            email_address=email_address).one()
+        sys.exit('Already have this account!')
+    except NoResultFound:
+        account = auth_handler.create_auth_account(db_session,
+                                                   email_address)
+
+    try:
+        verified_account = auth_handler.verify_account(db_session, account)
+    except NotSupportedError as e:
+        sys.exit(str(e))
+
+print 'OK. Authenticated account for {}'.format(email_address)

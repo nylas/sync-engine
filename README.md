@@ -1,107 +1,89 @@
 # Inbox
 
-[http://www.inboxapp.com](http://www.inboxapp.com)
+#### The open source email toolkit.
 
-Before you look at the code, please go read [Worse is
-Better](http://www.jwz.org/doc/worse-is-better.html).
 
-While you're at it, please also read Ryan Dahl's
-[rant](https://gist.github.com/cookrn/4015437#file-rant-md).
+Inbox is a set of tools to make it simple and quick to develop apps and services on top of email. It consists of:
 
-Now take a deep breath.
+- IMAP sync engine
+- Gmail OAuth authentication
+- MIME parsing and decoding
+- Full text search indexing
+- Queryable metadata store
+- Full message body storage including attachments
+- All UTF-8 and JSON sanitized
+- Contacts list sync
 
-Let's begin.
+These features are exposed via a clean REST API. See the [docs] (inbox/docs) folder for details.
 
-## Set up
 
-The Inbox platform currenly consists of two parts: the Python web server and
-the Javascript browser client. They communicate over a custom JSON-RPC inspired
-websocket protocol.
+## Getting Started
 
-The server can run in a variety of environments. In production, we run it on
-EC2 instances. For development, you can create a local virtual machine. Here's
-how to get set up.
+You can run Inbox almost anywhere. We've successfully built images for Docker, VMware Fusion, VirtualBox, AWS, and DigitalOcean. The easiest way to get started is to install from source within VirtualBox.
+
+
+### Install from source
+
+Here's how to set up a development environment running on your local machine:
 
 1. [Install VirtualBox](https://www.virtualbox.org/wiki/Downloads)
 
-2. [Install Vagrant](http://downloads.vagrantup.com/)
+2. [Install Vagrant](http://www.vagrantup.com/downloads.html)
 
-3. `git clone git@github.com:inboxapp/inbox-server.git`
+3. `git clone git@github.com:inboxapp/inbox.git`
 
-4. `cd inbox-server`
+4. `cd inbox`
 
 5. `vagrant up`
 
-    Feel free to check out the `Vagrantfile` while this starts up. It creates a
-    host-only network for the VM at `192.168.10.200`.
+    Feel free to check out the `Vagrantfile` while this starts up. It creates a host-only network for the VM at `192.168.10.200`.
 
 6. `vagrant ssh`
 
     At this point you should be SSH'd into a shiny new Ubuntu 12.04 VM. The
-    `inbox-server` directory you started with should be synced to `/vagrant`.
+    `inbox` directory you started with should be synced to `/vagrant`.
 
-    We use [docker](http://www.docker.io/) to package Inbox with its
-    dependencies. The next steps will create a new container for development.
+    If not, run `vagrant reload` and `vagrant ssh` again. You should see the
+    shared folder now.
 
 7. `cd /vagrant`
 
-8. `docker build -t "inboxapp/inbox-server" .`
+8. `sudo ./setup.sh` to install dependencies and create databases.
 
-    This will take a minute or two. Grab a snickers and [read more about
-    docker](https://www.docker.io/learn_more/).
+9. `bin/inbox-start`
 
-9. Next, we'll start a shell in the docker container and stay attached.
+And _voilà_! Auth an account via the commandline and start syncing:
 
-    `docker run -v /vagrant/:/srv/inboxapp-dev/ -i -t -p 80:5000 inboxapp/inbox-server /bin/bash`
+```
+  bin/inbox-auth ben.bitdiddle1861@gmail.com
+  bin/inbox-sync start ben.bitdiddle1861@gmail.com
+```
 
-    This command also shares the `/vagrant` directory with the container (so
-    you can keep editing files from your local filesystem) and exposes port
-    5000 of the container.
 
-10. `cd /srv/inboxapp-dev`
+## Contributing
 
-11. `pip install -e inbox-server` to avoid path hacks.
+We'd love your help making Inbox better! Join the [Google
+Group](http://groups.google.com/group/inbox-dev) for project updates and feature
+discussion. We also hang out in `##inbox` on `irc.freenode.net`, or you can email
+[help@inboxapp.com](mailto:help@inboxapp.com).
 
-12. `SHELL=/bin/bash script /dev/null`
-    `tmux`
+Please sign the [Contributor License Agreement](https://www.inboxapp.com/cla.html)
+before submitting patches. (It's similar to other projects, like NodeJS.)
 
-    You're probably going to want to interact with zerorpc services while
-    developing and will need to multiplex your connection to the docker
-    container. There is a docker bug that prevents tmux from working properly
-    (https://github.com/dotcloud/docker/issues/728); we work around this
-    by using the `script` command to open a new pty.
+We maintain strict code style, following [pep8](http://legacy.python.org/dev/peps/pep-0008/), the [Google Python style
+guide](http://google-styleguide.googlecode.com/svn/trunk/pyguide.html), and [numpy docstring
+conventions](https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt).
 
-13. `./inbox debug`
+We standardize on single-quotes for strings literals e.g. 'my-identifier', but use double-quotes for strings that are likely to contain single-quote characters as part of the string itself (such as error messages, or any strings containing natural language), e.g. "You've got an error!".
 
-14. In order for the Google oauth callback to work, you need to edit your local
-    system's `/etc/hosts` file to include the line:
 
-    `192.168.10.200 dev-localhost.inboxapp.com`
+## License
 
-And voila! Visit
-[http://dev-localhost.inboxapp.com]([http://dev-localhost.inboxapp.com) in your
-browser!
+This code is free software, licensed under the The GNU Affero General Public License (AGPL).
+See the `LICENSE` file for more details.
 
-On OS X you might need to run `dscacheutil -flushcache` afterward.
 
-## Production
+#### Random notes
 
-We want to ship Inbox as a packaged docker container, so it shouldn't contain
-custom Nginx stuff or SSL certs. This should be a separate package.
-
-Right now Flask handles both static files and upgrading to HTTP 1.1, which is
-ok for development.
-
-If you need to delete old docker containers, you can run `docker rm `docker ps -a -q``
-
-<hr/>
-
-## Style guide and git notes
-
-We'll just be using the [Google Python style
-guide](http://google-styleguide.googlecode.com/svn/trunk/pyguide.html). No need
-to reinvent the wheel.
-
-Also, do `git config branch.master.rebase true` in the repo to keep your
-history nice and clean. You can set this globally using `git config --global
-branch.autosetuprebase remote`.
+You should do `git config branch.master.rebase true` in the repo to keep your
+history nice and clean. You can set this globally using `git config --global branch.autosetuprebase remote`.

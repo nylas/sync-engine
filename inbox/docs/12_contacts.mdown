@@ -1,0 +1,90 @@
+Title: Contacts
+
+The Inbox API provides access to the user's contacts, making it easy to add contact autocomplete, address book integration, and more to your application.
+
+# Retrieving contacts
+
+    GET https://api.inboxapp.com/n/<namespace_id>/contacts
+
+
+Fetch the user's contact list. This API supports query parameters which make it easy to search the user's contacts. Available query parameters are listed below:
+
+**Options:**
+
+* `order_by`- If `order_by=rank`, return contacts in ranked order of relevance based
+  on the user's mail data.
+* `filter` - If given and if `order_by=rank` is passed, only return results containing this parameter as a substring of the contact's name or email address.
+* `limit` - Maximum number of results to return. Defaults to 10. Set to 0 for no limit.
+* `offset` - Zero-based offset to be used with `limit` for pagination of results.
+
+**Sample Response:**
+
+```
+:::json
+[
+    {
+        "name": "Ben Bitdiddle",
+        "email": "ben.bitdiddle@mit.edu",
+        "id": "8pjz8oj4hkfwgtb46furlh77",
+        "namespace": "aqau8ta87ndh6cwv0o3ajfoo2",
+        "object": "contact"
+    },
+    ....
+]
+```
+
+Two calls to `/contacts?order_by=rank` are not guaranteed to return the same results, since the relative ranking of contacts may change over time. Clients that want to fetch all of a user's contacts should omit the `order_by` and `filter` parameters in order to get consistently-paginated results.
+
+
+# Retrieving a single contact
+
+    GET https://api.inboxapp.com/n/<namespace_id>/contacts/<contact_id>
+
+This endpoint retreives details about a specific contact.
+
+**Sample response:**
+```
+::json
+{
+    "name": "Ben Bitdiddle",
+    "email": "ben.bitdiddle@mit.edu",
+    "id": "8pjz8oj4hkfwgtb46furlh77",
+    "namespace": "aqau8ta87ndh6cwv0o3ajfoo2",
+    "object": "contact"
+}
+```
+
+# Creating a contact
+
+New contacts can be easily created. Note these currently only exist within Inbox, and do not sync back to the provider (e.g., Google Contacts).
+
+    POST https://api.inboxapp.com/n/<namespace_id>/contacts/
+
+**Sample post body**
+```
+:::json
+{
+    "name": "Bill Rogers",
+    "email": "wrogers@mit.edu"
+}
+```
+**Sample response**
+```
+:::json
+{
+    "email": "wrogers@mit.edu",
+    "id": "cwcr6raeh2s4966cfo9bgajev",
+    "name": "Bill Rogers",
+    "namespace": "aqau8ta87ndh6cwv0o3ajfoo2",
+    "object": "contact"
+}
+
+```
+
+# Updating an existing contact
+
+**TODO (emfree)**
+
+# Deleting an existing contact
+
+**TODO (emfree)**
