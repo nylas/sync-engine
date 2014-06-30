@@ -13,7 +13,6 @@
 "ACTION_QUEUE_LABEL": "actions_test",
 
 "BASE_DUMP": "data/base_dump.sql",
-"KEY_DIR": "/inbox-eas/tests/data/keys",
 
 "EMAIL_EXCEPTIONS": false,
 

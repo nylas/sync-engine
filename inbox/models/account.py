@@ -1,15 +1,9 @@
-import os
-from hashlib import sha256
 from sqlalchemy import (Column, Integer, String, DateTime, Boolean, ForeignKey,
                         Enum)
-from sqlalchemy.orm import relationship, deferred
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import true
-from sqlalchemy.types import BLOB
 
-from inbox.config import config
-from inbox.util.file import Lock, mkdirp
-from inbox.util.cryptography import encrypt_aes, decrypt_aes
-from inbox.basicauth import AUTH_TYPES
+from inbox.util.file import Lock
 
 from inbox.models.mixins import HasPublicID
 from inbox.models.base import MailSyncBase
@@ -169,44 +163,6 @@ class Account(MailSyncBase, HasPublicID):
 
     def sync_unlock(self):
         self._sync_lock.release()
-
-    # Password stuff
-    # 'deferred' loads these large binary fields into memory only when needed
-    # i.e. on direct access.
-    password_aes = deferred(Column(BLOB(256)))
-    key = deferred(Column(BLOB(128)))
-
-    @property
-    def password(self):
-        if self.password_aes is not None:
-            with open(self._keyfile, 'r') as f:
-                key = f.read()
-
-            key = self.key + key
-            return decrypt_aes(self.password_aes, key)
-
-    @password.setter
-    def password(self, value):
-        assert AUTH_TYPES.get(self.provider) == 'password', self.provider
-        assert value is not None
-
-        key_size = int(config.get('KEY_SIZE', 128))
-        self.password_aes, key = encrypt_aes(value, key_size)
-        self.key = key[:len(key) / 2]
-
-        with open(self._keyfile, 'w+') as f:
-            f.write(key[len(key) / 2:])
-
-    @property
-    def _keyfile(self, create_dir=True):
-        assert self.key
-
-        key_dir = config.get('KEY_DIR', None)
-        assert key_dir
-        if create_dir:
-            mkdirp(key_dir)
-        key_filename = '{0}'.format(sha256(self.key).hexdigest())
-        return os.path.join(key_dir, key_filename)
 
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator,

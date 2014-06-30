@@ -23,9 +23,6 @@
 "GOOGLE_OAUTH_CLIENT_SECRET": "zgY9wgwML0kmQ6mmYHYJE05d",
 "GOOGLE_OAUTH_REDIRECT_URI": "urn:ietf:wg:oauth:2.0:oob",
 
-"KEY_DIR": "/var/lib/inboxapp/keys",
-"KEY_SIZE": 128,
-
 "STORE_MESSAGES_ON_S3": false,
 "MSG_PARTS_DIRECTORY": "/var/lib/inboxapp/parts",
 

@@ -29,8 +29,6 @@ CREATE TABLE `account` (
   `save_raw_messages` tinyint(1) DEFAULT '1',
   `sync_host` varchar(255) DEFAULT NULL,
   `last_synced_contacts` datetime DEFAULT NULL,
-  `password_aes` blob,
-  `key` tinyblob,
   `type` varchar(16) DEFAULT NULL,
   `inbox_folder_id` int(11) DEFAULT NULL,
   `sent_folder_id` int(11) DEFAULT NULL,
@@ -78,8 +76,42 @@ CREATE TABLE `account` (
 
 LOCK TABLES `account` WRITE;
 /*!40000 ALTER TABLE `account` DISABLE KEYS */;
-INSERT INTO `account` VALUES (1,'ï¿½ï¿½ï¿½ï¿½hPID','inboxapptest@gmail.com',1,'precise64','2014-05-03 01:15:03',NULL,NULL,'gmailaccount',2,4,5,NULL,NULL,NULL,3,NULL,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL,NULL,NULL,NULL);
+INSERT INTO `account` VALUES (1,'ï¿½ï¿½ï¿½ï¿½hPID','inboxapptest@gmail.com',1,'precise64','2014-05-03 01:15:03','gmailaccount',2,4,5,NULL,NULL,NULL,3,NULL,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL,NULL,NULL,NULL);
 /*!40000 ALTER TABLE `account` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `actionlog`
+--
+
+DROP TABLE IF EXISTS `actionlog`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `actionlog` (
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `namespace_id` int(11) NOT NULL,
+  `action` tinytext NOT NULL,
+  `record_id` int(11) NOT NULL,
+  `table_name` tinytext NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ix_actionlog_created_at` (`created_at`),
+  KEY `ix_actionlog_deleted_at` (`deleted_at`),
+  KEY `ix_actionlog_namespace_id` (`namespace_id`),
+  KEY `ix_actionlog_updated_at` (`updated_at`),
+  CONSTRAINT `actionlog_ibfk_1` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `actionlog`
+--
+
+LOCK TABLES `actionlog` WRITE;
+/*!40000 ALTER TABLE `actionlog` DISABLE KEYS */;
+/*!40000 ALTER TABLE `actionlog` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -100,7 +132,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('247cd689758c');
+INSERT INTO `alembic_version` VALUES ('7a117720554');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -187,6 +219,41 @@ INSERT INTO `contact` VALUES (1,'ï¿½Zï¿½zoï¿½L?ï¿',1,'ac99aa06-5604-4234-9ccc-df
 UNLOCK TABLES;
 
 --
+-- Table structure for table `draftthread`
+--
+
+DROP TABLE IF EXISTS `draftthread`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `draftthread` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `master_public_id` binary(16) NOT NULL,
+  `thread_id` int(11) DEFAULT NULL,
+  `message_id` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT '2014-05-22 18:48:31',
+  `updated_at` datetime NOT NULL DEFAULT '2014-05-22 18:48:31',
+  `deleted_at` datetime DEFAULT NULL,
+  `public_id` binary(16) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `thread_id` (`thread_id`),
+  KEY `message_id` (`message_id`),
+  KEY `ix_draftthread_public_id` (`public_id`),
+  CONSTRAINT `draftthread_ibfk_1` FOREIGN KEY (`thread_id`) REFERENCES `thread` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `draftthread_ibfk_2` FOREIGN KEY (`message_id`) REFERENCES `message` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `draftthread`
+--
+
+LOCK TABLES `draftthread` WRITE;
+/*!40000 ALTER TABLE `draftthread` DISABLE KEYS */;
+INSERT INTO `draftthread` VALUES (1,'(ï¿½5ï¿½ï¿½r@qï¿',16,16,'2014-06-28 00:56:57','2014-06-28 00:56:57',NULL,'t¢5æMMƒ¸ÍÓ3M–xK');
+/*!40000 ALTER TABLE `draftthread` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `easaccount`
 --
 
@@ -201,6 +268,7 @@ CREATE TABLE `easaccount` (
   `eas_policy_key` varchar(64) DEFAULT NULL,
   `eas_account_sync_key` varchar(64) NOT NULL DEFAULT '0',
   `eas_state` enum('sync','sync keyinvalid','finish') DEFAULT 'sync',
+  `password` varchar(256) DEFAULT NULL,
   PRIMARY KEY (`id`),
   CONSTRAINT `easaccount_ibfk_1` FOREIGN KEY (`id`) REFERENCES `account` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -1096,4 +1164,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-06-26  1:49:07
+-- Dump completed on 2014-06-30 21:29:18
