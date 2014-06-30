@@ -6,7 +6,10 @@ Threads are the main object in Inbox. They can be read, archived, and deleted. A
 
 # Retrieving a Thread
 
-    GET https://api.inboxapp.com/n/<namespace_id>/threads/<thread_id>
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/threads/<thread_id>
+```
 
 The thread object includes useful information like subject, participants, and time of the most recenly received message.
  
@@ -41,8 +44,8 @@ The thread object includes useful information like subject, participants, and ti
             "id": "f0idlvozkrpj3ihxze7obpivh"
         },
         {
-            'name': "unread",
-            'id': "8keda28h8ijj2nogpj83yjep8"
+            "name": "unread",
+            "id": "8keda28h8ijj2nogpj83yjep8"
         }
     ],
     "messages": [
@@ -61,11 +64,17 @@ The thread object includes useful information like subject, participants, and ti
 
 # Retrieving Many Threads
 
-    GET https://api.inboxapp.com/n/<namespace_id>/threads?<filter_string>
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/threads?<filter_string>
+```
 
 This API supports [Filters](#filters), making it easy to return a subset of threads matching your needs. You should specify one or more filter parameters to return threads in a specific folder, from a specific sender, etc. For example, this request would return the threads in the user's inbox:
 
-    GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=inbox
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=inbox
+```
 
 
 **Response:**

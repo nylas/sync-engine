@@ -4,8 +4,10 @@ The Inbox API provides access to the user's contacts, making it easy to add cont
 
 # Retrieving contacts
 
-    GET https://api.inboxapp.com/n/<namespace_id>/contacts
-
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/contacts
+```
 
 Fetch the user's contact list. This API supports query parameters which make it easy to search the user's contacts. Available query parameters are listed below:
 
@@ -38,7 +40,10 @@ Two calls to `/contacts?order_by=rank` are not guaranteed to return the same res
 
 # Retrieving a single contact
 
-    GET https://api.inboxapp.com/n/<namespace_id>/contacts/<contact_id>
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/contacts/<contact_id>
+```
 
 This endpoint retreives details about a specific contact.
 
@@ -58,9 +63,13 @@ This endpoint retreives details about a specific contact.
 
 New contacts can be easily created. Note these currently only exist within Inbox, and do not sync back to the provider (e.g., Google Contacts).
 
-    POST https://api.inboxapp.com/n/<namespace_id>/contacts/
+```
+:::xml
+POST https://api.inboxapp.com/n/<namespace_id>/contacts/
+```
 
 **Sample post body**
+
 ```
 :::json
 {
@@ -69,6 +78,7 @@ New contacts can be easily created. Note these currently only exist within Inbox
 }
 ```
 **Sample response**
+
 ```
 :::json
 {
@@ -83,8 +93,8 @@ New contacts can be easily created. Note these currently only exist within Inbox
 
 # Updating an existing contact
 
-**TODO (emfree)**
+The Inbox API does not yet support updating existing contacts or syncing changes back to underlying mail providers. Check back soon for this functionality.
 
 # Deleting an existing contact
 
-**TODO (emfree)**
+The Inbox API does not yet support deleting contacts. Check back soon for this functionality.

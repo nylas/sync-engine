@@ -2,7 +2,10 @@ Title: Sending
 
 Inbox provides a single API for sending mail:
 
-    POST https://api.inboxapp.com/n/<namespace_id>/send
+```
+:::xml
+POST https://api.inboxapp.com/n/<namespace_id>/send
+```
     
 You can use this API in two ways:
 

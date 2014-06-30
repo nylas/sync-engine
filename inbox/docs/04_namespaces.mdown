@@ -4,9 +4,10 @@ Namespaces are essentially references to linked accounts. They are the top-level
 
 The top-level URI will return information about a namespace with the given `namespace_id`.
 
-
-    GET https://api.inboxapp.com/n/<namespace_id>
-
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>
+```
 
 **Response**
 

@@ -4,18 +4,25 @@ A draft is a special kind of message which has not been sent, and therefore its 
 
 To get a list of all threads with drafts, use the [Threads](#threads) API call with a tag [filter](#filters) that specifies `draft`, like so:
 
-    https://api.inboxapp.com/n/<namespace_id>/threads?tag=drafts
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=drafts
+```
 
 # Retrieving Drafts
 
-    GET  https://api.inboxapp.com/n/<namespace_id>/drafts
-    GET  https://api.inboxapp.com/n/<namespace_id>/drafts/<draft_id>
-
+```
+:::xml
+GET  https://api.inboxapp.com/n/<namespace_id>/drafts
+GET  https://api.inboxapp.com/n/<namespace_id>/drafts/<draft_id>
+```
 
 # Creating a draft
 
-    POST https://api.inboxapp.com/n/<namespace_id>/drafts
-
+```
+:::xml
+POST https://api.inboxapp.com/n/<namespace_id>/drafts
+```
 
 Post body parameters:
 
@@ -76,7 +83,10 @@ If the draft is a response to an existing thread, you should provide the thread'
 
 Updating a draft is as simple as issuing a POST request to the draft's URI.
 
-    POST https://api.inboxapp.com/n/<namespace_id>/drafts/<draft_id>
+```
+:::xml
+POST https://api.inboxapp.com/n/<namespace_id>/drafts/<draft_id>
+```
 
 Any fields in the body of the request will overwrite previous values.
 
@@ -86,7 +96,10 @@ Updating a draft returns a new draft object, with a new ID. When submitting subs
 
 To delete a draft simply issue a DELETE request to the draft's URI.
 
-    DELETE https://api.inboxapp.com/n/<namespace_id>/drafts/<draft_id>
+```
+:::xml
+DELETE https://api.inboxapp.com/n/<namespace_id>/drafts/<draft_id>
+```
 
 If the draft does not exist, this request will fail.
 

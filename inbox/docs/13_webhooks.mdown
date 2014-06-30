@@ -5,10 +5,13 @@ Webhooks allow your application to receive callbacks when specific events happen
 
 # Creating a new webhook
 
-    POST https://api.inboxapp.com/n/<namespace_id>/webhooks
-
+```
+:::xml
+POST https://api.inboxapp.com/n/<namespace_id>/webhooks
+```
 
 **Sample post body**
+
 ```
 :::json
 {
@@ -45,7 +48,10 @@ Note that the specified `callback_url` and `failure_notify_url` *must* support H
 
 # Requesting webhook details
 
-    GET https://api.inboxapp.com/n/<namespace_id>/webhooks/<webhook_id>
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/webhooks/<webhook_id>
+```
 
 **Response:**
 
@@ -84,10 +90,15 @@ Note that the specified `callback_url` and `failure_notify_url` *must* support H
 Webhooks can be stopped or restarted by issuing a PUT request to the webhook's
 URI with the new value of the `active` parameter in the body.
 
-    PUT https://api.inboxapp.com/n/<namespace_id>/webhooks/<webhook_id>
+```
+:::xml
+PUT https://api.inboxapp.com/n/<namespace_id>/webhooks/<webhook_id>
+```
 
 ## Sample post body
+
 ```
+:::json
 {
   "active": false
 }
@@ -98,12 +109,15 @@ callback URL, delete the webhook and create a new one.
 
 # Listing all webhooks
 
-    //Again, don't just pose code, post some text content/context too. No matter how obvious it may be. It's good documentation experience and you want to be consistent too.
-
-    GET https://api.inboxapp.com/n/<namespace_id>/webhooks
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/webhooks
+```
 
 **Response:**
+
 ```
+:::json
 [
   <webhook_object>,
   <webhook_object>,

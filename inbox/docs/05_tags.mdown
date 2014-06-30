@@ -4,10 +4,15 @@ Tags are the primary way of storing metadata on a specific thread. They are gene
 
 # Getting all tags
 
-    GET https://api.inboxapp.com/n/<namespace_id>/tags
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/tags
+```
 
 **Response**
+
 ```
+:::json
 [
     {
         "name": "inbox",
@@ -25,9 +30,13 @@ Tags are the primary way of storing metadata on a specific thread. They are gene
 
 # Creating a new tag
 
-    POST https://api.inboxapp.com/n/<namespace_id>/tags
+```
+:::xml
+POST https://api.inboxapp.com/n/<namespace_id>/tags
+```
 
 **Request body**
+
 ```
 ::json
 {
@@ -37,10 +46,15 @@ Tags are the primary way of storing metadata on a specific thread. They are gene
 
 # Modifying tags on a thread
 
-    PUT https://api.inboxapp.com/n/<namespace_id>/thread/<thread_id>
+```
+:::xml
+PUT https://api.inboxapp.com/n/<namespace_id>/thread/<thread_id>
+```
 
 **Request body**
+
 ```
+:::json
 {
     "add_tags": ["housing-search", "craigslist"]
     "remove_tags": ["unread"]

@@ -4,7 +4,10 @@ Messages are a sub-object of threads. The content of a message is immutable (wit
 
 # Retrieving a Message
 
-    GET  https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>
+```
 
 **Sample Response**
 
@@ -42,8 +45,10 @@ Messages are a sub-object of threads. The content of a message is immutable (wit
 
 The messages endpoint supports [Filters](#filters), making it easy to return a subset of messages matching your needs. You should specify one or more filter parameters to narrow your request. For example, you can return messages from a specific sender, with a particular subject, etc.
 
-    GET  https://api.inboxapp.com/n/<namespace_id>/messages?filter_string
-
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/messages?filter_string
+```
 
 **Sample Response**
 
@@ -61,11 +66,21 @@ The messages endpoint supports [Filters](#filters), making it easy to return a s
 
 One of the filter parameters available on messages is `thread`. Given a `thread_id` value, the API call will will return all messages in the thread.
 
-    GET  https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>?thread=<thread_id>
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>?thread=<thread_id>
+```
 
 # Marking a message as unread
 
-    PUT https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>
-    {
-        "unread": false
-    }
+```
+:::xml
+PUT https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>
+```
+
+```
+:::json
+{
+    "unread": false
+}
+```

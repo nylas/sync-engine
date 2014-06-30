@@ -4,7 +4,10 @@ The files endpoint is used to manage data attached to messages. If you'd like to
 
 # Retrieving a specific file's metadata
 
-    GET https://api.inboxapp.com/n/<namespace_id>/files/<file_id>
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/files/<file_id>
+```
 
 **Response:**
 
@@ -26,7 +29,11 @@ The files endpoint is used to manage data attached to messages. If you'd like to
 
 This endpoint supports [filters](#filters), which allow you to fetch multiple files matching specific critera. For example, the following will return all zip files. Note the `/` character in the content type has been replaced by the [percent-encoded](http://en.wikipedia.org/wiki/Percent-encoding) value `%2F`.
 
-    GET https://api.inboxapp.com/n/<namespace_id>/files?content_type=application%2Fzip
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/files?content_type=application%2Fzip
+```
+
 
 ## A note on content-types
 
@@ -37,25 +44,35 @@ In the spirit of transcending [MIME](http://www.ietf.org/rfc/rfc2045.txt), Inbox
 
 Files can be downloaded by appending `/download` to the URI. The body response will include the filename.
 
-    GET https://api.inboxapp.com/n/<namespace_id>/files/<file_id>/download
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/files/<file_id>/download
+```
 
 
 # Uploading a new file
 
-    POST https://api.inboxapp.com/n/<namespace_id>/files
+```
+:::xml
+POST https://api.inboxapp.com/n/<namespace_id>/files
+```
+
     
 This endpoint is used to transfer files to Inbox, which must be done before adding them to a draft message. Data should be sent as multipart-form data with a single file field named `file`. An example of a correct request is shown below:
 
-    POST https://api.inboxapp.com/v1/n/account_123ad123512/files HTTP/1.1
-    Accept-Encoding: gzip, deflate
-    Content-Type: multipart/form-data; boundary=---------------------------41184676334
-    Content-Length: 29278
+```
+:::http
+POST https://api.inboxapp.com/v1/n/account_123ad123512/files HTTP/1.1
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data; boundary=---------------------------41184676334
+Content-Length: 29278
 
-    -----------------------------41184676334
-    Content-Disposition: form-data; name="file"; filename="GrandCanyon.jpg"
-    Content-Type: image/jpeg
+-----------------------------41184676334
+Content-Disposition: form-data; name="file"; filename="GrandCanyon.jpg"
+Content-Type: image/jpeg
 
-    <<<Binary data here>>>
+<<<Binary data here>>>
+```
 
 A successful upload will return an array with a single file object. This object's ID may added to subsequent [draft updates](#drafts) to attach the file to a draft before sending.
 
