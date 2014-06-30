@@ -11,7 +11,9 @@ from werkzeug.exceptions import HTTPException
 from inbox.models import (
     Message, Block, Part, Thread, Namespace, Lens, Webhook, Tag, SpoolMessage,
     Contact)
-from inbox.api.kellogs import jsonify
+from inbox.api.kellogs import jsonify, cereal
+from inbox.api.validation import (InputError, get_tags, get_attachments,
+                                  get_thread)
 from inbox.config import config
 from inbox import contacts, sendmail
 from inbox.models.base import MAX_INDEXABLE_LENGTH
@@ -563,18 +565,35 @@ def draft_create_api():
     subject = data.get('subject')
     body = data.get('body')
     files = data.get('files')
-
-    thread_public_id = data.get('reply_to_thread')
+    try:
+        tags = get_tags(data.get('tags'), g.namespace.id, g.db_session)
+        files = get_attachments(data.get('files'), g.namespace.id,
+                                g.db_session)
+        replyto_thread = get_thread(data.get('reply_to_thread'),
+                                    g.namespace.id, g.db_session)
+    except InputError as e:
+        return err(404, e.message)
 
     draft = sendmail.create_draft(g.db_session, g.namespace.account, to,
                                   subject, body, files, cc, bcc,
-                                  thread_public_id)
+                                  tags, replyto_thread)
 
     return jsonify(draft)
 
 
 @app.route('/drafts/<public_id>', methods=['POST'])
 def draft_update_api(public_id):
+    parent_draft = g.db_session.query(SpoolMessage). \
+        filter(SpoolMessage.public_id == public_id).first()
+    if parent_draft is None or parent_draft.namespace.id != g.namespace.id:
+        return err(404, 'No draft with public id {}'.format(public_id))
+    if not parent_draft.is_latest:
+        return err(409, 'Draft {} has already been updated to {}'.format(
+            public_id, cereal(parent_draft.most_recent_revision)))
+
+    # TODO(emfree): what if you try to update a draft on a *thread* that's been
+    # deleted?
+
     data = request.get_json(force=True)
 
     to = data.get('to')
@@ -582,10 +601,16 @@ def draft_update_api(public_id):
     bcc = data.get('bcc')
     subject = data.get('subject')
     body = data.get('body')
-    block_public_ids = data.get('files')
+    try:
+        tags = get_tags(data.get('tags'), g.namespace.id, g.db_session)
+        files = get_attachments(data.get('files'), g.namespace.id,
+                                g.db_session)
+    except InputError as e:
+        return err(404, e.message)
 
-    draft = sendmail.update_draft(g.db_session, g.namespace.account, public_id,
-                                  to, subject, body, block_public_ids, cc, bcc)
+    draft = sendmail.update_draft(g.db_session, g.namespace.account,
+                                  parent_draft, to, subject, body,
+                                  files, cc, bcc, tags)
     return jsonify(draft)
 
 

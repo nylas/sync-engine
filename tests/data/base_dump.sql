@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.35, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.37, for debian-linux-gnu (x86_64)
 --
--- Host: localhost    Database: inbox
+-- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.5.35-0ubuntu0.12.04.2-log
+-- Server version	5.5.37-0ubuntu0.12.04.1-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -100,7 +100,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('5a136610b50b');
+INSERT INTO `alembic_version` VALUES ('247cd689758c');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -184,40 +184,6 @@ LOCK TABLES `contact` WRITE;
 /*!40000 ALTER TABLE `contact` DISABLE KEYS */;
 INSERT INTO `contact` VALUES (1,'ï¿½Zï¿½zoï¿½L?ï¿',1,'ac99aa06-5604-4234-9ccc-dfb5f41973d1','inbox','local','inboxapptest@gmail.com','',NULL,24,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(2,'ï¿½6\",NA@ï¿½ï¿½ï',1,'523f7769-c26e-4728-921d-ffd43e5bb1b4','inbox','local','benbitdiddle1861@gmail.com','Ben Bitdiddle',NULL,10,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(3,'ï¿½4ï¿½-;Kï¿½ï¿',1,'0ff75111-5a72-46a4-a0d0-d1d189422117','inbox','local','paulxtiseo@gmail.com','Paul Tiseo',NULL,10,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(4,'ï¿½ï¿½ï¿½&mN@ï¿½',1,'6840fd76-34e3-4b1a-b0a3-6b797bbf92d7','inbox','local','golang-nuts@googlegroups.com','golang-nuts',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(5,'ï¿½`<]Jï¿½ï¿½',1,'31d28d81-67df-479b-ae79-6f19589a88dd','inbox','local','mail-noreply@google.com','Gmail Team',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(6,'\\ï¿½#eï¿½Hxï¿½ï',1,'c0849c30-e29d-4404-b931-ddf9c3d06201','inbox','local','christine@spang.cc','Christine Spang',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(7,'ï¿½ï¿½>J0ï¿½',1,'94d616ac-3963-442a-9d05-b88d43a94758','inbox','local','no-reply@accounts.google.com','',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(8,'amXï¿½T@Â˜6ï¿½>',1,'47c6565a-2c8e-49a5-a32c-9a7aff921248','inbox','local','kavya719@gmail.com','kavya joshi',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL);
 /*!40000 ALTER TABLE `contact` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `draftthread`
---
-
-DROP TABLE IF EXISTS `draftthread`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `draftthread` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `master_public_id` binary(16) NOT NULL,
-  `thread_id` int(11) DEFAULT NULL,
-  `message_id` int(11) DEFAULT NULL,
-  `created_at` datetime NOT NULL DEFAULT '2014-05-22 18:48:31',
-  `updated_at` datetime NOT NULL DEFAULT '2014-05-22 18:48:31',
-  `deleted_at` datetime DEFAULT NULL,
-  `public_id` binary(16) NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `thread_id` (`thread_id`),
-  KEY `message_id` (`message_id`),
-  KEY `ix_draftthread_public_id` (`public_id`),
-  CONSTRAINT `draftthread_ibfk_1` FOREIGN KEY (`thread_id`) REFERENCES `thread` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `draftthread_ibfk_2` FOREIGN KEY (`message_id`) REFERENCES `message` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `draftthread`
---
-
-LOCK TABLES `draftthread` WRITE;
-/*!40000 ALTER TABLE `draftthread` DISABLE KEYS */;
-/*!40000 ALTER TABLE `draftthread` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -871,19 +837,14 @@ CREATE TABLE `spoolmessage` (
   `is_sent` tinyint(1) NOT NULL DEFAULT '0',
   `resolved_message_id` int(11) DEFAULT NULL,
   `parent_draft_id` int(11) DEFAULT NULL,
-  `draft_copied_from` int(11) DEFAULT NULL,
-  `replyto_thread_id` int(11) DEFAULT NULL,
   `state` enum('draft','sending','sending failed','sent') NOT NULL DEFAULT 'draft',
+  `is_reply` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   KEY `resolved_message_id` (`resolved_message_id`),
   KEY `spoolmessage_ibfk_3` (`parent_draft_id`),
-  KEY `spoolmessage_ibfk_4` (`draft_copied_from`),
-  KEY `spoolmessage_ibfk_5` (`replyto_thread_id`),
   CONSTRAINT `spoolmessage_ibfk_1` FOREIGN KEY (`id`) REFERENCES `message` (`id`) ON DELETE CASCADE,
   CONSTRAINT `spoolmessage_ibfk_2` FOREIGN KEY (`resolved_message_id`) REFERENCES `message` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `spoolmessage_ibfk_3` FOREIGN KEY (`parent_draft_id`) REFERENCES `spoolmessage` (`id`),
-  CONSTRAINT `spoolmessage_ibfk_4` FOREIGN KEY (`draft_copied_from`) REFERENCES `spoolmessage` (`id`),
-  CONSTRAINT `spoolmessage_ibfk_5` FOREIGN KEY (`replyto_thread_id`) REFERENCES `draftthread` (`id`)
+  CONSTRAINT `spoolmessage_ibfk_3` FOREIGN KEY (`parent_draft_id`) REFERENCES `spoolmessage` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1135,4 +1096,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-06-25  0:03:42
+-- Dump completed on 2014-06-26  1:49:07

@@ -1,4 +1,4 @@
-from collections import namedtuple
+from datetime import datetime
 
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
@@ -6,17 +6,9 @@ from inbox.util.misc import load_modules
 from inbox.util.url import NotSupportedError
 from inbox.log import get_logger
 from inbox.models.session import session_scope
-from inbox.models import (SpoolMessage, Thread, DraftThread,
-                                             Account, Block)
-from inbox.models.util import get_or_copy_draft
+from inbox.models import SpoolMessage, Thread, Account, Part
 from inbox.sendmail.message import Recipients
-from inbox.sqlalchemy_ext.util import b36_to_bin
-
-
-# Message attributes of a message we're creating a reply to,
-# needed to correctly set headers in the reply.
-ReplyToAttrs = namedtuple(
-    'ReplyToAttrs', 'subject message_id_header references body')
+from inbox.sqlalchemy_ext.util import generate_public_id
 
 
 class SendMailException(Exception):
@@ -64,16 +56,6 @@ def register_backends():
     return sendmail_mod_for
 
 
-def get_function(provider, fn):
-    sendmail_mod_for = register_backends()
-
-    sendmail_mod = sendmail_mod_for.get(provider)
-    if not sendmail_mod:
-        raise NotSupportedError('Inbox does not support the email provider.')
-
-    return getattr(sendmail_mod, fn, None)
-
-
 def get_sendmail_client(account):
     sendmail_mod_for = register_backends()
 
@@ -90,36 +72,6 @@ def _parse_recipients(dicts_list):
     return [(d.get('name', ''), d.get('email', '')) for d in dicts_list]
 
 
-def all_recipients(to, cc=None, bcc=None):
-    """
-    Create a Recipients namedtuple.
-
-    Parameters
-    ----------
-    to : list
-        list of utf-8 encoded strings
-    cc : list, optional
-        list of utf-8 encoded strings
-    bcc: list, optional
-        list of utf-8 encoded strings
-
-    Returns
-    -------
-    Recipients(to, cc, bcc)
-
-    """
-    if to and not isinstance(to, list):
-        to = [to]
-
-    if cc and not isinstance(cc, list):
-        cc = [cc]
-
-    if bcc and not isinstance(bcc, list):
-        bcc = [bcc]
-
-    return Recipients(to=to, cc=cc, bcc=bcc)
-
-
 def get_draft(db_session, account, draft_public_id):
     """ Get the draft with public_id = `draft_public_id`, or None. """
     return db_session.query(SpoolMessage).join(Thread).filter(
@@ -128,15 +80,18 @@ def get_draft(db_session, account, draft_public_id):
 
 
 def get_all_drafts(db_session, account):
-    """ Get all the draft messages for the account. """
-    return db_session.query(SpoolMessage).join(Thread).filter(
+    """ Get all current draft messages for the account. """
+    # TODO(emfree) result-limit here, and ideally avoid loading non-current
+    # drafts in the first place.
+    drafts = db_session.query(SpoolMessage).join(Thread).filter(
         SpoolMessage.state == 'draft',
         Thread.namespace_id == account.namespace.id).all()
+    return [draft for draft in drafts if draft.is_latest]
 
 
 def create_draft(db_session, account, to=None, subject=None,
-                 body=None, block_public_ids=None, cc=None, bcc=None,
-                 thread_public_id=None):
+                 body=None, blocks=None, cc=None, bcc=None,
+                 tags=None, replyto_thread=None):
     """
     Create a new draft. If `thread_public_id` is specified, the draft is a
     reply to the last message in the thread; otherwise, it is an independant
@@ -151,35 +106,18 @@ def create_draft(db_session, account, to=None, subject=None,
     to_addr = _parse_recipients(to) if to else to
     cc_addr = _parse_recipients(cc) if cc else cc
     bcc_addr = _parse_recipients(bcc) if bcc else bcc
-    verify_blocks(block_public_ids, account.namespace.id)
 
-    # For independant drafts
-    replyto_thread_id = None
+    is_reply = replyto_thread is not None
 
-    # For reply drafts
-    if thread_public_id is not None:
-        thread = db_session.query(Thread).filter(
-            Thread.public_id == thread_public_id).one()
-
-        assert thread.namespace == account.namespace
-
-        draft_thread = DraftThread.create(db_session, thread)
-        db_session.add(draft_thread)
-        db_session.commit()
-
-        replyto_thread_id = draft_thread.id
-
-    create_and_save_fn = get_function(account.provider,
-                                      'create_and_save_draft')
-    return create_and_save_fn(db_session, account, to_addr, subject, body,
-                              block_public_ids, cc_addr, bcc_addr,
-                              replyto_thread_id)
+    return create_and_save_draft(db_session, account, to_addr, subject, body,
+                                 blocks, cc_addr, bcc_addr, tags,
+                                 replyto_thread, is_reply)
 
 
-def update_draft(db_session, account, draft_public_id, to=None, subject=None,
-                 body=None, block_public_ids=None, cc=None, bcc=None):
+def update_draft(db_session, account, draft, to=None, subject=None,
+                 body=None, blocks=None, cc=None, bcc=None, tags=None):
     """
-    Update the draft with public_id = `draft_public_id`.
+    Update draft.
 
     To maintain our messages are immutable invariant, we create a new draft
     message object.
@@ -198,25 +136,17 @@ def update_draft(db_session, account, draft_public_id, to=None, subject=None,
     return its public_id (which is different than the original's).
 
     """
-    draft = get_or_copy_draft(db_session, draft_public_id)
-
-    db_session.add(draft)
-    db_session.commit()
-
     to_addr = _parse_recipients(to) if to else draft.to_addr
     cc_addr = _parse_recipients(cc) if cc else draft.cc_addr
     bcc_addr = _parse_recipients(bcc) if bcc else draft.bcc_addr
     subject = subject or draft.subject
     body = body or draft.sanitized_body
-    block_public_ids = block_public_ids or \
-        [p.public_id for p in draft.parts if p.is_attachment]
-    verify_blocks(block_public_ids, account.namespace.id)
+    blocks = blocks or [p for p in draft.parts if p.is_attachment]
 
-    create_and_save_fn = get_function(account.provider,
-                                      'create_and_save_draft')
-    return create_and_save_fn(db_session, account, to_addr, subject, body,
-                              block_public_ids, cc_addr, bcc_addr,
-                              draft.replyto_thread_id, draft.id)
+    return create_and_save_draft(db_session, account, to_addr, subject, body,
+                                 blocks, cc_addr, bcc_addr,
+                                 tags, draft.thread, draft.is_reply,
+                                 draft)
 
 
 def delete_draft(db_session, account, draft_public_id):
@@ -234,6 +164,10 @@ def delete_draft(db_session, account, draft_public_id):
 def _delete_draft_versions(db_session, draft_id):
     draft = db_session.query(SpoolMessage).get(draft_id)
 
+    # Remove the drafts tag from the thread
+    # STOPSHIP(emfree) is this the right way to do this?
+    draft.thread.remove_tag(draft.namespace.tags['drafts'])
+
     if draft.parent_draft_id:
         _delete_draft_versions(db_session, draft.parent_draft_id)
 
@@ -244,17 +178,14 @@ def _delete_draft_versions(db_session, draft_id):
 
 def send_draft(account_id, draft_id):
     """
-    Send the draft with id = `draft_id` or
-    if `draft_public_id` is not specified, create a draft and send it - in
-    this case, a `to` address must be specified.
-
+    Send the draft with id = `draft_id`.
     """
+
     with session_scope() as db_session:
         account = db_session.query(Account).get(account_id)
 
         log = get_logger(account.id, 'drafts')
         sendmail_client = get_sendmail_client(account)
-
         try:
             draft = db_session.query(SpoolMessage).filter(
                 SpoolMessage.id == draft_id).one()
@@ -271,74 +202,127 @@ def send_draft(account_id, draft_id):
         assert draft.is_draft and not draft.is_sent
 
         recipients = Recipients(draft.to_addr, draft.cc_addr, draft.bcc_addr)
-        attachment_public_ids = [p.public_id for p in draft.parts
-                                 if p.is_attachment]
-
-        if not draft.replyto_thread:
-            return sendmail_client.send_new(db_session, draft,
-                                            recipients, attachment_public_ids)
+        if not draft.is_reply:
+            sendmail_client.send_new(db_session, draft, recipients)
         else:
-            assert isinstance(draft.replyto_thread, DraftThread)
-            thread = draft.replyto_thread.thread
+            sendmail_client.send_reply(db_session, draft, recipients)
 
-            message_id = draft.replyto_thread.message_id
-            if thread.messages[0].id != message_id:
-                raise SendMailException(
-                    'Can only send a reply to the latest message in thread!')
+        # Update SpoolMessage
+        draft.is_sent = True
+        draft.is_draft = False
+        draft.state = 'sent'
 
-            thread_subject = thread.subject
-            # The first message is the latest message we have for this thread
-            message_id_header = thread.messages[0].message_id_header
-            # The references are JWZ compliant
-            references = thread.messages[0].references
-            body = thread.messages[0].prettified_body
+        # Update thread
+        sent_tag = account.namespace.tags['sent']
+        draft.thread.apply_tag(sent_tag)
 
-            # Encapsulate the attributes of the message to reply to,
-            # needed to set the right headers, subject on the reply.
-            replyto_attrs = ReplyToAttrs(subject=thread_subject,
-                                         message_id_header=message_id_header,
-                                         references=references,
-                                         body=body)
+        db_session.commit()
 
-            return sendmail_client.send_reply(db_session, draft, replyto_attrs,
-                                              recipients,
-                                              attachment_public_ids)
+        return draft
 
 
-def verify_blocks(block_public_ids, namespace_id):
-    """ Verifies that the provided block_public_ids exist and are
-        within the given namesapce_id
+def generate_attachments(blocks):
+    attachment_dicts = []
+    for block in blocks:
+        attachment_dicts.append({
+            'filename': block.filename,
+            'data': block.data,
+            'content_type': block.content_type})
+    return attachment_dicts
+
+
+def create_and_save_draft(db_session, account, to_addr=None, subject=None,
+                          body=None, blocks=None, cc_addr=None, bcc_addr=None,
+                          new_tags=None, thread=None, is_reply=False,
+                          parent_draft=None):
     """
-    if not block_public_ids:
-        return
-    if not namespace_id:
-        raise ValueError("Need a namespace to check!")
-    with session_scope() as db_session:
-        for block_public_id in block_public_ids:
-            try:
-                b36_to_bin(block_public_id)
-                block = db_session.query(Block).filter(
-                    Block.public_id == block_public_id).one()
-                assert block.namespace_id == namespace_id
-            except (ValueError, NoResultFound, AssertionError):
-                raise SendMailException(
-                    'The given block public_ids {} are  not part of '
-                    'namespace {}'.format(block_public_ids,
-                                          namespace_id))
+    Create a draft object and commit it to the database.
+    """
+    dt = datetime.utcnow()
+    uid = generate_public_id()
+    to_addr = to_addr or []
+    cc_addr = cc_addr or []
+    bcc_addr = bcc_addr or []
+    blocks = blocks or []
+    body = body or ''
+    message = SpoolMessage()
+    message.from_addr = [(account.sender_name, account.email_address)]
+    message.created_date = dt
+    # TODO(emfree): we should maybe make received_date nullable, so its value
+    # doesn't change in the case of a drafted-and-later-reconciled message.
+    message.received_date = dt
+    message.is_sent = False
+    message.state = 'draft'
+    if parent_draft is not None:
+        message.parent_draft_id = parent_draft.id
+    message.subject = subject
+    message.sanitized_body = body
+    message.to_addr = to_addr
+    message.cc_addr = cc_addr
+    message.bcc_addr = bcc_addr
+    # TODO(emfree): this is different from the normal 'size' value of a
+    # message, which is the size of the entire MIME message.
+    message.size = len(body)
+    message.is_draft = True
+    message.is_read = True
+    message.inbox_uid = uid
+    message.public_id = uid
 
+    # Set the snippet
+    message.calculate_html_snippet(body)
 
-def generate_attachments(block_public_ids):
-    if not block_public_ids:
-        return
-    with session_scope() as db_session:
-        all_files = db_session.query(Block).filter(
-            Block.public_id.in_(block_public_ids)).all()
+    # Associate attachments to the draft message
+    for block in blocks:
+        # Create a new Part object to associate to the message object.
+        # (You can't just set block.message, because if block is an attachment
+        # on an existing message, that would dissociate it from the existing
+        # message.)
+        part = Part()
+        part.namespace_id = account.namespace.id
+        part.content_disposition = 'attachment'
+        part.content_type = block.content_type
+        part.is_inboxapp_attachment = True
+        part.data = block.data
+        message.parts.append(part)
+        db_session.add(part)
 
-        # In the future we may consider discovering the filetype from the data
-        # by using #magic.from_buffer(data, mime=True))
-        attachments = [
-            dict(filename=b.filename,
-                 data=b.data,
-                 content_type=b.content_type)
-            for b in all_files]
-        return attachments
+    # TODO(emfree) Update contact data here.
+
+    if is_reply:
+        message.is_reply = True
+        # If we're updating a draft, copy the in-reply-to and references
+        # headers from the parent. Otherwise, construct them from the last
+        # message currently in the thread.
+        if parent_draft is not None:
+            message.in_reply_to = parent_draft.in_reply_to
+            message.references = parent_draft.references
+        else:
+            # Make sure that the headers are constructed from an actual
+            # previous message on the thread, not another draft
+            non_draft_messages = [m for m in thread.messages if not m.is_draft]
+            if non_draft_messages:
+                last_message = non_draft_messages[-1]
+                message.in_reply_to = last_message.message_id_header
+                message.references = (last_message.references + '\t' +
+                                      last_message.message_id_header)
+    if thread is None:
+        # Create a new thread object for the draft.
+        thread = Thread(
+            subject=message.subject,
+            recentdate=message.received_date,
+            namespace=account.namespace,
+            subjectdate=message.received_date)
+        db_session.add(thread)
+
+    message.thread = thread
+    # This triggers an autoflush, so we need to execute it after setting
+    # message.thread
+    thread.apply_tag(account.namespace.tags['drafts'])
+
+    if new_tags:
+        tags_to_keep = {tag for tag in thread.tags if not tag.user_created}
+        thread.tags = new_tags | tags_to_keep
+
+    db_session.add(message)
+    db_session.commit()
+    return message

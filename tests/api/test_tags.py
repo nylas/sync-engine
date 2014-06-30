@@ -1,22 +1,13 @@
 """Exercise the tags API."""
 import gevent
 import pytest
-from tests.util.base import api_client
+from tests.util.base import api_client, mock_syncback_service
 
 
 # Utility functions to simplify hitting the API.
 
 def get_tag_names(thread):
     return [tag['name'] for tag in thread['tags']]
-
-
-def kill_greenlets():
-    """Utility function to kill all running greenlets."""
-    import gc
-    for obj in gc.get_objects():
-        if isinstance(obj, gevent.Greenlet):
-            obj.kill()
-
 
 @pytest.fixture(autouse=True)
 def create_canonical_tags(db):
@@ -131,25 +122,13 @@ class MockQueue(list):
         self.append(args)
 
 
-def test_actions_syncback(api_client):
+def test_actions_syncback(api_client, mock_syncback_service):
     """Add and remove tags that should trigger syncback actions, and check that
     the appropriate actions get put on the queue (doesn't test the
     implementation of the actual syncback methods in
     inbox/actions/base.py)."""
-    from inbox.transactions.actions import SyncbackService
     from inbox.actions.base import (mark_read, mark_unread, archive, unarchive,
                                     star, unstar)
-    from gevent import monkey
-    # aggressive=False used to avoid AttributeError in other tests, see
-    # https://groups.google.com/forum/#!topic/gevent/IzWhGQHq7n0
-    # TODO(emfree): It's totally whack that monkey-patching here would affect
-    # other tests. Can we make this not happen?
-    monkey.patch_all(aggressive=False)
-    s = SyncbackService(poll_interval=0)
-    s.queue = MockQueue()
-    s.start()
-    gevent.sleep()
-    assert len(s.queue) == 0
 
     thread_id = api_client.get_data('/threads/')[0]['id']
     thread_path = '/threads/{}'.format(thread_id)
@@ -172,8 +151,6 @@ def test_actions_syncback(api_client):
 
     gevent.sleep()
 
-    queued_actions = [item[0] for item in s.queue]
+    queued_actions = [item[0] for item in mock_syncback_service.queue]
     for action in [mark_read, mark_unread, archive, unarchive, star, unstar]:
         assert action in queued_actions
-
-    kill_greenlets()

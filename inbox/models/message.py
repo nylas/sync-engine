@@ -380,6 +380,10 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     def folders(self):
         return self.thread.folders
 
+    @property
+    def attachments(self):
+        return [part for part in self.parts if part.is_attachment]
+
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator,
                        'polymorphic_identity': 'message'}
@@ -401,6 +405,9 @@ class SpoolMessage(Message):
 
     state = Column(Enum('draft', 'sending', 'sending failed', 'sent'),
                    server_default='draft', nullable=False)
+
+    # Whether this draft is a reply to an existing thread.
+    is_reply = Column(Boolean, nullable=False, server_default=false())
 
     # Null till reconciled.
     # Deletes should not be cascaded! i.e. delete on remote -> delete the
@@ -437,25 +444,18 @@ class SpoolMessage(Message):
             'remote(SpoolMessage.deleted_at)==None)',
             uselist=False))
 
-    # For conflict draft updates: copy of the original is created
-    # We don't cascade deletes because deleting a draft should not delete
-    # the other drafts that are updates to the same original.
-    draft_copied_from = Column(Integer,
-                               ForeignKey('spoolmessage.id'),
-                               nullable=True)
+    @property
+    def is_latest(self):
+        """Returns True if this draft does not have a child revision."""
+        return self.child_draft is None
 
-    # For draft replies: the 'copy' of the thread it is a reply to.
-    replyto_thread_id = Column(Integer, ForeignKey('draftthread.id',
-                               ondelete='CASCADE'), nullable=True)
-    replyto_thread = relationship(
-        'DraftThread', primaryjoin='and_('
-        'SpoolMessage.replyto_thread_id==remote(DraftThread.id),'
-        'remote(DraftThread.deleted_at)==None)',
-        backref=backref(
-            'draftmessage', primaryjoin='and_('
-            'remote(SpoolMessage.replyto_thread_id)==DraftThread.id,'
-            'remote(SpoolMessage.deleted_at)==None)',
-            uselist=False))
+    @property
+    def most_recent_revision(self):
+        """Return the most recent draft version derived from this draft."""
+        revision = self
+        while revision.child_draft is not None:
+            revision = revision.child_draft
+        return revision
 
     __mapper_args__ = {'polymorphic_identity': 'spoolmessage',
                        'inherit_condition': id == Message.id}

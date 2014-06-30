@@ -27,7 +27,7 @@ AUTH_EXTNS = {'oauth': 'XOAUTH2',
               'password': 'PLAIN'}
 
 AccountInfo = namedtuple('AccountInfo',
-                         'id email provider full_name auth_type auth_token')
+                         'id email provider auth_type auth_token')
 
 
 def get_smtp_connection_pool(account_id, pool_size=None):
@@ -49,7 +49,6 @@ class SMTPConnection():
         self.account_id = account.id
         self.email_address = account.email
         self.provider = account.provider
-        self.full_name = account.full_name
         self.auth_type = account.auth_type
         self.auth_token = account.auth_token
 
@@ -173,8 +172,7 @@ class SMTPConnectionPool(geventconnpool.ConnectionPool):
 
             self.email_address = account.email_address
             self.provider = account.provider
-            self.full_name = account.full_name if account.provider == 'gmail'\
-                else ''
+            self.sender_name = account.sender_name
             self.sent_folder = account.sent_folder.name
 
             self.auth_type = AUTH_TYPES.get(account.provider)
@@ -204,7 +202,6 @@ class SMTPConnectionPool(geventconnpool.ConnectionPool):
         account_info = AccountInfo(id=self.account_id,
                                    email=self.email_address,
                                    provider=self.provider,
-                                   full_name=self.full_name,
                                    auth_type=self.auth_type,
                                    auth_token=auth_token)
 
@@ -228,8 +225,7 @@ class SMTPClient(object):
         self.account_id = account_id
         self.namespace = account_namespace
         self.pool = get_smtp_connection_pool(self.account_id)
-        # Required for Gmail
-        self.full_name = self.pool.full_name
+        self.sender_name = self.pool.sender_name
         self.email_address = self.pool.email_address
         self.sent_folder = self.pool.sent_folder
 
@@ -259,7 +255,6 @@ class SMTPClient(object):
                 # Sent to all successfully
                 self.log.info('Sending successful: {0} to {1}'.format(
                     self.email_address, ', '.join(recipients)))
-                return True
 
     def _send_mail(self, recipients, mimemsg):
         """
@@ -275,7 +270,7 @@ class SMTPClient(object):
         """
         raise NotImplementedError
 
-    def send_new(self, db_session, draft, recipients, block_public_ids=None):
+    def send_new(self, db_session, draft, recipients):
         """
         Send a previously created + saved draft email from this user account.
 
@@ -286,14 +281,10 @@ class SMTPClient(object):
             the draft message to send.
         recipients: Recipients(to, cc, bcc) namedtuple
             to, cc, bcc are a lists of utf-8 encoded strings or None.
-        block_public_ids: list of public_ids for Block objects (files)
-            which will be attached to the message
-
         """
         raise NotImplementedError
 
-    def send_reply(self, db_session, draft, replyto, recipients,
-                   block_public_ids=None):
+    def send_reply(self, db_session, draft, recipients):
         """
         Send a previously created + saved draft email reply from this user
         account.
@@ -303,12 +294,7 @@ class SMTPClient(object):
         db_session
         draft : models.tables.base.SpoolMessage object
             the draft message to send.
-        replyto: ReplyToAttrs(subject, message_id_header, references, body)
-            namedtuple
         recipients: Recipients(to, cc, bcc) namedtuple
             to, cc, bcc are a lists of utf-8 encoded strings or None.
-        block_public_ids: list of public_ids for Block objects (files)
-            which will be attached to the message
-
         """
         raise NotImplementedError

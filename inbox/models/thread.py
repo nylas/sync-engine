@@ -159,10 +159,14 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         # TODO(emfree) this should eventually live in its own utility function.
         inbox_tag = self.namespace.tags['inbox']
         archive_tag = self.namespace.tags['archive']
+        sent_tag = self.namespace.tags['sent']
+        drafts_tag = self.namespace.tags['drafts']
         if tag == inbox_tag:
             self.tags.discard(archive_tag)
         elif tag == archive_tag:
             self.tags.discard(inbox_tag)
+        elif tag == sent_tag:
+            self.tags.discard(drafts_tag)
 
     def remove_tag(self, tag, execute_action=False):
         """Remove the given Tag instance from this thread. Does nothing if the
@@ -200,65 +204,14 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
             self.tags.add(inbox_tag)
 
     @property
-    def drafts(self):
-        return [m for m in self.messages if m.is_draft] + \
-            [draftthread.draftmessage for draftthread in self.draftthreads]
+    def latest_drafts(self):
+        """Return all drafts on this thread that don't have later revisions.
+        """
+        return [message for message in self.messages if message.is_draft and
+                message.is_latest]
 
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator}
-
-
-class DraftThread(MailSyncBase, HasPublicID):
-    """
-    For a reply draft message, holds references to the message it is
-    created in reply to (thread_id, message_id)
-
-    Used instead of creating a copy of the thread and appending the draft to
-    the copy.
-
-    """
-    master_public_id = Column(Base36UID, nullable=False)
-    thread_id = Column(Integer, ForeignKey(Thread.id), nullable=False)
-    thread = relationship(
-        'Thread', primaryjoin='and_('
-        'DraftThread.thread_id==remote(Thread.id),'
-        'remote(Thread.deleted_at)==None)',
-        backref=backref(
-            'draftthreads', primaryjoin='and_('
-            'remote(DraftThread.thread_id)==Thread.id,'
-            'remote(DraftThread.deleted_at)==None)'))
-    message_id = Column(Integer, ForeignKey(Message.id),
-                        nullable=False)
-
-    @classmethod
-    def create(cls, session, original):
-        assert original
-
-        # We always create a copy so don't raise, simply log.
-        try:
-            draftthread = session.query(cls).filter(
-                DraftThread.master_public_id == original.public_id).one()
-        except NoResultFound:
-            log.info('NoResultFound for draft with public_id {0}'.
-                     format(original.public_id))
-        except MultipleResultsFound:
-            log.info('MultipleResultsFound for draft with public_id {0}'.
-                     format(original.public_id))
-
-        draftthread = cls(master_public_id=original.public_id,
-                          thread=original,
-                          message_id=original.messages[0].id)
-        return draftthread
-
-    @classmethod
-    def create_copy(cls, draftthread):
-        draftthread_copy = cls(
-            master_public_id=draftthread.master_public_id,
-            thread=draftthread.thread,
-            message_id=draftthread.message_id
-        )
-
-        return draftthread_copy
 
 
 class TagItem(MailSyncBase):

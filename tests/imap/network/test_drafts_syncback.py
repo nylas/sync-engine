@@ -20,7 +20,7 @@ def register_action_backends(db):
     rqworker starts. So we need to register them explicitly for these
     tests.
     """
-    from inbox.server.actions.base import register_backends
+    from inbox.actions.base import register_backends
     register_backends()
 
 
@@ -41,17 +41,15 @@ def test_remote_save_draft(db, config, message):
     """ Tests the save_draft function, which saves the draft to the remote. """
     from inbox.actions.gmail import remote_save_draft
     from inbox.sendmail.base import _parse_recipients, all_recipients
-    from inbox.sendmail.message import create_email, SenderInfo
+    from inbox.sendmail.message import create_email, Recipients
     from inbox.models import Account
 
     account = db.session.query(Account).get(ACCOUNT_ID)
-    sender_info = SenderInfo(name=account.full_name,
-                             email=account.email_address)
     to, subject, body = message
     to_addr = _parse_recipients(to)
-    recipients = all_recipients(to_addr)
-    email = create_email(sender_info, None, recipients, subject, body,
-                         None)
+    recipients = Recipients(to_addr, [], [])
+    email = create_email(account.sender_name, account.email_address, None,
+                         recipients, subject, body, None)
     date = datetime.utcnow()
 
     remote_save_draft(account, account.drafts_folder.name, email.to_string(),
@@ -75,20 +73,17 @@ def test_remote_delete_draft(db, config, message):
     remote.
 
     """
-    from inbox.actions.gmail import (remote_save_draft,
-                                            remote_delete_draft)
-    from inbox.sendmail.base import _parse_recipients, all_recipients
-    from inbox.sendmail.message import create_email, SenderInfo
+    from inbox.actions.gmail import remote_save_draft, remote_delete_draft
+    from inbox.sendmail.base import _parse_recipients
+    from inbox.sendmail.message import create_email, Recipients
     from inbox.models import Account
 
     account = db.session.query(Account).get(ACCOUNT_ID)
-    sender_info = SenderInfo(name=account.full_name,
-                             email=account.email_address)
     to, subject, body = message
     to_addr = _parse_recipients(to)
-    recipients = all_recipients(to_addr)
-    email = create_email(sender_info, None, recipients, subject, body,
-                         None)
+    recipients = Recipients(to_addr, [], [])
+    email = create_email(account.sender_name, account.email_address, None,
+                         recipients, subject, body, None)
     date = datetime.utcnow()
 
     # Save on remote

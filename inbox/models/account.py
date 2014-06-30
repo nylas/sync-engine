@@ -138,6 +138,12 @@ class Account(MailSyncBase, HasPublicID):
                     sync_start_time=self.sync_start_time,
                     sync_end_time=self.sync_end_time)
 
+    @property
+    def sender_name(self):
+        # Used for setting sender information when we send a message.
+        # Can be overridden by subclasses that store account name information.
+        return ''
+
     @classmethod
     def _get_lock_object(cls, account_id, lock_for=dict()):
         """ Make sure we only create one lock per account per process.

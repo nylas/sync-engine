@@ -2,8 +2,7 @@ from collections import namedtuple
 
 from flanker.addresslib import address
 
-from inbox.sendmail.message import (create_email, add_reply_headers,
-                                           rfc_transform, REPLYSTR)
+from inbox.sendmail.message import create_email, rfc_transform, REPLYSTR
 
 SMTPMessage = namedtuple(
     'SMTPMessage',
@@ -41,28 +40,29 @@ def smtp_attrs(msg):
     return smtpmsg
 
 
-def create_gmail_email(sender_info, inbox_uid, recipients, subject, body,
-                       attachments=None):
+def create_gmail_email(sender_name, sender_email, inbox_uid, recipients,
+                       subject, body, attachments=None):
     """ Create a Gmail email. """
-    mimemsg = create_email(sender_info, inbox_uid, recipients, subject, body,
-                           attachments)
+    mimemsg = create_email(sender_name, sender_email, inbox_uid, recipients,
+                           subject, body, attachments)
 
     return smtp_attrs(mimemsg)
 
 
-def create_gmail_reply(sender_info, replyto, inbox_uid, recipients, subject,
-                       body, attachments=None):
+def create_gmail_reply(sender_name, sender_email, in_reply_to, references,
+                       inbox_uid, recipients, subject, body, attachments=None):
     """ Create a Gmail email reply. """
-    mimemsg = create_email(sender_info, inbox_uid, recipients, subject, body,
-                           attachments)
+    mimemsg = create_email(sender_name, sender_email, inbox_uid, recipients,
+                           subject, body, attachments)
 
     # Add general reply headers:
-    reply = add_reply_headers(replyto, mimemsg)
+    mimemsg.headers['In-Reply-To'] = in_reply_to
+    mimemsg.headers['References'] = references
 
     # Set the 'Subject' header of the reply, required for Gmail.
     # Gmail requires the same subject as the original (adding Re:/Fwd: is fine
     # though) to group messages in the same conversation,
     # See: https://support.google.com/mail/answer/5900?hl=en
-    reply.headers['Subject'] = REPLYSTR + replyto.subject
+    mimemsg.headers['Subject'] = REPLYSTR + subject
 
-    return smtp_attrs(reply)
+    return smtp_attrs(mimemsg)

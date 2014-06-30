@@ -6,6 +6,7 @@ import subprocess
 import zerorpc
 from shutil import rmtree
 from pytest import fixture, yield_fixture
+import gevent
 
 
 def absolute_path(path):
@@ -121,6 +122,10 @@ class TestAPIClient(object):
         path = self.full_path(short_path, ns_id)
         return self.client.put(path, data=json.dumps(data))
 
+    def delete(self, short_path, ns_id=1):
+        path = self.full_path(short_path, ns_id)
+        return self.client.delete(path)
+
 
 class TestDB(object):
     def __init__(self, config, dumpfile):
@@ -175,3 +180,55 @@ class TestZeroRPC(object):
 
         self.client = zerorpc.Client(timeout=120)
         self.client.connect(service_loc)
+
+
+def kill_greenlets():
+    """Utility function to kill all running greenlets."""
+    import gc
+    for obj in gc.get_objects():
+        if isinstance(obj, gevent.Greenlet):
+            obj.kill()
+
+
+class MockQueue(list):
+    """Used to mock out the SyncbackService queue (with just a list)."""
+    def __init__(self):
+        list.__init__(self)
+
+    def enqueue(self, *args):
+        self.append(args)
+
+
+@yield_fixture(scope='function')
+def mock_syncback_service():
+    """Running SyncbackService with a mock queue."""
+    from inbox.transactions.actions import SyncbackService
+    from gevent import monkey
+    # aggressive=False used to avoid AttributeError in other tests, see
+    # https://groups.google.com/forum/#!topic/gevent/IzWhGQHq7n0
+    # TODO(emfree): It's totally whack that monkey-patching here would affect
+    # other tests. Can we make this not happen?
+    monkey.patch_all(aggressive=False)
+    s = SyncbackService(poll_interval=0)
+    s.queue = MockQueue()
+    s.start()
+    gevent.sleep()
+    assert len(s.queue) == 0
+    yield s
+    kill_greenlets()
+
+
+@yield_fixture(scope='function')
+def real_syncback_service():
+    from inbox.transactions.actions import SyncbackService
+    from gevent import monkey
+    # aggressive=False used to avoid AttributeError in other tests, see
+    # https://groups.google.com/forum/#!topic/gevent/IzWhGQHq7n0
+    # TODO(emfree): It's totally whack that monkey-patching here would affect
+    # other tests. Can we make this not happen?
+    monkey.patch_all(aggressive=False)
+    s = SyncbackService(poll_interval=1)
+    s.start()
+    gevent.sleep()
+    yield s
+    kill_greenlets()

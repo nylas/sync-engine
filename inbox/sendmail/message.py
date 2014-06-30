@@ -26,18 +26,20 @@ VERSION = pkg_resources.get_distribution('inbox').version
 
 REPLYSTR = 'Re: '
 
-SenderInfo = namedtuple('SenderInfo', 'name email')
 Recipients = namedtuple('Recipients', 'to cc bcc')
 
 
-def create_email(sender_info, inbox_uid, recipients, subject, html,
-                 attachments):
+def create_email(sender_name, sender_email, inbox_uid, recipients, subject,
+                 html, attachments):
     """
     Creates a MIME email message (both body and sets the needed headers).
 
     Parameters
     ----------
-    sender_info : SenderInfo(name, email)
+    sender_name: string
+        The name aka phrase of the sender.
+    sender_email: string
+        The sender's email address.
     recipients: Recipients(to, cc, bcc) namedtuple
         to, cc, bcc are a lists of utf-8 encoded strings or None.
     subject : string
@@ -48,21 +50,12 @@ def create_email(sender_info, inbox_uid, recipients, subject, html,
         a list of dicts(filename, data, content_type)
 
     """
-    full_name = sender_info.name if sender_info.name else ''
-    email_address = sender_info.email
-
-    if recipients.to is not None:
-        to = [address.EmailAddress(*addr) for addr in recipients.to]
-    else:
-        to = []
-    if recipients.cc is not None:
-        cc = [address.EmailAddress(*addr) for addr in recipients.cc]
-    else:
-        cc = []
-    if recipients.bcc is not None:
-        bcc = [address.EmailAddress(*addr) for addr in recipients.bcc]
-    else:
-        bcc = []
+    to = [address.EmailAddress(*addr) for addr in recipients.to] \
+        if recipients.to else []
+    cc = [address.EmailAddress(*addr) for addr in recipients.cc] \
+        if recipients.cc else []
+    bcc = [address.EmailAddress(*addr) for addr in recipients.bcc] \
+        if recipients.bcc else []
     html = html if html else ''
     plaintext = html2text(html)
 
@@ -95,8 +88,8 @@ def create_email(sender_info, inbox_uid, recipients, subject, html,
     # however set our own custom phrase i.e. the name that appears next to the
     # email address (useful if the user has multiple aliases and wants to
     # specify which to send as), see: http://lee-phillips.org/gmailRewriting/
-    # For other providers, we simply use full_name = ''
-    from_addr = address.EmailAddress(full_name, email_address)
+    # For other providers, we simply use name = ''
+    from_addr = address.EmailAddress(sender_name, sender_email)
     msg.headers['From'] = from_addr.full_spec()
 
     # Need to set these headers so recipients know we sent the email to them:
@@ -135,19 +128,6 @@ def add_inbox_headers(msg, inbox_uid):
 
     # Potentially also use `X-Mailer`
     msg.headers['User-Agent'] = 'Inbox/{0}'.format(VERSION)
-
-
-def add_reply_headers(replyto, msg):
-    """ Add reply specific headers. """
-    # Set the In-Reply-To header of the reply:
-    msg.headers['In-Reply-To'] = replyto.message_id_header
-
-    # Set the 'References' header of the reply:
-    separator = '\t'
-    msg.headers['References'] = replyto.references + separator +\
-        replyto.message_id_header
-
-    return msg
 
 
 def rfc_transform(msg):

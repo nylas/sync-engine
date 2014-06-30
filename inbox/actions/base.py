@@ -30,7 +30,8 @@ from inbox.util.concurrency import GeventWorker
 from inbox.models.session import session_scope
 from inbox.models import Account, SpoolMessage
 from inbox.config import config
-from inbox.sendmail.message import create_email, SenderInfo, Recipients
+from inbox.sendmail.base import generate_attachments
+from inbox.sendmail.message import create_email, Recipients
 import inbox.actions
 
 ACTION_MODULES = {}
@@ -142,14 +143,12 @@ def save_draft(account_id, message_id):
         account = db_session.query(Account).get(account_id)
         message = db_session.query(SpoolMessage).get(message_id)
 
-        sender_info = SenderInfo(account.full_name, account.email_address)
         recipients = Recipients(message.to_addr, message.cc_addr,
                                 message.bcc_addr)
-        attachment_public_ids = [p.public_id for p in message.parts
-                                 if p.is_attachment]
-        mimemsg = create_email(sender_info, message.inbox_uid, recipients,
-                               message.subject, message.sanitized_body,
-                               attachment_public_ids)
+        attachments = generate_attachments(message.attachments)
+        mimemsg = create_email(account.sender_name, account.email_address,
+                               message.inbox_uid, recipients, message.subject,
+                               message.sanitized_body, attachments)
 
         remote_save_draft = ACTION_MODULES[account.provider].remote_save_draft
         remote_save_draft(account, account.drafts_folder.name,

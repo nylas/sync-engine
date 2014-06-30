@@ -25,7 +25,7 @@ THREAD_TOPIC = 'Golden Gate Park next Sat'
 
 @pytest.fixture(scope='function')
 def message(db, config):
-    from inbox.server.models.tables.imap import ImapAccount
+    from inbox.models.tables.imap import ImapAccount
 
     account = db.session.query(ImapAccount).get(ACCOUNT_ID)
     to = [{'name': u'"\u2605The red-haired mermaid\u2605"',
@@ -43,22 +43,20 @@ def register_action_backends(db):
     rqworker starts. So we need to register them explicitly for these
     tests.
     """
-    from inbox.server.actions.base import register_backends
+    from inbox.actions.base import register_backends
     register_backends()
 
 
 def test_create_reconcile(db, config, message, sync_client):
     """ Tests the save_draft function, which saves the draft to the remote. """
-    from inbox.server.sendmail.base import create_draft
-    from inbox.server.actions.gmail import remote_save_draft
-    from inbox.server.sendmail.base import _parse_recipients, all_recipients
-    from inbox.server.sendmail.message import create_email, SenderInfo
-    from inbox.server.models.tables.base import Message, SpoolMessage
-    from inbox.server.models.tables.base import Account
+    from inbox.sendmail.base import create_draft
+    from inbox.actions.gmail import remote_save_draft
+    from inbox.sendmail.base import _parse_recipients, Recipients
+    from inbox.sendmail.message import create_email
+    from inbox.models.tables.base import Message, SpoolMessage
+    from inbox.models.tables.base import Account
 
     account = db.session.query(Account).get(ACCOUNT_ID)
-    sender_info = SenderInfo(name=account.full_name,
-                             email=account.email_address)
     to, subject, body = message
     attachment = None
     cc = None
@@ -76,9 +74,9 @@ def test_create_reconcile(db, config, message, sync_client):
     # Store on remote
     date = datetime.utcnow()
     to_addr = _parse_recipients(to)
-    recipients = all_recipients(to_addr)
-    email = create_email(sender_info, public_id, recipients, subject, body,
-                         None)
+    recipients = Recipients(to_addr, [], [])
+    email = create_email(account.sender_name, account.email_address, public_id,
+                         recipients, subject, body, None)
     inbox_uid = email.headers['X-INBOX-ID']
     assert inbox_uid == public_id, \
         'draft to save on remote has incorrect inbox_uid header'

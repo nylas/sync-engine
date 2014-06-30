@@ -34,7 +34,7 @@ class GmailAccount(ImapAccount):
     home_domain = Column(String(256))
 
     @property
-    def full_name(self):
+    def sender_name(self):
         return '{0} {1}'.format(self.given_name, self.family_name)
 
     @property
