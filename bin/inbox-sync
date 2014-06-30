@@ -17,8 +17,6 @@ parser = argparse.ArgumentParser(description='Start/stop mail sync')
 parser.add_argument('cmd', help='start or stop')
 parser.add_argument('email_address',
                     help='Email address of the account to start/stop')
-parser.add_argument('--dummy', action='store_true', default=False,
-                    help="Don't connect to IMAP backend.")
 args = parser.parse_args()
 
 with session_scope() as db_session:
@@ -33,9 +31,9 @@ mailsync_srv_loc = config.get('CRISPIN_SERVER_LOC', None)
 mailsync_client.connect(mailsync_srv_loc)
 try:
     if args.cmd == 'start':
-        print mailsync_client.start_sync(account_id, dummy=args.dummy)
+        print mailsync_client.start_sync(account_id)
     elif args.cmd == 'startall':
-        print mailsync_client.start_sync(dummy=args.dummy)
+        print mailsync_client.start_sync()
     elif args.cmd == 'stop':
         print mailsync_client.stop_sync(account_id)
     elif args.cmd == 'stopall':
