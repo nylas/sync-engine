@@ -89,7 +89,7 @@ def clean_pyc():
                 full_path = os.path.join(root, filename)
                 log.info('removing {0}'.format(full_path))
                 os.remove(full_path)
-    log.debug('Not writing pyc bytecode for this exectution')
+    log.debug('Not writing pyc bytecode for this execution')
     sys.dont_write_bytecode = True
 
 
