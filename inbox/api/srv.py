@@ -18,7 +18,7 @@ def mock_create_logger(app):
     return inbox_logger
 flask_logging.create_logger = mock_create_logger
 
-from inbox.api.kellogs import jsonify, cereal
+from inbox.api.kellogs import APIEncoder
 from inbox.models import register_backends, Namespace
 from inbox.models.session import session_scope
 table_mod_for = register_backends()
@@ -71,7 +71,8 @@ def ns_all():
     # However, this means the before_request isn't run, so we need to make our own session
     with session_scope() as db_session:
         namespaces = db_session.query(Namespace).all()
-        return jsonify(namespaces)
+        encoder = APIEncoder()
+        return encoder.jsonify(namespaces)
 
 @app.route('/')
 def home():
