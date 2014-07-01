@@ -20,4 +20,4 @@ You can run Inbox almost anywhere. Here's how to install install a development e
 
     The `inbox` directory you started with should be synced to `/vagrant`. If this directory is empty, then logout and run `vagrant reload` and `vagrant ssh` again.
 
-At this point the inbox server is installed and ready to run! The next steps are to start the inbox server, authenticate and sync an account and running your first inbox application.
+At this point Inbox is installed and ready to run! The next steps are to start the Inbox servers and authenticate and sync a mail account.

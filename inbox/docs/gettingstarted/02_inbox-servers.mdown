@@ -2,32 +2,46 @@ Title:   Inbox Servers
 
 The Inbox Servers are responsible for syncing accounts with underlying providers as well as providing the REST API to clients.
 
-* Inbox Sync Server
+Inbox Sync Server
+-----
 
 The sync server can be started by running the following command from within the Inbox VM (i.e. in the `/vagrant` directory from within a vagrant ssh session as explained in Installation). Note: you may want to run the server in a separate shell within tmux or in the background.
 
-   bin/inbox-start
+```
+:::bash
+$ bin/inbox-start
+```
 
 Now that the server is running, You will want to authenticate an account and sync it.  You can do so via the following commands, which again need to be run from within the Inbox VM:
 
+```
+:::bash
+$ bin/inbox-auth [YOUR_ACCOUNT]@gmail.com
 
-    bin/inbox-auth [YOUR_ACCOUNT]@gmail.com
+$ bin/inbox-sync start [YOUR_ACCOUNT]@gmail.com
+```
 
-    bin/inbox-sync start [YOUR_ACCOUNT]@gmail.com
 
 These commands will authenticate an account with the Inbox Server running within the VM and notify that server to start syncing the account with the underlying provider. Note: The sync step will take quite a while if you have a lot of data stored at your provider.
 
-* Inbox API Server
+Inbox API Server
+-----
 
 The Inbox API Server is responsible for providing a REST API to your Inbox data. In order to start this server, run the following command from within the Inbox VM:
 
-    bin/inbox-api
+```
+:::bash
+$ bin/inbox-api
+```
 
 This will start the API Server on port 5555. At this point **You're now ready to make requests!**
 
-You may test to see that the server is working properly by running the following command which should provide you with a json formatted output of the synced data.
+You can test that the server is working properly by hitting the `/n/` API which lists synced accounts. There is no authentication built in to the sync engine, so you query the API with a simple cURL command: 
 
-    curl http://localhost:5555/n/
+```
+:::bash
+$ curl http://localhost:5555/n/
+```
 
-Now you can start writing your own application on top of the Inbox API, see either the iOS Inbox SDK docs or the JavaScript Inbox SDK docs. For more information about the internals of the Inbox API, see the Inbox API Documentation.
+Now you can start writing your own application on top of the Inbox API! See either the <a href="/docs/ios">iOS SDK Docs</a> or the <a href="docs/javascript">JavaScript SDK Docs</a> to get started. For more information about the internals of the Inbox API, see the <a href="/docs/api">Inbox API Documentation</a>.
 
