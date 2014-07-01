@@ -129,7 +129,6 @@ class Filter(object):
         query = query.options(
             joinedload(Thread.messages).load_only('public_id', 'is_draft',
                                                   'discriminator'),
-            joinedload(Thread.namespace).load_only('public_id'),
             joinedload('tagitems').joinedload('tag').
             load_only('public_id', 'name'))
 

@@ -44,7 +44,7 @@ from sqlalchemy import asc, func
 from inbox.util.concurrency import retry_wrapper
 from inbox.log import get_logger
 from inbox.models.session import session_scope
-from inbox.api.kellogs import cereal
+from inbox.api.kellogs import APIEncoder
 from inbox.models import Transaction, Webhook, Lens
 
 
@@ -69,8 +69,9 @@ def format_output(public_snapshot, include_body):
     # Because we're using a snapshot of the message API representation in the
     # transaction log, we can just return that directly (without the 'body'
     # field if include_body is False).
-    return cereal({k: v for k, v in public_snapshot.iteritems()
-                   if k != 'body' or include_body})
+    encoder = APIEncoder()
+    return encoder.cereal({k: v for k, v in public_snapshot.iteritems()
+                           if k != 'body' or include_body})
 
 
 def format_failure_output(hook_id, timestamp, status_code):
@@ -93,6 +94,7 @@ class WebhookService():
         self.minimum_id = -1
         self.poller = None
         self.polling = False
+        self.encoder = APIEncoder()
         self._on_startup()
 
     @property
@@ -149,7 +151,8 @@ class WebhookService():
             db_session.commit()
             if hook.active:
                 self._start_hook(hook, db_session)
-            return cereal(hook, pretty=True)
+            return self.encoder.cereal(hook, pretty=True)
+
 
     def start_hook(self, hook_public_id):
         with session_scope() as db_session:

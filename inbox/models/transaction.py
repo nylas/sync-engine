@@ -51,9 +51,8 @@ class Transaction(MailSyncBase, Revision, HasPublicID):
         transaction is generated, as well as any other properties we want to
         have available in the transaction log. Used for client syncing and
         webhooks."""
-        from inbox.api.kellogs import APIEncoder
-        encoder = APIEncoder()
-        self.public_snapshot = encoder.default(obj)
+        from inbox.api.kellogs import encode
+        self.public_snapshot = encode(obj)
 
         from inbox.models.message import Message
         if isinstance(obj, Message):  # hack

@@ -11,7 +11,7 @@ from werkzeug.exceptions import HTTPException
 from inbox.models import (
     Message, Block, Part, Thread, Namespace, Webhook, Tag, SpoolMessage,
     Contact)
-from inbox.api.kellogs import jsonify, cereal
+from inbox.api.kellogs import APIEncoder
 from inbox.api.filtering import Filter
 from inbox.api.validation import (InputError, get_tags, get_attachments,
                                   get_thread)
@@ -64,6 +64,8 @@ def start():
     try:
         g.namespace = g.db_session.query(Namespace) \
             .filter(Namespace.public_id == g.namespace_public_id).one()
+
+        g.encoder = APIEncoder(g.namespace.public_id)
     except NoResultFound:
         return err(404, "Couldn't find namespace with id `{0}` ".format(
             g.namespace_public_id))
@@ -133,7 +135,7 @@ def handle_not_implemented_error(error):
 #
 @app.route('/')
 def index():
-    return jsonify(g.namespace)
+    return g.encoder.jsonify(g.namespace)
 
 
 ##
@@ -142,7 +144,7 @@ def index():
 @app.route('/tags/')
 def tag_query_api():
     results = list(g.namespace.tags.values())
-    return jsonify(results)
+    return g.encoder.jsonify(results)
 
 
 @app.route('/tags/', methods=['POST'])
@@ -158,7 +160,7 @@ def tag_create_api():
 
     tag = Tag(name=tag_name, namespace=g.namespace, user_created=True)
     g.db_session.commit()
-    return jsonify(tag)
+    return g.encoder.jsonify(tag)
 
 
 #
@@ -166,7 +168,7 @@ def tag_create_api():
 #
 @app.route('/threads/')
 def thread_query_api():
-    return jsonify(g.api_filter.get_threads())
+    return g.encoder.jsonify(g.api_filter.get_threads())
 
 
 @app.route('/threads/<public_id>')
@@ -176,7 +178,7 @@ def thread_api(public_id):
         thread = g.db_session.query(Thread).filter(
             Thread.public_id == public_id,
             Thread.namespace_id == g.namespace.id).one()
-        return jsonify(thread)
+        return g.encoder.jsonify(thread)
 
     except NoResultFound:
         return err(404, "Couldn't find thread with id `{0}` "
@@ -226,7 +228,7 @@ def thread_api_update(public_id):
         thread.apply_tag(tag, execute_action=True)
 
     g.db_session.commit()
-    return jsonify(thread)
+    return g.encoder.jsonify(thread)
 
 
 #
@@ -242,9 +244,9 @@ def thread_api_delete(public_id):
 # Messages
 ##
 @app.route('/messages/')
-#@profile
 def message_query_api():
-    return jsonify(g.api_filter.get_messages())
+    return g.encoder.jsonify(g.api_filter.get_messages())
+
 
 @app.route('/messages/<public_id>', methods=['GET', 'PUT'])
 def message_api(public_id):
@@ -258,7 +260,7 @@ def message_api(public_id):
                    "Couldn't find message with id {0} "
                    "on namespace {1}".format(public_id, g.namespace_public_id))
     if request.method == 'GET':
-        return jsonify(message)
+        return g.encoder.jsonify(message)
     elif request.method == 'PUT':
         data = request.get_json(force=True)
         if data.keys() != ['unread'] or not isinstance(data['unread'], bool):
@@ -307,7 +309,7 @@ def contact_search_api():
                    Contact.source == 'local'). \
             order_by(asc(Contact.id)).limit(limit).offset(offset).all()
 
-    return jsonify(results)
+    return g.encoder.jsonify(results)
 
 
 @app.route('/contacts/', methods=['POST'])
@@ -320,7 +322,7 @@ def contact_create_api():
         return err(400, 'Contact name and email cannot both be null.')
     new_contact = contacts.crud.create(g.namespace, g.db_session,
                                        name, email)
-    return jsonify(new_contact)
+    return g.encoder.jsonify(new_contact)
 
 
 @app.route('/contacts/<public_id>', methods=['GET'])
@@ -331,7 +333,7 @@ def contact_read_api(public_id):
     if result is None:
         return err(404, "Couldn't find contact with id {0}".
                    format(public_id))
-    return jsonify(result)
+    return g.encoder.jsonify(result)
 
 
 @app.route('/contacts/<public_id>', methods=['PUT'])
@@ -355,7 +357,7 @@ def files_api():
         .filter(Part.namespace_id == g.namespace.id) \
         .filter(Part.content_disposition is not None) \
         .limit(DEFAULT_LIMIT).all()
-    return jsonify(all_files)
+    return g.encoder.jsonify(all_files)
 
 
 @app.route('/files/<public_id>')
@@ -370,7 +372,7 @@ def file_read_api(public_id):
             # Block was likely uploaded via file API and not yet sent in a message
             g.log.debug("This block doesn't have a corresponding message: {}"
                         .format(f.public_id))
-        return jsonify(f)
+        return g.encoder.jsonify(f)
 
     except NoResultFound:
         return err(404, "Couldn't find file with id {0} "
@@ -395,7 +397,7 @@ def file_upload_api():
 
     g.db_session.add_all(all_files)
     g.db_session.commit()  # to generate public_ids
-    return jsonify(all_files)
+    return g.encoder.jsonify(all_files)
 
 
 #
@@ -468,7 +470,7 @@ def get_webhook_client():
 
 @app.route('/webhooks/', methods=['GET'])
 def webhooks_read_all_api():
-    return jsonify(g.db_session.query(Webhook).
+    return g.encoder.jsonify(g.db_session.query(Webhook).
                    filter(Webhook.namespace_id == g.namespace.id).all())
 
 
@@ -489,7 +491,7 @@ def webhooks_read_update_api(public_id):
             hook = g.db_session.query(Webhook).filter(
                 Webhook.public_id == public_id,
                 Webhook.namespace_id == g.namespace.id).one()
-            return jsonify(hook)
+            return g.encoder.jsonify(hook)
         except NoResultFound:
             return err(404, "Couldn't find webhook with id {}"
                        .format(public_id))
@@ -505,7 +507,7 @@ def webhooks_read_update_api(public_id):
                 get_webhook_client().start_hook(public_id)
             else:
                 get_webhook_client().stop_hook(public_id)
-            return jsonify({"success": True})
+            return g.encoder.jsonify({"success": True})
         except zerorpc.RemoteError:
             return err(404, "Couldn't find webhook with id {}"
                        .format(public_id))
@@ -526,7 +528,7 @@ def webhooks_delete_api(public_id):
 @app.route('/drafts/', methods=['GET'])
 def draft_get_all_api():
     drafts = sendmail.get_all_drafts(g.db_session, g.namespace.account)
-    return jsonify(drafts)
+    return g.encoder.jsonify(drafts)
 
 
 @app.route('/drafts/<public_id>', methods=['GET'])
@@ -534,7 +536,7 @@ def draft_get_api(public_id):
     draft = sendmail.get_draft(g.db_session, g.namespace.account, public_id)
     if draft is None:
         return err(404, 'No draft found with id {}'.format(public_id))
-    return jsonify(draft)
+    return g.encoder.jsonify(draft)
 
 
 @app.route('/drafts/', methods=['POST'])
@@ -560,7 +562,7 @@ def draft_create_api():
                                   subject, body, files, cc, bcc,
                                   tags, replyto_thread)
 
-    return jsonify(draft)
+    return g.encoder.jsonify(draft)
 
 
 @app.route('/drafts/<public_id>', methods=['POST'])
@@ -571,7 +573,7 @@ def draft_update_api(public_id):
         return err(404, 'No draft with public id {}'.format(public_id))
     if not parent_draft.is_latest:
         return err(409, 'Draft {} has already been updated to {}'.format(
-            public_id, cereal(parent_draft.most_recent_revision)))
+            public_id, g.encoder.cereal(parent_draft.most_recent_revision)))
 
     # TODO(emfree): what if you try to update a draft on a *thread* that's been
     # deleted?
@@ -593,7 +595,7 @@ def draft_update_api(public_id):
     draft = sendmail.update_draft(g.db_session, g.namespace.account,
                                   parent_draft, to, subject, body,
                                   files, cc, bcc, tags)
-    return jsonify(draft)
+    return g.encoder.jsonify(draft)
 
 
 @app.route('/drafts/<public_id>', methods=['DELETE'])
@@ -615,7 +617,7 @@ def draft_delete_api(public_id):
 
     result = sendmail.delete_draft(g.db_session, g.namespace.account,
                                    public_id)
-    return jsonify(result)
+    return g.encoder.jsonify(result)
 
 
 @app.route('/send', methods=['POST'])
@@ -646,7 +648,7 @@ def draft_send_api():
 
         # Mark draft for sending
         draft.state = 'sending'
-        return jsonify(draft)
+        return g.encoder.jsonify(draft)
 
     to = data.get('to')
     cc = data.get('cc')
@@ -659,7 +661,7 @@ def draft_send_api():
                                   subject, body, block_public_ids, cc, bcc)
     # Mark draft for sending
     draft.state = 'sending'
-    return jsonify(draft)
+    return g.encoder.jsonify(draft)
 
 
 ##
@@ -681,7 +683,7 @@ def sync_events():
     try:
         results = client_sync.get_entries_from_public_id(
             g.namespace.id, start_stamp, g.db_session, limit)
-        return jsonify(results)
+        return g.encoder.jsonify(results)
     except ValueError:
         return err(404, 'Invalid stamp parameter')
 
@@ -697,4 +699,4 @@ def generate_stamp():
     stamp = client_sync.get_public_id_from_ts(g.namespace.id,
                                               timestamp,
                                               g.db_session)
-    return jsonify({'stamp': stamp})
+    return g.encoder.jsonify({'stamp': stamp})
