@@ -10,6 +10,8 @@ from inbox.models import (
 
 
 def format_address_list(addresses):
+    if addresses is None:
+        return []
     return [{'name': name, 'email': email} for name, email in addresses]
 
 

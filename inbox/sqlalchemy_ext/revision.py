@@ -59,7 +59,7 @@ The versioned properties of unchanged and deleted children appear similarly.
 See the tests for more examples. (TODO(emfree): actually write some tests.)
 """
 
-from sqlalchemy import Column, Integer, String, Enum
+from sqlalchemy import Column, Integer, String, Enum, Index
 from sqlalchemy import event, inspect
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm.exc import UnmappedColumnError
@@ -73,7 +73,7 @@ class Revision(object):
     """ All revision records in a single table (role). """
     # Which object are we recording changes to?
     table_name = Column(String(20), nullable=False, index=True)
-    record_id = Column(Integer, nullable=False)
+    record_id = Column(Integer, nullable=False, index=True)
 
     command = Column(Enum('insert', 'update', 'delete'), nullable=False)
     delta = Column(BigJSON, nullable=True)
@@ -83,6 +83,9 @@ class Revision(object):
 
     def take_snapshot(self, obj):
         pass
+
+
+Index('table_name_record_id', Revision.table_name, Revision.record_id)
 
 
 def gen_rev_role(rev_cls):

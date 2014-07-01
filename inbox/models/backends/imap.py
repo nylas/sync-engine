@@ -160,9 +160,8 @@ class ImapThread(Thread):
         """
         if message.g_thrid is not None:
             try:
-                thread = session.query(cls).filter_by(
-                    g_thrid=message.g_thrid, namespace=namespace).one()
-                return thread.update_from_message(message)
+                return session.query(cls).filter_by(
+                    g_thrid=message.g_thrid, namespace_id=namespace.id).one()
             except NoResultFound:
                 pass
             except MultipleResultsFound:

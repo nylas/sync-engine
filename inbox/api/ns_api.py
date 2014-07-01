@@ -9,9 +9,10 @@ from werkzeug.exceptions import default_exceptions
 from werkzeug.exceptions import HTTPException
 
 from inbox.models import (
-    Message, Block, Part, Thread, Namespace, Lens, Webhook, Tag, SpoolMessage,
+    Message, Block, Part, Thread, Namespace, Webhook, Tag, SpoolMessage,
     Contact)
 from inbox.api.kellogs import jsonify, cereal
+from inbox.api.filtering import Filter
 from inbox.api.validation import (InputError, get_tags, get_attachments,
                                   get_thread)
 from inbox.config import config
@@ -25,7 +26,7 @@ from err import err
 from inbox.ignition import engine
 
 
-DEFAULT_LIMIT = 50
+DEFAULT_LIMIT = 100
 
 
 app = Blueprint(
@@ -68,7 +69,7 @@ def start():
             g.namespace_public_id))
 
     try:
-        g.lens = Lens(
+        g.api_filter = Filter(
             namespace_id=g.namespace.id,
             subject=request.args.get('subject'),
             thread_public_id=request.args.get('thread'),
@@ -83,10 +84,10 @@ def start():
             last_message_after=request.args.get('last_message_after'),
             filename=request.args.get('filename'),
             tag=request.args.get('tag'),
-            detached=True)
-        g.lens_limit = request.args.get('limit')
-        g.lens_offset = request.args.get('offset')
-        g.lens_order = request.args.get('order_by')
+            limit=request.args.get('limit') or DEFAULT_LIMIT,
+            offset=request.args.get('offset'),
+            order_by=request.args.get('order_by'),
+            db_session=g.db_session)
     except ValueError as e:
         return err(400, e.message)
 
@@ -165,9 +166,7 @@ def tag_create_api():
 #
 @app.route('/threads/')
 def thread_query_api():
-    return jsonify(g.lens.thread_query(g.db_session, limit=g.lens_limit,
-                                       offset=g.lens_offset,
-                                       order=g.lens_order).all())
+    return jsonify(g.api_filter.get_threads())
 
 
 @app.route('/threads/<public_id>')
@@ -243,11 +242,9 @@ def thread_api_delete(public_id):
 # Messages
 ##
 @app.route('/messages/')
+#@profile
 def message_query_api():
-    return jsonify(g.lens.message_query(g.db_session, limit=g.lens_limit,
-                                        offset=g.lens_offset,
-                                        order=g.lens_order).all())
-
+    return jsonify(g.api_filter.get_messages())
 
 @app.route('/messages/<public_id>', methods=['GET', 'PUT'])
 def message_api(public_id):

@@ -33,10 +33,62 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
     subject = Column(Text, nullable=True)
     subjectdate = Column(DateTime, nullable=False)
     recentdate = Column(DateTime, nullable=False)
+    participants = Column(JSON, nullable=True)
+    snippet = Column(String(191), nullable=True, default='')
+    message_public_ids = Column(JSON, nullable=True)
 
     folders = association_proxy(
         'folderitems', 'folder',
         creator=lambda folder: FolderItem(folder=folder))
+
+    @validates('messages')
+    def update_from_message(self, k, message):
+        if isinstance(message, SpoolMessage):
+            # STOPSHIP(emfree) be smarter here:
+            # we should maybe update a thread's participants, etc.
+            return message
+        if self.participants is None:
+            participant_set = set()
+        else:
+            # self.participants is a list of lists if it's not None, so convert
+            # to a list of tuples before set-ifying.
+            participant_set = {tuple(item) for item in self.participants}
+        for participant in itertools.chain(
+                message.from_addr, message.to_addr, message.cc_addr,
+                message.bcc_addr):
+            participant_set.add(tuple(participant))
+        self.participants = list(participant_set)
+
+        if message.received_date > self.recentdate:
+            self.recentdate = message.received_date
+            # Only update the thread's unread/unseen properties if this is the
+            # most recent message we have synced in the thread.
+            # This is so that if a user has already marked the thread as read
+            # or seen via the API, but we later sync older messages in the
+            # thread, it doesn't become re-unseen.
+            unread_tag = self.namespace.tags['unread']
+            unseen_tag = self.namespace.tags['unseen']
+            if message.is_read:
+                self.remove_tag(unread_tag)
+            else:
+                self.apply_tag(unread_tag)
+                self.apply_tag(unseen_tag)
+            self.snippet = message.snippet
+
+        # subject is subject of original message in the thread
+        if message.received_date < self.recentdate:
+            self.subject = message.subject
+            self.subjectdate = message.received_date
+
+        if ((not self.mailing_list_headers)
+                or len(message.mailing_list_headers) >
+                len(self.mailing_list_headers)):
+            self.mailing_list_headers = message.mailing_list_headers
+
+        self.message_public_ids = self.message_public_ids or []
+        self.message_public_ids.append(message.public_id)
+
+        return message
 
     @validates('folderitems', include_removes=True)
     def also_set_tag(self, key, folderitem, is_remove):
@@ -81,34 +133,6 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
 
     mailing_list_headers = Column(JSON, nullable=True)
 
-    def update_from_message(self, message):
-        if isinstance(message, SpoolMessage):
-            return self
-
-        if message.received_date > self.recentdate:
-            self.recentdate = message.received_date
-            # Only update the thread's unread/unseen properties if this is the
-            # most recent message we have synced in the thread.
-            # This is so that if a user has already marked the thread as read
-            # or seen via the API, but we later sync older messages in the
-            # thread, it doesn't become re-unseen.
-            unread_tag = self.namespace.tags['unread']
-            unseen_tag = self.namespace.tags['unseen']
-            if message.is_read:
-                self.remove_tag(unread_tag)
-            else:
-                self.apply_tag(unread_tag)
-                self.apply_tag(unseen_tag)
-
-        # subject is subject of original message in the thread
-        if message.received_date < self.recentdate:
-            self.subject = message.subject
-            self.subjectdate = message.received_date
-
-        if len(message.mailing_list_headers) > len(self.mailing_list_headers):
-            self.mailing_list_headers = message.mailing_list_headers
-        return self
-
     @property
     def mailing_list_info(self):
         return self.mailing_list_headers
@@ -118,22 +142,6 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
             if (v is not None):
                 return True
         return False
-
-    @property
-    def snippet(self):
-        if len(self.messages):
-            # Get the snippet from the most recent message
-            return self.messages[-1].snippet
-        return ""
-
-    @property
-    def participants(self):
-        p = set()
-        for m in self.messages:
-            p.update(tuple(entry) for entry in
-                     itertools.chain(m.from_addr, m.to_addr,
-                                     m.cc_addr, m.bcc_addr))
-        return p
 
     def apply_tag(self, tag, execute_action=False):
         """Add the given Tag instance to this thread. Does nothing if the tag

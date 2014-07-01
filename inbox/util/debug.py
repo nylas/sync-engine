@@ -1,6 +1,8 @@
 """Utilities for debugging failures in development/staging."""
+from functools import wraps
 import pdb
 from inbox.log import log_uncaught_errors
+from pyinstrument import Profiler
 
 
 def pause_on_exception(exception_type):
@@ -22,4 +24,16 @@ def pause_on_exception(exception_type):
                 log_uncaught_errors()
                 pdb.post_mortem()
         return wrapped
+    return wrapper
+
+
+def profile(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        profiler = Profiler()
+        profiler.start()
+        r = func(*args, **kwargs)
+        profiler.stop()
+        print profiler.output_text(color=True)
+        return r
     return wrapper
