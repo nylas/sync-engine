@@ -1,10 +1,10 @@
 Title:   Inbox Servers
 
-The Inbox Server(s) are responsible for syncing accounts with underlying providers as well as providing the REST API to clients.
+The Inbox Servers are responsible for syncing accounts with underlying providers as well as providing the REST API to clients.
 
 * Inbox Sync Server
 
-The sync server can be started by running the following command from within the Inbox VM (i.e. in the `/vagrant` directory from within a vagrant ssh session as explained in Installation). Note: you may want to run the server in a separate shell or in the background.
+The sync server can be started by running the following command from within the Inbox VM (i.e. in the `/vagrant` directory from within a vagrant ssh session as explained in Installation). Note: you may want to run the server in a separate shell within tmux or in the background.
 
    bin/inbox-start
 
@@ -15,7 +15,7 @@ Now that the server is running, You will want to authenticate an account and syn
 
     bin/inbox-sync start [YOUR_ACCOUNT]@gmail.com
 
-These commands will authenticate an account with the Inbox Server and notify the server that it should start syncing these accounts with the underlying provider. Note: The sync step will take quite a while if you have a lot of data stored at your provider.
+These commands will authenticate an account with the Inbox Server running within the VM and notify that server to start syncing the account with the underlying provider. Note: The sync step will take quite a while if you have a lot of data stored at your provider.
 
 * Inbox API Server
 
@@ -29,5 +29,5 @@ You may test to see that the server is working properly by running the following
 
     curl http://localhost:5555/n/
 
-Next you will be excited to start writing your own application on top of the Inbox API, see either the iOS Inbox SDK docs or the JavaScript Inbox SDK docs. For more information about the internals of the Inbox API, see the Inbox API Documentation.
+Now you can start writing your own application on top of the Inbox API, see either the iOS Inbox SDK docs or the JavaScript Inbox SDK docs. For more information about the internals of the Inbox API, see the Inbox API Documentation.
 
