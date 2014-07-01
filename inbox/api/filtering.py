@@ -1,7 +1,7 @@
 from datetime import datetime
 import bson
 from sqlalchemy import and_, or_, asc
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, subqueryload
 from inbox.models import (Contact, Message, MessageContactAssociation, Thread,
                           Tag, TagItem, Part)
 from inbox.util.encoding import base36decode
@@ -127,9 +127,9 @@ class Filter(object):
         # Eager-load some objects in order to make constructing API
         # representations faster.
         query = query.options(
-            joinedload(Thread.messages).load_only('public_id', 'is_draft',
-                                                  'discriminator'),
-            joinedload('tagitems').joinedload('tag').
+            subqueryload(Thread.messages).load_only('public_id', 'is_draft',
+                                                    'discriminator'),
+            subqueryload('tagitems').joinedload('tag').
             load_only('public_id', 'name'))
 
         query = query.limit(self.limit)
