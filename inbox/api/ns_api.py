@@ -55,21 +55,6 @@ def pull_lang_code(endpoint, values):
     g.namespace_public_id = values.pop('namespace_public_id')
 
 
-@app.record
-def record_auth(setup_state):
-    # Runs when the Blueprint binds to the main application
-    main_app = setup_state.app
-
-    @main_app.route('/n/')
-    def ns_all():
-        """ Return all namespaces """
-        # We do this outside the blueprint to support the case of an empty public_id.
-        # However, this means the before_request isn't run, so we need to make our own session
-        with session_scope() as db_session:
-            namespaces = db_session.query(Namespace).all()
-            return jsonify(namespaces)
-
-
 @app.before_request
 def start():
     g.db_session = InboxSession(engine)

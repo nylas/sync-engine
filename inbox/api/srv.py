@@ -14,12 +14,13 @@ werkzeug_log.addHandler(inbox_logger)
 from flask import Flask, request
 from flask import logging as flask_logging
 
-
 def mock_create_logger(app):
     return inbox_logger
 flask_logging.create_logger = mock_create_logger
 
-from inbox.models import register_backends
+from inbox.api.kellogs import jsonify, cereal
+from inbox.models import register_backends, Namespace
+from inbox.models.session import session_scope
 table_mod_for = register_backends()
 
 from ns_api import app as ns_api
@@ -63,6 +64,14 @@ def finish(response):
     app.logger.info("Sending response {0}".format(response))
     return response
 
+@app.route('/n/')
+def ns_all():
+    """ Return all namespaces """
+    # We do this outside the blueprint to support the case of an empty public_id.
+    # However, this means the before_request isn't run, so we need to make our own session
+    with session_scope() as db_session:
+        namespaces = db_session.query(Namespace).all()
+        return jsonify(namespaces)
 
 @app.route('/')
 def home():
