@@ -67,3 +67,5 @@ nosetests.xml
 .project
 .pydevproject
 
+# Editor temporary files
+*.swp
