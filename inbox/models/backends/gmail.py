@@ -9,10 +9,6 @@ class GmailAccount(ImapAccount):
     id = Column(Integer, ForeignKey(ImapAccount.id, ondelete='CASCADE'),
                 primary_key=True)
 
-#    # Must have this for join table inheritance to properly work
-#    imapaccount_id = Column(Integer, ForeignKey(ImapAccount.id,
-#                            ondelete='CASCADE'), primary_key=True)
-
     __mapper_args__ = {'polymorphic_identity': 'gmailaccount'}
 
     access_token = Column(String(512))  # Secret

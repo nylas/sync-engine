@@ -41,20 +41,15 @@ from inbox.models.backends.imap import ImapUid, ImapThread
 from inbox.mailsync.backends.base import (create_db_objects,
                                           commit_uids, new_or_updated,
                                           MailsyncError)
-from inbox.mailsync.backends.imap import (account,
-                                          uidvalidity_cb,
+from inbox.mailsync.backends.imap import (account, uidvalidity_cb,
                                           remove_deleted_uids,
                                           download_queued_uids,
-                                          update_metadata,
-                                          resync_uids_from,
-                                          base_initial_sync, base_poll,
-                                          safe_download,
-                                          add_uids_to_stack,
-                                          check_new_uids,
-                                          uid_list_to_stack,
-                                          report_progress,
-                                          ImapSyncMonitor,
-                                          update_uid_counts)
+                                          update_metadata, resync_uids_from,
+                                          base_initial_sync,
+                                          condstore_base_poll, safe_download,
+                                          add_uids_to_stack, check_new_uids,
+                                          uid_list_to_stack, report_progress,
+                                          ImapSyncMonitor, update_uid_counts)
 
 
 PROVIDER = 'gmail'
@@ -83,7 +78,8 @@ class GmailSyncMonitor(ImapSyncMonitor):
 def initial_sync(conn_pool, db_session, log, folder_name, shared_state):
     with conn_pool.get() as crispin_client:
         return base_initial_sync(crispin_client, db_session, log, folder_name,
-                                 shared_state, gmail_initial_sync)
+                                 shared_state, gmail_initial_sync,
+                                 create_gmail_message)
 
 
 def uid_download_folders(crispin_client):
@@ -93,7 +89,8 @@ def uid_download_folders(crispin_client):
 
 
 def gmail_initial_sync(crispin_client, db_session, log, folder_name,
-                       shared_state, local_uids, uid_download_stack):
+                       shared_state, local_uids, uid_download_stack,
+                       msg_create_fn):
     remote_uid_count = len(set(crispin_client.all_uids()))
     remote_g_metadata, sync_info = get_g_metadata(
         crispin_client, db_session, log, folder_name, local_uids,
@@ -163,8 +160,7 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
                              len(unknown_uids),
                              shared_state['status_cb'],
                              shared_state['syncmanager_lock'],
-                             gmail_download_and_commit_uids,
-                             create_gmail_message)
+                             gmail_download_and_commit_uids, msg_create_fn)
     else:
         raise MailsyncError(
             'Unknown Gmail sync folder: {}'.format(folder_name))
@@ -179,8 +175,9 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
 @retry_crispin
 def poll(conn_pool, db_session, log, folder_name, shared_state):
     with conn_pool.get() as crispin_client:
-        return base_poll(crispin_client, db_session, log, folder_name,
-                         shared_state, gmail_highestmodseq_update)
+        return condstore_base_poll(crispin_client, db_session, log,
+                                   folder_name, shared_state,
+                                   gmail_highestmodseq_update)
 
 
 def gmail_highestmodseq_update(crispin_client, db_session, log, folder_name,

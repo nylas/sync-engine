@@ -19,7 +19,8 @@ def main():
     # '--with-users' NOT specified
     if not args.with_users:
         keep_tables += ['user', 'namespace', 'account', 'imapaccount',
-                        'user_session', 'easaccount', 'folder', 'gmailaccount']
+                        'user_session', 'easaccount', 'folder', 'gmailaccount',
+                        'yahooaccount']
 
         reset_columns = {'easaccount': ['eas_account_sync_key', 'eas_state']}
 

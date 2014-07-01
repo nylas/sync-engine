@@ -6,9 +6,11 @@ import sqlalchemy.orm.exc
 
 from imapclient import IMAPClient
 
+from inbox.log import get_logger
+log = get_logger()
 from inbox.basicauth import password_auth
 from inbox.models import Namespace
-from inbox.models.backends.imap import ImapAccount
+from inbox.models.backends.yahoo import YahooAccount
 
 
 PROVIDER = 'yahoo'
@@ -28,11 +30,11 @@ def auth_account(email_address):
 
 def create_account(db_session, email_address, response):
     try:
-        account = db_session.query(ImapAccount).filter_by(
+        account = db_session.query(YahooAccount).filter_by(
             email_address=email_address).one()
     except sqlalchemy.orm.exc.NoResultFound:
         namespace = Namespace()
-        account = ImapAccount(namespace=namespace)
+        account = YahooAccount(namespace=namespace)
 
     account.imap_host = IMAP_HOST
     account.email_address = response['email']
@@ -60,7 +62,7 @@ def verify_yahoo_account(account):
     try:
         conn.login(account.email_address, account.password)
     except IMAPClient.Error as e:
-        print >>sys.stderr, '[ALERT] Invalid credentials (Failure)'
-        sys.exit(1)
+        log.error('IMAP connection error: {}'.format(e))
+        raise
 
     return conn

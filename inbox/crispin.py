@@ -197,56 +197,6 @@ class CrispinClient(object):
         self.conn = conn
         self.readonly = readonly
 
-    def select_folder(self, folder, uidvalidity_cb):
-        """ Selects a given folder.
-
-        Makes sure to set the 'selected_folder' attribute to a
-        (folder_name, select_info) pair.
-
-        Selecting a folder indicates the start of an IMAP session.  IMAP UIDs
-        are only guaranteed valid for sessions, so the caller must provide a
-        callback that checks UID validity.
-
-        Starts a new session even if `folder` is already selected, since
-        this does things like e.g. makes sure we're not getting
-        cached/out-of-date values for HIGHESTMODSEQ from the IMAP server.
-        """
-        select_info = self.conn.select_folder(
-            folder, readonly=self.readonly)
-        select_info['UIDVALIDITY'] = long(select_info['UIDVALIDITY'])
-        select_info['HIGHESTMODSEQ'] = long(select_info['HIGHESTMODSEQ'])
-        select_info['UIDNEXT'] = long(select_info['UIDNEXT'])
-        self.selected_folder = (folder, select_info)
-        # don't propagate cached information from previous session
-        self._folder_names = None
-        self.log.info('Selected folder {0} with {1} messages.'.format(
-            folder, select_info['EXISTS']))
-        return uidvalidity_cb(folder, select_info)
-
-    @property
-    def selected_folder_name(self):
-        return or_none(self.selected_folder, lambda f: f[0])
-
-    @property
-    def selected_folder_info(self):
-        return or_none(self.selected_folder, lambda f: f[1])
-
-    @property
-    def selected_highestmodseq(self):
-        return or_none(self.selected_folder_info, lambda i: i['HIGHESTMODSEQ'])
-
-    @property
-    def selected_uidvalidity(self):
-        return or_none(self.selected_folder_info, lambda i: i['UIDVALIDITY'])
-
-    def sync_folders(self):
-        # TODO: probabaly all of the folders
-        raise NotImplementedError
-
-    def folder_names(self):
-        # TODO: parse out contents of non-Gmail-specific LIST
-        raise NotImplementedError
-
     def _fetch_folder_list(self):
         """ NOTE: XLIST is deprecated, so we just use LIST.
 
@@ -269,9 +219,61 @@ class CrispinClient(object):
 
         return folders
 
+    def select_folder(self, folder, uidvalidity_cb):
+        """ Selects a given folder.
+
+        Makes sure to set the 'selected_folder' attribute to a
+        (folder_name, select_info) pair.
+
+        Selecting a folder indicates the start of an IMAP session.  IMAP UIDs
+        are only guaranteed valid for sessions, so the caller must provide a
+        callback that checks UID validity.
+
+        Starts a new session even if `folder` is already selected, since
+        this does things like e.g. makes sure we're not getting
+        cached/out-of-date values for HIGHESTMODSEQ from the IMAP server.
+        """
+        select_info = self.conn.select_folder(
+            folder, readonly=self.readonly)
+        select_info['UIDVALIDITY'] = long(select_info['UIDVALIDITY'])
+        select_info['UIDNEXT'] = long(select_info['UIDNEXT'])
+        self.selected_folder = (folder, select_info)
+        # don't propagate cached information from previous session
+        self._folder_names = None
+        self.log.info('Selected folder {0} with {1} messages.'.format(
+            folder, select_info['EXISTS']))
+        return uidvalidity_cb(folder, select_info)
+
+    @property
+    def selected_folder_name(self):
+        return or_none(self.selected_folder, lambda f: f[0])
+
+    @property
+    def selected_folder_info(self):
+        return or_none(self.selected_folder, lambda f: f[1])
+
+    @property
+    def selected_uidvalidity(self):
+        return or_none(self.selected_folder_info, lambda i: i['UIDVALIDITY'])
+
+    def sync_folders(self):
+        to_sync = []
+        folders = self.folder_names()
+        for tag in ('inbox', 'drafts', 'sent', 'starred', 'important',
+                    'archive', 'extra', 'spam', 'trash'):
+            if tag == 'extra' and tag in folders:
+                to_sync.extend(folders['extra'])
+            elif tag in folders:
+                to_sync.append(folders[tag])
+        return to_sync
+
+    def folder_names(self):
+        """ Should parse out provider-specific folder names and create map. """
+        raise NotImplementedError
+
     def folder_status(self, folder):
         status = [long(val) for val in self.conn.folder_status(
-            folder, ('UIDVALIDITY', 'HIGHESTMODSEQ', 'UIDNEXT'))]
+            folder, ('UIDVALIDITY', 'UIDNEXT'))]
 
         return status
 
@@ -303,34 +305,6 @@ class CrispinClient(object):
         data = self.conn.search(['NOT DELETED'])
         return sorted([long(s) for s in data])
 
-    @timed
-    def new_and_updated_uids(self, modseq):
-        return sorted([long(s) for s in self.conn.search(
-            ['NOT DELETED', "MODSEQ {}".format(modseq)])])
-
-
-class YahooCrispinClient(CrispinClient):
-    """ NOTE: This implementation is NOT FINISHED. """
-    def __init__(self, account_id, conn, readonly=True):
-        # CrispinClient.__init__(self, account_id, conn, readonly=readonly)
-        # TODO: Remove this once this client is usable.
-        raise NotImplementedError
-
-    def sync_folders(self):
-        return self.folder_names()
-
-    def flags(self, uids):
-        uids = [str(u) for u in uids]
-        data = self.conn.fetch(uids, ['FLAGS'])
-        return dict([(long(uid), Flags(msg['FLAGS']))
-                     for uid, msg in data.iteritems()])
-
-    def folder_names(self):
-        if self._folder_names is None:
-            folders = self._fetch_folder_list()
-            self._folder_names = [name for flags, delimiter, name in folders]
-        return self._folder_names
-
     def uids(self, uids):
         uids = [str(u) for u in uids]
         raw_messages = self.conn.fetch(uids,
@@ -353,14 +327,71 @@ class YahooCrispinClient(CrispinClient):
             messages.append(RawMessage(uid=long(uid),
                                        internaldate=msg['INTERNALDATE'],
                                        flags=msg['FLAGS'],
-                                       body=msg['BODY[]']))
+                                       body=msg['BODY[]'],
+                                       # TODO: use data structure that isn't
+                                       # Gmail-specific
+                                       g_thrid=None, g_msgid=None,
+                                       g_labels=None, created=None))
         return messages
 
-    def expand_threads(self, thread_ids):
-        NotImplementedError
+    def flags(self, uids):
+        uids = [str(u) for u in uids]
+        data = self.conn.fetch(uids, ['FLAGS'])
+        return dict([(long(uid), Flags(msg['FLAGS']))
+                     for uid, msg in data.iteritems()])
 
 
-class GmailCrispinClient(CrispinClient):
+class CondStoreCrispinClient(CrispinClient):
+
+    def select_folder(self, folder, uidvalidity_cb):
+        ret = super(CondStoreCrispinClient,
+                    self).select_folder(folder, uidvalidity_cb)
+        self.selected_folder_info['HIGHESTMODSEQ'] = \
+            long(self.selected_folder_info['HIGHESTMODSEQ'])
+        return ret
+
+    def folder_status(self, folder):
+        status = [long(val) for val in self.conn.folder_status(
+            folder, ('UIDVALIDITY', 'HIGHESTMODSEQ', 'UIDNEXT'))]
+
+        return status
+
+    @property
+    def selected_highestmodseq(self):
+        return or_none(self.selected_folder_info, lambda i: i['HIGHESTMODSEQ'])
+
+    @timed
+    def new_and_updated_uids(self, modseq):
+        return sorted([long(s) for s in self.conn.search(
+            ['NOT DELETED', "MODSEQ {}".format(modseq)])])
+
+
+class YahooCrispinClient(CrispinClient):
+    """ Yahoo is stock IMAP with no CONDSTORE or IDLE. """
+
+    def folder_names(self):
+        if self._folder_names is None:
+            folders = self._fetch_folder_list()
+            self._folder_names = dict()
+            for flags, delimiter, name in folders:
+                if u'\\Noselect' in flags:
+                    # special folders that can't contain messages
+                    pass
+                # TODO: internationalization support
+                elif name == 'Draft':
+                    self._folder_names['drafts'] = name
+                elif name == 'Bulk Mail':
+                    self._folder_names['spam'] = name
+                elif name in ('Inbox', 'Sent', 'Trash'):
+                    self._folder_names[name.lower()] = name
+                else:
+                    self._folder_names.setdefault(
+                        'extra', list()).append(name)
+        # TODO: support subfolders
+        return self._folder_names
+
+
+class GmailCrispinClient(CondStoreCrispinClient):
     PROVIDER = 'gmail'
 
     def sync_folders(self):

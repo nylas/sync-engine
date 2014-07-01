@@ -136,6 +136,8 @@ class UIDValidity(MailSyncBase):
 
 
 class ImapThread(Thread):
+    """ TODO: split into provider-specific classes. """
+
     id = Column(Integer, ForeignKey(Thread.id, ondelete='CASCADE'),
                 primary_key=True)
 
@@ -170,6 +172,17 @@ class ImapThread(Thread):
         thread = cls(subject=message.subject, g_thrid=message.g_thrid,
                      recentdate=message.received_date, namespace=namespace,
                      subjectdate=message.received_date,
+                     mailing_list_headers=message.mailing_list_headers)
+        if not message.is_read:
+            thread.apply_tag(namespace.tags['unread'])
+            thread.apply_tag(namespace.tags['unseen'])
+        return thread
+
+    @classmethod
+    def from_yahoo_message(cls, session, namespace, message):
+        """ For now, each message is its own thread. """
+        thread = cls(subject=message.subject, recentdate=message.received_date,
+                     namespace=namespace, subjectdate=message.received_date,
                      mailing_list_headers=message.mailing_list_headers)
         if not message.is_read:
             thread.apply_tag(namespace.tags['unread'])
