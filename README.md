@@ -48,9 +48,7 @@ Here's how to set up a development environment running on your local machine:
 
 7. `cd /vagrant`
 
-8. `sudo ./setup.sh` to install dependencies and create databases.
-
-9. `bin/inbox-start`
+8. `bin/inbox-start`
 
 And _voilà_! Auth an account via the commandline and start syncing:
 
