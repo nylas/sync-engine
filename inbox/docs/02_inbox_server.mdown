@@ -1,49 +1,33 @@
 Title:   Inbox Servers
 
-The Inbox Server(s) are responsible for syncing accounts with underlying
-providers as well as providing the REST API to clients.
+The Inbox Server(s) are responsible for syncing accounts with underlying providers as well as providing the REST API to clients.
 
 * Inbox Sync Server
 
-The sync server can be started by running the following command from within the
-Inbox VM (i.e. in the `/vagrant` directory from within a vagrant ssh session as
-explained in Installation). Note: you may want to run the server in a separate
-shell or in the background.
+The sync server can be started by running the following command from within the Inbox VM (i.e. in the `/vagrant` directory from within a vagrant ssh session as explained in Installation). Note: you may want to run the server in a separate shell or in the background.
 
    bin/inbox-start
 
-Now that the server is running, You will want to authenticate an account and
-sync it.  You can do so via the following commands, which again need to be run
-from within the Inbox VM:
+Now that the server is running, You will want to authenticate an account and sync it.  You can do so via the following commands, which again need to be run from within the Inbox VM:
 
 
     bin/inbox-auth [YOUR_ACCOUNT]@gmail.com
 
     bin/inbox-sync start [YOUR_ACCOUNT]@gmail.com
 
-These commands will authenticate an account with the Inbox Server and notify
-the server that it should start syncing these accounts with the underlying
-provider. Note: The sync step will take quite a while if you have a lot
-of data stored at your provider.
+These commands will authenticate an account with the Inbox Server and notify the server that it should start syncing these accounts with the underlying provider. Note: The sync step will take quite a while if you have a lot of data stored at your provider.
 
 * Inbox API Server
 
-The Inbox API Server is responsible for providing a REST API to your Inbox
-data. In order to start this server, run the following command from within the
-Inbox VM:
+The Inbox API Server is responsible for providing a REST API to your Inbox data. In order to start this server, run the following command from within the Inbox VM:
 
-   bin/inbox-api
+    bin/inbox-api
 
-This will start the API Server on port 5555. At this point **You're now ready
-to make requests!**
+This will start the API Server on port 5555. At this point **You're now ready to make requests!**
 
-You may test to see that the server is working properly by running the
-following command which should provide you with a json formatted output
-of the synced data.
+You may test to see that the server is working properly by running the following command which should provide you with a json formatted output of the synced data.
 
-   curl http://localhost:5555/n/
+    curl http://localhost:5555/n/
 
-Next you will be excited to start writing your own application on top of the Inbox API,
-see either the iOS Inbox SDK docs or the JavaScript Inbox SDK docs. For more information
-about the internals of the Inbox API, see the Inbox API Documentation.
+Next you will be excited to start writing your own application on top of the Inbox API, see either the iOS Inbox SDK docs or the JavaScript Inbox SDK docs. For more information about the internals of the Inbox API, see the Inbox API Documentation.
 
