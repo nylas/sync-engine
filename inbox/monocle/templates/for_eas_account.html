@@ -8,13 +8,15 @@
 <table class='table table-striped' id='status_table'>
   <thead>
     <tr>
-      <th>Folder (Folder Id)<br></th>
-      <th>State (running/ stopped/ killed)<br></th>
-      <th>Sync State(initial/ poll/ finish)<br></th>
-      <th>Num messages to sync<br></th>
-      <th>As of<br></th>
-      <th>Num synced<br></th>
-      <th>As of<br></th>
+      <th>Folder (Folder Id):<br></th>
+      <th>State (running/ stopped/ killed):<br></th>
+      <th>Sync Start Time:<br></th>
+      <th>Sync End Time:<br></th>
+      <th>Sync State(initial/ poll/ finish):<br></th>
+      <th>Num messages to sync:<br></th>
+      <th>As of:<br></th>
+      <th>Num synced:<br></th>
+      <th>As of:<br></th>
     </tr>
   </thead>
   <tbody>
@@ -36,6 +38,9 @@
           $.each(data, function(i, item) {
               content += '<tr>';
               content += '<td>' + item.name + '</td>';
+              content += '<td>' + item.run_state + '</td>';
+              content += '<td>' + item.sync_start_time + '</td>';
+              content += '<td>' + item.sync_end_time + '</td>';
               content += '<td>' + item.state + '</td>';
               content += '<td>' + item.num_uids_to_sync + '</td>';
               content += '<td>' + item.uid_checked_timestamp + '</td>';
