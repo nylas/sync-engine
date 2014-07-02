@@ -3,18 +3,7 @@
 #### The open source email toolkit.
 
 
-Inbox is a set of tools to make it simple and quick to develop apps and services on top of email. It consists of:
-
-- IMAP sync engine
-- Gmail OAuth authentication
-- MIME parsing and decoding
-- Queryable metadata store
-- Full message body storage including attachments
-- All UTF-8 and JSON sanitized
-- Contacts list sync
-
-These features are exposed via a clean REST API. See the [docs] (inbox/docs) folder for details.
-
+Inbox is a set of tools to make it simple and quick to develop apps and services on top of email.
 
 ## Getting Started
 
