@@ -29,6 +29,9 @@ def upgrade():
 
     with session_scope(versioned=False, ignore_soft_deletes=False) as db_session:
         num_threads, = db_session.query(sa.func.max(Thread.id)).one()
+        if num_threads is None:
+            # There aren't actually any threads to update.
+            return
         for pointer in range(0, num_threads + 1, 1000):
             print pointer
             for thread in db_session.query(Thread).filter(
