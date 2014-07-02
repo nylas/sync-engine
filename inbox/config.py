@@ -9,6 +9,17 @@ with open('/etc/inboxapp/config.json') as f:
     config = json.load(f)
 
 
+class ConfigError(Exception):
+    def __init__(self, error=None):
+        self.error = error or ''
+        self.help = \
+            'Run `sudo cp etc/config-dev.json /etc/inboxapp/config.json` and '\
+            'retry.'
+
+    def __str__(self):
+        return '{0} {1}'.format(self.error, self.help)
+
+
 def engine_uri(database=None):
     """ By default doesn't include the specific database. """
 

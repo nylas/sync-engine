@@ -29,7 +29,7 @@ from inbox.util.misc import load_modules
 from inbox.util.concurrency import GeventWorker
 from inbox.models.session import session_scope
 from inbox.models import Account, SpoolMessage
-from inbox.config import config
+from inbox.config import config, ConfigError
 from inbox.sendmail.base import generate_attachments
 from inbox.sendmail.message import create_email, Recipients
 import inbox.actions
@@ -60,10 +60,10 @@ def get_queue():
     # other.
     host = config.get('REDIS_HOST', None)
     port = config.get('REDIS_PORT', None)
-    assert host and port
-
     label = config.get('ACTION_QUEUE_LABEL', None)
-    assert label
+
+    if not (host and port and label):
+        raise ConfigError('Missing REDIS config values.')
 
     return Queue(label, connection=StrictRedis(host=host, port=port, db=0))
 
