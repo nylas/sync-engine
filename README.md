@@ -8,7 +8,6 @@ Inbox is a set of tools to make it simple and quick to develop apps and services
 - IMAP sync engine
 - Gmail OAuth authentication
 - MIME parsing and decoding
-- Full text search indexing
 - Queryable metadata store
 - Full message body storage including attachments
 - All UTF-8 and JSON sanitized
