@@ -15,6 +15,11 @@ from inbox.log import get_logger
 log = get_logger()
 
 
+def _absolute_path(relative_path):
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        relative_path)
+
+
 def check_requirements(requirements_path):
     # Check our requirements package
     failed_deps = []
@@ -43,8 +48,7 @@ def check_db():
     inbox_db_engine = sqlalchemy.create_engine(db_uri())
 
     # top-level, with setup.sh
-    alembic_ini_filename = config.get('ALEMBIC_INI', None)
-    assert alembic_ini_filename, 'Must set ALEMBIC_INI config var'
+    alembic_ini_filename = _absolute_path('../../alembic.ini')
     assert os.path.isfile(alembic_ini_filename), \
         'Must have alembic.ini file at {}'.format(alembic_ini_filename)
     alembic_cfg = alembic_config(alembic_ini_filename)
@@ -122,8 +126,7 @@ def load_overrides(file_path):
 
 def preflight():
     check_sudo()
-    requirements_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), '../../requirements.txt')
+    requirements_path = _absolute_path('../../requirements.txt')
     check_requirements(requirements_path)
     clean_pyc()
     check_db()

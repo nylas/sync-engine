@@ -12,8 +12,6 @@
 "MYSQL_HOSTNAME": "localhost",
 "MYSQL_PORT": 3306,
 
-"ALEMBIC_INI": "/vagrant/alembic.ini",
-
 "CACHE_BASEDIR" : "/var/lib/inboxapp/cache",
 "LOGDIR": "/var/log/inboxapp",
 "LOGLEVEL": 10,
