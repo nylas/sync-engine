@@ -83,8 +83,8 @@ class SyncbackService(gevent.Greenlet):
             # Just start working from the head of the log.
             # TODO(emfree): once we can do retry, persist a pointer into the
             # transaction log and advance it only on syncback success.
-            self.minimum_id, = db_session.query(
-                func.max(Transaction.id)).one() or -1
+            self.minimum_id = db_session.query(
+                func.max(Transaction.id)).one()[0] or -1
         gevent.Greenlet.__init__(self)
         if run_immediately:
             self.start()
