@@ -27,9 +27,10 @@ def resettable_counter(max_count=3, reset_interval=300):
         last_increment_at = time.time()
 
 
-def retry_wrapper(func, logger=None, failure_counter=None, account_id=None,
-                  folder=None, *args, **kwargs):
-    """Executes the callable func, logging and retrying on uncaught exceptions.
+def retry_wrapper(func, logger=None, failure_counter=None, exclude=None,
+                  account_id=None, folder=None, *args, **kwargs):
+    """
+    Executes the callable func, logging and retrying on uncaught exceptions.
 
     Arguments
     ---------
@@ -40,6 +41,7 @@ def retry_wrapper(func, logger=None, failure_counter=None, account_id=None,
         invoked on each failure; the call to func will be retried until
         StopIteration is raised from failure_counter. Defaults to an instance
         of resettable_counter.
+
     """
     logger = logger or get_logger()
     failure_counter = failure_counter or resettable_counter()
@@ -51,7 +53,14 @@ def retry_wrapper(func, logger=None, failure_counter=None, account_id=None,
             report_exit('stopped', account_id, folder)
             return e
         except Exception, e:
+            # Always log
             log_uncaught_errors(logger)
+
+            # Don't retry if e is an `exclude` exception
+            if exclude and \
+                    any(isinstance(e, exception) for exception in exclude):
+                report_exit('killed', account_id, folder)
+                raise
 
     report_exit('killed', account_id, folder)
     raise
