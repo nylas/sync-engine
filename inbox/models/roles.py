@@ -3,7 +3,7 @@ from hashlib import sha256
 
 from sqlalchemy import Column, Integer, String
 
-from inbox.config import config
+from inbox.config import config, ConfigError
 from inbox.log import get_logger
 log = get_logger()
 
@@ -135,7 +135,8 @@ class Blob(object):
         # Nest it 6 items deep so we don't have folders with too many files.
         h = self.data_sha256
         root = config.get('MSG_PARTS_DIRECTORY', None)
-        assert root, "Need root path for saving data"
+        if not root:
+            raise ConfigError('Need root path for saving data.')
         return os.path.join(root,
                             h[0], h[1], h[2], h[3], h[4], h[5])
 
@@ -153,7 +154,7 @@ class Blob(object):
             with open(self._data_file_path, 'rb') as f:
                 return f.read()
         except Exception:
-            log.error("No data for hash {0}".format(self.data_sha256))
+            log.error('No data for hash {0}'.format(self.data_sha256))
             # XXX should this instead be empty bytes?
             return None
 

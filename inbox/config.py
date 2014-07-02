@@ -10,9 +10,9 @@ with open('/etc/inboxapp/config.json') as f:
 
 
 class ConfigError(Exception):
-    def __init__(self, error=None):
+    def __init__(self, error=None, help=None):
         self.error = error or ''
-        self.help = \
+        self.help = help or \
             'Run `sudo cp etc/config-dev.json /etc/inboxapp/config.json` and '\
             'retry.'
 
@@ -22,18 +22,13 @@ class ConfigError(Exception):
 
 def engine_uri(database=None):
     """ By default doesn't include the specific database. """
-
     username = config.get('MYSQL_USER')
-    assert username, "Must have database username to connect!"
-
     password = config.get('MYSQL_PASSWORD')
-    assert password, "Must have database password to connect!"
-
     host = config.get('MYSQL_HOSTNAME')
-    assert host, "Must have database to connect!"
-
     port = config.get('MYSQL_PORT')
-    assert port, "Must have database port to connect!"
+
+    if not (username and password and host and port):
+        raise ConfigError('Missing database config values.')
 
     uri_template = 'mysql+pymysql://{username}:{password}@{host}' +\
                    ':{port}/{database}?charset=utf8mb4'
@@ -49,5 +44,6 @@ def engine_uri(database=None):
 
 def db_uri():
     database = config.get('MYSQL_DATABASE')
-    assert database, "Must have database name to connect!"
+    if not database:
+        raise ConfigError('Missing database config value.')
     return engine_uri(database)

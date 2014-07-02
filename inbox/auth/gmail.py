@@ -42,7 +42,7 @@ def create_auth_account(db_session, email_address):
     uri = config.get('GOOGLE_OAUTH_REDIRECT_URI', None)
 
     if uri != 'urn:ietf:wg:oauth:2.0:oob':
-        raise NotImplementedError("callback-based OAuth is not supported")
+        raise NotImplementedError('Callback-based OAuth is not supported')
 
     response = auth_account(email_address)
     account = create_account(db_session, email_address, response)

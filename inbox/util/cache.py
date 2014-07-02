@@ -5,18 +5,20 @@ from .file import safe_filename, mkdirp, splitall
 
 # A quick hack of a key-value cache of arbitrary data structures. Stores on disk.
 # XXX TODO: before prod deploy, make this configurable.
-from inbox.config import config
+from inbox.config import config, ConfigError
 from inbox.log import get_logger
 log = get_logger()
 
 
-PACK_ENCODING='utf-8'
+PACK_ENCODING = 'utf-8'
 
 
 def _path_from_key(key):
     parts = [safe_filename(part) for part in splitall(key)]
     cache_dir = config.get('CACHE_BASEDIR', None)
-    assert cache_dir, "Need directory to store cache! Set CACHE_BASEDIR in config.cfg"
+    if not cache_dir:
+        raise ConfigError('Missing cache directory value.')
+
     return os.path.join(cache_dir, *parts)
 
 
@@ -35,7 +37,8 @@ def _unless_dne(fn, *args, **kwargs):
     except IOError as e:
         if e.errno == errno.ENOENT:
             return None
-        else: raise
+        else:
+            raise
 
 
 def get_cache(key):

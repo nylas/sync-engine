@@ -4,16 +4,16 @@ import requests
 from inbox.util.url import url_concat
 from inbox.log import get_logger
 log = get_logger()
-from inbox.config import config
+from inbox.config import config, ConfigError
 from inbox.basicauth import AuthError
 
 # Google OAuth app credentials
 GOOGLE_OAUTH_CLIENT_ID = config.get('GOOGLE_OAUTH_CLIENT_ID', None)
 GOOGLE_OAUTH_CLIENT_SECRET = config.get('GOOGLE_OAUTH_CLIENT_SECRET', None)
 REDIRECT_URI = config.get('GOOGLE_OAUTH_REDIRECT_URI', None)
-assert GOOGLE_OAUTH_CLIENT_ID, 'Missing Google OAuth Client Id'
-assert GOOGLE_OAUTH_CLIENT_SECRET, 'Missing Google OAuth Client Secret'
-assert REDIRECT_URI, 'Missing Google OAuth redirect URI'
+if not (GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET and
+        REDIRECT_URI):
+    raise ConfigError('Missing Google OAuth Credentials.')
 
 OAUTH_AUTHENTICATE_URL = 'https://accounts.google.com/o/oauth2/auth'
 OAUTH_ACCESS_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token'
@@ -26,7 +26,7 @@ OAUTH_SCOPE = ' '.join([
     'https://mail.google.com/',  # email
     'https://www.google.com/m8/feeds',  # contacts
     'https://www.googleapis.com/auth/calendar'  # calendar
-    ])
+])
 
 
 class OAuthError(AuthError):
@@ -75,7 +75,8 @@ def get_authenticated_user(authorization_code):
     headers = {'Content-type': 'application/x-www-form-urlencoded',
                'Accept': 'text/plain'}
     data = urllib.urlencode(args)
-    response = requests.post(OAUTH_ACCESS_TOKEN_URL, data=data, headers=headers)
+    response = requests.post(OAUTH_ACCESS_TOKEN_URL, data=data,
+                             headers=headers)
 
     session_dict = response.json()
 

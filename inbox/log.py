@@ -14,7 +14,7 @@ import traceback
 import requests
 from colorlog import ColoredFormatter
 
-from inbox.config import config
+from inbox.config import config, ConfigError
 from inbox.util.file import mkdirp
 
 
@@ -52,12 +52,15 @@ def get_logger(account_id=None, purpose=None):
 
 
 def configure_general_logging():
-    """ Configure the general server logger to output to screen and server.log.
+    """
+    Configure the general server logger to output to screen and server.log.
 
     Logs are output to a directory configurable via LOGDIR.
+
     """
-    assert 'LOGDIR' in config, "LOGDIR not specified in config file"
-    assert 'LOGLEVEL' in config, "LOGLEVEL not specified in config file"
+    if not ('LOGDIR' in config and 'LOGLEVEL' in config):
+        raise ConfigError('Missing log config values.')
+
     mkdirp(config['LOGDIR'])
 
     # configure properties that should cascade
