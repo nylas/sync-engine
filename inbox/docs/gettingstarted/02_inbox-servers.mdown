@@ -1,18 +1,18 @@
-Title:   Inbox Servers
+Title: Inbox Sync Engine Services
 
-The Inbox Servers are responsible for syncing accounts with underlying providers as well as providing the REST API to clients.
+The open source Inbox Sync Engine includes two separate processes, one for syncing accounts with underlying providers, and another for responding to REST API requests. To use your development environment, you need to start both processes.
 
-Inbox Sync Server
+Inbox Sync Service
 -----
 
-The sync server can be started by running the following command from within the Inbox VM (i.e. in the `/vagrant` directory from within a vagrant ssh session as explained in Installation). Note: you may want to run the server in a separate shell within tmux or in the background.
+Start the sync process by running the command below from the `/vagrant` directory of your VirtualBox. Note that you may want to run the server in a separate shell within tmux or in the background.
 
 ```
 :::bash
 $ bin/inbox-start
 ```
 
-Now that the server is running, You will want to authenticate an account and sync it.  You can do so via the following commands, which again need to be run from within the Inbox VM:
+Once the sync process is running, you can authenticate an email account and start a sync. In a new VirtualBox shell in the `/vagrant` directory, run the commands below:
 
 ```
 :::bash
@@ -21,22 +21,23 @@ $ bin/inbox-auth [YOUR_ACCOUNT]@gmail.com
 $ bin/inbox-sync start [YOUR_ACCOUNT]@gmail.com
 ```
 
+The `inbox-auth` command will walk you through the process of obtaining an authorization token from Google or another service for syncing your mail.In the open-source version of the sync engine, your credentials are stored to the local mySQL database for simplicity. At this time, the open-source Inbox Sync Engine does not support Exchange, but you can request access to the Exchange beta <a href="/docs">here</a>. 
 
-These commands will authenticate an account with the Inbox Server running within the VM and notify that server to start syncing the account with the underlying provider. Note: The sync step will take quite a while if you have a lot of data stored at your provider.
+The `inbox-sync` command tells the sync process to start syncing your account with the underlying provider. Note that an initial sync can take quite a while depending on how much mail you have.
 
-Inbox API Server
+Inbox API Service
 -----
 
-The Inbox API Server is responsible for providing a REST API to your Inbox data. In order to start this server, run the following command from within the Inbox VM:
+The Inbox API service provides a REST API for interacting with your Inbox data. To start it in your development environment, run command below from the `/vagrant` folder within your VM:
 
 ```
 :::bash
 $ bin/inbox-api
 ```
 
-This will start the API Server on port 5555. At this point **You're now ready to make requests!**
+This will start the API Server on port 5555. At this point **You're now ready to make requests!** If you're using VirtualBox or VMWare fusion with Vagrant, port 5555 has already been forwarded to your host machine, so you can hit the API from your regular web browser.
 
-You can test that the server is working properly by hitting the `/n/` API which lists synced accounts. There is no authentication built in to the sync engine, so you query the API with a simple cURL command: 
+You can test that the server is working properly by hitting the `/n/` API which lists synced accounts. There is no authentication built in to the open source sync engine, so you query the API with a simple cURL command:
 
 ```
 :::bash

@@ -1,6 +1,6 @@
-Title:   Installation
+Title: Installation
 
-You can run Inbox almost anywhere. Here's how to install install a development enviornment within Virtualbox on your own machine.
+You can run the Inbox Sync Engine almost anywhere. A hosted version of the Inbox platform will be launching later this year, but you can start developing on top of the Inbox API today by running your own instance of the Inbox Sync Engine. For development, we recommend installing it on a VirtualBox or VMWare Fusion virtual machine and running it with Vagrant:
 
 1. [Install VirtualBox](https://www.virtualbox.org/wiki/Downloads)
 
@@ -20,4 +20,4 @@ You can run Inbox almost anywhere. Here's how to install install a development e
 
     The `inbox` directory you started with should be synced to `/vagrant`. If this directory is empty, then logout and run `vagrant reload` and `vagrant ssh` again.
 
-At this point Inbox is installed and ready to run! The next steps are to start the Inbox servers and authenticate and sync a mail account.
+At this point the Inbox Sync Engine is installed and ready to process mail! The next steps are to start the processes that come with the open-source toolkit and authenticate a mail account.
