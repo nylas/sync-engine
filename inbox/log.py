@@ -14,7 +14,7 @@ import traceback
 import requests
 from colorlog import ColoredFormatter
 
-from inbox.config import config, ConfigError
+from inbox.config import config
 from inbox.util.file import mkdirp
 
 
@@ -28,10 +28,10 @@ def get_tty_handler():
         "%(name)-20.20s %(log_color)s[%(levelname)-.1s %(asctime)s %(module)-8.8s:%(lineno)-4s]%(reset)s %(message)s",
         reset=True,
         log_colors={
-            'DEBUG':    'cyan',
-            'INFO':     'green',
-            'WARNING':  'yellow',
-            'ERROR':    'red',
+            'DEBUG': 'cyan',
+            'INFO': 'green',
+            'WARNING': 'yellow',
+            'ERROR': 'red',
             'CRITICAL': 'red',
         })
 
@@ -58,14 +58,14 @@ def configure_general_logging():
     Logs are output to a directory configurable via LOGDIR.
 
     """
-    if not ('LOGDIR' in config and 'LOGLEVEL' in config):
-        raise ConfigError('Missing log config values.')
+    logdir = config.get_required('LOGDIR')
+    loglevel = config.get_required('LOGLEVEL')
 
-    mkdirp(config['LOGDIR'])
+    mkdirp(logdir)
 
     # configure properties that should cascade
     inbox_root_logger = logging.getLogger('inbox')
-    inbox_root_logger.setLevel(int(config['LOGLEVEL']))
+    inbox_root_logger.setLevel(int(loglevel))
     # don't pass messages up to the root root logger
     inbox_root_logger.propagate = False
 
@@ -77,7 +77,7 @@ def configure_general_logging():
     for handler in logger.handlers:
         logger.removeHandler(handler)
 
-    logfile = os.path.join(config['LOGDIR'], 'server.log')
+    logfile = os.path.join(logdir, 'server.log')
     file_handler = logging.FileHandler(logfile, encoding='utf-8')
     file_handler.setFormatter(file_formatter)
     logger.addHandler(file_handler)
@@ -100,40 +100,44 @@ def configure_logging(account_id, purpose):
 
 
 def configure_mailsync_logging(account_id):
-    """ We log output for each mail sync instance to a different file than the
-        main server log, for ease of debugging. Sync logs still go to screen
-        too, for now.
     """
-    return configure_logging(account_id, "mailsync")
+    We log output for each mail sync instance to a different file than the
+    main server log, for ease of debugging. Sync logs still go to screen
+    too, for now.
+
+    """
+    return configure_logging(account_id, 'mailsync')
 
 
 def configure_contacts_logging(account_id):
-    """ We log output for each contacts sync instance to a different file than
-        the main server log, for ease of debugging. Contacts sync logs still go
-        to screen too, for now.
     """
-    return configure_logging(account_id, "contacts")
+    We log output for each contacts sync instance to a different file than
+    the main server log, for ease of debugging. Contacts sync logs still go
+    to screen too, for now.
+
+    """
+    return configure_logging(account_id, 'contacts')
 
 
 def email_exception(logger, etype, evalue, tb):
     """ Send stringified exception to configured email address. """
     exc_email_addr = config.get('EXCEPTION_EMAIL_ADDRESS')
     if exc_email_addr is None:
-        logger.error("No EXCEPTION_EMAIL_ADDRESS configured!")
+        logger.error('No EXCEPTION_EMAIL_ADDRESS configured!')
     mailgun_api_endpoint = config.get('MAILGUN_API_ENDPOINT')
     if mailgun_api_endpoint is None:
-        logger.error("No MAILGUN_API_ENDPOINT configured!")
+        logger.error('No MAILGUN_API_ENDPOINT configured!')
     mailgun_api_key = config.get('MAILGUN_API_KEY')
     if mailgun_api_key is None:
-        logger.error("No MAILGUN_API_KEY configured!")
+        logger.error('No MAILGUN_API_KEY configured!')
 
     r = requests.post(
         mailgun_api_endpoint,
-        auth=("api", mailgun_api_key),
-        data={"from": "Inbox App Server <{}>".format(exc_email_addr),
-              "to": [exc_email_addr],
-              "subject": "Uncaught error! {} {}".format(etype, evalue),
-              "text": u"""
+        auth=('api', mailgun_api_key),
+        data={'from': "Inbox App Server <{}>".format(exc_email_addr),
+              'to': [exc_email_addr],
+              'subject': "Uncaught error! {} {}".format(etype, evalue),
+              'text': u"""
     Something went wrong on {}. Please investigate. :)
 
     {}
@@ -145,12 +149,14 @@ def email_exception(logger, etype, evalue, tb):
 
 
 def log_uncaught_errors(logger=None):
-    """ Helper to log uncaught exceptions.
+    """
+    Helper to log uncaught exceptions.
 
-        Parameters
-        ----------
-        logger: logging.Logger, optional
-            The logging object to write to.
+    Parameters
+    ----------
+    logger: logging.Logger, optional
+        The logging object to write to.
+
     """
     logger = logger or get_logger()
     logger.exception('Uncaught error')

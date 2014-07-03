@@ -1,11 +1,13 @@
-import os, errno
+import os
+import errno
 import msgpack
 
-from .file import safe_filename, mkdirp, splitall
+from inbox.util.file import safe_filename, mkdirp, splitall
 
-# A quick hack of a key-value cache of arbitrary data structures. Stores on disk.
+# A quick hack of a key-value cache of arbitrary data structures. Stored on
+# disk.
 # XXX TODO: before prod deploy, make this configurable.
-from inbox.config import config, ConfigError
+from inbox.config import config
 from inbox.log import get_logger
 log = get_logger()
 
@@ -15,10 +17,7 @@ PACK_ENCODING = 'utf-8'
 
 def _path_from_key(key):
     parts = [safe_filename(part) for part in splitall(key)]
-    cache_dir = config.get('CACHE_BASEDIR', None)
-    if not cache_dir:
-        raise ConfigError('Missing cache directory value.')
-
+    cache_dir = config.get_required('CACHE_BASEDIR')
     return os.path.join(cache_dir, *parts)
 
 

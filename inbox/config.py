@@ -5,10 +5,6 @@ from urllib import quote_plus as urlquote
 __all__ = ['config', 'engine_uri', 'db_uri']
 
 
-with open('/etc/inboxapp/config.json') as f:
-    config = json.load(f)
-
-
 class ConfigError(Exception):
     def __init__(self, error=None, help=None):
         self.error = error or ''
@@ -20,15 +16,27 @@ class ConfigError(Exception):
         return '{0} {1}'.format(self.error, self.help)
 
 
+class Configuration(dict):
+    def __init__(self, *args, **kwargs):
+        dict.__init__(self, *args, **kwargs)
+
+    def get_required(self, key):
+        if key not in self:
+            raise ConfigError('Missing config value for {0}.'.format(key))
+
+        return self[key]
+
+
+with open('/etc/inboxapp/config.json') as f:
+    config = Configuration(json.load(f))
+
+
 def engine_uri(database=None):
     """ By default doesn't include the specific database. """
-    username = config.get('MYSQL_USER')
-    password = config.get('MYSQL_PASSWORD')
-    host = config.get('MYSQL_HOSTNAME')
-    port = config.get('MYSQL_PORT')
-
-    if not (username and password and host and port):
-        raise ConfigError('Missing database config values.')
+    username = config.get_required('MYSQL_USER')
+    password = config.get_required('MYSQL_PASSWORD')
+    host = config.get_required('MYSQL_HOSTNAME')
+    port = config.get_required('MYSQL_PORT')
 
     uri_template = 'mysql+pymysql://{username}:{password}@{host}' +\
                    ':{port}/{database}?charset=utf8mb4'
@@ -43,7 +51,5 @@ def engine_uri(database=None):
 
 
 def db_uri():
-    database = config.get('MYSQL_DATABASE')
-    if not database:
-        raise ConfigError('Missing database config value.')
+    database = config.get_required('MYSQL_DATABASE')
     return engine_uri(database)

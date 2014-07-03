@@ -4,16 +4,13 @@ import requests
 from inbox.util.url import url_concat
 from inbox.log import get_logger
 log = get_logger()
-from inbox.config import config, ConfigError
+from inbox.config import config
 from inbox.basicauth import AuthError
 
 # Google OAuth app credentials
-GOOGLE_OAUTH_CLIENT_ID = config.get('GOOGLE_OAUTH_CLIENT_ID', None)
-GOOGLE_OAUTH_CLIENT_SECRET = config.get('GOOGLE_OAUTH_CLIENT_SECRET', None)
-REDIRECT_URI = config.get('GOOGLE_OAUTH_REDIRECT_URI', None)
-if not (GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET and
-        REDIRECT_URI):
-    raise ConfigError('Missing Google OAuth Credentials.')
+GOOGLE_OAUTH_CLIENT_ID = config.get_required('GOOGLE_OAUTH_CLIENT_ID')
+GOOGLE_OAUTH_CLIENT_SECRET = config.get_required('GOOGLE_OAUTH_CLIENT_SECRET')
+REDIRECT_URI = config.get_required('GOOGLE_OAUTH_REDIRECT_URI')
 
 OAUTH_AUTHENTICATE_URL = 'https://accounts.google.com/o/oauth2/auth'
 OAUTH_ACCESS_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token'
