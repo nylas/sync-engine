@@ -34,13 +34,21 @@ def retry_wrapper(func, logger=None, failure_counter=None, exclude=None,
 
     Arguments
     ---------
-    func: function
-    logger: Logger instance, optional
-    failure_counter: iterator, optional
+    func : function
+    logger : Logger instance, optional
+    failure_counter : iterator, optional
         Can be used to configure retry behavior. falure_counter.next() is
         invoked on each failure; the call to func will be retried until
         StopIteration is raised from failure_counter. Defaults to an instance
         of resettable_counter.
+    exclude : list of Exception subclasses, optional
+        Can be used to configure retry behavior. func is /not/ retried if one
+        of these exceptions is raised. Default behavior is to retry for all
+        exceptions.
+    account_id : inbox.models.account.id, optional
+        Used for mailsync status reporting.
+    folder : inbox.models.folder.name, optional
+        Used for mailsync status reporting.
 
     """
     logger = logger or get_logger()
