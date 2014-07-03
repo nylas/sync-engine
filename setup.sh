@@ -48,18 +48,13 @@ apt-get -y install git \
                    libmysqlclient-dev \
                    gcc \
                    libzmq-dev \
-                   python-zmq \
                    libxml2-dev \
                    libxslt-dev \
                    lib32z1-dev \
                    libffi-dev \
                    python-lxml \
-                   libmagickwand-dev \
                    tmux \
                    curl \
-                   stunnel4 \
-                   g++ \
-                   htop
 
 color '35;1' 'Installing dependencies from pip...'
 pip install --upgrade setuptools
