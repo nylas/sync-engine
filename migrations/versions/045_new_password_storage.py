@@ -11,7 +11,6 @@ revision = '7a117720554'
 down_revision = '247cd689758c'
 
 import os
-from Crypto.Cipher import AES
 from alembic import op
 import sqlalchemy as sa
 
@@ -30,6 +29,7 @@ def decrypt_aes(ciphertext, key):
     The function expects the ciphertext as a byte string and it returns the
     decrypted message as a byte string.
     """
+    from Crypto.Cipher import AES
     unpad = lambda s: s[:-ord(s[-1])]
     iv = ciphertext[:AES.block_size]
     cipher = AES.new(key, AES.MODE_CBC, iv)
