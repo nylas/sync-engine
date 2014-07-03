@@ -1,9 +1,6 @@
 """Provide Google contacts."""
 
-import dateutil.parser
-import datetime
 import posixpath
-import time
 
 import gdata.auth
 import gdata.contacts.client
@@ -13,7 +10,6 @@ from inbox.models import Contact
 from inbox.models.backends.gmail import GmailAccount
 from inbox.auth.oauth import (GOOGLE_OAUTH_CLIENT_ID,
                               GOOGLE_OAUTH_CLIENT_SECRET, OAUTH_SCOPE)
-from inbox.auth.base import verify_imap_account
 from inbox.log import configure_logging
 
 SOURCE_APP_NAME = 'InboxApp Contact Sync Engine'
@@ -39,6 +35,7 @@ class GoogleContactsProvider(object):
         Logging handler.
     """
     PROVIDER_NAME = 'google'
+
     def __init__(self, account_id):
         self.account_id = account_id
         self.log = configure_logging(account_id, 'googlecontacts')
@@ -50,7 +47,6 @@ class GoogleContactsProvider(object):
         with session_scope() as db_session:
             try:
                 account = db_session.query(GmailAccount).get(self.account_id)
-                account = verify_imap_account(db_session, account)
                 two_legged_oauth_token = gdata.gauth.OAuth2Token(
                     client_id=GOOGLE_OAUTH_CLIENT_ID,
                     client_secret=GOOGLE_OAUTH_CLIENT_SECRET,
@@ -88,7 +84,7 @@ class GoogleContactsProvider(object):
                            email.primary]
         if email_addresses and len(email_addresses) > 1:
             self.log.error("Should not have more than one email per entry! {0}"
-                    .format(email_addresses))
+                           .format(email_addresses))
         try:
             # The id.text field of a ContactEntry object takes the form
             # 'http://www.google.com/m8/feeds/contacts/<useremail>/base/<uid>'.
@@ -105,7 +101,7 @@ class GoogleContactsProvider(object):
             raw_data = google_contact.to_string()
         except AttributeError, e:
             self.log.error('Something is wrong with contact: {0}'
-                    .format(google_contact))
+                           .format(google_contact))
             raise e
 
         deleted = google_contact.deleted is not None

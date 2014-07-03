@@ -14,7 +14,7 @@ preflight()
 from inbox.util.url import NotSupportedError
 from inbox.models.session import session_scope
 from inbox.models import Account
-from inbox.auth.base import get_handler
+from inbox.auth.base import handler_from_email
 
 parser = argparse.ArgumentParser(description='Auth an email account')
 parser.add_argument('email_address',
@@ -24,7 +24,7 @@ args = parser.parse_args()
 email_address = args.email_address
 
 with session_scope() as db_session:
-    auth_handler = get_handler(email_address)
+    auth_handler = handler_from_email(email_address)
 
     try:
         account = db_session.query(Account).filter_by(
@@ -35,7 +35,9 @@ with session_scope() as db_session:
                                                    email_address)
 
     try:
-        verified_account = auth_handler.verify_account(db_session, account)
+        auth_handler.verify_account(db_session, account)
+        db_session.add(account)
+        db_session.commit()
     except NotSupportedError as e:
         sys.exit(str(e))
 

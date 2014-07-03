@@ -1,44 +1,23 @@
 import socket
 
-import sqlalchemy.orm.exc
+from sqlalchemy.orm.exc import NoResultFound
 
 from imapclient import IMAPClient
 
-from inbox.auth.oauth import oauth_authorize
-from inbox.auth.base import verify_imap_account
-from inbox.models.session import session_scope
+from inbox.auth.oauth import oauth_authorize_console
 from inbox.models import Namespace
 from inbox.models.backends.gmail import GmailAccount
 from inbox.config import config
 
+from inbox.log import get_logger
+log = get_logger()
 
 PROVIDER = 'gmail'
 IMAP_HOST = 'imap.gmail.com'
 PROVIDER_PREFIX = 'gmail'
 
 
-def verify_gmail_account(account):
-    try:
-        conn = IMAPClient(IMAP_HOST, use_uid=True, ssl=True)
-    except IMAPClient.Error as e:
-        raise socket.error(str(e))
-
-    conn.debug = False
-    try:
-        conn.oauth2_login(account.email_address, account.access_token)
-    except IMAPClient.Error as e:
-        if str(e) == '[ALERT] Invalid credentials (Failure)':
-            # maybe refresh the access token
-            with session_scope() as db_session:
-                account = verify_imap_account(db_session, account)
-                conn.oauth2_login(account.email_address,
-                                  account.access_token)
-
-    return conn
-
-
 def create_auth_account(db_session, email_address):
-
     uri = config.get('GOOGLE_OAUTH_REDIRECT_URI', None)
 
     if uri != 'urn:ietf:wg:oauth:2.0:oob':
@@ -51,22 +30,23 @@ def create_auth_account(db_session, email_address):
 
 
 def auth_account(email_address):
-    return oauth_authorize(email_address)
+    return oauth_authorize_console(email_address)
 
 
 def create_account(db_session, email_address, response):
+    # See if the account exists in db, otherwise create it
     try:
-        account = db_session.query(GmailAccount).filter_by(
-            email_address=email_address).one()
-    except sqlalchemy.orm.exc.NoResultFound:
+        account = db_session.query(GmailAccount) \
+            .filter_by(email_address=email_address).one()
+    except NoResultFound:
         namespace = Namespace()
         account = GmailAccount(namespace=namespace)
 
-    account.access_token = response.get('access_token')
+    tok = response.get('access_token')
+    expires_in = response.get('expires_in')
+    account.set_access_token(tok, expires_in)
     account.refresh_token = response.get('refresh_token')
     account.scope = response.get('scope')
-    account.expires_in = response.get('expires_in')
-    account.token_type = response.get('token_type')
     account.email_address = response.get('email')
     account.family_name = response.get('family_name')
     account.given_name = response.get('given_name')
@@ -83,9 +63,23 @@ def create_account(db_session, email_address, response):
     return account
 
 
-def verify_account(db_session, account):
-    verify_gmail_account(account)
-    db_session.add(account)
-    db_session.commit()
+# Used by the 'inbox-auth' program after we create an authenticated account
+# as well as by a migration which imports gmail accounts from an old db
+def verify_account(account):
+    try:
+        conn = IMAPClient(IMAP_HOST, use_uid=True, ssl=True)
+    except IMAPClient.Error as e:
+        raise socket.error(str(e))
 
-    return account
+    conn.debug = False
+    try:
+        conn.oauth2_login(account.email_address, account.access_token)
+    except IMAPClient.Error as e:
+        log.info("IMAP Login error, refresh auth token for: {}"
+                 .format(account.email_address))
+        if str(e) == '[ALERT] Invalid credentials (Failure)':
+            # maybe the access token expired?
+            conn.oauth2_login(account.email_address,
+                              account.renew_access_token())
+
+    return conn

@@ -15,9 +15,7 @@ from gevent import socket
 import geventconnpool
 
 from inbox.util.misc import or_none, timed
-from inbox.auth.base import verify_imap_account
-from inbox.auth.gmail import verify_gmail_account
-from inbox.auth.yahoo import verify_yahoo_account
+from inbox.auth.base import handler_from_provider
 from inbox.basicauth import AUTH_TYPES
 from inbox.models.session import session_scope
 from inbox.models.backends.imap import ImapAccount
@@ -64,7 +62,8 @@ def writable_connection_pool(account_id, pool_size=4,
 
     Use like this:
 
-        with crispin.writable_connection_pool(account_id).get() as crispin_client:
+        conn_pool = crispin.writable_connection_pool(account_id)
+        with conn_pool.get() as crispin_client:
             # your code here
             pass
     """
@@ -110,7 +109,6 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
 
             # Refresh token if need be, for OAuthed accounts
             if AUTH_TYPES.get(account.provider) == 'oauth':
-                account = verify_imap_account(db_session, account)
                 self.access_token = account.access_token
 
             self.email_address = account.email_address
@@ -121,16 +119,8 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
         with session_scope() as db_session:
             account = db_session.query(ImapAccount).get(self.account_id)
 
-            if (account.provider == 'gmail'):
-                conn = verify_gmail_account(account)
-
-            elif (account.provider == 'yahoo'):
-                conn = verify_yahoo_account(account)
-
-            # Reads from db, therefore shouldn't get here
-            else:
-                raise Exception(
-                    "Couldn't find provider {}".format(account.provider))
+            auth_handler = handler_from_provider(account.provider)
+            conn = auth_handler.verify_account(account)
 
         return new_crispin(self.account_id, self.provider, conn, self.readonly)
 
@@ -557,7 +547,9 @@ class GmailCrispinClient(CondStoreCrispinClient):
         return sorted([long(uid) for uid in
                        self.conn.search(['NOT DELETED', criteria])])
 
-    ### the following methods WRITE to the IMAP account!
+    # -----------------------------------------
+    # following methods WRITE to IMAP account!
+    # -----------------------------------------
 
     def archive_thread(self, g_thrid):
         assert self.selected_folder_name == self.folder_names()['inbox'], \

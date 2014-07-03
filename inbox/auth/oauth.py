@@ -1,5 +1,6 @@
 import urllib
 import requests
+from requests import ConnectionError
 
 from inbox.util.url import url_concat
 from inbox.log import get_logger
@@ -34,66 +35,30 @@ class InvalidOAuthGrantError(OAuthError):
     pass
 
 
-def authorize_redirect_url(email_address=None):
-    args = {
-        'redirect_uri': REDIRECT_URI,
-        'client_id': GOOGLE_OAUTH_CLIENT_ID,
-        'response_type': 'code',
-        'scope': OAUTH_SCOPE,
-        'access_type': 'offline',  # to get a refresh token
-    }
-    if email_address:
-        args['login_hint'] = email_address
-    # DEBUG
-    args['approval_prompt'] = 'force'
+def validate_token(access_token):
+    """ Helper function which will validate an access token. """
+    log.info('Validating oauth token...')
+    try:
+        response = requests.get(OAUTH_TOKEN_VALIDATION_URL +
+                                '?access_token=' + access_token)
+    except ConnectionError, e:
+        log.error('Validation failed.')
+        log.error(e)
+        return None  # TODO better error handling here
 
-    # Prompt user for authorization + get auth_code
-    url = url_concat(OAUTH_AUTHENTICATE_URL, args)
-    print '''
-To authorize Inbox, visit this url and follow the directions:
+    validation_dict = response.json()
 
-{0}
-'''.format(url)
+    if 'error' in validation_dict:
+        assert validation_dict['error'] == 'invalid_token'
+        log.error('{0} - {1}'.format(validation_dict['error'],
+                                     validation_dict['error_description']))
+        return None
 
-    auth_code = raw_input('Enter authorization code: ').strip()
-    return auth_code
+    return validation_dict
 
 
-def get_authenticated_user(authorization_code):
-    log.info('Getting oauth authenticated user...')
-    args = {
-        'client_id': GOOGLE_OAUTH_CLIENT_ID,
-        'code': authorization_code,
-        'client_secret': GOOGLE_OAUTH_CLIENT_SECRET,
-        'grant_type': 'authorization_code',
-        'redirect_uri': REDIRECT_URI,
-    }
-
-    headers = {'Content-type': 'application/x-www-form-urlencoded',
-               'Accept': 'text/plain'}
-    data = urllib.urlencode(args)
-    response = requests.post(OAUTH_ACCESS_TOKEN_URL, data=data,
-                             headers=headers)
-
-    session_dict = response.json()
-
-    if u'error' in session_dict:
-        raise OAuthError(session_dict['error'])
-
-    access_token = session_dict['access_token']
-    validation_dict = validate_token(access_token)
-    userinfo_dict = user_info(access_token)
-
-    z = session_dict.copy()
-    z.update(validation_dict)
-    z.update(userinfo_dict)
-
-    return z
-
-    # TODO : get this data somewhere other than the auth module
-
-
-def get_new_token(refresh_token):
+def new_token(refresh_token):
+    """ Helper function which gets a new access token from a refresh token."""
     assert refresh_token is not None, 'refresh_token required'
 
     log.info('Getting new oauth token...')
@@ -122,37 +87,39 @@ def get_new_token(refresh_token):
         else:
             raise OAuthError(session_dict['error'])
 
-    access_token = session_dict['access_token']
-
-    # Validate token
-    validation_dict = validate_token(access_token)
-
-    z = session_dict.copy()
-    z.update(validation_dict)
-    return z
+    return session_dict['access_token'], session_dict['expires_in']
 
 
-def validate_token(access_token):
-    log.info('Validating oauth token...')
-    try:
-        response = requests.get(OAUTH_TOKEN_VALIDATION_URL +
-                                '?access_token=' + access_token)
-    except Exception, e:
-        log.error(e)
-        return None  # TODO better error handling here
+# ------------------------------------------------------------------
+# Console Support for providing link and reading response from user
+# ------------------------------------------------------------------
 
-    validation_dict = response.json()
+def _show_authorize_link(email_address=None):
+    """ Show authorization link.
+    Prints out a message to the console containing a link that the user can
+    click on that will bring them to a page that allows them to authorize
+    access to their account.
+    """
+    args = {
+        'redirect_uri': REDIRECT_URI,
+        'client_id': GOOGLE_OAUTH_CLIENT_ID,
+        'response_type': 'code',
+        'scope': OAUTH_SCOPE,
+        'access_type': 'offline',  # to get a refresh token
+    }
+    if email_address:
+        args['login_hint'] = email_address
+    # DEBUG
+    args['approval_prompt'] = 'force'
 
-    if 'error' in validation_dict:
-        assert validation_dict['error'] == 'invalid_token'
-        log.error('{0} - {1}'.format(validation_dict['error'],
-                                     validation_dict['error_description']))
-        return None
-
-    return validation_dict
+    # Prompt user for authorization + get auth_code
+    url = url_concat(OAUTH_AUTHENTICATE_URL, args)
+    print ("To authorize Inbox, visit this url and follow the directions:"
+           "\n\n{}").format(url)
 
 
-def user_info(access_token):
+def _user_info(access_token):
+    """ retrieves additional information about the user to store in the db"""
     log.info('Fetching user info...')
 
     try:
@@ -173,14 +140,45 @@ def user_info(access_token):
     return userinfo_dict
 
 
-def oauth_authorize(email_address):
-    auth_code = authorize_redirect_url(email_address)
+def _get_authenticated_user(authorization_code):
+    log.info('Getting oauth authenticated user...')
+    args = {
+        'client_id': GOOGLE_OAUTH_CLIENT_ID,
+        'code': authorization_code,
+        'client_secret': GOOGLE_OAUTH_CLIENT_SECRET,
+        'grant_type': 'authorization_code',
+        'redirect_uri': REDIRECT_URI,
+    }
 
-    try:
-        auth_response = get_authenticated_user(auth_code)
-    except OAuthError:
-        reentered_code = raw_input('\nInvalid authorization code, try again: '
-                                   ).strip()
-        auth_response = get_authenticated_user(reentered_code)
+    headers = {'Content-type': 'application/x-www-form-urlencoded',
+               'Accept': 'text/plain'}
+    data = urllib.urlencode(args)
+    resp = requests.post(OAUTH_ACCESS_TOKEN_URL, data=data, headers=headers)
 
-    return auth_response
+    session_dict = resp.json()
+
+    if u'error' in session_dict:
+        raise OAuthError(session_dict['error'])
+
+    access_token = session_dict['access_token']
+    validation_dict = validate_token(access_token)
+    userinfo_dict = _user_info(access_token)
+
+    z = session_dict.copy()
+    z.update(validation_dict)
+    z.update(userinfo_dict)
+
+    return z
+
+
+def oauth_authorize_console(email_address):
+    """ Console I/O and checking for a user to authorize their account."""
+    _show_authorize_link(email_address)
+
+    while True:
+        auth_code = raw_input('Enter authorization code: ').strip()
+        try:
+            auth_response = _get_authenticated_user(auth_code)
+            return auth_response
+        except OAuthError:
+            print "\nInvalid authorization code, try again...\n"

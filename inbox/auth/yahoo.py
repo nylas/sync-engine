@@ -1,4 +1,3 @@
-import sys
 import datetime
 import socket
 
@@ -45,14 +44,6 @@ def create_account(db_session, email_address, response):
 
 
 def verify_account(db_session, account):
-    verify_yahoo_account(account)
-    db_session.add(account)
-    db_session.commit()
-
-    return account
-
-
-def verify_yahoo_account(account):
     try:
         conn = IMAPClient(IMAP_HOST, use_uid=True, ssl=True)
     except IMAPClient.Error as e:
