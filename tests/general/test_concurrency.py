@@ -51,17 +51,17 @@ def test_no_logging_on_greenlet_exit():
     assert failing_function.call_count == 1
 
 
-def test_retry_count_resets():
+def test_retry_count_resets(monkeypatch):
+    monkeypatch.setattr('inbox.util.concurrency.resettable_counter',
+                        lambda: resettable_counter(reset_interval=0))
     logger = MockLogger()
-    counter = resettable_counter(reset_interval=0)
 
     failing_function = FailingFunction(ValueError, max_executions=6,
                                        delay=.1)
 
     exc_callback = lambda: log_uncaught_errors(logger)
 
-    retry(failing_function, retry_counter=counter,
-          exc_callback=exc_callback)()
+    retry(failing_function, exc_callback=exc_callback)()
 
     assert logger.call_count == 5
     assert failing_function.call_count == 6

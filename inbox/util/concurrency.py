@@ -28,7 +28,7 @@ def resettable_counter(max_count=3, reset_interval=300):
         last_increment_at = time.time()
 
 
-def retry(func, retry_counter=None, retry_classes=None, fail_classes=None,
+def retry(func, retry_classes=None, fail_classes=None,
           exc_callback=None, fail_callback=None):
     """
     Executes the callable func, retrying on uncaught exceptions.
@@ -36,11 +36,6 @@ def retry(func, retry_counter=None, retry_classes=None, fail_classes=None,
     Arguments
     ---------
     func : function
-    retry_counter : iterator, optional
-        Configures how often you want to retry. retry_counter.next() is invoked
-        on each failure; the call to func will be retried until StopIteration
-        is raised from failure_counter. Defaults to an instance of
-        resettable_counter.
     exc_callback : function, optional
     Function to execute if an exception is raised within func (e.g., log
     something)
@@ -54,7 +49,6 @@ def retry(func, retry_counter=None, retry_classes=None, fail_classes=None,
         Configures what not to retry on. If specified, func is /not/ retried if
         one of these exceptions is raised.
     """
-    retry_counter = retry_counter or resettable_counter()
     if (fail_classes and retry_classes and
             set(fail_classes).intersection(retry_classes)):
         raise ValueError("Can't include exception classes in both fail_on and "
@@ -71,7 +65,7 @@ def retry(func, retry_counter=None, retry_classes=None, fail_classes=None,
 
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
-        for _ in retry_counter:
+        for _ in resettable_counter():
             try:
                 return func(*args, **kwargs)
             except gevent.GreenletExit, e:
