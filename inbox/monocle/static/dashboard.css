@@ -39,6 +39,9 @@ a:visited {
 a:hover {
   color:#42A5C6;
 }
+td a {
+  display:block;
+}
 
 h1,h2,h3,h4 {
   line-height:160%;

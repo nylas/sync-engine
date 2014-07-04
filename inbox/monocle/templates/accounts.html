@@ -34,7 +34,7 @@
         function(data) {
           var content = '';
           $.each(data, function(i, item) {
-              link = "<a target='_blank' href=" + $SCRIPT_ROOT + '/accounts/' + item.id + ' >' + item.id + '</a>'
+              link = "<a href=" + $SCRIPT_ROOT + '/accounts/' + item.id + ' >' + item.id + '</a>'
               content += '<tr>';
               content += '<td class=account_id>' + link + '</td>';
               content += '<td>' + item.email + '</td>';
