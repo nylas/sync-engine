@@ -15,20 +15,26 @@ from sqlalchemy.orm.exc import NoResultFound
 
 parser = argparse.ArgumentParser(description='Start/stop mail sync')
 parser.add_argument('cmd', help='start or stop')
-parser.add_argument('email_address',
-                    help='Email address of the account to start/stop')
+parser.add_argument('email_address', nargs='?', default=None,
+                    help='Email address of the account to start/stop. '
+                    'Not required for startall/stopall.')
 args = parser.parse_args()
-
-with session_scope() as db_session:
-    try:
-        account_id = db_session.query(Account.id).filter_by(
-            email_address=args.email_address).one()[0]
-    except NoResultFound:
-        sys.exit('No record of account {0}'.format(args.email_address))
 
 mailsync_client = zerorpc.Client(timeout=15)
 mailsync_srv_loc = config.get('CRISPIN_SERVER_LOC', None)
 mailsync_client.connect(mailsync_srv_loc)
+
+if args.cmd == 'start' or args.cmd == 'stop':
+    if not args.email_address:
+        sys.exit('Specify the email_address of the account to start/stop.')
+
+    with session_scope() as db_session:
+        try:
+            account_id = db_session.query(Account.id).filter_by(
+                email_address=args.email_address).one()[0]
+        except NoResultFound:
+            sys.exit('No record of account {0}'.format(args.email_address))
+
 try:
     if args.cmd == 'start':
         print mailsync_client.start_sync(account_id)
