@@ -43,7 +43,7 @@ def create_account(db_session, email_address, response):
     return account
 
 
-def verify_account(db_session, account):
+def verify_account(account):
     try:
         conn = IMAPClient(IMAP_HOST, use_uid=True, ssl=True)
     except IMAPClient.Error as e:

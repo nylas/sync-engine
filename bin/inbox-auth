@@ -35,7 +35,7 @@ with session_scope() as db_session:
                                                    email_address)
 
     try:
-        auth_handler.verify_account(db_session, account)
+        auth_handler.verify_account(account)
         db_session.add(account)
         db_session.commit()
     except NotSupportedError as e:
