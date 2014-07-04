@@ -7,13 +7,16 @@ time. That's why functions take a connection argument.
 """
 import imaplib
 import functools
+import sys
 
 from collections import namedtuple
 
+import gevent
 from gevent import socket
 
 import geventconnpool
 
+from inbox.util.concurrency import retry
 from inbox.util.misc import or_none, timed
 from inbox.auth.base import handler_from_provider
 from inbox.basicauth import AUTH_TYPES
@@ -128,9 +131,22 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
         c.conn.noop()
 
 
+def _exc_callback():
+    gevent.sleep(5)
+    # When we port to structlog this can just be
+    # log.info('Connection broken; retrying', exc_info=True)
+    log.info('Connection broken with error {}; retrying with new connection'.
+             format(sys.exc_info()))
+
+
+def _fail_callback():
+    log.error('Max retries reached. Aborting. Error: {}'.
+              format(sys.exc_info()))
+
+
 retry_crispin = functools.partial(
-    geventconnpool.retry, exc_classes=CONN_DISCARD_EXC_CLASSES, logger=log,
-    interval=5, max_failures=5)
+    retry, retry_classes=CONN_DISCARD_EXC_CLASSES, exc_callback=_exc_callback,
+    fail_callback=_fail_callback)
 
 
 def new_crispin(account_id, provider, conn, readonly=True):

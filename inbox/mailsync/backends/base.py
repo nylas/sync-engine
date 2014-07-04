@@ -5,13 +5,14 @@ from gevent import Greenlet, joinall, sleep
 from gevent.queue import Queue, Empty
 from sqlalchemy.exc import DataError
 
-from inbox.util.concurrency import retry_wrapper
+from inbox.util.concurrency import retry_with_logging, retry_and_report_killed
 from inbox.util.itert import partition
 from inbox.util.misc import load_modules
 from inbox.config import config
 from inbox.log import configure_mailsync_logging
 from inbox.models import (Account, Folder, MAX_FOLDER_NAME_LENGTH)
 from inbox.mailsync.exc import SyncException
+from inbox.mailsync.reporting import report_exit
 import inbox.mailsync.backends
 
 
@@ -150,8 +151,8 @@ def commit_uids(db_session, log, new_uids):
 
     # Save message part blobs before committing changes to db.
     for msg in new_messages:
-        threads = [Greenlet.spawn(retry_wrapper, lambda: part.save(part._data),
-                                  log)
+        threads = [Greenlet.spawn(retry_with_logging, lambda:
+                                  part.save(part._data), log)
                    for part in msg.parts if hasattr(part, '_data')]
         # Fatally abort if part saves error out. Messages in this
         # chunk will be retried when the sync is restarted.
@@ -223,14 +224,19 @@ class BaseMailSyncMonitor(Greenlet):
             self.shared_state = dict(status_cb=status_cb)
 
         Greenlet.__init__(self)
+        self.link_value(lambda _: report_exit('stopped',
+                                              account_id=self.account_id))
 
     def _run(self):
-        return retry_wrapper(self._run_impl, self.log,
-                             account_id=self.account_id)
+        return retry_and_report_killed(self._run_impl, self.log,
+                                       account_id=self.account_id)
 
     def _run_impl(self):
-        sync = Greenlet.spawn(retry_wrapper, self.sync, self.log,
-                              account_id=self.account_id)
+        sync = Greenlet(retry_and_report_killed, self.sync, self.log,
+                        account_id=self.account_id)
+        sync.link_value(lambda _: report_exit('stopped',
+                                              account_id=self.account_id))
+        sync.start()
         while not sync.ready():
             try:
                 cmd = self.inbox.get_nowait()

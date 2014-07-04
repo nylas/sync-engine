@@ -162,12 +162,3 @@ def log_uncaught_errors(logger=None):
     logger.exception('Uncaught error')
     if config.get('EMAIL_EXCEPTIONS'):
         email_exception(logger, *sys.exc_info())
-
-    def __str__(self):
-        return str(self.func)
-
-    def __repr__(self):
-        return repr(self.func)
-
-    def __getattr__(self, item):
-        return getattr(self.func, item)

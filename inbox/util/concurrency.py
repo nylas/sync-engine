@@ -1,6 +1,7 @@
 import sys
 import signal
 import time
+import functools
 
 import gevent
 import zerorpc
@@ -9,8 +10,8 @@ from rq import Worker, Queue
 from rq.worker import StopRequested, DequeueTimeout
 
 from inbox.log import get_logger, log_uncaught_errors
-log = get_logger()
 from inbox.mailsync.reporting import report_exit
+log = get_logger()
 
 
 def resettable_counter(max_count=3, reset_interval=300):
@@ -27,51 +28,79 @@ def resettable_counter(max_count=3, reset_interval=300):
         last_increment_at = time.time()
 
 
-def retry_wrapper(func, logger=None, failure_counter=None, exclude=None,
-                  account_id=None, folder=None, *args, **kwargs):
+def retry(func, retry_counter=None, retry_classes=None, fail_classes=None,
+          exc_callback=None, fail_callback=None):
     """
-    Executes the callable func, logging and retrying on uncaught exceptions.
+    Executes the callable func, retrying on uncaught exceptions.
 
     Arguments
     ---------
     func : function
-    logger : Logger instance, optional
-    failure_counter : iterator, optional
-        Can be used to configure retry behavior. falure_counter.next() is
-        invoked on each failure; the call to func will be retried until
-        StopIteration is raised from failure_counter. Defaults to an instance
-        of resettable_counter.
-    exclude : list of Exception subclasses, optional
-        Can be used to configure retry behavior. func is /not/ retried if one
-        of these exceptions is raised. Default behavior is to retry for all
-        exceptions.
-    account_id : inbox.models.account.id, optional
-        Used for mailsync status reporting.
-    folder : inbox.models.folder.name, optional
-        Used for mailsync status reporting.
-
+    retry_counter : iterator, optional
+        Configures how often you want to retry. retry_counter.next() is invoked
+        on each failure; the call to func will be retried until StopIteration
+        is raised from failure_counter. Defaults to an instance of
+        resettable_counter.
+    exc_callback : function, optional
+    Function to execute if an exception is raised within func (e.g., log
+    something)
+    fail_callback: function, optional
+        Function to execute if we exit without func ever returning successfully
+        (e.g., log something more severe)
+    retry_classes: list of Exception subclasses, optional
+        Configures what to retry on. If specified, func is retried only if one
+        of these exceptions is raised. Default is to retry on all exceptions.
+    fail_classes: list of Exception subclasses, optional
+        Configures what not to retry on. If specified, func is /not/ retried if
+        one of these exceptions is raised.
     """
-    logger = logger or get_logger()
-    failure_counter = failure_counter or resettable_counter()
+    retry_counter = retry_counter or resettable_counter()
+    if (fail_classes and retry_classes and
+            set(fail_classes).intersection(retry_classes)):
+        raise ValueError("Can't include exception classes in both fail_on and "
+                         "retry_on")
 
-    for _ in failure_counter:
-        try:
-            return func(*args, **kwargs)
-        except gevent.GreenletExit, e:
-            report_exit('stopped', account_id, folder)
-            return e
-        except Exception, e:
-            # Always log
-            log_uncaught_errors(logger)
+    def should_retry_on(exc):
+        if fail_classes and any(isinstance(exc, exc_type) for exc_type in
+                                fail_classes):
+            return False
+        if retry_classes and not any(isinstance(exc, exc_type) for exc_type in
+                                     retry_classes):
+            return False
+        return True
 
-            # Don't retry if e is an `exclude` exception
-            if exclude and \
-                    any(isinstance(e, exception) for exception in exclude):
-                report_exit('killed', account_id, folder)
+    @functools.wraps(func)
+    def wrapped(*args, **kwargs):
+        for _ in retry_counter:
+            try:
+                return func(*args, **kwargs)
+            except gevent.GreenletExit, e:
+                # GreenletExit isn't actually a subclass of Exception.
+                # This is also considered to be a successful execution
+                # (somebody intentionally killed the greenlet).
                 raise
+            except Exception, e:
+                if exc_callback is not None:
+                    exc_callback()
+                if not should_retry_on(e):
+                    break
+        if fail_callback is not None:
+            fail_callback()
+        raise
 
-    report_exit('killed', account_id, folder)
-    raise
+    return wrapped
+
+
+def retry_with_logging(func, logger=None):
+    callback = lambda: log_uncaught_errors(logger)
+    return retry(func, exc_callback=callback)()
+
+
+def retry_and_report_killed(func, logger, account_id, folder_name=None):
+    exc_callback = lambda: log_uncaught_errors(logger)
+    fail_callback = lambda: report_exit('killed', account_id, folder_name)
+    return retry(func, exc_callback=exc_callback,
+                 fail_callback=fail_callback)()
 
 
 def make_zerorpc(cls, location):
@@ -86,7 +115,7 @@ def make_zerorpc(cls, location):
     # By default, when an uncaught error is thrown inside a greenlet, gevent
     # will print the stacktrace to stderr and kill the greenlet. Here we're
     # wrapping m in order to also log uncaught errors to disk.
-    return gevent.Greenlet.spawn(retry_wrapper, m)
+    return gevent.Greenlet.spawn(retry_with_logging(m))
 
 
 def print_dots():
@@ -153,8 +182,8 @@ class GeventWorker(Worker):
     def fork_and_perform_job(self, job):
         """Spawns a gevent greenlet to perform the actual work.
         """
-        self.gevent_pool.spawn(retry_wrapper, lambda: self.perform_job(job),
-                               self.log)
+        self.gevent_pool.spawn(retry_with_logging, lambda:
+                               self.perform_job(job), self.log)
 
     def dequeue_job_and_maintain_ttl(self, timeout):
         while True:

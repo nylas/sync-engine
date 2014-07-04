@@ -7,7 +7,7 @@ from inbox.models.session import session_scope
 from inbox.models import Contact, Account
 from inbox.log import configure_contacts_logging, get_logger
 from inbox.contacts.google import GoogleContactsProvider
-from inbox.util.concurrency import retry_wrapper
+from inbox.util.concurrency import retry_with_logging
 from inbox.util.misc import or_none
 
 log = get_logger()
@@ -39,7 +39,7 @@ class ContactSync(gevent.Greenlet):
         gevent.Greenlet.__init__(self)
 
     def _run(self):
-        return retry_wrapper(self._run_impl, self.log)
+        return retry_with_logging(self._run_impl, self.log)
 
     def _run_impl(self):
         contacts_provider = GoogleContactsProvider(self.account_id)

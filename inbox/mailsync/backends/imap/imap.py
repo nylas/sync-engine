@@ -74,7 +74,7 @@ from gevent.queue import LifoQueue
 from gevent.pool import Group
 from sqlalchemy.orm.exc import NoResultFound
 
-from inbox.util.concurrency import retry_wrapper
+from inbox.util.concurrency import retry_and_report_killed
 from inbox.util.itert import chunk
 from inbox.log import get_logger
 from inbox.crispin import connection_pool, retry_crispin
@@ -83,6 +83,7 @@ from inbox.models import Tag
 from inbox.models.backends.imap import ImapAccount, FolderSync
 from inbox.models.util import db_write_lock
 from inbox.mailsync.exc import UIDInvalid
+from inbox.mailsync.reporting import report_exit
 from inbox.mailsync.backends.imap import account
 from inbox.mailsync.backends.base import (save_folder_names, create_db_objects,
                                           commit_uids, new_or_updated)
@@ -176,11 +177,14 @@ class ImapFolderSyncMonitor(Greenlet):
         self.log = get_logger(account_id, 'mailsync')
 
         Greenlet.__init__(self)
+        self.link_value(lambda _: report_exit('stopped',
+                                              account_id=self.account_id,
+                                              folder_name=self.folder_name))
 
     def _run(self):
-        return retry_wrapper(self._run_impl, self.log,
-                             account_id=self.account_id,
-                             folder=self.folder_name)
+        return retry_and_report_killed(self._run_impl, self.log,
+                                       account_id=self.account_id,
+                                       folder_name=self.folder_name)
 
     def _run_impl(self):
         # We do NOT ignore soft deletes in the mail sync because it gets real

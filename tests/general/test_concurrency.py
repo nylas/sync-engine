@@ -3,7 +3,9 @@ import time
 import pytest
 from gevent import GreenletExit
 
-from inbox.util.concurrency import retry_wrapper, resettable_counter
+from inbox.util.concurrency import (retry, retry_with_logging,
+                                    resettable_counter)
+from inbox.log import log_uncaught_errors
 
 
 class MockLogger(object):
@@ -15,6 +17,8 @@ class MockLogger(object):
 
 
 class FailingFunction(object):
+    __name__ = 'FailingFunction'
+
     def __init__(self, exc_type, max_executions=6, delay=0):
         self.exc_type = exc_type
         self.max_executions = max_executions
@@ -29,11 +33,11 @@ class FailingFunction(object):
         return
 
 
-def test_retry_wrapper():
+def test_retry_with_logging():
     logger = MockLogger()
     failing_function = FailingFunction(ValueError)
     with pytest.raises(ValueError):
-        retry_wrapper(failing_function, logger=logger)
+        retry_with_logging(failing_function, logger=logger)
     assert logger.call_count == 3
     assert failing_function.call_count == 3
 
@@ -41,7 +45,8 @@ def test_retry_wrapper():
 def test_no_logging_on_greenlet_exit():
     logger = MockLogger()
     failing_function = FailingFunction(GreenletExit)
-    retry_wrapper(failing_function, logger=logger)
+    with pytest.raises(GreenletExit):
+        retry_with_logging(failing_function, logger=logger)
     assert logger.call_count == 0
     assert failing_function.call_count == 1
 
@@ -53,7 +58,10 @@ def test_retry_count_resets():
     failing_function = FailingFunction(ValueError, max_executions=6,
                                        delay=.1)
 
-    retry_wrapper(failing_function, logger=logger, failure_counter=counter)
+    exc_callback = lambda: log_uncaught_errors(logger)
+
+    retry(failing_function, retry_counter=counter,
+          exc_callback=exc_callback)()
 
     assert logger.call_count == 5
     assert failing_function.call_count == 6
