@@ -1,4 +1,4 @@
-Title: Inbox Sync Engine Services
+Title: Sync Engine Services
 
 The open source Inbox Sync Engine includes two separate processes, one for syncing accounts with underlying providers, and another for responding to REST API requests. To use your development environment, you need to start both processes.
 
@@ -21,7 +21,7 @@ $ bin/inbox-auth [YOUR_ACCOUNT]@gmail.com
 $ bin/inbox-sync start [YOUR_ACCOUNT]@gmail.com
 ```
 
-The `inbox-auth` command will walk you through the process of obtaining an authorization token from Google or another service for syncing your mail.In the open-source version of the sync engine, your credentials are stored to the local mySQL database for simplicity. At this time, the open-source Inbox Sync Engine does not support Exchange, but you can request access to the Exchange beta <a href="/docs">here</a>. 
+The `inbox-auth` command will walk you through the process of obtaining an authorization token from Google or another service for syncing your mail.In the open-source version of the sync engine, your credentials are stored to the local mySQL database for simplicity. At this time, the open-source Inbox Sync Engine does not support Exchange, but you can request access to the Exchange beta <a href="/docs">here</a>.
 
 The `inbox-sync` command tells the sync process to start syncing your account with the underlying provider. Note that an initial sync can take quite a while depending on how much mail you have.
 
