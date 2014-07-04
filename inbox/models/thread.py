@@ -33,9 +33,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
     subject = Column(Text, nullable=True)
     subjectdate = Column(DateTime, nullable=False)
     recentdate = Column(DateTime, nullable=False)
-    participants = Column(JSON, nullable=True)
     snippet = Column(String(191), nullable=True, default='')
-    message_public_ids = Column(JSON, nullable=True)
 
     folders = association_proxy(
         'folderitems', 'folder',
@@ -44,20 +42,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
     @validates('messages')
     def update_from_message(self, k, message):
         if isinstance(message, SpoolMessage):
-            # STOPSHIP(emfree) be smarter here:
-            # we should maybe update a thread's participants, etc.
             return message
-        if self.participants is None:
-            participant_set = set()
-        else:
-            # self.participants is a list of lists if it's not None, so convert
-            # to a list of tuples before set-ifying.
-            participant_set = {tuple(item) for item in self.participants}
-        for participant in itertools.chain(
-                message.from_addr, message.to_addr, message.cc_addr,
-                message.bcc_addr):
-            participant_set.add(tuple(participant))
-        self.participants = list(participant_set)
 
         if message.received_date > self.recentdate:
             self.recentdate = message.received_date
@@ -84,9 +69,6 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
                 or len(message.mailing_list_headers) >
                 len(self.mailing_list_headers)):
             self.mailing_list_headers = message.mailing_list_headers
-
-        self.message_public_ids = self.message_public_ids or []
-        self.message_public_ids.append(message.public_id)
 
         return message
 
@@ -132,6 +114,19 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
                         'Thread.deleted_at.is_(None))'))
 
     mailing_list_headers = Column(JSON, nullable=True)
+
+    @property
+    def participants(self):
+        p = set()
+        for m in self.messages:
+            if m.is_draft:
+                if isinstance(m, SpoolMessage) and not m.is_latest:
+                    # Don't use old draft revisions to compute participants.
+                    continue
+            p.update(tuple(entry) for entry in
+                     itertools.chain(m.from_addr, m.to_addr, m.cc_addr,
+                                     m.bcc_addr))
+        return list(p)
 
     @property
     def mailing_list_info(self):

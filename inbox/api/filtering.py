@@ -127,8 +127,9 @@ class Filter(object):
         # Eager-load some objects in order to make constructing API
         # representations faster.
         query = query.options(
-            subqueryload(Thread.messages).load_only('public_id', 'is_draft',
-                                                    'discriminator'),
+            subqueryload(Thread.messages).
+            load_only('public_id', 'is_draft', 'discriminator', 'from_addr',
+                      'to_addr', 'cc_addr', 'bcc_addr'),
             subqueryload('tagitems').joinedload('tag').
             load_only('public_id', 'name'))
 
