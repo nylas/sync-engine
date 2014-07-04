@@ -32,18 +32,16 @@ class ImapAccount(Account):
 
 
 class ImapUid(MailSyncBase):
-    """ This maps UIDs to the IMAP folder they belong to, and extra metadata
-        such as flags.
+    """ Maps UIDs to their IMAP folders and per-UID flag metadata.
 
-        This table is used solely for bookkeeping by the IMAP mail sync
-        backends.
+    This table is used solely for bookkeeping by the IMAP mail sync backends.
     """
-    imapaccount_id = Column(ForeignKey(ImapAccount.id, ondelete='CASCADE'),
-                            nullable=False)
-    imapaccount = relationship(ImapAccount,
-                               primaryjoin='and_('
-                               'ImapUid.imapaccount_id == ImapAccount.id, '
-                               'ImapAccount.deleted_at.is_(None))')
+    account_id = Column(ForeignKey(ImapAccount.id, ondelete='CASCADE'),
+                        nullable=False)
+    account = relationship(ImapAccount,
+                           primaryjoin='and_('
+                           'ImapUid.account_id == ImapAccount.id, '
+                           'ImapAccount.deleted_at.is_(None))')
 
     message_id = Column(Integer, ForeignKey(Message.id), nullable=False)
     message = relationship(Message,
@@ -104,35 +102,50 @@ class ImapUid(MailSyncBase):
     def namespace(self):
         return self.imapaccount.namespace
 
-    __table_args__ = (UniqueConstraint('folder_id', 'msg_uid',
-                      'imapaccount_id',),)
+    __table_args__ = (UniqueConstraint('folder_id', 'msg_uid', 'account_id',),)
 
 # make pulling up all messages in a given folder fast
-Index('imapaccount_id_folder_id', ImapUid.imapaccount_id, ImapUid.folder_id)
+Index('account_id_folder_id', ImapUid.account_id, ImapUid.folder_id)
 
 
-class UIDValidity(MailSyncBase):
-    """ UIDValidity has a per-folder value. If it changes, we need to
-        re-map g_msgid to UID for that folder.
+class ImapFolderInfo(MailSyncBase):
+    """ Per-folder UIDVALIDITY and (if applicable) HIGHESTMODSEQ.
+
+    If the UIDVALIDITY value changes, it indicates that all UIDs for messages
+    in the folder need to be thrown away and resynced.
+
+    These values come from the IMAP STATUS or SELECT commands.
+
+    See http://tools.ietf.org/html/rfc3501#section-2.3.1.1 for more info
+    on UIDVALIDITY, and http://tools.ietf.org/html/rfc4551 for more info on
+    HIGHESTMODSEQ.
     """
-    imapaccount_id = Column(ForeignKey(ImapAccount.id, ondelete='CASCADE'),
-                            nullable=False)
-    imapaccount = relationship(ImapAccount,
-                               primaryjoin='and_('
-                               'UIDValidity.imapaccount_id == ImapAccount.id, '
-                               'ImapAccount.deleted_at.is_(None))')
-    # maximum Gmail label length is 225 (tested empirically), but constraining
-    # folder_name uniquely requires max length of 767 bytes under utf8mb4
-    # http://mathiasbynens.be/notes/mysql-utf8mb4
-    folder_name = Column(String(191), nullable=False)
-    uid_validity = Column(Integer, nullable=False)
-    # invariant: the local datastore for this folder has always incorporated
-    # remote changes up to _at least_ this modseq (we can't guarantee that
-    # we haven't incorporated later changes too, since IMAP doesn't provide
-    # a true transactional interface)
-    highestmodseq = Column(Integer, nullable=False)
+    account_id = Column(ForeignKey(ImapAccount.id, ondelete='CASCADE'),
+                        nullable=False)
+    account = relationship(ImapAccount,
+                           primaryjoin='and_('
+                           'ImapFolderInfo.account_id == ImapAccount.id, '
+                           'ImapAccount.deleted_at == None)')
+    folder_id = Column(Integer, ForeignKey('folder.id'), nullable=False)
+    # We almost always need the folder name too, so eager load by default.
+    folder = relationship('Folder', lazy='joined',
+                          backref=backref('imapfolderinfo', primaryjoin='and_('
+                                          'Folder.id == ImapFolderInfo.folder_id,'
+                                          'ImapFolderInfo.deleted_at == None)'),
+                          primaryjoin='and_('
+                          'ImapFolderInfo.folder_id == Folder.id, '
+                          'Folder.deleted_at.is_(None))')
+    uidvalidity = Column(Integer, nullable=False)
+    # Invariant: the local datastore for this folder has always incorporated
+    # remote changes up to _at least_ this modseq (we can't guarantee that we
+    # haven't incorporated later changes too, since IMAP doesn't provide a true
+    # transactional interface).
+    #
+    # Note that some IMAP providers do not support the CONDSTORE extension, and
+    # therefore will not use this field.
+    highestmodseq = Column(Integer, nullable=True)
 
-    __table_args__ = (UniqueConstraint('imapaccount_id', 'folder_name'),)
+    __table_args__ = (UniqueConstraint('account_id', 'folder_id'),)
 
 
 class ImapThread(Thread):
@@ -191,39 +204,44 @@ class ImapThread(Thread):
     __mapper_args__ = {'polymorphic_identity': 'imapthread'}
 
 
-class FolderSync(MailSyncBase):
+class ImapFolderSyncStatus(MailSyncBase):
+    """ Per-folder status state saving for IMAP folders. """
     account_id = Column(ForeignKey(ImapAccount.id, ondelete='CASCADE'),
                         nullable=False)
     account = relationship(ImapAccount, backref=backref(
-        'foldersyncs',
+        'foldersyncstatuses',
         primaryjoin='and_('
-        'FolderSync.account_id == ImapAccount.id, '
-        'FolderSync.deleted_at.is_(None))'),
+        'ImapFolderSyncStatus.account_id == ImapAccount.id, '
+        'ImapFolderSyncStatus.deleted_at.is_(None))'),
         primaryjoin='and_('
-        'FolderSync.account_id == ImapAccount.id, '
+        'ImapFolderSyncStatus.account_id == ImapAccount.id, '
         'ImapAccount.deleted_at.is_(None))')
 
-    # maximum Gmail label length is 225 (tested empirically), but constraining
-    # folder_name uniquely requires max length of 767 bytes under utf8mb4
-    # http://mathiasbynens.be/notes/mysql-utf8mb4
-    folder_name = Column(String(191), nullable=False)
+    folder_id = Column(Integer, ForeignKey('folder.id'), nullable=False)
+    # We almost always need the folder name too, so eager load by default.
+    folder = relationship('Folder', lazy='joined', backref=backref(
+        'imapsyncstatus', primaryjoin='and_('
+        'Folder.id == ImapFolderSyncStatus.folder_id, '
+        'ImapFolderSyncStatus.deleted_at == None)'),
+        primaryjoin='and_(ImapFolderSyncStatus.folder_id == Folder.id, '
+        'Folder.deleted_at == None)')
 
-    # see state machine in mailsync/imap.py
+    # see state machine in mailsync/backends/imap/imap.py
     state = Column(Enum('initial', 'initial uidinvalid',
                    'poll', 'poll uidinvalid', 'finish'),
                    server_default='initial', nullable=False)
 
-    # For sync status reporting:
-    _sync_status = Column(MutableDict.as_mutable(JSON), nullable=True)
+    # stats on messages downloaded etc.
+    _metrics = Column(MutableDict.as_mutable(JSON), nullable=True)
 
     @property
-    def sync_status(self):
-        status = dict(name=self.folder_name, state=self.state)
-        status.update(self._sync_status or {})
+    def metrics(self):
+        status = dict(name=self.folder.name, state=self.state)
+        status.update(self._metrics or {})
 
         return status
 
-    def update_sync_status(self, metrics):
+    def update_metrics(self, metrics):
         sync_status_metrics = ['remote_uid_count', 'delete_uid_count',
                                'update_uid_count', 'download_uid_count',
                                'uid_checked_timestamp',
@@ -240,9 +258,9 @@ class FolderSync(MailSyncBase):
             if k == 'run_state':
                 assert metrics[k] in ('running', 'stopped', 'killed')
 
-        if self._sync_status is not None:
-            self._sync_status.update(metrics)
+        if self._metrics is not None:
+            self._metrics.update(metrics)
         else:
-            self._sync_status = metrics
+            self._metrics = metrics
 
-    __table_args__ = (UniqueConstraint('account_id', 'folder_name'),)
+    __table_args__ = (UniqueConstraint('account_id', 'folder_id'),)

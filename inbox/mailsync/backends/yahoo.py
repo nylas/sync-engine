@@ -80,7 +80,7 @@ def add_yahoo_attrs(db_session, log, new_uid, flags, folder, created):
     """ Yahoo-specific post-create-message bits."""
     with db_session.no_autoflush:
         new_uid.message.thread = ImapThread.from_yahoo_message(
-            db_session, new_uid.imapaccount.namespace, new_uid.message)
+            db_session, new_uid.account.namespace, new_uid.message)
         new_uid.update_imap_flags(flags)
 
         if folder in ('draft', 'sent') and not created and new_uid.message.inbox_uid:

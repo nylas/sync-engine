@@ -23,7 +23,7 @@ def test_soft_delete(db, config):
     m.sanitized_body = ""
     m.snippet = ""
 
-    u = ImapUid(message=m, imapaccount_id=ACCOUNT_ID, folder_id=f.id,
+    u = ImapUid(message=m, account_id=ACCOUNT_ID, folder_id=f.id,
                 msg_uid=9999, extra_flags="")
     db.session.add_all([m, u])
     f.mark_deleted()

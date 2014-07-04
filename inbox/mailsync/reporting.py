@@ -18,9 +18,9 @@ def report_exit(state, account_id=None, folder_name=None):
                 account.sync_end_time = datetime.utcnow()
             else:
                 # FolderSyncMonitor for account's folder
-                for f in account.foldersyncs:
-                    if f.folder_name == folder_name:
-                        f.update_sync_status(
+                for f in account.foldersyncstatuses:
+                    if f.folder.name == folder_name:
+                        f.update_metrics(
                             dict(run_state=state,
                                  sync_end_time=datetime.utcnow()))
 

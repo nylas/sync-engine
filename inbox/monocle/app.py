@@ -64,8 +64,8 @@ def _for_account(account_id):
     except NoResultFound:
         return err(404, 'No account with id `{0}`'.format(account_id))
 
-    folders_info = [foldersync.sync_status for foldersync in
-                    account.foldersyncs]
+    folders_info = [foldersyncstatus.metrics for foldersyncstatus in
+                    account.foldersyncstatuses]
 
     return json.dumps(folders_info, cls=DateTimeJSONEncoder)
 

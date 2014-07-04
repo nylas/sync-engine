@@ -220,14 +220,15 @@ def get_g_metadata(crispin_client, db_session, log, folder_name, uids,
     account_id = crispin_client.account_id
     remote_g_metadata = None
     update_uid_count = 0
-    saved_validity = account.get_uidvalidity(account_id, db_session,
-                                             folder_name)
-    if saved_validity is not None:
+
+    saved_folder_info = account.get_folder_info(account_id,
+                                                db_session, folder_name)
+    if saved_folder_info is not None:
         # If there's no cached validity we probably haven't run before.
         sync_type = 'resumed'
         remote_g_metadata, update_uid_count = retrieve_saved_g_metadata(
-            crispin_client, db_session, log, folder_name, uids, saved_validity,
-            syncmanager_lock)
+            crispin_client, db_session, log, folder_name, uids,
+            saved_folder_info, syncmanager_lock)
 
     if remote_g_metadata is None:
         sync_type = 'new'
@@ -236,7 +237,7 @@ def get_g_metadata(crispin_client, db_session, log, folder_name, uids,
         set_cache(remote_g_metadata_cache_file(account_id, folder_name),
                   remote_g_metadata)
         # Save highestmodseq that corresponds to the saved g_metadata.
-        account.update_uidvalidity(account_id, db_session, folder_name,
+        account.update_folder_info(account_id, db_session, folder_name,
                                    crispin_client.selected_uidvalidity,
                                    crispin_client.selected_highestmodseq)
         db_session.commit()
@@ -505,7 +506,7 @@ def add_new_imapuid(db_session, log, gmessage, folder_name, acc):
         message = db_session.query(Message).filter_by(
             g_msgid=gmessage.g_metadata.msgid).one()
         new_imapuid = ImapUid(
-            imapaccount=acc,
+            account=acc,
             folder=Folder.find_or_create(db_session, acc, folder_name),
             msg_uid=gmessage.uid, message=message)
         new_imapuid.update_imap_flags(gmessage.flags, gmessage.labels)
@@ -554,7 +555,7 @@ def add_new_imapuids(crispin_client, log, db_session, remote_g_metadata,
             # Folder.find_or_create()'s query will otherwise trigger a flush.
             with db_session.no_autoflush:
                 new_imapuids = [ImapUid(
-                    imapaccount=acc,
+                    account=acc,
                     folder=Folder.find_or_create(
                         db_session, acc, crispin_client.selected_folder_name),
                     msg_uid=uid, message=message_for[uid]) for uid in uids]
@@ -669,7 +670,7 @@ def add_gmail_attrs(db_session, log, new_uid, flags, folder, g_thrid, g_msgid,
         new_uid.update_imap_flags(flags, g_labels)
 
         thread = new_uid.message.thread = ImapThread.from_gmail_message(
-            db_session, new_uid.imapaccount.namespace, new_uid.message)
+            db_session, new_uid.account.namespace, new_uid.message)
 
         # make sure this thread has all the correct labels
         new_labels = account.update_thread_labels(thread, folder.name,

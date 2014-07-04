@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.37, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.34, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.5.37-0ubuntu0.12.04.1-log
+-- Server version	5.5.34-0ubuntu0.12.04.1-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -132,7 +132,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('161b88c17615');
+INSERT INTO `alembic_version` VALUES ('29217fad3f46');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -284,13 +284,13 @@ LOCK TABLES `easaccount` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `easfoldersync`
+-- Table structure for table `easfoldersyncstatus`
 --
 
-DROP TABLE IF EXISTS `easfoldersync`;
+DROP TABLE IF EXISTS `easfoldersyncstatus`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `easfoldersync` (
+CREATE TABLE `easfoldersyncstatus` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `account_id` int(11) NOT NULL,
   `folder_name` varchar(191) NOT NULL,
@@ -304,17 +304,17 @@ CREATE TABLE `easfoldersync` (
   `_sync_status` text,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_account_id_eas_folder_id` (`account_id`,`eas_folder_id`),
-  CONSTRAINT `easfoldersync_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `easaccount` (`id`) ON DELETE CASCADE
+  CONSTRAINT `easfoldersyncstatus_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `easaccount` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Dumping data for table `easfoldersync`
+-- Dumping data for table `easfoldersyncstatus`
 --
 
-LOCK TABLES `easfoldersync` WRITE;
-/*!40000 ALTER TABLE `easfoldersync` DISABLE KEYS */;
-/*!40000 ALTER TABLE `easfoldersync` ENABLE KEYS */;
+LOCK TABLES `easfoldersyncstatus` WRITE;
+/*!40000 ALTER TABLE `easfoldersyncstatus` DISABLE KEYS */;
+/*!40000 ALTER TABLE `easfoldersyncstatus` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -445,41 +445,6 @@ INSERT INTO `folderitem` VALUES (1,1,1,'2014-05-13 02:19:12','2014-05-13 02:19:1
 UNLOCK TABLES;
 
 --
--- Table structure for table `foldersync`
---
-
-DROP TABLE IF EXISTS `foldersync`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `foldersync` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `account_id` int(11) NOT NULL,
-  `folder_name` varchar(191) NOT NULL,
-  `state` enum('initial','initial uidinvalid','poll','poll uidinvalid','finish') NOT NULL DEFAULT 'initial',
-  `created_at` datetime NOT NULL,
-  `updated_at` datetime NOT NULL,
-  `deleted_at` datetime DEFAULT NULL,
-  `_sync_status` text,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `account_id` (`account_id`,`folder_name`),
-  KEY `ix_foldersync_created_at` (`created_at`),
-  KEY `ix_foldersync_deleted_at` (`deleted_at`),
-  KEY `ix_foldersync_updated_at` (`updated_at`),
-  CONSTRAINT `foldersync_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `imapaccount` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `foldersync`
---
-
-LOCK TABLES `foldersync` WRITE;
-/*!40000 ALTER TABLE `foldersync` DISABLE KEYS */;
-INSERT INTO `foldersync` VALUES (1,1,'INBOX','poll','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL),(2,1,'[Gmail]/All Mail','poll','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL);
-/*!40000 ALTER TABLE `foldersync` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `gmailaccount`
 --
 
@@ -546,6 +511,80 @@ INSERT INTO `imapaccount` VALUES (1,'imap.gmail.com');
 UNLOCK TABLES;
 
 --
+-- Table structure for table `imapfolderinfo`
+--
+
+DROP TABLE IF EXISTS `imapfolderinfo`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `imapfolderinfo` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `account_id` int(11) NOT NULL,
+  `uidvalidity` int(11) NOT NULL,
+  `highestmodseq` int(11) NOT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `folder_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `imapaccount_id` (`account_id`,`folder_id`),
+  KEY `ix_uidvalidity_created_at` (`created_at`),
+  KEY `ix_uidvalidity_deleted_at` (`deleted_at`),
+  KEY `ix_uidvalidity_updated_at` (`updated_at`),
+  KEY `imapfolderinfo_ibfk_2` (`folder_id`),
+  CONSTRAINT `imapfolderinfo_ibfk_2` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`),
+  CONSTRAINT `imapfolderinfo_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `imapaccount` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `imapfolderinfo`
+--
+
+LOCK TABLES `imapfolderinfo` WRITE;
+/*!40000 ALTER TABLE `imapfolderinfo` DISABLE KEYS */;
+INSERT INTO `imapfolderinfo` VALUES (1,1,1,106957,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,2),(2,1,11,106957,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,3);
+/*!40000 ALTER TABLE `imapfolderinfo` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `imapfoldersyncstatus`
+--
+
+DROP TABLE IF EXISTS `imapfoldersyncstatus`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `imapfoldersyncstatus` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `account_id` int(11) NOT NULL,
+  `state` enum('initial','initial uidinvalid','poll','poll uidinvalid','finish') NOT NULL DEFAULT 'initial',
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `_metrics` text,
+  `folder_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `account_id` (`account_id`,`folder_id`),
+  KEY `ix_foldersync_created_at` (`created_at`),
+  KEY `ix_foldersync_deleted_at` (`deleted_at`),
+  KEY `ix_foldersync_updated_at` (`updated_at`),
+  KEY `imapfoldersyncstatus_ibfk_2` (`folder_id`),
+  CONSTRAINT `imapfoldersyncstatus_ibfk_2` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`),
+  CONSTRAINT `imapfoldersyncstatus_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `imapaccount` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `imapfoldersyncstatus`
+--
+
+LOCK TABLES `imapfoldersyncstatus` WRITE;
+/*!40000 ALTER TABLE `imapfoldersyncstatus` DISABLE KEYS */;
+INSERT INTO `imapfoldersyncstatus` VALUES (1,1,'poll','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL,2),(2,1,'poll','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL,3);
+/*!40000 ALTER TABLE `imapfoldersyncstatus` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `imapthread`
 --
 
@@ -580,7 +619,7 @@ DROP TABLE IF EXISTS `imapuid`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `imapuid` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `imapaccount_id` int(11) NOT NULL,
+  `account_id` int(11) NOT NULL,
   `message_id` int(11) NOT NULL,
   `msg_uid` bigint(20) NOT NULL,
   `is_draft` tinyint(1) NOT NULL DEFAULT '0',
@@ -594,13 +633,13 @@ CREATE TABLE `imapuid` (
   `updated_at` datetime NOT NULL,
   `deleted_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_imapuid_folder_id_msg_uid_imapaccount_id` (`folder_id`,`msg_uid`,`imapaccount_id`),
+  UNIQUE KEY `uq_imapuid_folder_id_msg_uid_imapaccount_id` (`folder_id`,`msg_uid`,`account_id`),
   KEY `message_id` (`message_id`),
-  KEY `imapaccount_id_folder_id` (`imapaccount_id`,`folder_id`),
+  KEY `imapaccount_id_folder_id` (`account_id`,`folder_id`),
   KEY `ix_imapuid_created_at` (`created_at`),
   KEY `ix_imapuid_deleted_at` (`deleted_at`),
   KEY `ix_imapuid_updated_at` (`updated_at`),
-  CONSTRAINT `imapuid_ibfk_1` FOREIGN KEY (`imapaccount_id`) REFERENCES `imapaccount` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `imapuid_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `imapaccount` (`id`),
   CONSTRAINT `imapuid_ibfk_2` FOREIGN KEY (`message_id`) REFERENCES `message` (`id`),
   CONSTRAINT `imapuid_ibfk_3` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4;
@@ -1080,41 +1119,6 @@ INSERT INTO `transaction` VALUES ('part',3,'insert','{\"walk_index\": 2, \"names
 UNLOCK TABLES;
 
 --
--- Table structure for table `uidvalidity`
---
-
-DROP TABLE IF EXISTS `uidvalidity`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `uidvalidity` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `imapaccount_id` int(11) NOT NULL,
-  `folder_name` varchar(191) NOT NULL,
-  `uid_validity` int(11) NOT NULL,
-  `highestmodseq` int(11) NOT NULL,
-  `created_at` datetime NOT NULL,
-  `updated_at` datetime NOT NULL,
-  `deleted_at` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `imapaccount_id` (`imapaccount_id`,`folder_name`),
-  KEY `ix_uidvalidity_created_at` (`created_at`),
-  KEY `ix_uidvalidity_deleted_at` (`deleted_at`),
-  KEY `ix_uidvalidity_updated_at` (`updated_at`),
-  CONSTRAINT `uidvalidity_ibfk_1` FOREIGN KEY (`imapaccount_id`) REFERENCES `imapaccount` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `uidvalidity`
---
-
-LOCK TABLES `uidvalidity` WRITE;
-/*!40000 ALTER TABLE `uidvalidity` DISABLE KEYS */;
-INSERT INTO `uidvalidity` VALUES (1,1,'INBOX',1,106957,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(2,1,'[Gmail]/All Mail',11,106957,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL);
-/*!40000 ALTER TABLE `uidvalidity` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `webhook`
 --
 
@@ -1167,4 +1171,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-07-01  0:05:44
+-- Dump completed on 2014-07-03  1:29:18

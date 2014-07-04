@@ -13,9 +13,10 @@ from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
 
-from inbox.models import Block, Message, SpoolMessage, Folder
-from inbox.models.backends.imap import ImapUid, UIDValidity
-
+from inbox.models.block import Block
+from inbox.models.message import Message, SpoolMessage
+from inbox.models.folder import Folder
+from inbox.models.backends.imap import ImapUid, ImapFolderInfo
 
 from inbox.log import get_logger
 log = get_logger()
@@ -29,7 +30,7 @@ def total_stored_data(account_id, session):
     """
     subq = session.query(Block) \
         .join(Block.message, Message.imapuid) \
-        .filter(ImapUid.imapaccount_id == account_id) \
+        .filter(ImapUid.account_id == account_id) \
         .group_by(Message.id, Block.id)
     return session.query(func.sum(subq.subquery().columns.size)).scalar()
 
@@ -38,25 +39,25 @@ def total_stored_messages(account_id, session):
     """ Computes the number of emails in your account's IMAP folders. """
     return session.query(Message) \
         .join(Message.imapuid) \
-        .filter(ImapUid.imapaccount_id == account_id) \
+        .filter(ImapUid.account_id == account_id) \
         .group_by(Message.id).count()
 
 
 def num_uids(account_id, session, folder_name):
     return session.query(ImapUid.msg_uid).join(Folder).filter(
-        ImapUid.imapaccount_id == account_id,
+        ImapUid.account_id == account_id,
         Folder.name == folder_name).count()
 
 
 def all_uids(account_id, session, folder_name):
     return [uid for uid, in session.query(ImapUid.msg_uid).join(Folder).filter(
-        ImapUid.imapaccount_id == account_id,
+        ImapUid.account_id == account_id,
         Folder.name == folder_name)]
 
 
 def g_msgids(account_id, session, in_=None):
     query = session.query(Message.g_msgid).join(ImapUid) \
-        .filter(ImapUid.imapaccount_id == account_id).all()
+        .filter(ImapUid.account_id == account_id).all()
     # in some cases, in_ can contain +100k items, when the query only
     # returns a few thousand. we shouldn't pass them all to MySQL
     in_ = {long(i) for i in in_}  # in case they are strings
@@ -65,7 +66,7 @@ def g_msgids(account_id, session, in_=None):
 
 def g_metadata(account_id, session, folder_name):
     query = session.query(ImapUid.msg_uid, Message.g_msgid, Message.g_thrid)\
-        .filter(ImapUid.imapaccount_id == account_id,
+        .filter(ImapUid.account_id == account_id,
                 Folder.name == folder_name,
                 ImapUid.message_id == Message.id)
 
@@ -121,7 +122,7 @@ def update_metadata(account_id, session, folder_name, uids, new_flags):
     functionality in the lock.)
     """
     for item in session.query(ImapUid).join(Folder)\
-            .filter(ImapUid.imapaccount_id == account_id,
+            .filter(ImapUid.account_id == account_id,
                     ImapUid.msg_uid.in_(uids), Folder.name == folder_name)\
             .options(joinedload(ImapUid.message)):
         flags = new_flags[item.msg_uid].flags
@@ -142,7 +143,7 @@ def remove_messages(account_id, session, uids, folder):
         functionality in the lock.)
     """
     deletes = session.query(ImapUid).join(Folder).filter(
-        ImapUid.imapaccount_id == account_id,
+        ImapUid.account_id == account_id,
         Folder.name == folder,
         ImapUid.msg_uid.in_(uids)).all()
 
@@ -158,11 +159,12 @@ def remove_messages(account_id, session, uids, folder):
     # longer contain any messages.
 
 
-def get_uidvalidity(account_id, session, folder_name):
+def get_folder_info(account_id, session, folder_name):
     try:
         # using .one() here may catch duplication bugs
-        return session.query(UIDValidity).filter_by(
-            imapaccount_id=account_id, folder_name=folder_name).one()
+        return session.query(ImapFolderInfo).join(Folder).filter(
+            ImapFolderInfo.account_id == account_id,
+            Folder.name == folder_name).one()
     except NoResultFound:
         return None
 
@@ -171,8 +173,8 @@ def uidvalidity_valid(account_id, session, selected_uidvalidity, folder_name,
                       cached_uidvalidity=None):
     """ Validate UIDVALIDITY on currently selected folder. """
     if cached_uidvalidity is None:
-        cached_uidvalidity = get_uidvalidity(account_id,
-                                             session, folder_name).uid_validity
+        cached_uidvalidity = get_folder_info(account_id, session,
+                                             folder_name).uidvalidity
         assert type(cached_uidvalidity) == type(selected_uidvalidity), \
             "cached_validity: {0} / selected_uidvalidity: {1}".format(
                 type(cached_uidvalidity),
@@ -185,15 +187,17 @@ def uidvalidity_valid(account_id, session, selected_uidvalidity, folder_name,
         return selected_uidvalidity >= cached_uidvalidity
 
 
-def update_uidvalidity(account_id, session, folder_name, uidvalidity,
+def update_folder_info(account_id, session, folder_name, uidvalidity,
                        highestmodseq):
-    cached_validity = get_uidvalidity(account_id, session, folder_name)
-    if cached_validity is None:
-        cached_validity = UIDValidity(imapaccount_id=account_id,
-                                      folder_name=folder_name)
-    cached_validity.highestmodseq = highestmodseq
-    cached_validity.uid_validity = uidvalidity
-    session.add(cached_validity)
+    cached_folder_info = get_folder_info(account_id, session, folder_name)
+    if cached_folder_info is None:
+        folder = session.query(Folder).filter_by(account_id=account_id,
+                                                 name=folder_name).one()
+        cached_folder_info = ImapFolderInfo(imapaccount_id=account_id,
+                                            folder=folder)
+    cached_folder_info.highestmodseq = highestmodseq
+    cached_folder_info.uid_validity = uidvalidity
+    session.add(cached_folder_info)
 
 
 def create_imap_message(db_session, log, account, folder, msg):
@@ -216,9 +220,8 @@ def create_imap_message(db_session, log, account, folder, msg):
                         received_date=msg.internaldate, flags=msg.flags,
                         body_string=msg.body)
 
-
     if new_msg:
-        imapuid = ImapUid(imapaccount=account, folder=folder,
+        imapuid = ImapUid(account=account, folder=folder,
                           msg_uid=msg.uid, message=new_msg)
         imapuid.update_imap_flags(msg.flags)
 

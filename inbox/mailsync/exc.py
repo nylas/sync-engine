@@ -2,5 +2,5 @@ class SyncException(Exception):
     pass
 
 
-class UIDInvalid(SyncException):
+class UidInvalid(SyncException):
     pass

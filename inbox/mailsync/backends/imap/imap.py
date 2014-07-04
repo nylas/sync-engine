@@ -31,7 +31,8 @@ in mind that the data may be changing behind our backs as we're syncing.
 Fetching info about UIDs that no longer exist is not an error but gives us
 empty data.
 
-Folder sync state is stored in the FolderSync table to allow for restarts.
+Folder sync state is stored in the ImapFolderSyncStatus table to allow for
+restarts.
 
 Here's the state machine:
 
@@ -79,13 +80,14 @@ from inbox.util.itert import chunk
 from inbox.log import get_logger
 from inbox.crispin import connection_pool, retry_crispin
 from inbox.models.session import session_scope
-from inbox.models import Tag
-from inbox.models.backends.imap import ImapAccount, FolderSync
+from inbox.models import Tag, Folder
+from inbox.models.backends.imap import ImapAccount, ImapFolderSyncStatus
 from inbox.models.util import db_write_lock
-from inbox.mailsync.exc import UIDInvalid
+from inbox.mailsync.exc import UidInvalid
 from inbox.mailsync.reporting import report_exit
 from inbox.mailsync.backends.imap import account
-from inbox.mailsync.backends.base import (save_folder_names, create_db_objects,
+from inbox.mailsync.backends.base import (save_folder_names,
+                                          create_db_objects,
                                           commit_uids, new_or_updated)
 from inbox.mailsync.backends.base import BaseMailSyncMonitor
 
@@ -126,22 +128,26 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             'initial' state at a time.
         """
         with session_scope() as db_session:
-            saved_states = dict((saved_state.folder_name, saved_state.state)
-                                for saved_state in
-                                db_session.query(FolderSync).filter_by(
-                                    account_id=self.account_id))
+            saved_states = dict()
+            folder_id_for = dict()
+            for saved_state in db_session.query(ImapFolderSyncStatus)\
+                    .filter_by(account_id=self.account_id):
+                saved_states[saved_state.folder.name] = saved_state.state
+                folder_id_for[saved_state.folder.name] = saved_state.folder.id
+
             with connection_pool(self.account_id).get() as crispin_client:
                 sync_folders = crispin_client.sync_folders()
-                imapaccount = db_session.query(ImapAccount)\
+                account = db_session.query(ImapAccount)\
                     .get(self.account_id)
-                save_folder_names(self.log, imapaccount,
+                save_folder_names(self.log, account,
                                   crispin_client.folder_names(), db_session)
-                Tag.create_canonical_tags(imapaccount.namespace, db_session)
-        for folder in sync_folders:
-            if saved_states.get(folder) != 'finish':
+                Tag.create_canonical_tags(account.namespace, db_session)
+        for folder_name in sync_folders:
+            if saved_states.get(folder_name) != 'finish':
                 self.log.info("Initializing folder sync for {0}"
-                              .format(folder))
-                thread = ImapFolderSyncMonitor(self.account_id, folder,
+                              .format(folder_name))
+                thread = ImapFolderSyncMonitor(self.account_id, folder_name,
+                                               folder_id_for[folder_name],
                                                self.email_address,
                                                self.provider,
                                                self.shared_state,
@@ -155,7 +161,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                 # after completing the initial sync.
                 if self._thread_finished(thread):
                     self.log.info("Folder sync for {} is done."
-                                  .format(folder))
+                                  .format(folder_name))
                     # NOTE: Greenlet is automatically removed from the group
                     # after finishing.
 
@@ -165,10 +171,11 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
 class ImapFolderSyncMonitor(Greenlet):
     """ Per-folder sync engine. """
 
-    def __init__(self, account_id, folder_name, email_address, provider,
-                 shared_state, state_handlers):
+    def __init__(self, account_id, folder_name, folder_id,
+                 email_address, provider, shared_state, state_handlers):
         self.account_id = account_id
         self.folder_name = folder_name
+        self.folder_id = folder_id
         self.shared_state = shared_state
         self.state_handlers = state_handlers
         self.state = None
@@ -193,32 +200,32 @@ class ImapFolderSyncMonitor(Greenlet):
         # anyway.
         with session_scope(ignore_soft_deletes=False) as db_session:
             try:
-                foldersync = db_session.query(FolderSync).filter_by(
-                    account_id=self.account_id,
-                    folder_name=self.folder_name).one()
+                saved_folder_status = db_session.query(ImapFolderSyncStatus)\
+                    .filter_by(account_id=self.account_id,
+                               folder_id=self.folder_id).one()
             except NoResultFound:
-                foldersync = FolderSync(account_id=self.account_id,
-                                        folder_name=self.folder_name)
-                db_session.add(foldersync)
+                saved_folder_status = ImapFolderSyncStatus(
+                    account_id=self.account_id, folder_id=self.folder_id)
+                db_session.add(saved_folder_status)
                 db_session.commit()
 
-            foldersync.update_sync_status(
+            saved_folder_status.update_metrics(
                 dict(run_state='running',
                      sync_start_time=datetime.utcnow(),
                      sync_end_time=None))
 
-            self.state = foldersync.state
+            self.state = saved_folder_status.state
             # NOTE: The parent ImapSyncMonitor handler could kill us at any
             # time if it receives a shutdown command. The shutdown command is
             # equivalent to ctrl-c.
             while True:
                 try:
-                    self.state = foldersync.state = \
-                        self.state_handlers[foldersync.state](
+                    self.state = saved_folder_status.state = \
+                        self.state_handlers[saved_folder_status.state](
                             self.conn_pool, db_session, self.log,
                             self.folder_name, self.shared_state)
-                except UIDInvalid:
-                    self.state = foldersync.state = \
+                except UidInvalid:
+                    self.state = saved_folder_status.state = \
                         self.state + ' uidinvalid'
                 # State handlers are idempotent, so it's okay if we're
                 # killed between the end of the handler and the commit.
@@ -343,25 +350,23 @@ def condstore_base_poll(crispin_client, db_session, log, folder_name,
     messages that need syncing.
 
     """
-    saved_validity = account.get_uidvalidity(crispin_client.account_id,
-                                             db_session, folder_name)
+    saved_folder_info = account.get_folder_info(crispin_client.account_id,
+                                                db_session, folder_name)
 
     # Start a session since we're going to IDLE below anyway...
     # This also resets the folder name cache, which we want in order to
     # detect folder/label additions and deletions.
     status = crispin_client.select_folder(
-        folder_name,
-        uidvalidity_cb(db_session,
-                       crispin_client.account_id))
+        folder_name, uidvalidity_cb(db_session, crispin_client.account_id))
 
     log.debug("POLL current modseq: {} | saved modseq: {}".format(
-        status['HIGHESTMODSEQ'], saved_validity.highestmodseq))
+        status['HIGHESTMODSEQ'], saved_folder_info.highestmodseq))
 
-    if status['HIGHESTMODSEQ'] > saved_validity.highestmodseq:
+    if status['HIGHESTMODSEQ'] > saved_folder_info.highestmodseq:
         acc = db_session.query(ImapAccount).get(crispin_client.account_id)
         save_folder_names(log, acc, crispin_client.folder_names(), db_session)
         highestmodseq_update(crispin_client, db_session, log, folder_name,
-                             saved_validity.highestmodseq,
+                             saved_folder_info.highestmodseq,
                              shared_state['status_cb'], highestmodseq_fn,
                              shared_state['syncmanager_lock'])
 
@@ -369,9 +374,7 @@ def condstore_base_poll(crispin_client, db_session, log, folder_name,
     # `All Mail` won't tell us when messages are archived from the Inbox
     if folder_name.lower() in IDLE_FOLDERS:
         status = crispin_client.select_folder(
-            folder_name,
-            uidvalidity_cb(db_session,
-                           crispin_client.account_id))
+            folder_name, uidvalidity_cb(db_session, crispin_client.account_id))
 
         idle_frequency = 1800  # 30min
 
@@ -440,7 +443,7 @@ def highestmodseq_update(crispin_client, db_session, log, folder_name,
         log.debug("highestmodseq_update acquired syncmanager_lock")
         remove_deleted_uids(crispin_client.account_id, db_session, log,
                             folder_name, local_uids, remote_uids)
-    account.update_uidvalidity(account_id, db_session, folder_name,
+    account.update_folder_info(account_id, db_session, folder_name,
                                new_uidvalidity, new_highestmodseq)
     db_session.commit()
 
@@ -465,23 +468,24 @@ def imap_poll_update(crispin_client, db_session, log, folder_name,
 
 
 def uidvalidity_cb(db_session, account_id):
-    def fn(folder, select_info):
-        assert folder is not None and select_info is not None, \
-            "must start IMAP session before verifying UID validity"
-        saved_validity = account.get_uidvalidity(account_id, db_session,
-                                                 folder)
+    def fn(folder_name, select_info):
+        assert folder_name is not None and select_info is not None, \
+            "must start IMAP session before verifying UIDVALIDITY"
+        saved_folder_info = account.get_folder_info(account_id, db_session,
+                                                    folder_name)
         selected_uidvalidity = select_info['UIDVALIDITY']
 
-        if saved_validity:
+        if saved_folder_info:
             is_valid = account.uidvalidity_valid(account_id, db_session,
-                                                 selected_uidvalidity, folder,
-                                                 saved_validity.uid_validity)
+                                                 selected_uidvalidity,
+                                                 folder_name,
+                                                 saved_folder_info.uidvalidity)
             if not is_valid:
-                raise UIDInvalid(
+                raise UidInvalid(
                     'folder: {}, remote uidvalidity: {}, '
                     'cached uidvalidity: {}'.format(
-                        folder, selected_uidvalidity,
-                        saved_validity.uid_validity))
+                        folder_name, selected_uidvalidity,
+                        saved_folder_info.uidvalidity))
         return select_info
     return fn
 
@@ -603,13 +607,13 @@ def check_flags(crispin_client, db_session, log, folder_name, local_uids,
                 syncmanager_lock):
     """ Update message flags if folder has changed on the remote.
 
-    If we have a saved uidvalidity for this folder, make sure the folder hasn't
+    If we have saved validity info for this folder, make sure the folder hasn't
     changed since we saved it. Otherwise we need to query for flag changes too.
     """
-    saved_validity = account.get_uidvalidity(crispin_client.account_id,
-                                             db_session, folder_name)
-    if saved_validity is not None:
-        last_highestmodseq = saved_validity.highestmodseq
+    saved_folder_info = account.get_folder_info(crispin_client.account_id,
+                                                db_session, folder_name)
+    if saved_folder_info is not None:
+        last_highestmodseq = saved_folder_info.highestmodseq
         if last_highestmodseq > crispin_client.selected_highestmodseq:
             uids = crispin_client.new_and_updated_uids(last_highestmodseq)
             if uids:
@@ -713,9 +717,9 @@ def update_metadata(crispin_client, db_session, log, folder_name, uids,
 
 
 def update_uid_counts(db_session, log, account_id, folder_name, **kwargs):
-    foldersync = db_session.query(FolderSync).filter(
-        FolderSync.account_id == account_id,
-        FolderSync.folder_name == folder_name).one()
+    saved_status = db_session.query(ImapFolderSyncStatus).join(Folder).filter(
+        ImapFolderSyncStatus.account_id == account_id,
+        Folder.name == folder_name).one()
 
     # Record time we saved these counts +
     # Track num downloaded since `uid_checked_timestamp`
@@ -723,7 +727,7 @@ def update_uid_counts(db_session, log, account_id, folder_name, **kwargs):
                    num_downloaded_since_timestamp=0)
     metrics.update(kwargs)
 
-    foldersync.update_sync_status(metrics)
+    saved_status.update_metrics(metrics)
 
     db_session.commit()
 
@@ -748,18 +752,18 @@ def report_progress(crispin_client, db_session, log, folder_name,
     """
     assert crispin_client.selected_folder_name == folder_name
 
-    foldersync = db_session.query(FolderSync).filter(
-        FolderSync.account_id == crispin_client.account_id,
-        FolderSync.folder_name == folder_name).one()
+    saved_status = db_session.query(ImapFolderSyncStatus).join(Folder).filter(
+        ImapFolderSyncStatus.account_id == crispin_client.account_id,
+        Folder.name == folder_name).one()
 
-    previous_count = foldersync.sync_status.get(
+    previous_count = saved_status.metrics.get(
         'num_downloaded_since_timestamp', 0)
     metrics = dict(num_downloaded_since_timestamp=(previous_count +
                    downloaded_uid_count),
                    current_download_queue_size=num_remaining_messages,
                    queue_checked_at=datetime.utcnow())
 
-    foldersync.update_sync_status(metrics)
+    saved_status.update_metrics(metrics)
 
     db_session.commit()
 
