@@ -95,14 +95,20 @@ def upgrade():
         if 'easfoldersyncstatus' in Base.metadata.tables:
             for status in db_session.query(EASFolderSyncStatus):
                 print "migrating", status.folder_name
-                status.folder_id = folder_id_for[
-                    (status.account_id, status.folder_name.lower())]
+                folder_id = folder_id_for.get(
+                    (status.account_id, status.folder_name.lower()))
+                if folder_id is not None:
+                    status.folder_id = folder_id
+                else:
+                    # EAS folder rows *may* not exist if have no messages
+                    folder = Folder(account_id=status.account_id, name=status.folder_name)
+                    db_session.add(folder)
+                    db_session.commit()
+                    status.folder_id = folder.id
             db_session.commit()
             # some weird alembic bug? need to drop and recreate this FK
             op.drop_constraint('easfoldersyncstatus_ibfk_1',
                                'easfoldersyncstatus', type_='foreignkey')
-            op.drop_constraint('account_id',
-                               'easfoldersyncstatus', type_='unique')
             op.drop_column('easfoldersyncstatus', 'folder_name')
             op.create_foreign_key('easfoldersyncstatus_ibfk_1',
                                   'easfoldersyncstatus',
