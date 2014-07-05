@@ -193,7 +193,7 @@ def update_folder_info(account_id, session, folder_name, uidvalidity,
     if cached_folder_info is None:
         folder = session.query(Folder).filter_by(account_id=account_id,
                                                  name=folder_name).one()
-        cached_folder_info = ImapFolderInfo(imapaccount_id=account_id,
+        cached_folder_info = ImapFolderInfo(account_id=account_id,
                                             folder=folder)
     cached_folder_info.highestmodseq = highestmodseq
     cached_folder_info.uid_validity = uidvalidity

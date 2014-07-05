@@ -135,6 +135,12 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                 saved_states[saved_state.folder.name] = saved_state.state
                 folder_id_for[saved_state.folder.name] = saved_state.folder.id
 
+            # it's possible we've never started syncs for these folders before
+            for folder_id, folder_name, in \
+                    db_session.query(Folder.id, Folder.name).filter_by(
+                        account_id=self.account_id):
+                folder_id_for[folder_name] = folder_id
+
             with connection_pool(self.account_id).get() as crispin_client:
                 sync_folders = crispin_client.sync_folders()
                 account = db_session.query(ImapAccount)\
