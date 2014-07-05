@@ -13,10 +13,9 @@ from inbox.mailsync.backends import module_registry
 
 class SyncService(object):
     def __init__(self):
-        self.monitor_cls_for = dict([(mod.PROVIDER,
-                                      getattr(mod, mod.SYNC_MONITOR_CLS)) for
-                                     mod in module_registry.values() if
-                                     hasattr(mod, 'SYNC_MONITOR_CLS')])
+        self.monitor_cls_for = {mod.PROVIDER: getattr(
+            mod, mod.SYNC_MONITOR_CLS) for mod in module_registry.values()
+            if hasattr(mod, 'SYNC_MONITOR_CLS')}
 
         self.log = get_logger()
         # { account_id: MailSyncMonitor() }
