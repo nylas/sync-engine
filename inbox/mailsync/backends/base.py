@@ -206,8 +206,7 @@ def new_or_updated(uids, local_uids):
 
 
 class BaseMailSyncMonitor(Greenlet):
-    def __init__(self, account_id, email_address, provider, status_cb,
-                 heartbeat=1):
+    def __init__(self, account_id, email_address, provider, heartbeat=1):
         self.inbox = Queue()
         # how often to check inbox, in seconds
         self.heartbeat = heartbeat
@@ -218,10 +217,8 @@ class BaseMailSyncMonitor(Greenlet):
 
         # Stuff that might be updated later and we want to keep a shared
         # reference on child greenlets.
-        if hasattr(self, 'shared_state'):
-            self.shared_state['status_cb'] = status_cb
-        else:
-            self.shared_state = dict(status_cb=status_cb)
+        if not hasattr(self, 'shared_state'):
+            self.shared_state = dict()
 
         Greenlet.__init__(self)
         self.link_value(lambda _: report_exit('stopped',

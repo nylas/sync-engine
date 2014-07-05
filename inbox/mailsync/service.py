@@ -64,14 +64,9 @@ class SyncService(object):
                     try:
                         acc.sync_lock()
 
-                        def update_status(account_id, folder_name,
-                                          status_info):
-                            """ I really really wish I were a lambda """
-                            return
-
                         monitor = self.monitor_cls_for[acc.provider](
                             acc.id, acc.namespace.id, acc.email_address,
-                            acc.provider, update_status)
+                            acc.provider)
                         self.monitors[acc.id] = monitor
                         monitor.start()
                         # For Gmail accounts, also start contacts sync

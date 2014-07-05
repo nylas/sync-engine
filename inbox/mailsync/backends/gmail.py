@@ -60,7 +60,7 @@ GMessage = namedtuple('GMessage', 'uid g_metadata flags labels')
 
 class GmailSyncMonitor(ImapSyncMonitor):
     def __init__(self, account_id, namespace_id, email_address, provider,
-                 status_cb, heartbeat=1, poll_frequency=300):
+                 heartbeat=1, poll_frequency=300):
         self.folder_state_handlers = {
             'initial': initial_sync,
             'initial uidinvalid': resync_uids_from('initial'),
@@ -70,7 +70,7 @@ class GmailSyncMonitor(ImapSyncMonitor):
         }
 
         ImapSyncMonitor.__init__(self, account_id, namespace_id, email_address,
-                                 provider, status_cb, heartbeat=1,
+                                 provider, heartbeat=1,
                                  poll_frequency=poll_frequency)
 
 
@@ -143,7 +143,6 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
                                shared_state['syncmanager_lock'])
         download_queued_threads(crispin_client, db_session, log, folder_name,
                                 message_download_stack,
-                                shared_state['status_cb'],
                                 shared_state['syncmanager_lock'])
     elif folder_name in uid_download_folders(crispin_client):
         full_download = deduplicate_message_download(
@@ -158,7 +157,6 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
         download_queued_uids(crispin_client, db_session, log, folder_name,
                              uid_download_stack, len(local_uids),
                              len(unknown_uids),
-                             shared_state['status_cb'],
                              shared_state['syncmanager_lock'],
                              gmail_download_and_commit_uids, msg_create_fn)
     else:
@@ -181,7 +179,7 @@ def poll(conn_pool, db_session, log, folder_name, shared_state):
 
 
 def gmail_highestmodseq_update(crispin_client, db_session, log, folder_name,
-                               uids, local_uids, status_cb, syncmanager_lock):
+                               uids, local_uids, syncmanager_lock):
     g_metadata = crispin_client.g_metadata(uids)
     to_download = deduplicate_message_download(
         crispin_client, db_session, log, syncmanager_lock, g_metadata, uids)
@@ -195,14 +193,12 @@ def gmail_highestmodseq_update(crispin_client, db_session, log, folder_name,
                 message_download_stack.put(GMessage(
                     uid, g_metadata[uid], flags[uid].flags, flags[uid].labels))
         download_queued_threads(crispin_client, db_session, log, folder_name,
-                                message_download_stack, status_cb,
-                                syncmanager_lock)
+                                message_download_stack, syncmanager_lock)
     elif folder_name in uid_download_folders(crispin_client):
         uid_download_stack = uid_list_to_stack(to_download)
         download_queued_uids(crispin_client, db_session, log, folder_name,
                              uid_download_stack, 0, uid_download_stack.qsize(),
-                             status_cb, syncmanager_lock,
-                             gmail_download_and_commit_uids,
+                             syncmanager_lock, gmail_download_and_commit_uids,
                              create_gmail_message)
     else:
         raise MailsyncError(
@@ -342,8 +338,7 @@ def check_new_g_thrids(account_id, provider, folder_name, log,
 
 
 def download_queued_threads(crispin_client, db_session, log, folder_name,
-                            message_download_stack, status_cb,
-                            syncmanager_lock):
+                            message_download_stack, syncmanager_lock):
     """
     Download threads until `message_download_stack` is empty.
 

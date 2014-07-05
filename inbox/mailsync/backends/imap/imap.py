@@ -102,7 +102,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         poll_frequency and heartbeat are in seconds.
     """
     def __init__(self, account_id, namespace_id, email_address, provider,
-                 status_cb, heartbeat=1, poll_frequency=300):
+                 heartbeat=1, poll_frequency=300):
 
         self.shared_state = {
             # IMAP folders are kept up-to-date via polling
@@ -121,7 +121,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             }
 
         BaseMailSyncMonitor.__init__(self, account_id, email_address, provider,
-                                     status_cb, heartbeat)
+                                     heartbeat)
 
     def sync(self):
         """ Start per-folder syncs. Only have one per-folder sync in the
@@ -341,8 +341,8 @@ def base_poll(crispin_client, db_session, log, folder_name, shared_state,
     log.info("UIDs to download: {}".format(to_download))
     if to_download:
         download_fn(crispin_client, db_session, log, folder_name,
-                    to_download, local_uids, shared_state['status_cb'],
-                    shared_state['syncmanager_lock'], msg_create_fn)
+                    to_download, local_uids, shared_state['syncmanager_lock'],
+                    msg_create_fn)
 
     sleep(shared_state['poll_frequency'])
     return 'poll'
@@ -372,8 +372,7 @@ def condstore_base_poll(crispin_client, db_session, log, folder_name,
         acc = db_session.query(ImapAccount).get(crispin_client.account_id)
         save_folder_names(log, acc, crispin_client.folder_names(), db_session)
         highestmodseq_update(crispin_client, db_session, log, folder_name,
-                             saved_folder_info.highestmodseq,
-                             shared_state['status_cb'], highestmodseq_fn,
+                             saved_folder_info.highestmodseq, highestmodseq_fn,
                              shared_state['syncmanager_lock'])
 
     # We really only want to idle on a folder for new messages. Idling on
@@ -409,7 +408,7 @@ def condstore_base_poll(crispin_client, db_session, log, folder_name,
 
 
 def highestmodseq_update(crispin_client, db_session, log, folder_name,
-                         last_highestmodseq, status_cb, highestmodseq_fn,
+                         last_highestmodseq, highestmodseq_fn,
                          syncmanager_lock):
     account_id = crispin_client.account_id
     new_highestmodseq = crispin_client.selected_highestmodseq
@@ -441,7 +440,7 @@ def highestmodseq_update(crispin_client, db_session, log, folder_name,
                           delete_uid_count=len(deleted_uids))
 
         highestmodseq_fn(crispin_client, db_session, log, folder_name,
-                         changed_uids, local_uids, status_cb, syncmanager_lock)
+                         changed_uids, local_uids, syncmanager_lock)
     else:
         log.info("No new or updated messages")
 
@@ -463,13 +462,12 @@ def uid_list_to_stack(uids):
 
 
 def imap_poll_update(crispin_client, db_session, log, folder_name,
-                     uids, local_uids, status_cb, syncmanager_lock,
-                     msg_create_fn):
+                     uids, local_uids, syncmanager_lock, msg_create_fn):
     uid_download_stack = uid_list_to_stack(uids)
 
     download_queued_uids(crispin_client, db_session, log, folder_name,
                          uid_download_stack, 0, uid_download_stack.qsize(),
-                         status_cb, syncmanager_lock, download_and_commit_uids,
+                         syncmanager_lock, download_and_commit_uids,
                          msg_create_fn)
 
 
@@ -547,7 +545,6 @@ def imap_initial_sync(crispin_client, db_session, log, folder_name,
 
     download_queued_uids(crispin_client, db_session, log, folder_name,
                          uid_download_stack, len(local_uids), len(remote_uids),
-                         shared_state['status_cb'],
                          shared_state['syncmanager_lock'],
                          download_and_commit_uids, msg_create_fn)
 
@@ -630,7 +627,7 @@ def check_flags(crispin_client, db_session, log, folder_name, local_uids,
 
 def download_queued_uids(crispin_client, db_session, log,
                          folder_name, uid_download_stack, num_local_messages,
-                         num_total_messages, status_cb, syncmanager_lock,
+                         num_total_messages, syncmanager_lock,
                          download_commit_fn, msg_create_fn):
     while not uid_download_stack.empty():
         # Defer removing UID from queue until after it's committed to the DB'

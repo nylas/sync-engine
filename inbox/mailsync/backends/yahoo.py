@@ -28,7 +28,7 @@ SYNC_MONITOR_CLS = 'YahooSyncMonitor'
 
 class YahooSyncMonitor(ImapSyncMonitor):
     def __init__(self, account_id, namespace_id, email_address, provider,
-                 status_cb, heartbeat=1, poll_frequency=30):
+                 heartbeat=1, poll_frequency=30):
         self.folder_state_handlers = {
             'initial': initial_sync,
             'initial uidinvalid': resync_uids_from('initial'),
@@ -38,7 +38,7 @@ class YahooSyncMonitor(ImapSyncMonitor):
         }
 
         ImapSyncMonitor.__init__(self, account_id, namespace_id, email_address,
-                                 provider, status_cb, heartbeat=1,
+                                 provider, heartbeat=1,
                                  poll_frequency=poll_frequency)
 
 
