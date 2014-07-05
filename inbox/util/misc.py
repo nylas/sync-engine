@@ -91,8 +91,8 @@ def timed(fn):
     return timed_fn
 
 
-# From: http://stackoverflow.com/a/8556471
-def load_modules(base_module):
+# Based on: http://stackoverflow.com/a/8556471
+def load_modules(base_name, base_path):
     """
     Imports all modules underneath `base_module` in the module tree.
 
@@ -107,11 +107,8 @@ def load_modules(base_module):
     """
     modules = []
 
-    base_name = base_module.__name__
-    base_path = base_module.__path__
-
     for importer, module_name, _ in pkgutil.iter_modules(base_path):
-        full_module_name = '{0}.{1}'.format(base_name, module_name)
+        full_module_name = '{}.{}'.format(base_name, module_name)
 
         if full_module_name not in sys.modules:
             module = importer.find_module(module_name).load_module(
@@ -121,3 +118,19 @@ def load_modules(base_module):
         modules.append(module)
 
     return modules
+
+
+def register_backends(base_name, base_path):
+    """
+    Dynamically loads all packages contained within thread
+    backends module, including those by other module install paths
+    """
+    modules = load_modules(base_name, base_path)
+
+    mod_for = {}
+    for module in modules:
+        if hasattr(module, 'PROVIDER'):
+            provider = module.PROVIDER
+            mod_for[provider] = module
+
+    return mod_for

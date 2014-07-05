@@ -8,7 +8,7 @@ import gdata.contacts.client
 from inbox.models.session import session_scope
 from inbox.models import Contact
 from inbox.models.backends.gmail import GmailAccount
-from inbox.auth.oauth import (GOOGLE_OAUTH_CLIENT_ID,
+from inbox.oauth import (GOOGLE_OAUTH_CLIENT_ID,
                               GOOGLE_OAUTH_CLIENT_SECRET, OAUTH_SCOPE)
 from inbox.log import configure_logging
 

@@ -115,7 +115,7 @@ def test_queue_running(db):
         automatic verification of the behaviour here eventually (see the
         previous tests), but for now I'm leaving it lean and fast.
     """
-    from inbox.actions.base import archive, rqworker, register_backends
+    from inbox.actions import archive, rqworker, register_backends
     register_backends()
 
     archive(ACCOUNT_ID, 8)

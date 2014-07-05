@@ -2,7 +2,6 @@ from datetime import datetime
 
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
-from inbox.util.misc import load_modules
 from inbox.util.url import NotSupportedError
 from inbox.log import get_logger
 from inbox.models.session import session_scope
@@ -30,36 +29,10 @@ class SendError(SendMailException):
         return 'Send failed, failures: {0}'.format(', '.join(e))
 
 
-def register_backends():
-    """
-    Finds the sendmail modules for the different providers
-    (in the sendmail/ directory) and imports them.
-
-    Creates a mapping of provider:sendmail_mod for each backend found.
-
-    """
-    import inbox.sendmail
-
-    # Find and import
-    modules = load_modules(inbox.sendmail)
-
-    # Create mapping
-    sendmail_mod_for = {}
-    for module in modules:
-        if hasattr(module, 'PROVIDER'):
-            provider = module.PROVIDER
-
-            assert hasattr(module, 'SENDMAIL_CLS')
-
-            sendmail_mod_for[provider] = module
-
-    return sendmail_mod_for
-
-
 def get_sendmail_client(account):
-    sendmail_mod_for = register_backends()
+    from inbox.sendmail import module_registry
 
-    sendmail_mod = sendmail_mod_for.get(account.provider)
+    sendmail_mod = module_registry.get(account.provider)
     if not sendmail_mod:
         raise NotSupportedError('Inbox does not support the email provider.')
 

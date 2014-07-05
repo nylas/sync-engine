@@ -13,8 +13,7 @@ def get_tag_names(thread):
 def create_canonical_tags(db):
     """Ensure that all canonical tags exist for the namespace we're testing
     against. This is normally done when an account sync starts."""
-    from inbox.models import Namespace, Tag, register_backends
-    register_backends()
+    from inbox.models import Namespace, Tag
     namespace = db.session.query(Namespace).first()
     Tag.create_canonical_tags(namespace, db.session)
     db.session.commit()
@@ -125,9 +124,9 @@ class MockQueue(list):
 def test_actions_syncback(api_client, mock_syncback_service):
     """Add and remove tags that should trigger syncback actions, and check that
     the appropriate actions get put on the queue (doesn't test the
-    implementation of the actual syncback methods in
-    inbox/actions/base.py)."""
-    from inbox.actions.base import (mark_read, mark_unread, archive, unarchive,
+    implementation of the actual syncback methods in inbox.actions).
+    """
+    from inbox.actions import (mark_read, mark_unread, archive, unarchive,
                                     star, unstar)
 
     thread_id = api_client.get_data('/threads/')[0]['id']

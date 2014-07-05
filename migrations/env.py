@@ -21,11 +21,6 @@ if context.get_tag_argument() == 'test':
         if not config.get('MYSQL_HOSTNAME') == "localhost":
             sys.exit("Tests should only be run on localhost DB!")
 
-
-from inbox.models import register_backends
-table_mod_for = register_backends()
-
-
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel

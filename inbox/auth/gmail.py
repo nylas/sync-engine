@@ -4,7 +4,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from imapclient import IMAPClient
 
-from inbox.auth.oauth import oauth_authorize_console
+from inbox.oauth import oauth_authorize_console
 from inbox.models import Namespace
 from inbox.models.backends.gmail import GmailAccount
 from inbox.config import config

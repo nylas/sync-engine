@@ -36,17 +36,6 @@ def message(db, config):
     return (to, subject, body)
 
 
-@pytest.fixture(autouse=True)
-def register_action_backends(db):
-    """
-    Normally action backends only get registered when the actions
-    rqworker starts. So we need to register them explicitly for these
-    tests.
-    """
-    from inbox.actions.base import register_backends
-    register_backends()
-
-
 def test_create_reconcile(db, config, message, sync_client):
     """ Tests the save_draft function, which saves the draft to the remote. """
     from inbox.sendmail.base import create_draft

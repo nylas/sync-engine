@@ -171,9 +171,9 @@ def test_send(api_client, example_draft, real_syncback_service, monkeypatch):
     # monkey-patch to make this run faster.
     monkeypatch.setattr('inbox.sendmail.base.get_sendmail_client',
                         lambda *args, **kwargs: MockSMTPClient())
-    monkeypatch.setattr('inbox.actions.base.save_draft',
+    monkeypatch.setattr('inbox.actions.save_draft',
                         lambda *args, **kwargs: None)
-    monkeypatch.setattr('inbox.actions.base.delete_draft',
+    monkeypatch.setattr('inbox.actions.delete_draft',
                         lambda *args, **kwargs: None)
     r = api_client.post_data('/drafts', example_draft)
     draft_public_id = json.loads(r.data)['id']

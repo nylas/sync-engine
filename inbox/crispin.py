@@ -18,7 +18,6 @@ import geventconnpool
 
 from inbox.util.concurrency import retry
 from inbox.util.misc import or_none, timed
-from inbox.auth.base import handler_from_provider
 from inbox.basicauth import AUTH_TYPES
 from inbox.models.session import session_scope
 from inbox.models.backends.imap import ImapAccount
@@ -120,6 +119,8 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
     # TODO: simplify auth flow, preferably not need to use the db in this mod
     def _new_connection(self):
         with session_scope() as db_session:
+            from inbox.auth import handler_from_provider
+
             account = db_session.query(ImapAccount).get(self.account_id)
 
             auth_handler = handler_from_provider(account.provider)

@@ -13,17 +13,6 @@ THREAD_ID = 2
 # back to the state it started in when the test is done.
 
 
-@pytest.fixture(autouse=True)
-def register_action_backends(db):
-    """
-    Normally action backends only get registered when the actions
-    rqworker starts. So we need to register them explicitly for these
-    tests.
-    """
-    from inbox.actions.base import register_backends
-    register_backends()
-
-
 @pytest.fixture(scope='function')
 def message(db, config):
     from inbox.models.backends.imap import ImapAccount

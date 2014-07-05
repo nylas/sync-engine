@@ -7,12 +7,16 @@ from inbox.contacts.remote_sync import ContactSync
 from inbox.log import get_logger
 from inbox.models.session import session_scope
 from inbox.models import Account
-from inbox.mailsync.backends.base import register_backends
+
+from inbox.mailsync.backends import module_registry
 
 
 class SyncService(object):
     def __init__(self):
-        self.monitor_cls_for = register_backends()
+        self.monitor_cls_for = dict([(mod.PROVIDER,
+                                      getattr(mod, mod.SYNC_MONITOR_CLS)) for
+                                     mod in module_registry.values() if
+                                     hasattr(mod, 'SYNC_MONITOR_CLS')])
 
         self.log = get_logger()
         # { account_id: MailSyncMonitor() }
@@ -65,7 +69,7 @@ class SyncService(object):
                             """ I really really wish I were a lambda """
                             return
 
-                        monitor = self.monitor_cls_for[acc.provider][0](
+                        monitor = self.monitor_cls_for[acc.provider](
                             acc.id, acc.namespace.id, acc.email_address,
                             acc.provider, update_status)
                         self.monitors[acc.id] = monitor

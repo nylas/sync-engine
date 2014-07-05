@@ -14,9 +14,12 @@ For example, 'gmail', 'eas' etc.
 from pkgutil import extend_path
 __path__ = extend_path(__path__, __name__)
 
-from inbox.sendmail.base import (create_draft, update_draft,
-                                        delete_draft, get_draft,
-                                        get_all_drafts)
+from inbox.util.misc import register_backends
+
+module_registry = register_backends(__name__, __path__)
+
+from inbox.sendmail.base import (create_draft, update_draft, delete_draft,
+                                 get_draft, get_all_drafts)
 
 __all__ = ['create_draft', 'update_draft', 'delete_draft',
            'get_draft', 'get_all_drafts']

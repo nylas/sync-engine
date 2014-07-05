@@ -2,9 +2,7 @@
 
 from inbox.models.session import session_scope
 from inbox.contacts.process_mail import update_contacts
-from inbox.models import (Message, SearchSignal,
-                                             register_backends)
-register_backends()
+from inbox.models import Message, SearchSignal
 
 
 def rerank_contacts():

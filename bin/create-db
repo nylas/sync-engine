@@ -22,7 +22,7 @@ print 'Creating database: inbox'
 basic_engine.execute("CREATE DATABASE IF NOT EXISTS inbox DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci;")
 basic_engine.execute("GRANT ALL PRIVILEGES ON inbox.* TO inbox@localhost IDENTIFIED BY 'inbox'")
 
-table_mod_for = init_db()
+init_db()
 
 # Stamp initial alembic revision
 if inbox_db_engine.dialect.has_table(inbox_db_engine, "alembic_version"):

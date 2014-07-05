@@ -21,11 +21,6 @@ def init_db():
     From now on, we should ony be creating tables+columns via SQLalchemy *once*
     and all subscequent changes done via migration scripts.
     """
-    from inbox.models import register_backends
-    table_mod_for = register_backends()
-
     from inbox.models.base import MailSyncBase
 
     MailSyncBase.metadata.create_all(engine)
-
-    return table_mod_for

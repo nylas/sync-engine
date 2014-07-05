@@ -11,8 +11,6 @@ def test_mutable_json_type(db, config):
     updated as expected.
 
     """
-    from inbox.models import register_backends
-    register_backends()
     from inbox.models.account import Account
     from inbox.models.backends.imap import ImapFolderSyncStatus
 

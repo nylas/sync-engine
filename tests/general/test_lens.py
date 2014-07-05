@@ -6,8 +6,7 @@ from sqlalchemy import desc
 from tests.util.base import config, api_client
 config()
 
-from inbox.models import (register_backends, Lens, Transaction, SpoolMessage)
-register_backends()
+from inbox.models import (Lens, Transaction, SpoolMessage)
 
 NAMESPACE_ID = 1
 

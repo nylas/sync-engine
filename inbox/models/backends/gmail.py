@@ -1,7 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey
 
 from inbox.models.backends.imap import ImapAccount
-from inbox.auth.oauth import new_token, validate_token
 from datetime import datetime, timedelta
 
 from inbox.log import get_logger
@@ -36,6 +35,8 @@ class GmailAccount(ImapAccount):
 
     @property
     def access_token(self):
+        from inbox.oauth import new_token, validate_token
+
         if self.id in __volatile_tokens__:
             tok, expires = __volatile_tokens__[self.id]
             if datetime.utcnow() > expires:

@@ -14,7 +14,7 @@ preflight()
 from inbox.util.url import NotSupportedError
 from inbox.models.session import session_scope
 from inbox.models import Account
-from inbox.auth.base import handler_from_email
+from inbox.auth import handler_from_email
 
 parser = argparse.ArgumentParser(description='Auth an email account')
 parser.add_argument('email_address',

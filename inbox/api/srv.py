@@ -19,9 +19,8 @@ def mock_create_logger(app):
 flask_logging.create_logger = mock_create_logger
 
 from inbox.api.kellogs import APIEncoder
-from inbox.models import register_backends, Namespace
+from inbox.models import Namespace
 from inbox.models.session import session_scope
-table_mod_for = register_backends()
 
 from ns_api import app as ns_api
 

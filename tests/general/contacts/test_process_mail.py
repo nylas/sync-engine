@@ -5,8 +5,7 @@ from tests.util.base import config
 config()
 
 from inbox.contacts.process_mail import update_contacts
-from inbox.models import Contact, Message, register_backends
-register_backends()
+from inbox.models import Contact, Message
 
 ACCOUNT_ID = 1
 

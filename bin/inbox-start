@@ -36,8 +36,7 @@ preflight()
 
 
 def start():
-    from inbox.models import register_backends
-    table_mod_for = register_backends()
+    from inbox.models.backends import module_registry
 
     threads = []
 
@@ -68,7 +67,7 @@ def start():
     log.info('Recursion limit: {0}'.format(sys.getrecursionlimit()))
 
     log.info('Providers currently supported: '
-             '{0}'.format(', '.join(table_mod_for.keys())))
+             '{0}'.format(', '.join(module_registry.keys())))
 
     # hang out forever and run some services
     joinall(threads)

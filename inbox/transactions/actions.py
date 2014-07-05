@@ -17,7 +17,7 @@ from inbox.log import get_logger
 from inbox.models.session import session_scope
 from inbox.models import (SpoolMessage, Tag, Thread,
                                              Transaction)
-from inbox.actions.base import (get_queue, mark_read, mark_unread,
+from inbox.actions import (get_queue, mark_read, mark_unread,
                                        archive, unarchive, star, unstar,
                                        save_draft, delete_draft, rqworker)
 from inbox.sendmail.base import send_draft
@@ -71,7 +71,7 @@ class SyncbackService(gevent.Greenlet):
         self.log = get_logger(purpose='actions')
         self.actions = ActionRegistry()
         # Currently we're using the Redis queue and workers defined in
-        # inbox.actions.base as an expedient way to distribute syncback
+        # inbox.actions as an expedient way to distribute syncback
         # tasks to workers.
         # TODO(emfree) evaluate whether this makes sense, and at a minimum,
         # refactor to bring those definitions into this file.

@@ -7,8 +7,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.ignition import engine
 from inbox.models.session import InboxSession
-from inbox.models import register_backends, Account
-register_backends()
+from inbox.models import Account
 from inbox.api.err import err
 
 app = Flask(__name__)
