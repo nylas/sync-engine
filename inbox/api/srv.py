@@ -14,6 +14,7 @@ werkzeug_log.addHandler(inbox_logger)
 from flask import Flask, request
 from flask import logging as flask_logging
 
+
 def mock_create_logger(app):
     return inbox_logger
 flask_logging.create_logger = mock_create_logger
@@ -51,34 +52,39 @@ WSGIHandler.log_request = log_request
 def auth():
     pass  # no auth in dev VM
 
+
 @app.after_request
 def finish(response):
     origin = request.headers.get('origin')
     if origin:  # means it's just a regular request
-        response.headers['Access-Control-Allow-Origin'] = origin  # Just echo origin
+        response.headers['Access-Control-Allow-Origin'] = origin
         response.headers['Access-Control-Allow-Headers'] = 'Authorization'
-        response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
+        response.headers['Access-Control-Allow-Methods'] = \
+            'GET,PUT,POST,DELETE,OPTIONS'
         response.headers['Access-Control-Allow-Credentials'] = 'true'
 
     app.logger.info("Sending response {0}".format(response))
     return response
 
+
 @app.route('/n/')
 def ns_all():
     """ Return all namespaces """
-    # We do this outside the blueprint to support the case of an empty public_id.
-    # However, this means the before_request isn't run, so we need to make our own session
+    # We do this outside the blueprint to support the case of an empty
+    # public_id.  However, this means the before_request isn't run, so we need
+    # to make our own session
     with session_scope() as db_session:
         namespaces = db_session.query(Namespace).all()
         encoder = APIEncoder()
         return encoder.jsonify(namespaces)
 
+
 @app.route('/')
 def home():
     return """
 <html><body>
-    Check out the <strong><pre style="display:inline">docs</pre></strong> folder
-    for how to use this API.
+    Check out the <strong><pre style="display:inline">docs</pre></strong>
+    folder for how to use this API.
 </body></html>
 """
 

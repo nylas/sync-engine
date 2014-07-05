@@ -21,6 +21,7 @@ if context.get_tag_argument() == 'test':
         if not config.get('MYSQL_HOSTNAME') == "localhost":
             sys.exit("Tests should only be run on localhost DB!")
 
+
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
@@ -33,6 +34,7 @@ from inbox.ignition import db_uri
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
+
 
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
@@ -51,6 +53,7 @@ def run_migrations_offline():
     with context.begin_transaction():
         context.run_migrations()
 
+
 def run_migrations_online():
     """Run migrations in 'online' mode.
 
@@ -62,9 +65,9 @@ def run_migrations_online():
 
     connection = engine.connect()
     context.configure(
-                connection=connection,
-                target_metadata=target_metadata
-                )
+        connection=connection,
+        target_metadata=target_metadata
+    )
 
     try:
         with context.begin_transaction():
