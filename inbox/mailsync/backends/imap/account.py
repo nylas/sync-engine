@@ -196,7 +196,7 @@ def update_folder_info(account_id, session, folder_name, uidvalidity,
         cached_folder_info = ImapFolderInfo(account_id=account_id,
                                             folder=folder)
     cached_folder_info.highestmodseq = highestmodseq
-    cached_folder_info.uid_validity = uidvalidity
+    cached_folder_info.uidvalidity = uidvalidity
     session.add(cached_folder_info)
 
 
