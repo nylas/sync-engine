@@ -2,34 +2,34 @@ Title: Filters
 
 Filters allow you to refine your query for mail data to specific parameters. The more specific you can make the request, the faster it will perform. They can be appended to API requests on [Messages](#messages) and [Threads](#threads). Note that values must use [percent-encoding](http://en.wikipedia.org/wiki/Percent-encoding) (also known as URL encoding).
 
-* **`subject`** match, supports regex if string starts with `/`
+* **`subject`** Return messages or threads with a given subject string.
 
-* **`any_email`** (string) address. filters by any messages sent, received from, or also sent to the given address.
+* **`any_email`** Return messages sent, received from, or also sent to the given email address.
 
-* **`to`** all messages sent to an address
+* **`to`** Return messages sent to the given address.
 
-* **`from`** all messages from an address
+* **`from`** Return messages from the given address.
 
-* **`cc`** all messages cc'd to an address (by anyone)
+* **`cc`** Return messages cc'd to the given address (by anyone, not just the account holder).
 
-* **`bcc`** all messages bcc'd to an address (likely by you, since that header is removed by SMTP gateways)
+* **`bcc`** Return messages bcc'd to the given address (likely by you, since that header is removed by SMTP gateways)
 
-* **`thread`** the given identifier for a thread
+* **`thread`** Return messages on the thread with the given id.
 
-* **`tag`** (string) Only return threads with the given tag. This can include user-added labels, provider-specific labels for existing folder names, or Inbox's cannonical symbolic names. See [Tags](#tags) for more details.
+* **`tag`** Return threads with the given tag. This can be a user-added tag, a provider-specific label for an existing folder name, or one of Inbox's canonical symbolic tag names. See [Tags](#tags) for more details.
 
-* **`filename`** name of a file
+* **`filename`** Return messages that have a file with the given name attached.
 
-* **`last_message_before`** (integer, unix time) Get threads whose most recent message was received before this timestamp.
+* **`last_message_before`** (integer, Unix timestamp) Return threads whose most recent message was received before this timestamp.
 
-* **`last_message_after`** (integer, unix time) Get threads whose most recent message was received after this timestamp.
+* **`last_message_after`** (integer, Unix timestamp) Return threads whose most recent message was received after this timestamp.
 
-* **`started_before`** (integer, unix time) Get threads whose first message was received before this timestamp.
+* **`started_before`** (integer, Unix timestamp) Return threads whose first message was received before this timestamp.
 
-* **`started_after`** (integer, unix time) Get threads whose first message was received after this timestamp.
+* **`started_after`** (integer, Unix timestamp) Return threads whose first message was received after this timestamp.
 
-* **`limit`** (integer) this defaults to 100 for performance. Set 0 for no limit.
+* **`limit`** (integer) The maximum number of results to return. Defaults to 100 for performance. Set 0 for no limit.
 
-* **`offset`** (integer) zero-based offset to be used with limit for pagination of results
+* **`offset`** (integer) Zero-based offset; use with `limit` for pagination of results.
 
-* **`order_by`** (string, optional) Either 'subject' or 'date'. If given, return results ordered either alphabetically by subject or most-recent-first, respectively.
+* **`order_by`** If 'subject', return results ordered alphabetically by subject. If 'date', return results most-recent-first.
