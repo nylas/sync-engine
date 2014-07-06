@@ -115,9 +115,10 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     def namespace(self):
         return self.thread.namespace
 
-    def __init__(self, account=None, mid=None, folder_name=None,
-                 received_date=None, flags=None, body_string=None,
-                 *args, **kwargs):
+    @classmethod
+    def create(cls, account=None, mid=None, folder_name=None,
+               received_date=None, flags=None, body_string=None,
+               *args, **kwargs):
         """ Parses message data and writes out db metadata and MIME blocks.
 
         Returns the new Message, which links to the new Block objects through
@@ -133,132 +134,26 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
         raw_message : str
             The full message including headers (encoded).
+
         """
-
         _rqd = [account, mid, folder_name, received_date, flags, body_string]
-
-        if not any(_rqd):
-            MailSyncBase.__init__(self, *args, **kwargs)
-            return
 
         if any(_rqd) and not all([v is not None for v in _rqd]):
             raise ValueError(
                 "Required keyword arguments: account, mid, folder_name, "
                 "received_date, flags, body_string")
 
-        # trickle-down bugs
+        # stop trickle-down bugs
         assert account.namespace is not None
         assert not isinstance(body_string, unicode)
 
         try:
-            parsed = mime.from_string(body_string)
-
-            mime_version = parsed.headers.get('Mime-Version')
-            # NOTE: sometimes MIME-Version is set to "1.0 (1.0)", hence the
-            # .startswith
-            if mime_version is not None and not mime_version.startswith('1.0'):
-                log.error('Unexpected MIME-Version: {0}'.format(mime_version))
-
-            self.data_sha256 = sha256(body_string).hexdigest()
-
-            # clean_subject strips re:, fwd: etc.
-            self.subject = parsed.clean_subject
-            self.from_addr = parse_email_address_list(
-                parsed.headers.get('From'))
-            self.sender_addr = parse_email_address_list(
-                parsed.headers.get('Sender'))
-            self.reply_to = parse_email_address_list(
-                parsed.headers.get('Reply-To'))
-
-            self.to_addr = parse_email_address_list(
-                parsed.headers.getall('To'))
-            self.cc_addr = parse_email_address_list(
-                parsed.headers.getall('Cc'))
-            self.bcc_addr = parse_email_address_list(
-                parsed.headers.getall('Bcc'))
-
-            self.in_reply_to = parsed.headers.get('In-Reply-To')
-            self.message_id_header = parsed.headers.get('Message-Id')
-
-            self.received_date = received_date
-
-            # Optional mailing list headers
-            self.mailing_list_headers = parse_ml_headers(parsed.headers)
-
-            # Custom Inbox header
-            self.inbox_uid = parsed.headers.get('X-INBOX-ID')
-
-            # In accordance with JWZ (http://www.jwz.org/doc/threading.html)
-            self.references = parse_references(
-                parsed.headers.get('References', ''),
-                parsed.headers.get('In-Reply-To', ''))
-
-            self.size = len(body_string)  # includes headers text
-
-            i = 0  # for walk_index
-
-            from inbox.models.block import Part
-
-            # Store all message headers as object with index 0
-            headers_part = Part()
-            headers_part.namespace_id = account.namespace.id
-            headers_part.message = self
-            headers_part.walk_index = i
-            headers_part.data = json.dumps(parsed.headers.items())
-            self.parts.append(headers_part)
-
-            for mimepart in parsed.walk(
-                    with_self=parsed.content_type.is_singlepart()):
-                i += 1
-                if mimepart.content_type.is_multipart():
-                    log.warning("multipart sub-part found! on {}"
-                                .format(self.g_msgid))
-                    continue  # TODO should we store relations?
-
-                new_part = Part()
-                new_part.namespace_id = account.namespace.id
-                new_part.message = self
-                new_part.walk_index = i
-                new_part.misc_keyval = mimepart.headers.items()  # everything
-                new_part.content_type = mimepart.content_type.value
-                new_part.filename = _trim_filename(
-                    mimepart.content_type.params.get('name'),
-                    log=log)
-                # TODO maybe also trim other headers?
-
-                if mimepart.content_disposition[0] is not None:
-                    value, params = mimepart.content_disposition
-                    if value not in ['inline', 'attachment']:
-                        errmsg = """
-        Unknown Content-Disposition on message {0} found in {1}.
-        Bad Content-Disposition was: '{2}'
-        Parsed Content-Disposition was: '{3}'""".format(
-                            mid, folder_name, mimepart.content_disposition)
-                        log.error(errmsg)
-                        continue
-                    else:
-                        new_part.content_disposition = value
-                        if value == 'attachment':
-                            new_part.filename = _trim_filename(
-                                params.get('filename'),
-                                log=log)
-
-                if mimepart.body is None:
-                    data_to_write = ''
-                elif new_part.content_type.startswith('text'):
-                    data_to_write = mimepart.body.encode('utf-8', 'strict')
-                    # normalize mac/win/unix newlines
-                    data_to_write = data_to_write \
-                        .replace('\r\n', '\n').replace('\r', '\n')
-                else:
-                    data_to_write = mimepart.body
-                if data_to_write is None:
-                    data_to_write = ''
-
-                new_part.content_id = mimepart.headers.get('Content-Id')
-                new_part.data = data_to_write
-                self.parts.append(new_part)
+            return cls(account, mid, folder_name, received_date, flags,
+                       body_string, *args, **kwargs)
         except mime.DecodingError:
+            # NOTE: If we want to instead log metadata for failed messages
+            # to the DB, here's where to do it. (Need extra 'b0rked message'
+            # column.)
             # occasionally iconv will fail via maximum recursion depth
             _log_decode_error(account.id, folder_name, mid, body_string)
             log.error('DecodeError, msg logged to {0}'.format(
@@ -269,6 +164,122 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             log.error('RuntimeError<iconv> msg logged to {0}'.format(
                 _get_errfilename(account.id, folder_name, mid)))
             return
+
+    def __init__(self, account=None, mid=None, folder_name=None,
+                 received_date=None, flags=None, body_string=None,
+                 *args, **kwargs):
+        """ Use .create() instead to handle common errors!
+
+        (Can't abort object creation in a constructor.)
+
+        """
+        parsed = mime.from_string(body_string)
+
+        mime_version = parsed.headers.get('Mime-Version')
+        # NOTE: sometimes MIME-Version is set to "1.0 (1.0)", hence the
+        # .startswith
+        if mime_version is not None and not mime_version.startswith('1.0'):
+            log.error('Unexpected MIME-Version: {0}'.format(mime_version))
+
+        self.data_sha256 = sha256(body_string).hexdigest()
+
+        # clean_subject strips re:, fwd: etc.
+        self.subject = parsed.clean_subject
+        self.from_addr = parse_email_address_list(
+            parsed.headers.get('From'))
+        self.sender_addr = parse_email_address_list(
+            parsed.headers.get('Sender'))
+        self.reply_to = parse_email_address_list(
+            parsed.headers.get('Reply-To'))
+
+        self.to_addr = parse_email_address_list(
+            parsed.headers.getall('To'))
+        self.cc_addr = parse_email_address_list(
+            parsed.headers.getall('Cc'))
+        self.bcc_addr = parse_email_address_list(
+            parsed.headers.getall('Bcc'))
+
+        self.in_reply_to = parsed.headers.get('In-Reply-To')
+        self.message_id_header = parsed.headers.get('Message-Id')
+
+        self.received_date = received_date
+
+        # Optional mailing list headers
+        self.mailing_list_headers = parse_ml_headers(parsed.headers)
+
+        # Custom Inbox header
+        self.inbox_uid = parsed.headers.get('X-INBOX-ID')
+
+        # In accordance with JWZ (http://www.jwz.org/doc/threading.html)
+        self.references = parse_references(
+            parsed.headers.get('References', ''),
+            parsed.headers.get('In-Reply-To', ''))
+
+        self.size = len(body_string)  # includes headers text
+
+        i = 0  # for walk_index
+
+        from inbox.models.block import Part
+
+        # Store all message headers as object with index 0
+        headers_part = Part()
+        headers_part.namespace_id = account.namespace.id
+        headers_part.message = self
+        headers_part.walk_index = i
+        headers_part.data = json.dumps(parsed.headers.items())
+        self.parts.append(headers_part)
+
+        for mimepart in parsed.walk(
+                with_self=parsed.content_type.is_singlepart()):
+            i += 1
+            if mimepart.content_type.is_multipart():
+                log.warning("multipart sub-part found! on {}"
+                            .format(self.g_msgid))
+                continue  # TODO should we store relations?
+
+            new_part = Part()
+            new_part.namespace_id = account.namespace.id
+            new_part.message = self
+            new_part.walk_index = i
+            new_part.misc_keyval = mimepart.headers.items()  # everything
+            new_part.content_type = mimepart.content_type.value
+            new_part.filename = _trim_filename(
+                mimepart.content_type.params.get('name'),
+                log=log)
+            # TODO maybe also trim other headers?
+
+            if mimepart.content_disposition[0] is not None:
+                value, params = mimepart.content_disposition
+                if value not in ['inline', 'attachment']:
+                    errmsg = """
+    Unknown Content-Disposition on message {0} found in {1}.
+    Bad Content-Disposition was: '{2}'
+    Parsed Content-Disposition was: '{3}'""".format(
+                        mid, folder_name, mimepart.content_disposition)
+                    log.error(errmsg)
+                    continue
+                else:
+                    new_part.content_disposition = value
+                    if value == 'attachment':
+                        new_part.filename = _trim_filename(
+                            params.get('filename'),
+                            log=log)
+
+            if mimepart.body is None:
+                data_to_write = ''
+            elif new_part.content_type.startswith('text'):
+                data_to_write = mimepart.body.encode('utf-8', 'strict')
+                # normalize mac/win/unix newlines
+                data_to_write = data_to_write \
+                    .replace('\r\n', '\n').replace('\r', '\n')
+            else:
+                data_to_write = mimepart.body
+            if data_to_write is None:
+                data_to_write = ''
+
+            new_part.content_id = mimepart.headers.get('Content-Id')
+            new_part.data = data_to_write
+            self.parts.append(new_part)
 
         self.calculate_sanitized_body()
         MailSyncBase.__init__(self, *args, **kwargs)
@@ -459,6 +470,10 @@ class SpoolMessage(Message):
 
     __mapper_args__ = {'polymorphic_identity': 'spoolmessage',
                        'inherit_condition': id == Message.id}
+
+    @classmethod
+    def create(cls, *args, **kwargs):
+        return cls(*args, **kwargs)
 
     def __init__(self, *args, **kwargs):
         Message.__init__(self, *args, **kwargs)
