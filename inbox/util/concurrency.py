@@ -109,7 +109,7 @@ def make_zerorpc(cls, location):
     # By default, when an uncaught error is thrown inside a greenlet, gevent
     # will print the stacktrace to stderr and kill the greenlet. Here we're
     # wrapping m in order to also log uncaught errors to disk.
-    return gevent.Greenlet.spawn(retry_with_logging(m))
+    return gevent.Greenlet.spawn(retry_with_logging, m)
 
 
 def print_dots():
