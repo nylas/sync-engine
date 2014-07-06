@@ -51,9 +51,6 @@ def _log_decode_error(account_id, folder_name, uid, msg_string):
 
 
 class Message(MailSyncBase, HasRevisions, HasPublicID):
-    # XXX clean this up a lot - make a better constructor, maybe taking
-    # a flanker object as an argument to prefill a lot of attributes
-
     # Do delete messages if their associated thread is deleted.
     thread_id = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
                        nullable=False)
@@ -138,6 +135,10 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         """
         _rqd = [account, mid, folder_name, received_date, flags, body_string]
 
+        # for drafts
+        if not any(_rqd):
+            return MailSyncBase(*args, **kwargs)
+
         if any(_rqd) and not all([v is not None for v in _rqd]):
             raise ValueError(
                 "Required keyword arguments: account, mid, folder_name, "
@@ -173,6 +174,13 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         (Can't abort object creation in a constructor.)
 
         """
+        _rqd = [account, mid, folder_name, received_date, flags, body_string]
+
+        # for drafts - skip parsing
+        if not any(_rqd):
+            MailSyncBase.__init__(self, *args, **kwargs)
+            return
+
         parsed = mime.from_string(body_string)
 
         mime_version = parsed.headers.get('Mime-Version')
@@ -470,10 +478,6 @@ class SpoolMessage(Message):
 
     __mapper_args__ = {'polymorphic_identity': 'spoolmessage',
                        'inherit_condition': id == Message.id}
-
-    @classmethod
-    def create(cls, *args, **kwargs):
-        return cls(*args, **kwargs)
 
     def __init__(self, *args, **kwargs):
         Message.__init__(self, *args, **kwargs)
