@@ -93,8 +93,6 @@ class SyncbackService(gevent.Greenlet):
         # TODO(emfree) handle the case that message/thread objects may have
         # been deleted in the interim
         with session_scope() as db_session:
-            self.log.info('Processing log from entry {}'.
-                          format(self.minimum_id))
             query = db_session.query(Transaction). \
                 filter(or_(Transaction.table_name == 'thread',
                            Transaction.table_name == 'imapthread',
