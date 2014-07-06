@@ -73,7 +73,7 @@ class GmailAccount(ImapAccount):
 
     @property
     def sender_name(self):
-        return '{0} {1}'.format(self.given_name, self.family_name)
+        return self.name or ''
 
     @property
     def provider(self):
