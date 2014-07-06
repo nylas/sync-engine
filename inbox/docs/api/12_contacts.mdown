@@ -74,7 +74,7 @@ POST https://api.inboxapp.com/n/<namespace_id>/contacts/
 :::json
 {
     "name": "Bill Rogers",
-    "email": "wrogers@mit.edu"
+    "email": "wbrogers@mit.edu"
 }
 ```
 **Sample response**
@@ -82,7 +82,7 @@ POST https://api.inboxapp.com/n/<namespace_id>/contacts/
 ```
 :::json
 {
-    "email": "wrogers@mit.edu",
+    "email": "wbrogers@mit.edu",
     "id": "cwcr6raeh2s4966cfo9bgajev",
     "name": "Bill Rogers",
     "namespace": "aqau8ta87ndh6cwv0o3ajfoo2",

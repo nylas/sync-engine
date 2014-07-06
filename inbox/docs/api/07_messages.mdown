@@ -26,7 +26,7 @@ GET https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>
     "to": [
         {
             "name": "Bill Rogers"
-            "email": "wrogers@mit.edu",
+            "email": "wbrogers@mit.edu",
         }
     ],
     "cc": [],
@@ -47,7 +47,7 @@ The messages endpoint supports [Filters](#filters), making it easy to return a s
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/messages?filter_string
+GET https://api.inboxapp.com/n/<namespace_id>/messages?<filter_parameters>
 ```
 
 **Sample Response**

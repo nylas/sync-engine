@@ -6,7 +6,7 @@ Inbox provides a single API for sending mail:
 :::xml
 POST https://api.inboxapp.com/n/<namespace_id>/send
 ```
-    
+
 You can use this API in two ways:
 
 ####Send a drafted message
@@ -17,7 +17,7 @@ Send the POST body below to send an existing draft by ID. During the process of 
 ```
 :::json
 {
-	"draft_id": "asdasdas"
+	"draft_id": "9nhhb7w3tinsn4zkg9vjr3cxz"
 }
 ```
 
@@ -29,9 +29,9 @@ simply provide the JSON of the message object you want to send.
 ```
 :::json
 {
-	"to": [ {"name": "Ben", "email": "bengotow@gmail.com"}],
-	"body" : "....."
-	....
+	"to": [ {"name": "Bill", "email": "wbrogers@mit.edu"}],
+	"body" : "Sounds great! See you then.",
+	"reply_to_thread": "84umizq7c4jtrew491brpa6iu"
 }
 
 ```

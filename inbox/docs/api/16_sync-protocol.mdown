@@ -6,6 +6,9 @@ downloading all threads and messages.
 
 # Obtaining a sync stamp
 
+Sync clients should first exchange a Unix timestamp for a sync stamp. Clients
+can then use the sync stamp to fetch events that have occurred since that time.
+
 ```
 :::xml
 POST https://api.inboxapp.com/n/<namespace_id>/sync/generate_stamp
@@ -14,7 +17,7 @@ POST https://api.inboxapp.com/n/<namespace_id>/sync/generate_stamp
 ```
 :::json
 {
-    "start": "1401132646" // get events after this Unix timestamp
+    "start": "1401132646"
 }
 ```
 
@@ -91,9 +94,9 @@ GET https://api.inboxapp.com/n/<namespace_id>/sync/events?stamp=<stamp>
 
 Fetch the next set of events by issuing another query with `stamp` parameter
 equal to the value of `events_end`:
-    
+
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/sync/events?stamp=<events_end value>
+GET https://api.inboxapp.com/n/<namespace_id>/sync/events?stamp=<events_end>
 ```
 

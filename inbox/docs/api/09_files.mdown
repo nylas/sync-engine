@@ -57,12 +57,12 @@ GET https://api.inboxapp.com/n/<namespace_id>/files/<file_id>/download
 POST https://api.inboxapp.com/n/<namespace_id>/files
 ```
 
-    
+
 This endpoint is used to transfer files to Inbox, which must be done before adding them to a draft message. Data should be sent as multipart-form data with a single file field named `file`. An example of a correct request is shown below:
 
 ```
 :::http
-POST https://api.inboxapp.com/v1/n/account_123ad123512/files HTTP/1.1
+POST https://api.inboxapp.com/n/<namespace_id>/files HTTP/1.1
 Accept-Encoding: gzip, deflate
 Content-Type: multipart/form-data; boundary=---------------------------41184676334
 Content-Length: 29278
@@ -76,11 +76,17 @@ Content-Type: image/jpeg
 
 A successful upload will return an array with a single file object. This object's ID may added to subsequent [draft updates](#drafts) to attach the file to a draft before sending.
 
+**Sample Response:**
+
 ```
 :::json
 [
 	{
-	    <file_object>
+	    "content_type": "image/jpeg",
+            "id": "3f7d6reg1k7hc2umqkz8gcfmo",
+            "namespace": "agud8k5kr8tmnm8wg4y6appw4",
+            "object": "file",
+            "size": 29278
 	}
 ]
 ```
