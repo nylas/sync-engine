@@ -18,7 +18,7 @@ from inbox.api.validation import (InputError, get_tags, get_attachments,
 from inbox.config import config
 from inbox import contacts, sendmail
 from inbox.models.base import MAX_INDEXABLE_LENGTH
-from inbox.models.session import InboxSession, session_scope
+from inbox.models.session import InboxSession
 from inbox.transactions import client_sync
 
 from err import err
@@ -27,6 +27,7 @@ from inbox.ignition import engine
 
 
 DEFAULT_LIMIT = 100
+MAX_LIMIT = 1000
 
 
 app = Blueprint(
@@ -71,6 +72,17 @@ def start():
             g.namespace_public_id))
 
     try:
+        g.limit = int(request.args.get('limit', 10))
+        g.offset = int(request.args.get('offset', 0))
+    except ValueError:
+        return err(400, 'limit and offset parameters must be integers')
+    if g.limit < 0 or g.offset < 0:
+        return err(400, 'limit and offset parameters must be nonnegative '
+                        'integers')
+    if g.limit > MAX_LIMIT:
+        return err(400, 'cannot request more than {} resources at once.'.
+                   format(MAX_LIMIT))
+    try:
         g.api_filter = Filter(
             namespace_id=g.namespace.id,
             subject=request.args.get('subject'),
@@ -86,8 +98,8 @@ def start():
             last_message_after=request.args.get('last_message_after'),
             filename=request.args.get('filename'),
             tag=request.args.get('tag'),
-            limit=request.args.get('limit') or DEFAULT_LIMIT,
-            offset=request.args.get('offset'),
+            limit=g.limit,
+            offset=g.offset,
             order_by=request.args.get('order_by'),
             db_session=g.db_session)
     except ValueError as e:
@@ -288,26 +300,16 @@ def message_api(public_id):
 @app.route('/contacts/', methods=['GET'])
 def contact_search_api():
     filter = request.args.get('filter', '')
-    try:
-        limit = int(request.args.get('limit', 10))
-        offset = int(request.args.get('offset', 0))
-    except ValueError:
-        return err(400, 'limit and offset parameters must be integers')
-    if limit < 0 or offset < 0:
-        return err(400, 'limit and offset parameters must be nonnegative '
-                        'integers')
-    if limit > 1000:
-        return err(400, 'cannot request more than 1000 contacts at once.')
     order = request.args.get('order_by')
     if order == 'rank':
         results = contacts.search_util.search(g.db_session,
                                               g.namespace.account_id, filter,
-                                              limit, offset)
+                                              g.limit, g.offset)
     else:
         results = g.db_session.query(Contact). \
             filter(Contact.account_id == g.namespace.account_id,
                    Contact.source == 'local'). \
-            order_by(asc(Contact.id)).limit(limit).offset(offset).all()
+            order_by(asc(Contact.id)).limit(g.limit).offset(g.offset).all()
 
     return g.encoder.jsonify(results)
 

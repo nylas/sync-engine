@@ -134,7 +134,7 @@ class Filter(object):
             load_only('public_id', 'name'))
 
         query = query.limit(self.limit)
-        if self.offset is not None:
+        if self.offset:
             query = query.offset(self.offset)
 
         if self.order_by == 'subject':
@@ -230,7 +230,7 @@ class Filter(object):
         # (or just directly store it on the message object)
 
         query = query.limit(self.limit)
-        if self.offset is not None:
+        if self.offset:
             query = query.offset(self.offset)
 
         if self.order_by == 'subject':
