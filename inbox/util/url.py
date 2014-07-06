@@ -168,7 +168,8 @@ def provider_from_address(email_address):
     if email_supports_yahoo(domain):
         return 'yahoo'
 
-    return None
+    else:
+        return 'eas'
 
 
 # From tornado.httputil
