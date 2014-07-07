@@ -11,16 +11,14 @@ def user_console(user_email_address):
             email_address=user_email_address).one()
 
         with connection_pool(account.id, pool_size=1).get() as crispin_client:
-            if account.provider == 'gmail':
+            if account.provider == 'gmail' \
+                    and 'all' in crispin_client.folder_names():
                 crispin_client.select_folder(
                     crispin_client.folder_names()['all'],
                     uidvalidity_cb(db_session, account.id))
 
-                server_uids = crispin_client.all_uids()
-
             banner = """
     You can access the crispin instance with the 'crispin_client' variable.
-    AllMail message UIDs are in 'server_uids'.
 
     IMAPClient docs are at:
 
