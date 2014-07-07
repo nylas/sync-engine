@@ -30,14 +30,11 @@ def main():
 
     # All tests
     elif args.all:
-        testrunner += ['tests/general', 'tests/imap']
+        testrunner.append('tests/')
 
-        if os.path.exists(eastestspath):
-            testrunner.append(eastestspath)
-
-     # Only general tests (Default)
+     # Only general i.e. provider agnostic tests (Default)
     else:
-        testrunner.append('tests/general')
+        testrunner += ['tests/general', 'tests/api']
 
     print 'Running tests in {0}'.format(', '.join(d for d in testrunner[1:]))
 
