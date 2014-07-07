@@ -51,6 +51,16 @@ def test_no_logging_on_greenlet_exit():
     assert failing_function.call_count == 1
 
 
+def test_selective_retry():
+    logger = MockLogger()
+    failing_function = FailingFunction(ValueError)
+    with pytest.raises(ValueError):
+        retry_with_logging(failing_function, logger=logger,
+                           fail_classes=[ValueError])
+    assert logger.call_count == 1
+    assert failing_function.call_count == 1
+
+
 def test_retry_count_resets(monkeypatch):
     monkeypatch.setattr('inbox.util.concurrency.resettable_counter',
                         lambda: resettable_counter(reset_interval=0))

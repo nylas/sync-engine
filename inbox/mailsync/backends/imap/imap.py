@@ -195,9 +195,10 @@ class ImapFolderSyncMonitor(Greenlet):
                                               folder_name=self.folder_name))
 
     def _run(self):
-        return retry_and_report_killed(self._run_impl, self.log,
+        return retry_and_report_killed(self._run_impl,
                                        account_id=self.account_id,
-                                       folder_name=self.folder_name)
+                                       folder_name=self.folder_name,
+                                       logger=self.log)
 
     def _run_impl(self):
         # We do NOT ignore soft deletes in the mail sync because it gets real

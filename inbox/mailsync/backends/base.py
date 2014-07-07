@@ -225,12 +225,13 @@ class BaseMailSyncMonitor(Greenlet):
                                               account_id=self.account_id))
 
     def _run(self):
-        return retry_and_report_killed(self._run_impl, self.log,
-                                       account_id=self.account_id)
+        return retry_and_report_killed(self._run_impl,
+                                       account_id=self.account_id,
+                                       logger=self.log)
 
     def _run_impl(self):
-        sync = Greenlet(retry_and_report_killed, self.sync, self.log,
-                        account_id=self.account_id)
+        sync = Greenlet(retry_and_report_killed, self.sync,
+                        account_id=self.account_id, logger=self.log)
         sync.link_value(lambda _: report_exit('stopped',
                                               account_id=self.account_id))
         sync.start()

@@ -85,16 +85,20 @@ def retry(func, retry_classes=None, fail_classes=None,
     return wrapped
 
 
-def retry_with_logging(func, logger=None):
+def retry_with_logging(func, logger=None, retry_classes=None,
+                       fail_classes=None):
     callback = lambda: log_uncaught_errors(logger)
-    return retry(func, exc_callback=callback)()
+    return retry(func, exc_callback=callback, retry_classes=retry_classes,
+                 fail_classes=fail_classes)()
 
 
-def retry_and_report_killed(func, logger, account_id, folder_name=None):
+def retry_and_report_killed(func, account_id, folder_name=None, logger=None,
+                            retry_classes=None, fail_classes=None):
     exc_callback = lambda: log_uncaught_errors(logger)
     fail_callback = lambda: report_exit('killed', account_id, folder_name)
     return retry(func, exc_callback=exc_callback,
-                 fail_callback=fail_callback)()
+                 fail_callback=fail_callback, retry_classes=retry_classes,
+                 fail_classes=fail_classes)()
 
 
 def make_zerorpc(cls, location):
