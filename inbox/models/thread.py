@@ -61,7 +61,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
             self.snippet = message.snippet
 
         # subject is subject of original message in the thread
-        if message.received_date < self.recentdate:
+        if message.received_date < self.subjectdate:
             self.subject = message.subject
             self.subjectdate = message.received_date
 
