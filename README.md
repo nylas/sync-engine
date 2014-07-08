@@ -1,6 +1,6 @@
 # Inbox
 
-#### The open source email toolkit.
+#### The next-generation email platform.
 
 
 Inbox is a set of tools to make it simple and quick to develop apps and services on top of email.
