@@ -95,5 +95,5 @@ Adding certain tags will cause an action to be performed on the thread.
 
 * Adding **`archive`** will remove the thread from `inbox`.
 * Adding **`delete`** will remove all tags, and queue the message for deletion.
-* Adding or removing **`unread`** will mark the thread as read or unread, respectively.
+* Adding or removing **`unread`** will mark the thread as unread or read, respectively.
 * Removing the **`unseen`** tag signals that the thread has been displayed to the user. Clients can remove the **`unseen`** tag, but not add it. Removing **`unread`** will automatically also remove the **`unseen`** tag.
