@@ -5,7 +5,16 @@ import sys
 import os
 import argparse
 
-from inbox.config import config
+# Check that the inbox package is installed. It seems Vagrant may sometimes
+# fail to provision the box appropriately; this check is a reasonable
+# approximation of "Did the setup script run?"
+try:
+    from inbox.config import config
+except ImportError:
+    sys.exit("Could not find Inbox installation. "
+             "Maybe the Vagrant box provisioning didn't succeed?\n"
+             "Try running sudo ./setup.sh")
+
 
 from inbox.util.startup import preflight
 
