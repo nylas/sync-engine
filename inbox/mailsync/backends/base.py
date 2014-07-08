@@ -12,7 +12,7 @@ from inbox.config import config
 from inbox.log import configure_mailsync_logging
 from inbox.models import (Account, Folder, MAX_FOLDER_NAME_LENGTH)
 from inbox.mailsync.exc import SyncException
-from inbox.mailsync.reporting import report_exit
+from inbox.mailsync.reporting import report_stopped
 import inbox.mailsync.backends
 
 
@@ -221,8 +221,7 @@ class BaseMailSyncMonitor(Greenlet):
             self.shared_state = dict()
 
         Greenlet.__init__(self)
-        self.link_value(lambda _: report_exit('stopped',
-                                              account_id=self.account_id))
+        self.link_value(lambda _: report_stopped(self.account_id))
 
     def _run(self):
         return retry_and_report_killed(self._run_impl,
@@ -232,8 +231,7 @@ class BaseMailSyncMonitor(Greenlet):
     def _run_impl(self):
         sync = Greenlet(retry_and_report_killed, self.sync,
                         account_id=self.account_id, logger=self.log)
-        sync.link_value(lambda _: report_exit('stopped',
-                                              account_id=self.account_id))
+        sync.link_value(lambda _: report_stopped(account_id=self.account_id))
         sync.start()
         while not sync.ready():
             try:

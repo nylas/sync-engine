@@ -1,6 +1,4 @@
 """ ZeroRPC interface to syncing. """
-from datetime import datetime
-
 import platform
 
 from inbox.contacts.remote_sync import ContactSync
@@ -18,7 +16,6 @@ class SyncService(object):
             if hasattr(mod, 'SYNC_MONITOR_CLS')}
 
         self.log = get_logger()
-        # { account_id: MailSyncMonitor() }
         self.monitors = dict()
         self.contact_sync_monitors = dict()
 
@@ -27,8 +24,8 @@ class SyncService(object):
         with session_scope() as db_session:
             # XXX: I think we can do some sqlalchemy magic to make it so we
             # can query on the attribute sync_enabled.
-            for account_id, in db_session.query(Account.id)\
-                    .filter(~Account.sync_host.is_(None)):
+            for account_id, in db_session.query(Account.id).filter(
+                    ~Account.sync_host.is_(None)):
                 self.start_sync(account_id)
 
     def start_sync(self, account_id=None):
@@ -73,10 +70,7 @@ class SyncService(object):
                             contact_sync = ContactSync(acc.id)
                             self.contact_sync_monitors[acc.id] = contact_sync
                             contact_sync.start()
-                        acc.sync_host = fqdn
-                        acc.sync_state = 'running'
-                        acc.sync_start_time = datetime.utcnow()
-                        acc.sync_end_time = None
+                        acc.start_sync(fqdn)
                         db_session.add(acc)
                         db_session.commit()
                         results[acc.id] = 'OK sync started'
@@ -122,9 +116,7 @@ class SyncService(object):
                         .format(acc.sync_host, fqdn)
                     # XXX Can processing this command fail in some way?
                     self.monitors[acc.id].inbox.put_nowait('shutdown')
-                    acc.sync_host = None
-                    acc.sync_state = 'stopped'
-                    acc.sync_end_time = datetime.utcnow()
+                    acc.stop_sync()
                     db_session.add(acc)
                     db_session.commit()
                     acc.sync_unlock()

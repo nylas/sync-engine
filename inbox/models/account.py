@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import (Column, Integer, String, DateTime, Boolean, ForeignKey,
                         Enum)
 from sqlalchemy.orm import relationship
@@ -121,6 +123,25 @@ class Account(MailSyncBase, HasPublicID):
     @property
     def sync_enabled(self):
         return self.sync_host is not None
+
+    def start_sync(self, sync_host):
+        self.sync_host = sync_host
+        self.sync_start_time = datetime.utcnow()
+        self.sync_end_time = None
+
+        self.sync_state = 'running'
+
+    def stop_sync(self):
+        self.sync_host = None
+        self.sync_end_time = datetime.utcnow()
+
+        self.sync_state = 'stopped'
+
+    def kill_sync(self):
+        # Don't change sync_host if moving to state 'killed'
+        self.sync_end_time = datetime.utcnow()
+
+        self.sync_state = 'killed'
 
     @property
     def sync_status(self):

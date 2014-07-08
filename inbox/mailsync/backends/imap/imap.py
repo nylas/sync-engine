@@ -84,7 +84,7 @@ from inbox.models import Tag, Folder
 from inbox.models.backends.imap import ImapAccount, ImapFolderSyncStatus
 from inbox.models.util import db_write_lock
 from inbox.mailsync.exc import UidInvalid
-from inbox.mailsync.reporting import report_exit
+from inbox.mailsync.reporting import report_stopped
 from inbox.mailsync.backends.imap import account
 from inbox.mailsync.backends.base import (save_folder_names,
                                           create_db_objects,
@@ -190,9 +190,8 @@ class ImapFolderSyncMonitor(Greenlet):
         self.log = get_logger(account_id, 'mailsync')
 
         Greenlet.__init__(self)
-        self.link_value(lambda _: report_exit('stopped',
-                                              account_id=self.account_id,
-                                              folder_name=self.folder_name))
+        self.link_value(lambda _: report_stopped(account_id=self.account_id,
+                                                 folder_name=self.folder_name))
 
     def _run(self):
         return retry_and_report_killed(self._run_impl,
