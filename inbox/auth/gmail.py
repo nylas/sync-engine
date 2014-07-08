@@ -75,8 +75,9 @@ def verify_account(account):
     try:
         conn.oauth2_login(account.email_address, account.access_token)
     except IMAPClient.Error as e:
-        log.info("IMAP Login error, refresh auth token for: {}"
-                 .format(account.email_address))
+        log.error("IMAP Login error, refresh auth token for: {}"
+                  .format(account.email_address))
+        log.error("Error was: {}".format(e))
         if str(e) == '[ALERT] Invalid credentials (Failure)':
             # maybe the access token expired?
             conn.oauth2_login(account.email_address,
