@@ -284,7 +284,7 @@ def message_api(public_id):
 
         unread_tag = message.namespace.tags['unread']
         unseen_tag = message.namespace.tags['unseen']
-        if data.keys['unread']:
+        if data['unread']:
             message.is_read = False
             message.thread.apply_tag(unread_tag)
         else:
@@ -292,6 +292,7 @@ def message_api(public_id):
             message.thread.remove_tag(unseen_tag)
             if all(m.is_read for m in message.thread.messages):
                 message.thread.remove_tag(unread_tag)
+        return g.encoder.jsonify(message)
 
 
 #
