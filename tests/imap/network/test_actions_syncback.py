@@ -104,21 +104,3 @@ def test_remote_unread_syncback(db, config):
 
 
 # TODO: Test more of the different cases here.
-
-# Higher-level tests.
-
-
-def test_queue_running(db):
-    """ Just the very minimal basics for now: makes sure that the methods run
-        without raising an exception. You can use rq-dashboard and a Gmail
-        browser window to look in more depth. We'll want to add some
-        automatic verification of the behaviour here eventually (see the
-        previous tests), but for now I'm leaving it lean and fast.
-    """
-    from inbox.actions import archive, rqworker
-
-    archive(ACCOUNT_ID, 8)
-    # process actions queue
-    rqworker(burst=True)
-
-    # TODO: Test more of the different cases here.
