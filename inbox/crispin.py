@@ -37,6 +37,11 @@ RawMessage = namedtuple(
     'uid internaldate flags body g_thrid g_msgid g_labels created')
 
 
+class GmailSettingError(Exception):
+    """ Thrown on misconfigured Gmail accounts. """
+    pass
+
+
 def connection_pool(account_id, pool_size=8, connection_pool_for=dict()):
     """ Per-account crispin connection pool.
 
@@ -126,7 +131,8 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
             auth_handler = handler_from_provider(account.provider)
             conn = auth_handler.verify_account(account)
 
-        return new_crispin(self.account_id, self.provider, conn, self.readonly)
+        return new_crispin(self.account_id, self.email_address, self.provider,
+                           conn, self.readonly)
 
     def _keepalive(self, c):
         c.conn.noop()
@@ -150,12 +156,12 @@ retry_crispin = functools.partial(
     fail_callback=_fail_callback)
 
 
-def new_crispin(account_id, provider, conn, readonly=True):
+def new_crispin(account_id, email_address, provider, conn, readonly=True):
     crispin_module_for = dict(gmail=GmailCrispinClient, imap=CrispinClient,
                               yahoo=YahooCrispinClient)
 
     cls = crispin_module_for[provider]
-    return cls(account_id, conn, readonly=readonly)
+    return cls(account_id, email_address, conn, readonly=readonly)
 
 
 class CrispinClient(object):
@@ -195,9 +201,10 @@ class CrispinClient(object):
     # cause memory errors that only pop up in extreme edge cases.
     CHUNK_SIZE = 1
 
-    def __init__(self, account_id, conn, readonly=True):
+    def __init__(self, account_id, email_address, conn, readonly=True):
         self.log = get_logger(account_id)
         self.account_id = account_id
+        self.email_address = email_address
         # IMAP isn't stateless :(
         self.selected_folder = None
         self._folder_names = None
@@ -415,9 +422,15 @@ class GmailCrispinClient(CondStoreCrispinClient):
         list
             Folders to sync (as strings).
         """
+        if 'all' not in self.folder_names():
+            raise GmailSettingError(
+                "Account {} ({}) has no detected 'All Mail' folder. This is "
+                "probably because it is disabled from appearing in IMAP. "
+                "Please enable at "
+                "https://mail.google.com/mail/#settings/labels"
+                .format(self.account_id, self.email_address))
         folders = [self.folder_names()['inbox'], self.folder_names()['all']]
-        # Gmail allows users to configure which folders appear in the IMAP
-        # interface, so accounts MAY NOT have these folders available to sync!
+        # Non-essential folders, so don't error out if they're not present.
         for tag in ('trash', 'spam'):
             if tag in self.folder_names():
                 folders.append(self.folder_names()[tag])
