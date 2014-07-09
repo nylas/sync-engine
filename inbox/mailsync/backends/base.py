@@ -206,7 +206,8 @@ def new_or_updated(uids, local_uids):
 
 
 class BaseMailSyncMonitor(Greenlet):
-    def __init__(self, account_id, email_address, provider, heartbeat=1):
+    def __init__(self, account_id, email_address, provider, heartbeat=1,
+                 retry_fail_classes=None):
         self.inbox = Queue()
         # how often to check inbox, in seconds
         self.heartbeat = heartbeat
@@ -214,6 +215,7 @@ class BaseMailSyncMonitor(Greenlet):
         self.account_id = account_id
         self.email_address = email_address
         self.provider = provider
+        self.retry_fail_classes = retry_fail_classes
 
         # Stuff that might be updated later and we want to keep a shared
         # reference on child greenlets.
@@ -226,7 +228,8 @@ class BaseMailSyncMonitor(Greenlet):
     def _run(self):
         return retry_and_report_killed(self._run_impl,
                                        account_id=self.account_id,
-                                       logger=self.log)
+                                       logger=self.log,
+                                       fail_classes=self.retry_fail_classes)
 
     def _run_impl(self):
         sync = Greenlet(retry_and_report_killed, self.sync,

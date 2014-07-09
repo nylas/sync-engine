@@ -102,7 +102,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         poll_frequency and heartbeat are in seconds.
     """
     def __init__(self, account_id, namespace_id, email_address, provider,
-                 heartbeat=1, poll_frequency=300):
+                 heartbeat=1, poll_frequency=300, retry_fail_classes=None):
 
         self.shared_state = {
             # IMAP folders are kept up-to-date via polling
@@ -121,7 +121,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             }
 
         BaseMailSyncMonitor.__init__(self, account_id, email_address, provider,
-                                     heartbeat)
+                                     heartbeat, retry_fail_classes)
 
     def sync(self):
         """ Start per-folder syncs. Only have one per-folder sync in the
@@ -157,7 +157,8 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                                                self.email_address,
                                                self.provider,
                                                self.shared_state,
-                                               self.folder_state_handlers)
+                                               self.folder_state_handlers,
+                                               self.retry_fail_classes)
                 thread.start()
                 self.folder_monitors.add(thread)
                 while not self._thread_polling(thread) and \
@@ -178,7 +179,8 @@ class ImapFolderSyncMonitor(Greenlet):
     """ Per-folder sync engine. """
 
     def __init__(self, account_id, folder_name, folder_id,
-                 email_address, provider, shared_state, state_handlers):
+                 email_address, provider, shared_state, state_handlers,
+                 retry_fail_classes):
         self.account_id = account_id
         self.folder_name = folder_name
         self.folder_id = folder_id
@@ -186,6 +188,7 @@ class ImapFolderSyncMonitor(Greenlet):
         self.state_handlers = state_handlers
         self.state = None
         self.conn_pool = connection_pool(self.account_id)
+        self.retry_fail_classes = retry_fail_classes
 
         self.log = get_logger(account_id, 'mailsync')
 
@@ -197,7 +200,8 @@ class ImapFolderSyncMonitor(Greenlet):
         return retry_and_report_killed(self._run_impl,
                                        account_id=self.account_id,
                                        folder_name=self.folder_name,
-                                       logger=self.log)
+                                       logger=self.log,
+                                       fail_classes=self.retry_fail_classes)
 
     def _run_impl(self):
         # We do NOT ignore soft deletes in the mail sync because it gets real

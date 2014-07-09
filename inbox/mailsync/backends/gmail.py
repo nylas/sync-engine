@@ -32,7 +32,8 @@ from inbox.util.itert import chunk, partition
 from inbox.util.cache import set_cache, get_cache, rm_cache
 
 from inbox.contacts.process_mail import update_contacts
-from inbox.crispin import GMetadata, connection_pool, retry_crispin
+from inbox.crispin import (GMetadata, connection_pool, retry_crispin,
+                           GmailSettingError)
 from inbox.models.session import session_scope
 from inbox.models.util import reconcile_message
 from inbox.models import Message, Folder
@@ -71,7 +72,8 @@ class GmailSyncMonitor(ImapSyncMonitor):
 
         ImapSyncMonitor.__init__(self, account_id, namespace_id, email_address,
                                  provider, heartbeat=1,
-                                 poll_frequency=poll_frequency)
+                                 poll_frequency=poll_frequency,
+                                 retry_fail_classes=[GmailSettingError])
 
 
 @retry_crispin
