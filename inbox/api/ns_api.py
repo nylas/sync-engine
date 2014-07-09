@@ -72,7 +72,7 @@ def start():
             g.namespace_public_id))
 
     try:
-        g.limit = int(request.args.get('limit', 10))
+        g.limit = int(request.args.get('limit', DEFAULT_LIMIT))
         g.offset = int(request.args.get('offset', 0))
     except ValueError:
         return err(400, 'limit and offset parameters must be integers')
