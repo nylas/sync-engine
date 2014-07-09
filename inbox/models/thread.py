@@ -1,9 +1,9 @@
 import itertools
+from collections import defaultdict
 
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import relationship, backref, validates, object_session
-from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from inbox.log import get_logger
 log = get_logger()
@@ -17,7 +17,7 @@ from inbox.models.namespace import Namespace
 
 from inbox.models.folder import FolderItem
 from inbox.models.tag import Tag
-from inbox.models.message import Message, SpoolMessage
+from inbox.models.message import SpoolMessage
 
 
 class Thread(MailSyncBase, HasPublicID, HasRevisions):
@@ -117,16 +117,24 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
 
     @property
     def participants(self):
-        p = set()
+        """We deduplicate a thread's participants, because different messages
+        in the thread may reference the same email address with different
+        phrases. For each address, we just return the longest associated
+        phrase."""
+        # Construct a mapping address -> (longest phrase for that address)
+        deduped_participants = defaultdict(str)
         for m in self.messages:
             if m.is_draft:
                 if isinstance(m, SpoolMessage) and not m.is_latest:
                     # Don't use old draft revisions to compute participants.
                     continue
-            p.update(tuple(entry) for entry in
-                     itertools.chain(m.from_addr, m.to_addr, m.cc_addr,
-                                     m.bcc_addr))
-        return list(p)
+            for phrase, address in itertools.chain(m.from_addr, m.to_addr,
+                                                   m.cc_addr, m.bcc_addr):
+                if len(phrase) > len(deduped_participants[address]):
+                    deduped_participants[address] = phrase
+        # Turn that mapping back into a list of tuples
+        return [(phrase, address) for address, phrase in
+                deduped_participants.iteritems()]
 
     @property
     def mailing_list_info(self):
