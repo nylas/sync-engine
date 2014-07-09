@@ -1,5 +1,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import event
 
+from inbox.models.vault import vault
 from inbox.models.backends.imap import ImapAccount
 from datetime import datetime, timedelta
 
@@ -18,7 +20,7 @@ class GmailAccount(ImapAccount):
 
     __mapper_args__ = {'polymorphic_identity': 'gmailaccount'}
 
-    refresh_token = Column(String(512))  # Secret
+    refresh_token_id = Column(Integer())  # Secret
     scope = Column(String(512))
     access_type = Column(String(64))
     family_name = Column(String(256))
@@ -32,6 +34,14 @@ class GmailAccount(ImapAccount):
     locale = Column(String(8))
     picture = Column(String(1024))
     home_domain = Column(String(256))
+
+    @property
+    def refresh_token(self):
+        return vault.get(self.refresh_token_id)
+
+    @refresh_token.setter
+    def refresh_token(self, value):
+        self.refresh_token_id = vault.put(value)
 
     @property
     def access_token(self):
@@ -78,3 +88,11 @@ class GmailAccount(ImapAccount):
     @property
     def provider(self):
         return PROVIDER
+
+
+@event.listens_for(GmailAccount, 'after_update')
+def _after_gmailaccount_update(mapper, connection, target):
+    """ Hook to cascade delete the refresh_token as it may be remote (and usual
+    ORM mechanisms don't apply)."""
+    if target.deleted_at:
+        vault.remove(target.refresh_token_id)

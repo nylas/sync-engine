@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.34, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.37, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.5.34-0ubuntu0.12.04.1-log
+-- Server version	5.5.37-0ubuntu0.12.04.1-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -132,7 +132,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('29217fad3f46');
+INSERT INTO `alembic_version` VALUES ('1925c535a52d');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -281,6 +281,40 @@ CREATE TABLE `easaccount` (
 LOCK TABLES `easaccount` WRITE;
 /*!40000 ALTER TABLE `easaccount` DISABLE KEYS */;
 /*!40000 ALTER TABLE `easaccount` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `easfoldersync`
+--
+
+DROP TABLE IF EXISTS `easfoldersync`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `easfoldersync` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `account_id` int(11) NOT NULL,
+  `folder_name` varchar(191) NOT NULL,
+  `state` enum('initial','initial uidinvalid','poll','poll uidinvalid','finish') NOT NULL,
+  `eas_folder_sync_key` varchar(64) NOT NULL,
+  `eas_folder_id` varchar(64) DEFAULT NULL,
+  `eas_folder_type` varchar(64) DEFAULT NULL,
+  `eas_parent_id` varchar(64) DEFAULT NULL,
+  `remote_uid_count` int(11) DEFAULT NULL,
+  `uid_checked_date` datetime DEFAULT NULL,
+  `_sync_status` text,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_account_id_eas_folder_id` (`account_id`,`eas_folder_id`),
+  CONSTRAINT `easfoldersync_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `easaccount` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `easfoldersync`
+--
+
+LOCK TABLES `easfoldersync` WRITE;
+/*!40000 ALTER TABLE `easfoldersync` DISABLE KEYS */;
+/*!40000 ALTER TABLE `easfoldersync` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -445,6 +479,41 @@ INSERT INTO `folderitem` VALUES (1,1,1,'2014-05-13 02:19:12','2014-05-13 02:19:1
 UNLOCK TABLES;
 
 --
+-- Table structure for table `foldersync`
+--
+
+DROP TABLE IF EXISTS `foldersync`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `foldersync` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `account_id` int(11) NOT NULL,
+  `folder_name` varchar(191) NOT NULL,
+  `state` enum('initial','initial uidinvalid','poll','poll uidinvalid','finish') NOT NULL DEFAULT 'initial',
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `_sync_status` text,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `account_id` (`account_id`,`folder_name`),
+  KEY `ix_foldersync_created_at` (`created_at`),
+  KEY `ix_foldersync_deleted_at` (`deleted_at`),
+  KEY `ix_foldersync_updated_at` (`updated_at`),
+  CONSTRAINT `foldersync_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `imapaccount` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `foldersync`
+--
+
+LOCK TABLES `foldersync` WRITE;
+/*!40000 ALTER TABLE `foldersync` DISABLE KEYS */;
+INSERT INTO `foldersync` VALUES (1,1,'INBOX','poll','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL),(2,1,'[Gmail]/All Mail','poll','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL);
+/*!40000 ALTER TABLE `foldersync` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `gmailaccount`
 --
 
@@ -453,11 +522,7 @@ DROP TABLE IF EXISTS `gmailaccount`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `gmailaccount` (
   `id` int(11) NOT NULL,
-  `access_token` varchar(512) DEFAULT NULL,
-  `refresh_token` varchar(512) DEFAULT NULL,
   `scope` varchar(512) DEFAULT NULL,
-  `expires_in` int(11) DEFAULT NULL,
-  `token_type` varchar(64) DEFAULT NULL,
   `access_type` varchar(64) DEFAULT NULL,
   `family_name` varchar(256) DEFAULT NULL,
   `given_name` varchar(256) DEFAULT NULL,
@@ -470,6 +535,7 @@ CREATE TABLE `gmailaccount` (
   `locale` varchar(8) DEFAULT NULL,
   `picture` varchar(1024) DEFAULT NULL,
   `home_domain` varchar(256) DEFAULT NULL,
+  `refresh_token_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
   CONSTRAINT `gmailaccount_ibfk_1` FOREIGN KEY (`id`) REFERENCES `imapaccount` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -481,7 +547,7 @@ CREATE TABLE `gmailaccount` (
 
 LOCK TABLES `gmailaccount` WRITE;
 /*!40000 ALTER TABLE `gmailaccount` DISABLE KEYS */;
-INSERT INTO `gmailaccount` VALUES (1,'ya29.1.AADtN_WBwJ3JfESfm174VwtqekfY6YKDV2xjsUQ3iMkz-4qlKLwWxyceOfj9Uv_z7aoi5Q','1/XUcATARUuEjFSFk9M2ZkIHExnCcFCi5E8veIj2jKetA','https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile https://mail.google.com/ https://www.google.com/m8/feeds https://www.googleapis.com/auth/calendar',3600,'Bearer','offline','App','Inbox',NULL,'other','115086935419017912828','eyJhbGciOiJSUzI1NiIsImtpZCI6IjU3YjcwYzNhMTM4MjA5OTliZjhlNmIxYTBkMDdkYjRlNDVhMmE3NzMifQ.eyJpc3MiOiJhY2NvdW50cy5nb29nbGUuY29tIiwiaWQiOiIxMTUwODY5MzU0MTkwMTc5MTI4MjgiLCJzdWIiOiIxMTUwODY5MzU0MTkwMTc5MTI4MjgiLCJhenAiOiI5ODY2NTk3NzY1MTYtZmc3OW1xYmtia3RmNWt1MTBjMjE1dmRpajkxOHJhMGEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJlbWFpbCI6ImluYm94YXBwdGVzdEBnbWFpbC5jb20iLCJhdF9oYXNoIjoiS090Q0hvQ01mSjNQcmdGSVIwNDFtQSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJhdWQiOiI5ODY2NTk3NzY1MTYtZmc3OW1xYmtia3RmNWt1MTBjMjE1dmRpajkxOHJhMGEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJ0b2tlbl9oYXNoIjoiS090Q0hvQ01mSjNQcmdGSVIwNDFtQSIsInZlcmlmaWVkX2VtYWlsIjp0cnVlLCJjaWQiOiI5ODY2NTk3NzY1MTYtZmc3OW1xYmtia3RmNWt1MTBjMjE1dmRpajkxOHJhMGEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJpYXQiOjEzOTkwNzk0MDIsImV4cCI6MTM5OTA4MzMwMn0.CFnCmsz3XCK196CF6PQ19z9IUxEeffZ_eu3JVdJE1rDHc1i5h44l1ioNouJinyJhqV4QQmaXDGJ3oggogfF0TGuUbRwcOWs0_oR01ZxuplY0U7s_g96LcZt667L-ZPFZosPM3APvGof2tvDQViyFd0V6rGu3ok49HqatZ8PT5eo','115086935419017912828',NULL,'en',NULL,NULL);
+INSERT INTO `gmailaccount` VALUES (1,'https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile https://mail.google.com/ https://www.google.com/m8/feeds https://www.googleapis.com/auth/calendar','offline','App','Inbox',NULL,'other','115086935419017912828','eyJhbGciOiJSUzI1NiIsImtpZCI6IjU3YjcwYzNhMTM4MjA5OTliZjhlNmIxYTBkMDdkYjRlNDVhMmE3NzMifQ.eyJpc3MiOiJhY2NvdW50cy5nb29nbGUuY29tIiwiaWQiOiIxMTUwODY5MzU0MTkwMTc5MTI4MjgiLCJzdWIiOiIxMTUwODY5MzU0MTkwMTc5MTI4MjgiLCJhenAiOiI5ODY2NTk3NzY1MTYtZmc3OW1xYmtia3RmNWt1MTBjMjE1dmRpajkxOHJhMGEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJlbWFpbCI6ImluYm94YXBwdGVzdEBnbWFpbC5jb20iLCJhdF9oYXNoIjoiS090Q0hvQ01mSjNQcmdGSVIwNDFtQSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJhdWQiOiI5ODY2NTk3NzY1MTYtZmc3OW1xYmtia3RmNWt1MTBjMjE1dmRpajkxOHJhMGEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJ0b2tlbl9oYXNoIjoiS090Q0hvQ01mSjNQcmdGSVIwNDFtQSIsInZlcmlmaWVkX2VtYWlsIjp0cnVlLCJjaWQiOiI5ODY2NTk3NzY1MTYtZmc3OW1xYmtia3RmNWt1MTBjMjE1dmRpajkxOHJhMGEuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJpYXQiOjEzOTkwNzk0MDIsImV4cCI6MTM5OTA4MzMwMn0.CFnCmsz3XCK196CF6PQ19z9IUxEeffZ_eu3JVdJE1rDHc1i5h44l1ioNouJinyJhqV4QQmaXDGJ3oggogfF0TGuUbRwcOWs0_oR01ZxuplY0U7s_g96LcZt667L-ZPFZosPM3APvGof2tvDQViyFd0V6rGu3ok49HqatZ8PT5eo','115086935419017912828',NULL,'en',NULL,NULL,1);
 /*!40000 ALTER TABLE `gmailaccount` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -932,6 +998,35 @@ INSERT INTO `searchtoken` VALUES (1,'inboxapptest@gmail.com','email_address',1,'
 UNLOCK TABLES;
 
 --
+-- Table structure for table `secret`
+--
+
+DROP TABLE IF EXISTS `secret`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `secret` (
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `acl_id` int(11) NOT NULL,
+  `type` int(11) NOT NULL,
+  `secret` varchar(512) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `secret`
+--
+
+LOCK TABLES `secret` WRITE;
+/*!40000 ALTER TABLE `secret` DISABLE KEYS */;
+INSERT INTO `secret` VALUES ('2014-07-09 18:58:49','2014-07-09 18:58:49',NULL,1,0,0,'1/XUcATARUuEjFSFk9M2ZkIHExnCcFCi5E8veIj2jKetA');
+/*!40000 ALTER TABLE `secret` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `spoolmessage`
 --
 
@@ -1119,6 +1214,41 @@ INSERT INTO `transaction` VALUES ('part',3,'insert','{\"walk_index\": 2, \"names
 UNLOCK TABLES;
 
 --
+-- Table structure for table `uidvalidity`
+--
+
+DROP TABLE IF EXISTS `uidvalidity`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `uidvalidity` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `imapaccount_id` int(11) NOT NULL,
+  `folder_name` varchar(191) NOT NULL,
+  `uid_validity` int(11) NOT NULL,
+  `highestmodseq` int(11) NOT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `imapaccount_id` (`imapaccount_id`,`folder_name`),
+  KEY `ix_uidvalidity_created_at` (`created_at`),
+  KEY `ix_uidvalidity_deleted_at` (`deleted_at`),
+  KEY `ix_uidvalidity_updated_at` (`updated_at`),
+  CONSTRAINT `uidvalidity_ibfk_1` FOREIGN KEY (`imapaccount_id`) REFERENCES `imapaccount` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `uidvalidity`
+--
+
+LOCK TABLES `uidvalidity` WRITE;
+/*!40000 ALTER TABLE `uidvalidity` DISABLE KEYS */;
+INSERT INTO `uidvalidity` VALUES (1,1,'INBOX',1,106957,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(2,1,'[Gmail]/All Mail',11,106957,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL);
+/*!40000 ALTER TABLE `uidvalidity` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `webhook`
 --
 
@@ -1171,4 +1301,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-07-03  1:29:18
+-- Dump completed on 2014-07-09 11:59:16
