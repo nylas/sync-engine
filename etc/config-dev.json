@@ -23,5 +23,7 @@
 "STORE_MESSAGES_ON_S3": false,
 "MSG_PARTS_DIRECTORY": "/var/lib/inboxapp/parts",
 
+"VAULT_TYPE": "local",
+
 "EMAIL_EXCEPTIONS": false
 }
