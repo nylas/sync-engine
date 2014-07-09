@@ -3,7 +3,7 @@
   "conduit_uri" : "https://review.inboxapp.com/",
   "lint.engine" : "InboxServerLintEngine",
   "unit.engine" : "PytestTestEngine",
-  "arc.land.branch.onto" : "dev",
+  "arc.land.onto.default" : "dev",
   "load" : [
     "arclib"
   ]
