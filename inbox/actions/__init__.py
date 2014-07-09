@@ -39,26 +39,10 @@ from inbox.util.misc import register_backends
 
 module_registry = register_backends(__name__, __path__)
 
-from redis import StrictRedis
-from rq import Queue, Connection
-
-from inbox.util.concurrency import GeventWorker
 from inbox.models.session import session_scope
 from inbox.models import Account, SpoolMessage
-from inbox.config import config
 from inbox.sendmail.base import generate_attachments
 from inbox.sendmail.message import create_email, Recipients
-
-
-def get_queue():
-    # The queue label is set via config to allow multiple distinct Inbox
-    # instances to hit the same Redis server without interfering with each
-    # other.
-    host = config.get_required('REDIS_HOST')
-    port = config.get_required('REDIS_PORT')
-    label = config.get_required('ACTION_QUEUE_LABEL')
-
-    return Queue(label, connection=StrictRedis(host=host, port=port, db=0))
 
 
 def archive(account_id, thread_id):
@@ -159,19 +143,3 @@ def delete_draft(account_id, inbox_uid):
             module_registry[account.provider].remote_delete_draft
         remote_delete_draft(account, account.drafts_folder.name, inbox_uid,
                             db_session)
-
-
-# Later we're going to want to consider a pooling mechanism. We may want to
-# split actions queues by remote host, for example, and have workers for a
-# given host share a connection pool.
-def rqworker(burst=False):
-    """ Runs forever unless burst=True.
-
-    More details on how workers work at: http://python-rq.org/docs/workers/
-
-    """
-    with Connection():
-        q = get_queue()
-
-        w = GeventWorker([q])
-        w.work(burst=burst)

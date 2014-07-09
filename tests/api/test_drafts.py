@@ -7,8 +7,7 @@ from datetime import datetime
 import gevent
 import pytest
 
-from tests.util.base import (api_client, mock_syncback_service,
-                             real_syncback_service)
+from tests.util.base import api_client, real_syncback_service
 
 NAMESPACE_ID = 1
 

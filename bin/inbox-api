@@ -49,10 +49,8 @@ inbox_logger = get_logger(purpose='api')
 
 def start():
     # start actions service
-    from inbox.util.concurrency import make_zerorpc
     from inbox.transactions.actions import SyncbackService
-    action_srv_loc = config.get('ACTION_SERVER_LOC', None)
-    make_zerorpc(SyncbackService, action_srv_loc)
+    SyncbackService().start()
 
     http_server = WSGIServer(('', int(args.port)), app, log=inbox_logger)
     inbox_logger.info('Starting API server on port {0}'.format(args.port))

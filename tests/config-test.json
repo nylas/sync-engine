@@ -14,9 +14,5 @@
 
 "BASE_DUMP": "data/base_dump.sql",
 
-"EMAIL_EXCEPTIONS": false,
-
-"REDIS_HOST": "localhost",
-"REDIS_PORT": 6379
-
+"EMAIL_EXCEPTIONS": false
 }

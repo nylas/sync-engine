@@ -112,22 +112,13 @@ def test_tag_deletes_cascade_to_threads():
     pass
 
 
-class MockQueue(list):
-    """Used to mock out the SyncbackService queue (with just a list)."""
-    def __init__(self):
-        list.__init__(self)
-
-    def enqueue(self, *args):
-        self.append(args)
-
-
 def test_actions_syncback(api_client, mock_syncback_service):
-    """Add and remove tags that should trigger syncback actions, and check that
-    the appropriate actions get put on the queue (doesn't test the
+    """Adds and removes tags that should trigger syncback actions, and check
+    that the appropriate actions get spawned (but doesn't test the
     implementation of the actual syncback methods in inbox.actions).
     """
     from inbox.actions import (mark_read, mark_unread, archive, unarchive,
-                                    star, unstar)
+                               star, unstar)
 
     thread_id = api_client.get_data('/threads/')[0]['id']
     thread_path = '/threads/{}'.format(thread_id)
@@ -150,6 +141,5 @@ def test_actions_syncback(api_client, mock_syncback_service):
 
     gevent.sleep()
 
-    queued_actions = [item[0] for item in mock_syncback_service.queue]
     for action in [mark_read, mark_unread, archive, unarchive, star, unstar]:
-        assert action in queued_actions
+        assert action in mock_syncback_service.scheduled_actions

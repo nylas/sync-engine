@@ -72,16 +72,6 @@ def db(request, config):
     testdb.teardown()
 
 
-@fixture(scope='function')
-def action_queue(request, config):
-    from inbox.actions import base
-    q = base.get_queue()
-    request.addfinalizer(q.empty)
-    # make sure it's empty to start out with too
-    q.empty()
-    return q
-
-
 # TODO(emfree) can we make this into a yield_fixture without the tests hanging?
 @yield_fixture
 def api_client(db):
@@ -190,15 +180,6 @@ def kill_greenlets():
             obj.kill()
 
 
-class MockQueue(list):
-    """Used to mock out the SyncbackService queue (with just a list)."""
-    def __init__(self):
-        list.__init__(self)
-
-    def enqueue(self, *args):
-        self.append(args)
-
-
 @yield_fixture(scope='function')
 def mock_syncback_service():
     """Running SyncbackService with a mock queue."""
@@ -209,11 +190,18 @@ def mock_syncback_service():
     # TODO(emfree): It's totally whack that monkey-patching here would affect
     # other tests. Can we make this not happen?
     monkey.patch_all(aggressive=False)
-    s = SyncbackService(poll_interval=0)
-    s.queue = MockQueue()
+
+    class MockSyncbackService(SyncbackService):
+        def __init__(self, *args, **kwargs):
+            self.scheduled_actions = []
+            SyncbackService.__init__(self, *args, **kwargs)
+
+        def _execute_async_action(self, func, *args):
+            self.scheduled_actions.append(func)
+    s = MockSyncbackService(poll_interval=0)
     s.start()
     gevent.sleep()
-    assert len(s.queue) == 0
+    assert len(s.worker_pool) == 0
     yield s
     kill_greenlets()
 
