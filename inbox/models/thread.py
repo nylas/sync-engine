@@ -117,12 +117,12 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
 
     @property
     def participants(self):
-        """We deduplicate a thread's participants, because different messages
-        in the thread may reference the same email address with different
-        phrases. For each address, we just return the longest associated
-        phrase."""
-        # Construct a mapping address -> (longest phrase for that address)
-        deduped_participants = defaultdict(str)
+        """Different messages in the thread may reference the same email
+        address with different phrases. We partially deduplicate: if the same
+        email address occurs with both empty and nonempty phrase, we don't
+        separately return the (empty phrase, address) pair.
+        """
+        deduped_participants = defaultdict(set)
         for m in self.messages:
             if m.is_draft:
                 if isinstance(m, SpoolMessage) and not m.is_latest:
@@ -130,11 +130,13 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
                     continue
             for phrase, address in itertools.chain(m.from_addr, m.to_addr,
                                                    m.cc_addr, m.bcc_addr):
-                if len(phrase) > len(deduped_participants[address]):
-                    deduped_participants[address] = phrase
-        # Turn that mapping back into a list of tuples
-        return [(phrase, address) for address, phrase in
-                deduped_participants.iteritems()]
+                    deduped_participants[address].add(phrase.strip())
+        p = []
+        for address, phrases in deduped_participants.iteritems():
+            for phrase in phrases:
+                if phrase != '' or len(phrases) == 1:
+                    p.append((phrase, address))
+        return p
 
     @property
     def mailing_list_info(self):
