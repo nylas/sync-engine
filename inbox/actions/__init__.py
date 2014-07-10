@@ -131,6 +131,11 @@ def save_draft(account_id, message_id):
         remote_save_draft(account, account.drafts_folder.name,
                           mimemsg.to_string(), message.created_date)
 
+        # If this draft is created by an update_draft() call,
+        # delete the one it supercedes on the remote.
+        # Needed because our update_draft() creates a new draft
+        # message but the user expects to see the one
+        # updated draft only.
         if message.parent_draft:
             return delete_draft(account_id, message.parent_draft.inbox_uid)
 
