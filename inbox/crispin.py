@@ -27,9 +27,9 @@ log = get_logger()
 __all__ = ['CrispinClient', 'GmailCrispinClient', 'YahooCrispinClient']
 
 # Unify flags API across IMAP and Gmail
-Flags = namedtuple("Flags", "flags")
+Flags = namedtuple('Flags', 'flags')
 # Flags includes labels on Gmail because Gmail doesn't use \Draft.
-GmailFlags = namedtuple("GmailFlags", "flags labels")
+GmailFlags = namedtuple('GmailFlags', 'flags labels')
 
 GMetadata = namedtuple('GMetadata', 'msgid thrid')
 RawMessage = namedtuple(
@@ -633,6 +633,7 @@ class GmailCrispinClient(CondStoreCrispinClient):
         self.selected_folder_name == self.folder_names()['drafts'], \
             'Must select drafts folder first ({0})'.format(
                 self.selected_folder_name)
+
         self.conn.append(self.selected_folder_name, message, ['\\Draft'], date)
 
     def delete_draft(self, inbox_uid):
@@ -653,8 +654,6 @@ class GmailCrispinClient(CondStoreCrispinClient):
         identifier for the message that both we and the remote know.
 
         """
-        label_name = '\Draft'
-
         criteria = ['DRAFT', 'NOT DELETED',
                     'HEADER X-INBOX-ID {0}'.format(inbox_uid)]
         draft_uids = self.conn.search(criteria)
@@ -662,7 +661,7 @@ class GmailCrispinClient(CondStoreCrispinClient):
             assert len(draft_uids) == 1
 
             # Remove Gmail's `Draft` label
-            self.conn.remove_gmail_labels(draft_uids, [label_name])
+            self.conn.remove_gmail_labels(draft_uids, ['\Draft'])
 
             # Move to Gmail's `Trash` folder
             self.conn.delete_messages(draft_uids)

@@ -49,10 +49,15 @@ def test_remote_save_draft(db, config, message):
 
         c.conn.select_folder(account.drafts_folder.name, readonly=False)
 
-        inbox_uids = c.conn.search(criteria)
-        assert inbox_uids, 'Message missing from Drafts folder'
+        draft_uids = c.conn.search(criteria)
+        assert draft_uids, 'Message missing from Drafts folder'
 
-        c.conn.delete_messages(inbox_uids)
+        flags = c.conn.get_flags(draft_uids)
+        for uid in draft_uids:
+            f = flags.get(uid)
+            assert f and '\\Draft' in f, "Message missing '\\Draft' flag"
+
+        c.conn.delete_messages(draft_uids)
         c.conn.expunge()
 
 

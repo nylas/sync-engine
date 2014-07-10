@@ -97,13 +97,12 @@ class SyncbackService(gevent.Greenlet):
                     # TODO(emfree) handle deleted messages here
                     # Note: For deletes, only syncback for SpoolMessages that
                     # do not have a child_draft --kavya
-                    message = db_session.query(SpoolMessage). \
-                        get(transaction.record_id)
+                    message = db_session.query(SpoolMessage).get(
+                        transaction.record_id)
                     account_id = message.namespace.account_id
                     if transaction.command == 'insert':
-                        if transaction.delta.get('draft_copied_from') is None:
-                            self._execute_async_action(save_draft, account_id,
-                                                       message.id)
+                        self._execute_async_action(save_draft, account_id,
+                                                   message.id)
                     elif (transaction.command == 'update' and
                           transaction.delta.get('state') == 'sending'):
                         self._execute_async_action(send_draft, account_id,
