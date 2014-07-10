@@ -7,44 +7,15 @@ from sqlalchemy.exc import DataError
 
 from inbox.util.concurrency import retry_with_logging, retry_and_report_killed
 from inbox.util.itert import partition
-from inbox.util.misc import load_modules
 from inbox.config import config
 from inbox.log import configure_mailsync_logging
 from inbox.models import (Account, Folder, MAX_FOLDER_NAME_LENGTH)
 from inbox.mailsync.exc import SyncException
 from inbox.mailsync.reporting import report_stopped
-import inbox.mailsync.backends
 
 
 class MailsyncError(Exception):
     pass
-
-
-def register_backends():
-    """
-    Finds the monitor modules for the different providers
-    (in the backends directory) and imports them.
-
-    Creates a mapping of provider:monitor for each backend found.
-    """
-    monitor_cls_for = {}
-
-    # Find and import
-    modules = load_modules(inbox.mailsync.backends)
-
-    # Create mapping
-    for module in modules:
-        if hasattr(module, 'PROVIDER'):
-            provider = module.PROVIDER
-
-            assert hasattr(module, 'SYNC_MONITOR_CLS')
-            monitor_cls = getattr(module, module.SYNC_MONITOR_CLS, None)
-
-            assert monitor_cls is not None
-
-            monitor_cls_for[provider] = (monitor_cls, module)
-
-    return monitor_cls_for
 
 
 def verify_folder_name(account_id, old, new):
