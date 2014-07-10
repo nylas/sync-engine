@@ -127,7 +127,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         """ Start per-folder syncs. Only have one per-folder sync in the
             'initial' state at a time.
         """
-        with session_scope() as db_session:
+        with session_scope(ignore_soft_deletes=False) as db_session:
             saved_states = dict()
             folder_id_for = dict()
             for saved_state in db_session.query(ImapFolderSyncStatus)\
@@ -569,7 +569,7 @@ def check_new_uids(account_id, provider, folder_name, log, uid_download_stack,
     """
     log.info("Spinning up new UID-check poller for {}".format(folder_name))
     with connection_pool(account_id).get() as crispin_client:
-        with session_scope() as db_session:
+        with session_scope(ignore_soft_deletes=False) as db_session:
             crispin_client.select_folder(folder_name,
                                          uidvalidity_cb(
                                              db_session,
