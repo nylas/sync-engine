@@ -31,46 +31,62 @@ def save_folder_names(log, account, folder_names, db_session):
     Create Folder objects & map special folder names on Account objects.
 
     Folders that belong to an account and no longer exist in `folder_names`
-    ARE DELETED.
-    """
-    # NOTE: We don't do anything like canonicalizing to lowercase because
-    # different backends may be case-sensitive or not. Code that references
-    # saved folder names should canonicalize if needed when doing comparisons.
+    ARE DELETED, unless they are "dangling" (do not have a 'name' set).
 
+    We don't canonicalizing folder names to lowercase when saving
+    because different backends may be case-sensitive or not. Code that
+    references saved folder names should canonicalize if needed when doing
+    comparisons.
+
+    """
     assert 'inbox' in folder_names, 'Account {} has no detected inbox folder'\
         .format(account.email_address)
 
-    folders = {f.name.lower(): f for f in
-               db_session.query(Folder).filter_by(account=account)}
+    all_folders = db_session.query(Folder).filter_by(
+        account_id=account.id).all()
+    # dangled_folders don't map to upstream account folders (may be used for
+    # keeping track of e.g. special Gmail labels which are exposed as IMAP
+    # flags but not folders)
+    folder_for = {f.name.lower(): f for f in all_folders if f.name is not None}
+    dangled_folder_for = {f.canonical_name: f for f in all_folders
+                          if f.name is None}
 
-    for canonical_name in ['inbox', 'drafts', 'sent', 'spam', 'trash',
-                           'starred', 'important', 'archive', 'all']:
+    canonical_names = {'inbox', 'drafts', 'sent', 'spam', 'trash',
+                       'starred', 'important', 'archive', 'all'}
+    for canonical_name in canonical_names:
         if canonical_name in folder_names:
             backend_folder_name = folder_names[canonical_name].lower()
-            if backend_folder_name not in folders:
-                folder = Folder.create(account, folder_names[canonical_name],
-                                       db_session,
-                                       canonical_name)
+            if backend_folder_name not in folder_for:
+                # Reconcile dangled folders which now exist on the remote
+                if canonical_name in dangled_folder_for:
+                    folder = dangled_folder_for[canonical_name]
+                    folder.name = folder_names[canonical_name]
+                    del dangled_folder_for[canonical_name]
+                else:
+                    folder = Folder.create(account,
+                                           folder_names[canonical_name],
+                                           db_session, canonical_name)
                 attr_name = '{}_folder'.format(canonical_name)
                 setattr(account, attr_name, verify_folder_name(
                     account.id, getattr(account, attr_name), folder))
             else:
-                del folders[backend_folder_name]
+                del folder_for[backend_folder_name]
 
     # Gmail labels, user-created IMAP/EAS folders, etc.
     if 'extra' in folder_names:
         for name in folder_names['extra']:
             name = name[:MAX_FOLDER_NAME_LENGTH]
-            if name.lower() not in folders:
+            if name.lower() not in folder_for:
                 folder = Folder.create(account, name, db_session)
                 db_session.add(folder)
-            if name.lower() in folders:
-                del folders[name.lower()]
+            if name.lower() in folder_for:
+                del folder_for[name.lower()]
 
     # This may cascade to FolderItems and ImapUid (ONLY), which is what we
     # want--doing the update here short-circuits us syncing that change later.
-    log.info("Folders were deleted from the remote: {}".format(folders.keys()))
-    for folder in folders.values():
+    log.info("Folders were deleted from the remote: {}"
+             .format(folder_for.keys()))
+    for name, folder in folder_for.iteritems():
         db_session.delete(folder)
         # TODO(emfree) delete associated tag
 

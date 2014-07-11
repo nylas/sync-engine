@@ -656,7 +656,7 @@ def create_gmail_message(db_session, log, acct, folder, msg):
 
 def add_gmail_attrs(db_session, log, new_uid, flags, folder, g_thrid, g_msgid,
                     g_labels, created):
-    """ Gmail-specific post-create-message bits."""
+    """ Gmail-specific post-create-message bits. """
     # Disable autoflush so we don't try to flush a message with null
     # thread_id, causing a crash, and so that we don't flush on each
     # added/removed label.

@@ -75,41 +75,54 @@ def g_metadata(account_id, session, folder_name):
 
 
 def update_thread_labels(thread, folder_name, g_labels, db_session):
-    existing_labels = {folder.name.lower() for folder in thread.folders}
+    """ Make sure `thread` has all the right labels. """
+
+    existing_labels = {folder.name.lower() for folder in thread.folders
+                       if folder.name is not None} | \
+                      {folder.canonical_name for folder in thread.folders
+                       if folder.canonical_name is not None}
     new_labels = {l.lstrip('\\').lower() for l in g_labels}
     new_labels.add(folder_name.lower())
 
     # Remove labels that have been deleted -- note that the \Inbox, \Sent,
-    # \Important, and \Drafts labels are per-message, not per-thread, but
-    # since we always work at the thread level, _we_ apply the label to the
+    # \Important, \Starred, and \Drafts labels are per-message, not per-thread,
+    # but since we always work at the thread level, _we_ apply the label to the
     # whole thread.
+    # TODO: properly aggregate \Inbox, \Sent, \Important, and \Drafts
+    # per-message so we can detect deletions properly.
     thread.folders = {folder for folder in thread.folders if
-                      folder.name.lower() in new_labels or
-                      folder.name.lower() in ('inbox', 'sent', 'drafts',
-                                              'important')}
+                      (folder.name is not None and
+                       folder.name.lower() in new_labels) or
+                      folder.canonical_name in ('inbox', 'sent', 'drafts',
+                                                'important', 'starred')}
 
     # add new labels
     for label in new_labels:
         if label.lower() not in existing_labels:
             # The problem here is that Gmail's attempt to squash labels and
-            # IMAP folders into the same abstraction doesn't work
-            # perfectly. In particular, there is a '[Gmail]/Sent' folder,
-            # but *also* a 'Sent' label, and so on. We handle this by only
-            # maintaining one folder object that encapsulates both of
-            # these.
-            if label == 'sent':
-                thread.folders.add(thread.namespace.account.sent_folder)
-            elif label == 'draft':
-                thread.folders.add(thread.namespace.account.drafts_folder)
-            elif label == 'starred':
-                thread.folders.add(thread.namespace.account.starred_folder)
-            elif label == 'important':
-                thread.folders.add(
-                    thread.namespace.account.important_folder)
+            # IMAP folders into the same abstraction doesn't work perfectly. In
+            # particular, there is a '[Gmail]/Sent' folder, but *also* a 'Sent'
+            # label, and so on. We handle this by only maintaining one folder
+            # object that encapsulates both of these. If a Gmail user does not
+            # have these folders enabled via IMAP, we create Folder rows
+            # with no 'name' attribute and fill in the 'name' if the account
+            # is later reconfigured.
+            canonical_labels = {
+                'sent': thread.namespace.account.sent_folder,
+                'draft': thread.namespace.account.drafts_folder,
+                'starred': thread.namespace.account.starred_folder,
+                'important': thread.namespace.account.important_folder}
+            if label in canonical_labels:
+                folder = canonical_labels[label]
+                if folder:
+                    thread.folders.add(folder)
+                else:
+                    folder = Folder.find_or_create(
+                        db_session, thread.namespace.account, None, label)
+                    thread.folders.add(folder)
             else:
                 folder = Folder.find_or_create(db_session,
-                                               thread.namespace.account,
-                                               label)
+                                               thread.namespace.account, label)
                 thread.folders.add(folder)
     return new_labels
 
