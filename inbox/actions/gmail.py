@@ -52,6 +52,8 @@ def uidvalidity_cb(db_session, account_id):
 
 def _syncback_action(fn, account, folder_name, db_session):
     """ `folder_name` is a Gmail folder name. """
+    assert folder_name, "folder '{}' is not selectable".format(folder_name)
+
     with writable_connection_pool(account.id).get() as crispin_client:
         crispin_client.select_folder(folder_name, uidvalidity_cb)
         fn(account, db_session, crispin_client)

@@ -11,7 +11,7 @@ log = get_logger()
 
 
 class Folder(MailSyncBase):
-    """ Folders from the remote account backend (IMAP/Exchange). """
+    """ Folders and labels from the remote account backend (IMAP/Exchange). """
     # `use_alter` required here to avoid circular dependency w/Account
     account_id = Column(Integer,
                         ForeignKey('account.id', use_alter=True,
@@ -33,8 +33,8 @@ class Folder(MailSyncBase):
     # not confuse users when displaying it, but still only allow a single
     # folder with any specific name, canonicalized to lowercase.
     name = Column(String(MAX_FOLDER_NAME_LENGTH,
-                         collation='utf8mb4_general_ci'))
-    canonical_name = Column(String(MAX_FOLDER_NAME_LENGTH))
+                         collation='utf8mb4_general_ci'), nullable=True)
+    canonical_name = Column(String(MAX_FOLDER_NAME_LENGTH), nullable=True)
 
     __table_args__ = (UniqueConstraint('account_id', 'name'),)
 
@@ -44,7 +44,7 @@ class Folder(MailSyncBase):
 
     @classmethod
     def create(cls, account, name, session, canonical_name=None):
-        if len(name) > MAX_FOLDER_NAME_LENGTH:
+        if name is not None and len(name) > MAX_FOLDER_NAME_LENGTH:
             log.warning("Truncating long folder name for account {}; "
                         "original name was '{}'" .format(account.id, name))
             name = name[:MAX_FOLDER_NAME_LENGTH]
@@ -55,11 +55,14 @@ class Folder(MailSyncBase):
     @classmethod
     def find_or_create(cls, session, account, name, canonical_name=None):
         try:
-            if len(name) > MAX_FOLDER_NAME_LENGTH:
+            if name is not None and len(name) > MAX_FOLDER_NAME_LENGTH:
                 name = name[:MAX_FOLDER_NAME_LENGTH]
-            obj = session.query(cls).filter(
-                Folder.account_id == account.id,
-                func.lower(Folder.name) == func.lower(name)).one()
+            q = session.query(cls).filter_by(account_id=account.id)
+            if name is not None:
+                q = q.filter(func.lower(Folder.name) == func.lower(name))
+            if canonical_name is not None:
+                q = q.filter_by(canonical_name=canonical_name)
+            obj = q.one()
         except NoResultFound:
             obj = cls.create(account, name, session, canonical_name)
         except MultipleResultsFound:
