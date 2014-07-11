@@ -22,7 +22,7 @@ from inbox.basicauth import AUTH_TYPES
 from inbox.models.session import session_scope
 from inbox.models.backends.imap import ImapAccount
 from inbox.log import get_logger
-log = get_logger()
+logger = get_logger()
 
 __all__ = ['CrispinClient', 'GmailCrispinClient', 'YahooCrispinClient']
 
@@ -100,8 +100,8 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
         Is the connection to the IMAP server read-only?
     """
     def __init__(self, account_id, num_connections, readonly):
-        log.info('Creating Crispin connection pool for account {} with {} '
-                 'connections'.format(account_id, num_connections))
+        logger.info('Creating Crispin connection pool for account {} with {} '
+                    'connections'.format(account_id, num_connections))
         self.account_id = account_id
         self.readonly = readonly
         self._set_account_info()
@@ -140,15 +140,12 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
 
 def _exc_callback():
     gevent.sleep(5)
-    # When we port to structlog this can just be
-    # log.info('Connection broken; retrying', exc_info=True)
-    log.info('Connection broken with error {}; retrying with new connection'.
-             format(sys.exc_info()))
+    logger.info('Connection broken with error; retrying with new connection',
+                exc_info=True)
 
 
 def _fail_callback():
-    log.error('Max retries reached. Aborting. Error: {}'.
-              format(sys.exc_info()))
+    logger.error('Max retries reached. Aborting', exc_info=True)
 
 
 retry_crispin = functools.partial(
@@ -202,7 +199,7 @@ class CrispinClient(object):
     CHUNK_SIZE = 1
 
     def __init__(self, account_id, email_address, conn, readonly=True):
-        self.log = get_logger(account_id)
+        self.log = logger.new(account_id=account_id, module='crispin')
         self.account_id = account_id
         self.email_address = email_address
         # IMAP isn't stateless :(
@@ -254,8 +251,8 @@ class CrispinClient(object):
         self.selected_folder = (folder, select_info)
         # don't propagate cached information from previous session
         self._folder_names = None
-        self.log.info('Selected folder {0} with {1} messages.'.format(
-            folder, select_info['EXISTS']))
+        self.log.info('selected folder', folder=folder,
+                      folder_msg_count=select_info['EXISTS'])
         return uidvalidity_cb(folder, select_info)
 
     @property
@@ -541,9 +538,8 @@ class GmailCrispinClient(CondStoreCrispinClient):
             uid: GMetadata(msgid, thrid)
         """
         uids = [str(u) for u in uids]
-        self.log.debug(
-            "Fetching X-GM-MSGID and X-GM-THRID for {} uids."
-            .format(len(uids)))
+        self.log.debug('fetching X-GM-MSGID and X-GM-THRID',
+                       uid_count=len(uids))
         return dict([(long(uid), GMetadata(long(ret['X-GM-MSGID']),
                                            long(ret['X-GM-THRID']))) for uid,
                      ret in self.conn.fetch(uids, ['X-GM-MSGID',

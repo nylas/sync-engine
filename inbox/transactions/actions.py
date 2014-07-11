@@ -65,7 +65,7 @@ class SyncbackService(gevent.Greenlet):
     actions."""
 
     def __init__(self, poll_interval=1, chunk_size=22, max_pool_size=22):
-        self.log = get_logger(purpose='actions')
+        self.log = get_logger()
         self.actions = ActionRegistry()
         self.worker_pool = gevent.pool.Pool(max_pool_size)
         self.poll_interval = poll_interval
@@ -145,12 +145,11 @@ class SyncbackService(gevent.Greenlet):
         # TODO(emfree) Also support marking trash and spam.
 
     def _execute_async_action(self, func, *args):
-        self.log.info('Scheduling syncback action {} with args {}'.
-                      format(func, args))
+        self.log.info('Scheduling syncback action', func=func, args=args)
         g = gevent.Greenlet(retry_with_logging, lambda: func(*args),
                             logger=self.log)
-        g.link_value(lambda _: self.log.info(
-            'Syncback action {} with args {} completed'.format(func, args)))
+        g.link_value(lambda _: self.log.info('Syncback action completed',
+                                             func=func, args=args))
         self.worker_pool.start(g)
 
     def _run_impl(self):

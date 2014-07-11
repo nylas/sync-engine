@@ -3,14 +3,13 @@ from collections import Counter
 
 import gevent
 
+from inbox.log import get_logger
+logger = get_logger()
 from inbox.models.session import session_scope
 from inbox.models import Contact, Account
-from inbox.log import configure_contacts_logging, get_logger
 from inbox.contacts.google import GoogleContactsProvider
 from inbox.util.concurrency import retry_with_logging
 from inbox.util.misc import or_none
-
-log = get_logger()
 
 
 class ContactSync(gevent.Greenlet):
@@ -33,7 +32,7 @@ class ContactSync(gevent.Greenlet):
     def __init__(self, account_id, poll_frequency=300):
         self.account_id = account_id
         self.poll_frequency = poll_frequency
-        self.log = configure_contacts_logging(account_id)
+        self.log = logger.new(account_id=account_id, component='contact sync')
         self.log.info('Begin syncing contacts...')
 
         gevent.Greenlet.__init__(self)
@@ -63,6 +62,7 @@ def poll(account_id, provider):
         Must have a PROVIDER_NAME attribute and implement the get_contacts()
         method.
     """
+    log = logger.new(account_id=account_id)
     provider_name = provider.PROVIDER_NAME
     with session_scope() as db_session:
         account = db_session.query(Account).get(account_id)
@@ -107,17 +107,16 @@ def poll(account_id, provider):
                         cached_contact.copy_from(local_contact)
                     except MergeError:
                         log.error('Conflicting local and remote updates to '
-                                  'contact.\nLocal: {0}\ncached: {1}\n '
-                                  'remote: {2}'.format(local_contact,
-                                                       cached_contact,
-                                                       remote_contact))
+                                  'contact.',
+                                  local=local_contact, cached=cached_contact,
+                                  remote=remote_contact)
                         # TODO(emfree): Come up with a strategy for handling
                         # merge conflicts. For now, just don't update if there
                         # is a conflict.
                         continue
                 else:
-                    log.warning('Contact {0} already present as remote but '
-                                'not local contact'.format(cached_contact))
+                    log.warning('Contact already present as remote but not '
+                                'local contact', cached_contact=cached_contact)
                     cached_contact.copy_from(remote_contact)
                 change_counter['updated'] += 1
             else:
@@ -132,9 +131,9 @@ def poll(account_id, provider):
 
         account.last_synced_contacts = datetime.datetime.now()
 
-        log.info('Added {0} contacts.'.format(change_counter['added']))
-        log.info('Updated {0} contacts.'.format(change_counter['updated']))
-        log.info('Deleted {0} contacts.'.format(change_counter['deleted']))
+        log.info('added contacts', count=change_counter['added'])
+        log.info('updated contacts', count=change_counter['updated'])
+        log.info('deleted contacts', count=change_counter['deleted'])
 
         db_session.add_all(to_commit)
         db_session.commit()

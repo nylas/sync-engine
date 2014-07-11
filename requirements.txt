@@ -36,5 +36,6 @@ PyMySQL==0.6.2
 click==0.7
 faulthandler==2.3
 pyinstrument==0.10.1
+structlog==0.4.1
 # talon hasn't been released yet, uncomment after release
 #talon==1.0

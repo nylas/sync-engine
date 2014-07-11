@@ -11,7 +11,7 @@ from inbox.basicauth import AUTH_TYPES
 from inbox.models.session import session_scope
 from inbox.models.backends.imap import ImapAccount
 from inbox.sendmail.base import SendMailException, SendError
-log = get_logger(purpose='sendmail')
+log = get_logger()
 
 SMTP_HOSTS = {'gmail': 'smtp.gmail.com'}
 SMTP_PORT = 587
@@ -166,7 +166,7 @@ class SMTPConnection():
 
 class SMTPConnectionPool(geventconnpool.ConnectionPool):
     def __init__(self, account_id, num_connections, debug=False):
-        self.log = get_logger(account_id, 'sendmail: connection_pool')
+        self.log = get_logger()
         self.log.info('Creating SMTP connection pool for account {0} with {1} '
                       'connections'.format(account_id, num_connections))
 
@@ -238,7 +238,7 @@ class SMTPClient(object):
         self.email_address = self.pool.email_address
         self.sent_folder = self.pool.sent_folder
 
-        self.log = get_logger(account_id, 'sendmail')
+        self.log = get_logger()
 
     @smtpconn_retry
     def _send(self, recipients, msg):

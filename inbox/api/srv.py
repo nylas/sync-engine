@@ -1,23 +1,5 @@
-import logging
-
 from gevent.pywsgi import WSGIHandler
-
-from inbox.log import get_logger
-inbox_logger = get_logger(purpose='api')
-
-# Override default werkzeug before it starts up
-werkzeug_log = logging.getLogger('werkzeug')
-for handler in werkzeug_log.handlers:
-    werkzeug_log.removeHandler(handler)
-werkzeug_log.addHandler(inbox_logger)
-
 from flask import Flask, request
-from flask import logging as flask_logging
-
-
-def mock_create_logger(app):
-    return inbox_logger
-flask_logging.create_logger = mock_create_logger
 
 from inbox.api.kellogs import APIEncoder
 from inbox.models import Namespace
@@ -30,21 +12,26 @@ app = Flask(__name__)
 # Note that we need to set this *before* registering the blueprint.
 
 
-# gevent.pywsgi bullshit. see
+# gevent.pywsgi tries to call log.write(), but Python logger objects implement
+# log.debug(), log.info(), etc., so we need to monkey-patch log_request(). See
 # http://stackoverflow.com/questions/9444405/gunicorn-and-websockets
 def log_request(self, *args):
     log = self.server.log
-    if log:
-        if hasattr(log, "info"):
-            log.info(self.format_request(*args))
-        elif hasattr(log, "debug"):
-            log.debug(self.format_request(*args))
-        elif hasattr(log, "warning"):
-            log.warning(self.format_request(*args))
-        elif hasattr(log, "error"):
-            log.error(self.format_request(*args))
-        else:
-            log.write(self.format_request(*args))
+    length = self.response_length
+    if self.time_finish:
+        request_time = round(self.time_finish - self.time_start, 6)
+    if isinstance(self.client_address, tuple):
+        client_address = self.client_address[0]
+    else:
+        client_address = self.client_address
+    # STOPSHIP(emfree) seems this attribute may be missing?
+    status = getattr(self, 'status', None)
+    requestline = getattr(self, 'requestline', None)
+    log.info(length=length,
+             request_time=request_time,
+             client_address=client_address,
+             status=status,
+             requestline=requestline)
 WSGIHandler.log_request = log_request
 
 
@@ -62,8 +49,6 @@ def finish(response):
         response.headers['Access-Control-Allow-Methods'] = \
             'GET,PUT,POST,DELETE,OPTIONS'
         response.headers['Access-Control-Allow-Credentials'] = 'true'
-
-    app.logger.info("Sending response {0}".format(response))
     return response
 
 

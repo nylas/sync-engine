@@ -78,6 +78,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from inbox.util.concurrency import retry_and_report_killed
 from inbox.util.itert import chunk
 from inbox.log import get_logger
+logger = get_logger()
 from inbox.crispin import connection_pool, retry_crispin
 from inbox.models.session import session_scope
 from inbox.models import Tag, Folder
@@ -150,8 +151,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                 Tag.create_canonical_tags(account.namespace, db_session)
         for folder_name in sync_folders:
             if saved_states.get(folder_name) != 'finish':
-                self.log.info("Initializing folder sync for {0}"
-                              .format(folder_name))
+                self.log.info('initializing folder sync')
                 thread = ImapFolderSyncMonitor(self.account_id, folder_name,
                                                folder_id_for[folder_name],
                                                self.email_address,
@@ -167,8 +167,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                 # Allow individual folder sync monitors to shut themselves down
                 # after completing the initial sync.
                 if self._thread_finished(thread):
-                    self.log.info("Folder sync for {} is done."
-                                  .format(folder_name))
+                    self.log.info('folder sync finished')
                     # NOTE: Greenlet is automatically removed from the group
                     # after finishing.
 
@@ -190,7 +189,7 @@ class ImapFolderSyncMonitor(Greenlet):
         self.conn_pool = connection_pool(self.account_id)
         self.retry_fail_classes = retry_fail_classes
 
-        self.log = get_logger(account_id, 'mailsync')
+        self.log = logger.new(account_id=account_id, folder=folder_name)
 
         Greenlet.__init__(self)
         self.link_value(lambda _: report_stopped(account_id=self.account_id,
@@ -254,8 +253,7 @@ def resync_uids_from(previous_state):
         match them with X-GM-MSGIDs and sub in the new UIDs for the old. No
         messages are re-downloaded.
         """
-        log.info("UIDVALIDITY for {0} has changed; resyncing UIDs"
-                 .format(folder_name))
+        log.error("UIDVALIDITY changed")
         raise NotImplementedError
         return previous_state
     return resync_uids
@@ -284,7 +282,7 @@ def base_initial_sync(crispin_client, db_session, log, folder_name,
     new mail! We use a LIFO queue to make sure we're downloading newest mail
     first.
     """
-    log.info('Starting initial sync for {0}'.format(folder_name))
+    log.info('starting initial sync')
 
     local_uids = account.all_uids(crispin_client.account_id,
                                   db_session, folder_name)
@@ -360,6 +358,7 @@ def condstore_base_poll(crispin_client, db_session, log, folder_name,
     messages that need syncing.
 
     """
+    log.bind(state='poll')
     saved_folder_info = account.get_folder_info(crispin_client.account_id,
                                                 db_session, folder_name)
 
@@ -369,8 +368,8 @@ def condstore_base_poll(crispin_client, db_session, log, folder_name,
     status = crispin_client.select_folder(
         folder_name, uidvalidity_cb(db_session, crispin_client.account_id))
 
-    log.debug("POLL current modseq: {} | saved modseq: {}".format(
-        status['HIGHESTMODSEQ'], saved_folder_info.highestmodseq))
+    log.debug(current_modseq=status['HIGHESTMODSEQ'],
+              saved_modseq=saved_folder_info.highestmodseq)
 
     if status['HIGHESTMODSEQ'] > saved_folder_info.highestmodseq:
         acc = db_session.query(ImapAccount).get(crispin_client.account_id)
@@ -387,8 +386,7 @@ def condstore_base_poll(crispin_client, db_session, log, folder_name,
 
         idle_frequency = 1800  # 30min
 
-        log.info("Idling on {0} with {1} timeout".format(
-            folder_name, idle_frequency))
+        log.info('idling', timeout=idle_frequency)
         crispin_client.conn.idle()
         crispin_client.conn.idle_check(timeout=idle_frequency)
 
@@ -401,11 +399,9 @@ def condstore_base_poll(crispin_client, db_session, log, folder_name,
         # print r
 
         crispin_client.conn.idle_done()
-        log.info("IDLE triggered poll or timeout reached on {0}"
-                 .format(folder_name))
+        log.info('IDLE triggered poll')
     else:
-        log.info("Sleeping on {0} for {1} seconds".format(
-            folder_name, shared_state['poll_frequency']))
+        log.info('IDLE sleeping', seconds=shared_state['poll_frequency'])
         sleep(shared_state['poll_frequency'])
 
     return 'poll'
@@ -417,15 +413,15 @@ def highestmodseq_update(crispin_client, db_session, log, folder_name,
     account_id = crispin_client.account_id
     new_highestmodseq = crispin_client.selected_highestmodseq
     new_uidvalidity = crispin_client.selected_uidvalidity
-    log.info("Starting highestmodseq update on {} (current HIGHESTMODSEQ: {})"
-             .format(folder_name, new_highestmodseq))
+    log.info('starting highestmodseq update',
+             current_highestmodseq=new_highestmodseq)
     local_uids = account.all_uids(account_id, db_session, folder_name)
     changed_uids = crispin_client.new_and_updated_uids(last_highestmodseq)
     remote_uids = crispin_client.all_uids()
 
     if changed_uids:
         new, updated = new_or_updated(changed_uids, local_uids)
-        log.info("{0} new and {1} updated UIDs".format(len(new), len(updated)))
+        log.info(new_uid_count=len(new), updated_uid_count=len(updated))
         local_uids += new
         with syncmanager_lock:
             log.debug("highestmodseq_update acquired syncmanager_lock")
@@ -519,9 +515,8 @@ def imap_initial_sync(crispin_client, db_session, log, folder_name,
     assert crispin_client.selected_folder_name == folder_name
 
     remote_uids = crispin_client.all_uids()
-    log.info("Found {0} UIDs for folder {1}".format(len(remote_uids),
-                                                    folder_name))
-    log.info("Already have {0} UIDs".format(len(local_uids)))
+    log.info(remote_uid_count=len(remote_uids))
+    log.info(local_uid_count=len(local_uids))
 
     with shared_state['syncmanager_lock']:
         log.debug("imap_initial_sync acquired syncmanager_lock")
@@ -571,7 +566,7 @@ def check_new_uids(account_id, provider, folder_name, log, uid_download_stack,
 
     Runs until killed. (Intended to be run in a greenlet.)
     """
-    log.info("Spinning up new UID-check poller for {}".format(folder_name))
+    log.info("starting new UID-check poller")
     with connection_pool(account_id).get() as crispin_client:
         with session_scope(ignore_soft_deletes=False) as db_session:
             crispin_client.select_folder(folder_name,
@@ -592,8 +587,7 @@ def check_new_uids(account_id, provider, folder_name, log, uid_download_stack,
                     deleted_uids = remove_deleted_uids(
                         account_id, db_session, log, folder_name, local_uids,
                         remote_uids)
-                    log.info("Removed {} deleted UIDs from {}".format(
-                        len(deleted_uids), folder_name))
+                    log.info('remoted deleted uids', count=len(deleted_uids))
 
                 # filter out messages that have disappeared on the remote side
                 new_uid_download_stack = {u for u in uid_download_stack.queue
@@ -649,18 +643,16 @@ def download_queued_uids(crispin_client, db_session, log,
                         crispin_client.selected_folder_name,
                         1, uid_download_stack.qsize())
 
-    log.info(
-        'Saved all messages and metadata on {} to UIDVALIDITY {} / '
-        'UIDNEXT {}'.format(folder_name,
-                            crispin_client.selected_uidvalidity,
-                            crispin_client.selected_folder_info['UIDNEXT']))
+    log.info('saved all messages and metadata',
+             new_uidvalidity=crispin_client.selected_uidvalidity,
+             new_uidnext=crispin_client.selected_folder_info['UIDNEXT'])
 
 
 def safe_download(crispin_client, log, uids):
     try:
         raw_messages = crispin_client.uids(uids)
     except MemoryError, e:
-        log.error("Ran out of memory while fetching UIDs {}".format(uids))
+        log.error('ran out of memory while fetching UIDs', uids=uids)
         raise e
 
     return raw_messages
@@ -701,8 +693,7 @@ def remove_deleted_uids(account_id, db_session, log, folder_name, local_uids,
         account.remove_messages(account_id, db_session, to_delete, folder_name)
         db_session.commit()
 
-        log.info("Deleted {0} removed messages from {1}".format(
-            len(to_delete), folder_name))
+        log.info('deleted removed messages', count=len(to_delete))
 
     return to_delete
 
@@ -715,7 +706,7 @@ def update_metadata(crispin_client, db_session, log, folder_name, uids,
         new_flags = crispin_client.flags(uids)
         assert sorted(uids, key=int) == sorted(new_flags.keys(), key=int), \
             "server uids != local uids"
-        log.info("new flags: {0}".format(new_flags))
+        log.info(new_flags=new_flags)
         with syncmanager_lock:
             log.debug("update_metadata acquired syncmanager_lock")
             account.update_metadata(crispin_client.account_id, db_session,
@@ -774,5 +765,5 @@ def report_progress(crispin_client, db_session, log, folder_name,
 
     db_session.commit()
 
-    log.info('Syncing {} -- {} msgs in queue'.format(
-        folder_name, num_remaining_messages))
+    log.info('mailsync progress', folder=folder_name,
+             msg_queue_count=num_remaining_messages)

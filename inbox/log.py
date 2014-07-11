@@ -1,122 +1,68 @@
 """
 Logging configuration.
 
-We configure separate loggers for general server logging and per-user loggers
-for mail sync and contact sync.
+Mostly based off http://www.structlog.org/en/0.4.1/standard-library.html.
 
 """
-import os
 import sys
 import socket
-import logging
 import traceback
 
 import requests
-from colorlog import ColoredFormatter
-
+import colorlog
+import structlog
+from structlog._frames import _find_first_app_frame_and_name
 from inbox.config import config
-from inbox.util.file import mkdirp
+import logging
+import logging.handlers
 
 
-file_formatter = logging.Formatter(
-    "[%(levelname)-.1s %(asctime)s %(module)-8.8s:%(lineno)-4s] %(message)s")
-
-
-def get_tty_handler():
-    tty_formatter = ColoredFormatter(
-        # wish we could left-truncate name!
-        "%(name)-20.20s %(log_color)s[%(levelname)-.1s %(asctime)s %(module)-8.8s:%(lineno)-4s]%(reset)s %(message)s",
-        reset=True,
-        log_colors={
-            'DEBUG': 'cyan',
-            'INFO': 'green',
-            'WARNING': 'yellow',
-            'ERROR': 'red',
-            'CRITICAL': 'red',
-        })
-
+def configure_logging(is_prod):
     tty_handler = logging.StreamHandler()
-    tty_handler.setFormatter(tty_formatter)
-    return tty_handler
-
-
-def get_logger(account_id=None, purpose=None):
-    """ Helper for abstracting away our logger names. """
-    if account_id is None:
-        return logging.getLogger('inbox.general')
+    if not is_prod:
+        # Use a more human-friendly format.
+        formatter = colorlog.ColoredFormatter(
+            '%(log_color)s[%(levelname)s]%(reset)s %(message)s',
+            reset=True, log_colors={'DEBUG': 'cyan', 'INFO': 'green',
+                                    'WARNING': 'yellow', 'ERROR': 'red',
+                                    'CRITICAL': 'red'})
     else:
-        if purpose is None:
-            purpose = 'mailsync'
-        return logging.getLogger('inbox.{1}.{0}'.format(
-            account_id, purpose))
+        formatter = logging.Formatter('%(message)s')
+    tty_handler.setFormatter(formatter)
+    # Configure the root logger
+    logging.getLogger().addHandler(tty_handler)
 
 
-def configure_general_logging():
-    """
-    Configure the general server logger to output to screen and server.log.
-
-    Logs are output to a directory configurable via LOGDIR.
-
-    """
-    logdir = config.get_required('LOGDIR')
-    loglevel = config.get_required('LOGLEVEL')
-
-    mkdirp(logdir)
-
-    # configure properties that should cascade
-    inbox_root_logger = logging.getLogger('inbox')
-    inbox_root_logger.setLevel(int(loglevel))
-    # don't pass messages up to the root root logger
-    inbox_root_logger.propagate = False
-
-    # log everything to screen (or main logfile if redirecting)
-    inbox_root_logger.addHandler(get_tty_handler())
-
-    logger = get_logger()
-
-    for handler in logger.handlers:
-        logger.removeHandler(handler)
-
-    logfile = os.path.join(logdir, 'server.log')
-    file_handler = logging.FileHandler(logfile, encoding='utf-8')
-    file_handler.setFormatter(file_formatter)
-    logger.addHandler(file_handler)
-
-    return logger
+def _record_level(logger, name, event_dict):
+    """Record the log level ('info', 'warning', etc.) in the structlog event
+    dictionary."""
+    event_dict['level'] = name
+    return event_dict
 
 
-def configure_logging(account_id, purpose):
-    logger = get_logger(account_id, purpose)
-    logger.propagate = True
-
-    logdir = os.path.join(config['LOGDIR'], str(account_id))
-    mkdirp(logdir)
-    logfile = os.path.join(logdir, '{0}.log'.format(purpose))
-    handler = logging.FileHandler(logfile, encoding='utf-8')
-    handler.setFormatter(file_formatter)
-    logger.addHandler(handler)
-
-    return logger
+def _record_module(logger, name, event_dict):
+    """Record the module and line where the logging call was invoked."""
+    f, name = _find_first_app_frame_and_name(additional_ignores=['inbox.log'])
+    event_dict['module'] = '{}:{}'.format(name, f.f_lineno)
+    return event_dict
 
 
-def configure_mailsync_logging(account_id):
-    """
-    We log output for each mail sync instance to a different file than the
-    main server log, for ease of debugging. Sync logs still go to screen
-    too, for now.
-
-    """
-    return configure_logging(account_id, 'mailsync')
-
-
-def configure_contacts_logging(account_id):
-    """
-    We log output for each contacts sync instance to a different file than
-    the main server log, for ease of debugging. Contacts sync logs still go
-    to screen too, for now.
-
-    """
-    return configure_logging(account_id, 'contacts')
+structlog.configure(
+    processors=[
+        structlog.stdlib.filter_by_level,
+        structlog.processors.TimeStamper(fmt='iso', utc=True),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        _record_module,
+        _record_level,
+        structlog.processors.JSONRenderer(),
+    ],
+    context_class=dict,
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    wrapper_class=structlog.stdlib.BoundLogger,
+    cache_logger_on_first_use=True,
+)
+get_logger = structlog.get_logger
 
 
 def email_exception(logger, etype, evalue, tb):
@@ -154,11 +100,10 @@ def log_uncaught_errors(logger=None):
 
     Parameters
     ----------
-    logger: logging.Logger, optional
+    logger: structlog.BoundLogger, optional
         The logging object to write to.
-
     """
     logger = logger or get_logger()
-    logger.exception('Uncaught error')
+    logger.error('Uncaught error', exc_info=True)
     if config.get('EMAIL_EXCEPTIONS'):
         email_exception(logger, *sys.exc_info())

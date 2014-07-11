@@ -88,7 +88,7 @@ class WebhookService():
     webhooks."""
     def __init__(self, poll_interval=1, chunk_size=22):
         self.workers = defaultdict(set)
-        self.log = get_logger(purpose='webhooks')
+        self.log = get_logger()
         self.poll_interval = poll_interval
         self.chunk_size = chunk_size
         self.minimum_id = -1
