@@ -12,7 +12,7 @@ class MockLogger(object):
     def __init__(self):
         self.call_count = 0
 
-    def exception(self, *args, **kwargs):
+    def error(self, *args, **kwargs):
         self.call_count += 1
 
 

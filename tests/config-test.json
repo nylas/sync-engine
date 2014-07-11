@@ -8,7 +8,7 @@
 
 "MSG_PARTS_DIRECTORY": "tests/data/parts",
 "CACHE_BASEDIR" : "tests/cache",
-"LOGDIR": "tests/log",
+"TEST_LOGFILE": "tests/log",
 
 "ACTION_QUEUE_LABEL": "actions_test",
 

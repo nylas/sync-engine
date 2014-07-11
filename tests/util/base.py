@@ -4,7 +4,6 @@ import sys
 import subprocess
 
 import zerorpc
-from shutil import rmtree
 from pytest import fixture, yield_fixture
 import gevent
 
@@ -44,15 +43,24 @@ def log(request, config):
     Returns root server logger. For others loggers, use this fixture
     for setup but then call inbox.log.get_logger().
 
-    Testing log directory is removed at the end of the test run!
+    Testing log file is removed at the end of the test run!
 
     """
-    from inbox.log import configure_general_logging
+    import logging
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers:
+        root_logger.removeHandler(handler)
+
+    logfile = config.get_required('TEST_LOGFILE')
+    fileHandler = logging.FileHandler(logfile, encoding='utf-8')
+    root_logger.addHandler(fileHandler)
 
     def remove_logs():
-        rmtree(config['LOGDIR'], ignore_errors=True)
+        try:
+            os.remove(logfile)
+        except OSError:
+            pass
     request.addfinalizer(remove_logs)
-    return configure_general_logging()
 
 
 @yield_fixture(scope='function')

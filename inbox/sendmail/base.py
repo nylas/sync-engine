@@ -157,7 +157,7 @@ def send_draft(account_id, draft_id):
     with session_scope() as db_session:
         account = db_session.query(Account).get(account_id)
 
-        log = get_logger(account.id, 'drafts')
+        log = get_logger()
         sendmail_client = get_sendmail_client(account)
         try:
             draft = db_session.query(SpoolMessage).filter(

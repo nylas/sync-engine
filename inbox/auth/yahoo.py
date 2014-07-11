@@ -3,6 +3,9 @@ import socket
 
 import sqlalchemy.orm.exc
 
+from inbox.log import get_logger
+log = get_logger()
+
 from imapclient import IMAPClient
 
 from inbox.log import get_logger
@@ -53,7 +56,8 @@ def verify_account(account):
     try:
         conn.login(account.email_address, account.password)
     except IMAPClient.Error as e:
-        log.error('IMAP connection error: {}'.format(e))
+        log.error('yahoo_account_verify_failed',
+                  error='[ALERT] Invalid credentials (Failure)')
         raise
 
     return conn

@@ -5,12 +5,13 @@ import posixpath
 import gdata.auth
 import gdata.contacts.client
 
+from inbox.log import get_logger
+logger = get_logger()
 from inbox.models.session import session_scope
 from inbox.models import Contact
 from inbox.models.backends.gmail import GmailAccount
 from inbox.oauth import (GOOGLE_OAUTH_CLIENT_ID,
                               GOOGLE_OAUTH_CLIENT_SECRET, OAUTH_SCOPE)
-from inbox.log import configure_logging
 
 SOURCE_APP_NAME = 'InboxApp Contact Sync Engine'
 
@@ -38,7 +39,8 @@ class GoogleContactsProvider(object):
 
     def __init__(self, account_id):
         self.account_id = account_id
-        self.log = configure_logging(account_id, 'googlecontacts')
+        self.log = logger.new(account_id=account_id, component='contacts sync',
+                              provider=self.PROVIDER_NAME)
 
     def _get_google_client(self):
         """Return the Google API client."""
@@ -100,8 +102,8 @@ class GoogleContactsProvider(object):
             # representation.
             raw_data = google_contact.to_string()
         except AttributeError, e:
-            self.log.error('Something is wrong with contact: {0}'
-                           .format(google_contact))
+            self.log.error('Something is wrong with contact',
+                           contact=google_contact)
             raise e
 
         deleted = google_contact.deleted is not None

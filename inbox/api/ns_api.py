@@ -1,7 +1,7 @@
 import os
 
 import zerorpc
-from flask import request, g, Blueprint, make_response, current_app, Response
+from flask import request, g, Blueprint, make_response, Response
 from flask import jsonify as flask_jsonify
 from sqlalchemy import asc
 from sqlalchemy.orm.exc import NoResultFound
@@ -17,6 +17,7 @@ from inbox.api.validation import (InputError, get_tags, get_attachments,
                                   get_thread)
 from inbox.config import config
 from inbox import contacts, sendmail
+from inbox.log import get_logger
 from inbox.models.base import MAX_INDEXABLE_LENGTH
 from inbox.models.session import InboxSession
 from inbox.transactions import client_sync
@@ -61,7 +62,7 @@ def pull_lang_code(endpoint, values):
 def start():
     g.db_session = InboxSession(engine)
 
-    g.log = current_app.logger
+    g.log = get_logger()
     try:
         g.namespace = g.db_session.query(Namespace) \
             .filter(Namespace.public_id == g.namespace_public_id).one()
@@ -121,8 +122,8 @@ def record_auth(setup_state):
 
     def default_json_error(ex):
         """ Exception -> flask JSON responder """
-        app.logger.error("Uncaught error thrown by Flask/Werkzeug: {0}"
-                         .format(ex))
+        logger = get_logger()
+        logger.error('Uncaught error thrown by Flask/Werkzeug', exc_info=ex)
         response = flask_jsonify(message=str(ex), type='api_error')
         response.status_code = (ex.code
                                 if isinstance(ex, HTTPException)

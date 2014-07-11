@@ -4,8 +4,7 @@ import argparse
 
 from setproctitle import setproctitle; setproctitle('inbox-console')
 
-from inbox.log import configure_general_logging, get_logger
-configure_general_logging()
+from inbox.log import get_logger
 log = get_logger()
 
 parser = argparse.ArgumentParser(description='REPL for crispin')

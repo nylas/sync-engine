@@ -1,25 +1,21 @@
-import os
+import json
 import sys
 import traceback
-from logging import getLogger
 
-from inbox.log import log_uncaught_errors
+from inbox.log import log_uncaught_errors, get_logger
 
 
 def test_root_filelogger(config, log):
-    log.warning('TEST LOG STATEMENT')
-    root_logger = getLogger()
-    root_logger.warning('ROOT LOG STATEMENT')
+    logger = get_logger()
+    logger.info('INFO')
+    logger.warning('WARNING')
+    logger.error('ERROR')
     # NOTE: This slurps the whole logfile. Hope it's not big.
-    log_contents = open(os.path.join(config['LOGDIR'], 'server.log'),
-                        'r').read()
+    log_contents = open(config.get_required('TEST_LOGFILE'), 'r').read()
 
-    assert 'TEST LOG STATEMENT' in log_contents
-    assert 'ROOT LOG STATEMENT' not in log_contents
+    assert all(phrase in log_contents
+               for phrase in ('INFO', 'WARNING', 'ERROR'))
 
-
-def test_sync_filelogger(config, log):
-    pass
 
 # Helper functions for test_log_uncaught_errors
 
@@ -33,14 +29,18 @@ def test_log_uncaught_errors(config, log):
         error_throwing_function()
     except:
         log_uncaught_errors()
-    log_contents = open(os.path.join(config['LOGDIR'], 'server.log'),
-                        'r').read()
 
-    assert 'ValueError' in log_contents
-    assert 'GreenletExit' not in log_contents
+    with open(config.get_required('TEST_LOGFILE'), 'r') as f:
+        last_log_entry = json.loads(f.readlines()[-1])
+
+    assert 'exception' in last_log_entry
+    exc_info = last_log_entry['exception']
+
+    assert 'ValueError' in exc_info
+    assert 'GreenletExit' not in exc_info
     # Check that the traceback is logged. The traceback stored in
     # sys.exc_info() contains an extra entry for the test_log_uncaught_errors
     # frame, so just look for the rest of the traceback.
     tb = sys.exc_info()[2]
     for call in traceback.format_tb(tb)[1:]:
-        assert call in log_contents
+        assert call in exc_info

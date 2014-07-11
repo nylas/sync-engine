@@ -12,7 +12,6 @@
 "MYSQL_PORT": 3306,
 
 "CACHE_BASEDIR" : "/var/lib/inboxapp/cache",
-"LOGDIR": "/var/log/inboxapp",
 "LOGLEVEL": 10,
 "ACTION_QUEUE_LABEL": "action",
 

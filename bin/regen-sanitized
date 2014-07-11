@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 
 # Logging is really noisy, but sometimes useful
-# from inbox.log import configure_general_logging, get_logger
-# configure_general_logging()
+# from inbox.log import get_logger
 # log = get_logger()
 
 from inbox.models.session import session_scope
