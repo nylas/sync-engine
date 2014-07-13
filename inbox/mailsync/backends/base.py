@@ -85,7 +85,7 @@ def save_folder_names(log, account, folder_names, db_session):
 
     # This may cascade to FolderItems and ImapUid (ONLY), which is what we
     # want--doing the update here short-circuits us syncing that change later.
-    log.info("folders deleted from remote", folders=folders.keys())
+    log.info("folders deleted from remote", folders=folder_for.keys())
     for name, folder in folder_for.iteritems():
         db_session.delete(folder)
         # TODO(emfree) delete associated tag
