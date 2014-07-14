@@ -117,7 +117,6 @@ class Part(Block):
         return self.content_disposition is not None
 
     @property
-    def namespace(self):
-        if not self.message:
-            return None
-        return self.message.namespace
+    def is_embedded(self):
+        return (self.content_disposition is not None and
+                self.content_disposition.lower() == 'inline')

@@ -105,18 +105,25 @@ def encode(obj, namespace_public_id=None):
             'email': obj.email_address
         }
 
-    elif isinstance(obj, Part):  # ie: Attachments
-        return {
+    elif isinstance(obj, Block):  # ie: Attachments/Files
+        resp = {
             'id': obj.public_id,
             'object': 'file',
             'namespace': _get_namespace_public_id(obj),
             'content_type': obj.content_type,
             'size': obj.size,
-            'filename': obj.filename or obj.content_id,
-            'is_embedded': obj.content_disposition is not None
-            and obj.content_disposition.lower() == 'inline',
-            'message': obj.message.public_id
+            'filename': obj.filename,
+            'is_embedded': False,
+            'message': None
         }
+        if isinstance(obj, Part):
+            # if obj is actually a message attachment (and not merely an
+            # uploaded file), set additional properties
+            resp.update({
+                'is_embedded': obj.is_embedded,
+                'message': obj.message.public_id,
+            })
+        return resp
 
     elif isinstance(obj, Block):  # ie: Files
         # TODO consider adding more info?
