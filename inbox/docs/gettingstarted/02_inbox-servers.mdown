@@ -12,18 +12,15 @@ Start the sync process by running the command below from the `/vagrant` director
 $ bin/inbox-start
 ```
 
-Once the sync process is running, you can authenticate an email account and start a sync. In a new VirtualBox shell in the `/vagrant` directory, run the commands below:
-
+Once the sync process is running, you can authenticate an email account and start a sync. In a new VirtualBox shell in the `/vagrant` directory, run
 ```
 :::bash
 $ bin/inbox-auth [YOUR_ACCOUNT]@gmail.com
-
-$ bin/inbox-sync start [YOUR_ACCOUNT]@gmail.com
 ```
 
-The `inbox-auth` command will walk you through the process of obtaining an authorization token from Google or another service for syncing your mail.In the open-source version of the sync engine, your credentials are stored to the local mySQL database for simplicity. At this time, the open-source Inbox Sync Engine does not support Exchange, but you can request access to the Exchange beta <a href="/docs">here</a>.
+The `inbox-auth` command will walk you through the process of obtaining an authorization token from Google or another service for syncing your mail. In the open-source version of the sync engine, your credentials are stored to the local MySQL database for simplicity. At this time, the open-source Inbox Sync Engine does not support Exchange, but you can request access to the Exchange beta <a href="/docs">here</a>.
 
-The `inbox-sync` command tells the sync process to start syncing your account with the underlying provider. Note that an initial sync can take quite a while depending on how much mail you have.
+The sync engine will automatically begin syncing your account with the underlying provider. The `inbox-sync` command allows you to manually stop or restart the sync by running `inbox-sync stop [YOUR_ACCOUNT]@gmail.com` or `inbox-sync start [YOUR_ACCOUNT]@gmail.com`. Note that an initial sync can take quite a while depending on how much mail you have.
 
 Inbox API Service
 -----
