@@ -111,7 +111,8 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         backref=backref('threads',
                         primaryjoin='and_('
                         'Thread.namespace_id == Namespace.id, '
-                        'Thread.deleted_at.is_(None))'))
+                        'Thread.deleted_at.is_(None))'),
+        load_on_pending=True)
 
     mailing_list_headers = Column(JSON, nullable=True)
 

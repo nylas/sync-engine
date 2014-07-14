@@ -59,7 +59,8 @@ class Block(Blob, MailSyncBase, HasRevisions, HasPublicID):
                                      'Block.namespace_id == Namespace.id, '
                                      'Block.deleted_at.is_(None))'),
         primaryjoin='and_(Block.namespace_id==Namespace.id, '
-        'Namespace.deleted_at==None)')
+        'Namespace.deleted_at==None)',
+        load_on_pending=True)
 
     @reconstructor
     def init_on_load(self):
