@@ -38,11 +38,10 @@ Here's how to set up a development environment running on your local machine:
 
 8. `bin/inbox-start`
 
-And _voilà_! Auth an account via the commandline and start syncing:
+And _voilà_! Auth an account via the commandline to start syncing:
 
 ```
   bin/inbox-auth ben.bitdiddle1861@gmail.com
-  bin/inbox-sync start ben.bitdiddle1861@gmail.com
 ```
 
 
