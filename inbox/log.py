@@ -47,6 +47,48 @@ def _record_module(logger, name, event_dict):
     return event_dict
 
 
+def _format_string_renderer(_, __, event_dict):
+    """Use with the BoundLogger class below to properly handle messages of the
+    form `log.info('some message to format %s', some_value')`."""
+    positional_args = event_dict.get('_positional_args')
+    if positional_args:
+        event_dict['event'] = event_dict['event'] % positional_args
+        del event_dict['_positional_args']
+    return event_dict
+
+
+class BoundLogger(structlog._base.BoundLoggerBase):
+    """Adaptation of structlog.stdlib.BoundLogger to accept positional
+    arguments. See https://github.com/hynek/structlog/pull/23/
+    (we can remove this if that ever gets merged)."""
+    def debug(self, event=None, *args, **kw):
+        return self._proxy_to_logger('debug', event, *args, **kw)
+
+    def info(self, event=None, *args, **kw):
+        return self._proxy_to_logger('info', event, *args, **kw)
+
+    def warning(self, event=None, *args, **kw):
+        return self._proxy_to_logger('warning', event, *args, **kw)
+
+    warn = warning
+
+    def error(self, event=None, *args, **kw):
+        return self._proxy_to_logger('error', event, *args, **kw)
+
+    def critical(self, event=None, *args, **kw):
+        return self._proxy_to_logger('critical', event, *args, **kw)
+
+    # Note(emfree): We could also add an `exception` method here to support
+    # `log.exception(...)`.
+
+    def _proxy_to_logger(self, method_name, event=None, *event_args,
+                         **event_kw):
+        if event_args:
+            event_kw['_positional_args'] = event_args
+        return super(BoundLogger, self)._proxy_to_logger(method_name, event,
+                                                         **event_kw)
+
+
 structlog.configure(
     processors=[
         structlog.stdlib.filter_by_level,
@@ -55,11 +97,12 @@ structlog.configure(
         structlog.processors.format_exc_info,
         _record_module,
         _record_level,
+        _format_string_renderer,
         structlog.processors.JSONRenderer(),
     ],
     context_class=dict,
     logger_factory=structlog.stdlib.LoggerFactory(),
-    wrapper_class=structlog.stdlib.BoundLogger,
+    wrapper_class=BoundLogger,
     cache_logger_on_first_use=True,
 )
 get_logger = structlog.get_logger

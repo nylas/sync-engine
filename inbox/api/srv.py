@@ -1,4 +1,3 @@
-from gevent.pywsgi import WSGIHandler
 from flask import Flask, request
 
 from inbox.api.kellogs import APIEncoder
@@ -10,29 +9,7 @@ from ns_api import app as ns_api
 app = Flask(__name__)
 # Handle both /endpoint and /endpoint/ without redirecting.
 # Note that we need to set this *before* registering the blueprint.
-
-
-# gevent.pywsgi tries to call log.write(), but Python logger objects implement
-# log.debug(), log.info(), etc., so we need to monkey-patch log_request(). See
-# http://stackoverflow.com/questions/9444405/gunicorn-and-websockets
-def log_request(self, *args):
-    log = self.server.log
-    length = self.response_length
-    if self.time_finish:
-        request_time = round(self.time_finish - self.time_start, 6)
-    if isinstance(self.client_address, tuple):
-        client_address = self.client_address[0]
-    else:
-        client_address = self.client_address
-    # STOPSHIP(emfree) seems this attribute may be missing?
-    status = getattr(self, 'status', None)
-    requestline = getattr(self, 'requestline', None)
-    log.info(length=length,
-             request_time=request_time,
-             client_address=client_address,
-             status=status,
-             requestline=requestline)
-WSGIHandler.log_request = log_request
+app.url_map.strict_slashes = False
 
 
 @app.before_request
@@ -73,5 +50,4 @@ def home():
 </body></html>
 """
 
-app.url_map.strict_slashes = False
 app.register_blueprint(ns_api)  # /n/<namespace_id>/...
