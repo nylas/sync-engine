@@ -28,11 +28,11 @@ from inbox.log import get_logger
 log = get_logger()
 
 
-def _trim_filename(s, max_len=64, log=None):
+def _trim_filename(s, account_id, mid, max_len=64):
     if s and len(s) > max_len:
-        if log:
-            log.warning(u"field is too long. Truncating to {}"
-                        u"characters. {}".format(max_len, s))
+        log.warning('filename is too long, truncating',
+                    account_id=account_id, mid=mid, max_len=max_len,
+                    filename=s)
         return s[:max_len - 8] + s[-8:]  # Keep extension
     return s
 
@@ -145,7 +145,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                 "Required keyword arguments: account, mid, folder_name, "
                 "received_date, flags, body_string")
 
-        # trickle-down bugs
+        # stop trickle-down bugs
         assert account.namespace is not None
         assert not isinstance(body_string, unicode)
 
@@ -153,10 +153,11 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             parsed = mime.from_string(body_string)
 
             mime_version = parsed.headers.get('Mime-Version')
-            # NOTE: sometimes MIME-Version is set to "1.0 (1.0)", hence the
-            # .startswith
+            # sometimes MIME-Version is "1.0 (1.0)", hence the .startswith()
             if mime_version is not None and not mime_version.startswith('1.0'):
-                log.error('Unexpected MIME-Version: {0}'.format(mime_version))
+                log.warning('Unexpected MIME-Version',
+                            account_id=account.id, folder_name=folder_name,
+                            mid=mid, mime_version=mime_version)
 
             self.data_sha256 = sha256(body_string).hexdigest()
 
@@ -210,8 +211,9 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                     with_self=parsed.content_type.is_singlepart()):
                 i += 1
                 if mimepart.content_type.is_multipart():
-                    log.warning("multipart sub-part found! on {}"
-                                .format(self.g_msgid))
+                    log.warning('multipart sub-part found',
+                                account_id=account.id, folder_name=folder_name,
+                                mid=mid)
                     continue  # TODO should we store relations?
 
                 new_part = Part()
@@ -222,25 +224,24 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                 new_part.content_type = mimepart.content_type.value
                 new_part.filename = _trim_filename(
                     mimepart.content_type.params.get('name'),
-                    log=log)
+                    account.id, mid)
                 # TODO maybe also trim other headers?
 
                 if mimepart.content_disposition[0] is not None:
                     value, params = mimepart.content_disposition
                     if value not in ['inline', 'attachment']:
-                        errmsg = """
-        Unknown Content-Disposition on message {0} found in {1}.
-        Bad Content-Disposition was: '{2}'
-        Parsed Content-Disposition was: '{3}'""".format(
-                            mid, folder_name, mimepart.content_disposition)
-                        log.error(errmsg)
+                        log.error('Unknown Content-Disposition',
+                                  account_id=account.id, mid=mid,
+                                  folder_name=folder_name,
+                                  bad_content_disposition=
+                                  mimepart.content_disposition,
+                                  parsed_content_disposition=value)
                         continue
                     else:
                         new_part.content_disposition = value
                         if value == 'attachment':
                             new_part.filename = _trim_filename(
-                                params.get('filename'),
-                                log=log)
+                                params.get('filename'), account.id, mid)
 
                 if mimepart.body is None:
                     data_to_write = ''
@@ -262,15 +263,15 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             # Occasionally iconv will fail via maximum recursion depth. We
             # still keep the metadata and mark it as b0rked.
             _log_decode_error(account.id, folder_name, mid, body_string)
-            log.error('Message DecodeError', account_id=account.id,
+            log.error('Message parsing DecodeError', account_id=account.id,
                       folder_name=folder_name, err_filename=_get_errfilename(
                           account.id, folder_name, mid))
             self.mark_error()
             return
         except RuntimeError:
             _log_decode_error(account.id, folder_name, mid, body_string)
-            log.error('RuntimeError<iconv> msg logged to {0}'.format(
-                _get_errfilename(account.id, folder_name, mid)))
+            log.error('Message parsing RuntimeError<iconv>'.format(
+                err_filename=_get_errfilename(account.id, folder_name, mid)))
             self.mark_error()
             return
 
