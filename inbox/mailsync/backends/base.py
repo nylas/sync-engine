@@ -185,7 +185,8 @@ def new_or_updated(uids, local_uids):
 
 class BaseMailSyncMonitor(Greenlet):
     def __init__(self, account_id, email_address, provider, heartbeat=1,
-                 retry_fail_classes=None):
+                 retry_fail_classes=[MailsyncError,
+                                     ValueError, AttributeError]):
         self.inbox = Queue()
         # how often to check inbox, in seconds
         self.heartbeat = heartbeat
