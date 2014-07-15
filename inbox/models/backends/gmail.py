@@ -21,6 +21,10 @@ class GmailAccount(ImapAccount):
     __mapper_args__ = {'polymorphic_identity': 'gmailaccount'}
 
     refresh_token_id = Column(Integer())  # Secret
+    # STOPSHIP(emfree) store these either as secrets or as properties of the
+    # developer app.
+    client_id = Column(String(256))
+    client_secret = Column(String(256))
     scope = Column(String(512))
     access_type = Column(String(64))
     family_name = Column(String(256))
@@ -57,7 +61,9 @@ class GmailAccount(ImapAccount):
                 return tok
         else:
             # first time getting access token, or perhaps it expired?
-            tok, expires = new_token(self.refresh_token)
+            tok, expires = new_token(self.refresh_token,
+                                     self.client_id,
+                                     self.client_secret)
 
             if validate_token(tok):
                 self.set_access_token(tok, expires)
