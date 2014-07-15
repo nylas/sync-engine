@@ -73,7 +73,10 @@ class GmailSyncMonitor(ImapSyncMonitor):
         ImapSyncMonitor.__init__(self, account_id, namespace_id, email_address,
                                  provider, heartbeat=1,
                                  poll_frequency=poll_frequency,
-                                 retry_fail_classes=[GmailSettingError])
+                                 retry_fail_classes=[MailsyncError,
+                                                     ValueError,
+                                                     AttributeError,
+                                                     GmailSettingError])
 
 
 @retry_crispin
