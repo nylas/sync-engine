@@ -16,17 +16,17 @@ GET https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>
 {
     "id": "84umizq7c4jtrew491brpa6iu",
     "object": "message",
-    "subject": "Re: Dinner on Friday?"
+    "subject": "Re: Dinner on Friday?",
     "from": [
         {
-            "name": "Ben Bitdiddle"
-            "email": "ben.bitdiddle@gmail.com",
+            "name": "Ben Bitdiddle",
+            "email": "ben.bitdiddle@gmail.com"
         }
     ],
     "to": [
         {
-            "name": "Bill Rogers"
-            "email": "wbrogers@mit.edu",
+            "name": "Bill Rogers",
+            "email": "wbrogers@mit.edu"
         }
     ],
     "cc": [],
@@ -35,7 +35,7 @@ GET https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>
     "date": 1370084645,
     "thread": "5vryyrki4fqt7am31uso27t3f",
     "files": [
-        "1g76i48k34wqbf6qgp285nw0o",
+        "1g76i48k34wqbf6qgp285nw0o"
     ],
     "body": "<html><body>....</body></html>"
 }

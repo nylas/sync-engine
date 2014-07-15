@@ -58,7 +58,7 @@ PUT https://api.inboxapp.com/n/<namespace_id>/thread/<thread_id>
 ```
 :::json
 {
-    "add_tags": ["housing-search", "craigslist"]
+    "add_tags": ["housing-search", "craigslist"],
     "remove_tags": ["unread"]
 }
 ```
