@@ -96,7 +96,8 @@ class Part(Block):
         backref=backref("parts", primaryjoin='and_('
                         'Part.message_id == Message.id, '
                         'Part.deleted_at.is_(None))',
-                        cascade="all, delete, delete-orphan"))
+                        cascade="all, delete, delete-orphan"),
+        load_on_pending=True)
 
     walk_index = Column(Integer)
     content_disposition = Column(Enum('inline', 'attachment'))
