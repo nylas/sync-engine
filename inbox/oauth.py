@@ -57,15 +57,20 @@ def validate_token(access_token):
     return validation_dict
 
 
-def new_token(refresh_token):
+def new_token(refresh_token, client_id=None,
+              client_secret=None):
     """ Helper function which gets a new access token from a refresh token."""
     assert refresh_token is not None, 'refresh_token required'
+    # If these aren't set on the GmailAccount object, use the values from
+    # config so that the dev version of the sync engine continues to work.
+    client_id = client_id or GOOGLE_OAUTH_CLIENT_ID
+    client_secret = client_secret or GOOGLE_OAUTH_CLIENT_SECRET
 
     log.info('acquiring_new_oauth_token')
     args = {
         'refresh_token': refresh_token,
-        'client_id': GOOGLE_OAUTH_CLIENT_ID,
-        'client_secret': GOOGLE_OAUTH_CLIENT_SECRET,
+        'client_id': client_id,
+        'client_secret': client_secret,
         'grant_type': 'refresh_token'
     }
 
