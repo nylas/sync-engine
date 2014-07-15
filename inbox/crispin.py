@@ -42,7 +42,7 @@ class GmailSettingError(Exception):
     pass
 
 
-def connection_pool(account_id, pool_size=8, connection_pool_for=dict()):
+def connection_pool(account_id, pool_size=6, connection_pool_for=dict()):
     """ Per-account crispin connection pool.
 
     Use like this:
