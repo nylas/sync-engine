@@ -89,7 +89,8 @@ from inbox.mailsync.reporting import report_stopped
 from inbox.mailsync.backends.imap import account
 from inbox.mailsync.backends.base import (save_folder_names,
                                           create_db_objects,
-                                          commit_uids, new_or_updated)
+                                          commit_uids, new_or_updated,
+                                          MailsyncError)
 from inbox.mailsync.backends.base import BaseMailSyncMonitor
 
 
@@ -129,27 +130,32 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             'initial' state at a time.
         """
         with session_scope(ignore_soft_deletes=False) as db_session:
-            saved_states = dict()
-            folder_id_for = dict()
-            for saved_state in db_session.query(ImapFolderSyncStatus)\
-                    .filter_by(account_id=self.account_id):
-                saved_states[saved_state.folder.name] = saved_state.state
-                folder_id_for[saved_state.folder.name] = saved_state.folder.id
-
-            # it's possible we've never started syncs for these folders before
-            for folder_id, folder_name, in \
-                    db_session.query(Folder.id, Folder.name).filter_by(
-                        account_id=self.account_id):
-                folder_id_for[folder_name] = folder_id
-
             with connection_pool(self.account_id).get() as crispin_client:
                 sync_folders = crispin_client.sync_folders()
                 account = db_session.query(ImapAccount)\
                     .get(self.account_id)
                 save_folder_names(self.log, account,
                                   crispin_client.folder_names(), db_session)
-                Tag.create_canonical_tags(account.namespace, db_session)
+            Tag.create_canonical_tags(account.namespace, db_session)
+
+            folder_id_for = {name: id_ for id_, name in db_session.query(
+                Folder.id, Folder.name).filter_by(account_id=self.account_id)}
+
+            saved_states = {name: state for name, state in
+                            db_session.query(Folder.name,
+                                             ImapFolderSyncStatus.state)
+                            .join(ImapFolderSyncStatus.folder)
+                            .filter(ImapFolderSyncStatus.account_id ==
+                                    self.account_id)}
+
         for folder_name in sync_folders:
+            if folder_name not in folder_id_for:
+                self.log.error("Missing Folder object when starting sync",
+                               folder_name=folder_name,
+                               folder_id_for=folder_id_for)
+                raise MailsyncError("Missing Folder '{}' on account {}"
+                                    .format(folder_name, self.account_id))
+
             if saved_states.get(folder_name) != 'finish':
                 self.log.info('initializing folder sync')
                 thread = ImapFolderSyncMonitor(self.account_id, folder_name,
