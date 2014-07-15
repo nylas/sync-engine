@@ -97,12 +97,6 @@ def save_folder_names(log, account, folder_names, db_session):
     db_session.commit()
 
 
-def trigger_index_update(namespace_id):
-    c = zerorpc.Client()
-    c.connect(config.get('SEARCH_SERVER_LOC', None))
-    c.index(namespace_id)
-
-
 def gevent_check_join(log, threads, errmsg):
     """ Block until all threads have completed and throw an error if threads
         are not successful.
@@ -179,9 +173,6 @@ def commit_uids(db_session, log, new_uids):
                     pass
 
         raise e
-
-    # NOTE: indexing temporarily disabled because xapian is leaking fds :/
-    # trigger_index_update(self.account.namespace.id)
 
 
 def new_or_updated(uids, local_uids):
