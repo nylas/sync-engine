@@ -14,7 +14,7 @@ from inbox.models import (
 from inbox.api.kellogs import APIEncoder
 from inbox.api.filtering import Filter
 from inbox.api.validation import (InputError, get_tags, get_attachments,
-                                  get_thread)
+                                  get_thread, validate_public_id)
 from inbox.config import config
 from inbox import contacts, sendmail
 from inbox.log import get_logger
@@ -158,6 +158,34 @@ def index():
 def tag_query_api():
     results = list(g.namespace.tags.values())
     return g.encoder.jsonify(results)
+
+
+@app.route('/tags/<public_id>', methods=['GET', 'PUT'])
+def tag_read_update_api(public_id):
+    try:
+        validate_public_id(public_id)
+        tag = g.db_session.query(Tag).filter(
+            Tag.public_id == public_id,
+            Tag.namespace_id == g.namespace.id).one()
+    except ValueError:
+        return err(400, '{} is not a valid id'.format(public_id))
+    except NoResultFound:
+        return err(404, 'No tag found')
+    if request.method == 'GET':
+        return g.encoder.jsonify(tag)
+    elif request.method == 'PUT':
+        data = request.get_json(force=True)
+        if data.keys() != ['name']:
+            return err(400, 'Malformed tag update request')
+        if not tag.user_created:
+            return err(403, 'Cannot modify tag {}'.format(public_id))
+        new_name = data['name']
+        if not Tag.name_available(new_name, g.namespace.id, g.db_session):
+            return err(409, 'Tag name already used')
+        tag.name = new_name
+        g.db_session.commit()
+        return g.encoder.jsonify(tag)
+    # TODO(emfree) also support deleting user-created tags.
 
 
 @app.route('/tags/', methods=['POST'])

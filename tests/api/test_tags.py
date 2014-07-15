@@ -1,4 +1,5 @@
 """Exercise the tags API."""
+import json
 import gevent
 import pytest
 from tests.util.base import api_client, mock_syncback_service
@@ -28,6 +29,32 @@ def test_get_tags(api_client):
 def test_create_tag(api_client):
     api_client.post_data('/tags/', {'name': 'foo'})
     assert 'foo' in [tag['name'] for tag in api_client.get_data('/tags/')]
+
+
+def test_read_update_tags(api_client):
+    r = api_client.post_data('/tags/', {'name': 'foo'})
+    public_id = json.loads(r.data)['id']
+
+    tag_data = api_client.get_data('/tags/{}'.format(public_id))
+    assert tag_data['name'] == 'foo'
+    assert tag_data['id'] == public_id
+
+    r = api_client.put_data('/tags/{}'.format(public_id), {'name': 'bar'})
+    assert json.loads(r.data)['name'] == 'bar'
+
+    updated_tag_data = api_client.get_data('/tags/{}'.format(public_id))
+    assert updated_tag_data['name'] == 'bar'
+    assert updated_tag_data['id'] == public_id
+
+
+def test_can_only_update_user_tags(api_client):
+    r = api_client.get_data('/tags/unread')
+    assert r['name'] == 'unread'
+    assert r['id'] == 'unread'
+
+    r = api_client.put_data('/tags/unread', {'name': 'new name'})
+    assert r.status_code == 403
+
 
 
 def test_cant_create_existing_tag(api_client):

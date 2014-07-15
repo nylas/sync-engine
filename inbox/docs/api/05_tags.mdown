@@ -63,6 +63,39 @@ PUT https://api.inboxapp.com/n/<namespace_id>/thread/<thread_id>
 }
 ```
 
+# Getting data for a single tag
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/tags/<tag_id>
+```
+
+# Changing the name of an existing tag
+```
+:::xml
+PUT https://api.inboxapp.com/n/<namespace_id>/tags/<tag_id>
+```
+
+**Response**
+```
+:::json
+{
+    "id": "d121cvdyjhgacaqyymzjg5prl",
+    "name": "housing-search"
+}
+```
+
+**Request body**
+
+```
+:::json
+{
+    "name": <new_name>
+}
+```
+
+Note that only tags that were created via the API can be changed. You can't
+rename e.g. the `sent` or the `unread` tag.
+
 # Canonical tags
 
 These are an extended version of [RFC-6154](http://tools.ietf.org/html/rfc6154), mapped to the relevant values in backend providers. Some will not be used if unsupported by the user's provider. (e.g. `spam`)
