@@ -87,10 +87,10 @@ def encode(obj, namespace_public_id=None):
             'subject': obj.subject,
             'participants': format_address_list(obj.participants),
             'last_message_timestamp': obj.recentdate,
-            'subject_date': obj.subjectdate,
+            'first_message_timestamp': obj.subjectdate,
             'snippet': obj.snippet,
-            'messages':  [m.public_id for m in obj.messages if not
-                          m.is_draft],
+            'messages': [m.public_id for m in obj.messages if not
+                         m.is_draft],
             'drafts': [m.public_id for m in obj.latest_drafts],
             'tags': [{'name': tag.name, 'id': tag.public_id}
                      for tag in obj.tags]

@@ -80,7 +80,7 @@ GET https://api.inboxapp.com/n/<namespace_id>/sync/events?stamp=<stamp>
                     }
                 ],
                 "subject": "Missed Zulip from Michael Grinich",
-                "subject_date": 1401132649
+                "first_message_timestamp": 1401132649
             }
         },
         {

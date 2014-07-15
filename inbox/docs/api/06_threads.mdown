@@ -11,7 +11,7 @@ Threads are the main object in Inbox. They can be read, archived, and deleted. A
 GET https://api.inboxapp.com/n/<namespace_id>/threads/<thread_id>
 ```
 
-The thread object includes useful information like subject, participants, and time of the most recenly received message.
+The thread object includes useful information like subject, participants, and time of the most recently received message.
 
 **Sample response:**
 
@@ -23,6 +23,7 @@ The thread object includes useful information like subject, participants, and ti
     "namespace": "awa6ltos76vz5hvphkp8k17nt"
     "subject": "Dinner Party on Friday",
     "last_message_timestamp": 1398229259,
+    "first_message_timestamp": 1298229259,
     "participants": [
         {
             "name": "Ben Bitdiddle"
