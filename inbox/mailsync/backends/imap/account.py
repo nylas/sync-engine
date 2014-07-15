@@ -229,10 +229,9 @@ def create_imap_message(db_session, log, account, folder, msg):
     """
 
     msg_class = SpoolMessage if msg.created else Message
-    new_msg = msg_class.create(account=account, mid=msg.uid,
-                               folder_name=folder.name,
-                               received_date=msg.internaldate, flags=msg.flags,
-                               body_string=msg.body)
+    new_msg = msg_class(account=account, mid=msg.uid, folder_name=folder.name,
+                        received_date=msg.internaldate, flags=msg.flags,
+                        body_string=msg.body)
 
     if new_msg:
         imapuid = ImapUid(account=account, folder=folder,
