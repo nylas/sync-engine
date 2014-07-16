@@ -46,6 +46,7 @@ from inbox.log import get_logger
 from inbox.models.session import session_scope
 from inbox.api.kellogs import APIEncoder
 from inbox.models import Transaction, Webhook, Lens
+from inbox.sqlalchemy_ext.util import safer_yield_per
 
 
 class EventData(object):
@@ -91,7 +92,7 @@ class WebhookService():
         self.log = get_logger()
         self.poll_interval = poll_interval
         self.chunk_size = chunk_size
-        self.minimum_id = -1
+        self.minimum_id = 0
         self.poller = None
         self.polling = False
         self.encoder = APIEncoder()
@@ -144,7 +145,7 @@ class WebhookService():
                 failure_notify_url=parameters.get('failure_notify_url'),
                 include_body=parameters.get('include_body', False),
                 active=parameters.get('active', True),
-                min_processed_id=self.minimum_id)
+                min_processed_id=self.minimum_id - 1)
 
             db_session.add(hook)
             db_session.add(lens)
@@ -152,7 +153,6 @@ class WebhookService():
             if hook.active:
                 self._start_hook(hook, db_session)
             return self.encoder.cereal(hook, pretty=True)
-
 
     def start_hook(self, hook_public_id):
         with session_scope() as db_session:
@@ -165,7 +165,7 @@ class WebhookService():
         if any(worker.id == hook.id for worker in self.all_active_workers):
             # Hook already has a worker
             return 'OK hook already running'
-        hook.min_processed_id = self.minimum_id
+        hook.min_processed_id = self.minimum_id - 1
         hook.active = True
         namespace_id = hook.namespace_id
         worker = WebhookWorker(hook)
@@ -207,12 +207,13 @@ class WebhookService():
 
     def _start_polling(self):
         self.log.info('Start polling')
-        self.minimum_id = min(hook.min_processed_id for hook in
+        self.minimum_id = min(hook.min_processed_id + 1 for hook in
                               self.all_active_workers)
         self.poller = gevent.spawn(self._poll)
         self.polling = True
 
     def _stop_polling(self):
+
         self.log.info('Stop polling')
         self.poller.kill()
         self.polling = False
@@ -241,20 +242,18 @@ class WebhookService():
             max_tx_id, = db_session.query(func.max(Transaction.id)).one()
             if max_tx_id is None:
                 max_tx_id = 0
-            for pointer in range(self.minimum_id, max_tx_id, self.chunk_size):
-                # TODO(emfree) add the right index to make this query more
-                # performant.
-                for transaction in db_session.query(Transaction). \
-                        filter(Transaction.table_name == 'message',
-                               Transaction.command == 'insert',
-                               Transaction.id > pointer,
-                               Transaction.id <= pointer + self.chunk_size). \
-                        order_by(asc(Transaction.id)):
-                    namespace_id = transaction.namespace_id
-                    for worker in self.workers[namespace_id]:
-                        if worker.match(transaction):
-                            worker.enqueue(EventData(transaction))
-                    self.minimum_id = transaction.id
+            query = db_session.query(Transaction). \
+                filter(Transaction.table_name == 'message',
+                       Transaction.command == 'insert'). \
+                order_by(asc(Transaction.id))
+            for transaction in safer_yield_per(query, Transaction.id,
+                                               self.minimum_id,
+                                               self.chunk_size):
+                namespace_id = transaction.namespace_id
+                for worker in self.workers[namespace_id]:
+                    if worker.match(transaction):
+                        worker.enqueue(EventData(transaction))
+                self.minimum_id = transaction.id + 1
             self.log.debug('Processed tx. setting min id to {0}'.
                            format(self.minimum_id))
 

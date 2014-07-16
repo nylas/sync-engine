@@ -4,6 +4,7 @@ from sqlalchemy import asc, desc
 from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.models import Transaction
+from inbox.sqlalchemy_ext.util import safer_yield_per
 
 
 def dict_delta(current_dict, previous_dict):
@@ -148,11 +149,14 @@ def get_entries_from_public_id(namespace_id, events_start, db_session,
                          format(events_start))
     query = db_session.query(Transaction). \
         order_by(asc(Transaction.id)). \
-        filter(Transaction.namespace_id == namespace_id,
-               Transaction.id > internal_start_id)
+        filter(Transaction.namespace_id == namespace_id)
+
     events = []
     events_end = events_start
-    for transaction in query.yield_per(result_limit):
+    for transaction in safer_yield_per(query, Transaction.id,
+                                       internal_start_id + 1,
+                                       result_limit):
+
 
         if should_publish_transaction(transaction, db_session):
             event = create_event(transaction)

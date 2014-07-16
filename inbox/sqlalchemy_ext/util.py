@@ -169,3 +169,27 @@ def maybe_refine_query(query, subquery):
     if subquery is None:
         return query
     return query.join(subquery.subquery())
+
+
+def safer_yield_per(query, id_field, start_id, count):
+    """Incautious execution of 'for result in query.yield_per(N):' may cause
+    slowness or OOMing over large tables. This is a less general but less
+    dangerous alternative.
+
+    Parameters
+    ----------
+    query: sqlalchemy.Query
+        The query to yield windowed results from.
+    id_field: A SQLAlchemy attribute to use for windowing. E.g.,
+        `Transaction.id`
+    start_id: The value of id_field at which to start iterating.
+    count: int
+        The number of results to fetch at a time.
+    """
+    while True:
+        results = query.filter(id_field >= start_id).limit(count).all()
+        if not results:
+            return
+        for result in results:
+            start_id = result.id + 1
+            yield result
