@@ -710,8 +710,8 @@ def update_metadata(crispin_client, db_session, log, folder_name, uids,
     # bigger chunk because the data being fetched here is very small
     for uids in chunk(uids, 5 * crispin_client.CHUNK_SIZE):
         new_flags = crispin_client.flags(uids)
-        assert sorted(uids, key=int) == sorted(new_flags.keys(), key=int), \
-            "server uids != local uids"
+        # messages can disappear in the meantime; we'll update them next sync
+        uids = [uid for uid in uids if uid in new_flags]
         log.info(new_flags=new_flags)
         with syncmanager_lock:
             log.debug("update_metadata acquired syncmanager_lock")
