@@ -641,13 +641,12 @@ def create_gmail_message(db_session, log, acct, folder, msg):
 
     new_uid = account.create_imap_message(db_session, log, acct, folder, msg)
 
-    if new_uid:
-        new_uid = add_gmail_attrs(db_session, log, new_uid, msg.flags,
-                                  folder, msg.g_thrid, msg.g_msgid,
-                                  msg.g_labels, msg.created)
+    new_uid = add_gmail_attrs(db_session, log, new_uid, msg.flags, folder,
+                              msg.g_thrid, msg.g_msgid, msg.g_labels,
+                              msg.created)
 
-        update_contacts(db_session, acct.id, new_uid.message)
-        return new_uid
+    update_contacts(db_session, acct.id, new_uid.message)
+    return new_uid
 
 
 def add_gmail_attrs(db_session, log, new_uid, flags, folder, g_thrid, g_msgid,

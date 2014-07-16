@@ -70,10 +70,9 @@ def create_yahoo_message(db_session, log, acct, folder, msg):
 
     new_uid = account.create_imap_message(db_session, log, acct, folder, msg)
 
-    if new_uid:
-        new_uid = add_yahoo_attrs(db_session, log, new_uid, msg.flags,
-                                  folder, msg.created)
-        return new_uid
+    new_uid = add_yahoo_attrs(db_session, log, new_uid, msg.flags, folder,
+                              msg.created)
+    return new_uid
 
 
 def add_yahoo_attrs(db_session, log, new_uid, flags, folder, created):
