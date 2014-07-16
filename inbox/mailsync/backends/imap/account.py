@@ -236,7 +236,7 @@ def create_imap_message(db_session, log, account, folder, msg):
     if new_msg:
         imapuid = ImapUid(account=account, folder=folder,
                           msg_uid=msg.uid, message=new_msg)
-        imapuid.update_imap_flags(msg.flags)
+        imapuid.update_imap_flags(msg.flags, msg.g_labels)
 
         new_msg.is_draft = imapuid.is_draft
         new_msg.is_read = imapuid.is_seen
