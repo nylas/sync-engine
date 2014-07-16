@@ -54,6 +54,7 @@ def log(request, config):
     logfile = config.get_required('TEST_LOGFILE')
     fileHandler = logging.FileHandler(logfile, encoding='utf-8')
     root_logger.addHandler(fileHandler)
+    root_logger.setLevel(logging.DEBUG)
 
     def remove_logs():
         try:
