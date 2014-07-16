@@ -29,8 +29,11 @@ def configure_logging(is_prod):
     else:
         formatter = logging.Formatter('%(message)s')
     tty_handler.setFormatter(formatter)
-    # Configure the root logger
-    logging.getLogger().addHandler(tty_handler)
+    # Configure the root logger.
+    root_logger = logging.getLogger()
+    root_logger.addHandler(tty_handler)
+    # Set loglevel DEBUG if config value is missing.
+    root_logger.setLevel(config.get('LOGLEVEL', 10))
 
 
 def _record_level(logger, name, event_dict):
