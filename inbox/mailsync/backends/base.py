@@ -1,6 +1,5 @@
 from gc import collect as garbage_collect
 
-import zerorpc
 from gevent import Greenlet, joinall, sleep
 from gevent.queue import Queue, Empty
 from sqlalchemy.exc import DataError
@@ -9,7 +8,6 @@ from inbox.log import get_logger
 logger = get_logger()
 from inbox.util.concurrency import retry_with_logging, retry_and_report_killed
 from inbox.util.itert import partition
-from inbox.config import config
 from inbox.models import (Account, Folder, MAX_FOLDER_NAME_LENGTH)
 from inbox.mailsync.exc import SyncException
 from inbox.mailsync.reporting import report_stopped
