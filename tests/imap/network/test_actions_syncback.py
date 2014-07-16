@@ -19,6 +19,7 @@ def test_archive_move_syncback(db, config):
         id=THREAD_ID, namespace_id=NAMESPACE_ID).one()[0]
     account = db.session.query(ImapAccount).get(ACCOUNT_ID)
 
+    set_remote_archived(account, THREAD_ID, False, db.session)
     set_remote_archived(account, THREAD_ID, True, db.session)
 
     assert account.inbox_folder_id and account.all_folder_id, \
