@@ -551,8 +551,10 @@ def add_new_imapuids(crispin_client, log, db_session, remote_g_metadata,
                         db_session, acc, crispin_client.selected_folder_name),
                     msg_uid=uid, message=message_for[uid]) for uid in uids]
                 for item in new_imapuids:
-                    item.update_imap_flags(flags[item.msg_uid].flags,
-                                           flags[item.msg_uid].labels)
+                    # skip uids which have disappeared in the meantime
+                    if item.msg_uid in flags:
+                        item.update_imap_flags(flags[item.msg_uid].flags,
+                                               flags[item.msg_uid].labels)
             db_session.add_all(new_imapuids)
             db_session.commit()
 
