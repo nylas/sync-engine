@@ -221,8 +221,20 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
     def latest_drafts(self):
         """Return all drafts on this thread that don't have later revisions.
         """
-        return [message for message in self.messages if message.is_draft and
-                message.is_latest]
+        drafts = []
+        # TODO(emfree) we can probably clean this up after
+        # https://review.inboxapp.com/T163 is fixed.
+        for message in self.messages:
+            if not message.is_draft:
+                continue
+            if isinstance(message, SpoolMessage):
+                if message.is_latest:
+                    drafts.append(message)
+            else:
+                # This message object is a draft that was synced from backend,
+                # so is not a SpoolMessage instance.
+                drafts.append(message)
+        return drafts
 
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator}
