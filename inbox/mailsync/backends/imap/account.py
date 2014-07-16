@@ -233,15 +233,14 @@ def create_imap_message(db_session, log, account, folder, msg):
                         received_date=msg.internaldate, flags=msg.flags,
                         body_string=msg.body)
 
-    if new_msg:
-        imapuid = ImapUid(account=account, folder=folder,
-                          msg_uid=msg.uid, message=new_msg)
-        imapuid.update_imap_flags(msg.flags, msg.g_labels)
+    imapuid = ImapUid(account=account, folder=folder, msg_uid=msg.uid,
+                      message=new_msg)
+    imapuid.update_imap_flags(msg.flags, msg.g_labels)
 
-        new_msg.is_draft = imapuid.is_draft
-        new_msg.is_read = imapuid.is_seen
+    new_msg.is_draft = imapuid.is_draft
+    new_msg.is_read = imapuid.is_seen
 
-        # NOTE: This might be a good place to add FolderItem entries for
-        # non-Gmail backends.
+    # NOTE: This might be a good place to add FolderItem entries for
+    # non-Gmail backends.
 
-        return imapuid
+    return imapuid
