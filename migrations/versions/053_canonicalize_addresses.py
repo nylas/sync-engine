@@ -64,9 +64,10 @@ def upgrade():
         db_session.commit()
 
         for contact in db_session.query(Contact):
-            contact._raw_address = contact.email_address
-            contact._canonicalized_address = canonicalize_address(
-                contact.email_address)
+            if contact.email_address is not None:
+                contact._raw_address = contact.email_address
+                contact._canonicalized_address = canonicalize_address(
+                    contact.email_address)
         db_session.commit()
 
     op.drop_index('ix_account_email_address', table_name='account')
