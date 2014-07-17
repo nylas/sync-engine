@@ -5,7 +5,7 @@ from sqlalchemy.schema import UniqueConstraint
 
 from inbox.models.base import MailSyncBase
 from inbox.models.tag import Tag
-from inbox.models.base import MAX_FOLDER_NAME_LENGTH, MAX_INDEXABLE_LENGTH
+from inbox.models.constants import MAX_FOLDER_NAME_LENGTH, MAX_INDEXABLE_LENGTH
 from inbox.log import get_logger
 log = get_logger()
 

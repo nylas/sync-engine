@@ -2,10 +2,9 @@
 import calendar
 import uuid
 
-from flanker.addresslib import address
-
 from inbox.contacts import search_util
 from inbox.models import Contact, MessageContactAssociation
+from inbox.util.addr import canonicalize_address
 
 SIGNAL_NAME_MAPPING = {
     'to_addr': 'to_count',
@@ -13,16 +12,6 @@ SIGNAL_NAME_MAPPING = {
     'cc_addr': 'cc_count',
     'bcc_addr': 'bcc_count',
 }
-
-
-def canonicalize_address(addr):
-    """Gmail addresses with and without periods are the same, so we want to
-    treat them as belonging to the same contact."""
-    parsed_address = address.parse(addr, addr_spec_only=True)
-    local_part = parsed_address.mailbox
-    if parsed_address.hostname in ('gmail.com', 'googlemail.com'):
-        local_part = local_part.replace('.', '')
-    return '@'.join((local_part, parsed_address.hostname))
 
 
 def update_contacts(db_session, account_id, message):

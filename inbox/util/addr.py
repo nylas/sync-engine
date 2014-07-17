@@ -3,6 +3,17 @@ from flanker.addresslib import address
 from inbox.util.misc import or_none
 
 
+def canonicalize_address(addr):
+    """Gmail addresses with and without periods are the same."""
+    parsed_address = address.parse(addr, addr_spec_only=True)
+    if not isinstance(parsed_address, address.EmailAddress):
+        return addr
+    local_part = parsed_address.mailbox
+    if parsed_address.hostname in ('gmail.com', 'googlemail.com'):
+        local_part = local_part.replace('.', '')
+    return '@'.join((local_part, parsed_address.hostname))
+
+
 # TODO we should probably just store flanker's EmailAddress object
 # instead of doing this thing with quotes ourselves
 def strip_quotes(display_name):

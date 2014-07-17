@@ -18,7 +18,7 @@ from inbox.api.validation import (InputError, get_tags, get_attachments,
 from inbox.config import config
 from inbox import contacts, sendmail
 from inbox.log import get_logger
-from inbox.models.base import MAX_INDEXABLE_LENGTH
+from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from inbox.models.session import InboxSession
 from inbox.transactions import client_sync
 

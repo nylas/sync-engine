@@ -3,17 +3,16 @@ from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.schema import UniqueConstraint
 
-from inbox.models.mixins import HasPublicID
+from inbox.models.mixins import HasPublicID, HasEmailAddress
 from inbox.models.transaction import HasRevisions
 from inbox.models.base import MailSyncBase
 from inbox.models.search import SearchToken
 
-from inbox.models.base import MAX_INDEXABLE_LENGTH
 from inbox.models.account import Account
 from inbox.models.message import Message
 
 
-class Contact(MailSyncBase, HasRevisions, HasPublicID):
+class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
     """Data for a user's contact."""
     account_id = Column(ForeignKey(Account.id, ondelete='CASCADE'),
                         nullable=False)
@@ -35,8 +34,6 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID):
     # modifications to the data.
     source = Column('source', Enum('local', 'remote'))
 
-    email_address = Column(String(MAX_INDEXABLE_LENGTH),
-                           nullable=True, index=True)
     name = Column(Text)
     # phone_number = Column(String(64))
 

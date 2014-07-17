@@ -26,6 +26,11 @@ def test_filtering(db, api_client):
                                   format('inboxapptest@gmail.com'))
     assert len(results) > 1
 
+    # Check that we canonicalize when searching.
+    alternate_results = api_client.get_data('/threads?any_email={}'.
+                                            format('inboxapp.test@gmail.com'))
+    assert len(alternate_results) == len(results)
+
     results = api_client.get_data('/messages?from={}'.format(from_addr))
     assert len(results) == 1
     results = api_client.get_data('/threads?from={}'.format(from_addr))

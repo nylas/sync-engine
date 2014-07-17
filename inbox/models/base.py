@@ -3,9 +3,6 @@ from sqlalchemy.ext.declarative import as_declarative, declared_attr
 
 from inbox.models.mixins import AutoTimestampMixin
 
-MAX_INDEXABLE_LENGTH = 191
-MAX_FOLDER_NAME_LENGTH = MAX_INDEXABLE_LENGTH
-
 
 @as_declarative()
 class MailSyncBase(AutoTimestampMixin):

@@ -1,7 +1,6 @@
-
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy.sql.expression import false, true
+from sqlalchemy.sql.expression import false
 
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.schema import UniqueConstraint
@@ -10,7 +9,8 @@ from sqlalchemy.schema import UniqueConstraint
 from inbox.sqlalchemy_ext.util import generate_public_id
 
 from inbox.models.transaction import HasRevisions
-from inbox.models.base import MailSyncBase, MAX_INDEXABLE_LENGTH
+from inbox.models.base import MailSyncBase
+from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from inbox.models.namespace import Namespace
 
 

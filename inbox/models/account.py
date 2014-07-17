@@ -7,20 +7,15 @@ from sqlalchemy.sql.expression import true
 
 from inbox.util.file import Lock
 
-from inbox.models.mixins import HasPublicID
+from inbox.models.mixins import HasPublicID, HasEmailAddress
 from inbox.models.base import MailSyncBase
 from inbox.models.folder import Folder
-from inbox.models.base import MAX_INDEXABLE_LENGTH
 
 
-class Account(MailSyncBase, HasPublicID):
+class Account(MailSyncBase, HasPublicID, HasEmailAddress):
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_identity': 'account',
                        'polymorphic_on': discriminator}
-
-    # http://stackoverflow.com/questions/386294
-    email_address = Column(String(MAX_INDEXABLE_LENGTH),
-                           nullable=True, index=True)
 
     @property
     def provider(self):
