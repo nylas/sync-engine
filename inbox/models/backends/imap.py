@@ -159,8 +159,9 @@ class ImapThread(Thread):
     # different g_thrid for each user. We don't know yet if g_thrids are
     # unique globally.
 
-    # Gmail documents X-GM-THRID as 64-bit unsigned integer
-    g_thrid = Column(BigInteger, nullable=True, index=True)
+    # Gmail documents X-GM-THRID as 64-bit unsigned integer. Unique across
+    # an account but not necessarily globally unique.
+    g_thrid = Column(BigInteger, nullable=True, index=True, unique=False)
 
     @classmethod
     def from_gmail_message(cls, session, namespace, message):

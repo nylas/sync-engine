@@ -97,9 +97,18 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     # this might be a mail-parsing bug, or just a message from a bad client
     decode_error = Column(Boolean, server_default=false(), nullable=False)
 
-    # only on messages from Gmail
-    g_msgid = Column(BigInteger, nullable=True, index=True)
-    g_thrid = Column(BigInteger, nullable=True, index=True)
+    # only on messages from Gmail (TODO: use different table)
+    #
+    # X-GM-MSGID is guaranteed unique across an account but not globally
+    # across all Gmail.
+    #
+    # Messages between different accounts *may* have the same X-GM-MSGID,
+    # but it's unlikely.
+    #
+    # (Gmail info from
+    # http://mailman13.u.washington.edu/pipermail/imap-protocol/2014-July/002290.html.)
+    g_msgid = Column(BigInteger, nullable=True, index=True, unique=False)
+    g_thrid = Column(BigInteger, nullable=True, index=True, unique=False)
 
     # The uid as set in the X-INBOX-ID header of a sent message we create
     inbox_uid = Column(String(64), nullable=True)
