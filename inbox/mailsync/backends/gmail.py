@@ -494,9 +494,13 @@ def add_new_imapuid(db_session, log, gmessage, folder_name, acc):
     """
     if not db_session.query(ImapUid.msg_uid).join(Folder).filter(
             Folder.name == folder_name,
+            ImapUid.account_id == acc.id,
             ImapUid.msg_uid == gmessage.uid).all():
-        message = db_session.query(Message).filter_by(
-            g_msgid=gmessage.g_metadata.msgid).one()
+        message = db_session.query(Message).join(ImapThread).filter(
+            ImapThread.g_thrid == gmessage.g_metadata.thrid,
+            Message.g_thrid == gmessage.g_metadata.thrid,
+            Message.g_msgid == gmessage.g_metadata.msgid,
+            ImapThread.namespace_id == acc.namespace.id).one()
         new_imapuid = ImapUid(
             account=acc,
             folder=Folder.find_or_create(db_session, acc, folder_name),
@@ -527,22 +531,28 @@ def add_new_imapuids(crispin_client, log, db_session, remote_g_metadata,
         local_folder_uids = {uid for uid, in
                              db_session.query(ImapUid.msg_uid).join(Folder)
                              .filter(
+                                 ImapUid.account_id ==
+                                 crispin_client.account_id,
                                  Folder.name ==
                                  crispin_client.selected_folder_name,
                                  ImapUid.msg_uid.in_(uids))}
         uids = [uid for uid in uids if uid not in local_folder_uids]
 
         if uids:
-            # collate message objects to relate the new imapuids
-            imapuid_uid_for = dict([(metadata.msgid, uid) for (uid, metadata)
-                                    in remote_g_metadata.items()
-                                    if uid in uids])
-            imapuid_g_msgids = [remote_g_metadata[uid].msgid for uid in uids]
-            message_for = dict([(imapuid_uid_for[mm.g_msgid], mm) for mm in
-                                db_session.query(Message).filter(
-                                    Message.g_msgid.in_(imapuid_g_msgids))])
-
             acc = db_session.query(GmailAccount).get(crispin_client.account_id)
+
+            # collate message objects to relate the new imapuids to
+            imapuid_for = dict([(metadata.msgid, uid) for (uid, metadata)
+                                in remote_g_metadata.items()
+                                if uid in uids])
+            imapuid_g_msgids = [remote_g_metadata[uid].msgid for uid in uids]
+            message_for = dict([(imapuid_for[m.g_msgid], m) for m in
+                                db_session.query(Message).join(ImapThread)
+                                .filter(
+                                    Message.g_msgid.in_(imapuid_g_msgids),
+                                    ImapThread.namespace_id ==
+                                    acc.namespace.id)])
+
             # Folder.find_or_create()'s query will otherwise trigger a flush.
             with db_session.no_autoflush:
                 new_imapuids = [ImapUid(
