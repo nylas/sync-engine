@@ -87,7 +87,6 @@ The `limit` [filter](#filters) allows you to specify how many threads you would 
 
 If you are building an application that intends to sync all of the user's threads, like a full-featured mail client, you should use the [sync protocol](#sync-protocol) to avoid repeatedly paginating over the entire set of threads in the user's inbox.
 
-
 # Participants
 
 The list of thread participants includes everyone involved in the thread. The `name` field on each participant is the underlying `phrase` associated with their email address. In typical IMAP clients you set the phrase manually when you configure the account, so it's possible for phrases to vary for the same email address, or for the phrase to be missing entirely. When Inbox displays lists of participants it does not consolidate copies of an email addresses with different phrases, because phrases are often overloaded to provide context. For example, this is a valid set of participants:

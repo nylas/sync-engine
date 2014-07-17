@@ -36,7 +36,6 @@ GET https://api.inboxapp.com/n/<namespace_id>/tags
 GET https://api.inboxapp.com/n/<namespace_id>/tags/<tag_id>
 ```
 
-
 # Canonical Tags
 
 Inbox exposes a set of standard, canonical tags: an extended version of [RFC-6154](http://tools.ietf.org/html/rfc6154) mapped to the underlying folders / labels, etc. on each backend provider. A few of the standard tags, such as `spam`, may only be present if they are supported by the underlying email service.
@@ -59,16 +58,15 @@ You can add and remove tags from Inbox threads using a simple PUT request:
 
 ```
 :::xml
-PUT https://api.inboxapp.com/n/<namespace_id>/threads/<thread_id>
+POST https://api.inboxapp.com/n/<namespace_id>/tags
 ```
 
 **Request body**
 
 ```
-:::json
+::json
 {
-    "add_tags": ["housing-search", "craigslist"],
-    "remove_tags": ["unread"]
+    "name": <new tag name>
 }
 ```
 
@@ -124,7 +122,6 @@ POST https://api.inboxapp.com/n/<namespace_id>/tags
     "name": <new tag name>
 }
 ```
-
 
 
 # Changing custom tag names
