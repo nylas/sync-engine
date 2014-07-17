@@ -30,12 +30,12 @@ The thread object includes useful information like subject, participants, and ti
             "email": "ben.bitdiddle@gmail.com"
         },
         {
-            "name": "",
-            "email": "ben.bitdiddle@gmail.com"
+            "name": "Charles Mason",
+            "email": "cmason@cmu.edu"
         },
         {
-            "email": "wrogers@mit.edu",
-            "name": "Bill Rogers"
+            "name": "Bill Rogers",
+            "email": "wrogers@mit.edu"
         }
     ],
     "snippet": "Hey Bill, Looking forward to getting together for dinner on Friday. Want can I bring? I have a couple bottles of wine or could put together",
@@ -60,8 +60,6 @@ The thread object includes useful information like subject, participants, and ti
 }
 ```
 
-
-
 # Retrieving Many Threads
 
 ```
@@ -76,24 +74,72 @@ This API supports [Filters](#filters), making it easy to return a subset of thre
 GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=inbox
 ```
 
+Filters also allow you to make more complex queries like the one below, which shows threads that include `mark@inboxapp.com` as a participant and are unread, ordered by date:
 
-**Response:**
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=unread&any_email=mark@inboxapp.com&order_by=date
+```
+
+# Pagination
+
+The `limit` [filter](#filters) allows you to specify how many threads you would like returned. If your application only needs a few threads, you should explicitly provide a `limit` to improve performance. If your application needs to fetch a large number of threads, you can implement basic pagination using the `offset` [filter](#filters). If a request returns less than `limit` threads, you have run out of threads.
+
+If you are building an application that intends to sync all of the user's threads, like a full-featured mail client, you should use the [sync protocol](#sync-protocol) to avoid repeatedly paginating over the entire set of threads in the user's inbox.
+
+
+# Participants
+
+The list of thread participants includes everyone involved in the thread. The `name` field on each participant is the underlying `phrase` associated with their email address. In typical IMAP clients you set the phrase manually when you configure the account, so it's possible for phrases to vary for the same email address, or for the phrase to be missing entirely. When Inbox displays lists of participants it does not consolidate copies of an email addresses with different phrases, because phrases are often overloaded to provide context. For example, this is a valid set of participants:
 
 ```
 :::json
 [
-    <thread_object>,
-    <thread_object>,
-    <thread_object>,
-    ...
+    {
+        "name": "Bill Rogers",
+        "email": "wrogers@mit.edu"
+    },
+    {
+        "name": "Jon Smith (via Inbox Support)",
+        "email": "support@inboxapp.com"
+    },
+    {
+        "name": "Mark Tanner (via Inbox Support)",
+        "email": "support@inboxapp.com"
+    }
 ]
 ```
 
-# Archiving, Starring, and Deleting threads
+Inbox does not consolidate these two participants based on their email address `support@inboxapp.com`, because they could (and in this case do) represent two separate participants in the thread.
 
-These actions are expressed as applying specific tags to a thread. See [Tags](#tags) for more details.
+The `name` field may also be blank. In this case, you may want to display the email address or look up the email address in an external address book.
+
+```
+:::json
+[
+    {
+        "name": "Bill Rogers",
+        "email": "wrogers@mit.edu"
+    },
+    {
+        "name": "",
+        "email": "no-reply@example.com"
+    }
+]
+```
+
+# Snippets
+
+Inbox provides a snippet for each thread so that your application can preview message content without making additional API calls. The snippet is a small excerpt of text from the most recent message in the thread. It is automatically updated when messages are added to threads.
+
+Snippets are always provided as plain text with HTML tags and other content stripped from the body. Their length varies based on the length of the underlying messages, and a thread may have an empty snippet if the message in thread has no body text.
 
 
-# Replying to threads
+# Archiving, Starring, and Deleting
+
+You can perform actions on threads, such as archiving and marking as read, using [tags](#tags). For example, you can star a thread by adding the `starred` [tag](#tags). See the [tags](#tags) documentation for more information.
+
+
+# Replying and Sending
 
 See [Drafts & Sending](#drafts).

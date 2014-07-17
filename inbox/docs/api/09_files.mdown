@@ -58,7 +58,7 @@ POST https://api.inboxapp.com/n/<namespace_id>/files
 ```
 
 
-This endpoint is used to transfer files to Inbox, which must be done before adding them to a draft message. Data should be sent as multipart-form data with a single file field named `file`. An example of a correct request is shown below:
+This endpoint is used to transfer files to Inbox, which must be done before adding them to a draft message. Data should be sent as multipart-form data with a single file field named `file`. An example of a correct request is shown below. Rather than using this endpoint directly, you may want to consider using one of the Inbox SDKs, which internally handle native data types and build the form request.
 
 ```
 :::http
@@ -75,6 +75,7 @@ Content-Type: image/jpeg
 ```
 
 A successful upload will return an array with a single file object. This object's ID may added to subsequent [draft updates](#drafts) to attach the file to a draft before sending.
+
 
 **Sample Response:**
 
