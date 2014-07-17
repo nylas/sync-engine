@@ -96,3 +96,23 @@ def test_filtering(db, api_client):
                                   format('inboxapptest@gmail.com', 3))
     assert len(results) == 3
     assert len(results) == 3
+
+
+def test_ordering(api_client):
+    unordered_results = api_client.get_data('/messages')
+    unordered_dates = [result['date'] for result in unordered_results]
+    assert unordered_dates != sorted(unordered_dates)
+
+    ordered_results = api_client.get_data('/messages?order_by=date')
+    ordered_dates = [result['date'] for result in ordered_results]
+    assert ordered_dates == sorted(ordered_dates)
+
+    unordered_results = api_client.get_data('/threads')
+    unordered_dates = [result['last_message_timestamp'] for result in
+                       unordered_results]
+    assert unordered_dates != sorted(unordered_dates)
+
+    ordered_results = api_client.get_data('/threads?order_by=date')
+    ordered_dates = [result['last_message_timestamp'] for result in
+                     ordered_results]
+    assert ordered_dates == sorted(ordered_dates)
