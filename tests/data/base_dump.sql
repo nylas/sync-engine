@@ -25,7 +25,6 @@ DROP TABLE IF EXISTS `account`;
 CREATE TABLE `account` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `public_id` binary(16) NOT NULL,
-  `email_address` varchar(191) DEFAULT NULL,
   `save_raw_messages` tinyint(1) DEFAULT '1',
   `sync_host` varchar(255) DEFAULT NULL,
   `last_synced_contacts` datetime DEFAULT NULL,
@@ -45,9 +44,10 @@ CREATE TABLE `account` (
   `sync_state` enum('running','stopped','killed') DEFAULT NULL,
   `sync_start_time` datetime DEFAULT NULL,
   `sync_end_time` datetime DEFAULT NULL,
+  `_canonicalized_address` varchar(191) DEFAULT NULL,
+  `_raw_address` varchar(191) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `ix_account_public_id` (`public_id`),
-  KEY `ix_account_email_address` (`email_address`),
   KEY `account_ibfk_2` (`inbox_folder_id`),
   KEY `account_ibfk_3` (`sent_folder_id`),
   KEY `account_ibfk_4` (`drafts_folder_id`),
@@ -59,6 +59,8 @@ CREATE TABLE `account` (
   KEY `ix_account_created_at` (`created_at`),
   KEY `ix_account_deleted_at` (`deleted_at`),
   KEY `ix_account_updated_at` (`updated_at`),
+  KEY `ix_account__canonicalized_address` (`_canonicalized_address`),
+  KEY `ix_account__raw_address` (`_raw_address`),
   CONSTRAINT `account_ibfk_2` FOREIGN KEY (`inbox_folder_id`) REFERENCES `folder` (`id`),
   CONSTRAINT `account_ibfk_3` FOREIGN KEY (`sent_folder_id`) REFERENCES `folder` (`id`),
   CONSTRAINT `account_ibfk_4` FOREIGN KEY (`drafts_folder_id`) REFERENCES `folder` (`id`),
@@ -76,7 +78,7 @@ CREATE TABLE `account` (
 
 LOCK TABLES `account` WRITE;
 /*!40000 ALTER TABLE `account` DISABLE KEYS */;
-INSERT INTO `account` VALUES (1,'ï¿½ï¿½ï¿½ï¿½hPID','inboxapptest@gmail.com',1,'precise64','2014-05-03 01:15:03','gmailaccount',2,4,5,NULL,NULL,NULL,3,NULL,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL,NULL,NULL,NULL);
+INSERT INTO `account` VALUES (1,'ï¿½ï¿½ï¿½ï¿½hPID',1,'precise64','2014-05-03 01:15:03','gmailaccount',2,4,5,NULL,NULL,NULL,3,NULL,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL,NULL,NULL,NULL,'inboxapptest@gmail.com','inboxapptest@gmail.com');
 /*!40000 ALTER TABLE `account` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -132,7 +134,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('358d0320397f');
+INSERT INTO `alembic_version` VALUES ('3795b2a97af1');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -189,21 +191,23 @@ CREATE TABLE `contact` (
   `uid` varchar(64) NOT NULL,
   `provider_name` varchar(64) DEFAULT NULL,
   `source` enum('local','remote') DEFAULT NULL,
-  `email_address` varchar(191) DEFAULT NULL,
   `name` text,
   `raw_data` text,
   `score` int(11) DEFAULT NULL,
   `updated_at` datetime NOT NULL,
   `created_at` datetime NOT NULL,
   `deleted_at` datetime DEFAULT NULL,
+  `_canonicalized_address` varchar(191) DEFAULT NULL,
+  `_raw_address` varchar(191) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uid` (`uid`,`source`,`account_id`,`provider_name`),
   KEY `account_id` (`account_id`),
   KEY `ix_contact_public_id` (`public_id`),
-  KEY `ix_contact_email_address` (`email_address`),
   KEY `ix_contact_created_at` (`created_at`),
   KEY `ix_contact_deleted_at` (`deleted_at`),
   KEY `ix_contact_updated_at` (`updated_at`),
+  KEY `ix_contact__canonicalized_address` (`_canonicalized_address`),
+  KEY `ix_contact__raw_address` (`_raw_address`),
   CONSTRAINT `contact_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -214,7 +218,7 @@ CREATE TABLE `contact` (
 
 LOCK TABLES `contact` WRITE;
 /*!40000 ALTER TABLE `contact` DISABLE KEYS */;
-INSERT INTO `contact` VALUES (1,'ï¿½Zï¿½zoï¿½L?ï¿',1,'ac99aa06-5604-4234-9ccc-dfb5f41973d1','inbox','local','inboxapptest@gmail.com','',NULL,24,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(2,'ï¿½6\",NA@ï¿½ï¿½ï',1,'523f7769-c26e-4728-921d-ffd43e5bb1b4','inbox','local','benbitdiddle1861@gmail.com','Ben Bitdiddle',NULL,10,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(3,'ï¿½4ï¿½-;Kï¿½ï¿',1,'0ff75111-5a72-46a4-a0d0-d1d189422117','inbox','local','paulxtiseo@gmail.com','Paul Tiseo',NULL,10,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(4,'ï¿½ï¿½ï¿½&mN@ï¿½',1,'6840fd76-34e3-4b1a-b0a3-6b797bbf92d7','inbox','local','golang-nuts@googlegroups.com','golang-nuts',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(5,'ï¿½`<]Jï¿½ï¿½',1,'31d28d81-67df-479b-ae79-6f19589a88dd','inbox','local','mail-noreply@google.com','Gmail Team',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(6,'\\ï¿½#eï¿½Hxï¿½ï',1,'c0849c30-e29d-4404-b931-ddf9c3d06201','inbox','local','christine@spang.cc','Christine Spang',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(7,'ï¿½ï¿½>J0ï¿½',1,'94d616ac-3963-442a-9d05-b88d43a94758','inbox','local','no-reply@accounts.google.com','',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(8,'amXï¿½T@Â˜6ï¿½>',1,'47c6565a-2c8e-49a5-a32c-9a7aff921248','inbox','local','kavya719@gmail.com','kavya joshi',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL);
+INSERT INTO `contact` VALUES (1,'ï¿½Zï¿½zoï¿½L?ï¿',1,'ac99aa06-5604-4234-9ccc-dfb5f41973d1','inbox','local','',NULL,24,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'inboxapptest@gmail.com','inboxapptest@gmail.com'),(2,'ï¿½6\",NA@ï¿½ï¿½ï',1,'523f7769-c26e-4728-921d-ffd43e5bb1b4','inbox','local','Ben Bitdiddle',NULL,10,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'benbitdiddle1861@gmail.com','benbitdiddle1861@gmail.com'),(3,'ï¿½4ï¿½-;Kï¿½ï¿',1,'0ff75111-5a72-46a4-a0d0-d1d189422117','inbox','local','Paul Tiseo',NULL,10,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'paulxtiseo@gmail.com','paulxtiseo@gmail.com'),(4,'ï¿½ï¿½ï¿½&mN@ï¿½',1,'6840fd76-34e3-4b1a-b0a3-6b797bbf92d7','inbox','local','golang-nuts',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'golang-nuts@googlegroups.com','golang-nuts@googlegroups.com'),(5,'ï¿½`<]Jï¿½ï¿½',1,'31d28d81-67df-479b-ae79-6f19589a88dd','inbox','local','Gmail Team',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'mail-noreply@google.com','mail-noreply@google.com'),(6,'\\ï¿½#eï¿½Hxï¿½ï',1,'c0849c30-e29d-4404-b931-ddf9c3d06201','inbox','local','Christine Spang',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'christine@spang.cc','christine@spang.cc'),(7,'ï¿½ï¿½>J0ï¿½',1,'94d616ac-3963-442a-9d05-b88d43a94758','inbox','local','',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'no-reply@accounts.google.com','no-reply@accounts.google.com'),(8,'amXï¿½T@Â˜6ï¿½>',1,'47c6565a-2c8e-49a5-a32c-9a7aff921248','inbox','local','kavya joshi',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'kavya719@gmail.com','kavya719@gmail.com');
 /*!40000 ALTER TABLE `contact` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -767,6 +771,34 @@ CREATE TABLE `lens` (
 LOCK TABLES `lens` WRITE;
 /*!40000 ALTER TABLE `lens` DISABLE KEYS */;
 /*!40000 ALTER TABLE `lens` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `liveaccount`
+--
+
+DROP TABLE IF EXISTS `liveaccount`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `liveaccount` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `account_id` int(11) NOT NULL,
+  `state` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `liveaccount`
+--
+
+LOCK TABLES `liveaccount` WRITE;
+/*!40000 ALTER TABLE `liveaccount` DISABLE KEYS */;
+INSERT INTO `liveaccount` VALUES (1,'2014-07-16 01:52:31','2014-07-16 01:52:31',NULL,1,0);
+/*!40000 ALTER TABLE `liveaccount` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -1329,4 +1361,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-07-14 23:54:27
+-- Dump completed on 2014-07-17  0:18:59

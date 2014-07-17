@@ -1,8 +1,9 @@
 """ Top level module for all models """
 
 from inbox.models.account import Account
-from inbox.models.base import MailSyncBase, MAX_FOLDER_NAME_LENGTH
+from inbox.models.base import MailSyncBase
 from inbox.models.block import Block, Part
+from inbox.models.constants import MAX_FOLDER_NAME_LENGTH
 from inbox.models.contact import MessageContactAssociation, Contact
 from inbox.models.folder import Folder, FolderItem
 from inbox.models.lens import Lens
