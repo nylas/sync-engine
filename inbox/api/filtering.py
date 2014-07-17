@@ -133,15 +133,16 @@ class Filter(object):
             subqueryload('tagitems').joinedload('tag').
             load_only('public_id', 'name'))
 
-        query = query.limit(self.limit)
-        if self.offset:
-            query = query.offset(self.offset)
-
         if self.order_by == 'subject':
             query = query.order_by(asc(Thread.subject))
         elif self.order_by == 'date':
             query = query.order_by(asc(Thread.recentdate))
+
+        query = query.limit(self.limit)
+        if self.offset:
+            query = query.offset(self.offset)
         return query.all()
+
 
     def get_messages(self):
         query = self.db_session.query(Message). \
@@ -229,13 +230,13 @@ class Filter(object):
         # TODO(emfree) we should really eager-load the namespace too
         # (or just directly store it on the message object)
 
-        query = query.limit(self.limit)
-        if self.offset:
-            query = query.offset(self.offset)
-
         if self.order_by == 'subject':
             query = query.order_by(asc(Message.subject))
         elif self.order_by == 'date':
             query = query.order_by(asc(Message.received_date))
+
+        query = query.limit(self.limit)
+        if self.offset:
+            query = query.offset(self.offset)
 
         return query.all()
