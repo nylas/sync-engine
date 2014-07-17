@@ -65,11 +65,6 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
             self.subject = message.subject
             self.subjectdate = message.received_date
 
-        if ((not self.mailing_list_headers)
-                or len(message.mailing_list_headers) >
-                len(self.mailing_list_headers)):
-            self.mailing_list_headers = message.mailing_list_headers
-
         return message
 
     @validates('folderitems', include_removes=True)
@@ -114,8 +109,6 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
                         'Thread.deleted_at.is_(None))'),
         load_on_pending=True)
 
-    mailing_list_headers = Column(JSON, nullable=True)
-
     @property
     def participants(self):
         """Different messages in the thread may reference the same email
@@ -138,16 +131,6 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
                 if phrase != '' or len(phrases) == 1:
                     p.append((phrase, address))
         return p
-
-    @property
-    def mailing_list_info(self):
-        return self.mailing_list_headers
-
-    def is_mailing_list_thread(self):
-        for v in self.mailing_list_headers.itervalues():
-            if (v is not None):
-                return True
-        return False
 
     def apply_tag(self, tag, execute_action=False):
         """Add the given Tag instance to this thread. Does nothing if the tag

@@ -80,8 +80,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     size = Column(Integer, nullable=False)
     data_sha256 = Column(String(255), nullable=True)
 
-    mailing_list_headers = Column(JSON, nullable=True)
-
     is_draft = Column(Boolean, server_default=false(), nullable=False)
     is_read = Column(Boolean, server_default=false(), nullable=False)
 
@@ -181,9 +179,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             self.message_id_header = parsed.headers.get('Message-Id')
 
             self.received_date = received_date
-
-            # Optional mailing list headers
-            self.mailing_list_headers = parse_ml_headers(parsed.headers)
 
             # Custom Inbox header
             self.inbox_uid = parsed.headers.get('X-INBOX-ID')
@@ -373,10 +368,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             """.strip() % html_data
 
         return prettified
-
-    @property
-    def mailing_list_info(self):
-        return self.mailing_list_headers
 
     @property
     def headers(self):

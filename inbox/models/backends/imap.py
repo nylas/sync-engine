@@ -184,8 +184,7 @@ class ImapThread(Thread):
         thread = cls(subject=message.subject, g_thrid=message.g_thrid,
                      recentdate=message.received_date, namespace=namespace,
                      subjectdate=message.received_date,
-                     snippet=message.snippet,
-                     mailing_list_headers=message.mailing_list_headers)
+                     snippet=message.snippet)
         if not message.is_read:
             thread.apply_tag(namespace.tags['unread'])
             thread.apply_tag(namespace.tags['unseen'])
@@ -196,8 +195,7 @@ class ImapThread(Thread):
         """ For now, each message is its own thread. """
         thread = cls(subject=message.subject, recentdate=message.received_date,
                      namespace=namespace, subjectdate=message.received_date,
-                     snippet=message.snippet,
-                     mailing_list_headers=message.mailing_list_headers)
+                     snippet=message.snippet)
         if not message.is_read:
             thread.apply_tag(namespace.tags['unread'])
             thread.apply_tag(namespace.tags['unseen'])
