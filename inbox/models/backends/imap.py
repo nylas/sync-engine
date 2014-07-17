@@ -43,7 +43,8 @@ class ImapUid(MailSyncBase):
                            'ImapUid.account_id == ImapAccount.id, '
                            'ImapAccount.deleted_at.is_(None))')
 
-    message_id = Column(Integer, ForeignKey(Message.id), nullable=False)
+    message_id = Column(Integer, ForeignKey(Message.id, ondelete='CASCADE'),
+                        nullable=False)
     message = relationship(Message,
                            backref=backref('imapuids',
                                            primaryjoin='and_('

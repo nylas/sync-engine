@@ -115,8 +115,10 @@ class MessageContactAssociation(MailSyncBase):
     [assoc.message for assoc in c.message_associations if assoc.field ==
     ...  'to_addr']
     """
-    contact_id = Column(Integer, ForeignKey(Contact.id), primary_key=True)
-    message_id = Column(Integer, ForeignKey(Message.id), primary_key=True)
+    contact_id = Column(Integer, ForeignKey(Contact.id, ondelete='CASCADE'),
+                        primary_key=True)
+    message_id = Column(Integer, ForeignKey(Message.id, ondelete='CASCADE'),
+                        primary_key=True)
     field = Column(Enum('from_addr', 'to_addr', 'cc_addr', 'bcc_addr'))
     # Note: The `cascade` properties need to be a parameter of the backref
     # here, and not of the relationship. Otherwise a sqlalchemy error is thrown
