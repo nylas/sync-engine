@@ -44,6 +44,8 @@ def upgrade():
     def canonicalize_address(addr):
         """Gmail addresses with and without periods are the same."""
         parsed_address = address.parse(addr, addr_spec_only=True)
+        if not isinstance(parsed_address, address.EmailAddress):
+            return addr
         local_part = parsed_address.mailbox
         if parsed_address.hostname in ('gmail.com', 'googlemail.com'):
             local_part = local_part.replace('.', '')
