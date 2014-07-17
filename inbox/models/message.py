@@ -67,12 +67,12 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                         order_by='Message.received_date',
                         info={'versioned_properties': ['id']}))
 
-    from_addr = Column(JSON, nullable=True)
+    from_addr = Column(JSON, nullable=False, default=lambda: [])
     sender_addr = Column(JSON, nullable=True)
     reply_to = Column(JSON, nullable=True)
-    to_addr = Column(JSON, nullable=True)
-    cc_addr = Column(JSON, nullable=True)
-    bcc_addr = Column(JSON, nullable=True)
+    to_addr = Column(JSON, nullable=False, default=lambda: [])
+    cc_addr = Column(JSON, nullable=False, default=lambda: [])
+    bcc_addr = Column(JSON, nullable=False, default=lambda: [])
     in_reply_to = Column(JSON, nullable=True)
     # From: http://tools.ietf.org/html/rfc4130, section 5.3.3,
     # max message_id_header is 998 characters
