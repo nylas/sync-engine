@@ -1,13 +1,15 @@
 from sqlalchemy import create_engine
 
 from inbox.sqlalchemy_ext.util import ForceStrictMode
-from inbox.config import db_uri
+from inbox.config import db_uri, config
+
+DB_POOL_SIZE = config.get_required('DB_POOL_SIZE')
 
 engine = create_engine(db_uri(),
                        listeners=[ForceStrictMode()],
                        isolation_level='READ COMMITTED',
                        echo=False,
-                       pool_size=25,
+                       pool_size=DB_POOL_SIZE,
                        max_overflow=10,
                        connect_args={'charset': 'utf8mb4'})
 

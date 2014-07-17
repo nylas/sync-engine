@@ -10,8 +10,6 @@
 "CACHE_BASEDIR" : "tests/cache",
 "TEST_LOGFILE": "tests/log",
 
-"ACTION_QUEUE_LABEL": "actions_test",
-
 "BASE_DUMP": "data/base_dump.sql",
 
 "EMAIL_EXCEPTIONS": false
