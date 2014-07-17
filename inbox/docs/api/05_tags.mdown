@@ -1,8 +1,8 @@
 Title: Tags
 
-Tags are the primary way of storing metadata on a specific thread. They are generally used to group threads with some criteria, such as those unread or within a specific provider folder.
+Inbox Tags are a powerful way to store metadata on threads and group them for the user. The `unread` tag, for example, indicates that a thread is unread. Other tags might be used to organize threads by project, categorize threads with attachments, or record whether an email had been handled by a task-management app.
 
-# Getting all tags
+# Listing Tags
 
 ```
 :::xml
@@ -30,23 +30,32 @@ GET https://api.inboxapp.com/n/<namespace_id>/tags
 ]
 ```
 
-# Creating a new tag
-
+# Getting a Single Tag
 ```
 :::xml
-POST https://api.inboxapp.com/n/<namespace_id>/tags
+GET https://api.inboxapp.com/n/<namespace_id>/tags/<tag_id>
 ```
 
-**Request body**
 
-```
-::json
-{
-    "name": <new tag name>
-}
-```
+# Canonical Tags
 
-# Modifying tags on a thread
+Inbox exposes a set of standard, canonical tags: an extended version of [RFC-6154](http://tools.ietf.org/html/rfc6154) mapped to the underlying folders / labels, etc. on each backend provider. A few of the standard tags, such as `spam`, may only be present if they are supported by the underlying email service.
+
+* **`inbox`**
+* **`archive`**
+* **`drafts`**
+* **`sending`**
+* **`sent`**
+* **`spam`**
+* **`starred`**
+* **`unread`**
+* **`trash`**
+* **`unseen`**
+
+
+# Updating Tags & Performing Actions
+
+You can add and remove tags from Inbox threads using a simple PUT request:
 
 ```
 :::xml
@@ -63,25 +72,65 @@ PUT https://api.inboxapp.com/n/<namespace_id>/thread/<thread_id>
 }
 ```
 
-# Getting data for a single tag
+Adding and removing tags in the standard set allows you to perform actions on the user's mailbox in a consistent, uniform way. Each of the changes below is synced back to the underlying mail provider (Exchange, Gmail, Yahoo, etc.)
+
+* Add **`archive`** to remove the thread from the user's inbox. Removes the `inbox` tag.
+* Add **`trash`**  to remove all other tags and queue the message for deletion.
+* Add **`unread`** to mark the thread as unread.
+* Add **`starred`** to star the thread. On non-Gmail backends, this 'flags' the message.
+* Remove **`unseen`** to mark that the thread has been displayed to the user.
+* Remove **`unread`** to mark the thread as read and also remove the unseen tag.
+* Remove **`starred`** to unstar the thread. On non-Gmail backends, this 'unflags' the message.
+
+There are a few tags that you **cannot** add or remove:
+
+* **`drafts`** See [Drafts](#drafts) for creating and updating drafts.
+* **`sent`** See [Sending](#sending) for sending mail.
+
+
+### Unread & Unseen
+
+In addition to the standard "unread" state, Inbox exposes an additional state for each thread called "unseen." The goal of shared "unseen" state is to prevent the same message from being displayed prominently across several applications if the user has chosen not to read it. Here's a quick look at the difference between "unread" and "unseen" and the motivation behind "unseen":
+
+**Unread** (Threads & Messages):
+
+ - Messages and threads should be marked as read when the user views them.
+ - Messages may be collapsed or folded once they've been read.
+
+**Unseen** (Threads Only):
+
+- Threads are given the unseen tag when new messages are appended.
+- Threads with the unseen tag may be highlighted in your app.
+- Threads should be marked as seen as soon as the thread's snippet has been displayed, *even if the user chooses not to interact with them.*
+
+You are not required to use the "unseen" state: removing the `unread` tag also removes the `unseen` tag as a fallback behavior. However, you should mark threads as seen whenever they are displayed within your app so that they are not presented as new content in other apps.
+
+
+# Creating Custom Tags
+
+In addition to using Inbox's pre-defined tags like `unread`, `archive`, and `sent`, your application can define custom tags to store state and communicate with other mail apps. For example, your time saving mail client could tag messages with`revisit-later` to retrieve them when the user was ready to read them. A flight-tracking app could add the tag `flight-confirmation`, making it easy for the user to pull up their boarding pass at the airport.
+
+
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/tags/<tag_id>
+POST https://api.inboxapp.com/n/<namespace_id>/tags
 ```
 
-# Changing the name of an existing tag
+**Request body**
+
+```
+::json
+{
+    "name": <new tag name>
+}
+```
+
+
+
+# Changing custom tag names
 ```
 :::xml
 PUT https://api.inboxapp.com/n/<namespace_id>/tags/<tag_id>
-```
-
-**Response**
-```
-:::json
-{
-    "id": "d121cvdyjhgacaqyymzjg5prl",
-    "name": "housing-search"
-}
 ```
 
 **Request body**
@@ -93,40 +142,37 @@ PUT https://api.inboxapp.com/n/<namespace_id>/tags/<tag_id>
 }
 ```
 
+**Response**
+
+```
+:::json
+{
+    "id": "d121cvdyjhgacaqyymzjg5prl",
+    "name": "housing-search"
+}
+```
+
+
 Note that only tags that were created via the API can be changed. You can't
 rename e.g. the `sent` or the `unread` tag.
 
-# Canonical tags
 
-These are an extended version of [RFC-6154](http://tools.ietf.org/html/rfc6154), mapped to the relevant values in backend providers. Some will not be used if unsupported by the user's provider. (e.g. `spam`)
+# Gmail Labels & IMAP Folders
 
-* **`inbox`**
-* **`archive`** (present on threads that don't have the `inbox` tag)
-* **`drafts`**
-* **`send`**
-* **`sending`**
-* **`sent`**
-* **`spam`**
-* **`starred`**
-* **`unread`**
-* **`replied`**
-* **`trash`**
-* **`file`**
-* **`unseen`**
+Tags in Inbox are similar to labels in Gmail, but Inbox presents a uniform interface across all providers including Exchange, Yahoo, and generic IMAP. It's important to note that this consistent experience comes with an important limitation: though Inbox exposes tags for Gmail labels and IMAP folders, these tags are prefixed with the provider name and cannot be added or removed from threads. Inbox does not allow changes to these tags and does not sync them back to underlying mail provider with the exception of it's built-in canonical labels (unread, archive, trash, etc.)
 
+What does that mean in practice? Here are some examples of things you can and cannot do with Gmail labels (provider prefixed tags) through Inbox:
 
-# Read-only tags
+**Can I see if a message has been labeled 'climbing' in Gmail?**
 
-* **`drafts`** is set by Inbox, and cannot be modified. See [Drafts](#drafts) for creating and updating drafts.
-* **`sent`**
-* There are a number of provider-prefixed tags which are managed by Inbox. These tags can be read, but any attempt to modify them will fail. They are of the format `<provider>-<value>`, so a "homework" label in Gmail will appear as the tag `gmail-homework`. Current reserved providers include `gmail`, `exchange`, `yahoo`, `hotmail`, `icloud`, and `aol`.
+Yes. This Gmail label will be exposed as the tag `gmail-climbing` on the Inbox thread.
+
+**Can I add the 'climbing' label to a message in Gmail?**
+
+No. Although the Gmail label 'climbing' would appear in Inbox as the tag `gmail-climbing`, this tag is read only. You can't add or remove it from threads or rename it. This is important, because your application should work for users with stock IMAP and Exchange accounts as well as Gmail.
+
+**Can I add the 'starred' label to a message in Gmail?**
+
+In general, tag changes aren't synced back to Gmail but there are a few exceptions. Adding the Inbox `starred` tag will star the message in Gmail and perform the equivalent action on every other provider supported by Inbox. The need for a consistent behavior means that there are only a few tags this applies to: `unread`, `archive`, `starred`, `inbox` and `trash`.
 
 
-# Tag actions
-
-Adding certain tags will cause an action to be performed on the thread.
-
-* Adding **`archive`** will remove the thread from `inbox`.
-* Adding **`delete`** will remove all tags, and queue the message for deletion.
-* Adding or removing **`unread`** will mark the thread as unread or read, respectively.
-* Removing the **`unseen`** tag signals that the thread has been displayed to the user. Clients can remove the **`unseen`** tag, but not add it. Removing **`unread`** will automatically also remove the **`unseen`** tag.

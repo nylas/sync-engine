@@ -1,24 +1,34 @@
 Title: Filters
 
-Filters allow you to refine your query for mail data to specific parameters. The more specific you can make the request, the faster it will perform. They can be appended to API requests on [Messages](#messages) and [Threads](#threads). Note that values must use [percent-encoding](http://en.wikipedia.org/wiki/Percent-encoding) (also known as URL encoding).
+Filters allow you to query mail data based on specific parameters. The more specific you can make the requests the faster they perform, so it's important to use filters whenever possible. Filters can be appended to API requests on [Messages](#messages) and [Threads](#threads). Note that values must use [percent-encoding](http://en.wikipedia.org/wiki/Percent-encoding) (also known as URL encoding).
 
 * **`subject`** Return messages or threads with a given subject string.
 
-* **`any_email`** Return messages sent, received from, or also sent to the given email address.
+* **`any_email`** Return messages or threads sent, received from, or also sent to the given email address.
 
-* **`to`** Return messages sent to the given address.
+* **`to`** Return messages or threads sent to the given address.
 
-* **`from`** Return messages from the given address.
+* **`from`** Return messages or threads from the given address.
 
-* **`cc`** Return messages cc'd to the given address (by anyone, not just the account holder).
+* **`cc`** Return messages or threads cc'd to the given address (by anyone, not just the account holder).
 
-* **`bcc`** Return messages bcc'd to the given address (likely by you, since that header is removed by SMTP gateways)
+* **`bcc`** Return messages or threads bcc'd to the given address (likely by you, since that header is removed by SMTP gateways)
+
+* **`tag`** Return messages or threads with the given tag. The value can be the name or ID of a user-created tag, a provider-specific label for a folder (`gmail-climbing`), or one of Inbox's canonical symbolic tag names (`unread`, `starred`, etc.)  See [Tags](#tags) for more details.
+
+* **`filename`** Return messages or threads that have a file with the given name attached.
+
+* **`limit`** (integer) The maximum number of results to return. Defaults to 100 for performance. If `limit` is set too high, a request may fail with HTTP status code 400 to prevent excessively large response bodies.
+
+* **`offset`** (integer) Zero-based offset; use with `limit` for pagination of results.
+
+* **`order_by`** If 'subject', return results ordered alphabetically by subject. If 'date', return results most-recent-first.
+
+### Additional Message Filters
 
 * **`thread`** Return messages on the thread with the given id.
 
-* **`tag`** Return threads with the given tag. This can be a user-added tag, a provider-specific label for an existing folder name, or one of Inbox's canonical symbolic tag names. See [Tags](#tags) for more details.
-
-* **`filename`** Return messages that have a file with the given name attached.
+### Additional Thread Filters
 
 * **`last_message_before`** (integer, Unix timestamp) Return threads whose most recent message was received before this timestamp.
 
@@ -28,8 +38,69 @@ Filters allow you to refine your query for mail data to specific parameters. The
 
 * **`started_after`** (integer, Unix timestamp) Return threads whose first message was received after this timestamp.
 
-* **`limit`** (integer) The maximum number of results to return. Defaults to 100 for performance. If `limit` is set too high, a request may fail with HTTP status code 400 to prevent excessively large response bodies.
 
-* **`offset`** (integer) Zero-based offset; use with `limit` for pagination of results.
+# Search
 
-* **`order_by`** If 'subject', return results ordered alphabetically by subject. If 'date', return results most-recent-first.
+The filters API is not intended to be a replacement for full search functionality. Inbox will eventually include a decicated search API for freeform queries of mail data that you can use to perform high performance, full-text search in your application.
+
+
+# Wildcards & Multiple Value Support
+
+Filters do not currently support wildcards, such as `from=*@expedia.com`. Support for wildcards on specific filters may be added in the future, and we encourage you to submit pull requests for additional filter functionality you would find useful. Providing multiple values for a single filter, such as `tag=unread AND inbox` is also unsupported. The search API will likely add support for these complex use cases.
+
+
+# Examples
+
+#### Threads
+
+List threads with the Inbox tag:
+
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=inbox
+```
+
+List threads with a user-created tag using the tag ID:
+
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=aqb0llc2ioo0bclh7uxkim9z6
+```
+
+List the 5 most recent unread threads:
+
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=unread&limit=5&order_by=date
+```
+
+List threads that include `mark@inboxapp.com` as a participant and are unread, ordered by date:
+
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=unread&any_email=mark@inboxapp.com&order_by=date
+```
+
+
+#### Messages
+
+List messages in a particular thread:
+
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/messages?thread=aqb0llc2ioo0bclh7uxkim9z6
+```
+
+List messages from `no-reply@asana.com`:
+
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/messages?from=no-reply@asana.com
+```
+
+List messages that have an attachment named `image.jpg`:
+
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/messages?filename=image.jpg
+```
