@@ -15,17 +15,17 @@ from sqlalchemy import func
 
 
 def upgrade():
-    op.drop_constraint('messagecontactassociation',
-                       'messagecontactassociation_ibfk_1', type_='foreignkey')
-    op.drop_constraint('messagecontactassociation',
-                       'messagecontactassociation_ibfk_2', type_='foreignkey')
+    op.drop_constraint('messagecontactassociation_ibfk_1',
+                       'messagecontactassociation', type_='foreignkey')
+    op.drop_constraint('messagecontactassociation_ibfk_2',
+                       'messagecontactassociation', type_='foreignkey')
     op.create_foreign_key('messagecontactassociation_ibfk_1',
                           'messagecontactassociation', 'contact',
                           ['contact_id'], ['id'], ondelete='CASCADE')
     op.create_foreign_key('messagecontactassociation_ibfk_2',
                           'messagecontactassociation', 'message',
                           ['message_id'], ['id'], ondelete='CASCADE')
-    op.drop_constraint('imapuid', 'imapuid_ibfk_2', type_='foreignkey')
+    op.drop_constraint('imapuid_ibfk_2', 'imapuid', type_='foreignkey')
     op.create_foreign_key('imapuid_ibfk_2', 'imapuid', 'message',
                           ['message_id'], ['id'], ondelete='CASCADE')
     from inbox.models import Message
