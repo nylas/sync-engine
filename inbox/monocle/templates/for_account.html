@@ -12,6 +12,7 @@
       <th>State (running/ stopped/ killed):<br></th>
       <th>Sync Start Time:<br></th>
       <th>Sync End Time:<br></th>
+      <th>Sync Error:<br></th>
       <th>Sync State (initial/ poll/ finish):<br></th>
       <th>Type (new/resumed):<br></th>
       <th>Num messages on remote:<br></th>
@@ -50,6 +51,7 @@
               content += '<td>' + (item.run_state || '') + '</td>';
               content += '<td>' + (item.sync_start_time || '') + '</td>';
               content += '<td>' + (item.sync_end_time || '') + '</td>';
+              content += '<td>' + (item.sync_error || '') + '</td>';
               content += '<td>' + (item.state || '') + '</td>';
               content += '<td>' + (item.sync_type || '') + '</td>';
               content += '<td>' + (item.remote_uid_count || '') + '</td>';

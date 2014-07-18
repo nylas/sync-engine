@@ -5,6 +5,7 @@ from sqlalchemy import (Column, Integer, String, DateTime, Boolean, ForeignKey,
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import true
 
+from inbox.sqlalchemy_ext.util import JSON, MutableDict
 from inbox.util.file import Lock
 
 from inbox.models.mixins import HasPublicID, HasEmailAddress
@@ -115,9 +116,6 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
                     'Folder.deleted_at.is_(None))')
 
     sync_host = Column(String(255), nullable=True)
-    sync_state = Column(Enum('running', 'stopped', 'killed'), nullable=True)
-    sync_start_time = Column(DateTime, nullable=True)
-    sync_end_time = Column(DateTime, nullable=True)
 
     # current state of this account
     state = Column(Enum('live', 'down', 'invalid'), nullable=True)
@@ -126,34 +124,44 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
     def sync_enabled(self):
         return self.sync_host is not None
 
-    def start_sync(self, sync_host):
-        self.sync_host = sync_host
-        self.sync_start_time = datetime.utcnow()
-        self.sync_end_time = None
+    sync_state = Column(Enum('running', 'stopped', 'killed'), nullable=True)
 
-        self.sync_state = 'running'
-
-    def stop_sync(self):
-        self.sync_host = None
-        self.sync_end_time = datetime.utcnow()
-
-        self.sync_state = 'stopped'
-
-    def kill_sync(self):
-        # Don't change sync_host if moving to state 'killed'
-        self.sync_end_time = datetime.utcnow()
-
-        self.sync_state = 'killed'
+    _sync_status = Column(MutableDict.as_mutable(JSON), nullable=True)
 
     @property
     def sync_status(self):
-        return dict(id=self.id,
-                    email=self.email_address,
-                    provider=self.provider,
-                    is_enabled=self.sync_enabled,
-                    state=self.sync_state,
-                    sync_start_time=self.sync_start_time,
-                    sync_end_time=self.sync_end_time)
+        d = dict(id=self.id,
+                 email=self.email_address,
+                 provider=self.provider,
+                 is_enabled=self.sync_enabled,
+                 state=self.sync_state)
+        d.update(self._sync_status or {})
+
+        return d
+
+    def start_sync(self, sync_host):
+        self.sync_host = sync_host
+
+        self.sync_state = 'running'
+
+        self._sync_status['sync_start_time'] = datetime.utcnow()
+        self._sync_status['sync_end_time'] = None
+        self._sync_status['sync_error'] = None
+
+    def stop_sync(self):
+        self.sync_host = None
+
+        self.sync_state = 'stopped'
+
+        self._sync_status['sync_end_time'] = datetime.utcnow()
+
+    def kill_sync(self, error=None):
+        # Don't change sync_host if moving to state 'killed'
+
+        self.sync_state = 'killed'
+
+        self._sync_status['sync_end_time'] = datetime.utcnow()
+        self._sync_status['sync_error'] = error
 
     @property
     def sender_name(self):

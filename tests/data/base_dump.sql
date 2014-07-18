@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.37, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.35, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.5.37-0ubuntu0.12.04.1-log
+-- Server version	5.5.35-0ubuntu0.12.04.2-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -42,11 +42,9 @@ CREATE TABLE `account` (
   `deleted_at` datetime DEFAULT NULL,
   `important_folder_id` int(11) DEFAULT NULL,
   `sync_state` enum('running','stopped','killed') DEFAULT NULL,
-  `sync_start_time` datetime DEFAULT NULL,
-  `sync_end_time` datetime DEFAULT NULL,
   `_canonicalized_address` varchar(191) DEFAULT NULL,
   `_raw_address` varchar(191) DEFAULT NULL,
-  `state` enum('live','down','invalid') DEFAULT NULL,
+  `_sync_status` text,
   PRIMARY KEY (`id`),
   KEY `ix_account_public_id` (`public_id`),
   KEY `account_ibfk_2` (`inbox_folder_id`),
@@ -79,7 +77,11 @@ CREATE TABLE `account` (
 
 LOCK TABLES `account` WRITE;
 /*!40000 ALTER TABLE `account` DISABLE KEYS */;
+<<<<<<< HEAD
 INSERT INTO `account` VALUES (1,'����hPID',1,'precise64','2014-05-03 01:15:03','gmailaccount',2,4,5,NULL,NULL,NULL,3,NULL,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL,NULL,NULL,NULL,'inboxapptest@gmail.com','inboxapptest@gmail.com',NULL);
+=======
+INSERT INTO `account` VALUES (1,'����hPID',1,'precise64','2014-05-03 01:15:03','gmailaccount',2,4,5,NULL,NULL,NULL,3,NULL,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL,NULL,'inboxapptest@gmail.com','inboxapptest@gmail.com','{\"sync_start_time\": \"None\", \"sync_end_time\": \"None\"}');
+>>>>>>> Fixes T138 and then some: Include account_id in exceptions email, Include errors in Monocle.
 /*!40000 ALTER TABLE `account` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -135,7 +137,11 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
+<<<<<<< HEAD
 INSERT INTO `alembic_version` VALUES ('4b4674f1a726');
+=======
+INSERT INTO `alembic_version` VALUES ('4f57260602c9');
+>>>>>>> Fixes T138 and then some: Include account_id in exceptions email, Include errors in Monocle.
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1350,6 +1356,30 @@ LOCK TABLES `webhook` WRITE;
 /*!40000 ALTER TABLE `webhook` DISABLE KEYS */;
 /*!40000 ALTER TABLE `webhook` ENABLE KEYS */;
 UNLOCK TABLES;
+
+--
+-- Table structure for table `yahooaccount`
+--
+
+DROP TABLE IF EXISTS `yahooaccount`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `yahooaccount` (
+  `id` int(11) NOT NULL,
+  `password` varchar(256) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `yahooaccount_ibfk_1` FOREIGN KEY (`id`) REFERENCES `imapaccount` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `yahooaccount`
+--
+
+LOCK TABLES `yahooaccount` WRITE;
+/*!40000 ALTER TABLE `yahooaccount` DISABLE KEYS */;
+/*!40000 ALTER TABLE `yahooaccount` ENABLE KEYS */;
+UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -1360,4 +1390,8 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
+<<<<<<< HEAD
 -- Dump completed on 2014-07-16 19:47:42
+=======
+-- Dump completed on 2014-07-17  7:24:31
+>>>>>>> Fixes T138 and then some: Include account_id in exceptions email, Include errors in Monocle.

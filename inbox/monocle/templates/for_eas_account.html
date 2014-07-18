@@ -12,6 +12,7 @@
       <th>State (running/ stopped/ killed):<br></th>
       <th>Sync Start Time:<br></th>
       <th>Sync End Time:<br></th>
+      <th>Sync Error:<br></th>
       <th>Sync State(initial/ poll/ finish):<br></th>
       <th>Num messages to sync:<br></th>
       <th>As of:<br></th>
@@ -41,8 +42,9 @@
               content += '<td>' + (item.run_state || '') + '</td>';
               content += '<td>' + (item.sync_start_time || '') + '</td>';
               content += '<td>' + (item.sync_end_time || '') + '</td>';
+              content += '<td>' + (item.sync_error || '') + '</td>';
               content += '<td>' + (item.state || '') + '</td>';
-              content += '<td>' + (item.num_uids_to_sync || '') + '</td>';
+              content += '<td>' + (item.num_uids_to_sync || (typeof(item.num_uids_to_sync) == 'number'? '0' : '')) + '</td>';
               content += '<td>' + (item.uid_checked_timestamp || '') + '</td>';
               content += '<td>' + (item.num_synced_since_timestamp || '') + '</td>';
               content += '<td>' + (item.synced_checked_at || '') + '</td>';

@@ -15,6 +15,7 @@
       <th>State<br>(running/ stopped/ killed):<br></th>
       <th>Sync Start Time:<br></th>
       <th>Sync End Time:<br></th>
+      <th>Sync Error:<br></th>
     </tr>
   </thead>
   <tbody>
@@ -43,6 +44,7 @@
               content += '<td>' + (item.state || '') + '</td>';
               content += '<td>' + (item.sync_start_time || '') + '</td>';
               content += '<td>' + (item.sync_end_time || '') + '</td>';
+              content += '<td>' + (item.sync_error || '') + '</td>';
               content += '</tr>';
           });
           
