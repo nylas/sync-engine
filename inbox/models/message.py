@@ -7,7 +7,7 @@ from flanker import mime
 
 from sqlalchemy import (Column, Integer, BigInteger, String, DateTime,
                         Boolean, Enum, ForeignKey, Text)
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy.sql.expression import false
 
 from inbox.util.html import (plaintext2html, strip_tags,
@@ -17,7 +17,7 @@ from inbox.sqlalchemy_ext.util import JSON
 from inbox.config import config
 from inbox.util.addr import parse_email_address_list
 from inbox.util.file import mkdirp
-from inbox.util.misc import parse_ml_headers, parse_references
+from inbox.util.misc import parse_references
 
 from inbox.models.mixins import HasPublicID
 from inbox.models.transaction import HasRevisions
@@ -75,7 +75,8 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     bcc_addr = Column(JSON, nullable=True)
     in_reply_to = Column(JSON, nullable=True)
     message_id_header = Column(String(255), nullable=True)
-    subject = Column(Text, nullable=True)
+    # There is no hard limit on subject limit in the spec, but 255 is common.
+    subject = Column(String(255), nullable=True)
     received_date = Column(DateTime, nullable=False)
     size = Column(Integer, nullable=False)
     data_sha256 = Column(String(255), nullable=True)
@@ -115,6 +116,14 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
     # In accordance with JWZ (http://www.jwz.org/doc/threading.html)
     references = Column(JSON, nullable=True)
+
+    @validates('subject')
+    def validate_length(self, key, value):
+        if value is None:
+            return
+        if len(value) > 255:
+            value = value[:255]
+        return value
 
     @property
     def namespace(self):
