@@ -126,7 +126,8 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
 
     sync_state = Column(Enum('running', 'stopped', 'killed'), nullable=True)
 
-    _sync_status = Column(MutableDict.as_mutable(JSON), nullable=True)
+    _sync_status = Column(MutableDict.as_mutable(JSON), default={},
+                          nullable=True)
 
     @property
     def sync_status(self):

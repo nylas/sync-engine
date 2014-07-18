@@ -233,13 +233,14 @@ class ImapFolderSyncMonitor(Greenlet):
                 saved_folder_status = ImapFolderSyncStatus(
                     account_id=self.account_id, folder_id=self.folder_id)
                 db_session.add(saved_folder_status)
-                db_session.commit()
 
             saved_folder_status.update_metrics(
                 dict(run_state='running',
                      sync_start_time=datetime.utcnow(),
                      sync_end_time=None,
                      sync_error=None))
+
+            db_session.commit()
 
             self.state = saved_folder_status.state
             # NOTE: The parent ImapSyncMonitor handler could kill us at any
