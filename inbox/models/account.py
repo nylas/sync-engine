@@ -120,6 +120,9 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
     # current state of this account
     state = Column(Enum('live', 'down', 'invalid'), nullable=True)
 
+    # current state of this account
+    state = Column(Enum('live', 'down', 'invalid'), nullable=True)
+
     @property
     def sync_enabled(self):
         return self.sync_host is not None
