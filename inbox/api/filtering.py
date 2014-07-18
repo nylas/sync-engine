@@ -1,6 +1,6 @@
 from datetime import datetime
 import bson
-from sqlalchemy import and_, or_, asc
+from sqlalchemy import and_, or_, asc, desc
 from sqlalchemy.orm import joinedload, subqueryload
 from inbox.models import (Contact, Message, MessageContactAssociation, Thread,
                           Tag, TagItem, Part)
@@ -136,13 +136,12 @@ class Filter(object):
         if self.order_by == 'subject':
             query = query.order_by(asc(Thread.subject))
         elif self.order_by == 'date':
-            query = query.order_by(asc(Thread.recentdate))
+            query = query.order_by(desc(Thread.recentdate))
 
         query = query.limit(self.limit)
         if self.offset:
             query = query.offset(self.offset)
         return query.all()
-
 
     def get_messages(self):
         query = self.db_session.query(Message). \
@@ -233,7 +232,7 @@ class Filter(object):
         if self.order_by == 'subject':
             query = query.order_by(asc(Message.subject))
         elif self.order_by == 'date':
-            query = query.order_by(asc(Message.received_date))
+            query = query.order_by(desc(Message.received_date))
 
         query = query.limit(self.limit)
         if self.offset:
