@@ -3,6 +3,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey
 from inbox.models.backends.imap import ImapAccount
 
 PROVIDER = 'yahoo'
+IMAP_HOST = 'imap.mail.yahoo.com'
 
 
 class YahooAccount(ImapAccount):
@@ -16,3 +17,7 @@ class YahooAccount(ImapAccount):
     @property
     def provider(self):
         return PROVIDER
+
+    def verify(self):
+        from inbox.auth.imap import verify_account
+        return verify_account(self, IMAP_HOST)

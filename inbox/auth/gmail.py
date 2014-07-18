@@ -1,20 +1,17 @@
-import socket
-
 from sqlalchemy.orm.exc import NoResultFound
-
-from imapclient import IMAPClient
 
 from inbox.oauth import oauth_authorize_console
 from inbox.models import Namespace
-from inbox.models.backends.gmail import GmailAccount
+from inbox.models.backends.gmail import GmailAccount, IMAP_HOST
 from inbox.config import config
+from inbox.auth.oauth import connect_account as oauth_connect_account
+from inbox.auth.oauth import verify_account as oauth_verify_account
 
 from inbox.log import get_logger
 log = get_logger()
 
+
 PROVIDER = 'gmail'
-IMAP_HOST = 'imap.gmail.com'
-PROVIDER_PREFIX = 'gmail'
 
 
 def create_auth_account(db_session, email_address):
@@ -63,24 +60,9 @@ def create_account(db_session, email_address, response):
     return account
 
 
-# Used by the 'inbox-auth' program after we create an authenticated account
-# as well as by a migration which imports gmail accounts from an old db
+def connect_account(account):
+    return oauth_connect_account(account, IMAP_HOST)
+
+
 def verify_account(account):
-    try:
-        conn = IMAPClient(IMAP_HOST, use_uid=True, ssl=True)
-    except IMAPClient.Error as e:
-        raise socket.error(str(e))
-
-    conn.debug = False
-    try:
-        conn.oauth2_login(account.email_address, account.access_token)
-    except IMAPClient.Error as e:
-        log.error("IMAP Login error, refresh auth token for: {}"
-                  .format(account.email_address))
-        log.error("Error was: {}".format(e))
-        if str(e) == '[ALERT] Invalid credentials (Failure)':
-            # maybe the access token expired?
-            conn.oauth2_login(account.email_address,
-                              account.renew_access_token())
-
-    return conn
+    return oauth_verify_account(account, IMAP_HOST)

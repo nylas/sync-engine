@@ -9,10 +9,15 @@ from inbox.models.session import session_scope
 from inbox.models.secret import Secret
 
 from sqlalchemy.orm.exc import NoResultFound
+from zerorpc import Client
+from zerorpc.exceptions import RemoteError
 
 
 class NotFound(Exception):
     pass
+
+
+EXCEPTION_MAP = {"NotFound": NotFound}
 
 
 class Vault():
@@ -55,11 +60,27 @@ class LocalVault(Vault):
 class RemoteVault(Vault):
     """Concrete implementation of the class respresenting the remote vault
     interface."""
+    def __init__(self, location):
+        self.client = Client()
+        self.client.connect(location)
+
     def get(self, id):
-        pass
+        try:
+            return self.client.get(id)
+        except RemoteError, e:
+            raise EXCEPTION_MAP[e.name]() if e.name in EXCEPTION_MAP else e
 
     def put(self, value, type=0, acl=0):
-        pass
+        return self.client.put(value, type, acl)
+
+    def remove(self, id):
+        try:
+            return self.client.remove(id)
+        except RemoteError, e:
+            raise EXCEPTION_MAP[e.name]() if e.name in EXCEPTION_MAP else e
+
+    def echo(self, val):
+        return self.client.echo(val)
 
 
 vault_type = config.get_required("VAULT_TYPE")

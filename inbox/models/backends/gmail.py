@@ -1,15 +1,18 @@
+from datetime import datetime, timedelta
+
 from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy import event
 
 from inbox.models.vault import vault
 from inbox.models.backends.imap import ImapAccount
-from datetime import datetime, timedelta
+from inbox.oauth import new_token, validate_token
+from inbox.basicauth import AuthError
 
 from inbox.log import get_logger
 log = get_logger()
 
 PROVIDER = 'gmail'
-
+IMAP_HOST = 'imap.gmail.com'
 
 __volatile_tokens__ = {}
 
@@ -49,8 +52,6 @@ class GmailAccount(ImapAccount):
 
     @property
     def access_token(self):
-        from inbox.oauth import new_token, validate_token
-
         if self.id in __volatile_tokens__:
             tok, expires = __volatile_tokens__[self.id]
             if datetime.utcnow() > expires:
@@ -65,15 +66,33 @@ class GmailAccount(ImapAccount):
                                      self.client_id,
                                      self.client_secret)
 
-            if validate_token(tok):
-                self.set_access_token(tok, expires)
-                return tok
-            else:
-                return None
+            validate_token(tok)
+            self.set_access_token(tok, expires)
+            return tok
 
     def renew_access_token(self):
         del __volatile_tokens__[self.id]
         return self.access_token
+
+    def verify(self):
+        if self.id in __volatile_tokens__:
+            tok, expires = __volatile_tokens__[self.id]
+
+            if datetime.utcnow() > expires:
+                del __volatile_tokens__[self.id]
+                return self.verify()
+            else:
+                try:
+                    return validate_token(tok)
+                except AuthError:
+                    del __volatile_tokens__[self.id]
+                    raise
+
+        else:
+            tok, expires = new_token(self.refresh_token)
+            valid = validate_token(tok)
+            self.set_access_token(tok, expires)
+            return valid
 
     def set_access_token(self, tok, expires_in):
         # Subtract 10 seconds as it takes _some_ time to propagate between

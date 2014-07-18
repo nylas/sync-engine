@@ -11,6 +11,14 @@ class AuthError(Exception):
     pass
 
 
+class ConnectionError(AuthError):
+    pass
+
+
+class ValidationError(AuthError):
+    pass
+
+
 def password_auth(email_address, message=default_message):
     pw = getpass.getpass(message.format(email_address))
 

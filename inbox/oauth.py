@@ -1,12 +1,12 @@
 import urllib
 import requests
-from requests import ConnectionError
+from requests import ConnectionError as RequestsConnectionError
 
 from inbox.util.url import url_concat
 from inbox.log import get_logger
 log = get_logger()
 from inbox.config import config
-from inbox.basicauth import AuthError
+from inbox.basicauth import ValidationError, ConnectionError
 
 # Google OAuth app credentials
 GOOGLE_OAUTH_CLIENT_ID = config.get_required('GOOGLE_OAUTH_CLIENT_ID')
@@ -27,24 +27,40 @@ OAUTH_SCOPE = ' '.join([
 ])
 
 
-class OAuthError(AuthError):
+class OAuthError(ValidationError):
     pass
 
 
-class InvalidOAuthGrantError(OAuthError):
+class OAuthValidationError(OAuthError):
+    pass
+
+
+class OAuthInvalidGrantError(OAuthError):
     pass
 
 
 def validate_token(access_token):
-    """ Helper function which will validate an access token. """
-    log.info('Validating oauth token...')
+    """ Helper function which will validate an access token.
+
+    Returns
+    -------
+    validation_dict if connecting and validation succeeds
+
+    Raises
+    ------
+    ConnectionError
+        When unable to connect to oauth host
+    OAuthErrro
+        When authorization fails
+    """
+
     try:
         response = requests.get(OAUTH_TOKEN_VALIDATION_URL +
                                 '?access_token=' + access_token)
-    except ConnectionError, e:
+    except RequestsConnectionError, e:
         log.error('Validation failed.')
         log.error(e)
-        return None  # TODO better error handling here
+        raise ConnectionError()
 
     validation_dict = response.json()
 
@@ -52,7 +68,7 @@ def validate_token(access_token):
         assert validation_dict['error'] == 'invalid_token'
         log.error('{0} - {1}'.format(validation_dict['error'],
                                      validation_dict['error_description']))
-        return None
+        raise OAuthValidationError()
 
     return validation_dict
 
@@ -66,7 +82,6 @@ def new_token(refresh_token, client_id=None,
     client_id = client_id or GOOGLE_OAUTH_CLIENT_ID
     client_secret = client_secret or GOOGLE_OAUTH_CLIENT_SECRET
 
-    log.info('acquiring_new_oauth_token')
     args = {
         'refresh_token': refresh_token,
         'client_id': client_id,
@@ -82,13 +97,13 @@ def new_token(refresh_token, client_id=None,
                                  headers=headers)
     except requests.exceptions.HTTPError, e:
         log.error(e)  # TODO better error handling here
-        raise e
+        raise ConnectionError()
 
     session_dict = response.json()
     if u'error' in session_dict:
         if session_dict['error'] == 'invalid_grant':
             log.error('refresh_token_invalid')
-            raise InvalidOAuthGrantError('Could not get new token')
+            raise OAuthInvalidGrantError('Could not get new token')
         else:
             raise OAuthError(session_dict['error'])
 
