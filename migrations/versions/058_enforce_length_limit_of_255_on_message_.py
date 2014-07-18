@@ -46,6 +46,7 @@ def upgrade():
             if count > 500:
                 db_session.commit()
                 count = 0
+        db_session.commit()
 
         for thread in db_session.query(Thread).options(
                 sa.orm.load_only('subject')).yield_per(500):
@@ -54,6 +55,7 @@ def upgrade():
             if count > 500:
                 db_session.commit()
                 count = 0
+        db_session.commit()
 
     op.alter_column('message', 'subject',
                     type_=sa.String(255), existing_nullable=True)
