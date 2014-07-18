@@ -8,7 +8,7 @@ Create Date: 2014-07-17 06:07:08.339740
 
 # revision identifiers, used by Alembic.
 revision = '4f57260602c9'
-down_revision = '5143154fb1a2'
+down_revision = '4b4c5579c083'
 
 from alembic import op
 import sqlalchemy as sa
@@ -24,7 +24,7 @@ from sqlalchemy.ext.declarative import declarative_base
 def upgrade():
     op.add_column('account',
                   sa.Column('_sync_status', MutableDict.as_mutable(JSON()),
-                            nullable=True))
+                            default={}, nullable=True))
 
     Base = declarative_base()
     Base.metadata.reflect(engine)
