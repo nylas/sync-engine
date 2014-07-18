@@ -1,14 +1,12 @@
 import itertools
 from collections import defaultdict
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import relationship, backref, validates, object_session
 
 from inbox.log import get_logger
 log = get_logger()
-
-from inbox.sqlalchemy_ext.util import JSON, Base36UID
 
 from inbox.models.mixins import HasPublicID
 from inbox.models.base import MailSyncBase
@@ -30,7 +28,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         If you're attempting to display _all_ messages a la Gmail's All Mail,
         don't query based on folder!
     """
-    subject = Column(Text, nullable=True)
+    subject = Column(String(255), nullable=True)
     subjectdate = Column(DateTime, nullable=False)
     recentdate = Column(DateTime, nullable=False)
     snippet = Column(String(191), nullable=True, default='')
