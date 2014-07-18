@@ -19,7 +19,8 @@ from inbox.models.util import reconcile_message
 from inbox.models.backends.imap import ImapThread
 from inbox.mailsync.backends.imap import (account, base_poll, imap_poll_update,
                                           resync_uids_from, base_initial_sync,
-                                          imap_initial_sync, ImapSyncMonitor)
+                                          imap_initial_sync, ImapSyncMonitor,
+                                          update_metadata)
 
 
 PROVIDER = 'yahoo'
@@ -46,7 +47,8 @@ class YahooSyncMonitor(ImapSyncMonitor):
 def poll(conn_pool, db_session, log, folder_name, shared_state):
     with conn_pool.get() as crispin_client:
         return base_poll(crispin_client, db_session, log, folder_name,
-                         shared_state, imap_poll_update, create_yahoo_message)
+                         shared_state, imap_poll_update, create_yahoo_message,
+                         update_metadata)
 
 
 @retry_crispin
@@ -82,7 +84,8 @@ def add_yahoo_attrs(db_session, log, new_uid, flags, folder, created):
             db_session, new_uid.account.namespace, new_uid.message)
         new_uid.update_imap_flags(flags)
 
-        if folder in ('draft', 'sent') and not created and new_uid.message.inbox_uid:
+        if (folder in ('draft', 'sent') and not created
+                and new_uid.message.inbox_uid):
             reconcile_message(db_session, log, new_uid.message.inbox_uid,
                               new_uid.message)
 
