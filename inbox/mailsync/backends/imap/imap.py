@@ -101,15 +101,26 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
     """ Top-level controller for an account's mail sync. Spawns individual
         FolderSync greenlets for each folder.
 
-        poll_frequency and heartbeat are in seconds.
+        Parameters
+        ----------
+        poll_frequency: Integer
+            Seconds to wait between polling for the greenlets spawned
+        heartbeat: Integer
+            Seconds to wait between checking on folder sync threads.
+        refresh_flags_max: Integer
+            the maximum number of UIDs for which we'll check flags
+            periodically.
+
     """
     def __init__(self, account_id, namespace_id, email_address, provider,
-                 heartbeat=1, poll_frequency=300, retry_fail_classes=None):
+                 heartbeat=1, poll_frequency=300, retry_fail_classes=None,
+                 refresh_flags_max=2000):
 
         self.shared_state = {
             # IMAP folders are kept up-to-date via polling
             'poll_frequency': poll_frequency,
             'syncmanager_lock': db_write_lock(namespace_id),
+            'refresh_flags_max': refresh_flags_max,
         }
 
         self.folder_monitors = Group()
@@ -322,7 +333,7 @@ def poll(conn_pool, db_session, log, folder_name, shared_state):
 
 
 def base_poll(crispin_client, db_session, log, folder_name, shared_state,
-              download_fn, msg_create_fn):
+              download_fn, msg_create_fn, update_fn):
     """ Base polling logic for non-CONDSTORE IMAP servers.
 
     Local/remote UID comparison is used to detect new and deleted messages.
@@ -351,6 +362,13 @@ def base_poll(crispin_client, db_session, log, folder_name, shared_state,
         download_fn(crispin_client, db_session, log, folder_name,
                     to_download, local_uids, shared_state['syncmanager_lock'],
                     msg_create_fn)
+
+    flags_max_nr = abs(shared_state['refresh_flags_max'])
+    to_refresh = sorted(remote_uids - to_download)[-flags_max_nr:]
+    log.info('UIDs to refresh: ', uids=to_refresh)
+    if to_refresh:
+        update_fn(crispin_client, db_session, log, folder_name,
+                  to_refresh, shared_state['syncmanager_lock'])
 
     sleep(shared_state['poll_frequency'])
     return 'poll'
@@ -538,15 +556,21 @@ def imap_initial_sync(crispin_client, db_session, log, folder_name,
     update_uid_counts(db_session, log, crispin_client.account_id, folder_name,
                       remote_uid_count=len(remote_uids),
                       download_uid_count=len(new_uids),
-                      # TODO: flag updates not supported yet
+                      # flags are updated in imap_check_flags
                       update_uid_count=0,
                       delete_uid_count=len(deleted_uids),
                       sync_type='new' if len(local_uids) == 0 else 'resumed')
 
     new_uid_poller = spawn(check_new_uids, crispin_client.account_id,
-                           crispin_client.PROVIDER, folder_name, log,
+                           folder_name, log,
                            uid_download_stack, shared_state['poll_frequency'],
                            shared_state['syncmanager_lock'])
+
+    flags_refresh_poller = spawn(imap_check_flags, crispin_client.account_id,
+                                 folder_name, log,
+                                 shared_state['poll_frequency'],
+                                 shared_state['syncmanager_lock'],
+                                 shared_state['refresh_flags_max'])
 
     download_queued_uids(crispin_client, db_session, log, folder_name,
                          uid_download_stack, len(local_uids), len(remote_uids),
@@ -554,9 +578,10 @@ def imap_initial_sync(crispin_client, db_session, log, folder_name,
                          download_and_commit_uids, msg_create_fn)
 
     new_uid_poller.kill()
+    flags_refresh_poller.kill()
 
 
-def check_new_uids(account_id, provider, folder_name, log, uid_download_stack,
+def check_new_uids(account_id, folder_name, log, uid_download_stack,
                    poll_frequency, syncmanager_lock):
     """ Check for new UIDs and add them to the download stack.
 
@@ -627,6 +652,54 @@ def check_flags(crispin_client, db_session, log, folder_name, local_uids,
                 _, updated = new_or_updated(uids, local_uids)
                 update_metadata(crispin_client, db_session, log, folder_name,
                                 updated, syncmanager_lock)
+
+
+def imap_check_flags(account_id, folder_name, log, poll_frequency,
+                     syncmanager_lock, refresh_flags_max):
+    """
+    Periodically update message flags for those servers
+    who don't support CONDSTORE.
+    Runs until killed. (Intended to be run in a greenlet)
+
+    Parameters
+    ----------
+    account_id : String
+    folder_name : String
+    log : Logger
+    poll_frequency : Integer
+        Number of seconds to wait between polls.
+    syncmanager_lock : Locking Context Manager
+    refresh_flags_max : Integer
+        Maximum number of messages to check FLAGS of.
+
+    """
+    log.info("Spinning up new flags-refresher for ", folder_name=folder_name)
+    with connection_pool(account_id).get() as crispin_client:
+        with session_scope(ignore_soft_deletes=False) as db_session:
+            crispin_client.select_folder(folder_name,
+                                         uidvalidity_cb(
+                                             db_session,
+                                             crispin_client.account_id))
+        while True:
+            remote_uids = set(crispin_client.all_uids())
+            local_uids = set(account.all_uids(account_id, db_session,
+                                              folder_name))
+            to_refresh = sorted(remote_uids & local_uids)[-refresh_flags_max:]
+
+            update_metadata(crispin_client,
+                            db_session,
+                            log,
+                            folder_name,
+                            to_refresh,
+                            syncmanager_lock)
+
+            update_uid_counts(db_session,
+                              log,
+                              crispin_client.account_id,
+                              folder_name,
+                              update_uid_count=len(to_refresh))
+
+            sleep(poll_frequency)
 
 
 def download_queued_uids(crispin_client, db_session, log,
@@ -712,7 +785,7 @@ def update_metadata(crispin_client, db_session, log, folder_name, uids,
         new_flags = crispin_client.flags(uids)
         # messages can disappear in the meantime; we'll update them next sync
         uids = [uid for uid in uids if uid in new_flags]
-        log.info(new_flags=new_flags)
+        log.info("new flags ", new_flags=new_flags, folder_name=folder_name)
         with syncmanager_lock:
             log.debug("update_metadata acquired syncmanager_lock")
             account.update_metadata(crispin_client.account_id, db_session,

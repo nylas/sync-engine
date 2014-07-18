@@ -154,7 +154,7 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
             remote_g_metadata, unknown_uids)
         add_uids_to_stack(full_download, uid_download_stack)
         new_uid_poller = spawn(check_new_uids, crispin_client.account_id,
-                               crispin_client.PROVIDER, folder_name,
+                               folder_name,
                                log, uid_download_stack,
                                shared_state['poll_frequency'],
                                shared_state['syncmanager_lock'])
