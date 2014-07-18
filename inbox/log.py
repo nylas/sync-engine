@@ -111,7 +111,7 @@ structlog.configure(
 get_logger = structlog.get_logger
 
 
-def email_exception(logger, etype, evalue, tb):
+def email_exception(logger, account_id, etype, evalue, tb):
     """ Send stringified exception to configured email address. """
     exc_email_addr = config.get('EXCEPTION_EMAIL_ADDRESS')
     if exc_email_addr is None:
@@ -123,12 +123,14 @@ def email_exception(logger, etype, evalue, tb):
     if mailgun_api_key is None:
         logger.error('No MAILGUN_API_KEY configured!')
 
+    account_str = 'account_id {}: '.format(account_id) if account_id else ''
     r = requests.post(
         mailgun_api_endpoint,
         auth=('api', mailgun_api_key),
         data={'from': "Inbox App Server <{}>".format(exc_email_addr),
               'to': [exc_email_addr],
-              'subject': "Uncaught error! {} {}".format(etype, evalue),
+              'subject': "Uncaught error! {}{} {}".format(account_str, etype,
+                                                          evalue),
               'text': u"""
     Something went wrong on {}. Please investigate. :)
 
@@ -140,7 +142,7 @@ def email_exception(logger, etype, evalue, tb):
         logger.error("Couldn't send exception email: {}".format(r.json()))
 
 
-def log_uncaught_errors(logger=None):
+def log_uncaught_errors(logger=None, account_id=None):
     """
     Helper to log uncaught exceptions.
 
@@ -152,4 +154,4 @@ def log_uncaught_errors(logger=None):
     logger = logger or get_logger()
     logger.error('Uncaught error', exc_info=True)
     if config.get('EMAIL_EXCEPTIONS'):
-        email_exception(logger, *sys.exc_info())
+        email_exception(logger, account_id, *sys.exc_info())

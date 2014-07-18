@@ -238,7 +238,8 @@ class ImapFolderSyncMonitor(Greenlet):
             saved_folder_status.update_metrics(
                 dict(run_state='running',
                      sync_start_time=datetime.utcnow(),
-                     sync_end_time=None))
+                     sync_end_time=None,
+                     sync_error=None))
 
             self.state = saved_folder_status.state
             # NOTE: The parent ImapSyncMonitor handler could kill us at any

@@ -248,7 +248,8 @@ class ImapFolderSyncStatus(MailSyncBase):
                                'num_downloaded_since_timestamp',
                                'current_download_queue_size',
                                'queue_checked_at', 'sync_type',
-                               'run_state', 'sync_start_time', 'sync_end_time']
+                               'run_state', 'sync_start_time', 'sync_end_time',
+                               'sync_error']
 
         assert isinstance(metrics, dict)
         for k in metrics.iterkeys():
