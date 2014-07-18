@@ -92,7 +92,7 @@ def downgrade():
         for acct in db_session.query(GmailAccount):
             secret = db_session.query(Secret) \
                 .filter_by(id=acct.refresh_token_id).one()
-            acct.refresh_token_id = secret.id
+            acct.refresh_token = secret.secret
             db_session.add(acct)
         db_session.commit()
 
