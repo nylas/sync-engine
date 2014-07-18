@@ -1,22 +1,18 @@
 import datetime
-import socket
 
 import sqlalchemy.orm.exc
 
 from inbox.log import get_logger
 log = get_logger()
 
-from imapclient import IMAPClient
-
-from inbox.log import get_logger
-log = get_logger()
 from inbox.basicauth import password_auth
+from inbox.auth.imap import connect_account as imap_connect_account
+from inbox.auth.imap import verify_account as imap_verify_account
 from inbox.models import Namespace
-from inbox.models.backends.yahoo import YahooAccount
+from inbox.models.backends.yahoo import YahooAccount, IMAP_HOST
 
 
 PROVIDER = 'yahoo'
-IMAP_HOST = 'imap.mail.yahoo.com'
 
 
 def create_auth_account(db_session, email_address):
@@ -46,18 +42,9 @@ def create_account(db_session, email_address, response):
     return account
 
 
+def connect_account(account):
+    return imap_connect_account(account, IMAP_HOST)
+
+
 def verify_account(account):
-    try:
-        conn = IMAPClient(IMAP_HOST, use_uid=True, ssl=True)
-    except IMAPClient.Error as e:
-        raise socket.error(str(e))
-
-    conn.debug = False
-    try:
-        conn.login(account.email_address, account.password)
-    except IMAPClient.Error as e:
-        log.error('yahoo_account_verify_failed',
-                  error='[ALERT] Invalid credentials (Failure)')
-        raise
-
-    return conn
+    return imap_verify_account(account, IMAP_HOST)

@@ -129,7 +129,7 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
             account = db_session.query(ImapAccount).get(self.account_id)
 
             auth_handler = handler_from_provider(account.provider)
-            conn = auth_handler.verify_account(account)
+            conn = auth_handler.connect_account(account)
 
         return new_crispin(self.account_id, self.email_address, self.provider,
                            conn, self.readonly)

@@ -30,6 +30,10 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
         """
         raise NotImplementedError
 
+    def verify(self):
+        """ Verify that the account is still valid."""
+        raise NotImplementedError
+
     # local flags & data
     save_raw_messages = Column(Boolean, server_default=true())
 
@@ -114,6 +118,9 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
     sync_state = Column(Enum('running', 'stopped', 'killed'), nullable=True)
     sync_start_time = Column(DateTime, nullable=True)
     sync_end_time = Column(DateTime, nullable=True)
+
+    # current state of this account
+    state = Column(Enum('live', 'down', 'invalid'), nullable=True)
 
     @property
     def sync_enabled(self):

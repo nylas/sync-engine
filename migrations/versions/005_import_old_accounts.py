@@ -18,6 +18,7 @@ import os.path
 
 SQL_DUMP_FILENAME = 'alphasync_rds_inbox_imapaccount.sql'
 
+
 def upgrade():
     from inbox.models.session import session_scope
     from inbox.ignition import engine
@@ -38,9 +39,9 @@ def upgrade():
 
     Base = declarative_base()
     Base.metadata.reflect(engine)
+
     class ImapAccount_Old(Base):
         __table__ = Base.metadata.tables['imapaccount_old']
-
 
     with session_scope() as db_session:
         migrated_accounts = []
@@ -51,7 +52,8 @@ def upgrade():
             existing_account = db_session.query(ImapAccount)\
                 .filter_by(email_address=acct.email_address)
             if existing_account.count() > 0:
-                print 'Already have account for {0}'. format(acct.email_address)
+                print 'Already have account for {0}' \
+                    .format(acct.email_address)
                 continue
 
             # Create a mock OAuth response using data from the old table
@@ -70,7 +72,9 @@ def upgrade():
                 verified_email=acct.o_verified_email
                 )
 
-            new_account = gmail.create_account(db_session, acct.email_address, mock_response)
+            new_account = gmail.create_account(db_session,
+                                               acct.email_address,
+                                               mock_response)
 
             # Note that this doesn't verify **anything** about the account.
             # We're just doing the migration now
@@ -83,15 +87,15 @@ def upgrade():
 
         verified_accounts = []
         for acct in migrated_accounts:
-            try:
-                print 'Verifying {0}... '.format(acct.email_address),
-                gmail.verify_account(db_session, acct)
+            print 'Verifying {0}... '.format(acct.email_address),
+            if gmail.verify_account(acct):
                 verified_accounts.append(acct)
                 print 'OK!'
-            except Exception, e:
-                print 'FAILED!', e
+            else:
+                print 'FAILED!'
 
-        print 'Done! Verified {0} of {1}'.format(len(verified_accounts), len(migrated_accounts))
+        print 'Done! Verified {0} of {1}'.format(len(verified_accounts),
+                                                 len(migrated_accounts))
 
     op.drop_table('imapaccount_old')
 

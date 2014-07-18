@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+import time
+import sys
+from werkzeug.serving import run_with_reloader
+from inbox.models import Account
+from inbox.models.session import session_scope
+from inbox.basicauth import ConnectionError, ValidationError
+
+from inbox.log import get_logger, configure_logging
+configure_logging(False)
+log = get_logger()
+
+
+def verify_accounts():
+    with session_scope() as db_session:
+        accounts = db_session.query(Account).all()
+        for acct in accounts:
+            try:
+                acct.verify()
+                acct.state = 'live'
+            except ConnectionError:
+                acct.state = 'down'
+            except ValidationError:
+                acct.state = 'invalid'
+
+            log.info('status', email=acct.email_address, state=acct.state)
+            db_session.add(acct)
+            db_session.commit()
+
+
+def start():
+    while True:
+        verify_accounts()
+        time.sleep(0.5)
+
+
+if __name__ == "__main__":
+    try:
+        from inbox.config import config
+    except ImportError:
+        sys.exit("Could not find Inbox installation. "
+                 "Maybe the Vagrant box provisioning didn't succeed?\n"
+                 "Try running sudo ./setup.sh")
+
+    log.info("starting...")
+    run_with_reloader(start)
