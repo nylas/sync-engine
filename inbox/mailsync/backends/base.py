@@ -118,6 +118,17 @@ def create_db_objects(account_id, db_session, log, folder_name, raw_messages,
     folder = Folder.find_or_create(db_session, acc, folder_name)
     for msg in raw_messages:
         uid = msg_create_fn(db_session, log, acc, folder, msg)
+        # Must ensure message objects are flushed because they reference
+        # threads, which may be new, and later messages may need to belong to
+        # the same thread. If we don't flush here and disable autoflush within
+        # the message creation to avoid flushing incomplete messages, we can't
+        # query for the (uncommitted) new thread id.
+        #
+        # We should probably refactor this later to use provider-specific
+        # Message constructors to avoid creating incomplete objects in the
+        # first place.
+        db_session.add(uid)
+        db_session.flush()
         if uid is not None:
             new_uids.append(uid)
 
