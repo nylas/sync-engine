@@ -156,12 +156,10 @@ class ImapThread(Thread):
                 primary_key=True)
 
     # only on messages from Gmail
-    # NOTE: The same message sent to multiple users will be given a
-    # different g_thrid for each user. We don't know yet if g_thrids are
-    # unique globally.
-
+    #
     # Gmail documents X-GM-THRID as 64-bit unsigned integer. Unique across
-    # an account but not necessarily globally unique.
+    # an account but not necessarily globally unique. The same message sent
+    # to multiple users *may* have the same X-GM-THRID, but usually won't.
     g_thrid = Column(BigInteger, nullable=True, index=True, unique=False)
 
     @classmethod
@@ -180,8 +178,8 @@ class ImapThread(Thread):
             except NoResultFound:
                 pass
             except MultipleResultsFound:
-                log.info('Duplicate thread rows for thread {0}'.format(
-                    message.g_thrid))
+                log.error('Duplicate thread rows'.format(
+                    g_thrid=message.g_thrid))
                 raise
         thread = cls(subject=message.subject, g_thrid=message.g_thrid,
                      recentdate=message.received_date, namespace=namespace,
