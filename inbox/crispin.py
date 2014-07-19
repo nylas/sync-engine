@@ -7,7 +7,6 @@ time. That's why functions take a connection argument.
 """
 import imaplib
 import functools
-import sys
 
 from collections import namedtuple
 
