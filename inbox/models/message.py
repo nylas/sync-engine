@@ -74,7 +74,9 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     cc_addr = Column(JSON, nullable=True)
     bcc_addr = Column(JSON, nullable=True)
     in_reply_to = Column(JSON, nullable=True)
-    message_id_header = Column(String(255), nullable=True)
+    # From: http://tools.ietf.org/html/rfc4130, section 5.3.3,
+    # max message_id_header is 998 characters
+    message_id_header = Column(String(998), nullable=True)
     # There is no hard limit on subject limit in the spec, but 255 is common.
     subject = Column(String(255), nullable=True)
     received_date = Column(DateTime, nullable=False)
