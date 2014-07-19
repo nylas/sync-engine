@@ -16,7 +16,9 @@ from sqlalchemy.orm.exc import NoResultFound
 from inbox.models.block import Block
 from inbox.models.message import Message, SpoolMessage
 from inbox.models.folder import Folder
-from inbox.models.backends.imap import ImapUid, ImapFolderInfo
+from inbox.models.namespace import Namespace
+from inbox.models.backends.imap import (ImapUid, ImapFolderInfo, ImapThread,
+                                        ImapAccount)
 
 from inbox.log import get_logger
 log = get_logger()
@@ -56,8 +58,11 @@ def all_uids(account_id, session, folder_name):
 
 
 def g_msgids(account_id, session, in_=None):
-    query = session.query(Message.g_msgid).join(ImapUid) \
-        .filter(ImapUid.account_id == account_id).all()
+    # Easiest way to account-filter Messages is to namespace-filter from
+    # the associated thread. (Messages may not necessarily have associated
+    # ImapUids.)
+    query = session.query(Message.g_msgid).join(ImapThread).join(Namespace)\
+        .join(ImapAccount).filter(Namespace.account_id == account_id).all()
     # in some cases, in_ can contain +100k items, when the query only
     # returns a few thousand. we shouldn't pass them all to MySQL
     in_ = {long(i) for i in in_}  # in case they are strings
