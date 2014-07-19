@@ -1,18 +1,22 @@
 #!/usr/bin/env python
 from gevent import monkey; monkey.patch_all()
-import argparse
-
 from setproctitle import setproctitle; setproctitle('inbox-console')
+
+import click
 
 from inbox.log import get_logger
 log = get_logger()
 
-parser = argparse.ArgumentParser(description='REPL for crispin')
-parser.add_argument('email_address', nargs='?', default=None,
-                    help='Start console with crispin client for a particular '
-                    'user')
-args = parser.parse_args()
-
 from inbox.console import start_console
-log.debug('Starting console...')
-start_console(args.email_address)
+
+
+@click.command()
+@click.option('-e', '--email_address', default=None,
+              help='Initialize a crispin client for a particular account.')
+def console(email_address):
+    """ REPL for Inbox. """
+    log.debug('Starting console...')
+    start_console(email_address)
+
+if __name__ == '__main__':
+    console()

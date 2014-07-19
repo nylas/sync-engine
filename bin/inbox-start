@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 from gevent import monkey; monkey.patch_all()
+from setproctitle import setproctitle; setproctitle('inbox')
 
 import sys
 import os
-import argparse
 import platform
+
+import click
 
 # Check that the inbox package is installed. It seems Vagrant may sometimes
 # fail to provision the box appropriately; this check is a reasonable
@@ -16,36 +18,39 @@ except ImportError:
              "Maybe the Vagrant box provisioning didn't succeed?\n"
              "Try running sudo ./setup.sh")
 
+from gevent import joinall
 
 from inbox.util.startup import preflight
-
-from gevent import joinall
-from setproctitle import setproctitle; setproctitle('inbox')
-
 from inbox.log import get_logger, configure_logging
-log = get_logger()
 
-parser = argparse.ArgumentParser(description='Inbox sync service')
 
-parser.add_argument('--prod', action='store_true', default=False,
-                    help='Disables the autoreloader and potentially other'
-                    ' non-production features.')
-parser.add_argument('-c', '--config', dest='config', default=None,
-                    help='Path to JSON configuration file.')
-args = parser.parse_args()
+@click.command()
+@click.option('--prod/--no-prod', default=False,
+              help='Disables the autoreloader and potentially other '
+                   'non-production features.')
+@click.option('-c', '--config', default=None,
+              help='Path to JSON configuration file.')
+def main(prod, config):
+    """ Launch the Inbox sync service. """
+    configure_logging(prod)
 
-configure_logging(args.prod)
+    if config is not None:
+        from inbox.util.startup import load_overrides
+        config_path = os.path.abspath(config)
+        load_overrides(config_path)
 
-if args.config:
-    from inbox.util.startup import load_overrides
-    config_path = os.path.abspath(args.config)
-    # TODO expand to full path
-    load_overrides(config_path)
+    preflight()
 
-preflight()
+    if prod:
+        start()
+    else:
+        from werkzeug.serving import run_with_reloader
+        run_with_reloader(start)
 
 
 def start():
+    log = get_logger()
+
     from inbox.models.backends import module_registry
 
     threads = []
@@ -83,8 +88,5 @@ def start():
     # hang out forever and run some services
     joinall(threads)
 
-if not args.prod:
-    from werkzeug.serving import run_with_reloader
-    run_with_reloader(start)
-else:
-    start()
+if __name__ == '__main__':
+    main()

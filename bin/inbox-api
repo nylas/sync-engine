@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import os
 import sys
-import argparse
+
+import click
 
 # Check that the inbox package is installed. It seems Vagrant may sometimes
 # fail to provision the box appropriately; this check is a reasonable
@@ -22,45 +23,46 @@ from inbox.log import get_logger, configure_logging
 from inbox.util.startup import preflight, load_overrides
 
 
-parser = argparse.ArgumentParser(description='REPL for crispin')
-parser.add_argument('-p', '--port', dest='port', default=5555)
-parser.add_argument('--prod', action='store_true', default=False,
-                    help='Disables the autoreloader and potentially other'
-                    ' non-production features.')
-parser.add_argument('-c', '--config', dest='config', default=None,
-                    help='Path to JSON configuration file.')
-args = parser.parse_args()
+@click.command()
+@click.option('--prod/--no-prod', default=False,
+              help='Disables the autoreloader and potentially other '
+                   'non-production features.')
+@click.option('-c', '--config', default=None,
+              help='Path to JSON configuration file.')
+@click.option('-p', '--port', default=5555, help='Port to run flask app on.')
+def main(prod, config, port):
+    """ Launch the Inbox API service. """
+    configure_logging(prod)
 
-if args.config:
-    config_path = os.path.abspath(args.config)
-    # TODO expand to full path
-    load_overrides(config_path)
+    if config is not None:
+        config_path = os.path.abspath(config)
+        load_overrides(config_path)
 
-configure_logging(args.prod)
+    preflight()
 
-# We need to import this down here, because this in turn imports
-# ignition.engine, which has to happen *after* we read any config overrides for
-# the database parameters. Boo for imports with side-effects.
-from inbox.api.srv import app
-
-preflight()
-
-inbox_logger = get_logger()
+    if prod:
+        start(port)
+    else:
+        from werkzeug.serving import run_with_reloader
+        run_with_reloader(lambda: start(port))
 
 
-def start():
+def start(port):
+    # We need to import this down here, because this in turn imports
+    # ignition.engine, which has to happen *after* we read any config overrides
+    # for the database parameters. Boo for imports with side-effects.
+    from inbox.api.srv import app
+
     # start actions service
     from inbox.transactions.actions import SyncbackService
     SyncbackService().start()
 
-    http_server = WSGIServer(('', int(args.port)), app, log=inbox_logger,
+    inbox_logger = get_logger()
+
+    http_server = WSGIServer(('', int(port)), app, log=inbox_logger,
                              handler_class=InboxWSGIHandler)
-    inbox_logger.info('Starting API server on port {0}'.format(args.port))
+    inbox_logger.info('Starting API server', port=port)
     http_server.serve_forever()
 
-
-if not args.prod:
-    from werkzeug.serving import run_with_reloader
-    run_with_reloader(start)
-else:
-    start()
+if __name__ == '__main__':
+    main()
