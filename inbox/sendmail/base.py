@@ -1,12 +1,8 @@
 from datetime import datetime
 
-from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
-
 from inbox.util.url import NotSupportedError
-from inbox.log import get_logger
-from inbox.models.session import session_scope
-from inbox.models import SpoolMessage, Thread, Account, Part
-from inbox.sendmail.message import Recipients
+from inbox.models import SpoolMessage, Thread, Part
+from inbox.models.action_log import schedule_action
 from inbox.sqlalchemy_ext.util import generate_public_id
 
 
@@ -87,7 +83,7 @@ def create_draft(db_session, account, to=None, subject=None,
                                  replyto_thread, is_reply)
 
 
-def update_draft(db_session, account, draft, to=None, subject=None,
+def update_draft(db_session, account, parent_draft, to=None, subject=None,
                  body=None, blocks=None, cc=None, bcc=None, tags=None):
     """
     Update draft.
@@ -109,17 +105,20 @@ def update_draft(db_session, account, draft, to=None, subject=None,
     return its public_id (which is different than the original's).
 
     """
-    to_addr = _parse_recipients(to) if to else draft.to_addr
-    cc_addr = _parse_recipients(cc) if cc else draft.cc_addr
-    bcc_addr = _parse_recipients(bcc) if bcc else draft.bcc_addr
-    subject = subject or draft.subject
-    body = body or draft.sanitized_body
-    blocks = blocks or [p for p in draft.parts if p.is_attachment]
+    to_addr = _parse_recipients(to) if to else parent_draft.to_addr
+    cc_addr = _parse_recipients(cc) if cc else parent_draft.cc_addr
+    bcc_addr = _parse_recipients(bcc) if bcc else parent_draft.bcc_addr
+    subject = subject or parent_draft.subject
+    body = body or parent_draft.sanitized_body
+    blocks = blocks or [p for p in parent_draft.parts if p.is_attachment]
 
-    return create_and_save_draft(db_session, account, to_addr, subject, body,
-                                 blocks, cc_addr, bcc_addr,
-                                 tags, draft.thread, draft.is_reply,
-                                 draft)
+    new_draft = create_and_save_draft(db_session, account, to_addr, subject,
+                                      body, blocks, cc_addr, bcc_addr, tags,
+                                      parent_draft.thread,
+                                      parent_draft.is_reply, parent_draft)
+    schedule_action('delete_draft', parent_draft, parent_draft.namespace.id,
+                    db_session)
+    return new_draft
 
 
 def delete_draft(db_session, account, draft_public_id):
@@ -132,66 +131,21 @@ def delete_draft(db_session, account, draft_public_id):
     # Delete locally, make sure to delete all previous versions of this draft
     # present locally too.
     _delete_draft_versions(db_session, draft.id)
+    # Delete remotely.
+    schedule_action('delete_draft', draft, draft.namespace.id, db_session)
 
 
 def _delete_draft_versions(db_session, draft_id):
     draft = db_session.query(SpoolMessage).get(draft_id)
 
-    # Remove the drafts tag from the thread
-    # STOPSHIP(emfree) is this the right way to do this?
-    draft.thread.remove_tag(draft.namespace.tags['drafts'])
-
     if draft.parent_draft_id:
         _delete_draft_versions(db_session, draft.parent_draft_id)
 
     db_session.delete(draft)
-    # TODO[k]: Ensure this causes a delete on the remote too for draft of
-    # draft_id only!
 
-
-def send_draft(account_id, draft_id):
-    """
-    Send the draft with id = `draft_id`.
-    """
-
-    with session_scope() as db_session:
-        account = db_session.query(Account).get(account_id)
-
-        log = get_logger()
-        sendmail_client = get_sendmail_client(account)
-        try:
-            draft = db_session.query(SpoolMessage).filter(
-                SpoolMessage.id == draft_id).one()
-
-        except NoResultFound:
-            log.info('NoResultFound for draft_id {0}'.format(draft_id))
-            raise SendMailException('No draft with id {0}'.format(draft_id))
-
-        except MultipleResultsFound:
-            log.info('MultipleResultsFound for draft_id {0}'.format(draft_id))
-            raise SendMailException('Multiple drafts with id {0}'.format(
-                draft_id))
-
-        assert draft.is_draft and not draft.is_sent
-
-        recipients = Recipients(draft.to_addr, draft.cc_addr, draft.bcc_addr)
-        if not draft.is_reply:
-            sendmail_client.send_new(db_session, draft, recipients)
-        else:
-            sendmail_client.send_reply(db_session, draft, recipients)
-
-        # Update SpoolMessage
-        draft.is_sent = True
-        draft.is_draft = False
-        draft.state = 'sent'
-
-        # Update thread
-        sent_tag = account.namespace.tags['sent']
-        draft.thread.apply_tag(sent_tag)
-
-        db_session.commit()
-
-        return draft
+    # Remove the drafts tag from the thread if there are no more drafts.
+    if not draft.thread.latest_drafts:
+        draft.thread.remove_tag(draft.namespace.tags['drafts'])
 
 
 def generate_attachments(blocks):
@@ -295,6 +249,8 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
     if new_tags:
         tags_to_keep = {tag for tag in thread.tags if not tag.user_created}
         thread.tags = new_tags | tags_to_keep
+
+    schedule_action('save_draft', message, message.namespace.id, db_session)
 
     db_session.add(message)
     db_session.commit()

@@ -2,6 +2,7 @@
 
 from inbox.models.account import Account
 from inbox.models.base import MailSyncBase
+from inbox.models.action_log import ActionLog
 from inbox.models.block import Block, Part
 from inbox.models.constants import MAX_FOLDER_NAME_LENGTH
 from inbox.models.contact import MessageContactAssociation, Contact
@@ -17,7 +18,7 @@ from inbox.models.webhook import Webhook
 
 from inbox.models.backends import module_registry as backend_module_registry
 
-__all__ = ['Account', 'MailSyncBase', 'Block', 'Part',
+__all__ = ['Account', 'ActionLog', 'MailSyncBase', 'Block', 'Part',
            'MessageContactAssociation', 'Contact', 'Folder',
            'FolderItem', 'Lens', 'Message', 'SpoolMessage',
            'Namespace', 'SearchToken', 'SearchSignal',

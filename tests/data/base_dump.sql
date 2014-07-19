@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.35, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.37, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.5.35-0ubuntu0.12.04.2-log
+-- Server version	5.5.37-0ubuntu0.12.04.1-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -134,7 +134,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('4f57260602c9');
+INSERT INTO `alembic_version` VALUES ('15dfc756a1b0');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -820,7 +820,7 @@ CREATE TABLE `message` (
   `bcc_addr` text,
   `in_reply_to` text,
   `message_id_header` varchar(255) DEFAULT NULL,
-  `subject` text,
+  `subject` varchar(255) DEFAULT NULL,
   `received_date` datetime NOT NULL,
   `size` int(11) NOT NULL,
   `data_sha256` varchar(255) DEFAULT NULL,
@@ -1200,7 +1200,7 @@ DROP TABLE IF EXISTS `thread`;
 CREATE TABLE `thread` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `public_id` binary(16) NOT NULL,
-  `subject` text,
+  `subject` varchar(255) DEFAULT NULL,
   `subjectdate` datetime NOT NULL,
   `recentdate` datetime NOT NULL,
   `namespace_id` int(11) NOT NULL,
@@ -1384,4 +1384,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-07-18 22:17:30
+-- Dump completed on 2014-07-19  0:45:20

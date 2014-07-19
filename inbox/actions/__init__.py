@@ -39,10 +39,14 @@ from inbox.util.misc import register_backends
 
 module_registry = register_backends(__name__, __path__)
 
+from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
+
 from inbox.models.session import session_scope
 from inbox.models import Account, SpoolMessage
-from inbox.sendmail.base import generate_attachments
+from inbox.sendmail.base import (generate_attachments, get_sendmail_client,
+                                 SendMailException)
 from inbox.sendmail.message import create_email, Recipients
+from inbox.log import get_logger
 
 
 def archive(account_id, thread_id):
@@ -137,14 +141,65 @@ def save_draft(account_id, message_id):
         # message but the user expects to see the one
         # updated draft only.
         if message.parent_draft:
-            return delete_draft(account_id, message.parent_draft.inbox_uid)
+            return delete_draft(account_id, message.parent_draft.id)
 
 
-def delete_draft(account_id, inbox_uid):
+def delete_draft(account_id, draft_id):
     """ Delete a draft from the remote backend. """
     with session_scope() as db_session:
         account = db_session.query(Account).get(account_id)
+        draft = db_session.query(SpoolMessage).get(draft_id)
         remote_delete_draft = \
             module_registry[account.provider].remote_delete_draft
-        remote_delete_draft(account, account.drafts_folder.name, inbox_uid,
-                            db_session)
+        remote_delete_draft(account, account.drafts_folder.name,
+                            draft.inbox_uid, db_session)
+
+
+def send_draft(account_id, draft_id):
+    """
+    Send the draft with id = `draft_id`.
+    """
+    with session_scope() as db_session:
+        account = db_session.query(Account).get(account_id)
+
+        log = get_logger()
+        sendmail_client = get_sendmail_client(account)
+        try:
+            draft = db_session.query(SpoolMessage).filter(
+                SpoolMessage.id == draft_id).one()
+
+        except NoResultFound:
+            log.info('NoResultFound for draft_id {0}'.format(draft_id))
+            raise SendMailException('No draft with id {0}'.format(draft_id))
+
+        except MultipleResultsFound:
+            log.info('MultipleResultsFound for draft_id {0}'.format(draft_id))
+            raise SendMailException('Multiple drafts with id {0}'.format(
+                draft_id))
+
+        assert draft.is_draft and not draft.is_sent
+
+        recipients = Recipients(draft.to_addr, draft.cc_addr, draft.bcc_addr)
+        if not draft.is_reply:
+            sendmail_client.send_new(db_session, draft, recipients)
+        else:
+            sendmail_client.send_reply(db_session, draft, recipients)
+
+        # Update SpoolMessage
+        draft.is_sent = True
+        draft.is_draft = False
+        draft.state = 'sent'
+
+        # Update thread
+        sent_tag = account.namespace.tags['sent']
+        draft_tag = account.namespace.tags['drafts']
+        draft.thread.apply_tag(sent_tag)
+        # Remove the drafts tag from the thread if there are no more drafts.
+        if not draft.thread.latest_drafts:
+            draft.thread.remove_tag(draft_tag)
+
+        db_session.commit()
+
+        delete_draft(account_id, draft.id)
+
+        return draft
