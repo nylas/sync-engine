@@ -33,7 +33,7 @@ python-magic==0.4.6
 Pygments==1.6
 greenlet==0.4.2
 PyMySQL==0.6.2
-click==0.7
+click==2.4
 faulthandler==2.3
 pyinstrument==0.10.1
 structlog==0.4.1
