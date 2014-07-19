@@ -13,6 +13,7 @@ down_revision = '2a748760ac63'
 from inbox.ignition import engine
 from inbox.models.session import session_scope
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm.exc import NoResultFound
 
 Base = declarative_base()
 Base.metadata.reflect(engine)
@@ -32,10 +33,13 @@ def upgrade():
                 db_session.delete(s)
                 db_session.delete(s.folder)
 
-            ri = db_session.query(EASFolderSyncStatus).join(Folder).filter(
-                Folder.name == 'RecipientInfo').one()
-            db_session.delete(ri)
-            db_session.delete(ri.folder)
+            try:
+                ri = db_session.query(EASFolderSyncStatus).join(Folder).filter(
+                    Folder.name == 'RecipientInfo').one()
+                db_session.delete(ri)
+                db_session.delete(ri.folder)
+            except NoResultFound:
+                pass
 
             db_session.commit()
 
