@@ -19,6 +19,7 @@ from inbox.config import config
 from inbox import contacts, sendmail
 from inbox.log import get_logger
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
+from inbox.models.action_log import schedule_action
 from inbox.models.session import InboxSession
 from inbox.transactions import client_sync
 
@@ -664,35 +665,44 @@ def draft_send_api():
             draft = g.db_session.query(SpoolMessage).filter(
                 SpoolMessage.public_id == draft_public_id).one()
         except NoResultFound:
-            return err(404, 'No draft found with public_id {}'.
+            return err(404, 'No draft found with id {}'.
                        format(draft_public_id))
 
         if draft.namespace != g.namespace:
-            return err(404, 'No draft found with public_id {}'.
+            return err(404, 'No draft found with id {}'.
                        format(draft_public_id))
 
         if draft.is_sent or not draft.is_draft:
-            return err(400, 'Message with public id {} is not a draft'.
+            return err(400, 'Message with id {} is not a draft'.
                        format(draft_public_id))
 
         if not draft.to_addr:
-            return err(400, "No 'to:' recipients_specified")
+            return err(400, "No 'to:' recipients specified")
 
-        # Mark draft for sending
-        draft.state = 'sending'
-        return g.encoder.jsonify(draft)
+        if not draft.is_latest:
+            return err(409, 'Draft {} has already been updated to {}'.format(
+                draft_public_id, g.encoder.cereal(draft.most_recent_revision)))
 
-    to = data.get('to')
-    cc = data.get('cc')
-    bcc = data.get('bcc')
-    subject = data.get('subject')
-    body = data.get('body')
-    block_public_ids = data.get('files')
+    else:
+        to = data.get('to')
+        cc = data.get('cc')
+        bcc = data.get('bcc')
+        subject = data.get('subject')
+        body = data.get('body')
+        try:
+            tags = get_tags(data.get('tags'), g.namespace.id, g.db_session)
+            files = get_attachments(data.get('files'), g.namespace.id,
+                                    g.db_session)
+            replyto_thread = get_thread(data.get('reply_to_thread'),
+                                        g.namespace.id, g.db_session)
+        except InputError as e:
+            return err(404, e.message)
 
-    draft = sendmail.create_draft(g.db_session, g.namespace.account, to,
-                                  subject, body, block_public_ids, cc, bcc)
-    # Mark draft for sending
+        draft = sendmail.create_draft(g.db_session, g.namespace.account, to,
+                                      subject, body, files, cc, bcc,
+                                      tags, replyto_thread)
     draft.state = 'sending'
+    schedule_action('send_draft', draft, g.namespace.id, g.db_session)
     return g.encoder.jsonify(draft)
 
 

@@ -165,32 +165,45 @@ class MockSMTPClient(object):
         pass
 
 
-def test_send(api_client, example_draft, real_syncback_service, monkeypatch):
-    # We're not testing the actual SMTP sending or syncback here, so
-    # monkey-patch to make this run faster.
+@pytest.yield_fixture
+def patched_api_client(monkeypatch, db):
+    # We're not testing the actual SMTP sending or syncback with this, so
+    # monkey-patch to make the tests run faster.  This is basically the same as
+    # the api_client fixture, but we need to monkeypatch *before* constructing
+    # the fixture for it to work.
+    from inbox.api.srv import app
+    from tests.util.base import TestAPIClient
     monkeypatch.setattr('inbox.sendmail.base.get_sendmail_client',
                         lambda *args, **kwargs: MockSMTPClient())
     monkeypatch.setattr('inbox.actions.save_draft',
                         lambda *args, **kwargs: None)
     monkeypatch.setattr('inbox.actions.delete_draft',
                         lambda *args, **kwargs: None)
-    r = api_client.post_data('/drafts', example_draft)
+    app.config['TESTING'] = True
+    with app.test_client() as c:
+        yield TestAPIClient(c)
+
+
+def test_send(patched_api_client, example_draft, real_syncback_service,
+              monkeypatch):
+    r = patched_api_client.post_data('/drafts', example_draft)
     draft_public_id = json.loads(r.data)['id']
 
-    r = api_client.post_data('/send', {'draft_id': draft_public_id})
+    r = patched_api_client.post_data('/send', {'draft_id': draft_public_id})
 
     # TODO(emfree) do this more rigorously
     gevent.sleep(1)
 
-    drafts = api_client.get_data('/drafts')
-    threads_with_drafts = api_client.get_data('/threads?tag=drafts')
+    drafts = patched_api_client.get_data('/drafts')
+    threads_with_drafts = patched_api_client.get_data('/threads?tag=drafts')
     assert not drafts
     assert not threads_with_drafts
 
-    sent_threads = api_client.get_data('/threads?tag=sent')
+    sent_threads = patched_api_client.get_data('/threads?tag=sent')
     assert len(sent_threads) == 1
 
-    message = api_client.get_data('/messages/{}'.format(draft_public_id))
+    message = patched_api_client.get_data('/messages/{}'.
+                                          format(draft_public_id))
     assert message['state'] == 'sent'
     assert message['object'] == 'message'
 

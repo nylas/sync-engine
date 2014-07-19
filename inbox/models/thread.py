@@ -13,6 +13,7 @@ from inbox.models.base import MailSyncBase
 from inbox.models.transaction import HasRevisions
 from inbox.models.namespace import Namespace
 
+from inbox.models.action_log import schedule_action_for_tag
 from inbox.models.folder import FolderItem
 from inbox.models.tag import Tag
 from inbox.models.message import SpoolMessage
@@ -144,11 +145,11 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         """
         if tag in self.tags:
             return
-        # We need to directly access the tagitem object here in order to set
-        # the 'action_pending' flag.
-        tagitem = TagItem(thread=self, tag=tag)
-        tagitem.action_pending = execute_action
-        self.tagitems.add(tagitem)
+        self.tags.add(tag)
+
+        if execute_action:
+            schedule_action_for_tag(tag.public_id, self, object_session(self),
+                                    tag_added=True)
 
         # Add or remove dependent tags.
         # TODO(emfree) this should eventually live in its own utility function.
@@ -177,13 +178,11 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         """
         if tag not in self.tags:
             return
-        # We need to directly access the tagitem object here in order to set
-        # the 'action_pending' flag.
-        tagitem = object_session(self).query(TagItem). \
-            filter(TagItem.thread_id == self.id,
-                   TagItem.tag_id == tag.id).one()
-        tagitem.action_pending = execute_action
         self.tags.remove(tag)
+
+        if execute_action:
+            schedule_action_for_tag(tag.public_id, self, object_session(self),
+                                    tag_added=False)
 
         # Add or remove dependent tags.
         inbox_tag = self.namespace.tags['inbox']
@@ -232,8 +231,7 @@ class TagItem(MailSyncBase):
                         cascade='all, delete-orphan',
                         primaryjoin='and_(TagItem.thread_id==Thread.id, '
                                     'TagItem.deleted_at.is_(None))',
-                        info={'versioned_properties': ['tag_id',
-                                                       'action_pending']}),
+                        info={'versioned_properties': ['tag_id']}),
         primaryjoin='and_(TagItem.thread_id==Thread.id, '
         'Thread.deleted_at.is_(None))')
     tag = relationship(
@@ -245,18 +243,6 @@ class TagItem(MailSyncBase):
                         cascade='all, delete-orphan'),
         primaryjoin='and_(TagItem.tag_id==Tag.id, '
         'Tag.deleted_at.is_(None))')
-
-    # This flag should be set by calling code that adds or removes a tag from a
-    # thread, and wants a syncback action to be associated with it as a result.
-    @property
-    def action_pending(self):
-        if not hasattr(self, '_action_pending'):
-            self._action_pending = False
-        return self._action_pending
-
-    @action_pending.setter
-    def action_pending(self, value):
-        self._action_pending = value
 
     @property
     def namespace(self):
