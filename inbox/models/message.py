@@ -235,7 +235,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                 new_part.namespace_id = account.namespace.id
                 new_part.message = self
                 new_part.walk_index = i
-                new_part.misc_keyval = mimepart.headers.items()  # everything
                 new_part.content_type = mimepart.content_type.value
                 new_part.filename = _trim_filename(
                     mimepart.content_type.params.get('name'),

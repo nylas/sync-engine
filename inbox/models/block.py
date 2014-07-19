@@ -102,7 +102,6 @@ class Part(Block):
     walk_index = Column(Integer)
     content_disposition = Column(Enum('inline', 'attachment'))
     content_id = Column(String(255))  # For attachments
-    misc_keyval = Column(JSON)
 
     is_inboxapp_attachment = Column(Boolean, server_default=false())
 
