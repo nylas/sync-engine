@@ -18,7 +18,8 @@ from sqlalchemy.ext.declarative import declarative_base
 
 
 def upgrade():
-    from inbox.ignition import engine
+    from inbox.ignition import main_engine
+    engine = main_engine()
     Base = declarative_base()
     Base.metadata.reflect(engine)
 
@@ -153,7 +154,8 @@ def downgrade():
     op.drop_index('ix_folder_deleted_at', table_name='folder')
     op.drop_index('ix_folder_created_at', table_name='folder')
 
-    from inbox.ignition import engine
+    from inbox.ignition import main_engine
+    engine = main_engine()
     Base = declarative_base()
     Base.metadata.reflect(engine)
 

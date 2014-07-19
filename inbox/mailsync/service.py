@@ -1,6 +1,11 @@
-""" ZeroRPC interface to syncing. """
 import platform
+
 import gevent
+from gipc.gipc import _GProcess
+from setproctitle import setproctitle
+
+from sqlalchemy import func, or_
+from sqlalchemy.exc import OperationalError, TimeoutError
 
 from inbox.contacts.remote_sync import ContactSync
 from inbox.log import get_logger
@@ -10,57 +15,88 @@ from inbox.models import Account
 from inbox.mailsync.backends import module_registry
 
 
-class SyncService(object):
-    def __init__(self, poll_interval=1):
+class SyncService(_GProcess):
+    """
+    Parameters
+    ----------
+    cpu_id : int
+        If a system has 4 cores, value from 0-3. (Each sync service on the
+        system should get a different value.)
+    total_cpus : int
+        Total CPUs on the system.
+    poll_interval : int
+        Seconds between polls for account changes.
+    """
+    def __init__(self, cpu_id, total_cpus, poll_interval=1):
+        self.cpu_id = cpu_id
+        self.total_cpus = total_cpus
         self.monitor_cls_for = {mod.PROVIDER: getattr(
             mod, mod.SYNC_MONITOR_CLS) for mod in module_registry.values()
             if hasattr(mod, 'SYNC_MONITOR_CLS')}
 
         self.log = get_logger()
+        self.log.bind(cpu_id=cpu_id)
+        self.log.info('starting mail sync process',
+                      supported_providers=module_registry.keys())
+
         self.monitors = {}
         self.contact_sync_monitors = {}
         self.poll_interval = poll_interval
 
-        with session_scope() as db_session:
-            # Restart existing active syncs.
-            # (Later we'll want to partition these across different machines)
-            for account_id, in db_session.query(Account.id).filter(
-                    ~Account.sync_host.is_(None)):
-                self.start_sync(account_id)
+        _GProcess.__init__(self)
 
-        # In a separate greenlet, check for new accounts that are registered.
-        gevent.spawn(self._new_account_listener)
+    def run(self):
+        """
+        Polls for newly registered accounts and checks for start/stop commands.
 
-    def _new_account_listener(self):
-        """Polls for registered accounts that don't have syncs started."""
+        """
+        setproctitle('inbox-sync-{}'.format(self.cpu_id))
         while True:
-            with session_scope() as db_session:
-                unstarted_accounts = db_session.query(Account).filter(
-                    Account.sync_state.is_(None)).all()
-                if unstarted_accounts:
-                    self.log.info(
-                        'new accounts found',
-                        account_ids=[acc.id for acc in unstarted_accounts])
-                for account in unstarted_accounts:
-                    self.start_sync(account.id)
-            gevent.sleep(self.poll_interval)
+            try:
+                with session_scope() as db_session:
+                    start_accounts = \
+                        [id_ for id_, in db_session.query(Account.id).filter(
+                            or_(Account.sync_state.is_(None),
+                                Account.sync_host == platform.node()),
+                            func.mod(Account.id, self.total_cpus)
+                            == self.cpu_id)]
+                    for account_id in start_accounts:
+                        if account_id not in self.monitors:
+                            self.log.info('sync service starting sync',
+                                          account_id=account_id)
+                            self.start_sync(account_id)
+
+                    stop_accounts = set(self.monitors.keys()) - \
+                        set(start_accounts)
+                    for account_id in stop_accounts:
+                        self.log.info('sync service stopping sync',
+                                      account_id=account_id)
+                        self.stop_sync(account_id)
+
+                gevent.sleep(self.poll_interval)
+            except (OperationalError, TimeoutError) as e:
+                self.log.error("Database error in service poll loop", error=e)
 
     def start_sync(self, account_id):
         """
         Starts a sync for the account with the given account_id.
         If that account doesn't exist, does nothing.
+
         """
         with session_scope() as db_session:
             acc = db_session.query(Account).get(account_id)
             if acc is None:
-                return 'No account with id {}'.format(account_id)
+                self.log.error('no such account', account_id=account_id)
+                return
             fqdn = platform.node()
-            self.log.info('Starting sync for account {0}'.format(
-                acc.email_address))
+            self.log.info('starting sync', account_id=acc.id,
+                          email_address=acc.email_address)
 
             if acc.sync_host is not None and acc.sync_host != fqdn:
-                return 'acc {0} is syncing on host {1}'.format(
-                    acc.email_address, acc.sync_host)
+                self.log.warning('account is syncing on another host',
+                                 account_id=account_id,
+                                 email_address=acc.email_address,
+                                 sync_host=acc.sync_host)
             elif acc.id not in self.monitors:
                 try:
                     acc.sync_lock()
@@ -78,12 +114,11 @@ class SyncService(object):
                     acc.start_sync(fqdn)
                     db_session.add(acc)
                     db_session.commit()
-                    return 'OK sync started'
+                    self.log.info('sync started', account_id=account_id)
                 except Exception as e:
-                    self.log.error(e.message)
-                    return 'ERROR error encountered: {0}'.format(e)
+                    self.log.error('error encountered', msg=e.message)
             else:
-                return 'OK sync already started'
+                self.log.info('sync already started', account_id=account_id)
 
     def stop_sync(self, account_id):
         """
@@ -94,14 +129,15 @@ class SyncService(object):
         with session_scope() as db_session:
             acc = db_session.query(Account).get(account_id)
             if acc is None:
-                return 'no account found for id {}'.format(account_id)
+                self.log.error('no such account', account_id=account_id)
+                return
             fqdn = platform.node()
             if (not acc.id in self.monitors) or \
                     (not acc.sync_enabled):
-                return 'OK sync stopped already'
+                self.log.info('sync already started', account_id=account_id)
             try:
                 if acc.sync_host is None:
-                    return 'Sync not running'
+                    self.log.info('sync not enabled', account_id=account_id)
 
                 assert acc.sync_host == fqdn, \
                     "sync host FQDN doesn't match: {0} <--> {1}" \
@@ -117,7 +153,6 @@ class SyncService(object):
                 # accounts)
                 if acc.id in self.contact_sync_monitors:
                     del self.contact_sync_monitors[acc.id]
-                return 'OK sync stopped'
-
+                self.log.info('sync stopped', account_id=account_id)
             except Exception as e:
-                return 'ERROR error encountered: {0}'.format(e)
+                self.log.error('error encountered', msg=e.message)

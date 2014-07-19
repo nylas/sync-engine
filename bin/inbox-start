@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-from gevent import monkey; monkey.patch_all()
 from setproctitle import setproctitle; setproctitle('inbox')
 
 import sys
 import os
 import platform
+import multiprocessing
 
 import click
 
@@ -18,8 +18,6 @@ except ImportError:
              "Maybe the Vagrant box provisioning didn't succeed?\n"
              "Try running sudo ./setup.sh")
 
-from gevent import joinall
-
 from inbox.util.startup import preflight
 from inbox.log import get_logger, configure_logging
 
@@ -30,7 +28,9 @@ from inbox.log import get_logger, configure_logging
                    'non-production features.')
 @click.option('-c', '--config', default=None,
               help='Path to JSON configuration file.')
-def main(prod, config):
+@click.option('--processes', default=multiprocessing.cpu_count(),
+              help='Number of mailsync processes to spawn.')
+def main(prod, config, processes):
     """ Launch the Inbox sync service. """
     configure_logging(prod)
 
@@ -41,32 +41,26 @@ def main(prod, config):
 
     preflight()
 
-    if prod:
-        start()
-    else:
-        from werkzeug.serving import run_with_reloader
-        run_with_reloader(start)
-
-
-def start():
     log = get_logger()
+    log.info('start',
+             components=['mail sync', 'webhooks', 'contact sync'],
+             host=platform.node(), processes=processes,
+             recursion_limit=sys.getrecursionlimit())
 
-    from inbox.models.backends import module_registry
+    start(processes)
 
-    threads = []
 
+def run_webhooks():
     from inbox.util.concurrency import make_zerorpc
-
-    # Start ZeroRPC mail sync server service
-    from inbox.mailsync.service import SyncService
-    sync_srv_loc = config.get('CRISPIN_SERVER_LOC', None)
-    threads.append(make_zerorpc(SyncService, sync_srv_loc))
-
-    # start webhook service
     from inbox.transactions.webhook import WebhookService
+    setproctitle('inbox-webhooks')
     webhook_srv_loc = config.get('WEBHOOK_SERVER_LOC', None)
-    threads.append(make_zerorpc(WebhookService, webhook_srv_loc))
 
+    service = make_zerorpc(WebhookService, webhook_srv_loc)
+    service.join()
+
+
+def start(processes):
     print >>sys.stderr, """
     \033[94m     Welcome to... \033[0m\033[1;95m
       _____       _
@@ -78,15 +72,21 @@ def start():
 
      Use CTRL-C to stop.
      """
+    # top-level import makes child process DB calls sad :(
+    from gevent import monkey; monkey.patch_all()
+    import gipc
 
-    log.info('start',
-             components=['mail sync', 'webhooks', 'contact sync'],
-             host=platform.node(),
-             recursion_limit=sys.getrecursionlimit(),
-             supported_providers=module_registry.keys())
+    # run SyncService in individual processes for multicore support
+    from inbox.mailsync.service import SyncService
+    processes = [SyncService(i, processes) for i in xrange(processes)]
+    for process in processes:
+        process.start()
+    # also run webhooks in its own process
+    processes.append(gipc.start_process(target=run_webhooks))
 
     # hang out forever and run some services
-    joinall(threads)
+    for p in processes:
+        p.join()
 
 if __name__ == '__main__':
     main()

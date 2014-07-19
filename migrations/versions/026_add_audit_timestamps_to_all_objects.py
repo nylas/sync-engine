@@ -26,7 +26,8 @@ table_names = {'account', 'block', 'contact',
 
 
 def add_eas_tables():
-    from inbox.ignition import engine
+    from inbox.ignition import main_engine
+    engine = main_engine()
     Base = declarative_base()
     Base.metadata.reflect(engine)
     for table_name in ['easuid', 'easfoldersync']:

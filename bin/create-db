@@ -8,8 +8,10 @@ from alembic import command as alembic_command
 from inbox.config import engine_uri
 
 from inbox.ignition import init_db
-from inbox.ignition import engine as inbox_db_engine
+from inbox.ignition import main_engine
 from inbox.sqlalchemy_ext.util import ForceStrictMode
+
+inbox_db_engine = main_engine(pool_size=1)
 
 basic_engine = sqlalchemy.create_engine(
     engine_uri(), listeners=[ForceStrictMode()], echo=False)

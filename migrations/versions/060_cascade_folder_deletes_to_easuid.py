@@ -12,7 +12,8 @@ down_revision = '15dfc756a1b0'
 
 from alembic import op
 
-from inbox.ignition import engine
+from inbox.ignition import main_engine
+engine = main_engine()
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()

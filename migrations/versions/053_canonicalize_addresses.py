@@ -35,7 +35,8 @@ def upgrade():
                     unique=False)
 
     from flanker.addresslib import address
-    from inbox.ignition import engine
+    from inbox.ignition import main_engine
+    engine = main_engine()
     from inbox.models.session import session_scope
     from sqlalchemy.ext.declarative import declarative_base
     Base = declarative_base()
@@ -89,7 +90,8 @@ def downgrade():
                     unique=False)
     op.create_index('ix_contact_email_address', 'contact', ['email_address'],
                     unique=False)
-    from inbox.ignition import engine
+    from inbox.ignition import main_engine
+    engine = main_engine()
     from inbox.models.session import session_scope
     from sqlalchemy.ext.declarative import declarative_base
     Base = declarative_base()

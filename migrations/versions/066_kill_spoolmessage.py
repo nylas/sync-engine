@@ -15,7 +15,8 @@ import sqlalchemy as sa
 
 from sqlalchemy.ext.declarative import declarative_base
 from inbox.models.session import session_scope
-from inbox.ignition import engine
+from inbox.ignition import main_engine
+engine = main_engine()
 
 
 def upgrade():

@@ -10,7 +10,8 @@ Create Date: 2014-07-19 00:28:08.258857
 revision = 'bb4f204f192'
 down_revision = '2a748760ac63'
 
-from inbox.ignition import engine
+from inbox.ignition import main_engine
+engine = main_engine()
 from inbox.models.session import session_scope
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm.exc import NoResultFound
