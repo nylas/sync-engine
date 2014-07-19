@@ -27,17 +27,21 @@ def upgrade():
 
     with session_scope(versioned=False, ignore_soft_deletes=False) \
             as db_session:
-        null_field_count, = db_session.query(func.count(Message.id)). \
+        null_field_count = db_session.query(func.count(Message.id)). \
             filter(or_(Message.from_addr.is_(None),
                        Message.to_addr.is_(None),
                        Message.cc_addr.is_(None),
-                       Message.bcc_addr.is_(None)))
-        if null_field_count:
+                       Message.bcc_addr.is_(None))).scalar()
+        print 'messages to migrate:', null_field_count
+        if int(null_field_count):
             for message in db_session.query(Message):
                 for attr in ('to_addr', 'from_addr', 'cc_addr', 'bcc_addr'):
                     if getattr(message, attr) is None:
                         setattr(message, attr, [])
+                print '.',
         db_session.commit()
+
+    print 'making addrs non-nullable'
 
     op.alter_column('message', 'bcc_addr', existing_type=mysql.TEXT(),
                     nullable=False)
