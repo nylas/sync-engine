@@ -2,8 +2,8 @@
 from setproctitle import setproctitle; setproctitle('inbox-syncmgr')
 
 import sys
+import platform
 
-import zerorpc
 import click
 
 # Check that the inbox package is installed. It seems Vagrant may sometimes
@@ -27,28 +27,29 @@ from inbox.models import Account
 @click.argument('email_address')
 def main(cmd, email_address):
     """ Start/stop mail sync for an account. """
-    mailsync_client = zerorpc.Client(timeout=15)
-    mailsync_srv_loc = config.get('CRISPIN_SERVER_LOC', None)
-    mailsync_client.connect(mailsync_srv_loc)
 
-    if not email_address:
-        sys.exit('Specify the email_address of the account to start/stop.')
     with session_scope() as db_session:
         try:
-            account_id = db_session.query(Account.id).filter_by(
-                email_address=email_address).one()[0]
+            account = db_session.query(Account).filter_by(
+                email_address=email_address).one()
         except NoResultFound:
             sys.exit('No record of account {0}'.format(email_address))
 
-    try:
         if cmd == 'start':
-            print mailsync_client.start_sync(account_id)
+            account.start_sync(platform.node())
+            print "Marked account '{}' to start sync on {}.".format(
+                account.email_address, platform.node())
         elif cmd == 'stop':
-            print mailsync_client.stop_sync(account_id)
+            old_host = account.sync_host
+            if account.sync_enabled:
+                account.stop_sync()
+                print "Marked account '{}' to stop sync on {}.".format(
+                    account.email_address, old_host)
+            else:
+                print "Account '{}' is already disabled.".format(
+                    account.email_address)
         else:
             sys.exit('No such command.')
-    except zerorpc.exceptions.TimeoutExpired:
-        sys.exit("Can't connect to sync service. Is it running? (./bin/inbox-start)")
 
 if __name__ == '__main__':
     main()

@@ -30,7 +30,8 @@ def upgrade():
     from inbox.sqlalchemy_ext.util import generate_public_id, b36_to_bin
     # TODO(emfree) reflect
     from inbox.models.session import session_scope
-    from inbox.ignition import engine
+    from inbox.ignition import main_engine
+    engine = main_engine()
     Base = declarative_base()
     Base.metadata.reflect(engine)
 

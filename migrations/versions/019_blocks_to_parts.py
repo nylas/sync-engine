@@ -21,10 +21,10 @@ chunk_size = 250
 
 def upgrade():
     from inbox.models.session import session_scope, Session
-    from inbox.ignition import engine
+    from inbox.ignition import main_engine
+    engine = main_engine()
 
-    from inbox.models import (Part, Namespace,
-                                                 Message, Thread)
+    from inbox.models import (Part, Namespace, Message, Thread)
     from inbox.sqlalchemy_ext.util import JSON
 
     print 'Creating table for parts...'

@@ -10,7 +10,9 @@ def main():
     parser.add_argument('-u', '--with-users', action='store_true',
                         dest='with_users', default=False)
     args = parser.parse_args()
-    from inbox.ignition import engine, init_db
+    from inbox.ignition import main_engine, init_db
+
+    engine = main_engine(pool_size=1)
 
     # Always keep the 'alembic_version' table
     keep_tables = ['alembic_version']

@@ -16,7 +16,8 @@ from bson import json_util
 
 from inbox.sqlalchemy_ext.util import JSON, MutableDict
 
-from inbox.ignition import engine
+from inbox.ignition import main_engine
+engine = main_engine()
 from inbox.models.session import session_scope
 from sqlalchemy.ext.declarative import declarative_base
 

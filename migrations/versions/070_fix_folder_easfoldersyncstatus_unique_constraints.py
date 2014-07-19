@@ -13,7 +13,8 @@ down_revision = '479b3b84a73e'
 from alembic import op
 import sqlalchemy as sa
 
-from inbox.ignition import engine
+from inbox.ignition import main_engine
+engine = main_engine()
 
 Base = sa.ext.declarative.declarative_base()
 Base.metadata.reflect(engine)

@@ -24,7 +24,8 @@ from inbox.transactions import client_sync
 
 from err import err
 
-from inbox.ignition import engine
+from inbox.ignition import main_engine
+engine = main_engine()
 
 
 DEFAULT_LIMIT = 100

@@ -129,7 +129,8 @@ class TestAPIClient(object):
 class TestDB(object):
     def __init__(self, config, dumpfile):
         from inbox.models.session import InboxSession
-        from inbox.ignition import engine
+        from inbox.ignition import main_engine
+        engine = main_engine()
         # Set up test database
         self.session = InboxSession(engine, versioned=False)
         self.engine = engine

@@ -12,6 +12,7 @@ Flask==0.10.1
 gevent==1.0.1
 gevent-socketio==0.3.5-rc2
 geventconnpool==0.2.1
+gipc==0.4.0
 gunicorn==19.0.0
 colorlog==1.8
 MySQL-python==1.2.5

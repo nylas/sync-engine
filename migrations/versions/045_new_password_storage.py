@@ -39,7 +39,8 @@ def decrypt_aes(ciphertext, key):
 
 def upgrade():
     from inbox.models.session import session_scope
-    from inbox.ignition import engine
+    from inbox.ignition import main_engine
+    engine = main_engine()
     from inbox.util.file import mkdirp
     from hashlib import sha256
 

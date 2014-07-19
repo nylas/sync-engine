@@ -5,10 +5,12 @@ from flask import Flask, g, render_template
 
 from sqlalchemy.orm.exc import NoResultFound
 
-from inbox.ignition import engine
+from inbox.ignition import main_engine
 from inbox.models.session import InboxSession
 from inbox.models import Account
 from inbox.api.err import err
+
+engine = main_engine(pool_size=5)
 
 app = Flask(__name__)
 

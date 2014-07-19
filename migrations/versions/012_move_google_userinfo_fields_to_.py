@@ -17,7 +17,8 @@ from sqlalchemy.sql import table, column, text
 from sqlalchemy.ext.declarative import declarative_base
 
 from inbox.models.session import session_scope
-from inbox.ignition import engine
+from inbox.ignition import main_engine
+engine = main_engine()
 
 Base = declarative_base()
 Base.metadata.reflect(engine)
