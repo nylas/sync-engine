@@ -28,6 +28,16 @@
 <script type=text/javascript>
   var callback;
   var interval = 30;
+  var tableFilter = {
+      col_0: 'none',
+      col_1: 'none',
+      col_2: 'select',
+      col_3: 'select',
+      col_4: 'select',
+      col_5: 'none',
+      col_6: 'none',
+      col_7: 'none'
+  };
   var callback_fn = function() {                        
       $.getJSON(                            
         $SCRIPT_ROOT + '/_accounts',              
@@ -49,7 +59,11 @@
           });
           
           $('#status_table tbody').html(content);
-        });
+
+          if ($('#status_table tr').length >= 3) {
+              setFilterGrid('status_table', 0, tableFilter);
+          }
+      });
   };
 
   $(function() {
