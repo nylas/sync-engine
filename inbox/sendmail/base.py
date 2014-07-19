@@ -172,6 +172,10 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
     bcc_addr = bcc_addr or []
     blocks = blocks or []
     body = body or ''
+    if subject is None and thread is not None:
+        # Set subject from thread by default.
+        subject = thread.subject
+    subject = subject or ''
     message = SpoolMessage()
     message.from_addr = [(account.sender_name, account.email_address)]
     message.created_date = dt
