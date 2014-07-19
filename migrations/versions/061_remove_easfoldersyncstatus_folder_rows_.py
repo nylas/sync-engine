@@ -34,10 +34,11 @@ def upgrade():
                 db_session.delete(s.folder)
 
             try:
-                ri = db_session.query(EASFolderSyncStatus).join(Folder).filter(
-                    Folder.name == 'RecipientInfo').one()
-                db_session.delete(ri)
-                db_session.delete(ri.folder)
+                for status in db_session.query(EASFolderSyncStatus)\
+                        .join(Folder).filter(
+                            Folder.name == 'RecipientInfo').all():
+                    db_session.delete(status)
+                    db_session.delete(status.folder)
             except NoResultFound:
                 pass
 
