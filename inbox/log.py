@@ -81,8 +81,9 @@ class BoundLogger(structlog._base.BoundLoggerBase):
     def critical(self, event=None, *args, **kw):
         return self._proxy_to_logger('critical', event, *args, **kw)
 
-    # Note(emfree): We could also add an `exception` method here to support
-    # `log.exception(...)`.
+    def exception(self, event=None, *args, **kw):
+        kw['exc_info'] = True
+        return self._proxy_to_logger('error', event, *args, **kw)
 
     def _proxy_to_logger(self, method_name, event=None, *event_args,
                          **event_kw):

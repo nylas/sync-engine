@@ -29,19 +29,15 @@ def before_cursor_execute(conn, cursor, statement,
 @event.listens_for(Engine, "after_cursor_execute")
 def after_cursor_execute(conn, cursor, statement,
                          parameters, context, executemany):
-    total = time.time() - context._query_start_time
-    total *= 1000
+    total = int(1000 * (time.time() - context._query_start_time))
     # We only care about slow reads here
     if total > SLOW_QUERY_THRESHOLD_MS and statement.startswith('SELECT'):
         statement = ' '.join(statement.split())
         # Log stack trace, but remove the uninteresting parts.
         tb = ''.join([line for line in traceback.format_stack() if 'inbox' in
                       line][:-1])
-        log.warning("Slow query took {0:.2f}ms: \n"
-                    "\033[1;30;40m {1} \033[0m \n"
-                    "Params: \033[1;30;40m {2} \033[0m \n"
-                    "Trace: \033[1;30;40m {3} \033[0m "
-                    .format(total, statement, parameters, tb))
+        log.warning('slow query', query_time=total, statement=statement,
+                    parameters=parameters, tb=tb)
 
 
 ### Column Types
