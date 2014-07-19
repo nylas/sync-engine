@@ -74,6 +74,7 @@ from gevent import Greenlet, spawn, sleep
 from gevent.queue import LifoQueue
 from gevent.pool import Group
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.exc import DataError, IntegrityError
 
 from inbox.util.concurrency import retry_and_report_killed
 from inbox.util.itert import chunk
@@ -113,7 +114,10 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
 
     """
     def __init__(self, account_id, namespace_id, email_address, provider,
-                 heartbeat=1, poll_frequency=300, retry_fail_classes=None,
+                 heartbeat=1, poll_frequency=300,
+                 retry_fail_classes=[MailsyncError,
+                                     ValueError, AttributeError,
+                                     DataError, IntegrityError],
                  refresh_flags_max=2000):
 
         self.shared_state = {
