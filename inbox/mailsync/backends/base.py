@@ -2,7 +2,7 @@ from gc import collect as garbage_collect
 
 from gevent import Greenlet, joinall, sleep
 from gevent.queue import Queue, Empty
-from sqlalchemy.exc import DataError
+from sqlalchemy.exc import DataError, IntegrityError
 
 from inbox.log import get_logger
 logger = get_logger()
@@ -195,7 +195,8 @@ def new_or_updated(uids, local_uids):
 class BaseMailSyncMonitor(Greenlet):
     def __init__(self, account_id, email_address, provider, heartbeat=1,
                  retry_fail_classes=[MailsyncError,
-                                     ValueError, AttributeError]):
+                                     ValueError, AttributeError,
+                                     DataError, IntegrityError]):
         self.inbox = Queue()
         # how often to check inbox, in seconds
         self.heartbeat = heartbeat

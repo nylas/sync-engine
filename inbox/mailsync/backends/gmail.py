@@ -27,6 +27,7 @@ from collections import namedtuple
 
 from gevent import spawn
 from gevent.queue import LifoQueue
+from sqlalchemy.exc import DataError, IntegrityError
 
 from inbox.util.itert import chunk, partition
 from inbox.util.cache import set_cache, get_cache, rm_cache
@@ -76,6 +77,7 @@ class GmailSyncMonitor(ImapSyncMonitor):
                                  retry_fail_classes=[MailsyncError,
                                                      ValueError,
                                                      AttributeError,
+                                                     DataError, IntegrityError,
                                                      GmailSettingError])
 
 
