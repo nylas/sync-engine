@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, Index
 from sqlalchemy.orm import relationship
 
 from inbox.log import get_logger
@@ -61,5 +61,8 @@ class Transaction(MailSyncBase, Revision, HasPublicID):
                 'subjectdate': obj.thread.subjectdate,
                 'filenames': [part.filename for part in obj.parts if
                               part.is_attachment]}
+
+Index('namespace_id_deleted_at', Transaction.namespace_id,
+      Transaction.deleted_at)
 
 HasRevisions = gen_rev_role(Transaction)
