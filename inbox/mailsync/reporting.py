@@ -1,10 +1,10 @@
 import sys
-import traceback
 from datetime import datetime
 
 
 from inbox.models.session import session_scope
 from inbox.models.account import Account
+from inbox.log import safe_format_exception
 
 
 def report_stopped(account_id, folder_name=None):
@@ -26,7 +26,7 @@ def report_stopped(account_id, folder_name=None):
 
 
 def report_killed(account_id, folder_name=None):
-    error = '\t'.join(traceback.format_exception(*sys.exc_info()))
+    error = safe_format_exception(*sys.exc_info())
 
     with session_scope() as db_session:
         account = db_session.query(Account).get(account_id)
