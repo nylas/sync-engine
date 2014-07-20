@@ -21,7 +21,7 @@ MAX_EXCEPTION_LENGTH = 10000
 
 
 def configure_logging(is_prod):
-    tty_handler = logging.StreamHandler()
+    tty_handler = logging.StreamHandler(sys.stdout)
     if not is_prod:
         # Use a more human-friendly format.
         formatter = colorlog.ColoredFormatter(
