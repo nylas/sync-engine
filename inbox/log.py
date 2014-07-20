@@ -17,6 +17,9 @@ import logging
 import logging.handlers
 
 
+MAX_EXCEPTION_LENGTH = 10000
+
+
 def configure_logging(is_prod):
     tty_handler = logging.StreamHandler()
     if not is_prod:
@@ -36,27 +39,57 @@ def configure_logging(is_prod):
     root_logger.setLevel(config.get('LOGLEVEL', 10))
 
 
+def safe_format_exception(etype, value, tb, limit=None):
+    """Similar to structlog._format_exception, but truncate the exception part.
+    This is because SQLAlchemy exceptions can sometimes have ludicrously large
+    exception strings."""
+    if tb:
+        list = ['Traceback (most recent call last):\n']
+        list = list + traceback.format_tb(tb, limit)
+    else:
+        list = []
+    exc_only = traceback.format_exception_only(etype, value)
+    # Normally exc_only is a list containing a single string.  For syntax
+    # errors it may contain multiple elements, but we don't really need to
+    # worry about that here.
+    exc_only[0] = exc_only[0][:MAX_EXCEPTION_LENGTH]
+    list = list + exc_only
+    return '\t'.join(list)
+
+
 def _record_level(logger, name, event_dict):
-    """Record the log level ('info', 'warning', etc.) in the structlog event
-    dictionary."""
+    """Processor that records the log level ('info', 'warning', etc.) in the
+    structlog event dictionary."""
     event_dict['level'] = name
     return event_dict
 
 
 def _record_module(logger, name, event_dict):
-    """Record the module and line where the logging call was invoked."""
+    """Processor that records the module and line where the logging call was
+    invoked."""
     f, name = _find_first_app_frame_and_name(additional_ignores=['inbox.log'])
     event_dict['module'] = '{}:{}'.format(name, f.f_lineno)
     return event_dict
 
 
 def _format_string_renderer(_, __, event_dict):
-    """Use with the BoundLogger class below to properly handle messages of the
-    form `log.info('some message to format %s', some_value')`."""
+    """Processor to be used with the BoundLogger class below to properly handle
+    messages of the form
+    `log.info('some message to format %s', some_value')`."""
     positional_args = event_dict.get('_positional_args')
     if positional_args:
         event_dict['event'] = event_dict['event'] % positional_args
         del event_dict['_positional_args']
+    return event_dict
+
+
+def _safe_exc_info_renderer(_, __, event_dict):
+    """Processor that formats exception info safely."""
+    exc_info = event_dict.pop('exc_info', None)
+    if exc_info:
+        if not isinstance(exc_info, tuple):
+            exc_info = sys.exc_info()
+        event_dict['exception'] = safe_format_exception(*exc_info)
     return event_dict
 
 
@@ -98,7 +131,7 @@ structlog.configure(
         structlog.stdlib.filter_by_level,
         structlog.processors.TimeStamper(fmt='iso', utc=True),
         structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
+        _safe_exc_info_renderer,
         _record_module,
         _record_level,
         _format_string_renderer,
@@ -138,9 +171,9 @@ def email_exception(logger, account_id, etype, evalue, tb):
     {}
 
     """.format(socket.getfqdn(),
-               '\t'.join(traceback.format_exception(etype, evalue, tb)))})
+               safe_format_exception(etype, evalue, tb))})
     if r.status_code != requests.codes.ok:
-        logger.error("Couldn't send exception email: {}".format(r.json()))
+        logger.error("Couldn't send exception email: {}".format(r.text))
 
 
 def log_uncaught_errors(logger=None, account_id=None):
