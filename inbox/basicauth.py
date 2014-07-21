@@ -19,6 +19,10 @@ class ValidationError(AuthError):
     pass
 
 
+class NotSupportedError(AuthError):
+    pass
+
+
 def password_auth(email_address, message=default_message):
     pw = getpass.getpass(message.format(email_address))
 
