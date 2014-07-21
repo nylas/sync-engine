@@ -44,5 +44,4 @@ class GmailSMTPClient(SMTPClient):
                                      draft.in_reply_to, draft.references,
                                      inbox_uid, recipients, subject, body,
                                      attachments)
-
         return self._send_mail(db_session, draft, smtpmsg)

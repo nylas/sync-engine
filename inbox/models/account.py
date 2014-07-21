@@ -14,10 +14,6 @@ from inbox.models.folder import Folder
 
 
 class Account(MailSyncBase, HasPublicID, HasEmailAddress):
-    discriminator = Column('type', String(16))
-    __mapper_args__ = {'polymorphic_identity': 'account',
-                       'polymorphic_on': discriminator}
-
     @property
     def provider(self):
         """ A constant, unique lowercase identifier for the account provider
@@ -197,5 +193,5 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
         self._sync_lock.release()
 
     discriminator = Column('type', String(16))
-    __mapper_args__ = {'polymorphic_on': discriminator,
-                       'polymorphic_identity': 'account'}
+    __mapper_args__ = {'polymorphic_identity': 'account',
+                       'polymorphic_on': discriminator}

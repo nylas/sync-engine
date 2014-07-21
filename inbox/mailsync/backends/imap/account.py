@@ -14,7 +14,7 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.models.block import Block
-from inbox.models.message import Message, SpoolMessage
+from inbox.models.message import Message
 from inbox.models.folder import Folder
 from inbox.models.namespace import Namespace
 from inbox.models.backends.imap import (ImapUid, ImapFolderInfo, ImapThread,
@@ -232,11 +232,9 @@ def create_imap_message(db_session, log, account, folder, msg):
         New db object, which links to new Message and Block objects through
         relationships. All new objects are uncommitted.
     """
-
-    msg_class = SpoolMessage if msg.created else Message
-    new_msg = msg_class(account=account, mid=msg.uid, folder_name=folder.name,
-                        received_date=msg.internaldate, flags=msg.flags,
-                        body_string=msg.body)
+    new_msg = Message(account=account, mid=msg.uid, folder_name=folder.name,
+                      received_date=msg.internaldate, flags=msg.flags,
+                      body_string=msg.body)
 
     imapuid = ImapUid(account=account, folder=folder, msg_uid=msg.uid,
                       message=new_msg)

@@ -8,9 +8,8 @@ from sqlalchemy.orm.exc import NoResultFound
 from werkzeug.exceptions import default_exceptions
 from werkzeug.exceptions import HTTPException
 
-from inbox.models import (
-    Message, Block, Part, Thread, Namespace, Webhook, Tag, SpoolMessage,
-    Contact)
+from inbox.models import (Message, Block, Part, Thread, Namespace, Webhook,
+                          Tag, Contact)
 from inbox.api.kellogs import APIEncoder
 from inbox.api.filtering import Filter
 from inbox.api.validation import (InputError, get_tags, get_attachments,
@@ -400,7 +399,8 @@ def file_read_api(public_id):
             Block.public_id == public_id).one()
         if hasattr(f, 'message'):
             assert int(f.message.namespace.id) == int(g.namespace.id)
-            g.log.info("block's message namespace matches api context namespace")
+            g.log.info(
+                "block's message namespace matches api context namespace")
         else:
             # Block was likely uploaded via file API and not yet sent in a message
             g.log.debug("This block doesn't have a corresponding message: {}"
@@ -503,8 +503,8 @@ def get_webhook_client():
 
 @app.route('/webhooks/', methods=['GET'])
 def webhooks_read_all_api():
-    return g.encoder.jsonify(g.db_session.query(Webhook).
-                   filter(Webhook.namespace_id == g.namespace.id).all())
+    return g.encoder.jsonify(g.db_session.query(Webhook).filter(
+        Webhook.namespace_id == g.namespace.id).all())
 
 
 @app.route('/webhooks/', methods=['POST'])
@@ -600,9 +600,10 @@ def draft_create_api():
 
 @app.route('/drafts/<public_id>', methods=['POST'])
 def draft_update_api(public_id):
-    parent_draft = g.db_session.query(SpoolMessage). \
-        filter(SpoolMessage.public_id == public_id).first()
-    if parent_draft is None or parent_draft.namespace.id != g.namespace.id:
+    parent_draft = g.db_session.query(Message). \
+        filter(Message.public_id == public_id).first()
+    if parent_draft is None or not parent_draft.is_draft or \
+            parent_draft.namespace.id != g.namespace.id:
         return err(404, 'No draft with public id {}'.format(public_id))
     if not parent_draft.is_latest:
         return err(409, 'Draft {} has already been updated to {}'.format(
@@ -634,8 +635,8 @@ def draft_update_api(public_id):
 @app.route('/drafts/<public_id>', methods=['DELETE'])
 def draft_delete_api(public_id):
     try:
-        draft = g.db_session.query(SpoolMessage).filter(
-            SpoolMessage.public_id == public_id).one()
+        draft = g.db_session.query(Message).filter(
+            Message.public_id == public_id).one()
     except NoResultFound:
         return err(404, 'No draft found with public_id {}'.
                    format(public_id))
@@ -662,8 +663,8 @@ def draft_send_api():
     draft_public_id = data.get('draft_id')
     if draft_public_id is not None:
         try:
-            draft = g.db_session.query(SpoolMessage).filter(
-                SpoolMessage.public_id == draft_public_id).one()
+            draft = g.db_session.query(Message).filter(
+                Message.public_id == draft_public_id).one()
         except NoResultFound:
             return err(404, 'No draft found with id {}'.
                        format(draft_public_id))

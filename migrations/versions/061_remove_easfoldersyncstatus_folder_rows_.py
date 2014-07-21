@@ -46,4 +46,4 @@ def upgrade():
 
 
 def downgrade():
-    raise Exception("Nope, not needed.")
+    raise Exception('Nope, not needed.')

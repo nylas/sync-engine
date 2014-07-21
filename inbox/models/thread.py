@@ -16,7 +16,6 @@ from inbox.models.namespace import Namespace
 from inbox.models.action_log import schedule_action_for_tag
 from inbox.models.folder import FolderItem
 from inbox.models.tag import Tag
-from inbox.models.message import SpoolMessage
 
 
 class Thread(MailSyncBase, HasPublicID, HasRevisions):
@@ -40,7 +39,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
 
     @validates('messages')
     def update_from_message(self, k, message):
-        if isinstance(message, SpoolMessage):
+        if message.is_draft:
             return message
 
         if message.received_date > self.recentdate:
@@ -110,16 +109,18 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
 
     @property
     def participants(self):
-        """Different messages in the thread may reference the same email
+        """
+        Different messages in the thread may reference the same email
         address with different phrases. We partially deduplicate: if the same
         email address occurs with both empty and nonempty phrase, we don't
         separately return the (empty phrase, address) pair.
+
         """
         deduped_participants = defaultdict(set)
         for m in self.messages:
             if m.is_draft:
-                if isinstance(m, SpoolMessage) and not m.is_latest:
-                    # Don't use old draft revisions to compute participants.
+                # Don't use old draft revisions to compute participants.
+                if not m.is_latest:
                     continue
             for phrase, address in itertools.chain(m.from_addr, m.to_addr,
                                                    m.cc_addr, m.bcc_addr):
@@ -199,20 +200,16 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
 
     @property
     def latest_drafts(self):
-        """Return all drafts on this thread that don't have later revisions.
+        """
+        Return all drafts on this thread that don't have later revisions.
+
         """
         drafts = []
-        # TODO(emfree) we can probably clean this up after
-        # https://review.inboxapp.com/T163 is fixed.
         for message in self.messages:
             if not message.is_draft:
                 continue
-            if isinstance(message, SpoolMessage):
-                if message.is_latest:
-                    drafts.append(message)
-            else:
-                # This message object is a draft that was synced from backend,
-                # so is not a SpoolMessage instance.
+            # Only append if it's the latest revision.
+            if message.is_latest:
                 drafts.append(message)
         return drafts
 

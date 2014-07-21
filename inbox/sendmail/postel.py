@@ -286,7 +286,7 @@ class SMTPClient(object):
         Parameters
         ----------
         db_session
-        draft : models.tables.base.SpoolMessage object
+        draft : models.tables.base.Message object
             the draft message to send.
         recipients: Recipients(to, cc, bcc) namedtuple
             to, cc, bcc are a lists of utf-8 encoded strings or None.
@@ -301,7 +301,7 @@ class SMTPClient(object):
         Parameters
         ----------
         db_session
-        draft : models.tables.base.SpoolMessage object
+        draft : models.tables.base.Message object
             the draft message to send.
         recipients: Recipients(to, cc, bcc) namedtuple
             to, cc, bcc are a lists of utf-8 encoded strings or None.

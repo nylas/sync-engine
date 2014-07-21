@@ -83,8 +83,12 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     size = Column(Integer, nullable=False)
     data_sha256 = Column(String(255), nullable=True)
 
-    is_draft = Column(Boolean, server_default=false(), nullable=False)
     is_read = Column(Boolean, server_default=false(), nullable=False)
+
+    # For drafts (both Inbox-created and otherwise)
+    is_draft = Column(Boolean, server_default=false(), nullable=False)
+    is_sent = Column(Boolean, server_default=false(), nullable=False)
+    state = Column(Enum('draft', 'sending', 'sending failed', 'sent'))
 
     # Most messages are short and include a lot of quoted text. Preprocessing
     # just the relevant part out makes a big difference in how much data we
@@ -407,34 +411,16 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     def attachments(self):
         return [part for part in self.parts if part.is_attachment]
 
-    discriminator = Column('type', String(16))
-    __mapper_args__ = {'polymorphic_on': discriminator,
-                       'polymorphic_identity': 'message'}
+    ## FOR INBOX-CREATED MESSAGES:
 
-
-class SpoolMessage(Message):
-    """
-    Messages created by this client.
-
-    Stored so they are immediately available to the user. They are reconciled
-    with the messages we get from the remote backend in a subsequent sync.
-
-    """
-    id = Column(Integer, ForeignKey('message.id', ondelete='CASCADE'),
-                primary_key=True)
-
-    created_date = Column(DateTime)
-    is_sent = Column(Boolean, server_default=false(), nullable=False)
-
-    state = Column(Enum('draft', 'sending', 'sending failed', 'sent'),
-                   server_default='draft', nullable=False)
+    is_created = Column(Boolean, server_default=false(), nullable=False)
 
     # Whether this draft is a reply to an existing thread.
-    is_reply = Column(Boolean, nullable=False, server_default=false())
+    is_reply = Column(Boolean)
 
     # Null till reconciled.
     # Deletes should not be cascaded! i.e. delete on remote -> delete the
-    # resolved_message *only*, not the original SpoolMessage we created.
+    # resolved_message *only*, not the original Message we created.
     # We need this to correctly maintain draft versions (created on
     # update_draft())
     resolved_message_id = Column(Integer,
@@ -442,29 +428,31 @@ class SpoolMessage(Message):
                                  nullable=True)
     resolved_message = relationship(
         'Message',
+        remote_side='Message.id',
         primaryjoin='and_('
-        'SpoolMessage.resolved_message_id==remote(Message.id), '
+        'Message.resolved_message_id==remote(Message.id), '
         'remote(Message.deleted_at)==None)',
-        backref=backref('spooled_messages', primaryjoin='and_('
-                        'remote(SpoolMessage.resolved_message_id)==Message.id,'
-                        'remote(SpoolMessage.deleted_at)==None)'))
+        backref=backref('created_messages', primaryjoin='and_('
+                        'remote(Message.resolved_message_id)==Message.id,'
+                        'remote(Message.deleted_at)==None)',
+                        uselist=False))
 
-    ## FOR DRAFTS:
-
-    # For non-conflict draft updates: versioning
+    # For draft versioning
+    # Deletes should not be cascaded! i.e. deleting old version should not
+    # necessarily delete the newer versions.
     parent_draft_id = Column(Integer,
-                             ForeignKey('spoolmessage.id', ondelete='CASCADE'),
+                             ForeignKey('message.id'),
                              nullable=True)
     parent_draft = relationship(
-        'SpoolMessage',
-        remote_side=[id],
+        'Message',
+        remote_side='Message.id',
         primaryjoin='and_('
-        'SpoolMessage.parent_draft_id==remote(SpoolMessage.id), '
-        'remote(SpoolMessage.deleted_at)==None)',
+        'Message.parent_draft_id==remote(Message.id), '
+        'remote(Message.deleted_at)==None)',
         backref=backref(
             'child_draft', primaryjoin='and_('
-            'remote(SpoolMessage.parent_draft_id)==SpoolMessage.id,'
-            'remote(SpoolMessage.deleted_at)==None)',
+            'remote(Message.parent_draft_id)==Message.id,'
+            'remote(Message.deleted_at)==None)',
             uselist=False))
 
     @property
@@ -480,10 +468,12 @@ class SpoolMessage(Message):
             revision = revision.child_draft
         return revision
 
-    __mapper_args__ = {'polymorphic_identity': 'spoolmessage',
-                       'inherit_condition': id == Message.id}
-
-    def __init__(self, *args, **kwargs):
-        Message.__init__(self, *args, **kwargs)
-        if self.inbox_uid:
-            self.public_id = self.inbox_uid
+    @classmethod
+    def create_draft_message(cls, *args, **kwargs):
+        obj = cls(*args, **kwargs)
+        obj.is_created = True
+        obj.is_draft = True
+        obj.state = 'draft'
+        if obj.inbox_uid:
+            obj.public_id = obj.inbox_uid
+        return obj

@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from inbox.util.url import NotSupportedError
-from inbox.models import SpoolMessage, Thread, Part
+from inbox.models import Message, Thread, Part
 from inbox.models.action_log import schedule_action
 from inbox.sqlalchemy_ext.util import generate_public_id
 
@@ -43,8 +43,8 @@ def _parse_recipients(dicts_list):
 
 def get_draft(db_session, account, draft_public_id):
     """ Get the draft with public_id = `draft_public_id`, or None. """
-    return db_session.query(SpoolMessage).join(Thread).filter(
-        SpoolMessage.public_id == draft_public_id,
+    return db_session.query(Message).join(Thread).filter(
+        Message.public_id == draft_public_id,
         Thread.namespace_id == account.namespace.id).first()
 
 
@@ -52,8 +52,10 @@ def get_all_drafts(db_session, account):
     """ Get all current draft messages for the account. """
     # TODO(emfree) result-limit here, and ideally avoid loading non-current
     # drafts in the first place.
-    drafts = db_session.query(SpoolMessage).join(Thread).filter(
-        SpoolMessage.state == 'draft',
+    # Filter using is_draft rather than (state == 'draft') to include
+    # both created + synced drafts.
+    drafts = db_session.query(Message).join(Thread).filter(
+        Message.is_draft == True,
         Thread.namespace_id == account.namespace.id).all()
     return [draft for draft in drafts if draft.is_latest]
 
@@ -68,7 +70,7 @@ def create_draft(db_session, account, to=None, subject=None,
 
     Returns
     -------
-    SpoolMessage
+    Message
         The created draft message object.
 
     """
@@ -94,7 +96,7 @@ def update_draft(db_session, account, parent_draft, to=None, subject=None,
 
     Returns
     -------
-    SpoolMessage
+    Message
         The new draft message object.
 
 
@@ -123,8 +125,8 @@ def update_draft(db_session, account, parent_draft, to=None, subject=None,
 
 def delete_draft(db_session, account, draft_public_id):
     """ Delete the draft with public_id = `draft_public_id`. """
-    draft = db_session.query(SpoolMessage).filter(
-        SpoolMessage.public_id == draft_public_id).one()
+    draft = db_session.query(Message).filter(
+        Message.public_id == draft_public_id).one()
 
     assert draft.is_draft
 
@@ -136,7 +138,7 @@ def delete_draft(db_session, account, draft_public_id):
 
 
 def _delete_draft_versions(db_session, draft_id):
-    draft = db_session.query(SpoolMessage).get(draft_id)
+    draft = db_session.query(Message).get(draft_id)
 
     if draft.parent_draft_id:
         _delete_draft_versions(db_session, draft.parent_draft_id)
@@ -176,14 +178,14 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
         # Set subject from thread by default.
         subject = thread.subject
     subject = subject or ''
-    message = SpoolMessage()
+
+    # Sets is_draft = True, state = 'draft'
+    message = Message.create_draft_message()
+
     message.from_addr = [(account.sender_name, account.email_address)]
-    message.created_date = dt
     # TODO(emfree): we should maybe make received_date nullable, so its value
     # doesn't change in the case of a drafted-and-later-reconciled message.
     message.received_date = dt
-    message.is_sent = False
-    message.state = 'draft'
     if parent_draft is not None:
         message.parent_draft_id = parent_draft.id
     message.subject = subject
@@ -194,8 +196,9 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
     # TODO(emfree): this is different from the normal 'size' value of a
     # message, which is the size of the entire MIME message.
     message.size = len(body)
-    message.is_draft = True
     message.is_read = True
+    message.is_sent = False
+    message.is_reply = is_reply
     message.inbox_uid = uid
     message.public_id = uid
 

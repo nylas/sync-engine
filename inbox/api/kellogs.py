@@ -5,7 +5,7 @@ from json import JSONEncoder, dumps
 from flask import Response
 
 from inbox.models import (Message, Part, Contact, Thread, Namespace, Block,
-                          Webhook, Lens, Tag, SpoolMessage)
+                          Webhook, Lens, Tag)
 
 
 def format_address_list(addresses):
@@ -71,12 +71,11 @@ def encode(obj, namespace_public_id=None):
             'body': obj.sanitized_body,
             'unread': not obj.is_read,
         }
-
-        if isinstance(obj, SpoolMessage):
+        # If the message is a draft (Inbox-created or otherwise):
+        if obj.is_draft:
+            resp['object'] = 'draft'
+        if obj.state:
             resp['state'] = obj.state
-            if obj.state != 'sent':
-                resp['object'] = 'draft'
-
         return resp
 
     elif isinstance(obj, Thread):
@@ -89,8 +88,8 @@ def encode(obj, namespace_public_id=None):
             'last_message_timestamp': obj.recentdate,
             'subject_date': obj.subjectdate,
             'snippet': obj.snippet,
-            'messages':  [m.public_id for m in obj.messages if not
-                          m.is_draft],
+            'messages': [m.public_id for m in obj.messages if not
+                         m.is_draft],
             'drafts': [m.public_id for m in obj.latest_drafts],
             'tags': [{'name': tag.name, 'id': tag.public_id}
                      for tag in obj.tags]
