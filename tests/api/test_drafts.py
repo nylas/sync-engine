@@ -20,7 +20,7 @@ def example_draft(db):
         'subject': 'Draft test at {}'.format(datetime.utcnow()),
         'body': '<html><body><h2>Sea, birds, yoga and sand.</h2></body></html>',
         'to': [{'name': 'The red-haired mermaid',
-                'email':  account.email_address}]
+                'email': account.email_address}]
     }
 
 
@@ -82,6 +82,8 @@ def test_create_reply_draft(api_client):
     drafts = api_client.get_data('/drafts')
     assert len(drafts) == 1
     assert drafts[0]['state'] == 'draft'
+
+    assert thread_public_id == drafts[0]['thread']
 
     thread_data = api_client.get_data('/threads/{}'.format(thread_public_id))
     assert draft_public_id in thread_data['drafts']

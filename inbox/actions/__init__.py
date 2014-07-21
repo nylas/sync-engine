@@ -42,7 +42,7 @@ module_registry = register_backends(__name__, __path__)
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from inbox.models.session import session_scope
-from inbox.models import Account, SpoolMessage
+from inbox.models import Account, Message
 from inbox.sendmail.base import (generate_attachments, get_sendmail_client,
                                  SendMailException)
 from inbox.sendmail.message import create_email, Recipients
@@ -122,7 +122,8 @@ def save_draft(account_id, message_id):
     """ Sync a new/updated draft back to the remote backend. """
     with session_scope() as db_session:
         account = db_session.query(Account).get(account_id)
-        message = db_session.query(SpoolMessage).get(message_id)
+        message = db_session.query(Message).get(message_id)
+        assert message.is_draft
 
         recipients = Recipients(message.to_addr, message.cc_addr,
                                 message.bcc_addr)
@@ -133,7 +134,7 @@ def save_draft(account_id, message_id):
 
         remote_save_draft = module_registry[account.provider].remote_save_draft
         remote_save_draft(account, account.drafts_folder.name,
-                          mimemsg.to_string(), message.created_date)
+                          mimemsg.to_string(), message.created_at)
 
         # If this draft is created by an update_draft() call,
         # delete the one it supercedes on the remote.
@@ -148,7 +149,8 @@ def delete_draft(account_id, draft_id):
     """ Delete a draft from the remote backend. """
     with session_scope() as db_session:
         account = db_session.query(Account).get(account_id)
-        draft = db_session.query(SpoolMessage).get(draft_id)
+        draft = db_session.query(Message).get(draft_id)
+        assert draft.is_draft
         remote_delete_draft = \
             module_registry[account.provider].remote_delete_draft
         remote_delete_draft(account, account.drafts_folder.name,
@@ -156,17 +158,15 @@ def delete_draft(account_id, draft_id):
 
 
 def send_draft(account_id, draft_id):
-    """
-    Send the draft with id = `draft_id`.
-    """
+    """Send the draft with id = `draft_id`."""
     with session_scope() as db_session:
         account = db_session.query(Account).get(account_id)
 
         log = get_logger()
         sendmail_client = get_sendmail_client(account)
         try:
-            draft = db_session.query(SpoolMessage).filter(
-                SpoolMessage.id == draft_id).one()
+            draft = db_session.query(Message).filter(
+                Message.id == draft_id).one()
 
         except NoResultFound:
             log.info('NoResultFound for draft_id {0}'.format(draft_id))
@@ -185,7 +185,7 @@ def send_draft(account_id, draft_id):
         else:
             sendmail_client.send_reply(db_session, draft, recipients)
 
-        # Update SpoolMessage
+        # Update message
         draft.is_sent = True
         draft.is_draft = False
         draft.state = 'sent'

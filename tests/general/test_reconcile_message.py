@@ -4,11 +4,13 @@ ACCOUNT_ID = 1
 THREAD_ID = 1
 
 
-def test_reconcile_message(db, config, log):
+def test_reconcile_message(db, config):
     from inbox.models.util import reconcile_message
     from inbox.sendmail.base import create_draft
     from inbox.models.account import Account
     from inbox.models.message import Message
+    from inbox.log import get_logger
+    log = get_logger()
 
     account = db.session.query(Account).get(ACCOUNT_ID)
     draft = create_draft(db.session, account)

@@ -6,7 +6,7 @@ from sqlalchemy import desc
 from tests.util.base import config, api_client
 config()
 
-from inbox.models import (Lens, Transaction, SpoolMessage)
+from inbox.models import (Lens, Transaction, Message)
 
 NAMESPACE_ID = 1
 
@@ -19,13 +19,12 @@ def test_lens_tx(api_client, db):
     })
 
     transaction = db.session.query(Transaction). \
-        filter(Transaction.table_name == 'spoolmessage'). \
+        filter(Transaction.table_name == 'message'). \
         order_by(desc(Transaction.id)).first()
 
-    draft = db.session.query(SpoolMessage). \
-        order_by(desc(SpoolMessage.id)).first()
+    draft = db.session.query(Message).filter(Message.is_draft).\
+        order_by(desc(Message.id)).first()
     thread = draft.thread
-
 
     filter = Lens(subject='/Calaveras/')
     assert filter.match(transaction)

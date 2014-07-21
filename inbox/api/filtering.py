@@ -128,8 +128,8 @@ class Filter(object):
         # representations faster.
         query = query.options(
             subqueryload(Thread.messages).
-            load_only('public_id', 'is_draft', 'discriminator', 'from_addr',
-                      'to_addr', 'cc_addr', 'bcc_addr'),
+            load_only('public_id', 'is_draft', 'from_addr', 'to_addr',
+                      'cc_addr', 'bcc_addr'),
             subqueryload('tagitems').joinedload('tag').
             load_only('public_id', 'name'))
 

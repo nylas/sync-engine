@@ -1,6 +1,6 @@
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
-from inbox.models.message import SpoolMessage
+from inbox.models.message import Message
 from inbox.models.thread import Thread
 from inbox.models.folder import Folder, FolderItem
 
@@ -20,15 +20,19 @@ def reconcile_message(db_session, log, inbox_uid, new_msg):
     Notes
     -----
     Our current reconciliation strategy is to keep both messages i.e.
-    the one we sent (SpoolMessage) and the one we synced (Message).
+    the one we sent and the one we synced.
 
     """
     try:
-        spool_message = db_session.query(SpoolMessage).filter(
-            SpoolMessage.inbox_uid == inbox_uid).one()
-        spool_message.resolved_message = new_msg
-        return spool_message
+        message = db_session.query(Message).filter(
+            Message.public_id == inbox_uid).one()
+        assert message.is_created
+        message.resolved_message = new_msg
+        return message
 
+    # Don't raise here because message is an Inbox created message but
+    # not by this client i.e. the Inbox created version is not present in the
+    # local data store.
     except NoResultFound:
         log.error('NoResultFound for this message, even though '
                   'it has the inbox-sent header: {0}'.format(inbox_uid))
@@ -36,6 +40,7 @@ def reconcile_message(db_session, log, inbox_uid, new_msg):
     except MultipleResultsFound:
         log.error('MultipleResultsFound when reconciling message with '
                   'inbox-sent header: {0}'.format(inbox_uid))
+        raise
 
 
 # Namespace Utils

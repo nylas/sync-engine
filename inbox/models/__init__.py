@@ -8,7 +8,7 @@ from inbox.models.constants import MAX_FOLDER_NAME_LENGTH
 from inbox.models.contact import MessageContactAssociation, Contact
 from inbox.models.folder import Folder, FolderItem
 from inbox.models.lens import Lens
-from inbox.models.message import Message, SpoolMessage
+from inbox.models.message import Message
 from inbox.models.namespace import Namespace
 from inbox.models.search import SearchToken, SearchSignal
 from inbox.models.tag import Tag
@@ -20,7 +20,7 @@ from inbox.models.backends import module_registry as backend_module_registry
 
 __all__ = ['Account', 'ActionLog', 'MailSyncBase', 'Block', 'Part',
            'MessageContactAssociation', 'Contact', 'Folder',
-           'FolderItem', 'Lens', 'Message', 'SpoolMessage',
-           'Namespace', 'SearchToken', 'SearchSignal',
+           'FolderItem', 'Lens', 'Message', 'Namespace',
+           'SearchToken', 'SearchSignal',
            'Tag', 'TagItem', 'Thread', 'Transaction',
            'Webhook', 'MAX_FOLDER_NAME_LENGTH', 'backend_module_registry']
