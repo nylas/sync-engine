@@ -47,7 +47,7 @@ def upgrade():
                 Message.g_msgid == g_msgid,
                 Message.id != message_id).delete()
 
-    op.execute('ALTER TABLE message ADD UNIQUE INDEX (thread_id, g_msgid)')
+    op.execute('ALTER TABLE message ADD UNIQUE INDEX ix_message_thread_id_g_msgid (thread_id, g_msgid)')
 
 
 def downgrade():
