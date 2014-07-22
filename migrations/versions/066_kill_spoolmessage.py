@@ -61,7 +61,6 @@ def upgrade():
         for sm in db_session.query(SpoolMessage).yield_per(250):
             m = db_session.query(Message).get(sm.id)
 
-            m.created_date = m.created_date
             m.is_sent = sm.is_sent
             m.state = sm.state
             m.is_reply = sm.is_reply
