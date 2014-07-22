@@ -80,7 +80,7 @@ class ImapUid(MailSyncBase):
     # Message has been answered
     is_answered = Column(Boolean, server_default=false(), nullable=False)
     # things like: ['$Forwarded', 'nonjunk', 'Junk']
-    extra_flags = Column(LittleJSON, nullable=False)
+    extra_flags = Column(LittleJSON, default=[], nullable=False)
 
     def update_imap_flags(self, new_flags, x_gm_labels=None):
         new_flags = set(new_flags)
