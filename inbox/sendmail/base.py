@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from inbox.util.url import NotSupportedError
+from inbox.basicauth import NotSupportedError
 from inbox.models import Message, Thread, Part
 from inbox.models.action_log import schedule_action
 from inbox.sqlalchemy_ext.util import generate_public_id
