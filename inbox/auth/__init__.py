@@ -16,7 +16,8 @@ from inbox.util.misc import register_backends
 
 module_registry = register_backends(__name__, __path__)
 
-from inbox.util.url import provider_from_address, NotSupportedError
+from inbox.util.url import provider_from_address
+from inbox.basicauth import NotSupportedError
 
 
 def handler_from_provider(provider):
