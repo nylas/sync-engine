@@ -115,7 +115,10 @@ def create_db_objects(account_id, db_session, log, folder_name, raw_messages,
     # TODO: Detect which namespace to add message to. (shared folders)
     # Look up message thread,
     acc = db_session.query(Account).get(account_id)
+
     folder = Folder.find_or_create(db_session, acc, folder_name)
+    db_session.add(folder)
+
     for msg in raw_messages:
         uid = msg_create_fn(db_session, log, acc, folder, msg)
         # Must ensure message objects are flushed because they reference
