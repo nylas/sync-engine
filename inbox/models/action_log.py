@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, Text, ForeignKey
+from sqlalchemy import Column, Integer, Text, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql.expression import false
 
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
@@ -54,3 +55,4 @@ class ActionLog(MailSyncBase):
     action = Column(Text(40), nullable=False)
     record_id = Column(Integer, nullable=False)
     table_name = Column(Text(40), nullable=False)
+    executed = Column(Boolean, server_default=false(), nullable=False)

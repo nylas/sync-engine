@@ -189,34 +189,33 @@ def kill_greenlets():
             obj.kill()
 
 
+class MockSMTPClient(object):
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def send_new(*args, **kwargs):
+        pass
+
+    def send_reply(*args, **kwargs):
+        pass
+
+
+@fixture
+def patch_network_functions(monkeypatch):
+    """Monkeypatch functions that actually talk to Gmail so that the tests can
+    run faster."""
+    monkeypatch.setattr('inbox.sendmail.base.get_sendmail_client',
+                        lambda *args, **kwargs: MockSMTPClient())
+    for func_name in ['mark_read', 'mark_unread', 'archive', 'unarchive',
+                      'star', 'unstar', 'save_draft', 'delete_draft',
+                      'mark_spam', 'unmark_spam', 'mark_trash',
+                      'unmark_trash']:
+        monkeypatch.setattr('inbox.actions.' + func_name,
+                            lambda *args, **kwargs: None)
+
+
 @yield_fixture(scope='function')
-def mock_syncback_service():
-    """Running SyncbackService with a mock queue."""
-    from inbox.transactions.actions import SyncbackService
-    from gevent import monkey
-    # aggressive=False used to avoid AttributeError in other tests, see
-    # https://groups.google.com/forum/#!topic/gevent/IzWhGQHq7n0
-    # TODO(emfree): It's totally whack that monkey-patching here would affect
-    # other tests. Can we make this not happen?
-    monkey.patch_all(aggressive=False)
-
-    class MockSyncbackService(SyncbackService):
-        def __init__(self, *args, **kwargs):
-            self.scheduled_actions = []
-            SyncbackService.__init__(self, *args, **kwargs)
-
-        def _execute_async_action(self, func, *args):
-            self.scheduled_actions.append(func)
-    s = MockSyncbackService(poll_interval=0)
-    s.start()
-    gevent.sleep()
-    assert len(s.worker_pool) == 0
-    yield s
-    kill_greenlets()
-
-
-@yield_fixture(scope='function')
-def real_syncback_service():
+def syncback_service():
     from inbox.transactions.actions import SyncbackService
     from gevent import monkey
     # aggressive=False used to avoid AttributeError in other tests, see
