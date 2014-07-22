@@ -47,6 +47,7 @@ def get_contact_objects(db_session, account_id, addresses):
     any email without a match."""
     if addresses is None:
         return []
+
     contacts = []
     for addr in addresses:
         if addr is None:
@@ -60,7 +61,8 @@ def get_contact_objects(db_session, account_id, addresses):
             new_contact = Contact(name=name,
                                   email_address=canonical_email,
                                   account_id=account_id, source='local',
-                                  provider_name='inbox', uid=uuid.uuid4().hex)
+                                  provider_name='inbox',
+                                  uid=uuid.uuid4().hex)
             contacts.append(new_contact)
             db_session.add(new_contact)
         else:
