@@ -837,7 +837,6 @@ CREATE TABLE `message` (
   `updated_at` datetime NOT NULL,
   `deleted_at` datetime DEFAULT NULL,
   `is_read` tinyint(1) NOT NULL DEFAULT '0',
-  `created_date` datetime DEFAULT NULL,
   `is_created` tinyint(1) NOT NULL DEFAULT '0',
   `is_sent` tinyint(1) NOT NULL DEFAULT '0',
   `state` enum('draft','sending','sending failed','sent') DEFAULT NULL,
