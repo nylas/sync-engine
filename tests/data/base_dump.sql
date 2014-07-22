@@ -98,6 +98,7 @@ CREATE TABLE `actionlog` (
   `action` tinytext NOT NULL,
   `record_id` int(11) NOT NULL,
   `table_name` tinytext NOT NULL,
+  `executed` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   KEY `ix_actionlog_created_at` (`created_at`),
   KEY `ix_actionlog_deleted_at` (`deleted_at`),
@@ -134,7 +135,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('4f3a1f6eaee3');
+INSERT INTO `alembic_version` VALUES ('322c2800c401');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1096,6 +1097,39 @@ INSERT INTO `secrets` VALUES (1,0,0,'1/XUcATARUuEjFSFk9M2ZkIHExnCcFCi5E8veIj2jKe
 UNLOCK TABLES;
 
 --
+-- Table structure for table `spoolmessage`
+--
+
+DROP TABLE IF EXISTS `spoolmessage`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `spoolmessage` (
+  `id` int(11) NOT NULL,
+  `created_date` datetime DEFAULT NULL,
+  `is_sent` tinyint(1) NOT NULL DEFAULT '0',
+  `resolved_message_id` int(11) DEFAULT NULL,
+  `parent_draft_id` int(11) DEFAULT NULL,
+  `state` enum('draft','sending','sending failed','sent') NOT NULL DEFAULT 'draft',
+  `is_reply` tinyint(1) NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `resolved_message_id` (`resolved_message_id`),
+  KEY `spoolmessage_ibfk_3` (`parent_draft_id`),
+  CONSTRAINT `spoolmessage_ibfk_1` FOREIGN KEY (`id`) REFERENCES `message` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `spoolmessage_ibfk_2` FOREIGN KEY (`resolved_message_id`) REFERENCES `message` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `spoolmessage_ibfk_3` FOREIGN KEY (`parent_draft_id`) REFERENCES `spoolmessage` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `spoolmessage`
+--
+
+LOCK TABLES `spoolmessage` WRITE;
+/*!40000 ALTER TABLE `spoolmessage` DISABLE KEYS */;
+/*!40000 ALTER TABLE `spoolmessage` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `tag`
 --
 
@@ -1361,4 +1395,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-07-22  6:03:42
+-- Dump completed on 2014-07-22 22:45:30

@@ -8,12 +8,13 @@ TODO(emfree):
  * Add better logging.
 """
 import gevent
-from sqlalchemy import asc, func
+from sqlalchemy import asc
 
 from inbox.util.concurrency import retry_with_logging
 from inbox.log import get_logger
 from inbox.models.session import session_scope
 from inbox.models import ActionLog, Namespace
+from inbox.sqlalchemy_ext.util import safer_yield_per
 from inbox.actions import (mark_read, mark_unread, archive, unarchive, star,
                            unstar, save_draft, delete_draft, mark_spam,
                            unmark_spam, mark_trash, unmark_trash, send_draft)
@@ -38,45 +39,30 @@ ACTION_FUNCTION_MAP = {
 class SyncbackService(gevent.Greenlet):
     """Asynchronously consumes the action log and executes syncback actions."""
 
-    def __init__(self, poll_interval=1, chunk_size=22, max_pool_size=22):
+    def __init__(self, poll_interval=1, chunk_size=100, max_pool_size=22):
         self.log = get_logger()
         self.worker_pool = gevent.pool.Pool(max_pool_size)
         self.poll_interval = poll_interval
         self.chunk_size = chunk_size
-        with session_scope() as db_session:
-            # Just start working from the head of the log.
-            # TODO(emfree): once we can do retry, persist a pointer into the
-            # transaction log and advance it only on syncback success.
-            self.minimum_id, = db_session.query(
-                func.max(ActionLog.id)).one()
-            if self.minimum_id is None:
-                self.minimum_id = -1
         gevent.Greenlet.__init__(self)
 
     def _process_log(self):
         # TODO(emfree) handle the case that message/thread objects may have
-        # been deleted in the interim
+        # been deleted in the interim.
         with session_scope() as db_session:
             query = db_session.query(ActionLog). \
-                filter(ActionLog.id > self.minimum_id). \
-                order_by(asc(ActionLog.id)).yield_per(self.chunk_size)
+                filter(ActionLog.executed == False). \
+                order_by(asc(ActionLog.id))
 
-            for log_entry in query:
-                self.minimum_id = log_entry.id
+            for log_entry in safer_yield_per(query, ActionLog.id, 0,
+                                             self.chunk_size):
                 action_function = ACTION_FUNCTION_MAP[log_entry.action]
                 namespace = db_session.query(Namespace). \
                     get(log_entry.namespace_id)
-                self._execute_async_action(action_function,
-                                           namespace.account_id,
-                                           log_entry.record_id)
-
-    def _execute_async_action(self, func, *args):
-        self.log.info('Scheduling syncback action', func=func, args=args)
-        g = gevent.Greenlet(retry_with_logging, lambda: func(*args),
-                            logger=self.log)
-        g.link_value(lambda _: self.log.info('Syncback action completed',
-                                             func=func, args=args))
-        self.worker_pool.start(g)
+                worker = SyncbackWorker(action_function, log_entry.id,
+                                        log_entry.record_id,
+                                        namespace.account_id)
+                self.worker_pool.start(worker)
 
     def _run_impl(self):
         self.log.info('Starting action service')
@@ -86,3 +72,29 @@ class SyncbackService(gevent.Greenlet):
 
     def _run(self):
         retry_with_logging(self._run_impl, self.log)
+
+
+class SyncbackWorker(gevent.Greenlet):
+    """A greenlet spawned to execute a single syncback action."""
+    def __init__(self, func, action_log_id, record_id, account_id):
+        self.func = func
+        self.log = get_logger()
+        self.log.bind(record_id=record_id, action_log_id=action_log_id)
+        self.action_log_id = action_log_id
+        self.record_id = record_id
+        self.account_id = account_id
+        gevent.Greenlet.__init__(self)
+
+    def _run(self):
+        retry_with_logging(self._run_impl, self.log)
+
+    def _run_impl(self):
+        # Not ignoring soft-deleted objects here because if you, say, delete a
+        # draft, we still need to access the object to delete it on the remote.
+        with session_scope(ignore_soft_deletes=False) as db_session:
+            self.func(self.account_id, self.record_id, db_session)
+            action_log_entry = db_session.query(ActionLog).get(
+                self.action_log_id)
+            action_log_entry.executed = True
+            db_session.commit()
+            self.log.info('syncback action completed')

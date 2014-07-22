@@ -41,7 +41,6 @@ module_registry = register_backends(__name__, __path__)
 
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
-from inbox.models.session import session_scope
 from inbox.models import Account, Message
 from inbox.sendmail.base import (generate_attachments, get_sendmail_client,
                                  SendMailException)
@@ -49,157 +48,148 @@ from inbox.sendmail.message import create_email, Recipients
 from inbox.log import get_logger
 
 
-def archive(account_id, thread_id):
+def archive(account_id, thread_id, db_session):
     """Sync an archive action back to the backend. """
-    with session_scope() as db_session:
-        account = db_session.query(Account).get(account_id)
+    account = db_session.query(Account).get(account_id)
 
-        set_remote_archived = module_registry[account.provider]. \
-            set_remote_archived
-        set_remote_archived(account, thread_id, True, db_session)
-
-
-def unarchive(account_id, thread_id):
-    with session_scope() as db_session:
-        account = db_session.query(Account).get(account_id)
-
-        set_remote_archived = module_registry[account.provider]. \
-            set_remote_archived
-        set_remote_archived(account, thread_id, False, db_session)
+    set_remote_archived = module_registry[account.provider]. \
+        set_remote_archived
+    set_remote_archived(account, thread_id, True, db_session)
 
 
-def star(account_id, thread_id):
-    with session_scope() as db_session:
-        account = db_session.query(Account).get(account_id)
+def unarchive(account_id, thread_id, db_session):
+    account = db_session.query(Account).get(account_id)
 
-        set_remote_starred = module_registry[account.provider]. \
-            set_remote_starred
-        set_remote_starred(account, thread_id, True, db_session)
-
-
-def unstar(account_id, thread_id):
-    with session_scope() as db_session:
-        account = db_session.query(Account).get(account_id)
-
-        set_remote_starred = module_registry[account.provider]. \
-            set_remote_starred
-        set_remote_starred(account, thread_id, False, db_session)
+    set_remote_archived = module_registry[account.provider]. \
+        set_remote_archived
+    set_remote_archived(account, thread_id, False, db_session)
 
 
-def mark_unread(account_id, thread_id):
-    with session_scope() as db_session:
-        account = db_session.query(Account).get(account_id)
-        set_remote_unread = module_registry[account.provider]. \
-            set_remote_unread
-        set_remote_unread(account, thread_id, True, db_session)
+def star(account_id, thread_id, db_session):
+    account = db_session.query(Account).get(account_id)
+
+    set_remote_starred = module_registry[account.provider]. \
+        set_remote_starred
+    set_remote_starred(account, thread_id, True, db_session)
 
 
-def mark_read(account_id, thread_id):
-    with session_scope() as db_session:
-        account = db_session.query(Account).get(account_id)
-        set_remote_unread = module_registry[account.provider]. \
-            set_remote_unread
-        set_remote_unread(account, thread_id, False, db_session)
+def unstar(account_id, thread_id, db_session):
+    account = db_session.query(Account).get(account_id)
+
+    set_remote_starred = module_registry[account.provider]. \
+        set_remote_starred
+    set_remote_starred(account, thread_id, False, db_session)
 
 
-def mark_spam(account_id, thread_id):
+def mark_unread(account_id, thread_id, db_session):
+    account = db_session.query(Account).get(account_id)
+    set_remote_unread = module_registry[account.provider]. \
+        set_remote_unread
+    set_remote_unread(account, thread_id, True, db_session)
+
+
+def mark_read(account_id, thread_id, db_session):
+    account = db_session.query(Account).get(account_id)
+    set_remote_unread = module_registry[account.provider]. \
+        set_remote_unread
+    set_remote_unread(account, thread_id, False, db_session)
+
+
+def mark_spam(account_id, thread_id, db_session):
     raise NotImplementedError
 
 
-def unmark_spam(account_id, thread_id):
+def unmark_spam(account_id, thread_id, db_session):
     raise NotImplementedError
 
 
-def mark_trash(account_id, thread_id):
+def mark_trash(account_id, thread_id, db_session):
     raise NotImplementedError
 
 
-def unmark_trash(account_id, thread_id):
+def unmark_trash(account_id, thread_id, db_session):
     raise NotImplementedError
 
 
-def save_draft(account_id, message_id):
+def save_draft(account_id, message_id, db_session):
     """ Sync a new/updated draft back to the remote backend. """
-    with session_scope() as db_session:
-        account = db_session.query(Account).get(account_id)
-        message = db_session.query(Message).get(message_id)
-        assert message.is_draft
+    account = db_session.query(Account).get(account_id)
+    message = db_session.query(Message).get(message_id)
+    assert message.is_draft
 
-        recipients = Recipients(message.to_addr, message.cc_addr,
-                                message.bcc_addr)
-        attachments = generate_attachments(message.attachments)
-        mimemsg = create_email(account.sender_name, account.email_address,
-                               message.inbox_uid, recipients, message.subject,
-                               message.sanitized_body, attachments)
+    recipients = Recipients(message.to_addr, message.cc_addr,
+                            message.bcc_addr)
+    attachments = generate_attachments(message.attachments)
+    mimemsg = create_email(account.sender_name, account.email_address,
+                           message.inbox_uid, recipients, message.subject,
+                           message.sanitized_body, attachments)
 
-        remote_save_draft = module_registry[account.provider].remote_save_draft
-        remote_save_draft(account, account.drafts_folder.name,
-                          mimemsg.to_string(), message.created_at)
+    remote_save_draft = module_registry[account.provider].remote_save_draft
+    remote_save_draft(account, account.drafts_folder.name,
+                      mimemsg.to_string(), message.created_at)
 
-        # If this draft is created by an update_draft() call,
-        # delete the one it supercedes on the remote.
-        # Needed because our update_draft() creates a new draft
-        # message but the user expects to see the one
-        # updated draft only.
-        if message.parent_draft:
-            return delete_draft(account_id, message.parent_draft.id)
+    # If this draft is created by an update_draft() call,
+    # delete the one it supercedes on the remote.
+    # Needed because our update_draft() creates a new draft
+    # message but the user expects to see the one
+    # updated draft only.
+    if message.parent_draft:
+        return delete_draft(account_id, message.parent_draft.id, db_session)
 
 
-def delete_draft(account_id, draft_id):
+def delete_draft(account_id, draft_id, db_session):
     """ Delete a draft from the remote backend. """
-    with session_scope() as db_session:
-        account = db_session.query(Account).get(account_id)
-        draft = db_session.query(Message).get(draft_id)
-        assert draft.is_draft
-        remote_delete_draft = \
-            module_registry[account.provider].remote_delete_draft
-        remote_delete_draft(account, account.drafts_folder.name,
-                            draft.inbox_uid, db_session)
+    account = db_session.query(Account).get(account_id)
+    draft = db_session.query(Message).get(draft_id)
+    assert draft.is_draft
+    remote_delete_draft = \
+        module_registry[account.provider].remote_delete_draft
+    remote_delete_draft(account, account.drafts_folder.name,
+                        draft.inbox_uid, db_session)
 
 
-def send_draft(account_id, draft_id):
+def send_draft(account_id, draft_id, db_session):
     """Send the draft with id = `draft_id`."""
-    with session_scope() as db_session:
-        account = db_session.query(Account).get(account_id)
+    account = db_session.query(Account).get(account_id)
 
-        log = get_logger()
-        sendmail_client = get_sendmail_client(account)
-        try:
-            draft = db_session.query(Message).filter(
-                Message.id == draft_id).one()
+    log = get_logger()
+    sendmail_client = get_sendmail_client(account)
+    try:
+        draft = db_session.query(Message).filter(
+            Message.id == draft_id).one()
 
-        except NoResultFound:
-            log.info('NoResultFound for draft_id {0}'.format(draft_id))
-            raise SendMailException('No draft with id {0}'.format(draft_id))
+    except NoResultFound:
+        log.info('NoResultFound for draft_id {0}'.format(draft_id))
+        raise SendMailException('No draft with id {0}'.format(draft_id))
 
-        except MultipleResultsFound:
-            log.info('MultipleResultsFound for draft_id {0}'.format(draft_id))
-            raise SendMailException('Multiple drafts with id {0}'.format(
-                draft_id))
+    except MultipleResultsFound:
+        log.info('MultipleResultsFound for draft_id {0}'.format(draft_id))
+        raise SendMailException('Multiple drafts with id {0}'.format(
+            draft_id))
 
-        assert draft.is_draft and not draft.is_sent
+    assert draft.is_draft and not draft.is_sent
 
-        recipients = Recipients(draft.to_addr, draft.cc_addr, draft.bcc_addr)
-        if not draft.is_reply:
-            sendmail_client.send_new(db_session, draft, recipients)
-        else:
-            sendmail_client.send_reply(db_session, draft, recipients)
+    recipients = Recipients(draft.to_addr, draft.cc_addr, draft.bcc_addr)
+    if not draft.is_reply:
+        sendmail_client.send_new(db_session, draft, recipients)
+    else:
+        sendmail_client.send_reply(db_session, draft, recipients)
 
-        # Update message
-        draft.is_sent = True
-        draft.is_draft = False
-        draft.state = 'sent'
+    # Update message
+    draft.is_sent = True
+    draft.is_draft = False
+    draft.state = 'sent'
 
-        # Update thread
-        sent_tag = account.namespace.tags['sent']
-        draft_tag = account.namespace.tags['drafts']
-        draft.thread.apply_tag(sent_tag)
-        # Remove the drafts tag from the thread if there are no more drafts.
-        if not draft.thread.latest_drafts:
-            draft.thread.remove_tag(draft_tag)
+    # Update thread
+    sent_tag = account.namespace.tags['sent']
+    draft_tag = account.namespace.tags['drafts']
+    draft.thread.apply_tag(sent_tag)
+    # Remove the drafts tag from the thread if there are no more drafts.
+    if not draft.thread.latest_drafts:
+        draft.thread.remove_tag(draft_tag)
 
-        db_session.commit()
+    db_session.commit()
 
-        delete_draft(account_id, draft.id)
+    delete_draft(account_id, draft.id, db_session)
 
-        return draft
+    return draft

@@ -2,7 +2,8 @@
 import json
 import gevent
 import pytest
-from tests.util.base import api_client, mock_syncback_service
+from tests.util.base import (patch_network_functions, api_client,
+                             syncback_service)
 
 
 # Utility functions to simplify hitting the API.
@@ -139,13 +140,13 @@ def test_tag_deletes_cascade_to_threads():
     pass
 
 
-def test_actions_syncback(api_client, mock_syncback_service):
+def test_actions_syncback(patch_network_functions, api_client, db,
+                          syncback_service):
     """Adds and removes tags that should trigger syncback actions, and check
     that the appropriate actions get spawned (but doesn't test the
     implementation of the actual syncback methods in inbox.actions).
     """
-    from inbox.actions import (mark_read, mark_unread, archive, unarchive,
-                               star, unstar)
+    from inbox.models import ActionLog
 
     thread_id = api_client.get_data('/threads/')[0]['id']
     thread_path = '/threads/{}'.format(thread_id)
@@ -166,7 +167,10 @@ def test_actions_syncback(api_client, mock_syncback_service):
     api_client.put_data(thread_path, {'add_tags': ['starred']})
     api_client.put_data(thread_path, {'remove_tags': ['starred']})
 
-    gevent.sleep()
+    gevent.sleep(2)
 
-    for action in [mark_read, mark_unread, archive, unarchive, star, unstar]:
-        assert action in mock_syncback_service.scheduled_actions
+    action_log_entries = db.session.query(ActionLog)
+    assert ({log_entry.action for log_entry in action_log_entries} ==
+            {'mark_read', 'mark_unread', 'archive', 'unarchive', 'star',
+             'unstar'})
+    assert all(log_entry.executed for log_entry in action_log_entries)
