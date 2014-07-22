@@ -4,7 +4,7 @@ Filters allow you to query mail data based on specific parameters. The more spec
 
 * **`subject`** Return messages or threads with a given subject string.
 
-* **`any_email`** Return messages or threads sent, received from, or also sent to the given email address.
+* **`any_email`** Return messages or threads that contain the given address in any of the from, to, cc or bcc fields.
 
 * **`to`** Return messages or threads sent to the given address.
 
