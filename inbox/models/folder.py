@@ -50,6 +50,7 @@ class Folder(MailSyncBase):
             name = name[:MAX_FOLDER_NAME_LENGTH]
         obj = cls(account=account, name=name,
                   canonical_name=canonical_name)
+        session.add(obj)
         return obj
 
     @classmethod

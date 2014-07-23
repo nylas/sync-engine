@@ -250,20 +250,20 @@ def get_g_metadata(crispin_client, db_session, log, folder_name, uids,
 def gmail_download_and_commit_uids(crispin_client, db_session, log,
                                    folder_name, uids, msg_create_fn,
                                    syncmanager_lock):
-    log.debug('downloading uids', uids=uids)
+    log.info('downloading uids', uids=uids)
     raw_messages = safe_download(crispin_client, log, uids)
     with syncmanager_lock:
-        log.debug('gmail_download_and_commit_uids acquired syncmanager_lock')
+        log.info('gmail_download_and_commit_uids acquired syncmanager_lock')
         # there is the possibility that another green thread has already
         # downloaded some message(s) from this batch... check within the lock
         raw_messages = deduplicate_message_object_creation(
             crispin_client.account_id, db_session, log, raw_messages)
-        log.debug(unsaved_message_object_count=len(raw_messages))
+        log.info(unsaved_message_object_count=len(raw_messages))
         new_imapuids = create_db_objects(crispin_client.account_id, db_session,
                                          log, folder_name, raw_messages,
                                          msg_create_fn)
         commit_uids(db_session, log, new_imapuids)
-        log.debug(new_committed_message_count=len(new_imapuids))
+        log.info(new_committed_message_count=len(new_imapuids))
     return len(new_imapuids)
 
 
