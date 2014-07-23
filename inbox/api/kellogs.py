@@ -42,7 +42,7 @@ def encode(obj, namespace_public_id=None):
     elif isinstance(obj, Namespace):
         return {
             'id': obj.public_id,
-            'object': 'namepace',
+            'object': 'namespace',
             'namespace': obj.public_id,
 
             # Account specific
