@@ -2,10 +2,8 @@
 account backend.
 
 TODO(emfree):
- * Track syncback failure/success state, and implement retries
-   (syncback actions may be lost if the service restarts while actions are
-   still pending).
- * Add better logging.
+ * Make this more robust across multiple machines. If you started two instances
+   talking to the same database backend things could go really badly.
 """
 import gevent
 from sqlalchemy import asc
@@ -16,10 +14,16 @@ logger = get_logger()
 from inbox.models.session import session_scope
 from inbox.models import ActionLog, Namespace
 from inbox.sqlalchemy_ext.util import safer_yield_per
+from inbox.util.file import Lock
 from inbox.actions import (mark_read, mark_unread, archive, unarchive, star,
                            unstar, save_draft, delete_draft, mark_spam,
                            unmark_spam, mark_trash, unmark_trash, send_draft,
                            send_directly)
+
+# Global lock to ensure that only one instance of the syncback service is
+# running at once. Otherwise different instances might execute the same action
+# twice.
+syncback_lock = Lock('/var/lock/inbox_syncback/global.lock', block=False)
 
 ACTION_FUNCTION_MAP = {
     'archive': archive,
@@ -76,7 +80,17 @@ class SyncbackService(gevent.Greenlet):
     def mark_for_rescheduling(self, log_entry_id):
         self._scheduled_actions.discard(log_entry_id)
 
+    def _acquire_lock_nb(self):
+        """Spin on the global syncback lock."""
+        while True:
+            try:
+                syncback_lock.acquire()
+                return
+            except IOError:
+                gevent.sleep()
+
     def _run_impl(self):
+        self._acquire_lock_nb()
         self.log.info('Starting action service')
         while True:
             self._process_log()
