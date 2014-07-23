@@ -24,9 +24,8 @@ final class InboxServerLintEngine extends ArcanistLintEngine {
     // this one which you can use out of the box, or you can write your own.
     // Linters are responsible for actually analyzing the contents of a file
     // and raising warnings and errors.
-    $pyflakes_linter = new ArcanistPyFlakesLinter();
+    $flake8_linter = new ArcanistFlake8Linter();
     $pylint_linter = new MGArcanistPyLintLinter();
-    $pep8_linter = new ArcanistPEP8Linter();
 
     // Remove any paths that don't exist before we add paths to linters. We want
     // to do this for linters that operate on file contents because the
@@ -54,9 +53,8 @@ final class InboxServerLintEngine extends ArcanistLintEngine {
 
       // Add the path, to tell the linter it should examine the source code
       // to try to find problems.
-      $pyflakes_linter->addPath($path);
       $pylint_linter->addPath($path);
-      $pep8_linter->addPath($path);
+      $flake8_linter->addPath($path);
     }
 
     // We only built one linter, but you can build more than one (e.g., a
@@ -65,9 +63,8 @@ final class InboxServerLintEngine extends ArcanistLintEngine {
     // to run a Python linter and a more general text linter on every .py file).
 
     return array(
-      $pyflakes_linter,
       $pylint_linter,
-      $pep8_linter,
+      $flake8_linter,
     );
   }
 
