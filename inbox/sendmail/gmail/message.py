@@ -56,8 +56,10 @@ def create_gmail_reply(sender_name, sender_email, in_reply_to, references,
                            subject, body, attachments)
 
     # Add general reply headers:
-    mimemsg.headers['In-Reply-To'] = in_reply_to
-    mimemsg.headers['References'] = references
+    if in_reply_to:
+        mimemsg.headers['In-Reply-To'] = in_reply_to
+    if references:
+        mimemsg.headers['References'] = references
 
     # Set the 'Subject' header of the reply, required for Gmail.
     # Gmail requires the same subject as the original (adding Re:/Fwd: is fine

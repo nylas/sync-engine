@@ -684,6 +684,7 @@ def draft_send_api():
             return err(409, 'Draft {} has already been updated to {}'.format(
                 draft_public_id, g.encoder.cereal(draft.most_recent_revision)))
 
+        schedule_action('send_draft', draft, g.namespace.id, g.db_session)
     else:
         to = data.get('to')
         cc = data.get('cc')
@@ -701,9 +702,10 @@ def draft_send_api():
 
         draft = sendmail.create_draft(g.db_session, g.namespace.account, to,
                                       subject, body, files, cc, bcc,
-                                      tags, replyto_thread)
+                                      tags, replyto_thread, syncback=False)
+        schedule_action('send_directly', draft, g.namespace.id, g.db_session)
+
     draft.state = 'sending'
-    schedule_action('send_draft', draft, g.namespace.id, g.db_session)
     return g.encoder.jsonify(draft)
 
 
