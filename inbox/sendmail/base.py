@@ -62,7 +62,7 @@ def get_all_drafts(db_session, account):
 
 def create_draft(db_session, account, to=None, subject=None,
                  body=None, blocks=None, cc=None, bcc=None,
-                 tags=None, replyto_thread=None):
+                 tags=None, replyto_thread=None, syncback=True):
     """
     Create a new draft. If `thread_public_id` is specified, the draft is a
     reply to the last message in the thread; otherwise, it is an independant
@@ -82,7 +82,7 @@ def create_draft(db_session, account, to=None, subject=None,
 
     return create_and_save_draft(db_session, account, to_addr, subject, body,
                                  blocks, cc_addr, bcc_addr, tags,
-                                 replyto_thread, is_reply)
+                                 replyto_thread, is_reply, syncback=syncback)
 
 
 def update_draft(db_session, account, parent_draft, to=None, subject=None,
@@ -163,7 +163,7 @@ def generate_attachments(blocks):
 def create_and_save_draft(db_session, account, to_addr=None, subject=None,
                           body=None, blocks=None, cc_addr=None, bcc_addr=None,
                           new_tags=None, thread=None, is_reply=False,
-                          parent_draft=None):
+                          parent_draft=None, syncback=True):
     """
     Create a draft object and commit it to the database.
     """
@@ -231,14 +231,7 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
             message.in_reply_to = parent_draft.in_reply_to
             message.references = parent_draft.references
         else:
-            # Make sure that the headers are constructed from an actual
-            # previous message on the thread, not another draft
-            non_draft_messages = [m for m in thread.messages if not m.is_draft]
-            if non_draft_messages:
-                last_message = non_draft_messages[-1]
-                message.in_reply_to = last_message.message_id_header
-                message.references = (last_message.references + '\t' +
-                                      last_message.message_id_header)
+            _set_reply_headers(message, thread)
     if thread is None:
         # Create a new thread object for the draft.
         thread = Thread(
@@ -257,8 +250,25 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
         tags_to_keep = {tag for tag in thread.tags if not tag.user_created}
         thread.tags = new_tags | tags_to_keep
 
-    schedule_action('save_draft', message, message.namespace.id, db_session)
+    if syncback:
+        schedule_action('save_draft', message, message.namespace.id,
+                        db_session)
 
     db_session.add(message)
     db_session.commit()
     return message
+
+
+def _set_reply_headers(new_message, thread):
+    """When creating a draft in reply to a thread, set the In-Reply-To and
+    References headers appropriately, if possible."""
+    previous_messages = [m for m in thread.messages if not m.is_draft]
+    if previous_messages:
+        last_message = previous_messages[-1]
+        if last_message.message_id_header:
+            new_message.in_reply_to = last_message.message_id_header
+            if last_message.references:
+                new_message.references = (last_message.references + '\t' +
+                                          last_message.message_id_header)
+            else:
+                new_message.references = last_message.message_id_header

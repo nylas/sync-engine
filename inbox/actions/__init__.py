@@ -141,14 +141,25 @@ def delete_draft(account_id, draft_id, db_session):
     """ Delete a draft from the remote backend. """
     account = db_session.query(Account).get(account_id)
     draft = db_session.query(Message).get(draft_id)
-    assert draft.is_draft
     remote_delete_draft = \
         module_registry[account.provider].remote_delete_draft
     remote_delete_draft(account, account.drafts_folder.name,
                         draft.inbox_uid, db_session)
 
 
+def send_directly(account_id, draft_id, db_session):
+    """Send a just-created draft (as opposed to one that was previously created
+    and synced to the backend."""
+    _send(account_id, draft_id, db_session)
+
+
 def send_draft(account_id, draft_id, db_session):
+    """Send a previously created draft."""
+    _send(account_id, draft_id, db_session)
+    delete_draft(account_id, draft_id, db_session)
+
+
+def _send(account_id, draft_id, db_session):
     """Send the draft with id = `draft_id`."""
     account = db_session.query(Account).get(account_id)
 
@@ -167,7 +178,8 @@ def send_draft(account_id, draft_id, db_session):
         raise SendMailException('Multiple drafts with id {0}'.format(
             draft_id))
 
-    assert draft.is_draft and not draft.is_sent
+    if not draft.is_draft or draft.is_sent:
+        return
 
     recipients = Recipients(draft.to_addr, draft.cc_addr, draft.bcc_addr)
     if not draft.is_reply:
@@ -187,9 +199,5 @@ def send_draft(account_id, draft_id, db_session):
     # Remove the drafts tag from the thread if there are no more drafts.
     if not draft.thread.latest_drafts:
         draft.thread.remove_tag(draft_tag)
-
-    db_session.commit()
-
-    delete_draft(account_id, draft.id, db_session)
 
     return draft
