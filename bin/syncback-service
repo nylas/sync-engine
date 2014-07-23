@@ -1,0 +1,43 @@
+#!/usr/bin/env python
+"""Run the syncback service separately. You should run this if you run the
+API under something like gunicorn. (For convenience, the bin/inbox-api script
+also starts up the syncback service.)"""
+import os
+import click
+from gevent import monkey
+monkey.patch_all()
+from inbox.log import configure_logging
+from inbox.transactions.actions import SyncbackService
+from inbox.util.startup import preflight, load_overrides
+from setproctitle import setproctitle
+setproctitle('inbox_syncback_service')
+
+
+@click.command()
+@click.option('--prod/--no-prod', default=False,
+              help='Disables the autoreloader and potentially other '
+                   'non-production features.')
+@click.option('-c', '--config', default=None,
+              help='Path to JSON configuration file.')
+def main(prod, config):
+    """ Launch the actions syncback service. """
+    if config is not None:
+        config_path = os.path.abspath(config)
+        load_overrides(config_path)
+    preflight()
+    configure_logging(prod)
+    if prod:
+        start()
+    else:
+        from werkzeug.serving import run_with_reloader
+        run_with_reloader(start)
+
+
+def start():
+    # Start the syncback service, and just hang out forever
+    s = SyncbackService()
+    s.start()
+    s.join()
+
+if __name__ == '__main__':
+    main()
