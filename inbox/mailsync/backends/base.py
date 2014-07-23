@@ -76,8 +76,8 @@ def save_folder_names(log, account, folder_names, db_session):
         for name in folder_names['extra']:
             name = name[:MAX_FOLDER_NAME_LENGTH]
             if name.lower() not in folder_for:
+                # Folder.create() takes care of adding to the session
                 folder = Folder.create(account, name, db_session)
-                db_session.add(folder)
             if name.lower() in folder_for:
                 del folder_for[name.lower()]
 
@@ -117,7 +117,6 @@ def create_db_objects(account_id, db_session, log, folder_name, raw_messages,
     acc = db_session.query(Account).get(account_id)
 
     folder = Folder.find_or_create(db_session, acc, folder_name)
-    db_session.add(folder)
 
     for msg in raw_messages:
         uid = msg_create_fn(db_session, log, acc, folder, msg)
