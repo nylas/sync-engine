@@ -26,6 +26,7 @@ imapclient==0.11
 alembic==0.6.4
 iconv==1.0
 pep8==1.4.6
+flake8==2.1.0
 pyflakes==0.7.3
 pylint==1.1.0
 html2text==2014.4.5
