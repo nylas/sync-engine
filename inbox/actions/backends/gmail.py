@@ -1,44 +1,12 @@
-""" Operations for syncing back local datastore changes to Gmail.
-
-For IMAP, we could guarantee correctness with a full bidirectional sync by
-using a conservative algorithm like OfflineIMAP's
-(http://offlineimap.org/howitworks.html), but doing so wouldn't take advantage
-of newer IMAP extensions like CONDSTORE that make us have to do much less
-comparison and bookkeeping work.
-
-We don't get any notion of "transactions" from the remote with IMAP. Here are
-the possible cases for IMAP message changes:
-
-* new
-  - This message is either new-new and needs to be synced to us, or it's a
-    "sent" or "draft" message and we need to check whether or not we have it,
-    since we may have already saved a local copy. If we do already have it,
-    we need to make a new ImapUid for it and associate the Message object with
-    its ImapUid.
-* changed
-  - Update our flags or do nothing if the message isn't present locally. (NOTE:
-    this could mean the message has been moved locally, in which case we will
-    LOSE the flag change. We can fix this case in an eventually consistent
-    manner by sanchecking flags on all messages in an account once a day or
-    so.)
-* delete
-  - We always figure this out by comparing message lists against the local
-    repo. Since we're using the mailsync-specific ImapUid objects for
-    comparison, we automatically exclude Inbox-local sent and draft messages
-    from this calculation.
-
-We don't currently handle these operations on the special folders 'junk',
-'trash', 'sent', 'flagged'.
-"""
-from inbox.crispin import writable_connection_pool
+""" Operations for syncing back local datastore changes to Gmail. """
 
 from inbox.models.backends.imap import ImapThread
+from inbox.actions.backends.imap import syncback_action
 
 PROVIDER = 'gmail'
 
-
-class ActionError(Exception):
-    pass
+__all__ = ['set_remote_archived', 'set_remote_starred', 'set_remote_unread',
+           'remote_save_draft', 'remote_delete_draft']
 
 
 def uidvalidity_cb(db_session, account_id):
@@ -48,15 +16,6 @@ def uidvalidity_cb(db_session, account_id):
         UIDVALIDITY.
     """
     pass
-
-
-def _syncback_action(fn, account, folder_name, db_session):
-    """ `folder_name` is a Gmail folder name. """
-    assert folder_name, "folder '{}' is not selectable".format(folder_name)
-
-    with writable_connection_pool(account.id).get() as crispin_client:
-        crispin_client.select_folder(folder_name, uidvalidity_cb)
-        fn(account, db_session, crispin_client)
 
 
 def _archive(g_thrid, crispin_client):
@@ -83,7 +42,7 @@ def set_remote_archived(account, thread_id, archived, db_session):
     assert inbox_folder is not None
     inbox_folder_name = inbox_folder.name
 
-    return _syncback_action(fn, account, inbox_folder_name, db_session)
+    return syncback_action(fn, account, inbox_folder_name, db_session)
 
 
 def set_remote_starred(account, thread_id, starred, db_session):
@@ -91,7 +50,7 @@ def set_remote_starred(account, thread_id, starred, db_session):
         g_thrid = _get_g_thrid(account.namespace.id, thread_id, db_session)
         crispin_client.set_starred(g_thrid, starred)
 
-    return _syncback_action(fn, account, account.all_folder.name, db_session)
+    return syncback_action(fn, account, account.all_folder.name, db_session)
 
 
 def set_remote_unread(account, thread_id, unread, db_session):
@@ -99,7 +58,7 @@ def set_remote_unread(account, thread_id, unread, db_session):
         g_thrid = _get_g_thrid(account.namespace.id, thread_id, db_session)
         crispin_client.set_unread(g_thrid, unread)
 
-    return _syncback_action(fn, account, account.all_folder.name, db_session)
+    return syncback_action(fn, account, account.all_folder.name, db_session)
 
 
 def remote_move(account, thread_id, from_folder_name, to_folder_name,
@@ -147,10 +106,10 @@ def remote_move(account, thread_id, from_folder_name, to_folder_name,
             raise Exception("Unknown from_folder_name '{}'".
                             format(from_folder_name))
 
-    return _syncback_action(fn, account, from_folder_name, db_session)
+    return syncback_action(fn, account, from_folder_name, db_session)
 
 
-def remote_copy(account, thread_id, from_folder, to_folder, db_session):
+def _remote_copy(account, thread_id, from_folder, to_folder, db_session):
     """ NOTE: We are not planning to use this function yet since Inbox never
         modifies Gmail IMAP labels.
     """
@@ -167,10 +126,10 @@ def remote_copy(account, thread_id, from_folder, to_folder, db_session):
             crispin_client.add_label(g_thrid, to_folder)
         # copy a thread to all mail is a noop
 
-    return _syncback_action(fn, account, from_folder, db_session)
+    return syncback_action(fn, account, from_folder, db_session)
 
 
-def remote_delete(account, thread_id, folder_name, db_session):
+def _remote_delete(account, thread_id, folder_name, db_session):
     def fn(account, db_session, crispin_client):
         inbox_folder = crispin_client.folder_names()['inbox']
         all_folder = crispin_client.folder_names()['all']
@@ -193,7 +152,7 @@ def remote_delete(account, thread_id, folder_name, db_session):
         else:
             raise Exception("Unknown folder_name '{0}'".format(folder_name))
 
-    return _syncback_action(fn, account, folder_name, db_session)
+    return syncback_action(fn, account, folder_name, db_session)
 
 
 def remote_save_draft(account, folder_name, message, db_session, date=None):
@@ -201,7 +160,7 @@ def remote_save_draft(account, folder_name, message, db_session, date=None):
         assert folder_name == crispin_client.folder_names()['drafts']
         crispin_client.save_draft(message, date)
 
-    return _syncback_action(fn, account, folder_name, db_session)
+    return syncback_action(fn, account, folder_name, db_session)
 
 
 def remote_delete_draft(account, folder_name, inbox_uid, db_session):
@@ -209,4 +168,4 @@ def remote_delete_draft(account, folder_name, inbox_uid, db_session):
         assert folder_name == crispin_client.folder_names()['drafts']
         crispin_client.delete_draft(inbox_uid)
 
-    return _syncback_action(fn, account, folder_name, db_session)
+    return syncback_action(fn, account, folder_name, db_session)

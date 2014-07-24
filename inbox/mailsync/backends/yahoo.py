@@ -69,7 +69,6 @@ def create_yahoo_message(db_session, log, acct, folder, msg):
         relationships. All new objects are uncommitted.
     """
     assert acct is not None and acct.namespace is not None
-
     new_uid = account.create_imap_message(db_session, log, acct, folder, msg)
 
     new_uid = add_yahoo_attrs(db_session, log, new_uid, msg.flags, folder,
@@ -84,7 +83,7 @@ def add_yahoo_attrs(db_session, log, new_uid, flags, folder, created):
             db_session, new_uid.account.namespace, new_uid.message)
         new_uid.update_imap_flags(flags)
 
-        if (folder in ('draft', 'sent') and not created
+        if (folder.canonical_name in (u'drafts', u'sent') and not created
                 and new_uid.message.inbox_uid):
             reconcile_message(db_session, log, new_uid.message.inbox_uid,
                               new_uid.message)

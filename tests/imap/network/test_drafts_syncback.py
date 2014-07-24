@@ -28,7 +28,7 @@ def message(db, config):
 
 def test_remote_save_draft(db, config, message):
     """ Tests the save_draft function, which saves the draft to the remote. """
-    from inbox.actions.gmail import remote_save_draft
+    from inbox.actions.backends.gmail import remote_save_draft
     from inbox.sendmail.base import _parse_recipients
     from inbox.sendmail.message import create_email, Recipients
     from inbox.models import Account
@@ -67,7 +67,8 @@ def test_remote_delete_draft(db, config, message):
     remote.
 
     """
-    from inbox.actions.gmail import remote_save_draft, remote_delete_draft
+    from inbox.actions.backends.gmail import (remote_save_draft,
+                                              remote_delete_draft)
     from inbox.sendmail.base import _parse_recipients
     from inbox.sendmail.message import create_email, Recipients
     from inbox.models import Account

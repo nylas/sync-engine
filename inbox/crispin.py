@@ -350,6 +350,61 @@ class CrispinClient(object):
         return dict([(long(uid), Flags(msg['FLAGS']))
                      for uid, msg in data.iteritems()])
 
+    def copy_uids(self, uids, to_folder):
+        uids = [str(u) for u in uids]
+        self.conn.copy(uids, to_folder)
+
+    def delete_uids(self, uids):
+        uids = [str(u) for u in uids]
+        self.conn.delete_messages(uids)
+        self.conn.expunge()
+
+    def set_starred(self, uids, starred):
+        self.conn.add_flags(uids, ['\\Flagged'])
+
+    def set_unread(self, uids, unread):
+        uids = [str(u) for u in uids]
+        if unread:
+            self.conn.remove_flags(uids, ['\\Seen'])
+        else:
+            self.conn.add_flags(uids, ['\\Seen'])
+
+    def save_draft(self, message, date=None):
+        self.selected_folder_name == self.folder_names()['drafts'], \
+            'Must select drafts folder first ({0})'.format(
+                self.selected_folder_name)
+
+        self.conn.append(self.selected_folder_name, message, ['\\Draft'], date)
+
+    def delete_draft(self, inbox_uid):
+        """
+        Move the message from the "Drafts" folder and into the "Trash" folder.
+
+        Parameters
+        ----------
+        inbox_uid : str
+            The public_id of the draft we want to delete on the remote,
+            which is its X-INBOX-ID header too.
+
+        Notes
+        -----
+        Need the public_id == inbox_uid since that is the only unique
+        identifier for the message that both we and the remote know.
+
+        """
+        criteria = ['DRAFT', 'NOT DELETED',
+                    'HEADER X-INBOX-ID {0}'.format(inbox_uid)]
+        draft_uids = self.conn.search(criteria)
+        if draft_uids:
+            assert len(draft_uids) == 1
+
+            # TODO: do we need this part?
+            # Remove IMAP `Draft` label
+            self.conn.remove_flags(draft_uids, ['\Draft'])
+
+            self.conn.delete_messages(draft_uids)
+            self.conn.expunge()
+
 
 class CondStoreCrispinClient(CrispinClient):
 
@@ -623,13 +678,6 @@ class GmailCrispinClient(CondStoreCrispinClient):
             self.conn.add_flags(uids, ['\\Starred'])
         else:
             self.conn.remove_flags(uids, ['\\Starred'])
-
-    def save_draft(self, message, date=None):
-        self.selected_folder_name == self.folder_names()['drafts'], \
-            'Must select drafts folder first ({0})'.format(
-                self.selected_folder_name)
-
-        self.conn.append(self.selected_folder_name, message, ['\\Draft'], date)
 
     def delete_draft(self, inbox_uid):
         """

@@ -12,8 +12,8 @@ THREAD_ID = 2
 
 
 def test_archive_move_syncback(db, config):
-    from inbox.actions.gmail import (set_remote_archived, remote_move,
-                                     uidvalidity_cb)
+    from inbox.actions.backends.gmail import (set_remote_archived,
+                                              _remote_move, uidvalidity_cb)
     from inbox.models.backends.imap import ImapAccount, ImapThread
     g_thrid = db.session.query(ImapThread.g_thrid).filter_by(
         id=THREAD_ID, namespace_id=NAMESPACE_ID).one()[0]
@@ -33,8 +33,8 @@ def test_archive_move_syncback(db, config):
         assert archive_uids, "thread missing from archive"
 
         # and put things back the way they were :)
-        remote_move(account, THREAD_ID, account.all_folder.name,
-                    account.inbox_folder.name, db.session)
+        _remote_move(account, THREAD_ID, account.all_folder.name,
+                     account.inbox_folder.name, db.session)
         client.select_folder(account.inbox_folder.name, uidvalidity_cb)
         inbox_uids = client.find_messages(g_thrid)
         assert inbox_uids, "thread missing from inbox"
@@ -44,16 +44,16 @@ def test_archive_move_syncback(db, config):
 
 
 def test_copy_delete_syncback(db, config):
-    from inbox.actions.gmail import (remote_copy, remote_delete,
-                                     uidvalidity_cb)
+    from inbox.actions.backends.gmail import (_remote_copy, _remote_delete,
+                                              uidvalidity_cb)
     from inbox.models.backends.imap import ImapAccount, ImapThread
 
     g_thrid = db.session.query(ImapThread.g_thrid). \
         filter_by(id=THREAD_ID, namespace_id=NAMESPACE_ID).one()[0]
     account = db.session.query(ImapAccount).get(ACCOUNT_ID)
 
-    remote_copy(account, THREAD_ID, account.inbox_folder.name, 'testlabel',
-                db.session)
+    _remote_copy(account, THREAD_ID, account.inbox_folder.name, 'testlabel',
+                 db.session)
 
     with crispin_client(account.id, account.provider) as client:
         client.select_folder(account.inbox_folder.name, uidvalidity_cb)
@@ -67,7 +67,7 @@ def test_copy_delete_syncback(db, config):
         assert testlabel_uids, "thread missing from testlabel"
 
         # and put things back the way they were :)
-        remote_delete(account, THREAD_ID, 'testlabel', db.session)
+        _remote_delete(account, THREAD_ID, 'testlabel', db.session)
         client.select_folder(account.inbox_folder.name, uidvalidity_cb)
         inbox_uids = client.find_messages(g_thrid)
         assert inbox_uids, "thread missing from inbox"
@@ -80,7 +80,7 @@ def test_copy_delete_syncback(db, config):
 
 
 def test_remote_unread_syncback(db, config):
-    from inbox.actions.gmail import set_remote_unread, uidvalidity_cb
+    from inbox.actions.backends.gmail import set_remote_unread, uidvalidity_cb
     from inbox.models.backends.imap import ImapAccount, ImapThread
 
     account = db.session.query(ImapAccount).get(ACCOUNT_ID)
