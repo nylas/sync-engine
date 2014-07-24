@@ -1,4 +1,4 @@
-""" Code for propagating Inbox datastore changes to the account backend.
+""" Code for propagating Inbox datastore changes to account backends.
 
 Syncback actions don't update anything in the local datastore; the Inbox
 datastore is updated asynchronously (see namespace.py) and bookkeeping about
@@ -21,15 +21,6 @@ not really a problem because of the limited ways mail messages can change.
 
 ACTIONS MUST BE IDEMPOTENT! We are going to have task workers guarantee
 at-least-once semantics.
-
-** Notes abot per-provider action modules. **
-
-An action module *must* meet the following requirement:
-
-1. Specify the provider it implements as the module-level PROVIDER variable.
-For example, 'gmail', 'imap', 'eas', 'yahoo' etc.
-
-2. Live in the 'actions/' directory.
 """
 # Allow out-of-tree action submodules.
 from pkgutil import extend_path
@@ -37,11 +28,12 @@ __path__ = extend_path(__path__, __name__)
 
 from inbox.util.misc import register_backends
 
-module_registry = register_backends(__name__, __path__)
+from inbox.actions.backends import module_registry
 
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from inbox.models import Account, Message
+from inbox.models.session import session_scope
 from inbox.sendmail.base import (generate_attachments, get_sendmail_client,
                                  SendMailException)
 from inbox.sendmail.message import create_email, Recipients
@@ -139,12 +131,13 @@ def save_draft(account_id, message_id, db_session):
 
 def delete_draft(account_id, draft_id, db_session):
     """ Delete a draft from the remote backend. """
-    account = db_session.query(Account).get(account_id)
-    draft = db_session.query(Message).get(draft_id)
-    remote_delete_draft = \
-        module_registry[account.provider].remote_delete_draft
-    remote_delete_draft(account, account.drafts_folder.name,
-                        draft.inbox_uid, db_session)
+    with session_scope(ignore_soft_deletes=False) as db_session:
+        account = db_session.query(Account).get(account_id)
+        draft = db_session.query(Message).get(draft_id)
+        remote_delete_draft = \
+            module_registry[account.provider].remote_delete_draft
+        remote_delete_draft(account, account.drafts_folder.name,
+                            draft.inbox_uid, db_session)
 
 
 def send_directly(account_id, draft_id, db_session):
