@@ -239,11 +239,7 @@ class ImapFolderSyncMonitor(Greenlet):
                     account_id=self.account_id, folder_id=self.folder_id)
                 db_session.add(saved_folder_status)
 
-            saved_folder_status.update_metrics(
-                dict(run_state='running',
-                     sync_start_time=datetime.utcnow(),
-                     sync_end_time=None,
-                     sync_error=None))
+            saved_folder_status.start_sync()
 
             db_session.commit()
 
@@ -565,8 +561,7 @@ def imap_initial_sync(crispin_client, db_session, log, folder_name,
                       download_uid_count=len(new_uids),
                       # flags are updated in imap_check_flags
                       update_uid_count=0,
-                      delete_uid_count=len(deleted_uids),
-                      sync_type='new' if len(local_uids) == 0 else 'resumed')
+                      delete_uid_count=len(deleted_uids))
 
     new_uid_poller = spawn(check_new_uids, crispin_client.account_id,
                            folder_name, log,

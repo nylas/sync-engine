@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import (Column, Integer, BigInteger, String, Boolean, Enum,
                         ForeignKey, Index)
 from sqlalchemy.schema import UniqueConstraint
@@ -240,14 +242,27 @@ class ImapFolderSyncStatus(MailSyncBase):
                    server_default='initial', nullable=False)
 
     # stats on messages downloaded etc.
-    _metrics = Column(MutableDict.as_mutable(JSON), nullable=True)
+    _metrics = Column(MutableDict.as_mutable(JSON), default={}, nullable=True)
 
     @property
     def metrics(self):
         status = dict(name=self.folder.name, state=self.state)
-        status.update(self._metrics or {})
+        status.update(self._metrics)
 
         return status
+
+    def start_sync(self):
+        self._metrics = dict(run_state='running',
+                             sync_start_time=datetime.utcnow())
+
+    def stop_sync(self):
+        self._metrics['run_state'] = 'stopped'
+        self._metrics['sync_end_time'] = datetime.utcnow()
+
+    def kill_sync(self, error=None):
+        self._metrics['run_state'] = 'killed'
+        self._metrics['sync_end_time'] = datetime.utcnow()
+        self._metrics['sync_error'] = error
 
     def update_metrics(self, metrics):
         sync_status_metrics = ['remote_uid_count', 'delete_uid_count',
@@ -255,21 +270,12 @@ class ImapFolderSyncStatus(MailSyncBase):
                                'uid_checked_timestamp',
                                'num_downloaded_since_timestamp',
                                'current_download_queue_size',
-                               'queue_checked_at', 'sync_type',
-                               'run_state', 'sync_start_time', 'sync_end_time',
-                               'sync_error']
+                               'queue_checked_at']
 
         assert isinstance(metrics, dict)
         for k in metrics.iterkeys():
             assert k in sync_status_metrics, k
-            if k == 'sync_type':
-                assert metrics[k] in ('new', 'resumed')
-            if k == 'run_state':
-                assert metrics[k] in ('running', 'stopped', 'killed')
 
-        if self._metrics is not None:
-            self._metrics.update(metrics)
-        else:
-            self._metrics = metrics
+        self._metrics.update(metrics)
 
     __table_args__ = (UniqueConstraint('account_id', 'folder_id'),)
