@@ -9,10 +9,10 @@ from inbox.basicauth import password_auth
 from inbox.auth.imap import connect_account as imap_connect_account
 from inbox.auth.imap import verify_account as imap_verify_account
 from inbox.models import Namespace
-from inbox.models.backends.yahoo import YahooAccount, IMAP_HOST
+from inbox.models.backends.aol import AOLAccount, IMAP_HOST
 
 
-PROVIDER = 'yahoo'
+PROVIDER = 'aol'
 
 
 def create_auth_account(db_session, email_address, token, exit):
@@ -28,11 +28,11 @@ def auth_account(email_address, token, exit):
 
 def create_account(db_session, email_address, response):
     try:
-        account = db_session.query(YahooAccount).filter_by(
+        account = db_session.query(AOLAccount).filter_by(
             email_address=email_address).one()
     except sqlalchemy.orm.exc.NoResultFound:
         namespace = Namespace()
-        account = YahooAccount(namespace=namespace)
+        account = AOLAccount(namespace=namespace)
 
     account.imap_host = IMAP_HOST
     account.email_address = response['email']

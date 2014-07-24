@@ -1,3 +1,4 @@
+import sys
 from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.oauth import oauth_authorize_console
@@ -10,24 +11,47 @@ from inbox.auth.oauth import verify_account as oauth_verify_account
 from inbox.log import get_logger
 log = get_logger()
 
-
 PROVIDER = 'gmail'
 
+# Google OAuth app credentials
+OAUTH_CLIENT_ID = config.get_required('GOOGLE_OAUTH_CLIENT_ID')
+OAUTH_CLIENT_SECRET = config.get_required('GOOGLE_OAUTH_CLIENT_SECRET')
+OAUTH_REDIRECT_URI = config.get_required('GOOGLE_OAUTH_REDIRECT_URI')
 
-def create_auth_account(db_session, email_address):
+OAUTH_AUTHENTICATE_URL = 'https://accounts.google.com/o/oauth2/auth'
+OAUTH_ACCESS_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token'
+OAUTH_TOKEN_VALIDATION_URL = 'https://www.googleapis.com/oauth2/v1/tokeninfo'
+OAUTH_USER_INFO_URL = 'https://www.googleapis.com/oauth2/v1/userinfo'
+
+OAUTH_SCOPE = ' '.join([
+    'https://www.googleapis.com/auth/userinfo.email',  # email address
+    'https://www.googleapis.com/auth/userinfo.profile',  # G+ profile
+    'https://mail.google.com/',  # email
+    'https://www.google.com/m8/feeds',  # contacts
+    'https://www.googleapis.com/auth/calendar'  # calendar
+])
+
+
+def _this_module():
+    return sys.modules[__name__]
+
+
+def create_auth_account(db_session, email_address, token, exit):
     uri = config.get('GOOGLE_OAUTH_REDIRECT_URI', None)
 
     if uri != 'urn:ietf:wg:oauth:2.0:oob':
         raise NotImplementedError('Callback-based OAuth is not supported')
 
-    response = auth_account(email_address)
+    response = auth_account(email_address, token, exit)
     account = create_account(db_session, email_address, response)
 
     return account
 
 
-def auth_account(email_address):
-    return oauth_authorize_console(email_address)
+def auth_account(email_address, token, exit):
+    if not token:
+        print ("To authorize Inbox, visit this url and follow the directions:")
+    return oauth_authorize_console(_this_module(), email_address, token, exit)
 
 
 def create_account(db_session, email_address, response):

@@ -74,6 +74,49 @@ yahoo_mail_domains = [
     'rocketmail.com',
 ]
 
+# Outlook:
+outlook_mail_domains = [
+    'hotmail.com',
+    'outlook.com'
+    'outlook.com.ar',
+    'outlook.com.au',
+    'outlook.at',
+    'outlook.be',
+    'outlook.com.br',
+    'outlook.cl',
+    'outlook.cz',
+    'outlook.dk',
+    'outlook.fr',
+    'outlook.de',
+    'outlook.com.gr',
+    'outlook.co.il',
+    'outlook.in',
+    'outlook.co.id',
+    'outlook.ie',
+    'outlook.it',
+    'outlook.hu',
+    'outlook.jp',
+    'outlook.kr',
+    'outlook.lv',
+    'outlook.my',
+    'outlook.co.nz',
+    'outlook.com.pe',
+    'outlook.ph',
+    'outlook.pt',
+    'outlook.sa',
+    'outlook.sg',
+    'outlook.sk',
+    'outlook.es',
+    'outlook.co.th',
+    'outlook.com.tr',
+    'outlook.com.vn',
+]
+
+# Aol:
+aol_mail_domains = [
+    'aol.com',
+]
+
 # http://www.ysmallbizstatus.com/status/archives/13024
 yahoo_smallbiz_mx_servers = [
     'mx-biz.mail.am0.yahoodns.net',
@@ -131,6 +174,18 @@ def email_supports_gmail(domain):
     return is_valid
 
 
+def email_supports_outlook(domain):
+    # Must be a Outlook mail domain
+    if domain in outlook_mail_domains:
+        return True
+
+
+def email_supports_aol(domain):
+    # Must be a AOL mail domain
+    if domain in aol_mail_domains:
+        return True
+
+
 def email_supports_yahoo(domain):
     # Must be a Yahoo mail domain
     if domain in yahoo_mail_domains:
@@ -163,6 +218,12 @@ def provider_from_address(email_address):
 
     if email_supports_yahoo(domain):
         return 'yahoo'
+
+    if email_supports_outlook(domain):
+        return 'outlook'
+
+    if email_supports_aol(domain):
+        return 'aol'
 
     else:
         return 'eas'

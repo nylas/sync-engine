@@ -5,7 +5,7 @@ from sqlalchemy import (Column, String, Integer)
 
 class Secret(MailSyncBase):
     """Simple local secrets table."""
-    secret = Column(String(255), nullable=False)
+    secret = Column(String(2048), nullable=False)
 
     # what type of secret is being stored
     type = Column(Integer(), nullable=False)

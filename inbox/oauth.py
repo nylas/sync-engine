@@ -1,3 +1,4 @@
+import sys
 import urllib
 import requests
 from requests import ConnectionError as RequestsConnectionError
@@ -5,26 +6,7 @@ from requests import ConnectionError as RequestsConnectionError
 from inbox.util.url import url_concat
 from inbox.log import get_logger
 log = get_logger()
-from inbox.config import config
 from inbox.basicauth import ValidationError, ConnectionError
-
-# Google OAuth app credentials
-GOOGLE_OAUTH_CLIENT_ID = config.get_required('GOOGLE_OAUTH_CLIENT_ID')
-GOOGLE_OAUTH_CLIENT_SECRET = config.get_required('GOOGLE_OAUTH_CLIENT_SECRET')
-REDIRECT_URI = config.get_required('GOOGLE_OAUTH_REDIRECT_URI')
-
-OAUTH_AUTHENTICATE_URL = 'https://accounts.google.com/o/oauth2/auth'
-OAUTH_ACCESS_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token'
-OAUTH_TOKEN_VALIDATION_URL = 'https://www.googleapis.com/oauth2/v1/tokeninfo'
-USER_INFO_URL = 'https://www.googleapis.com/oauth2/v1/userinfo'
-
-OAUTH_SCOPE = ' '.join([
-    'https://www.googleapis.com/auth/userinfo.email',  # email address
-    'https://www.googleapis.com/auth/userinfo.profile',  # G+ profile
-    'https://mail.google.com/',  # email
-    'https://www.google.com/m8/feeds',  # contacts
-    'https://www.googleapis.com/auth/calendar'  # calendar
-])
 
 
 class OAuthError(ValidationError):
@@ -39,7 +21,7 @@ class OAuthInvalidGrantError(OAuthError):
     pass
 
 
-def validate_token(access_token):
+def validate_token(provider_module, access_token):
     """ Helper function which will validate an access token.
 
     Returns
@@ -55,7 +37,12 @@ def validate_token(access_token):
     """
 
     try:
-        response = requests.get(OAUTH_TOKEN_VALIDATION_URL +
+        validation_url = provider_module.OAUTH_TOKEN_VALIDATION_URL
+    except AttributeError:
+        return _user_info(provider_module, access_token)
+
+    try:
+        response = requests.get(validation_url +
                                 '?access_token=' + access_token)
     except RequestsConnectionError, e:
         log.error('Validation failed.')
@@ -73,14 +60,20 @@ def validate_token(access_token):
     return validation_dict
 
 
-def new_token(refresh_token, client_id=None,
+def new_token(provider_module, refresh_token, client_id=None,
               client_secret=None):
     """ Helper function which gets a new access token from a refresh token."""
     assert refresh_token is not None, 'refresh_token required'
-    # If these aren't set on the GmailAccount object, use the values from
+
+    # If these aren't set on the Account object, use the values from
     # config so that the dev version of the sync engine continues to work.
-    client_id = client_id or GOOGLE_OAUTH_CLIENT_ID
-    client_secret = client_secret or GOOGLE_OAUTH_CLIENT_SECRET
+    try:
+        client_id = client_id or provider_module.OAUTH_CLIENT_ID
+        client_secret = client_secret or provider_module.OAUTH_CLIENT_SECRET
+        access_token_url = provider_module.OAUTH_ACCESS_TOKEN_URL
+    except AttributeError:
+        log.error("Provider module must define OAUTH_CLIENT_ID,"
+                  "OAUTH_CLIENT_SECRET and OAUTH_ACCESS_TOKEN_URL")
 
     args = {
         'refresh_token': refresh_token,
@@ -93,18 +86,22 @@ def new_token(refresh_token, client_id=None,
         headers = {'Content-type': 'application/x-www-form-urlencoded',
                    'Accept': 'text/plain'}
         data = urllib.urlencode(args)
-        response = requests.post(OAUTH_ACCESS_TOKEN_URL, data=data,
-                                 headers=headers)
+        response = requests.post(access_token_url, data=data, headers=headers)
     except requests.exceptions.HTTPError, e:
-        log.error(e)  # TODO better error handling here
+        log.error(e)
         raise ConnectionError()
 
     session_dict = response.json()
     if u'error' in session_dict:
         if session_dict['error'] == 'invalid_grant':
-            log.error('refresh_token_invalid')
+            log.error('refresh_token_invalid',
+                      client_id=client_id,
+                      provider=provider_module.PROVIDER)
             raise OAuthInvalidGrantError('Could not get new token')
         else:
+            log.error('oauth_error',
+                      client_id=client_id,
+                      provider=provider_module.PROVIDER)
             raise OAuthError(session_dict['error'])
 
     return session_dict['access_token'], session_dict['expires_in']
@@ -114,39 +111,55 @@ def new_token(refresh_token, client_id=None,
 # Console Support for providing link and reading response from user
 # ------------------------------------------------------------------
 
-def _show_authorize_link(email_address=None):
+def _show_authorize_link(provider_module, email_address=None):
     """ Show authorization link.
     Prints out a message to the console containing a link that the user can
     click on that will bring them to a page that allows them to authorize
     access to their account.
     """
+
+    try:
+        redirect_uri = provider_module.OAUTH_REDIRECT_URI
+        client_id = provider_module.OAUTH_CLIENT_ID
+        scope = provider_module.OAUTH_SCOPE
+        authenticate_url = provider_module.OAUTH_AUTHENTICATE_URL
+    except AttributeError:
+        log.error("Provider module must define OAUTH_REDIRECT_URI, "
+                  "OAUTH_CLIENT_ID, OAUTH_SCOPE and OAUTH_AUTHENTICATE_URL")
+        raise
+
     args = {
-        'redirect_uri': REDIRECT_URI,
-        'client_id': GOOGLE_OAUTH_CLIENT_ID,
+        'redirect_uri': redirect_uri,
+        'client_id': client_id,
         'response_type': 'code',
-        'scope': OAUTH_SCOPE,
+        'scope': scope,
         'access_type': 'offline',  # to get a refresh token
     }
-    if email_address:
+
+    # TODO: Is there some way to make this generic? Outlook doesn't
+    # accept a login_hint. -cg3
+    if provider_module.PROVIDER == 'gmail' and email_address:
         args['login_hint'] = email_address
-    # DEBUG
-    args['approval_prompt'] = 'force'
 
     # Prompt user for authorization + get auth_code
-    url = url_concat(OAUTH_AUTHENTICATE_URL, args)
-    print ("To authorize Inbox, visit this url and follow the directions:"
-           "\n\n{}").format(url)
+    url = url_concat(authenticate_url, args)
+    print ("\n\n{}").format(url)
 
 
-def _user_info(access_token):
+def _user_info(provider_module, access_token):
     """ retrieves additional information about the user to store in the db"""
     log.info('fetching_user_info')
     try:
-        response = requests.get(USER_INFO_URL +
-                                '?access_token=' + access_token)
-    except Exception, e:
+        user_info_url = provider_module.OAUTH_USER_INFO_URL
+        args = {'access_token': access_token}
+        response = requests.get(user_info_url + "?" +
+                                urllib.urlencode(args))
+    except RequestsConnectionError as e:
         log.error('user_info_fetch_failed', error=e)
-        return None  # TODO better error handling here
+        raise ConnectionError()
+    except AttributeError:
+        log.error('Provider module must have OAUTH_USER_INFO_URL.')
+        raise
 
     userinfo_dict = response.json()
 
@@ -157,25 +170,37 @@ def _user_info(access_token):
                   error_description=userinfo_dict['error_description'])
         log.error('%s - %s' % (userinfo_dict['error'],
                                userinfo_dict['error_description']))
-        return None
+        raise OAuthValidationError()
 
     return userinfo_dict
 
 
-def _get_authenticated_user(authorization_code):
+def _get_authenticated_user(provider_module, authorization_code):
     log.info('Getting oauth authenticated user...')
+
+    try:
+        client_id = provider_module.OAUTH_CLIENT_ID
+        client_secret = provider_module.OAUTH_CLIENT_SECRET
+        access_token_url = provider_module.OAUTH_ACCESS_TOKEN_URL
+        redirect_uri = provider_module.OAUTH_REDIRECT_URI
+    except AttributeError:
+        log.error("Provider module must define OAUTH_CLIENT_ID,"
+                  "OAUTH_CLIENT_SECRET, OAUTH_ACCESS_TOKEN_URL"
+                  " and OAUTH_REDIRECT_URI")
+        raise
+
     args = {
-        'client_id': GOOGLE_OAUTH_CLIENT_ID,
+        'client_id': client_id,
         'code': authorization_code,
-        'client_secret': GOOGLE_OAUTH_CLIENT_SECRET,
+        'client_secret': client_secret,
         'grant_type': 'authorization_code',
-        'redirect_uri': REDIRECT_URI,
+        'redirect_uri': redirect_uri,
     }
 
     headers = {'Content-type': 'application/x-www-form-urlencoded',
                'Accept': 'text/plain'}
     data = urllib.urlencode(args)
-    resp = requests.post(OAUTH_ACCESS_TOKEN_URL, data=data, headers=headers)
+    resp = requests.post(access_token_url, data=data, headers=headers)
 
     session_dict = resp.json()
 
@@ -183,8 +208,8 @@ def _get_authenticated_user(authorization_code):
         raise OAuthError(session_dict['error'])
 
     access_token = session_dict['access_token']
-    validation_dict = validate_token(access_token)
-    userinfo_dict = _user_info(access_token)
+    validation_dict = validate_token(provider_module, access_token)
+    userinfo_dict = _user_info(provider_module, access_token)
 
     z = session_dict.copy()
     z.update(validation_dict)
@@ -193,14 +218,21 @@ def _get_authenticated_user(authorization_code):
     return z
 
 
-def oauth_authorize_console(email_address):
+def oauth_authorize_console(provider_module, email_address, token, exit):
     """ Console I/O and checking for a user to authorize their account."""
-    _show_authorize_link(email_address)
+    if not token:
+        _show_authorize_link(provider_module, email_address)
+        if exit:
+            sys.exit(0)
+    else:
+        auth_code = token
 
     while True:
-        auth_code = raw_input('Enter authorization code: ').strip()
+        if not token:
+            auth_code = raw_input('Enter authorization code: ').strip()
         try:
-            auth_response = _get_authenticated_user(auth_code)
+            auth_response = _get_authenticated_user(provider_module, auth_code)
             return auth_response
         except OAuthError:
             print "\nInvalid authorization code, try again...\n"
+            auth_code = None
