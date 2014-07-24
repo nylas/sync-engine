@@ -10,8 +10,9 @@ logger = get_logger()
 from inbox.models.session import session_scope
 from inbox.models import Contact
 from inbox.models.backends.gmail import GmailAccount
-from inbox.oauth import (GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET,
-                         OAUTH_SCOPE)
+from inbox.auth.gmail import (OAUTH_CLIENT_ID,
+                              OAUTH_CLIENT_SECRET,
+                              OAUTH_SCOPE)
 
 SOURCE_APP_NAME = 'InboxApp Contact Sync Engine'
 
@@ -49,9 +50,9 @@ class GoogleContactsProvider(object):
         with session_scope() as db_session:
             try:
                 account = db_session.query(GmailAccount).get(self.account_id)
-                client_id = account.client_id or GOOGLE_OAUTH_CLIENT_ID
+                client_id = account.client_id or OAUTH_CLIENT_ID
                 client_secret = (account.client_secret or
-                                 GOOGLE_OAUTH_CLIENT_SECRET)
+                                 OAUTH_CLIENT_SECRET)
                 two_legged_oauth_token = gdata.gauth.OAuth2Token(
                     client_id=client_id,
                     client_secret=client_secret,

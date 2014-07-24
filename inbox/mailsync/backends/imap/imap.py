@@ -36,6 +36,7 @@ restarts.
 
 Here's the state machine:
 
+
         -----
         |   ----------------         ----------------------
         ∨   | initial sync | <-----> | initial uidinvalid |

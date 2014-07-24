@@ -2,6 +2,8 @@ from imapclient import IMAPClient
 
 from inbox.basicauth import ConnectionError, ValidationError
 from inbox.log import get_logger
+from socket import gaierror, error as socket_error
+from ssl import SSLError
 log = get_logger()
 
 
@@ -22,6 +24,16 @@ def connect_account(account, host):
                   host=host,
                   error="[ALERT] Can't connect to host (Failure)")
         raise ConnectionError(str(e))
+    except gaierror as e:
+        log.error('account_connect_failed',
+                  host=host,
+                  error="[ALERT] Name resolution faiure (Failure)")
+        raise ConnectionError(str(e))
+    except socket_error as e:
+        log.error('account_connect_failed',
+                  host=host,
+                  error="[ALERT] Socket connection failure (Failure)")
+        raise ConnectionError(str(e))
 
     conn.debug = False
     try:
@@ -30,9 +42,14 @@ def connect_account(account, host):
         log.error('account_verify_failed',
                   email=account.email_address,
                   host=host,
-                  password=account.password,
                   error="[ALERT] Invalid credentials (Failure)")
         raise ValidationError()
+    except SSLError as e:
+        log.error('account_verify_failed',
+                  email=account.email_address,
+                  host=host,
+                  error="[ALERT] SSL Connection error (Failure)")
+        raise ConnectionError(str(e))
 
     return conn
 

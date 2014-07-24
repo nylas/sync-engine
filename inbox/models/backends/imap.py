@@ -68,7 +68,7 @@ class ImapUid(MailSyncBase):
                           'ImapUid.folder_id == Folder.id, '
                           'Folder.deleted_at.is_(None))')
 
-    ### Flags ###
+    # Flags #
     # Message has not completed composition (marked as a draft).
     is_draft = Column(Boolean, server_default=false(), nullable=False)
     # Message has been read
@@ -129,13 +129,14 @@ class ImapFolderInfo(MailSyncBase):
                            'ImapAccount.deleted_at == None)')
     folder_id = Column(Integer, ForeignKey('folder.id'), nullable=False)
     # We almost always need the folder name too, so eager load by default.
+    primaryjoin = 'and_(ImapFolderInfo.folder_id == Folder.id, ' \
+                  'Folder.deleted_at.is_(None))'
+    backrefjoin = 'and_(Folder.id == ImapFolderInfo.folder_id,' \
+                  'ImapFolderInfo.deleted_at == None)'
     folder = relationship('Folder', lazy='joined',
-                          backref=backref('imapfolderinfo', primaryjoin='and_('
-                                          'Folder.id == ImapFolderInfo.folder_id,'
-                                          'ImapFolderInfo.deleted_at == None)'),
-                          primaryjoin='and_('
-                          'ImapFolderInfo.folder_id == Folder.id, '
-                          'Folder.deleted_at.is_(None))')
+                          backref=backref('imapfolderinfo',
+                                          primaryjoin=backrefjoin),
+                          primaryjoin=primaryjoin)
     uidvalidity = Column(Integer, nullable=False)
     # Invariant: the local datastore for this folder has always incorporated
     # remote changes up to _at least_ this modseq (we can't guarantee that we
@@ -198,7 +199,7 @@ class ImapThread(Thread):
         return thread
 
     @classmethod
-    def from_yahoo_message(cls, session, namespace, message):
+    def from_imap_message(cls, session, namespace, message):
         """ For now, each message is its own thread. """
         thread = cls(subject=message.subject, recentdate=message.received_date,
                      namespace=namespace, subjectdate=message.received_date,

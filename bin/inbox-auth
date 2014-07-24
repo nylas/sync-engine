@@ -19,20 +19,31 @@ from inbox.basicauth import NotSupportedError
 
 @click.command()
 @click.argument('email_address')
-def main(email_address):
+@click.option('--token', default=None, help='Authorization token.')
+@click.option('--exit_after_link', is_flag=True,
+              help='Exit after showing the link.')
+@click.option('--reauth', is_flag=True,
+              help='Re-authenticate an account even if it already exists')
+def main(email_address, token, exit_after_link, reauth):
     """ Auth an email account. """
     preflight()
 
     with session_scope() as db_session:
         auth_handler = handler_from_email(email_address)
+        create_account = auth_handler.create_auth_account
 
         try:
             account = db_session.query(Account).filter_by(
                 email_address=email_address).one()
-            sys.exit('Already have this account!')
+
+            if reauth:
+                account = create_account(db_session, email_address,
+                                         token, exit_after_link)
+            else:
+                sys.exit('Already have this account!')
         except NoResultFound:
-            account = auth_handler.create_auth_account(db_session,
-                                                       email_address)
+            account = create_account(db_session, email_address,
+                                     token, exit_after_link)
 
         try:
             if auth_handler.verify_account(account):

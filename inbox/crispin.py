@@ -23,7 +23,9 @@ from inbox.models.backends.imap import ImapAccount
 from inbox.log import get_logger
 logger = get_logger()
 
-__all__ = ['CrispinClient', 'GmailCrispinClient', 'YahooCrispinClient']
+__all__ = ['CrispinClient', 'GmailCrispinClient',
+           'YahooCrispinClient', 'OutlookCrispinClient',
+           'AOLCrispinClient']
 
 # Unify flags API across IMAP and Gmail
 Flags = namedtuple('Flags', 'flags')
@@ -154,7 +156,9 @@ retry_crispin = functools.partial(
 
 def new_crispin(account_id, email_address, provider, conn, readonly=True):
     crispin_module_for = dict(gmail=GmailCrispinClient, imap=CrispinClient,
-                              yahoo=YahooCrispinClient)
+                              yahoo=YahooCrispinClient,
+                              outlook=OutlookCrispinClient,
+                              aol=AOLCrispinClient)
 
     cls = crispin_module_for[provider]
     return cls(account_id, email_address, conn, readonly=readonly)
@@ -448,6 +452,50 @@ class YahooCrispinClient(CrispinClient):
                 elif name == 'Bulk Mail':
                     self._folder_names['spam'] = name
                 elif name in ('Inbox', 'Sent', 'Trash'):
+                    self._folder_names[name.lower()] = name
+                else:
+                    self._folder_names.setdefault(
+                        'extra', list()).append(name)
+        # TODO: support subfolders
+        return self._folder_names
+
+
+class OutlookCrispinClient(CrispinClient):
+    """ Outlook is stock IMAP with no CONDSTORE or IDLE. """
+
+    def folder_names(self):
+        if self._folder_names is None:
+            folders = self._fetch_folder_list()
+            self._folder_names = dict()
+            for flags, delimiter, name in folders:
+                if u'\\Noselect' in flags:
+                    # special folders that can't contain messages
+                    pass
+                # TODO: internationalization support
+                elif name == 'Junk':
+                    self._folder_names['spam'] = name
+                elif name in ('Inbox', 'Sent', 'Trash', 'Drafts'):
+                    self._folder_names[name.lower()] = name
+                else:
+                    self._folder_names.setdefault(
+                        'extra', list()).append(name)
+        # TODO: support subfolders
+        return self._folder_names
+
+
+class AOLCrispinClient(CrispinClient):
+    """ AOL is stock IMAP with no CONDSTORE or IDLE. """
+
+    def folder_names(self):
+        if self._folder_names is None:
+            folders = self._fetch_folder_list()
+            self._folder_names = dict()
+            for flags, delimiter, name in folders:
+                if u'\\Noselect' in flags:
+                    # special folders that can't contain messages
+                    pass
+                # TODO: internationalization support
+                elif name in ('INBOX', 'Sent', 'Trash', 'Drafts', 'Spam'):
                     self._folder_names[name.lower()] = name
                 else:
                     self._folder_names.setdefault(
