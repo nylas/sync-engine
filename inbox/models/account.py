@@ -139,6 +139,9 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
     def start_sync(self, sync_host):
         self.sync_host = sync_host
 
+        self._sync_status['sync_type'] = 'new' if self.sync_state is None else\
+            'resumed'
+
         self.sync_state = 'running'
 
         self._sync_status['sync_start_time'] = datetime.utcnow()

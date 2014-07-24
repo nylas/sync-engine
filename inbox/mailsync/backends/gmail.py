@@ -99,10 +99,9 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
                        shared_state, local_uids, uid_download_stack,
                        msg_create_fn):
     remote_uid_count = len(set(crispin_client.all_uids()))
-    remote_g_metadata, sync_info = get_g_metadata(
+    remote_g_metadata, update_uid_count = get_g_metadata(
         crispin_client, db_session, log, folder_name, local_uids,
         shared_state['syncmanager_lock'])
-    sync_type, update_uid_count = sync_info
     remote_uids = sorted(remote_g_metadata.keys(), key=int)
     log.info(remote_uid_count=len(remote_uids))
     if folder_name == crispin_client.folder_names()['all']:
@@ -127,8 +126,7 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
                       remote_uid_count=remote_uid_count,
                       download_uid_count=len(unknown_uids),
                       update_uid_count=update_uid_count,
-                      delete_uid_count=delete_uid_count,
-                      sync_type=sync_type)
+                      delete_uid_count=delete_uid_count)
 
     if folder_name == crispin_client.folder_names()['inbox']:
         # We don't do an initial dedupe for Inbox because we do thread
@@ -227,13 +225,11 @@ def get_g_metadata(crispin_client, db_session, log, folder_name, uids,
                                                 db_session, folder_name)
     if saved_folder_info is not None:
         # If there's no cached validity we probably haven't run before.
-        sync_type = 'resumed'
         remote_g_metadata, update_uid_count = retrieve_saved_g_metadata(
             crispin_client, db_session, log, folder_name, uids,
             saved_folder_info, syncmanager_lock)
 
     if remote_g_metadata is None:
-        sync_type = 'new'
         remote_g_metadata = crispin_client.g_metadata(
             crispin_client.all_uids())
         set_cache(remote_g_metadata_cache_file(account_id, folder_name),
@@ -244,7 +240,7 @@ def get_g_metadata(crispin_client, db_session, log, folder_name, uids,
                                    crispin_client.selected_highestmodseq)
         db_session.commit()
 
-    return remote_g_metadata, (sync_type, update_uid_count)
+    return remote_g_metadata, update_uid_count
 
 
 def gmail_download_and_commit_uids(crispin_client, db_session, log,
