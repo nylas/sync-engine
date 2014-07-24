@@ -17,7 +17,7 @@ from inbox.sqlalchemy_ext.util import JSON
 from inbox.config import config
 from inbox.util.addr import parse_email_address_list
 from inbox.util.file import mkdirp
-from inbox.util.misc import parse_references
+from inbox.util.misc import parse_references, get_internaldate
 
 from inbox.models.mixins import HasPublicID
 from inbox.models.transaction import HasRevisions
@@ -154,7 +154,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         raw_message : str
             The full message including headers (encoded).
         """
-        _rqd = [account, mid, folder_name, received_date, flags, body_string]
+        _rqd = [account, mid, folder_name, flags, body_string]
 
         MailSyncBase.__init__(self, *args, **kwargs)
 
@@ -165,7 +165,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         if any(_rqd) and not all([v is not None for v in _rqd]):
             raise ValueError(
                 "Required keyword arguments: account, mid, folder_name, "
-                "received_date, flags, body_string")
+                "flags, body_string")
 
         # stop trickle-down bugs
         assert account.namespace is not None
@@ -202,7 +202,9 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             self.in_reply_to = parsed.headers.get('In-Reply-To')
             self.message_id_header = parsed.headers.get('Message-Id')
 
-            self.received_date = received_date
+            self.received_date = received_date if received_date else \
+                get_internaldate(parsed.headers.get('Date'),
+                                 parsed.headers.get('Received'))
 
             # Custom Inbox header
             self.inbox_uid = parsed.headers.get('X-INBOX-ID')

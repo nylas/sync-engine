@@ -1,4 +1,8 @@
-import os, sys, pkgutil, time
+import sys, pkgutil, time
+
+from datetime import datetime
+from email.utils import parsedate_tz, mktime_tz
+
 from inbox.log import get_logger
 
 
@@ -28,7 +32,7 @@ def strip_plaintext_quote(text):
         else:
             found_quote = False
     if found_quote:
-        return '\n'.join(lines[:quote_start-1])
+        return '\n'.join(lines[:quote_start - 1])
     else:
         return text
 
@@ -73,6 +77,19 @@ def parse_references(references, in_reply_to):
     return references
 
 
+def get_internaldate(date, received):
+    """ Get the date from the headers. """
+    if date is None:
+        other, date = received.split(';')
+
+    # All in UTC
+    parsed_date = parsedate_tz(date)
+    timestamp = mktime_tz(parsed_date)
+    dt = datetime.utcfromtimestamp(timestamp)
+
+    return dt
+
+
 def timed(fn):
     """ A decorator for timing methods. """
     def timed_fn(self, *args, **kwargs):
@@ -86,7 +103,8 @@ def timed(fn):
         except AttributeError:
             fn_logger = get_logger()
             # out = None
-        fn_logger.info("[timer] {0} took {1:.3f} seconds.".format(str(fn), float(time.time() - start_time)))
+        fn_logger.info('[timer] {0} took {1:.3f} seconds.'.format(
+            str(fn), float(time.time() - start_time)))
         return ret
     return timed_fn
 
