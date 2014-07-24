@@ -37,4 +37,4 @@ click==2.4
 faulthandler==2.3
 pyinstrument==0.10.1
 structlog==0.4.1
-talon==1.0
+-e git://github.com/inboxapp/talon.git@master#egg=talon
