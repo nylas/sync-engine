@@ -42,8 +42,8 @@ def reconcile_message(db_session, log, inbox_uid, new_msg):
                   'inbox-sent header: {0}'.format(inbox_uid))
         raise
 
-
 # Namespace Utils
+
 
 def _db_write_lockfile_name(account_id):
     return "/var/lock/inbox_datastore/{0}.lock".format(account_id)
