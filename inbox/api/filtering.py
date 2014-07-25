@@ -3,7 +3,7 @@ import bson
 from sqlalchemy import and_, or_, asc, desc
 from sqlalchemy.orm import joinedload, subqueryload
 from inbox.models import (Contact, Message, MessageContactAssociation, Thread,
-                          Tag, TagItem, Part)
+                          Tag, TagItem, Part, Block)
 from inbox.util.encoding import base36decode
 
 
@@ -269,3 +269,60 @@ class Filter(object):
             query = query.offset(self.offset)
 
         return [m for m in query.all() if m.is_latest]
+
+
+class FileFilter(object):
+    """Filtering for the files API. The parameters that make sense to filter on
+    here are different enough from the ones for messages/threads that it makes
+    sense to implement this separately."""
+    def __init__(self, namespace_id, message_public_id, filename, limit,
+                 offset, db_session):
+        self.namespace_id = namespace_id
+        self.message_public_id = message_public_id
+        self.filename = filename
+        self.limit = limit
+        self.offset = offset
+        self.db_session = db_session
+
+        # Validate user-provided parameters.
+
+        if message_public_id is not None:
+            try:
+                base36decode(message_public_id)
+            except ValueError:
+                raise ValueError('Invalid message id {}'.
+                                 format(message_public_id))
+
+        if filename is not None and len(filename) > 255:
+            raise ValueError('Filename parameter {} is too long'.
+                             format(filename))
+
+    def get_files(self):
+        # Handle the case of fetching attachments on a particular message.
+        if self.message_public_id is not None:
+            message = self.db_session.query(Message).filter(
+                Message.public_id == self.message_public_id).first()
+            if not message:
+                # There can't be any results.
+                return []
+            else:
+                results = message.attachments
+                if self.filename is not None:
+                    return [r for r in results if r.filename == self.filename]
+                else:
+                    return results
+
+        query = self.db_session.query(Part).filter(
+            Part.namespace_id == self.namespace_id,
+            ~Part.content_disposition.is_(None))
+
+        if self.filename is not None:
+            query = query.filter(Part.filename == self.filename)
+
+        # STOPSHIP(emfree): this doesn't return files that have been uploaded
+        # but not attached to a message!
+
+        query = query.limit(self.limit)
+        if self.offset:
+            query = query.offset(self.offset)
+        return query.all()

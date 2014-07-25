@@ -11,7 +11,7 @@ from werkzeug.exceptions import HTTPException
 from inbox.models import (Message, Block, Part, Thread, Namespace, Webhook,
                           Tag, Contact)
 from inbox.api.kellogs import APIEncoder
-from inbox.api.filtering import Filter
+from inbox.api.filtering import Filter, FileFilter
 from inbox.api.validation import (InputError, get_tags, get_attachments,
                                   get_thread, validate_public_id)
 from inbox.config import config
@@ -384,12 +384,18 @@ def contact_delete_api(public_id):
 @app.route('/files/', methods=['GET'])
 def files_api():
     # TODO perhaps return just if content_disposition == 'attachment'
-    # TODO(emfree) support query parameters per docs
-    all_files = g.db_session.query(Part) \
-        .filter(Part.namespace_id == g.namespace.id) \
-        .filter(Part.content_disposition is not None) \
-        .limit(DEFAULT_LIMIT).all()
-    return g.encoder.jsonify(all_files)
+    try:
+        file_filter = FileFilter(
+            namespace_id=g.namespace.id,
+            message_public_id=request.args.get('message'),
+            filename=request.args.get('filename'),
+            limit=int(request.args.get('limit', DEFAULT_LIMIT)),
+            offset=int(request.args.get('offset', 0)),
+            db_session=g.db_session)
+    except ValueError as e:
+        return err(400, e.message)
+
+    return g.encoder.jsonify(file_filter.get_files())
 
 
 @app.route('/files/<public_id>')
