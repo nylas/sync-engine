@@ -16,9 +16,9 @@ from inbox.models.backends.outlook import OutlookAccount, IMAP_HOST
 PROVIDER = 'outlook'
 
 # Outlook OAuth app credentials
-OAUTH_CLIENT_ID = config.get_required('LIVE_OAUTH_CLIENT_ID')
-OAUTH_CLIENT_SECRET = config.get_required('LIVE_OAUTH_CLIENT_SECRET')
-OAUTH_REDIRECT_URI = config.get_required('LIVE_OAUTH_REDIRECT_URI')
+OAUTH_CLIENT_ID = config.get_required('MS_LIVE_OAUTH_CLIENT_ID')
+OAUTH_CLIENT_SECRET = config.get_required('MS_LIVE_OAUTH_CLIENT_SECRET')
+OAUTH_REDIRECT_URI = config.get_required('MS_LIVE_OAUTH_REDIRECT_URI')
 
 OAUTH_AUTHENTICATE_URL = 'https://login.live.com/oauth20_authorize.srf'
 OAUTH_ACCESS_TOKEN_URL = 'https://login.live.com/oauth20_token.srf'
