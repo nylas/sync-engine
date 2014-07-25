@@ -247,7 +247,7 @@ class ImapFolderSyncStatus(MailSyncBase):
     @property
     def metrics(self):
         status = dict(name=self.folder.name, state=self.state)
-        status.update(self._metrics)
+        status.update(self._metrics or {})
 
         return status
 
@@ -276,6 +276,9 @@ class ImapFolderSyncStatus(MailSyncBase):
         for k in metrics.iterkeys():
             assert k in sync_status_metrics, k
 
-        self._metrics.update(metrics)
+        if self._metrics is not None:
+            self._metrics.update(metrics)
+        else:
+            self._metrics = metrics
 
     __table_args__ = (UniqueConstraint('account_id', 'folder_id'),)

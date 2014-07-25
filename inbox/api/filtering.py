@@ -239,3 +239,33 @@ class Filter(object):
             query = query.offset(self.offset)
 
         return query.all()
+
+    def get_drafts(self):
+        query = self.db_session.query(Message).filter(
+            Message.is_draft == True)
+
+        thread_criteria = [Thread.namespace_id == self.namespace_id]
+
+        if self.thread_public_id is not None:
+            # TODO(emfree) this is a common case that we should handle
+            # separately by just fetching the thread's messages and only
+            # filtering more if needed.
+            thread_criteria.append(Thread.public_id == self.thread_public_id)
+
+        thread_predicate = and_(*thread_criteria)
+        thread_query = self.db_session.query(Thread).filter(thread_predicate)
+
+        query = query.join(thread_query.subquery())
+
+        # Eager-load some objects in order to make constructing API
+        # representations faster.
+        query = query.options(
+            joinedload(Message.parts).load_only('public_id',
+                                                'content_disposition'),
+            joinedload(Message.thread).load_only('public_id', 'discriminator'))
+
+        query = query.limit(self.limit)
+        if self.offset:
+            query = query.offset(self.offset)
+
+        return [m for m in query.all() if m.is_latest]
