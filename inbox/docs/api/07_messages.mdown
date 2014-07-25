@@ -34,7 +34,12 @@ GET https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>
     "date": 1370084645,
     "thread": "5vryyrki4fqt7am31uso27t3f",
     "files": [
-        "1g76i48k34wqbf6qgp285nw0o"
+        {
+            "content_type": "image/jpeg",
+            "filename": "walter.jpg",
+            "id": "7jm8bplrg5tx0c7pon56tx30r",
+            "size": 38633
+        }
     ],
     "body": "<html><body>....</body></html>"
 }

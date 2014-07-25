@@ -66,10 +66,13 @@ def encode(obj, namespace_public_id=None):
             'bcc': format_address_list(obj.bcc_addr),
             'date': obj.received_date,
             'thread': obj.thread.public_id,
-            'files': [p.public_id for p in obj.parts if
-                      p.is_attachment],
             'body': obj.sanitized_body,
             'unread': not obj.is_read,
+            'files': [{
+                'content_type': p.content_type,
+                'size': p.size,
+                'filename': p.filename,
+                'id': p.public_id} for p in obj.parts if p.is_attachment]
         }
         # If the message is a draft (Inbox-created or otherwise):
         if obj.is_draft:
@@ -123,16 +126,6 @@ def encode(obj, namespace_public_id=None):
                 'message': obj.message.public_id,
             })
         return resp
-
-    elif isinstance(obj, Block):  # ie: Files
-        # TODO consider adding more info?
-        return {
-            'id': obj.public_id,
-            'object': 'file',
-            'namespace': _get_namespace_public_id(obj),
-            'content_type': obj.content_type,
-            'size': obj.size,
-        }
 
     elif isinstance(obj, Webhook):
         resp = encode(obj.lens, namespace_public_id)
