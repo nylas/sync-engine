@@ -52,6 +52,25 @@ def attachments(db):
     return new_attachments
 
 
+def test_drafts_filter(api_client, example_draft):
+    r = api_client.post_data('/drafts', example_draft)
+    public_id = json.loads(r.data)['id']
+
+    r = api_client.get_data('/drafts')
+    matching_saved_drafts = [draft for draft in r if draft['id'] == public_id]
+    thread_public_id = matching_saved_drafts[0]['thread']
+
+    reply_draft = {
+        'subject': 'test reply',
+        'body': 'test reply',
+        'reply_to_thread': thread_public_id
+    }
+    r = api_client.post_data('/drafts', reply_draft)
+
+    results = api_client.get_data('/drafts?thread={}'.format(thread_public_id))
+    assert len(results) == 2
+
+
 def test_create_and_get_draft(api_client, example_draft):
     r = api_client.post_data('/drafts', example_draft)
     public_id = json.loads(r.data)['id']
