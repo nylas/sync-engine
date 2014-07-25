@@ -264,6 +264,10 @@ class ImapFolderSyncStatus(MailSyncBase):
         self._metrics['sync_end_time'] = datetime.utcnow()
         self._metrics['sync_error'] = error
 
+    @property
+    def is_killed(self):
+        return self._metrics.get('run_state') == 'killed'
+
     def update_metrics(self, metrics):
         sync_status_metrics = ['remote_uid_count', 'delete_uid_count',
                                'update_uid_count', 'download_uid_count',

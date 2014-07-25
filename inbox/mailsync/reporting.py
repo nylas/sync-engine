@@ -32,8 +32,12 @@ def report_killed(account_id, folder_name=None):
             account.kill_sync(error)
         else:
             # FolderSyncMonitor for account's folder
-                for f in account.foldersyncstatuses:
-                    if f.folder.name == folder_name:
-                        f.kill_sync(error)
+            statuses = account.foldersyncstatuses
+            for f in statuses:
+                if f.folder.name == folder_name:
+                    f.kill_sync(error)
+
+            if all([f.is_killed for f in statuses]):
+                account.kill_sync()
 
         db_session.commit()
