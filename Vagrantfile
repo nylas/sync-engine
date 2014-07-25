@@ -33,8 +33,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.network "forwarded_port", guest: 5000, host: 5000
   config.vm.network "forwarded_port", guest: 8000, host: 8000
   config.vm.network "forwarded_port", guest: 5555, host: 5555
-  config.vm.network "forwarded_port", guest: 30000, host:30000
-  config.vm.network "forwarded_port", guest: 9200, host:9200
 
   # This will share any folder in the parent directory that
   # has the name share-*
