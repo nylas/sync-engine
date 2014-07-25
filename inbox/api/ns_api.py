@@ -438,6 +438,7 @@ def file_upload_api():
 #
 @app.route('/files/<public_id>/download')
 def file_download_api(public_id):
+
     try:
         f = g.db_session.query(Block).filter(
             Block.public_id == public_id).one()
@@ -556,11 +557,6 @@ def webhooks_delete_api(public_id):
 
 # TODO(emfree, kavya): Systematically validate user input, and return
 # meaningful errors for invalid input.
-
-@app.route('/drafts/')
-def draft_query_api():
-    return g.encoder.jsonify(g.api_filter.get_drafts())
-
 
 @app.route('/drafts/', methods=['GET'])
 def draft_get_all_api():
