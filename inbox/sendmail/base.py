@@ -48,18 +48,6 @@ def get_draft(db_session, account, draft_public_id):
         Thread.namespace_id == account.namespace.id).first()
 
 
-def get_all_drafts(db_session, account):
-    """ Get all current draft messages for the account. """
-    # TODO(emfree) result-limit here, and ideally avoid loading non-current
-    # drafts in the first place.
-    # Filter using is_draft rather than (state == 'draft') to include
-    # both created + synced drafts.
-    drafts = db_session.query(Message).join(Thread).filter(
-        Message.is_draft == True,
-        Thread.namespace_id == account.namespace.id).all()
-    return [draft for draft in drafts if draft.is_latest]
-
-
 def create_draft(db_session, account, to=None, subject=None,
                  body=None, blocks=None, cc=None, bcc=None,
                  tags=None, replyto_thread=None, syncback=True):
