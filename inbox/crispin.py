@@ -7,8 +7,9 @@ time. That's why functions take a connection argument.
 """
 import imaplib
 import functools
+import threading
 
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 
 import gevent
 from gevent import socket
@@ -37,6 +38,11 @@ RawMessage = namedtuple(
     'RawImapMessage',
     'uid internaldate flags body g_thrid g_msgid g_labels created')
 
+# Lazily-initialized map of account ids to lock objects.
+# This prevents multiple greenlets from concurrently creating duplicate
+# connection pools for a given account.
+_lock_map = defaultdict(threading.Lock)
+
 
 class GmailSettingError(Exception):
     """ Thrown on misconfigured Gmail accounts. """
@@ -56,12 +62,13 @@ def connection_pool(account_id, pool_size=6, connection_pool_for=dict()):
     none at all! It's up to the calling code to handle folder sessions
     properly. We don't reset to a certain select state because it's slow.
     """
-    pool = connection_pool_for.get(account_id)
-    if pool is None:
-        pool = connection_pool_for[account_id] \
-            = CrispinConnectionPool(account_id, num_connections=pool_size,
-                                    readonly=True)
-    return pool
+    with _lock_map[account_id]:
+        pool = connection_pool_for.get(account_id)
+        if pool is None:
+            pool = connection_pool_for[account_id] \
+                = CrispinConnectionPool(account_id, num_connections=pool_size,
+                                        readonly=True)
+        return pool
 
 
 def writable_connection_pool(account_id, pool_size=2,
@@ -75,12 +82,13 @@ def writable_connection_pool(account_id, pool_size=2,
             # your code here
             pass
     """
-    pool = connection_pool_for.get(account_id)
-    if pool is None:
-        pool = connection_pool_for[account_id] \
-            = CrispinConnectionPool(account_id, num_connections=pool_size,
-                                    readonly=False)
-    return pool
+    with _lock_map[account_id]:
+        pool = connection_pool_for.get(account_id)
+        if pool is None:
+            pool = connection_pool_for[account_id] \
+                = CrispinConnectionPool(account_id, num_connections=pool_size,
+                                        readonly=False)
+        return pool
 
 CONN_DISCARD_EXC_CLASSES = (socket.error, imaplib.IMAP4.error)
 
