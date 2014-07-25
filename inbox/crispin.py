@@ -71,7 +71,7 @@ def connection_pool(account_id, pool_size=6, connection_pool_for=dict()):
         return pool
 
 
-def writable_connection_pool(account_id, pool_size=2,
+def writable_connection_pool(account_id, pool_size=1,
                              connection_pool_for=dict()):
     """ Per-account crispin connection pool, with *read-write* connections.
 
