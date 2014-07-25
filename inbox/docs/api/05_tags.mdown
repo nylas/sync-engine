@@ -66,7 +66,9 @@ POST https://api.inboxapp.com/n/<namespace_id>/tags
 ```
 ::json
 {
-    "name": <new tag name>
+    "name": <new tag name>,
+    "add_tags": ["housing-search", "craigslist"],
+    "remove_tags": ["unread"]
 }
 ```
 
