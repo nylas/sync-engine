@@ -75,6 +75,7 @@ class SyncbackService(gevent.Greenlet):
                                         log_entry.record_id,
                                         namespace.account_id,
                                         syncback_service=self)
+                self.log.info('delegating action', action_id=log_entry.id)
                 self.worker_pool.start(worker)
 
     def mark_for_rescheduling(self, log_entry_id):
