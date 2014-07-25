@@ -77,7 +77,7 @@ yahoo_mail_domains = [
 # Outlook:
 outlook_mail_domains = [
     'hotmail.com',
-    'outlook.com'
+    'outlook.com',
     'outlook.com.ar',
     'outlook.com.au',
     'outlook.at',
