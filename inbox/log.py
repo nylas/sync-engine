@@ -163,14 +163,13 @@ def email_exception(logger, account_id, etype, evalue, tb):
         auth=('api', mailgun_api_key),
         data={'from': "Inbox App Server <{}>".format(exc_email_addr),
               'to': [exc_email_addr],
-              'subject': "Uncaught error! {}{} {}".format(account_str, etype,
-                                                          evalue),
+              'subject': "Uncaught error! {} {}".format(etype, evalue),
               'text': u"""
-    Something went wrong on {}. Please investigate. :)
+    Something went wrong on {}. {} Please investigate. :)
 
     {}
 
-    """.format(socket.getfqdn(),
+    """.format(socket.getfqdn(), account_str,
                safe_format_exception(etype, evalue, tb))})
     if r.status_code != requests.codes.ok:
         logger.error("Couldn't send exception email: {}".format(r.text))
