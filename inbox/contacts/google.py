@@ -3,6 +3,7 @@
 import posixpath
 
 import gdata.auth
+import gdata.client
 import gdata.contacts.client
 
 from inbox.log import get_logger
@@ -143,8 +144,15 @@ class GoogleContactsProvider(object):
         query.updated_min = sync_from_time
         query.showdeleted = True
         google_client = self._get_google_client()
+        # Return an empty result list if we couldn't create an API client, or
+        # if we get a RequestError
         if google_client is None:
-            # Return an empty generator if we couldn't create an API client
-            return
-        for result in google_client.GetContacts(q=query).entry:
-            yield self._parse_contact_result(result)
+            self.log.error('could not create contacts client')
+            return []
+        try:
+            results = google_client.GetContacts(q=query).entry
+            return [self._parse_contact_result(result) for result in results]
+        except gdata.client.RequestError:
+            self.log.error('contact sync request error',
+                           exc_info=True)
+            return []
