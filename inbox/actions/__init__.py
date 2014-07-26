@@ -26,14 +26,13 @@ at-least-once semantics.
 from pkgutil import extend_path
 __path__ = extend_path(__path__, __name__)
 
-from inbox.util.misc import register_backends
-
 from inbox.actions.backends import module_registry
 
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from inbox.models import Account, Message
 from inbox.models.session import session_scope
+from inbox.models.action_log import schedule_action
 from inbox.sendmail.base import (generate_attachments, get_sendmail_client,
                                  SendMailException)
 from inbox.sendmail.message import create_email, Recipients
@@ -149,7 +148,10 @@ def send_directly(account_id, draft_id, db_session):
 def send_draft(account_id, draft_id, db_session):
     """Send a previously created draft."""
     _send(account_id, draft_id, db_session)
-    delete_draft(account_id, draft_id, db_session)
+    draft = db_session.query(Message).get(draft_id)
+    # Schedule the deletion separately (we don't want to resend if sending
+    # succeeds but deletion fails!)
+    schedule_action('delete_draft', draft, draft.namespace.id, db_session)
 
 
 def _send(account_id, draft_id, db_session):
