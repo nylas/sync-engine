@@ -2,7 +2,6 @@ import itertools
 import re
 
 from datetime import datetime
-import bson
 
 from sqlalchemy import (Column, String, DateTime, ForeignKey, and_,
                         or_, asc, desc)
@@ -146,10 +145,7 @@ class Lens(MailSyncBase, HasPublicID):
         if value is None:
             return
         try:
-            dt = datetime.utcfromtimestamp(int(value))
-            # Need to set tzinfo so that we can compare to datetimes that were
-            # deserialized using bson.json_util.
-            return dt.replace(tzinfo=bson.tz_util.utc)
+            return datetime.utcfromtimestamp(int(value))
         except ValueError:
             raise ValueError('Invalid timestamp value for {}'.format(key))
 
