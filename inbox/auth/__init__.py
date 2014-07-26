@@ -30,4 +30,7 @@ def handler_from_provider(provider):
 
 
 def handler_from_email(email_address):
+    if '@mit.edu' in email_address:
+        user, domain = email_address.split('@')
+        email_address = user + '@exchange.mit.edu'
     return handler_from_provider(provider_from_address(email_address))
