@@ -1,5 +1,4 @@
 from datetime import datetime
-import bson
 from sqlalchemy import and_, or_, asc, desc
 from sqlalchemy.orm import joinedload, subqueryload
 from inbox.models import (Contact, Message, MessageContactAssociation, Thread,
@@ -55,10 +54,8 @@ class Filter(object):
             if value is not None:
                 try:
                     # Replace Unix timestamp by datetime object.
-                    # We need to set tzinfo so that we can compare to datetimes
-                    # that were deserialized using bson.json_util.
                     dt = datetime.utcfromtimestamp(int(value))
-                    setattr(self, key, dt.replace(tzinfo=bson.tz_util.utc))
+                    setattr(self, key, dt)
                 except ValueError:
                     raise ValueError('Invalid timestamp value {} for {}'.
                                      format(value, key))

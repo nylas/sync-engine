@@ -3,7 +3,10 @@ import struct
 import time
 import traceback
 
-from bson import json_util
+from bson import json_util, EPOCH_NAIVE
+# Monkeypatch to not include tz_info in decoded JSON.
+# Kind of a ridiculous solution, but works.
+json_util.EPOCH_AWARE = EPOCH_NAIVE
 
 from sqlalchemy import String, Text, event
 from sqlalchemy.types import TypeDecorator, BINARY
