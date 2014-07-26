@@ -36,8 +36,12 @@ def after_cursor_execute(conn, cursor, statement,
         # Log stack trace, but remove the uninteresting parts.
         tb = ''.join([line for line in traceback.format_stack() if 'inbox' in
                       line][:-1])
-        log.warning('slow query', query_time=total, statement=statement,
-                    parameters=parameters, tb=tb)
+        try:
+            log.warning('slow query', query_time=total, statement=statement,
+                        parameters=parameters, tb=tb)
+        except UnicodeDecodeError:
+            log.warning('slow query', query_time=total, tb=tb)
+            log.error('logging UnicodeDecodeError')
 
 
 ### Column Types
