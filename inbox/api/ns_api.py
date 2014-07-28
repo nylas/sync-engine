@@ -417,7 +417,6 @@ def file_read_api(public_id):
         return err(404, "Couldn't find file with id {0} "
                    "on namespace {1}".format(public_id, g.namespace_public_id))
 
-
 #
 # Upload file API. This actually supports multiple files at once
 # You can test with
@@ -436,7 +435,19 @@ def file_upload_api():
 
     g.db_session.add_all(all_files)
     g.db_session.commit()  # to generate public_ids
-    return g.encoder.jsonify(all_files)
+
+    # copy relevant information for returning to user
+    ret_files = []
+    for f in all_files:
+        ret_file = {
+                'namespace': f.namespace,
+                'content_type': f.content_type,
+                'filename': f.filename,
+                'size': len(f.data),
+                'id': f.public_id}
+        ret_files.append(ret_file)
+
+    return g.encoder.jsonify(ret_files)
 
 
 #
