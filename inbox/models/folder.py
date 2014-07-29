@@ -36,7 +36,7 @@ class Folder(MailSyncBase):
                          collation='utf8mb4_general_ci'), nullable=True)
     canonical_name = Column(String(MAX_FOLDER_NAME_LENGTH), nullable=True)
 
-    __table_args__ = (UniqueConstraint('account_id', 'name'),)
+    __table_args__ = (UniqueConstraint('account_id', 'name', 'canonical_name'),)
 
     @property
     def namespace(self):
