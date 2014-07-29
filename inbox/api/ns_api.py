@@ -436,18 +436,7 @@ def file_upload_api():
     g.db_session.add_all(all_files)
     g.db_session.commit()  # to generate public_ids
 
-    # copy relevant information for returning to user
-    ret_files = []
-    for f in all_files:
-        ret_file = {
-                'namespace': f.namespace,
-                'content_type': f.content_type,
-                'filename': f.filename,
-                'size': len(f.data),
-                'id': f.public_id}
-        ret_files.append(ret_file)
-
-    return g.encoder.jsonify(ret_files)
+    return g.encoder.jsonify(all_files)
 
 
 #
