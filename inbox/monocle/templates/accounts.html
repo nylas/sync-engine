@@ -3,7 +3,15 @@
 {% block title %} Monocle - Accounts {% endblock %}
 
 {% block content %}
-<h2 class='sub-header text-primary text-center'>MailSync Status Info: All Accounts</h2>
+<h2 class='sub-header text-primary text-center'>MailSync Status Info:</h2>
+<h4 class='text-green text-center' id='counts'>
+  <p id='total'></p>
+  <p id='running'></p>
+  <p id='stopped'></p>
+  <p id='killed'></p>
+  <p id='unstarted'></p>
+</h4>
+
 <div class='table-responsive table-white'>
 <table class='table table-bordered table-condensed table-hover' id='status_table'>
   <thead>
@@ -44,6 +52,9 @@
         $SCRIPT_ROOT + '/_accounts',              
         {},                                 
         function(data) {
+          var count = data.length
+          var running = 0; var stopped = 0; var killed = 0; var unstarted = 0;
+
           var content = '';
           $.each(data, function(i, item) {
               link = "<a href=" + $SCRIPT_ROOT + '/accounts/' + item.id + ' >' + item.id + '</a>'
@@ -58,9 +69,20 @@
               content += '<td>' + (item.sync_type|| '') + '</td>';
               content += '<td>' + (item.sync_error || '') + '</td>';
               content += '</tr>';
+
+              if (item.state === 'running') { running += 1; }
+              else if (item.state === 'stopped') { stopped += 1; }
+              else if (item.state === 'killed') { killed += 1; }
+              else { unstarted += 1; }
           });
           
           $('#status_table tbody').html(content);
+
+          $('#total').html('#(Accounts): ' + count);
+          $('#running').html('#(Running): ' + running);
+          $('#stopped').html('#(Stopped): ' + stopped);
+          $('#killed').html('#(Killed): ' + killed);
+          $('#unstarted').html('#(Unstarted): ' + unstarted);
 
           if ($('#status_table tr').length >= 3) {
               setFilterGrid('status_table', 0, tableFilter);
