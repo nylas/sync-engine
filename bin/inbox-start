@@ -6,6 +6,8 @@ import os
 import platform
 import multiprocessing
 
+from signal import signal, SIGTERM
+
 import click
 
 # Check that the inbox package is installed. It seems Vagrant may sometimes
@@ -60,7 +62,7 @@ def run_webhooks():
     service.join()
 
 
-def start(processes):
+def start(num_processes):
     print >>sys.stderr, """
     \033[94m     Welcome to... \033[0m\033[1;95m
       _____       _
@@ -74,15 +76,20 @@ def start(processes):
      """
     # top-level import makes child process DB calls sad :(
     from gevent import monkey; monkey.patch_all()
-    import gipc
 
     # run SyncService in individual processes for multicore support
     from inbox.mailsync.service import SyncService
-    processes = [SyncService(i, processes) for i in xrange(processes)]
-    for process in processes:
-        process.start()
+
+    signal(SIGTERM, lambda *args: sys.exit(-SIGTERM))
+
+    processes = [SyncService(i, num_processes) for i in xrange(num_processes)]
+
     # also run webhooks in its own process
-    processes.append(gipc.start_process(target=run_webhooks))
+    processes.append(multiprocessing.Process(target=run_webhooks))
+
+    for process in processes:
+        process.daemon = True
+        process.start()
 
     # hang out forever and run some services
     for p in processes:
