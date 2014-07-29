@@ -1,7 +1,7 @@
 import platform
 
 import gevent
-from gipc.gipc import _GProcess
+from multiprocessing import Process
 from setproctitle import setproctitle
 
 from sqlalchemy import func, or_
@@ -15,7 +15,7 @@ from inbox.models import Account
 from inbox.mailsync.backends import module_registry
 
 
-class SyncService(_GProcess):
+class SyncService(Process):
     """
     Parameters
     ----------
@@ -43,7 +43,7 @@ class SyncService(_GProcess):
         self.contact_sync_monitors = {}
         self.poll_interval = poll_interval
 
-        _GProcess.__init__(self)
+        Process.__init__(self)
 
     def run(self):
         """
