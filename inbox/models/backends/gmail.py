@@ -12,7 +12,7 @@ PROVIDER = 'gmail'
 IMAP_HOST = 'imap.gmail.com'
 
 
-class GmailAccount(ImapAccount, OAuthAccount):
+class GmailAccount(OAuthAccount, ImapAccount):
     id = Column(Integer, ForeignKey(ImapAccount.id, ondelete='CASCADE'),
                 primary_key=True)
 
