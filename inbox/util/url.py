@@ -152,6 +152,12 @@ gmail_mx_servers = [
     ]
 
 
+exchange_mail_domains = [
+    'onmicrosoft.com',
+    'exchange.mit.edu'
+]
+
+
 class InvalidEmailAddressError(Exception):
     pass
 
@@ -183,6 +189,12 @@ def email_supports_outlook(domain):
 def email_supports_aol(domain):
     # Must be a AOL mail domain
     if domain in aol_mail_domains:
+        return True
+
+
+def email_supports_exchange(domain):
+    # Must be a Exchange mail domain
+    if domain in exchange_mail_domains:
         return True
 
 
@@ -225,8 +237,11 @@ def provider_from_address(email_address):
     if email_supports_aol(domain):
         return 'aol'
 
-    else:
+    if email_supports_exchange(domain):
         return 'eas'
+
+    else:
+        return 'unknown'
 
 
 # From tornado.httputil

@@ -8,7 +8,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from werkzeug.exceptions import default_exceptions
 from werkzeug.exceptions import HTTPException
 
-from inbox.models import (Message, Block, Part, Thread, Namespace, Webhook,
+from inbox.models import (Message, Block, Thread, Namespace, Webhook,
                           Tag, Contact)
 from inbox.api.kellogs import APIEncoder
 from inbox.api.filtering import Filter, FileFilter
@@ -408,7 +408,7 @@ def file_read_api(public_id):
             g.log.info(
                 "block's message namespace matches api context namespace")
         else:
-            # Block was likely uploaded via file API and not yet sent in a message
+            # Block was likely uploaded via file API and not yet sent in a msg
             g.log.debug("This block doesn't have a corresponding message: {}"
                         .format(f.public_id))
         return g.encoder.jsonify(f)
@@ -416,6 +416,7 @@ def file_read_api(public_id):
     except NoResultFound:
         return err(404, "Couldn't find file with id {0} "
                    "on namespace {1}".format(public_id, g.namespace_public_id))
+
 
 #
 # Upload file API. This actually supports multiple files at once
