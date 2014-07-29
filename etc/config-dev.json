@@ -28,5 +28,6 @@
 
 "VAULT_TYPE": "local",
 
-"EMAIL_EXCEPTIONS": false
+"EMAIL_EXCEPTIONS": false,
+"SENTRY_EXCEPTIONS": false
 }
