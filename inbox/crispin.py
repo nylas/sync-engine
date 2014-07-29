@@ -332,6 +332,10 @@ class CrispinClient(object):
         raw_messages = self.conn.fetch(uids,
                                        ['BODY.PEEK[] INTERNALDATE FLAGS'])
         for uid, msg in raw_messages.iteritems():
+            if 'BODY[]' not in msg:
+                raise Exception(
+                    'No BODY[] element in IMAP response. Tags given: {}'
+                    .format(msg.keys()))
             # NOTE: flanker needs encoded bytestrings as its input, since to
             # deal properly with MIME-encoded email you need to do part
             # decoding based on message / MIME part headers anyway. imapclient
