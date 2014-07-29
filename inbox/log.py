@@ -7,54 +7,20 @@ Mostly based off http://www.structlog.org/en/0.4.1/standard-library.html.
 import sys
 import socket
 import traceback
+import logging
+import logging.handlers
 
+import raven
 import requests
 import colorlog
 import structlog
 from structlog._frames import _find_first_app_frame_and_name
-from inbox.config import config
-import logging
-import logging.handlers
 
+from inbox.config import config
 
 MAX_EXCEPTION_LENGTH = 10000
 
-
-def configure_logging(is_prod):
-    tty_handler = logging.StreamHandler(sys.stdout)
-    if not is_prod:
-        # Use a more human-friendly format.
-        formatter = colorlog.ColoredFormatter(
-            '%(log_color)s[%(levelname)s]%(reset)s %(message)s',
-            reset=True, log_colors={'DEBUG': 'cyan', 'INFO': 'green',
-                                    'WARNING': 'yellow', 'ERROR': 'red',
-                                    'CRITICAL': 'red'})
-    else:
-        formatter = logging.Formatter('%(message)s')
-    tty_handler.setFormatter(formatter)
-    # Configure the root logger.
-    root_logger = logging.getLogger()
-    root_logger.addHandler(tty_handler)
-    # Set loglevel DEBUG if config value is missing.
-    root_logger.setLevel(config.get('LOGLEVEL', 10))
-
-
-def safe_format_exception(etype, value, tb, limit=None):
-    """Similar to structlog._format_exception, but truncate the exception part.
-    This is because SQLAlchemy exceptions can sometimes have ludicrously large
-    exception strings."""
-    if tb:
-        list = ['Traceback (most recent call last):\n']
-        list = list + traceback.format_tb(tb, limit)
-    else:
-        list = []
-    exc_only = traceback.format_exception_only(etype, value)
-    # Normally exc_only is a list containing a single string.  For syntax
-    # errors it may contain multiple elements, but we don't really need to
-    # worry about that here.
-    exc_only[0] = exc_only[0][:MAX_EXCEPTION_LENGTH]
-    list = list + exc_only
-    return '\t'.join(list)
+sentry_client = None
 
 
 def _record_level(logger, name, event_dict):
@@ -125,7 +91,6 @@ class BoundLogger(structlog._base.BoundLoggerBase):
         return super(BoundLogger, self)._proxy_to_logger(method_name, event,
                                                          **event_kw)
 
-
 structlog.configure(
     processors=[
         structlog.stdlib.filter_by_level,
@@ -145,17 +110,53 @@ structlog.configure(
 get_logger = structlog.get_logger
 
 
+def configure_logging(is_prod):
+    tty_handler = logging.StreamHandler(sys.stdout)
+    if not is_prod:
+        # Use a more human-friendly format.
+        formatter = colorlog.ColoredFormatter(
+            '%(log_color)s[%(levelname)s]%(reset)s %(message)s',
+            reset=True, log_colors={'DEBUG': 'cyan', 'INFO': 'green',
+                                    'WARNING': 'yellow', 'ERROR': 'red',
+                                    'CRITICAL': 'red'})
+    else:
+        formatter = logging.Formatter('%(message)s')
+    tty_handler.setFormatter(formatter)
+    # Configure the root logger.
+    root_logger = logging.getLogger()
+    root_logger.addHandler(tty_handler)
+    # Set loglevel DEBUG if config value is missing.
+    root_logger.setLevel(config.get('LOGLEVEL', 10))
+
+    if config.get('SENTRY_EXCEPTIONS'):
+        sentry_dsn = config.get_required('SENTRY_DSN')
+        global sentry_client
+        sentry_client = raven.Client(sentry_dsn)
+
+
+def safe_format_exception(etype, value, tb, limit=None):
+    """Similar to structlog._format_exception, but truncate the exception part.
+    This is because SQLAlchemy exceptions can sometimes have ludicrously large
+    exception strings."""
+    if tb:
+        list = ['Traceback (most recent call last):\n']
+        list = list + traceback.format_tb(tb, limit)
+    else:
+        list = []
+    exc_only = traceback.format_exception_only(etype, value)
+    # Normally exc_only is a list containing a single string.  For syntax
+    # errors it may contain multiple elements, but we don't really need to
+    # worry about that here.
+    exc_only[0] = exc_only[0][:MAX_EXCEPTION_LENGTH]
+    list = list + exc_only
+    return '\t'.join(list)
+
+
 def email_exception(logger, account_id, etype, evalue, tb):
     """ Send stringified exception to configured email address. """
-    exc_email_addr = config.get('EXCEPTION_EMAIL_ADDRESS')
-    if exc_email_addr is None:
-        logger.error('No EXCEPTION_EMAIL_ADDRESS configured!')
-    mailgun_api_endpoint = config.get('MAILGUN_API_ENDPOINT')
-    if mailgun_api_endpoint is None:
-        logger.error('No MAILGUN_API_ENDPOINT configured!')
-    mailgun_api_key = config.get('MAILGUN_API_KEY')
-    if mailgun_api_key is None:
-        logger.error('No MAILGUN_API_KEY configured!')
+    exc_email_addr = config.get_required('EXCEPTION_EMAIL_ADDRESS')
+    mailgun_api_endpoint = config.get_required('MAILGUN_API_ENDPOINT')
+    mailgun_api_key = config.get_required('MAILGUN_API_KEY')
 
     account_str = 'account_id {}: '.format(account_id) if account_id else ''
     r = requests.post(
@@ -172,7 +173,8 @@ def email_exception(logger, account_id, etype, evalue, tb):
     """.format(socket.getfqdn(), account_str,
                safe_format_exception(etype, evalue, tb))})
     if r.status_code != requests.codes.ok:
-        logger.error("Couldn't send exception email: {}".format(r.text))
+        logger.error("Couldn't send exception email",
+                     status_code=r.status_code, response=r.text)
 
 
 def log_uncaught_errors(logger=None, account_id=None):
@@ -188,3 +190,6 @@ def log_uncaught_errors(logger=None, account_id=None):
     logger.error('Uncaught error', exc_info=True)
     if config.get('EMAIL_EXCEPTIONS'):
         email_exception(logger, account_id, *sys.exc_info())
+    if config.get('SENTRY_EXCEPTIONS'):
+        user_data = {'account_id': account_id}
+        sentry_client.captureException(extra=user_data)

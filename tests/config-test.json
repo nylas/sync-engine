@@ -12,5 +12,6 @@
 
 "BASE_DUMP": "data/base_dump.sql",
 
-"EMAIL_EXCEPTIONS": false
+"EMAIL_EXCEPTIONS": false,
+"SENTRY_EXCEPTIONS": false
 }
