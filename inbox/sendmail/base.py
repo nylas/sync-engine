@@ -205,6 +205,7 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
         part.content_type = block.content_type
         part.is_inboxapp_attachment = True
         part.data = block.data
+        part.filename = block.filename
         message.parts.append(part)
         db_session.add(part)
 
