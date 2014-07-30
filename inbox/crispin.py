@@ -140,8 +140,8 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
             auth_handler = handler_from_provider(account.provider)
             conn = auth_handler.connect_account(account)
 
-        return new_crispin(self.account_id, self.email_address, self.provider,
-                           conn, self.readonly)
+            return new_crispin(self.account_id, self.email_address,
+                               self.provider, conn, self.readonly)
 
     def _keepalive(self, c):
         c.conn.noop()
