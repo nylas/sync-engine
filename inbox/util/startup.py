@@ -1,3 +1,4 @@
+import gc
 import os
 import sys
 import subprocess
@@ -43,8 +44,8 @@ def check_requirements(requirements_path):
 
 def check_db():
     """ Checks the database revision against the known alembic migrations. """
-    from inbox.ignition import db_uri
-    inbox_db_engine = sqlalchemy.create_engine(db_uri())
+    from inbox.ignition import main_engine
+    inbox_db_engine = main_engine(pool_size=1, max_overflow=0)
 
     # top-level, with setup.sh
     alembic_ini_filename = _absolute_path('../../alembic.ini')
@@ -67,6 +68,9 @@ def check_db():
         head_revision = script.get_current_head()
         log.info('Head database revision: {0}'.format(head_revision))
         log.info('Current database revision: {0}'.format(current_revision))
+        # clean up a ton (8) of idle database connections
+        del script
+        gc.collect()
 
         if current_revision != head_revision:
             raise Exception(
