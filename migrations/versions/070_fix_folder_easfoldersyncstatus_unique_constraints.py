@@ -21,10 +21,10 @@ Base.metadata.reflect(engine)
 
 
 def upgrade():
-    op.drop_constraint('folder_ibfk_1', 'folder', type_='foreignkey')
+    op.drop_constraint('folder_fk1', 'folder', type_='foreignkey')
     op.drop_constraint('account_id', 'folder', type_='unique')
 
-    op.create_foreign_key('folder_ibfk_1',
+    op.create_foreign_key('folder_fk1',
                           'folder', 'account',
                           ['account_id'], ['id'])
     op.create_unique_constraint('account_id',
