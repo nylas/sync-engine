@@ -70,16 +70,44 @@ mkdir -p /etc/inboxapp
 chown $SUDO_USER /etc/inboxapp
 
 color '35;1' 'Copying default development configuration to /etc/inboxapp'
-cp ./etc/config-dev.json /etc/inboxapp/config.json
+src=./etc/config-dev.json
+dest=/etc/inboxapp/config.json
+if [ ! -f $dest ]; then
+    cp $src $dest
+elif [ $src -nt $dest ]; then
+    echo "Error: inbox config is newer and merging of configs not (yet) supported."
+    echo "Diffs:"
+    echo "src: $src dest: $dest"
+    diff $dest $src
+    exit 1
+fi
 
 # Mysql config
-cp ./etc/my.cnf /etc/mysql/conf.d/inboxapp.cnf
+color '35;1' 'Copying default mysql configuration to /etc/mysql/conf.d'
+src=./etc/my.cnf
+dest=/etc/mysql/conf.d/inboxapp.cnf
+if [ ! -f $dest ]; then
+    cp $src $dest
+elif [ $src -nt $dest ]; then
+    echo "Error: inbox config is newer and merging of configs not (yet) supported."
+    echo "Diffs:"
+    echo "src: $src dest: $dest"
+    diff $dest $src
+    exit 1
+fi
 
 mysqld_safe &
 sleep 10
 
-color '35;1' 'Creating databases...'
-python bin/create-db
+if ! have_dbs=$(mysql -e "show databases like 'inbox'" | grep -q inbox); then
+    color '35;1' 'Creating databases...'
+    python bin/create-db
+else
+    color '35;1' 'Upgrading databases...'
+    alembic upgrade head
+fi
+
+color '35;1' 'Removing .pyc files...'
 find . -name \*.pyc -delete
 
 color '35;1' 'Cleaning up...'
