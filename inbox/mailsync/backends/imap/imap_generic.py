@@ -36,17 +36,17 @@ class ImapGenericSyncMonitor(ImapSyncMonitor):
 
 
 @retry_crispin
-def poll(conn_pool, db_session, log, folder_name, shared_state):
+def poll(conn_pool, log, folder_name, shared_state):
     with conn_pool.get() as crispin_client:
-        return base_poll(crispin_client, db_session, log, folder_name,
+        return base_poll(crispin_client, log, folder_name,
                          shared_state, imap_poll_update,
                          create_message, update_metadata)
 
 
 @retry_crispin
-def initial_sync(conn_pool, db_session, log, folder_name, shared_state):
+def initial_sync(conn_pool, log, folder_name, shared_state):
     with conn_pool.get() as crispin_client:
-        return base_initial_sync(crispin_client, db_session, log, folder_name,
+        return base_initial_sync(crispin_client, log, folder_name,
                                  shared_state, imap_initial_sync,
                                  create_message)
 

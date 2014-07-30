@@ -187,17 +187,9 @@ def get_folder_info(account_id, session, folder_name):
         return None
 
 
-def uidvalidity_valid(account_id, session, selected_uidvalidity, folder_name,
-                      cached_uidvalidity=None):
+def uidvalidity_valid(account_id, selected_uidvalidity, folder_name,
+                      cached_uidvalidity):
     """ Validate UIDVALIDITY on currently selected folder. """
-    if cached_uidvalidity is None:
-        cached_uidvalidity = get_folder_info(account_id, session,
-                                             folder_name).uidvalidity
-        assert type(cached_uidvalidity) == type(selected_uidvalidity), \
-            "cached_validity: {0} / selected_uidvalidity: {1}".format(
-                type(cached_uidvalidity),
-                type(selected_uidvalidity))
-
     if cached_uidvalidity is None:
         # no row is basically equivalent to UIDVALIDITY == -inf
         return True

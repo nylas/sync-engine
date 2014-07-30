@@ -196,10 +196,28 @@ def new_or_updated(uids, local_uids):
 
 
 class BaseMailSyncMonitor(Greenlet):
+    """
+    The SYNC_MONITOR_CLS for all mail sync providers should subclass this.
+
+    Parameters
+    ----------
+    account_id : int
+        Which account to sync.
+    email_address : str
+        Email address for `account_id`.
+    provider : str
+        Provider for `account_id`.
+    heartbeat : int
+        How often to check for commands.
+    retry_fail_classes : list
+        Additional exceptions to *not* retry on. (This base class sets some
+        defaults.)
+    """
+    RETRY_FAIL_CLASSES = [MailsyncError, ValueError, AttributeError, DataError,
+                          IntegrityError, TypeError]
+
     def __init__(self, account_id, email_address, provider, heartbeat=1,
-                 retry_fail_classes=[MailsyncError,
-                                     ValueError, AttributeError,
-                                     DataError, IntegrityError]):
+                 retry_fail_classes=[]):
         self.inbox = Queue()
         # how often to check inbox, in seconds
         self.heartbeat = heartbeat
@@ -207,7 +225,8 @@ class BaseMailSyncMonitor(Greenlet):
         self.account_id = account_id
         self.email_address = email_address
         self.provider = provider
-        self.retry_fail_classes = retry_fail_classes
+        self.retry_fail_classes = self.RETRY_FAIL_CLASSES
+        self.retry_fail_classes.extend(retry_fail_classes)
 
         # Stuff that might be updated later and we want to keep a shared
         # reference on child greenlets.

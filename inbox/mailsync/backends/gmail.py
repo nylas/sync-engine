@@ -27,10 +27,10 @@ from collections import namedtuple
 
 from gevent import spawn
 from gevent.queue import LifoQueue
-from sqlalchemy.exc import DataError, IntegrityError
 
 from inbox.util.itert import chunk, partition
 from inbox.util.cache import set_cache, get_cache, rm_cache
+from inbox.util.misc import or_none
 
 from inbox.contacts.process_mail import update_contacts
 from inbox.crispin import (GMetadata, connection_pool, retry_crispin,
@@ -74,17 +74,13 @@ class GmailSyncMonitor(ImapSyncMonitor):
         ImapSyncMonitor.__init__(self, account_id, namespace_id, email_address,
                                  provider, heartbeat=1,
                                  poll_frequency=poll_frequency,
-                                 retry_fail_classes=[MailsyncError,
-                                                     ValueError,
-                                                     AttributeError,
-                                                     DataError, IntegrityError,
-                                                     GmailSettingError])
+                                 retry_fail_classes=[GmailSettingError])
 
 
 @retry_crispin
-def initial_sync(conn_pool, db_session, log, folder_name, shared_state):
+def initial_sync(conn_pool, log, folder_name, shared_state):
     with conn_pool.get() as crispin_client:
-        return base_initial_sync(crispin_client, db_session, log, folder_name,
+        return base_initial_sync(crispin_client, log, folder_name,
                                  shared_state, gmail_initial_sync,
                                  create_gmail_message)
 
@@ -95,12 +91,11 @@ def uid_download_folders(crispin_client):
             ('trash', 'spam', 'all') if tag in crispin_client.folder_names()]
 
 
-def gmail_initial_sync(crispin_client, db_session, log, folder_name,
-                       shared_state, local_uids, uid_download_stack,
-                       msg_create_fn):
+def gmail_initial_sync(crispin_client, log, folder_name, shared_state,
+                       local_uids, uid_download_stack, msg_create_fn):
     remote_uid_count = len(set(crispin_client.all_uids()))
     remote_g_metadata, update_uid_count = get_g_metadata(
-        crispin_client, db_session, log, folder_name, local_uids,
+        crispin_client, log, folder_name, local_uids,
         shared_state['syncmanager_lock'])
     remote_uids = sorted(remote_g_metadata.keys(), key=int)
     log.info(remote_uid_count=len(remote_uids))
@@ -109,24 +104,25 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
 
     with shared_state['syncmanager_lock']:
         log.debug('gmail_initial_sync grabbed syncmanager_lock')
-        deleted_uids = remove_deleted_uids(
-            crispin_client.account_id, db_session, log, folder_name,
-            local_uids, remote_uids)
-    delete_uid_count = len(deleted_uids)
+        with session_scope(ignore_soft_deletes=False) as db_session:
+            deleted_uids = remove_deleted_uids(
+                crispin_client.account_id, db_session, log, folder_name,
+                local_uids, remote_uids)
+            delete_uid_count = len(deleted_uids)
 
-    local_uids = set(local_uids) - deleted_uids
-    unknown_uids = set(remote_uids) - local_uids
+            local_uids = set(local_uids) - deleted_uids
+            unknown_uids = set(remote_uids) - local_uids
 
-    # Persist the num(messages) to sync (any type of sync: download,
-    # update or delete) before we start.
-    # Note that num_local_deleted, num_local_updated ARE the numbers to
-    # delete/update too since we make those changes rightaway before we start
-    # downloading messages.
-    update_uid_counts(db_session, log, crispin_client.account_id, folder_name,
-                      remote_uid_count=remote_uid_count,
-                      download_uid_count=len(unknown_uids),
-                      update_uid_count=update_uid_count,
-                      delete_uid_count=delete_uid_count)
+            # Persist the num(messages) to sync (any type of sync: download,
+            # update or delete) before we start.
+            # Note that num_local_deleted, num_local_updated ARE the numbers to
+            # delete/update too since we make those changes rightaway before we
+            # start downloading messages.
+            update_uid_counts(db_session, log, crispin_client.account_id,
+                              folder_name, remote_uid_count=remote_uid_count,
+                              download_uid_count=len(unknown_uids),
+                              update_uid_count=update_uid_count,
+                              delete_uid_count=delete_uid_count)
 
     if folder_name == crispin_client.folder_names()['inbox']:
         # We don't do an initial dedupe for Inbox because we do thread
@@ -145,12 +141,12 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
                                message_download_stack,
                                shared_state['poll_frequency'],
                                shared_state['syncmanager_lock'])
-        download_queued_threads(crispin_client, db_session, log, folder_name,
+        download_queued_threads(crispin_client, log, folder_name,
                                 message_download_stack,
                                 shared_state['syncmanager_lock'])
     elif folder_name in uid_download_folders(crispin_client):
         full_download = deduplicate_message_download(
-            crispin_client, db_session, log, shared_state['syncmanager_lock'],
+            crispin_client, log, shared_state['syncmanager_lock'],
             remote_g_metadata, unknown_uids)
         add_uids_to_stack(full_download, uid_download_stack)
         new_uid_poller = spawn(check_new_uids, crispin_client.account_id,
@@ -158,7 +154,7 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
                                log, uid_download_stack,
                                shared_state['poll_frequency'],
                                shared_state['syncmanager_lock'])
-        download_queued_uids(crispin_client, db_session, log, folder_name,
+        download_queued_uids(crispin_client, log, folder_name,
                              uid_download_stack, len(local_uids),
                              len(unknown_uids),
                              shared_state['syncmanager_lock'],
@@ -175,18 +171,17 @@ def gmail_initial_sync(crispin_client, db_session, log, folder_name,
 
 
 @retry_crispin
-def poll(conn_pool, db_session, log, folder_name, shared_state):
+def poll(conn_pool, log, folder_name, shared_state):
     with conn_pool.get() as crispin_client:
-        return condstore_base_poll(crispin_client, db_session, log,
-                                   folder_name, shared_state,
-                                   gmail_highestmodseq_update)
+        return condstore_base_poll(crispin_client, log, folder_name,
+                                   shared_state, gmail_highestmodseq_update)
 
 
-def gmail_highestmodseq_update(crispin_client, db_session, log, folder_name,
-                               uids, local_uids, syncmanager_lock):
+def gmail_highestmodseq_update(crispin_client, log, folder_name, uids,
+                               local_uids, syncmanager_lock):
     g_metadata = crispin_client.g_metadata(uids)
     to_download = deduplicate_message_download(
-        crispin_client, db_session, log, syncmanager_lock, g_metadata, uids)
+        crispin_client, log, syncmanager_lock, g_metadata, uids)
     if folder_name == crispin_client.folder_names()['inbox']:
         flags = crispin_client.flags(to_download)
         message_download_stack = LifoQueue()
@@ -196,11 +191,11 @@ def gmail_highestmodseq_update(crispin_client, db_session, log, folder_name,
                 # from the folder in the meantime.
                 message_download_stack.put(GMessage(
                     uid, g_metadata[uid], flags[uid].flags, flags[uid].labels))
-        download_queued_threads(crispin_client, db_session, log, folder_name,
+        download_queued_threads(crispin_client, log, folder_name,
                                 message_download_stack, syncmanager_lock)
     elif folder_name in uid_download_folders(crispin_client):
         uid_download_stack = uid_list_to_stack(to_download)
-        download_queued_uids(crispin_client, db_session, log, folder_name,
+        download_queued_uids(crispin_client, log, folder_name,
                              uid_download_stack, 0, uid_download_stack.qsize(),
                              syncmanager_lock, gmail_download_and_commit_uids,
                              create_gmail_message)
@@ -213,21 +208,23 @@ def remote_g_metadata_cache_file(account_id, folder_name):
     return os.path.join(str(account_id), folder_name, 'remote_g_metadata')
 
 
-def get_g_metadata(crispin_client, db_session, log, folder_name, uids,
-                   syncmanager_lock):
+def get_g_metadata(crispin_client, log, folder_name, uids, syncmanager_lock):
     assert folder_name == crispin_client.selected_folder_name, \
         "crispin selected folder isn't as expected"
     account_id = crispin_client.account_id
     remote_g_metadata = None
     update_uid_count = 0
 
-    saved_folder_info = account.get_folder_info(account_id,
-                                                db_session, folder_name)
-    if saved_folder_info is not None:
+    with session_scope(ignore_soft_deletes=False) as db_session:
+        saved_folder_info = account.get_folder_info(
+            account_id, db_session, folder_name)
+        saved_highestmodseq = or_none(saved_folder_info, lambda i:
+                                      i.highestmodseq)
+    if saved_highestmodseq is not None:
         # If there's no cached validity we probably haven't run before.
         remote_g_metadata, update_uid_count = retrieve_saved_g_metadata(
-            crispin_client, db_session, log, folder_name, uids,
-            saved_folder_info, syncmanager_lock)
+            crispin_client, log, folder_name, uids,
+            saved_highestmodseq, syncmanager_lock)
 
     if remote_g_metadata is None:
         remote_g_metadata = crispin_client.g_metadata(
@@ -235,6 +232,7 @@ def get_g_metadata(crispin_client, db_session, log, folder_name, uids,
         set_cache(remote_g_metadata_cache_file(account_id, folder_name),
                   remote_g_metadata)
         # Save highestmodseq that corresponds to the saved g_metadata.
+    with session_scope(ignore_soft_deletes=False) as db_session:
         account.update_folder_info(account_id, db_session, folder_name,
                                    crispin_client.selected_uidvalidity,
                                    crispin_client.selected_highestmodseq)
@@ -243,23 +241,23 @@ def get_g_metadata(crispin_client, db_session, log, folder_name, uids,
     return remote_g_metadata, update_uid_count
 
 
-def gmail_download_and_commit_uids(crispin_client, db_session, log,
-                                   folder_name, uids, msg_create_fn,
-                                   syncmanager_lock):
+def gmail_download_and_commit_uids(crispin_client, log, folder_name, uids,
+                                   msg_create_fn, syncmanager_lock):
     log.info('downloading uids', uids=uids)
     raw_messages = safe_download(crispin_client, log, uids)
     with syncmanager_lock:
         log.info('gmail_download_and_commit_uids acquired syncmanager_lock')
         # there is the possibility that another green thread has already
         # downloaded some message(s) from this batch... check within the lock
-        raw_messages = deduplicate_message_object_creation(
-            crispin_client.account_id, db_session, log, raw_messages)
-        log.info(unsaved_message_object_count=len(raw_messages))
-        new_imapuids = create_db_objects(crispin_client.account_id, db_session,
-                                         log, folder_name, raw_messages,
-                                         msg_create_fn)
-        commit_uids(db_session, log, new_imapuids)
-        log.info(new_committed_message_count=len(new_imapuids))
+        with session_scope(ignore_soft_deletes=False) as db_session:
+            raw_messages = deduplicate_message_object_creation(
+                crispin_client.account_id, db_session, log, raw_messages)
+            log.info(unsaved_message_object_count=len(raw_messages))
+            new_imapuids = create_db_objects(
+                crispin_client.account_id, db_session, log, folder_name,
+                raw_messages, msg_create_fn)
+            commit_uids(db_session, log, new_imapuids)
+            log.info(new_committed_message_count=len(new_imapuids))
     return len(new_imapuids)
 
 
@@ -283,11 +281,8 @@ def check_new_g_thrids(account_id, provider, folder_name, log,
 
     """
     with connection_pool(account_id).get() as crispin_client:
-        with session_scope(ignore_soft_deletes=False) as db_session:
-            crispin_client.select_folder(folder_name,
-                                         uidvalidity_cb(
-                                             db_session,
-                                             crispin_client.account_id))
+        crispin_client.select_folder(folder_name,
+                                     uidvalidity_cb(crispin_client.account_id))
         while True:
             log.info('Checking for new/deleted messages during initial sync.')
             remote_uids = set(crispin_client.all_uids())
@@ -335,7 +330,7 @@ def check_new_g_thrids(account_id, provider, folder_name, log,
             log.info('IDLE detected changes or timeout reached')
 
 
-def download_queued_threads(crispin_client, db_session, log, folder_name,
+def download_queued_threads(crispin_client, log, folder_name,
                             message_download_stack, syncmanager_lock):
     """
     Download threads until `message_download_stack` is empty.
@@ -361,13 +356,12 @@ def download_queued_threads(crispin_client, db_session, log, folder_name,
             all_mail_crispin_client:
         all_mail_crispin_client.select_folder(
             crispin_client.folder_names()['all'],
-            uidvalidity_cb(db_session, crispin_client.account_id))
+            uidvalidity_cb(crispin_client.account_id))
 
         # Since we do thread expansion, for any given thread, even if we
         # already have the UID in the given GMessage downloaded, we may not
         # have _every_ message in the thread. We have to expand it and make
         # sure we have all messages.
-        acc = db_session.query(GmailAccount).get(crispin_client.account_id)
         while not message_download_stack.empty():
             message = message_download_stack.get_nowait()
             # Don't try to re-download any messages that are in the same
@@ -385,9 +379,9 @@ def download_queued_threads(crispin_client, db_session, log, folder_name,
                 [message.g_metadata.thrid])
             thread_g_metadata = all_mail_crispin_client.g_metadata(
                 thread_uids)
-            download_thread(all_mail_crispin_client, db_session, log,
-                            syncmanager_lock, thread_g_metadata,
-                            message.g_metadata.thrid, thread_uids)
+            download_thread(all_mail_crispin_client, log, syncmanager_lock,
+                            thread_g_metadata, message.g_metadata.thrid,
+                            thread_uids)
             # In theory we only ever have one Greenlet modifying ImapUid
             # entries for a non-All Mail folder, but grab the lock anyway
             # to be safe.
@@ -397,10 +391,13 @@ def download_queued_threads(crispin_client, db_session, log, folder_name,
                 # make sure we have ImapUids recorded for this folder (used in
                 # progress tracking, queuing, and delete detection).
                 log.debug('adding imapuid rows', count=len(processed_msgs))
-                for msg in processed_msgs:
-                    add_new_imapuid(db_session, log, msg, folder_name, acc)
+                with session_scope(ignore_soft_deletes=False) as db_session:
+                    acc = db_session.query(GmailAccount).get(
+                        crispin_client.account_id)
+                    for msg in processed_msgs:
+                        add_new_imapuid(db_session, log, msg, folder_name, acc)
 
-            report_progress(crispin_client, db_session, log, folder_name,
+            report_progress(crispin_client, log, folder_name,
                             len(processed_msgs),
                             message_download_stack.qsize())
         log.info('Message download queue emptied')
@@ -409,8 +406,8 @@ def download_queued_threads(crispin_client, db_session, log, folder_name,
     # the folder we're actually downloading messages for.
 
 
-def download_thread(crispin_client, db_session, log, syncmanager_lock,
-                    thread_g_metadata, g_thrid, thread_uids):
+def download_thread(crispin_client, log, syncmanager_lock, thread_g_metadata,
+                    g_thrid, thread_uids):
     """
     Download all messages in thread identified by `g_thrid`.
 
@@ -420,12 +417,11 @@ def download_thread(crispin_client, db_session, log, syncmanager_lock,
     """
     log.debug('downloading thread',
               g_thrid=g_thrid, message_count=len(thread_uids))
-    to_download = deduplicate_message_download(crispin_client, db_session, log,
-                                               syncmanager_lock,
-                                               thread_g_metadata, thread_uids)
+    to_download = deduplicate_message_download(
+        crispin_client, log, syncmanager_lock, thread_g_metadata, thread_uids)
     log.debug(deduplicated_message_count=len(to_download))
     for uids in chunk(reversed(to_download), crispin_client.CHUNK_SIZE):
-        gmail_download_and_commit_uids(crispin_client, db_session, log,
+        gmail_download_and_commit_uids(crispin_client, log,
                                        crispin_client.selected_folder_name,
                                        uids, create_gmail_message,
                                        syncmanager_lock)
@@ -442,8 +438,8 @@ def deduplicate_message_object_creation(account_id, db_session, log,
             existing_g_msgids]
 
 
-def deduplicate_message_download(crispin_client, db_session, log,
-                                 syncmanager_lock, remote_g_metadata, uids):
+def deduplicate_message_download(crispin_client, log, syncmanager_lock,
+                                 remote_g_metadata, uids):
     """
     Deduplicate message download using X-GM-MSGID.
 
@@ -453,11 +449,12 @@ def deduplicate_message_download(crispin_client, db_session, log,
         Deduplicated UIDs.
 
     """
-    local_g_msgids = set(account.g_msgids(crispin_client.account_id,
-                                          db_session,
-                                          in_={remote_g_metadata[uid].msgid for
-                                               uid in uids if uid in
-                                               remote_g_metadata}))
+    with session_scope(ignore_soft_deletes=False) as db_session:
+        local_g_msgids = set(account.g_msgids(crispin_client.account_id,
+                                              db_session,
+                                              in_={remote_g_metadata[uid].msgid
+                                                   for uid in uids if uid in
+                                                   remote_g_metadata}))
     full_download, imapuid_only = partition(
         lambda uid: uid in remote_g_metadata and
         remote_g_metadata[uid].msgid in local_g_msgids,
@@ -469,8 +466,8 @@ def deduplicate_message_download(crispin_client, db_session, log,
         # them again here if we're deduping All Mail downloads.
         if crispin_client.selected_folder_name != \
                 crispin_client.folder_names()['all']:
-            add_new_imapuids(crispin_client, log, db_session,
-                             remote_g_metadata, syncmanager_lock, imapuid_only)
+            add_new_imapuids(crispin_client, log, remote_g_metadata,
+                             syncmanager_lock, imapuid_only)
 
     return full_download
 
@@ -510,8 +507,8 @@ def add_new_imapuid(db_session, log, gmessage, folder_name, acc):
         log.debug('skipping imapuid creation', uid=gmessage.uid)
 
 
-def add_new_imapuids(crispin_client, log, db_session, remote_g_metadata,
-                     syncmanager_lock, uids):
+def add_new_imapuids(crispin_client, log, remote_g_metadata, syncmanager_lock,
+                     uids):
     """
     Add ImapUid entries only for (already-downloaded) messages.
 
@@ -523,52 +520,56 @@ def add_new_imapuids(crispin_client, log, db_session, remote_g_metadata,
     flags = crispin_client.flags(uids)
 
     with syncmanager_lock:
-        log.debug('add_new_imapuids acquired syncmanager_lock')
-        # Since we prioritize download for messages in certain threads, we may
-        # already have ImapUid entries despite calling this method.
-        local_folder_uids = {uid for uid, in
-                             db_session.query(ImapUid.msg_uid).join(Folder)
-                             .filter(
-                                 ImapUid.account_id ==
-                                 crispin_client.account_id,
-                                 Folder.name ==
-                                 crispin_client.selected_folder_name,
-                                 ImapUid.msg_uid.in_(uids))}
-        uids = [uid for uid in uids if uid not in local_folder_uids]
+        with session_scope(ignore_soft_deletes=False) as db_session:
+            log.debug('add_new_imapuids acquired syncmanager_lock')
+            # Since we prioritize download for messages in certain threads, we
+            # may already have ImapUid entries despite calling this method.
+            local_folder_uids = {uid for uid, in
+                                 db_session.query(ImapUid.msg_uid).join(Folder)
+                                 .filter(
+                                     ImapUid.account_id ==
+                                     crispin_client.account_id,
+                                     Folder.name ==
+                                     crispin_client.selected_folder_name,
+                                     ImapUid.msg_uid.in_(uids))}
+            uids = [uid for uid in uids if uid not in local_folder_uids]
 
-        if uids:
-            acc = db_session.query(GmailAccount).get(crispin_client.account_id)
+            if uids:
+                acc = db_session.query(GmailAccount).get(
+                    crispin_client.account_id)
 
-            # collate message objects to relate the new imapuids to
-            imapuid_for = dict([(metadata.msgid, uid) for (uid, metadata)
-                                in remote_g_metadata.items()
-                                if uid in uids])
-            imapuid_g_msgids = [remote_g_metadata[uid].msgid for uid in uids]
-            message_for = dict([(imapuid_for[m.g_msgid], m) for m in
-                                db_session.query(Message).join(ImapThread)
-                                .filter(
-                                    Message.g_msgid.in_(imapuid_g_msgids),
-                                    ImapThread.namespace_id ==
-                                    acc.namespace.id)])
+                # collate message objects to relate the new imapuids to
+                imapuid_for = dict([(metadata.msgid, uid) for (uid, metadata)
+                                    in remote_g_metadata.items()
+                                    if uid in uids])
+                imapuid_g_msgids = [remote_g_metadata[uid].msgid for uid in
+                                    uids]
+                message_for = dict([(imapuid_for[m.g_msgid], m) for m in
+                                    db_session.query(Message).join(ImapThread)
+                                    .filter(
+                                        Message.g_msgid.in_(imapuid_g_msgids),
+                                        ImapThread.namespace_id ==
+                                        acc.namespace.id)])
 
-            # Folder.find_or_create()'s query will otherwise trigger a flush.
-            with db_session.no_autoflush:
-                new_imapuids = [ImapUid(
-                    account=acc,
-                    folder=Folder.find_or_create(
-                        db_session, acc, crispin_client.selected_folder_name),
-                    msg_uid=uid, message=message_for[uid]) for uid in uids]
-                for item in new_imapuids:
-                    # skip uids which have disappeared in the meantime
-                    if item.msg_uid in flags:
-                        item.update_imap_flags(flags[item.msg_uid].flags,
-                                               flags[item.msg_uid].labels)
-            db_session.add_all(new_imapuids)
-            db_session.commit()
+                # Stop Folder.find_or_create()'s query from triggering a flush.
+                with db_session.no_autoflush:
+                    new_imapuids = [ImapUid(
+                        account=acc,
+                        folder=Folder.find_or_create(
+                            db_session, acc,
+                            crispin_client.selected_folder_name),
+                        msg_uid=uid, message=message_for[uid]) for uid in uids]
+                    for item in new_imapuids:
+                        # skip uids which have disappeared in the meantime
+                        if item.msg_uid in flags:
+                            item.update_imap_flags(flags[item.msg_uid].flags,
+                                                   flags[item.msg_uid].labels)
+                db_session.add_all(new_imapuids)
+                db_session.commit()
 
 
-def retrieve_saved_g_metadata(crispin_client, db_session, log, folder_name,
-                              local_uids, saved_validity, syncmanager_lock):
+def retrieve_saved_g_metadata(crispin_client, log, folder_name, local_uids,
+                              saved_highestmodseq, syncmanager_lock):
     log.info('Attempting to retrieve remote_g_metadata from cache')
 
     update_uid_count = 0
@@ -582,20 +583,16 @@ def retrieve_saved_g_metadata(crispin_client, db_session, log, folder_name,
 
         log.info('successfully retrieved remote_g_metadata cache',
                  object_count=len(remote_g_metadata))
-        if crispin_client.selected_highestmodseq > \
-                saved_validity.highestmodseq:
-            update_uid_count = update_saved_g_metadata(crispin_client,
-                                                       db_session, log,
-                                                       folder_name,
-                                                       remote_g_metadata,
-                                                       local_uids,
-                                                       syncmanager_lock)
+        if crispin_client.selected_highestmodseq > saved_highestmodseq:
+            update_uid_count = update_saved_g_metadata(
+                crispin_client, log, folder_name, remote_g_metadata,
+                local_uids, syncmanager_lock)
     else:
         log.info("No cached data found")
     return remote_g_metadata, update_uid_count
 
 
-def update_saved_g_metadata(crispin_client, db_session, log, folder_name,
+def update_saved_g_metadata(crispin_client, log, folder_name,
                             remote_g_metadata, local_uids, syncmanager_lock):
     """
     If HIGHESTMODSEQ has changed since we saved the X-GM-MSGID cache,
@@ -634,7 +631,7 @@ def update_saved_g_metadata(crispin_client, db_session, log, folder_name,
         # It's easy and fast to just update these here and now.
         # Bigger chunk because the data being fetched here is very small.
         for uids in chunk(updated, 5 * crispin_client.CHUNK_SIZE):
-            update_metadata(crispin_client, db_session, log, folder_name, uids,
+            update_metadata(crispin_client, log, folder_name, uids,
                             syncmanager_lock)
         log.info('updated metadata for modified messages',
                  msg_count=len(updated))
