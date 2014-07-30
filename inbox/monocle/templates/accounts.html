@@ -3,28 +3,27 @@
 {% block title %} Monocle - Accounts {% endblock %}
 
 {% block content %}
-<h2 class='sub-header text-primary text-center'>MailSync Status Info: All Accounts</h2>
-<h4 class='text-green text-center' id='counts'>
-  <p id='total'></p>
-  <p id='running'></p>
-  <p id='stopped'></p>
-  <p id='killed'></p>
-  <p id='unstarted'></p>
-</h4>
+<div class='text-center' id='counts'>
+  <span id='total'></span>
+  <span id='running'></span>
+  <span id='stopped'></span>
+  <span id='killed'></span>
+  <span id='unstarted'></span>
+</div>
 
 <div class='table-responsive table-white'>
 <table class='table table-bordered table-condensed table-hover' id='status_table'>
   <thead>
     <tr>
-      <th>Account Id:<br></th>
-      <th>Email Address:<br></th>
-      <th>Provider:<br></th>
-      <th>Is Enabled?<br>(enabled/ not enabled):<br></th>
-      <th>State<br>(running/ stopped/ killed):<br></th>
-      <th>Sync Start Time:<br></th>
-      <th>Sync End Time:<br></th>
-      <th>Sync Type<br>(new/ resumed):<br></th>
-      <th>Sync Error:<br></th>
+      <th class="account_id">Id:</th>
+      <th class="email">Email Address:</th>
+      <th class="provider">Provider:</th>
+      <th class="enabled">Enabled?</th>
+      <th class="state">State</th>
+      <th class="start">Start Time:</th>
+      <th class="end">End Time:<br></th>
+      <th class="type">Type:</th>
+      <th class="error">Sync Error:</th>
     </tr>
   </thead>
   <tbody>
@@ -47,42 +46,44 @@
       col_6: 'none',
       col_7: 'none'
   };
-  var callback_fn = function() {                        
-      $.getJSON(                            
-        $SCRIPT_ROOT + '/_accounts',              
-        {},                                 
+  var callback_fn = function() {
+      $.getJSON(
+        $SCRIPT_ROOT + '/_accounts',
+        {},
         function(data) {
           var count = data.length
           var running = 0; var stopped = 0; var killed = 0; var unstarted = 0;
 
           var content = '';
           $.each(data, function(i, item) {
-              link = "<a href=" + $SCRIPT_ROOT + '/accounts/' + item.id + ' >' + item.id + '</a>'
-              content += '<tr>';
-              content += '<td class=account_id>' + link + '</td>';
-              content += '<td>' + item.email + '</td>';
-              content += '<td>' + item.provider + '</td>';
-              content += '<td>' + (item.is_enabled ? 'enabled' : 'not enabled') + '</td>';
-              content += '<td>' + (item.state || '') + '</td>';
-              content += '<td>' + (item.sync_start_time || '') + '</td>';
-              content += '<td>' + (item.sync_end_time || '') + '</td>';
-              content += '<td>' + (item.sync_type|| '') + '</td>';
-              content += '<td>' + (item.sync_error || '') + '</td>';
+              link = "<a href=" + $SCRIPT_ROOT + '/account/' + item.id + '" id="link-' + item.id + '" >' + item.id + "</a>";
+              content += '<tr class="account-row" onclick="document.getElementById(\'link-' + item.id + '\').click();">';
+              content += '<td class="account_id">' + link + '</td>';
+              content += '<td class="email">' + item.email + '</td>';
+              content += '<td class="provider">' + item.provider + '</td>';
+              content += '<td class="enabled">' + (item.is_enabled ? 'enabled' : 'not enabled') + '</td>';
+              content += '<td class="state status-' + (item.state == 'running' ? "ok" : "bad") + '">' + (item.state || '') + '</td>';
+              content += '<td class="start">' + (time_ago(item.sync_start_time) || '') + '</td>';
+              content += '<td class="end">' + (time_ago(item.sync_end_time) || '') + '</td>';
+              content += '<td class="type">' + (item.sync_type|| '') + '</td>';
+              content += '<td class="error">' + (item.sync_error || '') + '</td>';
               content += '</tr>';
+              content += '</a>'
+
 
               if (item.state === 'running') { running += 1; }
               else if (item.state === 'stopped') { stopped += 1; }
               else if (item.state === 'killed') { killed += 1; }
               else { unstarted += 1; }
           });
-          
+
           $('#status_table tbody').html(content);
 
-          $('#total').html('#(Accounts): ' + count);
-          $('#running').html('#(Running): ' + running);
-          $('#stopped').html('#(Stopped): ' + stopped);
-          $('#killed').html('#(Killed): ' + killed);
-          $('#unstarted').html('#(Unstarted): ' + unstarted);
+          $('#total').html('Accounts: ' + count);
+          $('#running').html('Running: ' + running);
+          $('#stopped').html('Stopped: ' + stopped);
+          $('#killed').html('Killed: ' + killed);
+          $('#unstarted').html('Unstarted: ' + unstarted);
 
           if ($('#status_table tr').length >= 3) {
               setFilterGrid('status_table', 0, tableFilter);
@@ -93,8 +94,6 @@
   $(function() {
     callback_fn();
     callback = setInterval(callback_fn, interval*1000); 
-
-    console.log('Callback set up.');
   });
 
   $(document).delegate('.ui-page', 'pagehide', function () {

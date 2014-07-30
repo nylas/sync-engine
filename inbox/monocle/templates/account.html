@@ -1,0 +1,107 @@
+{% extends 'layout.html' %}
+
+{% block title %} Monocle - Account {{ account.id }} {% endblock %}
+
+{% block content %}
+<div id="account-info">
+  <b>Account Info:</b>
+  <div class="info-item">
+      <div class="info-name">ID:</div>
+      <div class="info-value">{{ account.id }}</div>
+  </div>
+  <div class="info-item">
+      <div class="info-name">Email:</div>
+      <div class="info-value">{{ account.email }}</div>
+  </div>
+  <div class="info-item">
+      <div class="info-name">Provider:</div>
+      <div class="info-value">{{ account.provider }}</div>
+  </div>
+  <div class="info-item">
+      <div class="info-name">State:</div>
+      <div class="info-value status-{{ "ok" if account.is_enabled else "bad" }}">{{ "Enabled" if account.is_enabled else "Disabled" }} ({{ account.state }})</div>
+  </div>
+  <div class="info-item">
+      <div class="info-name">Actions:</div>
+      <div class="info-value">
+          <a href="/account/{{account.id}}?action=stop"><button type="button" class="btn btn-default btn-xs"><span class="glyphicon glyphicon-stop"></span> Stop</button></a>
+
+          <a href="/account/{{account.id}}?action=start"><button type="button" class="btn btn-default btn-xs"><span class="glyphicon glyphicon-play"></span> Start</button></a>
+      </div>
+  </div>
+</div>
+<div id="account-error">
+  <b>Last Error:</b>
+  {{account.sync_error}}
+</div>
+
+<div class='table-responsive table-white'>
+<table class='table table-bordered table-condensed table-hover' id='status_table'>
+  <thead>
+    <tr>
+      <th>Folder</th>
+      <th>State</th>
+      <th>Sync Start</th>
+      <th>Sync End</th>
+      <th>Sync Error</th>
+      <th>State</th>
+      <th>As of</th>
+      <th># Remote</th>
+      <th>updated</th>
+      <th>deleted</th>
+      <th>to-download</th>
+      <th>downloaded since:</th>
+      <th>remain</th>
+      <th>checked-at</th>
+    </tr>
+  </thead>
+  <tbody>
+  </tbody>
+</table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type=text/javascript>
+  var callback;
+  var interval = 10;
+  var callback_fn = function() {
+      $.getJSON(
+        $SCRIPT_ROOT + '/_accounts/' + {{ account.id }},
+        {},
+        function(data) {
+          var content = '';
+          $.each(data, function(i, item) {
+              timestamp = item.uid_checked_timestamp
+              content += '<tr>';
+              content += '<td>' + item.name + '</td>';
+              content += '<td>' + (item.run_state || '') + '</td>';
+              content += '<td>' + (time_ago(item.sync_start_time) || '') + '</td>';
+              content += '<td>' + (time_ago(item.sync_end_time) || '') + '</td>';
+              content += '<td>' + (item.sync_error || '').replace(/\..*/,"") + '</td>';
+              content += '<td>' + (item.state || '') + '</td>';
+              content += '<td>' + (time_ago(timestamp) || '') + '</td>';
+              content += '<td>' + (item.remote_uid_count || '') + '</td>';
+              content += '<td>' + (item.update_uid_count || '') + '</td>';
+              content += '<td>' + (item.delete_uid_count || '') + '</td>';
+              content += '<td>' + (item.download_uid_count || '') + '</td>';
+              content += '<td>' + (item.num_downloaded_since_timestamp || '') + '</td>';
+              content += '<td>' + (item.current_download_queue_size || '') + '</td>';
+              content += '<td>' + (time_ago(item.queue_checked_at) || '') + '</td>';
+              content += '</tr>';
+          });
+          $('#status_table tbody').html(content);
+        });
+  };
+
+  $(function() {
+    callback_fn();
+    callback = setInterval(callback_fn, interval*1000); 
+  });
+
+  $(document).delegate('.ui-page', 'pagehide', function () {
+      clearInterval(callback);
+  });
+</script>
+    <a href="/accounts"><button type="button" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-arrow-left"></span> Back to Accounts</button></a>
+{% endblock %}

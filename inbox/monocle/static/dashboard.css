@@ -1,5 +1,5 @@
 html {
-  background-color: #14222A;
+  background: #eee;
 }
 body {
   background: transparent;
@@ -63,6 +63,66 @@ h4 {
 }
 
 .account_id {
-  font-size:17px;
   text-align:center;
+}
+
+#account-info {
+  margin-left: 20px;
+  margin-bottom: 20px;
+}
+
+#account-error {
+  margin-left: 20px;
+  margin-bottom: 20px;
+}
+.info-item {
+  padding-top: 5px;
+  width: 100%;
+}
+
+.info-item > .info-name
+{
+	float: left;
+	width: 100px;
+}
+.info-item > .info-value
+{
+}
+#title {
+  font-size: 30px;
+  color: #B00;
+}
+#subtitle {
+  font-size: 20px;
+}
+#counts {
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+th.provider, td.provider {
+  text-align: center;
+}
+th.enabled, td.enabled {
+  text-align: center;
+}
+th.state, td.state {
+  text-align: center;
+}
+
+th.start, th.end {
+  min-width: 125px;
+}
+
+th.start, th.end, td.start, td.end {
+  text-align: center;
+}
+
+.status-ok {
+  color: #090;
+}
+.status-bad {
+  color: #900;
+}
+.account-row {
+  cursor: pointer; cursor: hand;
 }
