@@ -4,6 +4,11 @@
 
 {% block content %}
 <h2 class='sub-header text-primary text-center'>MailSync Status Info: Account {{ account.id }}</h2>
+<h4 class='text-green text-center'>
+  <p id='email'>Email: {{ account.email }}</p>
+  <p id='provider'>Provider: {{ account.provider }}</p>
+</h4>
+
 <div class='table-responsive table-white'>
 <table class='table table-bordered table-condensed table-hover' id='status_table'>
   <thead>
