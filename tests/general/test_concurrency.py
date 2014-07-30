@@ -63,7 +63,7 @@ def test_selective_retry():
 
 def test_retry_count_resets(monkeypatch):
     monkeypatch.setattr('inbox.util.concurrency.resettable_counter',
-                        lambda: resettable_counter(reset_interval=0))
+                        lambda x, y: resettable_counter(reset_interval=0))
     logger = MockLogger()
 
     failing_function = FailingFunction(ValueError, max_executions=6,
@@ -75,3 +75,28 @@ def test_retry_count_resets(monkeypatch):
 
     assert logger.call_count == 5
     assert failing_function.call_count == 6
+
+
+def test_configurable_retry_count_resets(monkeypatch):
+    logger = MockLogger()
+
+    default_failing_function = FailingFunction(
+        ValueError, max_executions=3, delay=.1)
+
+    exc_callback = lambda: log_uncaught_errors(logger)
+
+    retry(default_failing_function, exc_callback=exc_callback)()
+
+    assert logger.call_count == 2
+    assert default_failing_function.call_count == 3
+
+    logger = MockLogger()
+
+    failing_function = FailingFunction(ValueError, max_executions=5, delay=.1)
+
+    exc_callback = lambda: log_uncaught_errors(logger)
+
+    retry(failing_function, exc_callback=exc_callback, max_count=5)()
+
+    assert logger.call_count == 4
+    assert failing_function.call_count == 5
