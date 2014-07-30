@@ -3,13 +3,11 @@
 GENERIC IMAP SYNC ENGINE (SANS COND STORE)
 -----------------
 
-Generic IMAP backend with no CONDSTORE support.
+Generic IMAP backend with no CONDSTORE support. Flags for recent messages are
+updated on each poll, and periodically during initial sync.
 
 No support for server-side threading, so we have to thread messages ourselves.
 Currently we make each message its own thread.
-
-No support for synchronizing flag changes. (We plan to add support for this
-later, but a lack of CONDSTORE makes it tricky / slow.)
 
 """
 from inbox.crispin import retry_crispin
