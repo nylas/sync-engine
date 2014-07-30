@@ -2,7 +2,6 @@ from __future__ import with_statement
 import json
 import sys
 from alembic import context
-from sqlalchemy import create_engine, pool
 
 from logging.config import fileConfig
 
@@ -28,7 +27,7 @@ if context.get_tag_argument() == 'test':
 from inbox.models.base import MailSyncBase
 target_metadata = MailSyncBase.metadata
 
-from inbox.ignition import db_uri
+from inbox.ignition import main_engine
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -48,7 +47,7 @@ def run_migrations_offline():
     script output.
 
     """
-    context.configure(url=db_uri())
+    context.configure(engine=main_engine(pool_size=1, max_overflow=0))
 
     with context.begin_transaction():
         context.run_migrations()
@@ -61,7 +60,7 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
-    engine = create_engine(db_uri(), poolclass=pool.NullPool)
+    engine = main_engine(pool_size=1, max_overflow=0)
 
     connection = engine.connect()
     context.configure(
