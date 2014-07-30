@@ -288,6 +288,15 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                           account.id, folder_name, mid))
             self.mark_error()
             return
+        except AttributeError:
+            # For EAS messages that are missing Date + Received headers, due
+            # to the processing we do in inbox.util.misc.get_internaldate()
+            _log_decode_error(account.id, folder_name, mid, body_string)
+            log.error('Message parsing AttributeError', account_id=account.id,
+                      folder_name=folder_name, err_filename=_get_errfilename(
+                          account.id, folder_name, mid))
+            self.mark_error()
+            return
         except RuntimeError:
             _log_decode_error(account.id, folder_name, mid, body_string)
             log.error('Message parsing RuntimeError<iconv>'.format(
