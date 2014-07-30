@@ -28,7 +28,7 @@ def resettable_counter(max_count=3, reset_interval=300):
 
 
 def retry(func, retry_classes=None, fail_classes=None,
-          exc_callback=None, fail_callback=None):
+          exc_callback=None, fail_callback=None, **reset_params):
     """
     Executes the callable func, retrying on uncaught exceptions.
 
@@ -64,7 +64,8 @@ def retry(func, retry_classes=None, fail_classes=None,
 
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
-        for _ in resettable_counter():
+        for _ in resettable_counter(reset_params.get('max_count', 3),
+                                    reset_params.get('reset_interval', 300)):
             try:
                 return func(*args, **kwargs)
             except gevent.GreenletExit, e:

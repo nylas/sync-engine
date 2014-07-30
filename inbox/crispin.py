@@ -159,7 +159,7 @@ def _fail_callback():
 
 retry_crispin = functools.partial(
     retry, retry_classes=CONN_DISCARD_EXC_CLASSES, exc_callback=_exc_callback,
-    fail_callback=_fail_callback)
+    fail_callback=_fail_callback, max_count=5, reset_interval=150)
 
 
 def new_crispin(account_id, email_address, provider, conn, readonly=True):
