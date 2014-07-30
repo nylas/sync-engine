@@ -4,7 +4,6 @@ import subprocess
 import json
 from pkg_resources import require, DistributionNotFound, VersionConflict
 
-from setproctitle import setproctitle; setproctitle('inbox')
 import sqlalchemy
 from alembic.config import Config as alembic_config
 from alembic.script import ScriptDirectory
