@@ -6,8 +6,8 @@
     <meta name='viewport' content='width=device-width, initial-scale=1'>
     <link rel='icon' href="{{ url_for('static', filename='favicon.png') }}">
     <div class='main'>
-      <h1 class='text-center'>Monocle<br></h1>
-      <h2 class='text-center'>The Inbox Admin Dashboard</h2>
+      <div id='title' class='text-center'>Monocle</div>
+      <div id='subtitle' class='text-center'>The Inbox Admin Dashboard</div>
     </div>
     <div>
       <title>{% block title %}{% endblock %}</title>
@@ -19,6 +19,8 @@
     <div class='page'>{% block content %}{% endblock %}</div>
   </body>
   <script src='//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js'></script>
+  <script type=text/javascript src="{{url_for('static', filename='dashboard.js') }}"></script>
+  <script type=text/javascript src="{{url_for('static', filename='pretty.js') }}"></script>
   <script type=text/javascript src="{{url_for('static', filename='tablefilter.js') }}"></script>
   <script type=text/javascript>
   	$SCRIPT_ROOT = {{ request.script_root|tojson|safe }};

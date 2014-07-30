@@ -1,7 +1,9 @@
+#!/usr/bin/python
+from subprocess import call
 import json
 import datetime
 
-from flask import Flask, g, render_template
+from flask import Flask, g, render_template, request
 
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -43,23 +45,43 @@ def _all_accounts():
     return json.dumps(accounts_info, cls=DateTimeJSONEncoder)
 
 
-@app.route('/accounts/<account_id>', methods=['GET'])
-def for_account(account_id):
+def _render_account(account):
+    acct_info = account.sync_status
+
+    template = 'account.html' if account.provider != 'eas' else \
+        'eas_account.html'
+
+    return render_template(template, account=acct_info)
+
+
+@app.route('/account/<account_id>', methods=['GET'])
+def account(account_id):
     try:
         account = g.db_session.query(Account).get(account_id)
     except NoResultFound:
         return err(404, 'No account with id `{0}`'.format(account_id))
 
-    acct_info = account.sync_status
+    if 'action' in request.args:
+        root_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                 '..', '..')
+        bin_path = os.path.abspath(os.path.join(root_path, 'bin'))
+        inbox_sync = os.path.join(bin_path, 'inbox-sync')
 
-    template = 'for_account.html' if account.provider != 'eas' else \
-        'for_eas_account.html'
+        action = request.args.get('action', None)
+        if action == 'stop':
+            print "stopping: ", account_id
+            call([inbox_sync, "stop", account.email_address])
+            account = g.db_session.query(Account).get(account_id)
+        elif action == 'start':
+            print "starting: ", account_id
+            call([inbox_sync, "start", account.email_address])
+            account = g.db_session.query(Account).get(account_id)
 
-    return render_template(template, account=acct_info)
+    return _render_account(account)
 
 
 @app.route('/_accounts/<account_id>', methods=['GET'])
-def _for_account(account_id):
+def _account(account_id):
     try:
         account = g.db_session.query(Account).get(account_id)
     except NoResultFound:
@@ -80,4 +102,6 @@ class DateTimeJSONEncoder(json.JSONEncoder):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=False)
+    import os
+    os.environ['DEBUG'] = 'true' if app.debug else 'false'
+    app.run(host='0.0.0.0')
