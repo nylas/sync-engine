@@ -59,6 +59,10 @@ The thread object includes useful information like subject, participants, and ti
 }
 ```
 
+# Retrieving all Messages in a Thread
+
+See [Message section](#retrieving-messages-in-a-thread).
+
 # Retrieving Many Threads
 
 ```
