@@ -6,7 +6,7 @@ from inbox.config import db_uri, config
 DB_POOL_SIZE = config.get_required('DB_POOL_SIZE')
 
 
-def main_engine(pool_size=DB_POOL_SIZE, max_overflow=10):
+def main_engine(pool_size=DB_POOL_SIZE, max_overflow=5):
     engine = create_engine(db_uri(),
                            listeners=[ForceStrictMode()],
                            isolation_level='READ COMMITTED',
