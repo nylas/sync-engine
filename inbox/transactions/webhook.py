@@ -84,7 +84,7 @@ def format_failure_output(hook_id, timestamp, status_code):
     return json.dumps(response)
 
 
-class WebhookService():
+class WebhookService(object):
     """Asynchronously consumes the transaction log and executes registered
     webhooks."""
     def __init__(self, poll_interval=1, chunk_size=22):

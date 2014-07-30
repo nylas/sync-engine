@@ -20,7 +20,7 @@ class NotFound(Exception):
 EXCEPTION_MAP = {"NotFound": NotFound}
 
 
-class Vault():
+class Vault(object):
     """Abstract class respresenting the vault interface."""
     def get(self, id):
         raise NotImplementedError

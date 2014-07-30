@@ -43,7 +43,7 @@ smtpconn_retry = functools.partial(
     geventconnpool.retry, logger=log, interval=5, max_failures=5)
 
 
-class SMTPConnection():
+class SMTPConnection(object):
     def __init__(self, account, c, log):
         self.account_id = account.id
         self.email_address = account.email
