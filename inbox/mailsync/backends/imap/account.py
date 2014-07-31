@@ -81,12 +81,13 @@ def g_metadata(account_id, session, folder_name):
 
 def update_thread_labels(thread, folder_name, g_labels, db_session):
     """ Make sure `thread` has all the right labels. """
-
     existing_labels = {folder.name.lower() for folder in thread.folders
                        if folder.name is not None} | \
                       {folder.canonical_name for folder in thread.folders
                        if folder.canonical_name is not None}
-    new_labels = {l.lstrip('\\').lower() for l in g_labels}
+
+    new_labels = {l.lstrip('\\').lower() if isinstance(l, unicode)
+                  else unicode(l) for l in g_labels}
     new_labels.add(folder_name.lower())
 
     # Remove labels that have been deleted -- note that the \Inbox, \Sent,
