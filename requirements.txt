@@ -30,7 +30,7 @@ pyflakes==0.7.3
 pylint==1.1.0
 html2text==2014.4.5
 python-magic==0.4.6
-Pygments==1.6
+-e hg+https://bitbucket.org/birkenfeld/pygments-main#egg=pygments
 greenlet==0.4.2
 PyMySQL==0.6.2
 click==2.4
