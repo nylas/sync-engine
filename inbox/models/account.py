@@ -120,7 +120,9 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
     def sync_enabled(self):
         return self.sync_host is not None
 
-    sync_state = Column(Enum('running', 'stopped', 'killed'), nullable=True)
+    sync_state = Column(Enum('running', 'stopped', 'killed',
+                             'invalid', 'connerror'),
+                        nullable=True)
 
     _sync_status = Column(MutableDict.as_mutable(JSON), default={},
                           nullable=True)
