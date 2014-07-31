@@ -22,8 +22,6 @@ Filters allow you to query mail data based on specific parameters. The more spec
 
 * **`offset`** (integer) Zero-based offset; use with `limit` for pagination of results.
 
-* **`order_by`** If 'subject', return results ordered alphabetically by subject. If 'date', return results most-recent-first.
-
 ### Additional Message Filters
 
 * **`thread`** Return messages on the thread with the given id.

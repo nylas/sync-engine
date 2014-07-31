@@ -12,7 +12,7 @@ class Filter(object):
     def __init__(self, namespace_id, subject, from_addr, to_addr, cc_addr,
                  bcc_addr, any_email, thread_public_id, started_before,
                  started_after, last_message_before, last_message_after,
-                 filename, tag, limit, offset, order_by, db_session):
+                 filename, tag, limit, offset, db_session):
         self.namespace_id = namespace_id
         self.subject = subject
         self.from_addr = from_addr
@@ -29,7 +29,6 @@ class Filter(object):
         self.tag = tag
         self.limit = limit
         self.offset = offset
-        self.order_by = order_by
         self.db_session = db_session
 
         # Validate input
@@ -130,10 +129,7 @@ class Filter(object):
             subqueryload('tagitems').joinedload('tag').
             load_only('public_id', 'name'))
 
-        if self.order_by == 'subject':
-            query = query.order_by(asc(Thread.subject))
-        elif self.order_by == 'date':
-            query = query.order_by(desc(Thread.recentdate))
+        query = query.order_by(desc(Thread.recentdate))
 
         query = query.limit(self.limit)
         if self.offset:
@@ -227,10 +223,7 @@ class Filter(object):
         # TODO(emfree) we should really eager-load the namespace too
         # (or just directly store it on the message object)
 
-        if self.order_by == 'subject':
-            query = query.order_by(asc(Message.subject))
-        elif self.order_by == 'date':
-            query = query.order_by(desc(Message.received_date))
+        query = query.order_by(desc(Message.received_date))
 
         query = query.limit(self.limit)
         if self.offset:
