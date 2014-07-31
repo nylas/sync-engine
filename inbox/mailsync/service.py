@@ -144,7 +144,7 @@ class SyncService(Process):
                     .format(acc.sync_host, fqdn)
                 # XXX Can processing this command fail in some way?
                 self.monitors[acc.id].inbox.put_nowait('shutdown')
-                acc.stop_sync()
+                acc.sync_stopped()
                 db_session.add(acc)
                 db_session.commit()
                 acc.sync_unlock()

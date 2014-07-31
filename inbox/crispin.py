@@ -18,7 +18,7 @@ import geventconnpool
 
 from inbox.util.concurrency import retry
 from inbox.util.misc import or_none, timed
-from inbox.basicauth import AUTH_TYPES
+from inbox.basicauth import AUTH_TYPES, ConnectionError, ValidationError
 from inbox.models.session import session_scope
 from inbox.models.backends.imap import ImapAccount
 from inbox.log import get_logger
@@ -113,8 +113,12 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
                     'connections'.format(account_id, num_connections))
         self.account_id = account_id
         self.readonly = readonly
+        self.valid = True
         self._set_account_info()
         # 1200s == 20min
+        if not self.valid:
+            return
+
         geventconnpool.ConnectionPool.__init__(
             self, num_connections, keepalive=1200,
             exc_classes=CONN_DISCARD_EXC_CLASSES)
@@ -125,7 +129,21 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
 
             # Refresh token if need be, for OAuthed accounts
             if AUTH_TYPES.get(account.provider) == 'oauth':
-                self.access_token = account.access_token
+                try:
+                    self.access_token = account.access_token
+                except ValidationError:
+                    logger.error("Error obtaining access token",
+                                 accound_id=self.account_id)
+                    account.sync_state = 'invalid'
+                    self.valid = False
+                except ConnectionError:
+                    logger.error("Error connecting",
+                                 accound_id=self.account_id)
+                    account.sync_state = 'connerror'
+                    self.valid = False
+
+                db_session.add(account)
+                db_session.commit()
 
             self.email_address = account.email_address
             self.provider = account.provider
@@ -138,7 +156,22 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
             account = db_session.query(ImapAccount).get(self.account_id)
 
             auth_handler = handler_from_provider(account.provider)
-            conn = auth_handler.connect_account(account)
+            try:
+                conn = auth_handler.connect_account(account)
+            except ValidationError:
+                logger.error("Error obtaining access token",
+                             accound_id=self.account_id)
+                account.sync_state = 'invalid'
+                db_session.add(account)
+                db_session.commit()
+                return None
+            except ConnectionError:
+                logger.error("Error connecting",
+                             accound_id=self.account_id)
+                account.sync_state = 'connerror'
+                db_session.add(account)
+                db_session.commit()
+                return None
 
             return new_crispin(self.account_id, self.email_address,
                                self.provider, conn, self.readonly)
