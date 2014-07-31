@@ -102,4 +102,4 @@ class DateTimeJSONEncoder(json.JSONEncoder):
 if __name__ == '__main__':
     import os
     os.environ['DEBUG'] = 'true' if app.debug else 'false'
-    app.run(host='0.0.0.0')
+    app.run(host='127.0.0.1')
