@@ -173,8 +173,8 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
                 db_session.commit()
                 return None
 
-            return new_crispin(self.account_id, self.email_address,
-                               self.provider, conn, self.readonly)
+        return new_crispin(self.account_id, self.email_address,
+                           self.provider, conn, self.readonly)
 
     def _keepalive(self, c):
         c.conn.noop()
