@@ -47,10 +47,7 @@ def _all_accounts():
 
 def _render_account(account):
     acct_info = account.sync_status
-
-    template = 'account.html' if account.provider != 'eas' else \
-        'eas_account.html'
-
+    template = 'account.html'
     return render_template(template, account=acct_info)
 
 

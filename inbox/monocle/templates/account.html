@@ -39,6 +39,18 @@
 <table class='table table-bordered table-condensed table-hover' id='status_table'>
   <thead>
     <tr>
+{% if account.provider == 'eas' %}
+      <th>Folder (Id)</th>
+      <th>State</th>
+      <th>Sync Start</th>
+      <th>Sync End</th>
+      <th>Sync Error</th>
+      <th>State</th>
+      <th>to-sync</th>
+      <th>As of</th>
+      <th># synced</th>
+      <th>As of</th>
+{% else %}
       <th>Folder</th>
       <th>State</th>
       <th>Sync Start</th>
@@ -50,9 +62,10 @@
       <th>updated</th>
       <th>deleted</th>
       <th>to-download</th>
-      <th>downloaded since:</th>
+      <th>downloaded since</th>
       <th>remain</th>
       <th>checked-at</th>
+{% endif %}
     </tr>
   </thead>
   <tbody>
@@ -72,7 +85,6 @@
         function(data) {
           var content = '';
           $.each(data, function(i, item) {
-              timestamp = item.uid_checked_timestamp
               content += '<tr>';
               content += '<td>' + item.name + '</td>';
               content += '<td>' + (item.run_state || '') + '</td>';
@@ -80,14 +92,22 @@
               content += '<td>' + (time_ago(item.sync_end_time) || '') + '</td>';
               content += '<td>' + (item.sync_error || '').replace(/\..*/,"") + '</td>';
               content += '<td>' + (item.state || '') + '</td>';
-              content += '<td>' + (time_ago(timestamp) || '') + '</td>';
-              content += '<td>' + (item.remote_uid_count || '') + '</td>';
-              content += '<td>' + (item.update_uid_count || '') + '</td>';
-              content += '<td>' + (item.delete_uid_count || '') + '</td>';
-              content += '<td>' + (item.download_uid_count || '') + '</td>';
-              content += '<td>' + (item.num_downloaded_since_timestamp || '') + '</td>';
-              content += '<td>' + (item.current_download_queue_size || '') + '</td>';
-              content += '<td>' + (time_ago(item.queue_checked_at) || '') + '</td>';
+              {% if account.provider == 'eas' %}
+                  content += '<td>' + (item.num_uids_to_sync || (typeof(item.num_uids_to_sync) == 'number'? '0' : '')) + '</td>';
+                  content += '<td>' + (item.uid_checked_timestamp || '') + '</td>';
+                  content += '<td>' + (item.num_synced_since_timestamp || (typeof(item.num_synced_since_timestamp) == 'number'? '0' : '')) + '</td>';
+                  content += '<td>' + (item.synced_checked_at || '') + '</td>';
+              {% else %}
+                  timestamp = item.uid_checked_timestamp
+                  content += '<td>' + (time_ago(timestamp) || '') + '</td>';
+                  content += '<td>' + (item.remote_uid_count || '') + '</td>';
+                  content += '<td>' + (item.update_uid_count || '') + '</td>';
+                  content += '<td>' + (item.delete_uid_count || '') + '</td>';
+                  content += '<td>' + (item.download_uid_count || '') + '</td>';
+                  content += '<td>' + (item.num_downloaded_since_timestamp || '') + '</td>';
+                  content += '<td>' + (item.current_download_queue_size || '') + '</td>';
+                  content += '<td>' + (time_ago(item.queue_checked_at) || '') + '</td>';
+              {% endif %}
               content += '</tr>';
           });
           $('#status_table tbody').html(content);

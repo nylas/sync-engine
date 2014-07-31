@@ -56,7 +56,7 @@
 
           var content = '';
           $.each(data, function(i, item) {
-              link = "<a href=" + $SCRIPT_ROOT + '/account/' + item.id + '" id="link-' + item.id + '" >' + item.id + "</a>";
+              link = '<a href="' + $SCRIPT_ROOT + '/account/' + item.id + '" id="link-' + item.id + '" >' + item.id + "</a>";
               content += '<tr class="account-row" onclick="document.getElementById(\'link-' + item.id + '\').click();">';
               content += '<td class="account_id">' + link + '</td>';
               content += '<td class="email">' + item.email + '</td>';
