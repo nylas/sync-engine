@@ -102,7 +102,6 @@ def start():
             tag=request.args.get('tag'),
             limit=g.limit,
             offset=g.offset,
-            order_by=request.args.get('order_by'),
             db_session=g.db_session)
     except ValueError as e:
         return err(400, e.message)

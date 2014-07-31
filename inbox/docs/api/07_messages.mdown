@@ -66,6 +66,8 @@ GET https://api.inboxapp.com/n/<namespace_id>/messages?<filter_parameters>
 ]
 ```
 
+Messages are returned order by date, most recent first.
+
 # Retrieving Messages in a Thread
 
 One of the filter parameters available on messages is `thread`. Given a `thread_id` value, the API call will will return all messages in the thread.

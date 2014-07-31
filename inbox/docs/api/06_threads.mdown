@@ -85,6 +85,8 @@ Filters also allow you to make more complex queries like the one below, which sh
 GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=unread&any_email=mark@inboxapp.com&order_by=date
 ```
 
+Threads are returned in order of their latest message date, most recent first.
+
 # Pagination
 
 The `limit` [filter](#filters) allows you to specify how many threads you would like returned. If your application only needs a few threads, you should explicitly provide a `limit` to improve performance. If your application needs to fetch a large number of threads, you can implement basic pagination using the `offset` [filter](#filters). If a request returns less than `limit` threads, you have run out of threads.
