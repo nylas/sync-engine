@@ -91,8 +91,8 @@ class Filter(object):
 
         if self.tag is not None:
             tag_query = self.db_session.query(TagItem).join(Tag). \
-                filter(or_(Tag.public_id == self.tag,
-                           Tag.name == self.tag)).subquery()
+                filter(or_(Tag.public_id == self.tag, Tag.name == self.tag),
+                       Tag.namespace_id == self.namespace_id).subquery()
 
             query = query.join(tag_query)
 
@@ -169,7 +169,8 @@ class Filter(object):
         thread_query = self.db_session.query(Thread).filter(thread_predicate)
         if self.tag is not None:
             thread_query = thread_query.join(TagItem).join(Tag). \
-                filter(or_(Tag.public_id == self.tag, Tag.name == self.tag))
+                filter(or_(Tag.public_id == self.tag, Tag.name == self.tag),
+                       Tag.namespace_id == self.namespace_id)
         thread_query = thread_query.subquery()
 
         query = query.join(thread_query)
