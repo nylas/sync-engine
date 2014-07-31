@@ -66,13 +66,12 @@ def account(account_id):
 
         action = request.args.get('action', None)
         if action == 'stop':
-            print "stopping: ", account_id
-            call([inbox_sync, "stop", account.email_address])
-            account = g.db_session.query(Account).get(account_id)
+            if account.sync_enabled:
+                print "stopping: ", account_id
+                account.stop_sync()
         elif action == 'start':
             print "starting: ", account_id
-            call([inbox_sync, "start", account.email_address])
-            account = g.db_session.query(Account).get(account_id)
+            account.start_sync(platform.node())
 
     return _render_account(account)
 
