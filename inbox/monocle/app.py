@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import platform
 from subprocess import call
 import json
 import datetime
@@ -15,6 +16,7 @@ from inbox.api.err import err
 engine = main_engine(pool_size=5)
 
 app = Flask(__name__)
+app.debug = False
 
 
 @app.before_request
