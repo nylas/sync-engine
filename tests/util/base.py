@@ -215,7 +215,7 @@ def patch_network_functions(monkeypatch):
                             lambda *args, **kwargs: None)
 
 
-@yield_fixture(scope='function')
+@yield_fixture(scope='session')
 def syncback_service():
     from inbox.transactions.actions import SyncbackService
     from gevent import monkey
