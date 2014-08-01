@@ -4,11 +4,24 @@
 
 {% block content %}
 <div class='text-center' id='counts'>
+  <div>
   <span id='total'></span>
+  </div>
+
+  <div>
   <span id='running'></span>
   <span id='stopped'></span>
   <span id='killed'></span>
   <span id='unstarted'></span>
+  </div>
+
+  <div>
+  <span id='gmail'></span>
+  <span id='eas'></span>
+  <span id='outlook'></span>
+  <span id='yahoo'></span>
+  <span id='other'></span>
+  </div>
 </div>
 
 <div class='table-responsive table-white'>
@@ -53,6 +66,7 @@
         function(data) {
           var count = data.length
           var running = 0; var stopped = 0; var killed = 0; var unstarted = 0;
+          var gmail = 0; var eas = 0; var outlook = 0; var yahoo = 0; var other = 0;
 
           var content = '';
           $.each(data, function(i, item) {
@@ -75,15 +89,28 @@
               else if (item.state === 'stopped') { stopped += 1; }
               else if (item.state === 'killed') { killed += 1; }
               else { unstarted += 1; }
+
+              if (item.provider === 'gmail') { gmail += 1; }
+              else if (item.provider === 'eas') { eas += 1; }
+              else if (item.provider === 'outlook') { outlook += 1; }
+              else if (item.provider === 'yahoo') { yahoo += 1; }
+              else { other += 1; }
           });
 
           $('#status_table tbody').html(content);
 
           $('#total').html('Accounts: ' + count);
+
           $('#running').html('Running: ' + running);
           $('#stopped').html('Stopped: ' + stopped);
           $('#killed').html('Killed: ' + killed);
           $('#unstarted').html('Unstarted: ' + unstarted);
+
+          $('#gmail').html('Gmail: ' + gmail);
+          $('#eas').html('EAS: ' + eas);
+          $('#outlook').html('Outlook: ' + outlook);
+          $('#yahoo').html('Yahoo: ' + yahoo);
+          $('#other').html('Other: ' + other);
 
           if ($('#status_table tr').length >= 3) {
               setFilterGrid('status_table', 0, tableFilter);
