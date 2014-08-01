@@ -1,6 +1,7 @@
 import os
 import errno
 import msgpack
+from msgpack.exceptions import UnpackException, ExtraData
 
 from inbox.util.file import safe_filename, mkdirp, splitall
 
@@ -38,6 +39,8 @@ def _unless_dne(fn, *args, **kwargs):
             return None
         else:
             raise
+    except (UnpackException, ExtraData):
+        return None
 
 
 def get_cache(key):
