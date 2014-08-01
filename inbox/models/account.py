@@ -152,10 +152,12 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
         self._sync_status['sync_error'] = None
 
     def stop_sync(self):
-        self.sync_host = None
-
+        """ set a flag for the monitor to stop the sync."""
         self.sync_state = 'stopped'
 
+    def sync_stopped(self):
+        """ called when the sync has actually been stopped"""
+        self.sync_host = None
         self._sync_status['sync_end_time'] = datetime.utcnow()
 
     def kill_sync(self, error=None):

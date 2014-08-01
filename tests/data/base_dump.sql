@@ -41,7 +41,7 @@ CREATE TABLE `account` (
   `updated_at` datetime NOT NULL,
   `deleted_at` datetime DEFAULT NULL,
   `important_folder_id` int(11) DEFAULT NULL,
-  `sync_state` enum('running','stopped','killed') DEFAULT NULL,
+  `sync_state` enum('running','stopped','killed','invalid','connerror') DEFAULT NULL,
   `_canonicalized_address` varchar(191) DEFAULT NULL,
   `_raw_address` varchar(191) DEFAULT NULL,
   `state` enum('live','down','invalid') DEFAULT NULL,
@@ -135,8 +135,32 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('322c2800c401');
+INSERT INTO `alembic_version` VALUES ('3bb5d61c895c');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `aolaccount`
+--
+
+DROP TABLE IF EXISTS `aolaccount`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `aolaccount` (
+  `id` int(11) NOT NULL,
+  `password` varchar(256) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `aolaccount_ibfk_1` FOREIGN KEY (`id`) REFERENCES `imapaccount` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `aolaccount`
+--
+
+LOCK TABLES `aolaccount` WRITE;
+/*!40000 ALTER TABLE `aolaccount` DISABLE KEYS */;
+/*!40000 ALTER TABLE `aolaccount` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -343,6 +367,7 @@ CREATE TABLE `easfoldersyncstatus` (
   `_sync_status` text,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_account_id_eas_folder_id` (`account_id`,`eas_folder_id`),
+  UNIQUE KEY `account_id_2` (`account_id`,`eas_folder_id`),
   CONSTRAINT `easfoldersyncstatus_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `easaccount` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -430,11 +455,11 @@ CREATE TABLE `folder` (
   `deleted_at` datetime DEFAULT NULL,
   `canonical_name` varchar(191) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `account_id` (`account_id`,`name`),
+  UNIQUE KEY `account_id` (`account_id`,`name`,`canonical_name`),
   KEY `ix_folder_created_at` (`created_at`),
   KEY `ix_folder_deleted_at` (`deleted_at`),
   KEY `ix_folder_updated_at` (`updated_at`),
-  CONSTRAINT `folder_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
+  CONSTRAINT `folder_fk1` FOREIGN KEY (`account_id`) REFERENCES `account` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -943,6 +968,41 @@ INSERT INTO `namespace` VALUES (1,'>ï¿½ï¿½ï¿½fï¿½@ï',1,'root','2014-05-13 02:19:
 UNLOCK TABLES;
 
 --
+-- Table structure for table `outlookaccount`
+--
+
+DROP TABLE IF EXISTS `outlookaccount`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `outlookaccount` (
+  `id` int(11) NOT NULL,
+  `refresh_token_id` int(11) DEFAULT NULL,
+  `scope` varchar(512) DEFAULT NULL,
+  `locale` varchar(8) DEFAULT NULL,
+  `client_id` varchar(256) DEFAULT NULL,
+  `client_secret` varchar(256) DEFAULT NULL,
+  `o_id` varchar(32) DEFAULT NULL,
+  `o_id_token` varchar(1024) DEFAULT NULL,
+  `link` varchar(256) DEFAULT NULL,
+  `name` varchar(256) DEFAULT NULL,
+  `gender` varchar(16) DEFAULT NULL,
+  `family_name` varchar(256) DEFAULT NULL,
+  `given_name` varchar(256) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `outlookaccount_ibfk_1` FOREIGN KEY (`id`) REFERENCES `imapaccount` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `outlookaccount`
+--
+
+LOCK TABLES `outlookaccount` WRITE;
+/*!40000 ALTER TABLE `outlookaccount` DISABLE KEYS */;
+/*!40000 ALTER TABLE `outlookaccount` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `part`
 --
 
@@ -1055,7 +1115,7 @@ CREATE TABLE `secret` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `acl_id` int(11) NOT NULL,
   `type` int(11) NOT NULL,
-  `secret` varchar(512) DEFAULT NULL,
+  `secret` varchar(2048) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1395,4 +1455,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-07-22 22:45:30
+-- Dump completed on 2014-08-01 11:24:51

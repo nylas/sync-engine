@@ -1,6 +1,6 @@
 from gc import collect as garbage_collect
 
-from gevent import Greenlet, joinall, sleep
+from gevent import Greenlet, joinall, sleep, GreenletExit
 from gevent.queue import Queue, Empty
 from sqlalchemy.exc import DataError, IntegrityError
 
@@ -14,6 +14,10 @@ from inbox.mailsync.reporting import report_stopped
 
 
 class MailsyncError(Exception):
+    pass
+
+
+class MailsyncDone(GreenletExit):
     pass
 
 
@@ -252,8 +256,7 @@ class BaseMailSyncMonitor(Greenlet):
                 cmd = self.inbox.get_nowait()
                 if not self.process_command(cmd):
                     # ctrl-c, basically!
-                    self.log.info("Stopping sync for {0}".format(
-                        self.email_address))
+                    self.log.info("Stopping sync", email=self.email_address)
                     # make sure the parent can't start/stop any folder monitors
                     # first
                     sync.kill(block=True)
@@ -261,9 +264,13 @@ class BaseMailSyncMonitor(Greenlet):
                     return
             except Empty:
                 sleep(self.heartbeat)
-        assert not sync.successful(), \
-            "mail sync for {} account {} should run forever!"\
-            .format(self.provider, self.account_id)
+
+        if sync.successful():
+            self.folder_monitors.kill()
+            return
+
+        self.log.error("mail sync should run forever", provider=self.provider,
+                       account_id=self.account_id)
         raise sync.exception
 
     def process_command(self, cmd):

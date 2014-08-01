@@ -132,7 +132,7 @@ class SyncService(Process):
                 self.log.error('no such account', account_id=account_id)
                 return
             fqdn = platform.node()
-            if (not acc.id in self.monitors) or \
+            if (acc.id not in self.monitors) or \
                     (not acc.sync_enabled):
                 self.log.info('sync already started', account_id=account_id)
             try:

@@ -88,7 +88,7 @@ def new_token(provider_module, refresh_token, client_id=None,
                    'Accept': 'text/plain'}
         data = urllib.urlencode(args)
         response = requests.post(access_token_url, data=data, headers=headers)
-    except requests.exceptions.HTTPError, e:
+    except (requests.exceptions.HTTPError, RequestsConnectionError), e:
         log.error(e)
         raise ConnectionError()
 
