@@ -26,6 +26,7 @@ def start():
 
 @app.after_request
 def finish(response):
+    g.db_session.close()
     return response
 
 
