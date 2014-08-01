@@ -1,6 +1,7 @@
 import sys
 import urllib
 import requests
+from simplejson import JSONDecodeError
 from requests import ConnectionError as RequestsConnectionError
 
 from inbox.util.url import url_concat
@@ -91,7 +92,14 @@ def new_token(provider_module, refresh_token, client_id=None,
         log.error(e)
         raise ConnectionError()
 
-    session_dict = response.json()
+    try:
+        session_dict = response.json()
+    except JSONDecodeError:
+        log.error("Couldn't convert response to json.",
+                  status_code=response.status_code,
+                  response=response.text)
+        raise ConnectionError()
+
     if u'error' in session_dict:
         if session_dict['error'] == 'invalid_grant':
             log.error('refresh_token_invalid',
