@@ -39,14 +39,14 @@ Here's the state machine:
 
         -----
         |   ----------------         ----------------------
-        ∨   | initial sync | <-----> | initial uidinvalid |
+        â¨   | initial sync | <-----> | initial uidinvalid |
 ----------  ----------------         ----------------------
 | finish |          |
-----------          ∨
+----------          â¨
         ^   ----------------         ----------------------
         |---|      poll    | <-----> |   poll uidinvalid  |
             ----------------         ----------------------
-            |  ∧
+            |  â§
             ----
 
 We encapsulate sync engine instances in greenlets for cooperative coroutine
