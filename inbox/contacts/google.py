@@ -8,6 +8,8 @@ import gdata.contacts.client
 
 from inbox.log import get_logger
 logger = get_logger()
+from inbox.basicauth import ConnectionError
+from inbox.oauth import OAuthError
 from inbox.models.session import session_scope
 from inbox.models import Contact
 from inbox.models.backends.gmail import GmailAccount
@@ -65,8 +67,17 @@ class GoogleContactsProvider(object):
                     source=SOURCE_APP_NAME)
                 google_client.auth_token = two_legged_oauth_token
                 return google_client
-            except gdata.client.BadAuthentication:
+            except (gdata.client.BadAuthentication, OAuthError):
                 self.log.error('Invalid user credentials given')
+                account.sync_state = 'invalid'
+                db_session.add(account)
+                db_session.commit()
+                return None
+            except ConnectionError:
+                self.log.error('Connection error')
+                account.sync_state = 'connerror'
+                db_session.add(account)
+                db_session.commit()
                 return None
 
     def _parse_contact_result(self, google_contact):

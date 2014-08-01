@@ -93,11 +93,20 @@ from inbox.mailsync.backends.imap import account
 from inbox.mailsync.backends.base import (save_folder_names,
                                           create_db_objects,
                                           commit_uids, new_or_updated,
-                                          MailsyncError)
+                                          MailsyncError,
+                                          MailsyncDone)
 from inbox.mailsync.backends.base import BaseMailSyncMonitor
 
 
 IDLE_FOLDERS = ['inbox', 'sent mail']
+
+
+def _pool(account_id):
+    """ Get a crispin pool, throwing an error if it's invalid."""
+    pool = connection_pool(account_id)
+    if not pool.valid:
+        raise MailsyncDone()
+    return pool
 
 
 class ImapSyncMonitor(BaseMailSyncMonitor):
@@ -144,7 +153,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             'initial' state at a time.
         """
         with session_scope(ignore_soft_deletes=False) as db_session:
-            with connection_pool(self.account_id).get() as crispin_client:
+            with _pool(self.account_id).get() as crispin_client:
                 sync_folders = crispin_client.sync_folders()
                 account = db_session.query(ImapAccount)\
                     .get(self.account_id)
@@ -206,7 +215,7 @@ class ImapFolderSyncMonitor(Greenlet):
         self.shared_state = shared_state
         self.state_handlers = state_handlers
         self.state = None
-        self.conn_pool = connection_pool(self.account_id)
+        self.conn_pool = _pool(self.account_id)
         self.retry_fail_classes = retry_fail_classes
 
         self.log = logger.new(account_id=account_id, folder=folder_name)
@@ -615,7 +624,7 @@ def check_new_uids(account_id, folder_name, log, uid_download_stack,
     Runs until killed. (Intended to be run in a greenlet.)
     """
     log.info("starting new UID-check poller")
-    with connection_pool(account_id).get() as crispin_client:
+    with _pool(account_id).get() as crispin_client:
         crispin_client.select_folder(
             folder_name, uidvalidity_cb(crispin_client.account_id))
         while True:
@@ -688,7 +697,7 @@ def imap_check_flags(account_id, folder_name, log, poll_frequency,
 
     """
     log.info("Spinning up new flags-refresher for ", folder_name=folder_name)
-    with connection_pool(account_id).get() as crispin_client:
+    with _pool(account_id).get() as crispin_client:
         with session_scope(ignore_soft_deletes=False) as db_session:
             crispin_client.select_folder(folder_name,
                                          uidvalidity_cb(
