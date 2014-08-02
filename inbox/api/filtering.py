@@ -1,319 +1,259 @@
-from datetime import datetime
-from sqlalchemy import and_, or_, asc, desc
+from sqlalchemy import and_, or_, desc
 from sqlalchemy.orm import joinedload, subqueryload
 from inbox.models import (Contact, Message, MessageContactAssociation, Thread,
-                          Tag, TagItem, Part, Block)
-from inbox.util.encoding import base36decode
+                          Tag, TagItem, Part)
 
 
-class Filter(object):
-    """ A container for all the filtering query parameters an API client may
-    pass."""
-    def __init__(self, namespace_id, subject, from_addr, to_addr, cc_addr,
-                 bcc_addr, any_email, thread_public_id, started_before,
-                 started_after, last_message_before, last_message_after,
-                 filename, tag, limit, offset, db_session):
-        self.namespace_id = namespace_id
-        self.subject = subject
-        self.from_addr = from_addr
-        self.to_addr = to_addr
-        self.cc_addr = cc_addr
-        self.bcc_addr = bcc_addr
-        self.any_email = any_email
-        self.thread_public_id = thread_public_id
-        self.started_before = started_before
-        self.started_after = started_after
-        self.last_message_before = last_message_before
-        self.last_message_after = last_message_after
-        self.filename = filename
-        self.tag = tag
-        self.limit = limit
-        self.offset = offset
-        self.db_session = db_session
+def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
+            any_email, thread_public_id, started_before, started_after,
+            last_message_before, last_message_after, filename, tag, limit,
+            offset, db_session):
+    query = db_session.query(Thread)
+    thread_criteria = [Thread.namespace_id == namespace_id]
+    if thread_public_id is not None:
+        query = query.filter(Thread.public_id == thread_public_id)
+        # TODO(emfree): at this point there should be at most one object,
+        # so we could just execute the query and check additional filters
+        # in Python-land.
 
-        # Validate input
+    if started_before is not None:
+        thread_criteria.append(Thread.subjectdate < started_before)
 
-        for key in ('subject', 'any_email', 'to_addr', 'from_addr', 'cc_addr',
-                    'bcc_addr', 'filename', 'tag'):
-            value = getattr(self, key, None)
-            if value is not None and len(value) > 255:
-                raise ValueError('Value {} for {} is too long'.
-                                 format(value, key))
+    if started_after is not None:
+        thread_criteria.append(Thread.subjectdate > started_after)
 
-        if thread_public_id is not None:
-            try:
-                base36decode(thread_public_id)
-            except ValueError:
-                raise ValueError('Invalid thread id {}'.
-                                 format(thread_public_id))
+    if last_message_before is not None:
+        thread_criteria.append(Thread.recentdate <
+                               last_message_before)
 
-        for key in ('started_before', 'started_after', 'last_message_before',
-                    'last_message_after'):
-            value = getattr(self, key, None)
-            if value is not None:
-                try:
-                    # Replace Unix timestamp by datetime object.
-                    dt = datetime.utcfromtimestamp(int(value))
-                    setattr(self, key, dt)
-                except ValueError:
-                    raise ValueError('Invalid timestamp value {} for {}'.
-                                     format(value, key))
+    if last_message_after is not None:
+        thread_criteria.append(Thread.recentdate > last_message_after)
 
-    def get_threads(self):
-        query = self.db_session.query(Thread)
-        thread_criteria = [Thread.namespace_id == self.namespace_id]
-        if self.thread_public_id is not None:
-            query = query.filter(Thread.public_id ==
-                                 self.thread_public_id)
-            # TODO(emfree): at this point there should be at most one object,
-            # so we could just execute the query and check additional filters
-            # in Python-land.
+    if subject is not None:
+        thread_criteria.append(Thread.subject == subject)
 
-        if self.started_before is not None:
-            thread_criteria.append(Thread.subjectdate < self.started_before)
+    thread_predicate = and_(*thread_criteria)
+    query = query.filter(thread_predicate)
 
-        if self.started_after is not None:
-            thread_criteria.append(Thread.subjectdate > self.started_after)
+    if tag is not None:
+        tag_query = db_session.query(TagItem).join(Tag). \
+            filter(or_(Tag.public_id == tag, Tag.name == tag),
+                   Tag.namespace_id == namespace_id).subquery()
 
-        if self.last_message_before is not None:
-            thread_criteria.append(Thread.recentdate <
-                                   self.last_message_before)
+        query = query.join(tag_query)
 
-        if self.last_message_after is not None:
-            thread_criteria.append(Thread.recentdate > self.last_message_after)
+    if any((from_addr, to_addr, cc_addr, bcc_addr)):
+        contact_criteria = []
+        if from_addr is not None:
+            contact_criteria.append(and_(
+                Contact.email_address == from_addr,
+                MessageContactAssociation.field == 'from_addr'))
 
-        if self.subject is not None:
-            thread_criteria.append(Thread.subject == self.subject)
+        if to_addr is not None:
+            contact_criteria.append(and_(
+                Contact.email_address == to_addr,
+                MessageContactAssociation.field == 'to_addr'))
 
-        thread_predicate = and_(*thread_criteria)
-        query = query.filter(thread_predicate)
+        if cc_addr is not None:
+            contact_criteria.append(and_(
+                Contact.email_address == cc_addr,
+                MessageContactAssociation.field == 'cc_addr'))
 
-        if self.tag is not None:
-            tag_query = self.db_session.query(TagItem).join(Tag). \
-                filter(or_(Tag.public_id == self.tag, Tag.name == self.tag),
-                       Tag.namespace_id == self.namespace_id).subquery()
+        if bcc_addr is not None:
+            contact_criteria.append(and_(
+                Contact.email_address == bcc_addr,
+                MessageContactAssociation.field == 'bcc_addr'))
 
-            query = query.join(tag_query)
+        contact_query = db_session.query(Message). \
+            join(MessageContactAssociation).join(Contact). \
+            filter(or_(*contact_criteria)).subquery()
 
-        if any((self.from_addr, self.to_addr, self.cc_addr, self.bcc_addr)):
-            contact_criteria = []
-            for field in ('from_addr', 'to_addr', 'cc_addr', 'bcc_addr'):
-                if getattr(self, field, None) is not None:
-                    contact_criteria.append(and_(
-                        Contact.email_address == getattr(self, field),
-                        MessageContactAssociation.field == field))
+        query = query.join(contact_query)
 
-            contact_query = self.db_session.query(Message). \
-                join(MessageContactAssociation).join(Contact). \
-                filter(or_(*contact_criteria)).subquery()
+    if any_email is not None:
+        any_contact_query = db_session.query(Message). \
+            join(MessageContactAssociation).join(Contact). \
+            filter(Contact.email_address == any_email).subquery()
+        query = query.join(any_contact_query)
 
-            query = query.join(contact_query)
+    if filename is not None:
+        files_query = db_session.query(Message). \
+            join(Part).filter(Part.filename == filename).subquery()
+        query = query.join(files_query)
 
-        if self.any_email is not None:
-            any_contact_query = self.db_session.query(Message). \
-                join(MessageContactAssociation).join(Contact). \
-                filter(Contact.email_address == self.any_email).subquery()
-            query = query.join(any_contact_query)
+    # Eager-load some objects in order to make constructing API
+    # representations faster.
+    query = query.options(
+        subqueryload(Thread.messages).
+        load_only('public_id', 'is_draft', 'from_addr', 'to_addr',
+                  'cc_addr', 'bcc_addr'),
+        subqueryload('tagitems').joinedload('tag').
+        load_only('public_id', 'name'))
 
-        if self.filename is not None:
-            files_query = self.db_session.query(Message). \
-                join(Part).filter(Part.filename == self.filename).subquery()
-            query = query.join(files_query)
+    query = query.order_by(desc(Thread.recentdate))
 
-        # Eager-load some objects in order to make constructing API
-        # representations faster.
-        query = query.options(
-            subqueryload(Thread.messages).
-            load_only('public_id', 'is_draft', 'from_addr', 'to_addr',
-                      'cc_addr', 'bcc_addr'),
-            subqueryload('tagitems').joinedload('tag').
-            load_only('public_id', 'name'))
-
-        query = query.order_by(desc(Thread.recentdate))
-
-        query = query.limit(self.limit)
-        if self.offset:
-            query = query.offset(self.offset)
-        return query.all()
-
-    def get_messages(self):
-        query = self.db_session.query(Message). \
-            filter(Message.is_draft == False)
-
-        thread_criteria = [Thread.namespace_id == self.namespace_id]
-
-        if self.thread_public_id is not None:
-            # TODO(emfree) this is a common case that we should handle
-            # separately by just fetching the thread's messages and only
-            # filtering more if needed.
-            thread_criteria.append(Thread.public_id == self.thread_public_id)
-
-        if self.started_before is not None:
-            thread_criteria.append(Thread.subjectdate < self.started_before)
-
-        if self.started_after is not None:
-            thread_criteria.append(Thread.subjectdate > self.started_after)
-
-        if self.last_message_before is not None:
-            thread_criteria.append(Thread.recentdate <
-                                   self.last_message_before)
-
-        if self.last_message_after is not None:
-            thread_criteria.append(Thread.recentdate > self.last_message_after)
-
-        thread_predicate = and_(*thread_criteria)
-        thread_query = self.db_session.query(Thread).filter(thread_predicate)
-        if self.tag is not None:
-            thread_query = thread_query.join(TagItem).join(Tag). \
-                filter(or_(Tag.public_id == self.tag, Tag.name == self.tag),
-                       Tag.namespace_id == self.namespace_id)
-        thread_query = thread_query.subquery()
-
-        query = query.join(thread_query)
-
-        if self.subject is not None:
-            query = query.filter(Message.subject == self.subject)
-
-        if self.to_addr is not None:
-            to_query = self.db_session.query(Message). \
-                join(MessageContactAssociation).join(Contact). \
-                filter(MessageContactAssociation.field == 'to_addr',
-                       Contact.email_address == self.to_addr).subquery()
-            query = query.join(to_query)
-
-        if self.from_addr is not None:
-            from_query = self.db_session.query(MessageContactAssociation). \
-                join(Contact).filter(
-                    MessageContactAssociation.field == 'from_addr',
-                    Contact.email_address == self.from_addr).subquery()
-            query = query.join(from_query)
-
-        if self.cc_addr is not None:
-            cc_query = self.db_session.query(MessageContactAssociation). \
-                join(Contact).filter(
-                    MessageContactAssociation.field == 'cc_addr',
-                    Contact.email_address == self.cc_addr).subquery()
-            query = query.join(cc_query)
-
-        if self.bcc_addr is not None:
-            bcc_query = self.db_session.query(MessageContactAssociation). \
-                join(Contact).filter(
-                    MessageContactAssociation.field == 'bcc_addr',
-                    Contact.email_address == self.bcc_addr).subquery()
-            query = query.join(bcc_query)
-
-        if self.any_email is not None:
-            any_email_query = self.db_session.query(
-                MessageContactAssociation).join(Contact). \
-                filter(Contact.email_address == self.any_email).subquery()
-            query = query.join(any_email_query)
-
-        if self.filename is not None:
-            file_query = self.db_session.query(Part). \
-                filter(Part.filename == self.filename).subquery()
-            query = query.join(file_query)
-
-        # Eager-load some objects in order to make constructing API
-        # representations faster.
-        query = query.options(
-            joinedload(Message.parts).load_only('public_id',
-                                                'content_disposition'),
-            joinedload(Message.thread).load_only('public_id', 'discriminator'))
-
-        # TODO(emfree) we should really eager-load the namespace too
-        # (or just directly store it on the message object)
-
-        query = query.order_by(desc(Message.received_date))
-
-        query = query.limit(self.limit)
-        if self.offset:
-            query = query.offset(self.offset)
-
-        return query.all()
-
-    def get_drafts(self):
-        query = self.db_session.query(Message).filter(
-            Message.is_draft == True)
-
-        thread_criteria = [Thread.namespace_id == self.namespace_id]
-
-        if self.thread_public_id is not None:
-            # TODO(emfree) this is a common case that we should handle
-            # separately by just fetching the thread's messages and only
-            # filtering more if needed.
-            thread_criteria.append(Thread.public_id == self.thread_public_id)
-
-        thread_predicate = and_(*thread_criteria)
-        thread_query = self.db_session.query(Thread).filter(thread_predicate)
-
-        query = query.join(thread_query.subquery())
-
-        # Eager-load some objects in order to make constructing API
-        # representations faster.
-        query = query.options(
-            joinedload(Message.parts).load_only('public_id',
-                                                'content_disposition'),
-            joinedload(Message.thread).load_only('public_id', 'discriminator'))
-
-        query = query.limit(self.limit)
-        if self.offset:
-            query = query.offset(self.offset)
-
-        return [m for m in query.all() if m.is_latest]
+    query = query.limit(limit)
+    if offset:
+        query = query.offset(offset)
+    return query.all()
 
 
-class FileFilter(object):
-    """Filtering for the files API. The parameters that make sense to filter on
-    here are different enough from the ones for messages/threads that it makes
-    sense to implement this separately."""
-    def __init__(self, namespace_id, message_public_id, filename, limit,
-                 offset, db_session):
-        self.namespace_id = namespace_id
-        self.message_public_id = message_public_id
-        self.filename = filename
-        self.limit = limit
-        self.offset = offset
-        self.db_session = db_session
+def messages(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
+             any_email, thread_public_id, started_before, started_after,
+             last_message_before, last_message_after, filename, tag, limit,
+             offset, db_session):
+    query = db_session.query(Message). \
+        filter(Message.is_draft == False)
 
-        # Validate user-provided parameters.
+    thread_criteria = [Thread.namespace_id == namespace_id]
 
-        if message_public_id is not None:
-            try:
-                base36decode(message_public_id)
-            except ValueError:
-                raise ValueError('Invalid message id {}'.
-                                 format(message_public_id))
+    if thread_public_id is not None:
+        # TODO(emfree) this is a common case that we should handle
+        # separately by just fetching the thread's messages and only
+        # filtering more if needed.
+        thread_criteria.append(Thread.public_id == thread_public_id)
 
-        if filename is not None and len(filename) > 255:
-            raise ValueError('Filename parameter {} is too long'.
-                             format(filename))
+    if started_before is not None:
+        thread_criteria.append(Thread.subjectdate < started_before)
 
-    def get_files(self):
-        # Handle the case of fetching attachments on a particular message.
-        if self.message_public_id is not None:
-            message = self.db_session.query(Message).filter(
-                Message.public_id == self.message_public_id).first()
-            if not message:
-                # There can't be any results.
-                return []
+    if started_after is not None:
+        thread_criteria.append(Thread.subjectdate > started_after)
+
+    if last_message_before is not None:
+        thread_criteria.append(Thread.recentdate <
+                               last_message_before)
+
+    if last_message_after is not None:
+        thread_criteria.append(Thread.recentdate > last_message_after)
+
+    thread_predicate = and_(*thread_criteria)
+    thread_query = db_session.query(Thread).filter(thread_predicate)
+    if tag is not None:
+        thread_query = thread_query.join(TagItem).join(Tag). \
+            filter(or_(Tag.public_id == tag, Tag.name == tag),
+                   Tag.namespace_id == namespace_id)
+    thread_query = thread_query.subquery()
+
+    query = query.join(thread_query)
+
+    if subject is not None:
+        query = query.filter(Message.subject == subject)
+
+    if to_addr is not None:
+        to_query = db_session.query(Message). \
+            join(MessageContactAssociation).join(Contact). \
+            filter(MessageContactAssociation.field == 'to_addr',
+                   Contact.email_address == to_addr).subquery()
+        query = query.join(to_query)
+
+    if from_addr is not None:
+        from_query = db_session.query(MessageContactAssociation). \
+            join(Contact).filter(
+                MessageContactAssociation.field == 'from_addr',
+                Contact.email_address == from_addr).subquery()
+        query = query.join(from_query)
+
+    if cc_addr is not None:
+        cc_query = db_session.query(MessageContactAssociation). \
+            join(Contact).filter(
+                MessageContactAssociation.field == 'cc_addr',
+                Contact.email_address == cc_addr).subquery()
+        query = query.join(cc_query)
+
+    if bcc_addr is not None:
+        bcc_query = db_session.query(MessageContactAssociation). \
+            join(Contact).filter(
+                MessageContactAssociation.field == 'bcc_addr',
+                Contact.email_address == bcc_addr).subquery()
+        query = query.join(bcc_query)
+
+    if any_email is not None:
+        any_email_query = db_session.query(
+            MessageContactAssociation).join(Contact). \
+            filter(Contact.email_address == any_email).subquery()
+        query = query.join(any_email_query)
+
+    if filename is not None:
+        file_query = db_session.query(Part). \
+            filter(Part.filename == filename).subquery()
+        query = query.join(file_query)
+
+    # Eager-load some objects in order to make constructing API
+    # representations faster.
+    query = query.options(
+        joinedload(Message.parts).load_only('public_id',
+                                            'content_disposition'),
+        joinedload(Message.thread).load_only('public_id', 'discriminator'))
+
+    # TODO(emfree) we should really eager-load the namespace too
+    # (or just directly store it on the message object)
+
+    query = query.order_by(desc(Message.received_date))
+
+    query = query.limit(limit)
+    if offset:
+        query = query.offset(offset)
+
+    return query.all()
+
+
+def drafts(namespace_id, thread_public_id, limit, offset, db_session):
+    query = db_session.query(Message).filter(Message.is_draft == True)
+
+    thread_criteria = [Thread.namespace_id == namespace_id]
+
+    if thread_public_id is not None:
+        # TODO(emfree) this is a common case that we should handle
+        # separately by just fetching the thread's messages and only
+        # filtering more if needed.
+        thread_criteria.append(Thread.public_id == thread_public_id)
+
+    thread_predicate = and_(*thread_criteria)
+    thread_query = db_session.query(Thread).filter(thread_predicate)
+
+    query = query.join(thread_query.subquery())
+
+    # Eager-load some objects in order to make constructing API
+    # representations faster.
+    query = query.options(
+        joinedload(Message.parts).load_only('public_id',
+                                            'content_disposition'),
+        joinedload(Message.thread).load_only('public_id', 'discriminator'))
+
+    query = query.limit(limit)
+    if offset:
+        query = query.offset(offset)
+
+    return [m for m in query.all() if m.is_latest]
+
+
+def files(namespace_id, message_public_id, filename, limit, offset,
+          db_session):
+    # Handle the case of fetching attachments on a particular message.
+    if message_public_id is not None:
+        message = db_session.query(Message).filter(
+            Message.public_id == message_public_id).first()
+        if not message:
+            # There can't be any results.
+            return []
+        else:
+            results = message.attachments
+            if filename is not None:
+                return [r for r in results if r.filename == filename]
             else:
-                results = message.attachments
-                if self.filename is not None:
-                    return [r for r in results if r.filename == self.filename]
-                else:
-                    return results
+                return results
 
-        query = self.db_session.query(Part).filter(
-            Part.namespace_id == self.namespace_id,
-            ~Part.content_disposition.is_(None))
+    query = db_session.query(Part).filter(
+        Part.namespace_id == namespace_id,
+        ~Part.content_disposition.is_(None))
 
-        if self.filename is not None:
-            query = query.filter(Part.filename == self.filename)
+    if filename is not None:
+        query = query.filter(Part.filename == filename)
 
-        # STOPSHIP(emfree): this doesn't return files that have been uploaded
-        # but not attached to a message!
+    # STOPSHIP(emfree): this doesn't return files that have been uploaded
+    # but not attached to a message!
 
-        query = query.limit(self.limit)
-        if self.offset:
-            query = query.offset(self.offset)
-        return query.all()
+    query = query.limit(limit)
+    if offset:
+        query = query.offset(offset)
+    return query.all()

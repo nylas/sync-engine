@@ -3,6 +3,7 @@ import os
 import zerorpc
 from flask import request, g, Blueprint, make_response, Response
 from flask import jsonify as flask_jsonify
+from flask.ext.restful import reqparse
 from sqlalchemy import asc
 from sqlalchemy.orm.exc import NoResultFound
 from werkzeug.exceptions import default_exceptions
@@ -11,9 +12,11 @@ from werkzeug.exceptions import HTTPException
 from inbox.models import (Message, Block, Thread, Namespace, Webhook,
                           Tag, Contact)
 from inbox.api.kellogs import APIEncoder
-from inbox.api.filtering import Filter, FileFilter
+from inbox.api import filtering
 from inbox.api.validation import (InputError, get_tags, get_attachments,
-                                  get_thread, validate_public_id)
+                                  get_thread, valid_public_id,
+                                  timestamp, bounded_str, strict_parse_args,
+                                  limit, ValidatableArgument)
 from inbox.config import config
 from inbox import contacts, sendmail
 from inbox.log import get_logger
@@ -37,7 +40,7 @@ app = Blueprint(
     __name__,
     url_prefix='/n/<namespace_public_id>')
 
-# Configure mimietype -> extension map
+# Configure mimetype -> extension map
 # TODO perhaps expand to encompass non-standard mimetypes too
 # see python mimetypes library
 common_extensions = {}
@@ -73,38 +76,10 @@ def start():
         return err(404, "Couldn't find namespace with id `{0}` ".format(
             g.namespace_public_id))
 
-    try:
-        g.limit = int(request.args.get('limit', DEFAULT_LIMIT))
-        g.offset = int(request.args.get('offset', 0))
-    except ValueError:
-        return err(400, 'limit and offset parameters must be integers')
-    if g.limit < 0 or g.offset < 0:
-        return err(400, 'limit and offset parameters must be nonnegative '
-                        'integers')
-    if g.limit > MAX_LIMIT:
-        return err(400, 'cannot request more than {} resources at once.'.
-                   format(MAX_LIMIT))
-    try:
-        g.api_filter = Filter(
-            namespace_id=g.namespace.id,
-            subject=request.args.get('subject'),
-            thread_public_id=request.args.get('thread'),
-            to_addr=request.args.get('to'),
-            from_addr=request.args.get('from'),
-            cc_addr=request.args.get('cc'),
-            bcc_addr=request.args.get('bcc'),
-            any_email=request.args.get('any_email'),
-            started_before=request.args.get('started_before'),
-            started_after=request.args.get('started_after'),
-            last_message_before=request.args.get('last_message_before'),
-            last_message_after=request.args.get('last_message_after'),
-            filename=request.args.get('filename'),
-            tag=request.args.get('tag'),
-            limit=g.limit,
-            offset=g.offset,
-            db_session=g.db_session)
-    except ValueError as e:
-        return err(400, e.message)
+    g.parser = reqparse.RequestParser(argument_class=ValidatableArgument)
+    g.parser.add_argument('limit', default=DEFAULT_LIMIT, type=limit,
+                          location='args')
+    g.parser.add_argument('offset', default=0, type=int, location='args')
 
 
 @app.after_request
@@ -143,6 +118,13 @@ def handle_not_implemented_error(error):
     return response
 
 
+@app.errorhandler(InputError)
+def handle_input_error(error):
+    response = flask_jsonify(message=str(error), type='api_error')
+    response.status_code = 400
+    return response
+
+
 #
 # General namespace info
 #
@@ -163,7 +145,7 @@ def tag_query_api():
 @app.route('/tags/<public_id>', methods=['GET', 'PUT'])
 def tag_read_update_api(public_id):
     try:
-        validate_public_id(public_id)
+        valid_public_id(public_id)
         tag = g.db_session.query(Tag).filter(
             Tag.public_id == public_id,
             Tag.namespace_id == g.namespace.id).one()
@@ -209,7 +191,43 @@ def tag_create_api():
 #
 @app.route('/threads/')
 def thread_query_api():
-    return g.encoder.jsonify(g.api_filter.get_threads())
+    g.parser.add_argument('subject', type=bounded_str, location='args')
+    g.parser.add_argument('to', type=bounded_str, location='args')
+    g.parser.add_argument('from', type=bounded_str, location='args')
+    g.parser.add_argument('cc', type=bounded_str, location='args')
+    g.parser.add_argument('bcc', type=bounded_str, location='args')
+    g.parser.add_argument('any_email', type=bounded_str, location='args')
+    g.parser.add_argument('started_before', type=timestamp, location='args')
+    g.parser.add_argument('started_after', type=timestamp, location='args')
+    g.parser.add_argument('last_message_before', type=timestamp,
+                          location='args')
+    g.parser.add_argument('last_message_after', type=timestamp,
+                          location='args')
+    g.parser.add_argument('filename', type=bounded_str, location='args')
+    g.parser.add_argument('thread', type=valid_public_id, location='args')
+    g.parser.add_argument('tag', type=bounded_str, location='args')
+    args = strict_parse_args(g.parser, request.args)
+
+    threads = filtering.threads(
+        namespace_id=g.namespace.id,
+        subject=args['subject'],
+        thread_public_id=args['thread'],
+        to_addr=args['to'],
+        from_addr=args['from'],
+        cc_addr=args['cc'],
+        bcc_addr=args['bcc'],
+        any_email=args['any_email'],
+        started_before=args['started_before'],
+        started_after=args['started_after'],
+        last_message_before=args['last_message_before'],
+        last_message_after=args['last_message_after'],
+        filename=args['filename'],
+        tag=args['tag'],
+        limit=args['limit'],
+        offset=args['offset'],
+        db_session=g.db_session)
+
+    return g.encoder.jsonify(threads)
 
 
 @app.route('/threads/<public_id>')
@@ -286,7 +304,42 @@ def thread_api_delete(public_id):
 ##
 @app.route('/messages/')
 def message_query_api():
-    return g.encoder.jsonify(g.api_filter.get_messages())
+    g.parser.add_argument('subject', type=bounded_str, location='args')
+    g.parser.add_argument('to', type=bounded_str, location='args')
+    g.parser.add_argument('from', type=bounded_str, location='args')
+    g.parser.add_argument('cc', type=bounded_str, location='args')
+    g.parser.add_argument('bcc', type=bounded_str, location='args')
+    g.parser.add_argument('any_email', type=bounded_str, location='args')
+    g.parser.add_argument('started_before', type=timestamp, location='args')
+    g.parser.add_argument('started_after', type=timestamp, location='args')
+    g.parser.add_argument('last_message_before', type=timestamp,
+                          location='args')
+    g.parser.add_argument('last_message_after', type=timestamp,
+                          location='args')
+    g.parser.add_argument('filename', type=bounded_str, location='args')
+    g.parser.add_argument('thread', type=valid_public_id, location='args')
+    g.parser.add_argument('tag', type=bounded_str, location='args')
+    args = strict_parse_args(g.parser, request.args)
+    messages = filtering.messages(
+        namespace_id=g.namespace.id,
+        subject=args['subject'],
+        thread_public_id=args['thread'],
+        to_addr=args['to'],
+        from_addr=args['from'],
+        cc_addr=args['cc'],
+        bcc_addr=args['bcc'],
+        any_email=args['any_email'],
+        started_before=args['started_before'],
+        started_after=args['started_after'],
+        last_message_before=args['last_message_before'],
+        last_message_after=args['last_message_after'],
+        filename=args['filename'],
+        tag=args['tag'],
+        limit=args['limit'],
+        offset=args['offset'],
+        db_session=g.db_session)
+
+    return g.encoder.jsonify(messages)
 
 
 @app.route('/messages/<public_id>', methods=['GET', 'PUT'])
@@ -329,17 +382,20 @@ def message_api(public_id):
 ##
 @app.route('/contacts/', methods=['GET'])
 def contact_search_api():
-    filter = request.args.get('filter', '')
-    order = request.args.get('order_by')
-    if order == 'rank':
+    g.parser.add_argument('filter', type=str, default='', location='args')
+    # STOPSHIP(emfree): validate expected actual values
+    g.parser.add_argument('order_by', type=str, location='args')
+    args = strict_parse_args(g.parser, request.args)
+    if args.get('order_by') == 'rank':
         results = contacts.search_util.search(g.db_session,
                                               g.namespace.account_id, filter,
-                                              g.limit, g.offset)
+                                              args['limit'], args['offset'])
     else:
         results = g.db_session.query(Contact). \
             filter(Contact.account_id == g.namespace.account_id,
                    Contact.source == 'local'). \
-            order_by(asc(Contact.id)).limit(g.limit).offset(g.offset).all()
+            order_by(asc(Contact.id)).limit(args['limit']). \
+            offset(args['offset']).all()
 
     return g.encoder.jsonify(results)
 
@@ -384,18 +440,18 @@ def contact_delete_api(public_id):
 @app.route('/files/', methods=['GET'])
 def files_api():
     # TODO perhaps return just if content_disposition == 'attachment'
-    try:
-        file_filter = FileFilter(
-            namespace_id=g.namespace.id,
-            message_public_id=request.args.get('message'),
-            filename=request.args.get('filename'),
-            limit=int(request.args.get('limit', DEFAULT_LIMIT)),
-            offset=int(request.args.get('offset', 0)),
-            db_session=g.db_session)
-    except ValueError as e:
-        return err(400, e.message)
+    g.parser.add_argument('filename', type=bounded_str, location='args')
+    g.parser.add_argument('message', type=valid_public_id, location='args')
+    args = strict_parse_args(g.parser, request.args)
+    files = filtering.files(
+        namespace_id=g.namespace.id,
+        message_public_id=args['message'],
+        filename=args['filename'],
+        limit=args['limit'],
+        offset=args['offset'],
+        db_session=g.db_session)
 
-    return g.encoder.jsonify(file_filter.get_files())
+    return g.encoder.jsonify(files)
 
 
 @app.route('/files/<public_id>')
@@ -566,7 +622,12 @@ def webhooks_delete_api(public_id):
 
 @app.route('/drafts/')
 def draft_query_api():
-    return g.encoder.jsonify(g.api_filter.get_drafts())
+    g.parser.add_argument('thread', type=valid_public_id,
+                          location='args')
+    args = strict_parse_args(g.parser, request.args)
+    drafts = filtering.drafts(g.namespace.id, args['thread'], args['limit'],
+                              args['offset'], g.db_session)
+    return g.encoder.jsonify(drafts)
 
 
 @app.route('/drafts/<public_id>', methods=['GET'])
@@ -720,19 +781,12 @@ def draft_send_api():
 
 @app.route('/sync/events')
 def sync_events():
-    start_stamp = request.args.get('stamp')
-    try:
-        limit = int(request.args.get('limit', 100))
-    except ValueError:
-        return err(400, 'Invalid limit parameter')
-    if limit <= 0:
-        return err(400, 'Invalid limit parameter')
-    if start_stamp is None:
-        return err(400, 'No stamp parameter in sync request.')
-
+    g.parser.add_argument('stamp', type=valid_public_id, location='args',
+                          required=True)
+    args = strict_parse_args(g.parser, request.args)
     try:
         results = client_sync.get_entries_from_public_id(
-            g.namespace.id, start_stamp, g.db_session, limit)
+            g.namespace.id, args['stamp'], g.db_session, args['limit'])
         return g.encoder.jsonify(results)
     except ValueError:
         return err(404, 'Invalid stamp parameter')
