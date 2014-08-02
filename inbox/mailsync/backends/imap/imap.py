@@ -699,11 +699,7 @@ def imap_check_flags(account_id, folder_name, log, poll_frequency,
                                               folder_name))
             to_refresh = sorted(remote_uids & local_uids)[-refresh_flags_max:]
 
-            update_metadata(crispin_client,
-                            db_session,
-                            log,
-                            folder_name,
-                            to_refresh,
+            update_metadata(crispin_client, log, folder_name, to_refresh,
                             syncmanager_lock)
 
             update_uid_counts(db_session,
