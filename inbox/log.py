@@ -5,13 +5,12 @@ Mostly based off http://www.structlog.org/en/0.4.1/standard-library.html.
 
 """
 import sys
-import socket
 import traceback
 import logging
 import logging.handlers
 
 import raven
-import requests
+import raven.processors
 import colorlog
 import structlog
 from structlog._frames import _find_first_app_frame_and_name
@@ -131,7 +130,8 @@ def configure_logging(is_prod):
     if config.get('SENTRY_EXCEPTIONS'):
         sentry_dsn = config.get_required('SENTRY_DSN')
         global sentry_client
-        sentry_client = raven.Client(sentry_dsn)
+        sentry_client = raven.Client(
+            sentry_dsn, processors=('inbox.log.TruncatingProcessor',))
 
 
 def safe_format_exception(etype, value, tb, limit=None):
@@ -152,29 +152,13 @@ def safe_format_exception(etype, value, tb, limit=None):
     return '\t'.join(list)
 
 
-def email_exception(logger, account_id, etype, evalue, tb):
-    """ Send stringified exception to configured email address. """
-    exc_email_addr = config.get_required('EXCEPTION_EMAIL_ADDRESS')
-    mailgun_api_endpoint = config.get_required('MAILGUN_API_ENDPOINT')
-    mailgun_api_key = config.get_required('MAILGUN_API_KEY')
-
-    account_str = 'account_id {}: '.format(account_id) if account_id else ''
-    r = requests.post(
-        mailgun_api_endpoint,
-        auth=('api', mailgun_api_key),
-        data={'from': "Inbox App Server <{}>".format(exc_email_addr),
-              'to': [exc_email_addr],
-              'subject': "Uncaught error! {} {}".format(etype, evalue),
-              'text': u"""
-    Something went wrong on {}. {} Please investigate. :)
-
-    {}
-
-    """.format(socket.getfqdn(), account_str,
-               safe_format_exception(etype, evalue, tb))})
-    if r.status_code != requests.codes.ok:
-        logger.error("Couldn't send exception email",
-                     status_code=r.status_code, response=r.text)
+class TruncatingProcessor(raven.processors.Processor):
+    def process(self, data, **kwargs):
+        if 'exception' in data:
+            if 'values' in data['exception']:
+                for item in data['exception']['values']:
+                    item['value'] = item['value'][:MAX_EXCEPTION_LENGTH]
+        return data
 
 
 def log_uncaught_errors(logger=None, account_id=None):
@@ -188,8 +172,6 @@ def log_uncaught_errors(logger=None, account_id=None):
     """
     logger = logger or get_logger()
     logger.error('Uncaught error', exc_info=True)
-    if config.get('EMAIL_EXCEPTIONS'):
-        email_exception(logger, account_id, *sys.exc_info())
     if config.get('SENTRY_EXCEPTIONS'):
         user_data = {'account_id': account_id}
         sentry_client.captureException(extra=user_data)
