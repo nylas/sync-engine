@@ -21,6 +21,11 @@ from inbox.basicauth import NotSupportedError
 
 
 def handler_from_provider(provider):
+    # TODO: Console auth doesn't have support for handling unknown providers
+    # and just trying eas first with a fallback, so just assume EAS for now.
+    # -cg3
+    if provider == 'unknown':
+        provider = 'eas'
     auth_mod = module_registry.get(provider)
 
     if auth_mod is not None:
@@ -34,10 +39,5 @@ def handler_from_email(email_address):
         user, domain = email_address.split('@')
         email_address = user + '@exchange.mit.edu'
 
-    # TODO: Console auth doesn't have support for handling unknown providers
-    # and just trying eas first with a fallback, so just assume EAS for now.
-    # -cg3
     provider = provider_from_address(email_address)
-    if provider == "unknown":
-        provider = "eas"
     return handler_from_provider(provider)
