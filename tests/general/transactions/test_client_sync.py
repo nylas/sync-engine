@@ -10,7 +10,7 @@ def test_invalid_input(api_client):
 
     sync_response = api_client.client.get(api_client.full_path(
         '/sync/events?stamp={}'.format('fake stamp'), 1))
-    assert sync_response.status_code == 404
+    assert sync_response.status_code == 400
 
 
 def test_event_generation(api_client):

@@ -102,3 +102,8 @@ def test_ordering(api_client):
     ordered_results = api_client.get_data('/messages')
     ordered_dates = [result['date'] for result in ordered_results]
     assert ordered_dates == sorted(ordered_dates, reverse=True)
+
+
+def test_strict_argument_parsing(api_client):
+    r = api_client.client.get(api_client.full_path('/threads?foo=bar'))
+    assert r.status_code == 400

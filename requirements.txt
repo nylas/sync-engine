@@ -42,3 +42,4 @@ cssselect==0.9.1  # For talon
 -e git://github.com/mailgun/talon.git@master#egg=talon
 raven==5.0.0
 simplejson==3.6.0
+Flask-RESTful==0.2.12

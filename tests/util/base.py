@@ -96,7 +96,7 @@ class TestAPIClient(object):
         self.client = test_client
         self.ns_public_ids = {}
 
-    def full_path(self, path, ns_id):
+    def full_path(self, path, ns_id=1):
         """For testing purposes, replace a path such as '/tags' by
         '/n/<ns_id>/tags', where <ns_id> is the id of the first result of a
         call to '/n/'."""
