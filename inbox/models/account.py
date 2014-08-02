@@ -133,22 +133,26 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
                  email=self.email_address,
                  provider=self.provider,
                  is_enabled=self.sync_enabled,
-                 state=self.sync_state)
+                 state=self.sync_state,
+                 sync_host=self.sync_host)
         d.update(self._sync_status or {})
 
         return d
 
-    def start_sync(self, sync_host):
-        self.sync_host = sync_host
+    def start_sync(self, sync_host=None):
+        if sync_host:
+            self.sync_host = sync_host
 
-        self._sync_status['sync_type'] = 'new' if self.sync_state is None else\
-            'resumed'
+            self._sync_status['sync_type'] = 'new' if self.sync_state is None else\
+                'resumed'
 
-        self.sync_state = 'running'
+            self.sync_state = 'running'
 
-        self._sync_status['sync_start_time'] = datetime.utcnow()
-        self._sync_status['sync_end_time'] = None
-        self._sync_status['sync_error'] = None
+            self._sync_status['sync_start_time'] = datetime.utcnow()
+            self._sync_status['sync_end_time'] = None
+            self._sync_status['sync_error'] = None
+        else:
+            self.sync_state = None
 
     def stop_sync(self):
         """ set a flag for the monitor to stop the sync."""

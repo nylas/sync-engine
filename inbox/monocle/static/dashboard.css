@@ -108,6 +108,12 @@ th.enabled, td.enabled {
 th.state, td.state {
   text-align: center;
 }
+th.host, td.host {
+  text-align: center;
+}
+th.type, td.type {
+  text-align: center;
+}
 
 th.start, th.end {
   min-width: 125px;

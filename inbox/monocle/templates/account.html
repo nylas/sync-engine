@@ -3,6 +3,8 @@
 {% block title %} Monocle - Account {{ account.id }} {% endblock %}
 
 {% block content %}
+<a href="/accounts" style="position: absolute; left: 10px; top: 10px;"><button type="button" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-arrow-left"></span> Back to Accounts</button></a>
+
 <div id="account-info">
   <b>Account Info:</b>
   <div class="info-item">
@@ -16,6 +18,10 @@
   <div class="info-item">
       <div class="info-name">Provider:</div>
       <div class="info-value">{{ account.provider }}</div>
+  </div>
+  <div class="info-item">
+      <div class="info-name">Sync Host:</div>
+      <div class="info-value">{{ account.sync_host }} &nbsp;</div>
   </div>
   <div class="info-item">
       <div class="info-name">State:</div>
@@ -123,5 +129,5 @@
       clearInterval(callback);
   });
 </script>
-    <a href="/accounts"><button type="button" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-arrow-left"></span> Back to Accounts</button></a>
+<a href="/accounts"><button type="button" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-arrow-left"></span> Back to Accounts</button></a>
 {% endblock %}

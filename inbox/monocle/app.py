@@ -1,6 +1,4 @@
 #!/usr/bin/python
-import platform
-from subprocess import call
 import json
 import datetime
 
@@ -32,7 +30,7 @@ def finish(response):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('accounts.html')
 
 
 @app.route('/accounts', methods=['GET'])
@@ -62,19 +60,16 @@ def account(account_id):
         return err(404, 'No account with id `{0}`'.format(account_id))
 
     if 'action' in request.args:
-        root_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                 '..', '..')
-        bin_path = os.path.abspath(os.path.join(root_path, 'bin'))
-        inbox_sync = os.path.join(bin_path, 'inbox-sync')
-
         action = request.args.get('action', None)
         if action == 'stop':
             if account.sync_enabled:
-                print "stopping: ", account_id
                 account.stop_sync()
+                g.db_session.add(account)
+                g.db_session.commit()
         elif action == 'start':
-            print "starting: ", account_id
-            account.start_sync(platform.node())
+            account.start_sync()
+            g.db_session.add(account)
+            g.db_session.commit()
 
     return _render_account(account)
 
@@ -101,6 +96,8 @@ class DateTimeJSONEncoder(json.JSONEncoder):
 
 
 if __name__ == '__main__':
+    from setproctitle import setproctitle
     import os
+    setproctitle('monocle')
     os.environ['DEBUG'] = 'true' if app.debug else 'false'
     app.run(host='127.0.0.1')

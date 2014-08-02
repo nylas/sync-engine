@@ -28,15 +28,16 @@
 <table class='table table-bordered table-condensed table-hover' id='status_table'>
   <thead>
     <tr>
-      <th class="account_id">Id:</th>
-      <th class="email">Email Address:</th>
-      <th class="provider">Provider:</th>
+      <th class="account_id">Id</th>
+      <th class="email">Email Address</th>
+      <th class="provider">Provider</th>
+      <th class="host">Sync Host</th>
       <th class="enabled">Enabled?</th>
       <th class="state">State</th>
-      <th class="start">Start Time:</th>
-      <th class="end">End Time:<br></th>
-      <th class="type">Type:</th>
-      <th class="error">Sync Error:</th>
+      <th class="start">Start Time</th>
+      <th class="end">End Time</th>
+      <th class="type">Type</th>
+      <th class="error">Sync Error</th>
     </tr>
   </thead>
   <tbody>
@@ -55,9 +56,10 @@
       col_2: 'select',
       col_3: 'select',
       col_4: 'select',
-      col_5: 'none',
+      col_5: 'select',
       col_6: 'none',
-      col_7: 'none'
+      col_7: 'none',
+      col_8: 'none',
   };
   var callback_fn = function() {
       $.getJSON(
@@ -75,6 +77,7 @@
               content += '<td class="account_id">' + link + '</td>';
               content += '<td class="email">' + item.email + '</td>';
               content += '<td class="provider">' + item.provider + '</td>';
+              content += '<td class="host">' + item.sync_host + '</td>';
               content += '<td class="enabled">' + (item.is_enabled ? 'enabled' : 'not enabled') + '</td>';
               content += '<td class="state status-' + (item.state == 'running' ? "ok" : "bad") + '">' + (item.state || '') + '</td>';
               content += '<td class="start">' + (time_ago(item.sync_start_time) || '') + '</td>';
