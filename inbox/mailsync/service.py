@@ -11,6 +11,7 @@ from inbox.contacts.remote_sync import ContactSync
 from inbox.log import get_logger
 from inbox.models.session import session_scope
 from inbox.models import Account
+from inbox.util.concurrency import retry_with_logging
 
 from inbox.mailsync.backends import module_registry
 
@@ -46,36 +47,36 @@ class SyncService(Process):
         Process.__init__(self)
 
     def run(self):
+        setproctitle('inbox-sync-{}'.format(self.cpu_id))
+        retry_with_logging(self._run_impl, self.log)
+
+    def _run_impl(self):
         """
         Polls for newly registered accounts and checks for start/stop commands.
 
         """
-        setproctitle('inbox-sync-{}'.format(self.cpu_id))
         while True:
-            try:
-                with session_scope() as db_session:
-                    start_accounts = \
-                        [id_ for id_, in db_session.query(Account.id).filter(
-                            or_(Account.sync_state.is_(None),
-                                Account.sync_host == platform.node()),
-                            func.mod(Account.id, self.total_cpus)
-                            == self.cpu_id)]
-                    for account_id in start_accounts:
-                        if account_id not in self.monitors:
-                            self.log.info('sync service starting sync',
-                                          account_id=account_id)
-                            self.start_sync(account_id)
-
-                    stop_accounts = set(self.monitors.keys()) - \
-                        set(start_accounts)
-                    for account_id in stop_accounts:
-                        self.log.info('sync service stopping sync',
+            with session_scope() as db_session:
+                start_accounts = \
+                    [id_ for id_, in db_session.query(Account.id).filter(
+                        or_(Account.sync_state.is_(None),
+                            Account.sync_host == platform.node()),
+                        func.mod(Account.id, self.total_cpus)
+                        == self.cpu_id)]
+                for account_id in start_accounts:
+                    if account_id not in self.monitors:
+                        self.log.info('sync service starting sync',
                                       account_id=account_id)
-                        self.stop_sync(account_id)
+                        self.start_sync(account_id)
 
-                gevent.sleep(self.poll_interval)
-            except (OperationalError, TimeoutError) as e:
-                self.log.error("Database error in service poll loop", error=e)
+                stop_accounts = set(self.monitors.keys()) - \
+                    set(start_accounts)
+                for account_id in stop_accounts:
+                    self.log.info('sync service stopping sync',
+                                  account_id=account_id)
+                    self.stop_sync(account_id)
+
+            gevent.sleep(self.poll_interval)
 
     def start_sync(self, account_id):
         """
