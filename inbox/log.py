@@ -161,6 +161,11 @@ class TruncatingProcessor(raven.processors.Processor):
         return data
 
 
+def sentry_alert(*args, **kwargs):
+    if config.get('SENTRY_EXCEPTIONS'):
+        sentry_client.captureException(*args, **kwargs)
+
+
 def log_uncaught_errors(logger=None, account_id=None):
     """
     Helper to log uncaught exceptions.
@@ -172,6 +177,5 @@ def log_uncaught_errors(logger=None, account_id=None):
     """
     logger = logger or get_logger()
     logger.error('Uncaught error', exc_info=True)
-    if config.get('SENTRY_EXCEPTIONS'):
-        user_data = {'account_id': account_id}
-        sentry_client.captureException(extra=user_data)
+    user_data = {'account_id': account_id}
+    sentry_alert(extra=user_data)
