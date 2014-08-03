@@ -3,16 +3,12 @@
 #### The next-generation email platform.
 
 
-Inbox is a set of tools to make it simple and quick to develop apps and services on top of email.
-
-## Getting Started
-
-You can run Inbox almost anywhere. We've successfully built images for Docker, VMware Fusion, VirtualBox, AWS, and DigitalOcean. The easiest way to get started is to install from source within VirtualBox.
+Inbox is a set of tools to make it simple to develop apps and services on top of email. This includes a modern RESTful API that return JSON and Unicode objects. See the [full API documentation](https://www.inboxapp.com/docs/api#overview) for more details.
 
 
-### Install from source
 
-Here's how to set up a development environment running on your local machine:
+### Set up
+
 
 1. [Install VirtualBox](https://www.virtualbox.org/wiki/Downloads)
 
@@ -40,10 +36,27 @@ Here's how to set up a development environment running on your local machine:
 
 And _voilà_! Auth an account via the commandline to start syncing:
 
-```
-  bin/inbox-auth ben.bitdiddle1861@gmail.com
-```
+    bin/inbox-auth ben.bitdiddle1861@gmail.com
 
+
+
+## Provider compatibility
+
+|  Provider  	|  Status      			| 	Details  |
+|:------------	|:--------------------:	|:----------|
+| Gmail 		|  :white_check_mark:	| Supported   |
+| Google Apps 		|  :white_check_mark:	| Supported   |
+| Microsoft Exchange | :large_blue_diamond: | Included in the [Inbox Developer Program](https://www.inboxapp.com/features)  |
+| Yahoo! Mail   |  :white_check_mark:   | Supported  |
+| Hotmail/Outlook.com  |  :warning:   | In development |
+| AOL 	|  :warning: 			|  In development 	|
+| Cyrus (Fastmail)	|  :warning:	|  In development	|
+| iCloud |  :warning:	|  In development	|
+| Dovecot (Gandhi) | :warning: | In development |
+| Zimbra  | :no_entry:  | Not implemented |
+| Courier  | :no_entry:  | Not implemented |
+
+Please [create an issue](https://github.com/inboxapp/inbox/issues) if you use a mail provider not listed here.
 
 ## Contributing
 
@@ -53,7 +66,7 @@ discussion. We also hang out in `##inbox` on `irc.freenode.net`, or you can emai
 [help@inboxapp.com](mailto:help@inboxapp.com).
 
 Please sign the [Contributor License Agreement](https://www.inboxapp.com/cla.html)
-before submitting patches. (It's similar to other projects, like NodeJS.)
+before submitting patches. (It's similar to other projects, like NodeJS or Meteor.)
 
 We maintain strict code style, following [pep8](http://legacy.python.org/dev/peps/pep-0008/), the [Google Python style
 guide](http://google-styleguide.googlecode.com/svn/trunk/pyguide.html), and [numpy docstring
