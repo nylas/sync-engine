@@ -45,7 +45,7 @@ def ns_all():
 def home():
     return """
 <html><body>
-    Check out the <strong><pre style="display:inline">docs</pre></strong>
+    Check out the <strong><pre style="display:inline;">docs</pre></strong>
     folder for how to use this API.
 </body></html>
 """
