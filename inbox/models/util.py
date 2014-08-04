@@ -34,8 +34,8 @@ def reconcile_message(db_session, log, inbox_uid, new_msg):
     # not by this client i.e. the Inbox created version is not present in the
     # local data store.
     except NoResultFound:
-        log.error('NoResultFound for this message, even though '
-                  'it has the inbox-sent header: {0}'.format(inbox_uid))
+        log.warning('NoResultFound for this message, even though '
+                    'it has the inbox-sent header: {0}'.format(inbox_uid))
 
     except MultipleResultsFound:
         log.error('MultipleResultsFound when reconciling message with '
