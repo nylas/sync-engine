@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 import os
+import click
 import sqlalchemy
 
 from alembic.config import Config as alembic_config
 from alembic import command as alembic_command
 
-from inbox.config import engine_uri
+from inbox.config import engine_uri, config
 
 from inbox.ignition import init_db
 from inbox.ignition import main_engine
@@ -17,35 +18,53 @@ basic_engine = sqlalchemy.create_engine(
     engine_uri(), listeners=[ForceStrictMode()], echo=False)
 
 
-print 'Creating database: test'
-basic_engine.execute(
-    "CREATE DATABASE IF NOT EXISTS test DEFAULT CHARACTER SET utf8mb4 "
-    "DEFAULT COLLATE utf8mb4_general_ci")
-basic_engine.execute("GRANT ALL PRIVILEGES ON test.* TO inboxtest@localhost "
-                     "IDENTIFIED BY 'inboxtest'")
+@click.command()
+@click.option('--prod/--no-prod', default=False,
+              help='Disable creating the test database for production '
+                   'deployments')
+def main(prod):
 
-print 'Creating database: inbox'
-basic_engine.execute("CREATE DATABASE IF NOT EXISTS inbox DEFAULT CHARACTER "
-                     "SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci;")
-basic_engine.execute("GRANT ALL PRIVILEGES ON inbox.* TO inbox@localhost "
-                     "IDENTIFIED BY 'inbox'")
+    if not prod:
+        print 'Creating database: test'
+        basic_engine.execute(
+            "CREATE DATABASE IF NOT EXISTS test DEFAULT CHARACTER SET utf8mb4 "
+            "DEFAULT COLLATE utf8mb4_general_ci")
+        basic_engine.execute("GRANT ALL PRIVILEGES ON test.* TO "
+                             "inboxtest@localhost IDENTIFIED BY 'inboxtest'")
 
-init_db()
+    mysql_user = config.get_required('MYSQL_USER')
+    mysql_database = config.get_required('MYSQL_DATABASE')
 
-# Stamp initial alembic revision
-if inbox_db_engine.dialect.has_table(inbox_db_engine, "alembic_version"):
-    res = inbox_db_engine.execute("SELECT version_num from alembic_version")
-    current_revision = [r for r in res][0][0]
-    assert current_revision, 'Need current revision in alembic_version table.'
-    print 'Already revisioned by alembic {0}'.format(current_revision)
-else:
-    alembic_ini_filename = 'alembic.ini'  # top-level, with setup.sh
-    assert os.path.isfile(alembic_ini_filename), \
-        'Must have alembic.ini file at {0}'.format(alembic_ini_filename)
-    alembic_cfg = alembic_config(alembic_ini_filename)
+    print 'Creating database: {}'.format(mysql_database)
+    basic_engine.execute("CREATE DATABASE IF NOT EXISTS {} DEFAULT CHARACTER "
+                         "SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci;".
+                         format(mysql_database))
+    basic_engine.execute("GRANT ALL PRIVILEGES ON {mysql_database}.* TO "
+                         "{mysql_user}@localhost IDENTIFIED BY '{mysql_user}'".
+                         format(mysql_user=mysql_user,
+                                mysql_database=mysql_database))
 
-    print 'Stamping with alembic revision'
-    alembic_command.stamp(alembic_cfg, "head")
+    init_db()
+
+    # Stamp initial alembic revision
+    if inbox_db_engine.dialect.has_table(inbox_db_engine, "alembic_version"):
+        res = inbox_db_engine.execute(
+            "SELECT version_num from alembic_version")
+        current_revision = [r for r in res][0][0]
+        assert current_revision, \
+            'Need current revision in alembic_version table.'
+        print 'Already revisioned by alembic {0}'.format(current_revision)
+    else:
+        alembic_ini_filename = 'alembic.ini'  # top-level, with setup.sh
+        assert os.path.isfile(alembic_ini_filename), \
+            'Must have alembic.ini file at {0}'.format(alembic_ini_filename)
+        alembic_cfg = alembic_config(alembic_ini_filename)
+
+        print 'Stamping with alembic revision'
+        alembic_command.stamp(alembic_cfg, "head")
+
+    print 'Finished setting up database'
 
 
-print 'Finished setting up database'
+if __name__ == '__main__':
+    main()
