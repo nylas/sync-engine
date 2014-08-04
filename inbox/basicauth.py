@@ -2,6 +2,9 @@
 import sys
 import getpass
 
+AUTH_TYPES = {'gmail': 'oauth', 'outlook': 'oauth', 'aol': 'password',
+              'yahoo': 'password', 'eas': 'password'}
+
 # Certain password auths flows (like EAS) provide their own message
 default_message = 'Password for {0} (hidden): '
 

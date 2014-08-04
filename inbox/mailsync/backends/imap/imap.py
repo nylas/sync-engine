@@ -39,14 +39,14 @@ Here's the state machine:
 
         -----
         |   ----------------         ----------------------
-        ∨   | initial sync | <-----> | initial uidinvalid |
+        â¨   | initial sync | <-----> | initial uidinvalid |
 ----------  ----------------         ----------------------
 | finish |          |
-----------          ∨
+----------          â¨
         ^   ----------------         ----------------------
         |---|      poll    | <-----> |   poll uidinvalid  |
             ----------------         ----------------------
-            |  ∧
+            |  â§
             ----
 
 We encapsulate sync engine instances in greenlets for cooperative coroutine
@@ -124,7 +124,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             periodically.
 
     """
-    def __init__(self, account_id, namespace_id, email_address, provider_name,
+    def __init__(self, account_id, namespace_id, email_address, provider,
                  heartbeat=1, poll_frequency=300,
                  retry_fail_classes=[], refresh_flags_max=2000):
 
@@ -145,9 +145,8 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                 'finish': lambda c, s, l, f, st: 'finish',
             }
 
-        BaseMailSyncMonitor.__init__(self, account_id, email_address,
-                                     provider_name, heartbeat,
-                                     retry_fail_classes)
+        BaseMailSyncMonitor.__init__(self, account_id, email_address, provider,
+                                     heartbeat, retry_fail_classes)
 
     def sync(self):
         """ Start per-folder syncs. Only have one per-folder sync in the
@@ -185,7 +184,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                 thread = ImapFolderSyncMonitor(self.account_id, folder_name,
                                                folder_id_for[folder_name],
                                                self.email_address,
-                                               self.provider_name,
+                                               self.provider,
                                                self.shared_state,
                                                self.folder_state_handlers,
                                                self.retry_fail_classes)
@@ -207,8 +206,8 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
 class ImapFolderSyncMonitor(Greenlet):
     """ Per-folder sync engine. """
 
-    def __init__(self, account_id, folder_name, folder_id, email_address,
-                 provider_name, shared_state, state_handlers,
+    def __init__(self, account_id, folder_name, folder_id,
+                 email_address, provider, shared_state, state_handlers,
                  retry_fail_classes):
         self.account_id = account_id
         self.folder_name = folder_name
@@ -239,11 +238,10 @@ class ImapFolderSyncMonitor(Greenlet):
         # anyway.
         with session_scope(ignore_soft_deletes=False) as db_session:
             try:
-                state = ImapFolderSyncStatus.state
                 saved_folder_status = db_session.query(ImapFolderSyncStatus)\
                     .filter_by(account_id=self.account_id,
                                folder_id=self.folder_id).options(
-                        load_only(state)).one()
+                                   load_only(ImapFolderSyncStatus.state)).one()
             except NoResultFound:
                 saved_folder_status = ImapFolderSyncStatus(
                     account_id=self.account_id, folder_id=self.folder_id)

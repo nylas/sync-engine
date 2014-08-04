@@ -61,7 +61,7 @@ GMessage = namedtuple('GMessage', 'uid g_metadata flags labels')
 
 
 class GmailSyncMonitor(ImapSyncMonitor):
-    def __init__(self, account_id, namespace_id, email_address, provider_name,
+    def __init__(self, account_id, namespace_id, email_address, provider,
                  heartbeat=1, poll_frequency=300):
         self.folder_state_handlers = {
             'initial': initial_sync,
@@ -72,7 +72,7 @@ class GmailSyncMonitor(ImapSyncMonitor):
         }
 
         ImapSyncMonitor.__init__(self, account_id, namespace_id, email_address,
-                                 provider_name, heartbeat=1,
+                                 provider, heartbeat=1,
                                  poll_frequency=poll_frequency,
                                  retry_fail_classes=[GmailSettingError])
 
@@ -261,7 +261,7 @@ def gmail_download_and_commit_uids(crispin_client, log, folder_name, uids,
     return len(new_imapuids)
 
 
-def check_new_g_thrids(account_id, provider_name, folder_name, log,
+def check_new_g_thrids(account_id, provider, folder_name, log,
                        message_download_stack, poll_frequency,
                        syncmanager_lock):
     """

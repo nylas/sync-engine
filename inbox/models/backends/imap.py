@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import (Column, Integer, BigInteger, Boolean, Enum,
+from sqlalchemy import (Column, Integer, BigInteger, String, Boolean, Enum,
                         ForeignKey, Index)
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm import relationship, backref
@@ -25,6 +25,7 @@ class ImapAccount(Account):
     id = Column(Integer, ForeignKey(Account.id, ondelete='CASCADE'),
                 primary_key=True)
 
+    imap_host = Column(String(512))
     __mapper_args__ = {'polymorphic_identity': 'imapaccount'}
 
     @property

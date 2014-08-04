@@ -20,7 +20,7 @@ from inbox.mailsync.backends.imap import (account, base_poll, imap_poll_update,
 
 
 class ImapGenericSyncMonitor(ImapSyncMonitor):
-    def __init__(self, account_id, namespace_id, email_address, provider_name,
+    def __init__(self, account_id, namespace_id, email_address, provider,
                  heartbeat=1, poll_frequency=30):
         self.folder_state_handlers = {
             'initial': initial_sync,
@@ -31,7 +31,7 @@ class ImapGenericSyncMonitor(ImapSyncMonitor):
         }
 
         ImapSyncMonitor.__init__(self, account_id, namespace_id, email_address,
-                                 provider_name, heartbeat=1,
+                                 provider, heartbeat=1,
                                  poll_frequency=poll_frequency)
 
 
@@ -76,15 +76,8 @@ def add_attrs(db_session, log, new_uid, flags, folder, created):
             db_session, new_uid.account.namespace, new_uid.message)
         new_uid.update_imap_flags(flags)
 
-        # make sure this thread has all the correct labels
-        new_labels = account.update_thread_labels(new_uid.message.thread,
-                                                  folder.name,
-                                                  [folder.canonical_name],
-                                                  db_session)
-
-        # Reconciliation for Drafts, Sent Mail folders:
-        if (('draft' in new_labels or 'sent' in new_labels) and not
-                created and new_uid.message.inbox_uid):
+        if (folder in ('draft', 'sent') and not created
+                and new_uid.message.inbox_uid):
             reconcile_message(db_session, log, new_uid.message.inbox_uid,
                               new_uid.message)
 

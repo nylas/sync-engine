@@ -1,10 +1,8 @@
-from dns.resolver import Resolver
-from dns.resolver import NoNameservers, NXDOMAIN, Timeout
+from dns.resolver import Resolver, NoNameservers
 from urllib import urlencode
 import logging as log
 import re
 
-from inbox.providers import providers
 
 # http://www.regular-expressions.info/email.html
 EMAIL_REGEX = re.compile(r'[A-Z0-9._%+-]+@(?:[A-Z0-9-]+\.)+[A-Z]{2,4}',
@@ -14,9 +12,211 @@ EMAIL_REGEX = re.compile(r'[A-Z0-9._%+-]+@(?:[A-Z0-9-]+\.)+[A-Z]{2,4}',
 dns_resolver = Resolver()
 dns_resolver.nameservers = ['8.8.8.8']
 
+# YAHOO:
+# https://en.wikipedia.org/wiki/Yahoo!_Mail#Email_domains
+yahoo_mail_domains = [
+    'yahoo.com.ar',  # Argentina
+    'yahoo.com.au',  # Australia
+    'yahoo.at',      # Austria
+    'yahoo.be',      # Belgium (French)
+    'yahoo.fr',
+    'yahoo.be',      # Belgium (Dutch)
+    'yahoo.nl',
+    'yahoo.com.br',  # Brazil
+    'yahoo.ca',      # Canada (English)
+    'yahoo.en',
+    'yahoo.ca',      # Canada (French)
+    'yahoo.fr',
+    'yahoo.com.cn',  # China
+    'yahoo.cn',
+    'yahoo.com.co',  # Colombia
+    'yahoo.cz',      # Czech Republic
+    'yahoo.dk',      # Denmark
+    'yahoo.fi',      # Finland
+    'yahoo.fr',      # France
+    'yahoo.de',      # Germany
+    'yahoo.gr',      # Greece
+    'yahoo.com.hk',  # Hong Kong
+    'yahoo.hu',      # Hungary
+    'yahoo.co.in',   # India
+    'yahoo.in',      # Indonesia
+    'yahoo.ie',      # Ireland
+    'yahoo.co.il',   # Israel
+    'yahoo.it',      # Italy
+    'yahoo.co.jp',   # Japan
+    'yahoo.com.my',  # Malaysia
+    'yahoo.com.mx',  # Mexico
+    'yahoo.ae',      # Middle East
+    'yahoo.nl',      # Netherlands
+    'yahoo.co.nz',   # New Zealand
+    'yahoo.no',      # Norway
+    'yahoo.com.ph',  # Philippines
+    'yahoo.pl',      # Poland
+    'yahoo.pt',      # Portugal
+    'yahoo.ro',      # Romania
+    'yahoo.ru',      # Russia
+    'yahoo.com.sg',  # Singapore
+    'yahoo.co.za',   # South Africa
+    'yahoo.es',      # Spain
+    'yahoo.se',      # Sweden
+    'yahoo.ch',      # Switzerland (French)
+    'yahoo.fr',
+    'yahoo.ch',      # Switzerland (German)
+    'yahoo.de',
+    'yahoo.com.tw',  # Taiwan
+    'yahoo.co.th',   # Thailand
+    'yahoo.com.tr',  # Turkey
+    'yahoo.co.uk',   # United Kingdom
+    'yahoo.com',     # United States
+    'yahoo.com.vn',  # Vietnam
+
+    'ymail.com',     # Newly added!
+    'rocketmail.com',
+]
+
+# Outlook:
+outlook_mail_domains = [
+    'hotmail.com',
+    'outlook.com',
+    'outlook.com.ar',
+    'outlook.com.au',
+    'outlook.at',
+    'outlook.be',
+    'outlook.com.br',
+    'outlook.cl',
+    'outlook.cz',
+    'outlook.dk',
+    'outlook.fr',
+    'outlook.de',
+    'outlook.com.gr',
+    'outlook.co.il',
+    'outlook.in',
+    'outlook.co.id',
+    'outlook.ie',
+    'outlook.it',
+    'outlook.hu',
+    'outlook.jp',
+    'outlook.kr',
+    'outlook.lv',
+    'outlook.my',
+    'outlook.co.nz',
+    'outlook.com.pe',
+    'outlook.ph',
+    'outlook.pt',
+    'outlook.sa',
+    'outlook.sg',
+    'outlook.sk',
+    'outlook.es',
+    'outlook.co.th',
+    'outlook.com.tr',
+    'outlook.com.vn',
+]
+
+# Aol:
+aol_mail_domains = [
+    'aol.com',
+]
+
+# http://www.ysmallbizstatus.com/status/archives/13024
+yahoo_smallbiz_mx_servers = [
+    'mx-biz.mail.am0.yahoodns.net',
+    'mx1.biz.mail.yahoo.com.',
+    'mx5.biz.mail.yahoo.com.',
+    'mxvm2.mail.yahoo.com.',
+    'mx-van.mail.am0.yahoodns.net'
+]
+
+# GOOGLE
+gmail_mx_servers = [
+    # Google apps for your domain
+    'aspmx.l.google.com.',
+    'aspmx2.googlemail.com.',
+    'aspmx3.googlemail.com.',
+    'aspmx4.googlemail.com.',
+    'aspmx5.googlemail.com.',
+    'alt1.aspmx.l.google.com.',
+    'alt2.aspmx.l.google.com.',
+    'alt3.aspmx.l.google.com.',
+    'alt4.aspmx.l.google.com.',
+    'aspmx1.aspmx.l.google.com.',
+    'aspmx2.aspmx.l.google.com.',
+    'aspmx3.aspmx.l.google.com.',
+    'aspmx4.aspmx.l.google.com.',
+
+    # Gmail
+    'gmail-smtp-in.l.google.com.',
+    'alt1.gmail-smtp-in.l.google.com.',
+    'alt2.gmail-smtp-in.l.google.com.',
+    'alt3.gmail-smtp-in.l.google.com.',
+    'alt4.gmail-smtp-in.l.google.com.'
+    ]
+
+
+exchange_mail_domains = [
+    'onmicrosoft.com',
+    'exchange.mit.edu'
+]
+
 
 class InvalidEmailAddressError(Exception):
     pass
+
+
+def email_supports_gmail(domain):
+    # Must have Gmail or Google Apps MX records
+    is_valid = True
+    try:
+        answers = dns_resolver.query(domain, 'MX')
+
+        # All relay servers must be gmail
+        for rdata in answers:
+            if not str(rdata.exchange).lower() in gmail_mx_servers:
+                is_valid = False
+
+    except NoNameservers:
+        log.error("NoNameservers error")
+        is_valid = False
+
+    return is_valid
+
+
+def email_supports_outlook(domain):
+    # Must be a Outlook mail domain
+    if domain in outlook_mail_domains:
+        return True
+
+
+def email_supports_aol(domain):
+    # Must be a AOL mail domain
+    if domain in aol_mail_domains:
+        return True
+
+
+def email_supports_exchange(domain):
+    # Must be a Exchange mail domain
+    if domain in exchange_mail_domains:
+        return True
+
+
+def email_supports_yahoo(domain):
+    # Must be a Yahoo mail domain
+    if domain in yahoo_mail_domains:
+        return True
+
+    # Or have a Yahoo small business MX record
+    is_valid = True
+    try:
+        answers = dns_resolver.query(domain, 'MX')
+
+        for rdata in answers:
+            if not str(rdata.exchange).lower() in yahoo_smallbiz_mx_servers:
+                is_valid = False
+
+    except NoNameservers:
+        log.error("NoNameservers error")
+        is_valid = False
+
+    return is_valid
 
 
 def provider_from_address(email_address):
@@ -25,51 +225,23 @@ def provider_from_address(email_address):
 
     domain = email_address.split('@')[1].lower()
 
-    mx_records = []
-    try:
-        mx_records = dns_resolver.query(domain, 'MX')
-    except NoNameservers:
-        log.error("NoMXservers error", domain=domain)
-    except NXDOMAIN:
-        log.error("No such domain", domain=domain)
-    except Timeout:
-        log.error("Timed out while resolving", domain=domain)
+    if email_supports_gmail(domain):
+        return 'gmail'
 
-    ns_records = []
-    try:
-        ns_records = dns_resolver.query(domain, 'NS')
-    except NoNameservers:
-        log.error("NoNameservers error", domain=domain)
-    except NXDOMAIN:
-        log.error("No such domain", domain=domain)
-    except Timeout:
-        log.error("Timed out while resolving", domain=domain)
+    if email_supports_yahoo(domain):
+        return 'yahoo'
 
-    for (p_name, p) in providers.iteritems():
-        mx_servers = p.get('mx_servers', [])
-        ns_servers = p.get('ns_servers', [])
-        domains = p.get('domains', [])
-        if domain in domains:
-            return p_name
+    if email_supports_outlook(domain):
+        return 'outlook'
 
-        valid = True
-        for rdata in mx_records:
-            if str(rdata.exchange).lower() not in mx_servers:
-                valid = False
-                break
+    if email_supports_aol(domain):
+        return 'aol'
 
-        if valid:
-            return p_name
+    if email_supports_exchange(domain):
+        return 'eas'
 
-        for rdata in ns_records:
-            if str(rdata).lower() not in ns_servers:
-                valid = False
-                break
-
-        if valid:
-            return p_name
-
-    return 'unknown'
+    else:
+        return 'unknown'
 
 
 # From tornado.httputil

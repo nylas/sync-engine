@@ -3,7 +3,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.oauth import oauth_authorize_console
 from inbox.models import Namespace
-from inbox.models.backends.gmail import GmailAccount
+from inbox.models.backends.gmail import GmailAccount, IMAP_HOST
 from inbox.config import config
 from inbox.auth.oauth import connect_account as oauth_connect_account
 from inbox.auth.oauth import verify_account as oauth_verify_account
@@ -87,8 +87,8 @@ def create_account(db_session, email_address, response):
 
 
 def connect_account(account):
-    return oauth_connect_account(account)
+    return oauth_connect_account(account, IMAP_HOST)
 
 
 def verify_account(account):
-    return oauth_verify_account(account)
+    return oauth_verify_account(account, IMAP_HOST)

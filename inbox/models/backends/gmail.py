@@ -9,6 +9,7 @@ from inbox.log import get_logger
 log = get_logger()
 
 PROVIDER = 'gmail'
+IMAP_HOST = 'imap.gmail.com'
 
 
 class GmailAccount(OAuthAccount, ImapAccount):
