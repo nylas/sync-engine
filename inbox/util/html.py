@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 import re
 import cgi
 
 from talon.quotations import (register_xpath_extensions, extract_from_html,
-                              extract_from_plain)
+                              extract_from_plain) # noqa
 register_xpath_extensions()
 
 from HTMLParser import HTMLParser
@@ -10,12 +11,27 @@ from HTMLParser import HTMLParser
 
 # http://stackoverflow.com/questions/753052/strip-html-from-strings-in-python
 class MLStripper(HTMLParser):
+    strippedTags = ["title", "script", "style"]
+
     def __init__(self):
         self.reset()
         self.fed = []
+        self.strip_tag_contents_mode = False
+
+    def handle_starttag(self, tag, attrs):
+        # Strip the contents of a tag when it's
+        # in strippedTags. We can do this because
+        # HTMLParser won't try to parse the inner
+        # contents of a tag.
+        if tag.lower() in MLStripper.strippedTags:
+            self.strip_tag_contents_mode = True
+
+    def handle_endtag(self, tag):
+        self.strip_tag_contents_mode = False
 
     def handle_data(self, d):
-        self.fed.append(d)
+        if not self.strip_tag_contents_mode:
+            self.fed.append(d)
 
     def get_data(self):
         return u''.join(self.fed)
@@ -27,7 +43,7 @@ def strip_tags(html):
     return s.get_data()
 
 # https://djangosnippets.org/snippets/19/
-re_string = re.compile(ur'(?P<htmlchars>[<&>])|(?P<space>^[ \t]+)|(?P<lineend>\n)|(?P<protocol>(^|\s)((http|ftp)://.*?))(\s|$)', re.S|re.M|re.I|re.U)
+re_string = re.compile(ur'(?P<htmlchars>[<&>])|(?P<space>^[ \t]+)|(?P<lineend>\n)|(?P<protocol>(^|\s)((http|ftp)://.*?))(\s|$)', re.S|re.M|re.I|re.U) # noqa
 
 
 def plaintext2html(text, tabstop=4):
