@@ -1,9 +1,12 @@
-import sys, pkgutil, time
+import sys
+import pkgutil
+import time
 
 from datetime import datetime
 from email.utils import parsedate_tz, mktime_tz
 
 from inbox.log import get_logger
+from inbox.providers import providers
 
 
 def or_none(value, selector):
@@ -148,7 +151,13 @@ def register_backends(base_name, base_path):
     mod_for = {}
     for module in modules:
         if hasattr(module, 'PROVIDER'):
-            provider = module.PROVIDER
-            mod_for[provider] = module
+            provider_name = module.PROVIDER
+            if provider_name == 'generic':
+                for p_name, p in providers.iteritems():
+                    p_type = p.get('type', None)
+                    if p_type == 'generic' and p_name not in mod_for:
+                        mod_for[p_name] = module
+            else:
+                mod_for[provider_name] = module
 
     return mod_for

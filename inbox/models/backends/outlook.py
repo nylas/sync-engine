@@ -4,7 +4,6 @@ from inbox.models.backends.imap import ImapAccount
 from inbox.models.backends.oauth import OAuthAccount
 
 PROVIDER = 'outlook'
-IMAP_HOST = 'imap-mail.outlook.com'
 
 
 class OutlookAccount(ImapAccount, OAuthAccount):
@@ -33,5 +32,5 @@ class OutlookAccount(ImapAccount, OAuthAccount):
         return PROVIDER
 
     def verify(self):
-        from inbox.auth.imap import verify_account
-        return verify_account(self, IMAP_HOST)
+        from inbox.auth.generic import verify_account
+        return verify_account(self)

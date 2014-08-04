@@ -18,15 +18,14 @@ import geventconnpool
 
 from inbox.util.concurrency import retry
 from inbox.util.misc import or_none, timed
-from inbox.basicauth import AUTH_TYPES, ConnectionError, ValidationError
+from inbox.basicauth import ConnectionError, ValidationError
 from inbox.models.session import session_scope
+from inbox.providers import provider_info
 from inbox.models.backends.imap import ImapAccount
 from inbox.log import get_logger
 logger = get_logger()
 
-__all__ = ['CrispinClient', 'GmailCrispinClient',
-           'YahooCrispinClient', 'OutlookCrispinClient',
-           'AOLCrispinClient']
+__all__ = ['CrispinClient', 'GmailCrispinClient']
 
 # Unify flags API across IMAP and Gmail
 Flags = namedtuple('Flags', 'flags')
@@ -128,7 +127,7 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
             account = db_session.query(ImapAccount).get(self.account_id)
 
             # Refresh token if need be, for OAuthed accounts
-            if AUTH_TYPES.get(account.provider) == 'oauth':
+            if provider_info(account.provider)['auth'] == 'oauth2':
                 try:
                     self.access_token = account.access_token
                 except ValidationError:
@@ -146,7 +145,7 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
                 db_session.commit()
 
             self.email_address = account.email_address
-            self.provider = account.provider
+            self.provider_name = account.provider
 
     # TODO: simplify auth flow, preferably not need to use the db in this mod
     def _new_connection(self):
@@ -174,7 +173,7 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
                 return None
 
         return new_crispin(self.account_id, self.email_address,
-                           self.provider, conn, self.readonly)
+                           self.provider_name, conn, self.readonly)
 
     def _keepalive(self, c):
         c.conn.noop()
@@ -195,14 +194,10 @@ retry_crispin = functools.partial(
     fail_callback=_fail_callback, max_count=5, reset_interval=150)
 
 
-def new_crispin(account_id, email_address, provider, conn, readonly=True):
-    crispin_module_for = dict(gmail=GmailCrispinClient, imap=CrispinClient,
-                              yahoo=YahooCrispinClient,
-                              outlook=OutlookCrispinClient,
-                              aol=AOLCrispinClient)
-
-    cls = crispin_module_for[provider]
-    return cls(account_id, email_address, conn, readonly=readonly)
+def new_crispin(account_id, email_address, provider_name, conn, readonly=True):
+    cls = GmailCrispinClient if provider_name == 'gmail' else CrispinClient
+    return cls(account_id, provider_name, email_address, conn,
+               readonly=readonly)
 
 
 class CrispinClient(object):
@@ -242,9 +237,11 @@ class CrispinClient(object):
     # cause memory errors that only pop up in extreme edge cases.
     CHUNK_SIZE = 1
 
-    def __init__(self, account_id, email_address, conn, readonly=True):
+    def __init__(self, account_id, provider_name, email_address, conn,
+                 readonly=True):
         self.log = logger.new(account_id=account_id, module='crispin')
         self.account_id = account_id
+        self.provider_name = provider_name
         self.email_address = email_address
         # IMAP isn't stateless :(
         self.selected_folder = None
@@ -323,8 +320,23 @@ class CrispinClient(object):
         return to_sync
 
     def folder_names(self):
-        """ Should parse out provider-specific folder names and create map. """
-        raise NotImplementedError
+        info = provider_info(self.provider_name)
+        folder_map = info.get('folder_map', {})
+        if self._folder_names is None:
+            folders = self._fetch_folder_list()
+            self._folder_names = dict()
+            for flags, delimiter, name in folders:
+                if u'\\Noselect' in flags:
+                    # special folders that can't contain messages
+                    pass
+                # TODO: internationalization support
+                elif name in folder_map:
+                    self._folder_names[folder_map[name]] = name
+                else:
+                    self._folder_names.setdefault(
+                        'extra', list()).append(name)
+        # TODO: support subfolders
+        return self._folder_names
 
     def folder_status(self, folder):
         status = [long(val) for val in self.conn.folder_status(
@@ -478,75 +490,6 @@ class CondStoreCrispinClient(CrispinClient):
     def new_and_updated_uids(self, modseq):
         return sorted([long(s) for s in self.conn.search(
             ['NOT DELETED', "MODSEQ {}".format(modseq)])])
-
-
-class YahooCrispinClient(CrispinClient):
-    """ Yahoo is stock IMAP with no CONDSTORE or IDLE. """
-
-    def folder_names(self):
-        if self._folder_names is None:
-            folders = self._fetch_folder_list()
-            self._folder_names = dict()
-            for flags, delimiter, name in folders:
-                if u'\\Noselect' in flags:
-                    # special folders that can't contain messages
-                    pass
-                # TODO: internationalization support
-                elif name == 'Draft':
-                    self._folder_names['drafts'] = name
-                elif name == 'Bulk Mail':
-                    self._folder_names['spam'] = name
-                elif name in ('Inbox', 'Sent', 'Trash'):
-                    self._folder_names[name.lower()] = name
-                else:
-                    self._folder_names.setdefault(
-                        'extra', list()).append(name)
-        # TODO: support subfolders
-        return self._folder_names
-
-
-class OutlookCrispinClient(CrispinClient):
-    """ Outlook is stock IMAP with no CONDSTORE or IDLE. """
-
-    def folder_names(self):
-        if self._folder_names is None:
-            folders = self._fetch_folder_list()
-            self._folder_names = dict()
-            for flags, delimiter, name in folders:
-                if u'\\Noselect' in flags:
-                    # special folders that can't contain messages
-                    pass
-                # TODO: internationalization support
-                elif name == 'Junk':
-                    self._folder_names['spam'] = name
-                elif name in ('Inbox', 'Sent', 'Trash', 'Drafts'):
-                    self._folder_names[name.lower()] = name
-                else:
-                    self._folder_names.setdefault(
-                        'extra', list()).append(name)
-        # TODO: support subfolders
-        return self._folder_names
-
-
-class AOLCrispinClient(CrispinClient):
-    """ AOL is stock IMAP with no CONDSTORE or IDLE. """
-
-    def folder_names(self):
-        if self._folder_names is None:
-            folders = self._fetch_folder_list()
-            self._folder_names = dict()
-            for flags, delimiter, name in folders:
-                if u'\\Noselect' in flags:
-                    # special folders that can't contain messages
-                    pass
-                # TODO: internationalization support
-                elif name in ('INBOX', 'Sent', 'Trash', 'Drafts', 'Spam'):
-                    self._folder_names[name.lower()] = name
-                else:
-                    self._folder_names.setdefault(
-                        'extra', list()).append(name)
-        # TODO: support subfolders
-        return self._folder_names
 
 
 class GmailCrispinClient(CondStoreCrispinClient):

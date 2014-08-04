@@ -5,7 +5,6 @@ refresh tokens.
 from datetime import datetime, timedelta
 
 from inbox.models.vault import vault
-from inbox.models.backends.imap import ImapAccount
 from inbox.oauth import new_token, validate_token
 from inbox.basicauth import AuthError
 

@@ -11,7 +11,7 @@ from inbox.auth.oauth import verify_account as oauth_verify_account
 from inbox.oauth import oauth_authorize_console
 from inbox.models import Namespace
 from inbox.config import config
-from inbox.models.backends.outlook import OutlookAccount, IMAP_HOST
+from inbox.models.backends.outlook import OutlookAccount
 
 PROVIDER = 'outlook'
 
@@ -61,9 +61,7 @@ def create_account(db_session, email_address, response):
         namespace = Namespace()
         account = OutlookAccount(namespace=namespace)
 
-    account.imap_host = IMAP_HOST
     account.date = datetime.datetime.utcnow()
-
     tok = response.get('access_token')
     expires_in = response.get('expires_in')
     account.set_access_token(tok, expires_in)
@@ -81,8 +79,8 @@ def create_account(db_session, email_address, response):
 
 
 def connect_account(account):
-    return oauth_connect_account(account, IMAP_HOST)
+    return oauth_connect_account(account)
 
 
 def verify_account(account):
-    return oauth_verify_account(account, IMAP_HOST)
+    return oauth_verify_account(account)

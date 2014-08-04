@@ -220,7 +220,7 @@ class BaseMailSyncMonitor(Greenlet):
     RETRY_FAIL_CLASSES = [MailsyncError, ValueError, AttributeError, DataError,
                           IntegrityError, TypeError]
 
-    def __init__(self, account_id, email_address, provider, heartbeat=1,
+    def __init__(self, account_id, email_address, provider_name, heartbeat=1,
                  retry_fail_classes=[]):
         self.inbox = Queue()
         # how often to check inbox, in seconds
@@ -228,7 +228,7 @@ class BaseMailSyncMonitor(Greenlet):
         self.log = logger.new(component='mail sync', account_id=account_id)
         self.account_id = account_id
         self.email_address = email_address
-        self.provider = provider
+        self.provider_name = provider_name
         self.retry_fail_classes = self.RETRY_FAIL_CLASSES
         self.retry_fail_classes.extend(retry_fail_classes)
 
@@ -269,7 +269,8 @@ class BaseMailSyncMonitor(Greenlet):
             self.folder_monitors.kill()
             return
 
-        self.log.error("mail sync should run forever", provider=self.provider,
+        self.log.error("mail sync should run forever",
+                       provider=self.provider_name,
                        account_id=self.account_id)
         raise sync.exception
 
