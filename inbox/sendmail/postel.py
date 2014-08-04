@@ -7,14 +7,11 @@ import geventconnpool
 from gevent import socket
 
 from inbox.log import get_logger
-from inbox.basicauth import AUTH_TYPES
 from inbox.models.session import session_scope
 from inbox.models.backends.imap import ImapAccount
 from inbox.sendmail.base import SendMailException, SendError
+from inbox.providers import provider_info
 log = get_logger()
-
-SMTP_HOSTS = {'gmail': 'smtp.gmail.com'}
-SMTP_PORT = 587
 
 DEFAULT_POOL_SIZE = 2
 
@@ -22,7 +19,7 @@ DEFAULT_POOL_SIZE = 2
 account_id_to_connection_pool = {}
 
 # TODO[k]: Other types (LOGIN, XOAUTH, PLAIN-CLIENTTOKEN, CRAM-MD5)
-AUTH_EXTNS = {'oauth': 'XOAUTH2',
+AUTH_EXTNS = {'oauth2': 'XOAUTH2',
               'password': 'PLAIN'}
 
 AccountInfo = namedtuple('AccountInfo',
@@ -47,14 +44,14 @@ class SMTPConnection(object):
     def __init__(self, account, c, log):
         self.account_id = account.id
         self.email_address = account.email
-        self.provider = account.provider
-        self.auth_type = account.auth_type
+        self.provider_name = account.provider
+        self.auth_type = provider_info(self.provider_name)['auth']
         self.auth_token = account.auth_token
 
         self.connection = c
 
         self.log = log
-        self.auth_handlers = {'oauth': self.smtp_oauth,
+        self.auth_handlers = {'oauth2': self.smtp_oauth2,
                               'password': self.smtp_password}
 
         self.setup()
@@ -104,12 +101,12 @@ class SMTPConnection(object):
         auth_handler()
 
     # OAuth2 authentication
-    def _smtp_oauth_try_refresh(self):
+    def _smtp_oauth2_try_refresh(self):
         with session_scope() as db_session:
             account = db_session.query(ImapAccount).get(self.account_id)
             self.auth_token = account.renew_access_token()
 
-    def smtp_oauth(self):
+    def smtp_oauth2(self):
         c = self.connection
 
         # Try to auth, but if it fails then try to refresh the access_token
@@ -120,7 +117,7 @@ class SMTPConnection(object):
             c.docmd('AUTH', 'XOAUTH2 {0}'.format(
                 base64.b64encode(auth_string)))
         except smtplib.SMTPAuthenticationError as e:
-            self._smtp_oauth_try_refresh()
+            self._smtp_oauth2_try_refresh()
             try:
                 auth_string = 'user={0}\1auth=Bearer {1}\1\1'.\
                     format(self.email_address, self.auth_token)
@@ -131,11 +128,28 @@ class SMTPConnection(object):
                     self.email_address))
                 raise e
 
-        self.log.info('SMTP Auth success for: {0}'.format(self.email_address))
+        self.log.info('SMTP Auth(OAuth2) success for: {0}'.format(
+            self.email_address))
 
     # Password authentication
     def smtp_password(self):
-        raise NotImplementedError
+        c = self.connection
+
+        # Try to auth, but if it fails with the login function, try a manual
+        # AUTH LOGIN (see: http://www.harelmalka.com/?p=94 )
+        try:
+            c.login(self.email_address, self.auth_token)
+        except smtplib.SMTPAuthenticationError, e:
+            try:
+                c.docmd("AUTH LOGIN", base64.b64encode(self.email_address))
+                c.docmd(base64.b64encode(self.auth_token), "")
+            except smtplib.SMTPAuthenticationError as e:
+                self.log.error('SMTP Auth failed for: {0}'.format(
+                    self.email_address))
+                raise e
+
+        self.log.info('SMTP Auth(Password) success for: {0}'.format(
+            self.email_address))
 
     def is_connected(self):
         try:
@@ -147,7 +161,8 @@ class SMTPConnection(object):
 
     def reconnect(self):
         try:
-            self.connection.connect(SMTP_HOSTS[self.provider], SMTP_PORT)
+            host, port = provider_info(self.provider_name)['smtp'].split(':')
+            self.connection.connect(str(host), int(port))
         except smtplib.SMTPConnectError:
             self.log.error('SMTPConnectError')
             raise
@@ -184,13 +199,13 @@ class SMTPConnectionPool(geventconnpool.ConnectionPool):
             account = db_session.query(ImapAccount).get(self.account_id)
 
             self.email_address = account.email_address
-            self.provider = account.provider
+            self.provider_name = account.provider
             self.sender_name = account.sender_name
             self.sent_folder = account.sent_folder.name
 
-            self.auth_type = AUTH_TYPES.get(account.provider)
+            self.auth_type = provider_info(self.provider_name)['auth']
 
-            if self.auth_type == 'oauth':
+            if self.auth_type == 'oauth2':
                 self.auth_token = account.access_token
             else:
                 assert self.auth_type == 'password'
@@ -198,7 +213,8 @@ class SMTPConnectionPool(geventconnpool.ConnectionPool):
 
     def _new_connection(self):
         try:
-            connection = smtplib.SMTP(SMTP_HOSTS[self.provider], SMTP_PORT)
+            host, port = provider_info(self.provider_name)['smtp'].split(':')
+            connection = smtplib.SMTP(str(host), int(port))
         # Convert to a socket.error so geventconnpool will retry automatically
         # to establish new connections. We do this so the pool is resistant to
         # temporary connection errors.
@@ -210,7 +226,7 @@ class SMTPConnectionPool(geventconnpool.ConnectionPool):
 
         account_info = AccountInfo(id=self.account_id,
                                    email=self.email_address,
-                                   provider=self.provider,
+                                   provider=self.provider_name,
                                    auth_type=self.auth_type,
                                    auth_token=self.auth_token)
 
