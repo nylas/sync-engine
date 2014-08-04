@@ -8,7 +8,7 @@ Create Date: 2014-07-31 09:37:48.099402
 
 # revision identifiers, used by Alembic.
 revision = '4e93522b5b62'
-down_revision = '2525c5245cc2'
+down_revision = '3bb5d61c895c'
 
 from inbox.ignition import main_engine
 from inbox.models.session import session_scope
@@ -37,7 +37,7 @@ def page_query(q):
 
 def upgrade():
     with session_scope(ignore_soft_deletes=False, versioned=False)\
-         as db_session:
+            as db_session:
         for message in page_query(db_session.query(Message)):
             # calculate_sanitized_body has the side effect of computing the
             # right snippet
