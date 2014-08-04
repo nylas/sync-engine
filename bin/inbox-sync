@@ -39,8 +39,8 @@ def main(cmd, email_address):
             account.start_sync(platform.node())
             print "Marked account '{}' to start sync on {}.".format(
                 account.email_address, platform.node())
-                db_session.add(account)
-                db_session.commit()
+            db_session.add(account)
+            db_session.commit()
         elif cmd == 'stop':
             old_host = account.sync_host
             if account.sync_enabled:
