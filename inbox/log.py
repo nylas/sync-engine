@@ -131,7 +131,9 @@ def configure_logging(is_prod):
         sentry_dsn = config.get_required('SENTRY_DSN')
         global sentry_client
         sentry_client = raven.Client(
-            sentry_dsn, processors=('inbox.log.TruncatingProcessor',))
+            sentry_dsn,
+            processors=('inbox.log.TruncatingProcessor',
+                        'raven.processors.RemoveStackLocalsProcessor'))
 
 
 def safe_format_exception(etype, value, tb, limit=None):
