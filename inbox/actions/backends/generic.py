@@ -3,13 +3,13 @@
 
 See imap.py for notes about implementation.
 """
-from sqlalchemy.orm import joinedload, load_only, Load
+from sqlalchemy.orm import joinedload
 
 from inbox.actions.backends.imap import uidvalidity_cb, syncback_action
-from inbox.models.backends.imap import ImapThread, ImapUid
+from inbox.models.backends.imap import ImapThread
 from inbox.models.message import Message
 
-PROVIDER = 'yahoo'
+PROVIDER = 'generic'
 
 __all__ = ['set_remote_archived', 'set_remote_starred', 'set_remote_unread',
            'remote_save_draft', 'remote_delete_draft']
@@ -19,9 +19,9 @@ def get_thread_uids(db_session, thread_id):
     """A shortcut method to get uids of the messages in a thread
     thread_id: integer
     """
-    return db_session.query(ImapThread).options(joinedload('messages')\
-                .joinedload('imapuids')\
-                .load_only('msg_uid')).filter_by(id=thread_id).one()
+    opts = joinedload('messages').joinedload('imapuids').load_only('msg_uid')
+    return db_session.query(ImapThread).options(opts)\
+        .filter_by(id=thread_id).one()
 
 
 def set_remote_archived(account, thread_id, archived, db_session):
@@ -141,7 +141,7 @@ def remote_delete_draft(account, folder_name, inbox_uid, db_session):
             filter_by(public_id=inbox_uid).one()
         uids = []
 
-        if message.resolved_message != None:
+        if message.resolved_message is not None:
             for imapuid in message.resolved_message.imapuids:
                 uids.append(imapuid.msg_uid)
 

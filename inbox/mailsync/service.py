@@ -5,8 +5,8 @@ from multiprocessing import Process
 from setproctitle import setproctitle
 
 from sqlalchemy import func, or_
-from sqlalchemy.exc import OperationalError, TimeoutError
 
+from inbox.providers import providers
 from inbox.contacts.remote_sync import ContactSync
 from inbox.log import get_logger
 from inbox.models.session import session_scope
@@ -34,6 +34,10 @@ class SyncService(Process):
         self.monitor_cls_for = {mod.PROVIDER: getattr(
             mod, mod.SYNC_MONITOR_CLS) for mod in module_registry.values()
             if hasattr(mod, 'SYNC_MONITOR_CLS')}
+
+        for p_name, p in providers.iteritems():
+            if p_name not in self.monitor_cls_for:
+                self.monitor_cls_for[p_name] = self.monitor_cls_for["generic"]
 
         self.log = get_logger()
         self.log.bind(cpu_id=cpu_id)
