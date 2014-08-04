@@ -80,6 +80,8 @@ def create_account(db_session, email_address, response):
     account.locale = response.get('locale')
     account.picture = response.get('picture')
     account.home_domain = response.get('hd')
+    account.client_id = response.get('client_id')
+    account.client_secret = response.get('client_secret')
 
     return account
 
