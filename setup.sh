@@ -110,7 +110,8 @@ if $configure_db; then
     mysqld_safe &
     sleep 10
 
-    if ! have_dbs=$(mysql -e "show databases like 'inbox'" | grep -q inbox); then
+    db_name=`cat /etc/inboxapp/config.json  | grep "MYSQL_DATABASE" | awk '{ print $2 }' | sed "s/\"\(.*\)\",/\1/"`
+    if ! have_dbs=$(mysql -e "show databases like '$db_name'" | grep -q $db_name); then
         color '35;1' 'Creating databases...'
         python bin/create-db
     else
