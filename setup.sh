@@ -2,6 +2,15 @@
 
 set -e
 
+configure_db=true
+while getopts "p" opt; do
+    case $opt in
+        p)
+            configure_db=false
+        ;;
+    esac
+done
+
 color() {
       printf '\033[%sm%s\033[m\n' "$@"
       # usage color "31;5" "string"
@@ -83,29 +92,31 @@ elif [ $src -nt $dest ]; then
     exit 1
 fi
 
-# Mysql config
-color '35;1' 'Copying default mysql configuration to /etc/mysql/conf.d'
-src=./etc/my.cnf
-dest=/etc/mysql/conf.d/inboxapp.cnf
-if [ ! -f $dest ]; then
-    cp $src $dest
-elif [ $src -nt $dest ]; then
-    echo "Error: inbox config is newer and merging of configs not (yet) supported."
-    echo "Diffs:"
-    echo "src: $src dest: $dest"
-    diff $dest $src
-    exit 1
-fi
+if $configure_db; then
+    # Mysql config
+    color '35;1' 'Copying default mysql configuration to /etc/mysql/conf.d'
+    src=./etc/my.cnf
+    dest=/etc/mysql/conf.d/inboxapp.cnf
+    if [ ! -f $dest ]; then
+        cp $src $dest
+    elif [ $src -nt $dest ]; then
+        echo "Error: inbox config is newer and merging of configs not (yet) supported."
+        echo "Diffs:"
+        echo "src: $src dest: $dest"
+        diff $dest $src
+        exit 1
+    fi
 
-mysqld_safe &
-sleep 10
+    mysqld_safe &
+    sleep 10
 
-if ! have_dbs=$(mysql -e "show databases like 'inbox'" | grep -q inbox); then
-    color '35;1' 'Creating databases...'
-    python bin/create-db
-else
-    color '35;1' 'Upgrading databases...'
-    alembic upgrade head
+    if ! have_dbs=$(mysql -e "show databases like 'inbox'" | grep -q inbox); then
+        color '35;1' 'Creating databases...'
+        python bin/create-db
+    else
+        color '35;1' 'Upgrading databases...'
+        alembic upgrade head
+    fi
 fi
 
 color '35;1' 'Removing .pyc files...'
