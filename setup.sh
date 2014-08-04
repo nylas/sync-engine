@@ -35,7 +35,6 @@ echo "mysql-server mysql-server/root_password_again password root" | debconf-set
 
 color '35;1' 'Installing dependencies from apt-get...'
 apt-get -y install git \
-                   mercurial \
                    wget \
                    supervisor \
                    mysql-server \

@@ -30,11 +30,12 @@ pyflakes==0.7.3
 pylint==1.1.0
 html2text==2014.4.5
 python-magic==0.4.6
--e hg+https://bitbucket.org/birkenfeld/pygments-main#egg=pygments
 greenlet==0.4.2
 PyMySQL==0.6.2
 click==2.4
 faulthandler==2.3
 pyinstrument==0.10.1
 structlog==0.4.1
+lxml==3.3.5  # For talon
+cssselect==0.9.1  # For talon
 -e git://github.com/mailgun/talon.git@master#egg=talon
