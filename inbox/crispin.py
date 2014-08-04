@@ -133,12 +133,12 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
                     self.access_token = account.access_token
                 except ValidationError:
                     logger.error("Error obtaining access token",
-                                 accound_id=self.account_id)
+                                 account_id=self.account_id)
                     account.sync_state = 'invalid'
                     self.valid = False
                 except ConnectionError:
                     logger.error("Error connecting",
-                                 accound_id=self.account_id)
+                                 account_id=self.account_id)
                     account.sync_state = 'connerror'
                     self.valid = False
 
@@ -160,14 +160,14 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
                 conn = auth_handler.connect_account(account)
             except ValidationError:
                 logger.error("Error obtaining access token",
-                             accound_id=self.account_id)
+                             account_id=self.account_id)
                 account.sync_state = 'invalid'
                 db_session.add(account)
                 db_session.commit()
                 return None
             except ConnectionError:
                 logger.error("Error connecting",
-                             accound_id=self.account_id)
+                             account_id=self.account_id)
                 account.sync_state = 'connerror'
                 db_session.add(account)
                 db_session.commit()
