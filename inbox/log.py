@@ -13,13 +13,37 @@ import raven
 import raven.processors
 import colorlog
 import structlog
-from structlog._frames import _find_first_app_frame_and_name
 
 from inbox.config import config
 
 MAX_EXCEPTION_LENGTH = 10000
 
 sentry_client = None
+
+
+def _find_first_app_frame_and_name(ignores=None):
+    """
+    Remove ignorable calls and return the relevant app frame. Borrowed from
+    structlog, but fixes an issue when the stack includes an 'exec' statement
+    or similar (f.f_globals doesn't have a '__name__' key in that case).
+
+    Parameters
+    ----------
+    ignores: list, optional
+        Additional names with which the first frame must not start.
+
+    Returns
+    -------
+    tuple of (frame, name)
+    """
+    ignores = ignores or []
+    f = sys._getframe()
+    name = f.f_globals.get('__name__')
+    while f is not None and (name is None or
+                             any(name.startswith(i) for i in ignores)):
+        f = f.f_back
+        name = f.f_globals.get('__name__')
+    return f, name
 
 
 def _record_level(logger, name, event_dict):
@@ -33,8 +57,8 @@ def _record_module(logger, name, event_dict):
     """Processor that records the module and line where the logging call was
     invoked."""
     f, name = _find_first_app_frame_and_name(
-        additional_ignores=['inbox.log', 'inbox.sqlalchemy_ext.util',
-                            'inbox.models.session', 'sqlalchemy'])
+        ignores=['structlog', 'inbox.log', 'inbox.sqlalchemy_ext.util',
+                 'inbox.models.session', 'sqlalchemy'])
     event_dict['module'] = '{}:{}'.format(name, f.f_lineno)
     return event_dict
 
