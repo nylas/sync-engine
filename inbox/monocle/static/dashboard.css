@@ -117,11 +117,19 @@ th.start, th.end, td.start, td.end {
   text-align: center;
 }
 
-.status-ok {
-  color: #090;
+.status-running {
 }
-.status-bad {
-  color: #900;
+.status-killed {
+  background-color: #EEB4B4;
+}
+.status-stopped {
+  background-color: #FEF1B5;
+}
+.status-invalid {
+  background-color: #FFDAB9;
+}
+.status-connerror {
+  background-color: #FFDAB9;
 }
 .account-row {
   cursor: pointer; cursor: hand;
