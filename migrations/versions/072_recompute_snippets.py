@@ -16,7 +16,7 @@ from inbox.models.message import Message
 from sqlalchemy.ext.declarative import declarative_base
 
 
-engine = main_engine()
+engine = main_engine(pool_size=1, max_overflow=0)
 Base = declarative_base()
 Base.metadata.reflect(engine)
 
