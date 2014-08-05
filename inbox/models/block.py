@@ -47,9 +47,6 @@ class Block(Blob, MailSyncBase, HasRevisions, HasPublicID):
         self.size = 0
         MailSyncBase.__init__(self, *args, **kwargs)
 
-    def __repr__(self):
-        return 'Block: %s' % self.__dict__
-
     namespace_id = Column(Integer,
                           ForeignKey(Namespace.id, ondelete='CASCADE'),
                           nullable=False)

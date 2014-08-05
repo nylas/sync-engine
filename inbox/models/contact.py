@@ -60,12 +60,6 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
     def namespace(self):
         return self.account.namespace
 
-    def __repr__(self):
-        # XXX this won't work properly with unicode (e.g. in the name)
-        return ('Contact({}, {}, {}, {}, {}, {})'
-                .format(self.uid, self.name, self.email_address, self.source,
-                        self.provider_name, self.deleted))
-
     def copy_from(self, src):
         """ Copy fields from src."""
         self.account_id = src.account_id
