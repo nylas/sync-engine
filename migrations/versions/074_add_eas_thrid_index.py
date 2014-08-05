@@ -1,14 +1,14 @@
 """Add eas_thrid index
 
 Revision ID: 3c02d8204335
-Revises: 2525c5245cc2
+Revises:43cd2de5ad85
 Create Date: 2014-08-02 03:12:47.504963
 
 """
 
 # revision identifiers, used by Alembic.
 revision = '3c02d8204335'
-down_revision = '2525c5245cc2'
+down_revision = '43cd2de5ad85'
 
 from alembic import op
 import sqlalchemy as sa
