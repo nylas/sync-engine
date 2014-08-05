@@ -56,11 +56,8 @@
           <th ng-if="account.provider == 'eas'">As of</th>
 
           <th ng-if="account.provider != 'eas'">As of</th>
-          <th ng-if="account.provider != 'eas'"># Remote</th>
-          <th ng-if="account.provider != 'eas'">updated</th>
-          <th ng-if="account.provider != 'eas'">deleted</th>
-          <th ng-if="account.provider != 'eas'">to-download</th>
-          <th ng-if="account.provider != 'eas'">downloaded since</th>
+          <th ng-if="account.provider != 'eas'"># Remote Uids</th>
+          <th ng-if="account.provider != 'eas'"># Downloaded Messages</th>
           <th ng-if="account.provider != 'eas'">remain</th>
           <th ng-if="account.provider != 'eas'">checked-at</th>
 
@@ -82,11 +79,8 @@
 
           <td ng-if="account.provider != 'eas'">{{folder.uid_checked_timestamp | time_ago}}</td>
           <td ng-if="account.provider != 'eas'">{{folder.remote_uid_count}}</td>
-          <td ng-if="account.provider != 'eas'">{{folder.update_uid_count}}</td>
-          <td ng-if="account.provider != 'eas'">{{folder.delete_uid_count}}</td>
-          <td ng-if="account.provider != 'eas'">{{folder.download_uid_count}}</td>
           <td ng-if="account.provider != 'eas'">{{folder.num_downloaded_since_timestamp}}</td>
-          <td ng-if="account.provider != 'eas'">{{folder.current_download_queue_size}}</td>
+          <td ng-if="account.provider != 'eas'">{{folder.download_uid_count}}</td>
           <td ng-if="account.provider != 'eas'">{{folder.queue_checked_at | time_ago}}</td>
         </tr>
       </tbody>

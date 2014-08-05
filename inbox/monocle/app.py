@@ -36,7 +36,8 @@ def root():
 @app.route('/accounts', methods=['GET'])
 def accounts():
     accounts = g.db_session.query(Account).all()
-    accounts_info = [acct.sync_status for acct in accounts]
+    accounts_info = [acct.calculate_sync_status(g.db_session) for acct in
+                     accounts]
 
     return json.dumps(accounts_info, cls=DateTimeJSONEncoder)
 
@@ -60,10 +61,9 @@ def account(account_id):
             g.db_session.add(account)
             g.db_session.commit()
 
-
     if account:
         folders_info = [foldersyncstatus.metrics for foldersyncstatus in
-                account.foldersyncstatuses]
+                        account.foldersyncstatuses]
         sync_status = account.sync_status
     else:
         folders_info = []

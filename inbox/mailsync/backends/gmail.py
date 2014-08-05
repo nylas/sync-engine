@@ -325,6 +325,13 @@ def check_new_g_thrids(account_id, provider_name, folder_name, log,
                 message_download_stack.queue = sorted(
                     new_message_download_stack, key=lambda m: m.uid)
 
+                with session_scope(ignore_soft_deletes=False) as db_session:
+                    update_uid_counts(
+                        db_session, log, crispin_client.account_id,
+                        folder_name, remote_uid_count=len(remote_uids),
+                        download_uid_count=message_download_stack.qsize(),
+                        delete_uid_count=len(deleted_uids))
+
             log.info('idling', timeout=poll_frequency)
             crispin_client.conn.idle()
             crispin_client.conn.idle_check(timeout=poll_frequency)

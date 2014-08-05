@@ -120,9 +120,10 @@
           <td class="start">{{account.sync_start_time | time_ago}}</td>
           <td class="end">{{account.sync_end_time | time_ago}}</td>
           <td class="sync-progress">
-            <div class="progress" ng-if="account.percent">
-              <div class="progress-bar progress-bar-info"  role="progressbar" aria-valuenow="{{account.percent * 100}}" aria-valuemin="0" aria-valuemax="100" style="width: {{account.percent * 100}}%"> 
-                &nbsp;{{account.percent * 100}}%
+            percent = {{(account.local_count/account.remote_count) * 100}}
+            <div class="progress">
+              <div class="progress-bar progress-bar-info"  role="progressbar" aria-valuenow="{{percent}}" aria-valuemin="0" aria-valuemax="100" style="width: {{percent}}%">
+                &nbsp;{{percent}}%
               </div>
             </div>
           </td>
