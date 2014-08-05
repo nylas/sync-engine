@@ -1,8 +1,9 @@
 from dns.resolver import Resolver
-from dns.resolver import NoNameservers, NXDOMAIN, Timeout
+from dns.resolver import NoNameservers, NXDOMAIN, Timeout, NoAnswer
 from urllib import urlencode
-import logging as log
+from inbox.log import get_logger
 import re
+log = get_logger('inbox.util.url')
 
 from inbox.providers import providers
 
@@ -34,6 +35,8 @@ def provider_from_address(email_address):
         log.error("No such domain", domain=domain)
     except Timeout:
         log.error("Timed out while resolving", domain=domain)
+    except NoAnswer:
+        log.error("Provider didn't answer", domain=domain)
 
     ns_records = []
     try:
@@ -44,6 +47,8 @@ def provider_from_address(email_address):
         log.error("No such domain", domain=domain)
     except Timeout:
         log.error("Timed out while resolving", domain=domain)
+    except NoAnswer:
+        log.error("Provider didn't answer", domain=domain)
 
     for (p_name, p) in providers.iteritems():
         mx_servers = p.get('mx_servers', [])
