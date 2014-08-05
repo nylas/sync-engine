@@ -5,7 +5,7 @@
 # log = get_logger()
 
 from inbox.models.session import session_scope
-from inbox.models import Message, Block
+from inbox.models import Message, Part
 
 PAGE_SIZE = 500
 
@@ -25,7 +25,7 @@ print 'Paging through 500 at a time...'
 
 with session_scope() as db_session:
     c = 1
-    for msg in page_query(db_session.query(Message).join(Block)):
+    for msg in page_query(db_session.query(Message).join(Part)):
         print msg.id,
         if not msg.decode_error:
             msg.calculate_sanitized_body()
