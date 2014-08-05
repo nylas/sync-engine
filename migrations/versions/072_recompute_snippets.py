@@ -39,9 +39,10 @@ def upgrade():
     with session_scope(ignore_soft_deletes=False, versioned=False)\
             as db_session:
         for message in page_query(db_session.query(Message)):
-            # calculate_sanitized_body has the side effect of computing the
-            # right snippet
-            message.calculate_sanitized_body()
+            if not message.decode_error:
+                # calculate_sanitized_body has the side effect of computing the
+                # right snippet
+                message.calculate_sanitized_body()
     db_session.commit()
 
 
