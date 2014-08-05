@@ -33,10 +33,9 @@
       <th class="provider">Provider:</th>
       <th class="enabled">Enabled?</th>
       <th class="state">State</th>
-      <th class="start">Start Time:</th>
-      <th class="end">End Time:<br></th>
-      <th class="type">Type:</th>
-      <th class="error">Sync Error:</th>
+      <th class="start">Start Time</th>
+      <th class="end">End Time</th>
+      <th class="error">Sync Error</th>
     </tr>
   </thead>
   <tbody>
@@ -79,7 +78,6 @@
               content += '<td class="state status-' + (item.state == 'running' ? "ok" : "bad") + '">' + (item.state || '') + '</td>';
               content += '<td class="start">' + (time_ago(item.sync_start_time) || '') + '</td>';
               content += '<td class="end">' + (time_ago(item.sync_end_time) || '') + '</td>';
-              content += '<td class="type">' + (item.sync_type|| '') + '</td>';
               content += '<td class="error">' + (item.sync_error || '') + '</td>';
               content += '</tr>';
               content += '</a>'
