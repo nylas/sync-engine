@@ -32,8 +32,6 @@
       <th class="email">Email Address</th>
       <th class="provider">Provider</th>
       <th class="host">Sync Host</th>
-      <th class="enabled">Enabled?</th>
-      <th class="state">State</th>
       <th class="start">Start Time</th>
       <th class="end">End Time</th>
       <th class="error">Sync Error</th>
@@ -55,10 +53,8 @@
       col_2: 'select',
       col_3: 'select',
       col_4: 'select',
-      col_5: 'select',
+      col_5: 'none',
       col_6: 'none',
-      col_7: 'none',
-      col_8: 'none',
   };
   var callback_fn = function() {
       $.getJSON(
@@ -72,19 +68,17 @@
           var content = '';
           $.each(data, function(i, item) {
               link = '<a href="' + $SCRIPT_ROOT + '/account/' + item.id + '" id="link-' + item.id + '" >' + item.id + "</a>";
-              content += '<tr class="account-row" onclick="document.getElementById(\'link-' + item.id + '\').click();">';
+              rowclass =  'account-row status-' + (item.state || '');
+              content += '<tr class="' + rowclass + '" onclick="document.getElementById(\'link-' + item.id + '\').click();">';
               content += '<td class="account_id">' + link + '</td>';
               content += '<td class="email">' + item.email + '</td>';
               content += '<td class="provider">' + item.provider + '</td>';
-              content += '<td class="host">' + item.sync_host + '</td>';
-              content += '<td class="enabled">' + (item.is_enabled ? 'enabled' : 'not enabled') + '</td>';
-              content += '<td class="state status-' + (item.state == 'running' ? "ok" : "bad") + '">' + (item.state || '') + '</td>';
+              content += '<td class="host">' + (item.sync_host ? item.sync_host : 'not enabled') + '</td>';
               content += '<td class="start">' + (time_ago(item.sync_start_time) || '') + '</td>';
               content += '<td class="end">' + (time_ago(item.sync_end_time) || '') + '</td>';
               content += '<td class="error">' + (item.sync_error || '') + '</td>';
               content += '</tr>';
               content += '</a>'
-
 
               if (item.state === 'running') { running += 1; }
               else if (item.state === 'stopped') { stopped += 1; }
