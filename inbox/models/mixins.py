@@ -44,6 +44,11 @@ class HasEmailAddress(object):
 
     @email_address.setter
     def email_address(self, value):
+        if value is not None:
+            # Silently truncate if necessary. In practice, this may be too
+            # long if somebody put a super-long email into their contacts by
+            # mistake or something.
+            value = value[:MAX_INDEXABLE_LENGTH]
         self._raw_address = value
         self._canonicalized_address = canonicalize_address(value)
 
