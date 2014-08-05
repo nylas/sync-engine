@@ -21,7 +21,7 @@ from datetime import datetime
 
 def upgrade():
     from inbox.ignition import main_engine
-    engine = main_engine()
+    engine = main_engine(pool_size=1, max_overflow=0)
 
     Session = sessionmaker(bind=engine)
 

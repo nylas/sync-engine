@@ -22,7 +22,7 @@ chunk_size = 250
 def upgrade():
     from inbox.models.session import session_scope, Session
     from inbox.ignition import main_engine
-    engine = main_engine()
+    engine = main_engine(pool_size=1, max_overflow=0)
 
     from inbox.models import (Part, Namespace, Message, Thread)
     from inbox.sqlalchemy_ext.util import JSON

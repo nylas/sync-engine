@@ -13,7 +13,7 @@ down_revision = '15dfc756a1b0'
 from alembic import op
 
 from inbox.ignition import main_engine
-engine = main_engine()
+engine = main_engine(pool_size=1, max_overflow=0)
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()

@@ -25,7 +25,7 @@ def truncate_subject(obj):
 def upgrade():
     from inbox.models.session import session_scope
     from inbox.ignition import main_engine
-    engine = main_engine()
+    engine = main_engine(pool_size=1, max_overflow=0)
 
     from sqlalchemy.ext.declarative import declarative_base
     Base = declarative_base()

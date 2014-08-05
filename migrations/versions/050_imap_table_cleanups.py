@@ -19,7 +19,7 @@ def upgrade():
     from inbox.models.folder import Folder
     from inbox.sqlalchemy_ext.util import JSON
     from inbox.ignition import main_engine
-    engine = main_engine()
+    engine = main_engine(pool_size=1, max_overflow=0)
 
     ### foldersync => imapfoldersyncstatus
     # note that renaming a table does in fact migrate constraints + indexes too
