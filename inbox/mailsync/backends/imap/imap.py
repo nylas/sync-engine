@@ -370,10 +370,17 @@ def base_poll(crispin_client, log, folder_name, shared_state, download_fn,
         deleted_uids = remove_deleted_uids(
             account_id, db_session, log, folder_name, local_uids,
             remote_uids)
-    local_uids -= deleted_uids
-    log.info("Removed {} deleted UIDs from {}".format(
-        len(deleted_uids), folder_name))
-    to_download = remote_uids - local_uids
+
+        local_uids -= deleted_uids
+        log.info("Removed {} deleted UIDs from {}".format(
+            len(deleted_uids), folder_name))
+        to_download = remote_uids - local_uids
+
+        update_uid_counts(db_session, log, account_id, folder_name,
+                          remote_uid_count=len(remote_uids),
+                          download_uid_count=len(to_download),
+                          delete_uid_count=len(deleted_uids))
+
     log.info("UIDs to download: {}".format(to_download))
     if to_download:
         download_fn(crispin_client, log, folder_name, to_download, local_uids,
@@ -498,6 +505,9 @@ def highestmodseq_update(crispin_client, log, folder_name, last_highestmodseq,
                     account_id, db_session, folder_name)
             remove_deleted_uids(crispin_client.account_id, db_session, log,
                                 folder_name, local_uids, remote_uids)
+        update_uid_counts(db_session, log, account_id, folder_name,
+                          remote_uid_count=len(remote_uids),
+                          delete_uid_count=len(deleted_uids))
         account.update_folder_info(account_id, db_session, folder_name,
                                    new_uidvalidity, new_highestmodseq)
         db_session.commit()
@@ -584,9 +594,10 @@ def imap_initial_sync(crispin_client, log, folder_name, shared_state,
     with session_scope(ignore_soft_deletes=False) as db_session:
         update_uid_counts(db_session, log, crispin_client.account_id,
                           folder_name, remote_uid_count=len(remote_uids),
+                          # This is the initial size of our download_queue
                           download_uid_count=len(new_uids),
-                          # flags are updated in imap_check_flags
-                          update_uid_count=0,
+                          # Flags are updated in imap_check_flags() and
+                          # update_uid_count is set there
                           delete_uid_count=len(deleted_uids))
 
     new_uid_poller = spawn(check_new_uids, crispin_client.account_id,
@@ -645,18 +656,27 @@ def check_new_uids(account_id, folder_name, log, uid_download_stack,
                         remote_uids)
                     log.info('remoted deleted uids', count=len(deleted_uids))
 
-                # filter out messages that have disappeared on the remote side
-                new_uid_download_stack = {u for u in uid_download_stack.queue
-                                          if u in remote_uids}
+                    # filter out messages that have disappeared on the
+                    # remote side
+                    new_uid_download_stack = {u for u in
+                                              uid_download_stack.queue if u in
+                                              remote_uids}
 
-                # add in any new uids from the remote
-                for uid in remote_uids:
-                    if uid not in local_with_pending_uids:
-                        log.debug("adding new message {} to download queue"
-                                  .format(uid))
-                        new_uid_download_stack.add(uid)
-                uid_download_stack.queue = sorted(new_uid_download_stack,
-                                                  key=int)
+                    # add in any new uids from the remote
+                    for uid in remote_uids:
+                        if uid not in local_with_pending_uids:
+                            log.debug("adding new message {} to download queue"
+                                      .format(uid))
+                            new_uid_download_stack.add(uid)
+                    uid_download_stack.queue = sorted(new_uid_download_stack,
+                                                      key=int)
+
+                    update_uid_counts(
+                        db_session, log, crispin_client.account_id,
+                        folder_name, remote_uid_count=len(remote_uids),
+                        download_uid_count=uid_download_stack.qsize(),
+                        delete_uid_count=len(deleted_uids))
+
             sleep(poll_frequency)
 
 
@@ -819,11 +839,13 @@ def update_uid_counts(db_session, log, account_id, folder_name, **kwargs):
         ImapFolderSyncStatus.account_id == account_id,
         Folder.name == folder_name).one()
 
-    # Record time we saved these counts +
-    # Track num downloaded since `uid_checked_timestamp`
-    metrics = dict(uid_checked_timestamp=datetime.utcnow(),
-                   num_downloaded_since_timestamp=0)
-    metrics.update(kwargs)
+    # We're not updating the current_remote_count metric
+    # so don't update uid_checked_timestamp.
+    if kwargs.get('remote_uid_count') is None:
+        saved_status.update_metrics(kwargs)
+    else:
+        metrics = dict(uid_checked_timestamp=datetime.utcnow())
+        metrics.update(kwargs)
 
     saved_status.update_metrics(metrics)
 
@@ -841,12 +863,13 @@ def report_progress(crispin_client, log, folder_name, downloaded_uid_count,
             .filter(
                 ImapFolderSyncStatus.account_id == crispin_client.account_id,
                 Folder.name == folder_name).one()
+
         previous_count = saved_status.metrics.get(
             'num_downloaded_since_timestamp', 0)
 
         metrics = dict(num_downloaded_since_timestamp=(previous_count +
                                                        downloaded_uid_count),
-                       current_download_queue_size=num_remaining_messages,
+                       download_uid_count=num_remaining_messages,
                        queue_checked_at=datetime.utcnow())
 
         saved_status.update_metrics(metrics)

@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import (Column, Integer, BigInteger, Boolean, Enum,
-                        ForeignKey, Index)
+                        ForeignKey, Index, func)
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
@@ -26,6 +26,20 @@ class ImapAccount(Account):
                 primary_key=True)
 
     __mapper_args__ = {'polymorphic_identity': 'imapaccount'}
+
+    def calculate_sync_status(self, db_session):
+        metrics = db_session.query(ImapFolderSyncStatus._metrics).filter(
+            ImapFolderSyncStatus.account_id == self.id).all()
+        remote_count = sum([m[0].get('remote_uid_count', 0) for m in metrics
+                            if m[0]])
+
+        local_count = db_session.query(func.count(ImapUid.id)).filter(
+            ImapUid.account_id == self.id).one()[0]
+
+        status = dict(remote_count=remote_count, local_count=local_count)
+        status.update(self.sync_status)
+
+        return status
 
     @property
     def provider(self):
@@ -265,8 +279,7 @@ class ImapFolderSyncStatus(MailSyncBase):
                                'update_uid_count', 'download_uid_count',
                                'uid_checked_timestamp',
                                'num_downloaded_since_timestamp',
-                               'current_download_queue_size',
-                               'queue_checked_at']
+                               'queue_checked_at', 'percent']
 
         assert isinstance(metrics, dict)
         for k in metrics.iterkeys():
