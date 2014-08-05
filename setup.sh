@@ -84,11 +84,17 @@ dest=/etc/inboxapp/config.json
 if [ ! -f $dest ]; then
     cp $src $dest
 elif [ $src -nt $dest ]; then
-    echo "Error: inbox config is newer and merging of configs not (yet) supported."
-    echo "Diffs:"
-    echo "src: $src dest: $dest"
-    diff $dest $src
-    exit 1
+    set +e
+    diff_result=$(diff -q $src $dest)
+    different=$?
+    set -e
+    if [ $different -ne 0 ]; then
+        echo "Error: inbox config is newer and merging of configs not (yet) supported."
+        echo "Diffs:"
+        echo "src: $src dest: $dest"
+        diff $dest $src
+        exit 1
+    fi
 fi
 
 if $configure_db; then
@@ -99,11 +105,17 @@ if $configure_db; then
     if [ ! -f $dest ]; then
         cp $src $dest
     elif [ $src -nt $dest ]; then
-        echo "Error: inbox config is newer and merging of configs not (yet) supported."
-        echo "Diffs:"
-        echo "src: $src dest: $dest"
-        diff $dest $src
-        exit 1
+        set +e
+        diff_result=$(diff -q $src $dest)
+        different=$?
+        set -e
+        if [ $different -ne 0 ]; then
+            echo "Error: inbox config is newer and merging of configs not (yet) supported."
+            echo "Diffs:"
+            echo "src: $src dest: $dest"
+            diff $dest $src
+            exit 1
+        fi
     fi
 
     mysqld_safe &
