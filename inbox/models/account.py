@@ -155,11 +155,15 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
             self.sync_state = None
 
     def stop_sync(self):
-        """ set a flag for the monitor to stop the sync."""
+        """ Set a flag for the monitor to stop the sync. """
+
+        # Invalid credentials/Connection error, don't overwrite state
+        if self.sync_state == 'invalid' or self.sync_state == 'connerr':
+            return
         self.sync_state = 'stopped'
 
     def sync_stopped(self):
-        """ called when the sync has actually been stopped"""
+        """ Called when the sync has actually been stopped. """
         self.sync_host = None
         self._sync_status['sync_end_time'] = datetime.utcnow()
 
