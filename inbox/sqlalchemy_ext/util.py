@@ -1,7 +1,6 @@
 import uuid
 import struct
 import time
-import traceback
 
 from bson import json_util, EPOCH_NAIVE
 # Monkeypatch to not include tz_info in decoded JSON.
@@ -20,7 +19,7 @@ from inbox.log import get_logger
 log = get_logger()
 
 
-SLOW_QUERY_THRESHOLD_MS = 250
+SLOW_QUERY_THRESHOLD_MS = 5000
 
 
 @event.listens_for(Engine, "before_cursor_execute")
@@ -36,14 +35,11 @@ def after_cursor_execute(conn, cursor, statement,
     # We only care about slow reads here
     if total > SLOW_QUERY_THRESHOLD_MS and statement.startswith('SELECT'):
         statement = ' '.join(statement.split())
-        # Log stack trace, but remove the uninteresting parts.
-        tb = ''.join([line for line in traceback.format_stack() if 'inbox' in
-                      line][:-1])
         try:
             log.warning('slow query', query_time=total, statement=statement,
-                        parameters=parameters, tb=tb)
+                        parameters=parameters)
         except UnicodeDecodeError:
-            log.warning('slow query', query_time=total, tb=tb)
+            log.warning('slow query', query_time=total)
             log.error('logging UnicodeDecodeError')
 
 

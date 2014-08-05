@@ -32,7 +32,9 @@ def _record_level(logger, name, event_dict):
 def _record_module(logger, name, event_dict):
     """Processor that records the module and line where the logging call was
     invoked."""
-    f, name = _find_first_app_frame_and_name(additional_ignores=['inbox.log'])
+    f, name = _find_first_app_frame_and_name(
+        additional_ignores=['inbox.log', 'inbox.sqlalchemy_ext.util',
+                            'inbox.models.session', 'sqlalchemy'])
     event_dict['module'] = '{}:{}'.format(name, f.f_lineno)
     return event_dict
 

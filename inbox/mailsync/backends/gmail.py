@@ -246,7 +246,7 @@ def gmail_download_and_commit_uids(crispin_client, log, folder_name, uids,
     log.info('downloading uids', uids=uids)
     raw_messages = safe_download(crispin_client, log, uids)
     with syncmanager_lock:
-        log.info('gmail_download_and_commit_uids acquired syncmanager_lock')
+        log.debug('gmail_download_and_commit_uids acquired syncmanager_lock')
         # there is the possibility that another green thread has already
         # downloaded some message(s) from this batch... check within the lock
         with session_scope(ignore_soft_deletes=False) as db_session:
