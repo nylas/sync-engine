@@ -9,13 +9,14 @@ from inbox.models import Message, Block
 
 PAGE_SIZE = 500
 
+
 def page_query(q):
     offset = 0
     while True:
         r = False
         for elem in q.limit(PAGE_SIZE).offset(offset):
-           r = True
-           yield elem
+            r = True
+            yield elem
         offset += PAGE_SIZE
         if not r:
             break
@@ -26,10 +27,11 @@ with session_scope() as db_session:
     c = 1
     for msg in page_query(db_session.query(Message).join(Block)):
         print msg.id,
-        msg.calculate_sanitized_body()
+        if not msg.decode_error:
+            msg.calculate_sanitized_body()
 
-        c+=1
-        if c % PAGE_SIZE == 0:
-            db_session.commit()
+            c += 1
+            if c % PAGE_SIZE == 0:
+                db_session.commit()
 
     db_session.commit()
