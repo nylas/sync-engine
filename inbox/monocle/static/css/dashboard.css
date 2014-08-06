@@ -66,9 +66,24 @@ h4 {
   text-align:center;
 }
 
-#account-info {
+#account-info, #account-error {
   margin-left: 20px;
   margin-bottom: 20px;
+  margin-right: 20px;
+}
+
+#account-error #account-error-text {
+  padding: 5px;
+}
+
+#folder-list {
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+#account-list {
+  margin-left: 20px;
+  margin-right: 20px;
 }
 
 #account-error {
@@ -76,8 +91,10 @@ h4 {
   margin-bottom: 20px;
 }
 .info-item {
-  padding-top: 5px;
+  margin-left: 5px;
   width: 100%;
+  margin-top: 5px;
+  margin-bottom: 5px;
 }
 
 .info-item > .info-name
@@ -99,6 +116,11 @@ h4 {
   font-size: 15px;
   margin-bottom: 10px;
 }
+
+div#account-list th {
+  cursor: pointer;
+}
+
 th.provider, td.provider {
   text-align: center;
 }
@@ -108,13 +130,33 @@ th.enabled, td.enabled {
 th.state, td.state {
   text-align: center;
 }
-
+th.host, td.host {
+  text-align: center;
+}
+th.type, td.type, th.sync-progress {
+  text-align: center;
+}
 th.start, th.end {
   min-width: 125px;
 }
 
 th.start, th.end, td.start, td.end {
   text-align: center;
+}
+
+td.sync-progress {
+  width: 130px;
+  height: 25px;
+}
+
+td.sync-progress div.progress {
+  height: 22px;
+  margin: 0px;
+  padding: 0px;
+}
+
+td.sync-progress div.progress-bar {
+  height: 22px;
 }
 
 .status-running {

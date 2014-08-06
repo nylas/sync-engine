@@ -4,7 +4,7 @@ from subprocess import call
 import json
 import datetime
 
-from flask import Flask, g, render_template, request
+from flask import Flask, g, request
 
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -15,7 +15,7 @@ from inbox.api.err import err
 
 engine = main_engine(pool_size=5)
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='')
 app.debug = False
 
 
@@ -31,27 +31,16 @@ def finish(response):
 
 
 @app.route('/')
-def index():
-    return render_template('index.html')
+def root():
+    return app.send_static_file('index.html')
 
 
 @app.route('/accounts', methods=['GET'])
-def all_accounts():
-    return render_template('accounts.html')
-
-
-@app.route('/_accounts', methods=['GET'])
-def _all_accounts():
+def accounts():
     accounts = g.db_session.query(Account).all()
     accounts_info = [acct.sync_status for acct in accounts]
 
     return json.dumps(accounts_info, cls=DateTimeJSONEncoder)
-
-
-def _render_account(account):
-    acct_info = account.sync_status
-    template = 'account.html'
-    return render_template(template, account=acct_info)
 
 
 @app.route('/account/<account_id>', methods=['GET'])
@@ -76,20 +65,17 @@ def account(account_id):
             print "starting: ", account_id
             account.start_sync(platform.node())
 
-    return _render_account(account)
 
+    if account:
+        folders_info = [foldersyncstatus.metrics for foldersyncstatus in
+                account.foldersyncstatuses]
+        sync_status = account.sync_status
+    else:
+        folders_info = []
+        sync_status = {}
 
-@app.route('/_accounts/<account_id>', methods=['GET'])
-def _account(account_id):
-    try:
-        account = g.db_session.query(Account).get(account_id)
-    except NoResultFound:
-        return err(404, 'No account with id `{0}`'.format(account_id))
-
-    folders_info = [foldersyncstatus.metrics for foldersyncstatus in
-                    account.foldersyncstatuses]
-
-    return json.dumps(folders_info, cls=DateTimeJSONEncoder)
+    return json.dumps({"account": sync_status,
+                       "folders": folders_info}, cls=DateTimeJSONEncoder)
 
 
 class DateTimeJSONEncoder(json.JSONEncoder):

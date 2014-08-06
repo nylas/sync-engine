@@ -1,0 +1,21 @@
+#!/usr/bin/env python
+import os
+import click
+from setproctitle import setproctitle
+from inbox.monocle.app import app
+
+setproctitle('inbox')
+
+@click.command()
+@click.option('--port', default=5555, help='Port to run on')
+@click.option('--host', default="0.0.0.0", help='Host to run on')
+@click.option('--debug', is_flag=True, help='Whether to run in debug mode.')
+
+def main(port, host, debug):
+    if debug:
+        app.debug = True
+    os.environ['DEBUG'] = 'true' if app.debug else 'false'
+    app.run(host=host, port=port)
+
+if __name__ == '__main__':
+    main()
