@@ -3,6 +3,7 @@ from functools import wraps
 import pdb
 from inbox.log import log_uncaught_errors
 from pyinstrument import Profiler
+import signal
 
 
 def pause_on_exception(exception_type):
@@ -37,3 +38,16 @@ def profile(func):
         print profiler.output_text(color=True)
         return r
     return wrapper
+
+
+def attach_profiler():
+    profiler = Profiler()
+    profiler.start()
+
+    def handle_signal(signum, frame):
+        print profiler.output_text(color=True)
+        # Work around an arguable bug in pyinstrument in which output gets
+        # frozen after the first call to profiler.output_text()
+        delattr(profiler, '_root_frame')
+
+    signal.signal(signal.SIGTRAP, handle_signal)
