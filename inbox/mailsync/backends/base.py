@@ -144,23 +144,6 @@ def create_db_objects(account_id, db_session, log, folder_name, raw_messages,
 
 
 def commit_uids(db_session, log, new_uids):
-    new_messages = [item.message for item in new_uids]
-
-    # Save message part blobs before committing changes to db.
-    for msg in new_messages:
-        threads = [Greenlet.spawn(retry_with_logging, lambda:
-                                  part.save(part._data), log)
-                   for part in msg.parts if hasattr(part, '_data')]
-        # Fatally abort if part saves error out. Messages in this
-        # chunk will be retried when the sync is restarted.
-        gevent_check_join(log, threads,
-                          "Could not save message parts to blob store!")
-        # clear data to save memory
-        for part in msg.parts:
-            part._data = None
-
-    garbage_collect()
-
     try:
         log.info("Committing {0} UIDs".format(len(new_uids)))
         db_session.add_all(new_uids)
