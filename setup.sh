@@ -55,6 +55,7 @@ apt-get -y install git \
                    build-essential \
                    libmysqlclient-dev \
                    gcc \
+                   g++ \
                    libzmq-dev \
                    libxml2-dev \
                    libxslt-dev \
