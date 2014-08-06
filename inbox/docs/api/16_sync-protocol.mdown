@@ -1,13 +1,24 @@
-Title: Delta protocol
+Title: Delta Sync
 
-The delta protocol allows clients to get recent changes to a namespace without
-downloading all threads and messages.
+As Inbox syncs your users' mailboxes, it builds a transaction log that records
+every change. Your application can use these changes, exposed through the Delta
+Sync API, to build email applications that process new data quickly without
+fetching an index of the user's mailbox or performing a large number of API calls.
+
+To use the Delta Sync API, your application needs to maintain a sync `cursor`,
+a record of the last change you successfully processed. Each time you perform a
+sync, you process the delta updates provided by the API and update your stored `cursor`.
 
 
-# Obtaining a delta cursor
+# Obtaining a Delta Sync Cursor
 
-Delta clients should first exchange a Unix timestamp for a delta cursor. Clients
-can then use the delta cursor to fetch events that have occurred since that time.
+The first time you sync using the Delta Sync API, you need to obtain a cursor. The
+`generate_cursor` API allows you to exchange a unix timestamp for a cursor so you can
+begin a sync at an arbitrary point in the user's mailbox history. Alternatively,
+if you want to start consuming the user's entire mailbox history you can set
+your cursor to `0`.
+
+Once you have a cursor, you should store it and update it as you make sync requests.
 
 ```
 :::xml
@@ -30,7 +41,12 @@ POST https://api.inboxapp.com/n/<namespace_id>/delta/generate_cursor
 }
 ```
 
-# Requesting changes
+# Requesting a Delta
+
+Each time your application syncs with Inbox, you provide the cursor indicating
+your position in the user's mailbox history. The API request below returns a
+set of JSON objects representing individual changes to the user's mailbox: tag
+changes, new messages, etc.
 
 ```
 :::xml
@@ -42,9 +58,9 @@ GET https://api.inboxapp.com/n/<namespace_id>/delta?cursor=<cursor>
 ```
 :::json
 {
-    "events_start": "aqb0llc2ioo0bclh7uxkim9z6",
-    "events_end": "5u9kwbgyq8wgq0iqdakqt7kjl",
-    "events": [
+    "cursor_start": "aqb0llc2ioo0bclh7uxkim9z6",
+    "cursor_end": "5u9kwbgyq8wgq0iqdakqt7kjl",
+    "deltas": [
         {
             "object_id": "aqb0llc2ioo0bclh7uxkim9z6",
             "event": "modify",
@@ -92,11 +108,10 @@ GET https://api.inboxapp.com/n/<namespace_id>/delta?cursor=<cursor>
 }
 ```
 
-Fetch the next set of events by issuing another query with `cursor` parameter
-equal to the value of `events_end`:
-
-```
-:::xml
-GET https://api.inboxapp.com/n/<namespace_id>/delta?cursor=<events_end>
-```
+After you've processed the deltas, your application should update it's stored
+`cursor` to the value of `cursor_end` in the response. Inbox may only return the
+first batch of changes, so it's important to make this API call repeatedly until
+you receive the same `cursor_end` that you sent (`cursor_start`). This indicates
+that you have consumed the entire transaction log of the user's mailbox and your
+application is up-to-date.
 
