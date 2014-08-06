@@ -4,7 +4,10 @@
 
 angular.module('monocleApp.controllers', [])
   .controller('accountsController', ['$scope', '$location', '$interval', 'monocleAPIservice', function($scope, $location, $interval, monocleAPIservice) {
-      $scope.nameFilter = null;
+      $scope.emailFilter = null;
+      $scope.errorFilter = null;
+      $scope.providerFilter = null;
+      $scope.stateFilter = null;
       $scope.accountsList = [];
       $scope.state_count = {};
       $scope.provider_count = {};
@@ -46,6 +49,23 @@ angular.module('monocleApp.controllers', [])
           $scope.provider_count = provider_count;
 
       });
+
+      $scope.filterState = function (state) {
+        $scope.stateFilter = state;
+      }
+
+      $scope.filterProvider = function (provider) {
+        $scope.providerFilter = provider;
+      }
+
+      $scope.accountFilter = function (account) {
+            var keyword = new RegExp($scope.emailFilter, 'i');
+            var error_keyword = new RegExp($scope.errorFilter, 'i');
+            return (!$scope.emailFilter || keyword.test(account.email)) && 
+               (!$scope.providerFilter || account.provider == $scope.providerFilter) &&
+               (!$scope.stateFilter || account.state == $scope.stateFilter) &&
+               (!$scope.errorFilter || keyword.test(account.sync_error));
+      };
 
       $interval(monocleAPIservice.getAccounts, 3000);
   }])
