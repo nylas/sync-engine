@@ -779,28 +779,27 @@ def draft_send_api():
 # Client syncing
 ##
 
-@app.route('/sync/events')
+@app.route('/delta')
 def sync_events():
-    g.parser.add_argument('stamp', type=valid_public_id, location='args',
+    g.parser.add_argument('cursor', type=valid_public_id, location='args',
                           required=True)
     args = strict_parse_args(g.parser, request.args)
     try:
         results = client_sync.get_entries_from_public_id(
-            g.namespace.id, args['stamp'], g.db_session, args['limit'])
+            g.namespace.id, args['cursor'], g.db_session, args['limit'])
         return g.encoder.jsonify(results)
     except ValueError:
-        return err(404, 'Invalid stamp parameter')
+        return err(404, 'Invalid cursor parameter')
 
 
-@app.route('/sync/generate_stamp', methods=['POST'])
-def generate_stamp():
+@app.route('/delta/generate_cursor', methods=['POST'])
+def generate_cursor():
     data = request.get_json(force=True)
     if data.keys() != ['start'] or not isinstance(data['start'], int):
-        return err(400, 'generate_stamp request body must have the format '
+        return err(400, 'generate_cursor request body must have the format '
                         '{"start": <Unix timestamp>}')
 
     timestamp = int(data['start'])
-    stamp = client_sync.get_public_id_from_ts(g.namespace.id,
-                                              timestamp,
-                                              g.db_session)
-    return g.encoder.jsonify({'stamp': stamp})
+    cursor = client_sync.get_public_id_from_ts(g.namespace.id, timestamp,
+                                               g.db_session)
+    return g.encoder.jsonify({'cursor': cursor})

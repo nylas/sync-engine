@@ -1,17 +1,17 @@
-Title: Sync protocol
+Title: Delta protocol
 
-The sync protocol allows clients to get recent changes to a namespace without
+The delta protocol allows clients to get recent changes to a namespace without
 downloading all threads and messages.
 
 
-# Obtaining a sync stamp
+# Obtaining a delta cursor
 
-Sync clients should first exchange a Unix timestamp for a sync stamp. Clients
-can then use the sync stamp to fetch events that have occurred since that time.
+Delta clients should first exchange a Unix timestamp for a delta cursor. Clients
+can then use the delta cursor to fetch events that have occurred since that time.
 
 ```
 :::xml
-POST https://api.inboxapp.com/n/<namespace_id>/sync/generate_stamp
+POST https://api.inboxapp.com/n/<namespace_id>/delta/generate_cursor
 ```
 
 ```
@@ -26,7 +26,7 @@ POST https://api.inboxapp.com/n/<namespace_id>/sync/generate_stamp
 ```
 :::json
 {
-   "stamp": "aqb0llc2ioo0bclh7uxkim9z6"
+   "cursor": "aqb0llc2ioo0bclh7uxkim9z6"
 }
 ```
 
@@ -34,7 +34,7 @@ POST https://api.inboxapp.com/n/<namespace_id>/sync/generate_stamp
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/sync/events?stamp=<stamp>
+GET https://api.inboxapp.com/n/<namespace_id>/delta?cursor=<cursor>
 ```
 
 **Sample response:**
@@ -92,11 +92,11 @@ GET https://api.inboxapp.com/n/<namespace_id>/sync/events?stamp=<stamp>
 }
 ```
 
-Fetch the next set of events by issuing another query with `stamp` parameter
+Fetch the next set of events by issuing another query with `cursor` parameter
 equal to the value of `events_end`:
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/sync/events?stamp=<events_end>
+GET https://api.inboxapp.com/n/<namespace_id>/delta?cursor=<events_end>
 ```
 
