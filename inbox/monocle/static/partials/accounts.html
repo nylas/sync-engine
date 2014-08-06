@@ -112,7 +112,7 @@
             <input class="form-control" type="text" ng-model="errorFilter" placeholder="Search..."/>
           </td>
         <tr ng-repeat="account in accountsList | filter:accountFilter | orderBy:predicate:reverse" class='account-row status-{{account.state}}' ng-click="select_account(account.id)">
-          <td class="account_id"><a href="/account/{{account.id}}" id="link-{{account.id}}">{{account.id}}</a></td>
+          <td class="account_id">{{account.id}}</td>
           <td class="email">{{account.email}}</td>
           <td class="provider">{{account.provider}}</td>
           <td class="state">{{account.state}}</td>
