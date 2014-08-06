@@ -165,13 +165,6 @@ class ImapThread(Thread):
     g_thrid = Column(BigInteger, nullable=True, index=True, unique=False)
 
     @classmethod
-    def imapuids(self, session):
-        thread = db_session.query(ImapThread).options(
-            joinedload('messages').load_only('id')
-            .joinedload('imapuids').load_only('id'))\
-            .filter_by(id=thread_id).one()
-
-    @classmethod
     def from_gmail_message(cls, session, namespace, message):
         """
         Threads are broken solely on Gmail's X-GM-THRID for now. (Subjects
