@@ -176,3 +176,9 @@ td.sync-progress div.progress-bar {
 .account-row {
   cursor: pointer; cursor: hand;
 }
+
+tr.filters li {
+  cursor: pointer; cursor: hand;
+  text-decoration: none;
+  padding-left: 20px;
+}
