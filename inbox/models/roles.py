@@ -54,6 +54,9 @@ class Blob(object):
 
     @data.setter
     def data(self, value):
+        # Cache value in memory. Otherwise message-parsing incurs a disk or S3
+        # roundtrip.
+        self._data = value
         assert value is not None, \
             "Blob can't have NoneType data (can be zero-length, though!)"
         assert type(value) is not unicode, "Blob bytes must be encoded"
