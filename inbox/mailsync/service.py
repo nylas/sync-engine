@@ -7,11 +7,13 @@ from setproctitle import setproctitle
 from sqlalchemy import func, or_
 
 from inbox.providers import providers
+from inbox.config import config
 from inbox.contacts.remote_sync import ContactSync
 from inbox.log import get_logger
 from inbox.models.session import session_scope
 from inbox.models import Account
 from inbox.util.concurrency import retry_with_logging
+from inbox.util.debug import attach_profiler
 
 from inbox.mailsync.backends import module_registry
 
@@ -51,6 +53,12 @@ class SyncService(Process):
         Process.__init__(self)
 
     def run(self):
+        if config.get('DEBUG_PROFILING_ON'):
+            # If config flag is set, get live top-level profiling output on
+            # stdout by doing kill -SIGTRAP <sync_process>.
+            # This slows things down so you probably don't want to do it
+            # normally.
+            attach_profiler()
         setproctitle('inbox-sync-{}'.format(self.cpu_id))
         retry_with_logging(self._run_impl, self.log)
 

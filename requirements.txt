@@ -35,7 +35,7 @@ greenlet==0.4.2
 PyMySQL==0.6.2
 click==2.4
 faulthandler==2.3
-pyinstrument==0.10.1
+pyinstrument==0.12
 structlog==0.4.1
 lxml==3.3.5  # For talon
 cssselect==0.9.1  # For talon
