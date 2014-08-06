@@ -13,6 +13,7 @@ from collections import namedtuple, defaultdict
 
 import gevent
 from gevent import socket
+from gevent.coros import BoundedSemaphore
 
 import geventconnpool
 
@@ -113,11 +114,12 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
         self.account_id = account_id
         self.readonly = readonly
         self.valid = True
+        self._new_conn_lock = BoundedSemaphore(1)
         self._set_account_info()
-        # 1200s == 20min
         if not self.valid:
             return
 
+        # 1200s == 20min
         geventconnpool.ConnectionPool.__init__(
             self, num_connections, keepalive=1200,
             exc_classes=CONN_DISCARD_EXC_CLASSES)
@@ -149,7 +151,9 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
 
     # TODO: simplify auth flow, preferably not need to use the db in this mod
     def _new_connection(self):
-        with session_scope() as db_session:
+        # Ensure that connections are initialized serially, so as not to use
+        # many db sessions on startup.
+        with self._new_conn_lock as _, session_scope() as db_session:
             from inbox.auth import handler_from_provider
 
             account = db_session.query(ImapAccount).get(self.account_id)
