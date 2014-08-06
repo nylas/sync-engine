@@ -20,5 +20,12 @@ factory('monocleAPIservice', function($http) {
         });
     }
 
+    monocleAPI.accountAction = function(id, action) {
+        return $http({
+            method: 'GET',
+               url: '/account/'+ id + "?action=" + action
+        });
+    }
+
     return monocleAPI;
 });
