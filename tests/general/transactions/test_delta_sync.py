@@ -14,8 +14,8 @@ def test_invalid_input(api_client):
 
 
 def test_event_generation(api_client):
-    """Tests that events are returned in response to client sync API calls.
-    Doesn't test formatting of individual events in the response."""
+    """Tests that deltas are returned in response to client sync API calls.
+    Doesn't test formatting of individual deltas in the response."""
     ts = int(time.time())
     api_client.post_data('/tags/', {'name': 'foo'})
 
@@ -24,19 +24,19 @@ def test_event_generation(api_client):
     cursor = json.loads(cursor_response.data)['cursor']
 
     sync_data = api_client.get_data('/delta?cursor={}'.format(cursor))
-    assert len(sync_data['events']) == 1
+    assert len(sync_data['deltas']) == 1
     api_client.post_data('/contacts/', {'name': 'test',
                                         'email': 'test@example.com'})
 
     sync_data = api_client.get_data('/delta?cursor={}'.format(cursor))
-    assert len(sync_data['events']) == 2
+    assert len(sync_data['deltas']) == 2
 
     thread_id = api_client.get_data('/threads/')[0]['id']
     thread_path = '/threads/{}'.format(thread_id)
     api_client.put_data(thread_path, {'add_tags': ['foo']})
 
     sync_data = api_client.get_data('/delta?cursor={}'.format(cursor))
-    assert len(sync_data['events']) == 3
+    assert len(sync_data['deltas']) == 3
 
     time.sleep(1)
 
@@ -53,8 +53,8 @@ def test_event_generation(api_client):
 
     sync_data = api_client.get_data('/delta?cursor={0}&limit={1}'.
                                     format(cursor, 8))
-    assert len(sync_data['events']) == 8
+    assert len(sync_data['deltas']) == 8
 
-    cursor = sync_data['events_end']
+    cursor = sync_data['cursor_end']
     sync_data = api_client.get_data('/delta?cursor={0}'.format(cursor))
-    assert len(sync_data['events']) == 2
+    assert len(sync_data['deltas']) == 2

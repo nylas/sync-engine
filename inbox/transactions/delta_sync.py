@@ -95,80 +95,79 @@ def get_public_id_from_ts(namespace_id, timestamp, db_session):
         filter(Transaction.created_at < dt,
                Transaction.namespace_id == namespace_id).first()
     if transaction is None:
-        # If there are no earlier events, use '0' as a special stamp parameter
+        # If there are no earlier deltas, use '0' as a special stamp parameter
         # to signal 'process from the start of the log'.
         return '0'
     return transaction.public_id
 
 
-def get_entries_from_public_id(namespace_id, events_start, db_session,
+def get_entries_from_public_id(namespace_id, cursor_start, db_session,
                                result_limit):
     """Returns up to result_limit processed transaction log entries for the
     given namespace_id. Begins processing the log after the transaction with
-    public_id equal to the events_start parameter.
+    public_id equal to the cursor_start parameter.
 
     Arguments
     ---------
     namespace_id: int
-    events_start: string
+    cursor_start: string
         The public_id of the transaction log entry after which to begin
         processing. Normally this should be the return value of a previous call
-        to get_public_id_from_ts, or the value of 'events_end' from a previous
+        to get_public_id_from_ts, or the value of 'cursor_end' from a previous
         call to this function.
     db_session: InboxSession
     result_limit: int
-        The maximum number of events to return.
+        The maximum number of deltas to return.
 
     Returns
     -------
     Dictionary with keys:
-     - 'events_start'
-     - 'events': list of serialized add/modify/delete events
-     - (optional) 'events_end': the public_id of the last transaction log entry
-       in the returned events, if available. This value can be passed as
-       events_start in a subsequent call to this function to get the next page
+     - 'cursor_start'
+     - 'deltas': list of serialized add/modify/delete deltas
+     - (optional) 'cursor_end': the public_id of the last transaction log entry
+       in the returned deltas, if available. This value can be passed as
+       cursor_start in a subsequent call to this function to get the next page
        of results.
 
     Raises
     ------
     ValueError
-        If events_start is invalid.
+        If cursor_start is invalid.
     """
     try:
-        # Check that events_start can be a public id, and interpret the special
+        # Check that cursor_start can be a public id, and interpret the special
         # stamp value '0'.
-        int_value = int(events_start, 36)
+        int_value = int(cursor_start, 36)
         if not int_value:
             internal_start_id = 0
         else:
             internal_start_id, = db_session.query(Transaction.id). \
-                filter(Transaction.public_id == events_start,
+                filter(Transaction.public_id == cursor_start,
                        Transaction.namespace_id == namespace_id).one()
     except (ValueError, NoResultFound):
         raise ValueError('Invalid first_public_id parameter: {}'.
-                         format(events_start))
+                         format(cursor_start))
     query = db_session.query(Transaction). \
         order_by(asc(Transaction.id)). \
         filter(Transaction.namespace_id == namespace_id)
 
-    events = []
-    events_end = events_start
+    deltas = []
+    cursor_end = cursor_start
     for transaction in safer_yield_per(query, Transaction.id,
                                        internal_start_id + 1,
                                        result_limit):
 
-
         if should_publish_transaction(transaction, db_session):
             event = create_event(transaction)
-            events.append(event)
-            events_end = transaction.public_id
-            if len(events) == result_limit:
+            deltas.append(event)
+            cursor_end = transaction.public_id
+            if len(deltas) == result_limit:
                 break
 
     result = {
-        'events_start': events_start,
-        'events': events,
-        'events_end': events_end
+        'cursor_start': cursor_start,
+        'deltas': deltas,
+        'cursor_end': cursor_end
     }
 
     return result
