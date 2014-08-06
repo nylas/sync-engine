@@ -23,7 +23,7 @@ from inbox.log import get_logger
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from inbox.models.action_log import schedule_action
 from inbox.models.session import InboxSession
-from inbox.transactions import client_sync
+from inbox.transactions import delta_sync
 
 from err import err
 
@@ -780,12 +780,12 @@ def draft_send_api():
 ##
 
 @app.route('/delta')
-def sync_events():
+def sync_deltas():
     g.parser.add_argument('cursor', type=valid_public_id, location='args',
                           required=True)
     args = strict_parse_args(g.parser, request.args)
     try:
-        results = client_sync.get_entries_from_public_id(
+        results = delta_sync.get_entries_from_public_id(
             g.namespace.id, args['cursor'], g.db_session, args['limit'])
         return g.encoder.jsonify(results)
     except ValueError:
@@ -800,6 +800,6 @@ def generate_cursor():
                         '{"start": <Unix timestamp>}')
 
     timestamp = int(data['start'])
-    cursor = client_sync.get_public_id_from_ts(g.namespace.id, timestamp,
+    cursor = delta_sync.get_public_id_from_ts(g.namespace.id, timestamp,
                                                g.db_session)
     return g.encoder.jsonify({'cursor': cursor})
