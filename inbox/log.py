@@ -13,6 +13,8 @@ import raven
 import raven.processors
 import colorlog
 import structlog
+import subprocess
+from structlog._frames import _find_first_app_frame_and_name
 
 from inbox.config import config
 
@@ -159,7 +161,7 @@ def configure_logging(is_prod):
         sentry_client = raven.Client(
             sentry_dsn,
             processors=('inbox.log.TruncatingProcessor',
-                        'raven.processors.RemoveStackLocalsProcessor'))
+                        'inbox.log.KeepLastNStackLocalsProcessor'))
 
 
 def safe_format_exception(etype, value, tb, limit=None):
@@ -189,9 +191,30 @@ class TruncatingProcessor(raven.processors.Processor):
         return data
 
 
+class KeepLastNStackLocalsProcessor(raven.processors.Processor):
+    """This processor keeps the locals for only the last
+    n frames."""
+    FRAMES_KEPT_NR = 20
+
+    def filter_stacktrace(self, data, **kwargs):
+        if 'frames' not in data:
+            return
+
+        for index, frame in enumerate(reversed(data['frames'])):
+            if index >= self.FRAMES_KEPT_NR:
+                frame.pop('vars')
+
+
 def sentry_alert(*args, **kwargs):
     if config.get('SENTRY_EXCEPTIONS'):
         sentry_client.captureException(*args, **kwargs)
+
+
+def get_git_revision():
+    params = ['git', 'rev-parse', '--short', 'HEAD']
+    return subprocess.check_output(params).strip()
+
+git_revision = get_git_revision()
 
 
 def log_uncaught_errors(logger=None, account_id=None):
@@ -205,5 +228,5 @@ def log_uncaught_errors(logger=None, account_id=None):
     """
     logger = logger or get_logger()
     logger.error('Uncaught error', exc_info=True)
-    user_data = {'account_id': account_id}
+    user_data = {'account_id': account_id, 'revision': git_revision}
     sentry_alert(extra=user_data)
