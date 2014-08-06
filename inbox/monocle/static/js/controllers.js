@@ -64,7 +64,7 @@ angular.module('monocleApp.controllers', [])
             return (!$scope.emailFilter || keyword.test(account.email)) && 
                (!$scope.providerFilter || account.provider == $scope.providerFilter) &&
                (!$scope.stateFilter || account.state == $scope.stateFilter) &&
-               (!$scope.errorFilter || keyword.test(account.sync_error));
+               (!$scope.errorFilter || error_keyword.test(account.sync_error));
       };
 
       $interval(monocleAPIservice.getAccounts, 3000);
