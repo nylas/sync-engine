@@ -27,9 +27,8 @@
   <div class="info-item">
     <div class="info-name">Actions:</div>
     <div class="info-value">
-      <a href="/account/{{account.id}}?action=stop"><button type="button" class="btn btn-default btn-xs"><span class="glyphicon glyphicon-stop"></span> Stop</button></a>
-
-      <a href="/account/{{account.id}}?action=start"><button type="button" class="btn btn-default btn-xs"><span class="glyphicon glyphicon-play"></span> Start</button></a>
+      <button type="button" class="btn btn-default btn-xs" ng-click="accountAction('stop')"><span class="glyphicon glyphicon-stop"></span> Stop</button>
+      <button type="button" class="btn btn-default btn-xs" ng-click="accountAction('start')"><span class="glyphicon glyphicon-play"></span> Start</button>
     </div>
   </div>
 </div>

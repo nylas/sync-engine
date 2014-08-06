@@ -86,6 +86,13 @@ angular.module('monocleApp.controllers', [])
         });
       }
 
+      $scope.accountAction = function(action) {
+        monocleAPIservice.accountAction($scope.id, action).success(function (response) {
+          $scope.account = response.account;
+          $scope.folders = response.folders;
+        });
+      }
+
       $interval($scope.refreshDetails, 3000);
 
   }]);
