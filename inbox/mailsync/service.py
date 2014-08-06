@@ -74,7 +74,9 @@ class SyncService(Process):
                         or_(Account.sync_state.is_(None),
                             Account.sync_host == platform.node()),
                         func.mod(Account.id, self.total_cpus)
-                        == self.cpu_id)]
+                        == self.cpu_id,
+                        or_(Account.sync_state != 'stopped',
+                            Account.sync_state.is_(None)))]
                 for account_id in start_accounts:
                     if account_id not in self.monitors:
                         self.log.info('sync service starting sync',
@@ -110,6 +112,7 @@ class SyncService(Process):
                                  account_id=account_id,
                                  email_address=acc.email_address,
                                  sync_host=acc.sync_host)
+
             elif acc.id not in self.monitors:
                 try:
                     acc.sync_lock()
@@ -147,7 +150,7 @@ class SyncService(Process):
             fqdn = platform.node()
             if (acc.id not in self.monitors) or \
                     (not acc.sync_enabled):
-                self.log.info('sync already started', account_id=account_id)
+                self.log.info('sync not local', account_id=account_id)
             try:
                 if acc.sync_host is None:
                     self.log.info('sync not enabled', account_id=account_id)
