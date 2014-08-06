@@ -7,13 +7,14 @@
 // Takes an ISO time and returns a string representing how
 // long ago the date represents.
 function prettyDate(date){
-	var now = new Date();
-	var diff = (((now).getTime() - date.getTime()) / 1000),
+	var now = new Date(); 
+	var now_utc = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(),  now.getUTCHours(), now.getUTCMinutes(), now.getUTCSeconds());
+	var diff = (((now_utc).getTime() - date.getTime()) / 1000),
 		day_diff = Math.floor(diff / 86400);
-
+			
 	if ( isNaN(day_diff) || day_diff < 0 || day_diff >= 31 )
 		return;
-
+			
 	return day_diff == 0 && (
 			diff < 60 && "just now" ||
 			diff < 120 && "1 minute ago" ||
