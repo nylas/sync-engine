@@ -28,6 +28,8 @@ from collections import namedtuple
 from gevent import spawn
 from gevent.queue import LifoQueue
 
+from sqlalchemy.orm.exc import NoResultFound
+
 from inbox.util.itert import chunk, partition
 from inbox.util.cache import set_cache, get_cache, rm_cache
 from inbox.util.misc import or_none
@@ -491,11 +493,19 @@ def add_new_imapuid(db_session, log, gmessage, folder_name, acc):
             Folder.name == folder_name,
             ImapUid.account_id == acc.id,
             ImapUid.msg_uid == gmessage.uid).all():
-        message = db_session.query(Message).join(ImapThread).filter(
-            ImapThread.g_thrid == gmessage.g_metadata.thrid,
-            Message.g_thrid == gmessage.g_metadata.thrid,
-            Message.g_msgid == gmessage.g_metadata.msgid,
-            ImapThread.namespace_id == acc.namespace.id).one()
+        try:
+            message = db_session.query(Message).join(ImapThread).filter(
+                ImapThread.g_thrid == gmessage.g_metadata.thrid,
+                Message.g_thrid == gmessage.g_metadata.thrid,
+                Message.g_msgid == gmessage.g_metadata.msgid,
+                ImapThread.namespace_id == acc.namespace.id).one()
+        except NoResultFound:
+            # this may occur when a thread is expanded and those messages are
+            # downloaded and committed, then new messages on that thread arrive
+            # and get added to the download queue before this code is run
+            log.debug('no Message object found, skipping imapuid creation',
+                      uid=gmessage.uid, g_msgid=gmessage.g_metadata.msgid)
+            return
         new_imapuid = ImapUid(
             account=acc,
             folder=Folder.find_or_create(db_session, acc, folder_name),
@@ -504,7 +514,8 @@ def add_new_imapuid(db_session, log, gmessage, folder_name, acc):
         db_session.add(new_imapuid)
         db_session.commit()
     else:
-        log.debug('skipping imapuid creation', uid=gmessage.uid)
+        log.debug('skipping imapuid creation',
+                  uid=gmessage.uid, g_msgid=gmessage.g_metadata.msgid)
 
 
 def add_new_imapuids(crispin_client, log, remote_g_metadata, syncmanager_lock,
