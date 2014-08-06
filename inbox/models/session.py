@@ -1,3 +1,5 @@
+import sys
+import time
 from contextlib import contextmanager
 
 from sqlalchemy.orm.session import Session
@@ -189,10 +191,21 @@ def session_scope(versioned=True, ignore_soft_deletes=True, namespace_id=None):
                            ignore_soft_deletes=ignore_soft_deletes,
                            namespace_id=namespace_id)
     try:
+        start_time = time.time()
+        calling_frame = sys._getframe().f_back.f_back
+        call_loc = '{}:{}'.format(calling_frame.f_globals.get('__name__'),
+                                  calling_frame.f_lineno)
+        logger = log.bind(engine_id=id(cached_engine), session_id=id(session),
+                          call_loc=call_loc)
+        logger.info('creating db_session',
+                    sessions_used=cached_engine.pool.checkedout())
         yield session
         session.commit()
     except:
         session.rollback()
         raise
     finally:
+        lifetime = time.time() - start_time
+        logger.info('closing db_session', lifetime=lifetime,
+                    sessions_used=cached_engine.pool.checkedout())
         session.close()
