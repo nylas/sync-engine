@@ -16,6 +16,9 @@ class AddressComparator(Comparator):
     def __eq__(self, other):
         return self.__clause_element__() == canonicalize_address(other)
 
+    def like(self, term, escape=None):
+        return self.__clause_element__().like(term, escape=escape)
+
 
 class HasEmailAddress(object):
     """Provides an email_address attribute, which returns as value whatever you

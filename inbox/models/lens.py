@@ -3,8 +3,7 @@ import re
 
 from datetime import datetime
 
-from sqlalchemy import (Column, String, DateTime, ForeignKey, and_,
-                        or_, asc, desc)
+from sqlalchemy import (Column, String, DateTime, ForeignKey)
 from sqlalchemy.orm import (reconstructor, relationship, validates,
                             object_session)
 
@@ -12,16 +11,11 @@ from inbox.log import get_logger
 log = get_logger()
 
 from inbox.util.encoding import base36decode
-from inbox.sqlalchemy_ext.util import Base36UID, maybe_refine_query
+from inbox.sqlalchemy_ext.util import Base36UID
 
 from inbox.models.mixins import HasPublicID
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
-from inbox.models.message import Message
-from inbox.models.thread import Thread, TagItem
-from inbox.models.contact import Contact, MessageContactAssociation
-from inbox.models.block import Block
-from inbox.models.tag import Tag
 
 
 LENS_LIMIT_DEFAULT = 100

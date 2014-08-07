@@ -13,6 +13,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
 
+from inbox.contacts.process_mail import update_contacts_from_message
 from inbox.models.block import Block
 from inbox.models.message import Message
 from inbox.models.folder import Folder
@@ -235,6 +236,8 @@ def create_imap_message(db_session, log, account, folder, msg):
 
     new_msg.is_draft = imapuid.is_draft
     new_msg.is_read = imapuid.is_seen
+
+    update_contacts_from_message(db_session, new_msg, account.id)
 
     # NOTE: This might be a good place to add FolderItem entries for
     # non-Gmail backends.

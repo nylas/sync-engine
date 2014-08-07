@@ -1,12 +1,10 @@
 from sqlalchemy import Column, Integer, String, Enum, ForeignKey, Text
-from sqlalchemy.orm import relationship, backref, validates
-from sqlalchemy.orm.collections import attribute_mapped_collection
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy.schema import UniqueConstraint
 
 from inbox.models.mixins import HasPublicID, HasEmailAddress
 from inbox.models.transaction import HasRevisions
 from inbox.models.base import MailSyncBase
-from inbox.models.search import SearchToken
 
 from inbox.models.account import Account
 from inbox.models.message import Message
@@ -38,11 +36,6 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
     # phone_number = Column(String(64))
 
     raw_data = Column(Text)
-    search_signals = relationship(
-        'SearchSignal', cascade='all',
-        primaryjoin='and_(SearchSignal.contact_id == Contact.id, '
-                    'SearchSignal.deleted_at.is_(None))',
-        collection_class=attribute_mapped_collection('name'))
 
     # A score to use for ranking contact search results. This should be
     # precomputed to facilitate performant search.
@@ -69,32 +62,6 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
         self.email_address = src.email_address
         self.provider_name = src.provider_name
         self.raw_data = src.raw_data
-
-    @validates('name', include_backrefs=False)
-    def tokenize_name(self, key, name):
-        """ Update the associated search tokens whenever the contact's name is
-        updated."""
-        new_tokens = []
-        # Delete existing 'name' tokens
-        self.token = [token for token in self.token if token.source != 'name']
-        if name is not None:
-            new_tokens.extend(name.split())
-            new_tokens.append(name)
-            self.token.extend(SearchToken(token=token, source='name') for token
-                              in new_tokens)
-        return name
-
-    @validates('email_address', include_backrefs=False)
-    def tokenize_email_address(self, key, email_address):
-        """ Update the associated search tokens whenever the contact's email
-        address is updated."""
-        self.token = [token for token in self.token if token.source !=
-                      'email_address']
-        if email_address is not None:
-            new_token = SearchToken(token=email_address,
-                                    source='email_address')
-            self.token.append(new_token)
-        return email_address
 
 
 class MessageContactAssociation(MailSyncBase):

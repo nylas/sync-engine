@@ -34,7 +34,6 @@ from inbox.util.itert import chunk, partition
 from inbox.util.cache import set_cache, get_cache, rm_cache
 from inbox.util.misc import or_none
 
-from inbox.contacts.process_mail import update_contacts
 from inbox.crispin import (GMetadata, connection_pool, retry_crispin,
                            GmailSettingError)
 from inbox.models.session import session_scope
@@ -668,7 +667,6 @@ def create_gmail_message(db_session, log, acct, folder, msg):
                               msg.g_thrid, msg.g_msgid, msg.g_labels,
                               msg.created)
 
-    update_contacts(db_session, acct.id, new_uid.message)
     return new_uid
 
 
