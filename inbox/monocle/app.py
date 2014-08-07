@@ -95,8 +95,8 @@ def calculate_eas_status(db_session, accts):
             EASFolderSyncStatus.account_id.in_(ids)).all()
 
         numuids = db_session.query(
-            EASUid.account_id, func.count(EASUid.id)).group_by(
-            EASUid.account_id).all()
+            EASUid.easaccount_id, func.count(EASUid.id)).group_by(
+            EASUid.easaccount_id).all()
 
         remote = defaultdict(int)
         for m in metrics:
@@ -160,5 +160,4 @@ if __name__ == '__main__':
     import os
     setproctitle('monocle')
     os.environ['DEBUG'] = 'true' if app.debug else 'false'
-    #app.run(host='127.0.0.1')
-    app.run(host='0.0.0.0', debug=True)
+    app.run(host='127.0.0.1')
