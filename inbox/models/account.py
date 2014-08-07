@@ -159,6 +159,13 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
         self._sync_status['sync_end_time'] = None
         self._sync_status['sync_error'] = None
 
+        self._sync_status['id'] = self.id
+        self._sync_status['email'] = self.email_address
+        self._sync_status['provider'] = self.provider
+
+        self._sync_status['state'] = self.sync_state
+        self._sync_status['sync_host'] = self.sync_host
+
     def stop_sync(self):
         """ Set a flag for the monitor to stop the sync. """
 
@@ -172,6 +179,9 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
         self.sync_host = None
         self._sync_status['sync_end_time'] = datetime.utcnow()
 
+        self._sync_status['state'] = self.sync_state
+        self._sync_status['sync_host'] = self.sync_host
+
     def kill_sync(self, error=None):
         # Don't change sync_host if moving to state 'killed'
 
@@ -179,6 +189,9 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
 
         self._sync_status['sync_end_time'] = datetime.utcnow()
         self._sync_status['sync_error'] = error
+
+        self._sync_status['state'] = self.sync_state
+        self._sync_status['sync_host'] = self.sync_host
 
     @property
     def sender_name(self):
