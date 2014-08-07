@@ -847,8 +847,7 @@ def update_uid_counts(db_session, log, account_id, folder_name, **kwargs):
     else:
         metrics = dict(uid_checked_timestamp=datetime.utcnow())
         metrics.update(kwargs)
-
-    saved_status.update_metrics(metrics)
+        saved_status.update_metrics(metrics)
 
     db_session.commit()
 
