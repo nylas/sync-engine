@@ -60,23 +60,35 @@ def parse_ml_headers(headers):
 
 def parse_references(references, in_reply_to):
     """
-    Determine the message_ids that the message references, as per JWZ.
-    (http://www.jwz.org/doc/threading.html)
+    Parse a References: header and returns an array of MessageIDs.
+    The returned array contains the MessageID in In-Reply-To if
+    the header is present.
+
+    Parameters
+    ----------
+
+    references: string
+        the contents of the referfences header
+
+    in_reply_to: string
+        the contents of the in-reply-to header
 
     Returns
     -------
-    str
-        references : a string of tab-separated message_ids.
-
+    list of MessageIds (strings) or an empty list.
     """
     replyto = in_reply_to.split()[0] if in_reply_to else in_reply_to
 
     if not references:
-        return replyto
+        if replyto:
+            return [replyto]
+        else:
+            return []
 
-    separator = '\t'
+    references = references.split()
     if replyto not in references:
-        references += (separator + replyto)
+        references.append(replyto)
+
     return references
 
 
