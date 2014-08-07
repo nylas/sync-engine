@@ -120,10 +120,9 @@
           <td class="start">{{account.sync_start_time | time_ago}}</td>
           <td class="end">{{account.sync_end_time | time_ago}}</td>
           <td class="sync-progress">
-            percent = {{(account.local_count/account.remote_count) * 100}}
             <div class="progress">
-              <div class="progress-bar progress-bar-info"  role="progressbar" aria-valuenow="{{percent}}" aria-valuemin="0" aria-valuemax="100" style="width: {{percent}}%">
-                &nbsp;{{percent}}%
+              <div class="progress-bar progress-bar-info"  role="progressbar" aria-valuenow="{{ account | account_percent}}" aria-valuemin="0" aria-valuemax="100" style="width: {{account | account_percent}}%">
+                &nbsp;{{ account | account_percent}}%
               </div>
             </div>
           </td>
