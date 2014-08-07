@@ -8,6 +8,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 import sqlalchemy.orm.query
 
+from inbox.config import config
 from inbox.ignition import main_engine
 from inbox.log import get_logger
 log = get_logger()
@@ -191,21 +192,23 @@ def session_scope(versioned=True, ignore_soft_deletes=True, namespace_id=None):
                            ignore_soft_deletes=ignore_soft_deletes,
                            namespace_id=namespace_id)
     try:
-        start_time = time.time()
-        calling_frame = sys._getframe().f_back.f_back
-        call_loc = '{}:{}'.format(calling_frame.f_globals.get('__name__'),
-                                  calling_frame.f_lineno)
-        logger = log.bind(engine_id=id(cached_engine), session_id=id(session),
-                          call_loc=call_loc)
-        logger.info('creating db_session',
-                    sessions_used=cached_engine.pool.checkedout())
+        if config.get('LOG_DB_SESSIONS'):
+            start_time = time.time()
+            calling_frame = sys._getframe().f_back.f_back
+            call_loc = '{}:{}'.format(calling_frame.f_globals.get('__name__'),
+                                      calling_frame.f_lineno)
+            logger = log.bind(engine_id=id(cached_engine),
+                              session_id=id(session), call_loc=call_loc)
+            logger.info('creating db_session',
+                        sessions_used=cached_engine.pool.checkedout())
         yield session
         session.commit()
     except:
         session.rollback()
         raise
     finally:
-        lifetime = time.time() - start_time
-        logger.info('closing db_session', lifetime=lifetime,
-                    sessions_used=cached_engine.pool.checkedout())
+        if config.get('LOG_DB_SESSIONS'):
+            lifetime = time.time() - start_time
+            logger.info('closing db_session', lifetime=lifetime,
+                        sessions_used=cached_engine.pool.checkedout())
         session.close()
