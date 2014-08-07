@@ -503,8 +503,9 @@ def highestmodseq_update(crispin_client, log, folder_name, last_highestmodseq,
             if local_uids is None:
                 local_uids = account.all_uids(
                     account_id, db_session, folder_name)
-            remove_deleted_uids(crispin_client.account_id, db_session, log,
-                                folder_name, local_uids, remote_uids)
+            deleted_uids = remove_deleted_uids(crispin_client.account_id,
+                                               db_session, log, folder_name,
+                                               local_uids, remote_uids)
         update_uid_counts(db_session, log, account_id, folder_name,
                           remote_uid_count=len(remote_uids),
                           delete_uid_count=len(deleted_uids))
