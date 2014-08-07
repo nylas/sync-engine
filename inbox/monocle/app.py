@@ -19,10 +19,14 @@ engine = main_engine(pool_size=5)
 app = Flask(__name__, static_url_path='')
 app.debug = False
 
+ACCOUNTS_INFO = []
+last_calc_at = None
+recalc_after = 120
+
 
 @app.before_request
 def start():
-    g.db_session = InboxSession(engine)
+    g.db_session = InboxSession(engine, ignore_soft_deletes=False)
 
 
 @app.after_request
@@ -38,18 +42,30 @@ def root():
 
 @app.route('/accounts', methods=['GET'])
 def accounts():
-    accounts = g.db_session.query(Account).all()
-    accounts_info = []
+    global last_calc_at, ACCOUNTS_INFO
 
-    imap, eas = partition(lambda a: a.provider == 'eas', accounts)
+    delta = (datetime.datetime.utcnow() - last_calc_at).seconds if \
+        last_calc_at else None
 
-    if imap:
-        accounts_info.extend(calculate_imap_status(g.db_session, imap))
+    app.logger.error('In accounts, last_calc_at, delta: {0}, {1}'.format(
+        str(last_calc_at), str(delta)))
 
-    if eas and 'eas' in backend_module_registry:
-        accounts_info.extend(calculate_eas_status(g.db_session, eas))
+    if not last_calc_at or delta >= recalc_after:
+        app.logger.error('Recalc')
 
-    return json.dumps(accounts_info, cls=DateTimeJSONEncoder)
+        ACCOUNTS_INFO = []
+        accounts = g.db_session.query(Account).all()
+        imap, eas = partition(lambda a: a.provider == 'eas', accounts)
+
+        if imap:
+            ACCOUNTS_INFO.extend(calculate_imap_status(g.db_session, imap))
+
+        if eas and 'eas' in backend_module_registry:
+            ACCOUNTS_INFO.extend(calculate_eas_status(g.db_session, eas))
+
+        last_calc_at = datetime.datetime.utcnow()
+
+    return json.dumps(ACCOUNTS_INFO, cls=DateTimeJSONEncoder)
 
 
 def calculate_imap_status(db_session, accts):
@@ -154,10 +170,18 @@ class DateTimeJSONEncoder(json.JSONEncoder):
         else:
             return super(DateTimeJSONEncoder, self).default(obj)
 
+import logging
+from logging import FileHandler
 
 if __name__ == '__main__':
     from setproctitle import setproctitle
     import os
     setproctitle('monocle')
     os.environ['DEBUG'] = 'true' if app.debug else 'false'
+
+    if app.debug:
+        handler = FileHandler('monocle_debug.log')
+        handler.setLevel(logging.INFO)
+        app.logger.addHandler(handler)
+
     app.run(host='127.0.0.1')
