@@ -13,9 +13,7 @@ Fetch the user's contact list. This API supports query parameters which make it 
 
 **Options:**
 
-* `order_by`- If `order_by=rank`, return contacts in ranked order of relevance based
-  on the user's mail data.
-* `filter` - If given and if `order_by=rank` is passed, only return results containing this parameter as a substring of the contact's name or email address.
+* `filter` - If given, only return results containing this parameter as a substring of the contact's name or email address.
 * `limit` - Maximum number of results to return. Defaults to 100. If `limit` is set too high, a request may fail with HTTP status code 400 to prevent excessively large response bodies.
 * `offset` - Zero-based offset to be used with `limit` for pagination of results.
 
@@ -34,9 +32,6 @@ Fetch the user's contact list. This API supports query parameters which make it 
     ....
 ]
 ```
-
-Two calls to `/contacts?order_by=rank` are not guaranteed to return the same results, since the relative ranking of contacts may change over time. Clients that want to fetch all of a user's contacts should omit the `order_by` and `filter` parameters in order to get consistently-paginated results.
-
 
 # Retrieving a single contact
 

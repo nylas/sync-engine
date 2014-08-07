@@ -4,7 +4,7 @@ import zerorpc
 from flask import request, g, Blueprint, make_response, Response
 from flask import jsonify as flask_jsonify
 from flask.ext.restful import reqparse
-from sqlalchemy import asc
+from sqlalchemy import asc, or_
 from sqlalchemy.orm.exc import NoResultFound
 from werkzeug.exceptions import default_exceptions
 from werkzeug.exceptions import HTTPException
@@ -382,20 +382,19 @@ def message_api(public_id):
 ##
 @app.route('/contacts/', methods=['GET'])
 def contact_search_api():
-    g.parser.add_argument('filter', type=str, default='', location='args')
-    # STOPSHIP(emfree): validate expected actual values
-    g.parser.add_argument('order_by', type=str, location='args')
+    g.parser.add_argument('filter', type=bounded_str, default='',
+                          location='args')
     args = strict_parse_args(g.parser, request.args)
-    if args.get('order_by') == 'rank':
-        results = contacts.search_util.search(g.db_session,
-                                              g.namespace.account_id, filter,
-                                              args['limit'], args['offset'])
-    else:
-        results = g.db_session.query(Contact). \
-            filter(Contact.account_id == g.namespace.account_id,
-                   Contact.source == 'local'). \
-            order_by(asc(Contact.id)).limit(args['limit']). \
-            offset(args['offset']).all()
+    term_filter_string = '%{}%'.format(args['filter'])
+    term_filter = or_(
+        Contact.name.like(term_filter_string),
+        Contact.email_address.like(term_filter_string))
+    results = g.db_session.query(Contact). \
+        filter(Contact.account_id == g.namespace.account_id,
+               Contact.source == 'local',
+               term_filter). \
+        order_by(asc(Contact.id)).limit(args['limit']). \
+        offset(args['offset']).all()
 
     return g.encoder.jsonify(results)
 
@@ -801,5 +800,5 @@ def generate_cursor():
 
     timestamp = int(data['start'])
     cursor = delta_sync.get_public_id_from_ts(g.namespace.id, timestamp,
-                                               g.db_session)
+                                              g.db_session)
     return g.encoder.jsonify({'cursor': cursor})
