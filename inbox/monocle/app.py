@@ -47,7 +47,7 @@ def accounts():
         accounts_info.extend(calculate_imap_status(g.db_session, imap))
 
     if eas and 'eas' in backend_module_registry:
-        accounts_info.extend(calculate_eas_status())
+        accounts_info.extend(calculate_eas_status(g.db_session, eas))
 
     return json.dumps(accounts_info, cls=DateTimeJSONEncoder)
 
