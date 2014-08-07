@@ -3,7 +3,8 @@ import platform
 from subprocess import call
 import json
 import datetime
-from collections import defaultdict
+import logging
+from logging import FileHandler
 
 from flask import Flask, g, request
 
@@ -14,12 +15,15 @@ from inbox.ignition import main_engine
 from inbox.models.session import InboxSession
 from inbox.models import Account, backend_module_registry
 from inbox.api.err import err
-from inbox.util.itert import partition
 
 engine = main_engine(pool_size=5)
 
 app = Flask(__name__, static_url_path='')
-app.debug = False
+app.debug = True
+
+ACCOUNTS_INFO = []
+last_calc_at = None
+recalc_after = 120
 
 
 @app.before_request
@@ -40,80 +44,87 @@ def root():
 
 @app.route('/accounts', methods=['GET'])
 def accounts():
-    accounts = g.db_session.query(Account).all()
-    accounts_info = []
+    global last_calc_at, ACCOUNTS_INFO
 
-    imap, eas = partition(lambda a: a.provider == 'eas', accounts)
+    delta = (datetime.datetime.utcnow() - last_calc_at).seconds if \
+        last_calc_at else None
 
-    if imap:
-        accounts_info.extend(calculate_imap_status(g.db_session, imap))
+    app.logger.info('last_calc_at, delta: {0}, {1}'.format(
+        str(last_calc_at), str(delta)))
 
-    if eas and 'eas' in backend_module_registry:
-        accounts_info.extend(calculate_eas_status(g.db_session, eas))
+    if not last_calc_at or delta >= recalc_after:
+        app.logger.info('Recalculating')
 
-    return json.dumps(accounts_info, cls=DateTimeJSONEncoder)
+        ACCOUNTS_INFO = {}
+        eas = []
+        imap = []
+
+        accounts = g.db_session.query(Account.id, Account.discriminator,
+                                      Account._sync_status).all()
+
+        for a in accounts:
+            ACCOUNTS_INFO[a[0]] = a[2]
+
+            if a[1] == 'easaccount':
+                eas.append(a[0])
+            else:
+                imap.append(a[0])
+
+        if imap:
+            calculate_imap_status(g.db_session, imap, ACCOUNTS_INFO)
+
+        if eas and 'eas' in backend_module_registry:
+            calculate_eas_status(g.db_session, eas, ACCOUNTS_INFO)
+
+        last_calc_at = datetime.datetime.utcnow()
+
+    return json.dumps(ACCOUNTS_INFO.values(), cls=DateTimeJSONEncoder)
 
 
-def calculate_imap_status(db_session, accts):
+def calculate_imap_status(db_session, accts, accounts_info):
         from inbox.models.backends.imap import ImapFolderSyncStatus, ImapUid
-
-        ids = [a.id for a in accts]
 
         metrics = db_session.query(
             ImapFolderSyncStatus.account_id,
             ImapFolderSyncStatus._metrics).filter(
-            ImapFolderSyncStatus.account_id.in_(ids)).all()
+            ImapFolderSyncStatus.account_id.in_(accounts_info.keys())).all()
 
         numuids = db_session.query(
             ImapUid.account_id, func.count(ImapUid.id)).group_by(
             ImapUid.account_id).all()
 
-        remote = defaultdict(int)
         for m in metrics:
-            remote[m[0]] += m[1].get('remote_uid_count', 0)
+            remote_count = accounts_info[m[0]].get('remote_count', 0)
+            remote_count += m[1].get('remote_uid_count', 0)
 
-        local = defaultdict(int)
+            accounts_info[m[0]]['remote_count'] = remote_count
+
         for m in numuids:
-            local[m[0]] = m[1]
-
-        accounts_info = []
-        for a in accts:
-            status = a.sync_status
-            status.update(remote_count=remote[a.id], local_count=local[a.id])
-
-            accounts_info.append(status)
+            accounts_info[m[0]]['local_count'] = m[1]
 
         return accounts_info
 
 
-def calculate_eas_status(db_session, accts):
+def calculate_eas_status(db_session, accts, accounts_info):
         from inbox.models.backends.eas import EASFolderSyncStatus, EASUid
-
-        ids = [a.id for a in accts]
 
         metrics = db_session.query(
             EASFolderSyncStatus.account_id,
             EASFolderSyncStatus._metrics).filter(
-            EASFolderSyncStatus.account_id.in_(ids)).all()
+            EASFolderSyncStatus.account_id.in_(accounts_info.keys())).all()
 
         numuids = db_session.query(
             EASUid.easaccount_id, func.count(EASUid.id)).group_by(
             EASUid.easaccount_id).all()
 
-        remote = defaultdict(int)
         for m in metrics:
-            remote[m[0]] += m[1].get('total_remote_count', 0)
+            remote_count = accounts_info[m[0]].get('remote_count', 0)
+            remote_count += m[1].get('total_remote_count', 0)
 
-        local = defaultdict(int)
+            accounts_info[m[0]]['remote_count'] = remote_count
+
         for m in numuids:
-            local[m[0]] = m[1]
-
-        accounts_info = []
-        for a in accts:
-            status = a.sync_status
-            status.update(remote_count=remote[a.id], local_count=local[a.id])
-
-            accounts_info.append(status)
+            accounts_info[m[0]]['local_count'] = m[1]
 
         return accounts_info
 
@@ -163,4 +174,10 @@ class DateTimeJSONEncoder(json.JSONEncoder):
 if __name__ == '__main__':
     import os
     os.environ['DEBUG'] = 'true' if app.debug else 'false'
+
+    if app.debug:
+        handler = FileHandler('debug.log')
+        handler.setLevel(logging.INFO)
+        app.logger.addHandler(handler)
+
     app.run(host='127.0.0.1')
