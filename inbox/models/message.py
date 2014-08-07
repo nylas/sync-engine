@@ -56,8 +56,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     # Do delete messages if their associated thread is deleted.
     thread_id = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
                        nullable=False)
-    thread_order = Column(Integer, nullable=False)
-
     thread = relationship(
         'Thread',
         primaryjoin='and_(Message.thread_id == Thread.id, '
@@ -363,7 +361,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
         return plain_data, html_data
 
-    # FIXME @karim: doesn't work - refactor/i18n
     def trimmed_subject(self):
         s = self.subject
         if s[:4] == u'RE: ' or s[:4] == u'Re: ':

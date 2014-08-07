@@ -13,7 +13,6 @@ Currently we make each message its own thread.
 from inbox.crispin import retry_crispin
 from inbox.models.util import reconcile_message
 from inbox.models.backends.imap import ImapThread
-from inbox.util.threading import cleanup_subject, thread_messages
 from inbox.mailsync.backends.imap import (account, base_poll, imap_poll_update,
                                           resync_uids_from, base_initial_sync,
                                           imap_initial_sync, ImapSyncMonitor,
@@ -73,23 +72,9 @@ def create_message(db_session, log, acct, folder, msg):
 def add_attrs(db_session, log, new_uid, flags, folder, created):
     """ Post-create-message bits."""
     with db_session.no_autoflush:
-        clean_subject = cleanup_subject(new_uid.message.subject)
-        parent_threads = db_session.query(ImapThread).\
-                    filter(ImapThread.subject.like(clean_subject)).all()
-
-        if parent_threads == []:
-            new_uid.message.thread = ImapThread.from_imap_message(
-                db_session, new_uid.account.namespace, new_uid.message)
-            new_uid.message.thread_order = 0
-        else:
-            # FIXME: arbitrarily select the first thread. This shouldn't
-            # be a problem now but it could become one if we had thread-
-            # splitting.
-            parent_thread = parent_threads[0]
-            parent_thread.messages.append(new_uid.message)
-            constructed_thread = thread_messages(parent_thread.messages)
-            for index, message in enumerate(constructed_thread):
-                message.thread_order = index
+        new_uid.message.thread = ImapThread.from_imap_message(
+            db_session, new_uid.account.namespace, new_uid.message)
+        new_uid.update_imap_flags(flags)
 
         # make sure this thread has all the correct labels
         new_labels = account.update_thread_labels(new_uid.message.thread,
@@ -102,7 +87,5 @@ def add_attrs(db_session, log, new_uid, flags, folder, created):
                 created and new_uid.message.inbox_uid):
             reconcile_message(db_session, log, new_uid.message.inbox_uid,
                               new_uid.message)
-
-        new_uid.update_imap_flags(flags)
 
         return new_uid
