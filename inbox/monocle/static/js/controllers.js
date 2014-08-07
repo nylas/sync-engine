@@ -43,6 +43,12 @@ angular.module('monocleApp.controllers', [])
 
             provider_count[response[i].provider] += 1;
 
+            var percent = Math.floor((response[i].local_count/response[i].remote_count) * 100);
+            if(percent > 100) {
+              percent = 100;
+            }
+
+            response[i].percent = percent
           }
 
           $scope.state_count = state_count;

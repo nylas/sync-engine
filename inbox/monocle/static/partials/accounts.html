@@ -121,8 +121,8 @@
           <td class="end">{{account.sync_end_time | time_ago}}</td>
           <td class="sync-progress">
             <div class="progress">
-              <div class="progress-bar progress-bar-info"  role="progressbar" aria-valuenow="{{ account | account_percent}}" aria-valuemin="0" aria-valuemax="100" style="width: {{account | account_percent}}%">
-                &nbsp;{{ account | account_percent}}%
+              <div class="progress-bar progress-bar-info"  role="progressbar" aria-valuenow="{{account.percent}}" aria-valuemin="0" aria-valuemax="100" style="width: {{account.percent}}%">
+                &nbsp;{{account.percent}}%
               </div>
             </div>
           </td>
