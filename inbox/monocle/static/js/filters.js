@@ -13,4 +13,13 @@ angular.module('monocleApp.filters', []).
       var date = new Date(text_date_formatted);
       return prettyDate(date);
     };
+  }).
+  filter('account_percent', function() {
+    return function(account) {
+      var percent = Math.floor((account.local_count/account.remote_count) * 100);
+      if(percent > 100) {
+        percent = 100;
+      }
+      return percent;
+    };
   });
