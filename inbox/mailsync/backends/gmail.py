@@ -680,6 +680,9 @@ def add_gmail_attrs(db_session, log, new_uid, flags, folder, g_thrid, g_msgid,
         new_uid.message.g_msgid = g_msgid
         # NOTE: g_thrid == g_msgid on the first message in the thread :)
         new_uid.message.g_thrid = g_thrid
+
+        # we rely on Gmail's threading instead of our threading algorithm.
+        new_uid.message.thread_order = 0
         new_uid.update_imap_flags(flags, g_labels)
 
         thread = new_uid.message.thread = ImapThread.from_gmail_message(
