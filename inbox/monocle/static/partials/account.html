@@ -50,10 +50,11 @@
           <th>Sync Error</th>
           <th>State</th>
 
-          <th ng-if="account.provider == 'eas'">to-sync</th>
           <th ng-if="account.provider == 'eas'">As of</th>
-          <th ng-if="account.provider == 'eas'"># synced</th>
-          <th ng-if="account.provider == 'eas'">As of</th>
+          <th ng-if="account.provider == 'eas'"># Remote</th>
+          <th ng-if="account.provider == 'eas'"># Synced</th>
+          <th ng-if="account.provider == 'eas'">remain</th>
+          <th ng-if="account.provider == 'eas'">checked-at</th>
 
           <th ng-if="account.provider != 'eas'">As of</th>
           <th ng-if="account.provider != 'eas'"># Remote Uids</th>
@@ -72,9 +73,10 @@
           <td>{{folder.sync_error}}</td>
           <td>{{folder.state}}</td>
 
-          <td ng-if="account.provider == 'eas'">{{folder.num_uids_to_sync}}</td>
           <td ng-if="account.provider == 'eas'">{{folder.uid_checked_timestamp | time_ago}}</td>
+          <td ng-if="account.provider == 'eas'">{{folder.total_remote_count}}</td>
           <td ng-if="account.provider == 'eas'">{{folder.num_synced_since_timestamp}}</td>
+          <td ng-if="account.provider == 'eas'">{{folder.num_uids_to_sync}}</td>
           <td ng-if="account.provider == 'eas'">{{folder.synced_checked_at | time_ago}}</td>
 
           <td ng-if="account.provider != 'eas'">{{folder.uid_checked_timestamp | time_ago}}</td>
