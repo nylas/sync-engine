@@ -41,6 +41,13 @@ class MessageTree(object):
         self.children = []  # Note: Children are sorted by received_date
         self.message = message
 
+    def __str__(self):
+        s = "Value: %s\n" % str(self.message)
+        if self.children != []:
+            for child in self.children:
+                s += "\t" + str(child)
+        return s
+
     def find_by_message_id(self, message_id):
         if self.message.message_id_header == message_id:
             return self
@@ -54,7 +61,6 @@ class MessageTree(object):
 
     def insert_child(self, message):
         self.children.append(message)
-        message.parent = self
         sorted(self.children, key=lambda x: x.message.received_date)
 
     def insert_message(self, message):
@@ -72,12 +78,18 @@ class MessageTree(object):
         # if there's nothing we can only take an educated guess
         # append the message next to the closest message in time.
         if len(self.children) > 0:
-            more_recent_messages = filter(lambda x: x.message.received_date <
+            prior_messages = filter(lambda x: x.message.received_date <
                                           message.received_date, self.children)
             # Pick the first message. Message choice doesn't really matter
             # because we're going to traverse the tree in level-order. We
             # just want a ballpark here.
-            more_recent_messages[0].insert_message(message)
+            if len(prior_messages) > 0:
+                prior_messages[0].insert_message(message)
+            else:
+                # there are no messages prior to this one. Insert directly under
+                # parent.
+                mt = MessageTree(message)
+                self.insert_child(mt)
             return
         else:  # tree with no children
             mt = MessageTree(message)
@@ -105,5 +117,4 @@ def thread_messages(messages_list):
     root = MessageTree(msgs_by_date[0])
     for msg in msgs_by_date[1:]:
         root.insert_message(msg)
-
     return root.as_list()
