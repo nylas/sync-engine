@@ -80,13 +80,15 @@ from sqlalchemy.orm import load_only
 from inbox.util.concurrency import retry_and_report_killed
 from inbox.util.itert import chunk
 from inbox.util.misc import or_none
+from inbox.util.threading import cleanup_subject, thread_messages
 from inbox.log import get_logger
 logger = get_logger()
 from inbox.crispin import connection_pool, retry_crispin
 from inbox.models.session import session_scope
 from inbox.models import Tag, Folder
-from inbox.models.backends.imap import ImapAccount, ImapFolderSyncStatus
-from inbox.models.util import db_write_lock
+from inbox.models.backends.imap import (ImapAccount, ImapFolderSyncStatus,
+                                        ImapThread)
+from inbox.models.util import db_write_lock, reconcile_message
 from inbox.mailsync.exc import UidInvalid
 from inbox.mailsync.reporting import report_stopped
 from inbox.mailsync.backends.imap import account
@@ -406,9 +408,12 @@ def condstore_base_poll(crispin_client, log, folder_name, shared_state,
 
     """
     log.bind(state='poll')
+
     with session_scope(ignore_soft_deletes=False) as db_session:
-        saved_highestmodseq = account.get_folder_info(
-            crispin_client.account_id, db_session, folder_name).highestmodseq
+        saved_folder_info = account.get_folder_info(crispin_client.account_id,
+                                                    db_session, folder_name)
+
+        saved_highestmodseq = saved_folder_info.highestmodseq
 
     # Start a session since we're going to IDLE below anyway...
     # This also resets the folder name cache, which we want in order to
@@ -471,8 +476,10 @@ def highestmodseq_update(crispin_client, log, folder_name, last_highestmodseq,
     if changed_uids:
         with session_scope(ignore_soft_deletes=False) as db_session:
             local_uids = account.all_uids(account_id, db_session, folder_name)
+
         new, updated = new_or_updated(changed_uids, local_uids)
         log.info(new_uid_count=len(new), updated_uid_count=len(updated))
+
         local_uids += new
         with syncmanager_lock:
             log.debug("highestmodseq_update acquired syncmanager_lock")
@@ -492,8 +499,8 @@ def highestmodseq_update(crispin_client, log, folder_name, last_highestmodseq,
                               update_uid_count=len(updated),
                               delete_uid_count=len(deleted_uids))
 
-        highestmodseq_fn(crispin_client, log, folder_name, changed_uids,
-                         local_uids, syncmanager_lock)
+        highestmodseq_fn(crispin_client, log, folder_name, new,
+                         updated, syncmanager_lock)
     else:
         log.info("No new or updated messages")
 
@@ -512,6 +519,17 @@ def highestmodseq_update(crispin_client, log, folder_name, last_highestmodseq,
         account.update_folder_info(account_id, db_session, folder_name,
                                    new_uidvalidity, new_highestmodseq)
         db_session.commit()
+
+
+# FIXME @karim: this is an unfortunate name. It's named similarly
+# to the gmail_highestmodseq_update, in gmail.py
+def generic_highestmodseq_update(crispin_client, log, folder_name, new_uids,
+                                 updated_uids, syncmanager_lock):
+    uid_download_stack = uid_list_to_stack(new_uids)
+    download_queued_uids(crispin_client, log, folder_name,
+                         uid_download_stack, 0, uid_download_stack.qsize(),
+                         syncmanager_lock, download_and_commit_uids,
+                         imap_create_message)
 
 
 def uid_list_to_stack(uids):
@@ -562,18 +580,32 @@ def add_uids_to_stack(uids, uid_download_stack):
         uid_download_stack.put(uid)
 
 
-def condstore_imap_initial_sync(crispin_client, db_session, log, folder_name,
+def condstore_imap_initial_sync(crispin_client, log, folder_name,
                                 shared_state, local_uids, uid_download_stack,
                                 msg_create_fn):
+    with session_scope(ignore_soft_deletes=False) as db_session:
+        saved_folder_info = account.get_folder_info(crispin_client.account_id,
+                                                    db_session, folder_name)
+
+        if saved_folder_info is None:
+            assert (crispin_client.selected_uidvalidity is not None and
+                    crispin_client.selected_highestmodseq is not None)
+
+            account.update_folder_info(crispin_client.account_id, db_session,
+                                       folder_name,
+                                       crispin_client.selected_uidvalidity,
+                                       crispin_client.selected_highestmodseq)
+
     check_flags(crispin_client, db_session, log, folder_name, local_uids,
                 shared_state['syncmanager_lock'])
-    return imap_initial_sync(crispin_client, db_session, log, folder_name,
+    return imap_initial_sync(crispin_client, log, folder_name,
                              shared_state, local_uids, uid_download_stack,
-                             msg_create_fn)
+                             msg_create_fn, spawn_flags_refresh_poller=False)
 
 
 def imap_initial_sync(crispin_client, log, folder_name, shared_state,
-                      local_uids, uid_download_stack, msg_create_fn):
+                      local_uids, uid_download_stack, msg_create_fn,
+                      spawn_flags_refresh_poller=True):
     assert crispin_client.selected_folder_name == folder_name
 
     remote_uids = crispin_client.all_uids()
@@ -603,14 +635,17 @@ def imap_initial_sync(crispin_client, log, folder_name, shared_state,
 
     new_uid_poller = spawn(check_new_uids, crispin_client.account_id,
                            folder_name, log,
-                           uid_download_stack, shared_state['poll_frequency'],
+                           uid_download_stack,
+                           shared_state['poll_frequency'],
                            shared_state['syncmanager_lock'])
 
-    flags_refresh_poller = spawn(imap_check_flags, crispin_client.account_id,
-                                 folder_name, log,
-                                 shared_state['poll_frequency'],
-                                 shared_state['syncmanager_lock'],
-                                 shared_state['refresh_flags_max'])
+    if spawn_flags_refresh_poller:
+        flags_refresh_poller = spawn(imap_check_flags,
+                                     crispin_client.account_id,
+                                     folder_name, log,
+                                     shared_state['poll_frequency'],
+                                     shared_state['syncmanager_lock'],
+                                     shared_state['refresh_flags_max'])
 
     download_queued_uids(crispin_client, log, folder_name, uid_download_stack,
                          len(local_uids), len(remote_uids),
@@ -618,7 +653,9 @@ def imap_initial_sync(crispin_client, log, folder_name, shared_state,
                          download_and_commit_uids, msg_create_fn)
 
     new_uid_poller.kill()
-    flags_refresh_poller.kill()
+
+    if spawn_flags_refresh_poller:
+        flags_refresh_poller.kill()
 
 
 def check_new_uids(account_id, folder_name, log, uid_download_stack,
@@ -731,14 +768,17 @@ def imap_check_flags(account_id, folder_name, log, poll_frequency,
                                               folder_name))
             to_refresh = sorted(remote_uids & local_uids)[-refresh_flags_max:]
 
-            update_metadata(crispin_client, log, folder_name, to_refresh,
+            update_metadata(crispin_client,
+                            log,
+                            folder_name,
+                            to_refresh,
                             syncmanager_lock)
-
-            update_uid_counts(db_session,
-                              log,
-                              crispin_client.account_id,
-                              folder_name,
-                              update_uid_count=len(to_refresh))
+            with session_scope(ignore_soft_deletes=True) as db_session:
+                update_uid_counts(db_session,
+                                  log,
+                                  crispin_client.account_id,
+                                  folder_name,
+                                  update_uid_count=len(to_refresh))
 
             sleep(poll_frequency)
 
@@ -878,3 +918,61 @@ def report_progress(crispin_client, log, folder_name, downloaded_uid_count,
 
     log.info('mailsync progress', folder=folder_name,
              msg_queue_count=num_remaining_messages)
+
+
+def imap_create_message(db_session, log, acct, folder, msg):
+    """ Message creation logic.
+
+    Returns
+    -------
+    new_uid: inbox.models.backends.imap.ImapUid
+        New db object, which links to new Message and Block objects through
+        relationships. All new objects are uncommitted.
+    """
+    assert acct is not None and acct.namespace is not None
+
+    new_uid = account.create_imap_message(db_session, log, acct, folder, msg)
+
+    new_uid = add_attrs(db_session, log, new_uid, msg.flags, folder,
+                        msg.created)
+    return new_uid
+
+
+def add_attrs(db_session, log, new_uid, flags, folder, created):
+    """ Post-create-message bits."""
+    with db_session.no_autoflush:
+        clean_subject = cleanup_subject(new_uid.message.subject)
+        parent_threads = db_session.query(ImapThread).\
+                    filter(ImapThread.subject.like(clean_subject)).all()
+
+        if parent_threads == []:
+            new_uid.message.thread = ImapThread.from_imap_message(
+                db_session, new_uid.account.namespace, new_uid.message)
+            new_uid.message.thread_order = 0
+        else:
+            # FIXME: arbitrarily select the first thread. This shouldn't
+            # be a problem now but it could become one if we choose
+            # to implement thread-splitting.
+            parent_thread = parent_threads[0]
+            parent_thread.messages.append(new_uid.message)
+            constructed_thread = thread_messages(parent_thread.messages)
+            for index, message in enumerate(constructed_thread):
+                message.thread_order = index
+
+        # FIXME: refactor 'new_labels' name. This is generic IMAP, not
+        # gmail.
+        # make sure this thread has all the correct labels
+        new_labels = account.update_thread_labels(new_uid.message.thread,
+                                                  folder.name,
+                                                  [folder.canonical_name],
+                                                  db_session)
+
+        # Reconciliation for Drafts, Sent Mail folders:
+        if (('draft' in new_labels or 'sent' in new_labels) and not
+                created and new_uid.message.inbox_uid):
+            reconcile_message(db_session, log, new_uid.message.inbox_uid,
+                              new_uid.message)
+
+        new_uid.update_imap_flags(flags)
+
+        return new_uid
