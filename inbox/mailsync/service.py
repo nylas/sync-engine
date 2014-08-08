@@ -119,7 +119,11 @@ class SyncService(Process):
 
                     info = provider_info(acc.provider)
                     provider_supports_condstore = info.get("condstore", None)
-                    if provider_supports_condstore or acc.supports_condstore:
+                    account_supports_condstore = getattr(acc,
+                                                         'supports_condstore',
+                                                         None)
+                    if (provider_supports_condstore or
+                        account_supports_condstore):
                         # upgrade generic providers if they support condstore
                         monitor = self.monitor_cls_for['generic_condstore'](
                             acc.id, acc.namespace.id, acc.email_address,
