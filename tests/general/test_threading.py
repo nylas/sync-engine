@@ -35,7 +35,6 @@ def test_threading():
                  Message("ccc_header", [], datetime(2000, 12, 23)),
                  Message("ddd_header", ["bbb_header"], datetime(2000, 12, 23))]
 
-    print thread_messages(messages3)
     assert thread_messages(messages3) == messages3
 
 
