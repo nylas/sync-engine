@@ -160,8 +160,7 @@ def configure_logging(is_prod):
         global sentry_client
         sentry_client = raven.Client(
             sentry_dsn,
-            processors=('inbox.log.TruncatingProcessor',
-                        'inbox.log.KeepLastNStackLocalsProcessor'))
+            processors=('inbox.log.TruncatingProcessor',))
 
 
 def safe_format_exception(etype, value, tb, limit=None):
@@ -183,26 +182,27 @@ def safe_format_exception(etype, value, tb, limit=None):
 
 
 class TruncatingProcessor(raven.processors.Processor):
-    def process(self, data, **kwargs):
-        if 'exception' in data:
-            if 'values' in data['exception']:
-                for item in data['exception']['values']:
-                    item['value'] = item['value'][:MAX_EXCEPTION_LENGTH]
-        return data
-
-
-class KeepLastNStackLocalsProcessor(raven.processors.Processor):
-    """This processor keeps the locals for only the last
-    n frames."""
+    """Truncates the exception value string, and strips all but the last stack
+    locals."""
     FRAMES_KEPT_NR = 20
 
-    def filter_stacktrace(self, data, **kwargs):
-        if 'frames' not in data:
-            return
-
-        for index, frame in enumerate(reversed(data['frames'])):
-            if index >= self.FRAMES_KEPT_NR:
-                frame.pop('vars')
+    # Note(emfree): raven.processors.Processor provides a filter_stacktrace
+    # method to implement, but won't actually call it correctly. We can
+    # simplify this after submitting an upstream fix.
+    def process(self, data, **kwargs):
+        if 'exception' not in data:
+            return data
+        if 'values' not in data['exception']:
+            return data
+        for item in data['exception']['values']:
+            item['value'] = item['value'][:MAX_EXCEPTION_LENGTH]
+            stacktrace = item.get('stacktrace')
+            if stacktrace is not None:
+                if 'frames' in stacktrace:
+                    for ix, frame in enumerate(reversed(stacktrace['frames'])):
+                        if ix >= self.FRAMES_KEPT_NR:
+                            frame.pop('vars')
+        return data
 
 
 def sentry_alert(*args, **kwargs):
