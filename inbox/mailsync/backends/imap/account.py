@@ -16,10 +16,10 @@ from sqlalchemy.orm.exc import NoResultFound
 from inbox.contacts.process_mail import update_contacts_from_message
 from inbox.models.block import Block
 from inbox.models.message import Message
+from inbox.models.thread import Thread
 from inbox.models.folder import Folder
 from inbox.models.namespace import Namespace
-from inbox.models.backends.imap import (ImapUid, ImapFolderInfo, ImapThread,
-                                        ImapAccount)
+from inbox.models.backends.imap import ImapUid, ImapFolderInfo
 
 from inbox.log import get_logger
 log = get_logger()
@@ -58,16 +58,23 @@ def all_uids(account_id, session, folder_name):
         Folder.name == folder_name)]
 
 
-def g_msgids(account_id, session, in_=None):
+def g_msgids(account_id, session, in_):
     # Easiest way to account-filter Messages is to namespace-filter from
     # the associated thread. (Messages may not necessarily have associated
     # ImapUids.)
-    query = session.query(Message.g_msgid).join(ImapThread).join(Namespace)\
-        .join(ImapAccount).filter(Namespace.account_id == account_id).all()
-    # in some cases, in_ can contain +100k items, when the query only
-    # returns a few thousand. we shouldn't pass them all to MySQL
     in_ = {long(i) for i in in_}  # in case they are strings
-    return sorted([g_msgid for g_msgid, in query if g_msgid in in_])
+    if len(in_) > 1000:
+        # If in_ is really large, passing all the values to MySQL can get
+        # deadly slow. (Approximate threshold empirically determined)
+        query = session.query(Message.g_msgid).join(Thread).join(Namespace). \
+            filter(Namespace.account_id == account_id).all()
+        return sorted(g_msgid for g_msgid, in query if g_msgid in in_)
+    # But in the normal case that in_ only has a few elements, it's way better
+    # to not fetch a bunch of values from MySQL only to return a few of them.
+    query = session.query(Message.g_msgid).join(Thread).join(Namespace). \
+        filter(Namespace.account_id == account_id,
+               Message.g_msgid.in_(in_)).all()
+    return sorted(g_msgid for g_msgid, in query)
 
 
 def g_metadata(account_id, session, folder_name):
