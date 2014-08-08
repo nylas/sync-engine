@@ -26,7 +26,7 @@ from inbox.models.backends.imap import ImapAccount
 from inbox.log import get_logger
 logger = get_logger()
 
-__all__ = ['CrispinClient', 'GmailCrispinClient']
+__all__ = ['CrispinClient', 'GmailCrispinClient', 'CondStoreCrispinClient']
 
 # Unify flags API across IMAP and Gmail
 Flags = namedtuple('Flags', 'flags')
@@ -199,7 +199,10 @@ retry_crispin = functools.partial(
 
 
 def new_crispin(account_id, email_address, provider_name, conn, readonly=True):
-    cls = GmailCrispinClient if provider_name == 'gmail' else CrispinClient
+    if provider_name == 'gmail':
+        cls = GmailCrispinClient
+    else:
+        cls = CrispinClient
     return cls(account_id, provider_name, email_address, conn,
                readonly=readonly)
 

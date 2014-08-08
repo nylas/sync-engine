@@ -178,11 +178,13 @@ def poll(conn_pool, log, folder_name, shared_state):
                                    shared_state, gmail_highestmodseq_update)
 
 
-def gmail_highestmodseq_update(crispin_client, log, folder_name, uids,
-                               local_uids, syncmanager_lock):
+def gmail_highestmodseq_update(crispin_client, log, folder_name, new_uids,
+                               updated_uids, syncmanager_lock):
+    uids = new_uids + updated_uids
     g_metadata = crispin_client.g_metadata(uids)
     to_download = deduplicate_message_download(
         crispin_client, log, syncmanager_lock, g_metadata, uids)
+
     if folder_name == crispin_client.folder_names()['inbox']:
         flags = crispin_client.flags(to_download)
         message_download_stack = LifoQueue()
