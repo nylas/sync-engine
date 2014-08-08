@@ -253,7 +253,6 @@ def gmail_download_and_commit_uids(crispin_client, log, folder_name, uids,
         with session_scope(ignore_soft_deletes=False) as db_session:
             raw_messages = deduplicate_message_object_creation(
                 crispin_client.account_id, db_session, log, raw_messages)
-            log.info(unsaved_message_object_count=len(raw_messages))
             new_imapuids = create_db_objects(
                 crispin_client.account_id, db_session, log, folder_name,
                 raw_messages, msg_create_fn)
@@ -438,7 +437,6 @@ def download_thread(crispin_client, log, syncmanager_lock, thread_g_metadata,
 
 def deduplicate_message_object_creation(account_id, db_session, log,
                                         raw_messages):
-    log.info('Deduplicating message object creation.')
     new_g_msgids = {msg.g_msgid for msg in raw_messages}
     existing_g_msgids = set(account.g_msgids(account_id, db_session,
                                              in_=new_g_msgids))
