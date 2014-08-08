@@ -21,7 +21,7 @@ def test_mutable_json_type(db, config):
 
     original_metrics = sync_status.metrics
 
-    metrics = dict(current_download_queue_size=10,
+    metrics = dict(download_uid_count=10,
                    queue_checked_at=datetime.utcnow())
     sync_status.update_metrics(metrics)
 
@@ -33,7 +33,7 @@ def test_mutable_json_type(db, config):
 
     # Reupdate status
     new_metrics = dict(delete_uid_count=50,
-                       current_download_queue_size=100,
+                       download_uid_count=100,
                        queue_checked_at=datetime.utcnow())
     sync_status.update_metrics(new_metrics)
 
