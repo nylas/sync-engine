@@ -96,6 +96,7 @@ providers = {
     },
     "fastmail": {
         "type": "generic",
+        "condstore": True,
         "imap": "mail.messagingengine.com",
         "smtp": "mail.messagingengine.com:587",
         "auth": "password",

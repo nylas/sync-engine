@@ -100,6 +100,20 @@ def connect_account(account):
     return conn
 
 
+def supports_condstore(conn):
+    """Check if the connection supports CONDSTORE
+    Returns
+    -------
+    True: If the account supports CONDSTORE
+    False otherwise
+    """
+    capabilities = conn.capabilities()
+    if "CONDSTORE" in capabilities:
+        return True
+
+    return False
+
+
 def verify_account(account):
     """Verifies a generic IMAP account by logging in and logging out.
 
@@ -110,5 +124,11 @@ def verify_account(account):
     True: If the client can successfully connect.
     """
     conn = connect_account(account)
+
+    info = provider_info(account.provider)
+    if "condstore" not in info:
+        if supports_condstore(conn):
+            account.supports_condstore = True
+
     conn.logout()
     return True
