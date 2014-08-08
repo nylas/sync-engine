@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean
 from sqlalchemy import event
 from inbox.models.backends.imap import ImapAccount
 from inbox.models.vault import vault
@@ -12,6 +12,7 @@ class GenericAccount(ImapAccount):
 
     provider = Column(String(64))
     password_id = Column(Integer())  # Secret
+    supports_condstore = Column(Boolean)
 
     __mapper_args__ = {'polymorphic_identity': 'genericaccount'}
 

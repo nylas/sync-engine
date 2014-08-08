@@ -6,7 +6,7 @@ from setproctitle import setproctitle
 
 from sqlalchemy import func, or_
 
-from inbox.providers import providers
+from inbox.providers import providers, provider_info
 from inbox.config import config
 from inbox.contacts.remote_sync import ContactSync
 from inbox.log import get_logger
@@ -117,9 +117,17 @@ class SyncService(Process):
                 try:
                     acc.sync_lock()
 
-                    monitor = self.monitor_cls_for[acc.provider](
-                        acc.id, acc.namespace.id, acc.email_address,
-                        acc.provider)
+                    info = provider_info(acc.provider)
+                    provider_supports_condstore = info.get("condstore", None)
+                    if provider_supports_condstore or acc.supports_condstore:
+                        # upgrade generic providers if they support condstore
+                        monitor = self.monitor_cls_for['generic_condstore'](
+                            acc.id, acc.namespace.id, acc.email_address,
+                            acc.provider)
+                    else:
+                        monitor = self.monitor_cls_for[acc.provider](
+                            acc.id, acc.namespace.id, acc.email_address,
+                            acc.provider)
                     self.monitors[acc.id] = monitor
                     monitor.start()
                     # For Gmail accounts, also start contacts sync

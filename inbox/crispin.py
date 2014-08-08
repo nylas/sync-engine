@@ -22,6 +22,7 @@ from inbox.util.misc import or_none, timed
 from inbox.basicauth import ConnectionError, ValidationError
 from inbox.models.session import session_scope
 from inbox.providers import provider_info
+from inbox.models.account import Account
 from inbox.models.backends.imap import ImapAccount
 from inbox.log import get_logger
 logger = get_logger()
@@ -202,7 +203,25 @@ def new_crispin(account_id, email_address, provider_name, conn, readonly=True):
     if provider_name == 'gmail':
         cls = GmailCrispinClient
     else:
-        cls = CrispinClient
+        info = provider_info(provider_name)
+        # look up in the provider database to see
+        # if the provider supports CONDSTORE
+        if "condstore" in info:
+            if info["condstore"]:
+                cls = CondStoreCrispinClient
+            else:
+                # condstore=False in provider file
+                cls = CrispinClient
+        else:
+            # no match in provider file, check in the
+            # account settings.
+            with session_scope() as db_session:
+                acc = db_session.query(Account).get(account_id)
+                if acc is not None:
+                    if acc.supports_condstore:
+                        cls = CondStoreCrispinClient
+                    else:
+                        cls = CrispinClient
     return cls(account_id, provider_name, email_address, conn,
                readonly=readonly)
 
