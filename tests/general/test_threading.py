@@ -30,6 +30,15 @@ def test_threading():
 
     assert thread_messages(messages2) == messages2
 
+    messages3 = [Message("aaa_header", [], datetime(1999, 1, 23)),
+                 Message("bbb_header", ["aaa_header"], datetime(2000, 12, 23)),
+                 Message("ccc_header", [], datetime(2000, 12, 23)),
+                 Message("ddd_header", ["bbb_header"], datetime(2000, 12, 23))]
+
+    print thread_messages(messages3)
+    assert thread_messages(messages3) == messages3
+
+
 
 # hack but my test won't run in the test runner. All the
 # tests hang.
