@@ -253,6 +253,8 @@ def gmail_download_and_commit_uids(crispin_client, log, folder_name, uids,
         with session_scope(ignore_soft_deletes=False) as db_session:
             raw_messages = deduplicate_message_object_creation(
                 crispin_client.account_id, db_session, log, raw_messages)
+            if not raw_messages:
+                return 0
             new_imapuids = create_db_objects(
                 crispin_client.account_id, db_session, log, folder_name,
                 raw_messages, msg_create_fn)
