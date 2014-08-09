@@ -851,8 +851,6 @@ def remove_deleted_uids(account_id, db_session, log, folder_name, local_uids,
     to_delete = set(local_uids) - set(remote_uids)
     if to_delete:
         account.remove_messages(account_id, db_session, to_delete, folder_name)
-        db_session.commit()
-
         log.info('deleted removed messages', count=len(to_delete))
 
     return to_delete

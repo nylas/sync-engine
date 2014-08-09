@@ -176,14 +176,16 @@ def remove_messages(account_id, session, uids, folder):
 
     for d in deletes:
         session.delete(d)
+
+    for uid in deletes:
+        if uid.message is not None:
+            thread = uid.message.thread
+            folder = uid.folder
+            thread.folders.discard(folder)
     session.commit()
 
     # XXX TODO: Have a recurring worker permanently remove dangling
-    # messages from the database and block store. (Probably too
-    # expensive to do here.)
-    # XXX TODO: This doesn't properly update threads to make sure they have
-    # the correct folders associated with them, or are deleted when they no
-    # longer contain any messages.
+    # messages and threads from the database.
 
 
 def get_folder_info(account_id, session, folder_name):
