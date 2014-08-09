@@ -53,10 +53,21 @@ class Tag(MailSyncBase, HasRevisions):
     RESERVED_PROVIDER_NAMES = ['gmail', 'outlook', 'yahoo', 'exchange',
                                'inbox', 'icloud', 'aol']
 
-    RESERVED_TAG_NAMES = ['inbox', 'all', 'archive', 'drafts', 'send',
-                          'sending', 'sent', 'spam', 'starred', 'unstarred',
-                          'unread', 'replied', 'trash', 'file', 'attachment',
-                          'unseen']
+    CANONICAL_TAG_NAMES = ['inbox', 'archive', 'drafts', 'sending', 'sent',
+                           'spam', 'starred', 'trash', 'unread', 'unseen']
+
+    RESERVED_TAG_NAMES = ['all', 'archive', 'drafts', 'send', 'replied',
+                          'file', 'attachment', 'unseen']
+
+    # Tags that are allowed to be both added and removed via the API.
+    USER_MUTABLE_TAGS = ['unread', 'starred', 'spam', 'trash', 'inbox',
+                         'archive']
+
+    @property
+    def user_removable(self):
+        # The 'unseen' tag can only be removed.
+        return (self.user_created or self.public_id in self.USER_MUTABLE_TAGS
+                or self.public_id == 'unseen')
 
     @classmethod
     def create_canonical_tags(cls, namespace, db_session):
@@ -64,8 +75,8 @@ class Tag(MailSyncBase, HasRevisions):
         exist."""
         existing_canonical_tags = db_session.query(Tag).filter(
             Tag.namespace_id == namespace.id,
-            Tag.public_id.in_(cls.RESERVED_TAG_NAMES)).all()
-        missing_canonical_names = set(cls.RESERVED_TAG_NAMES).difference(
+            Tag.public_id.in_(cls.CANONICAL_TAG_NAMES)).all()
+        missing_canonical_names = set(cls.CANONICAL_TAG_NAMES).difference(
             {tag.public_id for tag in existing_canonical_tags})
         for canonical_name in missing_canonical_names:
             tag = Tag(namespace=namespace,
@@ -79,7 +90,7 @@ class Tag(MailSyncBase, HasRevisions):
                cls.RESERVED_PROVIDER_NAMES):
             return False
 
-        if name in cls.RESERVED_TAG_NAMES:
+        if name in cls.RESERVED_TAG_NAMES or name in cls.CANONICAL_TAG_NAMES:
             return False
 
         if (name,) in db_session.query(Tag.name). \
@@ -88,19 +99,9 @@ class Tag(MailSyncBase, HasRevisions):
 
         return True
 
-    # Tags that are allowed to be both added and removed via the API.
-    USER_MUTABLE_TAGS = ['unread', 'starred', 'spam', 'trash', 'inbox',
-                         'archive']
-
     @property
     def user_addable(self):
         return (self.user_created or self.public_id in self.USER_MUTABLE_TAGS)
-
-    @property
-    def user_removable(self):
-        # The 'unseen' tag can only be removed.
-        return (self.user_created or self.public_id in self.USER_MUTABLE_TAGS
-                or self.public_id == 'unseen')
 
     __table_args__ = (UniqueConstraint('namespace_id', 'name'),
                       UniqueConstraint('namespace_id', 'public_id'))
