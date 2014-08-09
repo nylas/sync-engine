@@ -244,7 +244,7 @@ def contacts_provider(config, db):
 
 class ContactsProviderStub(object):
     """Contacts provider stub to stand in for an actual provider.
-    When an instance's get_contacts() method is called, return an iterable of
+    When an instance's get_items() method is called, return an iterable of
     Contact objects corresponding to the data it's been fed via
     supply_contact().
     """
@@ -266,3 +266,51 @@ class ContactsProviderStub(object):
 
     def get_items(self, *args, **kwargs):
         return self._contacts
+
+@fixture(scope='function')
+def event_sync(config, db):
+    from inbox.events.remote_sync import EventSync
+    return EventSync(1)
+
+
+@fixture(scope='function')
+def events_provider(config, db):
+    return EventsProviderStub()
+
+
+class EventsProviderStub(object):
+    """Events provider stub to stand in for an actual provider.
+    See ContactsProviderStub.
+    """
+    def __init__(self, provider_name='test_provider'):
+        self._events = []
+        self._next_uid = 1
+        self.PROVIDER_NAME = provider_name
+
+    def supply_event(self, subject, body, start, end, all_day, busy,
+                     location='', time_zone=0, locked=False,
+                     reminders='[]', recurrence="", deleted=False,
+                     raw_data=''):
+        from inbox.models import Event
+        from datetime import datetime
+        self._events.append(Event(account_id=1,
+                                  uid=str(self._next_uid),
+                                  source='remote',
+                                  provider_name=self.PROVIDER_NAME,
+                                  subject=subject,
+                                  body=body,
+                                  location=location,
+                                  start=datetime.utcfromtimestamp(start),
+                                  end=datetime.utcfromtimestamp(end),
+                                  all_day=all_day,
+                                  time_zone=time_zone,
+                                  busy=busy,
+                                  locked=locked,
+                                  raw_data=raw_data,
+                                  reminders=reminders,
+                                  recurrence=recurrence,
+                                  deleted=deleted))
+        self._next_uid += 1
+
+    def get_items(self, *args, **kwargs):
+        return self._events
