@@ -39,6 +39,12 @@ class Folder(MailSyncBase):
     __table_args__ = (UniqueConstraint('account_id', 'name', 'canonical_name'),)
 
     @property
+    def lowercase_name(self):
+        if self.name is None:
+            return None
+        return self.name.lower()
+
+    @property
     def namespace(self):
         return self.account.namespace
 
