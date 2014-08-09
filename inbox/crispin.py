@@ -218,7 +218,7 @@ def new_crispin(account_id, email_address, provider_name, conn, readonly=True):
             with session_scope() as db_session:
                 acc = db_session.query(Account).get(account_id)
                 if acc is not None:
-                    if acc.supports_condstore:
+                    if getattr(acc, 'supports_condstore'):
                         cls = CondStoreCrispinClient
                     else:
                         cls = CrispinClient
