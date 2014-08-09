@@ -104,11 +104,14 @@ def update_thread_labels(thread, folder_name, g_labels, db_session):
     # whole thread.
     # TODO: properly aggregate \Inbox, \Sent, \Important, and \Drafts
     # per-message so we can detect deletions properly.
-    thread.folders = {folder for folder in thread.folders if
-                      (folder.name is not None and
-                       folder.name.lower() in new_labels) or
-                      folder.canonical_name in ('inbox', 'sent', 'drafts',
-                                                'important', 'starred')}
+    folders_to_discard = []
+    for folder in thread.folders:
+        if folder.canonical_name not in ('inbox', 'sent', 'drafts',
+                                         'important', 'starred', 'all'):
+            if folder.lowercase_name not in new_labels:
+                folders_to_discard.append(folder)
+    for folder in folders_to_discard:
+        thread.folders.discard(folder)
 
     # add new labels
     for label in new_labels:
