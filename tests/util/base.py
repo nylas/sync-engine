@@ -229,3 +229,40 @@ def syncback_service():
     gevent.sleep()
     yield s
     kill_greenlets()
+
+
+@fixture(scope='function')
+def contact_sync(config, db):
+    from inbox.contacts.remote_sync import ContactSync
+    return ContactSync(1)
+
+
+@fixture(scope='function')
+def contacts_provider(config, db):
+    return ContactsProviderStub()
+
+
+class ContactsProviderStub(object):
+    """Contacts provider stub to stand in for an actual provider.
+    When an instance's get_contacts() method is called, return an iterable of
+    Contact objects corresponding to the data it's been fed via
+    supply_contact().
+    """
+    def __init__(self, provider_name='test_provider'):
+        self._contacts = []
+        self._next_uid = 1
+        self.PROVIDER_NAME = provider_name
+
+    def supply_contact(self, name, email_address, deleted=False):
+        from inbox.models import Contact
+        self._contacts.append(Contact(account_id=1,
+                                      uid=str(self._next_uid),
+                                      source='remote',
+                                      provider_name=self.PROVIDER_NAME,
+                                      name=name,
+                                      email_address=email_address,
+                                      deleted=deleted))
+        self._next_uid += 1
+
+    def get_items(self, *args, **kwargs):
+        return self._contacts

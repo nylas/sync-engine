@@ -114,7 +114,7 @@ class InboxSession(object):
             raise Exception("Why are you adding a deleted object?")
 
     def add_all(self, instances):
-        if not True in [i.is_deleted for i in instances] or \
+        if True not in [i.is_deleted for i in instances] or \
                 not self.ignore_soft_deletes:
             self._session.add_all(instances)
         else:

@@ -49,6 +49,16 @@ class OAuthAccount(object):
             self.set_access_token(tok, expires)
             return tok
 
+    @property
+    def access_expiry(self):
+        if self.id in __volatile_tokens__:
+            tok, expires = __volatile_tokens__[self.id]
+            return expires
+        else:
+            self.access_token()
+            tok, expires = __volatile_tokens__[self.id]
+            return expires
+
     def renew_access_token(self):
         del __volatile_tokens__[self.id]
         return self.access_token

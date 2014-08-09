@@ -4,11 +4,12 @@ import gevent
 from multiprocessing import Process
 from setproctitle import setproctitle
 
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, and_
 
 from inbox.providers import providers, provider_info
 from inbox.config import config
 from inbox.contacts.remote_sync import ContactSync
+from inbox.events.remote_sync import EventSync
 from inbox.log import get_logger
 from inbox.models.session import session_scope
 from inbox.models import Account
@@ -48,6 +49,7 @@ class SyncService(Process):
 
         self.monitors = {}
         self.contact_sync_monitors = {}
+        self.event_sync_monitors = {}
         self.poll_interval = poll_interval
 
         Process.__init__(self)
@@ -69,14 +71,17 @@ class SyncService(Process):
         """
         while True:
             with session_scope() as db_session:
+                sync_on_this_node = or_(Account.sync_state.is_(None),
+                                        Account.sync_host == platform.node())
+                sync_explicitly_stopped = and_(Account.sync_state == 'stopped',
+                                               Account.sync_state.isnot(None))
+                start_on_this_cpu = \
+                    (func.mod(Account.id, self.total_cpus) == self.cpu_id)
                 start_accounts = \
                     [id_ for id_, in db_session.query(Account.id).filter(
-                        or_(Account.sync_state.is_(None),
-                            Account.sync_host == platform.node()),
-                        func.mod(Account.id, self.total_cpus)
-                        == self.cpu_id,
-                        or_(Account.sync_state != 'stopped',
-                            Account.sync_state.is_(None)))]
+                        sync_on_this_node,
+                        ~sync_explicitly_stopped,
+                        start_on_this_cpu)]
                 for account_id in start_accounts:
                     if account_id not in self.monitors:
                         self.log.info('sync service starting sync',
@@ -139,6 +144,10 @@ class SyncService(Process):
                         contact_sync = ContactSync(acc.id)
                         self.contact_sync_monitors[acc.id] = contact_sync
                         contact_sync.start()
+
+                        event_sync = EventSync(acc.id)
+                        self.event_sync_monitors[acc.id] = event_sync
+                        event_sync.start()
                     acc.start_sync(fqdn)
                     db_session.add(acc)
                     db_session.commit()
@@ -181,6 +190,8 @@ class SyncService(Process):
                 # accounts)
                 if acc.id in self.contact_sync_monitors:
                     del self.contact_sync_monitors[acc.id]
+                if acc.id in self.event_sync_monitors:
+                    del self.event_sync_monitors[acc.id]
                 self.log.info('sync stopped', account_id=account_id)
             except Exception as e:
                 self.log.error('error encountered', msg=e.message)

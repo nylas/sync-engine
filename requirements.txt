@@ -43,3 +43,5 @@ cssselect==0.9.1  # For talon
 raven==5.0.0
 simplejson==3.6.0
 Flask-RESTful==0.2.12
+google-api-python-client==1.2
+oauth2client==1.2

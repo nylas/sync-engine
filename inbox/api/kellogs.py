@@ -4,8 +4,8 @@ from json import JSONEncoder, dumps
 
 from flask import Response
 
-from inbox.models import (Message, Part, Contact, Thread, Namespace, Block,
-                          Webhook, Lens, Tag)
+from inbox.models import (Message, Part, Contact, Event, Thread, Namespace,
+                          Block, Webhook, Lens, Tag)
 
 
 def format_address_list(addresses):
@@ -105,6 +105,24 @@ def encode(obj, namespace_public_id=None):
             'namespace': _get_namespace_public_id(obj),
             'name': obj.name,
             'email': obj.email_address
+        }
+
+    elif isinstance(obj, Event):
+        return {
+            'id': obj.public_id,
+            'object': 'event',
+            'namespace': _get_namespace_public_id(obj),
+            'uid': obj.uid,
+            'subject': obj.subject,
+            'body': obj.body,
+            'busy': obj.busy,
+            'locked': obj.locked,
+            'reminders': obj.reminders,
+            'recurrence': obj.recurrence,
+            'start': obj.start,
+            'end': obj.end,
+            'all_day': obj.all_day,
+            'time_zone': obj.time_zone
         }
 
     elif isinstance(obj, Block):  # ie: Attachments/Files

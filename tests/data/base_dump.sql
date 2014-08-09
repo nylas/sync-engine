@@ -46,6 +46,7 @@ CREATE TABLE `account` (
   `_raw_address` varchar(191) DEFAULT NULL,
   `state` enum('live','down','invalid') DEFAULT NULL,
   `_sync_status` text,
+  `last_synced_events` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `ix_account_public_id` (`public_id`),
   KEY `account_ibfk_2` (`inbox_folder_id`),
@@ -78,7 +79,7 @@ CREATE TABLE `account` (
 
 LOCK TABLES `account` WRITE;
 /*!40000 ALTER TABLE `account` DISABLE KEYS */;
-INSERT INTO `account` VALUES (1,'����hPID',1,'precise64','2014-05-03 01:15:03','gmailaccount',2,4,5,NULL,NULL,NULL,3,NULL,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL,NULL,'inboxapptest@gmail.com','inboxapptest@gmail.com',NULL,'{\"sync_start_time\": \"None\", \"sync_end_time\": \"None\"}');
+INSERT INTO `account` VALUES (1,'����hPID',1,'precise64','2014-05-03 01:15:03','gmailaccount',2,4,5,NULL,NULL,NULL,3,NULL,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL,NULL,'inboxapptest@gmail.com','inboxapptest@gmail.com',NULL,'{\"sync_start_time\": \"None\", \"sync_end_time\": \"None\"}',NULL);
 /*!40000 ALTER TABLE `account` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -135,7 +136,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('3de3979f94bd');
+INSERT INTO `alembic_version` VALUES ('1c2253a0e997');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -417,6 +418,50 @@ LOCK TABLES `easuid` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `event`
+--
+
+DROP TABLE IF EXISTS `event`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `event` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `uid` varchar(64) NOT NULL,
+  `provider_name` varchar(64) NOT NULL,
+  `public_id` binary(16) NOT NULL,
+  `raw_data` text NOT NULL,
+  `account_id` int(11) NOT NULL,
+  `subject` varchar(255) DEFAULT NULL,
+  `body` text,
+  `location` varchar(255) DEFAULT NULL,
+  `busy` tinyint(1) NOT NULL,
+  `locked` tinyint(1) NOT NULL,
+  `reminders` varchar(255) DEFAULT NULL,
+  `recurrence` varchar(255) DEFAULT NULL,
+  `start` datetime NOT NULL,
+  `end` datetime DEFAULT NULL,
+  `all_day` tinyint(1) NOT NULL,
+  `time_zone` int(11) NOT NULL,
+  `source` enum('remote','local') NOT NULL,
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `account_id` (`account_id`),
+  CONSTRAINT `event_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `event`
+--
+
+LOCK TABLES `event` WRITE;
+/*!40000 ALTER TABLE `event` DISABLE KEYS */;
+/*!40000 ALTER TABLE `event` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `folder`
 --
 
@@ -531,6 +576,7 @@ CREATE TABLE `genericaccount` (
   `id` int(11) NOT NULL,
   `password_id` int(11) DEFAULT NULL,
   `provider` varchar(64) NOT NULL,
+  `supports_condstore` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`id`),
   CONSTRAINT `genericaccount_ibfk_1` FOREIGN KEY (`id`) REFERENCES `imapaccount` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -1365,4 +1411,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-08-07 22:53:24
+-- Dump completed on 2014-08-09  0:50:06

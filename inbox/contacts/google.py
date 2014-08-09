@@ -16,11 +16,12 @@ from inbox.models.backends.gmail import GmailAccount
 from inbox.auth.gmail import (OAUTH_CLIENT_ID,
                               OAUTH_CLIENT_SECRET,
                               OAUTH_SCOPE)
+from inbox.sync.base_sync_provider import BaseSyncProvider
 
 SOURCE_APP_NAME = 'InboxApp Contact Sync Engine'
 
 
-class GoogleContactsProvider(object):
+class GoogleContactsProvider(BaseSyncProvider):
     """A utility class to fetch and parse Google contact data for the specified
     account using the Google Contacts API.
 
@@ -129,7 +130,7 @@ class GoogleContactsProvider(object):
                        email_address=email_address, deleted=deleted,
                        raw_data=raw_data)
 
-    def get_contacts(self, sync_from_time=None, max_results=100000):
+    def get_items(self, sync_from_time=None, max_results=100000):
         """Fetches and parses fresh contact data.
 
         Parameters
