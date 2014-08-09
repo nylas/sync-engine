@@ -120,8 +120,6 @@ class SyncService(Process):
 
             elif acc.id not in self.monitors:
                 try:
-                    if acc.is_sync_locked and acc.is_killed:
-                        acc.sync_unlock()
                     acc.sync_lock()
 
                     info = provider_info(acc.provider)
@@ -130,7 +128,7 @@ class SyncService(Process):
                                                          'supports_condstore',
                                                          None)
                     if (provider_supports_condstore or
-                            account_supports_condstore):
+                        account_supports_condstore):
                         # upgrade generic providers if they support condstore
                         monitor = self.monitor_cls_for['generic_condstore'](
                             acc.id, acc.namespace.id, acc.email_address,
@@ -186,10 +184,7 @@ class SyncService(Process):
                 acc.sync_stopped()
                 db_session.add(acc)
                 db_session.commit()
-
-                if acc.is_sync_locked:
-                    acc.sync_unlock()
-
+                acc.sync_unlock()
                 del self.monitors[acc.id]
                 # Also stop contacts sync (only relevant for Gmail
                 # accounts)

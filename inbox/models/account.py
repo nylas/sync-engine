@@ -199,10 +199,6 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
         # Can be overridden by subclasses that store account name information.
         return ''
 
-    @property
-    def is_killed(self):
-        return self.sync_state == 'killed'
-
     @classmethod
     def _get_lock_object(cls, account_id, lock_for=dict()):
         """ Make sure we only create one lock per account per process.
@@ -228,10 +224,6 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
 
     def sync_unlock(self):
         self._sync_lock.release()
-
-    @property
-    def is_sync_locked(self):
-        return self._sync_lock.locked()
 
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_identity': 'account',
