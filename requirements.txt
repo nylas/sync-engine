@@ -29,7 +29,7 @@ pep8==1.4.6
 flake8==2.1.0
 pyflakes==0.7.3
 pylint==1.1.0
-html2text==2014.7.3
+-e git://github.com/inboxapp/html2text.git@master#egg=html2text
 python-magic==0.4.6
 greenlet==0.4.2
 PyMySQL==0.6.2
