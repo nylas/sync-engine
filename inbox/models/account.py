@@ -35,6 +35,7 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
     save_raw_messages = Column(Boolean, server_default=true())
 
     last_synced_contacts = Column(DateTime, nullable=True)
+    last_synced_events = Column(DateTime, nullable=True)
 
     # Folder mappings for the data we sync back to the account backend.  All
     # account backends will not provide all of these. This may mean that Inbox

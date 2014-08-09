@@ -1,4 +1,104 @@
 Title: Calendar
 SkipDoc: True
 
-TODO someday soon.
+The events endpoint is used to manage calendar style events.
+
+# Retrieving a specific event's metadata
+
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/events/<event_id>
+```
+
+**Response:**
+
+```
+:::json
+{
+    "all_day": false,
+    "body": null,
+    "busy": true,
+    "end": 1407409200,
+    "id": "2332er2f1gc5hxfgf1yxb3e75",
+    "locked": false,
+    "namespace": "6njcbog8c23gzindlp2e3547p",
+    "object": "event",
+    "recurrence": "None",
+    "reminders": "[30]",
+    "start": 1407405600,
+    "subject": "yoga",
+    "time_zone": 0,
+    "uid": "p7kvq81skkflggjevcoeuc437s"
+}
+```
+
+# Retrieving many events
+
+This endpoint supports [filters](#filters), which allow you to fetch multiple events matching specific critera. For example, the following will limit the number of results to 3. Note the `/` character in the content type has been replaced by the [percent-encoded](http://en.wikipedia.org/wiki/Percent-encoding) value `%2F`.
+
+**Options:**
+
+* `limit` - Maximum number of results to return. Defaults to 100. If `limit` is set too high, a request may fail with HTTP status code 400 to prevent excessively large response bodies.
+* `offset` - Zero-based offset to be used with `limit` for pagination of results.
+
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/events?limit=3
+```
+
+# Adding a new event
+
+New events can easily be created with the following API. Note these currently only exist within Inbox, and do not sync back to the provider (e.g., Google Events).
+
+Note that timestamps are expected to be in UTC timezone.
+
+```
+:::xml
+POST https://api.inboxapp.com/n/<namespace_id>/events
+```
+
+**Sample post body**
+
+```
+{
+    "subject":"Friday meeting",
+    "start": "1407542195",
+    "end":"1407542195",
+    "busy":"0",
+    "all_day":"0"
+}
+```
+
+**Sample response**
+
+```
+:::json
+{
+    "all_day": false,
+    "body": null,
+    "busy": false,
+    "end": 1407758400,
+    "id": "deue71ylhmz2vp47frnkgqmyz",
+    "locked": false,
+    "namespace": "6njcbog8c23gzindlp2e3547p",
+    "object": "event",
+    "recurrence": null,
+    "reminders": null,
+    "start": 1407754800,
+    "subject": "Monday meeting",
+    "time_zone": 0,
+    "uid": "c41402c541f2422791949de46df3cff8"
+}
+
+
+
+
+
+
+# Updating an existing event
+
+The Inbox API does not yet support updating existing events or syncing changes back to underlying mail providers. Check back soon for this functionality.
+
+# Deleting an existing event
+
+The Inbox API does not yet support deleting events. Check back soon for this functionality.

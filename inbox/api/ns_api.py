@@ -1,6 +1,7 @@
 import os
 
 import zerorpc
+from datetime import datetime
 from flask import request, g, Blueprint, make_response, Response
 from flask import jsonify as flask_jsonify
 from flask.ext.restful import reqparse
@@ -10,7 +11,7 @@ from werkzeug.exceptions import default_exceptions
 from werkzeug.exceptions import HTTPException
 
 from inbox.models import (Message, Block, Thread, Namespace, Webhook,
-                          Tag, Contact)
+                          Tag, Contact, Event)
 from inbox.api.kellogs import APIEncoder
 from inbox.api import filtering
 from inbox.api.validation import (InputError, get_tags, get_attachments,
@@ -18,7 +19,7 @@ from inbox.api.validation import (InputError, get_tags, get_attachments,
                                   timestamp, bounded_str, strict_parse_args,
                                   limit, ValidatableArgument)
 from inbox.config import config
-from inbox import contacts, sendmail
+from inbox import events, contacts, sendmail
 from inbox.log import get_logger
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from inbox.models.action_log import schedule_action
@@ -430,6 +431,81 @@ def contact_update_api(public_id):
 
 @app.route('/contacts/<public_id>', methods=['DELETE'])
 def contact_delete_api(public_id):
+    raise NotImplementedError
+
+
+#
+# Events
+##
+@app.route('/events/', methods=['GET'])
+def event_search_api():
+    g.parser.add_argument('filter', type=str, default='', location='args')
+    args = strict_parse_args(g.parser, request.args)
+    results = g.db_session.query(Event). \
+        filter(Event.account_id == g.namespace.account_id,
+               Event.source == 'local'). \
+        order_by(asc(Event.id)).limit(args['limit']). \
+        offset(args['offset']).all()
+
+    return g.encoder.jsonify(results)
+
+
+@app.route('/events/', methods=['POST'])
+def event_create_api():
+    data = request.get_json(force=True)
+
+    subject = data.get('subject')
+    body = data.get('body')
+    location = data.get('location')
+    reminders = data.get('reminders')
+    recurrence = data.get('recurrence')
+
+    try:
+        start = datetime.utcfromtimestamp(int(data.get('start')))
+    except (ValueError, TypeError):
+        return err(400, 'Event start time invalid.')
+
+    try:
+        end = datetime.utcfromtimestamp(int(data.get('end')))
+    except (ValueError, TypeError):
+        return err(400, 'Event end time invalid.')
+
+    busy = data.get('busy')
+    all_day = data.get('all_day')
+    if not subject:
+        return err(400, 'Event subject cannot be null.')
+
+    new_contact = events.crud.create(g.namespace, g.db_session,
+                                     subject,
+                                     body,
+                                     location,
+                                     reminders,
+                                     recurrence,
+                                     start,
+                                     end,
+                                     busy,
+                                     all_day)
+    return g.encoder.jsonify(new_contact)
+
+
+@app.route('/events/<public_id>', methods=['GET'])
+def event_read_api(public_id):
+    # TODO auth with account object
+    # Get all data for an existing event.
+    result = events.crud.read(g.namespace, g.db_session, public_id)
+    if result is None:
+        return err(404, "Couldn't find event with id {0}".
+                   format(public_id))
+    return g.encoder.jsonify(result)
+
+
+@app.route('/events/<public_id>', methods=['PUT'])
+def event_update_api(public_id):
+    raise NotImplementedError
+
+
+@app.route('/events/<public_id>', methods=['DELETE'])
+def event_delete_api(public_id):
     raise NotImplementedError
 
 
