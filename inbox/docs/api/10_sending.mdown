@@ -9,10 +9,11 @@ POST https://api.inboxapp.com/n/<namespace_id>/send
 
 You can use this API in two ways:
 
-####Send a drafted message
+#Sending an Existing Draft
 
-Send the POST body below to send an existing draft by ID. During the process of sending a message through provider's gateway, the message will have the `sending` tag. After it has successfuly sent, the message will have the `sent` tag. Usually this process happens very quickly. If you notice messages that continue to have the `sending` tag, you should check the status of the [namespace](#namespaces). The draft object is hidden once the message has been successfully sent.
+Perform a POST request with the POST body below to send an existing draft. If the draft is not already in response to a thread, a new thread will be created. The drafts `state` will change from `draft` to `sending`, and Inbox will attempt to deliver the message through the provider's SMTP gateway. Once the message has been sent, the thread receives the `sent` tag and the drafts `status` becomes `sent`. Sent drafts no longer appear in the user's drafts list, but you can continue to query them by ID to check that the message was delivered successfully.
 
+In rare cases, message delivery can fail if the user's email gateway rejects the message. This could happen for a number of reasons, including illegial attachment data, bad credentials, or rate limiting. Inbox will always return a `200 Success` response to `/send` and continue trying to send the message if the initial attempt fails. To check whether a message has been successfully delivered, see [Confirming Message Delivery](#confirming-message-delivery).
 
 ```
 :::json
@@ -21,17 +22,76 @@ Send the POST body below to send an existing draft by ID. During the process of 
 }
 ```
 
-####Sending a new message
+#Sending a New Message
 
-You can send messages without saving them as drafts beforehand. Instead of providing a draft ID,
-simply provide the JSON of the message object you want to send.
+You can send messages without saving them as drafts beforehand. Instead of providing a draft ID, simply provide the JSON of the message object you want to send.
+
+If the message is in reply to a thread, provide the `reply_to_thread` key with the ID of the existing thread. Inbox automatically sends the message to thread participants, so you can generally omit the `to`, `cc` and `subject` attributes of the message. The `To` field is populated with all of the participants on the To line of the last message in the thread, and the `Cc` field is populated with participants CC'd on the last message in the thread. Similarly, the subject line is automatically set to the subject line of the most recent message in the thread.
+
+If you want to override these defaults when replying to a thread, simply include the attributes in the POST body of the request.
+
+Messages you create or send __should not include quoted text__ when they are in reply to an existing thread.
 
 ```
 :::json
 {
-	"to": [ {"name": "Bill", "email": "wbrogers@mit.edu"}],
+	"reply_to_thread": "84umizq7c4jtrew491brpa6iu",
 	"body" : "Sounds great! See you then.",
-	"reply_to_thread": "84umizq7c4jtrew491brpa6iu"
-}
 
+	"to": [
+		{
+			"name": "Bill",
+			"email": "wbrogers@mit.edu"
+		}
+	]
+}
+```
+
+#Monitoring Message Delivery
+
+The `/send` API returns the JSON of the draft that was queued for delivery, including it's ID.
+
+**Response Body**
+
+```
+:::json
+{
+	"id": "9nhhb7w3tinsn4zkg9vjr3cxz",
+	"state": "sending",
+    "subject": "Dinner on Friday?",
+    "to": [
+        {
+	        "name": "Ben Bitdiddle",
+	        "email": "ben.bitdiddle@gmail.com",
+        }
+    ],
+    "body": "<html><body>....</body></html>"
+    ...
+}
+```
+
+
+The draft's `state` attribute allows you to track it's state through the delivery process. You can request the draft object after calling the `/send` API to see if the message has been sent.
+
+```
+:::xml
+GET /n/<namespace_id>/drafts/<draft_id>
+```
+
+**Response Body**
+
+```
+:::json
+{
+	"state": "sent",
+    "subject": "Dinner on Friday?",
+    "to": [
+        {
+	        "name": "Ben Bitdiddle",
+	        "email": "ben.bitdiddle@gmail.com",
+        }
+    ],
+    "body": "<html><body>....</body></html>",
+    ...
+}
 ```

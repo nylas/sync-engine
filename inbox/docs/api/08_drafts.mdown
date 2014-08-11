@@ -1,13 +1,11 @@
 Title: Drafts
 
-A draft is a special kind of message which has not been sent, and therefore its body contents are mutable. Once sent, the body cannot be changed.
+A draft is a special kind of message which has not been sent, and therefore its body contents are mutable. Once sent, the body cannot be changed. Draft objects are identical to message objects sent via the API, except that they have a `state` parameter. The `state` parameter has three states:
 
-To get a list of all threads with drafts, use the [Threads](#threads) API call with a tag [filter](#filters) that specifies `draft`, like so:
+- `draft`: The default state.
+- `sending`: The draft has been queued for sending using the [Sending](#sending) API.
+- `sent`: The draft has been successfully sent.
 
-```
-:::xml
-GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=drafts
-```
 
 # Retrieving Drafts
 
@@ -42,14 +40,16 @@ Note that all of these parameters are optional. If omitted, an empty draft will 
 ```
 :::json
 {
-    "subject": "Dinner on Friday?"
+    "subject": "Dinner on Friday?",
     "to": [
         {
-        "name": "Ben Bitdiddle"
-        "email": "ben.bitdiddle@gmail.com",
+	        "name": "Ben Bitdiddle",
+	        "email": "ben.bitdiddle@gmail.com"
         },
     ],
-    "body": "<html><body>....</body></html>"
+    "cc": [],
+    "bcc": [],
+    "body": "<html><body>....</body></html>",
     "files": [
         "bgmzg0qp61oqrrmpadboiiyg3",
         "aikfl1kl73r69hevrm018jqzw"
@@ -64,7 +64,7 @@ Also note that creating a draft will fail if the referenced `files` ids have not
 
 ### Creating a reply to an existing thread
 
-If the draft is a response to an existing thread, you should provide the thread's ID in the `reply_to_thread` parameter and omit the `subject` parameter. Messages you create or send __should not include quoted text__ when they are in reply to an existing thread.
+If the draft is a response to an existing thread, you should provide the thread's ID in the `reply_to_thread` parameter and omit the `subject` parameter. Inbox will automatically populate the `To` and `CC` fields with the participants on the last message in the thread. Messages you create or send __should not include quoted text__ when they are in reply to an existing thread.
 
 ```
 :::json
@@ -107,3 +107,14 @@ If the draft does not exist, this request will fail.
 # Sending a draft
 
 The Inbox API provides a single API for sending both new messages and existing drafts. See [Sending](#sending) for more information.
+
+
+# Listing Threads with Drafts
+
+In some scenarios, you may want to display all of the threads in the user's inbox that have draft messages. To get a list of all threads with drafts, use the [Threads](#threads) API call with a [filter](#filters) on the `draft` tag:
+
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=drafts
+```
+
