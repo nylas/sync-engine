@@ -51,129 +51,140 @@ class BaseSync(gevent.Greenlet):
         raise NotImplementedError  # Implement in subclasses
 
     def poll(self):
-        """Query a remote provider for updates and persist them to the
-        database.
-
-        Parameters
-        ----------
-        account_id: int
-            ID for the account whose items should be queried.
-        db_session: sqlalchemy.orm.session.Session
-            Database session
-
-        provider: Interface to the remote item data provider.
-            Must have a PROVIDER_NAME attribute and implement the get()
-            method.
-        """
-
-        log = logger.new(account_id=self.account_id)
-        provider_name = self.provider_instance.PROVIDER_NAME
-        with session_scope() as db_session:
-            account = db_session.query(Account).get(self.account_id)
-            change_counter = Counter()
-            last_sync = or_none(self.last_sync(account),
-                                datetime.datetime.isoformat)
-            to_commit = []
-            for item in self.provider_instance.get_items(last_sync):
-                item.account = account
-                assert item.uid is not None, \
-                    'Got remote item with null uid'
-                assert isinstance(item.uid, str)
-
-                target_obj = self.target_obj
-                matching_items = db_session.query(target_obj).filter(
-                    target_obj.account == account,
-                    target_obj.provider_name == provider_name,
-                    target_obj.uid == item.uid)
-                # Snapshot of item data from immediately after last sync:
-                cached_item = matching_items. \
-                    filter(target_obj.source == 'remote').first()
-
-                # Item data reflecting any local modifications since the last
-                # sync with the remote provider:
-                local_item = matching_items. \
-                    filter(target_obj.source == 'local').first()
-                # If the remote item was deleted, purge the corresponding
-                # database entries.
-                if item.deleted:
-                    if cached_item is not None:
-                        db_session.delete(cached_item)
-                        change_counter['deleted'] += 1
-                    if local_item is not None:
-                        db_session.delete(local_item)
-                    continue
-                # Otherwise, update the database.
-                if cached_item is not None:
-                    # The provider gave an update to a item we already have.
-                    if local_item is not None:
-                        try:
-                            # Attempt to merge remote updates into local_item
-                            self.merge(cached_item, item, local_item)
-                            # And update cached_item to reflect both local and
-                            # remote updates
-                            cached_item.copy_from(local_item)
-
-                        except MergeError:
-                            log.error('Conflicting local and remote updates'
-                                      'to item.',
-                                      local=local_item, cached=cached_item,
-                                      remote=item)
-                            # For now, just don't update if conflict ing
-                            continue
-                    else:
-                        log.warning('Item already present as remote but not '
-                                    'local item', cached_item=cached_item)
-                        cached_item.copy_from(item)
-                    change_counter['updated'] += 1
-                else:
-                    # This is a new item, create both local and remote DB
-                    # entries.
-                    local_item = self.target_obj()
-                    local_item.copy_from(item)
-                    local_item.source = 'local'
-                    to_commit.append(item)
-                    to_commit.append(local_item)
-                    change_counter['added'] += 1
-
-            self.set_last_sync(account)
-
-            log.info('sync', added=change_counter['added'],
-                     updated=change_counter['updated'],
-                     deleted=change_counter['deleted'])
-
-            db_session.add_all(to_commit)
-            db_session.commit()
+        return base_poll(self.account_id, self.provider_instance,
+                         self.last_sync, self.target_obj,
+                         self.merge, self.set_last_sync)
 
     def merge(self, base, remote, dest):
-        """Merge changes from remote into dest if there are no conflicting
-        updates to remote and dest relative to base.
+        return base_merge(base, remote, dest, self.merge_attrs)
 
-        Parameters
-        ----------
-        base, remote, dest: target object type
 
-        Raises
-        ------
-        MergeError
-            If there is a conflict.
-        """
-        for attr_name in self.merge_attrs:
-            base_attr = getattr(base, attr_name)
-            remote_attr = getattr(remote, attr_name)
-            dest_attr = getattr(dest, attr_name)
-            if base_attr != remote_attr != dest_attr != base_attr:
-                raise MergeError('Conflicting updates to items {0}, {1} from '
-                                 'base {2} on attr: {3}'.format(remote,
-                                                                dest,
-                                                                base,
-                                                                attr_name))
+def base_poll(account_id, provider_instance, last_sync_fn, target_obj,
+              merge_fn, set_last_sync_fn):
+    """Query a remote provider for updates and persist them to the
+    database.
 
-        # No conflicts, can merge
-        for attr_name in self.merge_attrs:
-            base_attr = getattr(base, attr_name)
-            remote_attr = getattr(remote, attr_name)
-            if base_attr != remote_attr:
-                setattr(dest, attr_name, remote_attr)
+    Parameters
+    ----------
+    account_id: int
+        ID for the account whose items should be queried.
+    db_session: sqlalchemy.orm.session.Session
+        Database session
+
+    provider: Interface to the remote item data provider.
+        Must have a PROVIDER_NAME attribute and implement the get()
+        method.
+    """
+
+    log = logger.new(account_id=account_id)
+    provider_name = provider_instance.PROVIDER_NAME
+    with session_scope() as db_session:
+        account = db_session.query(Account).get(account_id)
+        change_counter = Counter()
+        last_sync = or_none(last_sync_fn(account),
+                            datetime.datetime.isoformat)
+        to_commit = []
+        for item in provider_instance.get_items(last_sync):
+            item.account = account
+            assert item.uid is not None, \
+                'Got remote item with null uid'
+            assert isinstance(item.uid, str)
+
+            target_obj = target_obj
+            matching_items = db_session.query(target_obj).filter(
+                target_obj.account == account,
+                target_obj.provider_name == provider_name,
+                target_obj.uid == item.uid)
+            # Snapshot of item data from immediately after last sync:
+            cached_item = matching_items. \
+                filter(target_obj.source == 'remote').first()
+
+            # Item data reflecting any local modifications since the last
+            # sync with the remote provider:
+            local_item = matching_items. \
+                filter(target_obj.source == 'local').first()
+            # If the remote item was deleted, purge the corresponding
+            # database entries.
+            if item.deleted:
+                if cached_item is not None:
+                    db_session.delete(cached_item)
+                    change_counter['deleted'] += 1
+                if local_item is not None:
+                    db_session.delete(local_item)
+                continue
+            # Otherwise, update the database.
+            if cached_item is not None:
+                # The provider gave an update to a item we already have.
+                if local_item is not None:
+                    try:
+                        # Attempt to merge remote updates into local_item
+                        merge_fn(cached_item, item, local_item)
+                        # And update cached_item to reflect both local and
+                        # remote updates
+                        cached_item.copy_from(local_item)
+
+                    except MergeError:
+                        log.error('Conflicting local and remote updates'
+                                  'to item.',
+                                  local=local_item, cached=cached_item,
+                                  remote=item)
+                        # For now, just don't update if conflict ing
+                        continue
+                else:
+                    log.warning('Item already present as remote but not '
+                                'local item', cached_item=cached_item)
+                    cached_item.copy_from(item)
+                change_counter['updated'] += 1
+            else:
+                # This is a new item, create both local and remote DB
+                # entries.
+                local_item = target_obj()
+                local_item.copy_from(item)
+                local_item.source = 'local'
+                to_commit.append(item)
+                to_commit.append(local_item)
+                change_counter['added'] += 1
+
+        set_last_sync_fn(account)
+
+        log.info('sync', added=change_counter['added'],
+                 updated=change_counter['updated'],
+                 deleted=change_counter['deleted'])
+
+        db_session.add_all(to_commit)
+        db_session.commit()
+
+
+def base_merge(base, remote, dest, merge_attrs):
+    """Merge changes from remote into dest if there are no conflicting
+    updates to remote and dest relative to base.
+
+    Parameters
+    ----------
+    base, remote, dest: target object type
+
+    Raises
+    ------
+    MergeError
+        If there is a conflict.
+    """
+    for attr_name in merge_attrs:
+        base_attr = getattr(base, attr_name)
+        remote_attr = getattr(remote, attr_name)
+        dest_attr = getattr(dest, attr_name)
+        if base_attr != remote_attr != dest_attr != base_attr:
+            raise MergeError('Conflicting updates to items {0}, {1} from '
+                             'base {2} on attr: {3}'.format(remote,
+                                                            dest,
+                                                            base,
+                                                            attr_name))
+
+    # No conflicts, can merge
+    for attr_name in merge_attrs:
+        base_attr = getattr(base, attr_name)
+        remote_attr = getattr(remote, attr_name)
+        if base_attr != remote_attr:
+            setattr(dest, attr_name, remote_attr)
 
 
 class MergeError(Exception):
