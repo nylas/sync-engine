@@ -109,9 +109,6 @@ class Lock:
         fcntl.flock(self.handle, fcntl.LOCK_UN)
         self.gevent_lock.release()
 
-    def locked(self):
-        return self.gevent_lock.locked()
-
     def __enter__(self):
         self.acquire()
         return self

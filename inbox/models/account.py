@@ -161,13 +161,6 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
         self._sync_status['sync_end_time'] = None
         self._sync_status['sync_error'] = None
 
-        self._sync_status['id'] = self.id
-        self._sync_status['email'] = self.email_address
-        self._sync_status['provider'] = self.provider
-
-        self._sync_status['state'] = self.sync_state
-        self._sync_status['sync_host'] = self.sync_host
-
     def stop_sync(self):
         """ Set a flag for the monitor to stop the sync. """
 
@@ -181,9 +174,6 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
         self.sync_host = None
         self._sync_status['sync_end_time'] = datetime.utcnow()
 
-        self._sync_status['state'] = self.sync_state
-        self._sync_status['sync_host'] = self.sync_host
-
     def kill_sync(self, error=None):
         # Don't change sync_host if moving to state 'killed'
 
@@ -192,18 +182,11 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
         self._sync_status['sync_end_time'] = datetime.utcnow()
         self._sync_status['sync_error'] = error
 
-        self._sync_status['state'] = self.sync_state
-        self._sync_status['sync_host'] = self.sync_host
-
     @property
     def sender_name(self):
         # Used for setting sender information when we send a message.
         # Can be overridden by subclasses that store account name information.
         return ''
-
-    @property
-    def is_killed(self):
-        return self.sync_state == 'killed'
 
     @classmethod
     def _get_lock_object(cls, account_id, lock_for=dict()):
@@ -230,10 +213,6 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
 
     def sync_unlock(self):
         self._sync_lock.release()
-
-    @property
-    def is_sync_locked(self):
-        return self._sync_lock.locked()
 
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_identity': 'account',
