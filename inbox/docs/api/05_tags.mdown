@@ -36,6 +36,15 @@ GET https://api.inboxapp.com/n/<namespace_id>/tags
 GET https://api.inboxapp.com/n/<namespace_id>/tags/<tag_id>
 ```
 
+# Getting Threads with a Tag
+
+You can list all of the threads with a given tag using a [Tag Filter](#filters). The tag parameter can be a tag ID, such as `4zv7pgvihjvuptbwv57kiz62` or a tag name, like `inbox` or `gmail-hiking`.
+
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=<tag_id>
+```
+
 # Canonical Tags
 
 Inbox exposes a set of standard, canonical tags: an extended version of [RFC-6154](http://tools.ietf.org/html/rfc6154) mapped to the underlying folders / labels, etc. on each backend provider. A few of the standard tags, such as `spam`, may only be present if they are supported by the underlying email service.
@@ -88,7 +97,7 @@ There are a few tags that you **cannot** add or remove:
 * **`sent`** See [Sending](#sending) for sending mail.
 
 
-### Unread & Unseen
+## Unread & Unseen
 
 In addition to the standard "unread" state, Inbox exposes an additional state for each thread called "unseen." The goal of shared "unseen" state is to prevent the same message from being displayed prominently across several applications if the user has chosen not to read it. Here's a quick look at the difference between "unread" and "unseen" and the motivation behind "unseen":
 
