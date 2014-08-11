@@ -212,6 +212,14 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
     def sync_unlock(self):
         self._sync_lock.release()
 
+    @property
+    def is_killed(self):
+        return self.sync_state == 'killed'
+
+    @property
+    def is_sync_locked(self):
+        return self._sync_lock.locked()
+
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_identity': 'account',
                        'polymorphic_on': discriminator}
