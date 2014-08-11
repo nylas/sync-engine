@@ -43,8 +43,8 @@ Note that all of these parameters are optional. If omitted, an empty draft will 
     "subject": "Dinner on Friday?",
     "to": [
         {
-        "name": "Ben Bitdiddle",
-        "email": "ben.bitdiddle@gmail.com"
+            "name": "Ben Bitdiddle",
+            "email": "ben.bitdiddle@gmail.com"
         },
     ],
     "cc": [],
