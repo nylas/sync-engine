@@ -19,19 +19,18 @@ GET https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>
     "subject": "Re: Dinner on Friday?"
     "from": [
         {
-            "name": "Ben Bitdiddle"
-            "email": "ben.bitdiddle@gmail.com",
+            "name": "Ben Bitdiddle",
+            "email": "ben.bitdiddle@gmail.com"
         }
     ],
     "to": [
         {
-            "name": "Bill Rogers"
-            "email": "wbrogers@mit.edu",
+            "name": "Bill Rogers",
+            "email": "wbrogers@mit.edu"
         }
     ],
     "cc": [],
     "bcc": [],
-    "to": ["someone@example.com"],
     "date": 1370084645,
     "thread": "5vryyrki4fqt7am31uso27t3f",
     "files": [

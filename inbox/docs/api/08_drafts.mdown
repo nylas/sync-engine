@@ -43,8 +43,8 @@ Note that all of these parameters are optional. If omitted, an empty draft will 
     "subject": "Dinner on Friday?",
     "to": [
         {
-	        "name": "Ben Bitdiddle",
-	        "email": "ben.bitdiddle@gmail.com"
+            "name": "Ben Bitdiddle",
+            "email": "ben.bitdiddle@gmail.com"
         },
     ],
     "cc": [],
@@ -70,7 +70,7 @@ If the draft is a response to an existing thread, you should provide the thread'
 :::json
 {
     "reply_to_thread": <thread_id>,
-    "body": "<html><body>....</body></html>"
+    "body": "<html><body>....</body></html>",
     "files": [
         <file_object>,
         ...

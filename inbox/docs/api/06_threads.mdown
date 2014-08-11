@@ -25,8 +25,8 @@ The thread object includes useful information like subject, participants, and ti
     "last_message_timestamp": 1398229259,
     "participants": [
         {
-            "name": "Ben Bitdiddle"
-            "email": "ben.bitdiddle@gmail.com",
+            "name": "Ben Bitdiddle",
+            "email": "ben.bitdiddle@gmail.com"
         },
         {
             "name": "Charles Mason",
@@ -51,7 +51,7 @@ The thread object includes useful information like subject, participants, and ti
     "messages": [
         "251r594smznew6yhiocht2v29",
         "7upzl8ss738iz8xf48lm84q3e",
-        "ah5wuphj3t83j260jqucm9a28",
+        "ah5wuphj3t83j260jqucm9a28"
     ],
     "drafts": [
         "251r594smznew6yhi12312saq"

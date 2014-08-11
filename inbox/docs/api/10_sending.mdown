@@ -18,7 +18,7 @@ In rare cases, message delivery can fail if the user's email gateway rejects the
 ```
 :::json
 {
-	"draft_id": "9nhhb7w3tinsn4zkg9vjr3cxz"
+    "draft_id": "9nhhb7w3tinsn4zkg9vjr3cxz"
 }
 ```
 
@@ -35,15 +35,15 @@ Messages you create or send __should not include quoted text__ when they are in 
 ```
 :::json
 {
-	"reply_to_thread": "84umizq7c4jtrew491brpa6iu",
-	"body" : "Sounds great! See you then.",
+    "reply_to_thread": "84umizq7c4jtrew491brpa6iu",
+    "body" : "Sounds great! See you then.",
 
-	"to": [
-		{
-			"name": "Bill",
-			"email": "wbrogers@mit.edu"
-		}
-	]
+    "to": [
+        {
+            "name": "Bill",
+            "email": "wbrogers@mit.edu"
+        }
+    ]
 }
 ```
 
@@ -56,13 +56,13 @@ The `/send` API returns the JSON of the draft that was queued for delivery, incl
 ```
 :::json
 {
-	"id": "9nhhb7w3tinsn4zkg9vjr3cxz",
-	"state": "sending",
+    "id": "9nhhb7w3tinsn4zkg9vjr3cxz",
+    "state": "sending",
     "subject": "Dinner on Friday?",
     "to": [
         {
-	        "name": "Ben Bitdiddle",
-	        "email": "ben.bitdiddle@gmail.com",
+            "name": "Ben Bitdiddle",
+            "email": "ben.bitdiddle@gmail.com"
         }
     ],
     "body": "<html><body>....</body></html>"
@@ -83,12 +83,12 @@ GET /n/<namespace_id>/drafts/<draft_id>
 ```
 :::json
 {
-	"state": "sent",
+    "state": "sent",
     "subject": "Dinner on Friday?",
     "to": [
         {
-	        "name": "Ben Bitdiddle",
-	        "email": "ben.bitdiddle@gmail.com",
+            "name": "Ben Bitdiddle",
+            "email": "ben.bitdiddle@gmail.com",
         }
     ],
     "body": "<html><body>....</body></html>",

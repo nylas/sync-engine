@@ -21,7 +21,7 @@ GET https://api.inboxapp.com/n/<namespace_id>/files/<file_id>
     "size": 3145728,
     "content-type": "application/zip",
     "message": "152ev3uktfrtk3y2subs4i9mn",
-    "is_embedded": false,
+    "is_embedded": false
 }
 ```
 
@@ -82,12 +82,12 @@ A successful upload will return an array with a single file object. This object'
 ```
 :::json
 [
-	{
-	    "content_type": "image/jpeg",
+    {
+        "content_type": "image/jpeg",
             "id": "3f7d6reg1k7hc2umqkz8gcfmo",
             "namespace": "agud8k5kr8tmnm8wg4y6appw4",
             "object": "file",
             "size": 29278
-	}
+    }
 ]
 ```

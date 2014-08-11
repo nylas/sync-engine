@@ -32,7 +32,7 @@ POST https://api.inboxapp.com/n/<namespace_id>/webhooks
     "started_before": null,
     "started_after": null,
     "last_message_before": null,
-    "last_message_after": null,
+    "last_message_after": null
 }
 ```
 
@@ -79,7 +79,7 @@ GET https://api.inboxapp.com/n/<namespace_id>/webhooks/<webhook_id>
     "started_before": null,
     "started_after": null,
     "last_message_before": null,
-    "last_message_after": null,
+    "last_message_after": null
 }
 ```
 
