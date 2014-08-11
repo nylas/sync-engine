@@ -95,7 +95,7 @@ def update_thread_labels(thread, folder_name, g_labels, db_session):
                        if folder.canonical_name is not None}
 
     new_labels = {l.lstrip('\\').lower() if isinstance(l, unicode)
-                  else unicode(l) for l in g_labels}
+                  else unicode(l) for l in g_labels if l is not None}
     new_labels.add(folder_name.lower())
 
     # Remove labels that have been deleted -- note that the \Inbox, \Sent,
