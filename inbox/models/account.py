@@ -152,12 +152,18 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
     def sync_started(self, sync_host):
         self.sync_host = sync_host
 
-        self._sync_status['sync_type'] = 'new' if self.sync_state is None else\
-            'resumed'
+        # Never run before
+        if self.sync_state is None and \
+                self._sync_status.get('sync_end_time') is None:
+            self._sync_status['sync_type'] = 'new'
+            self._sync_status['sync_start_time'] = datetime.utcnow()
+        # Restarting stopped/killed
+        else:
+            self._sync_status['sync_type'] = 'resumed'
+            self._sync_status['sync_restart_time'] = datetime.utcnow()
 
         self.sync_state = 'running'
 
-        self._sync_status['sync_start_time'] = datetime.utcnow()
         self._sync_status['sync_end_time'] = None
         self._sync_status['sync_error'] = None
 

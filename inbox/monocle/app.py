@@ -4,6 +4,8 @@ from subprocess import call
 import json
 import datetime
 from collections import defaultdict
+import logging
+from logging import FileHandler
 
 from flask import Flask, g, request
 
@@ -175,8 +177,6 @@ class DateTimeJSONEncoder(json.JSONEncoder):
         else:
             return super(DateTimeJSONEncoder, self).default(obj)
 
-import logging
-from logging import FileHandler
 
 if __name__ == '__main__':
     import os
