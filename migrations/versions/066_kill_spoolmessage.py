@@ -13,13 +13,12 @@ down_revision = '2e6120c97485'
 from alembic import op
 import sqlalchemy as sa
 
-from sqlalchemy.ext.declarative import declarative_base
-from inbox.models.session import session_scope
-from inbox.ignition import main_engine
-engine = main_engine(pool_size=1, max_overflow=0)
-
 
 def upgrade():
+    from sqlalchemy.ext.declarative import declarative_base
+    from inbox.models.session import session_scope
+    from inbox.ignition import main_engine
+    engine = main_engine(pool_size=1, max_overflow=0)
     op.add_column('message',
                   sa.Column('is_created', sa.Boolean,
                             server_default=sa.sql.expression.false(),

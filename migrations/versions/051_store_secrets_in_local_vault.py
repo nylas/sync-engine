@@ -13,13 +13,13 @@ down_revision = '29217fad3f46'
 from alembic import op
 import sqlalchemy as sa
 from datetime import datetime
-from inbox.models.session import session_scope
-from sqlalchemy.ext.declarative import declarative_base
-from inbox.ignition import main_engine
-engine = main_engine(pool_size=1, max_overflow=0)
 
 
 def upgrade():
+    from inbox.models.session import session_scope
+    from sqlalchemy.ext.declarative import declarative_base
+    from inbox.ignition import main_engine
+    engine = main_engine(pool_size=1, max_overflow=0)
     op.create_table(
         'secret',
         sa.Column('created_at', sa.DateTime(), nullable=True),
@@ -70,6 +70,10 @@ def upgrade():
 
 
 def downgrade():
+    from inbox.models.session import session_scope
+    from sqlalchemy.ext.declarative import declarative_base
+    from inbox.ignition import main_engine
+    engine = main_engine(pool_size=1, max_overflow=0)
     Base = declarative_base()
     Base.metadata.reflect(engine)
 
