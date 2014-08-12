@@ -68,7 +68,7 @@ You can add and remove tags from Inbox threads using a simple PUT request:
 
 ```
 :::xml
-PUT https://api.inboxapp.com/n/<namespace_id>/thread/<thread_id>
+PUT https://api.inboxapp.com/n/<namespace_id>/threads/<thread_id>
 ```
 
 **Request body**
