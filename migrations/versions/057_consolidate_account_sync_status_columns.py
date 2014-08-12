@@ -14,15 +14,13 @@ from alembic import op
 import sqlalchemy as sa
 from bson import json_util
 
-from inbox.sqlalchemy_ext.util import JSON, MutableDict
-
-from inbox.ignition import main_engine
-engine = main_engine(pool_size=1, max_overflow=0)
-from inbox.models.session import session_scope
-from sqlalchemy.ext.declarative import declarative_base
-
 
 def upgrade():
+    from inbox.sqlalchemy_ext.util import JSON, MutableDict
+    from inbox.ignition import main_engine
+    engine = main_engine(pool_size=1, max_overflow=0)
+    from inbox.models.session import session_scope
+    from sqlalchemy.ext.declarative import declarative_base
     op.add_column('account',
                   sa.Column('_sync_status', MutableDict.as_mutable(JSON()),
                             default={}, nullable=True))

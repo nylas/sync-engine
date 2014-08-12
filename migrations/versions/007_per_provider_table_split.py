@@ -16,12 +16,6 @@ import sqlalchemy as sa
 from sqlalchemy.sql import table, column
 from sqlalchemy.ext.declarative import declarative_base
 
-from inbox.models.session import session_scope
-from inbox.ignition import main_engine
-engine = main_engine(pool_size=1, max_overflow=0)
-
-Base = declarative_base()
-Base.metadata.reflect(engine)
 
 
 def upgrade():
@@ -38,6 +32,11 @@ def downgrade():
 
 # Upgrade funtions:
 def genericize_imapaccount():
+    from inbox.models.session import session_scope
+    from inbox.ignition import main_engine
+    engine = main_engine(pool_size=1, max_overflow=0)
+    Base = declarative_base()
+    Base.metadata.reflect(engine)
     class ImapAccount_(Base):
         __table__ = Base.metadata.tables['imapaccount']
 
@@ -73,6 +72,11 @@ def genericize_imapaccount():
 
 
 def genericize_thread():
+    from inbox.models.session import session_scope
+    from inbox.ignition import main_engine
+    engine = main_engine(pool_size=1, max_overflow=0)
+    Base = declarative_base()
+    Base.metadata.reflect(engine)
     class Thread_(Base):
         __table__ = Base.metadata.tables['thread']
 
@@ -136,6 +140,11 @@ def genericize_namespace_contact_foldersync():
 
 # Downgrade functions:
 def downgrade_imapaccount():
+    from inbox.models.session import session_scope
+    from inbox.ignition import main_engine
+    engine = main_engine(pool_size=1, max_overflow=0)
+    Base = declarative_base()
+    Base.metadata.reflect(engine)
     class ImapAccount_(Base):
         __table__ = Base.metadata.tables['imapaccount']
 
@@ -177,6 +186,11 @@ def downgrade_imapaccount():
 
 
 def downgrade_imapthread():
+    from inbox.models.session import session_scope
+    from inbox.ignition import main_engine
+    engine = main_engine(pool_size=1, max_overflow=0)
+    Base = declarative_base()
+    Base.metadata.reflect(engine)
     class ImapThread_(Base):
         __table__ = Base.metadata.tables['imapthread']
 

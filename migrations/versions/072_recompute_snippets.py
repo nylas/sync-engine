@@ -10,16 +10,6 @@ Create Date: 2014-07-31 09:37:48.099402
 revision = '4e93522b5b62'
 down_revision = '3bb5d61c895c'
 
-from inbox.ignition import main_engine
-from inbox.models.session import session_scope
-from inbox.models.message import Message
-from sqlalchemy.ext.declarative import declarative_base
-
-
-engine = main_engine(pool_size=1, max_overflow=0)
-Base = declarative_base()
-Base.metadata.reflect(engine)
-
 
 # solution from http://stackoverflow.com/a/1217947
 def page_query(q):
@@ -36,6 +26,8 @@ def page_query(q):
 
 
 def upgrade():
+    from inbox.models.session import session_scope
+    from inbox.models.message import Message
     with session_scope(ignore_soft_deletes=False, versioned=False)\
             as db_session:
         for message in page_query(db_session.query(Message)):

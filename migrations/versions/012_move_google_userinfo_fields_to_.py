@@ -16,15 +16,13 @@ from sqlalchemy.dialects import mysql
 from sqlalchemy.sql import table, column, text
 from sqlalchemy.ext.declarative import declarative_base
 
-from inbox.models.session import session_scope
-from inbox.ignition import main_engine
-engine = main_engine(pool_size=1, max_overflow=0)
-
-Base = declarative_base()
-Base.metadata.reflect(engine)
-
 
 def upgrade():
+    from inbox.models.session import session_scope
+    from inbox.ignition import main_engine
+    engine = main_engine(pool_size=1, max_overflow=0)
+    Base = declarative_base()
+    Base.metadata.reflect(engine)
     # ADD:
     op.add_column('imapaccount', sa.Column('family_name', sa.String(length=255),
                                            nullable=True))
@@ -89,6 +87,11 @@ def upgrade():
 
 
 def downgrade():
+    from inbox.models.session import session_scope
+    from inbox.ignition import main_engine
+    engine = main_engine(pool_size=1, max_overflow=0)
+    Base = declarative_base()
+    Base.metadata.reflect(engine)
     # ADD:
     op.add_column('account', sa.Column('family_name', sa.String(length=255),
                                        nullable=True))
