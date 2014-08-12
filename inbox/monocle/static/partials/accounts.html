@@ -52,11 +52,6 @@
             <span ng-show="predicate=='sync_start_time' && reverse" class="glyphicon glyphicon-sort-by-attributes"></span>
             <span ng-show="predicate=='sync_start_time' && !reverse" class="glyphicon glyphicon-sort-by-attributes-alt"></span>
           </th>
-          <th class="end" ng-click="sort('sync_end_time')">
-            End Time
-            <span ng-show="predicate=='sync_end_time' && reverse" class="glyphicon glyphicon-sort-by-attributes"></span>
-            <span ng-show="predicate=='sync_end_time' && !reverse" class="glyphicon glyphicon-sort-by-attributes-alt"></span>
-          </th>
           <th class="sync-progress" ng-click="sort('percent')">
             Progress
             <span ng-show="predicate=='percent' && reverse" class="glyphicon glyphicon-sort-by-attributes"></span>
@@ -105,7 +100,6 @@
           </td>
           <td class="host"></td>
           <td class="start"></td>
-          <td class="end"></td>
           <td class="sync-progress">
           </td>
           <td class="error">
@@ -118,7 +112,6 @@
           <td class="state">{{account.state}}</td>
           <td class="host">{{account.sync_host}}</td>
           <td class="start">{{account.sync_start_time | time_ago}}</td>
-          <td class="end">{{account.sync_end_time | time_ago}}</td>
           <td class="sync-progress">
             <div class="progress">
               <div class="progress-bar progress-bar-info"  role="progressbar" aria-valuenow="{{account.percent}}" aria-valuemin="0" aria-valuemax="100" style="width: {{account.percent}}%">
