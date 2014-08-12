@@ -1,6 +1,8 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
+from werkzeug.exceptions import default_exceptions, HTTPException
 
 from inbox.api.kellogs import APIEncoder
+from inbox.log import get_logger
 from inbox.models import Namespace
 from inbox.models.session import session_scope
 
@@ -10,6 +12,21 @@ app = Flask(__name__)
 # Handle both /endpoint and /endpoint/ without redirecting.
 # Note that we need to set this *before* registering the blueprint.
 app.url_map.strict_slashes = False
+
+
+def default_json_error(ex):
+    """ Exception -> flask JSON responder """
+    logger = get_logger()
+    logger.error('Uncaught error thrown by Flask/Werkzeug', exc_info=ex)
+    response = jsonify(message=str(ex), type='api_error')
+    response.status_code = (ex.code
+                            if isinstance(ex, HTTPException)
+                            else 500)
+    return response
+
+# Patch all error handlers in werkzeug
+for code in default_exceptions.iterkeys():
+    app.error_handler_spec[None][code] = default_json_error
 
 
 @app.before_request

@@ -7,8 +7,6 @@ from flask import jsonify as flask_jsonify
 from flask.ext.restful import reqparse
 from sqlalchemy import asc, or_
 from sqlalchemy.orm.exc import NoResultFound
-from werkzeug.exceptions import default_exceptions
-from werkzeug.exceptions import HTTPException
 
 from inbox.models import (Message, Block, Thread, Namespace, Webhook,
                           Tag, Contact, Event)
@@ -89,26 +87,6 @@ def finish(response):
         g.db_session.commit()
     g.db_session.close()
     return response
-
-
-@app.record
-def record_auth(setup_state):
-    # Runs when the Blueprint binds to the main application
-    app = setup_state.app
-
-    def default_json_error(ex):
-        """ Exception -> flask JSON responder """
-        logger = get_logger()
-        logger.error('Uncaught error thrown by Flask/Werkzeug', exc_info=ex)
-        response = flask_jsonify(message=str(ex), type='api_error')
-        response.status_code = (ex.code
-                                if isinstance(ex, HTTPException)
-                                else 500)
-        return response
-
-    # Patch all error handlers in werkzeug
-    for code in default_exceptions.iterkeys():
-        app.error_handler_spec[None][code] = default_json_error
 
 
 @app.errorhandler(NotImplementedError)

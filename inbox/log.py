@@ -149,8 +149,15 @@ def configure_logging(is_prod):
     else:
         formatter = logging.Formatter('%(message)s')
     tty_handler.setFormatter(formatter)
+    tty_handler._inbox = True
+
     # Configure the root logger.
     root_logger = logging.getLogger()
+    for handler in root_logger.handlers:
+        # If the handler was previously installed, remove it so that repeated
+        # calls to configure_logging() are idempotent.
+        if getattr(handler, '_inbox', False):
+            root_logger.removeHandler(handler)
     root_logger.addHandler(tty_handler)
     # Set loglevel DEBUG if config value is missing.
     root_logger.setLevel(config.get('LOGLEVEL', 10))
