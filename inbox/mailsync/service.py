@@ -141,7 +141,7 @@ class SyncService(Process):
                             acc.provider)
                     self.monitors[acc.id] = monitor
                     monitor.start()
-                    # For Gmail accounts, also start contacts sync
+                    # For Gmail accounts, also start contacts and events sync
                     if acc.provider == 'gmail':
                         contact_sync = ContactSync(acc.id)
                         self.contact_sync_monitors[acc.id] = contact_sync

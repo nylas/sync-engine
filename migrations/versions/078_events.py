@@ -40,7 +40,7 @@ def upgrade():
         sa.Column('deleted_at', sa.DateTime(), nullable=True),
         sa.ForeignKeyConstraint(['account_id'], ['account.id'],
                                 ondelete='CASCADE'),
-        sa.PrimaryKeyConstraint('id')
+        sa.PrimaryKeyConstraint('id'),
     )
     op.add_column('account', sa.Column('last_synced_events', sa.DateTime(),
                   nullable=True))

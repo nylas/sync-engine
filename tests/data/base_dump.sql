@@ -136,7 +136,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('1c2253a0e997');
+INSERT INTO `alembic_version` VALUES ('5901bf556d83');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -426,7 +426,7 @@ DROP TABLE IF EXISTS `event`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `event` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `uid` varchar(64) NOT NULL,
+  `uid` varchar(767) CHARACTER SET ascii DEFAULT NULL,
   `provider_name` varchar(64) NOT NULL,
   `public_id` binary(16) NOT NULL,
   `raw_data` text NOT NULL,
@@ -447,6 +447,7 @@ CREATE TABLE `event` (
   `updated_at` datetime DEFAULT NULL,
   `deleted_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
+  UNIQUE KEY `uuid` (`uid`,`source`,`account_id`,`provider_name`),
   KEY `account_id` (`account_id`),
   CONSTRAINT `event_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -1411,4 +1412,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-08-09  0:50:06
+-- Dump completed on 2014-08-12  4:55:49

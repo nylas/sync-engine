@@ -432,7 +432,7 @@ def event_search_api():
 def event_create_api():
     data = request.get_json(force=True)
 
-    subject = data.get('subject')
+    subject = data.get('subject', '')
     body = data.get('body')
     location = data.get('location')
     reminders = data.get('reminders')
@@ -448,10 +448,18 @@ def event_create_api():
     except (ValueError, TypeError):
         return err(400, 'Event end time invalid.')
 
-    busy = data.get('busy')
-    all_day = data.get('all_day')
-    if not subject:
-        return err(400, 'Event subject cannot be null.')
+    if start > end:
+        return err(400, 'Event cannot start after it ends.')
+
+    if not isinstance(data.get('busy'), bool):
+        return err(400, '\'busy\' must be true or false')
+
+    busy = int(data.get('busy'))
+
+    if not isinstance(data.get('all_day'), bool):
+        return err(400, '\'all_day\' must be true or false')
+
+    all_day = int(data.get('all_day'))
 
     new_contact = events.crud.create(g.namespace, g.db_session,
                                      subject,

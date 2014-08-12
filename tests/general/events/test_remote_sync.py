@@ -67,8 +67,8 @@ def test_merge(config, event_sync):
     assert dest.subject == 'new subject'
     assert dest.body == 'new body'
     assert dest.location == 'new location'
-    assert dest.busy == True
-    assert dest.locked == True
+    assert dest.busy
+    assert dest.locked
     assert dest.start == 2
     assert dest.end == 3
 
