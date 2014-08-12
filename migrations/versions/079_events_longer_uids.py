@@ -13,18 +13,19 @@ down_revision = '1c2253a0e997'
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
-from inbox.ignition import main_engine
-engine = main_engine(pool_size=1, max_overflow=0)
 
 
 def upgrade():
+    from inbox.ignition import main_engine
+    engine = main_engine(pool_size=1, max_overflow=0)
     Base = declarative_base()
     Base.metadata.reflect(engine)
 
     # The model previously didn't reflect the migration, therefore
     # only drop the uid constraint if it exists (created with creat_db
     # vs a migration).
-    if 'uid' in Base.metadata.tables['event'].c:
+    inspector = sa.inspect(engine)
+    if 'uid' in [c['name'] for c in inspector.get_unique_constraints('event')]:
         op.drop_constraint('uid', 'event', type_='unique')
 
     op.create_unique_constraint('uuid', 'event', ['uid', 'source',
