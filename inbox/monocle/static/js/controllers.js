@@ -104,6 +104,15 @@ angular.module('monocleApp.controllers', [])
 
       $scope.refreshDetails = function() {
         monocleAPIservice.getAccountDetails($scope.id).success(function (response) {
+          if (response.account.provider == 'eas') {
+            var i = 0;
+            for(i = 0; i < response.folders.length; i++) {
+              var rate = Math.floor(response.folders[i].num_downloaded/response.folders[i].download_time);
+              rate = (rate === null || isNaN(rate)) ? '' : rate;
+              response.folders[i].rate = rate;
+            }
+          }
+
           $scope.account = response.account;
           $scope.folders = response.folders;
         });

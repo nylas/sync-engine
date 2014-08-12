@@ -14,12 +14,12 @@ angular.module('monocleApp.filters', []).
       return prettyDate(date);
     };
   }).
-  filter('account_percent', function() {
-    return function(account) {
-      var percent = Math.floor((account.local_count/account.remote_count) * 100);
-      if(percent > 100) {
-        percent = 100;
-      }
-      return percent;
+  filter('sync_rate', function() {
+    return function(rate) {
+      if(typeof rate == "undefined")
+          return '';
+      if(rate == null)
+          return '';
+      return rate;
     };
   });
