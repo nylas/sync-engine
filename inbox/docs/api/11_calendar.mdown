@@ -1,5 +1,4 @@
 Title: Calendar
-SkipDoc: True
 
 The events endpoint is used to manage calendar style events.
 
