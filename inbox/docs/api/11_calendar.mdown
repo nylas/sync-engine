@@ -64,8 +64,8 @@ POST https://api.inboxapp.com/n/<namespace_id>/events
     "subject":"Friday meeting",
     "start": "1407542195",
     "end":"1407542195",
-    "busy":"0",
-    "all_day":"0"
+    "busy": false,
+    "all_day": false
 }
 ```
 

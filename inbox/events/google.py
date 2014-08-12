@@ -23,6 +23,10 @@ from inbox.sync.base_sync_provider import BaseSyncProvider
 SOURCE_APP_NAME = 'InboxApp Calendar Sync Engine'
 
 
+class MalformedEventError(Exception):
+    pass
+
+
 class GoogleEventsProvider(BaseSyncProvider):
     """A utility class to fetch and parse Google calendar data for the
     specified account using the Google Calendar API.
@@ -98,8 +102,11 @@ class GoogleEventsProvider(BaseSyncProvider):
                 raise ConnectionError
 
     def _parse_datetime(self, date):
-        dt = date_parser.parse(date)
-        return dt.astimezone(tz.gettz('UTC')).replace(tzinfo=None)
+        try:
+            dt = date_parser.parse(date)
+            return dt.astimezone(tz.gettz('UTC')).replace(tzinfo=None)
+        except ValueError:
+            raise MalformedEventError()
 
     def _parse_event(self, cal_info, event):
         """Constructs a Calendar object from a Google calendar entry.
@@ -122,7 +129,21 @@ class GoogleEventsProvider(BaseSyncProvider):
 
         try:
             uid = str(event['id'])
-            subject = event['summary']
+
+            # The entirety of the raw event data in json representation.
+            raw_data = str(event)
+
+            # 'cancelled' events signify those instances within a series
+            # that have been cancelled (for that given series). As such,
+            # since full support for dealing with single instances within
+            # a reocurring event series is not added, right now we just
+            # treat this event as 'malformed'. -cg3
+            # TODO: Add support for reocurring events (see ways to handle
+            # this generically across providers)
+            if 'status' in event and event['status'] == 'cancelled':
+                raise MalformedEventError()
+
+            subject = event.get('summary', '')
             body = event.get('description', None)
             location = event.get('location', None)
             all_day = False
@@ -140,11 +161,14 @@ class GoogleEventsProvider(BaseSyncProvider):
             if 'dateTime' in start:
                 if event['reminders']['useDefault']:
                     reminder_source = cal_info['defaultReminders']
-                else:
+                elif 'overrides' in event['reminders']:
                     reminder_source = event['reminders']['overrides']
+                else:
+                    reminder_source = None
 
-                for reminder in reminder_source:
-                    reminders.append(reminder['minutes'])
+                if reminder_source:
+                    for reminder in reminder_source:
+                        reminders.append(reminder['minutes'])
 
                 start = self._parse_datetime(start['dateTime'])
                 end = self._parse_datetime(end['dateTime'])
@@ -163,12 +187,8 @@ class GoogleEventsProvider(BaseSyncProvider):
             time_zone = cal_info['timeZone']
             time_zone = 0  # FIXME: this ain't right -cg3
 
-            # The entirety of the raw event data in json representation.
-            raw_data = str(event)
-        except AttributeError, e:
-            print e
-            self.log.error('Malformed event', event=event)
-            raise e
+        except (KeyError, AttributeError):
+            raise MalformedEventError()
 
         return Event(account_id=self.account_id,
                      uid=uid,
@@ -216,6 +236,11 @@ class GoogleEventsProvider(BaseSyncProvider):
                 db_session.commit()
             raise ValidationError
 
-        events = [self._parse_event(resp, ev) for ev in resp['items']]
+        events = []
+        for response_event in resp['items']:
+            try:
+                events.append(self._parse_event(resp, response_event))
+            except MalformedEventError:
+                self.log.error('Malformed event', google_event=response_event)
 
         return events

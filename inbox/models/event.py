@@ -1,7 +1,6 @@
 from sqlalchemy import (Column, Integer, String, ForeignKey, Text, Boolean,
-                        DateTime, Enum)
+                        DateTime, Enum, UniqueConstraint)
 from sqlalchemy.orm import relationship
-from sqlalchemy.schema import UniqueConstraint
 
 from inbox.models.transaction import HasRevisions
 from inbox.models.base import MailSyncBase
@@ -20,7 +19,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
                     'Account.deleted_at.is_(None))')
 
     # A server-provided unique ID.
-    uid = Column(String(64), nullable=False)
+    uid = Column(String(767, collation='ascii_general_ci'), nullable=False)
 
     # A constant, unique identifier for the remote backend this event came
     # from. E.g., 'google', 'eas', 'inbox'
@@ -47,7 +46,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     deleted = False
 
     __table_args__ = (UniqueConstraint('uid', 'source', 'account_id',
-                                       'provider_name'),)
+                                       'provider_name', name='uuid'),)
 
     def copy_from(self, src):
         """ Copy fields from src."""
