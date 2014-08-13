@@ -59,7 +59,15 @@ def provider_from_address(email_address):
 
         valid = True
         for rdata in mx_records:
-            if str(rdata.exchange).lower() not in mx_servers:
+            domain = str(rdata.exchange).lower()
+
+            # Depending on how the MX server is configured, domain may
+            # refer to a relative name or to an absolute one.
+            # FIXME @karim: maybe resolve the server instead.
+            if domain[-1] == '.':
+                domain = domain[:-1]
+
+            if domain not in mx_servers:
                 valid = False
                 break
 

@@ -16,24 +16,24 @@ providers = {
         "imap": "imap.gmail.com",
         "smtp": "smtp.gmail.com:587",
         "auth": "oauth2",
-        "mx_servers": ["aspmx.l.google.com.",
-                       "aspmx2.googlemail.com.",
-                       "aspmx3.googlemail.com.",
-                       "aspmx4.googlemail.com.",
-                       "aspmx5.googlemail.com.",
-                       "alt1.aspmx.l.google.com.",
-                       "alt2.aspmx.l.google.com.",
-                       "alt3.aspmx.l.google.com.",
-                       "alt4.aspmx.l.google.com.",
-                       "aspmx1.aspmx.l.google.com.",
-                       "aspmx2.aspmx.l.google.com.",
-                       "aspmx3.aspmx.l.google.com.",
-                       "aspmx4.aspmx.l.google.com.",
-                       "gmail-smtp-in.l.google.com.",
-                       "alt1.gmail-smtp-in.l.google.com.",
-                       "alt2.gmail-smtp-in.l.google.com.",
-                       "alt3.gmail-smtp-in.l.google.com.",
-                       "alt4.gmail-smtp-in.l.google.com."]
+        "mx_servers": ["aspmx.l.google.com",
+                       "aspmx2.googlemail.com",
+                       "aspmx3.googlemail.com",
+                       "aspmx4.googlemail.com",
+                       "aspmx5.googlemail.com",
+                       "alt1.aspmx.l.google.com",
+                       "alt2.aspmx.l.google.com",
+                       "alt3.aspmx.l.google.com",
+                       "alt4.aspmx.l.google.com",
+                       "aspmx1.aspmx.l.google.com",
+                       "aspmx2.aspmx.l.google.com",
+                       "aspmx3.aspmx.l.google.com",
+                       "aspmx4.aspmx.l.google.com",
+                       "gmail-smtp-in.l.google.com",
+                       "alt1.gmail-smtp-in.l.google.com",
+                       "alt2.gmail-smtp-in.l.google.com",
+                       "alt3.gmail-smtp-in.l.google.com",
+                       "alt4.gmail-smtp-in.l.google.com"],
     },
     "yahoo": {
         "type": "generic",
@@ -58,7 +58,7 @@ providers = {
                     "yahoo.com.vn", "ymail.com", "rocketmail.com"],
         "mx_servers": ["mx-biz.mail.am0.yahoodns.net",
                        "mx1.biz.mail.yahoo.com.", "mx5.biz.mail.yahoo.com.",
-                       "mxvm2.mail.yahoo.com.", "mx-van.mail.am0.yahoodns.net"]
+                       "mxvm2.mail.yahoo.com.", "mx-van.mail.am0.yahoodns.net"],
     },
     "outlook": {
         "type": "generic",
@@ -76,7 +76,7 @@ providers = {
                     "outlook.kr", "outlook.lv", "outlook.my", "outlook.co.nz",
                     "outlook.com.pe", "outlook.ph", "outlook.pt", "outlook.sa",
                     "outlook.sg", "outlook.sk", "outlook.es", "outlook.co.th",
-                    "outlook.com.tr", "outlook.com.vn"]
+                    "outlook.com.tr", "outlook.com.vn"],
     },
     "aol": {
         "type": "generic",
@@ -85,14 +85,14 @@ providers = {
         "auth": "password",
         "folder_map": {"Spam": "spam", "INBOX": "inbox", "Sent": "sent",
                        "Trash": "trash", "Drafts": "drafts"},
-        "domains": ["aol.com"]
+        "domains": ["aol.com"],
     },
     "eas": {
         "auth": "password",
         "domains": [
             "onmicrosoft.com",
             "exchange.mit.edu"
-            ]
+            ],
     },
     "fastmail": {
         "type": "generic",
@@ -107,7 +107,7 @@ providers = {
         "mx_servers": ["1-smtp.messagingengine.com",
                        "in2-smtp.messagingengine.com"],
         "ns_servers": ["ns1.messagingengine.com",
-                       "ns2.messagingengine.com"]
+                       "ns2.messagingengine.com"],
     },
     "icloud": {
         "type": "generic",
@@ -118,7 +118,7 @@ providers = {
                        "Drafts": "drafts", "Junk": "spam",
                        "Sent Messages": "sent",
                        "Deleted Messages": "trash"},
-        "domains": ["icloud.com"]
+        "domains": ["icloud.com"],
     },
     "gmx": {
         "type": "generic",
@@ -127,15 +127,17 @@ providers = {
         "auth": "password",
         "folder_map": {"INBOX": "inbox", "Drafts": "drafts", "Spam": "spam",
                        "Sent": "sent", "Trash": "trash"},
-        "domains": ["gmx.us", "gmx.com"]
+        "domains": ["gmx.us", "gmx.com"],
     },
     "gandi": {
         "type": "generic",
+        "condstore": True,
         "imap": "mail.gandi.net",
         "smtp": "mail.gandi.net:587",
         "auth": "password",
         "folder_map": {"INBOX": "inbox"},
-        "domains": ["debuggers.co"]
+        "domains": ["debuggers.co"],
+        "mx_servers": ["spool.mail.gandi.net", "fb.mail.gandi.net"],
     },
     "zimbra": {
         "type": "generic",
@@ -144,7 +146,7 @@ providers = {
         "auth": "password",
         "folder_map": {"INBOX": "inbox", "Drafts": "drafts", "Junk": "spam",
                        "Sent": "sent", "Trash": "trash"},
-        "domains": ["mrmail.com"]
+        "domains": ["mrmail.com"],
     },
     "mail.ru": {
         "type": "generic",
@@ -156,6 +158,6 @@ providers = {
                        "\u0421\u043f\u0430\u043c": "spam",
                        "\u041e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u043d\u044b\u0435": "sent",
                        "\u041a\u043e\u0440\u0437\u0438\u043d\u0430": "trash"},
-        "domains": ["mail.ru"]
+        "domains": ["mail.ru"],
     }
 }
