@@ -12,6 +12,7 @@ def main_engine(pool_size=DB_POOL_SIZE, max_overflow=5):
                            isolation_level='READ COMMITTED',
                            echo=False,
                            pool_size=pool_size,
+                           pool_recycle=3600,
                            max_overflow=max_overflow,
                            connect_args={'charset': 'utf8mb4'})
     return engine
