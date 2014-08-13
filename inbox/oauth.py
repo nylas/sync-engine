@@ -46,16 +46,16 @@ def validate_token(provider_module, access_token):
         response = requests.get(validation_url +
                                 '?access_token=' + access_token)
     except RequestsConnectionError, e:
-        log.error('Validation failed.')
-        log.error(e)
+        log.error('access token validation failed', error=e)
         raise ConnectionError()
 
     validation_dict = response.json()
 
     if 'error' in validation_dict:
         assert validation_dict['error'] == 'invalid_token'
-        log.error('{0} - {1}'.format(validation_dict['error'],
-                                     validation_dict['error_description']))
+        log.error('error validating access token',
+                  error=validation_dict['error'],
+                  error_description=validation_dict['error_description'])
         raise OAuthValidationError()
 
     return validation_dict

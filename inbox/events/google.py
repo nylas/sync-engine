@@ -241,6 +241,7 @@ class GoogleEventsProvider(BaseSyncProvider):
             try:
                 events.append(self._parse_event(resp, response_event))
             except MalformedEventError:
-                self.log.error('Malformed event', google_event=response_event)
+                self.log.warning('Malformed event',
+                                 google_event=response_event)
 
         return events
