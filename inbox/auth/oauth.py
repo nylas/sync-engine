@@ -43,9 +43,8 @@ def connect_account(account):
     try:
         conn.oauth2_login(account.email_address, account.access_token)
     except IMAPClient.Error as e:
-        log.error("IMAP Login error, refresh auth token for: {}"
-                  .format(account.email_address))
-        log.error("Error was: {}".format(e))
+        log.error('IMAP Login error during refresh auth token. Account: {}, '
+                  'error: {}'.format(account.email_address, e))
         if str(e) == '[ALERT] Invalid credentials (Failure)':
             # maybe the access token expired?
             try:
@@ -54,7 +53,7 @@ def connect_account(account):
             except IMAPClient.Error as e:
                 raise ValidationError()
         else:
-            raise ValidationError()
+            raise ConnectionError(str(e))
     except SSLError as e:
         log.error('account_verify_failed',
                   email=account.email_address,
