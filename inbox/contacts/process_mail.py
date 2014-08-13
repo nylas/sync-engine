@@ -10,7 +10,8 @@ def update_contacts_from_message(db_session, message, account_id):
             items = set(getattr(message, field))
             for name, email_address in items:
                 contact = db_session.query(Contact).filter(
-                    Contact.email_address == email_address).first()
+                    Contact.email_address == email_address,
+                    Contact.account_id == account_id).first()
                 if contact is None:
                     contact = Contact(name=name, email_address=email_address,
                                       account_id=account_id, source='local',
