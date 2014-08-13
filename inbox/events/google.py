@@ -93,7 +93,7 @@ class GoogleEventsProvider(BaseSyncProvider):
                 account.sync_state = 'invalid'
                 db_session.add(account)
                 db_session.commit()
-                return ValidationError
+                raise ValidationError
             except ConnectionError:
                 self.log.error('Connection error')
                 account.sync_state = 'connerror'
