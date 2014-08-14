@@ -60,7 +60,6 @@ class SyncbackService(gevent.Greenlet):
         with session_scope() as db_session:
             query = db_session.query(ActionLog).filter(~ActionLog.executed)
             if self._scheduled_actions:
-
                 query = query.filter(
                     ~ActionLog.id.in_(self._scheduled_actions))
             query = query.order_by(asc(ActionLog.id))
