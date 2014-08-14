@@ -194,14 +194,16 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                 thread.start()
                 self.folder_monitors.add(thread)
                 while not self._thread_polling(thread) and \
-                        not self._thread_finished(thread):
+                        not self._thread_finished(thread) and \
+                        not thread.ready():
                     sleep(self.heartbeat)
+
                 # Allow individual folder sync monitors to shut themselves down
                 # after completing the initial sync.
-                if self._thread_finished(thread):
-                    self.log.info('folder sync finished')
-                    # NOTE: Greenlet is automatically removed from the group
-                    # after finishing.
+                if self._thread_finished(thread) or thread.ready():
+                    self.log.info('folder sync finished/killed',
+                                  folder_name=thread.folder_name)
+                    # NOTE: Greenlet is automatically removed from the group.
 
         self.folder_monitors.join()
 
@@ -940,8 +942,8 @@ def add_attrs(db_session, log, new_uid, flags, folder, created):
     """ Post-create-message bits."""
     with db_session.no_autoflush:
         clean_subject = cleanup_subject(new_uid.message.subject)
-        parent_threads = db_session.query(ImapThread).\
-                    filter(ImapThread.subject.like(clean_subject)).all()
+        parent_threads = db_session.query(ImapThread).filter(
+            ImapThread.subject.like(clean_subject)).all()
 
         if parent_threads == []:
             new_uid.message.thread = ImapThread.from_imap_message(
