@@ -136,7 +136,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('5901bf556d83');
+INSERT INTO `alembic_version` VALUES ('4e3e8abea884');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -431,7 +431,7 @@ CREATE TABLE `event` (
   `public_id` binary(16) NOT NULL,
   `raw_data` text NOT NULL,
   `account_id` int(11) NOT NULL,
-  `subject` varchar(255) DEFAULT NULL,
+  `subject` varchar(1024) DEFAULT NULL,
   `body` text,
   `location` varchar(255) DEFAULT NULL,
   `busy` tinyint(1) NOT NULL,
@@ -1412,4 +1412,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-08-12  4:55:49
+-- Dump completed on 2014-08-14 21:49:45

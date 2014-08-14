@@ -143,9 +143,9 @@ class GoogleEventsProvider(BaseSyncProvider):
             if 'status' in event and event['status'] == 'cancelled':
                 raise MalformedEventError()
 
-            subject = event.get('summary', '')
+            subject = event.get('summary', '')[0:1023]
             body = event.get('description', None)
-            location = event.get('location', None)
+            location = event.get('location', None)[0:254]
             all_day = False
             locked = True
 
