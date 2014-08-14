@@ -25,7 +25,6 @@ def provider_from_address(email_address):
         raise InvalidEmailAddressError('Invalid email address')
 
     domain = email_address.split('@')[1].lower()
-
     mx_records = []
     try:
         mx_records = dns_resolver.query(domain, 'MX')
@@ -59,15 +58,15 @@ def provider_from_address(email_address):
 
         valid = True
         for rdata in mx_records:
-            domain = str(rdata.exchange).lower()
+            mx_domain = str(rdata.exchange).lower()
 
             # Depending on how the MX server is configured, domain may
             # refer to a relative name or to an absolute one.
             # FIXME @karim: maybe resolve the server instead.
-            if domain[-1] == '.':
-                domain = domain[:-1]
+            if mx_domain[-1] == '.':
+                mx_domain = mx_domain[:-1]
 
-            if domain not in mx_servers:
+            if mx_domain not in mx_servers:
                 valid = False
                 break
 
