@@ -1,7 +1,6 @@
 import platform
 
 import gevent
-from multiprocessing import Process
 from setproctitle import setproctitle
 
 from sqlalchemy import func, or_, and_
@@ -19,7 +18,7 @@ from inbox.util.debug import attach_profiler
 from inbox.mailsync.backends import module_registry
 
 
-class SyncService(Process):
+class SyncService(object):
     """
     Parameters
     ----------
@@ -51,8 +50,6 @@ class SyncService(Process):
         self.contact_sync_monitors = {}
         self.event_sync_monitors = {}
         self.poll_interval = poll_interval
-
-        Process.__init__(self)
 
     def run(self):
         if config.get('DEBUG_PROFILING_ON'):
