@@ -59,6 +59,8 @@ def all_uids(account_id, session, folder_name):
 
 
 def g_msgids(account_id, session, in_):
+    if not in_:
+        return []
     # Easiest way to account-filter Messages is to namespace-filter from
     # the associated thread. (Messages may not necessarily have associated
     # ImapUids.)
