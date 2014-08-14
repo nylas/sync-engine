@@ -63,7 +63,13 @@ def create_account(db_session, email_address, response):
         namespace = Namespace()
         account = GmailAccount(namespace=namespace)
 
-    account.refresh_token = response['refresh_token']
+    # We only get refresh tokens on initial login (or failed credentials)
+    # otherwise, we don't force the login screen and therefore don't get a
+    # refresh token back from google.
+    new_refresh_token = response.get('refresh_token')
+    if new_refresh_token:
+        account.refresh_token = new_refresh_token
+
     tok = response.get('access_token')
     expires_in = response.get('expires_in')
     account.set_access_token(tok, expires_in)
