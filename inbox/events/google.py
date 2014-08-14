@@ -102,6 +102,9 @@ class GoogleEventsProvider(BaseSyncProvider):
                 raise ConnectionError
 
     def _parse_datetime(self, date):
+        if not date:
+            raise MalformedEventError()
+
         try:
             dt = date_parser.parse(date)
             return dt.astimezone(tz.gettz('UTC')).replace(tzinfo=None)
