@@ -85,7 +85,9 @@ providers = {
         "auth": "password",
         "folder_map": {"Spam": "spam", "INBOX": "inbox", "Sent": "sent",
                        "Trash": "trash", "Drafts": "drafts"},
-        "domains": ["aol.com"]
+        "domains": ["aol.com"],
+        "mx_servers": ["mailin-01.mx.aol.com", "mailin-02.mx.aol.com",
+                       "mailin-03.mx.aol.com", "mailin-04.mx.aol.com"]
     },
     "eas": {
         "auth": "password",
@@ -104,7 +106,7 @@ providers = {
                        "INBOX.Drafts": "drafts", "INBOX.Junk Mail": "spam",
                        "INBOX.Sent Items": "sent", "INBOX.Trash": "trash"},
         "domains": ["fastmail.fm"],
-        "mx_servers": ["1-smtp.messagingengine.com",
+        "mx_servers": ["in1-smtp.messagingengine.com",
                        "in2-smtp.messagingengine.com"],
         "ns_servers": ["ns1.messagingengine.com",
                        "ns2.messagingengine.com"]
@@ -118,7 +120,14 @@ providers = {
                        "Drafts": "drafts", "Junk": "spam",
                        "Sent Messages": "sent",
                        "Deleted Messages": "trash"},
+<<<<<<< HEAD
         "domains": ["icloud.com"]
+=======
+        "domains": ["icloud.com"],
+        "mx_servers": ["mx1.mail.icloud.com", "mx2.mail.icloud.com",
+                       "mx3.mail.icloud.com", "mx4.mail.icloud.com",
+                       "mx5.mail.icloud.com", "mx6.mail.icloud.com"]
+>>>>>>> d10bc84... [proivder_resolution] Fix provider resolution code and add tests.
     },
     "gmx": {
         "type": "generic",
@@ -134,8 +143,16 @@ providers = {
         "imap": "mail.gandi.net",
         "smtp": "mail.gandi.net:587",
         "auth": "password",
+<<<<<<< HEAD
         "folder_map": {"INBOX": "inbox"},
         "domains": ["debuggers.co"]
+=======
+        "folder_map": {"INBOX": "inbox", "Drafts": "drafts", "Junk": "spam",
+                       "Sent": "sent", "Trash": "trash"},
+        "domains": ["debuggers.co"],
+        "mx_servers": ["spool.mail.gandi.net", "fb.mail.gandi.net",
+                       "mail4.gandi.net", "mail5.gandi.net"],
+>>>>>>> d10bc84... [proivder_resolution] Fix provider resolution code and add tests.
     },
     "zimbra": {
         "type": "generic",
@@ -144,7 +161,12 @@ providers = {
         "auth": "password",
         "folder_map": {"INBOX": "inbox", "Drafts": "drafts", "Junk": "spam",
                        "Sent": "sent", "Trash": "trash"},
+<<<<<<< HEAD
         "domains": ["mrmail.com"]
+=======
+        "domains": ["mrmail.com"],
+        "mx_servers": ["mx.mrmail.com"]
+>>>>>>> d10bc84... [proivder_resolution] Fix provider resolution code and add tests.
     },
     "mail.ru": {
         "type": "generic",
@@ -156,6 +178,11 @@ providers = {
                        "\u0421\u043f\u0430\u043c": "spam",
                        "\u041e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u043d\u044b\u0435": "sent",
                        "\u041a\u043e\u0440\u0437\u0438\u043d\u0430": "trash"},
+<<<<<<< HEAD
         "domains": ["mail.ru"]
+=======
+        "domains": ["mail.ru"],
+        "mx_servers": ["mxs.mail.ru"]
+>>>>>>> d10bc84... [proivder_resolution] Fix provider resolution code and add tests.
     }
 }
