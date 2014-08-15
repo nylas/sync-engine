@@ -335,7 +335,6 @@ class CrispinClient(object):
         select_info = self.conn.select_folder(
             folder, readonly=self.readonly)
         select_info['UIDVALIDITY'] = long(select_info['UIDVALIDITY'])
-        select_info['UIDNEXT'] = long(select_info['UIDNEXT'])
         self.selected_folder = (folder, select_info)
         # don't propagate cached information from previous session
         self._folder_names = None
@@ -387,13 +386,9 @@ class CrispinClient(object):
 
     def folder_status(self, folder):
         status = [long(val) for val in self.conn.folder_status(
-            folder, ('UIDVALIDITY', 'UIDNEXT'))]
+            folder, ('UIDVALIDITY'))]
 
         return status
-
-    def next_uid(self, folder):
-        status = self.folder_status(folder)
-        return status['UIDNEXT']
 
     def search_uids(self, criteria):
         """ Find not-deleted UIDs in this folder matching the criteria.
@@ -525,7 +520,7 @@ class CondStoreCrispinClient(CrispinClient):
 
     def folder_status(self, folder):
         status = [long(val) for val in self.conn.folder_status(
-            folder, ('UIDVALIDITY', 'HIGHESTMODSEQ', 'UIDNEXT'))]
+            folder, ('UIDVALIDITY', 'HIGHESTMODSEQ'))]
 
         return status
 

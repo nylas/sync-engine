@@ -363,9 +363,8 @@ def base_poll(crispin_client, log, folder_name, shared_state, download_fn,
     account_id = crispin_client.account_id
 
     with session_scope(ignore_soft_deletes=False) as db_session:
-        status = crispin_client.select_folder(
-            folder_name, uidvalidity_cb(account_id))
-    log.debug("POLL current UIDNEXT: {}".format(status['UIDNEXT']))
+        crispin_client.select_folder(folder_name,
+                                     uidvalidity_cb(account_id))
 
     remote_uids = set(crispin_client.all_uids())
     with session_scope(ignore_soft_deletes=False) as db_session:
@@ -805,8 +804,7 @@ def download_queued_uids(crispin_client, log, folder_name, uid_download_stack,
                         uid_download_stack.qsize())
 
     log.info('saved all messages and metadata',
-             new_uidvalidity=crispin_client.selected_uidvalidity,
-             new_uidnext=crispin_client.selected_folder_info['UIDNEXT'])
+             new_uidvalidity=crispin_client.selected_uidvalidity)
 
 
 def safe_download(crispin_client, log, uids):
