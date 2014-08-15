@@ -117,6 +117,7 @@ def encode(obj, namespace_public_id=None):
             'body': obj.body,
             'busy': obj.busy,
             'locked': obj.locked,
+            'location': obj.location,
             'reminders': obj.reminders,
             'recurrence': obj.recurrence,
             'start': obj.start,

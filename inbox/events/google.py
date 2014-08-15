@@ -2,7 +2,6 @@
 
 import httplib2
 import dateutil.parser as date_parser
-from dateutil import tz
 
 from apiclient.discovery import build
 from oauth2client.client import OAuth2Credentials
@@ -19,12 +18,9 @@ from inbox.auth.gmail import (OAUTH_CLIENT_ID,
                               OAUTH_CLIENT_SECRET,
                               OAUTH_ACCESS_TOKEN_URL)
 from inbox.sync.base_sync_provider import BaseSyncProvider
+from inbox.events.util import MalformedEventError, parse_datetime
 
 SOURCE_APP_NAME = 'InboxApp Calendar Sync Engine'
-
-
-class MalformedEventError(Exception):
-    pass
 
 
 class GoogleEventsProvider(BaseSyncProvider):
@@ -101,16 +97,6 @@ class GoogleEventsProvider(BaseSyncProvider):
                 db_session.commit()
                 raise ConnectionError
 
-    def _parse_datetime(self, date):
-        if not date:
-            raise MalformedEventError()
-
-        try:
-            dt = date_parser.parse(date)
-            return dt.astimezone(tz.gettz('UTC')).replace(tzinfo=None)
-        except ValueError:
-            raise MalformedEventError()
-
     def _parse_event(self, cal_info, event):
         """Constructs a Calendar object from a Google calendar entry.
 
@@ -173,8 +159,8 @@ class GoogleEventsProvider(BaseSyncProvider):
                     for reminder in reminder_source:
                         reminders.append(reminder['minutes'])
 
-                start = self._parse_datetime(start['dateTime'])
-                end = self._parse_datetime(end['dateTime'])
+                start = parse_datetime(start['dateTime'])
+                end = parse_datetime(end['dateTime'])
             else:
                 start = date_parser.parse(start['date'])
                 end = date_parser.parse(end['date'])

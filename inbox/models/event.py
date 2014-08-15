@@ -59,6 +59,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
         self.body = src.body
         self.busy = src.busy
         self.locked = src.locked
+        self.location = src.location
         self.reminders = src.reminders
         self.recurrence = src.recurrence
         self.start = src.start
