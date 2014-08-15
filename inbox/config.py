@@ -1,3 +1,4 @@
+import os
 import json
 from urllib import quote_plus as urlquote
 
@@ -27,7 +28,20 @@ class Configuration(dict):
         return self[key]
 
 
-with open('/etc/inboxapp/config.json') as f:
+if 'INBOX_ENV' in os.environ:
+    assert os.environ['INBOX_ENV'] in ('dev', 'test', 'prod'), \
+        "INBOX_ENV must be either 'dev', 'test', or 'prod'"
+    env = os.environ['INBOX_ENV']
+else:
+    env = 'prod'
+
+if env == 'prod':
+    # Read prod config from an unversioned config file.
+    config_path = '/etc/inboxapp/config.json'
+else:
+    root_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
+    config_path = os.path.join(root_path, 'etc', "config-%s.json" % env)
+with open(config_path) as f:
     config = Configuration(json.load(f))
 
 

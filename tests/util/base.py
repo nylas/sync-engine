@@ -1,6 +1,5 @@
 import json
 import os
-import sys
 import subprocess
 
 import zerorpc
@@ -21,19 +20,9 @@ def absolute_path(path):
 @fixture(scope='session', autouse=True)
 def config():
     from inbox.config import config
-
-    filename = absolute_path('config-test.json')
-    try:
-        f = open(filename)
-    except IOError:
-        sys.exit('Missing test config at {0}'.format(filename))
-    else:
-        with f:
-            test_config = json.load(f)
-            config.update(test_config)
-            if not config.get('MYSQL_HOSTNAME') == 'localhost':
-                sys.exit('Tests should only be run on localhost DB!')
-
+    assert 'INBOX_ENV' in os.environ and \
+        os.environ['INBOX_ENV'] == 'test', \
+        "INBOX_ENV must be 'test' to run tests"
     return config
 
 
@@ -266,6 +255,7 @@ class ContactsProviderStub(object):
 
     def get_items(self, *args, **kwargs):
         return self._contacts
+
 
 @fixture(scope='function')
 def event_sync(config, db):
