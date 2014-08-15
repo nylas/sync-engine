@@ -56,7 +56,7 @@ def provider_from_address(email_address):
         if domain in domains:
             return p_name
 
-        valid = True
+        valid = len(mx_records)
         for rdata in mx_records:
             mx_domain = str(rdata.exchange).lower()
 
@@ -73,6 +73,7 @@ def provider_from_address(email_address):
         if valid:
             return p_name
 
+        valid = len(ns_records)
         for rdata in ns_records:
             if str(rdata).lower() not in ns_servers:
                 valid = False
