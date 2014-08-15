@@ -134,7 +134,9 @@ class GoogleEventsProvider(BaseSyncProvider):
 
             subject = event.get('summary', '')[0:1023]
             body = event.get('description', None)
-            location = event.get('location', None)[0:254]
+            location = event.get('location', None)
+            if location:
+                location = location[0:254]
             all_day = False
             locked = True
 
