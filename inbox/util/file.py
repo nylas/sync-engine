@@ -61,7 +61,7 @@ def remove_file(filename):
             raise
 
 
-class Lock:
+class Lock(object):
     """ UNIX-specific exclusive file locks (released when the process ends).
 
     Based on
@@ -102,7 +102,8 @@ class Lock:
     def acquire(self):
         got_gevent_lock = self.gevent_lock.acquire(blocking=self.block)
         if not got_gevent_lock:
-            raise IOError("cannot acquire gevent lock")
+            raise IOError("cannot acquire gevent lock; associated file is {}"
+                          .format(self.filename))
         fcntl.flock(self.handle, self.lock_op)
 
     def release(self):
