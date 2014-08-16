@@ -2,7 +2,6 @@
 
 import httplib2
 import dateutil.parser as date_parser
-from dateutil import tz
 
 from apiclient.discovery import build
 from oauth2client.client import OAuth2Credentials
@@ -19,12 +18,9 @@ from inbox.auth.gmail import (OAUTH_CLIENT_ID,
                               OAUTH_CLIENT_SECRET,
                               OAUTH_ACCESS_TOKEN_URL)
 from inbox.sync.base_sync_provider import BaseSyncProvider
+from inbox.events.util import MalformedEventError, parse_datetime
 
 SOURCE_APP_NAME = 'InboxApp Calendar Sync Engine'
-
-
-class MalformedEventError(Exception):
-    pass
 
 
 class GoogleEventsProvider(BaseSyncProvider):
@@ -93,20 +89,13 @@ class GoogleEventsProvider(BaseSyncProvider):
                 account.sync_state = 'invalid'
                 db_session.add(account)
                 db_session.commit()
-                return ValidationError
+                raise ValidationError
             except ConnectionError:
                 self.log.error('Connection error')
                 account.sync_state = 'connerror'
                 db_session.add(account)
                 db_session.commit()
                 raise ConnectionError
-
-    def _parse_datetime(self, date):
-        try:
-            dt = date_parser.parse(date)
-            return dt.astimezone(tz.gettz('UTC')).replace(tzinfo=None)
-        except ValueError:
-            raise MalformedEventError()
 
     def _parse_event(self, cal_info, event):
         """Constructs a Calendar object from a Google calendar entry.
@@ -143,9 +132,11 @@ class GoogleEventsProvider(BaseSyncProvider):
             if 'status' in event and event['status'] == 'cancelled':
                 raise MalformedEventError()
 
-            subject = event.get('summary', '')
+            subject = event.get('summary', '')[0:1023]
             body = event.get('description', None)
             location = event.get('location', None)
+            if location:
+                location = location[0:254]
             all_day = False
             locked = True
 
@@ -170,8 +161,8 @@ class GoogleEventsProvider(BaseSyncProvider):
                     for reminder in reminder_source:
                         reminders.append(reminder['minutes'])
 
-                start = self._parse_datetime(start['dateTime'])
-                end = self._parse_datetime(end['dateTime'])
+                start = parse_datetime(start['dateTime'])
+                end = parse_datetime(end['dateTime'])
             else:
                 start = date_parser.parse(start['date'])
                 end = date_parser.parse(end['date'])
@@ -241,6 +232,7 @@ class GoogleEventsProvider(BaseSyncProvider):
             try:
                 events.append(self._parse_event(resp, response_event))
             except MalformedEventError:
-                self.log.error('Malformed event', google_event=response_event)
+                self.log.warning('Malformed event',
+                                 google_event=response_event)
 
         return events

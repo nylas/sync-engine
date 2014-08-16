@@ -61,11 +61,11 @@ def create_account(db_session, email_address, response):
         namespace = Namespace()
         account = OutlookAccount(namespace=namespace)
 
+    account.refresh_token = response['refresh_token']
     account.date = datetime.datetime.utcnow()
     tok = response.get('access_token')
     expires_in = response.get('expires_in')
     account.set_access_token(tok, expires_in)
-    account.refresh_token = response.get('refresh_token')
     account.scope = response.get('scope')
     account.email_address = response.get('emails')['account']
     account.o_id_token = response.get('user_id')

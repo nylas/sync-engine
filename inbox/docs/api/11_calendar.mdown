@@ -22,7 +22,7 @@ GET https://api.inboxapp.com/n/<namespace_id>/events/<event_id>
     "locked": false,
     "namespace": "6njcbog8c23gzindlp2e3547p",
     "object": "event",
-    "recurrence": "None",
+    "recurrence": null,
     "reminders": "[30]",
     "start": 1407405600,
     "subject": "yoga",
@@ -88,10 +88,7 @@ POST https://api.inboxapp.com/n/<namespace_id>/events
     "time_zone": 0,
     "uid": "c41402c541f2422791949de46df3cff8"
 }
-
-
-
-
+```
 
 
 # Updating an existing event

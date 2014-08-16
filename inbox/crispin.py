@@ -8,6 +8,7 @@ time. That's why functions take a connection argument.
 import imaplib
 import functools
 import threading
+import random
 
 from collections import namedtuple, defaultdict
 
@@ -19,7 +20,8 @@ import geventconnpool
 
 from inbox.util.concurrency import retry
 from inbox.util.misc import or_none, timed
-from inbox.basicauth import ConnectionError, ValidationError
+from inbox.basicauth import (ConnectionError, ValidationError,
+                             TransientConnectionError)
 from inbox.models.session import session_scope
 from inbox.providers import provider_info
 from inbox.models.account import Account
@@ -160,22 +162,41 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
             account = db_session.query(ImapAccount).get(self.account_id)
 
             auth_handler = handler_from_provider(account.provider)
-            try:
-                conn = auth_handler.connect_account(account)
-            except ValidationError:
-                logger.error("Error obtaining access token",
-                             account_id=self.account_id)
-                account.sync_state = 'invalid'
-                db_session.add(account)
-                db_session.commit()
-                return None
-            except ConnectionError:
-                logger.error("Error connecting",
-                             account_id=self.account_id)
-                account.sync_state = 'connerror'
-                db_session.add(account)
-                db_session.commit()
-                return None
+            # FIXME @karim: This code is slightly complex - we may
+            # get transient errors (TransientConnectionError) when
+            # connecting. We want to retry once before giving up
+            # but we also need to handle other more serious errors.
+            # The 'solution' is to wrap the code in a loop and continue
+            # only on a TransientConnectionError.
+            for i in range(2):
+                try:
+                    conn = auth_handler.connect_account(account)
+                except TransientConnectionError:
+                    gevent.sleep(random.uniform(1, 10))
+                    if i < 2:
+                        continue
+                    else:
+                        # Retry only once.
+                        logger.error("Error connecting",
+                                     account_id=self.account_id)
+                        account.sync_state = 'connerror'
+                        db_session.add(account)
+                        db_session.commit()
+                        return None
+                except ValidationError:
+                    logger.error("Error obtaining access token",
+                                 account_id=self.account_id)
+                    account.sync_state = 'invalid'
+                    db_session.add(account)
+                    db_session.commit()
+                    return None
+                except ConnectionError:
+                    logger.error("Error connecting",
+                                 account_id=self.account_id)
+                    account.sync_state = 'connerror'
+                    db_session.add(account)
+                    db_session.commit()
+                    return None
 
         return new_crispin(self.account_id, self.email_address,
                            self.provider_name, conn, self.readonly)
@@ -314,7 +335,6 @@ class CrispinClient(object):
         select_info = self.conn.select_folder(
             folder, readonly=self.readonly)
         select_info['UIDVALIDITY'] = long(select_info['UIDVALIDITY'])
-        select_info['UIDNEXT'] = long(select_info['UIDNEXT'])
         self.selected_folder = (folder, select_info)
         # don't propagate cached information from previous session
         self._folder_names = None
@@ -366,13 +386,9 @@ class CrispinClient(object):
 
     def folder_status(self, folder):
         status = [long(val) for val in self.conn.folder_status(
-            folder, ('UIDVALIDITY', 'UIDNEXT'))]
+            folder, ('UIDVALIDITY'))]
 
         return status
-
-    def next_uid(self, folder):
-        status = self.folder_status(folder)
-        return status['UIDNEXT']
 
     def search_uids(self, criteria):
         """ Find not-deleted UIDs in this folder matching the criteria.
@@ -504,7 +520,7 @@ class CondStoreCrispinClient(CrispinClient):
 
     def folder_status(self, folder):
         status = [long(val) for val in self.conn.folder_status(
-            folder, ('UIDVALIDITY', 'HIGHESTMODSEQ', 'UIDNEXT'))]
+            folder, ('UIDVALIDITY', 'HIGHESTMODSEQ'))]
 
         return status
 

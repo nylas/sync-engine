@@ -73,7 +73,6 @@ def create_account(db_session, email_address, response):
     tok = response.get('access_token')
     expires_in = response.get('expires_in')
     account.set_access_token(tok, expires_in)
-    account.refresh_token = response.get('refresh_token')
     account.scope = response.get('scope')
     account.email_address = response.get('email')
     account.family_name = response.get('family_name')

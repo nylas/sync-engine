@@ -49,7 +49,7 @@ Filters do not currently support wildcards, such as `from=*@expedia.com`. Suppor
 
 # Examples
 
-#### Threads
+**Threads**
 
 List threads with the Inbox tag:
 
@@ -80,7 +80,7 @@ GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=unread&any_email=mark@
 ```
 
 
-#### Messages
+**Messages**
 
 List messages in a particular thread:
 

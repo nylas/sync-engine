@@ -1,5 +1,4 @@
 import datetime
-
 from inbox.log import get_logger
 logger = get_logger()
 

@@ -59,6 +59,8 @@ def all_uids(account_id, session, folder_name):
 
 
 def g_msgids(account_id, session, in_):
+    if not in_:
+        return []
     # Easiest way to account-filter Messages is to namespace-filter from
     # the associated thread. (Messages may not necessarily have associated
     # ImapUids.)
@@ -151,20 +153,21 @@ def update_metadata(account_id, session, folder_name, uids, new_flags):
     to grab the lock in here in case the caller needs to put higher-level
     functionality in the lock.)
     """
-    for item in session.query(ImapUid).join(Folder)\
-            .filter(ImapUid.account_id == account_id,
-                    ImapUid.msg_uid.in_(uids), Folder.name == folder_name)\
-            .options(joinedload(ImapUid.message)):
-        flags = new_flags[item.msg_uid].flags
-        if hasattr(new_flags[item.msg_uid], 'labels'):
-            labels = new_flags[item.msg_uid].labels
-            thread = item.message.thread
-            update_thread_labels(thread, folder_name, labels, session)
-        else:
-            labels = None
-        item.update_imap_flags(flags, labels)
-        item.message.is_draft = item.is_draft
-        item.message.is_read = item.is_seen
+    if uids:
+        for item in session.query(ImapUid).join(Folder)\
+                .filter(ImapUid.account_id == account_id,
+                        ImapUid.msg_uid.in_(uids), Folder.name == folder_name)\
+                .options(joinedload(ImapUid.message)):
+            flags = new_flags[item.msg_uid].flags
+            if hasattr(new_flags[item.msg_uid], 'labels'):
+                labels = new_flags[item.msg_uid].labels
+                thread = item.message.thread
+                update_thread_labels(thread, folder_name, labels, session)
+            else:
+                labels = None
+            item.update_imap_flags(flags, labels)
+            item.message.is_draft = item.is_draft
+            item.message.is_read = item.is_seen
 
 
 def remove_messages(account_id, session, uids, folder):
@@ -172,23 +175,24 @@ def remove_messages(account_id, session, uids, folder):
         to grab the lock in here in case the caller needs to put higher-level
         functionality in the lock.)
     """
-    deletes = session.query(ImapUid).join(Folder).filter(
-        ImapUid.account_id == account_id,
-        Folder.name == folder,
-        ImapUid.msg_uid.in_(uids)).all()
+    if uids:
+        deletes = session.query(ImapUid).join(Folder).filter(
+            ImapUid.account_id == account_id,
+            Folder.name == folder,
+            ImapUid.msg_uid.in_(uids)).all()
 
-    for d in deletes:
-        session.delete(d)
+        for d in deletes:
+            session.delete(d)
 
-    for uid in deletes:
-        if uid.message is not None:
-            thread = uid.message.thread
-            folder = uid.folder
-            thread.folders.discard(folder)
-    session.commit()
+        for uid in deletes:
+            if uid.message is not None:
+                thread = uid.message.thread
+                folder = uid.folder
+                thread.folders.discard(folder)
+        session.commit()
 
-    # XXX TODO: Have a recurring worker permanently remove dangling
-    # messages and threads from the database.
+        # XXX TODO: Have a recurring worker permanently remove dangling
+        # messages and threads from the database.
 
 
 def get_folder_info(account_id, session, folder_name):

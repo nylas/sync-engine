@@ -168,10 +168,10 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
     def stop_sync(self):
         """ Set a flag for the monitor to stop the sync. """
 
-        # Invalid credentials/Connection error, don't overwrite state
-        if self.sync_state == 'invalid' or self.sync_state == 'connerr':
-            return
-        self.sync_state = 'stopped'
+        # Don't overwrite state if Invalid credentials/Connection error/
+        # Killed because foldersyncs were killed.
+        if not self.sync_state or self.sync_state == 'running':
+            self.sync_state = 'stopped'
 
     def sync_stopped(self):
         """ Called when the sync has actually been stopped. """

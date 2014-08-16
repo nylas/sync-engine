@@ -27,7 +27,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
 
     raw_data = Column(Text, nullable=False)
 
-    subject = Column(String(255), nullable=True)
+    subject = Column(String(1024), nullable=True)
     body = Column(Text, nullable=True)
     location = Column(String(255), nullable=True)
     busy = Column(Boolean, nullable=False)
@@ -59,6 +59,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
         self.body = src.body
         self.busy = src.busy
         self.locked = src.locked
+        self.location = src.location
         self.reminders = src.reminders
         self.recurrence = src.recurrence
         self.start = src.start

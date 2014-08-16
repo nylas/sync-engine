@@ -24,36 +24,50 @@ from inbox.models import Account
 
 @click.command()
 @click.argument('cmd')
-@click.argument('email_address')
-def main(cmd, email_address):
+@click.argument('email_address', default='')
+@click.option('--all', default=False, is_flag=True,
+              help='Apply the command to all accounts.')
+def main(cmd, email_address, all):
     """ Start/stop mail sync for an account. """
 
-    with session_scope() as db_session:
-        try:
-            account = db_session.query(Account).filter_by(
-                email_address=email_address).one()
-        except NoResultFound:
-            sys.exit('No record of account {0}'.format(email_address))
+    if (not email_address and not all) or (email_address and all):
+        sys.exit('Must either specify an email address or \'--all\'')
 
-        if cmd == 'start':
-            account.start_sync(platform.node())
-            print "Marked account '{}' to start sync on {}.".format(
-                account.email_address, platform.node())
-            db_session.add(account)
-            db_session.commit()
-        elif cmd == 'stop':
-            old_host = account.sync_host
-            if account.sync_enabled:
-                account.stop_sync()
-                print "Marked account '{}' to stop sync on {}.".format(
-                    account.email_address, old_host)
+    if cmd not in ('start', 'stop'):
+        sys.exit('No such command.')
+
+    with session_scope() as db_session:
+        accounts = []
+
+        if all:
+            accounts.extend(db_session.query(Account).all())
+        else:
+            try:
+                account = db_session.query(Account).filter_by(
+                    email_address=email_address).one()
+                accounts.append(account)
+            except NoResultFound:
+                sys.exit('No record of account {0}'
+                         .format(email_address))
+
+        for account in accounts:
+            if cmd == 'start':
+                account.start_sync(platform.node())
+                print "Marked account '{}' to start sync on {}.".format(
+                    account.email_address, platform.node())
                 db_session.add(account)
                 db_session.commit()
-            else:
-                print "Account '{}' is already disabled.".format(
-                    account.email_address)
-        else:
-            sys.exit('No such command.')
+            elif cmd == 'stop':
+                old_host = account.sync_host
+                if account.sync_enabled:
+                    account.stop_sync()
+                    print "Marked account '{}' to stop sync on {}.".format(
+                        account.email_address, old_host)
+                    db_session.add(account)
+                    db_session.commit()
+                else:
+                    print "Account '{}' is already disabled.".format(
+                        account.email_address)
 
 if __name__ == '__main__':
     main()

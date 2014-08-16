@@ -9,7 +9,8 @@ from inbox.log import get_logger
 log = get_logger()
 
 from inbox.basicauth import password_auth
-from inbox.basicauth import ConnectionError, ValidationError
+from inbox.basicauth import (ConnectionError, ValidationError,
+                             TransientConnectionError)
 from inbox.models import Namespace
 from inbox.models.backends.generic import GenericAccount
 from inbox.providers import provider_info
@@ -57,6 +58,9 @@ def connect_account(account):
     ------
     ConnectionError
         If we cannot connect to the IMAP host.
+    TransientConnectionError
+        Sometimes the server bails out on us. Retrying may
+        fix things.
     ValidationError
         If the credentials are invalid.
     """
@@ -65,6 +69,12 @@ def connect_account(account):
     host = info["imap"]
     try:
         conn = IMAPClient(host, use_uid=True, ssl=True)
+    except IMAPClient.AbortError as e:
+        log.error('account_connect_failed',
+                  host=host,
+                  error=("[ALERT] Can't connect to host -"
+                         "may be transient (Failure)"))
+        raise TransientConnectionError(str(e))
     except IMAPClient.Error as e:
         log.error('account_connect_failed',
                   host=host,
@@ -84,6 +94,12 @@ def connect_account(account):
     conn.debug = False
     try:
         conn.login(account.email_address, account.password)
+    except IMAPClient.AbortError as e:
+        log.error('account_verify_failed',
+                  email=account.email_address,
+                  host=host,
+                  error="[ALERT] Invalid credentials (Failure)")
+        raise TransientConnectionError()
     except IMAPClient.Error as e:
         log.error('account_verify_failed',
                   email=account.email_address,

@@ -32,6 +32,13 @@ We don't currently handle these operations on the special folders 'junk',
 'trash', 'sent', 'flagged'.
 """
 from inbox.crispin import writable_connection_pool
+from inbox.basicauth import ConnectionError, TransientConnectionError
+import gevent
+import random
+from inbox.log import get_logger
+
+logger = get_logger()
+
 
 PROVIDER = 'imap'
 
@@ -52,8 +59,29 @@ def syncback_action(fn, account, folder_name, db_session):
     """
     assert folder_name, "folder '{}' is not selectable".format(folder_name)
 
-    with writable_connection_pool(account.id).get() as crispin_client:
-        # NOTE: This starts a *new* IMAP session every time---we will want
-        # to optimize this at some point. But for now, it's most correct.
-        crispin_client.select_folder(folder_name, uidvalidity_cb)
-        fn(account, db_session, crispin_client)
+    # NOTE: This starts a *new* IMAP session every time---we will want
+    # to optimize this at some point. But for now, it's most correct.
+    for i in range(2):
+        with writable_connection_pool(account.id).get() as crispin_client:
+            try:
+                crispin_client.select_folder(folder_name, uidvalidity_cb)
+                fn(account, db_session, crispin_client)
+                return
+            except TransientConnectionError:
+                # this was probably a transient server error --
+                # back off and retry once:
+                if i == 2:
+                    # retry only once
+                    logger.error("Error syncing back - second error in a row",
+                                 account_id=account.id)
+                    account.sync_state = 'connerror'
+                    raise
+
+                # wait a random delay because
+                # we don't want to be hammering the server all at once.
+                gevent.sleep(random.uniform(1, 10))
+                continue
+            except ConnectionError:
+                logger.error("Error syncing back", account_id=account.id)
+                account.sync_state = 'connerror'
+                raise

@@ -15,7 +15,7 @@ fileConfig(alembic_config.config_file_name)
 # If alembic was invoked with --tag=test, override these main config values
 if context.get_tag_argument() == 'test':
     from inbox.config import config
-    with open('./tests/config-test.json') as f:
+    with open('../etc/config-test.json') as f:
         config.update(json.load(f))
         if not config.get('MYSQL_HOSTNAME') == "localhost":
             sys.exit("Tests should only be run on localhost DB!")

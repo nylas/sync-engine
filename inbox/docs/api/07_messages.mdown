@@ -41,6 +41,7 @@ GET https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>
             "size": 38633
         }
     ],
+    "snippet": "Sounds good--that bottle of Pinot should go well with the meal. I'll also bring a surprise for dessert. :) Do you have ice cream? Looking fo",
     "body": "<html><body>....</body></html>"
 }
 ```
