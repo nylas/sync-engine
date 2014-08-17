@@ -64,6 +64,7 @@ apt-get -y install git \
                    python-lxml \
                    tmux \
                    curl \
+                   tnef \
 
 color '35;1' 'Installing dependencies from pip...'
 pip install --upgrade setuptools
