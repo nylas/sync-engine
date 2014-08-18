@@ -4,6 +4,7 @@ from collections import namedtuple
 
 import smtplib
 import geventconnpool
+import gevent
 from gevent import socket
 
 from inbox.log import get_logger
@@ -11,6 +12,7 @@ from inbox.models.session import session_scope
 from inbox.models.backends.imap import ImapAccount
 from inbox.sendmail.base import SendMailException, SendError
 from inbox.providers import provider_info
+from inbox.util.concurrency import retry
 log = get_logger()
 
 DEFAULT_POOL_SIZE = 2
@@ -36,8 +38,18 @@ def get_smtp_connection_pool(account_id, pool_size=None):
     return account_id_to_connection_pool[account_id]
 
 
-smtpconn_retry = functools.partial(
-    geventconnpool.retry, logger=log, interval=5, max_failures=5)
+def _exc_callback():
+    gevent.sleep(5)
+    log.warning('Sending failed with exception; retrying', exc_info=True)
+
+
+def _fail_callback():
+    log.error('Max retries reached. Aborting', exc_info=True)
+
+
+smtpconn_retry = functools.partial(retry, exc_callback=_exc_callback,
+                                   fail_callback=_fail_callback,
+                                   max_count=5)
 
 
 class SMTPConnection(object):
