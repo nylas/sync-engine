@@ -64,13 +64,21 @@ Also note that creating a draft will fail if the referenced `files` ids have not
 
 ## Replying to an existing thread
 
-If the draft is a response to an existing thread, you should provide the thread's ID in the `reply_to_thread` parameter and omit the `subject` parameter. Inbox will automatically populate the `To` and `CC` fields with the participants on the last message in the thread. Messages you create or send __should not include quoted text__ when they are in reply to an existing thread.
+If the draft is a response to an existing thread, you should provide the thread's ID in the `reply_to_thread` parameter and omit the `subject` parameter. Note that you must explicitly specify the message's recipients in the `to`, `cc` and `bcc` fields of the post body; this is to prevent any ambiguity about whom the message will be sent to.
+
+Messages you create or send __should not include quoted text__ when they are in reply to an existing thread.
 
 ```
 :::json
 {
     "reply_to_thread": <thread_id>,
     "body": "<html><body>....</body></html>",
+    "to": [
+        {
+            "name": "Bill Rogers",
+            "email": "wbrogers@mit.edu"
+        }
+    ],
     "files": [
         <file_object>,
         ...
