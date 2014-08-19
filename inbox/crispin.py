@@ -366,8 +366,25 @@ class CrispinClient(object):
         return to_sync
 
     def folder_names(self):
+        # Different providers have different names for folders, here
+        # we have a default map for common name mapping, additional
+        # mappings can be provided via the provider configuration file
+        default_folder_map = {'Inbox': 'inbox', 'Drafts': 'drafts',
+                              'Draft': 'drafts', 'Junk': 'spam',
+                              'Archive': 'archive', 'Sent': 'sent',
+                              'Trash': 'trash', 'INBOX': 'inbox'}
+
+        # Some providers also provide flags to determine common folders
+        # Here we read these flags and apply the mapping
+        flag_to_folder_map = {'\\Trash': 'trash', '\\Sent': 'sent',
+                              '\\Drafts': 'drafts', '\\Junk': 'spam',
+                              '\\Inbox': 'inbox', '\\Spam': 'spam'}
+
+        # Additionally we provide a custom mapping for providers that
+        # don't fit into the defaults.
         info = provider_info(self.provider_name)
         folder_map = info.get('folder_map', {})
+
         if self._folder_names is None:
             folders = self._fetch_folder_list()
             self._folder_names = dict()
@@ -378,9 +395,17 @@ class CrispinClient(object):
                 # TODO: internationalization support
                 elif name in folder_map:
                     self._folder_names[folder_map[name]] = name
+                elif name in default_folder_map:
+                    self._folder_names[default_folder_map[name]] = name
                 else:
-                    self._folder_names.setdefault(
-                        'extra', list()).append(name)
+                    matched = False
+                    for flag in flags:
+                        if flag in flag_to_folder_map:
+                            self._folder_names[flag_to_folder_map[flag]] = name
+                            matched = True
+                    if not matched:
+                        self._folder_names.setdefault(
+                            'extra', list()).append(name)
         # TODO: support subfolders
         return self._folder_names
 
