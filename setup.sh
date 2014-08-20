@@ -100,6 +100,25 @@ elif [ $src -nt $dest ]; then
     fi
 fi
 
+color '35;1' 'Copying default secrets configuration to /etc/inboxapp'
+src=./etc/secrets-dev.yml
+dest=/etc/inboxapp/secrets-dev.yml
+if [ ! -f $dest ]; then
+    cp $src $dest
+elif [ $src -nt $dest ]; then
+    set +e
+    diff_result=$(diff -q $src $dest)
+    different=$?
+    set -e
+    if [ $different -ne 0 ]; then
+        echo "Error: inbox secrets config is newer and merging of configs not (yet) supported."
+        echo "Diffs:"
+        echo "src: $src dest: $dest"
+        diff $dest $src
+        exit 1
+    fi
+fi
+
 if $configure_db; then
     # Mysql config
     color '35;1' 'Copying default mysql configuration to /etc/mysql/conf.d'

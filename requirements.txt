@@ -47,3 +47,7 @@ Flask-RESTful==0.2.12
 google-api-python-client==1.2
 oauth2client==1.2
 icalendar==3.8.2
+#pynacl==0.2.3
+-e git://github.com/kav-ya/pynacl.git@libsodium_fix#egg=pynacl
+pyaml==14.05.7
+enum==0.4.4

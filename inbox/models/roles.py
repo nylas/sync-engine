@@ -1,11 +1,14 @@
 import os
 from hashlib import sha256
 
+import nacl.secret
+import nacl.utils
 from sqlalchemy import Column, Integer, String
 
 from inbox.config import config
 from inbox.log import get_logger
 log = get_logger()
+from inbox.models.util import EncryptionScheme
 
 STORE_MSG_ON_S3 = config.get('STORE_MESSAGES_ON_S3', None)
 # Enable by defining these in your config
@@ -14,39 +17,53 @@ STORE_MSG_ON_S3 = config.get('STORE_MESSAGES_ON_S3', None)
 # "AWS_SECRET_ACCESS_KEY": "<YOUR_AWS_ACCESS_KEY>",
 # "MESSAGE_STORE_BUCKET_NAME": "<YOUR_AWS_ACCESS_KEY>",
 
-
 if STORE_MSG_ON_S3:
     from boto.s3.connection import S3Connection
     from boto.s3.key import Key
-
-from inbox.util.file import mkdirp, remove_file
+else:
+    from inbox.util.file import mkdirp, remove_file
 
 
 class Blob(object):
-
     """ A blob of data that can be saved to local or remote (S3) disk. """
 
     size = Column(Integer, default=0)
     data_sha256 = Column(String(64))
 
+    encryption_scheme = Column(Integer, server_default='0', nullable=False)
+
     @property
     def data(self):
+        encrypted = True
         if self.size == 0:
-            log.warning("block size is 0")
+            log.warning('block size is 0')
             # NOTE: This is a placeholder for "empty bytes". If this doesn't
             # work as intended, it will trigger the hash assertion later.
             value = ""
+            encrypted = False
         elif hasattr(self, '_data'):
-            # on initial download we temporarily store data in memory
+            # On initial download we temporarily store data unencrypted
+            # in memory
             value = self._data
+            encrypted = False
         elif STORE_MSG_ON_S3:
             value = self._get_from_s3()
         else:
             value = self._get_from_disk()
 
         if value is None:
-            log.error("Couldn't find data on disk!")
+            log.error("Couldn't find data!")
             return value
+
+        # Decrypt if reqd.
+        if encrypted and self.encryption_scheme == \
+                EncryptionScheme.SECRETBOX_WITH_STATIC_KEY:
+            value = nacl.secret.SecretBox(
+                key=config.get_required('BLOCK_ENCRYPTION_KEY'),
+                encoder=nacl.encoding.HexEncoder
+            ).decrypt(
+                value,
+                encoder=nacl.encoding.HexEncoder)
 
         assert self.data_sha256 == sha256(value).hexdigest(), \
             "Returned data doesn't match stored hash!"
@@ -54,27 +71,40 @@ class Blob(object):
 
     @data.setter
     def data(self, value):
-        # Cache value in memory. Otherwise message-parsing incurs a disk or S3
-        # roundtrip.
+        # Cache value in memory unencrypted. Otherwise message-parsing incurs
+        # a disk or S3 roundtrip.
         self._data = value
+
         assert value is not None, \
             "Blob can't have NoneType data (can be zero-length, though!)"
-        assert type(value) is not unicode, "Blob bytes must be encoded"
+        assert type(value) is not unicode, 'Blob bytes must be encoded'
+
         self.size = len(value)
         self.data_sha256 = sha256(value).hexdigest()
+
+        # Encrypt before saving
+        self.encryption_scheme = EncryptionScheme.SECRETBOX_WITH_STATIC_KEY
+
+        encrypted_value = nacl.secret.SecretBox(
+            key=config.get_required('BLOCK_ENCRYPTION_KEY'),
+            encoder=nacl.encoding.HexEncoder
+        ).encrypt(
+            plaintext=value,
+            nonce=self.data_sha256[:nacl.secret.SecretBox.NONCE_SIZE],
+            encoder=nacl.encoding.HexEncoder)
+
         if self.size > 0:
             if STORE_MSG_ON_S3:
-                self._save_to_s3(value)
+                self._save_to_s3(encrypted_value)
             else:
-                self._save_to_disk(value)
+                self._save_to_disk(encrypted_value)
         else:
-            log.warning("Not saving 0-length {1} {0}".format(
+            log.warning('Not saving 0-length {1} {0}'.format(
                 self.id, self.__class__.__name__))
 
     @data.deleter
     def data(self):
         if self.size == 0:
-            # nothing to do here
             return
         if STORE_MSG_ON_S3:
             self._delete_from_s3()
@@ -84,23 +114,21 @@ class Blob(object):
         self.data_sha256 = None
 
     def _save_to_s3(self, data):
-        assert len(data) > 0, "Need data to save!"
-        # TODO: store AWS credentials in a better way.
-        assert 'AWS_ACCESS_KEY_ID' in config, "Need AWS key!"
-        assert 'AWS_SECRET_ACCESS_KEY' in config, "Need AWS secret!"
-        assert 'MESSAGE_STORE_BUCKET_NAME' in config, \
-            "Need bucket name to store message data!"
-        # Boto pools connections at the class level
-        conn = S3Connection(config.get('AWS_ACCESS_KEY_ID'),
-                            config.get('AWS_SECRET_ACCESS_KEY'))
-        bucket = conn.get_bucket(config.get('MESSAGE_STORE_BUCKET_NAME'))
+        assert len(data) > 0, 'Need data to save!'
 
-        # See if it alreays exists and has the same hash
+        access_key = config.get_required('AWS_ACCESS_KEY_ID')
+        secret_key = config.get_required('AWS_SECRET_ACCESS_KEY')
+        bucket_name = config.get_required('MESSAGE_STORE_BUCKET_NAME')
+
+        # Boto pools connections at the class level
+        conn = S3Connection(access_key, secret_key)
+        bucket = conn.get_bucket(bucket_name)
+
+        # See if it already exists and has the same hash
         data_obj = bucket.get_key(self.data_sha256)
         if data_obj:
             assert data_obj.get_metadata('data_sha256') == self.data_sha256, \
                 "Block hash doesn't match what we previously stored on s3!"
-            # log.info("Block already exists on S3.")
             return
 
         data_obj = Key(bucket)
@@ -119,12 +147,18 @@ class Blob(object):
 
     def _get_from_s3(self):
         assert self.data_sha256, "Can't get data with no hash!"
+
+        access_key = config.get_required('AWS_ACCESS_KEY_ID')
+        secret_key = config.get_required('AWS_SECRET_ACCESS_KEY')
+        bucket_name = config.get_required('MESSAGE_STORE_BUCKET_NAME')
+
         # Boto pools connections at the class level
-        conn = S3Connection(config.get('AWS_ACCESS_KEY_ID'),
-                            config.get('AWS_SECRET_ACCESS_KEY'))
-        bucket = conn.get_bucket(config.get('MESSAGE_STORE_BUCKET_NAME'))
+        conn = S3Connection(access_key, secret_key)
+        bucket = conn.get_bucket(bucket_name)
+
         data_obj = bucket.get_key(self.data_sha256)
-        assert data_obj, "No data returned!"
+        assert data_obj, 'No data returned!'
+
         return data_obj.get_contents_as_string()
 
     def _delete_from_s3(self):

@@ -1,5 +1,6 @@
 import os
 import json
+import yaml
 from urllib import quote_plus as urlquote
 
 
@@ -37,12 +38,22 @@ else:
 
 if env == 'prod':
     # Read prod config from an unversioned config file.
-    config_path = '/etc/inboxapp/config.json'
+    root_path = '/etc/inboxapp'
+    config_path = os.path.join(root_path, 'config.json')
 else:
-    root_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
-    config_path = os.path.join(root_path, 'etc', "config-%s.json" % env)
+    root_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..',
+                             'etc')
+    config_path = os.path.join(root_path, 'config-{0}.json'.format(env))
+
 with open(config_path) as f:
     config = Configuration(json.load(f))
+
+    secrets_path = os.path.join(root_path, config.get_required('SECRETS_FILE'))
+
+    with open(secrets_path, 'r') as f:
+        secrets_config = Configuration(yaml.safe_load(f))
+
+    config.update(secrets_config)
 
 
 def engine_uri(database=None):

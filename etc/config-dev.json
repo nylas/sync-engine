@@ -4,8 +4,6 @@
 "WEBHOOK_SERVER_LOC": "tcp://0.0.0.0:9994",
 
 "MYSQL_DATABASE": "inbox",
-"MYSQL_USER": "root",
-"MYSQL_PASSWORD": "root",
 "MYSQL_HOSTNAME": "localhost",
 "MYSQL_PORT": 3306,
 
@@ -15,19 +13,15 @@
 "LOGDIR": "/var/log/inboxapp",
 "LOGLEVEL": 10,
 
-"GOOGLE_OAUTH_CLIENT_ID": "986659776516-fg79mqbkbktf5ku10c215vdij918ra0a.apps.googleusercontent.com",
-"GOOGLE_OAUTH_CLIENT_SECRET": "zgY9wgwML0kmQ6mmYHYJE05d",
 "GOOGLE_OAUTH_REDIRECT_URI": "urn:ietf:wg:oauth:2.0:oob",
 
-"MS_LIVE_OAUTH_CLIENT_ID": "000000004C12138C",
-"MS_LIVE_OAUTH_CLIENT_SECRET": "tjMNyu7ACbE8DOt0LE30Ptk7muNdPosG",
 "MS_LIVE_OAUTH_REDIRECT_URI": "https://login.live.com/oauth20_desktop.srf",
 
 "STORE_MESSAGES_ON_S3": false,
 "MSG_PARTS_DIRECTORY": "/var/lib/inboxapp/parts",
 
-"VAULT_TYPE": "local",
-
 "EMAIL_EXCEPTIONS": false,
-"SENTRY_EXCEPTIONS": false
+"SENTRY_EXCEPTIONS": false,
+
+"SECRETS_FILE": "secrets-dev.yml"
 }
