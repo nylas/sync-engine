@@ -539,13 +539,22 @@ class CondStoreCrispinClient(CrispinClient):
     def select_folder(self, folder, uidvalidity_cb):
         ret = super(CondStoreCrispinClient,
                     self).select_folder(folder, uidvalidity_cb)
-        self.selected_folder_info['HIGHESTMODSEQ'] = \
-            long(self.selected_folder_info['HIGHESTMODSEQ'])
+        # We need to issue a STATUS command asking for HIGHESTMODSEQ
+        # because some servers won't enable CONDSTORE support otherwise
+        status = self.folder_status(folder)
+        if 'HIGHESTMODSEQ' in self.selected_folder_info:
+            self.selected_folder_info['HIGHESTMODSEQ'] = \
+                long(self.selected_folder_info['HIGHESTMODSEQ'])
+        elif 'HIGHESTMODSEQ' in status:
+            self.selected_folder_info['HIGHESTMODSEQ'] = \
+                status['HIGHESTMODSEQ']
         return ret
 
     def folder_status(self, folder):
-        status = [long(val) for val in self.conn.folder_status(
-            folder, ('UIDVALIDITY', 'HIGHESTMODSEQ'))]
+        status = self.conn.folder_status(
+            folder, ('UIDVALIDITY', 'HIGHESTMODSEQ', 'UIDNEXT'))
+        for param in status:
+            status[param] = long(status[param])
 
         return status
 

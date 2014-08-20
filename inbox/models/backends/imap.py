@@ -138,7 +138,7 @@ class ImapFolderInfo(MailSyncBase):
                           backref=backref('imapfolderinfo',
                                           primaryjoin=backrefjoin),
                           primaryjoin=primaryjoin)
-    uidvalidity = Column(Integer, nullable=False)
+    uidvalidity = Column(BigInteger, nullable=False)
     # Invariant: the local datastore for this folder has always incorporated
     # remote changes up to _at least_ this modseq (we can't guarantee that we
     # haven't incorporated later changes too, since IMAP doesn't provide a true
@@ -146,7 +146,7 @@ class ImapFolderInfo(MailSyncBase):
     #
     # Note that some IMAP providers do not support the CONDSTORE extension, and
     # therefore will not use this field.
-    highestmodseq = Column(Integer, nullable=True)
+    highestmodseq = Column(BigInteger, nullable=True)
 
     __table_args__ = (UniqueConstraint('account_id', 'folder_id'),)
 
