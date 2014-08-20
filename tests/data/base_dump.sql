@@ -331,21 +331,27 @@ DROP TABLE IF EXISTS `easfoldersyncstatus`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `easfoldersyncstatus` (
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `account_id` int(11) NOT NULL,
-  `folder_name` varchar(191) NOT NULL,
-  `state` enum('initial','initial uidinvalid','poll','poll uidinvalid','finish') NOT NULL,
+  `folder_id` int(11) NOT NULL,
+  `state` enum('initial','initial keyinvalid','poll','poll keyinvalid','finish') NOT NULL DEFAULT 'initial',
   `eas_folder_sync_key` varchar(64) NOT NULL,
   `eas_folder_id` varchar(64) DEFAULT NULL,
   `eas_folder_type` varchar(64) DEFAULT NULL,
   `eas_parent_id` varchar(64) DEFAULT NULL,
-  `remote_uid_count` int(11) DEFAULT NULL,
-  `uid_checked_date` datetime DEFAULT NULL,
-  `_sync_status` text,
+  `_metrics` text,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_account_id_eas_folder_id` (`account_id`,`eas_folder_id`),
+  UNIQUE KEY `account_id` (`account_id`,`folder_id`),
   UNIQUE KEY `account_id_2` (`account_id`,`eas_folder_id`),
-  CONSTRAINT `easfoldersyncstatus_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `easaccount` (`id`) ON DELETE CASCADE
+  KEY `folder_id` (`folder_id`),
+  KEY `ix_easfoldersyncstatus_created_at` (`created_at`),
+  KEY `ix_easfoldersyncstatus_deleted_at` (`deleted_at`),
+  KEY `ix_easfoldersyncstatus_updated_at` (`updated_at`),
+  CONSTRAINT `easfoldersyncstatus_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `easaccount` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `easfoldersyncstatus_ibfk_2` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -391,20 +397,29 @@ DROP TABLE IF EXISTS `easuid`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `easuid` (
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `easaccount_id` int(11) NOT NULL,
   `message_id` int(11) DEFAULT NULL,
+  `fld_uid` int(11) NOT NULL,
   `msg_uid` int(11) DEFAULT NULL,
-  `folder_name` varchar(191) DEFAULT NULL,
+  `folder_id` int(11) NOT NULL,
   `is_draft` tinyint(1) NOT NULL,
   `is_flagged` tinyint(1) NOT NULL,
   `is_seen` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `folder_name` (`folder_name`,`msg_uid`,`easaccount_id`),
+  UNIQUE KEY `folder_id` (`folder_id`,`msg_uid`,`easaccount_id`),
   KEY `message_id` (`message_id`),
-  KEY `easuid_easaccount_id_folder_name` (`easaccount_id`,`folder_name`),
+  KEY `ix_easuid_deleted_at` (`deleted_at`),
+  KEY `ix_easuid_msg_uid` (`msg_uid`),
+  KEY `easuid_easaccount_id_folder_id` (`easaccount_id`,`folder_id`),
+  KEY `ix_easuid_created_at` (`created_at`),
+  KEY `ix_easuid_updated_at` (`updated_at`),
   CONSTRAINT `easuid_ibfk_1` FOREIGN KEY (`easaccount_id`) REFERENCES `easaccount` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `easuid_ibfk_2` FOREIGN KEY (`message_id`) REFERENCES `message` (`id`)
+  CONSTRAINT `easuid_ibfk_2` FOREIGN KEY (`message_id`) REFERENCES `message` (`id`),
+  CONSTRAINT `easuid_ibfk_3` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1447,4 +1462,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-08-16 22:27:06
+-- Dump completed on 2014-08-20 23:17:48
