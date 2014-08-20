@@ -493,31 +493,32 @@ def event_read_api(public_id):
 def event_update_api(public_id):
     data = request.get_json(force=True)
 
-    valid, err_str, start, end = _validate_event(data)
-    if not valid:
-        return err(400, err_str)
+    try:
+        valid_event_update(data)
+    except InputError as e:
+        return err(404, e.message)
 
-    subject = data.get('subject', '')
-    body = data.get('body')
-    location = data.get('location')
-    reminders = data.get('reminders')
-    recurrence = data.get('recurrence')
-    busy = int(data.get('busy'))
-    all_day = int(data.get('all_day'))
-    participants = data.get('participants', [])
+    if 'start' in data:
+        data['start'] = datetime.utcfromtimestamp(int(data.get('start')))
+
+    if 'end' in data:
+        data['end'] = datetime.utcfromtimestamp(int(data.get('end')))
+
+    if 'busy' in data:
+        data['busy'] = int(data.get('busy'))
+
+    if 'all_day' in data:
+        data['all_day'] = int(data.get('all_day'))
+
+    if 'participants' in data:
+        data['participant_list'] = data['participants']
+        del data['participants']
+        for p in data['participant_list']:
+            if 'status' not in p:
+                p['status'] = 'awaiting'
 
     result = events.crud.update(g.namespace, g.db_session,
-                                public_id,
-                                subject,
-                                body,
-                                location,
-                                reminders,
-                                recurrence,
-                                start,
-                                end,
-                                busy,
-                                all_day,
-                                participants)
+                                public_id, data)
     if result is None:
         return err(404, "Couldn't find event with id {0}".
                    format(public_id))

@@ -164,16 +164,9 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
         self.all_day = src.all_day
         self.time_zone = src.time_zone
 
-<<<<<<< HEAD
-        p_list = []
-        for participant in src.participants:
-            p_list.append(participant)
-        self.participants = p_list
-=======
         self.participants_by_email = {}
         for p_email, p in src.participants_by_email.iteritems():
             self.participants_by_email[p_email] = p
->>>>>>> master
 
     @property
     def namespace(self):

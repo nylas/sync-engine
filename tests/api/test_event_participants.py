@@ -321,6 +321,7 @@ def test_api_add_participant(events_provider, event_sync,
     e_data['participants'].append({'email': 'filet.minyon@example.com'})
     e_resp = api_client.put_data('/events/' + event_id, e_data, ns_id)
     e_resp_data = json.loads(e_resp.data)
+
     assert len(e_resp_data['participants']) == 6
     for i, p in enumerate(e_resp_data['participants']):
         assert p['email'] == e_data['participants'][i]['email']
