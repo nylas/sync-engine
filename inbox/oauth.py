@@ -119,7 +119,7 @@ def new_token(provider_module, refresh_token, client_id=None,
 # Console Support for providing link and reading response from user
 # ------------------------------------------------------------------
 
-def _show_authorize_link(provider_module, email_address=None):
+def authorize_link(provider_module, email_address=None):
     """ Show authorization link.
     Prints out a message to the console containing a link that the user can
     click on that will bring them to a page that allows them to authorize
@@ -151,7 +151,7 @@ def _show_authorize_link(provider_module, email_address=None):
 
     # Prompt user for authorization + get auth_code
     url = url_concat(authenticate_url, args)
-    print ("\n\n{}").format(url)
+    return url
 
 
 def _user_info(provider_module, access_token):
@@ -229,7 +229,8 @@ def _get_authenticated_user(provider_module, authorization_code):
 def oauth_authorize_console(provider_module, email_address, token, exit):
     """ Console I/O and checking for a user to authorize their account."""
     if not token:
-        _show_authorize_link(provider_module, email_address)
+        url = authorize_link(provider_module, email_address)
+        print ("\n\n{}").format(url)
         if exit:
             sys.exit(0)
     else:

@@ -1,8 +1,7 @@
 import pytest
 import time
 from client import APIClient
-from inbox.auth.generic import create_account
-from inbox.auth import handler_from_email
+from base import create_account
 from inbox.models.session import session_scope
 from conftest import (TEST_MAX_DURATION_SECS, TEST_GRANULARITY_CHECK_SECS,
                       passwords)
@@ -10,16 +9,8 @@ from conftest import (TEST_MAX_DURATION_SECS, TEST_GRANULARITY_CHECK_SECS,
 
 @pytest.mark.parametrize('email,password', passwords)
 def test_password_auth(email, password):
-    response = {"email": email, "password": password}
-
     with session_scope() as db_session:
-        auth_handler = handler_from_email(email)
-        account = create_account(db_session, email, response)
-        if auth_handler.verify_account(account):
-            db_session.add(account)
-            db_session.commit()
-
-        db_session.commit()
+        create_account(db_session, email, password)
 
     start_time = time.time()
 

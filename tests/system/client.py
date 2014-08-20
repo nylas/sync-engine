@@ -147,7 +147,7 @@ class APIClient(object):
         return self._get_resource("drafts", Draft, id, **kwargs)
 
     def get_files(self, **kwargs):
-        return self._get_resource("files", File, id, **kwargs)
+        return self._get_resources("files", File, **kwargs)
 
     def get_file(self, id, **kwargs):
         return self._get_resource("files", File, id, **kwargs)

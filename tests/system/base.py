@@ -9,6 +9,13 @@
 # a gmail account, you test class will inherit E2ETest and GmailMixin.
 import client
 import time
+from inbox.auth import handler_from_email
+from inbox.util.url import provider_from_address
+from google_auth_helper import google_auth
+from outlook_auth_helper import outlook_auth
+from inbox.auth.generic import create_account as create_generic_account
+from inbox.auth.gmail import create_auth_account as create_gmail_account
+from inbox.auth.outlook import create_auth_account as create_outlook_account
 
 
 def for_all_available_providers(fn):
@@ -30,3 +37,22 @@ def pick(l, predicate):
     for el in l:
         if predicate(el):
             return el
+
+
+def create_account(db_session, email, password):
+    provider = provider_from_address(email)
+    if provider == 'gmail':
+        token = google_auth(email, password)
+        account = create_gmail_account(db_session, email, token, False)
+    elif provider == 'outlook':
+        token = outlook_auth(email, password)
+        account = create_outlook_account(db_session, email, token, False)
+    else:
+        response = {"email": email, "password": password}
+        account = create_generic_account(db_session, email, response)
+
+    auth_handler = handler_from_email(email)
+    auth_handler.verify_account(account)
+
+    db_session.add(account)
+    db_session.commit()
