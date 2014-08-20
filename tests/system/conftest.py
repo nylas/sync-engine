@@ -11,8 +11,8 @@ try:
     passwords = []
     for account in credentials:
         passwords.append((account['user'], account['password']))
-except IOError as e:
-    print ("Error: test accounts file not found."
+except ImportError:
+    print ("Error: test accounts file not found. "
            "You need to create accounts.py\n"
            "File format: credentials = [{'user': 'bill@example.com', "
            "'password': 'VerySecret'}]")
