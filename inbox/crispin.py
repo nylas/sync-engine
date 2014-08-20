@@ -154,49 +154,49 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
 
     # TODO: simplify auth flow, preferably not need to use the db in this mod
     def _new_connection(self):
+        from inbox.auth import handler_from_provider
+
+        num_transients = 0
+        max_transient_retries = 2
+
         # Ensure that connections are initialized serially, so as not to use
         # many db sessions on startup.
         with self._new_conn_lock as _, session_scope() as db_session:
-            from inbox.auth import handler_from_provider
-
             account = db_session.query(ImapAccount).get(self.account_id)
 
             auth_handler = handler_from_provider(account.provider)
-            # FIXME @karim: This code is slightly complex - we may
-            # get transient errors (TransientConnectionError) when
-            # connecting. We want to retry once before giving up
-            # but we also need to handle other more serious errors.
-            # The 'solution' is to wrap the code in a loop and continue
-            # only on a TransientConnectionError.
-            for i in range(2):
+
+            while True:
                 try:
                     conn = auth_handler.connect_account(account)
-                except TransientConnectionError:
-                    gevent.sleep(random.uniform(1, 10))
-                    if i < 2:
+
+                except ConnectionError, e:
+                    if isinstance(e, TransientConnectionError) and \
+                            num_transients < max_transient_retries:
+                        num_transients += 1
+                        gevent.sleep(random.uniform(1, 10))
                         continue
                     else:
-                        # Retry only once.
-                        logger.error("Error connecting",
+                        logger.error('Error connecting',
                                      account_id=self.account_id)
                         account.sync_state = 'connerror'
                         db_session.add(account)
                         db_session.commit()
                         return None
+
                 except ValidationError:
-                    logger.error("Error obtaining access token",
+                    logger.error('Error obtaining access token',
                                  account_id=self.account_id)
                     account.sync_state = 'invalid'
                     db_session.add(account)
                     db_session.commit()
                     return None
-                except ConnectionError:
-                    logger.error("Error connecting",
-                                 account_id=self.account_id)
-                    account.sync_state = 'connerror'
-                    db_session.add(account)
-                    db_session.commit()
-                    return None
+
+                break
+
+            account.sync_state = 'running'
+            db_session.add(account)
+            db_session.commit()
 
         return new_crispin(self.account_id, self.email_address,
                            self.provider_name, conn, self.readonly)

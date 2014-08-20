@@ -66,29 +66,20 @@ def connect_account(account):
     """
 
     info = provider_info(account.provider)
-    host = info["imap"]
+    host = info['imap']
     try:
         conn = IMAPClient(host, use_uid=True, ssl=True)
     except IMAPClient.AbortError as e:
         log.error('account_connect_failed',
+                  email=account.email_address,
                   host=host,
-                  error=("[ALERT] Can't connect to host -"
-                         "may be transient (Failure)"))
+                  error=("[ALERT] Can't connect to host - may be transient"))
         raise TransientConnectionError(str(e))
-    except IMAPClient.Error as e:
+    except(IMAPClient.Error, gaierror, socket_error) as e:
         log.error('account_connect_failed',
+                  email=account.email_address,
                   host=host,
-                  error="[ALERT] Can't connect to host (Failure)")
-        raise ConnectionError(str(e))
-    except gaierror as e:
-        log.error('account_connect_failed',
-                  host=host,
-                  error="[ALERT] Name resolution faiure (Failure)")
-        raise ConnectionError(str(e))
-    except socket_error as e:
-        log.error('account_connect_failed',
-                  host=host,
-                  error="[ALERT] Socket connection failure (Failure)")
+                  error='[ALERT] (Failure): {0}'.format(str(e)))
         raise ConnectionError(str(e))
 
     conn.debug = False
@@ -98,19 +89,19 @@ def connect_account(account):
         log.error('account_verify_failed',
                   email=account.email_address,
                   host=host,
-                  error="[ALERT] Invalid credentials (Failure)")
-        raise TransientConnectionError()
+                  error="[ALERT] Can't connect to host - may be transient")
+        raise TransientConnectionError(str(e))
     except IMAPClient.Error as e:
         log.error('account_verify_failed',
                   email=account.email_address,
                   host=host,
-                  error="[ALERT] Invalid credentials (Failure)")
-        raise ValidationError()
+                  error='[ALERT] Invalid credentials (Failure)')
+        raise ValidationError(str(e))
     except SSLError as e:
         log.error('account_verify_failed',
                   email=account.email_address,
                   host=host,
-                  error="[ALERT] SSL Connection error (Failure)")
+                  error='[ALERT] SSL Connection error (Failure)')
         raise ConnectionError(str(e))
 
     return conn
