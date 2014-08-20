@@ -116,6 +116,7 @@ class OutlookEventsProvider(BaseSyncProvider):
                 self.log.error("Error obtaining events",
                                provider=self.PROVIDER_NAME,
                                account_id=self.account_id)
+                return response_items
 
             response_items = resp.json()['data']
 

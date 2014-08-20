@@ -61,8 +61,8 @@ class ICloudEventsProvider(BaseSyncProvider):
             start_date = event['startDate'][1:]
             end_date = event['endDate'][1:]
 
-            start = datetime.datetime(*start_date)
-            end = datetime.datetime(*end_date)
+            start = datetime.datetime(*start_date[:-1])
+            end = datetime.datetime(*end_date[:-1])
 
             recurrence = event['recurrence']
 
