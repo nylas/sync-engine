@@ -23,6 +23,7 @@ OAUTH_REDIRECT_URI = config.get_required('MS_LIVE_OAUTH_REDIRECT_URI')
 OAUTH_AUTHENTICATE_URL = 'https://login.live.com/oauth20_authorize.srf'
 OAUTH_ACCESS_TOKEN_URL = 'https://login.live.com/oauth20_token.srf'
 OAUTH_USER_INFO_URL = 'https://apis.live.net/v5.0/me'
+OAUTH_BASE_URL = 'https://apis.live.net/v5.0/'
 
 OAUTH_SCOPE = ' '.join([
     'wl.basic',            # Read access for basic profile info + contacts

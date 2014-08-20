@@ -19,6 +19,9 @@ class ParticipantMap(OrderedDict, MappedCollection):
         MappedCollection.__init__(self, keyfunc=lambda p: p.email_address)
         OrderedDict.__init__(self, *args, **kw)
 
+SUBJECT_MAX_LEN = 1024
+LOCATION_MAX_LEN = 255
+
 
 class Event(MailSyncBase, HasRevisions, HasPublicID):
     """Data for events."""
@@ -38,7 +41,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
 
     raw_data = Column(Text, nullable=False)
 
-    subject = Column(String(1024), nullable=True)
+    subject = Column(String(SUBJECT_MAX_LEN), nullable=True)
     body = Column(Text, nullable=True)
     location = Column(String(255), nullable=True)
     busy = Column(Boolean, nullable=False)
@@ -81,7 +84,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
                  'email': p.email_address,
                  'status': p.status,
                  'notes': p.notes}
-                for p in self.participants_by_email.values()]
+                for p in self.participants]
 
     @participant_list.setter
     def participant_list(self, p_list):
@@ -161,9 +164,16 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
         self.all_day = src.all_day
         self.time_zone = src.time_zone
 
+<<<<<<< HEAD
+        p_list = []
+        for participant in src.participants:
+            p_list.append(participant)
+        self.participants = p_list
+=======
         self.participants_by_email = {}
         for p_email, p in src.participants_by_email.iteritems():
             self.participants_by_email[p_email] = p
+>>>>>>> master
 
     @property
     def namespace(self):

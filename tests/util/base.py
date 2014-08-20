@@ -106,6 +106,10 @@ class TestAPIClient(object):
         path = self.full_path(short_path, ns_id)
         return self.client.post(path, data=json.dumps(data))
 
+    def post_raw(self, short_path, data, ns_id=1, headers=''):
+        path = self.full_path(short_path, ns_id)
+        return self.client.post(path, data=data, headers=headers)
+
     def put_data(self, short_path, data, ns_id=1):
         path = self.full_path(short_path, ns_id)
         return self.client.put(path, data=json.dumps(data))
@@ -223,7 +227,7 @@ def syncback_service():
 @fixture(scope='function')
 def contact_sync(config, db):
     from inbox.contacts.remote_sync import ContactSync
-    return ContactSync(1)
+    return ContactSync('gmail', 1)
 
 
 @fixture(scope='function')
@@ -260,7 +264,7 @@ class ContactsProviderStub(object):
 @fixture(scope='function')
 def event_sync(config, db):
     from inbox.events.remote_sync import EventSync
-    return EventSync(1)
+    return EventSync('gmail', 1)
 
 
 @fixture(scope='function')

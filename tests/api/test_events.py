@@ -1,3 +1,4 @@
+import os
 import json
 
 from inbox.models import Account
@@ -90,6 +91,53 @@ def test_api_create(events_provider, event_sync, db, api_client):
     assert e_get_resp['end'] == e_data['end']
     assert e_get_resp['busy'] == e_data['busy']
     assert e_get_resp['all_day'] == e_data['all_day']
+
+
+def test_api_create_ical(events_provider, event_sync, db, api_client):
+    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
+    ns_id = acct.namespace.public_id
+
+    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
+    ns_id = acct.namespace.public_id
+
+    tests_path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                              '..')
+    invite_path = os.path.join(tests_path, 'data', 'invite.ics')
+    f = open(invite_path, 'r')
+    cal_str = f.read()
+    f.close()
+
+    headers = {'content-type': 'text/calendar'}
+    e_resp = api_client.post_raw('/events', cal_str, ns_id, headers=headers)
+    e_resp_data = json.loads(e_resp.data)[0]
+    assert e_resp_data['object'] == 'event'
+    assert e_resp_data['namespace'] == acct.namespace.public_id
+    assert e_resp_data['subject'] == 'test recurring event'
+    assert e_resp_data['body'] == 'Event Discription'
+    assert e_resp_data['location'] == 'just some location'
+    assert e_resp_data['start'] == 1407628800
+    assert e_resp_data['end'] == 1407715200
+    assert e_resp_data['busy'] is True
+    assert e_resp_data['all_day'] is True
+    part_names = [p['name'] for p in e_resp_data['participants']]
+    assert 'John Q. Public' in part_names
+    assert 'Alyssa P Hacker' in part_names
+    assert 'benbitdit@example.com' in part_names
+    assert 'Filet Minyon' in part_names
+    for p in e_resp_data['participants']:
+        if p['name'] == 'John Q. Public':
+            assert p['status'] == 'awaiting'
+            assert p['email'] == 'johnqpublic@example.com'
+        if p['name'] == 'Alyssa P Hacker':
+            assert p['notes'] == 'Guests: 1'
+            assert p['status'] == 'yes'
+            assert p['email'] == 'alyssaphacker@example.com'
+        if p['name'] == 'benbitdit@example.com':
+            assert p['status'] == 'no'
+            assert p['email'] == 'benbitdit@example.com'
+        if p['name'] == 'Filet Minyon':
+            assert p['status'] == 'maybe'
+            assert p['email'] == 'filet.minyon@example.com'
 
 
 def test_api_create_no_subject(events_provider, event_sync, db, api_client):

@@ -10,8 +10,6 @@ class Participant(MailSyncBase, HasEmailAddress, HasPublicID):
     event_id = Column(ForeignKey('event.id', ondelete='CASCADE'),
                       nullable=False)
 
-    participant_cascade = "save-update, merge, delete, delete-orphan"
-
     __table_args__ = (UniqueConstraint('_raw_address',
                                        'event_id', name='uid'),)
 

@@ -19,6 +19,7 @@ from inbox.auth.gmail import (OAUTH_CLIENT_ID,
                               OAUTH_ACCESS_TOKEN_URL)
 from inbox.sync.base_sync_provider import BaseSyncProvider
 from inbox.events.util import MalformedEventError, parse_datetime
+from inbox.models.event import SUBJECT_MAX_LEN, LOCATION_MAX_LEN
 
 SOURCE_APP_NAME = 'InboxApp Calendar Sync Engine'
 
@@ -29,9 +30,6 @@ class GoogleEventsProvider(BaseSyncProvider):
 
     Parameters
     ----------
-    db_session: sqlalchemy.orm.session.Session
-        Database session.
-
     account_id: GmailAccount.id
         The user account for which to fetch event data.
 
@@ -132,11 +130,11 @@ class GoogleEventsProvider(BaseSyncProvider):
             if 'status' in event and event['status'] == 'cancelled':
                 raise MalformedEventError()
 
-            subject = event.get('summary', '')[0:1023]
+            subject = event.get('summary', '')[:SUBJECT_MAX_LEN]
             body = event.get('description', None)
             location = event.get('location', None)
             if location:
-                location = location[0:254]
+                location = location[:LOCATION_MAX_LEN]
             all_day = False
             locked = True
 
@@ -229,7 +227,7 @@ class GoogleEventsProvider(BaseSyncProvider):
                      source='remote',
                      participants=participants)
 
-    def get_items(self, sync_from_time=None, max_results=100000):
+    def get_items(self, sync_from_time=None):
         """Fetches and parses fresh event data.
 
         Parameters
@@ -238,8 +236,6 @@ class GoogleEventsProvider(BaseSyncProvider):
             A time in ISO 8601 format: If not None, fetch data for calendars
             that have been updated since this time. Otherwise fetch all
             calendar data.
-        max_results: int, optional
-            The maximum number of calendar entries to fetch.
 
         Yields
         ------

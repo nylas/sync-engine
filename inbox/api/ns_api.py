@@ -433,6 +433,16 @@ def event_search_api():
 
 @app.route('/events/', methods=['POST'])
 def event_create_api():
+    # Handle ical uploads
+    if request.headers['content-type'] == 'text/calendar':
+        ics_str = request.data
+        new_events = events.crud.create_from_ics(g.namespace, g.db_session,
+                                                 ics_str)
+        if not new_events:
+            return err(400, "Couldn't parse .ics file.")
+
+        return g.encoder.jsonify(new_events)
+
     data = request.get_json(force=True)
 
     try:
@@ -483,31 +493,31 @@ def event_read_api(public_id):
 def event_update_api(public_id):
     data = request.get_json(force=True)
 
-    try:
-        valid_event_update(data)
-    except InputError as e:
-        return err(404, e.message)
+    valid, err_str, start, end = _validate_event(data)
+    if not valid:
+        return err(400, err_str)
 
-    # Convert the data into our types where necessary
-    # e.g. timestamps, participant_list
-    if 'start' in data:
-        data['start'] = datetime.utcfromtimestamp(int(data.get('start')))
-    if 'end' in data:
-        data['end'] = datetime.utcfromtimestamp(int(data.get('end')))
-    if 'participants' in data:
-        data['participant_list'] = []
-        for p in data['participants']:
-            if 'status' not in p:
-                p['status'] = 'awaiting'
-            data['participant_list'].append(p)
-        del data['participants']
+    subject = data.get('subject', '')
+    body = data.get('body')
+    location = data.get('location')
+    reminders = data.get('reminders')
+    recurrence = data.get('recurrence')
+    busy = int(data.get('busy'))
+    all_day = int(data.get('all_day'))
+    participants = data.get('participants', [])
 
-    try:
-        result = events.crud.update(g.namespace, g.db_session,
-                                    public_id, data)
-    except InputError as e:
-        return err(404, e.message)
-
+    result = events.crud.update(g.namespace, g.db_session,
+                                public_id,
+                                subject,
+                                body,
+                                location,
+                                reminders,
+                                recurrence,
+                                start,
+                                end,
+                                busy,
+                                all_day,
+                                participants)
     if result is None:
         return err(404, "Couldn't find event with id {0}".
                    format(public_id))

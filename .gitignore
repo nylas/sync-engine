@@ -69,6 +69,7 @@ nosetests.xml
 
 # Editor temporary files
 *.swp
+*.swo
 
 # ctags
 tags

@@ -2,8 +2,11 @@
 Called by the API."""
 import uuid
 
-from inbox.models import Event
 from sqlalchemy.orm import subqueryload
+
+from inbox.models import Event
+from inbox.events.ical import events_from_ics
+from inbox.events.util import MalformedEventError
 
 INBOX_PROVIDER_NAME = 'inbox'
 
@@ -33,6 +36,16 @@ def create(namespace, db_session, subject, body, location, reminders,
     db_session.add(event)
     db_session.commit()
     return event
+
+
+def create_from_ics(namespace, db_session, ics_str):
+    try:
+        events = events_from_ics(namespace, ics_str)
+    except MalformedEventError:
+        return None
+    db_session.add_all(events)
+    db_session.commit()
+    return events
 
 
 def read(namespace, db_session, event_public_id):

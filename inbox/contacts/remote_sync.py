@@ -6,6 +6,8 @@ from inbox.models import Contact
 from inbox.contacts.google import GoogleContactsProvider
 from inbox.sync.base_sync import BaseSync
 
+__provider_map__ = {'gmail': GoogleContactsProvider}
+
 
 class ContactSync(BaseSync):
     """Per-account contact sync engine.
@@ -24,7 +26,8 @@ class ContactSync(BaseSync):
     log: logging.Logger
         Logging handler.
     """
-    def __init__(self, account_id, poll_frequency=300):
+    def __init__(self, provider_name, account_id, poll_frequency=300):
+        self._provider_name = provider_name
         self.log = logger.new(account_id=account_id, component='contact sync')
         self.log.info('Begin syncing contacts...')
 
@@ -32,7 +35,7 @@ class ContactSync(BaseSync):
 
     @property
     def provider(self):
-        return GoogleContactsProvider
+        return __provider_map__[self._provider_name]
 
     @property
     def target_obj(self):

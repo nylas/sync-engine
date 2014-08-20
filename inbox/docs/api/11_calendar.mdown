@@ -90,6 +90,10 @@ POST https://api.inboxapp.com/n/<namespace_id>/events
 }
 ```
 
+# Uploading a .ics file
+
+It is also possible to create new events by uploading a .ics file. To do so, post the file data to the event creation endpoint with the `content-type` header set to `text/calendar`.
+
 
 # Updating an existing event
 

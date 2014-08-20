@@ -1,7 +1,9 @@
 import pytest
 
+from inbox.models import Account
 from inbox.events.google import GoogleEventsProvider
 from inbox.events.google import MalformedEventError
+from inbox.events.ical import events_from_ics
 
 ACCOUNT_ID = 1
 
@@ -95,3 +97,9 @@ def test_long_eventid(google_events_provider):
                           u'email': u'fakeemail@gmail.com'},
              u'id': long_id}
     google_events_provider._parse_event(cal_info, event)
+
+
+def test_invalid_ical(db):
+    with pytest.raises(MalformedEventError):
+        account = db.session.query(Account).filter_by(id=ACCOUNT_ID).first()
+        events = events_from_ics(account.namespace, "asdf")

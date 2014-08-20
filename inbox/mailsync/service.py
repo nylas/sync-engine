@@ -138,15 +138,17 @@ class SyncService(object):
                             acc.provider)
                     self.monitors[acc.id] = monitor
                     monitor.start()
-                    # For Gmail accounts, also start contacts and events sync
-                    if acc.provider == 'gmail':
-                        contact_sync = ContactSync(acc.id)
+
+                    if info.get('contacts', None):
+                        contact_sync = ContactSync(acc.provider, acc.id)
                         self.contact_sync_monitors[acc.id] = contact_sync
                         contact_sync.start()
 
-                        event_sync = EventSync(acc.id)
+                    if info.get('events', None):
+                        event_sync = EventSync(acc.provider, acc.id)
                         self.event_sync_monitors[acc.id] = event_sync
                         event_sync.start()
+
                     acc.start_sync(fqdn)
                     db_session.add(acc)
                     db_session.commit()

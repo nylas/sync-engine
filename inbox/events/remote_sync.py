@@ -3,8 +3,14 @@ from inbox.log import get_logger
 logger = get_logger()
 
 from inbox.events.google import GoogleEventsProvider
+from inbox.events.outlook import OutlookEventsProvider
+from inbox.events.icloud import ICloudEventsProvider
 from inbox.sync.base_sync import BaseSync
 from inbox.models import Event
+
+__provider_map__ = {'gmail': GoogleEventsProvider,
+                    'outlook': OutlookEventsProvider,
+                    'icloud': ICloudEventsProvider}
 
 
 class EventSync(BaseSync):
@@ -24,7 +30,8 @@ class EventSync(BaseSync):
     log: logging.Logger
         Logging handler.
     """
-    def __init__(self, account_id, poll_frequency=300):
+    def __init__(self, provider_name, account_id, poll_frequency=30):
+        self._provider_name = provider_name
         self.log = logger.new(account_id=account_id, component='event sync')
         self.log.info('Begin syncing Events...')
 
@@ -32,7 +39,7 @@ class EventSync(BaseSync):
 
     @property
     def provider(self):
-        return GoogleEventsProvider
+        return __provider_map__[self._provider_name]
 
     @property
     def target_obj(self):
