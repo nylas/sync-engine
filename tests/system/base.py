@@ -13,7 +13,6 @@ from inbox.auth import handler_from_email
 from inbox.util.url import provider_from_address
 from google_auth_helper import google_auth
 from outlook_auth_helper import outlook_auth
-from inbox.auth.generic import create_account as create_generic_account
 from inbox.auth.gmail import create_auth_account as create_gmail_account
 from inbox.auth.outlook import create_auth_account as create_outlook_account
 
@@ -41,6 +40,9 @@ def pick(l, predicate):
 
 def create_account(db_session, email, password):
     provider = provider_from_address(email)
+    auth_handler = handler_from_email(email)
+    # Special-case Gmail and Outlook, because we need to provide an oauth token
+    # and not merely a password.
     if provider == 'gmail':
         token = google_auth(email, password)
         account = create_gmail_account(db_session, email, token, False)
@@ -49,9 +51,8 @@ def create_account(db_session, email, password):
         account = create_outlook_account(db_session, email, token, False)
     else:
         response = {"email": email, "password": password}
-        account = create_generic_account(db_session, email, response)
+        account = auth_handler.create_account(db_session, email, response)
 
-    auth_handler = handler_from_email(email)
     auth_handler.verify_account(account)
 
     db_session.add(account)

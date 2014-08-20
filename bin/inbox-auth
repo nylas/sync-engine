@@ -1,16 +1,12 @@
 #!/usr/bin/env python
 from gevent import monkey; monkey.patch_all()
-
 import sys
-
 import click
 
 from setproctitle import setproctitle; setproctitle('inbox-auth')
-
 from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.util.startup import preflight
-
 from inbox.models.session import session_scope
 from inbox.models import Account
 from inbox.auth import handler_from_email
@@ -21,7 +17,8 @@ from inbox.basicauth import NotSupportedError
 @click.argument('email_address')
 @click.option('--token', default=None, help='Authorization token.')
 @click.option('--exit_after_link', is_flag=True,
-              help='Exit after showing the link.')
+              help='Exit after showing the link. Conceivably useful for '
+                   'automating account creation.')
 @click.option('--reauth', is_flag=True,
               help='Re-authenticate an account even if it already exists')
 def main(email_address, token, exit_after_link, reauth):
