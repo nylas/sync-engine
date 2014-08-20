@@ -136,7 +136,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('4e3e8abea884');
+INSERT INTO `alembic_version` VALUES ('1322d3787305');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -460,6 +460,41 @@ CREATE TABLE `event` (
 LOCK TABLES `event` WRITE;
 /*!40000 ALTER TABLE `event` DISABLE KEYS */;
 /*!40000 ALTER TABLE `event` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `eventparticipant`
+--
+
+DROP TABLE IF EXISTS `eventparticipant`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `eventparticipant` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `public_id` binary(16) NOT NULL,
+  `event_id` int(11) NOT NULL,
+  `name` varchar(255) DEFAULT NULL,
+  `_raw_address` varchar(191) DEFAULT NULL,
+  `_canonicalized_address` varchar(191) DEFAULT NULL,
+  `status` enum('yes','no','maybe','awaiting') NOT NULL,
+  `notes` text,
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uid` (`_raw_address`,`event_id`),
+  KEY `event_id` (`event_id`),
+  CONSTRAINT `eventparticipant_ibfk_1` FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `eventparticipant`
+--
+
+LOCK TABLES `eventparticipant` WRITE;
+/*!40000 ALTER TABLE `eventparticipant` DISABLE KEYS */;
+/*!40000 ALTER TABLE `eventparticipant` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -1412,4 +1447,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-08-14 21:49:45
+-- Dump completed on 2014-08-16 22:27:06

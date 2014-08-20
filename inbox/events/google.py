@@ -12,7 +12,7 @@ logger = get_logger()
 from inbox.basicauth import ConnectionError, ValidationError
 from inbox.oauth import OAuthError
 from inbox.models.session import session_scope
-from inbox.models import Event
+from inbox.models import Event, Participant
 from inbox.models.backends.gmail import GmailAccount
 from inbox.auth.gmail import (OAUTH_CLIENT_ID,
                               OAUTH_CLIENT_SECRET,
@@ -142,7 +142,8 @@ class GoogleEventsProvider(BaseSyncProvider):
 
             start = event['start']
             end = event['end']
-            recurrence = str(event.get('recurrence', None))
+            g_reccur = event.get('recurrence', None)
+            recurrence = str(g_reccur) if g_reccur else None
 
             busy = event.get('transparency', True)
             if busy == 'transparent':
@@ -170,6 +171,35 @@ class GoogleEventsProvider(BaseSyncProvider):
 
             reminders = str(reminders)
 
+            # Convert google's notion of status into our own
+            participants = []
+            status_map = {'accepted': 'yes', 'needsAction': 'awaiting',
+                          'declined': 'no', 'tentative': 'maybe'}
+            for attendee in event.get('attendees', []):
+                g_status = attendee.get('responseStatus')
+                if g_status not in status_map:
+                    raise MalformedEventError()
+                status = status_map[g_status]
+
+                email = attendee.get('email')
+                if not email:
+                    raise MalformedEventError()
+
+                name = attendee.get('displayName')
+
+                notes = None
+                if 'additionalGuests' in attendee:
+                    notes = "Guests: {}".format(attendee['additionalGuests'])
+                    if 'comment' in attendee:
+                        notes += " Notes: {}".format(attendee['comment'])
+                elif 'comment' in attendee:
+                    notes = "Notes: {}".format(attendee['comment'])
+
+                participants.append(Participant(email_address=email,
+                                                name=name,
+                                                status=status,
+                                                notes=notes))
+
             if 'self' in event['creator']:
                 locked = False
             elif 'guestsCanModify' in event:
@@ -196,7 +226,8 @@ class GoogleEventsProvider(BaseSyncProvider):
                      all_day=all_day,
                      locked=locked,
                      time_zone=time_zone,
-                     source='remote')
+                     source='remote',
+                     participants=participants)
 
     def get_items(self, sync_from_time=None, max_results=100000):
         """Fetches and parses fresh event data.

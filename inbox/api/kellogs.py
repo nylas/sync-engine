@@ -116,6 +116,7 @@ def encode(obj, namespace_public_id=None):
             'uid': obj.uid,
             'subject': obj.subject,
             'body': obj.body,
+            'participants': obj.participant_list,
             'busy': obj.busy,
             'locked': obj.locked,
             'location': obj.location,

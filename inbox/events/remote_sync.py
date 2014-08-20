@@ -35,13 +35,6 @@ class EventSync(BaseSync):
         return GoogleEventsProvider
 
     @property
-    def merge_attrs(self):
-        # This must be updated when new fields are added to the class.
-        return ['subject', 'body', 'start', 'end', 'all_day',
-                'locked', 'location', 'reminders', 'recurrence',
-                'time_zone', 'busy', 'raw_data']
-
-    @property
     def target_obj(self):
         return Event
 

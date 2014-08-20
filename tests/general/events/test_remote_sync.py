@@ -9,7 +9,7 @@ from tests.util.base import (event_sync, events_provider,
 config()
 from inbox.models import Event
 from inbox.events.remote_sync import EventSync
-from inbox.sync.base_sync import MergeError
+from inbox.util.misc import MergeError
 
 __all__ = ['event_sync', 'events_provider']
 
@@ -63,7 +63,7 @@ def test_merge(config, event_sync):
 
     dest = _default_event()
 
-    event_sync.merge(base, remote, dest)
+    dest.merge_from(base, remote)
     assert dest.subject == 'new subject'
     assert dest.body == 'new body'
     assert dest.location == 'new location'
@@ -106,7 +106,7 @@ def test_merge_conflict(config, event_sync):
                  source='remote')
 
     with pytest.raises(MergeError):
-        event_sync.merge(base, remote, dest)
+        dest.merge_from(base, remote)
 
     # Check no update in case of conflict
     assert dest.subject == 'subject2'

@@ -7,15 +7,17 @@ from flask import jsonify as flask_jsonify
 from flask.ext.restful import reqparse
 from sqlalchemy import asc, or_
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.orm import subqueryload
 
 from inbox.models import (Message, Block, Thread, Namespace, Webhook,
                           Tag, Contact, Event)
 from inbox.api.kellogs import APIEncoder
 from inbox.api import filtering
 from inbox.api.validation import (InputError, get_tags, get_attachments,
-                                  get_thread, valid_public_id,
-                                  timestamp, bounded_str, strict_parse_args,
-                                  limit, ValidatableArgument)
+                                  get_thread, valid_public_id, valid_event,
+                                  valid_event_update, timestamp, bounded_str,
+                                  strict_parse_args, limit,
+                                  ValidatableArgument)
 from inbox.config import config
 from inbox import events, contacts, sendmail
 from inbox.log import get_logger
@@ -423,6 +425,7 @@ def event_search_api():
         filter(Event.account_id == g.namespace.account_id,
                Event.source == 'local'). \
         order_by(asc(Event.id)).limit(args['limit']). \
+        options(subqueryload(Event.participants_by_email)). \
         offset(args['offset']).all()
 
     return g.encoder.jsonify(results)
@@ -432,34 +435,24 @@ def event_search_api():
 def event_create_api():
     data = request.get_json(force=True)
 
+    try:
+        valid_event(data)
+    except InputError as e:
+        return err(404, e.message)
+
+    start = datetime.utcfromtimestamp(int(data.get('start')))
+    end = datetime.utcfromtimestamp(int(data.get('end')))
     subject = data.get('subject', '')
     body = data.get('body')
     location = data.get('location')
     reminders = data.get('reminders')
     recurrence = data.get('recurrence')
-
-    try:
-        start = datetime.utcfromtimestamp(int(data.get('start')))
-    except (ValueError, TypeError):
-        return err(400, 'Event start time invalid.')
-
-    try:
-        end = datetime.utcfromtimestamp(int(data.get('end')))
-    except (ValueError, TypeError):
-        return err(400, 'Event end time invalid.')
-
-    if start > end:
-        return err(400, 'Event cannot start after it ends.')
-
-    if not isinstance(data.get('busy'), bool):
-        return err(400, '\'busy\' must be true or false')
-
     busy = int(data.get('busy'))
-
-    if not isinstance(data.get('all_day'), bool):
-        return err(400, '\'all_day\' must be true or false')
-
     all_day = int(data.get('all_day'))
+    participants = data.get('participants', [])
+    for p in participants:
+        if 'status' not in p:
+            p['status'] = 'awaiting'
 
     new_contact = events.crud.create(g.namespace, g.db_session,
                                      subject,
@@ -470,7 +463,8 @@ def event_create_api():
                                      start,
                                      end,
                                      busy,
-                                     all_day)
+                                     all_day,
+                                     participants)
     return g.encoder.jsonify(new_contact)
 
 
@@ -487,7 +481,37 @@ def event_read_api(public_id):
 
 @app.route('/events/<public_id>', methods=['PUT'])
 def event_update_api(public_id):
-    raise NotImplementedError
+    data = request.get_json(force=True)
+
+    try:
+        valid_event_update(data)
+    except InputError as e:
+        return err(404, e.message)
+
+    # Convert the data into our types where necessary
+    # e.g. timestamps, participant_list
+    if 'start' in data:
+        data['start'] = datetime.utcfromtimestamp(int(data.get('start')))
+    if 'end' in data:
+        data['end'] = datetime.utcfromtimestamp(int(data.get('end')))
+    if 'participants' in data:
+        data['participant_list'] = []
+        for p in data['participants']:
+            if 'status' not in p:
+                p['status'] = 'awaiting'
+            data['participant_list'].append(p)
+        del data['participants']
+
+    try:
+        result = events.crud.update(g.namespace, g.db_session,
+                                    public_id, data)
+    except InputError as e:
+        return err(404, e.message)
+
+    if result is None:
+        return err(404, "Couldn't find event with id {0}".
+                   format(public_id))
+    return g.encoder.jsonify(result)
 
 
 @app.route('/events/<public_id>', methods=['DELETE'])
@@ -538,7 +562,8 @@ def file_read_api(public_id):
 #
 # Upload file API. This actually supports multiple files at once
 # You can test with
-# curl http://localhost:5555/n/4s4iz36h36w17kumggi36ha2b/files --form upload=@dancingbaby.gif
+# $ curl http://localhost:5555/n/4s4iz36h36w17kumggi36ha2b/files \
+# --form upload=@dancingbaby.gif
 @app.route('/files/', methods=['POST'])
 def file_upload_api():
     all_files = []

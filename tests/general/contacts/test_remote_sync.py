@@ -8,8 +8,7 @@ from tests.util.base import (contact_sync, contacts_provider,
 # inbox.models.tables.
 config()
 from inbox.models import Contact
-from inbox.contacts.remote_sync import ContactSync
-from inbox.sync.base_sync import MergeError
+from inbox.util.misc import MergeError
 
 __all__ = ['contact_sync', 'contacts_provider']
 
@@ -19,16 +18,11 @@ ACCOUNT_ID = 1
 
 
 @pytest.fixture(scope='function')
-def alt_contact_sync(config, db):
-    return ContactSync(2)
-
-
-@pytest.fixture(scope='function')
 def alternate_contacts_provider(config, db):
     return ContactsProviderStub('alternate_provider')
 
 
-def test_merge(config, contact_sync):
+def test_merge(config):
     """Test the basic logic of the merge() function."""
     base = Contact(name='Original Name',
                    email_address='originaladdress@inboxapp.com')
@@ -36,12 +30,12 @@ def test_merge(config, contact_sync):
                      email_address='originaladdress@inboxapp.com')
     dest = Contact(name='Original Name',
                    email_address='newaddress@inboxapp.com')
-    contact_sync.merge(base, remote, dest)
+    dest.merge_from(base, remote)
     assert dest.name == 'New Name'
     assert dest.email_address == 'newaddress@inboxapp.com'
 
 
-def test_merge_conflict(config, contact_sync):
+def test_merge_conflict(config):
     """Test that merge() raises an error on conflict."""
     base = Contact(name='Original Name',
                    email_address='originaladdress@inboxapp.com')
@@ -50,7 +44,7 @@ def test_merge_conflict(config, contact_sync):
     dest = Contact(name='Some Other Name',
                    email_address='newaddress@inboxapp.com')
     with pytest.raises(MergeError):
-        contact_sync.merge(base, remote, dest)
+        dest.merge_from(base, remote)
 
     # Check no update in case of conflict
     assert dest.name == 'Some Other Name'

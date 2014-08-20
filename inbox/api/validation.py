@@ -86,7 +86,7 @@ def get_tags(tag_public_ids, namespace_id, db_session):
             tag = db_session.query(Tag). \
                 filter(Tag.namespace_id == namespace_id,
                        Tag.public_id == tag_public_id,
-                       Tag.user_created == True).one()
+                       Tag.user_created).one()
             tags.add(tag)
         except NoResultFound:
             raise InputError('Invalid tag public id {}'.format(tag_public_id))
@@ -127,3 +127,62 @@ def get_thread(thread_public_id, namespace_id, db_session):
     except NoResultFound:
         raise InputError('Invalid thread public id {}'.
                          format(thread_public_id))
+
+
+def valid_event(event):
+    try:
+        start = datetime.utcfromtimestamp(int(event.get('start')))
+    except (ValueError, TypeError):
+        raise InputError('Event start time invalid.')
+
+    try:
+        end = datetime.utcfromtimestamp(int(event.get('end')))
+    except (ValueError, TypeError):
+        raise InputError('Event end time invalid.')
+
+    if start > end:
+        raise InputError('Event cannot start after it ends.')
+
+    if not isinstance(event.get('busy'), bool):
+        raise InputError('\'busy\' must be true or false')
+
+    if not isinstance(event.get('all_day'), bool):
+        raise InputError('\'all_day\' must be true or false')
+
+    participants = event.get('participants', [])
+    for p in participants:
+        if 'email' not in p:
+            raise InputError("'participants' must must have email")
+        if 'status' in p:
+            if p['status'] not in ('yes', 'no', 'maybe', 'awaiting'):
+                raise InputError("'participants' status must be one of: "
+                                 "yes, no, maybe, awaiting")
+
+
+def valid_event_update(event):
+    try:
+        if 'start' in event:
+            datetime.utcfromtimestamp(int(event.get('start')))
+    except (ValueError, TypeError):
+        raise InputError('Event start time invalid.')
+
+    try:
+        if 'end' in event:
+            datetime.utcfromtimestamp(int(event.get('end')))
+    except (ValueError, TypeError):
+        raise InputError('Event end time invalid.')
+
+    if 'busy' in event and not isinstance(event.get('busy'), bool):
+        raise InputError('\'busy\' must be true or false')
+
+    if 'all_day' in event and not isinstance(event.get('all_day'), bool):
+        raise InputError('\'all_day\' must be true or false')
+
+    participants = event.get('participants', [])
+    for p in participants:
+        if 'email' not in p:
+            raise InputError("'participants' must must have email")
+        if 'status' in p:
+            if p['status'] not in ('yes', 'no', 'maybe', 'awaiting'):
+                raise InputError("'participants' status must be one of: "
+                                 "yes, no, maybe, awaiting")

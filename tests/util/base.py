@@ -280,7 +280,7 @@ class EventsProviderStub(object):
     def supply_event(self, subject, body, start, end, all_day, busy,
                      location='', time_zone=0, locked=False,
                      reminders='[]', recurrence="", deleted=False,
-                     raw_data=''):
+                     raw_data='', participants=[]):
         from inbox.models import Event
         from datetime import datetime
         self._events.append(Event(account_id=1,
@@ -299,7 +299,8 @@ class EventsProviderStub(object):
                                   raw_data=raw_data,
                                   reminders=reminders,
                                   recurrence=recurrence,
-                                  deleted=deleted))
+                                  deleted=deleted,
+                                  participants=[]))
         self._next_uid += 1
 
     def get_items(self, *args, **kwargs):

@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Enum, ForeignKey, Text
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.schema import UniqueConstraint
 
+from inbox.util.misc import merge_attr
 from inbox.models.mixins import HasPublicID, HasEmailAddress
 from inbox.models.transaction import HasRevisions
 from inbox.models.base import MailSyncBase
@@ -52,6 +53,12 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
     @property
     def namespace(self):
         return self.account.namespace
+
+    def merge_from(self, base, remote):
+        # This must be updated when new fields are added to the class.
+        merge_attrs = ['name', 'email_address', 'raw_data']
+        for attr in merge_attrs:
+            merge_attr(base, remote, self, attr)
 
     def copy_from(self, src):
         """ Copy fields from src."""

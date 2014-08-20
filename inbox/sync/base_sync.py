@@ -8,7 +8,7 @@ logger = get_logger()
 from inbox.basicauth import ValidationError
 from inbox.models.session import session_scope
 from inbox.util.concurrency import retry_with_logging
-from inbox.util.misc import or_none
+from inbox.util.misc import or_none, MergeError
 from inbox.models import Account
 
 
@@ -43,24 +43,17 @@ class BaseSync(gevent.Greenlet):
     def provider_name(self):
         raise NotImplementedError  # Implement in subclasses
 
-    @property
-    def merge_attrs(self):
-        raise NotImplementedError  # Implement in subclasses
-
     def last_sync(self, account):
         raise NotImplementedError  # Implement in subclasses
 
     def poll(self):
         return base_poll(self.account_id, self.provider_instance,
                          self.last_sync, self.target_obj,
-                         self.merge, self.set_last_sync)
-
-    def merge(self, base, remote, dest):
-        return base_merge(base, remote, dest, self.merge_attrs)
+                         self.set_last_sync)
 
 
 def base_poll(account_id, provider_instance, last_sync_fn, target_obj,
-              merge_fn, set_last_sync_fn):
+              set_last_sync_fn):
     """Query a remote provider for updates and persist them to the
     database.
 
@@ -80,11 +73,15 @@ def base_poll(account_id, provider_instance, last_sync_fn, target_obj,
     provider_name = provider_instance.PROVIDER_NAME
     with session_scope() as db_session:
         account = db_session.query(Account).get(account_id)
-        change_counter = Counter()
         last_sync = or_none(last_sync_fn(account),
                             datetime.datetime.isoformat)
+
+    items = provider_instance.get_items(last_sync)
+    with session_scope() as db_session:
+        account = db_session.query(Account).get(account_id)
+        change_counter = Counter()
         to_commit = []
-        for item in provider_instance.get_items(last_sync):
+        for item in items:
             item.account = account
             assert item.uid is not None, \
                 'Got remote item with null uid'
@@ -118,7 +115,7 @@ def base_poll(account_id, provider_instance, last_sync_fn, target_obj,
                 if local_item is not None:
                     try:
                         # Attempt to merge remote updates into local_item
-                        merge_fn(cached_item, item, local_item)
+                        local_item.merge_from(cached_item, item)
                         # And update cached_item to reflect both local and
                         # remote updates
                         cached_item.copy_from(local_item)
@@ -153,39 +150,3 @@ def base_poll(account_id, provider_instance, last_sync_fn, target_obj,
 
         db_session.add_all(to_commit)
         db_session.commit()
-
-
-def base_merge(base, remote, dest, merge_attrs):
-    """Merge changes from remote into dest if there are no conflicting
-    updates to remote and dest relative to base.
-
-    Parameters
-    ----------
-    base, remote, dest: target object type
-
-    Raises
-    ------
-    MergeError
-        If there is a conflict.
-    """
-    for attr_name in merge_attrs:
-        base_attr = getattr(base, attr_name)
-        remote_attr = getattr(remote, attr_name)
-        dest_attr = getattr(dest, attr_name)
-        if base_attr != remote_attr != dest_attr != base_attr:
-            raise MergeError('Conflicting updates to items {0}, {1} from '
-                             'base {2} on attr: {3}'.format(remote,
-                                                            dest,
-                                                            base,
-                                                            attr_name))
-
-    # No conflicts, can merge
-    for attr_name in merge_attrs:
-        base_attr = getattr(base, attr_name)
-        remote_attr = getattr(remote, attr_name)
-        if base_attr != remote_attr:
-            setattr(dest, attr_name, remote_attr)
-
-
-class MergeError(Exception):
-    pass

@@ -7,6 +7,7 @@ from inbox.models.block import Block, Part
 from inbox.models.constants import MAX_FOLDER_NAME_LENGTH
 from inbox.models.contact import MessageContactAssociation, Contact
 from inbox.models.event import Event
+from inbox.models.participant import Participant
 from inbox.models.folder import Folder, FolderItem
 from inbox.models.lens import Lens
 from inbox.models.message import Message
@@ -21,5 +22,5 @@ from inbox.models.backends import module_registry as backend_module_registry
 __all__ = ['Account', 'ActionLog', 'MailSyncBase', 'Block', 'Part',
            'MessageContactAssociation', 'Contact', 'Event', 'Folder',
            'FolderItem', 'Lens', 'Message', 'Namespace',
-           'Tag', 'TagItem', 'Thread', 'Transaction',
+           'Tag', 'TagItem', 'Thread', 'Transaction', 'Participant',
            'Webhook', 'MAX_FOLDER_NAME_LENGTH', 'backend_module_registry']

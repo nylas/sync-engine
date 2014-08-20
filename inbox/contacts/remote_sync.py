@@ -35,11 +35,6 @@ class ContactSync(BaseSync):
         return GoogleContactsProvider
 
     @property
-    def merge_attrs(self):
-        # This must be updated when new fields are added to the class.
-        return ['name', 'email_address', 'raw_data']
-
-    @property
     def target_obj(self):
         return Contact
 
