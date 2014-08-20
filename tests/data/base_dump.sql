@@ -716,8 +716,8 @@ DROP TABLE IF EXISTS `imapfolderinfo`;
 CREATE TABLE `imapfolderinfo` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `account_id` int(11) NOT NULL,
-  `uidvalidity` int(11) NOT NULL,
-  `highestmodseq` int(11) NOT NULL,
+  `uidvalidity` bigint(20) NOT NULL,
+  `highestmodseq` bigint(20) NOT NULL,
   `created_at` datetime NOT NULL,
   `updated_at` datetime NOT NULL,
   `deleted_at` datetime DEFAULT NULL,
