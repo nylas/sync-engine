@@ -52,11 +52,6 @@ Here's the state machine:
 We encapsulate sync engine instances in greenlets for cooperative coroutine
 scheduling around network I/O.
 
-We provide a ZeroRPC service for starting, stopping, and querying status on
-running syncs. We don't provide knobs to start/stop sync instances at a
-per-folder level, only at a per-account level. There's no good reason to be
-able to do so, and leaving that configurability out simplifies the interface.
-
 --------------
 SESSION SCOPES
 --------------
