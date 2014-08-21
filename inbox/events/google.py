@@ -24,6 +24,12 @@ from inbox.models.event import SUBJECT_MAX_LEN, LOCATION_MAX_LEN
 SOURCE_APP_NAME = 'InboxApp Calendar Sync Engine'
 
 
+# Silence the stupid Google API client logger
+import logging
+apiclient_logger = logging.getLogger('apiclient.discovery')
+apiclient_logger.setLevel(40)
+
+
 class GoogleEventsProvider(BaseSyncProvider):
     """A utility class to fetch and parse Google calendar data for the
     specified account using the Google Calendar API.
