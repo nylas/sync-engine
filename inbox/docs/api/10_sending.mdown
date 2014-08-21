@@ -26,9 +26,7 @@ In rare cases, message delivery can fail if the user's email gateway rejects the
 
 You can send messages without saving them as drafts beforehand. Instead of providing a draft ID, simply provide the JSON of the message object you want to send.
 
-If the message is in reply to a thread, provide the `reply_to_thread` key with the ID of the existing thread. Inbox automatically sends the message to thread participants, so you can generally omit the `to`, `cc` and `subject` attributes of the message. The `To` field is populated with all of the participants on the To line of the last message in the thread, and the `Cc` field is populated with participants CC'd on the last message in the thread. Similarly, the subject line is automatically set to the subject line of the most recent message in the thread.
-
-If you want to override these defaults when replying to a thread, simply include the attributes in the POST body of the request.
+If the message is in reply to a thread, provide the `reply_to_thread` key with the ID of the existing thread.  Note that you must explicitly specify the message's recipients in the `to`, `cc` and `bcc` fields of the post body; this is to prevent any ambiguity about whom the message will be sent to.
 
 Messages you create or send __should not include quoted text__ when they are in reply to an existing thread.
 
