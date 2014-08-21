@@ -47,6 +47,11 @@ class File(InboxAPIObject):
              "namespace", "object", "size"]
 
 
+class Event(InboxAPIObject):
+    attrs = ["id", "namespace", "subject", "body", "location", "read_only",
+             "start", "end", "participants"]
+
+
 class Namespace(InboxAPIObject):
     attrs = ["account", "email_address", "id", "namespace", "object",
              "provider"]
@@ -145,6 +150,12 @@ class APIClient(object):
 
     def get_draft(self, id, **kwargs):
         return self._get_resource("drafts", Draft, id, **kwargs)
+
+    def get_events(self, **kwargs):
+        return self._get_resources("events", Event, **kwargs)
+
+    def get_event(self, id, **kwargs):
+        return self._get_resource("events", Event, id, **kwargs)
 
     def get_files(self, **kwargs):
         return self._get_resources("files", File, **kwargs)

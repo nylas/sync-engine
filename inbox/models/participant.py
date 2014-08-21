@@ -4,6 +4,8 @@ from sqlalchemy.ext.declarative import declared_attr
 from inbox.models.base import MailSyncBase
 
 from inbox.models.mixins import HasEmailAddress, HasPublicID
+from inbox.log import get_logger
+log = get_logger()
 
 
 class Participant(MailSyncBase, HasEmailAddress, HasPublicID):
@@ -21,3 +23,12 @@ class Participant(MailSyncBase, HasEmailAddress, HasPublicID):
     @declared_attr
     def __tablename__(cls):
         return 'eventparticipant'
+
+    def copy_from(self, src):
+        if src.status is None:
+            log.error("CopyError", src=src.id)
+            assert False
+        self.email_address = src.email_address
+        self.status = src.status
+        self.name = src.name
+        self.notes = src.notes

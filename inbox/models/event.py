@@ -114,10 +114,19 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
             del self.participants_by_email[email]
 
     def merge_participant(self, p_email, base, remote):
-        dest = self.participants_by_email.get(p_email)
-        if not dest:
+        if p_email not in self.participants_by_email:
+            # Removed locally, so don't add
+            if base and remote:
+                return
             new_p = Participant(email_address=p_email)
             self.participants_by_email[p_email] = new_p
+        else:
+            # Removed by remote, don't add
+            if base and not remote:
+                del self.participants_by_email[p_email]
+                return
+
+        dest = self.participants_by_email.get(p_email)
 
         merge_attrs = ['name', 'status', 'notes']
 
@@ -164,9 +173,19 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
         self.all_day = src.all_day
         self.time_zone = src.time_zone
 
-        self.participants_by_email = {}
         for p_email, p in src.participants_by_email.iteritems():
             self.participants_by_email[p_email] = p
+            if p_email not in self.participants_by_email:
+                new_p = Participant(event_id=self.id, name=p.name,
+                                    notes=p.notes, status=p.status)
+                self.participants_by_email[p_email] = new_p
+            else:
+                old_p = self.participants_by_email[p_email]
+                old_p.copy_from(p)
+
+        for p_email in self.participants_by_email:
+            if p_email not in src.participants_by_email:
+                del self.participants_by_email[p_email]
 
     @property
     def namespace(self):
