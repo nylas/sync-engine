@@ -1,9 +1,19 @@
 """Utilities for debugging failures in development/staging."""
 from functools import wraps
+from collections import Counter
 import pdb
 from inbox.log import log_uncaught_errors
 from pyinstrument import Profiler
 import signal
+
+
+def raise_once(exc_class, counter=Counter()):
+    """Add raise_once(exc_class) in your code to raise an instance of exc_class
+    at that location, but only once for the program execution time. This is for
+    debugging retry logic, etc."""
+    if not counter['failures']:
+        counter['failures'] += 1
+        raise exc_class()
 
 
 def pause_on_exception(exception_type):

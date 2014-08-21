@@ -33,7 +33,7 @@ def get_sendmail_client(account):
         raise NotSupportedError('Inbox does not support the email provider.')
 
     sendmail_cls = getattr(sendmail_mod, sendmail_mod.SENDMAIL_CLS)
-    sendmail_client = sendmail_cls(account.id, account.namespace)
+    sendmail_client = sendmail_cls(account.id)
     return sendmail_client
 
 
