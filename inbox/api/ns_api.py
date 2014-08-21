@@ -69,11 +69,12 @@ def start():
 
     g.log = get_logger()
     try:
+        valid_public_id(g.namespace_public_id)
         g.namespace = g.db_session.query(Namespace) \
             .filter(Namespace.public_id == g.namespace_public_id).one()
 
         g.encoder = APIEncoder(g.namespace.public_id)
-    except NoResultFound:
+    except (NoResultFound, InputError):
         return err(404, "Couldn't find namespace with id `{0}` ".format(
             g.namespace_public_id))
 
