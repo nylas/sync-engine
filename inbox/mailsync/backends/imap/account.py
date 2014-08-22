@@ -159,15 +159,26 @@ def update_metadata(account_id, session, folder_name, uids, new_flags):
                         ImapUid.msg_uid.in_(uids), Folder.name == folder_name)\
                 .options(joinedload(ImapUid.message)):
             flags = new_flags[item.msg_uid].flags
+            thread = item.message.thread
             if hasattr(new_flags[item.msg_uid], 'labels'):
                 labels = new_flags[item.msg_uid].labels
-                thread = item.message.thread
                 update_thread_labels(thread, folder_name, labels, session)
             else:
                 labels = None
             item.update_imap_flags(flags, labels)
+
+            unread_status_changed = item.message.is_read != item.is_seen
+
             item.message.is_draft = item.is_draft
             item.message.is_read = item.is_seen
+
+            # We have to update the thread's read tag separately.
+            if unread_status_changed:
+                unread_tag = thread.namespace.tags['unread']
+                if not item.message.is_read:
+                    thread.apply_tag(unread_tag)
+                elif all(m.is_read for m in thread.messages):
+                    thread.remove_tag(unread_tag)
 
 
 def remove_messages(account_id, session, uids, folder):
