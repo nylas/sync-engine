@@ -77,7 +77,7 @@ class SyncbackService(gevent.Greenlet):
                 self.log.info('delegating action', action_id=log_entry.id)
                 self.worker_pool.start(worker)
 
-    def mark_for_rescheduling(self, log_entry_id):
+    def remove_from_schedule(self, log_entry_id):
         self._scheduled_actions.discard(log_entry_id)
 
     def _acquire_lock_nb(self):
@@ -122,8 +122,11 @@ class SyncbackWorker(gevent.Greenlet):
                 self.func(self.account_id, self.record_id, db_session)
             except Exception:
                 log_uncaught_errors(self.log)
-                # Wait for a bit before rescheduling.
+                # Wait for a bit, then remove the log id from the scheduled set
+                # so that it can be retried.
                 gevent.sleep(self.retry_interval)
+                self.syncback_service.remove_from_schedule(self.action_log_id)
+                raise
             else:
                 action_log_entry = db_session.query(ActionLog).get(
                     self.action_log_id)
@@ -132,4 +135,4 @@ class SyncbackWorker(gevent.Greenlet):
 
                 self.log.info('syncback action completed',
                               action_id=self.action_log_id)
-            self.syncback_service.mark_for_rescheduling(self.action_log_id)
+                self.syncback_service.remove_from_schedule(self.action_log_id)
