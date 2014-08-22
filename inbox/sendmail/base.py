@@ -73,7 +73,7 @@ def create_draft(db_session, account, to=None, subject=None,
                                  replyto_thread, is_reply, syncback=syncback)
 
 
-def update_draft(db_session, account, parent_draft, to=None, subject=None,
+def update_draft(db_session, account, original_draft, to=None, subject=None,
                  body=None, blocks=None, cc=None, bcc=None, tags=None):
     """
     Update draft.
@@ -87,7 +87,6 @@ def update_draft(db_session, account, parent_draft, to=None, subject=None,
     Message
         The new draft message object.
 
-
     Notes
     -----
     Messages, including draft messages, are immutable in Inbox.
@@ -95,20 +94,57 @@ def update_draft(db_session, account, parent_draft, to=None, subject=None,
     return its public_id (which is different than the original's).
 
     """
-    to_addr = _parse_recipients(to) if to else parent_draft.to_addr
-    cc_addr = _parse_recipients(cc) if cc else parent_draft.cc_addr
-    bcc_addr = _parse_recipients(bcc) if bcc else parent_draft.bcc_addr
-    subject = subject or parent_draft.subject
-    body = body or parent_draft.sanitized_body
-    blocks = blocks or [p for p in parent_draft.parts if p.is_attachment]
 
-    new_draft = create_and_save_draft(db_session, account, to_addr, subject,
-                                      body, blocks, cc_addr, bcc_addr, tags,
-                                      parent_draft.thread,
-                                      parent_draft.is_reply, parent_draft)
-    schedule_action('delete_draft', parent_draft, parent_draft.namespace.id,
+    def update(attr, value=None):
+        if value is not None:
+            setattr(original_draft, attr, value)
+
+            if attr == 'sanitized_body':
+                # Update size, snippet too
+                original_draft.size = len(value)
+                original_draft.calculate_html_snippet(value)
+
+    update('to_addr', _parse_recipients(to) if to else None)
+    update('cc_addr', _parse_recipients(cc) if cc else None)
+    update('bcc_addr', _parse_recipients(bcc) if bcc else None)
+    update('subject', subject if subject else None)
+    update('sanitized_body', body if body else None)
+    update('received_date', datetime.utcnow())
+
+    # Parts, tags require special handling
+    for block in blocks:
+        part = Part()
+        part.namespace_id = account.namespace.id
+        part.content_disposition = 'attachment'
+        part.content_type = block.content_type
+        part.is_inboxapp_attachment = True
+        part.data = block.data
+        part.filename = block.filename
+        original_draft.parts.append(part)
+
+        db_session.add(part)
+
+    thread = original_draft.thread
+    if tags:
+        tags_to_keep = {tag for tag in thread.tags if not tag.user_created}
+        thread.tags = tags | tags_to_keep
+
+    # Delete previous version on remote
+    schedule_action('delete_draft', original_draft,
+                    original_draft.namespace.id, db_session,
+                    inbox_uid=original_draft.inbox_uid)
+
+    # Update version  + inbox_uid, sync to remote
+    version = generate_public_id()
+    update('version', version)
+    update('inbox_uid', version)
+
+    schedule_action('save_draft', original_draft, original_draft.namespace.id,
                     db_session)
-    return new_draft
+
+    db_session.commit()
+
+    return original_draft
 
 
 def delete_draft(db_session, account, draft_public_id):
@@ -118,24 +154,17 @@ def delete_draft(db_session, account, draft_public_id):
 
     assert draft.is_draft
 
-    # Delete locally, make sure to delete all previous versions of this draft
-    # present locally too.
-    _delete_draft_versions(db_session, draft.id)
-    # Delete remotely.
-    schedule_action('delete_draft', draft, draft.namespace.id, db_session)
-
-
-def _delete_draft_versions(db_session, draft_id):
-    draft = db_session.query(Message).get(draft_id)
-
-    if draft.parent_draft_id:
-        _delete_draft_versions(db_session, draft.parent_draft_id)
-
     db_session.delete(draft)
 
     # Remove the drafts tag from the thread if there are no more drafts.
-    if not draft.thread.latest_drafts:
+    if not draft.thread.drafts:
         draft.thread.remove_tag(draft.namespace.tags['drafts'])
+
+    db_session.commit()
+
+    # Delete remotely.
+    schedule_action('delete_draft', draft, draft.namespace.id, db_session,
+                    inbox_uid=draft.inbox_uid)
 
 
 def generate_attachments(blocks):
@@ -151,12 +180,11 @@ def generate_attachments(blocks):
 def create_and_save_draft(db_session, account, to_addr=None, subject=None,
                           body=None, blocks=None, cc_addr=None, bcc_addr=None,
                           new_tags=None, thread=None, is_reply=False,
-                          parent_draft=None, syncback=True):
-    """
-    Create a draft object and commit it to the database.
-    """
+                          syncback=True):
+    """Create a draft object and commit it to the database."""
     dt = datetime.utcnow()
     uid = generate_public_id()
+    version = generate_public_id()
     to_addr = to_addr or []
     cc_addr = cc_addr or []
     bcc_addr = bcc_addr or []
@@ -174,8 +202,6 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
     # TODO(emfree): we should maybe make received_date nullable, so its value
     # doesn't change in the case of a drafted-and-later-reconciled message.
     message.received_date = dt
-    if parent_draft is not None:
-        message.parent_draft_id = parent_draft.id
     message.subject = subject
     message.sanitized_body = body
     message.to_addr = to_addr
@@ -187,8 +213,9 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
     message.is_read = True
     message.is_sent = False
     message.is_reply = is_reply
-    message.inbox_uid = uid
     message.public_id = uid
+    message.version = version
+    message.inbox_uid = version
 
     # Set the snippet
     message.calculate_html_snippet(body)
@@ -213,14 +240,9 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
 
     if is_reply:
         message.is_reply = True
-        # If we're updating a draft, copy the in-reply-to and references
-        # headers from the parent. Otherwise, construct them from the last
+        # Construct the in-reply-to and references headers from the last
         # message currently in the thread.
-        if parent_draft is not None:
-            message.in_reply_to = parent_draft.in_reply_to
-            message.references = parent_draft.references
-        else:
-            _set_reply_headers(message, thread)
+        _set_reply_headers(message, thread)
     if thread is None:
         # Create a new thread object for the draft.
         thread = Thread(

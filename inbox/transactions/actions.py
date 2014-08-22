@@ -73,7 +73,8 @@ class SyncbackService(gevent.Greenlet):
                 worker = SyncbackWorker(action_function, log_entry.id,
                                         log_entry.record_id,
                                         namespace.account_id,
-                                        syncback_service=self)
+                                        syncback_service=self,
+                                        extra_args=log_entry.extra_args)
                 self.log.info('delegating action', action_id=log_entry.id)
                 self.worker_pool.start(worker)
 
@@ -103,15 +104,18 @@ class SyncbackService(gevent.Greenlet):
 class SyncbackWorker(gevent.Greenlet):
     """A greenlet spawned to execute a single syncback action."""
     def __init__(self, func, action_log_id, record_id, account_id,
-                 syncback_service, retry_interval=30):
+                 syncback_service, retry_interval=30, extra_args=None):
         self.func = func
         self.action_log_id = action_log_id
         self.record_id = record_id
         self.account_id = account_id
         self.syncback_service = syncback_service
         self.retry_interval = retry_interval
+        self.extra_args = extra_args
+
         self.log = logger.new(record_id=record_id, action_log_id=action_log_id,
-                              action=self.func, account_id=self.account_id)
+                              action=self.func, account_id=self.account_id,
+                              extra_args=extra_args)
         gevent.Greenlet.__init__(self)
 
     def _run(self):
@@ -119,7 +123,11 @@ class SyncbackWorker(gevent.Greenlet):
         # draft, we still need to access the object to delete it on the remote.
         with session_scope(ignore_soft_deletes=False) as db_session:
             try:
-                self.func(self.account_id, self.record_id, db_session)
+                if self.extra_args:
+                    self.func(self.account_id, self.record_id, db_session,
+                              self.extra_args)
+                else:
+                    self.func(self.account_id, self.record_id, db_session)
             except Exception:
                 log_uncaught_errors(self.log)
                 # Wait for a bit, then remove the log id from the scheduled set

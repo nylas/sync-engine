@@ -39,7 +39,7 @@ class Thread(InboxAPIObject):
 
 
 class Draft(InboxAPIObject):
-    attrs = Message.attrs + ["state"]
+    attrs = Message.attrs + ["state", "version"]
 
 
 class File(InboxAPIObject):
@@ -187,5 +187,7 @@ class APIClient(object):
         send_req = requests.post(url, data=json.dumps(message))
         return send_req
 
-    def send_draft(self, draft_id):
-        return self._update_resource("send", Draft, id, {"draft_id": draft_id})
+    def send_draft(self, draft_id, version):
+        return self._update_resource("send", Draft, id,
+                                     {"draft_id": draft_id,
+                                      "version": version})

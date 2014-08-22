@@ -119,9 +119,8 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         deduped_participants = defaultdict(set)
         for m in self.messages:
             if m.is_draft:
-                # Don't use old draft revisions to compute participants.
-                if not m.is_latest:
-                    continue
+                # Don't use drafts to compute participants.
+                continue
             for phrase, address in itertools.chain(m.from_addr, m.to_addr,
                                                    m.cc_addr, m.bcc_addr):
                     deduped_participants[address].add(phrase.strip())
@@ -199,19 +198,12 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
             self.tags.add(inbox_tag)
 
     @property
-    def latest_drafts(self):
+    def drafts(self):
         """
         Return all drafts on this thread that don't have later revisions.
 
         """
-        drafts = []
-        for message in self.messages:
-            if not message.is_draft:
-                continue
-            # Only append if it's the latest revision.
-            if message.is_latest:
-                drafts.append(message)
-        return drafts
+        return [m for m in self.messages if m.is_draft]
 
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator}

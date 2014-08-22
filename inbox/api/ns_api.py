@@ -831,14 +831,20 @@ def draft_update_api(public_id):
         valid_public_id(public_id)
     except InputError:
         return err(400, 'Invalid draft id {}'.format(public_id))
-    parent_draft = g.db_session.query(Message). \
-        filter(Message.public_id == public_id).first()
-    if parent_draft is None or not parent_draft.is_draft or \
-            parent_draft.namespace.id != g.namespace.id:
+
+    data = request.get_json(force=True)
+    if data.get('version') is None:
+        return err(400, 'Must specify version to update')
+
+    version = data.get('version')
+    original_draft = g.db_session.query(Message).filter(
+        Message.public_id == public_id).first()
+    if original_draft is None or not original_draft.is_draft or \
+            original_draft.namespace.id != g.namespace.id:
         return err(404, 'No draft with public id {}'.format(public_id))
-    if not parent_draft.is_latest:
-        return err(409, 'Draft {} has already been updated to {}'.format(
-            public_id, g.encoder.cereal(parent_draft.most_recent_revision)))
+    if original_draft.version != version:
+        return err(409, 'Draft {0}.{1} has already been updated to version '
+                   '{2}'.format(public_id, version, original_draft.version))
 
     # TODO(emfree): what if you try to update a draft on a *thread* that's been
     # deleted?
@@ -858,13 +864,18 @@ def draft_update_api(public_id):
         return err(404, e.message)
 
     draft = sendmail.update_draft(g.db_session, g.namespace.account,
-                                  parent_draft, to, subject, body,
+                                  original_draft, to, subject, body,
                                   files, cc, bcc, tags)
     return g.encoder.jsonify(draft)
 
 
 @app.route('/drafts/<public_id>', methods=['DELETE'])
 def draft_delete_api(public_id):
+    data = request.get_json(force=True)
+    if data.get('version') is None:
+        return err(400, 'Must specify version to delete')
+    version = data.get('version')
+
     try:
         valid_public_id(public_id)
         draft = g.db_session.query(Message).filter(
@@ -883,6 +894,10 @@ def draft_delete_api(public_id):
         return err(400, 'Message with public id {} is not a draft'.
                    format(public_id))
 
+    if draft.version != version:
+        return err(409, 'Draft {0}.{1} has already been updated to version '
+                   '{2}'.format(public_id, version, draft.version))
+
     result = sendmail.delete_draft(g.db_session, g.namespace.account,
                                    public_id)
     return g.encoder.jsonify(result)
@@ -891,10 +906,16 @@ def draft_delete_api(public_id):
 @app.route('/send', methods=['POST'])
 def draft_send_api():
     data = request.get_json(force=True)
-    if data.get('draft_id') is None and data.get('to') is None:
-        return err(400, 'Must specify either draft id or message recipients.')
+    if data.get('draft_id') is None:
+        if data.get('to') is None:
+            return err(400, 'Must specify either draft id + version or '
+                       'message recipients.')
+    else:
+        if data.get('version') is None:
+            return err(400, 'Must specify version to send')
 
     draft_public_id = data.get('draft_id')
+    version = data.get('version')
     if draft_public_id is not None:
         try:
             valid_public_id(draft_public_id)
@@ -917,9 +938,10 @@ def draft_send_api():
         if not draft.to_addr:
             return err(400, "No 'to:' recipients specified")
 
-        if not draft.is_latest:
-            return err(409, 'Draft {} has already been updated to {}'.format(
-                draft_public_id, g.encoder.cereal(draft.most_recent_revision)))
+        if draft.version != version:
+            return err(
+                409, 'Draft {0}.{1} has already been updated to version {2}'.
+                format(draft_public_id, version, draft.version))
 
         schedule_action('send_draft', draft, g.namespace.id, g.db_session)
     else:

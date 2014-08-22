@@ -114,9 +114,9 @@ class TestAPIClient(object):
         path = self.full_path(short_path, ns_id)
         return self.client.put(path, data=json.dumps(data))
 
-    def delete(self, short_path, ns_id=1):
+    def delete(self, short_path, data=None, ns_id=1):
         path = self.full_path(short_path, ns_id)
-        return self.client.delete(path)
+        return self.client.delete(path, data=json.dumps(data))
 
 
 class TestDB(object):

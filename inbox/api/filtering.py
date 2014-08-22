@@ -224,7 +224,7 @@ def drafts(namespace_id, thread_public_id, limit, offset, db_session):
     if offset:
         query = query.offset(offset)
 
-    return [m for m in query.all() if m.is_latest]
+    return query.all()
 
 
 def files(namespace_id, message_public_id, filename, limit, offset,

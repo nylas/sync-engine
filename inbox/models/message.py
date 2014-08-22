@@ -12,7 +12,7 @@ from sqlalchemy.sql.expression import false
 
 from inbox.util.html import (plaintext2html, strip_tags,
                              extract_from_html, extract_from_plain)
-from inbox.sqlalchemy_ext.util import JSON
+from inbox.sqlalchemy_ext.util import JSON, Base36UID, generate_public_id
 
 from inbox.config import config
 from inbox.util.addr import parse_email_address_list
@@ -124,6 +124,9 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
     # In accordance with JWZ (http://www.jwz.org/doc/threading.html)
     references = Column(JSON, nullable=True)
+
+    # Only used on drafts
+    version = Column(Base36UID, nullable=True, default=generate_public_id)
 
     @validates('subject')
     def validate_length(self, key, value):
@@ -450,37 +453,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                         'remote(Message.resolved_message_id)==Message.id,'
                         'remote(Message.deleted_at)==None)',
                         uselist=False))
-
-    # For draft versioning
-    # Deletes should not be cascaded! i.e. deleting old version should not
-    # necessarily delete the newer versions.
-    parent_draft_id = Column(Integer,
-                             ForeignKey('message.id'),
-                             nullable=True)
-    parent_draft = relationship(
-        'Message',
-        remote_side='Message.id',
-        primaryjoin='and_('
-        'Message.parent_draft_id==remote(Message.id), '
-        'remote(Message.deleted_at)==None)',
-        backref=backref(
-            'child_draft', primaryjoin='and_('
-            'remote(Message.parent_draft_id)==Message.id,'
-            'remote(Message.deleted_at)==None)',
-            uselist=False))
-
-    @property
-    def is_latest(self):
-        """Returns True if this draft does not have a child revision."""
-        return self.child_draft is None
-
-    @property
-    def most_recent_revision(self):
-        """Return the most recent draft version derived from this draft."""
-        revision = self
-        while revision.child_draft is not None:
-            revision = revision.child_draft
-        return revision
 
     @classmethod
     def create_draft_message(cls, *args, **kwargs):

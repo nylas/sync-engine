@@ -119,29 +119,26 @@ def save_draft(account_id, message_id, db_session):
     remote_save_draft(account, account.drafts_folder.name,
                       mimemsg.to_string(), message.created_at)
 
-    # If this draft is created by an update_draft() call,
-    # delete the one it supercedes on the remote.
-    # Needed because our update_draft() creates a new draft
-    # message but the user expects to see the one
-    # updated draft only.
-    if message.parent_draft:
-        return delete_draft(account_id, message.parent_draft.id, db_session)
 
-
-def delete_draft(account_id, draft_id, db_session):
+def delete_draft(account_id, draft_id, db_session, args):
     """ Delete a draft from the remote backend. """
+    inbox_uid = args.get('inbox_uid')
+    assert inbox_uid
+
     with session_scope(ignore_soft_deletes=False) as db_session:
         account = db_session.query(Account).get(account_id)
-        draft = db_session.query(Message).get(draft_id)
         remote_delete_draft = \
             module_registry[account.provider].remote_delete_draft
         remote_delete_draft(account, account.drafts_folder.name,
-                            draft.inbox_uid, db_session)
+                            inbox_uid, db_session)
 
 
 def send_directly(account_id, draft_id, db_session):
-    """Send a just-created draft (as opposed to one that was previously created
-    and synced to the backend."""
+    """
+    Send a just-created draft (as opposed to one that was previously created
+    and synced to the backend.
+
+    """
     _send(account_id, draft_id, db_session)
 
 
@@ -151,7 +148,8 @@ def send_draft(account_id, draft_id, db_session):
     draft = db_session.query(Message).get(draft_id)
     # Schedule the deletion separately (we don't want to resend if sending
     # succeeds but deletion fails!)
-    schedule_action('delete_draft', draft, draft.namespace.id, db_session)
+    schedule_action('delete_draft', draft, draft.namespace.id, db_session,
+                    inbox_uid=draft.inbox_uid)
 
 
 def _send(account_id, draft_id, db_session):
@@ -192,7 +190,7 @@ def _send(account_id, draft_id, db_session):
     draft_tag = account.namespace.tags['drafts']
     draft.thread.apply_tag(sent_tag)
     # Remove the drafts tag from the thread if there are no more drafts.
-    if not draft.thread.latest_drafts:
+    if not draft.thread.drafts:
         draft.thread.remove_tag(draft_tag)
 
     return draft

@@ -1,10 +1,16 @@
 Title: Drafts
 
-A draft is a special kind of message which has not been sent, and therefore its body contents are mutable. Once sent, the body cannot be changed. Draft objects are identical to message objects sent via the API, except that they have a `state` parameter. The `state` parameter has three states:
+A draft is a special kind of message which has not been sent, and therefore its body contents are mutable. Once sent, the body cannot be changed. Draft objects are identical to message objects sent via the API, except that they have two additional parameters:
+
+1. A `state` parameter. The `state` parameter has three states:
 
 - `draft`: The default state.
 - `sending`: The draft has been queued for sending using the [Sending](#sending) API.
 - `sent`: The draft has been successfully sent.
+
+2. A `version` parameter that refers to a particular revision. 
+A draft has an unchanging ID but each revision to it receives a new version. Having a constant ID is useful for caching and
+repeated querying, while the unique version is used to prevent conflicting operations.
 
 
 # Retrieving Drafts
@@ -54,6 +60,7 @@ Note that all of these parameters are optional. If omitted, an empty draft will 
         "bgmzg0qp61oqrrmpadboiiyg3",
         "aikfl1kl73r69hevrm018jqzw"
     ]
+    "version": "evrm018jqzwbgmzg0qp61oqrr"
 }
 ```
 
@@ -96,9 +103,14 @@ Updating a draft is as simple as issuing a POST request to the draft's URI.
 POST https://api.inboxapp.com/n/<namespace_id>/drafts/<draft_id>
 ```
 
-Any fields in the body of the request will overwrite previous values.
+Post body parameters:
 
-Updating a draft returns a new draft object, with a new ID. When submitting subsequent send or save actions, you must use this new ID. Returning a new draft revision with a new ID is important in case multiple clients have queued, but not successfully sent, changes to the same draft. In these cases, the draft is forked into two separate drafts.
+* `version`
+
+The request body must contain the version of the draft you wish to update.
+Other fields are optional and will overwrite previous values.
+
+Updating a draft returns a new draft object with the same ID but different version. When submitting subsequent send or save actions, you must use this new version.
 
 # Deleting a draft
 
@@ -109,6 +121,11 @@ To delete a draft simply issue a DELETE request to the draft's URI.
 DELETE https://api.inboxapp.com/n/<namespace_id>/drafts/<draft_id>
 ```
 
+Delete body parameters:
+
+* `version`
+
+The request body must contain the version of the draft you wish to delete.
 If the draft does not exist, this request will fail.
 
 

@@ -54,13 +54,17 @@ def attachments(db):
 
 def test_create_and_get_draft(api_client, example_draft):
     r = api_client.post_data('/drafts', example_draft)
-    public_id = json.loads(r.data)['id']
     assert r.status_code == 200
+
+    public_id = json.loads(r.data)['id']
+    version = json.loads(r.data)['version']
+    assert public_id != version
 
     r = api_client.get_data('/drafts')
     matching_saved_drafts = [draft for draft in r if draft['id'] == public_id]
     assert len(matching_saved_drafts) == 1
     saved_draft = matching_saved_drafts[0]
+
     assert saved_draft['state'] == 'draft'
     assert all(saved_draft[k] == v for k, v in example_draft.iteritems())
 
@@ -137,17 +141,22 @@ def test_update_draft(api_client):
     }
     r = api_client.post_data('/drafts', original_draft)
     draft_public_id = json.loads(r.data)['id']
+    version = json.loads(r.data)['version']
 
     updated_draft = {
         'subject': 'updated draft',
         'body': 'updated draft',
+        'version': version
     }
 
     r = api_client.post_data('/drafts/{}'.format(draft_public_id),
                              updated_draft)
     updated_public_id = json.loads(r.data)['id']
+    updated_version = json.loads(r.data)['version']
 
-    assert updated_public_id != draft_public_id
+    assert updated_public_id == draft_public_id and \
+        updated_version != version
+
     drafts = api_client.get_data('/drafts')
     assert len(drafts) == 1
     assert drafts[0]['id'] == updated_public_id
@@ -160,16 +169,20 @@ def test_delete_draft(api_client):
     }
     r = api_client.post_data('/drafts', original_draft)
     draft_public_id = json.loads(r.data)['id']
+    version = json.loads(r.data)['version']
 
     updated_draft = {
         'subject': 'updated draft',
-        'body': 'updated draft'
+        'body': 'updated draft',
+        'version': version
     }
     r = api_client.post_data('/drafts/{}'.format(draft_public_id),
                              updated_draft)
     updated_public_id = json.loads(r.data)['id']
+    updated_version = json.loads(r.data)['version']
 
-    r = api_client.delete('/drafts/{}'.format(updated_public_id))
+    r = api_client.delete('/drafts/{}'.format(updated_public_id),
+                          {'version': updated_version})
 
     # Check that drafts were deleted
     drafts = api_client.get_data('/drafts')
@@ -180,8 +193,11 @@ def test_send(patch_network_functions, api_client, example_draft,
               syncback_service):
     r = api_client.post_data('/drafts', example_draft)
     draft_public_id = json.loads(r.data)['id']
+    version = json.loads(r.data)['version']
 
-    r = api_client.post_data('/send', {'draft_id': draft_public_id})
+    r = api_client.post_data('/send',
+                             {'draft_id': draft_public_id,
+                              'version': version})
 
     # TODO(emfree) do this more rigorously
     gevent.sleep(2)
@@ -206,19 +222,24 @@ def test_conflicting_updates(api_client):
     }
     r = api_client.post_data('/drafts', original_draft)
     original_public_id = json.loads(r.data)['id']
+    version = json.loads(r.data)['version']
 
     updated_draft = {
         'subject': 'updated draft',
-        'body': 'updated draft'
+        'body': 'updated draft',
+        'version': version
     }
     r = api_client.post_data('/drafts/{}'.format(original_public_id),
                              updated_draft)
     assert r.status_code == 200
     updated_public_id = json.loads(r.data)['id']
+    updated_version = json.loads(r.data)['version']
+    assert updated_version != version
 
     conflicting_draft = {
         'subject': 'conflicting draft',
-        'body': 'conflicting draft'
+        'body': 'conflicting draft',
+        'version': version
     }
     r = api_client.post_data('/drafts/{}'.format(original_public_id),
                              conflicting_draft)
@@ -232,7 +253,8 @@ def test_conflicting_updates(api_client):
 def test_update_to_nonexistent_draft(api_client):
     updated_draft = {
         'subject': 'updated draft',
-        'body': 'updated draft'
+        'body': 'updated draft',
+        'version': 'notarealversion'
     }
 
     r = api_client.post_data('/drafts/{}'.format('notarealid'), updated_draft)

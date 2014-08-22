@@ -2,9 +2,9 @@ from sqlalchemy import Column, Integer, Text, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import false
 
+from inbox.sqlalchemy_ext.util import JSON
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
-
 
 ADD_TAG_ACTIONS = {
     'inbox': 'unarchive',
@@ -34,13 +34,14 @@ def schedule_action_for_tag(tag_public_id, thread, db_session, tag_added):
         schedule_action(action, thread, thread.namespace_id, db_session)
 
 
-def schedule_action(func_name, record, namespace_id, db_session):
+def schedule_action(func_name, record, namespace_id, db_session, **kwargs):
     db_session.flush()  # Ensure that the record's id is non-null
     log_entry = ActionLog(
         action=func_name,
         table_name=record.__tablename__,
         record_id=record.id,
-        namespace_id=namespace_id)
+        namespace_id=namespace_id,
+        extra_args=kwargs)
     db_session.add(log_entry)
 
 
@@ -56,3 +57,5 @@ class ActionLog(MailSyncBase):
     record_id = Column(Integer, nullable=False)
     table_name = Column(Text(40), nullable=False)
     executed = Column(Boolean, server_default=false(), nullable=False)
+
+    extra_args = Column(JSON, nullable=True)

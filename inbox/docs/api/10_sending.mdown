@@ -18,7 +18,8 @@ In rare cases, message delivery can fail if the user's email gateway rejects the
 ```
 :::json
 {
-    "draft_id": "9nhhb7w3tinsn4zkg9vjr3cxz"
+    "draft_id": "9nhhb7w3tinsn4zkg9vjr3cxz",
+    "version": "evrm018jqzwbgmzg0qp61oqrr"
 }
 ```
 
@@ -55,6 +56,7 @@ The `/send` API returns the JSON of the draft that was queued for delivery, incl
 :::json
 {
     "id": "9nhhb7w3tinsn4zkg9vjr3cxz",
+    "version": "evrm018jqzwbgmzg0qp61oqrr",
     "state": "sending",
     "subject": "Dinner on Friday?",
     "to": [

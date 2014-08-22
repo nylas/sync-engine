@@ -41,6 +41,7 @@ def test_draft(client, data):
 
     draft = client.create_draft(message)
     draft_id = draft.id
+    draft_version = draft.version
 
     start_time = time.time()
     found_draft = False
@@ -58,7 +59,7 @@ def test_draft(client, data):
         format(TEST_MAX_DURATION_SECS, data["email"])
 
     # send the draft and check that it's been removed
-    client.send_draft(draft_id)
+    client.send_draft(draft_id, draft_version)
 
     start_time = time.time()
     found_draft = False

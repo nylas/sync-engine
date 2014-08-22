@@ -78,6 +78,7 @@ def encode(obj, namespace_public_id=None):
         # If the message is a draft (Inbox-created or otherwise):
         if obj.is_draft:
             resp['object'] = 'draft'
+            resp['version'] = obj.version
         if obj.state:
             resp['state'] = obj.state
         return resp
@@ -94,7 +95,7 @@ def encode(obj, namespace_public_id=None):
             'snippet': obj.snippet,
             'messages': [m.public_id for m in obj.messages if not
                          m.is_draft],
-            'drafts': [m.public_id for m in obj.latest_drafts],
+            'drafts': [m.public_id for m in obj.drafts],
             'tags': [{'name': tag.name, 'id': tag.public_id}
                      for tag in obj.tags]
         }
