@@ -56,11 +56,10 @@ scheduling around network I/O.
 SESSION SCOPES
 --------------
 
-Database sessions for each ImapFolderSyncMonitor are held for the duration of
-the action (e.g. poll, initial sync). Sessions for ZeroRPC requests are held
-for the duration of the request, if they need database access. ImapSyncMonitor
-only briefly accesses the database to start up and grabs a transient session
-for that.
+Database sessions are held for as short a duration as possible---just to
+query for needed information or update the local state. Long-held database
+sessions reduces scalability.
+
 """
 from __future__ import division
 
