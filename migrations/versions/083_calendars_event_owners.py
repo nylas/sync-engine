@@ -15,31 +15,11 @@ import sqlalchemy as sa
 from sqlalchemy.sql import table
 
 
-def _reset_last_synced_events():
-    from inbox.models.session import session_scope
-    from inbox.ignition import main_engine
-    engine = main_engine(pool_size=1, max_overflow=0)
-
-    Base = sa.ext.declarative.declarative_base()
-    Base.metadata.reflect(engine)
-
-    class Account(Base):
-        __table__ = Base.metadata.tables['account']
-
-    with session_scope(ignore_soft_deletes=False) as db_session:
-        for account in db_session.query(Account):
-            account.last_synced_events = None
-
-        db_session.commit()
-
-
 def upgrade():
 
     # remove old events that didn't match foreign key constraints on calendars
     event = table('event')
     op.execute(event.delete())
-
-    _reset_last_synced_events()
 
     op.create_table(
         'calendar',
@@ -101,6 +81,7 @@ def upgrade():
 
 
 def downgrade():
+    pass
     op.alter_column('eventparticipant', 'status',
                     existing_type=sa.Enum('yes', 'no', 'maybe', 'noreply'),
                     type_=sa.Enum('yes', 'no', 'maybe', 'awaiting'),

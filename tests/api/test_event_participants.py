@@ -1,3 +1,4 @@
+import pytest
 import json
 
 from inbox.models import Account
@@ -28,6 +29,14 @@ def test_api_create(events_provider, event_sync, db, api_client):
 
     e_resp = api_client.post_data('/events', e_data, ns_id)
     e_resp_data = json.loads(e_resp.data)
+
+    assert len(e_resp_data['participants']) == 1
+    participant = e_resp_data['participants'][0]
+    assert participant['name'] == e_data['participants'][0]['name']
+    assert participant['email'] == e_data['participants'][0]['email']
+    assert participant['status'] == 'noreply'
+
+    e_resp_data = api_client.get_data('/events/' + e_resp_data['id'], ns_id)
 
     assert len(e_resp_data['participants']) == 1
     participant = e_resp_data['participants'][0]
@@ -353,6 +362,15 @@ def test_api_remove_participant(events_provider, event_sync,
         assert p['email'] == e_data['participants'][i]['email']
         assert p['name'] is None
 
+    event_id = e_resp_data['id']
+    e_data['participants'].pop()
+    e_resp = api_client.put_data('/events/' + event_id, e_data, ns_id)
+    e_resp_data = json.loads(e_resp.data)
+    assert len(e_resp_data['participants']) == 4
+    for i, p in enumerate(e_resp_data['participants']):
+        assert p['email'] == e_data['participants'][i]['email']
+        assert p['name'] is None
+
 
 def test_api_update_participant_status(events_provider, event_sync,
                                        db, api_client):
@@ -408,3 +426,214 @@ def test_api_update_participant_status(events_provider, event_sync,
         assert p['email'] == e_data['participants'][i]['email']
         assert p['status'] == expected[i]
         assert p['name'] is None
+
+
+@pytest.mark.parametrize('rsvp', ['yes', 'no', 'maybe'])
+def test_api_participant_reply(events_provider, event_sync,
+                               db, api_client, rsvp):
+    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
+    ns_id = acct.namespace.public_id
+
+    e_data = {
+        'subject': 'Friday Office Party',
+        'start': 1407542195,
+        'end': 1407543195,
+        'busy': False,
+        'all_day': False,
+        'participants': [{'email': 'alyssa@example.com'},
+                         {'email': 'ben.bitdiddle@example.com'},
+                         {'email': 'pei.mihn@example.com'},
+                         {'email': 'bill.ling@example.com'},
+                         {'email': 'john.q@example.com'}]
+    }
+
+    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp_data = json.loads(e_resp.data)
+    assert len(e_resp_data['participants']) == 5
+
+    event_id = e_resp_data['id']
+    participants = e_resp_data['participants']
+    participant_id = participants[0]['id']
+
+    url = '/events/{}?'.format(event_id)
+    url += 'action=rsvp&participant_id={}&rsvp={}'.format(participant_id, rsvp)
+
+    e_resp_data = api_client.get_data(url, ns_id)
+    participants = e_resp_data['participants']
+    assert len(participants) == 5
+    assert participants[0]['status'] == rsvp
+
+    e_resp_data = api_client.get_data('/events/' + e_resp_data['id'], ns_id)
+    participants = e_resp_data['participants']
+    assert len(participants) == 5
+    assert participants[0]['status'] == rsvp
+
+
+def test_api_participant_reply_invalid_rsvp(events_provider,
+                                            event_sync,
+                                            db, api_client):
+    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
+    ns_id = acct.namespace.public_id
+
+    e_data = {
+        'subject': 'Friday Office Party',
+        'start': 1407542195,
+        'end': 1407543195,
+        'busy': False,
+        'all_day': False,
+        'participants': [{'email': 'alyssa@example.com'},
+                         {'email': 'ben.bitdiddle@example.com'},
+                         {'email': 'pei.mihn@example.com'},
+                         {'email': 'bill.ling@example.com'},
+                         {'email': 'john.q@example.com'}]
+    }
+
+    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp_data = json.loads(e_resp.data)
+    assert len(e_resp_data['participants']) == 5
+
+    event_id = e_resp_data['id']
+    participants = e_resp_data['participants']
+    participant_id = participants[0]['id']
+
+    url = '/events/{}?'.format(event_id)
+    url += 'action=rsvp&participant_id={}&rsvp={}'.format(participant_id,
+                                                          'bad')
+
+    e_resp_data = api_client.get_data(url, ns_id)
+    assert e_resp_data['type'] == 'api_error'
+
+
+def test_api_participant_reply_invalid_participant(events_provider,
+                                                   event_sync,
+                                                   db, api_client):
+    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
+    ns_id = acct.namespace.public_id
+
+    e_data = {
+        'subject': 'Friday Office Party',
+        'start': 1407542195,
+        'end': 1407543195,
+        'busy': False,
+        'all_day': False,
+        'participants': [{'email': 'alyssa@example.com'},
+                         {'email': 'ben.bitdiddle@example.com'},
+                         {'email': 'pei.mihn@example.com'},
+                         {'email': 'bill.ling@example.com'},
+                         {'email': 'john.q@example.com'}]
+    }
+
+    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp_data = json.loads(e_resp.data)
+    assert len(e_resp_data['participants']) == 5
+
+    event_id = e_resp_data['id']
+
+    url = '/events/{}?'.format(event_id)
+    url += 'action=rsvp&participant_id={}&rsvp={}'.format('bad', 'yes')
+
+    e_resp_data = api_client.get_data(url, ns_id)
+    assert e_resp_data['type'] == 'invalid_request_error'
+
+
+def test_api_participant_reply_invalid_event(events_provider,
+                                             event_sync,
+                                             db, api_client):
+    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
+    ns_id = acct.namespace.public_id
+
+    e_data = {
+        'subject': 'Friday Office Party',
+        'start': 1407542195,
+        'end': 1407543195,
+        'busy': False,
+        'all_day': False,
+        'participants': [{'email': 'alyssa@example.com'},
+                         {'email': 'ben.bitdiddle@example.com'},
+                         {'email': 'pei.mihn@example.com'},
+                         {'email': 'bill.ling@example.com'},
+                         {'email': 'john.q@example.com'}]
+    }
+
+    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp_data = json.loads(e_resp.data)
+    assert len(e_resp_data['participants']) == 5
+
+    participants = e_resp_data['participants']
+    participant_id = participants[0]['id']
+
+    url = '/events/{}?'.format(participant_id)
+    url += 'action=rsvp&participant_id={}&rsvp={}'.format(participant_id,
+                                                          'yes')
+
+    e_resp_data = api_client.get_data(url, ns_id)
+    assert e_resp_data['type'] == 'invalid_request_error'
+
+
+def test_api_participant_reply_invalid_event2(events_provider,
+                                              event_sync,
+                                              db, api_client):
+    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
+    ns_id = acct.namespace.public_id
+
+    e_data = {
+        'subject': 'Friday Office Party',
+        'start': 1407542195,
+        'end': 1407543195,
+        'busy': False,
+        'all_day': False,
+        'participants': [{'email': 'alyssa@example.com'},
+                         {'email': 'ben.bitdiddle@example.com'},
+                         {'email': 'pei.mihn@example.com'},
+                         {'email': 'bill.ling@example.com'},
+                         {'email': 'john.q@example.com'}]
+    }
+
+    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp_data = json.loads(e_resp.data)
+    assert len(e_resp_data['participants']) == 5
+
+    participants = e_resp_data['participants']
+    participant_id = participants[0]['id']
+
+    url = '/events/{}?'.format('bad')
+    url += 'action=rsvp&participant_id={}&rsvp={}'.format(participant_id,
+                                                          'yes')
+
+    e_resp_data = api_client.get_data(url, ns_id)
+    assert e_resp_data['type'] == 'invalid_request_error'
+
+
+def test_api_participant_reply_invalid_action(events_provider,
+                                              event_sync,
+                                              db, api_client):
+    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
+    ns_id = acct.namespace.public_id
+
+    e_data = {
+        'subject': 'Friday Office Party',
+        'start': 1407542195,
+        'end': 1407543195,
+        'busy': False,
+        'all_day': False,
+        'participants': [{'email': 'alyssa@example.com'},
+                         {'email': 'ben.bitdiddle@example.com'},
+                         {'email': 'pei.mihn@example.com'},
+                         {'email': 'bill.ling@example.com'},
+                         {'email': 'john.q@example.com'}]
+    }
+
+    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp_data = json.loads(e_resp.data)
+    assert len(e_resp_data['participants']) == 5
+
+    event_id = e_resp_data['id']
+    participants = e_resp_data['participants']
+    participant_id = participants[0]['id']
+
+    url = '/events/{}?'.format(event_id)
+    url += 'action=bad&participant_id={}&rsvp={}'.format(participant_id,
+                                                         'yes')
+
+    e_resp_data = api_client.get_data(url, ns_id)
+    assert e_resp_data['type'] == 'api_error'

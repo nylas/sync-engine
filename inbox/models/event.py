@@ -94,7 +94,8 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
         return [{'name': p.name,
                  'email': p.email_address,
                  'status': p.status,
-                 'notes': p.notes}
+                 'notes': p.notes,
+                 'id': p.public_id}
                 for p in self.participants_by_email.values()]
 
     @participant_list.setter

@@ -186,3 +186,15 @@ def valid_event_update(event):
             if p['status'] not in ('yes', 'no', 'maybe', 'noreply'):
                 raise InputError("'participants' status must be one of: "
                                  "yes, no, maybe, noreply")
+
+
+def valid_event_action(action):
+    if action not in ['rsvp']:
+        raise InputError('Invalid event action: {}'.format(action))
+    return action
+
+
+def valid_rsvp(rsvp):
+    if rsvp not in ['yes', 'no', 'maybe']:
+        raise InputError('Invalid rsvp: {}'.format(rsvp))
+    return rsvp

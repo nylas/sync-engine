@@ -10,14 +10,14 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import subqueryload
 
 from inbox.models import (Message, Block, Thread, Namespace, Webhook,
-                          Tag, Contact, Event)
+                          Tag, Contact, Event, Participant)
 from inbox.api.kellogs import APIEncoder
 from inbox.api import filtering
 from inbox.api.validation import (InputError, get_tags, get_attachments,
                                   get_thread, valid_public_id, valid_event,
                                   valid_event_update, timestamp, bounded_str,
-                                  strict_parse_args, limit,
-                                  ValidatableArgument)
+                                  strict_parse_args, limit, valid_event_action,
+                                  valid_rsvp, ValidatableArgument)
 from inbox.config import config
 from inbox import events, contacts, sendmail
 from inbox.log import get_logger
@@ -483,6 +483,41 @@ def event_create_api():
 def event_read_api(public_id):
     # TODO auth with account object
     # Get all data for an existing event.
+
+    g.parser.add_argument('participant_id', type=valid_public_id,
+                          location='args')
+    g.parser.add_argument('action', type=valid_event_action, location='args')
+    g.parser.add_argument('rsvp', type=valid_rsvp, location='args')
+    args = strict_parse_args(g.parser, request.args)
+
+    if 'action' in args:
+        # Participants are able to RSVP to events by clicking on links (e.g.
+        # that are emailed to them). Therefore, the RSVP action is invoked via
+        # a GET.
+        if args['action'] == 'rsvp':
+            try:
+                participant_id = args.get('participant_id')
+                if not participant_id:
+                    return err(404, "Must specify a participant_id with rsvp")
+
+                participant = g.db_session.query(Participant).filter_by(
+                    public_id=participant_id).one()
+
+                participant.status = args['rsvp']
+                g.db_session.commit()
+
+                result = events.crud.read(g.namespace, g.db_session,
+                                          public_id)
+
+                if result is None:
+                    return err(404, "Couldn't find event with id {0}"
+                               .format(public_id))
+
+                return g.encoder.jsonify(result)
+            except NoResultFound:
+                return err(404, "Couldn't find participant with id `{0}` "
+                           .format(participant_id))
+
     result = events.crud.read(g.namespace, g.db_session, public_id)
     if result is None:
         return err(404, "Couldn't find event with id {0}".
