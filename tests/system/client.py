@@ -72,8 +72,8 @@ class APIClient(object):
         namespaces = cls.namespaces()
         for ns in namespaces:
             if ns["email_address"] == email_address:
-                return cls(ns["id"])
-        return None
+                return (cls(ns["id"]), ns)
+        return (None, None)
 
     def __init__(self, namespace, apiBase="http://localhost:5555/n/"):
         self.namespace = namespace
