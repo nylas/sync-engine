@@ -131,7 +131,7 @@ def tag_read_update_api(public_id):
         tag = g.db_session.query(Tag).filter(
             Tag.public_id == public_id,
             Tag.namespace_id == g.namespace.id).one()
-    except ValueError:
+    except InputError:
         return err(400, '{} is not a valid id'.format(public_id))
     except NoResultFound:
         return err(404, 'No tag found')
@@ -214,13 +214,14 @@ def thread_query_api():
 
 @app.route('/threads/<public_id>')
 def thread_api(public_id):
-    public_id = public_id.lower()
     try:
+        valid_public_id(public_id)
         thread = g.db_session.query(Thread).filter(
             Thread.public_id == public_id,
             Thread.namespace_id == g.namespace.id).one()
         return g.encoder.jsonify(thread)
-
+    except InputError:
+        return err(400, 'Invalid thread id {}'.format(public_id))
     except NoResultFound:
         return err(404, "Couldn't find thread with id `{0}` "
                    "on namespace {1}".format(public_id, g.namespace_public_id))
@@ -232,9 +233,12 @@ def thread_api(public_id):
 @app.route('/threads/<public_id>', methods=['PUT'])
 def thread_api_update(public_id):
     try:
+        valid_public_id(public_id)
         thread = g.db_session.query(Thread).filter(
             Thread.public_id == public_id,
             Thread.namespace_id == g.namespace.id).one()
+    except InputError:
+        return err(400, 'Invalid draft id {}'.format(public_id))
     except NoResultFound:
         return err(404, "Couldn't find thread with id `{0}` "
                    "on namespace {1}".format(public_id, g.namespace_public_id))
@@ -327,10 +331,12 @@ def message_query_api():
 @app.route('/messages/<public_id>', methods=['GET', 'PUT'])
 def message_api(public_id):
     try:
+        valid_public_id(public_id)
         message = g.db_session.query(Message).filter(
             Message.public_id == public_id).one()
         assert int(message.namespace.id) == int(g.namespace.id)
-
+    except InputError:
+        return err(400, 'Invalid message id {}'.format(public_id))
     except NoResultFound:
         return err(404,
                    "Couldn't find message with id {0} "
@@ -396,6 +402,10 @@ def contact_create_api():
 
 @app.route('/contacts/<public_id>', methods=['GET'])
 def contact_read_api(public_id):
+    try:
+        valid_public_id(public_id)
+    except InputError:
+        return err(400, 'Invalid contact id {}'.format(public_id))
     # TODO auth with account object
     # Get all data for an existing contact.
     result = contacts.crud.read(g.namespace, g.db_session, public_id)
@@ -481,9 +491,11 @@ def event_create_api():
 
 @app.route('/events/<public_id>', methods=['GET'])
 def event_read_api(public_id):
-    # TODO auth with account object
-    # Get all data for an existing event.
-
+    """Get all data for an existing event."""
+    try:
+        valid_public_id(public_id)
+    except InputError:
+        return err(400, 'Invalid event id {}'.format(public_id))
     g.parser.add_argument('participant_id', type=valid_public_id,
                           location='args')
     g.parser.add_argument('action', type=valid_event_action, location='args')
@@ -527,6 +539,10 @@ def event_read_api(public_id):
 
 @app.route('/events/<public_id>', methods=['PUT'])
 def event_update_api(public_id):
+    try:
+        valid_public_id(public_id)
+    except InputError:
+        return err(400, 'Invalid event id {}'.format(public_id))
     data = request.get_json(force=True)
 
     try:
@@ -588,6 +604,7 @@ def files_api():
 @app.route('/files/<public_id>')
 def file_read_api(public_id):
     try:
+        valid_public_id(public_id)
         f = g.db_session.query(Block).filter(
             Block.public_id == public_id).one()
         if hasattr(f, 'message'):
@@ -599,7 +616,8 @@ def file_read_api(public_id):
             g.log.debug("This block doesn't have a corresponding message: {}"
                         .format(f.public_id))
         return g.encoder.jsonify(f)
-
+    except InputError:
+        return err(400, 'Invalid file id {}'.format(public_id))
     except NoResultFound:
         return err(404, "Couldn't find file with id {0} "
                    "on namespace {1}".format(public_id, g.namespace_public_id))
@@ -634,9 +652,12 @@ def file_upload_api():
 @app.route('/files/<public_id>/download')
 def file_download_api(public_id):
     try:
+        valid_public_id(public_id)
         f = g.db_session.query(Block).filter(
             Block.public_id == public_id).one()
         assert int(f.namespace_id) == int(g.namespace.id)
+    except InputError:
+        return err(400, 'Invalid file id {}'.format(public_id))
     except NoResultFound:
         return err(404, "Couldn't find file with id {0} "
                    "on namespace {1}".format(public_id, g.namespace_public_id))
@@ -713,6 +734,10 @@ def webhooks_create_api():
 
 @app.route('/webhooks/<public_id>', methods=['GET', 'PUT'])
 def webhooks_read_update_api(public_id):
+    try:
+        valid_public_id(public_id)
+    except InputError:
+        return err(400, 'Invalid webhook id {}'.format(public_id))
     if request.method == 'GET':
         try:
             hook = g.db_session.query(Webhook).filter(
@@ -764,6 +789,10 @@ def draft_query_api():
 
 @app.route('/drafts/<public_id>', methods=['GET'])
 def draft_get_api(public_id):
+    try:
+        valid_public_id(public_id)
+    except InputError:
+        return err(400, 'Invalid draft id {}'.format(public_id))
     draft = sendmail.get_draft(g.db_session, g.namespace.account, public_id)
     if draft is None:
         return err(404, 'No draft found with id {}'.format(public_id))
@@ -798,6 +827,10 @@ def draft_create_api():
 
 @app.route('/drafts/<public_id>', methods=['POST'])
 def draft_update_api(public_id):
+    try:
+        valid_public_id(public_id)
+    except InputError:
+        return err(400, 'Invalid draft id {}'.format(public_id))
     parent_draft = g.db_session.query(Message). \
         filter(Message.public_id == public_id).first()
     if parent_draft is None or not parent_draft.is_draft or \
@@ -833,8 +866,11 @@ def draft_update_api(public_id):
 @app.route('/drafts/<public_id>', methods=['DELETE'])
 def draft_delete_api(public_id):
     try:
+        valid_public_id(public_id)
         draft = g.db_session.query(Message).filter(
             Message.public_id == public_id).one()
+    except InputError:
+        return err(400, 'Invalid public id {}'.format(public_id))
     except NoResultFound:
         return err(404, 'No draft found with public_id {}'.
                    format(public_id))
@@ -861,8 +897,11 @@ def draft_send_api():
     draft_public_id = data.get('draft_id')
     if draft_public_id is not None:
         try:
+            valid_public_id(draft_public_id)
             draft = g.db_session.query(Message).filter(
                 Message.public_id == draft_public_id).one()
+        except InputError:
+            return err(400, 'Invalid public id {}'.format(draft_public_id))
         except NoResultFound:
             return err(404, 'No draft found with id {}'.
                        format(draft_public_id))
