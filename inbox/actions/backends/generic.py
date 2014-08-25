@@ -8,6 +8,7 @@ from sqlalchemy.orm import joinedload
 from inbox.actions.backends.imap import uidvalidity_cb, syncback_action
 from inbox.models.backends.imap import ImapThread
 from inbox.models.message import Message
+from inbox.models.folder import Folder
 
 PROVIDER = 'generic'
 
@@ -25,14 +26,19 @@ def get_thread_uids(db_session, thread_id):
 
 
 def set_remote_archived(account, thread_id, archived, db_session):
-    assert account.archive_folder, 'account {} has no detected archive folder'\
-        .format(account.id)
+    if account.archive_folder is None:
+        # account has no detected archive folder - create one.
+        archive_folder = Folder.find_or_create(db_session, account,
+                                               'Archive', 'archive')
+        account.archive_folder = archive_folder
+
     if archived:
-        return remote_move(account, thread_id, account.inbox_folder,
-                           account.archive_folder, db_session)
+        return remote_move(account, thread_id, account.inbox_folder.name,
+                           account.archive_folder.name, db_session,
+                           create_destination=True)
     else:
-        return remote_move(account, thread_id, account.archive_folder,
-                           account.inbox_folder, db_session)
+        return remote_move(account, thread_id, account.archive_folder.name,
+                           account.inbox_folder.name, db_session)
 
 
 def set_remote_starred(account, thread_id, starred, db_session):
@@ -60,7 +66,8 @@ def set_remote_unread(account, thread_id, unread, db_session):
     return syncback_action(fn, account, account.inbox_folder.name, db_session)
 
 
-def remote_move(account, thread_id, from_folder, to_folder, db_session):
+def remote_move(account, thread_id, from_folder, to_folder, db_session,
+                create_destination=False):
     if from_folder == to_folder:
         return
 
@@ -73,6 +80,9 @@ def remote_move(account, thread_id, from_folder, to_folder, db_session):
 
         if to_folder not in folders.values() and \
            to_folder not in folders['extra']:
+            if create_destination:
+                crispin_client.create_folder(to_folder)
+            else:
                 raise Exception("Unknown to_folder '{}'".format(to_folder))
 
         crispin_client.select_folder(from_folder, uidvalidity_cb)

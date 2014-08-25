@@ -415,6 +415,9 @@ class CrispinClient(object):
 
         return status
 
+    def create_folder(self, name):
+        self.conn.create_folder(name)
+
     def search_uids(self, criteria):
         """ Find not-deleted UIDs in this folder matching the criteria.
 
