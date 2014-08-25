@@ -126,7 +126,7 @@ def test_api_create_ical(events_provider, event_sync, db, api_client):
     assert 'Filet Minyon' in part_names
     for p in e_resp_data['participants']:
         if p['name'] == 'John Q. Public':
-            assert p['status'] == 'awaiting'
+            assert p['status'] == 'noreply'
             assert p['email'] == 'johnqpublic@example.com'
         if p['name'] == 'Alyssa P Hacker':
             assert p['notes'] == 'Guests: 1'

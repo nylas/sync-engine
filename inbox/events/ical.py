@@ -5,7 +5,7 @@ from inbox.models import Event, Participant
 from inbox.events.util import MalformedEventError
 
 
-def events_from_ics(namespace, ics_str):
+def events_from_ics(namespace, calendar, ics_str):
     try:
         cal = Calendar.from_ical(ics_str)
     except ValueError:
@@ -41,11 +41,11 @@ def events_from_ics(namespace, ics_str):
                 except KeyError:
                     name = None
 
-                status_map = {'NEEDS-ACTION': 'awaiting',
+                status_map = {'NEEDS-ACTION': 'noreply',
                               'ACCEPTED': 'yes',
                               'DECLINED': 'no',
                               'TENTATIVE': 'maybe'}
-                status = 'awaiting'
+                status = 'noreply'
                 try:
                     a_status = attendee.params['PARTSTAT']
                     status = status_map[a_status]
@@ -75,6 +75,7 @@ def events_from_ics(namespace, ics_str):
             uid = str(component.get('uid'))
             event = Event(
                 account_id=namespace.account_id,
+                calendar=calendar,
                 uid=uid,
                 provider_name='ics',
                 raw_data=component.to_ical(),
@@ -87,8 +88,7 @@ def events_from_ics(namespace, ics_str):
                 end=end,
                 busy=True,
                 all_day=all_day,
-                locked=True,
-                time_zone=0,
+                read_only=True,
                 source='local')
 
             event.participants = participants

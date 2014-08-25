@@ -33,7 +33,7 @@ def test_api_create(events_provider, event_sync, db, api_client):
     participant = e_resp_data['participants'][0]
     assert participant['name'] == e_data['participants'][0]['name']
     assert participant['email'] == e_data['participants'][0]['email']
-    assert participant['status'] == 'awaiting'
+    assert participant['status'] == 'noreply'
 
 
 def test_api_create_status_yes(events_provider, event_sync, db, api_client):
@@ -87,10 +87,10 @@ def test_api_create_multiple(events_provider, event_sync, db, api_client):
     participant1 = e_resp_data['participants'][1]
     assert participant0['name'] is None
     assert participant0['email'] == e_data['participants'][0]['email']
-    assert participant0['status'] == 'awaiting'
+    assert participant0['status'] == 'noreply'
     assert participant1['name'] is None
     assert participant1['email'] == e_data['participants'][1]['email']
-    assert participant1['status'] == 'awaiting'
+    assert participant1['status'] == 'noreply'
 
 
 def test_api_create_status_no(events_provider, event_sync, db, api_client):
@@ -145,8 +145,8 @@ def test_api_create_status_maybe(events_provider, event_sync, db, api_client):
     assert participant['status'] == e_data['participants'][0]['status']
 
 
-def test_api_create_status_awaiting(events_provider, event_sync, db,
-                                    api_client):
+def test_api_create_status_noreply(events_provider, event_sync, db,
+                                   api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
@@ -158,7 +158,7 @@ def test_api_create_status_awaiting(events_provider, event_sync, db,
         'all_day': False,
         'participants': [{
             'email': 'alyssa@example.com',
-            'status': 'awaiting'
+            'status': 'noreply'
             }]
     }
 
@@ -194,7 +194,7 @@ def test_api_create_no_name(events_provider, event_sync, db, api_client):
     participant = e_resp_data['participants'][0]
     assert participant['name'] is None
     assert participant['email'] == e_data['participants'][0]['email']
-    assert participant['status'] == 'awaiting'
+    assert participant['status'] == 'noreply'
 
 
 def test_api_create_no_email(events_provider, event_sync, db, api_client):
@@ -353,15 +353,6 @@ def test_api_remove_participant(events_provider, event_sync,
         assert p['email'] == e_data['participants'][i]['email']
         assert p['name'] is None
 
-    event_id = e_resp_data['id']
-    e_data['participants'].pop()
-    e_resp = api_client.put_data('/events/' + event_id, e_data, ns_id)
-    e_resp_data = json.loads(e_resp.data)
-    assert len(e_resp_data['participants']) == 4
-    for i, p in enumerate(e_resp_data['participants']):
-        assert p['email'] == e_data['participants'][i]['email']
-        assert p['name'] is None
-
 
 def test_api_update_participant_status(events_provider, event_sync,
                                        db, api_client):
@@ -412,7 +403,7 @@ def test_api_update_participant_status(events_provider, event_sync,
     assert e_resp_data['all_day'] is False
 
     assert len(e_resp_data['participants']) == 5
-    expected = ['yes', 'no', 'maybe', 'awaiting', 'awaiting']
+    expected = ['yes', 'no', 'maybe', 'noreply', 'noreply']
     for i, p in enumerate(e_resp_data['participants']):
         assert p['email'] == e_data['participants'][i]['email']
         assert p['status'] == expected[i]

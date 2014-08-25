@@ -4,7 +4,7 @@ import uuid
 
 from sqlalchemy.orm import subqueryload
 
-from inbox.models import Event
+from inbox.models import Account, Event
 from inbox.events.ical import events_from_ics
 from inbox.events.util import MalformedEventError
 
@@ -13,7 +13,10 @@ INBOX_PROVIDER_NAME = 'inbox'
 
 def create(namespace, db_session, subject, body, location, reminders,
            recurrence, start, end, busy, all_day, participants):
+    account = db_session.query(Account).filter(
+        Account.id == namespace.account_id).one()
     event = Event(
+        calendar=account.default_calendar,
         account_id=namespace.account_id,
         uid=uuid.uuid4().hex,
         provider_name=INBOX_PROVIDER_NAME,
@@ -27,8 +30,8 @@ def create(namespace, db_session, subject, body, location, reminders,
         end=end,
         busy=busy,
         all_day=all_day,
-        locked=False,
-        time_zone=0,
+        read_only=False,
+        is_owner=True,
         source='local')
 
     event.participant_list = participants
@@ -39,8 +42,10 @@ def create(namespace, db_session, subject, body, location, reminders,
 
 
 def create_from_ics(namespace, db_session, ics_str):
+    account = db_session.query(Account).filter(
+        Account.id == namespace.account_id).one()
     try:
-        events = events_from_ics(namespace, ics_str)
+        events = events_from_ics(namespace, account.default_calendar, ics_str)
     except MalformedEventError:
         return None
     db_session.add_all(events)

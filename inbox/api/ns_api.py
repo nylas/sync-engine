@@ -463,7 +463,7 @@ def event_create_api():
     participants = data.get('participants', [])
     for p in participants:
         if 'status' not in p:
-            p['status'] = 'awaiting'
+            p['status'] = 'noreply'
 
     new_contact = events.crud.create(g.namespace, g.db_session,
                                      subject,
@@ -499,27 +499,26 @@ def event_update_api(public_id):
     except InputError as e:
         return err(404, e.message)
 
+    # Convert the data into our types where necessary
+    # e.g. timestamps, participant_list
     if 'start' in data:
         data['start'] = datetime.utcfromtimestamp(int(data.get('start')))
-
     if 'end' in data:
         data['end'] = datetime.utcfromtimestamp(int(data.get('end')))
-
-    if 'busy' in data:
-        data['busy'] = int(data.get('busy'))
-
-    if 'all_day' in data:
-        data['all_day'] = int(data.get('all_day'))
-
     if 'participants' in data:
-        data['participant_list'] = data['participants']
-        del data['participants']
-        for p in data['participant_list']:
+        data['participant_list'] = []
+        for p in data['participants']:
             if 'status' not in p:
-                p['status'] = 'awaiting'
+                p['status'] = 'noreply'
+            data['participant_list'].append(p)
+        del data['participants']
 
-    result = events.crud.update(g.namespace, g.db_session,
-                                public_id, data)
+    try:
+        result = events.crud.update(g.namespace, g.db_session,
+                                    public_id, data)
+    except InputError as e:
+        return err(404, e.message)
+
     if result is None:
         return err(404, "Couldn't find event with id {0}".
                    format(public_id))

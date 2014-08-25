@@ -7,19 +7,17 @@ from apiclient.discovery import build
 from oauth2client.client import OAuth2Credentials
 from oauth2client.client import AccessTokenRefreshError
 
-from inbox.log import get_logger
-logger = get_logger()
 from inbox.basicauth import ConnectionError, ValidationError
 from inbox.oauth import OAuthError
-from inbox.models.session import session_scope
 from inbox.models import Event, Participant
+from inbox.models.session import session_scope
 from inbox.models.backends.gmail import GmailAccount
 from inbox.auth.gmail import (OAUTH_CLIENT_ID,
                               OAUTH_CLIENT_SECRET,
                               OAUTH_ACCESS_TOKEN_URL)
-from inbox.sync.base_sync_provider import BaseSyncProvider
 from inbox.events.util import MalformedEventError, parse_datetime
 from inbox.models.event import SUBJECT_MAX_LEN, LOCATION_MAX_LEN
+from inbox.events.base import BaseEventProvider
 
 SOURCE_APP_NAME = 'InboxApp Calendar Sync Engine'
 
@@ -30,7 +28,7 @@ apiclient_logger = logging.getLogger('apiclient.discovery')
 apiclient_logger.setLevel(40)
 
 
-class GoogleEventsProvider(BaseSyncProvider):
+class GoogleEventsProvider(BaseEventProvider):
     """A utility class to fetch and parse Google calendar data for the
     specified account using the Google Calendar API.
 
@@ -48,15 +46,8 @@ class GoogleEventsProvider(BaseSyncProvider):
     """
     PROVIDER_NAME = 'google'
 
-    def __init__(self, account_id):
-        self.account_id = account_id
-        self.log = logger.new(account_id=account_id, component='event sync',
-                              provider=self.PROVIDER_NAME)
-
     def _get_google_service(self):
         """Return the Google API client."""
-        # TODO(emfree) figure out a better strategy for refreshing OAuth
-        # credentials as needed
         with session_scope() as db_session:
             try:
                 account = db_session.query(GmailAccount).get(self.account_id)
@@ -101,22 +92,22 @@ class GoogleEventsProvider(BaseSyncProvider):
                 db_session.commit()
                 raise ConnectionError
 
-    def _parse_event(self, cal_info, event):
-        """Constructs a Calendar object from a Google calendar entry.
+    def parse_event(self, event, cal_info):
+        """Constructs an Event object from a Google calendar entry.
 
         Parameters
         ----------
-        google_calendar: gdata.calendar.entry.CalendarEntry
+        event: gdata.calendar.entry.CalendarEntry
             The Google calendar entry to parse.
 
         Returns
         -------
-        ..models.tables.base.Calendar
-            A corresponding Inbox Calendar instance.
+        ..models.tables.base.Event
+            A corresponding Inbox Event instance.
 
         Raises
         ------
-        AttributeError
+        MalformedEventError
            If the calendar data could not be parsed correctly.
         """
 
@@ -142,7 +133,8 @@ class GoogleEventsProvider(BaseSyncProvider):
             if location:
                 location = location[:LOCATION_MAX_LEN]
             all_day = False
-            locked = True
+            read_only = True
+            is_owner = False
 
             start = event['start']
             end = event['end']
@@ -177,7 +169,7 @@ class GoogleEventsProvider(BaseSyncProvider):
 
             # Convert google's notion of status into our own
             participants = []
-            status_map = {'accepted': 'yes', 'needsAction': 'awaiting',
+            status_map = {'accepted': 'yes', 'needsAction': 'noreply',
                           'declined': 'no', 'tentative': 'maybe'}
             for attendee in event.get('attendees', []):
                 g_status = attendee.get('responseStatus')
@@ -205,12 +197,13 @@ class GoogleEventsProvider(BaseSyncProvider):
                                                 notes=notes))
 
             if 'self' in event['creator']:
-                locked = False
+                is_owner = True
+                read_only = False
             elif 'guestsCanModify' in event:
-                locked = False
+                read_only = False
 
-            time_zone = cal_info['timeZone']
-            time_zone = 0  # FIXME: this ain't right -cg3
+            owner = "{} <{}>".format(event['creator']['displayName'],
+                                     event['creator']['email'])
 
         except (KeyError, AttributeError):
             raise MalformedEventError()
@@ -226,28 +219,15 @@ class GoogleEventsProvider(BaseSyncProvider):
                      recurrence=recurrence,
                      start=start,
                      end=end,
+                     owner=owner,
+                     is_owner=is_owner,
                      busy=busy,
                      all_day=all_day,
-                     locked=locked,
-                     time_zone=time_zone,
+                     read_only=read_only,
                      source='remote',
                      participants=participants)
 
-    def get_items(self, sync_from_time=None):
-        """Fetches and parses fresh event data.
-
-        Parameters
-        ----------
-        sync_from_time: str, optional
-            A time in ISO 8601 format: If not None, fetch data for calendars
-            that have been updated since this time. Otherwise fetch all
-            calendar data.
-
-        Yields
-        ------
-        ..models.tables.base.Events
-            The events that have been updated since the last account sync.
-        """
+    def fetch_items(self, sync_from_time=None):
         service = self._get_google_service()
         try:
             resp = service.events().list(calendarId=self.email).execute()
@@ -260,12 +240,8 @@ class GoogleEventsProvider(BaseSyncProvider):
                 db_session.commit()
             raise ValidationError
 
-        events = []
-        for response_event in resp['items']:
-            try:
-                events.append(self._parse_event(resp, response_event))
-            except MalformedEventError:
-                self.log.warning('Malformed event',
-                                 google_event=response_event)
+        # Make sure we have a calendar associated with these events
+        calendar_id = self.get_calendar_id(resp['summary'])
 
-        return events
+        for response_event in resp['items']:
+            yield (calendar_id, response_event, resp)

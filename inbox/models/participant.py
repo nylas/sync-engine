@@ -1,4 +1,5 @@
-from sqlalchemy import Column, String, Text, Enum, UniqueConstraint, ForeignKey
+from sqlalchemy import (Column, String, Text, Enum, Integer,
+                        UniqueConstraint, ForeignKey)
 from sqlalchemy.ext.declarative import declared_attr
 
 from inbox.models.base import MailSyncBase
@@ -16,9 +17,10 @@ class Participant(MailSyncBase, HasEmailAddress, HasPublicID):
                                        'event_id', name='uid'),)
 
     name = Column(String(255), nullable=True)
-    status = Column(Enum('yes', 'no', 'maybe', 'awaiting'),
-                    default='awaiting', nullable=False)
+    status = Column(Enum('yes', 'no', 'maybe', 'noreply'),
+                    default='noreply', nullable=False)
     notes = Column(Text, nullable=True)
+    guests = Column(Integer, default=0, nullable=False)
 
     @declared_attr
     def __tablename__(cls):

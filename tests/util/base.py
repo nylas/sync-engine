@@ -282,12 +282,13 @@ class EventsProviderStub(object):
         self.PROVIDER_NAME = provider_name
 
     def supply_event(self, subject, body, start, end, all_day, busy,
-                     location='', time_zone=0, locked=False,
+                     location='', read_only=False, owner="",
                      reminders='[]', recurrence="", deleted=False,
-                     raw_data='', participants=[]):
+                     raw_data='', is_owner=True, participants=[]):
         from inbox.models import Event
         from datetime import datetime
         self._events.append(Event(account_id=1,
+                                  calendar_id=1,
                                   uid=str(self._next_uid),
                                   source='remote',
                                   provider_name=self.PROVIDER_NAME,
@@ -297,9 +298,10 @@ class EventsProviderStub(object):
                                   start=datetime.utcfromtimestamp(start),
                                   end=datetime.utcfromtimestamp(end),
                                   all_day=all_day,
-                                  time_zone=time_zone,
                                   busy=busy,
-                                  locked=locked,
+                                  is_owner=is_owner,
+                                  owner=owner,
+                                  read_only=read_only,
                                   raw_data=raw_data,
                                   reminders=reminders,
                                   recurrence=recurrence,

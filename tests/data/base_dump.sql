@@ -47,6 +47,7 @@ CREATE TABLE `account` (
   `state` enum('live','down','invalid') DEFAULT NULL,
   `_sync_status` text,
   `last_synced_events` datetime DEFAULT NULL,
+  `default_calendar_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `ix_account_public_id` (`public_id`),
   KEY `account_ibfk_2` (`inbox_folder_id`),
@@ -62,6 +63,8 @@ CREATE TABLE `account` (
   KEY `ix_account_updated_at` (`updated_at`),
   KEY `ix_account__canonicalized_address` (`_canonicalized_address`),
   KEY `ix_account__raw_address` (`_raw_address`),
+  KEY `default_calendar_ibfk_1` (`default_calendar_id`),
+  CONSTRAINT `default_calendar_ibfk_1` FOREIGN KEY (`default_calendar_id`) REFERENCES `calendar` (`id`),
   CONSTRAINT `account_ibfk_2` FOREIGN KEY (`inbox_folder_id`) REFERENCES `folder` (`id`),
   CONSTRAINT `account_ibfk_3` FOREIGN KEY (`sent_folder_id`) REFERENCES `folder` (`id`),
   CONSTRAINT `account_ibfk_4` FOREIGN KEY (`drafts_folder_id`) REFERENCES `folder` (`id`),
@@ -79,7 +82,7 @@ CREATE TABLE `account` (
 
 LOCK TABLES `account` WRITE;
 /*!40000 ALTER TABLE `account` DISABLE KEYS */;
-INSERT INTO `account` VALUES (1,'ï¿½ï¿½ï¿½ï¿½hPID',1,'precise64','2014-05-03 01:15:03','gmailaccount',2,4,5,NULL,NULL,NULL,3,NULL,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL,NULL,'inboxapptest@gmail.com','inboxapptest@gmail.com',NULL,'{\"sync_start_time\": \"None\", \"sync_end_time\": \"None\"}',NULL);
+INSERT INTO `account` VALUES (1,'ï¿½ï¿½ï¿½ï¿½hPID',1,'precise64','2014-05-03 01:15:03','gmailaccount',2,4,5,NULL,NULL,NULL,3,NULL,'2014-05-13 02:19:12','2014-08-22 18:02:36',NULL,NULL,NULL,'inboxapptest@gmail.com','inboxapptest@gmail.com',NULL,'{\"sync_start_time\": \"None\", \"sync_end_time\": \"None\"}',NULL,NULL);
 /*!40000 ALTER TABLE `account` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -136,7 +139,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('1322d3787305');
+INSERT INTO `alembic_version` VALUES ('10a1129fe685');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -177,6 +180,40 @@ LOCK TABLES `block` WRITE;
 /*!40000 ALTER TABLE `block` DISABLE KEYS */;
 INSERT INTO `block` VALUES (1,1950,'1c61dd2b4dd1193911f3aaa63ac0d7d55058d567664cddaab094e59a46cdc59d','ï¿½Æ–Kï¿½ï¿½Eï¿½',NULL,NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(2,15,'d58d3859935609dd2afe7233c68939cd9cd20ef54e3a61d0442f41fc157fc10d','_ï¿½ï¿½ï¿½ï¿½ï¿½','text/plain',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(3,36,'6103eda40adfd98a9e4b4e16ff958e693893f4c37359c76fd9b4e77531a22828','ï¿½p\Zï¿½ï¿½ï¿½Dï','text/html',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(4,6738,'179cd7e3034869737ae02cee0b918fb85f9254ea2fd0c0b3f7b84a32420edebc','v\n  ï¿½Ë’Jï¿½ï¿½',NULL,NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(5,1361,'7fdc6a5d14d7832747b01287f8b7da14bf612e2e100df9df1b4561bcaec8d268','ï¿½p}{ï¿½ï¿½Kï¿','text/plain',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(6,2120,'2014eb3bb6de2ecb23151b266a3057be6cf3e9c19659d215b531fcee286a87f5','\nï¿½ï¿½ï¿½)0Eï¿','text/html',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(7,453,'98ae516cd24a27e52537143ff996e1c462ae2be9ea96ef0df3e4db41f8cb1060','wÒªï¿½aCï¿½ï¿½',NULL,NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(8,1251,'b1558fdb97bc5918be82a7d342358fdd8abaa32cace1c96056319c594af6ddfe','ï¿½ï¿½ï¿½3ï¿½Hï','text/plain',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(9,12626,'5ef8b7411036839cf82f81125fda1227b56378c14e4d2f2e251aaaa5496062ad','ï¿½]ï¿½pï¿½_Eï¿½','text/html',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(10,2037,'af620f6b1b2178f7ae978e21534b334c1b313e09c1c9657db686726368312434','ï¿½GXcdï¿½Dï¿½ï¿',NULL,NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(11,3,'98ea6e4f216f2fb4b69fff9b3a44842c38686ca685f3f55dc48c5d3fb1107be4','\\,ï¿½Fï¿½CZï¿½','text/plain',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(12,24,'408ba4f10aada5751a08119a3c82a667239b3094bf14fe2e67a258dc03afbacf','?ï¿½gï¿½@Gï¿½ï¿','text/html',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(13,2846,'889b24bb1bf892e1634717a015b0ccd9f93b39afa46a2986be3fe90879d6d19e','ï¿½3Ù˜+IÙ´ï¿½ï¿',NULL,NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(14,13,'004815e57fe5989f9536f2d50d29bcc0474462dfd0543868e43c5351285c4f60','ï¿½^Ó¢ï¿½bF:ï¿½ï','text/plain',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(15,34,'a0d9bb0476a09e0b8cda7c8799e2ff00959e645292dcd64790d9138623393995','ï¿½ï¿½ï¿½\'É‰Gï¿','text/html',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(16,1951,'f582e89b834cd098b5d023d09014c99554e519649523427da7eb6ed1bbb2dbb9','ï¿½ZËŽï¿½ï¿½GGï¿',NULL,NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(17,14,'b0bbbdfc73c7ebd75b9d5e66896312cc3c3a59fe5c86e0de44de3a132b34ebad','ï¿½ï¿½k&ï¿½CÎ‘ï','text/plain',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(18,35,'3f93e1bec4711d5bca6c71e1ae3bd7a81437a6ade1e1afab07fd8c26e8f60961','ï¿½ï¿½]ï¿½~Kï¿½','text/html',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(19,1965,'223681a017f96b40fa854b8810c039a20db392c8df9773575177976aba3e0834','ï¿½ï¿½iï¿½\rHgï¿',NULL,NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(20,6,'5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03','.@ï¿½ï¿½<K+ï¿½ï','text/plain',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(21,27,'eccf61f9770be39afd1efe2c8ec5bdbf2ddc3d3cf30a688bf6a18bf4dac45048','ï¿½ï¿½ï¿½ï¿½ï¿½ï','text/html',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(22,2837,'6a10813ed0f5a12fb60a530aed347f74b32c0de65da5f8b4f14cd459469bfb30','ï¿½.ï¿½ï¿½Mï¿½',NULL,NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(23,13,'31b75c53af215582d8b94e90730e58dd711f17b2c6c9128836ba98e8620892c8','ï¿½ï¿½ï¿½ï¿½8Gï','text/plain',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(24,34,'889eddcafac71f421c65339c0c38bec66940ffdd76adedce2472a4edf704398d','Ù‚ï¿½ï¿½ï¿½OWï¿','text/html',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(25,1949,'46866e65955fdb44934bda5241facc2e5351d85bc58d5fe4363bacd99dfbed9b','ï¿½ï¿½ï¿½8ï¿½D',NULL,NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(26,27,'a87dd39d644c9330f2f60ea9458b35c503352a3d6a9be0339f5b3b44d8239d88','Ê†ï¿½\"5VO.ï¿½ï¿½','text/plain',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(27,63,'d560107b9f59d09cabcbc2633bbf986545e2bd41f3517655d7b8bf3c7dea7786','ï¿½`ï¿½ï¿½ï¿½ï¿½','text/html',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(28,2224,'f9f27dc47aa42dcd7dc0140be6723e58942ae5f4b5a4947ff43d8c427991917c','Ô•ï¿½qï¿½L_ï¿½Q',NULL,NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(29,993,'3d747459c9884417e66ceb56b4f1811b15cfb3fc8efcf1bfb4ac88e3859fa4f0','Í¶xdRBØŸï¿½ï¿½\\','text/plain',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(30,5575,'e956c365e2a7b8481070dde8bdd3d741d799f32f2c208a44a8b6aac9c377419a','ï¿½Yeï¿½ï¿½Jlï¿','text/html',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(31,6321,'2991102bf5c783ea6f018731a8939ee97a4d7562a76e8188775447e3c6e0876f','+ï¿½ï¿½ï¿½ï¿½ï¿½','image/png',NULL,'google.png',1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(32,565,'ff3f6b9d30f972e18d28a27d9c19aee77c5f704de8cf490a502c1389c2caf93a','ï¿½g3ï¿½T!Hï¿½9','image/png',NULL,'profilephoto.png',1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(33,891,'21ddd725936b604c5b970431f6f44c3887797938c8ba98525bb2098c128aed81','qï¿½åº‰ï¿½Lï¿½ï¿',NULL,NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(34,31,'7747fbe457d3e6d5ead68b4d6f39d17cc2b33e24f9fa78ee40dfe8accbad8ae0','Yï¿½ï¿½ï¿½ï¿½ï¿½',NULL,'text/text',NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(35,61,'8c9624e032689b58d2dfa87635f7a2ae2d0b4faa06312065eeacde739c1f2252','ï¿½ï¿½ï¿½ï¿½ï¿½^','text/html',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(36,852,'553b8ce2185f5d66380cf0209f81cb2fa6a3a0e1f59845d8530ed08b38e96a0e','\0ï¿½ï¿½a!@Ò‹ï¿½',NULL,NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(37,31,'7747fbe457d3e6d5ead68b4d6f39d17cc2b33e24f9fa78ee40dfe8accbad8ae0','w\nï¿½DI#ï¿½ï¿',NULL,'text/text',NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(38,61,'8c9624e032689b58d2dfa87635f7a2ae2d0b4faa06312065eeacde739c1f2252','ï¿½@ï¿½ï¿½1Nï¿½','text/html',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(39,853,'5f015f0eab6e3adcf8320221b6b0686b73f05a2a3cae54e7367f1d42ba44c734','Q0+GX0Bï¿½ï¿½Eï¿',NULL,NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(40,31,'7747fbe457d3e6d5ead68b4d6f39d17cc2b33e24f9fa78ee40dfe8accbad8ae0','ï¿½3ï¿½rï¿½ALï¿',NULL,'text/text',NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(41,61,'8c9624e032689b58d2dfa87635f7a2ae2d0b4faa06312065eeacde739c1f2252','ï¿½ï¿½ï¿½PÂšKï¿½','text/html',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(42,858,'0b940bea3d7f6e2523605b3e5e91f3d93aa38d780d6ba49f6fd3664ee3b0eaad','ï¿½Hl@ï¿½ï¿½Dlï¿',NULL,NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(43,31,'7747fbe457d3e6d5ead68b4d6f39d17cc2b33e24f9fa78ee40dfe8accbad8ae0','5?)ï¿½ï¿½Lpï¿½x',NULL,'text/text',NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(44,61,'8c9624e032689b58d2dfa87635f7a2ae2d0b4faa06312065eeacde739c1f2252','ï¿½ï¿½ï¿½ï¿½-H','text/html',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(45,895,'42cefe658856c48397713f475e04af3059fa8c43ee5cc67b7c25ff822f6fdd1c','vï¿½dï¿½zï¿½Eï¿',NULL,NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(46,31,'7747fbe457d3e6d5ead68b4d6f39d17cc2b33e24f9fa78ee40dfe8accbad8ae0','ï¿½ï¿½0ï¿½ï¿½\'CX',NULL,'text/text',NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(47,61,'8c9624e032689b58d2dfa87635f7a2ae2d0b4faa06312065eeacde739c1f2252','ï¿½ï¿½ï¿½ï¿½c:@ï','text/html',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(48,3092,'3a50e724e41242746339a2ad4accd821dca20a73844848c54556d5fc13e58a31','Lï¿½ï¿½8ï¿½LTï¿',NULL,NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(49,2722,'d30c644879e3b7b618dd03d593e67a9b6ff80615e4aea01b06b992dbed47008a','^ï¿½Eï¿½R8Dï¿½ï¿','text/plain',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL),(50,6605,'37a1732d9a602ad020d4bf3c878571d8c19eb968ca61a382a4d2d3fb5e8ef896','ï¿½ï¿½CÖ‰ï¿½Hï¿½','text/html',NULL,NULL,1,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL);
 /*!40000 ALTER TABLE `block` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `calendar`
+--
+
+DROP TABLE IF EXISTS `calendar`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `calendar` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `public_id` binary(16) NOT NULL,
+  `account_id` int(11) NOT NULL,
+  `name` varchar(128) DEFAULT NULL,
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `notes` text,
+  `uid` varchar(767) CHARACTER SET ascii NOT NULL,
+  `read_only` tinyint(1) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uuid` (`account_id`,`name`),
+  CONSTRAINT `calendar_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `calendar`
+--
+
+LOCK TABLES `calendar` WRITE;
+/*!40000 ALTER TABLE `calendar` DISABLE KEYS */;
+INSERT INTO `calendar` VALUES (1,'Ï5ö¬F\0»í«žöÃÀ',1,NULL,NULL,NULL,NULL,NULL,'167wjlgf89za2cdhy17p9bsu8',0);
+/*!40000 ALTER TABLE `calendar` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -450,21 +487,27 @@ CREATE TABLE `event` (
   `body` text,
   `location` varchar(255) DEFAULT NULL,
   `busy` tinyint(1) NOT NULL,
-  `locked` tinyint(1) NOT NULL,
   `reminders` varchar(255) DEFAULT NULL,
   `recurrence` varchar(255) DEFAULT NULL,
   `start` datetime NOT NULL,
   `end` datetime DEFAULT NULL,
   `all_day` tinyint(1) NOT NULL,
-  `time_zone` int(11) NOT NULL,
   `source` enum('remote','local') NOT NULL,
   `created_at` datetime DEFAULT NULL,
   `updated_at` datetime DEFAULT NULL,
   `deleted_at` datetime DEFAULT NULL,
+  `calendar_id` int(11) NOT NULL,
+  `owner` varchar(255) DEFAULT NULL,
+  `is_owner` tinyint(1) NOT NULL,
+  `start_date` date DEFAULT NULL,
+  `end_date` date DEFAULT NULL,
+  `read_only` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uuid` (`uid`,`source`,`account_id`,`provider_name`),
   KEY `account_id` (`account_id`),
-  CONSTRAINT `event_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
+  KEY `event_ibfk_2` (`calendar_id`),
+  CONSTRAINT `event_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `event_ibfk_2` FOREIGN KEY (`calendar_id`) REFERENCES `calendar` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -491,11 +534,12 @@ CREATE TABLE `eventparticipant` (
   `name` varchar(255) DEFAULT NULL,
   `_raw_address` varchar(191) DEFAULT NULL,
   `_canonicalized_address` varchar(191) DEFAULT NULL,
-  `status` enum('yes','no','maybe','awaiting') NOT NULL,
+  `status` enum('yes','no','maybe','noreply') NOT NULL,
   `notes` text,
   `created_at` datetime DEFAULT NULL,
   `updated_at` datetime DEFAULT NULL,
   `deleted_at` datetime DEFAULT NULL,
+  `guests` int(11) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uid` (`_raw_address`,`event_id`),
   KEY `event_id` (`event_id`),
@@ -1462,4 +1506,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-08-20 23:17:48
+-- Dump completed on 2014-08-23  2:01:53

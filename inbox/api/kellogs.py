@@ -118,14 +118,13 @@ def encode(obj, namespace_public_id=None):
             'body': obj.body,
             'participants': obj.participant_list,
             'busy': obj.busy,
-            'locked': obj.locked,
+            'read_only': obj.read_only,
             'location': obj.location,
             'reminders': obj.reminders,
             'recurrence': obj.recurrence,
             'start': obj.start,
             'end': obj.end,
-            'all_day': obj.all_day,
-            'time_zone': obj.time_zone
+            'all_day': obj.all_day
         }
 
     elif isinstance(obj, Block):  # ie: Attachments/Files

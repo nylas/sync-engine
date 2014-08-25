@@ -19,15 +19,12 @@ GET https://api.inboxapp.com/n/<namespace_id>/events/<event_id>
     "busy": true,
     "end": 1407409200,
     "id": "2332er2f1gc5hxfgf1yxb3e75",
-    "locked": false,
     "namespace": "6njcbog8c23gzindlp2e3547p",
     "object": "event",
     "recurrence": null,
     "reminders": "[30]",
     "start": 1407405600,
     "subject": "yoga",
-    "time_zone": 0,
-    "uid": "p7kvq81skkflggjevcoeuc437s"
 }
 ```
 
@@ -78,15 +75,12 @@ POST https://api.inboxapp.com/n/<namespace_id>/events
     "busy": false,
     "end": 1407758400,
     "id": "deue71ylhmz2vp47frnkgqmyz",
-    "locked": false,
     "namespace": "6njcbog8c23gzindlp2e3547p",
     "object": "event",
     "recurrence": null,
     "reminders": null,
     "start": 1407754800,
     "subject": "Monday meeting",
-    "time_zone": 0,
-    "uid": "c41402c541f2422791949de46df3cff8"
 }
 ```
 

@@ -1,4 +1,4 @@
-from sqlalchemy import (Column, Integer, String, ForeignKey, Text, Boolean,
+from sqlalchemy import (Column, String, ForeignKey, Text, Boolean,
                         DateTime, Enum, UniqueConstraint)
 from sqlalchemy.orm import relationship
 from sqlalchemy.util import OrderedDict
@@ -10,6 +10,7 @@ from inbox.models.base import MailSyncBase
 from inbox.models.mixins import HasPublicID
 
 from inbox.models.account import Account
+from inbox.models.calendar import Calendar
 from inbox.models.participant import Participant
 
 
@@ -27,10 +28,19 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     """Data for events."""
     account_id = Column(ForeignKey(Account.id, ondelete='CASCADE'),
                         nullable=False)
+
     account = relationship(
         Account, load_on_pending=True,
         primaryjoin='and_(Event.account_id == Account.id, '
                     'Account.deleted_at.is_(None))')
+
+    calendar_id = Column(ForeignKey(Calendar.id, ondelete='CASCADE'),
+                         nullable=False)
+
+    calendar = relationship(
+        Calendar, load_on_pending=True,
+        primaryjoin='and_(Event.calendar_id == Calendar.id, '
+                    'Calendar.deleted_at.is_(None))')
 
     # A server-provided unique ID.
     uid = Column(String(767, collation='ascii_general_ci'), nullable=False)
@@ -42,16 +52,17 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     raw_data = Column(Text, nullable=False)
 
     subject = Column(String(SUBJECT_MAX_LEN), nullable=True)
+    owner = Column(String(1024), nullable=True)
     body = Column(Text, nullable=True)
     location = Column(String(255), nullable=True)
     busy = Column(Boolean, nullable=False)
-    locked = Column(Boolean, nullable=False)
+    read_only = Column(Boolean, nullable=False)
     reminders = Column(String(255), nullable=True)
     recurrence = Column(String(255), nullable=True)
     start = Column(DateTime, nullable=False)
     end = Column(DateTime, nullable=True)
     all_day = Column(Boolean, nullable=False)
-    time_zone = Column(Integer, nullable=False)
+    is_owner = Column(Boolean, nullable=False, default=True)
     source = Column('source', Enum('local', 'remote'))
 
     # Flag to set if the event is deleted in a remote backend.
@@ -84,7 +95,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
                  'email': p.email_address,
                  'status': p.status,
                  'notes': p.notes}
-                for p in self.participants]
+                for p in self.participants_by_email.values()]
 
     @participant_list.setter
     def participant_list(self, p_list):
@@ -146,8 +157,9 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     def merge_from(self, base, remote):
         # This must be updated when new fields are added to the class.
         merge_attrs = ['subject', 'body', 'start', 'end', 'all_day',
-                       'locked', 'location', 'reminders', 'recurrence',
-                       'time_zone', 'busy', 'raw_data']
+                       'read_only', 'location', 'reminders', 'recurrence',
+                       'busy', 'raw_data', 'owner', 'is_owner', 'calendar_id']
+
         for attr in merge_attrs:
             merge_attr(base, remote, self, attr)
 
@@ -164,14 +176,16 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
         self.subject = src.subject
         self.body = src.body
         self.busy = src.busy
-        self.locked = src.locked
+        self.read_only = src.read_only
+        self.is_owner = src.is_owner
+        self.owner = self.owner
         self.location = src.location
         self.reminders = src.reminders
         self.recurrence = src.recurrence
         self.start = src.start
         self.end = src.end
         self.all_day = src.all_day
-        self.time_zone = src.time_zone
+        self.calendar_id = src.calendar_id
 
         for p_email, p in src.participants_by_email.iteritems():
             self.participants_by_email[p_email] = p

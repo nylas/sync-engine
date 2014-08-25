@@ -7,7 +7,7 @@ from tests.util.base import (event_sync, events_provider,
 # Need to set up test config before we can import from
 # inbox.models.tables.
 config()
-from inbox.models import Event
+from inbox.models import Account, Event
 from inbox.events.remote_sync import EventSync
 from inbox.util.misc import MergeError
 
@@ -28,81 +28,87 @@ def alternate_events_provider(config, db):
     return EventsProviderStub('alternate_provider')
 
 
-def _default_event():
+def _default_calendar(db):
+    account = db.session.query(Account).filter(
+        Account.id == ACCOUNT_ID).one()
+    return account.default_calendar
+
+
+def _default_event(db):
     return Event(account_id=ACCOUNT_ID,
+                 calendar=_default_calendar(db),
                  subject='subject',
                  body='',
                  location='',
                  busy=False,
-                 locked=False,
+                 read_only=False,
                  reminders='',
                  recurrence='',
                  start=0,
                  end=1,
                  all_day=False,
-                 time_zone=0,
                  source='remote')
 
 
-def test_merge(config, event_sync):
+def test_merge(db, config, event_sync):
     """Test the basic logic of the merge() function."""
-    base = _default_event()
+    base = _default_event(db)
     remote = Event(account_id=ACCOUNT_ID,
+                   calendar=_default_calendar(db),
                    subject='new subject',
                    body='new body',
                    location='new location',
                    busy=True,
-                   locked=True,
+                   read_only=True,
                    reminders='',
                    recurrence='',
                    start=2,
                    end=3,
                    all_day=False,
-                   time_zone=0,
                    source='remote')
 
-    dest = _default_event()
+    dest = _default_event(db)
 
     dest.merge_from(base, remote)
     assert dest.subject == 'new subject'
     assert dest.body == 'new body'
     assert dest.location == 'new location'
     assert dest.busy
-    assert dest.locked
+    assert dest.read_only
     assert dest.start == 2
     assert dest.end == 3
 
 
-def test_merge_conflict(config, event_sync):
+def test_merge_conflict(db, config, event_sync):
     """Test that merge() raises an error on conflict."""
-    base = _default_event()
+    base = _default_event(db)
 
     remote = Event(account_id=ACCOUNT_ID,
+                   calendar=_default_calendar(db),
                    subject='new subject',
                    body='new body',
                    location='new location',
                    busy=False,
-                   locked=True,
+                   read_only=True,
                    reminders='',
                    recurrence='',
                    start=2,
                    end=3,
                    all_day=False,
-                   time_zone=0,
                    source='remote')
 
     dest = Event(account_id=ACCOUNT_ID,
+                 calendar=_default_calendar(db),
                  subject='subject2',
                  body='body2',
                  location='location2',
                  busy=False,
-                 locked=False,
+                 read_only=False,
                  reminders='',
                  recurrence='',
                  start=0,
                  end=1,
                  all_day=False,
-                 time_zone=0,
                  source='remote')
 
     with pytest.raises(MergeError):

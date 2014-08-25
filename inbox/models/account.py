@@ -4,6 +4,7 @@ from sqlalchemy import (Column, Integer, String, DateTime, Boolean, ForeignKey,
                         Enum)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import true
+from inbox.sqlalchemy_ext.util import generate_public_id
 
 from inbox.sqlalchemy_ext.util import JSON, MutableDict
 from inbox.util.file import Lock
@@ -11,6 +12,7 @@ from inbox.util.file import Lock
 from inbox.models.mixins import HasPublicID, HasEmailAddress
 from inbox.models.base import MailSyncBase
 from inbox.models.folder import Folder
+from inbox.models.calendar import Calendar
 
 
 class Account(MailSyncBase, HasPublicID, HasEmailAddress):
@@ -111,6 +113,34 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
         'Folder', post_update=True,
         primaryjoin='and_(Account.important_folder_id == Folder.id, '
                     'Folder.deleted_at.is_(None))')
+
+    default_calendar_id = Column(Integer,
+                                 ForeignKey('calendar.id',
+                                            ondelete='SET NULL',
+                                            use_alter=True,
+                                            name='default_calendar_ibfk_1'),
+                                 nullable=True)
+
+    _default_calendar = relationship(
+        'Calendar', post_update=True,
+        primaryjoin='and_(Account.default_calendar_id == Calendar.id, '
+                    'Calendar.deleted_at.is_(None))')
+
+    @property
+    def default_calendar(self):
+        if not self._default_calendar:
+            public_id = generate_public_id()
+            new_cal = Calendar()
+            new_cal.public_id = public_id
+            new_cal.account = self
+            new_cal.uid = public_id
+            new_cal.read_only = False
+            self._default_calendar = new_cal
+        return self._default_calendar
+
+    @default_calendar.setter
+    def default_calendar(self, cal):
+        self._default_calendar = cal
 
     sync_host = Column(String(255), nullable=True)
 

@@ -24,7 +24,7 @@ def test_cancelled_event(google_events_provider):
              u'recurringEventId': u'f3jukdd49bc36smsui4rb35n18',
              u'id': u'f3jukdd49bc36smsui4rb35n18_20111007T063100Z'}
     with pytest.raises(MalformedEventError):
-        google_events_provider._parse_event(cal_info, event)
+        google_events_provider.parse_event(event, cal_info)
 
 
 def test_no_reminders(google_events_provider):
@@ -58,7 +58,7 @@ def test_no_reminders(google_events_provider):
                           u'displayName': u'Ben Bitdiddle',
                           u'email': u'fakeemail@gmail.com'},
              u'id': u't0msu19ehpo48tp2pek4j2kh70'}
-    google_events_provider._parse_event(cal_info, event)
+    google_events_provider.parse_event(event, cal_info)
 
 
 def test_long_eventid(google_events_provider):
@@ -96,10 +96,11 @@ def test_long_eventid(google_events_provider):
                           u'displayName': u'Ben Bitdiddle',
                           u'email': u'fakeemail@gmail.com'},
              u'id': long_id}
-    google_events_provider._parse_event(cal_info, event)
+    google_events_provider.parse_event(event, cal_info)
 
 
 def test_invalid_ical(db):
     with pytest.raises(MalformedEventError):
         account = db.session.query(Account).filter_by(id=ACCOUNT_ID).first()
-        events = events_from_ics(account.namespace, "asdf")
+        events_from_ics(account.namespace,
+                        account.default_calendar, "asdf")

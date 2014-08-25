@@ -9,7 +9,7 @@ logger = get_logger()
 from inbox.basicauth import ValidationError
 from inbox.models.session import session_scope
 from inbox.models import Event
-from inbox.sync.base_sync_provider import BaseSyncProvider
+from inbox.events.base import BaseEventProvider
 from inbox.models.backends.generic import GenericAccount
 from inbox.events.util import MalformedEventError
 from inbox.models.event import SUBJECT_MAX_LEN, LOCATION_MAX_LEN
@@ -20,7 +20,7 @@ ICLOUD_LOGIN = ICLOUD_SETUP + '/login'
 ICLOUD_VALIDATE = ICLOUD_SETUP + '/validate'
 
 
-class ICloudEventsProvider(BaseSyncProvider):
+class ICloudEventsProvider(BaseEventProvider):
     """A utility class to fetch and parse iCloud calendar data for the
     specified account using the iCloud webservices api
 
@@ -36,12 +36,7 @@ class ICloudEventsProvider(BaseSyncProvider):
     """
     PROVIDER_NAME = 'icloud'
 
-    def __init__(self, account_id):
-        self.account_id = account_id
-        self.log = logger.new(account_id=account_id, component='event sync',
-                              provider=self.PROVIDER_NAME)
-
-    def _parse_event(self, event):
+    def parse_event(self, event, extra):
         try:
             uid = str(event['guid'])
 
@@ -54,7 +49,7 @@ class ICloudEventsProvider(BaseSyncProvider):
             if location:
                 location = location[:LOCATION_MAX_LEN]
             all_day = event.get('allDay', False)
-            locked = event.get('readOnly')
+            read_only = event.get('readOnly')
 
             # for some reason iCloud gives the date as YYYYMMDD for the first
             # entry and then the Y, M, D, H, S as later entries.
@@ -74,7 +69,6 @@ class ICloudEventsProvider(BaseSyncProvider):
 
             # and for some reason iCloud isn't giving us participants
             participants = []
-            time_zone = 0  # iCloud gives us times in UTC when we ask for it
 
         except (KeyError, AttributeError):
             raise MalformedEventError()
@@ -92,27 +86,12 @@ class ICloudEventsProvider(BaseSyncProvider):
                      end=end,
                      busy=busy,
                      all_day=all_day,
-                     locked=locked,
-                     time_zone=time_zone,
+                     read_only=read_only,
                      source='remote',
+                     is_owner=True,
                      participants=participants)
 
-    def get_items(self, sync_from_time=None):
-        """Fetches and parses fresh event data.
-
-        Parameters
-        ----------
-        sync_from_time: str, optional
-            A time in ISO 8601 format: If not None, fetch data for calendars
-            that have been updated since this time. Otherwise fetch all
-            calendar data.
-
-        Yields
-        ------
-        ..models.tables.base.Events
-            The events that have been updated since the last account sync.
-        """
-
+    def fetch_items(self, sync_from_time=None):
         response_items = []
         with session_scope() as db_session:
             account = db_session.query(GenericAccount).get(self.account_id)
@@ -154,14 +133,10 @@ class ICloudEventsProvider(BaseSyncProvider):
         }
         resp = session.get(event_url, params=params)
 
-        response_items = resp.json()['Event']
+        resp = resp.json()
 
-        events = []
+        calendar_id = self.get_calendar_id('default')
+        response_items = resp['Event']
+
         for response_event in response_items:
-            try:
-                events.append(self._parse_event(response_event))
-            except MalformedEventError:
-                self.log.warning('Malformed event',
-                                 icloud_event=response_event)
-
-        return events
+            yield (calendar_id, response_event, None)

@@ -154,9 +154,9 @@ def valid_event(event):
         if 'email' not in p:
             raise InputError("'participants' must must have email")
         if 'status' in p:
-            if p['status'] not in ('yes', 'no', 'maybe', 'awaiting'):
+            if p['status'] not in ('yes', 'no', 'maybe', 'noreply'):
                 raise InputError("'participants' status must be one of: "
-                                 "yes, no, maybe, awaiting")
+                                 "yes, no, maybe, noreply")
 
 
 def valid_event_update(event):
@@ -183,6 +183,6 @@ def valid_event_update(event):
         if 'email' not in p:
             raise InputError("'participants' must must have email")
         if 'status' in p:
-            if p['status'] not in ('yes', 'no', 'maybe', 'awaiting'):
+            if p['status'] not in ('yes', 'no', 'maybe', 'noreply'):
                 raise InputError("'participants' status must be one of: "
-                                 "yes, no, maybe, awaiting")
+                                 "yes, no, maybe, noreply")
