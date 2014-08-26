@@ -54,7 +54,8 @@ class Tag(MailSyncBase, HasRevisions):
                                'inbox', 'icloud', 'aol']
 
     CANONICAL_TAG_NAMES = ['inbox', 'archive', 'drafts', 'sending', 'sent',
-                           'spam', 'starred', 'trash', 'unread', 'unseen']
+                           'spam', 'starred', 'trash', 'unread', 'unseen',
+                           'attachment']
 
     RESERVED_TAG_NAMES = ['all', 'archive', 'drafts', 'send', 'replied',
                           'file', 'attachment', 'unseen']

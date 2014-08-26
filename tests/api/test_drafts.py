@@ -27,29 +27,13 @@ def example_draft(db):
 
 @pytest.fixture(scope='function')
 def attachments(db):
-    from inbox.models import Block
-    test_data = [('muir.jpg', 'image/jpeg'),
-                 ('LetMeSendYouEmail.wav', 'audio/vnd.wave'),
-                 ('first-attachment.jpg', 'image/jpeg')]
-
-    new_attachments = []
-    for filename, content_type in test_data:
-
-        test_attachment_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            '..', 'data', filename)
-
-        with open(test_attachment_path, 'r') as f:
-            b = Block(namespace_id=NAMESPACE_ID,
-                      filename=filename,
-                      data=f.read())
-            # for now because of lousy _content_type enum
-            b.content_type = content_type
-            db.session.add(b)
-            db.session.commit()
-            new_attachments.append(b.public_id)
-
-    return new_attachments
+    filenames = ['muir.jpg', 'LetMeSendYouEmail.wav', 'first-attachment.jpg']
+    data = []
+    for filename in filenames:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..',
+                            'data', filename)
+        data.append((filename, path))
+    return data
 
 
 def test_create_and_get_draft(api_client, example_draft):
@@ -71,6 +55,10 @@ def test_create_and_get_draft(api_client, example_draft):
     # Check that thread gets the draft tag
     threads_with_drafts = api_client.get_data('/threads?tag=drafts')
     assert len(threads_with_drafts) == 1
+
+    # Check that thread doesn't get the attachment tag, in this case
+    thread_tags = threads_with_drafts[0]['tags']
+    assert not any('attachment' == tag['name'] for tag in thread_tags)
 
 
 def test_create_reply_draft(api_client):
@@ -113,9 +101,26 @@ def test_drafts_filter(api_client, example_draft):
     assert len(results) == 2
 
 
-def test_create_draft_with_attachments(api_client, attachments):
-    # TODO(emfree)
-    pass
+def test_create_draft_with_attachments(api_client, attachments, example_draft):
+    attachment_ids = []
+    upload_path = api_client.full_path('/files')
+    for filename, path in attachments:
+        data = {'file': (open(path, 'rb'), filename)}
+        r = api_client.client.post(upload_path, data=data)
+        assert r.status_code == 200
+        attachment_id = json.loads(r.data)[0]['id']
+        attachment_ids.append(attachment_id)
+
+    example_draft['files'] = attachment_ids
+    r = api_client.post_data('/drafts', example_draft)
+    assert r.status_code == 200
+
+    threads_with_drafts = api_client.get_data('/threads?tag=drafts')
+    assert len(threads_with_drafts) == 1
+
+    # Check that thread also gets the attachment tag
+    thread_tags = threads_with_drafts[0]['tags']
+    assert any('attachment' == tag['name'] for tag in thread_tags)
 
 
 def test_get_all_drafts(api_client, example_draft):

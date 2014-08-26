@@ -182,88 +182,88 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
                           new_tags=None, thread=None, is_reply=False,
                           syncback=True):
     """Create a draft object and commit it to the database."""
-    dt = datetime.utcnow()
-    uid = generate_public_id()
-    version = generate_public_id()
-    to_addr = to_addr or []
-    cc_addr = cc_addr or []
-    bcc_addr = bcc_addr or []
-    blocks = blocks or []
-    body = body or ''
-    if subject is None and thread is not None:
-        # Set subject from thread by default.
-        subject = thread.subject
-    subject = subject or ''
+    with db_session.no_autoflush:
+        dt = datetime.utcnow()
+        uid = generate_public_id()
+        version = generate_public_id()
+        to_addr = to_addr or []
+        cc_addr = cc_addr or []
+        bcc_addr = bcc_addr or []
+        blocks = blocks or []
+        body = body or ''
+        if subject is None and thread is not None:
+            # Set subject from thread by default.
+            subject = thread.subject
+        subject = subject or ''
 
-    # Sets is_draft = True, state = 'draft'
-    message = Message.create_draft_message()
+        # Sets is_draft = True, state = 'draft'
+        message = Message.create_draft_message()
 
-    message.from_addr = [(account.sender_name, account.email_address)]
-    # TODO(emfree): we should maybe make received_date nullable, so its value
-    # doesn't change in the case of a drafted-and-later-reconciled message.
-    message.received_date = dt
-    message.subject = subject
-    message.sanitized_body = body
-    message.to_addr = to_addr
-    message.cc_addr = cc_addr
-    message.bcc_addr = bcc_addr
-    # TODO(emfree): this is different from the normal 'size' value of a
-    # message, which is the size of the entire MIME message.
-    message.size = len(body)
-    message.is_read = True
-    message.is_sent = False
-    message.is_reply = is_reply
-    message.public_id = uid
-    message.version = version
-    message.inbox_uid = version
+        message.from_addr = [(account.sender_name, account.email_address)]
+        # TODO(emfree): we should maybe make received_date nullable, so its
+        # value doesn't change in the case of a drafted-and-later-reconciled
+        # message.
+        message.received_date = dt
+        message.subject = subject
+        message.sanitized_body = body
+        message.to_addr = to_addr
+        message.cc_addr = cc_addr
+        message.bcc_addr = bcc_addr
+        # TODO(emfree): this is different from the normal 'size' value of a
+        # message, which is the size of the entire MIME message.
+        message.size = len(body)
+        message.is_read = True
+        message.is_sent = False
+        message.is_reply = is_reply
+        message.public_id = uid
+        message.version = version
+        message.inbox_uid = version
 
-    # Set the snippet
-    message.calculate_html_snippet(body)
+        # Set the snippet
+        message.calculate_html_snippet(body)
 
-    # Associate attachments to the draft message
-    for block in blocks:
-        # Create a new Part object to associate to the message object.
-        # (You can't just set block.message, because if block is an attachment
-        # on an existing message, that would dissociate it from the existing
-        # message.)
-        part = Part()
-        part.namespace_id = account.namespace.id
-        part.content_disposition = 'attachment'
-        part.content_type = block.content_type
-        part.is_inboxapp_attachment = True
-        part.data = block.data
-        part.filename = block.filename
-        message.parts.append(part)
-        db_session.add(part)
+        # Associate attachments to the draft message
+        for block in blocks:
+            # Create a new Part object to associate to the message object.
+            # (You can't just set block.message, because if block is an
+            # attachment on an existing message, that would dissociate it from
+            # the existing message.)
+            part = Part()
+            part.namespace_id = account.namespace.id
+            part.content_disposition = 'attachment'
+            part.content_type = block.content_type
+            part.is_inboxapp_attachment = True
+            part.data = block.data
+            part.filename = block.filename
+            message.parts.append(part)
+            db_session.add(part)
 
-    # TODO(emfree) Update contact data here.
+        # TODO(emfree) Update contact data here.
 
-    if is_reply:
-        message.is_reply = True
-        # Construct the in-reply-to and references headers from the last
-        # message currently in the thread.
-        _set_reply_headers(message, thread)
-    if thread is None:
-        # Create a new thread object for the draft.
-        thread = Thread(
-            subject=message.subject,
-            recentdate=message.received_date,
-            namespace=account.namespace,
-            subjectdate=message.received_date)
-        db_session.add(thread)
+        if is_reply:
+            message.is_reply = True
+            # Construct the in-reply-to and references headers from the last
+            # message currently in the thread.
+            _set_reply_headers(message, thread)
+        if thread is None:
+            # Create a new thread object for the draft.
+            thread = Thread(
+                subject=message.subject,
+                recentdate=message.received_date,
+                namespace=account.namespace,
+                subjectdate=message.received_date)
+            db_session.add(thread)
 
-    message.thread = thread
-    # This triggers an autoflush, so we need to execute it after setting
-    # message.thread
-    thread.apply_tag(account.namespace.tags['drafts'])
+        message.thread = thread
+        thread.apply_tag(account.namespace.tags['drafts'])
 
-    if new_tags:
-        tags_to_keep = {tag for tag in thread.tags if not tag.user_created}
-        thread.tags = new_tags | tags_to_keep
+        if new_tags:
+            tags_to_keep = {tag for tag in thread.tags if not tag.user_created}
+            thread.tags = new_tags | tags_to_keep
 
-    if syncback:
-        schedule_action('save_draft', message, message.namespace.id,
-                        db_session)
+        if syncback:
+            schedule_action('save_draft', message, message.namespace.id,
+                            db_session)
 
     db_session.add(message)
     db_session.commit()

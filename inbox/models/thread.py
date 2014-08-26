@@ -39,7 +39,13 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
 
     @validates('messages')
     def update_from_message(self, k, message):
+        if message.attachments:
+            attachment_tag = self.namespace.tags['attachment']
+            self.apply_tag(attachment_tag)
+
         if message.is_draft:
+            # Don't change subjectdate, recentdate, or unread/unseen based on
+            # drafts
             return message
 
         if message.received_date > self.recentdate:
