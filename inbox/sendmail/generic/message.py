@@ -58,7 +58,7 @@ def create_reply(sender_name, sender_email, in_reply_to, references,
     if in_reply_to:
         mimemsg.headers['In-Reply-To'] = in_reply_to
     if references:
-        mimemsg.headers['References'] = references
+        mimemsg.headers['References'] = '\t'.join(references)
 
     # Set the 'Subject' header of the reply
     # Some providers require the same subject as the original (adding Re:/Fwd:

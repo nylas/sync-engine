@@ -279,7 +279,7 @@ def _set_reply_headers(new_message, thread):
         if last_message.message_id_header:
             new_message.in_reply_to = last_message.message_id_header
             if last_message.references:
-                new_message.references = (last_message.references + '\t' +
-                                          last_message.message_id_header)
+                new_message.references = (last_message.references +
+                                          [last_message.message_id_header])
             else:
-                new_message.references = last_message.message_id_header
+                new_message.references = [last_message.message_id_header]
