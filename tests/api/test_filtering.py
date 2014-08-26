@@ -1,6 +1,7 @@
 import datetime
 import calendar
-from inbox.models import Message
+from inbox.models import Message, Thread
+from inbox.contacts.process_mail import update_contacts_from_message
 from tests.util.base import api_client
 
 NAMESPACE_ID = 1
@@ -107,3 +108,57 @@ def test_ordering(api_client):
 def test_strict_argument_parsing(api_client):
     r = api_client.client.get(api_client.full_path('/threads?foo=bar'))
     assert r.status_code == 400
+
+
+def add_fake_message(account_id, thread, to_email, received_date,
+                     db_session):
+    """ One-off helper function to add 'fake' messages to the datastore."""
+    m = Message()
+    m.from_addr = [('', to_email)]
+    m.received_date = received_date
+    m.size = 0
+    m.sanitized_body = ''
+    m.snippet = ''
+    m.thread = thread
+    update_contacts_from_message(db_session, m, account_id)
+    db_session.add(m)
+    db_session.commit()
+
+
+def test_distinct_results(api_client, db):
+    """Test that limit and offset parameters work correctly when joining on
+    multiple matching messages per thread."""
+    # Create a thread with multiple messages on it.
+    first_thread = db.session.query(Thread).filter(
+        Thread.namespace_id == NAMESPACE_ID).get(1)
+    add_fake_message(NAMESPACE_ID, first_thread, 'hello@example.com',
+                     datetime.datetime.utcnow(), db.session)
+    add_fake_message(NAMESPACE_ID, first_thread, 'hello@example.com',
+                     datetime.datetime.utcnow(), db.session)
+
+    # Now create another thread with the same participants
+    older_date = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
+    second_thread = db.session.query(Thread).filter(
+        Thread.namespace_id == NAMESPACE_ID).get(2)
+    add_fake_message(NAMESPACE_ID, second_thread, 'hello@example.com',
+                     older_date, db.session)
+    add_fake_message(NAMESPACE_ID, second_thread, 'hello@example.com',
+                     older_date, db.session)
+
+    filtered_results = api_client.get_data('/threads?from=hello@example.com'
+                                           '&limit=1&offset=0')
+    assert len(filtered_results) == 1
+    assert filtered_results[0]['id'] == first_thread.public_id
+
+    filtered_results = api_client.get_data('/threads?from=hello@example.com'
+                                           '&limit=1&offset=1')
+    assert len(filtered_results) == 1
+    assert filtered_results[0]['id'] == second_thread.public_id
+
+    filtered_results = api_client.get_data('/threads?from=hello@example.com'
+                                           '&limit=2&offset=0')
+    assert len(filtered_results) == 2
+
+    filtered_results = api_client.get_data('/threads?from=hello@example.com'
+                                           '&limit=2&offset=1')
+    assert len(filtered_results) == 1

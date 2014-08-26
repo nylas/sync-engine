@@ -90,9 +90,7 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
         subqueryload('tagitems').joinedload('tag').
         load_only('public_id', 'name'))
 
-    query = query.order_by(desc(Thread.recentdate))
-
-    query = query.limit(limit)
+    query = query.order_by(desc(Thread.recentdate)).distinct().limit(limit)
     if offset:
         query = query.offset(offset)
     return query.all()
@@ -188,9 +186,7 @@ def messages(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
     # TODO(emfree) we should really eager-load the namespace too
     # (or just directly store it on the message object)
 
-    query = query.order_by(desc(Message.received_date))
-
-    query = query.limit(limit)
+    query = query.order_by(desc(Message.received_date)).distinct().limit(limit)
     if offset:
         query = query.offset(offset)
 
