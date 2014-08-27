@@ -25,7 +25,7 @@ def reconcile_message(db_session, log, inbox_uid, new_msg):
     """
     try:
         message = db_session.query(Message).filter(
-            Message.public_id == inbox_uid).one()
+            Message.version == inbox_uid).one()
         assert message.is_created
         message.resolved_message = new_msg
         return message

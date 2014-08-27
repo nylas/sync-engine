@@ -15,7 +15,7 @@ def test_reconcile_message(db, config):
     account = db.session.query(Account).get(ACCOUNT_ID)
     draft = create_draft(db.session, account)
 
-    assert draft.inbox_uid == draft.public_id, 'draft has incorrect inbox_uid'
+    assert draft.inbox_uid == draft.version, 'draft has incorrect inbox_uid'
     inbox_uid = draft.inbox_uid
 
     message = Message()
