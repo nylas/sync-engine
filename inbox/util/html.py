@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import re
 import cgi
+import htmlentitydefs
 from HTMLParser import HTMLParser, HTMLParseError
 from talon.quotations import (register_xpath_extensions, extract_from_html,
                               extract_from_plain)  # noqa
@@ -13,7 +14,7 @@ __all__ = ['strip_tags', 'plaintext2html', 'extract_from_html',
 
 
 # http://stackoverflow.com/questions/753052/strip-html-from-strings-in-python
-class MLStripper(HTMLParser):
+class HTMLTagStripper(HTMLParser):
     strippedTags = ["title", "script", "style"]
 
     def __init__(self):
@@ -26,7 +27,7 @@ class MLStripper(HTMLParser):
         # in strippedTags. We can do this because
         # HTMLParser won't try to parse the inner
         # contents of a tag.
-        if tag.lower() in MLStripper.strippedTags:
+        if tag.lower() in HTMLTagStripper.strippedTags:
             self.strip_tag_contents_mode = True
 
     def handle_endtag(self, tag):
@@ -36,12 +37,29 @@ class MLStripper(HTMLParser):
         if not self.strip_tag_contents_mode:
             self.fed.append(d)
 
+    def handle_charref(self, d):
+        try:
+            if d.startswith('x'):
+                val = int(d[1:], 16)
+            else:
+                val = int(d)
+        except ValueError:
+            return
+        self.fed.append(unichr(val))
+
+    def handle_entityref(self, d):
+        try:
+            val = unichr(htmlentitydefs.name2codepoint[d])
+        except KeyError:
+            return
+        self.fed.append(val)
+
     def get_data(self):
         return u''.join(self.fed)
 
 
 def strip_tags(html):
-    s = MLStripper()
+    s = HTMLTagStripper()
     try:
         s.feed(html)
     except HTMLParseError:
