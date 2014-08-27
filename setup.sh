@@ -72,6 +72,7 @@ pip install -r requirements.txt
 
 pip install -e .
 if [ -d "../inbox-eas" ]; then
+    pip install -r ../inbox-eas/requirements.txt
     pip install -e ../inbox-eas
 fi
 
