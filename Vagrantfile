@@ -18,8 +18,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.provider :vmware_fusion do |vmware, override|
     override.vm.box = "precise64_fusion"
     override.vm.box_url = "http://files.vagrantup.com/precise64_vmware_fusion.box"
-    config.vm.box_download_checksum_type = "sha256"
-    config.vm.box_download_checksum = "b79e900774b6a27500243d28bd9b1770e428faa3d8a3e45997f2a939b2b63570"
+    override.vm.box_download_checksum_type = "sha256"
+    override.vm.box_download_checksum = "b79e900774b6a27500243d28bd9b1770e428faa3d8a3e45997f2a939b2b63570"
     vmware.vmx["memsize"] = "1024"
     vmware.vmx["numvcpus"] = "2"
   end
