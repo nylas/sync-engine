@@ -4,6 +4,7 @@ import datetime
 
 from hashlib import sha256
 from flanker import mime
+import gevent
 
 from sqlalchemy import (Column, Integer, BigInteger, String, DateTime,
                         Boolean, Enum, ForeignKey, Text)
@@ -140,9 +141,9 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     def namespace(self):
         return self.thread.namespace
 
-    def __init__(self, account=None, mid=None, folder_name=None,
-                 received_date=None, flags=None, body_string=None,
-                 *args, **kwargs):
+    @classmethod
+    def create_from_sync(cls, account, mid, folder_name, received_date, flags,
+                         body_string):
         """ Parses message data and writes out db metadata and MIME blocks.
 
         Returns the new Message, which links to the new Block objects through
@@ -159,15 +160,9 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         raw_message : str
             The full message including headers (encoded).
         """
+        msg = Message()
         _rqd = [account, mid, folder_name, flags, body_string]
-
-        MailSyncBase.__init__(self, *args, **kwargs)
-
-        # for drafts
-        if not any(_rqd):
-            return
-
-        if any(_rqd) and not all([v is not None for v in _rqd]):
+        if not all([v is not None for v in _rqd]):
             raise ValueError(
                 "Required keyword arguments: account, mid, folder_name, "
                 "flags, body_string")
@@ -176,6 +171,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         assert account.namespace is not None
         assert not isinstance(body_string, unicode)
 
+        block_saving_threads = []
         try:
             parsed = mime.from_string(body_string)
 
@@ -186,40 +182,40 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                             account_id=account.id, folder_name=folder_name,
                             mid=mid, mime_version=mime_version)
 
-            self.data_sha256 = sha256(body_string).hexdigest()
+            msg.data_sha256 = sha256(body_string).hexdigest()
 
             # clean_subject strips re:, fwd: etc.
-            self.subject = parsed.clean_subject
-            self.from_addr = parse_email_address_list(
+            msg.subject = parsed.clean_subject
+            msg.from_addr = parse_email_address_list(
                 parsed.headers.get('From'))
-            self.sender_addr = parse_email_address_list(
+            msg.sender_addr = parse_email_address_list(
                 parsed.headers.get('Sender'))
-            self.reply_to = parse_email_address_list(
+            msg.reply_to = parse_email_address_list(
                 parsed.headers.get('Reply-To'))
 
-            self.to_addr = parse_email_address_list(
+            msg.to_addr = parse_email_address_list(
                 parsed.headers.getall('To'))
-            self.cc_addr = parse_email_address_list(
+            msg.cc_addr = parse_email_address_list(
                 parsed.headers.getall('Cc'))
-            self.bcc_addr = parse_email_address_list(
+            msg.bcc_addr = parse_email_address_list(
                 parsed.headers.getall('Bcc'))
 
-            self.in_reply_to = parsed.headers.get('In-Reply-To')
-            self.message_id_header = parsed.headers.get('Message-Id')
+            msg.in_reply_to = parsed.headers.get('In-Reply-To')
+            msg.message_id_header = parsed.headers.get('Message-Id')
 
-            self.received_date = received_date if received_date else \
+            msg.received_date = received_date if received_date else \
                 get_internaldate(parsed.headers.get('Date'),
                                  parsed.headers.get('Received'))
 
             # Custom Inbox header
-            self.inbox_uid = parsed.headers.get('X-INBOX-ID')
+            msg.inbox_uid = parsed.headers.get('X-INBOX-ID')
 
             # In accordance with JWZ (http://www.jwz.org/doc/threading.html)
-            self.references = parse_references(
+            msg.references = parse_references(
                 parsed.headers.get('References', ''),
                 parsed.headers.get('In-Reply-To', ''))
 
-            self.size = len(body_string)  # includes headers text
+            msg.size = len(body_string)  # includes headers text
 
             i = 0  # for walk_index
 
@@ -228,11 +224,12 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             # Store all message headers as object with index 0
             block = Block()
             block.namespace_id = account.namespace.id
-            block.data = json.dumps(parsed.headers.items())
+            headers = json.dumps(parsed.headers.items())
+            block_saving_threads.append(block.async_save_data(headers))
 
-            headers_part = Part(block=block, message=self)
+            headers_part = Part(block=block, message=msg)
             headers_part.walk_index = i
-            self.parts.append(headers_part)
+            msg.parts.append(headers_part)
 
             for mimepart in parsed.walk(
                     with_self=parsed.content_type.is_singlepart()):
@@ -250,7 +247,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                     mimepart.content_type.params.get('name'),
                     account.id, mid)
 
-                new_part = Part(block=block, message=self)
+                new_part = Part(block=block, message=msg)
                 new_part.walk_index = i
 
                 # TODO maybe also trim other headers?
@@ -283,9 +280,13 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                     data_to_write = ''
 
                 new_part.content_id = mimepart.headers.get('Content-Id')
-                block.data = data_to_write
-                self.parts.append(new_part)
-            self.calculate_sanitized_body()
+                block_saving_threads.append(
+                    block.async_save_data(data_to_write))
+                msg.parts.append(new_part)
+            gevent.joinall(block_saving_threads)
+            assert all(g.successful for g in block_saving_threads), \
+                'Failed to save message parts!'
+            msg.calculate_sanitized_body()
         except mime.DecodingError:
             # Occasionally iconv will fail via maximum recursion depth. We
             # still keep the metadata and mark it as b0rked.
@@ -293,8 +294,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             log.error('Message parsing DecodeError', account_id=account.id,
                       folder_name=folder_name, err_filename=_get_errfilename(
                           account.id, folder_name, mid))
-            self.mark_error()
-            return
+            msg.mark_error()
         except AttributeError:
             # For EAS messages that are missing Date + Received headers, due
             # to the processing we do in inbox.util.misc.get_internaldate()
@@ -302,14 +302,13 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             log.error('Message parsing AttributeError', account_id=account.id,
                       folder_name=folder_name, err_filename=_get_errfilename(
                           account.id, folder_name, mid))
-            self.mark_error()
-            return
+            msg.mark_error()
         except RuntimeError:
             _log_decode_error(account.id, folder_name, mid, body_string)
             log.error('Message parsing RuntimeError<iconv>'.format(
                 err_filename=_get_errfilename(account.id, folder_name, mid)))
-            self.mark_error()
-            return
+            msg.mark_error()
+        return msg
 
     def mark_error(self):
         self.decode_error = True

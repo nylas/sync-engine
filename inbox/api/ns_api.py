@@ -777,7 +777,7 @@ def file_upload_api():
         f.namespace = g.namespace
         f.content_type = uploaded.content_type
         f.filename = uploaded.filename
-        f.data = uploaded.read()
+        f.save_data(uploaded.read())
         all_files.append(f)
 
     g.db_session.add_all(all_files)
