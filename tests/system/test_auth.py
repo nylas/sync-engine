@@ -16,7 +16,7 @@ def test_password_auth(email, password):
 
     # Check that the account exists
     while time.time() - start_time < TEST_MAX_DURATION_SECS:
-        client = APIClient.from_email(email)
+        client = APIClient.from_email(email)[0]
         if client is not None:
             break
         time.sleep(TEST_GRANULARITY_CHECK_SECS)
