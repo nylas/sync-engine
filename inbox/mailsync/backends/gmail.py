@@ -94,81 +94,88 @@ def uid_download_folders(crispin_client):
 
 def gmail_initial_sync(crispin_client, log, folder_name, shared_state,
                        local_uids, uid_download_stack, msg_create_fn):
-    remote_uid_count = len(set(crispin_client.all_uids()))
-    remote_g_metadata, update_uid_count = get_g_metadata(
-        crispin_client, log, folder_name, local_uids,
-        shared_state['syncmanager_lock'])
-    remote_uids = sorted(remote_g_metadata.keys(), key=int)
-    log.info(remote_uid_count=len(remote_uids))
-    if folder_name == crispin_client.folder_names()['all']:
-        log.info(local_uid_count=len(local_uids))
+    # We wrap the block in a try/finally because the greenlets like
+    # new_uid_poller need to be killed when this greenlet is interrupted
+    try:
+        remote_uid_count = len(set(crispin_client.all_uids()))
+        remote_g_metadata, update_uid_count = get_g_metadata(
+            crispin_client, log, folder_name, local_uids,
+            shared_state['syncmanager_lock'])
+        remote_uids = sorted(remote_g_metadata.keys(), key=int)
+        log.info(remote_uid_count=len(remote_uids))
+        if folder_name == crispin_client.folder_names()['all']:
+            log.info(local_uid_count=len(local_uids))
 
-    with shared_state['syncmanager_lock']:
-        log.debug('gmail_initial_sync grabbed syncmanager_lock')
-        with session_scope(ignore_soft_deletes=False) as db_session:
-            deleted_uids = remove_deleted_uids(
-                crispin_client.account_id, db_session, log, folder_name,
-                local_uids, remote_uids)
-            delete_uid_count = len(deleted_uids)
+        with shared_state['syncmanager_lock']:
+            log.debug('gmail_initial_sync grabbed syncmanager_lock')
+            with session_scope(ignore_soft_deletes=False) as db_session:
+                deleted_uids = remove_deleted_uids(
+                    crispin_client.account_id, db_session, log, folder_name,
+                    local_uids, remote_uids)
+                delete_uid_count = len(deleted_uids)
 
-            local_uids = set(local_uids) - deleted_uids
-            unknown_uids = set(remote_uids) - local_uids
+                local_uids = set(local_uids) - deleted_uids
+                unknown_uids = set(remote_uids) - local_uids
 
-            # Persist the num(messages) to sync (any type of sync: download,
-            # update or delete) before we start.
-            # Note that num_local_deleted, num_local_updated ARE the numbers to
-            # delete/update too since we make those changes rightaway before we
-            # start downloading messages.
-            update_uid_counts(db_session, log, crispin_client.account_id,
-                              folder_name, remote_uid_count=remote_uid_count,
-                              download_uid_count=len(unknown_uids),
-                              update_uid_count=update_uid_count,
-                              delete_uid_count=delete_uid_count)
+                # Persist the num(messages) to sync (any type of sync:
+                # download, update or delete) before we start.
+                # Note that num_local_deleted, num_local_updated
+                # ARE the numbers to delete/update too since we make those
+                # changes rightaway before we start downloading messages.
+                update_uid_counts(db_session, log, crispin_client.account_id,
+                                  folder_name,
+                                  remote_uid_count=remote_uid_count,
+                                  download_uid_count=len(unknown_uids),
+                                  update_uid_count=update_uid_count,
+                                  delete_uid_count=delete_uid_count)
 
-    if folder_name == crispin_client.folder_names()['inbox']:
-        # We don't do an initial dedupe for Inbox because we do thread
-        # expansion, which means even if we have a given msgid downloaded, we
-        # miiight not have the whole thread. This means that restarts cause
-        # duplicate work, but hopefully these folders aren't too huge.
-        message_download_stack = LifoQueue()
-        flags = crispin_client.flags(unknown_uids)
-        for uid in unknown_uids:
-            if uid in flags:
-                message_download_stack.put(
-                    GMessage(uid, remote_g_metadata[uid], flags[uid].flags,
-                             flags[uid].labels))
-        new_uid_poller = spawn(check_new_g_thrids, crispin_client.account_id,
-                               crispin_client.PROVIDER, folder_name, log,
-                               message_download_stack,
-                               shared_state['poll_frequency'],
-                               shared_state['syncmanager_lock'])
-        download_queued_threads(crispin_client, log, folder_name,
-                                message_download_stack,
-                                shared_state['syncmanager_lock'])
-    elif folder_name in uid_download_folders(crispin_client):
-        full_download = deduplicate_message_download(
-            crispin_client, log, shared_state['syncmanager_lock'],
-            remote_g_metadata, unknown_uids)
-        add_uids_to_stack(full_download, uid_download_stack)
-        new_uid_poller = spawn(check_new_uids, crispin_client.account_id,
-                               folder_name,
-                               log, uid_download_stack,
-                               shared_state['poll_frequency'],
-                               shared_state['syncmanager_lock'])
-        download_queued_uids(crispin_client, log, folder_name,
-                             uid_download_stack, len(local_uids),
-                             len(unknown_uids),
-                             shared_state['syncmanager_lock'],
-                             gmail_download_and_commit_uids, msg_create_fn)
-    else:
-        raise MailsyncError(
-            'Unknown Gmail sync folder: {}'.format(folder_name))
+        if folder_name == crispin_client.folder_names()['inbox']:
+            # We don't do an initial dedupe for Inbox because we do thread
+            # expansion, which means even if we have a given msgid downloaded,
+            # we miiight not have the whole thread. This means that restarts
+            # cause duplicate work, but hopefully these folders aren't
+            # too huge.
+            message_download_stack = LifoQueue()
+            flags = crispin_client.flags(unknown_uids)
+            for uid in unknown_uids:
+                if uid in flags:
+                    message_download_stack.put(
+                        GMessage(uid, remote_g_metadata[uid], flags[uid].flags,
+                                 flags[uid].labels))
+            new_uid_poller = spawn(check_new_g_thrids,
+                                   crispin_client.account_id,
+                                   crispin_client.PROVIDER, folder_name, log,
+                                   message_download_stack,
+                                   shared_state['poll_frequency'],
+                                   shared_state['syncmanager_lock'])
+            download_queued_threads(crispin_client, log, folder_name,
+                                    message_download_stack,
+                                    shared_state['syncmanager_lock'])
+        elif folder_name in uid_download_folders(crispin_client):
+            full_download = deduplicate_message_download(
+                crispin_client, log, shared_state['syncmanager_lock'],
+                remote_g_metadata, unknown_uids)
+            add_uids_to_stack(full_download, uid_download_stack)
+            new_uid_poller = spawn(check_new_uids, crispin_client.account_id,
+                                   folder_name,
+                                   log, uid_download_stack,
+                                   shared_state['poll_frequency'],
+                                   shared_state['syncmanager_lock'])
+            download_queued_uids(crispin_client, log, folder_name,
+                                 uid_download_stack, len(local_uids),
+                                 len(unknown_uids),
+                                 shared_state['syncmanager_lock'],
+                                 gmail_download_and_commit_uids, msg_create_fn)
+        else:
+            raise MailsyncError(
+                'Unknown Gmail sync folder: {}'.format(folder_name))
 
-    # Complete X-GM-MSGID mapping is no longer needed after initial sync.
-    rm_cache(remote_g_metadata_cache_file(crispin_client.account_id,
-                                          folder_name))
+        # Complete X-GM-MSGID mapping is no longer needed after initial sync.
+        rm_cache(remote_g_metadata_cache_file(crispin_client.account_id,
+                                              folder_name))
 
-    new_uid_poller.kill()
+    finally:
+        new_uid_poller.kill()
 
 
 @retry_crispin

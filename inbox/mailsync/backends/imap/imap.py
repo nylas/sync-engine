@@ -601,56 +601,61 @@ def condstore_imap_initial_sync(crispin_client, log, folder_name,
 def imap_initial_sync(crispin_client, log, folder_name, shared_state,
                       local_uids, uid_download_stack, msg_create_fn,
                       spawn_flags_refresh_poller=True):
-    assert crispin_client.selected_folder_name == folder_name
+    # We wrap the block in a try/finally because the greenlets like
+    # new_uid_poller need to be killed when this greenlet is interrupted
+    try:
+        assert crispin_client.selected_folder_name == folder_name
 
-    remote_uids = crispin_client.all_uids()
-    log.info(remote_uid_count=len(remote_uids))
-    log.info(local_uid_count=len(local_uids))
+        remote_uids = crispin_client.all_uids()
+        log.info(remote_uid_count=len(remote_uids))
+        log.info(local_uid_count=len(local_uids))
 
-    with shared_state['syncmanager_lock']:
-        log.debug("imap_initial_sync acquired syncmanager_lock")
+        with shared_state['syncmanager_lock']:
+            log.debug("imap_initial_sync acquired syncmanager_lock")
+            with session_scope(ignore_soft_deletes=False) as db_session:
+                deleted_uids = remove_deleted_uids(
+                    crispin_client.account_id, db_session, log, folder_name,
+                    local_uids, remote_uids)
+
+        local_uids = set(local_uids) - deleted_uids
+
+        new_uids = set(remote_uids) - local_uids
+        add_uids_to_stack(new_uids, uid_download_stack)
+
         with session_scope(ignore_soft_deletes=False) as db_session:
-            deleted_uids = remove_deleted_uids(
-                crispin_client.account_id, db_session, log, folder_name,
-                local_uids, remote_uids)
+            update_uid_counts(db_session, log, crispin_client.account_id,
+                              folder_name, remote_uid_count=len(remote_uids),
+                              # This is the initial size of our download_queue
+                              download_uid_count=len(new_uids),
+                              # Flags are updated in imap_check_flags() and
+                              # update_uid_count is set there
+                              delete_uid_count=len(deleted_uids))
 
-    local_uids = set(local_uids) - deleted_uids
+        new_uid_poller = spawn(check_new_uids, crispin_client.account_id,
+                               folder_name, log,
+                               uid_download_stack,
+                               shared_state['poll_frequency'],
+                               shared_state['syncmanager_lock'])
 
-    new_uids = set(remote_uids) - local_uids
-    add_uids_to_stack(new_uids, uid_download_stack)
+        if spawn_flags_refresh_poller:
+            flags_refresh_poller = spawn(imap_check_flags,
+                                         crispin_client.account_id,
+                                         folder_name, log,
+                                         shared_state['poll_frequency'],
+                                         shared_state['syncmanager_lock'],
+                                         shared_state['refresh_flags_max'])
 
-    with session_scope(ignore_soft_deletes=False) as db_session:
-        update_uid_counts(db_session, log, crispin_client.account_id,
-                          folder_name, remote_uid_count=len(remote_uids),
-                          # This is the initial size of our download_queue
-                          download_uid_count=len(new_uids),
-                          # Flags are updated in imap_check_flags() and
-                          # update_uid_count is set there
-                          delete_uid_count=len(deleted_uids))
+        download_queued_uids(crispin_client, log, folder_name,
+                             uid_download_stack,
+                             len(local_uids), len(remote_uids),
+                             shared_state['syncmanager_lock'],
+                             download_and_commit_uids, msg_create_fn)
 
-    new_uid_poller = spawn(check_new_uids, crispin_client.account_id,
-                           folder_name, log,
-                           uid_download_stack,
-                           shared_state['poll_frequency'],
-                           shared_state['syncmanager_lock'])
+    finally:
+        new_uid_poller.kill()
 
-    if spawn_flags_refresh_poller:
-        flags_refresh_poller = spawn(imap_check_flags,
-                                     crispin_client.account_id,
-                                     folder_name, log,
-                                     shared_state['poll_frequency'],
-                                     shared_state['syncmanager_lock'],
-                                     shared_state['refresh_flags_max'])
-
-    download_queued_uids(crispin_client, log, folder_name, uid_download_stack,
-                         len(local_uids), len(remote_uids),
-                         shared_state['syncmanager_lock'],
-                         download_and_commit_uids, msg_create_fn)
-
-    new_uid_poller.kill()
-
-    if spawn_flags_refresh_poller:
-        flags_refresh_poller.kill()
+        if spawn_flags_refresh_poller:
+            flags_refresh_poller.kill()
 
 
 def check_new_uids(account_id, folder_name, log, uid_download_stack,
