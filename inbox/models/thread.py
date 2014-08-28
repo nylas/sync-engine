@@ -217,8 +217,10 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
 
 class TagItem(MailSyncBase):
     """Mapping between user tags and threads."""
-    thread_id = Column(Integer, ForeignKey(Thread.id), nullable=False)
-    tag_id = Column(Integer, ForeignKey(Tag.id), nullable=False)
+    thread_id = Column(Integer, ForeignKey(Thread.id,
+                                           ondelete='CASCADE'), nullable=False)
+    tag_id = Column(Integer, ForeignKey(Tag.id,
+                                        ondelete='CASCADE'), nullable=False)
     thread = relationship(
         'Thread',
         backref=backref('tagitems',

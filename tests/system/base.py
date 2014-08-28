@@ -89,6 +89,7 @@ def create_account(db_session, email, password):
 
     db_session.add(account)
     db_session.commit()
+    return account
 
 
 def format_test_result(function_name, provider, email, start_time):

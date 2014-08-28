@@ -212,6 +212,7 @@ class ImapFolderSyncStatus(MailSyncBase):
                         nullable=False)
     account = relationship(ImapAccount, backref=backref(
         'foldersyncstatuses',
+        cascade='delete',
         primaryjoin='and_('
         'ImapFolderSyncStatus.account_id == ImapAccount.id, '
         'ImapFolderSyncStatus.deleted_at.is_(None))'),

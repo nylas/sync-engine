@@ -1,4 +1,5 @@
 import datetime
+import time
 from imapclient import IMAPClient
 from socket import gaierror, error as socket_error
 from ssl import SSLError
@@ -13,6 +14,7 @@ from inbox.basicauth import (ConnectionError, ValidationError,
                              TransientConnectionError)
 from inbox.models import Namespace
 from inbox.models.backends.generic import GenericAccount
+from inbox.models.account import Account
 from inbox.providers import provider_info
 from inbox.util.url import provider_from_address
 from inbox.basicauth import NotSupportedError
@@ -49,6 +51,27 @@ def create_account(db_session, email_address, response):
     account.provider = provider_name
 
     return account
+
+
+def delete_account(db_session, email_address):
+    try:
+        account = db_session.query(Account).filter_by(
+            email_address=email_address).one()
+    except sqlalchemy.orm.exc.NoResultFound:
+        return  # The account doesn't exist, no need to delete it
+
+    # We must stop the sync before removing the account
+    # FIXME: handle race conditions.
+    account.stop_sync()
+    db_session.commit()
+    while True:
+        time.sleep(10)
+        if account.sync_status['sync_end_time'] is not None:
+            break
+
+    db_session.delete(account)  # Note: this _must_ be a soft delete
+    db_session.delete(account.namespace)
+    db_session.commit()
 
 
 def connect_account(account):
