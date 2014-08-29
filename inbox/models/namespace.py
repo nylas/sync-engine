@@ -16,6 +16,7 @@ class Namespace(MailSyncBase, HasPublicID):
                            lazy='joined',
                            single_parent=True,
                            backref=backref('namespace', uselist=False,
+                                           lazy='joined',
                                            primaryjoin='and_('
                                            'Account.id==Namespace.account_id, '
                                            'Namespace.deleted_at.is_(None))'),
