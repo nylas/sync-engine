@@ -43,7 +43,7 @@ def upgrade():
     op.add_column('account', sa.Column('default_calendar_id', sa.Integer(),
                   nullable=True))
 
-    op.create_foreign_key('default_calendar_ibfk_1',
+    op.create_foreign_key('account_ibfk_10',
                           'account', 'calendar',
                           ['default_calendar_id'], ['id'])
     op.add_column('event', sa.Column('calendar_id', sa.Integer(),
