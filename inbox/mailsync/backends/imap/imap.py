@@ -434,7 +434,9 @@ def condstore_base_poll(crispin_client, log, folder_name, shared_state,
         status = crispin_client.select_folder(
             folder_name, uidvalidity_cb(crispin_client.account_id))
 
-        idle_frequency = 1800  # 30min
+        # Idle doesn't pick up flag changes, so we don't want to idle for very
+        # long, or we won't detect things like messages being marked as read.
+        idle_frequency = 30
 
         log.info('idling', timeout=idle_frequency)
         crispin_client.conn.idle()
