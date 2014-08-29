@@ -27,14 +27,14 @@ In rare cases, message delivery can fail if the user's email gateway rejects the
 
 You can send messages without saving them as drafts beforehand. Instead of providing a draft ID, simply provide the JSON of the message object you want to send.
 
-If the message is in reply to a thread, provide the `reply_to_thread` key with the ID of the existing thread.  Note that you must explicitly specify the message's recipients in the `to`, `cc` and `bcc` fields of the post body; this is to prevent any ambiguity about whom the message will be sent to.
+If the message is in reply to a thread, provide the `thread_id` key with the ID of the existing thread.  Note that you must explicitly specify the message's recipients in the `to`, `cc` and `bcc` fields of the post body; this is to prevent any ambiguity about whom the message will be sent to.
 
 Messages you create or send __should not include quoted text__ when they are in reply to an existing thread.
 
 ```
 :::json
 {
-    "reply_to_thread": "84umizq7c4jtrew491brpa6iu",
+    "thread_id": "84umizq7c4jtrew491brpa6iu",
     "body" : "Sounds great! See you then.",
 
     "to": [

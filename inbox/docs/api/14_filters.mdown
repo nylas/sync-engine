@@ -24,7 +24,7 @@ Filters allow you to query mail data based on specific parameters. The more spec
 
 ### Additional Message Filters
 
-* **`thread`** Return messages on the thread with the given id.
+* **`thread_id`** Return messages on the thread with the given id.
 
 ### Additional Thread Filters
 
@@ -86,7 +86,7 @@ List messages in a particular thread:
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/messages?thread=aqb0llc2ioo0bclh7uxkim9z6
+GET https://api.inboxapp.com/n/<namespace_id>/messages?thread_id=aqb0llc2ioo0bclh7uxkim9z6
 ```
 
 List messages from `no-reply@asana.com`:

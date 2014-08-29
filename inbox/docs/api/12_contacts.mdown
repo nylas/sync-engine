@@ -26,7 +26,7 @@ Fetch the user's contact list. This API supports query parameters which make it 
         "name": "Ben Bitdiddle",
         "email": "ben.bitdiddle@mit.edu",
         "id": "8pjz8oj4hkfwgtb46furlh77",
-        "namespace": "aqau8ta87ndh6cwv0o3ajfoo2",
+        "namespace_id": "aqau8ta87ndh6cwv0o3ajfoo2",
         "object": "contact"
     },
     ....
@@ -49,7 +49,7 @@ This endpoint retreives details about a specific contact.
     "name": "Ben Bitdiddle",
     "email": "ben.bitdiddle@mit.edu",
     "id": "8pjz8oj4hkfwgtb46furlh77",
-    "namespace": "aqau8ta87ndh6cwv0o3ajfoo2",
+    "namespace_id": "aqau8ta87ndh6cwv0o3ajfoo2",
     "object": "contact"
 }
 ```
@@ -80,7 +80,7 @@ POST https://api.inboxapp.com/n/<namespace_id>/contacts/
     "email": "wbrogers@mit.edu",
     "id": "cwcr6raeh2s4966cfo9bgajev",
     "name": "Bill Rogers",
-    "namespace": "aqau8ta87ndh6cwv0o3ajfoo2",
+    "namespace_id": "aqau8ta87ndh6cwv0o3ajfoo2",
     "object": "contact"
 }
 

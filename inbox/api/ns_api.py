@@ -186,14 +186,14 @@ def thread_query_api():
     g.parser.add_argument('last_message_after', type=timestamp,
                           location='args')
     g.parser.add_argument('filename', type=bounded_str, location='args')
-    g.parser.add_argument('thread', type=valid_public_id, location='args')
+    g.parser.add_argument('thread_id', type=valid_public_id, location='args')
     g.parser.add_argument('tag', type=bounded_str, location='args')
     args = strict_parse_args(g.parser, request.args)
 
     threads = filtering.threads(
         namespace_id=g.namespace.id,
         subject=args['subject'],
-        thread_public_id=args['thread'],
+        thread_public_id=args['thread_id'],
         to_addr=args['to'],
         from_addr=args['from'],
         cc_addr=args['cc'],
@@ -303,13 +303,13 @@ def message_query_api():
     g.parser.add_argument('last_message_after', type=timestamp,
                           location='args')
     g.parser.add_argument('filename', type=bounded_str, location='args')
-    g.parser.add_argument('thread', type=valid_public_id, location='args')
+    g.parser.add_argument('thread_id', type=valid_public_id, location='args')
     g.parser.add_argument('tag', type=bounded_str, location='args')
     args = strict_parse_args(g.parser, request.args)
     messages = filtering.messages(
         namespace_id=g.namespace.id,
         subject=args['subject'],
-        thread_public_id=args['thread'],
+        thread_public_id=args['thread_id'],
         to_addr=args['to'],
         from_addr=args['from'],
         cc_addr=args['cc'],
@@ -774,10 +774,10 @@ def webhooks_delete_api(public_id):
 
 @app.route('/drafts/')
 def draft_query_api():
-    g.parser.add_argument('thread', type=valid_public_id,
+    g.parser.add_argument('thread_id', type=valid_public_id,
                           location='args')
     args = strict_parse_args(g.parser, request.args)
-    drafts = filtering.drafts(g.namespace.id, args['thread'], args['limit'],
+    drafts = filtering.drafts(g.namespace.id, args['thread_id'], args['limit'],
                               args['offset'], g.db_session)
     return g.encoder.jsonify(drafts)
 
@@ -803,12 +803,11 @@ def draft_create_api():
     bcc = data.get('bcc')
     subject = data.get('subject')
     body = data.get('body')
-    files = data.get('files')
     try:
         tags = get_tags(data.get('tags'), g.namespace.id, g.db_session)
-        files = get_attachments(data.get('files'), g.namespace.id,
+        files = get_attachments(data.get('file_ids'), g.namespace.id,
                                 g.db_session)
-        replyto_thread = get_thread(data.get('reply_to_thread'),
+        replyto_thread = get_thread(data.get('thread_id'),
                                     g.namespace.id, g.db_session)
     except InputError as e:
         return err(404, e.message)
@@ -853,7 +852,7 @@ def draft_update_api(public_id):
     body = data.get('body')
     try:
         tags = get_tags(data.get('tags'), g.namespace.id, g.db_session)
-        files = get_attachments(data.get('files'), g.namespace.id,
+        files = get_attachments(data.get('file_ids'), g.namespace.id,
                                 g.db_session)
     except InputError as e:
         return err(404, e.message)
@@ -947,9 +946,9 @@ def draft_send_api():
         body = data.get('body')
         try:
             tags = get_tags(data.get('tags'), g.namespace.id, g.db_session)
-            files = get_attachments(data.get('files'), g.namespace.id,
+            files = get_attachments(data.get('file_ids'), g.namespace.id,
                                     g.db_session)
-            replyto_thread = get_thread(data.get('reply_to_thread'),
+            replyto_thread = get_thread(data.get('thread_id'),
                                         g.namespace.id, g.db_session)
         except InputError as e:
             return err(404, e.message)

@@ -75,7 +75,7 @@ One of the filter parameters available on messages is `thread`. Given a `thread_
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>?thread=<thread_id>
+GET https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>?thread_id=<thread_id>
 ```
 
 # Marking a message as read

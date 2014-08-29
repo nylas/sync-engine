@@ -37,7 +37,7 @@ def test_draft(client, data):
     subject = "Test draft from Inbox - %s" % time.strftime("%H:%M:%S")
     message = {"to": [{"email": data["email"]}],
                "body": "This is a test email, disregard this.",
-               "subject": subject, "files": [file_id]}
+               "subject": subject, "file_ids": [file_id]}
 
     draft = client.create_draft(message)
     draft_id = draft.id

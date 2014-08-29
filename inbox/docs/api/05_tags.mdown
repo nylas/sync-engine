@@ -17,13 +17,13 @@ GET https://api.inboxapp.com/n/<namespace_id>/tags
     {
         "id": "4zv7pgvihjvuptbwv57kiz62",
         "name": "inbox",
-        "namespace": "awa6ltos76vz5hvphkp8k17nt",
+        "namespace_id": "awa6ltos76vz5hvphkp8k17nt",
         "object": "tag"
     },
     {
         "id": "76zrfd8ln5zo2swalu1yojhty",
         "name": "drafts",
-        "namespace": "awa6ltos76vz5hvphkp8k17nt",
+        "namespace_id": "awa6ltos76vz5hvphkp8k17nt",
         "object": "tag"
     },
     ...

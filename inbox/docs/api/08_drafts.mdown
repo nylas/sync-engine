@@ -34,9 +34,9 @@ Post body parameters:
 * `to`
 * `cc`
 * `bcc`
-* `reply_to_thread`
+* `thread_id`
 * `body`
-* `files`
+* `file_ids`
 
 Note that all of these parameters are optional. If omitted, an empty draft will still be created.
 
@@ -56,7 +56,7 @@ Note that all of these parameters are optional. If omitted, an empty draft will 
     "cc": [],
     "bcc": [],
     "body": "<html><body>....</body></html>",
-    "files": [
+    "file_ids": [
         "bgmzg0qp61oqrrmpadboiiyg3",
         "aikfl1kl73r69hevrm018jqzw"
     ]
@@ -66,19 +66,19 @@ Note that all of these parameters are optional. If omitted, an empty draft will 
 
 A successful response will contain the newly created [Draft](#draft) object.
 
-Also note that creating a draft will fail if the referenced `files` ids have not been uploaded. See [Files](#files) for more details on how to upload and reference attachments.
+Also note that creating a draft will fail if the files with the referenced `file_ids` have not been uploaded. See [Files](#files) for more details on how to upload and reference attachments.
 
 
 ## Replying to an existing thread
 
-If the draft is a response to an existing thread, you should provide the thread's ID in the `reply_to_thread` parameter and omit the `subject` parameter. Note that you must explicitly specify the message's recipients in the `to`, `cc` and `bcc` fields of the post body; this is to prevent any ambiguity about whom the message will be sent to.
+If the draft is a response to an existing thread, you should provide the thread's ID in the `thread_id` parameter and omit the `subject` parameter. Note that you must explicitly specify the message's recipients in the `to`, `cc` and `bcc` fields of the post body; this is to prevent any ambiguity about whom the message will be sent to.
 
 Messages you create or send __should not include quoted text__ when they are in reply to an existing thread.
 
 ```
 :::json
 {
-    "reply_to_thread": <thread_id>,
+    "thread_id": <thread_id>,
     "body": "<html><body>....</body></html>",
     "to": [
         {
@@ -86,8 +86,8 @@ Messages you create or send __should not include quoted text__ when they are in 
             "email": "wbrogers@mit.edu"
         }
     ],
-    "files": [
-        <file_object>,
+    "file_ids": [
+        "bgmzg0qp61oqrrmpadboiiyg3",
         ...
     ],
 }

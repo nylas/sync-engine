@@ -275,7 +275,7 @@ class Lens(MailSyncBase, HasPublicID):
 
         if self.thread_public_id is not None:
             self.filters.append(
-                lambda message_tx: message_tx.public_snapshot['thread']
+                lambda message_tx: message_tx.public_snapshot['thread_id']
                 == self.thread_public_id)
 
         if self.started_before is not None:

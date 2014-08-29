@@ -16,7 +16,7 @@ GET https://api.inboxapp.com/n/<namespace_id>/files/<file_id>
 {
     "id": "conefgqnnsvqlj64iu0lvsb7g",
     "object": "file",
-    "namespace": "awa6ltos76vz5hvphkp8k17nt",
+    "namespace_id": "awa6ltos76vz5hvphkp8k17nt",
     "filename": "House-Blueprints.zip",
     "size": 3145728,
     "content-type": "application/zip",
@@ -85,7 +85,7 @@ A successful upload will return an array with a single file object. This object'
     {
         "content_type": "image/jpeg",
             "id": "3f7d6reg1k7hc2umqkz8gcfmo",
-            "namespace": "agud8k5kr8tmnm8wg4y6appw4",
+            "namespace_id": "agud8k5kr8tmnm8wg4y6appw4",
             "object": "file",
             "size": 29278
     }

@@ -19,7 +19,7 @@ def _verify_create(ns_id, api_client, e_data):
 
     e_resp_data = json.loads(e_resp.data)
     assert e_resp_data['object'] == 'event'
-    assert e_resp_data['namespace'] == ns_id
+    assert e_resp_data['namespace_id'] == ns_id
     assert e_resp_data['subject'] == e_data['subject']
     assert e_resp_data['location'] == e_data['location']
     for k, v in e_data['when'].iteritems():
@@ -29,7 +29,7 @@ def _verify_create(ns_id, api_client, e_data):
     e_get_resp = api_client.get_data('/events/' + e_id, ns_id)
 
     assert e_get_resp['object'] == 'event'
-    assert e_get_resp['namespace'] == ns_id
+    assert e_get_resp['namespace_id'] == ns_id
     assert e_get_resp['id'] == e_id
     assert e_get_resp['subject'] == e_data['subject']
     for k, v in e_data['when'].iteritems():

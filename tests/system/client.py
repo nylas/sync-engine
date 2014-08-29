@@ -25,17 +25,17 @@ class InboxAPIObject(dict):
 
 
 class Message(InboxAPIObject):
-    attrs = ["bcc", "body", "date", "files", "from", "id", "namespace",
-             "object", "subject", "thread", "to", "unread"]
+    attrs = ["bcc", "body", "date", "file_ids", "from", "id", "namespace_id",
+             "object", "subject", "thread_id", "to", "unread"]
 
 
 class Tag(InboxAPIObject):
-    attrs = ["id", "name", "namespace", "object"]
+    attrs = ["id", "name", "namespace_id", "object"]
 
 
 class Thread(InboxAPIObject):
-    attrs = ["drafts", "id", "messages", "namespace", "object", "participants",
-             "snippet", "subject", "subject_date", "tags"]
+    attrs = ["draft_ids", "id", "message_ids", "namespace_id", "object",
+             "participants", "snippet", "subject", "subject_date", "tags"]
 
 
 class Draft(InboxAPIObject):
@@ -43,17 +43,17 @@ class Draft(InboxAPIObject):
 
 
 class File(InboxAPIObject):
-    attrs = ["content_type", "filename", "id", "is_embedded", "message",
-             "namespace", "object", "size"]
+    attrs = ["content_type", "filename", "id", "is_embedded", "message_id",
+             "namespace_id", "object", "size"]
 
 
 class Event(InboxAPIObject):
-    attrs = ["id", "namespace", "subject", "body", "location", "read_only",
+    attrs = ["id", "namespace_id", "subject", "body", "location", "read_only",
              "start", "end", "participants"]
 
 
 class Namespace(InboxAPIObject):
-    attrs = ["account", "email_address", "id", "namespace", "object",
+    attrs = ["account_id", "email_address", "id", "namespace_id", "object",
              "provider"]
 
 

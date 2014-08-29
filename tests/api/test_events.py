@@ -73,7 +73,7 @@ def test_api_create(db, api_client):
     e_resp = api_client.post_data('/events', e_data, ns_id)
     e_resp_data = json.loads(e_resp.data)
     assert e_resp_data['object'] == 'event'
-    assert e_resp_data['namespace'] == acct.namespace.public_id
+    assert e_resp_data['namespace_id'] == acct.namespace.public_id
     assert e_resp_data['subject'] == e_data['subject']
     assert e_resp_data['location'] == e_data['location']
     assert e_resp_data['when']['time'] == e_data['when']['time']
@@ -82,7 +82,7 @@ def test_api_create(db, api_client):
     e_get_resp = api_client.get_data('/events/' + e_id, ns_id)
 
     assert e_get_resp['object'] == 'event'
-    assert e_get_resp['namespace'] == acct.namespace.public_id
+    assert e_get_resp['namespace_id'] == acct.namespace.public_id
     assert e_get_resp['id'] == e_id
     assert e_get_resp['subject'] == e_data['subject']
     assert e_get_resp['when']['time'] == e_data['when']['time']
@@ -104,7 +104,7 @@ def test_api_create_ical(db, api_client):
     e_resp_data = json.loads(e_resp.data)[0]
 
     assert e_resp_data['object'] == 'event'
-    assert e_resp_data['namespace'] == acct.namespace.public_id
+    assert e_resp_data['namespace_id'] == acct.namespace.public_id
     assert e_resp_data['subject'] == 'test recurring event'
     assert e_resp_data['body'] == 'Event Discription'
     assert e_resp_data['location'] == 'just some location'
@@ -143,7 +143,7 @@ def test_api_create_no_subject(db, api_client):
     e_resp = api_client.post_data('/events', e_data, ns_id)
     e_resp_data = json.loads(e_resp.data)
     assert e_resp_data['object'] == 'event'
-    assert e_resp_data['namespace'] == acct.namespace.public_id
+    assert e_resp_data['namespace_id'] == acct.namespace.public_id
     assert e_resp_data['subject'] == e_data['subject']
     assert e_resp_data['when']['time'] == e_data['when']['time']
     assert 'id' in e_resp_data
@@ -151,7 +151,7 @@ def test_api_create_no_subject(db, api_client):
     e_get_resp = api_client.get_data('/events/' + e_id, ns_id)
 
     assert e_get_resp['object'] == 'event'
-    assert e_get_resp['namespace'] == acct.namespace.public_id
+    assert e_get_resp['namespace_id'] == acct.namespace.public_id
     assert e_get_resp['id'] == e_id
     assert e_get_resp['subject'] == e_data['subject']
     assert e_get_resp['when']['time'] == e_data['when']['time']
@@ -169,7 +169,7 @@ def test_api_update_subject(db, api_client):
     e_resp = api_client.post_data('/events', e_data, ns_id)
     e_resp_data = json.loads(e_resp.data)
     assert e_resp_data['object'] == 'event'
-    assert e_resp_data['namespace'] == acct.namespace.public_id
+    assert e_resp_data['namespace_id'] == acct.namespace.public_id
     assert e_resp_data['subject'] == e_data['subject']
     assert e_resp_data['when']['time'] == e_data['when']['time']
     assert 'id' in e_resp_data
@@ -180,7 +180,7 @@ def test_api_update_subject(db, api_client):
     e_put_data = json.loads(e_put_resp.data)
 
     assert e_put_data['object'] == 'event'
-    assert e_put_data['namespace'] == acct.namespace.public_id
+    assert e_put_data['namespace_id'] == acct.namespace.public_id
     assert e_put_data['id'] == e_id
     assert e_put_data['subject'] == 'new subject'
     assert e_put_data['when']['object'] == 'time'

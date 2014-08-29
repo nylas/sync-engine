@@ -20,7 +20,7 @@ The thread object includes useful information like subject, participants, and ti
 {
     "id": "evh5uy0shhpm5d0le89goor17",
     "object": "thread",
-    "namespace": "awa6ltos76vz5hvphkp8k17nt",
+    "namespace_id": "awa6ltos76vz5hvphkp8k17nt",
     "subject": "Dinner Party on Friday",
     "last_message_timestamp": 1398229259,
     "first_message_timestamp": 1298229259,
@@ -49,12 +49,12 @@ The thread object includes useful information like subject, participants, and ti
             "id": "8keda28h8ijj2nogpj83yjep8"
         }
     ],
-    "messages": [
+    "message_ids": [
         "251r594smznew6yhiocht2v29",
         "7upzl8ss738iz8xf48lm84q3e",
         "ah5wuphj3t83j260jqucm9a28"
     ],
-    "drafts": [
+    "draft_ids": [
         "251r594smznew6yhi12312saq"
     ]
 }

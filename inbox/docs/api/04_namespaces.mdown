@@ -20,8 +20,8 @@ GET https://api.inboxapp.com/n
     {
         "id": "awa6ltos76vz5hvphkp8k17nt",
         "object": "namespace",
-        "namespace": "awa6ltos76vz5hvphkp8k17nt",
-        "account": "c5zc216uat483slypx67mu8i3",
+        "namespace_id": "awa6ltos76vz5hvphkp8k17nt",
+        "account_id": "c5zc216uat483slypx67mu8i3",
         "email_adddress": "ben.bitdiddle@gmail.com",
         "provider": "Gmail"
     }

@@ -67,7 +67,7 @@ def test_create_reply_draft(api_client):
     reply_draft = {
         'subject': 'test reply',
         'body': 'test reply',
-        'reply_to_thread': thread_public_id
+        'thread_id': thread_public_id
     }
     r = api_client.post_data('/drafts', reply_draft)
     draft_public_id = json.loads(r.data)['id']
@@ -76,10 +76,10 @@ def test_create_reply_draft(api_client):
     assert len(drafts) == 1
     assert drafts[0]['state'] == 'draft'
 
-    assert thread_public_id == drafts[0]['thread']
+    assert thread_public_id == drafts[0]['thread_id']
 
     thread_data = api_client.get_data('/threads/{}'.format(thread_public_id))
-    assert draft_public_id in thread_data['drafts']
+    assert draft_public_id in thread_data['draft_ids']
 
 
 def test_drafts_filter(api_client, example_draft):
@@ -88,12 +88,12 @@ def test_drafts_filter(api_client, example_draft):
 
     r = api_client.get_data('/drafts')
     matching_saved_drafts = [draft for draft in r if draft['id'] == public_id]
-    thread_public_id = matching_saved_drafts[0]['thread']
+    thread_public_id = matching_saved_drafts[0]['thread_id']
 
     reply_draft = {
         'subject': 'test reply',
         'body': 'test reply',
-        'reply_to_thread': thread_public_id
+        'thread_id': thread_public_id
     }
     r = api_client.post_data('/drafts', reply_draft)
 
@@ -111,7 +111,7 @@ def test_create_draft_with_attachments(api_client, attachments, example_draft):
         attachment_id = json.loads(r.data)[0]['id']
         attachment_ids.append(attachment_id)
 
-    example_draft['files'] = attachment_ids
+    example_draft['file_ids'] = attachment_ids
     r = api_client.post_data('/drafts', example_draft)
     assert r.status_code == 200
 

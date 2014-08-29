@@ -78,12 +78,12 @@ GET https://api.inboxapp.com/n/<namespace_id>/delta?cursor=<cursor>
             "attributes": {
                 "id": "2fhs446h1uiomjg2sa7r5n1w6",
                 "last_message_timestamp": 1401132649,
-                "messages": [
+                "message_ids": [
                     "ebszclpialarlf32m1hxdcckk",
                     "duknijxbjxtonwi59p7wd17ew",
                     "e89w5zrh5o7oklc8cp9vjup69"
                 ],
-                "namespace": "ebaa9877yhmaeamqodbmq7rqa",
+                "namespace_id": "ebaa9877yhmaeamqodbmq7rqa",
                 "object": "thread",
                 "participants": [
                     {

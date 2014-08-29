@@ -73,7 +73,7 @@ def test_api_create(contacts_provider, contact_sync, db, api_client):
     c_resp = api_client.post_data('/contacts', c_data, ns_id)
     c_resp_data = json.loads(c_resp.data)
     assert c_resp_data['object'] == 'contact'
-    assert c_resp_data['namespace'] == acct.namespace.public_id
+    assert c_resp_data['namespace_id'] == acct.namespace.public_id
     assert c_resp_data['email'] == c_data['email']
     assert c_resp_data['name'] == c_data['name']
     assert 'id' in c_resp_data
@@ -81,7 +81,7 @@ def test_api_create(contacts_provider, contact_sync, db, api_client):
     c_get_resp = api_client.get_data('/contacts/' + c_id, ns_id)
 
     assert c_get_resp['object'] == 'contact'
-    assert c_get_resp['namespace'] == acct.namespace.public_id
+    assert c_get_resp['namespace_id'] == acct.namespace.public_id
     assert c_get_resp['email'] == c_data['email']
     assert c_get_resp['name'] == c_data['name']
     assert c_get_resp['id'] == c_id

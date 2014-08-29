@@ -44,10 +44,10 @@ def encode(obj, namespace_public_id=None):
         return {
             'id': obj.public_id,
             'object': 'namespace',
-            'namespace': obj.public_id,
+            'namespace_id': obj.public_id,
 
             # Account specific
-            'account': obj.account.public_id,
+            'account_id': obj.account.public_id,
             'email_address': obj.account.email_address,
             'provider': obj.account.provider,
             # 'status':  'syncing',  # TODO what are values here
@@ -59,14 +59,14 @@ def encode(obj, namespace_public_id=None):
         resp = {
             'id': obj.public_id,
             'object': 'message',
-            'namespace': _get_namespace_public_id(obj),
+            'namespace_id': _get_namespace_public_id(obj),
             'subject': obj.subject,
             'from': format_address_list(obj.from_addr),
             'to': format_address_list(obj.to_addr),
             'cc': format_address_list(obj.cc_addr),
             'bcc': format_address_list(obj.bcc_addr),
             'date': obj.received_date,
-            'thread': obj.thread.public_id,
+            'thread_id': obj.thread.public_id,
             'snippet': obj.snippet,
             'body': obj.sanitized_body,
             'unread': not obj.is_read,
@@ -88,15 +88,15 @@ def encode(obj, namespace_public_id=None):
         return {
             'id': obj.public_id,
             'object': 'thread',
-            'namespace': _get_namespace_public_id(obj),
+            'namespace_id': _get_namespace_public_id(obj),
             'subject': obj.subject,
             'participants': format_address_list(obj.participants),
             'last_message_timestamp': obj.recentdate,
             'first_message_timestamp': obj.subjectdate,
             'snippet': obj.snippet,
-            'messages': [m.public_id for m in obj.messages if not
-                         m.is_draft],
-            'drafts': [m.public_id for m in obj.drafts],
+            'message_ids': [m.public_id for m in obj.messages if not
+                            m.is_draft],
+            'draft_ids': [m.public_id for m in obj.drafts],
             'tags': [{'name': tag.name, 'id': tag.public_id}
                      for tag in obj.tags]
         }
@@ -105,7 +105,7 @@ def encode(obj, namespace_public_id=None):
         return {
             'id': obj.public_id,
             'object': 'contact',
-            'namespace': _get_namespace_public_id(obj),
+            'namespace_id': _get_namespace_public_id(obj),
             'name': obj.name,
             'email': obj.email_address
         }
@@ -114,7 +114,7 @@ def encode(obj, namespace_public_id=None):
         return {
             'id': obj.public_id,
             'object': 'event',
-            'namespace': _get_namespace_public_id(obj),
+            'namespace_id': _get_namespace_public_id(obj),
             'subject': obj.subject,
             'body': obj.body,
             'participants': [encode(p) for p in obj.participants],
@@ -161,7 +161,7 @@ def encode(obj, namespace_public_id=None):
         resp = {
             'id': obj.public_id,
             'object': 'file',
-            'namespace': _get_namespace_public_id(obj),
+            'namespace_id': _get_namespace_public_id(obj),
             'content_type': obj.content_type,
             'size': obj.size,
             'filename': obj.filename,
@@ -185,7 +185,7 @@ def encode(obj, namespace_public_id=None):
         resp.update({
             'id': obj.public_id,
             'object': 'webhook',
-            'namespace': _get_namespace_public_id(obj),
+            'namespace_id': _get_namespace_public_id(obj),
             'callback_url': obj.callback_url,
             'failure_notify_url': obj.failure_notify_url,
             'include_body': obj.include_body,
@@ -197,14 +197,14 @@ def encode(obj, namespace_public_id=None):
         return {
             'id': obj.public_id,
             'object': 'lens',
-            'namespace': _get_namespace_public_id(obj),
+            'namespace_id': _get_namespace_public_id(obj),
             'to': obj.to_addr,
             'from': obj.from_addr,
             'cc': obj.cc_addr,
             'bcc': obj.bcc_addr,
             'any_email': obj.any_email,
             'subject': obj.subject,
-            'thread': obj.thread_public_id,
+            'thread_id': obj.thread_public_id,
             'filename': obj.filename,
             'started_before': obj.started_before,
             'started_after': obj.started_after,
@@ -217,7 +217,7 @@ def encode(obj, namespace_public_id=None):
             'id': obj.public_id,
             'object': 'tag',
             'name': obj.name,
-            'namespace': _get_namespace_public_id(obj)
+            'namespace_id': _get_namespace_public_id(obj)
         }
 
 
