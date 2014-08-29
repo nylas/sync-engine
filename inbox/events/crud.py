@@ -77,4 +77,9 @@ def update(namespace, db_session, event_public_id, update_dict):
 
 
 def delete(namespace, db_session, event_public_id):
-    raise NotImplementedError
+    """ Delete the event with public_id = `event_public_id`. """
+    event = db_session.query(Event).filter(
+        Event.public_id == event_public_id).one()
+
+    db_session.delete(event)
+    db_session.commit()

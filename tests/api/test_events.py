@@ -203,3 +203,40 @@ def test_api_create_ical_invalid(db, api_client):
     headers = {'content-type': 'text/calendar'}
     e_resp = api_client.post_raw('/events', 'asdf', ns_id, headers=headers)
     assert e_resp.status_code != 200
+
+
+def test_api_delete(db, api_client):
+    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
+    ns_id = acct.namespace.public_id
+
+    e_data = {
+        'subject': '',
+        'when': {'time': 1407542195},
+    }
+
+    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp_data = json.loads(e_resp.data)
+    assert e_resp_data['object'] == 'event'
+    assert e_resp_data['namespace'] == acct.namespace.public_id
+    assert e_resp_data['subject'] == e_data['subject']
+    assert e_resp_data['when']['time'] == e_data['when']['time']
+    assert 'id' in e_resp_data
+    e_id = e_resp_data['id']
+
+    api_client.delete('/events/' + e_id, ns_id=ns_id)
+
+    event = api_client.get_data('/events/' + e_id, ns_id)
+    assert event['type'] == 'invalid_request_error'
+
+
+def test_api_delete_invalid(db, api_client):
+    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
+    ns_id = acct.namespace.public_id
+
+    e_id = 'asdf'
+    resp = api_client.delete('/events/' + e_id, ns_id=ns_id)
+    assert resp.status_code != 200
+
+    e_id = generate_public_id()
+    resp = api_client.delete('/events/' + e_id, ns_id=ns_id)
+    assert resp.status_code != 200

@@ -573,7 +573,24 @@ def event_update_api(public_id):
 
 @app.route('/events/<public_id>', methods=['DELETE'])
 def event_delete_api(public_id):
-    raise NotImplementedError
+    try:
+        valid_public_id(public_id)
+        event = g.db_session.query(Event).filter_by(
+            public_id=public_id).one()
+    except InputError:
+        return err(400, 'Invalid event id {}'.format(public_id))
+    except NoResultFound:
+        return err(404, 'No event found with public_id {}'.
+                   format(public_id))
+    if event.namespace != g.namespace:
+        return err(404, 'No event found with public_id {}'.
+                   format(public_id))
+    if event.provider_name != 'inbox':
+        return err(404, 'Cannot delete provider-based event with public_id {}'.
+                        format(public_id))
+
+    result = events.crud.delete(g.namespace, g.db_session, public_id)
+    return g.encoder.jsonify(result)
 
 
 #
