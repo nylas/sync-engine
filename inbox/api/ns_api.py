@@ -461,15 +461,13 @@ def event_create_api():
     except InputError as e:
         return err(404, e.message)
 
-    start = datetime.utcfromtimestamp(int(data.get('start')))
-    end = datetime.utcfromtimestamp(int(data.get('end')))
     subject = data.get('subject', '')
     body = data.get('body')
     location = data.get('location')
     reminders = data.get('reminders')
     recurrence = data.get('recurrence')
-    busy = int(data.get('busy'))
-    all_day = int(data.get('all_day'))
+    when = data.get('when')
+
     participants = data.get('participants', [])
     for p in participants:
         if 'status' not in p:
@@ -481,10 +479,7 @@ def event_create_api():
                                      location,
                                      reminders,
                                      recurrence,
-                                     start,
-                                     end,
-                                     busy,
-                                     all_day,
+                                     when,
                                      participants)
     return g.encoder.jsonify(new_contact)
 

@@ -110,7 +110,6 @@ class GoogleEventsProvider(BaseEventProvider):
         MalformedEventError
            If the calendar data could not be parsed correctly.
         """
-
         try:
             uid = str(event['id'])
 

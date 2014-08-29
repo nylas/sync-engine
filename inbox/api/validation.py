@@ -1,5 +1,6 @@
 """Utilities for validating user input to the API."""
 from datetime import datetime
+from inbox.models.when import parse_as_when
 from flask.ext.restful import reqparse
 from sqlalchemy.orm.exc import NoResultFound
 from inbox.models import Tag, Thread, Block
@@ -129,25 +130,18 @@ def get_thread(thread_public_id, namespace_id, db_session):
                          format(thread_public_id))
 
 
+def valid_when(when):
+    try:
+        parse_as_when(when)
+    except ValueError as e:
+        raise InputError(str(e))
+
+
 def valid_event(event):
-    try:
-        start = datetime.utcfromtimestamp(int(event.get('start')))
-    except (ValueError, TypeError):
-        raise InputError('Event start time invalid.')
+    if 'when' not in event:
+        raise InputError("Must specify 'when' when creating an event.")
 
-    try:
-        end = datetime.utcfromtimestamp(int(event.get('end')))
-    except (ValueError, TypeError):
-        raise InputError('Event end time invalid.')
-
-    if start > end:
-        raise InputError('Event cannot start after it ends.')
-
-    if not isinstance(event.get('busy'), bool):
-        raise InputError('\'busy\' must be true or false')
-
-    if not isinstance(event.get('all_day'), bool):
-        raise InputError('\'all_day\' must be true or false')
+    valid_when(event['when'])
 
     participants = event.get('participants', [])
     for p in participants:
@@ -160,23 +154,11 @@ def valid_event(event):
 
 
 def valid_event_update(event):
-    try:
-        if 'start' in event:
-            datetime.utcfromtimestamp(int(event.get('start')))
-    except (ValueError, TypeError):
-        raise InputError('Event start time invalid.')
-
-    try:
-        if 'end' in event:
-            datetime.utcfromtimestamp(int(event.get('end')))
-    except (ValueError, TypeError):
-        raise InputError('Event end time invalid.')
+    if 'when' in event:
+        valid_when(event['when'])
 
     if 'busy' in event and not isinstance(event.get('busy'), bool):
         raise InputError('\'busy\' must be true or false')
-
-    if 'all_day' in event and not isinstance(event.get('all_day'), bool):
-        raise InputError('\'all_day\' must be true or false')
 
     participants = event.get('participants', [])
     for p in participants:

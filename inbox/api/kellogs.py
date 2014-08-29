@@ -4,8 +4,9 @@ from json import JSONEncoder, dumps
 
 from flask import Response
 
-from inbox.models import (Message, Part, Contact, Event, Thread, Namespace,
-                          Block, Webhook, Lens, Tag)
+from inbox.models import (Message, Part, Contact, Event, Participant, Time,
+                          TimeSpan, Date, DateSpan, Thread, Namespace, Block,
+                          Webhook, Lens, Tag)
 
 
 def format_address_list(addresses):
@@ -114,18 +115,46 @@ def encode(obj, namespace_public_id=None):
             'id': obj.public_id,
             'object': 'event',
             'namespace': _get_namespace_public_id(obj),
-            'uid': obj.uid,
             'subject': obj.subject,
             'body': obj.body,
-            'participants': obj.participant_list,
-            'busy': obj.busy,
+            'participants': [encode(p) for p in obj.participants],
             'read_only': obj.read_only,
             'location': obj.location,
-            'reminders': obj.reminders,
-            'recurrence': obj.recurrence,
-            'start': obj.start,
-            'end': obj.end,
-            'all_day': obj.all_day
+            'when': encode(obj.when)
+        }
+
+    elif isinstance(obj, Participant):
+        return {
+            'id': obj.public_id,
+            'name': obj.name,
+            'email': obj.email_address,
+            'status': obj.status,
+        }
+
+    elif isinstance(obj, Time):
+        return {
+            'object': 'time',
+            'time': obj.time
+        }
+
+    elif isinstance(obj, TimeSpan):
+        return {
+            'object': 'timespan',
+            'start_time': obj.start_time,
+            'end_time': obj.end_time
+        }
+
+    elif isinstance(obj, Date):
+        return {
+            'object': 'date',
+            'date': obj.date.isoformat()
+        }
+
+    elif isinstance(obj, DateSpan):
+        return {
+            'object': 'datespan',
+            'start_date': obj.start_date.isoformat(),
+            'end_date': obj.end_date.isoformat()
         }
 
     elif isinstance(obj, Block):  # ie: Attachments/Files

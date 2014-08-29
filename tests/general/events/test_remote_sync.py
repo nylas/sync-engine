@@ -1,8 +1,7 @@
 import pytest
 
 from tests.util.base import config
-from tests.util.base import (event_sync, events_provider,
-                             EventsProviderStub)
+from tests.general.events.conftest import EventsProviderStub
 
 # Need to set up test config before we can import from
 # inbox.models.tables.
@@ -10,8 +9,6 @@ config()
 from inbox.models import Account, Event
 from inbox.events.remote_sync import EventSync
 from inbox.util.misc import MergeError
-
-__all__ = ['event_sync', 'events_provider']
 
 ACCOUNT_ID = 1
 
@@ -126,8 +123,8 @@ def test_add_events(events_provider, event_sync, db):
         filter_by(account_id=ACCOUNT_ID).filter_by(source='local').count()
     num_original_remote_events = db.session.query(Event). \
         filter_by(account_id=ACCOUNT_ID).filter_by(source='remote').count()
-    events_provider.supply_event('subj', '', 0, 1, False, False)
-    events_provider.supply_event('subj2', '', 0, 1, False, False)
+    events_provider.supply_event('subj')
+    events_provider.supply_event('subj2')
 
     event_sync.provider_instance = events_provider
     event_sync.poll()
@@ -141,7 +138,7 @@ def test_add_events(events_provider, event_sync, db):
 
 def test_update_event(events_provider, event_sync, db):
     """Test that subsequent event updates get stored."""
-    events_provider.supply_event('subj', '', 0, 1, False, False)
+    events_provider.supply_event('subj', '')
     event_sync.provider_instance = events_provider
     event_sync.poll()
     results = db.session.query(Event).filter_by(source='remote').all()
@@ -150,7 +147,7 @@ def test_update_event(events_provider, event_sync, db):
     assert 'subj' in subjects
 
     events_provider.__init__()
-    events_provider.supply_event('newsubj', 'newbody', 0, 1, False, False)
+    events_provider.supply_event('newsubj', 'newbody')
     event_sync.poll()
     db.new_session()
 
@@ -164,7 +161,7 @@ def test_update_event(events_provider, event_sync, db):
 def test_uses_local_updates(events_provider, event_sync, db):
     """Test that non-conflicting local and remote updates to the same event
     both get stored."""
-    events_provider.supply_event('subj', '', 0, 1, False, False)
+    events_provider.supply_event('subj', '')
     event_sync.provider_instance = events_provider
     event_sync.poll()
     results = db.session.query(Event).filter_by(source='local').all()
@@ -173,7 +170,7 @@ def test_uses_local_updates(events_provider, event_sync, db):
     db.session.commit()
 
     events_provider.__init__()
-    events_provider.supply_event('subj', 'newbody', 0, 1, False, False)
+    events_provider.supply_event('subj', 'newbody')
     event_sync.provider_instance = events_provider
     event_sync.poll()
 
@@ -192,8 +189,8 @@ def test_uses_local_updates(events_provider, event_sync, db):
 
 def test_multiple_remotes(events_provider, alternate_events_provider,
                           event_sync, db):
-    events_provider.supply_event('subj', '', 0, 1, False, False)
-    alternate_events_provider.supply_event('subj2', 'body', 0, 1, False, False)
+    events_provider.supply_event('subj', '')
+    alternate_events_provider.supply_event('subj2', 'body')
 
     event_sync.provider_instance = events_provider
     event_sync.poll()
@@ -213,15 +210,23 @@ def test_multiple_remotes(events_provider, alternate_events_provider,
 
 def test_deletes(events_provider, event_sync, db):
     num_original_events = db.session.query(Event).count()
-    events_provider.supply_event('subj', '', 0, 1, False, False)
+    events_provider.supply_event('subj')
     event_sync.provider_instance = events_provider
     event_sync.poll()
     num_current_events = db.session.query(Event).count()
     assert num_current_events - num_original_events == 2
 
     events_provider.__init__()
-    events_provider.supply_event('subj', '', 0, 1, False, False, deleted=True)
+    events_provider.supply_event('subj', deleted=True)
     event_sync.poll()
 
     num_current_events = db.session.query(Event).count()
     assert num_current_events == num_original_events
+
+
+def test_malformed(events_provider, event_sync, db):
+    num_original_events = db.session.query(Event).count()
+    events_provider.supply_bad()
+    event_sync.provider_instance = events_provider
+    event_sync.poll()
+    assert db.session.query(Event).count() == num_original_events

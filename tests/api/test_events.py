@@ -1,24 +1,26 @@
 import os
 import json
 
+from inbox.sqlalchemy_ext.util import generate_public_id
 from inbox.models import Account
-from tests.util.base import (event_sync, events_provider,
-                             api_client)
+from tests.util.base import api_client
 
-__all__ = ['events_provider', 'event_sync', 'api_client']
+__all__ = ['api_client']
 
 
 ACCOUNT_ID = 1
 
 
-def test_api_list(events_provider, event_sync, db, api_client):
-    events_provider.supply_event('subj', 'body1', 0, 1, False, False)
-    events_provider.supply_event('subj2', 'body2', 0, 1, False, False)
-
-    event_sync.provider_instance = events_provider
-    event_sync.poll()
+def test_api_list(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
+
+    e_data = {'subject': 'subj', 'body': 'body1',
+              'when': {'time': 1}, 'location': 'InboxHQ'}
+    e_data2 = {'subject': 'subj2', 'body': 'body2',
+               'when': {'time': 1}, 'location': 'InboxHQ'}
+    api_client.post_data('/events', e_data, ns_id)
+    api_client.post_data('/events', e_data2, ns_id)
 
     event_list = api_client.get_data('/events', ns_id)
     event_subjects = [event['subject'] for event in event_list]
@@ -30,14 +32,14 @@ def test_api_list(events_provider, event_sync, db, api_client):
     assert 'body2' in event_bodies
 
 
-def test_api_get(events_provider, event_sync, db, api_client):
-    events_provider.supply_event('subj', '', 0, 1, False, False)
-    events_provider.supply_event('subj2', '', 0, 1, False, False)
-
-    event_sync.provider_instance = events_provider
-    event_sync.poll()
+def test_api_get(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
+
+    e_data = {'subject': 'subj', 'when': {'time': 1}, 'location': 'InboxHQ'}
+    e_data2 = {'subject': 'subj2', 'when': {'time': 1}, 'location': 'InboxHQ'}
+    api_client.post_data('/events', e_data, ns_id)
+    api_client.post_data('/events', e_data2, ns_id)
 
     event_list = api_client.get_data('/events', ns_id)
 
@@ -58,16 +60,14 @@ def test_api_get(events_provider, event_sync, db, api_client):
     assert c2found
 
 
-def test_api_create(events_provider, event_sync, db, api_client):
+def test_api_create(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'subject': 'Friday Office Party',
-        'start': 1407542195,
-        'end': 1407543195,
-        'busy': False,
-        'all_day': False
+        'when': {'time': 1407542195},
+        'location': 'Inbox HQ',
     }
 
     e_resp = api_client.post_data('/events', e_data, ns_id)
@@ -75,10 +75,8 @@ def test_api_create(events_provider, event_sync, db, api_client):
     assert e_resp_data['object'] == 'event'
     assert e_resp_data['namespace'] == acct.namespace.public_id
     assert e_resp_data['subject'] == e_data['subject']
-    assert e_resp_data['start'] == e_data['start']
-    assert e_resp_data['end'] == e_data['end']
-    assert e_resp_data['busy'] == e_data['busy']
-    assert e_resp_data['all_day'] == e_data['all_day']
+    assert e_resp_data['location'] == e_data['location']
+    assert e_resp_data['when']['time'] == e_data['when']['time']
     assert 'id' in e_resp_data
     e_id = e_resp_data['id']
     e_get_resp = api_client.get_data('/events/' + e_id, ns_id)
@@ -87,16 +85,10 @@ def test_api_create(events_provider, event_sync, db, api_client):
     assert e_get_resp['namespace'] == acct.namespace.public_id
     assert e_get_resp['id'] == e_id
     assert e_get_resp['subject'] == e_data['subject']
-    assert e_get_resp['start'] == e_data['start']
-    assert e_get_resp['end'] == e_data['end']
-    assert e_get_resp['busy'] == e_data['busy']
-    assert e_get_resp['all_day'] == e_data['all_day']
+    assert e_get_resp['when']['time'] == e_data['when']['time']
 
 
-def test_api_create_ical(events_provider, event_sync, db, api_client):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
+def test_api_create_ical(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
@@ -110,15 +102,15 @@ def test_api_create_ical(events_provider, event_sync, db, api_client):
     headers = {'content-type': 'text/calendar'}
     e_resp = api_client.post_raw('/events', cal_str, ns_id, headers=headers)
     e_resp_data = json.loads(e_resp.data)[0]
+
     assert e_resp_data['object'] == 'event'
     assert e_resp_data['namespace'] == acct.namespace.public_id
     assert e_resp_data['subject'] == 'test recurring event'
     assert e_resp_data['body'] == 'Event Discription'
     assert e_resp_data['location'] == 'just some location'
-    assert e_resp_data['start'] == 1407628800
-    assert e_resp_data['end'] == 1407715200
-    assert e_resp_data['busy'] is True
-    assert e_resp_data['all_day'] is True
+    assert e_resp_data['when']['object'] == 'datespan'
+    assert e_resp_data['when']['start_date'] == '2014-08-10'
+    assert e_resp_data['when']['end_date'] == '2014-08-11'
     part_names = [p['name'] for p in e_resp_data['participants']]
     assert 'John Q. Public' in part_names
     assert 'Alyssa P Hacker' in part_names
@@ -129,7 +121,6 @@ def test_api_create_ical(events_provider, event_sync, db, api_client):
             assert p['status'] == 'noreply'
             assert p['email'] == 'johnqpublic@example.com'
         if p['name'] == 'Alyssa P Hacker':
-            assert p['notes'] == 'Guests: 1'
             assert p['status'] == 'yes'
             assert p['email'] == 'alyssaphacker@example.com'
         if p['name'] == 'benbitdit@example.com':
@@ -140,16 +131,13 @@ def test_api_create_ical(events_provider, event_sync, db, api_client):
             assert p['email'] == 'filet.minyon@example.com'
 
 
-def test_api_create_no_subject(events_provider, event_sync, db, api_client):
+def test_api_create_no_subject(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'subject': '',
-        'start': 1407542195,
-        'end': 1407543195,
-        'busy': False,
-        'all_day': False
+        'when': {'time': 1407542195},
     }
 
     e_resp = api_client.post_data('/events', e_data, ns_id)
@@ -157,10 +145,7 @@ def test_api_create_no_subject(events_provider, event_sync, db, api_client):
     assert e_resp_data['object'] == 'event'
     assert e_resp_data['namespace'] == acct.namespace.public_id
     assert e_resp_data['subject'] == e_data['subject']
-    assert e_resp_data['start'] == e_data['start']
-    assert e_resp_data['end'] == e_data['end']
-    assert e_resp_data['busy'] == e_data['busy']
-    assert e_resp_data['all_day'] == e_data['all_day']
+    assert e_resp_data['when']['time'] == e_data['when']['time']
     assert 'id' in e_resp_data
     e_id = e_resp_data['id']
     e_get_resp = api_client.get_data('/events/' + e_id, ns_id)
@@ -169,79 +154,52 @@ def test_api_create_no_subject(events_provider, event_sync, db, api_client):
     assert e_get_resp['namespace'] == acct.namespace.public_id
     assert e_get_resp['id'] == e_id
     assert e_get_resp['subject'] == e_data['subject']
-    assert e_get_resp['start'] == e_data['start']
-    assert e_get_resp['end'] == e_data['end']
-    assert e_get_resp['busy'] == e_data['busy']
-    assert e_get_resp['all_day'] == e_data['all_day']
+    assert e_get_resp['when']['time'] == e_data['when']['time']
 
 
-def test_create_start_after_end(events_provider, event_sync, db, api_client):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
-    e_data = {
-        'subject': 'Friday Office Party',
-        'start': 1407543195,
-        'end': 1407542195,
-        'busy': False,
-        'all_day': False
-    }
-
-    event_list = api_client.get_data('/events', ns_id)
-    length_before = len(event_list)
-    e_resp = api_client.post_data('/events', e_data, ns_id)
-    e_resp_data = json.loads(e_resp.data)
-
-    assert e_resp_data["type"] == "invalid_request_error"
-
-    event_list = api_client.get_data('/events', ns_id)
-    length_after = len(event_list)
-    assert length_before == length_after
-
-
-def test_create_nonbool_busy(events_provider, event_sync, db, api_client):
+def test_api_update_subject(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'subject': '',
-        'start': -1407543195,
-        'end': 1407542195,
-        'busy': 'yes',
-        'all_day': False
+        'when': {'time': 1407542195},
     }
 
-    event_list = api_client.get_data('/events', ns_id)
-    length_before = len(event_list)
     e_resp = api_client.post_data('/events', e_data, ns_id)
     e_resp_data = json.loads(e_resp.data)
+    assert e_resp_data['object'] == 'event'
+    assert e_resp_data['namespace'] == acct.namespace.public_id
+    assert e_resp_data['subject'] == e_data['subject']
+    assert e_resp_data['when']['time'] == e_data['when']['time']
+    assert 'id' in e_resp_data
+    e_id = e_resp_data['id']
 
-    assert e_resp_data["type"] == "invalid_request_error"
+    e_update_data = {'subject': 'new subject'}
+    e_put_resp = api_client.put_data('/events/' + e_id, e_update_data, ns_id)
+    e_put_data = json.loads(e_put_resp.data)
 
-    event_list = api_client.get_data('/events', ns_id)
-    length_after = len(event_list)
-    assert length_before == length_after
+    assert e_put_data['object'] == 'event'
+    assert e_put_data['namespace'] == acct.namespace.public_id
+    assert e_put_data['id'] == e_id
+    assert e_put_data['subject'] == 'new subject'
+    assert e_put_data['when']['object'] == 'time'
+    assert e_put_data['when']['time'] == e_data['when']['time']
 
 
-def test_create_nonbool_all_day(events_provider, event_sync, db, api_client):
+def test_api_update_invalid(db, api_client):
+    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
+    ns_id = acct.namespace.public_id
+    e_update_data = {'subject': 'new subject'}
+    e_id = generate_public_id()
+    e_put_resp = api_client.put_data('/events/' + e_id, e_update_data, ns_id)
+    assert e_put_resp.status_code != 200
+
+
+def test_api_create_ical_invalid(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
-    e_data = {
-        'subject': '',
-        'start': -1407543195,
-        'end': 1407542195,
-        'busy': True,
-        'all_day': 'False'
-    }
-
-    event_list = api_client.get_data('/events', ns_id)
-    length_before = len(event_list)
-    e_resp = api_client.post_data('/events', e_data, ns_id)
-    e_resp_data = json.loads(e_resp.data)
-
-    assert e_resp_data["type"] == "invalid_request_error"
-
-    event_list = api_client.get_data('/events', ns_id)
-    length_after = len(event_list)
-    assert length_before == length_after
+    headers = {'content-type': 'text/calendar'}
+    e_resp = api_client.post_raw('/events', 'asdf', ns_id, headers=headers)
+    assert e_resp.status_code != 200

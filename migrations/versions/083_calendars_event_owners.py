@@ -16,7 +16,6 @@ from sqlalchemy.sql import table
 
 
 def upgrade():
-
     # remove old events that didn't match foreign key constraints on calendars
     event = table('event')
     op.execute(event.delete())
@@ -81,7 +80,6 @@ def upgrade():
 
 
 def downgrade():
-    pass
     op.alter_column('eventparticipant', 'status',
                     existing_type=sa.Enum('yes', 'no', 'maybe', 'noreply'),
                     type_=sa.Enum('yes', 'no', 'maybe', 'awaiting'),

@@ -2,7 +2,7 @@
 --
 -- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.5.38-0ubuntu0.12.04.1
+-- Server version	5.5.38-0ubuntu0.12.04.1-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -140,7 +140,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('294200d809c8');
+INSERT INTO `alembic_version` VALUES ('1ac03cab7a24');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -490,7 +490,7 @@ CREATE TABLE `event` (
   `busy` tinyint(1) NOT NULL,
   `reminders` varchar(255) DEFAULT NULL,
   `recurrence` varchar(255) DEFAULT NULL,
-  `start` datetime NOT NULL,
+  `start` datetime DEFAULT NULL,
   `end` datetime DEFAULT NULL,
   `all_day` tinyint(1) NOT NULL,
   `source` enum('remote','local') NOT NULL,
@@ -500,8 +500,6 @@ CREATE TABLE `event` (
   `calendar_id` int(11) NOT NULL,
   `owner` varchar(255) DEFAULT NULL,
   `is_owner` tinyint(1) NOT NULL,
-  `start_date` date DEFAULT NULL,
-  `end_date` date DEFAULT NULL,
   `read_only` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uuid` (`uid`,`source`,`account_id`,`provider_name`),
@@ -1505,4 +1503,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-08-27  1:13:34
+-- Dump completed on 2014-08-27 22:31:24

@@ -2,25 +2,21 @@ import pytest
 import json
 
 from inbox.models import Account
-from tests.util.base import (event_sync, events_provider,
-                             api_client)
+from tests.util.base import api_client
 
-__all__ = ['events_provider', 'event_sync', 'api_client']
+__all__ = ['api_client']
 
 
 ACCOUNT_ID = 1
 
 
-def test_api_create(events_provider, event_sync, db, api_client):
+def test_api_create(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'subject': 'Friday Office Party',
-        'start': 1407542195,
-        'end': 1407543195,
-        'busy': False,
-        'all_day': False,
+        'when': {'time': 1407542195},
         'participants': [{
             'name': 'alyssa p. hacker',
             'email': 'alyssa@example.com'
@@ -45,16 +41,13 @@ def test_api_create(events_provider, event_sync, db, api_client):
     assert participant['status'] == 'noreply'
 
 
-def test_api_create_status_yes(events_provider, event_sync, db, api_client):
+def test_api_create_status_yes(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'subject': 'Friday Office Party',
-        'start': 1407542195,
-        'end': 1407543195,
-        'busy': False,
-        'all_day': False,
+        'when': {'time': 1407542195},
         'participants': [{
             'email': 'alyssa@example.com',
             'status': 'yes'
@@ -71,16 +64,13 @@ def test_api_create_status_yes(events_provider, event_sync, db, api_client):
     assert participant['status'] == 'yes'
 
 
-def test_api_create_multiple(events_provider, event_sync, db, api_client):
+def test_api_create_multiple(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'subject': 'Friday Office Party',
-        'start': 1407542195,
-        'end': 1407543195,
-        'busy': False,
-        'all_day': False,
+        'when': {'time': 1407542195},
         'participants': [{
             'email': 'alyssa@example.com',
         }, {
@@ -102,16 +92,13 @@ def test_api_create_multiple(events_provider, event_sync, db, api_client):
     assert participant1['status'] == 'noreply'
 
 
-def test_api_create_status_no(events_provider, event_sync, db, api_client):
+def test_api_create_status_no(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'subject': 'Friday Office Party',
-        'start': 1407542195,
-        'end': 1407543195,
-        'busy': False,
-        'all_day': False,
+        'when': {'time': 1407542195},
         'participants': [{
             'email': 'alyssa@example.com',
             'status': 'no'
@@ -128,16 +115,13 @@ def test_api_create_status_no(events_provider, event_sync, db, api_client):
     assert participant['status'] == e_data['participants'][0]['status']
 
 
-def test_api_create_status_maybe(events_provider, event_sync, db, api_client):
+def test_api_create_status_maybe(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'subject': 'Friday Office Party',
-        'start': 1407542195,
-        'end': 1407543195,
-        'busy': False,
-        'all_day': False,
+        'when': {'time': 1407542195},
         'participants': [{
             'email': 'alyssa@example.com',
             'status': 'maybe'
@@ -154,17 +138,13 @@ def test_api_create_status_maybe(events_provider, event_sync, db, api_client):
     assert participant['status'] == e_data['participants'][0]['status']
 
 
-def test_api_create_status_noreply(events_provider, event_sync, db,
-                                   api_client):
+def test_api_create_status_noreply(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'subject': 'Friday Office Party',
-        'start': 1407542195,
-        'end': 1407543195,
-        'busy': False,
-        'all_day': False,
+        'when': {'time': 1407542195},
         'participants': [{
             'email': 'alyssa@example.com',
             'status': 'noreply'
@@ -181,16 +161,13 @@ def test_api_create_status_noreply(events_provider, event_sync, db,
     assert participant['status'] == e_data['participants'][0]['status']
 
 
-def test_api_create_no_name(events_provider, event_sync, db, api_client):
+def test_api_create_no_name(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'subject': 'Friday Office Party',
-        'start': 1407542195,
-        'end': 1407543195,
-        'busy': False,
-        'all_day': False,
+        'when': {'time': 1407542195},
         'participants': [{
             'email': 'alyssa@example.com'
             }]
@@ -206,16 +183,13 @@ def test_api_create_no_name(events_provider, event_sync, db, api_client):
     assert participant['status'] == 'noreply'
 
 
-def test_api_create_no_email(events_provider, event_sync, db, api_client):
+def test_api_create_no_email(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'subject': 'Friday Office Party',
-        'start': 1407542195,
-        'end': 1407543195,
-        'busy': False,
-        'all_day': False,
+        'when': {'time': 1407542195},
         'participants': [{
             'name': 'alyssa p. hacker',
             }]
@@ -227,16 +201,13 @@ def test_api_create_no_email(events_provider, event_sync, db, api_client):
     assert e_resp_data["type"] == "invalid_request_error"
 
 
-def test_api_create_bad_status(events_provider, event_sync, db, api_client):
+def test_api_create_bad_status(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'subject': 'Friday Office Party',
-        'start': 1407542195,
-        'end': 1407543195,
-        'busy': False,
-        'all_day': False,
+        'when': {'time': 1407542195},
         'participants': [{
             'name': 'alyssa p. hacker',
             'email': 'alyssa@example.com',
@@ -250,42 +221,13 @@ def test_api_create_bad_status(events_provider, event_sync, db, api_client):
     assert e_resp_data["type"] == "invalid_request_error"
 
 
-def test_api_create_notes(events_provider, event_sync, db, api_client):
+def test_api_create_preserve_order(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'subject': 'Friday Office Party',
-        'start': 1407542195,
-        'end': 1407543195,
-        'busy': False,
-        'all_day': False,
-        'participants': [{
-            'email': 'alyssa@example.com',
-            'notes': 'this is a note.'
-            }]
-    }
-
-    e_resp = api_client.post_data('/events', e_data, ns_id)
-    e_resp_data = json.loads(e_resp.data)
-    assert len(e_resp_data['participants']) == 1
-    participant = e_resp_data['participants'][0]
-    assert participant['name'] is None
-    assert participant['email'] == e_data['participants'][0]['email']
-    assert participant['notes'] == e_data['participants'][0]['notes']
-
-
-def test_api_create_preserve_order(events_provider, event_sync,
-                                   db, api_client):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
-    e_data = {
-        'subject': 'Friday Office Party',
-        'start': 1407542195,
-        'end': 1407543195,
-        'busy': False,
-        'all_day': False,
+        'when': {'time': 1407542195},
         'participants': [{'email': 'alyssa@example.com'},
                          {'email': 'ben.bitdiddle@example.com'},
                          {'email': 'pei.mihn@example.com'},
@@ -301,17 +243,13 @@ def test_api_create_preserve_order(events_provider, event_sync,
         assert p['name'] is None
 
 
-def test_api_add_participant(events_provider, event_sync,
-                             db, api_client):
+def test_api_add_participant(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'subject': 'Friday Office Party',
-        'start': 1407542195,
-        'end': 1407543195,
-        'busy': False,
-        'all_day': False,
+        'when': {'time': 1407542195},
         'participants': [{'email': 'alyssa@example.com'},
                          {'email': 'ben.bitdiddle@example.com'},
                          {'email': 'pei.mihn@example.com'},
@@ -337,17 +275,13 @@ def test_api_add_participant(events_provider, event_sync,
         assert p['name'] is None
 
 
-def test_api_remove_participant(events_provider, event_sync,
-                                db, api_client):
+def test_api_remove_participant(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'subject': 'Friday Office Party',
-        'start': 1407542195,
-        'end': 1407543195,
-        'busy': False,
-        'all_day': False,
+        'when': {'time': 1407542195},
         'participants': [{'email': 'alyssa@example.com'},
                          {'email': 'ben.bitdiddle@example.com'},
                          {'email': 'pei.mihn@example.com'},
@@ -372,17 +306,13 @@ def test_api_remove_participant(events_provider, event_sync,
         assert p['name'] is None
 
 
-def test_api_update_participant_status(events_provider, event_sync,
-                                       db, api_client):
+def test_api_update_participant_status(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'subject': 'Friday Office Party',
-        'start': 1407542195,
-        'end': 1407543195,
-        'busy': False,
-        'all_day': False,
+        'when': {'time': 1407542195},
         'participants': [{'email': 'alyssa@example.com'},
                          {'email': 'ben.bitdiddle@example.com'},
                          {'email': 'pei.mihn@example.com'},
@@ -415,10 +345,7 @@ def test_api_update_participant_status(events_provider, event_sync,
 
     # Make sure that nothing changed that we didn't specify
     assert e_resp_data['subject'] == 'Friday Office Party'
-    assert e_resp_data['start'] == 1407542195
-    assert e_resp_data['end'] == 1407543195
-    assert e_resp_data['busy'] is False
-    assert e_resp_data['all_day'] is False
+    assert e_resp_data['when']['time'] == 1407542195
 
     assert len(e_resp_data['participants']) == 5
     expected = ['yes', 'no', 'maybe', 'noreply', 'noreply']
@@ -429,17 +356,13 @@ def test_api_update_participant_status(events_provider, event_sync,
 
 
 @pytest.mark.parametrize('rsvp', ['yes', 'no', 'maybe'])
-def test_api_participant_reply(events_provider, event_sync,
-                               db, api_client, rsvp):
+def test_api_participant_reply(db, api_client, rsvp):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'subject': 'Friday Office Party',
-        'start': 1407542195,
-        'end': 1407543195,
-        'busy': False,
-        'all_day': False,
+        'when': {'time': 1407542195},
         'participants': [{'email': 'alyssa@example.com'},
                          {'email': 'ben.bitdiddle@example.com'},
                          {'email': 'pei.mihn@example.com'},
@@ -469,18 +392,13 @@ def test_api_participant_reply(events_provider, event_sync,
     assert participants[0]['status'] == rsvp
 
 
-def test_api_participant_reply_invalid_rsvp(events_provider,
-                                            event_sync,
-                                            db, api_client):
+def test_api_participant_reply_invalid_rsvp(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'subject': 'Friday Office Party',
-        'start': 1407542195,
-        'end': 1407543195,
-        'busy': False,
-        'all_day': False,
+        'when': {'time': 1407542195},
         'participants': [{'email': 'alyssa@example.com'},
                          {'email': 'ben.bitdiddle@example.com'},
                          {'email': 'pei.mihn@example.com'},
@@ -504,18 +422,13 @@ def test_api_participant_reply_invalid_rsvp(events_provider,
     assert e_resp_data['type'] == 'api_error'
 
 
-def test_api_participant_reply_invalid_participant(events_provider,
-                                                   event_sync,
-                                                   db, api_client):
+def test_api_participant_reply_invalid_participant(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'subject': 'Friday Office Party',
-        'start': 1407542195,
-        'end': 1407543195,
-        'busy': False,
-        'all_day': False,
+        'when': {'time': 1407542195},
         'participants': [{'email': 'alyssa@example.com'},
                          {'email': 'ben.bitdiddle@example.com'},
                          {'email': 'pei.mihn@example.com'},
@@ -536,18 +449,13 @@ def test_api_participant_reply_invalid_participant(events_provider,
     assert e_resp_data['type'] == 'invalid_request_error'
 
 
-def test_api_participant_reply_invalid_event(events_provider,
-                                             event_sync,
-                                             db, api_client):
+def test_api_participant_reply_invalid_event(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'subject': 'Friday Office Party',
-        'start': 1407542195,
-        'end': 1407543195,
-        'busy': False,
-        'all_day': False,
+        'when': {'time': 1407542195},
         'participants': [{'email': 'alyssa@example.com'},
                          {'email': 'ben.bitdiddle@example.com'},
                          {'email': 'pei.mihn@example.com'},
@@ -570,18 +478,13 @@ def test_api_participant_reply_invalid_event(events_provider,
     assert e_resp_data['type'] == 'invalid_request_error'
 
 
-def test_api_participant_reply_invalid_event2(events_provider,
-                                              event_sync,
-                                              db, api_client):
+def test_api_participant_reply_invalid_event2(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'subject': 'Friday Office Party',
-        'start': 1407542195,
-        'end': 1407543195,
-        'busy': False,
-        'all_day': False,
+        'when': {'time': 1407542195},
         'participants': [{'email': 'alyssa@example.com'},
                          {'email': 'ben.bitdiddle@example.com'},
                          {'email': 'pei.mihn@example.com'},
@@ -604,18 +507,13 @@ def test_api_participant_reply_invalid_event2(events_provider,
     assert e_resp_data['type'] == 'invalid_request_error'
 
 
-def test_api_participant_reply_invalid_action(events_provider,
-                                              event_sync,
-                                              db, api_client):
+def test_api_participant_reply_invalid_action(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'subject': 'Friday Office Party',
-        'start': 1407542195,
-        'end': 1407543195,
-        'busy': False,
-        'all_day': False,
+        'when': {'time': 1407542195},
         'participants': [{'email': 'alyssa@example.com'},
                          {'email': 'ben.bitdiddle@example.com'},
                          {'email': 'pei.mihn@example.com'},

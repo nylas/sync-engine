@@ -27,6 +27,25 @@ def test_cancelled_event(google_events_provider):
         google_events_provider.parse_event(event, cal_info)
 
 
+def test_malformed_event(google_events_provider):
+    """Test that the parser gracefully handles malformed events."""
+    cal_info = {}
+    event = {u'originalStartTime':
+             {u'dateTime': u'2011-10-06T23:31:00-07:00'},
+             u'reminders': {u'useDefault': False},
+             u'start': {u'dateTime': None},
+             u'end': {u'dateTime': u'2014-08-11T13:00:00-07:00'},
+             u'etag': u'"2632026776000000"',
+             u'recurringEventId': u'f3jukdd49bc36smsui4rb35n18',
+             u'id': u'f3jukdd49bc36smsui4rb35n18_20111007T063100Z'}
+    with pytest.raises(MalformedEventError):
+        google_events_provider.parse_event(event, cal_info)
+
+    event['start'] = {'dateTime': 'asdf'}
+    with pytest.raises(MalformedEventError):
+        google_events_provider.parse_event(event, cal_info)
+
+
 def test_no_reminders(google_events_provider):
     """Test that the parser gracefully handles events with no reminders."""
     cal_info = {u'kind': u'calendar#events',

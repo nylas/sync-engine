@@ -12,7 +12,7 @@ INBOX_PROVIDER_NAME = 'inbox'
 
 
 def create(namespace, db_session, subject, body, location, reminders,
-           recurrence, start, end, busy, all_day, participants):
+           recurrence, when, participants):
     account = db_session.query(Account).filter(
         Account.id == namespace.account_id).one()
     event = Event(
@@ -24,12 +24,7 @@ def create(namespace, db_session, subject, body, location, reminders,
         subject=subject,
         body=body,
         location=location,
-        reminders=reminders,
-        recurrence=recurrence,
-        start=start,
-        end=end,
-        busy=busy,
-        all_day=all_day,
+        when=when,
         read_only=False,
         is_owner=True,
         source='local')
@@ -72,7 +67,7 @@ def update(namespace, db_session, event_public_id, update_dict):
         return event
 
     for attr in ['subject', 'body', 'location', 'reminders', 'recurrence',
-                 'start', 'end', 'busy', 'all_day', 'participant_list']:
+                 'when', 'participant_list']:
         if attr in update_dict:
             setattr(event, attr, update_dict[attr])
 
