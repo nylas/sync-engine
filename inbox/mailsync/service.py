@@ -121,24 +121,11 @@ class SyncService(object):
                         acc.sync_unlock()
                     acc.sync_lock()
 
-                    info = provider_info(acc.provider)
-                    provider_supports_condstore = info.get("condstore", None)
-                    account_supports_condstore = getattr(acc,
-                                                         'supports_condstore',
-                                                         None)
-                    if (provider_supports_condstore or
-                            account_supports_condstore):
-                        # upgrade generic providers if they support condstore
-                        monitor = self.monitor_cls_for['generic_condstore'](
-                            acc.id, acc.namespace.id, acc.email_address,
-                            acc.provider)
-                    else:
-                        monitor = self.monitor_cls_for[acc.provider](
-                            acc.id, acc.namespace.id, acc.email_address,
-                            acc.provider)
+                    monitor = self.monitor_cls_for[acc.provider](acc)
                     self.monitors[acc.id] = monitor
                     monitor.start()
 
+                    info = provider_info(acc.provider)
                     if info.get('contacts', None):
                         contact_sync = ContactSync(acc.provider, acc.id)
                         self.contact_sync_monitors[acc.id] = contact_sync

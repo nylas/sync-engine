@@ -1,4 +1,4 @@
-from gc import collect as garbage_collect
+import functools
 
 from gevent import Greenlet, joinall, sleep, GreenletExit
 from gevent.queue import Queue, Empty
@@ -6,11 +6,16 @@ from sqlalchemy.exc import DataError, IntegrityError
 
 from inbox.log import get_logger
 logger = get_logger()
-from inbox.util.concurrency import retry_with_logging, retry_and_report_killed
+from inbox.util.concurrency import retry_and_report_killed
 from inbox.util.itert import partition
 from inbox.models import (Account, Folder, MAX_FOLDER_NAME_LENGTH)
+from inbox.models.session import session_scope
 from inbox.mailsync.exc import SyncException
 from inbox.mailsync.reporting import report_stopped
+
+
+mailsync_session_scope = functools.partial(session_scope,
+                                           ignore_soft_deletes=False)
 
 
 class MailsyncError(Exception):
@@ -124,7 +129,7 @@ def create_db_objects(account_id, db_session, log, folder_name, raw_messages,
                                    canonical_name)
 
     for msg in raw_messages:
-        uid = msg_create_fn(db_session, log, acc, folder, msg)
+        uid = msg_create_fn(db_session, acc, folder, msg)
         # Must ensure message objects are flushed because they reference
         # threads, which may be new, and later messages may need to belong to
         # the same thread. If we don't flush here and disable autoflush within
@@ -203,15 +208,14 @@ class BaseMailSyncMonitor(Greenlet):
     RETRY_FAIL_CLASSES = [MailsyncError, ValueError, AttributeError, DataError,
                           IntegrityError, TypeError]
 
-    def __init__(self, account_id, email_address, provider_name, heartbeat=1,
-                 retry_fail_classes=[]):
+    def __init__(self, account, heartbeat=1, retry_fail_classes=[]):
         self.inbox = Queue()
         # how often to check inbox, in seconds
         self.heartbeat = heartbeat
-        self.log = logger.new(component='mail sync', account_id=account_id)
-        self.account_id = account_id
-        self.email_address = email_address
-        self.provider_name = provider_name
+        self.log = logger.new(component='mail sync', account_id=account.id)
+        self.account_id = account.id
+        self.email_address = account.email_address
+        self.provider_name = account.provider
         self.retry_fail_classes = self.RETRY_FAIL_CLASSES
         self.retry_fail_classes.extend(retry_fail_classes)
 

@@ -9,8 +9,6 @@ def test_reconcile_message(db, config):
     from inbox.sendmail.base import create_draft
     from inbox.models.account import Account
     from inbox.models.message import Message
-    from inbox.log import get_logger
-    log = get_logger()
 
     account = db.session.query(Account).get(ACCOUNT_ID)
     draft = create_draft(db.session, account)
@@ -30,7 +28,7 @@ def test_reconcile_message(db, config):
     db.session.add(message)
     db.session.commit()
 
-    reconcile_message(db.session, log, inbox_uid, message)
+    reconcile_message(db.session, inbox_uid, message)
 
     assert draft.resolved_message and draft.resolved_message.id == message.id,\
         'draft not reconciled correctly'

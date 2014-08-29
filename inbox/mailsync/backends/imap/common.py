@@ -9,84 +9,22 @@ Types returned for data are the column types defined via SQLAlchemy.
 Eventually we're going to want a better way of ACLing functions that operate on
 accounts.
 """
-from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.contacts.process_mail import update_contacts_from_message
-from inbox.models.block import Block
 from inbox.models.message import Message
-from inbox.models.thread import Thread
 from inbox.models.folder import Folder
-from inbox.models.namespace import Namespace
 from inbox.models.backends.imap import ImapUid, ImapFolderInfo
 
 from inbox.log import get_logger
 log = get_logger()
 
 
-def total_stored_data(account_id, session):
-    """
-    Computes the total size of the block data of emails in your
-    account's IMAP folders.
-
-    """
-    subq = session.query(Block) \
-        .join(Block.message, Message.imapuid) \
-        .filter(ImapUid.account_id == account_id) \
-        .group_by(Message.id, Block.id)
-    return session.query(func.sum(subq.subquery().columns.size)).scalar()
-
-
-def total_stored_messages(account_id, session):
-    """ Computes the number of emails in your account's IMAP folders. """
-    return session.query(Message) \
-        .join(Message.imapuid) \
-        .filter(ImapUid.account_id == account_id) \
-        .group_by(Message.id).count()
-
-
-def num_uids(account_id, session, folder_name):
-    return session.query(ImapUid.msg_uid).join(Folder).filter(
-        ImapUid.account_id == account_id,
-        Folder.name == folder_name).count()
-
-
 def all_uids(account_id, session, folder_name):
-    return [uid for uid, in session.query(ImapUid.msg_uid).join(Folder).filter(
+    return {uid for uid, in session.query(ImapUid.msg_uid).join(Folder).filter(
         ImapUid.account_id == account_id,
-        Folder.name == folder_name)]
-
-
-def g_msgids(account_id, session, in_):
-    if not in_:
-        return []
-    # Easiest way to account-filter Messages is to namespace-filter from
-    # the associated thread. (Messages may not necessarily have associated
-    # ImapUids.)
-    in_ = {long(i) for i in in_}  # in case they are strings
-    if len(in_) > 1000:
-        # If in_ is really large, passing all the values to MySQL can get
-        # deadly slow. (Approximate threshold empirically determined)
-        query = session.query(Message.g_msgid).join(Thread).join(Namespace). \
-            filter(Namespace.account_id == account_id).all()
-        return sorted(g_msgid for g_msgid, in query if g_msgid in in_)
-    # But in the normal case that in_ only has a few elements, it's way better
-    # to not fetch a bunch of values from MySQL only to return a few of them.
-    query = session.query(Message.g_msgid).join(Thread).join(Namespace). \
-        filter(Namespace.account_id == account_id,
-               Message.g_msgid.in_(in_)).all()
-    return sorted(g_msgid for g_msgid, in query)
-
-
-def g_metadata(account_id, session, folder_name):
-    query = session.query(ImapUid.msg_uid, Message.g_msgid, Message.g_thrid)\
-        .filter(ImapUid.account_id == account_id,
-                Folder.name == folder_name,
-                ImapUid.message_id == Message.id)
-
-    return dict([(uid, dict(msgid=g_msgid, thrid=g_thrid))
-                 for uid, g_msgid, g_thrid in query])
+        Folder.name == folder_name)}
 
 
 def update_thread_labels(thread, folder_name, g_labels, db_session):

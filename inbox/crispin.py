@@ -714,8 +714,9 @@ class GmailCrispinClient(CondStoreCrispinClient):
                      ret in self.conn.fetch(uids, ['X-GM-MSGID',
                                                    'X-GM-THRID']).iteritems()])
 
-    def expand_threads(self, g_thrids):
-        """ Find all message UIDs in this account with X-GM-THRID in g_thrids.
+    def expand_thread(self, g_thrid):
+        """ Find all message UIDs in this account with X-GM-THRID equal to
+        g_thrid.
 
         Requires the "All Mail" folder to be selected.
 
@@ -727,10 +728,9 @@ class GmailCrispinClient(CondStoreCrispinClient):
         assert self.selected_folder_name == self.folder_names()['all'], \
             "must select All Mail first ({})".format(
                 self.selected_folder_name)
-        criteria = ('OR ' * (len(g_thrids) - 1)) + ' '.join(
-            ['X-GM-THRID {}'.format(thrid) for thrid in g_thrids])
+        criterion = 'X-GM-THRID {}'.format(g_thrid)
         uids = [long(uid) for uid in self.conn.search(['NOT DELETED',
-                                                       criteria])]
+                                                       criterion])]
         # UIDs ascend over time; return in order most-recent first
         return sorted(uids, reverse=True)
 

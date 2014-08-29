@@ -14,7 +14,7 @@ import raven.processors
 import colorlog
 import structlog
 import subprocess
-from structlog._frames import _find_first_app_frame_and_name
+from structlog.threadlocal import wrap_dict
 
 from inbox.config import config
 
@@ -129,7 +129,7 @@ structlog.configure(
         _format_string_renderer,
         structlog.processors.JSONRenderer(),
     ],
-    context_class=dict,
+    context_class=wrap_dict(dict),
     logger_factory=structlog.stdlib.LoggerFactory(),
     wrapper_class=BoundLogger,
     cache_logger_on_first_use=True,

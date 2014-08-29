@@ -11,7 +11,7 @@ from inbox.log import get_logger
 log = get_logger()
 
 
-def reconcile_message(db_session, log, inbox_uid, new_msg):
+def reconcile_message(db_session, inbox_uid, new_msg):
     """
     Identify a `Sent Mail` (or corresponding) message synced from the
     remote backend as one we sent and reconcile it with the message we
