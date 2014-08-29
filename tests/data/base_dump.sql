@@ -2,7 +2,7 @@
 --
 -- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.5.38-0ubuntu0.12.04.1-log
+-- Server version	5.5.38-0ubuntu0.12.04.1
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -64,7 +64,7 @@ CREATE TABLE `account` (
   KEY `ix_account__canonicalized_address` (`_canonicalized_address`),
   KEY `ix_account__raw_address` (`_raw_address`),
   KEY `default_calendar_ibfk_1` (`default_calendar_id`),
-  CONSTRAINT `default_calendar_ibfk_1` FOREIGN KEY (`default_calendar_id`) REFERENCES `calendar` (`id`),
+  CONSTRAINT `account_ibfk_10` FOREIGN KEY (`default_calendar_id`) REFERENCES `calendar` (`id`),
   CONSTRAINT `account_ibfk_2` FOREIGN KEY (`inbox_folder_id`) REFERENCES `folder` (`id`),
   CONSTRAINT `account_ibfk_3` FOREIGN KEY (`sent_folder_id`) REFERENCES `folder` (`id`),
   CONSTRAINT `account_ibfk_4` FOREIGN KEY (`drafts_folder_id`) REFERENCES `folder` (`id`),
@@ -140,7 +140,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('1ac03cab7a24');
+INSERT INTO `alembic_version` VALUES ('565c7325c51d');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1503,4 +1503,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-08-27 22:31:24
+-- Dump completed on 2014-08-29 20:51:00

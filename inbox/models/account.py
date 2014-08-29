@@ -118,7 +118,7 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
                                  ForeignKey('calendar.id',
                                             ondelete='SET NULL',
                                             use_alter=True,
-                                            name='default_calendar_ibfk_1'),
+                                            name='account_ibfk_10'),
                                  nullable=True)
 
     _default_calendar = relationship(
