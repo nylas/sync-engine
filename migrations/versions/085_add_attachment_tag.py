@@ -19,18 +19,24 @@ def upgrade():
     from sqlalchemy.orm import joinedload
     with session_scope() as db_session:
         # Create the attachment tag
+	print "creating canonical tags..."
         for ns in db_session.query(Namespace):
             Tag.create_canonical_tags(ns, db_session)
+	    db_session.commit()
 
-        thread_count, = db_session.query(func.count(Thread.id)).one()
+        thread_count = db_session.query(func.count(Thread.id)).scalar()
+        print "\nchecking for attachment tag on {} threads".format(thread_count)
         q = db_session.query(Thread).options(joinedload(Thread.messages))
         processed_count = 0
-        for thr in safer_yield_per(q, Thread.id, 1, thread_count):
+        for thr in safer_yield_per(q, Thread.id, 1, 25):
             if any(m.attachments for m in thr.messages):
                 attachment_tag = thr.namespace.tags['attachment']
                 thr.apply_tag(attachment_tag)
             processed_count += 1
-            print processed_count
+	    if processed_count % 500 == 0:
+                print processed_count
+                db_session.commit()
+	db_session.commit()
 
 
 def downgrade():
