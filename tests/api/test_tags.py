@@ -2,8 +2,13 @@
 import json
 import gevent
 import pytest
+from inbox.models import Tag
+
 from tests.util.base import (patch_network_functions, api_client,
-                             syncback_service)
+                             syncback_service, default_namespace)
+
+__all__ = ['patch_network_functions', 'api_client', 'syncback_service',
+           'default_namespace']
 
 
 # Utility functions to simplify hitting the API.
@@ -11,25 +16,74 @@ from tests.util.base import (patch_network_functions, api_client,
 def get_tag_names(thread):
     return [tag['name'] for tag in thread['tags']]
 
+
 @pytest.fixture(autouse=True)
-def create_canonical_tags(db):
+def create_canonical_tags(db, default_namespace):
     """Ensure that all canonical tags exist for the namespace we're testing
     against. This is normally done when an account sync starts."""
-    from inbox.models import Namespace, Tag
-    namespace = db.session.query(Namespace).first()
-    Tag.create_canonical_tags(namespace, db.session)
+    Tag.create_canonical_tags(default_namespace, db.session)
     db.session.commit()
 
 
 def test_get_tags(api_client):
-    from inbox.models import Tag
     tags = api_client.get_data('/tags/')
     assert set(Tag.RESERVED_TAG_NAMES).issubset({tag['name'] for tag in tags})
 
 
-def test_create_tag(api_client):
-    api_client.post_data('/tags/', {'name': 'foo'})
+def test_get_invalid(api_client):
+    bad_tag_id = '0000000000000000000000000'
+    tag_data = api_client.get_data('/tags/{}'.format(bad_tag_id))
+    assert tag_data['message'] == 'No tag found'
+
+    bad_tag_id = 'asdf!'
+    tag_data = api_client.get_data('/tags/{}'.format(bad_tag_id))
+    assert 'is not a valid id' in tag_data['message']
+
+
+def test_create_tag(api_client, default_namespace):
+    ns_id = default_namespace.public_id
+
+    post_resp = api_client.post_data('/tags/', {'name': 'foo'})
+    assert post_resp.status_code == 200
+    tag_resp = json.loads(post_resp.data)
+    assert tag_resp['name'] == 'foo'
+    assert tag_resp['namespace_id'] == ns_id
+    tag_id = tag_resp['id']
+
+    # Check getting the tag
+    tag_data = api_client.get_data('/tags/{}'.format(tag_id))
+    assert tag_data['name'] == 'foo'
+    assert tag_data['namespace_id'] == ns_id
+    assert tag_data['id'] == tag_id
+
+    # Check listing the tag
     assert 'foo' in [tag['name'] for tag in api_client.get_data('/tags/')]
+
+    # Make sure we can specify the namespace that we are creating the tag in
+    bad_ns_id = 0000000000000000000000000
+    tag_data = {'name': 'foo3', 'namespace_id': bad_ns_id}
+    put_resp = api_client.post_data('/tags/', tag_data)
+    assert put_resp.status_code == 400
+    assert 'foo3' not in [tag['name'] for tag in api_client.get_data('/tags/')]
+
+    # Make sure that we can only update to the existing namespace
+
+
+def test_create_invalid(api_client, default_namespace):
+    from inbox.models.constants import MAX_INDEXABLE_LENGTH
+    bad_ns_id = '0000000000000000000000000'
+
+    post_resp = api_client.post_data('/tags/', {'invalid': 'foo'})
+    assert post_resp.status_code == 400
+
+    new_tag_data = {'name': 'foo', 'namespace_id': bad_ns_id}
+    post_resp = api_client.post_data('/tags/', new_tag_data)
+    assert post_resp.status_code == 400
+
+    too_long = 'x' * (MAX_INDEXABLE_LENGTH + 1)
+    post_resp = api_client.post_data('/tags/', {'name': too_long})
+    assert post_resp.status_code == 400
+    assert 'too long' in json.loads(post_resp.data)['message']
 
 
 def test_read_update_tags(api_client):
@@ -39,13 +93,45 @@ def test_read_update_tags(api_client):
     tag_data = api_client.get_data('/tags/{}'.format(public_id))
     assert tag_data['name'] == 'foo'
     assert tag_data['id'] == public_id
+    tag_ns_id = tag_data['namespace_id']
 
     r = api_client.put_data('/tags/{}'.format(public_id), {'name': 'bar'})
+    assert json.loads(r.data)['name'] == 'bar'
+
+    # include namespace
+    r = api_client.put_data('/tags/{}'.format(public_id),
+                            {'name': 'bar', 'namepace_id': tag_ns_id})
     assert json.loads(r.data)['name'] == 'bar'
 
     updated_tag_data = api_client.get_data('/tags/{}'.format(public_id))
     assert updated_tag_data['name'] == 'bar'
     assert updated_tag_data['id'] == public_id
+
+
+def test_update_invalid(api_client):
+    not_found_id = '0000000000000000000000000'
+    r = api_client.put_data('/tags/{}'.format(not_found_id), {'name': 'bar'})
+    assert r.status_code == 404
+
+    bad_id = '!'
+    r = api_client.put_data('/tags/{}'.format(bad_id), {'name': 'bar'})
+    assert r.status_code == 400
+
+    post_resp = api_client.post_data('/tags/', {'name': 'foo'})
+    tag_id = json.loads(post_resp.data)['id']
+    r = api_client.put_data('/tags/{}'.format(tag_id), {'invalid': 'bar'})
+    assert r.status_code == 400
+
+    # create a conflict
+    post_resp = api_client.post_data('/tags/', {'name': 'foo_conflict'})
+    r = api_client.put_data('/tags/{}'.format(tag_id),
+                            {'name': 'foo_conflict'})
+    assert r.status_code == 409
+
+    # try to move namespaces
+    tag_update = {'name': 'foo3', 'namespace_id': not_found_id}
+    r = api_client.put_data('/tags/{}'.format(tag_id), tag_update)
+    assert r.status_code == 400
 
 
 def test_can_only_update_user_tags(api_client):
@@ -55,7 +141,6 @@ def test_can_only_update_user_tags(api_client):
 
     r = api_client.put_data('/tags/unread', {'name': 'new name'})
     assert r.status_code == 403
-
 
 
 def test_cant_create_existing_tag(api_client):

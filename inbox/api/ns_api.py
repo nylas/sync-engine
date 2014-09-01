@@ -124,8 +124,8 @@ def tag_query_api():
     return g.encoder.jsonify(results)
 
 
-@app.route('/tags/<public_id>', methods=['GET', 'PUT'])
-def tag_read_update_api(public_id):
+@app.route('/tags/<public_id>', methods=['GET'])
+def tag_read_api(public_id):
     try:
         valid_public_id(public_id)
         tag = g.db_session.query(Tag).filter(
@@ -135,28 +135,54 @@ def tag_read_update_api(public_id):
         return err(400, '{} is not a valid id'.format(public_id))
     except NoResultFound:
         return err(404, 'No tag found')
-    if request.method == 'GET':
-        return g.encoder.jsonify(tag)
-    elif request.method == 'PUT':
-        data = request.get_json(force=True)
-        if data.keys() != ['name']:
-            return err(400, 'Malformed tag update request')
-        if not tag.user_created:
-            return err(403, 'Cannot modify tag {}'.format(public_id))
-        new_name = data['name']
+
+    return g.encoder.jsonify(tag)
+
+
+@app.route('/tags/<public_id>', methods=['PUT'])
+def tag_update_api(public_id):
+    try:
+        valid_public_id(public_id)
+        tag = g.db_session.query(Tag).filter(
+            Tag.public_id == public_id,
+            Tag.namespace_id == g.namespace.id).one()
+    except InputError:
+        return err(400, '{} is not a valid id'.format(public_id))
+    except NoResultFound:
+        return err(404, 'No tag found')
+
+    data = request.get_json(force=True)
+    if 'name' not in data.keys():
+        return err(400, 'Malformed tag update request')
+    if 'namespace_id' in data.keys():
+        ns_id = data['namespace_id']
+        valid_public_id(ns_id)
+        if ns_id != g.namespace.id:
+            return err(400, 'Cannot change the namespace on a tag.')
+    if not tag.user_created:
+        return err(403, 'Cannot modify tag {}'.format(public_id))
+    new_name = data['name']
+
+    if new_name != tag.name:  # short-circuit rename to same value
         if not Tag.name_available(new_name, g.namespace.id, g.db_session):
             return err(409, 'Tag name already used')
         tag.name = new_name
         g.db_session.commit()
-        return g.encoder.jsonify(tag)
     # TODO(emfree) also support deleting user-created tags.
+
+    return g.encoder.jsonify(tag)
 
 
 @app.route('/tags/', methods=['POST'])
 def tag_create_api():
     data = request.get_json(force=True)
-    if data.keys() != ['name']:
+    if 'name' not in data.keys():
         return err(400, 'Malformed tag request')
+    if 'namespace_id' in data.keys():
+        ns_id = data['namespace_id']
+        valid_public_id(ns_id)
+        if ns_id != g.namespace.id:
+            return err(400, 'Cannot change the namespace on a tag.')
     tag_name = data['name']
     if not Tag.name_available(tag_name, g.namespace.id, g.db_session):
         return err(409, 'Tag name not available')

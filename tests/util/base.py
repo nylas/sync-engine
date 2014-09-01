@@ -225,6 +225,18 @@ def syncback_service():
 
 
 @fixture(scope='function')
+def default_namespace(db):
+    from inbox.models import Namespace
+    return db.session.query(Namespace).first()
+
+
+@fixture(scope='function')
+def default_account(db):
+    from inbox.models import Account
+    return db.session.query(Account).filter_by(id=1).one()
+
+
+@fixture(scope='function')
 def contact_sync(config, db):
     from inbox.contacts.remote_sync import ContactSync
     return ContactSync('gmail', 1)

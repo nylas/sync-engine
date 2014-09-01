@@ -46,8 +46,9 @@ def limit(value):
 def valid_public_id(value):
     try:
         # raise ValueError on malformed public ids
+        # raise TypeError if an integer is passed in
         int(value, 36)
-    except ValueError:
+    except (TypeError, ValueError):
         raise InputError('Invalid id {}'.format(value))
     return value
 
