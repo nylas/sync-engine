@@ -13,6 +13,7 @@ node_modules
 /tests/log
 /tests/output
 /tests/coverage
+htmlcov
 /cache
 /config.json
 

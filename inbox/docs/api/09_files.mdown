@@ -29,6 +29,20 @@ GET https://api.inboxapp.com/n/<namespace_id>/files/<file_id>
 
 This endpoint supports [filters](#filters), which allow you to fetch multiple files matching specific critera. For example, the following will return all zip files. Note the `/` character in the content type has been replaced by the [percent-encoded](http://en.wikipedia.org/wiki/Percent-encoding) value `%2F`.
 
+## Options
+
+* **`limit`** (integer) The maximum number of results to return. Defaults to 100 for performance. If `limit` is set too high, a request may fail with HTTP status code 400 to prevent excessively large response bodies.
+
+* **`offset`** (integer) Zero-based offset; use with `limit` for pagination of results.
+
+* **`message_id`** Return only files that are attached to a particular message.
+
+* **`file_id`** Return the file with the given file_id
+
+* **`filename`** (string) Return only files that match the given filename
+
+* **`is_attachment`** (bool) either `true` or `false` specifying if the results should be filtered to files that are attachments or not.
+
 ```
 :::xml
 GET https://api.inboxapp.com/n/<namespace_id>/files?content_type=application%2Fzip

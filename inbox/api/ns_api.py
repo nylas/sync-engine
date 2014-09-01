@@ -16,7 +16,7 @@ from inbox.api import filtering
 from inbox.api.validation import (InputError, get_tags, get_attachments,
                                   get_calendar, get_thread,
                                   valid_public_id, valid_event,
-                                  valid_event_update, timestamp,
+                                  valid_event_update, timestamp, boolean,
                                   bounded_str, strict_parse_args, limit,
                                   valid_event_action, valid_rsvp,
                                   ValidatableArgument)
@@ -658,14 +658,20 @@ def event_delete_api(public_id):
 #
 @app.route('/files/', methods=['GET'])
 def files_api():
-    # TODO perhaps return just if content_disposition == 'attachment'
     g.parser.add_argument('filename', type=bounded_str, location='args')
-    g.parser.add_argument('message', type=valid_public_id, location='args')
+    g.parser.add_argument('message_id', type=valid_public_id, location='args')
+    g.parser.add_argument('file_id', type=valid_public_id, location='args')
+    g.parser.add_argument('content_type', type=bounded_str, location='args')
+    g.parser.add_argument('is_attachment', type=boolean, default=None,
+                          location='args')
     args = strict_parse_args(g.parser, request.args)
     files = filtering.files(
         namespace_id=g.namespace.id,
-        message_public_id=args['message'],
+        file_public_id=args['file_id'],
+        message_public_id=args['message_id'],
         filename=args['filename'],
+        content_type=args['content_type'],
+        is_attachment=args['is_attachment'],
         limit=args['limit'],
         offset=args['offset'],
         db_session=g.db_session)
@@ -940,13 +946,42 @@ def webhooks_delete_api(public_id):
 # TODO(emfree, kavya): Systematically validate user input, and return
 # meaningful errors for invalid input.
 
-@app.route('/drafts/')
+@app.route('/drafts/', methods=['GET'])
 def draft_query_api():
-    g.parser.add_argument('thread_id', type=valid_public_id,
+    g.parser.add_argument('subject', type=bounded_str, location='args')
+    g.parser.add_argument('to', type=bounded_str, location='args')
+    g.parser.add_argument('cc', type=bounded_str, location='args')
+    g.parser.add_argument('bcc', type=bounded_str, location='args')
+    g.parser.add_argument('any_email', type=bounded_str, location='args')
+    g.parser.add_argument('started_before', type=timestamp, location='args')
+    g.parser.add_argument('started_after', type=timestamp, location='args')
+    g.parser.add_argument('last_message_before', type=timestamp,
                           location='args')
+    g.parser.add_argument('last_message_after', type=timestamp,
+                          location='args')
+    g.parser.add_argument('filename', type=bounded_str, location='args')
+    g.parser.add_argument('thread_id', type=valid_public_id, location='args')
+    g.parser.add_argument('tag', type=bounded_str, location='args')
     args = strict_parse_args(g.parser, request.args)
-    drafts = filtering.drafts(g.namespace.id, args['thread_id'], args['limit'],
-                              args['offset'], g.db_session)
+    drafts = filtering.drafts(
+        namespace_id=g.namespace.id,
+        subject=args['subject'],
+        thread_public_id=args['thread_id'],
+        to_addr=args['to'],
+        from_addr=None,
+        cc_addr=args['cc'],
+        bcc_addr=args['bcc'],
+        any_email=args['any_email'],
+        started_before=args['started_before'],
+        started_after=args['started_after'],
+        last_message_before=args['last_message_before'],
+        last_message_after=args['last_message_after'],
+        filename=args['filename'],
+        tag=args['tag'],
+        limit=args['limit'],
+        offset=args['offset'],
+        db_session=g.db_session)
+
     return g.encoder.jsonify(drafts)
 
 

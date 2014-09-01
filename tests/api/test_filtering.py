@@ -2,18 +2,78 @@ import datetime
 import calendar
 from inbox.models import Message, Thread
 from inbox.contacts.process_mail import update_contacts_from_message
+from inbox.util.misc import dt_to_timestamp
 from tests.util.base import api_client
+
+__all__ = ['api_client']
 
 NAMESPACE_ID = 1
 
 
 def test_filtering(db, api_client):
     message = db.session.query(Message).filter_by(id=2).one()
+    thread = message.thread
+    t_start = dt_to_timestamp(thread.subjectdate)
+    t_lastmsg = dt_to_timestamp(thread.recentdate)
 
     subject = message.subject
     to_addr = message.to_addr[0][1]
     from_addr = message.from_addr[0][1]
     received_date = message.received_date
+
+    results = api_client.get_data('/threads?thread_id={}'
+                                  .format('e6z26rjrxs2gu8at6gsa8svr1'))
+    assert len(results) == 1
+
+    results = api_client.get_data('/messages?thread_id={}'
+                                  .format('e6z26rjrxs2gu8at6gsa8svr1'))
+    assert len(results) == 1
+
+    results = api_client.get_data('/threads?cc={}'
+                                  .format(message.cc_addr))
+    assert len(results) == 0
+
+    results = api_client.get_data('/messages?cc={}'
+                                  .format(message.cc_addr))
+    assert len(results) == 0
+
+    results = api_client.get_data('/threads?bcc={}'
+                                  .format(message.bcc_addr))
+    assert len(results) == 0
+
+    results = api_client.get_data('/messages?bcc={}'
+                                  .format(message.bcc_addr))
+    assert len(results) == 0
+
+    results = api_client.get_data('/threads?filename=test')
+    assert len(results) == 0
+
+    results = api_client.get_data('/messages?filename=test')
+    assert len(results) == 0
+
+    results = api_client.get_data('/threads?started_after={}'
+                                  .format(t_start-1))
+    assert len(results) == 1
+
+    results = api_client.get_data('/messages?started_after={}'
+                                  .format(t_start-1))
+    assert len(results) == 1
+
+    results = api_client.get_data('/messages?last_message_before={}&limit=1'
+                                  .format(t_lastmsg+1))
+    assert len(results) == 1
+
+    results = api_client.get_data('/threads?last_message_before={}&limit=1'
+                                  .format(t_lastmsg+1))
+    assert len(results) == 1
+
+    results = api_client.get_data('/threads?tag={}&limit=1'
+                                  .format('inbox'))
+    assert len(results) == 1
+
+    results = api_client.get_data('/messages?tag={}&limit=1'
+                                  .format('inbox'))
+    assert len(results) == 1
 
     results = api_client.get_data('/messages?subject={}'.format(subject))
     assert len(results) == 1
@@ -86,16 +146,18 @@ def test_filtering(db, api_client):
 
     results = api_client.get_data('/messages?from={}&to={}'.
                                   format(from_addr, to_addr))
+    assert len(results) == 1
+
     results = api_client.get_data('/threads?from={}&to={}'.
                                   format(from_addr, to_addr))
     assert len(results) == 1
-    assert len(results) == 1
 
-    results = api_client.get_data('/messages?to={}&limit={}'.
-                                  format('inboxapptest@gmail.com', 3))
+    results = api_client.get_data('/messages?to={}&limit={}&offset={}'.
+                                  format('inboxapptest@gmail.com', 2, 1))
+    assert len(results) == 2
+
     results = api_client.get_data('/threads?to={}&limit={}'.
                                   format('inboxapptest@gmail.com', 3))
-    assert len(results) == 3
     assert len(results) == 3
 
 

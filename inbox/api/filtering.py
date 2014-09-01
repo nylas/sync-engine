@@ -2,7 +2,7 @@ from sqlalchemy import and_, or_, desc, asc
 from sqlalchemy.orm import joinedload, subqueryload
 from inbox.models import (Contact, Event, Calendar, Message,
                           MessageContactAssociation, Thread, Tag,
-                          TagItem, Part)
+                          TagItem, Block, Part)
 
 
 def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
@@ -97,12 +97,18 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
     return query.all()
 
 
-def messages(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
-             any_email, thread_public_id, started_before, started_after,
-             last_message_before, last_message_after, filename, tag, limit,
-             offset, db_session):
-    query = db_session.query(Message). \
-        filter(~Message.is_draft)
+def _messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
+                        cc_addr, bcc_addr, any_email, thread_public_id,
+                        started_before, started_after, last_message_before,
+                        last_message_after, filename, tag, limit, offset,
+                        db_session):
+
+    query = db_session.query(Message)
+
+    if drafts:
+        query = query.filter(Message.is_draft)
+    else:
+        query = query.filter(~Message.is_draft)
 
     thread_criteria = [Thread.namespace_id == namespace_id]
 
@@ -173,9 +179,7 @@ def messages(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
         query = query.join(any_email_query)
 
     if filename is not None:
-        file_query = db_session.query(Part). \
-            filter(Part.filename == filename).subquery()
-        query = query.join(file_query)
+        query = query.join(Part).filter(Part.filename == filename)
 
     # Eager-load some objects in order to make constructing API
     # representations faster.
@@ -187,40 +191,133 @@ def messages(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
     # TODO(emfree) we should really eager-load the namespace too
     # (or just directly store it on the message object)
 
-    query = query.order_by(desc(Message.received_date)).distinct().limit(limit)
+    if not drafts:
+        query = query.order_by(desc(Message.received_date)).distinct()
+
+    query = query.limit(limit)
+
     if offset:
         query = query.offset(offset)
 
     return query.all()
 
 
-def drafts(namespace_id, thread_public_id, limit, offset, db_session):
-    query = db_session.query(Message).filter(Message.is_draft)
+def messages(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
+             any_email, thread_public_id, started_before, started_after,
+             last_message_before, last_message_after, filename, tag, limit,
+             offset, db_session):
+    return _messages_or_drafts(namespace_id, False, subject, from_addr,
+                               to_addr, cc_addr, bcc_addr, any_email,
+                               thread_public_id, started_before,
+                               started_after, last_message_before,
+                               last_message_after, filename, tag, limit,
+                               offset, db_session)
 
-    thread_criteria = [Thread.namespace_id == namespace_id]
 
-    if thread_public_id is not None:
-        # TODO(emfree) this is a common case that we should handle
-        # separately by just fetching the thread's messages and only
-        # filtering more if needed.
-        thread_criteria.append(Thread.public_id == thread_public_id)
+def drafts(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
+           any_email, thread_public_id, started_before, started_after,
+           last_message_before, last_message_after, filename, tag, limit,
+           offset, db_session):
+    return _messages_or_drafts(namespace_id, True, subject, from_addr,
+                               to_addr, cc_addr, bcc_addr, any_email,
+                               thread_public_id, started_before,
+                               started_after, last_message_before,
+                               last_message_after, filename, tag, limit,
+                               offset, db_session)
 
-    thread_predicate = and_(*thread_criteria)
-    thread_query = db_session.query(Thread).filter(thread_predicate)
 
-    query = query.join(thread_query.subquery())
+def events(namespace_id, account_id, event_public_id,
+           calendar_public_id, subject, body, location, starts_before,
+           starts_after, ends_before, ends_after, source, limit, offset,
+           db_session):
+
+    query = db_session.query(Event). \
+        filter(Event.account_id == account_id)
+    event_criteria = []
+    if event_public_id:
+        query = query.filter(Event.public_id == event_public_id)
+
+    if starts_before is not None:
+        event_criteria.append(Event.start < starts_before)
+
+    if starts_after is not None:
+        event_criteria.append(Event.start > starts_after)
+
+    if ends_before is not None:
+        event_criteria.append(Event.end < ends_before)
+
+    if ends_after is not None:
+        event_criteria.append(Event.end > ends_after)
+
+    event_predicate = and_(*event_criteria)
+    query = query.filter(event_predicate)
+
+    if calendar_public_id is not None:
+        query = query.join(Calendar). \
+            filter(Calendar.public_id == calendar_public_id,
+                   Calendar.account_id == account_id)
+
+    if subject is not None:
+        query = query.filter(Event.subject.like('%{}%'.format(subject)))
+
+    if body is not None:
+        query = query.filter(Event.body.like('%{}%'.format(body)))
+
+    if location is not None:
+        query = query.filter(Event.location.like('%{}%'.format(location)))
+
+    if source is not None:
+        query = query.filter(Event.source == source)
 
     # Eager-load some objects in order to make constructing API
     # representations faster.
     query = query.options(
-        joinedload(Message.parts).load_only('public_id',
-                                            'content_disposition'),
-        joinedload(Message.thread).load_only('public_id', 'discriminator'))
+        subqueryload(Event.participants_by_email))
 
-    query = query.limit(limit)
+    query = query.order_by(asc(Event.start)).limit(limit)
     if offset:
         query = query.offset(offset)
 
+    return query.all()
+
+
+def files(namespace_id, file_public_id, message_public_id, filename,
+          content_type, is_attachment, limit, offset, db_session):
+
+    query = db_session.query(Block) \
+        .filter(Block.namespace_id == namespace_id)
+
+    # filter out inline attachments while keeping non-attachments
+    query = query.outerjoin(Part)
+    if is_attachment is True:
+        query = query.filter(Part.content_disposition,
+                             Part.content_disposition != 'inline')
+    elif is_attachment is False:
+        query = query.filter(Part.id.is_(None))
+    else:
+        query = query.filter(or_(Part.id.is_(None),
+                             and_(Part.content_disposition,
+                                  Part.content_disposition != 'inline')))
+
+    if content_type is not None:
+        query = query.filter(or_(Block._content_type_common == content_type,
+                                 Block._content_type_other == content_type))
+
+    if file_public_id is not None:
+        query = query.filter(Block.public_id == file_public_id)
+
+    if filename is not None:
+        query = query.filter(Block.filename == filename)
+
+    # Handle the case of fetching attachments on a particular message.
+    if message_public_id is not None:
+        query = query.join(Message) \
+            .filter(Message.public_id == message_public_id)
+
+    query = query.order_by(asc(Block.id)).distinct().limit(limit)
+
+    if offset:
+        query = query.offset(offset)
     return query.all()
 
 
@@ -277,36 +374,4 @@ def events(namespace_id, account_id, event_public_id,
     if offset:
         query = query.offset(offset)
 
-    return query.all()
-
-
-def files(namespace_id, message_public_id, filename, limit, offset,
-          db_session):
-    # Handle the case of fetching attachments on a particular message.
-    if message_public_id is not None:
-        message = db_session.query(Message).filter(
-            Message.public_id == message_public_id).first()
-        if not message:
-            # There can't be any results.
-            return []
-        else:
-            results = message.attachments
-            if filename is not None:
-                return [r for r in results if r.filename == filename]
-            else:
-                return results
-
-    query = db_session.query(Part).filter(
-        Part.namespace_id == namespace_id,
-        ~Part.content_disposition.is_(None))
-
-    if filename is not None:
-        query = query.filter(Part.filename == filename)
-
-    # STOPSHIP(emfree): this doesn't return files that have been uploaded
-    # but not attached to a message!
-
-    query = query.limit(limit)
-    if offset:
-        query = query.offset(offset)
     return query.all()

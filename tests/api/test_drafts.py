@@ -99,8 +99,17 @@ def test_drafts_filter(api_client, example_draft):
     }
     r = api_client.post_data('/drafts', reply_draft)
 
-    results = api_client.get_data('/drafts?thread={}'.format(thread_public_id))
+    _filter = '?thread_id=0000000000000000000000000'
+    results = api_client.get_data('/drafts' + _filter)
+    assert len(results) == 0
+
+    results = api_client.get_data('/drafts?thread_id={}'
+                                  .format(thread_public_id))
     assert len(results) == 2
+
+    results = api_client.get_data('/drafts?offset={}&thread_id={}'
+                                  .format(1, thread_public_id))
+    assert len(results) == 1
 
 
 def test_create_draft_with_attachments(api_client, attachments, example_draft):

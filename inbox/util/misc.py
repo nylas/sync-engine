@@ -92,6 +92,10 @@ def parse_references(references, in_reply_to):
     return references
 
 
+def dt_to_timestamp(dt):
+    return int(time.mktime(dt.timetuple()))
+
+
 def get_internaldate(date, received):
     """ Get the date from the headers. """
     if date is None:
