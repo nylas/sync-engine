@@ -836,7 +836,7 @@ def draft_create_api():
     return g.encoder.jsonify(draft)
 
 
-@app.route('/drafts/<public_id>', methods=['POST'])
+@app.route('/drafts/<public_id>', methods=['PUT'])
 def draft_update_api(public_id):
     try:
         valid_public_id(public_id)

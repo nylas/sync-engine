@@ -10,6 +10,8 @@ import pytest
 from tests.util.base import (patch_network_functions, api_client,
                              syncback_service)
 
+__all__ = ['patch_network_functions', 'api_client', 'syncback_service']
+
 NAMESPACE_ID = 1
 
 
@@ -19,7 +21,7 @@ def example_draft(db):
     account = db.session.query(Account).get(1)
     return {
         'subject': 'Draft test at {}'.format(datetime.utcnow()),
-        'body': '<html><body><h2>Sea, birds, yoga and sand.</h2></body></html>',
+        'body': '<html><body><h2>Sea, birds and sand.</h2></body></html>',
         'to': [{'name': 'The red-haired mermaid',
                 'email': account.email_address}]
     }
@@ -154,8 +156,8 @@ def test_update_draft(api_client):
         'version': version
     }
 
-    r = api_client.post_data('/drafts/{}'.format(draft_public_id),
-                             updated_draft)
+    r = api_client.put_data('/drafts/{}'.format(draft_public_id),
+                            updated_draft)
     updated_public_id = json.loads(r.data)['id']
     updated_version = json.loads(r.data)['version']
 
@@ -181,8 +183,8 @@ def test_delete_draft(api_client):
         'body': 'updated draft',
         'version': version
     }
-    r = api_client.post_data('/drafts/{}'.format(draft_public_id),
-                             updated_draft)
+    r = api_client.put_data('/drafts/{}'.format(draft_public_id),
+                            updated_draft)
     updated_public_id = json.loads(r.data)['id']
     updated_version = json.loads(r.data)['version']
 
@@ -234,8 +236,8 @@ def test_conflicting_updates(api_client):
         'body': 'updated draft',
         'version': version
     }
-    r = api_client.post_data('/drafts/{}'.format(original_public_id),
-                             updated_draft)
+    r = api_client.put_data('/drafts/{}'.format(original_public_id),
+                            updated_draft)
     assert r.status_code == 200
     updated_public_id = json.loads(r.data)['id']
     updated_version = json.loads(r.data)['version']
@@ -246,8 +248,8 @@ def test_conflicting_updates(api_client):
         'body': 'conflicting draft',
         'version': version
     }
-    r = api_client.post_data('/drafts/{}'.format(original_public_id),
-                             conflicting_draft)
+    r = api_client.put_data('/drafts/{}'.format(original_public_id),
+                            conflicting_draft)
     assert r.status_code == 409
 
     drafts = api_client.get_data('/drafts')
@@ -262,7 +264,7 @@ def test_update_to_nonexistent_draft(api_client):
         'version': 'notarealversion'
     }
 
-    r = api_client.post_data('/drafts/{}'.format('notarealid'), updated_draft)
+    r = api_client.put_data('/drafts/{}'.format('notarealid'), updated_draft)
     assert r.status_code == 404
     drafts = api_client.get_data('/drafts')
     assert len(drafts) == 0

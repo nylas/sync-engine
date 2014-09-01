@@ -96,21 +96,21 @@ Messages you create or send __should not include quoted text__ when they are in 
 
 # Updating a draft
 
-Updating a draft is as simple as issuing a POST request to the draft's URI.
+Updating a draft is as simple as issuing a PUT request to the draft's URI.
 
 ```
 :::xml
-POST https://api.inboxapp.com/n/<namespace_id>/drafts/<draft_id>
+PUT https://api.inboxapp.com/n/<namespace_id>/drafts/<draft_id>
 ```
 
-Post body parameters:
+Put body parameters:
 
 * `version`
 
 The request body must contain the version of the draft you wish to update.
 Other fields are optional and will overwrite previous values.
 
-Updating a draft returns a new draft object with the same ID but different version. When submitting subsequent send or save actions, you must use this new version.
+Updating a draft returns a draft object with the same ID but different version. When submitting subsequent send or save actions, you must use this new version.
 
 # Deleting a draft
 
