@@ -135,6 +135,8 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
             new_cal.account = self
             new_cal.uid = public_id
             new_cal.read_only = False
+            new_cal.name = 'default'
+            new_cal.provider_name = 'inbox'
             self._default_calendar = new_cal
         return self._default_calendar
 

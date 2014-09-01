@@ -20,7 +20,7 @@ def _verify_create(ns_id, api_client, e_data):
     e_resp_data = json.loads(e_resp.data)
     assert e_resp_data['object'] == 'event'
     assert e_resp_data['namespace_id'] == ns_id
-    assert e_resp_data['subject'] == e_data['subject']
+    assert e_resp_data['title'] == e_data['title']
     assert e_resp_data['location'] == e_data['location']
     for k, v in e_data['when'].iteritems():
         assert e_resp_data['when'][k] == v
@@ -31,7 +31,7 @@ def _verify_create(ns_id, api_client, e_data):
     assert e_get_resp['object'] == 'event'
     assert e_get_resp['namespace_id'] == ns_id
     assert e_get_resp['id'] == e_id
-    assert e_get_resp['subject'] == e_data['subject']
+    assert e_get_resp['title'] == e_data['title']
     for k, v in e_data['when'].iteritems():
         assert e_get_resp['when'][k] == v
 
@@ -43,7 +43,7 @@ def test_api_time(db, api_client):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'time': 1407542195},
         'location': 'Inbox HQ',
     }
@@ -57,7 +57,7 @@ def test_api_timespan(db, api_client):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'start_time': 1407542195, 'end_time': 1407548195},
         'location': 'Inbox HQ',
     }
@@ -71,7 +71,7 @@ def test_api_date(db, api_client):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'date': '2014-08-27'},
         'location': 'Inbox HQ',
     }
@@ -85,7 +85,7 @@ def test_api_datespan(db, api_client):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'start_date': '2014-08-27', 'end_date': '2014-08-28'},
         'location': 'Inbox HQ',
     }
@@ -101,7 +101,7 @@ def test_api_invalid_event_no_when(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
-    e_data = {'subject': 'Friday Office Party'}
+    e_data = {'title': 'Friday Office Party'}
     with pytest.raises(CreateError):
         _verify_create(ns_id, api_client, e_data)
 
@@ -110,7 +110,7 @@ def test_api_invalid_event_when_no_params(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
-    e_data = {'subject': 'Friday Office Party', 'when': {}}
+    e_data = {'title': 'Friday Office Party', 'when': {}}
     with pytest.raises(CreateError):
         _verify_create(ns_id, api_client, e_data)
 
@@ -119,7 +119,7 @@ def test_api_invalid_event_when_bad_params(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
-    e_data = {'subject': 'Friday Office Party', 'when': {'start': 0}}
+    e_data = {'title': 'Friday Office Party', 'when': {'start': 0}}
     with pytest.raises(CreateError):
         _verify_create(ns_id, api_client, e_data)
 
@@ -127,7 +127,7 @@ def test_api_invalid_event_when_bad_params(db, api_client):
 def test_api_invalid_event_when_timespan_bad_params(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
-    e_data = {'subject': 'Friday Office Party'}
+    e_data = {'title': 'Friday Office Party'}
 
     e_data['when'] = {'object': 'time', 'start': 0}
     with pytest.raises(CreateError):
@@ -161,7 +161,7 @@ def test_api_invalid_event_when_timespan_bad_params(db, api_client):
 def test_api_invalid_event_when_datespan_bad_params(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
-    e_data = {'subject': 'Friday Office Party'}
+    e_data = {'title': 'Friday Office Party'}
 
     e_data['when'] = {'object': 'date', 'start': 0}
     with pytest.raises(CreateError):
@@ -198,7 +198,7 @@ def test_api_invalid_event_when_datespan_bad_params(db, api_client):
 def test_api_invalid_event_when_time_bad_params(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
-    e_data = {'subject': 'Friday Office Party'}
+    e_data = {'title': 'Friday Office Party'}
 
     e_data['when'] = {'object': 'date', 'time': 0}
     with pytest.raises(CreateError):
@@ -216,7 +216,7 @@ def test_api_invalid_event_when_time_bad_params(db, api_client):
 def test_api_invalid_event_when_date_bad_params(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
-    e_data = {'subject': 'Friday Office Party'}
+    e_data = {'title': 'Friday Office Party'}
 
     e_data['when'] = {'object': 'time', 'date': 0}
     with pytest.raises(CreateError):
@@ -230,7 +230,7 @@ def test_api_invalid_event_when_date_bad_params(db, api_client):
 def test_api_event_when_update(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
-    e_data = {'subject': 'Friday Office Party', 'location': 'home'}
+    e_data = {'title': 'Friday Office Party', 'location': 'home'}
     e_data['when'] = {'time': 0}
     e_resp_data = _verify_create(ns_id, api_client, e_data)
     e_id = e_resp_data['id']

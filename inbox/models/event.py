@@ -4,7 +4,7 @@ from dateutil.parser import parse as date_parse
 
 from sqlalchemy import (Column, String, ForeignKey, Text, Boolean,
                         DateTime, Enum, UniqueConstraint)
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy.util import OrderedDict
 from sqlalchemy.orm.collections import MappedCollection
 
@@ -25,8 +25,9 @@ class ParticipantMap(OrderedDict, MappedCollection):
         MappedCollection.__init__(self, keyfunc=lambda p: p.email_address)
         OrderedDict.__init__(self, *args, **kw)
 
-SUBJECT_MAX_LEN = 1024
+TITLE_MAX_LEN = 1024
 LOCATION_MAX_LEN = 255
+OWNER_MAX_LEN = 1024
 
 
 class Event(MailSyncBase, HasRevisions, HasPublicID):
@@ -42,10 +43,15 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     calendar_id = Column(ForeignKey(Calendar.id, ondelete='CASCADE'),
                          nullable=False)
 
-    calendar = relationship(
-        Calendar, load_on_pending=True,
-        primaryjoin='and_(Event.calendar_id == Calendar.id, '
-                    'Calendar.deleted_at.is_(None))')
+    _backref_primary_join = ('and_(Event.calendar_id == Calendar.id, '
+                             'Calendar.deleted_at.is_(None))')
+    _primary_join = ('and_(Event.calendar_id == Calendar.id, '
+                     'Calendar.deleted_at.is_(None))')
+    _backref = backref('events', primaryjoin=_backref_primary_join)
+    calendar = relationship(Calendar,
+                            backref=_backref,
+                            load_on_pending=True,
+                            primaryjoin=_primary_join)
 
     # A server-provided unique ID.
     uid = Column(String(767, collation='ascii_general_ci'), nullable=False)
@@ -56,10 +62,10 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
 
     raw_data = Column(Text, nullable=False)
 
-    subject = Column(String(SUBJECT_MAX_LEN), nullable=True)
-    owner = Column(String(1024), nullable=True)
-    body = Column(Text, nullable=True)
-    location = Column(String(255), nullable=True)
+    title = Column(String(TITLE_MAX_LEN), nullable=True)
+    owner = Column(String(OWNER_MAX_LEN), nullable=True)
+    description = Column(Text, nullable=True)
+    location = Column(String(LOCATION_MAX_LEN), nullable=True)
     busy = Column(Boolean, nullable=False, default=True)
     read_only = Column(Boolean, nullable=False)
     reminders = Column(String(255), nullable=True)
@@ -162,7 +168,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
 
     def merge_from(self, base, remote):
         # This must be updated when new fields are added to the class.
-        merge_attrs = ['subject', 'body', 'start', 'end', 'all_day',
+        merge_attrs = ['title', 'description', 'start', 'end', 'all_day',
                        'read_only', 'location', 'reminders', 'recurrence',
                        'busy', 'raw_data', 'owner', 'is_owner', 'calendar_id']
 
@@ -179,8 +185,8 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
         self.uid = src.uid
         self.provider_name = src.provider_name
         self.raw_data = src.raw_data
-        self.subject = src.subject
-        self.body = src.body
+        self.title = src.title
+        self.description = src.description
         self.busy = src.busy
         self.read_only = src.read_only
         self.is_owner = src.is_owner

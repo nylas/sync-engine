@@ -1,33 +1,12 @@
 
-from inbox.models import Event, Account
+from inbox.models import Event
+from default_event import default_event, default_calendar
 
 ACCOUNT_ID = 1
 
 
-def _default_calendar(db):
-    account = db.session.query(Account).filter(
-        Account.id == ACCOUNT_ID).one()
-    return account.default_calendar
-
-
-def _default_event(db):
-    return Event(account_id=ACCOUNT_ID,
-                 calendar=_default_calendar(db),
-                 subject='subject',
-                 body='',
-                 location='',
-                 busy=False,
-                 read_only=False,
-                 reminders='',
-                 recurrence='',
-                 start=0,
-                 end=1,
-                 all_day=False,
-                 source='remote')
-
-
 def test_initial(db):
-    remote = _default_event(db)
+    remote = default_event(db)
     remote.participant_list = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
@@ -37,7 +16,10 @@ def test_initial(db):
          'status': 'noreply'}]
 
     local = Event(account_id=ACCOUNT_ID,
-                  calendar=_default_calendar(db))
+                  calendar=default_calendar(db),
+                  provider_name='inbox', raw_data='',
+                  read_only=False, all_day=False,
+                  source='local')
     local.copy_from(remote)
     local.source = 'local'
     assert len(local.participants) == 3
@@ -50,7 +32,7 @@ def test_initial(db):
 
 
 def test_no_change(db):
-    local = _default_event(db)
+    local = default_event(db)
     local.participant_list = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
@@ -58,7 +40,7 @@ def test_no_change(db):
          'status': 'noreply'},
         {'email': 'mary@example.com',
          'status': 'noreply'}]
-    remote = _default_event(db)
+    remote = default_event(db)
     remote.participant_list = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
@@ -66,7 +48,7 @@ def test_no_change(db):
          'status': 'noreply'},
         {'email': 'mary@example.com',
          'status': 'noreply'}]
-    new = _default_event(db)
+    new = default_event(db)
     new.participant_list = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
@@ -86,7 +68,7 @@ def test_no_change(db):
 
 
 def test_add_participant_remote(db):
-    local = _default_event(db)
+    local = default_event(db)
     local.participant_list = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
@@ -94,7 +76,7 @@ def test_add_participant_remote(db):
          'status': 'noreply'},
         {'email': 'mary@example.com',
          'status': 'noreply'}]
-    remote = _default_event(db)
+    remote = default_event(db)
     remote.participant_list = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
@@ -102,7 +84,7 @@ def test_add_participant_remote(db):
          'status': 'noreply'},
         {'email': 'mary@example.com',
          'status': 'noreply'}]
-    new = _default_event(db)
+    new = default_event(db)
     new.participant_list = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
@@ -124,7 +106,7 @@ def test_add_participant_remote(db):
 
 
 def test_add_participant_local(db):
-    local = _default_event(db)
+    local = default_event(db)
     local.participant_list = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
@@ -134,7 +116,7 @@ def test_add_participant_local(db):
          'status': 'noreply'},
         {'email': 'mary@example.com',
          'status': 'noreply'}]
-    remote = _default_event(db)
+    remote = default_event(db)
     remote.participant_list = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
@@ -142,7 +124,7 @@ def test_add_participant_local(db):
          'status': 'noreply'},
         {'email': 'mary@example.com',
          'status': 'noreply'}]
-    new = _default_event(db)
+    new = default_event(db)
     new.participant_list = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
@@ -161,13 +143,13 @@ def test_add_participant_local(db):
 
 
 def test_remove_participant_local(db):
-    local = _default_event(db)
+    local = default_event(db)
     local.participant_list = [
         {'email': 'paul@example.com',
          'status': 'noreply'},
         {'email': 'mary@example.com',
          'status': 'noreply'}]
-    remote = _default_event(db)
+    remote = default_event(db)
     remote.participant_list = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
@@ -175,7 +157,7 @@ def test_remove_participant_local(db):
          'status': 'noreply'},
         {'email': 'mary@example.com',
          'status': 'noreply'}]
-    new = _default_event(db)
+    new = default_event(db)
     new.participant_list = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
@@ -194,7 +176,7 @@ def test_remove_participant_local(db):
 
 
 def test_remove_participant_remote(db):
-    local = _default_event(db)
+    local = default_event(db)
     local.participant_list = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
@@ -202,7 +184,7 @@ def test_remove_participant_remote(db):
          'status': 'noreply'},
         {'email': 'mary@example.com',
          'status': 'noreply'}]
-    remote = _default_event(db)
+    remote = default_event(db)
     remote.participant_list = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
@@ -210,7 +192,7 @@ def test_remove_participant_remote(db):
          'status': 'noreply'},
         {'email': 'mary@example.com',
          'status': 'noreply'}]
-    new = _default_event(db)
+    new = default_event(db)
     new.participant_list = [
         {'email': 'paul@example.com',
          'status': 'noreply'},

@@ -24,7 +24,7 @@ class EventsProviderStub(BaseEventProvider):
         self.PROVIDER_NAME = provider_name
         BaseEventProvider.__init__(self, 1)
 
-    def supply_event(self, subject, body='', when={'time': 0}, busy=True,
+    def supply_event(self, title, description='', when={'time': 0}, busy=True,
                      location='', read_only=False, owner="",
                      reminders='[]', recurrence="", deleted=False,
                      raw_data='', is_owner=True, participants=[]):
@@ -34,8 +34,8 @@ class EventsProviderStub(BaseEventProvider):
                                   uid=str(self._next_uid),
                                   source='remote',
                                   provider_name=self.PROVIDER_NAME,
-                                  subject=subject,
-                                  body=body,
+                                  title=title,
+                                  description=description,
                                   location=location,
                                   when=when,
                                   busy=busy,

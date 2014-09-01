@@ -10,14 +10,16 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import subqueryload
 
 from inbox.models import (Message, Block, Thread, Namespace, Webhook,
-                          Tag, Contact, Event, Participant)
+                          Tag, Contact, Calendar, Event, Participant)
 from inbox.api.kellogs import APIEncoder
 from inbox.api import filtering
 from inbox.api.validation import (InputError, get_tags, get_attachments,
-                                  get_thread, valid_public_id, valid_event,
-                                  valid_event_update, timestamp, bounded_str,
-                                  strict_parse_args, limit, valid_event_action,
-                                  valid_rsvp, ValidatableArgument)
+                                  get_calendar, get_thread,
+                                  valid_public_id, valid_event,
+                                  valid_event_update, timestamp,
+                                  bounded_str, strict_parse_args, limit,
+                                  valid_event_action, valid_rsvp,
+                                  ValidatableArgument)
 from inbox.config import config
 from inbox import events, contacts, sendmail
 from inbox.log import get_logger
@@ -451,19 +453,38 @@ def contact_delete_api(public_id):
     raise NotImplementedError
 
 
-#
+##
 # Events
 ##
 @app.route('/events/', methods=['GET'])
 def event_search_api():
-    g.parser.add_argument('filter', type=str, default='', location='args')
+    g.parser.add_argument('event_id', type=valid_public_id, location='args')
+    g.parser.add_argument('calendar_id', type=valid_public_id, location='args')
+    g.parser.add_argument('title', type=bounded_str, location='args')
+    g.parser.add_argument('description', type=bounded_str, location='args')
+    g.parser.add_argument('location', type=bounded_str, location='args')
+    g.parser.add_argument('starts_before', type=timestamp, location='args')
+    g.parser.add_argument('starts_after', type=timestamp, location='args')
+    g.parser.add_argument('ends_before', type=timestamp, location='args')
+    g.parser.add_argument('ends_after', type=timestamp, location='args')
     args = strict_parse_args(g.parser, request.args)
-    results = g.db_session.query(Event). \
-        filter(Event.account_id == g.namespace.account_id,
-               Event.source == 'local'). \
-        order_by(asc(Event.id)).limit(args['limit']). \
-        options(subqueryload(Event.participants_by_email)). \
-        offset(args['offset']).all()
+
+    results = filtering.events(
+        namespace_id=g.namespace.id,
+        account_id=g.namespace.account_id,
+        event_public_id=args['event_id'],
+        calendar_public_id=args['calendar_id'],
+        title=args['title'],
+        description=args['description'],
+        location=args['location'],
+        starts_before=args['starts_before'],
+        starts_after=args['starts_after'],
+        ends_before=args['ends_before'],
+        ends_after=args['ends_after'],
+        limit=args['limit'],
+        offset=args['offset'],
+        source='local',
+        db_session=g.db_session)
 
     return g.encoder.jsonify(results)
 
@@ -481,14 +502,22 @@ def event_create_api():
         return g.encoder.jsonify(new_events)
 
     data = request.get_json(force=True)
+    try:
+        calendar = get_calendar(data.get('calendar_id'),
+                                g.namespace, g.db_session)
+    except InputError as e:
+        return err(404, e.message)
+
+    if calendar.read_only:
+        return err(400, "Can't create events on read_only calendar.")
 
     try:
         valid_event(data)
     except InputError as e:
         return err(404, e.message)
 
-    subject = data.get('subject', '')
-    body = data.get('body')
+    title = data.get('title', '')
+    description = data.get('description')
     location = data.get('location')
     reminders = data.get('reminders')
     recurrence = data.get('recurrence')
@@ -500,8 +529,9 @@ def event_create_api():
             p['status'] = 'noreply'
 
     new_contact = events.crud.create(g.namespace, g.db_session,
-                                     subject,
-                                     body,
+                                     calendar,
+                                     title,
+                                     description,
                                      location,
                                      reminders,
                                      recurrence,
@@ -567,7 +597,7 @@ def event_update_api(public_id):
     data = request.get_json(force=True)
 
     try:
-        valid_event_update(data)
+        valid_event_update(data, g.namespace, g.db_session)
     except InputError as e:
         return err(404, e.message)
 
@@ -589,7 +619,7 @@ def event_update_api(public_id):
         result = events.crud.update(g.namespace, g.db_session,
                                     public_id, data)
     except InputError as e:
-        return err(404, e.message)
+        return err(400, e.message)
 
     if result is None:
         return err(404, "Couldn't find event with id {0}".
@@ -602,7 +632,8 @@ def event_delete_api(public_id):
     try:
         valid_public_id(public_id)
         event = g.db_session.query(Event).filter_by(
-            public_id=public_id).one()
+            public_id=public_id). \
+            options(subqueryload(Event.calendar)).one()
     except InputError:
         return err(400, 'Invalid event id {}'.format(public_id))
     except NoResultFound:
@@ -614,6 +645,9 @@ def event_delete_api(public_id):
     if event.provider_name != 'inbox':
         return err(404, 'Cannot delete provider-based event with public_id {}'.
                         format(public_id))
+    if event.calendar.read_only:
+        return err(404, 'Cannot delete event with public_id {} from '
+                   ' read_only calendar.'.format(public_id))
 
     result = events.crud.delete(g.namespace, g.db_session, public_id)
     return g.encoder.jsonify(result)
@@ -736,12 +770,103 @@ def file_download_api(public_id):
 
 
 ##
-# Calendar
+# Calendars
 ##
-@app.route('/events/<public_id>')
-def events_api(public_id):
+@app.route('/calendars/', methods=['GET'])
+def calendar_search_api():
     """ Calendar events! """
-    raise NotImplementedError
+    g.parser.add_argument('filter', type=bounded_str, default='',
+                          location='args')
+    args = strict_parse_args(g.parser, request.args)
+    term_filter_string = '%{}%'.format(args['filter'])
+    term_filter = or_(
+        Calendar.name.like(term_filter_string),
+        Calendar.description.like(term_filter_string))
+
+    eager = subqueryload(Calendar.events). \
+        subqueryload(Event.participants_by_email)
+
+    results = g.db_session.query(Calendar). \
+        filter(Calendar.account_id == g.namespace.account_id,
+               term_filter). \
+        order_by(asc(Calendar.id)).limit(args['limit']). \
+        options(eager). \
+        offset(args['offset']).all()
+
+    return g.encoder.jsonify(results)
+
+
+@app.route('/calendars/', methods=['POST'])
+def calendar_create_api():
+    data = request.get_json(force=True)
+
+    if 'name' not in data:
+        return err(404, "Calendar must have a name.")
+
+    name = data['name']
+
+    existing = g.db_session.query(Calendar).filter_by(
+        name=name).first()
+
+    if existing:
+        return err(404, "Calendar already exists with name '{}'.".format(name))
+
+    description = data.get('description', None)
+
+    cal_create = events.crud.create_calendar
+    new_calendar = cal_create(g.namespace, g.db_session, name, description)
+    return g.encoder.jsonify(new_calendar)
+
+
+@app.route('/calendars/<public_id>', methods=['GET'])
+def calendar_read_api(public_id):
+    """Get all data for an existing calendar."""
+    try:
+        valid_public_id(public_id)
+    except InputError:
+        return err(400, 'Invalid calendar id {}'.format(public_id))
+
+    result = events.crud.read_calendar(g.namespace, g.db_session, public_id)
+    if result is None:
+        return err(404, "Couldn't find calendar with id {0}".
+                   format(public_id))
+    return g.encoder.jsonify(result)
+
+
+@app.route('/calendars/<public_id>', methods=['PUT'])
+def calendar_update_api(public_id):
+    try:
+        calendar = get_calendar(public_id, g.namespace, g.db_session)
+    except InputError as e:
+        return err(404, e.message)
+
+    if calendar.read_only:
+        return err(400, "Cannot update a read_only calendar.")
+
+    data = request.get_json(force=True)
+    result = events.crud.update_calendar(g.namespace, g.db_session,
+                                         public_id, data)
+
+    if result is None:
+        return err(404, "Couldn't find calendar with id {0}".
+                   format(public_id))
+    return g.encoder.jsonify(result)
+
+
+@app.route('/calendars/<public_id>', methods=['DELETE'])
+def calendar_delete_api(public_id):
+    try:
+        calendar = get_calendar(public_id, g.namespace, g.db_session)
+    except InputError as e:
+        return err(404, e.message)
+
+    if calendar.read_only:
+        return err(400, "Cannot delete a read_only calendar.")
+
+    result = events.crud.delete_calendar(g.namespace, g.db_session,
+                                         public_id)
+
+    return g.encoder.jsonify(result)
 
 
 ##

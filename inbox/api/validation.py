@@ -3,7 +3,7 @@ from datetime import datetime
 from inbox.models.when import parse_as_when
 from flask.ext.restful import reqparse
 from sqlalchemy.orm.exc import NoResultFound
-from inbox.models import Tag, Thread, Block
+from inbox.models import Account, Calendar, Tag, Thread, Block
 
 MAX_LIMIT = 1000
 
@@ -131,6 +131,21 @@ def get_thread(thread_public_id, namespace_id, db_session):
                          format(thread_public_id))
 
 
+def get_calendar(calendar_public_id, namespace, db_session):
+    if calendar_public_id is None:
+        account = db_session.query(Account).filter(
+            Account.id == namespace.account_id).one()
+        return account.default_calendar
+    valid_public_id(calendar_public_id)
+    try:
+        return db_session.query(Calendar). \
+            filter(Calendar.public_id == calendar_public_id,
+                   Calendar.account_id == namespace.account_id).one()
+    except NoResultFound:
+        raise InputError('Invalid calendar public id {}'.
+                         format(calendar_public_id))
+
+
 def valid_when(when):
     try:
         parse_as_when(when)
@@ -154,12 +169,17 @@ def valid_event(event):
                                  "yes, no, maybe, noreply")
 
 
-def valid_event_update(event):
+def valid_event_update(event, namespace, db_session):
     if 'when' in event:
         valid_when(event['when'])
 
     if 'busy' in event and not isinstance(event.get('busy'), bool):
         raise InputError('\'busy\' must be true or false')
+
+    calendar = get_calendar(event.get('calendar_id'),
+                            namespace, db_session)
+    if calendar and calendar.read_only:
+        raise InputError("Cannot move event to read_only calendar.")
 
     participants = event.get('participants', [])
     for p in participants:

@@ -1,7 +1,8 @@
-from sqlalchemy import and_, or_, desc
+from sqlalchemy import and_, or_, desc, asc
 from sqlalchemy.orm import joinedload, subqueryload
-from inbox.models import (Contact, Message, MessageContactAssociation, Thread,
-                          Tag, TagItem, Part)
+from inbox.models import (Contact, Event, Calendar, Message,
+                          MessageContactAssociation, Thread, Tag,
+                          TagItem, Part)
 
 
 def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
@@ -101,7 +102,7 @@ def messages(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
              last_message_before, last_message_after, filename, tag, limit,
              offset, db_session):
     query = db_session.query(Message). \
-        filter(Message.is_draft == False)
+        filter(~Message.is_draft)
 
     thread_criteria = [Thread.namespace_id == namespace_id]
 
@@ -194,7 +195,7 @@ def messages(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
 
 
 def drafts(namespace_id, thread_public_id, limit, offset, db_session):
-    query = db_session.query(Message).filter(Message.is_draft == True)
+    query = db_session.query(Message).filter(Message.is_draft)
 
     thread_criteria = [Thread.namespace_id == namespace_id]
 
@@ -217,6 +218,62 @@ def drafts(namespace_id, thread_public_id, limit, offset, db_session):
         joinedload(Message.thread).load_only('public_id', 'discriminator'))
 
     query = query.limit(limit)
+    if offset:
+        query = query.offset(offset)
+
+    return query.all()
+
+
+def events(namespace_id, account_id, event_public_id,
+           calendar_public_id, title, description, location, starts_before,
+           starts_after, ends_before, ends_after, source, limit, offset,
+           db_session):
+
+    query = db_session.query(Event). \
+        filter(Event.account_id == account_id)
+    event_criteria = []
+    if event_public_id:
+        query = query.filter(Event.public_id == event_public_id)
+
+    if starts_before is not None:
+        event_criteria.append(Event.start < starts_before)
+
+    if starts_after is not None:
+        event_criteria.append(Event.start > starts_after)
+
+    if ends_before is not None:
+        event_criteria.append(Event.end < ends_before)
+
+    if ends_after is not None:
+        event_criteria.append(Event.end > ends_after)
+
+    event_predicate = and_(*event_criteria)
+    query = query.filter(event_predicate)
+
+    if calendar_public_id is not None:
+        query = query.join(Calendar). \
+            filter(Calendar.public_id == calendar_public_id,
+                   Calendar.account_id == account_id)
+
+    if title is not None:
+        query = query.filter(Event.title.like('%{}%'.format(title)))
+
+    if description is not None:
+        query = query.filter(Event.description.like('%{}%'
+                                                    .format(description)))
+
+    if location is not None:
+        query = query.filter(Event.location.like('%{}%'.format(location)))
+
+    if source is not None:
+        query = query.filter(Event.source == source)
+
+    # Eager-load some objects in order to make constructing API
+    # representations faster.
+    query = query.options(
+        subqueryload(Event.participants_by_email))
+
+    query = query.order_by(asc(Event.start)).limit(limit)
     if offset:
         query = query.offset(offset)
 

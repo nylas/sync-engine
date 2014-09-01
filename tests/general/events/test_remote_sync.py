@@ -6,9 +6,10 @@ from tests.general.events.conftest import EventsProviderStub
 # Need to set up test config before we can import from
 # inbox.models.tables.
 config()
-from inbox.models import Account, Event
+from inbox.models import Event
 from inbox.events.remote_sync import EventSync
 from inbox.util.misc import MergeError
+from default_event import default_event
 
 ACCOUNT_ID = 1
 
@@ -25,95 +26,46 @@ def alternate_events_provider(config, db):
     return EventsProviderStub('alternate_provider')
 
 
-def _default_calendar(db):
-    account = db.session.query(Account).filter(
-        Account.id == ACCOUNT_ID).one()
-    return account.default_calendar
-
-
-def _default_event(db):
-    return Event(account_id=ACCOUNT_ID,
-                 calendar=_default_calendar(db),
-                 subject='subject',
-                 body='',
-                 location='',
-                 busy=False,
-                 read_only=False,
-                 reminders='',
-                 recurrence='',
-                 start=0,
-                 end=1,
-                 all_day=False,
-                 source='remote')
-
-
 def test_merge(db, config, event_sync):
     """Test the basic logic of the merge() function."""
-    base = _default_event(db)
-    remote = Event(account_id=ACCOUNT_ID,
-                   calendar=_default_calendar(db),
-                   subject='new subject',
-                   body='new body',
-                   location='new location',
-                   busy=True,
-                   read_only=True,
-                   reminders='',
-                   recurrence='',
-                   start=2,
-                   end=3,
-                   all_day=False,
-                   source='remote')
+    base = default_event(db)
+    remote = default_event(db)
+    remote.title = 'new title'
+    remote.description = 'new description'
+    remote.location = 'new location'
 
-    dest = _default_event(db)
+    dest = default_event(db)
 
     dest.merge_from(base, remote)
-    assert dest.subject == 'new subject'
-    assert dest.body == 'new body'
+    assert dest.title == 'new title'
+    assert dest.description == 'new description'
     assert dest.location == 'new location'
-    assert dest.busy
-    assert dest.read_only
-    assert dest.start == 2
-    assert dest.end == 3
+    assert dest.read_only is False
+    assert dest.start == base.start
+    assert dest.end == base.end
 
 
 def test_merge_conflict(db, config, event_sync):
     """Test that merge() raises an error on conflict."""
-    base = _default_event(db)
+    base = default_event(db)
 
-    remote = Event(account_id=ACCOUNT_ID,
-                   calendar=_default_calendar(db),
-                   subject='new subject',
-                   body='new body',
-                   location='new location',
-                   busy=False,
-                   read_only=True,
-                   reminders='',
-                   recurrence='',
-                   start=2,
-                   end=3,
-                   all_day=False,
-                   source='remote')
+    remote = default_event(db)
 
-    dest = Event(account_id=ACCOUNT_ID,
-                 calendar=_default_calendar(db),
-                 subject='subject2',
-                 body='body2',
-                 location='location2',
-                 busy=False,
-                 read_only=False,
-                 reminders='',
-                 recurrence='',
-                 start=0,
-                 end=1,
-                 all_day=False,
-                 source='remote')
+    remote.title = 'new title'
+    remote.description = 'new description'
+    remote.location = 'new location'
+
+    dest = default_event(db)
+    dest.title = 'title2'
+    dest.description = 'description2'
+    dest.location = 'location2'
 
     with pytest.raises(MergeError):
         dest.merge_from(base, remote)
 
     # Check no update in case of conflict
-    assert dest.subject == 'subject2'
-    assert dest.body == 'body2'
+    assert dest.title == 'title2'
+    assert dest.description == 'description2'
     assert dest.location == 'location2'
 
 
@@ -143,19 +95,19 @@ def test_update_event(events_provider, event_sync, db):
     event_sync.poll()
     results = db.session.query(Event).filter_by(source='remote').all()
     db.new_session()
-    subjects = [r.subject for r in results]
-    assert 'subj' in subjects
+    titles = [r.title for r in results]
+    assert 'subj' in titles
 
     events_provider.__init__()
-    events_provider.supply_event('newsubj', 'newbody')
+    events_provider.supply_event('newsubj', 'newdescription')
     event_sync.poll()
     db.new_session()
 
     results = db.session.query(Event).filter_by(source='remote').all()
-    subjs = [r.subject for r in results]
+    subjs = [r.title for r in results]
     assert 'newsubj' in subjs
-    bodies = [r.body for r in results]
-    assert 'newbody' in bodies
+    bodies = [r.description for r in results]
+    assert 'newdescription' in bodies
 
 
 def test_uses_local_updates(events_provider, event_sync, db):
@@ -166,31 +118,31 @@ def test_uses_local_updates(events_provider, event_sync, db):
     event_sync.poll()
     results = db.session.query(Event).filter_by(source='local').all()
     # Fake a local event update.
-    results[-1].subject = 'New Subject'
+    results[-1].title = 'New title'
     db.session.commit()
 
     events_provider.__init__()
-    events_provider.supply_event('subj', 'newbody')
+    events_provider.supply_event('subj', 'newdescription')
     event_sync.provider_instance = events_provider
     event_sync.poll()
 
     remote_results = db.session.query(Event).filter_by(source='remote').all()
-    subjects = [r.subject for r in remote_results]
-    assert 'New Subject' in subjects
-    bodies = [r.body for r in remote_results]
-    assert 'newbody' in bodies
+    titles = [r.title for r in remote_results]
+    assert 'New title' in titles
+    bodies = [r.description for r in remote_results]
+    assert 'newdescription' in bodies
 
     local_results = db.session.query(Event).filter_by(source='local').all()
-    subjects = [r.subject for r in local_results]
-    assert 'New Subject' in subjects
-    bodies = [r.body for r in local_results]
-    assert 'newbody' in bodies
+    titles = [r.title for r in local_results]
+    assert 'New title' in titles
+    bodies = [r.description for r in local_results]
+    assert 'newdescription' in bodies
 
 
 def test_multiple_remotes(events_provider, alternate_events_provider,
                           event_sync, db):
     events_provider.supply_event('subj', '')
-    alternate_events_provider.supply_event('subj2', 'body')
+    alternate_events_provider.supply_event('subj2', 'description')
 
     event_sync.provider_instance = events_provider
     event_sync.poll()
@@ -204,8 +156,8 @@ def test_multiple_remotes(events_provider, alternate_events_provider,
         filter_by(source='local', provider_name='alternate_provider').one()
     # Check that both events were persisted, even though they have the same
     # uid.
-    assert result.subject == 'subj'
-    assert alternate_result.subject == 'subj2'
+    assert result.title == 'subj'
+    assert alternate_result.title == 'subj2'
 
 
 def test_deletes(events_provider, event_sync, db):

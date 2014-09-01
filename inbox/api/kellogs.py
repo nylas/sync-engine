@@ -4,9 +4,9 @@ from json import JSONEncoder, dumps
 
 from flask import Response
 
-from inbox.models import (Message, Part, Contact, Event, Participant, Time,
-                          TimeSpan, Date, DateSpan, Thread, Namespace, Block,
-                          Webhook, Lens, Tag)
+from inbox.models import (Message, Part, Contact, Calendar, Event,
+                          Participant, Time, TimeSpan, Date, DateSpan,
+                          Thread, Namespace, Block, Webhook, Lens, Tag)
 
 
 def format_address_list(addresses):
@@ -115,12 +115,24 @@ def encode(obj, namespace_public_id=None):
             'id': obj.public_id,
             'object': 'event',
             'namespace_id': _get_namespace_public_id(obj),
-            'subject': obj.subject,
-            'body': obj.body,
+            'calendar_id': obj.calendar.public_id if obj.calendar else None,
+            'title': obj.title,
+            'description': obj.description,
             'participants': [encode(p) for p in obj.participants],
             'read_only': obj.read_only,
             'location': obj.location,
             'when': encode(obj.when)
+        }
+
+    elif isinstance(obj, Calendar):
+        return {
+            'id': obj.public_id,
+            'object': 'calendar',
+            'namespace': _get_namespace_public_id(obj),
+            'name': obj.name,
+            'description': obj.description,
+            'read_only': obj.read_only,
+            'event_ids': [e.public_id for e in obj.events],
         }
 
     elif isinstance(obj, Participant):

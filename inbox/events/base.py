@@ -15,19 +15,26 @@ class BaseEventProvider(BaseSyncProvider):
         self.log = logger.new(account_id=account_id, component='event sync',
                               provider=self.PROVIDER_NAME)
 
-    def get_calendar_id(self, name):
+    def get_calendar_id(self, name, description=None):
         calendar_id = None
         with session_scope() as db_session:
-            cal_name = "{}-{}".format(self.PROVIDER_NAME, name)
             cal = db_session.query(Calendar). \
                 filter_by(account_id=self.account_id,
-                          name=cal_name).first()
+                          provider_name=self.PROVIDER_NAME,
+                          name=name).first()
             if not cal:
                 cal = Calendar(account_id=self.account_id,
-                               name=cal_name)
+                               provider_name=self.PROVIDER_NAME,
+                               name=name)
                 db_session.add(cal)
                 db_session.commit()
             calendar_id = cal.id
+
+            # update the description if appropriate
+            if cal.description != description:
+                cal.description = description
+                db_session.commit()
+
         return calendar_id
 
     def get_items(self, sync_from_time=None):

@@ -15,7 +15,7 @@ def test_api_create(db, api_client):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'time': 1407542195},
         'participants': [{
             'name': 'alyssa p. hacker',
@@ -46,7 +46,7 @@ def test_api_create_status_yes(db, api_client):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'time': 1407542195},
         'participants': [{
             'email': 'alyssa@example.com',
@@ -69,7 +69,7 @@ def test_api_create_multiple(db, api_client):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'time': 1407542195},
         'participants': [{
             'email': 'alyssa@example.com',
@@ -97,7 +97,7 @@ def test_api_create_status_no(db, api_client):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'time': 1407542195},
         'participants': [{
             'email': 'alyssa@example.com',
@@ -120,7 +120,7 @@ def test_api_create_status_maybe(db, api_client):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'time': 1407542195},
         'participants': [{
             'email': 'alyssa@example.com',
@@ -143,7 +143,7 @@ def test_api_create_status_noreply(db, api_client):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'time': 1407542195},
         'participants': [{
             'email': 'alyssa@example.com',
@@ -166,7 +166,7 @@ def test_api_create_no_name(db, api_client):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'time': 1407542195},
         'participants': [{
             'email': 'alyssa@example.com'
@@ -188,7 +188,7 @@ def test_api_create_no_email(db, api_client):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'time': 1407542195},
         'participants': [{
             'name': 'alyssa p. hacker',
@@ -206,7 +206,7 @@ def test_api_create_bad_status(db, api_client):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'time': 1407542195},
         'participants': [{
             'name': 'alyssa p. hacker',
@@ -226,7 +226,7 @@ def test_api_create_preserve_order(db, api_client):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'time': 1407542195},
         'participants': [{'email': 'alyssa@example.com'},
                          {'email': 'ben.bitdiddle@example.com'},
@@ -248,7 +248,7 @@ def test_api_add_participant(db, api_client):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'time': 1407542195},
         'participants': [{'email': 'alyssa@example.com'},
                          {'email': 'ben.bitdiddle@example.com'},
@@ -280,7 +280,7 @@ def test_api_remove_participant(db, api_client):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'time': 1407542195},
         'participants': [{'email': 'alyssa@example.com'},
                          {'email': 'ben.bitdiddle@example.com'},
@@ -311,7 +311,7 @@ def test_api_update_participant_status(db, api_client):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'time': 1407542195},
         'participants': [{'email': 'alyssa@example.com'},
                          {'email': 'ben.bitdiddle@example.com'},
@@ -344,7 +344,7 @@ def test_api_update_participant_status(db, api_client):
     e_resp_data = json.loads(e_resp.data)
 
     # Make sure that nothing changed that we didn't specify
-    assert e_resp_data['subject'] == 'Friday Office Party'
+    assert e_resp_data['title'] == 'Friday Office Party'
     assert e_resp_data['when']['time'] == 1407542195
 
     assert len(e_resp_data['participants']) == 5
@@ -361,7 +361,7 @@ def test_api_participant_reply(db, api_client, rsvp):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'time': 1407542195},
         'participants': [{'email': 'alyssa@example.com'},
                          {'email': 'ben.bitdiddle@example.com'},
@@ -397,7 +397,7 @@ def test_api_participant_reply_invalid_rsvp(db, api_client):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'time': 1407542195},
         'participants': [{'email': 'alyssa@example.com'},
                          {'email': 'ben.bitdiddle@example.com'},
@@ -427,7 +427,7 @@ def test_api_participant_reply_invalid_participant(db, api_client):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'time': 1407542195},
         'participants': [{'email': 'alyssa@example.com'},
                          {'email': 'ben.bitdiddle@example.com'},
@@ -454,7 +454,7 @@ def test_api_participant_reply_invalid_event(db, api_client):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'time': 1407542195},
         'participants': [{'email': 'alyssa@example.com'},
                          {'email': 'ben.bitdiddle@example.com'},
@@ -483,7 +483,7 @@ def test_api_participant_reply_invalid_event2(db, api_client):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'time': 1407542195},
         'participants': [{'email': 'alyssa@example.com'},
                          {'email': 'ben.bitdiddle@example.com'},
@@ -512,7 +512,7 @@ def test_api_participant_reply_invalid_action(db, api_client):
     ns_id = acct.namespace.public_id
 
     e_data = {
-        'subject': 'Friday Office Party',
+        'title': 'Friday Office Party',
         'when': {'time': 1407542195},
         'participants': [{'email': 'alyssa@example.com'},
                          {'email': 'ben.bitdiddle@example.com'},

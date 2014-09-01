@@ -16,8 +16,8 @@ def events_from_ics(namespace, calendar, ics_str):
         if component.name == "VEVENT":
             start = component.get('dtstart').dt
             end = component.get('dtend').dt
-            subject = component.get('summary')
-            body = str(component.get('description'))
+            title = component.get('summary')
+            description = str(component.get('description'))
             if isinstance(start, datetime):
                 all_day = False
             else:
@@ -79,8 +79,8 @@ def events_from_ics(namespace, calendar, ics_str):
                 uid=uid,
                 provider_name='ics',
                 raw_data=component.to_ical(),
-                subject=subject,
-                body=body,
+                title=title,
+                description=description,
                 location=location,
                 reminders=str([]),
                 recurrence=reccur,

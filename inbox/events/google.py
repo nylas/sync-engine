@@ -16,7 +16,7 @@ from inbox.auth.gmail import (OAUTH_CLIENT_ID,
                               OAUTH_CLIENT_SECRET,
                               OAUTH_ACCESS_TOKEN_URL)
 from inbox.events.util import MalformedEventError, parse_datetime
-from inbox.models.event import SUBJECT_MAX_LEN, LOCATION_MAX_LEN
+from inbox.models.event import TITLE_MAX_LEN, LOCATION_MAX_LEN
 from inbox.events.base import BaseEventProvider
 
 SOURCE_APP_NAME = 'InboxApp Calendar Sync Engine'
@@ -126,8 +126,8 @@ class GoogleEventsProvider(BaseEventProvider):
             if 'status' in event and event['status'] == 'cancelled':
                 raise MalformedEventError()
 
-            subject = event.get('summary', '')[:SUBJECT_MAX_LEN]
-            body = event.get('description', None)
+            title = event.get('summary', '')[:TITLE_MAX_LEN]
+            description = event.get('description', None)
             location = event.get('location', None)
             if location:
                 location = location[:LOCATION_MAX_LEN]
@@ -211,8 +211,8 @@ class GoogleEventsProvider(BaseEventProvider):
                      uid=uid,
                      provider_name=self.PROVIDER_NAME,
                      raw_data=raw_data,
-                     subject=subject,
-                     body=body,
+                     title=title,
+                     description=description,
                      location=location,
                      reminders=reminders,
                      recurrence=recurrence,
@@ -240,7 +240,8 @@ class GoogleEventsProvider(BaseEventProvider):
             raise ValidationError
 
         # Make sure we have a calendar associated with these events
-        calendar_id = self.get_calendar_id(resp['summary'])
+        description = resp.get('description')
+        calendar_id = self.get_calendar_id(resp['summary'], description)
 
         for response_event in resp['items']:
             yield (calendar_id, response_event, resp)
