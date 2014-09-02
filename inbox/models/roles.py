@@ -122,7 +122,7 @@ class Blob(object):
 
         # Boto pools connections at the class level
         conn = S3Connection(access_key, secret_key)
-        bucket = conn.get_bucket(bucket_name)
+        bucket = conn.get_bucket(bucket_name, validate=False)
 
         # See if it already exists and has the same hash
         data_obj = bucket.get_key(self.data_sha256)
@@ -154,7 +154,7 @@ class Blob(object):
 
         # Boto pools connections at the class level
         conn = S3Connection(access_key, secret_key)
-        bucket = conn.get_bucket(bucket_name)
+        bucket = conn.get_bucket(bucket_name, validate=False)
 
         data_obj = bucket.get_key(self.data_sha256)
         assert data_obj, 'No data returned!'
