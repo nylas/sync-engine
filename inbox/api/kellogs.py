@@ -178,14 +178,14 @@ def encode(obj, namespace_public_id=None):
             'size': obj.size,
             'filename': obj.filename,
             'is_embedded': False,
-            'message': None
+            'message_id': None
         }
         if isinstance(obj, Part):
             # if obj is actually a message attachment (and not merely an
             # uploaded file), set additional properties
             resp.update({
                 'is_embedded': obj.is_embedded,
-                'message': obj.message.public_id,
+                'message_id': obj.message.public_id,
             })
         return resp
 

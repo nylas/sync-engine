@@ -20,7 +20,7 @@ GET https://api.inboxapp.com/n/<namespace_id>/files/<file_id>
     "filename": "House-Blueprints.zip",
     "size": 3145728,
     "content-type": "application/zip",
-    "message": "152ev3uktfrtk3y2subs4i9mn",
+    "message_id": "152ev3uktfrtk3y2subs4i9mn",
     "is_embedded": false
 }
 ```
