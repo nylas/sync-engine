@@ -15,7 +15,7 @@ def user_console(user_email_address):
                     and 'all' in crispin_client.folder_names():
                 crispin_client.select_folder(
                     crispin_client.folder_names()['all'],
-                    uidvalidity_cb(db_session, account.id))
+                    uidvalidity_cb(account.id))
 
             banner = """
     You can access the crispin instance with the 'crispin_client' variable.
