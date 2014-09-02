@@ -1,4 +1,4 @@
-from inbox.mailsync.backends.imap import uidvalidity_cb
+from inbox.mailsync.backends.imap.generic import uidvalidity_cb
 from inbox.crispin import connection_pool
 from inbox.models.session import session_scope
 from inbox.models import Account
