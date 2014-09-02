@@ -185,7 +185,7 @@ def encode(obj, namespace_public_id=None):
             # uploaded file), set additional properties
             resp.update({
                 'is_embedded': obj.is_embedded,
-                'messages': [message.public_id for message in obj.messages]
+                'message': obj.message.public_id,
             })
         return resp
 

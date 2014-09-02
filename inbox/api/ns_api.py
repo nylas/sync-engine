@@ -9,7 +9,7 @@ from sqlalchemy import asc, or_
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import subqueryload
 
-from inbox.models import (Message, Part, Thread, Namespace, Webhook,
+from inbox.models import (Message, Block, Thread, Namespace, Webhook,
                           Tag, Contact, Calendar, Event, Participant)
 from inbox.api.kellogs import APIEncoder
 from inbox.api import filtering
@@ -683,15 +683,14 @@ def files_api():
 def file_read_api(public_id):
     try:
         valid_public_id(public_id)
-        f = g.db_session.query(Part).filter(
-            Part.public_id == public_id).one()
-
+        f = g.db_session.query(Block).filter(
+            Block.public_id == public_id).one()
         if hasattr(f, 'message'):
             assert int(f.message.namespace.id) == int(g.namespace.id)
             g.log.info(
                 "block's message namespace matches api context namespace")
         else:
-            # Part was likely uploaded via file API and not yet sent in a msg
+            # Block was likely uploaded via file API and not yet sent in a msg
             g.log.debug("This block doesn't have a corresponding message: {}"
                         .format(f.public_id))
         return g.encoder.jsonify(f)
@@ -712,13 +711,11 @@ def file_upload_api():
     all_files = []
     for name, uploaded in request.files.iteritems():
         g.log.info("Processing upload '{0}'".format(name))
-        f = Part()
+        f = Block()
         f.namespace = g.namespace
         f.content_type = uploaded.content_type
         f.filename = uploaded.filename
         f.data = uploaded.read()
-        f.content_disposition = 'attachment'
-        f.is_inboxapp_attachment = True
         all_files.append(f)
 
     g.db_session.add_all(all_files)
@@ -734,8 +731,8 @@ def file_upload_api():
 def file_download_api(public_id):
     try:
         valid_public_id(public_id)
-        f = g.db_session.query(Part).filter(
-            Part.public_id == public_id).one()
+        f = g.db_session.query(Block).filter(
+            Block.public_id == public_id).one()
         assert int(f.namespace_id) == int(g.namespace.id)
     except InputError:
         return err(400, 'Invalid file id {}'.format(public_id))

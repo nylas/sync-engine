@@ -9,7 +9,6 @@ from sqlalchemy import (Column, Integer, BigInteger, String, DateTime,
                         Boolean, Enum, ForeignKey, Text)
 from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy.sql.expression import false
-from sqlalchemy.ext.associationproxy import association_proxy
 
 from inbox.util.html import (plaintext2html, strip_tags,
                              extract_from_html, extract_from_plain)
@@ -69,7 +68,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                         'Message.deleted_at.is_(None))',
                         order_by='Message.received_date',
                         info={'versioned_properties': ['id']}))
-    parts = association_proxy('message_parts', 'part')
 
     from_addr = Column(JSON, nullable=False, default=lambda: [])
     sender_addr = Column(JSON, nullable=True)
@@ -230,7 +228,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             # Store all message headers as object with index 0
             headers_part = Part()
             headers_part.namespace_id = account.namespace.id
-            headers_part.messages.append(self)
+            headers_part.message = self
             headers_part.walk_index = i
             headers_part.data = json.dumps(parsed.headers.items())
             self.parts.append(headers_part)
@@ -246,7 +244,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
                 new_part = Part()
                 new_part.namespace_id = account.namespace.id
-                new_part.messages.append(self)
+                new_part.message = self
                 new_part.walk_index = i
                 new_part.content_type = mimepart.content_type.value
                 new_part.filename = _trim_filename(
