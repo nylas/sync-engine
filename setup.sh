@@ -38,7 +38,7 @@ if [ ! -f "/usr/include/sodium.h" ]; then
 color '35;1' 'Installing sodium crypto library'
     mkdir -p setup
     cd setup
-    libsodium=libsodium-0.4.3.tar.gz
+    libsodium=libsodium-0.7.0.tar.gz
     if [ ! -f $libsodium ]; then
         color '34;1' ' > Downloading...'
         wget -q -O "$libsodium" https://download.libsodium.org/libsodium/releases/$libsodium
@@ -46,7 +46,7 @@ color '35;1' 'Installing sodium crypto library'
 
     color '34;1' ' > Checking the hash...'
     if ! shasum -a 256 -s -c << EOF
-        599ce19ae6ace2d30aee353b931088f720713c4e1d0b2918ed46de1914fb6042 *$libsodium
+        4ccaffd1a15be67786e28a61b602492a97eb5bcb83455ed53c02fa038b8e9168 *$libsodium
 EOF
     then
         color '31;1' " Error verifying $libsodium hash!"
