@@ -18,19 +18,19 @@ MySQL-python==1.2.5
 requests==2.3.0
 chardet==2.1.1
 setproctitle==1.1.8
--e git+https://github.com/inboxapp/zerorpc-python.git@master#egg=zerorpc
+git+https://github.com/inboxapp/zerorpc-python.git@master#egg=zerorpc
 gdata==2.0.18
 python-dateutil==2.1
--e git+https://github.com/inboxapp/flanker.git@master#egg=flanker
+git+https://github.com/inboxapp/flanker.git@master#egg=flanker
 # imapclient==0.11
--e git+https://github.com/inboxapp/imapclient.git@inbox-modseq-hotfix#egg=imapclient
+git+https://github.com/inboxapp/imapclient.git@inbox-modseq-hotfix#egg=imapclient
 alembic==0.6.4
 iconv==1.0
 pep8==1.4.6
 flake8==2.1.0
 pyflakes==0.7.3
 pylint==1.1.0
--e git+https://github.com/inboxapp/html2text.git@master#egg=html2text
+git+https://github.com/inboxapp/html2text.git@master#egg=html2text
 python-magic==0.4.6
 greenlet==0.4.2
 PyMySQL==0.6.2
@@ -40,7 +40,7 @@ pyinstrument==0.12
 structlog==0.4.1
 lxml==3.3.5  # For talon
 cssselect==0.9.1  # For talon
--e git+https://github.com/mailgun/talon.git@master#egg=talon
+git+https://github.com/mailgun/talon.git@master#egg=talon
 raven==5.0.0
 simplejson==3.6.0
 Flask-RESTful==0.2.12
