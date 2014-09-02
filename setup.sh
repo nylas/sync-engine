@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
 
@@ -33,6 +33,42 @@ color '36;1' "
      For more details, visit:
      https://www.github.com/inboxapp/inbox
 "
+
+if [ ! -f "/usr/include/sodium.h" ]; then
+color '35;1' 'Installing sodium crypto library'
+    mkdir -p setup
+    cd setup
+    libsodium=libsodium-0.4.3.tar.gz
+    if [ ! -f $libsodium ]; then
+        color '34;1' ' > Downloading...'
+        wget -q -O "$libsodium" https://download.libsodium.org/libsodium/releases/$libsodium
+    fi
+
+    color '34;1' ' > Checking the hash...'
+    if ! shasum -a 256 -s -c << EOF
+        599ce19ae6ace2d30aee353b931088f720713c4e1d0b2918ed46de1914fb6042 *$libsodium
+EOF
+    then
+        color '31;1' " Error verifying $libsodium hash!"
+        exit 1
+    else
+        color '32;1' " $libsodium hash ok."
+    fi
+
+    tar -zxf $libsodium
+    pushd `pwd`
+    cd ${libsodium//.tar.gz/}
+    color '34;1' ' > Configuring...'
+    ./configure --prefix=/usr --quiet
+    color '34;1' ' > Building...'
+    make -s > /tmp/$libsodium.build.out
+    color '34;1' ' > Installing...'
+    make install -s > /tmp/$libsodium.build.out
+    popd
+    color '34;1' ' > Cleaning up'
+    rm -fr setup $libsodium
+    color '34;1' ' > libsodium installation done.'
+fi
 
 color '35;1' 'Updating packages...'
 apt-get update
