@@ -88,7 +88,7 @@ Content-Type: image/jpeg
 <<<Binary data here>>>
 ```
 
-A successful upload will return an array with a single file object. This object's ID may added to subsequent [draft updates](#drafts) to attach the file to a draft before sending.
+A successful upload will return an array with a single file object. This object's ID may be added to subsequent [draft updates](#drafts) to attach the file to a draft before sending.
 
 
 **Sample Response:**
