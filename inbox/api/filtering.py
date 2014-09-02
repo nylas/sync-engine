@@ -1,8 +1,8 @@
 from sqlalchemy import and_, or_, desc, asc
 from sqlalchemy.orm import joinedload, subqueryload
 from inbox.models import (Contact, Event, Calendar, Message,
-                          MessageContactAssociation, Thread, Tag,
-                          TagItem, Block, Part)
+                          MessageContactAssociation, MessagePartAssociation,
+                          Thread, Tag, TagItem, Block, Part)
 
 
 def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
@@ -79,7 +79,8 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
 
     if filename is not None:
         files_query = db_session.query(Message). \
-            join(Part).filter(Part.filename == filename).subquery()
+            join(MessagePartAssociation).join(Part). \
+            filter(Part.filename == filename).subquery()
         query = query.join(files_query)
 
     # Eager-load some objects in order to make constructing API
@@ -179,13 +180,17 @@ def _messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
         query = query.join(any_email_query)
 
     if filename is not None:
-        query = query.join(Part).filter(Part.filename == filename)
+        files_query = db_session.query(Message). \
+            join(MessagePartAssociation).join(Part). \
+            filter(Part.filename == filename).subquery()
+        query = query.join(files_query)
 
     # Eager-load some objects in order to make constructing API
     # representations faster.
     query = query.options(
-        joinedload(Message.parts).load_only('public_id',
-                                            'content_disposition'),
+        joinedload(Message.message_parts).
+        joinedload(MessagePartAssociation.part).
+        load_only('public_id', 'content_disposition'),
         joinedload(Message.thread).load_only('public_id', 'discriminator'))
 
     # TODO(emfree) we should really eager-load the namespace too
@@ -318,6 +323,9 @@ def files(namespace_id, file_public_id, message_public_id, filename,
 
     if offset:
         query = query.offset(offset)
+
+    query = query.limit(limit)
+
     return query.all()
 
 
@@ -371,7 +379,3 @@ def events(namespace_id, account_id, event_public_id,
         subqueryload(Event.participants_by_email))
 
     query = query.order_by(asc(Event.start)).limit(limit)
-    if offset:
-        query = query.offset(offset)
-
-    return query.all()

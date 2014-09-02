@@ -3,7 +3,7 @@ from datetime import datetime
 from inbox.models.when import parse_as_when
 from flask.ext.restful import reqparse
 from sqlalchemy.orm.exc import NoResultFound
-from inbox.models import Account, Calendar, Tag, Thread, Block
+from inbox.models import Account, Calendar, Tag, Thread, Part
 
 MAX_LIMIT = 1000
 
@@ -104,26 +104,26 @@ def get_tags(tag_public_ids, namespace_id, db_session):
     return tags
 
 
-def get_attachments(block_public_ids, namespace_id, db_session):
+def get_attachments(parts_public_ids, namespace_id, db_session):
     attachments = set()
-    if block_public_ids is None:
+    if parts_public_ids is None:
         return attachments
-    if not isinstance(block_public_ids, list):
+    if not isinstance(parts_public_ids, list):
         raise InputError('{} is not a list of block ids'.
-                         format(block_public_ids))
-    for block_public_id in block_public_ids:
+                         format(parts_public_ids))
+    for part_public_id in parts_public_ids:
         # Validate public ids before querying with them
-        valid_public_id(block_public_id)
+        valid_public_id(part_public_id)
         try:
-            block = db_session.query(Block). \
-                filter(Block.public_id == block_public_id,
-                       Block.namespace_id == namespace_id).one()
+            part = db_session.query(Part). \
+                filter(Part.public_id == part_public_id,
+                       Part.namespace_id == namespace_id).one()
             # In the future we may consider discovering the filetype from the
             # data by using #magic.from_buffer(data, mime=True))
-            attachments.add(block)
+            attachments.add(part)
         except NoResultFound:
-            raise InputError('Invalid block public id {}'.
-                             format(block_public_id))
+            raise InputError('Invalid part public id {}'.
+                             format(part_public_id))
     return attachments
 
 

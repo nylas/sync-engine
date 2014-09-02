@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from inbox.basicauth import NotSupportedError
-from inbox.models import Message, Thread, Part
+from inbox.models import Message, Thread
 from inbox.models.action_log import schedule_action
 from inbox.sqlalchemy_ext.util import generate_public_id
 
@@ -224,19 +224,8 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
 
         # Associate attachments to the draft message
         for block in blocks:
-            # Create a new Part object to associate to the message object.
-            # (You can't just set block.message, because if block is an
-            # attachment on an existing message, that would dissociate it from
-            # the existing message.)
-            part = Part()
-            part.namespace_id = account.namespace.id
-            part.content_disposition = 'attachment'
-            part.content_type = block.content_type
-            part.is_inboxapp_attachment = True
-            part.data = block.data
-            part.filename = block.filename
-            message.parts.append(part)
-            db_session.add(part)
+            block.messages.append(message)
+            message.parts.append(block)
 
         # TODO(emfree) Update contact data here.
 
