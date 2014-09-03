@@ -218,6 +218,7 @@ class FolderSyncEngine(Greenlet):
                           spawn_flags_refresh_poller=True):
         # We wrap the block in a try/finally because the greenlets like
         # new_uid_poller need to be killed when this greenlet is interrupted
+        new_uid_poller, flags_refresh_poller = None, None
         try:
             assert crispin_client.selected_folder_name == self.folder_name
 
@@ -254,9 +255,10 @@ class FolderSyncEngine(Greenlet):
             self.download_uids(crispin_client, uid_download_stack)
 
         finally:
-            new_uid_poller.kill()
+            if new_uid_poller is not None:
+                new_uid_poller.kill()
 
-            if spawn_flags_refresh_poller:
+            if spawn_flags_refresh_poller and flags_refresh_poller is not None:
                 flags_refresh_poller.kill()
 
     def poll_impl(self, crispin_client):

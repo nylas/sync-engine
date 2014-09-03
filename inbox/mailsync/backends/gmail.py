@@ -70,6 +70,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                           uid_download_stack):
         # We wrap the block in a try/finally because the greenlets like
         # new_uid_poller need to be killed when this greenlet is interrupted
+        new_uid_poller = None
         try:
             remote_uid_count = len(set(crispin_client.all_uids()))
             remote_g_metadata, update_uid_count = self.__fetch_g_metadata(
@@ -132,7 +133,8 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
             rm_cache(remote_g_metadata_cache_file(self.account_id,
                                                   self.folder_name))
         finally:
-            new_uid_poller.kill()
+            if new_uid_poller is not None:
+                new_uid_poller.kill()
 
     def highestmodseq_callback(self, crispin_client, new_uids, updated_uids):
         uids = new_uids + updated_uids
