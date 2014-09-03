@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 set -e
 
@@ -34,41 +34,6 @@ color '36;1' "
      https://www.github.com/inboxapp/inbox
 "
 
-if [ ! -f "/usr/include/sodium.h" ]; then
-color '35;1' 'Installing sodium crypto library'
-    mkdir -p setup
-    cd setup
-    libsodium=libsodium-0.7.0.tar.gz
-    if [ ! -f $libsodium ]; then
-        color '34;1' ' > Downloading...'
-        wget -q -O "$libsodium" https://download.libsodium.org/libsodium/releases/$libsodium
-    fi
-
-    color '34;1' ' > Checking the hash...'
-    if ! shasum -a 256 -s -c << EOF
-        4ccaffd1a15be67786e28a61b602492a97eb5bcb83455ed53c02fa038b8e9168 *$libsodium
-EOF
-    then
-        color '31;1' " Error verifying $libsodium hash!"
-        exit 1
-    else
-        color '32;1' " $libsodium hash ok."
-    fi
-
-    tar -zxf $libsodium
-    pushd ${libsodium//.tar.gz/}
-    color '34;1' ' > Configuring...'
-    ./configure --prefix=/usr --quiet
-    color '34;1' ' > Building...'
-    make -s > /tmp/$libsodium.build.out
-    color '34;1' ' > Installing...'
-    make install -s > /tmp/$libsodium.build.out
-    popd
-    color '34;1' ' > Cleaning up'
-    rm -fr setup $libsodium
-    color '34;1' ' > libsodium installation done.'
-fi
-
 color '35;1' 'Updating packages...'
 apt-get update
 apt-get -y install python-software-properties
@@ -101,7 +66,6 @@ apt-get -y install git \
                    curl \
                    tnef \
 
-pwd
 color '35;1' 'Installing dependencies from pip...'
 pip install --upgrade setuptools
 pip install -r requirements.txt
