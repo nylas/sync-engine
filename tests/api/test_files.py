@@ -109,3 +109,17 @@ def test_is_attachment_filtering(api_client, uploaded_file_ids, draft):
     # TODO: de-dup files on backend
     assert new_orphan == old_orphan
     assert new_total == old_total + 1
+
+
+@pytest.mark.parametrize("filename", FILENAMES)
+def test_download(api_client, uploaded_file_ids, filename):
+    import md5
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..',
+                        'data', filename)
+    in_file = api_client.get_data('/files?filename={}'.format(filename))[0]
+    data = api_client.get_raw('/files/{}/download'.format(in_file['id']))
+
+    local_data = open(path, 'rb').read()
+    local_md5 = md5.new(local_data).digest()
+    dl_md5 = md5.new(data).digest()
+    assert local_md5 == dl_md5

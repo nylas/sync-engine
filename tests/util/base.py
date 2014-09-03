@@ -98,6 +98,10 @@ class TestAPIClient(object):
             self.ns_public_ids[ns_id] = ns_public_id
         return '/n/{}'.format(ns_public_id) + path
 
+    def get_raw(self, short_path, ns_id=1):
+        path = self.full_path(short_path, ns_id)
+        return self.client.get(path).data
+
     def get_data(self, short_path, ns_id=1):
         path = self.full_path(short_path, ns_id)
         return json.loads(self.client.get(path).data)
