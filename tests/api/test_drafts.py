@@ -205,6 +205,38 @@ def test_delete_draft(api_client):
     assert not drafts
 
 
+def test_delete_remote_draft(db, api_client):
+    from inbox.models.message import Message
+
+    # Non-Inbox created draft, therefore don't set inbox_uid
+    message = Message()
+    message.thread_id = 1
+    message.received_date = datetime.utcnow()
+    message.size = len('')
+    message.is_draft = True
+    message.is_read = True
+    message.sanitized_body = ''
+    message.snippet = ''
+
+    db.session.add(message)
+    db.session.commit()
+
+    drafts = api_client.get_data('/drafts')
+    assert len(drafts) == 1
+
+    public_id = drafts[0]['id']
+    version = drafts[0]['version']
+
+    assert public_id == message.public_id and version == message.version
+
+    api_client.delete('/drafts/{}'.format(public_id),
+                      {'version': version})
+
+    # Check that drafts were deleted
+    drafts = api_client.get_data('/drafts')
+    assert not drafts
+
+
 def test_send(patch_network_functions, api_client, example_draft,
               syncback_service):
     r = api_client.post_data('/drafts', example_draft)

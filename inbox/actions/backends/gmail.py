@@ -6,14 +6,16 @@ from inbox.actions.backends.imap import syncback_action
 PROVIDER = 'gmail'
 
 __all__ = ['set_remote_archived', 'set_remote_starred', 'set_remote_unread',
-           'remote_save_draft', 'remote_delete_draft']
+           'remote_save_draft', 'remote_delete_draft', 'remote_delete']
 
 
 def uidvalidity_cb(db_session, account_id):
-    """ Gmail Syncback actions never ever touch the database and don't rely on
-        local UIDs since they instead do SEARCHes based on X-GM-THRID to find
-        the message UIDs to act on. So we don't actually need to care about
-        UIDVALIDITY.
+    """
+    Gmail Syncback actions never ever touch the database and don't rely on
+    local UIDs since they instead do SEARCHes based on X-GM-THRID to find
+    the message UIDs to act on. So we don't actually need to care about
+    UIDVALIDITY.
+
     """
     pass
 
@@ -129,17 +131,28 @@ def _remote_copy(account, thread_id, from_folder, to_folder, db_session):
     return syncback_action(fn, account, from_folder, db_session)
 
 
-def _remote_delete(account, thread_id, folder_name, db_session):
+def remote_delete(account, thread_id, folder_name, db_session):
     def fn(account, db_session, crispin_client):
+        g_thrid = _get_g_thrid(account.namespace.id, thread_id, db_session)
+
         inbox_folder = crispin_client.folder_names()['inbox']
         all_folder = crispin_client.folder_names()['all']
-        g_thrid = _get_g_thrid(account.namespace.id, thread_id, db_session)
+        drafts_folder = crispin_client.folder_names()['drafts']
+
+        # Move to All Mail
         if folder_name == inbox_folder:
             return _archive(g_thrid, crispin_client)
+        # Remove \Draft, move to Trash
+        elif folder_name == drafts_folder:
+            crispin_client.select_folder(
+                crispin_client.folder_names()['all'], uidvalidity_cb)
+            crispin_client.delete(g_thrid, folder_name)
+        # Remove label, keep in All Mail
         elif folder_name in crispin_client.folder_names()['labels']:
             crispin_client.select_folder(
                 crispin_client.folder_names()['all'], uidvalidity_cb)
             crispin_client.remove_label(g_thrid, folder_name)
+        # Move to Trash
         elif folder_name == all_folder:
             # delete thread from all mail: really delete it (move it to trash
             # where it will be permanently deleted after 30 days, see

@@ -13,7 +13,7 @@ from inbox.models.folder import Folder
 PROVIDER = 'generic'
 
 __all__ = ['set_remote_archived', 'set_remote_starred', 'set_remote_unread',
-           'remote_save_draft', 'remote_delete_draft']
+           'remote_save_draft', 'remote_delete_draft', 'remote_delete']
 
 
 def get_thread_uids(db_session, thread_id):
@@ -124,14 +124,16 @@ def remote_copy(account, thread_id, from_folder, to_folder, db_session):
 
 
 def remote_delete(account, thread_id, folder_name, db_session):
+    """ We currently only allow this for Drafts. """
     def fn(account, db_session, crispin_client):
-        uids = []
+        if folder_name == crispin_client.folder_names()['drafts']:
+            uids = []
 
-        thread = get_thread_uids(db_session, thread_id)
-        for msg in thread.messages:
-            uids.extend([uid.msg_uid for uid in msg.imapuids])
+            thread = get_thread_uids(db_session, thread_id)
+            for msg in thread.messages:
+                uids.extend([uid.msg_uid for uid in msg.imapuids])
 
-        crispin_client.delete_uids(uids)
+            crispin_client.delete_uids(uids)
 
     return syncback_action(fn, account, folder_name, db_session)
 
@@ -147,8 +149,8 @@ def remote_save_draft(account, folder_name, message, db_session, date=None):
 def remote_delete_draft(account, folder_name, inbox_uid, db_session):
     def fn(account, db_session, crispin_client):
         assert folder_name == crispin_client.folder_names()['drafts']
-        message = db_session.query(Message). \
-            filter_by(public_id=inbox_uid).one()
+        message = db_session.query(Message).filter_by(
+            public_id=inbox_uid).one()
         uids = []
 
         if message.resolved_message is not None:

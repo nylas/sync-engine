@@ -538,7 +538,6 @@ class CrispinClient(object):
 
 
 class CondStoreCrispinClient(CrispinClient):
-
     def select_folder(self, folder, uidvalidity_cb):
         ret = super(CondStoreCrispinClient,
                     self).select_folder(folder, uidvalidity_cb)
@@ -763,18 +762,22 @@ class GmailCrispinClient(CondStoreCrispinClient):
             self.conn.copy(uids, to_folder)
 
     def add_label(self, g_thrid, label_name):
-        """ NOTE: Does nothing if the thread isn't in the currently selected
-            folder.
+        """
+        NOTE: Does nothing if the thread isn't in the currently selected
+        folder.
+
         """
         uids = self.find_messages(g_thrid)
         self.conn.add_gmail_labels(uids, [label_name])
 
     def remove_label(self, g_thrid, label_name):
-        """ NOTE: Does nothing if the thread isn't in the currently selected
-            folder.
+        """
+        NOTE: Does nothing if the thread isn't in the currently selected
+        folder.
+
         """
         # Gmail won't even include the label of the selected folder (when the
-        # selected folder is a laebl) in the list of labels for a UID, FYI.
+        # selected folder is a label) in the list of labels for a UID, FYI.
         assert self.selected_folder_name != label_name, \
             "Gmail doesn't support removing a selected label"
         uids = self.find_messages(g_thrid)
@@ -793,6 +796,23 @@ class GmailCrispinClient(CondStoreCrispinClient):
             self.conn.add_flags(uids, ['\\Starred'])
         else:
             self.conn.remove_flags(uids, ['\\Starred'])
+
+    def delete(self, g_thrid, folder_name):
+        """
+        Permanent delete i.e. remove the corresponding label and add the
+        `Trash` flag. We currently only allow this for Drafts, all other
+        non-All Mail deletes are archives.
+
+        """
+        uids = self.find_messages(g_thrid)
+
+        if folder_name == self.folder_names()['drafts']:
+            # Remove Gmail's `Draft` label
+            self.conn.remove_gmail_labels(uids, ['\Draft'])
+
+            # Move to Gmail's `Trash` folder
+            self.conn.delete_messages(uids)
+            self.conn.expunge()
 
     def delete_draft(self, inbox_uid):
         """
