@@ -37,6 +37,8 @@ def upgrade():
     op.add_column('message',
                   sa.Column('version', mysql.BINARY(16), nullable=True))
 
+    op.drop_constraint('message_ibfk_3', 'message', type_='foreignkey')
+
     from inbox.ignition import main_engine
     from inbox.models.session import session_scope
 
@@ -51,12 +53,19 @@ def upgrade():
     # one.
     with session_scope(ignore_soft_deletes=False, versioned=False) as \
             db_session:
+
+        parent_draft_ids = [d for d, in db_session.query(
+            Message.parent_draft_id).filter(
+            Message.is_created == True,
+            Message.is_draft == True,
+            Message.parent_draft_id.isnot(None)).all()]
+
         q = db_session.query(Message).filter(
             Message.is_created == True,
             Message.is_draft == True)
 
         for d in page_query(q):
-            if d.child_draft is not None:
+            if d.id in parent_draft_ids:
                 db_session.delete(d)
             else:
                 d.version = d.public_id
@@ -64,7 +73,6 @@ def upgrade():
 
         db_session.commit()
 
-    op.drop_constraint('message_ibfk_3', 'message', type_='foreignkey')
     op.drop_column('message', 'parent_draft_id')
 
 
