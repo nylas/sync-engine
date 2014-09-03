@@ -56,7 +56,8 @@ EOF
     fi
 
     tar -zxf $libsodium
-    pushd ${libsodium//.tar.gz/}
+    pushd `pwd`
+    cd ${libsodium//.tar.gz/}
     color '34;1' ' > Configuring...'
     ./configure --prefix=/usr --quiet
     color '34;1' ' > Building...'
@@ -101,7 +102,6 @@ apt-get -y install git \
                    curl \
                    tnef \
 
-pwd
 color '35;1' 'Installing dependencies from pip...'
 pip install --upgrade setuptools
 pip install -r requirements.txt
