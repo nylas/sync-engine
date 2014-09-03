@@ -14,14 +14,14 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
 
-from inbox.ignition import main_engine
-engine = main_engine(pool_size=1, max_overflow=0)
-from inbox.sqlalchemy_ext.util import JSON, MutableDict
-Base = declarative_base()
-Base.metadata.reflect(engine)
-
 
 def upgrade():
+    from inbox.ignition import main_engine
+    engine = main_engine(pool_size=1, max_overflow=0)
+    from inbox.sqlalchemy_ext.util import JSON, MutableDict
+    Base = declarative_base()
+    Base.metadata.reflect(engine)
+
     op.add_column('foldersync',
                   sa.Column('_sync_status', MutableDict.as_mutable(JSON()),
                             nullable=True))
@@ -33,6 +33,11 @@ def upgrade():
 
 
 def downgrade():
+    from inbox.ignition import main_engine
+    engine = main_engine(pool_size=1, max_overflow=0)
+    Base = declarative_base()
+    Base.metadata.reflect(engine)
+
     op.drop_column('foldersync', '_sync_status')
 
     if 'easfoldersync' in Base.metadata.tables:

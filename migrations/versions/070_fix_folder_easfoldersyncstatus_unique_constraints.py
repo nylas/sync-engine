@@ -13,14 +13,14 @@ down_revision = '479b3b84a73e'
 from alembic import op
 import sqlalchemy as sa
 
-from inbox.ignition import main_engine
-engine = main_engine(pool_size=1, max_overflow=0)
-
-Base = sa.ext.declarative.declarative_base()
-Base.metadata.reflect(engine)
-
 
 def upgrade():
+    from inbox.ignition import main_engine
+    engine = main_engine(pool_size=1, max_overflow=0)
+
+    Base = sa.ext.declarative.declarative_base()
+    Base.metadata.reflect(engine)
+
     op.drop_constraint('folder_fk1', 'folder', type_='foreignkey')
     op.drop_constraint('account_id', 'folder', type_='unique')
 
