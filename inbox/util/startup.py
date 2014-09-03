@@ -26,7 +26,14 @@ def check_requirements(requirements_path):
     with open(requirements_path, 'r') as f:
         for x in f:
             x = x.strip()
-            if not x or x.startswith('#') or x.startswith('-e '):
+            if not x or x.startswith('#'):
+                # skip blank lines and comments
+                continue
+            elif x.startswith('-e ') or '://' in x:
+                # ignore vcs URIs
+                # XXX(dlitz): we could probably parse `#egg=<version_req>` from
+                # the URI if we wanted to, assuming we want to parse
+                # requirements.txt ourselves at all.
                 continue
             try:
                 require(x)

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 set -e
 
@@ -66,8 +66,11 @@ apt-get -y install git \
                    curl \
                    tnef \
 
+color '35;1' 'Ensuring setuptools and pip versions...'
+easy_install 'setuptools>=5.3' 'pip>=1.5.6'
+hash easy_install pip   # these might be in /usr/local/bin now
+
 color '35;1' 'Installing dependencies from pip...'
-pip install --upgrade setuptools
 pip install -r requirements.txt
 
 pip install -e .
