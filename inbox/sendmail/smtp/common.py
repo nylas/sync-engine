@@ -1,10 +1,10 @@
 from inbox.sendmail.base import generate_attachments, SendError
-from inbox.sendmail.postel import SMTPClient
-from inbox.sendmail.generic.message import create_email, create_reply
+from inbox.sendmail.smtp.postel import BaseSMTPClient
+from inbox.sendmail.smtp.message import create_email, create_reply
 
 
-class GenericSMTPClient(SMTPClient):
-    """ SMTPClient for Generic IMAP. """
+class SMTPClient(BaseSMTPClient):
+    """ SMTPClient for Gmail and other providers. """
     def _send_mail(self, db_session, message, smtpmsg):
         """Send the email message."""
         # Send it using SMTP:

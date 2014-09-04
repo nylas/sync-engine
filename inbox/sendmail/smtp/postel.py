@@ -166,7 +166,7 @@ class SMTPConnection(object):
         return self.connection.sendmail(email_address, recipients, msg)
 
 
-class SMTPClient(object):
+class BaseSMTPClient(object):
     """
     Base class for an SMTPClient.
     The SMTPClient is responsible for creating/closing SMTP connections
@@ -200,7 +200,7 @@ class SMTPClient(object):
     def _send(self, recipients, msg):
         """ Send the email message over the network. """
         try:
-            with self.get_connection() as smtpconn:
+            with self._get_connection() as smtpconn:
                 failures = smtpconn.sendmail(self.email_address, recipients,
                                              msg)
             # Sent to none successfully
@@ -260,7 +260,7 @@ class SMTPClient(object):
         """
         raise NotImplementedError
 
-    def get_connection(self):
+    def _get_connection(self):
         try:
             host, port = provider_info(self.provider_name)['smtp'].split(':')
             connection = smtplib.SMTP()
