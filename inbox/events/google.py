@@ -190,17 +190,17 @@ class GoogleEventsProvider(BaseEventProvider):
                 name = attendee.get('displayName')
 
                 notes = None
+                guests = 0
                 if 'additionalGuests' in attendee:
-                    notes = "Guests: {}".format(attendee['additionalGuests'])
-                    if 'comment' in attendee:
-                        notes += " Notes: {}".format(attendee['comment'])
+                    guests = attendee['additionalGuests']
                 elif 'comment' in attendee:
-                    notes = "Notes: {}".format(attendee['comment'])
+                    notes = attendee['comment']
 
                 participants.append(Participant(email_address=email,
                                                 name=name,
                                                 status=status,
-                                                notes=notes))
+                                                notes=notes,
+                                                guests=guests))
 
             if 'self' in event['creator']:
                 is_owner = True
@@ -208,8 +208,11 @@ class GoogleEventsProvider(BaseEventProvider):
             elif 'guestsCanModify' in event:
                 read_only = False
 
-            owner = "{} <{}>".format(event['creator']['displayName'],
-                                     event['creator']['email'])
+            owner = ""
+            if 'creator' in event:
+                creator = event['creator']
+                owner = u'{} <{}>'.format(creator['displayName'],
+                                          creator['email'])
 
         except (KeyError, AttributeError):
             raise MalformedEventError()
