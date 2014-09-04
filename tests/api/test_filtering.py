@@ -1,11 +1,12 @@
+import json
 import datetime
 import calendar
 from inbox.models import Message, Thread
 from inbox.contacts.process_mail import update_contacts_from_message
 from inbox.util.misc import dt_to_timestamp
-from tests.util.base import api_client
+from tests.util.base import api_client, test_client
 
-__all__ = ['api_client']
+__all__ = ['api_client', 'test_client']
 
 NAMESPACE_ID = 1
 
@@ -224,3 +225,25 @@ def test_distinct_results(api_client, db):
     filtered_results = api_client.get_data('/threads?from=hello@example.com'
                                            '&limit=2&offset=1')
     assert len(filtered_results) == 1
+
+
+def test_filtering_namespaces(db, test_client):
+    all_namespaces = json.loads(test_client.get('/n/').data)
+    email = all_namespaces[0]['email_address']
+
+    no_namespaces = json.loads(test_client.get('/n/?limit=0').data)
+    assert no_namespaces == []
+
+    all_namespaces = json.loads(test_client.get('/n/?limit=1').data)
+    assert len(all_namespaces) == 1
+
+    some_namespaces = json.loads(test_client.get('/n/?offset=1').data)
+    assert len(some_namespaces) == len(all_namespaces) - 1
+
+    filter_ = '?email_address={}'.format(email)
+    namespaces = json.loads(test_client.get('/n/' + filter_).data)
+    assert namespaces[0]['email_address'] == email
+
+    filter_ = '?email_address=unknown@email.com'
+    namespaces = json.loads(test_client.get('/n/' + filter_).data)
+    assert len(namespaces) == 0

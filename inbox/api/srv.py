@@ -1,12 +1,16 @@
 from flask import Flask, request, jsonify
+from flask.ext.restful import reqparse
 from werkzeug.exceptions import default_exceptions, HTTPException
 
 from inbox.api.kellogs import APIEncoder
 from inbox.log import get_logger
-from inbox.models import Namespace
+from inbox.models import Namespace, Account
 from inbox.models.session import session_scope
+from inbox.api.validation import (bounded_str, ValidatableArgument,
+                                  strict_parse_args, limit)
 
 from ns_api import app as ns_api
+from ns_api import DEFAULT_LIMIT
 
 app = Flask(__name__)
 # Handle both /endpoint and /endpoint/ without redirecting.
@@ -53,7 +57,23 @@ def ns_all():
     # public_id.  However, this means the before_request isn't run, so we need
     # to make our own session
     with session_scope() as db_session:
-        namespaces = db_session.query(Namespace).all()
+        parser = reqparse.RequestParser(argument_class=ValidatableArgument)
+        parser.add_argument('limit', default=DEFAULT_LIMIT, type=limit,
+                            location='args')
+        parser.add_argument('offset', default=0, type=int, location='args')
+        parser.add_argument('email_address', type=bounded_str, location='args')
+        args = strict_parse_args(parser, request.args)
+
+        query = db_session.query(Namespace)
+        if args['email_address']:
+            query = query.join(Account)
+            query = query.filter_by(email_address=args['email_address'])
+
+        query = query.limit(args['limit'])
+        if args['offset']:
+            query = query.offset(args['offset'])
+
+        namespaces = query.all()
         encoder = APIEncoder()
         return encoder.jsonify(namespaces)
 

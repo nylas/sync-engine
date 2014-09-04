@@ -70,6 +70,14 @@ def db(request, config):
     testdb.teardown()
 
 
+@yield_fixture
+def test_client(db):
+    from inbox.api.srv import app
+    app.config['TESTING'] = True
+    with app.test_client() as c:
+        yield c
+
+
 # TODO(emfree) can we make this into a yield_fixture without the tests hanging?
 @yield_fixture
 def api_client(db):
