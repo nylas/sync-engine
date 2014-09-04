@@ -113,13 +113,10 @@ def update_draft(db_session, account, original_draft, to=None, subject=None,
 
     # Parts, tags require special handling
     for block in blocks:
-        part = Part()
+        part = Part(block=block)
         part.namespace_id = account.namespace.id
         part.content_disposition = 'attachment'
-        part.content_type = block.content_type
         part.is_inboxapp_attachment = True
-        part.data = block.data
-        part.filename = block.filename
         original_draft.parts.append(part)
 
         db_session.add(part)
@@ -228,13 +225,10 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
             # (You can't just set block.message, because if block is an
             # attachment on an existing message, that would dissociate it from
             # the existing message.)
-            part = Part()
+            part = Part(block=block)
             part.namespace_id = account.namespace.id
             part.content_disposition = 'attachment'
-            part.content_type = block.content_type
             part.is_inboxapp_attachment = True
-            part.data = block.data
-            part.filename = block.filename
             message.parts.append(part)
             db_session.add(part)
 

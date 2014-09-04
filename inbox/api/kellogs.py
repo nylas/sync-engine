@@ -71,10 +71,11 @@ def encode(obj, namespace_public_id=None):
             'body': obj.sanitized_body,
             'unread': not obj.is_read,
             'files': [{
-                'content_type': p.content_type,
-                'size': p.size,
-                'filename': p.filename,
-                'id': p.public_id} for p in obj.parts if p.is_attachment]
+                'content_type': b.content_type,
+                'size': b.size,
+                'filename': b.filename,
+                'id': b.public_id} for b in [p.block for p in obj.parts
+                                             if p.is_attachment]]
         }
         # If the message is a draft (Inbox-created or otherwise):
         if obj.is_draft:

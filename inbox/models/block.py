@@ -4,8 +4,6 @@ from sqlalchemy.orm import reconstructor, relationship, backref
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.sql.expression import false
 
-from inbox.sqlalchemy_ext.util import JSON
-
 from inbox.models.roles import Blob
 from inbox.models.mixins import HasPublicID
 from inbox.models.transaction import HasRevisions
@@ -77,13 +75,20 @@ def serialize_before_insert(mapper, connection, target):
         target._content_type_other = target.content_type
 
 
-class Part(Block):
+class Part(MailSyncBase):
     """ Part is a section of a specific message. This includes message bodies
         as well as attachments.
     """
-
-    id = Column(Integer, ForeignKey(Block.id, ondelete='CASCADE'),
-                primary_key=True)
+    block_id = Column(Integer, ForeignKey(Block.id, ondelete='CASCADE'))
+    block = relationship(
+        Block,
+        primaryjoin='and_(Part.block_id==Block.id, '
+        'Block.deleted_at==None)',
+        backref=backref("parts", primaryjoin='and_('
+                        'Part.block_id == Block.id, '
+                        'Part.deleted_at.is_(None))',
+                        cascade="all, delete, delete-orphan"),
+        load_on_pending=True)
 
     message_id = Column(Integer, ForeignKey(Message.id, ondelete='CASCADE'))
     message = relationship(

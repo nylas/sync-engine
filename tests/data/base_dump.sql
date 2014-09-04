@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.35, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.38, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.5.35-0ubuntu0.12.04.2-log
+-- Server version	5.5.38-0ubuntu0.12.04.1-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -140,7 +140,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('24e9afe91349');
+INSERT INTO `alembic_version` VALUES ('2b89164aa9cd');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1077,6 +1077,40 @@ INSERT INTO `messagecontactassociation` VALUES (1,1,1,'to_addr','2014-05-13 02:1
 UNLOCK TABLES;
 
 --
+-- Table structure for table `messagepartassociation`
+--
+
+DROP TABLE IF EXISTS `messagepartassociation`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `messagepartassociation` (
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `message_id` int(11) NOT NULL,
+  `part_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`,`message_id`,`part_id`),
+  KEY `message_id` (`message_id`),
+  KEY `part_id` (`part_id`),
+  KEY `op.f('ix_messagepartassociation_created_at')` (`created_at`),
+  KEY `op.f('ix_messagepartassociation_deleted_at')` (`deleted_at`),
+  KEY `op.f('ix_messagepartassociation_updated_at')` (`updated_at`),
+  CONSTRAINT `messagepartassociation_ibfk_1` FOREIGN KEY (`message_id`) REFERENCES `message` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `messagepartassociation_ibfk_2` FOREIGN KEY (`part_id`) REFERENCES `part` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `messagepartassociation`
+--
+
+LOCK TABLES `messagepartassociation` WRITE;
+/*!40000 ALTER TABLE `messagepartassociation` DISABLE KEYS */;
+/*!40000 ALTER TABLE `messagepartassociation` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `namespace`
 --
 
@@ -1154,17 +1188,22 @@ DROP TABLE IF EXISTS `part`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `part` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `message_id` int(11) DEFAULT NULL,
   `walk_index` int(11) DEFAULT NULL,
   `content_disposition` enum('inline','attachment') DEFAULT NULL,
   `content_id` varchar(255) DEFAULT NULL,
   `is_inboxapp_attachment` tinyint(1) DEFAULT '0',
+  `block_id` int(11) NOT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `message_id` (`message_id`,`walk_index`),
-  CONSTRAINT `part_ibfk_1` FOREIGN KEY (`id`) REFERENCES `block` (`id`) ON DELETE CASCADE,
+  KEY `part_ibfk_1` (`block_id`),
+  CONSTRAINT `part_ibfk_1` FOREIGN KEY (`block_id`) REFERENCES `block` (`id`),
   CONSTRAINT `part_ibfk_2` FOREIGN KEY (`message_id`) REFERENCES `message` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=51 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1173,7 +1212,7 @@ CREATE TABLE `part` (
 
 LOCK TABLES `part` WRITE;
 /*!40000 ALTER TABLE `part` DISABLE KEYS */;
-INSERT INTO `part` VALUES (1,1,0,NULL,NULL,0),(2,1,1,NULL,NULL,0),(3,1,2,NULL,NULL,0),(4,2,0,NULL,NULL,0),(5,2,1,NULL,NULL,0),(6,2,2,NULL,NULL,0),(7,3,0,NULL,NULL,0),(8,3,1,NULL,NULL,0),(9,3,2,NULL,NULL,0),(10,4,0,NULL,NULL,0),(11,4,1,NULL,NULL,0),(12,4,2,NULL,NULL,0),(13,5,0,NULL,NULL,0),(14,5,1,NULL,NULL,0),(15,5,2,NULL,NULL,0),(16,6,0,NULL,NULL,0),(17,6,1,NULL,NULL,0),(18,6,2,NULL,NULL,0),(19,7,0,NULL,NULL,0),(20,7,1,NULL,NULL,0),(21,7,2,NULL,NULL,0),(22,8,0,NULL,NULL,0),(23,8,1,NULL,NULL,0),(24,8,2,NULL,NULL,0),(25,9,0,NULL,NULL,0),(26,9,1,NULL,NULL,0),(27,9,2,NULL,NULL,0),(28,10,0,NULL,NULL,0),(29,10,2,NULL,NULL,0),(30,10,3,NULL,NULL,0),(31,10,4,'attachment','<google>',0),(32,10,5,'attachment','<profilephoto>',0),(33,11,0,NULL,NULL,0),(34,11,1,NULL,NULL,0),(35,11,2,NULL,NULL,0),(36,12,0,NULL,NULL,0),(37,12,1,NULL,NULL,0),(38,12,2,NULL,NULL,0),(39,13,0,NULL,NULL,0),(40,13,1,NULL,NULL,0),(41,13,2,NULL,NULL,0),(42,14,0,NULL,NULL,0),(43,14,1,NULL,NULL,0),(44,14,2,NULL,NULL,0),(45,15,0,NULL,NULL,0),(46,15,1,NULL,NULL,0),(47,15,2,NULL,NULL,0),(48,16,0,NULL,NULL,0),(49,16,1,NULL,NULL,0),(50,16,2,NULL,NULL,0);
+INSERT INTO `part` VALUES (1,1,0,NULL,NULL,0,1,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(2,1,1,NULL,NULL,0,2,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(3,1,2,NULL,NULL,0,3,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(4,2,0,NULL,NULL,0,4,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(5,2,1,NULL,NULL,0,5,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(6,2,2,NULL,NULL,0,6,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(7,3,0,NULL,NULL,0,7,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(8,3,1,NULL,NULL,0,8,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(9,3,2,NULL,NULL,0,9,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(10,4,0,NULL,NULL,0,10,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(11,4,1,NULL,NULL,0,11,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(12,4,2,NULL,NULL,0,12,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(13,5,0,NULL,NULL,0,13,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(14,5,1,NULL,NULL,0,14,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(15,5,2,NULL,NULL,0,15,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(16,6,0,NULL,NULL,0,16,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(17,6,1,NULL,NULL,0,17,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(18,6,2,NULL,NULL,0,18,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(19,7,0,NULL,NULL,0,19,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(20,7,1,NULL,NULL,0,20,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(21,7,2,NULL,NULL,0,21,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(22,8,0,NULL,NULL,0,22,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(23,8,1,NULL,NULL,0,23,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(24,8,2,NULL,NULL,0,24,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(25,9,0,NULL,NULL,0,25,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(26,9,1,NULL,NULL,0,26,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(27,9,2,NULL,NULL,0,27,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(28,10,0,NULL,NULL,0,28,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(29,10,2,NULL,NULL,0,29,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(30,10,3,NULL,NULL,0,30,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(31,10,4,'attachment','<google>',0,31,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(32,10,5,'attachment','<profilephoto>',0,32,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(33,11,0,NULL,NULL,0,33,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(34,11,1,NULL,NULL,0,34,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(35,11,2,NULL,NULL,0,35,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(36,12,0,NULL,NULL,0,36,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(37,12,1,NULL,NULL,0,37,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(38,12,2,NULL,NULL,0,38,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(39,13,0,NULL,NULL,0,39,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(40,13,1,NULL,NULL,0,40,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(41,13,2,NULL,NULL,0,41,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(42,14,0,NULL,NULL,0,42,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(43,14,1,NULL,NULL,0,43,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(44,14,2,NULL,NULL,0,44,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(45,15,0,NULL,NULL,0,45,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(46,15,1,NULL,NULL,0,46,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(47,15,2,NULL,NULL,0,47,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(48,16,0,NULL,NULL,0,48,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(49,16,1,NULL,NULL,0,49,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL),(50,16,2,NULL,NULL,0,50,'2014-09-03 16:18:01','2014-09-03 16:18:01',NULL);
 /*!40000 ALTER TABLE `part` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1507,4 +1546,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-09-01 17:18:04
+-- Dump completed on 2014-09-03 16:18:01

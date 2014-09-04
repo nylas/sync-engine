@@ -9,7 +9,7 @@ from sqlalchemy import asc, or_
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import subqueryload
 
-from inbox.models import (Message, Block, Thread, Namespace, Webhook,
+from inbox.models import (Message, Block, Part, Thread, Namespace, Webhook,
                           Tag, Contact, Calendar, Event, Participant)
 from inbox.api.kellogs import APIEncoder
 from inbox.api import filtering
@@ -679,21 +679,37 @@ def files_api():
     return g.encoder.jsonify(files)
 
 
-@app.route('/files/<public_id>')
+@app.route('/files/<public_id>', methods=['GET'])
 def file_read_api(public_id):
     try:
         valid_public_id(public_id)
         f = g.db_session.query(Block).filter(
             Block.public_id == public_id).one()
-        if hasattr(f, 'message'):
-            assert int(f.message.namespace.id) == int(g.namespace.id)
-            g.log.info(
-                "block's message namespace matches api context namespace")
-        else:
-            # Block was likely uploaded via file API and not yet sent in a msg
-            g.log.debug("This block doesn't have a corresponding message: {}"
-                        .format(f.public_id))
         return g.encoder.jsonify(f)
+    except InputError:
+        return err(400, 'Invalid file id {}'.format(public_id))
+    except NoResultFound:
+        return err(404, "Couldn't find file with id {0} "
+                   "on namespace {1}".format(public_id, g.namespace_public_id))
+
+
+@app.route('/files/<public_id>', methods=['DELETE'])
+def file_delete_api(public_id):
+    try:
+        valid_public_id(public_id)
+        f = g.db_session.query(Block).filter(
+            Block.public_id == public_id).one()
+
+        if g.db_session.query(Block).join(Part) \
+                .filter(Block.public_id == public_id).first() is not None:
+            return err(400, "Can't delete file that is attachment.")
+
+        g.db_session.delete(f)
+        g.db_session.commit()
+
+        # This is essentially what our other API endpoints do after deleting.
+        # Effectively no error == success
+        return g.encoder.jsonify(None)
     except InputError:
         return err(400, 'Invalid file id {}'.format(public_id))
     except NoResultFound:

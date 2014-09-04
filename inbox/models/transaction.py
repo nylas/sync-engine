@@ -59,7 +59,7 @@ class Transaction(MailSyncBase, Revision, HasPublicID):
             self.private_snapshot = {
                 'recentdate': obj.thread.recentdate,
                 'subjectdate': obj.thread.subjectdate,
-                'filenames': [part.filename for part in obj.parts if
+                'filenames': [part.block.filename for part in obj.parts if
                               part.is_attachment]}
 
 Index('namespace_id_deleted_at', Transaction.namespace_id,

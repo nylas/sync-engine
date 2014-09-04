@@ -74,16 +74,68 @@ def test_file_filtering(api_client, uploaded_file_ids, draft):
     assert len(results) == 1
 
     results = api_client.get_data('/files?filename=LetMeSendYouEmail.wav')
-    # TODO: files should be de-duped on backend and result should be 1
-    assert len(results) == 2
+    assert len(results) == 1
 
     results = api_client.get_data('/files?content_type=audio%2Fx-wav')
-    # TODO: files should be de-duped on backend and result should be 1
-    assert len(results) == 2
+    assert len(results) == 1
 
     results = api_client.get_data('/files?content_type=image%2Fjpeg')
-    # TODO: files should be de-duped on backend and result should be 2
-    assert len(results) == 4
+    assert len(results) == 2
+
+
+def test_attachment_has_same_id(api_client, uploaded_file_ids, draft):
+    attachment_id = uploaded_file_ids.pop()
+    draft['file_ids'] = [attachment_id]
+    r = api_client.post_data('/drafts', draft)
+    assert r.status_code == 200
+    draft_resp = json.loads(r.data)
+    assert attachment_id in [x['id'] for x in draft_resp['files']]
+
+
+def test_delete(api_client, uploaded_file_ids, draft):
+    non_attachment_id = uploaded_file_ids.pop()
+    attachment_id = uploaded_file_ids.pop()
+    draft['file_ids'] = [attachment_id]
+    r = api_client.post_data('/drafts', draft)
+    assert r.status_code == 200
+
+    # Test that we can delete a non-attachment
+    r = api_client.delete('/files/{}'.format(non_attachment_id))
+    assert r.status_code == 200
+
+    data = api_client.get_data('/files/{}'.format(non_attachment_id))
+    assert data['message'].startswith("Couldn't find file")
+
+    # Make sure that we cannot delete attachments
+    r = api_client.delete('/files/{}'.format(attachment_id))
+    assert r.status_code == 400
+
+    data = api_client.get_data('/files/{}'.format(attachment_id))
+    assert data['id'] == attachment_id
+
+
+@pytest.mark.parametrize("filename", FILENAMES)
+def test_get_with_id(api_client, uploaded_file_ids, filename):
+    in_file = api_client.get_data('/files?filename={}'.format(filename))[0]
+    data = api_client.get_data('/files/{}'.format(in_file['id']))
+    assert data['filename'] == filename
+
+
+def test_get_invalid(api_client, uploaded_file_ids):
+    data = api_client.get_data('/files/0000000000000000000000000')
+    assert data['message'].startswith("Couldn't find file")
+    data = api_client.get_data('/files/!')
+    assert data['message'].startswith("Invalid file id")
+
+    data = api_client.get_data('/files/0000000000000000000000000/download')
+    assert data['message'].startswith("Couldn't find file")
+    data = api_client.get_data('/files/!/download')
+    assert data['message'].startswith("Invalid file id")
+
+    r = api_client.delete('/files/0000000000000000000000000')
+    assert r.status_code == 404
+    r = api_client.delete('/files/!')
+    assert r.status_code == 400
 
 
 def test_is_attachment_filtering(api_client, uploaded_file_ids, draft):
@@ -106,9 +158,8 @@ def test_is_attachment_filtering(api_client, uploaded_file_ids, draft):
     assert new_attach + new_orphan == new_total
     assert new_attach == old_attach + 1
 
-    # TODO: de-dup files on backend
-    assert new_orphan == old_orphan
-    assert new_total == old_total + 1
+    assert new_orphan == old_orphan - 1
+    assert new_total == old_total
 
 
 @pytest.mark.parametrize("filename", FILENAMES)

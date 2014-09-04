@@ -223,14 +223,15 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
             i = 0  # for walk_index
 
-            from inbox.models.block import Part
+            from inbox.models.block import Block, Part
 
             # Store all message headers as object with index 0
-            headers_part = Part()
-            headers_part.namespace_id = account.namespace.id
-            headers_part.message = self
+            block = Block()
+            block.namespace_id = account.namespace.id
+            block.data = json.dumps(parsed.headers.items())
+
+            headers_part = Part(block=block, message=self)
             headers_part.walk_index = i
-            headers_part.data = json.dumps(parsed.headers.items())
             self.parts.append(headers_part)
 
             for mimepart in parsed.walk(
@@ -242,35 +243,36 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                                 mid=mid)
                     continue  # TODO should we store relations?
 
-                new_part = Part()
-                new_part.namespace_id = account.namespace.id
-                new_part.message = self
-                new_part.walk_index = i
-                new_part.content_type = mimepart.content_type.value
-                new_part.filename = _trim_filename(
+                block = Block()
+                block.namespace_id = account.namespace.id
+                block.content_type = mimepart.content_type.value
+                block.filename = _trim_filename(
                     mimepart.content_type.params.get('name'),
                     account.id, mid)
-                # TODO maybe also trim other headers?
 
+                new_part = Part(block=block, message=self)
+                new_part.walk_index = i
+
+                # TODO maybe also trim other headers?
                 if mimepart.content_disposition[0] is not None:
                     value, params = mimepart.content_disposition
                     if value not in ['inline', 'attachment']:
+                        cd = mimepart.content_disposition
                         log.error('Unknown Content-Disposition',
                                   account_id=account.id, mid=mid,
                                   folder_name=folder_name,
-                                  bad_content_disposition=
-                                  mimepart.content_disposition,
+                                  bad_content_disposition=cd,
                                   parsed_content_disposition=value)
                         continue
                     else:
                         new_part.content_disposition = value
                         if value == 'attachment':
-                            new_part.filename = _trim_filename(
+                            new_part.block.filename = _trim_filename(
                                 params.get('filename'), account.id, mid)
 
                 if mimepart.body is None:
                     data_to_write = ''
-                elif new_part.content_type.startswith('text'):
+                elif new_part.block.content_type.startswith('text'):
                     data_to_write = mimepart.body.encode('utf-8', 'strict')
                     # normalize mac/win/unix newlines
                     data_to_write = data_to_write \
@@ -281,7 +283,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                     data_to_write = ''
 
                 new_part.content_id = mimepart.headers.get('Content-Id')
-                new_part.data = data_to_write
+                block.data = data_to_write
                 self.parts.append(new_part)
             self.calculate_sanitized_body()
         except mime.DecodingError:
@@ -356,12 +358,12 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         html_data = None
 
         for part in self.parts:
-            if part.content_type == 'text/html':
-                html_data = part.data.decode('utf-8')
+            if part.block.content_type == 'text/html':
+                html_data = part.block.data.decode('utf-8')
                 break
         for part in self.parts:
-            if part.content_type == 'text/plain':
-                plain_data = part.data.decode('utf-8')
+            if part.block.content_type == 'text/plain':
+                plain_data = part.block.data.decode('utf-8')
                 break
 
         return plain_data, html_data
@@ -415,7 +417,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         assert self.parts, \
             "Can't provide headers before parts have been parsed"
 
-        headers = self.parts[0].data
+        headers = self.parts[0].block.data
         json_headers = json.JSONDecoder().decode(headers)
 
         return json_headers
@@ -428,7 +430,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     def attachments(self):
         return [part for part in self.parts if part.is_attachment]
 
-    ## FOR INBOX-CREATED MESSAGES:
+    # FOR INBOX-CREATED MESSAGES:
 
     is_created = Column(Boolean, server_default=false(), nullable=False)
 

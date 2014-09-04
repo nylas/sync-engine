@@ -79,7 +79,9 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
 
     if filename is not None:
         files_query = db_session.query(Message). \
-            join(Part).filter(Part.filename == filename).subquery()
+            join(Part).join(Block). \
+            filter(Block.filename == filename). \
+            subquery()
         query = query.join(files_query)
 
     # Eager-load some objects in order to make constructing API
@@ -179,14 +181,15 @@ def _messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
         query = query.join(any_email_query)
 
     if filename is not None:
-        query = query.join(Part).filter(Part.filename == filename)
-
-    # Eager-load some objects in order to make constructing API
-    # representations faster.
-    query = query.options(
-        joinedload(Message.parts).load_only('public_id',
-                                            'content_disposition'),
-        joinedload(Message.thread).load_only('public_id', 'discriminator'))
+        # Eager-load some objects in order to make constructing API
+        # representations faster.
+        # Don't load things like block data
+        block_loads = ['public_id', 'filename', 'size',
+                       '_content_type_other', '_content_type_common']
+        query = query.options(
+            joinedload(Message.parts).load_only('content_disposition').
+            joinedload(Part.block).load_only(*block_loads)). \
+            filter(Block.filename == filename)
 
     # TODO(emfree) we should really eager-load the namespace too
     # (or just directly store it on the message object)

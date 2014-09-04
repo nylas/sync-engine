@@ -23,14 +23,14 @@ def test_local_storage(db, config):
     # Ensure .data will access and decrypt the encrypted data from disk
     assert not hasattr(msg, '_data')
 
-    for p in msg.parts:
-        assert p.encryption_scheme == \
+    for b in [p.block for p in msg.parts]:
+        assert b.encryption_scheme == \
             EncryptionScheme.SECRETBOX_WITH_STATIC_KEY
 
         # Accessing .data verifies data integrity
-        data = p.data
+        data = b.data
 
-        raw = p._get_from_disk
+        raw = b._get_from_disk
         assert data != raw
 
 
