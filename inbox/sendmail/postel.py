@@ -263,7 +263,9 @@ class SMTPClient(object):
     def get_connection(self):
         try:
             host, port = provider_info(self.provider_name)['smtp'].split(':')
-            connection = smtplib.SMTP(str(host), int(port))
+            connection = smtplib.SMTP()
+            # connection.set_debuglevel(2)
+            connection.connect(str(host), int(port))
         # Convert to a socket.error so geventconnpool will retry automatically
         # to establish new connections. We do this so the pool is resistant to
         # temporary connection errors.

@@ -150,7 +150,7 @@ providers = {
     "namecheap": {
         "type": "generic",
         "imap": "mail.privateemail.com",
-        "smtp": "smtp.privateemail.com:587",
+        "smtp": "mail.privateemail.com:587",
         "auth": "password",
         "mx_servers": ["mx1.privateemail.com", "mx2.privateemail.com"]
     },
