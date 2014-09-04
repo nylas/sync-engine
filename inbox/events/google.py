@@ -157,8 +157,15 @@ class GoogleEventsProvider(BaseEventProvider):
                     for reminder in reminder_source:
                         reminders.append(reminder['minutes'])
 
-                start = parse_datetime(start['dateTime'])
-                end = parse_datetime(end['dateTime'])
+                try:
+                    start = parse_datetime(start['dateTime'])
+                    end = parse_datetime(end['dateTime'])
+                except TypeError:
+                    self.log.error('Invalid start: {} or end: {}'
+                                   .format(start['dateTime'],
+                                           end['dateTime']))
+                    raise MalformedEventError()
+
             else:
                 start = date_parser.parse(start['date'])
                 end = date_parser.parse(end['date'])
