@@ -44,7 +44,8 @@ def upgrade():
 
     with session_scope(ignore_soft_deletes=False, versioned=False) as \
             db_session:
-        secrets = db_session.query(Secret).all()
+        secrets = db_session.query(Secret).filter(
+            Secret.secret.isnot(None)).all()
 
         for s in secrets:
             plain = s.secret.encode('ascii') if isinstance(s.secret, unicode) \
@@ -55,8 +56,7 @@ def upgrade():
                 encoder=nacl.encoding.HexEncoder
             ).encrypt(
                 plaintext=plain,
-                nonce=nacl.utils.random(nacl.secret.SecretBox.NONCE_SIZE),
-                encoder=nacl.encoding.HexEncoder)
+                nonce=nacl.utils.random(nacl.secret.SecretBox.NONCE_SIZE))
 
             s.encryption_scheme = EncryptionScheme.SECRETBOX_WITH_STATIC_KEY
 

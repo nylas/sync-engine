@@ -29,29 +29,26 @@ def reencrypt():
                 continue
 
             if isinstance(s._secret, unicode):
-                print '\nUNICODE SECRET!', s.id
                 continue
             else:
                 encrypted = s._secret
 
             try:
                 decrypted = nacl.secret.SecretBox(
-                    key=cfg.get_required('SECRET_ENCRYPTION_KEY'),
+                    key=key,
                     encoder=nacl.encoding.HexEncoder
                 ).decrypt(
                     encrypted,
                     encoder=nacl.encoding.HexEncoder)
             except TypeError:
-                print '\nTypeError: ', s.id
                 decrypted = nacl.secret.SecretBox(
-                    key=cfg.get_required('SECRET_ENCRYPTION_KEY'),
+                    key=key,
                     encoder=nacl.encoding.HexEncoder
                 ).decrypt(encrypted)
 
             s.secret = decrypted
 
             db_session.add(s)
-            print '\nReencrypted: ', s.id
 
         db_session.commit()
 
