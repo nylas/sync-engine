@@ -12,8 +12,7 @@ from sqlalchemy.sql.expression import false
 
 from inbox.util.html import (plaintext2html, strip_tags,
                              extract_from_html, extract_from_plain)
-from inbox.sqlalchemy_ext.util import (JSON, Base36UID, generate_public_id,
-                                       BigJSON)
+from inbox.sqlalchemy_ext.util import JSON, Base36UID, generate_public_id
 
 from inbox.config import config
 from inbox.util.addr import parse_email_address_list
@@ -73,11 +72,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     from_addr = Column(JSON, nullable=False, default=lambda: [])
     sender_addr = Column(JSON, nullable=True)
     reply_to = Column(JSON, nullable=True)
-
-    # We allow to_addr to be bigger rather than truncating,
-    # it may be used in sending.
-    to_addr = Column(BigJSON, nullable=False, default=lambda: [])
-
+    to_addr = Column(JSON, nullable=False, default=lambda: [])
     cc_addr = Column(JSON, nullable=False, default=lambda: [])
     bcc_addr = Column(JSON, nullable=False, default=lambda: [])
     in_reply_to = Column(JSON, nullable=True)
