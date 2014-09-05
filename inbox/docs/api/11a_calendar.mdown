@@ -1,0 +1,119 @@
+Title: Calendars
+
+Inbox supports calendars and events with a variety of functionality. Each namespace has one or more calendars, and each calendar has a collection of individual events. Each event has a title and description as well as a list of participants.
+
+The calendars endpoint is used to manage calendars which hold events. Calendars are quite simple, having only a name and description as well as a list of event_ids. **Note**: Inbox does not yet support sync-back of provider calendars. The `read_only` flag on a calendar indicates that you cannot modify its properties or make changes to its events. Calendar sync-back for provider calendars such as Gmail, Exchange and iCloud is coming soon.
+
+# Retrieving a list of calendars
+
+
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/calendars
+```
+
+**Response:**
+
+```
+:::json
+
+[
+    {
+        "description": null,
+        "event_ids": [
+            "4ee4xbnx7pxdb9g7c2f8ncyto",
+            "8aqtuhn6ahlzl5aaca70iuvw3",
+            "c4f4kvm6n57gcd5h03w6aucuu",
+        ],
+        "id": "8n9cfm9ad2f7tul91czc5sh3p",
+        "name": "default",
+        "namespace_id": "14e5bn96uizyuhidhcw5rfrb0",
+        "object": "calendar",
+        "read_only": false
+    },
+    {
+        "description": "google default calendar",
+        "event_ids": [
+            "2bgyvu5bky8vot8hbjtgtidoh",
+            "57wkn2l4howwwd1hbe3t3g6ss",
+            "dza8s8u2cvw9jvv6vyzomkccf",
+            "8nuy29crccev5jgtf4gxlrywo",
+            "56wn6b0qn239wopnlglj8luop",
+            "7tr6wk0g2tn9avz4gljb0e62n",
+            "5urb7m3644aelp7p418kvi5of",
+            "4x7jmcivlaka8pxhi3go0qjs2",
+            "3ldxnms28w0ohp16fsbesfrrq",
+            "462dfzn9jwyzgmtz3j7llmwua",
+            "13muku4t5t2fbdm3ocibdkh46"
+        ],
+        "id": "ci0k1wfyv533ccgox4t7uri4h",
+        "name": "example@gmail.com",
+        "namespace_id": "14e5bn96uizyuhidhcw5rfrb0",
+        "object": "calendar",
+        "read_only": true
+    }
+]
+```
+
+From this response we can see that there are two available calendars. The first calendar is the user's default calendar. When events are created, if a specific calendar is not provided, they will be added to this calendar. Additionally, there is a calendar being synced from a provider. In this situation we can see that the provider-backed calendar is marked as *read_only* and therefore events cannot be added to it through the Inbox API.
+
+This endpoint supports [filters](#filters), which allow you to fetch multiple events matching specific critera. For example, the following will limit the results to calendars named `work`.
+
+**Options:**
+
+* **`limit`** (Integer) Maximum number of results to return. Defaults to 100. If `limit` is set too high, a request may fail with HTTP status code 400 to prevent excessively large response bodies.
+* **`offset`** (Integer) Zero-based offset to be used with `limit` for pagination of results.
+* **`filter`** (String) Only return calendars whose description or name matches the provided value. Default is to return all calendars.
+
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/calendars?filter=work
+```
+
+Like other endpoints, the metadata can be retrieved for a specific calendar by specifing its `id` as in the following:
+
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/calendars/<calendar_id>
+```
+
+# Adding a new calendar
+
+New calendars can easily be created with the following API. Note these currently only exist within Inbox, and do not sync back to the users underlying email provider (e.g., Google Calendars).
+
+```
+:::xml
+POST https://api.inboxapp.com/n/<namespace_id>/calendars
+```
+
+**Sample post body**
+
+```
+{
+    "name": "Birthdays",
+}
+```
+
+**Sample response**
+
+```
+:::json
+{
+    "description": null,
+    "event_ids": [],
+    "id": "aef6meoh4kl8d1w8qtfbo0u9f",
+    "name": "Birthdays",
+    "namespace": "3q4vzllntcsea53vxz4erbnxr",
+    "object": "calendar",
+    "read_only": false
+}
+```
+
+
+# Updating an existing calendar
+
+If the calendar is managed by Inbox (and therefore is not `read_only`) then the *name* and *description* properties may be updated via a PUT method to the calendar endpoint with a body similar to that of.
+
+# Deleting a calendar
+
+If the calendar is managed by Inbox (and therefore is not `read_only`) then it can be deleted via the DELETE method to the calendar endpoint.

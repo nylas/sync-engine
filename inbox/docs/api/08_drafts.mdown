@@ -21,6 +21,8 @@ GET  https://api.inboxapp.com/n/<namespace_id>/drafts
 GET  https://api.inboxapp.com/n/<namespace_id>/drafts/<draft_id>
 ```
 
+This endpoint supports [filters](#filters), which allow you to fetch multiple drafts matching specific critera. The same parameters are supported as that of the [messages](#messages) endpoint.
+
 # Creating a Draft
 
 ```
@@ -142,4 +144,6 @@ In some scenarios, you may want to display all of the threads in the user's inbo
 :::xml
 GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=drafts
 ```
+
+
 
