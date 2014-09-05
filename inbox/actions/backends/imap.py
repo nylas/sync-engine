@@ -40,9 +40,6 @@ from inbox.log import get_logger
 logger = get_logger()
 
 
-PROVIDER = 'imap'
-
-
 def uidvalidity_cb(db_session, account_id):
     """
     TODO: check that UidValidity hasn't changed since action was queued.

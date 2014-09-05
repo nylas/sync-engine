@@ -30,7 +30,7 @@ from inbox.actions.backends import module_registry
 
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
-from inbox.models import Account, Message
+from inbox.models import Account, Message, Thread
 from inbox.models.session import session_scope
 from inbox.models.action_log import schedule_action
 from inbox.sendmail.base import (generate_attachments, get_sendmail_client,
@@ -73,6 +73,9 @@ def unstar(account_id, thread_id, db_session):
 
 
 def mark_unread(account_id, thread_id, db_session):
+    thread = db_session.query(Thread).get(thread_id)
+    for message in thread.messages:
+        message.is_read = False
     account = db_session.query(Account).get(account_id)
     set_remote_unread = module_registry[account.provider]. \
         set_remote_unread
@@ -80,6 +83,9 @@ def mark_unread(account_id, thread_id, db_session):
 
 
 def mark_read(account_id, thread_id, db_session):
+    thread = db_session.query(Thread).get(thread_id)
+    for message in thread.messages:
+        message.is_read = True
     account = db_session.query(Account).get(account_id)
     set_remote_unread = module_registry[account.provider]. \
         set_remote_unread

@@ -262,6 +262,21 @@ def test_read_implies_seen(api_client, db):
     assert not any(tag['id'] in ['unread', 'unseen'] for tag in r['tags'])
 
 
+def test_unread_cascades_to_messages(patch_network_functions, log, api_client,
+                                     syncback_service):
+    thread_id = api_client.get_data('/threads/')[0]['id']
+    thread_path = '/threads/{}'.format(thread_id)
+    api_client.put_data(thread_path, {'add_tags': ['unread']})
+    gevent.sleep(3)
+    messages = api_client.get_data('/messages?thread_id={}'.format(thread_id))
+    assert all(msg['unread'] for msg in messages)
+
+    api_client.put_data(thread_path, {'remove_tags': ['unread']})
+    gevent.sleep(1)
+    messages = api_client.get_data('/messages?thread_id={}'.format(thread_id))
+    assert not any(msg['unread'] for msg in messages)
+
+
 def test_tag_deletes_cascade_to_threads():
     # TODO(emfree)
     pass

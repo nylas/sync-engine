@@ -212,12 +212,11 @@ def patch_network_functions(monkeypatch):
     run faster."""
     monkeypatch.setattr('inbox.sendmail.base.get_sendmail_client',
                         lambda *args, **kwargs: MockSMTPClient())
-    for func_name in ['mark_read', 'mark_unread', 'archive', 'unarchive',
-                      'star', 'unstar', 'save_draft', 'delete_draft',
-                      'mark_spam', 'unmark_spam', 'mark_trash',
-                      'unmark_trash']:
-        monkeypatch.setattr('inbox.actions.' + func_name,
-                            lambda *args, **kwargs: None)
+    import inbox.actions
+    for backend in inbox.actions.module_registry.values():
+        for method_name in backend.__all__:
+            monkeypatch.setattr(backend.__name__ + '.' + method_name,
+                                lambda *args, **kwargs: None)
 
 
 @yield_fixture(scope='session')
