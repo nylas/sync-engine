@@ -37,10 +37,6 @@ def get_sendmail_client(account):
     return sendmail_client
 
 
-def _parse_recipients(dicts_list):
-    return [(d.get('name', ''), d.get('email', '')) for d in dicts_list]
-
-
 def get_draft(db_session, account, draft_public_id):
     """ Get the draft with public_id = `draft_public_id`, or None. """
     return db_session.query(Message).join(Thread).filter(
@@ -48,8 +44,8 @@ def get_draft(db_session, account, draft_public_id):
         Thread.namespace_id == account.namespace.id).first()
 
 
-def create_draft(db_session, account, to=None, subject=None,
-                 body=None, blocks=None, cc=None, bcc=None,
+def create_draft(db_session, account, to_addr=None, subject=None,
+                 body=None, blocks=None, cc_addr=None, bcc_addr=None,
                  tags=None, replyto_thread=None, syncback=True):
     """
     Create a new draft. If `thread_public_id` is specified, the draft is a
@@ -62,10 +58,6 @@ def create_draft(db_session, account, to=None, subject=None,
         The created draft message object.
 
     """
-    to_addr = _parse_recipients(to) if to else to
-    cc_addr = _parse_recipients(cc) if cc else cc
-    bcc_addr = _parse_recipients(bcc) if bcc else bcc
-
     is_reply = replyto_thread is not None
 
     return create_and_save_draft(db_session, account, to_addr, subject, body,
@@ -73,8 +65,9 @@ def create_draft(db_session, account, to=None, subject=None,
                                  replyto_thread, is_reply, syncback=syncback)
 
 
-def update_draft(db_session, account, original_draft, to=None, subject=None,
-                 body=None, blocks=None, cc=None, bcc=None, tags=None):
+def update_draft(db_session, account, original_draft, to_addr=None,
+                 subject=None, body=None, blocks=None, cc_addr=None,
+                 bcc_addr=None, tags=None):
     """
     Update draft.
 
@@ -104,9 +97,9 @@ def update_draft(db_session, account, original_draft, to=None, subject=None,
                 original_draft.size = len(value)
                 original_draft.calculate_html_snippet(value)
 
-    update('to_addr', _parse_recipients(to) if to else None)
-    update('cc_addr', _parse_recipients(cc) if cc else None)
-    update('bcc_addr', _parse_recipients(bcc) if bcc else None)
+    update('to_addr', to_addr)
+    update('cc_addr', cc_addr)
+    update('bcc_addr', bcc_addr)
     update('subject', subject if subject else None)
     update('sanitized_body', body if body else None)
     update('received_date', datetime.utcnow())

@@ -14,7 +14,7 @@ from inbox.models import (Message, Block, Part, Thread, Namespace, Webhook,
 from inbox.api.kellogs import APIEncoder
 from inbox.api import filtering
 from inbox.api.validation import (InputError, get_tags, get_attachments,
-                                  get_calendar, get_thread,
+                                  get_calendar, get_thread, get_recipients,
                                   valid_public_id, valid_event,
                                   valid_event_update, timestamp, boolean,
                                   bounded_str, strict_parse_args, limit,
@@ -1056,9 +1056,9 @@ def draft_get_api(public_id):
 def draft_create_api():
     data = request.get_json(force=True)
 
-    to = data.get('to')
-    cc = data.get('cc')
-    bcc = data.get('bcc')
+    to = get_recipients(data.get('to'), 'to')
+    cc = get_recipients(data.get('cc'), 'cc')
+    bcc = get_recipients(data.get('bcc'), 'bcc')
     subject = data.get('subject')
     body = data.get('body')
     try:
@@ -1103,9 +1103,9 @@ def draft_update_api(public_id):
 
     data = request.get_json(force=True)
 
-    to = data.get('to')
-    cc = data.get('cc')
-    bcc = data.get('bcc')
+    to = get_recipients(data.get('to'), 'to')
+    cc = get_recipients(data.get('cc'), 'cc')
+    bcc = get_recipients(data.get('bcc'), 'bcc')
     subject = data.get('subject')
     body = data.get('body')
     try:
@@ -1197,9 +1197,9 @@ def draft_send_api():
 
         schedule_action('send_draft', draft, g.namespace.id, g.db_session)
     else:
-        to = data.get('to')
-        cc = data.get('cc')
-        bcc = data.get('bcc')
+        to = get_recipients(data.get('to'), 'to', validate_emails=True)
+        cc = get_recipients(data.get('cc'), 'cc', validate_emails=True)
+        bcc = get_recipients(data.get('bcc'), 'bcc', validate_emails=True)
         subject = data.get('subject')
         body = data.get('body')
         try:

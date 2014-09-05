@@ -166,6 +166,7 @@ class TestDB(object):
         """Closes the session. We need to explicitly do this to prevent certain
         tests from hanging. Note that we don't need to actually destroy or
         rolback the database because we create it anew on each test."""
+        self.session.rollback()
         self.session.close()
 
     def save(self):

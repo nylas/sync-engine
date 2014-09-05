@@ -1,6 +1,7 @@
 from inbox.sqlalchemy_ext.util import generate_public_id
 from tests.util.base import api_client
 
+
 def test_namespace_id_validation(api_client, db):
     from inbox.models import Namespace
     actual_namespace_id, = db.session.query(Namespace.public_id).first()
@@ -14,5 +15,19 @@ def test_namespace_id_validation(api_client, db):
     malformed_namespace_id = 'this string is definitely not base36-decodable'
     r = api_client.client.get('/n/{}'.format(malformed_namespace_id))
     assert r.status_code == 404
+
+
+def test_recipient_validation(api_client):
+    r = api_client.post_data('/drafts', {'to': 'foo@example.com'})
+    assert r.status_code == 400
+    r = api_client.post_data('/drafts', {'to': [{'name': 'foo'}]})
+    assert r.status_code == 400
+    r = api_client.post_data('/send', {'to': [{'email': 'foo'}]})
+    assert r.status_code == 400
+    r = api_client.post_data('/drafts',
+                             {'to': [{'name': 'Good Recipient',
+                                      'email': 'goodrecipient@example.com'},
+                                     'badrecipient@example.com']})
+    assert r.status_code == 400
 
 # TODO(emfree): Add more comprehensive parameter-validation tests.

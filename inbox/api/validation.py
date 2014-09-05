@@ -1,9 +1,10 @@
 """Utilities for validating user input to the API."""
 from datetime import datetime
-from inbox.models.when import parse_as_when
+from flanker.addresslib import address
 from flask.ext.restful import reqparse
 from sqlalchemy.orm.exc import NoResultFound
 from inbox.models import Account, Calendar, Tag, Thread, Block
+from inbox.models.when import parse_as_when
 
 MAX_LIMIT = 1000
 
@@ -140,6 +141,24 @@ def get_thread(thread_public_id, namespace_id, db_session):
                          format(thread_public_id))
 
 
+def get_recipients(recipients, field, validate_emails=False):
+    if recipients is None:
+        return None
+    if not isinstance(recipients, list):
+        raise InputError('Invalid {} field'.format(field))
+    for r in recipients:
+        if not (isinstance(r, dict) and 'email' in r):
+            raise InputError('Invalid {} field'.format(field))
+        if (validate_emails and not
+                isinstance(address.parse(r['email']), address.EmailAddress)):
+            # flanker purports to have a more comprehensive validate_address
+            # function, but it doesn't actually work. So just invoke the
+            # parser.
+            raise InputError('Invalid recipient address {}'.format(r['email']))
+
+    return [(r.get('name', ''), r.get('email', '')) for r in recipients]
+
+
 def get_calendar(calendar_public_id, namespace, db_session):
     if calendar_public_id is None:
         account = db_session.query(Account).filter(
@@ -193,7 +212,7 @@ def valid_event_update(event, namespace, db_session):
     participants = event.get('participants', [])
     for p in participants:
         if 'email' not in p:
-            raise InputError("'participants' must must have email")
+            raise InputError("'participants' must have email")
         if 'status' in p:
             if p['status'] not in ('yes', 'no', 'maybe', 'noreply'):
                 raise InputError("'participants' status must be one of: "
