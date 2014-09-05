@@ -1,83 +1,61 @@
 # -*- coding: utf-8 -*-
+import pytest
 import time
-import requests.exceptions
-from base import for_all_available_providers
-from conftest import TEST_MAX_DURATION_SECS, TEST_GRANULARITY_CHECK_SECS
+from base import for_all_available_providers, timeout_loop
+from inbox.client.errors import NotFoundError
+
+
+@timeout_loop('file')
+def wait_for_file(client, file_id):
+    try:
+        client.files.find(file_id)
+        return True
+    except NotFoundError:
+        return False
+
+
+@timeout_loop('draft')
+def wait_for_draft(client, draft_id):
+    try:
+        return client.drafts.find(draft_id)
+    except NotFoundError:
+        return False
+
+
+@timeout_loop('draft_removed')
+def check_draft_is_removed(client, draft_id):
+    try:
+        client.drafts.find(draft_id)
+        return False
+    except NotFoundError:
+        return True
 
 
 @for_all_available_providers
-def test_draft(client, data):
+def test_draft(client):
     # Let's create a draft, attach a file to it and delete it
 
     # Create the file
-    fname = 'file_%d.txt' % time.time()
-    filehash = {'file': (fname, 'This is a file')}
-    files = client.create_files(filehash)
+    myfile = client.files.create()
+    myfile.filename = 'file_%d.txt' % time.time()
+    myfile.data = 'This is a file'
+    myfile.save()
+    wait_for_file(client, myfile.id)
 
-    start_time = time.time()
-    file_id = files[0].id
-    found_file = False
-    while time.time() - start_time < TEST_MAX_DURATION_SECS:
-        time.sleep(TEST_GRANULARITY_CHECK_SECS)
-        try:
-            client.get_file(file_id)
-        except requests.exceptions.HTTPError:
-            continue
+    # And the draft
+    mydraft = client.drafts.create()
+    mydraft.to = [{'email': client.email_address}]
+    mydraft.subject = "Test draft from Inbox - %s" % time.strftime("%H:%M:%S")
+    mydraft.body = "This is a test email, disregard this."
+    mydraft.attach(myfile)
+    mydraft.save()
+    wait_for_draft(client, mydraft.id)
+    mydraft.send()
 
-        found_file = True
-        print ("test_file_creation\t%s\t%s" %
-               (data["email"], time.time() - start_time))
-        break
-
-    assert found_file, ("Failed to find file in less"
-                        "than {} seconds on account: {}").\
-        format(TEST_MAX_DURATION_SECS, data["email"])
-
-    # Attach the file to the draft
-    subject = "Test draft from Inbox - %s" % time.strftime("%H:%M:%S")
-    message = {"to": [{"email": data["email"]}],
-               "body": "This is a test email, disregard this.",
-               "subject": subject, "file_ids": [file_id]}
-
-    draft = client.create_draft(message)
-    draft_id = draft.id
-    draft_version = draft.version
-
-    start_time = time.time()
-    found_draft = False
-    while time.time() - start_time < TEST_MAX_DURATION_SECS:
-        time.sleep(TEST_GRANULARITY_CHECK_SECS)
-        draft = client.get_draft(draft_id)
-        if draft.id == draft_id:
-            found_draft = True
-            print ("test_draft_creation\t%s\t%f" %
-                   (data["email"], time.time() - start_time))
-            break
-
-    assert found_draft, ("Failed to find draft in less"
-                         "than {} seconds on account: {}").\
-        format(TEST_MAX_DURATION_SECS, data["email"])
-
-    # send the draft and check that it's been removed
-    client.send_draft(draft_id, draft_version)
-
-    start_time = time.time()
-    found_draft = False
     # Not sure about the correct behaviour for this one -
     # are sent drafts kept?
-    while time.time() - start_time < TEST_MAX_DURATION_SECS:
-        time.sleep(TEST_GRANULARITY_CHECK_SECS)
-        try:
-            draft = client.get_draft(draft_id)
-        except requests.exceptions.HTTPError:
-            continue
+    # check_draft_is_removed(client, mydraft.id)
 
-        if draft.state == "sent":
-            found_draft = True
-            print ("test_draft_reconciliation\t%s\t%f" %
-                   (data["email"], time.time() - start_time))
-            break
 
-    assert found_draft, ("Failed to send draft in less"
-                         "than {} seconds on account: {}").\
-        format(TEST_MAX_DURATION_SECS, data["email"])
+if __name__ == '__main__':
+    pytest.main([__file__])

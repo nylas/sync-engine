@@ -1,6 +1,6 @@
 # This file contains pytest fixtures as well as some config
 
-API_BASE = "http://localhost:5555/n/"
+API_BASE = "http://localhost:5555"
 TEST_MAX_DURATION_SECS = 240
 TEST_GRANULARITY_CHECK_SECS = 0.1
 

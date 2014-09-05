@@ -7,7 +7,7 @@
 #
 # For instance, if you want to define a test which will run against
 # a gmail account, you test class will inherit E2ETest and GmailMixin.
-import time
+from time import time, sleep
 from inbox.auth import handler_from_email
 from inbox.util.url import provider_from_address
 from inbox.models.session import session_scope
@@ -17,55 +17,66 @@ from google_auth_helper import google_auth
 from outlook_auth_helper import outlook_auth
 from inbox.auth.gmail import create_auth_account as create_gmail_account
 from inbox.auth.outlook import create_auth_account as create_outlook_account
-from client import APIClient
+from client import InboxTestClient
+
+
+def timeout_loop(name):
+    def wrap(f):
+        def wrapped_f(*args, **kwargs):
+            client = args[0]
+            print "Waiting for: {}...".format(name)
+            success = False
+            start_time = time()
+            while time() - start_time < TEST_MAX_DURATION_SECS:
+                if f(*args, **kwargs):
+                    success = True
+                    break
+                sleep(TEST_GRANULARITY_CHECK_SECS)
+
+            assert success, ("Failed to {} in less than {}s on {}"
+                             .format(name, TEST_MAX_DURATION_SECS,
+                                     client.email_address))
+
+            format_test_result(name, client.provider,
+                               client.email_address, start_time)
+        return wrapped_f
+    return wrap
+
+
+@timeout_loop('sync_start')
+def wait_for_sync_start(client):
+    return True if client.messages.first() else False
+
+
+@timeout_loop('auth')
+def wait_for_auth(client):
+    namespaces = client.namespaces.all()
+    if len(namespaces):
+        client.email_address = namespaces[0]['email_address']
+        client.provider = namespaces[0]['provider']
+        return True
+    return False
 
 
 def for_all_available_providers(fn):
     """Run a test on all providers defined in accounts.py. This function
     handles account setup and teardown."""
-    def f():
+    def f(*args, **kwargs):
         for email, password in passwords:
+            # FIXME: Don't create the account if it's already created. --cg3
             with session_scope() as db_session:
                 create_account(db_session, email, password)
 
-            client = None
-            ns = None
-            start_time = time.time()
-            while time.time() - start_time < TEST_MAX_DURATION_SECS:
-                time.sleep(TEST_GRANULARITY_CHECK_SECS)
-                client, ns = APIClient.from_email(email)
-                if client is not None:
-                    break
+            client = InboxTestClient(email)
+            wait_for_auth(client)
 
-            assert client, ("Creating account from password file"
-                            " should have been faster")
-            format_test_result("namespace_creation_time", ns["provider"],
+            # wait for sync to start. tests rely on things setup at beginning
+            # of sync (e.g. folder hierarchy)
+            wait_for_sync_start(client)
+            start_time = time()
+            fn(client, *args, **kwargs)
+            format_test_result(fn.__name__, provider_from_address(email),
                                email, start_time)
-
-            # wait a little time for the sync to start. It's necessary
-            # because a lot of tests rely on stuff setup at the beginning
-            # of the sync (for example, a folder hierarchy).
-            start_time = time.time()
-            sync_started = False
-            while time.time() - start_time < TEST_MAX_DURATION_SECS:
-                msgs = client.get_messages()
-                if len(msgs) > 0:
-                    sync_started = True
-                    break
-                time.sleep(TEST_GRANULARITY_CHECK_SECS)
-
-            assert sync_started, ("The initial sync should have started")
-
-            data = {"email": ns["email_address"], "provider": ns["provider"]}
-            start_time = time.time()
-            fn(client, data)
-            format_test_result(fn.__name__, ns["provider"],
-                               ns["email_address"],
-                               start_time)
-
-            with session_scope() as db_session:
-                # delete account
-                pass
 
     return f
 
@@ -94,4 +105,4 @@ def create_account(db_session, email, password):
 
 def format_test_result(function_name, provider, email, start_time):
     print "%s\t%s\t%s\t%f" % (function_name, provider,
-                              email, time.time() - start_time)
+                              email, time() - start_time)
