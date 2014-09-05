@@ -34,7 +34,12 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # ]
   config.vm.network "private_network", ip: "192.168.10.200"
   config.vm.provision :shell, :inline => "apt-get update -q && cd /vagrant && /bin/sh setup.sh"
-  config.vm.network "forwarded_port", guest: 5000, host: 5000, host_ip: "127.0.0.1"
+
+  # Share ports 5000 - 5009
+  10.times do |n|
+    config.vm.network "forwarded_port", guest: 5000+n, host: 5000+n, host_ip: "127.0.0.1"
+  end
+
   config.vm.network "forwarded_port", guest: 8000, host: 8000, host_ip: "127.0.0.1"
   config.vm.network "forwarded_port", guest: 5555, host: 5555, host_ip: "127.0.0.1"
 
