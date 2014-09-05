@@ -122,7 +122,23 @@ def index():
 ##
 @app.route('/tags/')
 def tag_query_api():
-    results = list(g.namespace.tags.values())
+    g.parser.add_argument('tag_name', type=bounded_str, location='args')
+    g.parser.add_argument('tag_id', type=valid_public_id, location='args')
+    args = strict_parse_args(g.parser, request.args)
+
+    query = g.db_session.query(Tag).filter(Tag.namespace_id == g.namespace.id)
+
+    if args['tag_name']:
+        query = query.filter_by(name=args['tag_name'])
+
+    if args['tag_id']:
+        query = query.filter_by(public_id=args['tag_id'])
+
+    query = query.limit(args['limit'])
+    if args['offset']:
+        query = query.offset(args['offset'])
+
+    results = query.all()
     return g.encoder.jsonify(results)
 
 
@@ -196,6 +212,29 @@ def tag_create_api():
     return g.encoder.jsonify(tag)
 
 
+@app.route('/tags/<public_id>', methods=['DELETE'])
+def tag_delete_api(public_id):
+    try:
+        valid_public_id(public_id)
+        t = g.db_session.query(Tag).filter(
+            Tag.public_id == public_id).one()
+
+        if not t.user_created:
+            return err(400, "Can't delete non user-created tag.")
+
+        g.db_session.delete(t)
+        g.db_session.commit()
+
+        # This is essentially what our other API endpoints do after deleting.
+        # Effectively no error == success
+        return g.encoder.jsonify(None)
+    except InputError:
+        return err(400, 'Invalid tag id {}'.format(public_id))
+    except NoResultFound:
+        return err(404, "Couldn't find tag with id {0} "
+                   "on namespace {1}".format(public_id, g.namespace_public_id))
+
+
 #
 # Threads
 #
@@ -266,7 +305,7 @@ def thread_api_update(public_id):
             Thread.public_id == public_id,
             Thread.namespace_id == g.namespace.id).one()
     except InputError:
-        return err(400, 'Invalid draft id {}'.format(public_id))
+        return err(400, 'Invalid thread id {}'.format(public_id))
     except NoResultFound:
         return err(404, "Couldn't find thread with id `{0}` "
                    "on namespace {1}".format(public_id, g.namespace_public_id))

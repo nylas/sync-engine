@@ -29,6 +29,22 @@ def test_get_tags(api_client):
     tags = api_client.get_data('/tags/')
     assert set(Tag.RESERVED_TAG_NAMES).issubset({tag['name'] for tag in tags})
 
+    for tag_name in Tag.RESERVED_TAG_NAMES:
+        tag = api_client.get_data('/tags/?tag_name={}'.format(tag_name))[0]
+        assert tag['object'] == 'tag'
+        assert tag['id'] == tag['id']
+        assert tag['name'] == tag['name']
+
+    for tag_name in Tag.RESERVED_TAG_NAMES:
+        tag = api_client.get_data('/tags/?tag_id={}'.format(tag_name))[0]
+        assert tag['object'] == 'tag'
+        assert tag['id'] == tag['id']
+        assert tag['name'] == tag['name']
+
+    tag_count = len(tags)
+    offset_tags = api_client.get_data('/tags/?offset=1')
+    assert len(offset_tags) == tag_count - 1
+
 
 def test_get_invalid(api_client):
     bad_tag_id = '0000000000000000000000000'
@@ -66,7 +82,27 @@ def test_create_tag(api_client, default_namespace):
     assert put_resp.status_code == 400
     assert 'foo3' not in [tag['name'] for tag in api_client.get_data('/tags/')]
 
-    # Make sure that we can only update to the existing namespace
+
+def test_delete_tag(api_client, default_namespace):
+    post_resp = api_client.post_data('/tags/', {'name': 'foo'})
+    tag_resp = json.loads(post_resp.data)
+    tag_id = tag_resp['id']
+
+    del_resp = api_client.delete('/tags/' + tag_id)
+    assert del_resp.status_code == 200
+    tag_data = api_client.get_data('/tags/{}'.format(tag_id))
+    assert tag_data['message'] == 'No tag found'
+
+    del_resp = api_client.delete('/tags/!' + tag_id)
+    assert del_resp.status_code == 400
+    assert json.loads(del_resp.data)['message'].startswith('Invalid tag id')
+
+    del_resp = api_client.delete('/tags/0000000000000000000000000')
+    assert del_resp.status_code == 404
+
+    del_resp = api_client.delete('/tags/inbox')
+    assert del_resp.status_code == 400
+    assert 'user-created' in json.loads(del_resp.data)['message']
 
 
 def test_create_invalid(api_client, default_namespace):
