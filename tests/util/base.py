@@ -188,14 +188,6 @@ class TestZeroRPC(object):
         self.client.connect(service_loc)
 
 
-def kill_greenlets():
-    """Utility function to kill all running greenlets."""
-    import gc
-    for obj in gc.get_objects():
-        if isinstance(obj, gevent.Greenlet):
-            obj.kill()
-
-
 class MockSMTPClient(object):
     def __init__(self, *args, **kwargs):
         pass
@@ -233,7 +225,6 @@ def syncback_service():
     s.start()
     gevent.sleep()
     yield s
-    kill_greenlets()
 
 
 @fixture(scope='function')
