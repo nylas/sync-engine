@@ -67,8 +67,11 @@ apt-get -y install git \
                    tnef \
 
 color '35;1' 'Ensuring setuptools and pip versions...'
-easy_install 'setuptools>=5.3' 'pip>=1.5.6'
-hash easy_install pip   # these might be in /usr/local/bin now
+# If python-setuptools is actually the old 'distribute' fork of setuptools,
+# then the first 'pip install setuptools' will be a no-op.
+pip install 'pip>=1.5.6' 'setuptools>=5.3'
+hash pip        # /usr/bin/pip might now be /usr/local/bin/pip
+pip install 'pip>=1.5.6' 'setuptools>=5.3'
 
 color '35;1' 'Installing dependencies from pip...'
 pip install -r requirements.txt
