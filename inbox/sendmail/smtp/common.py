@@ -22,7 +22,8 @@ class SMTPClient(BaseSMTPClient):
         inbox_uid = draft.inbox_uid
         subject = draft.subject
         body = draft.sanitized_body
-        attachments = generate_attachments(draft.attachments)
+        blocks = [p.block for p in draft.attachments]
+        attachments = generate_attachments(blocks)
 
         smtpmsg = create_email(self.sender_name, self.email_address,
                                inbox_uid, recipients, subject, body,
@@ -38,7 +39,8 @@ class SMTPClient(BaseSMTPClient):
         inbox_uid = draft.inbox_uid
         subject = draft.subject
         body = draft.sanitized_body
-        attachments = generate_attachments(draft.attachments)
+        blocks = [p.block for p in draft.attachments]
+        attachments = generate_attachments(blocks)
 
         smtpmsg = create_reply(self.sender_name, self.email_address,
                                draft.in_reply_to, draft.references,
