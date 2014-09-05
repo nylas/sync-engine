@@ -8,7 +8,10 @@ from sqlalchemy.orm.exc import NoResultFound
 
 import sqlalchemy.orm.query
 
+# If we're here, config must've been loaded
 from inbox.config import config
+assert config
+
 from inbox.ignition import main_engine
 from inbox.log import get_logger
 log = get_logger()
@@ -22,8 +25,8 @@ class IgnoreSoftDeletesOption(MapperOption):
     child objects on relationships.
 
     Based on:
-
         https://bitbucket.org/zzzeek/sqlalchemy/wiki/UsageRecipes/GlobalFilter
+
     """
     propagate_to_loaders = True
 
@@ -50,16 +53,17 @@ class IgnoreSoftDeletesOption(MapperOption):
 
 
 class InboxQuery(sqlalchemy.orm.query.Query):
-
     def delete(self, *args):
         """ Not supported because we'd have to use internal APIs. """
         raise Exception("Not supported, use `session.delete()` instead!")
 
     def get(self, ident):
-        """Can't use regular `.get()` on a query w/options already applied.
+        """
+        Can't use regular `.get()` on a query w/options already applied.
 
         Note that our semantics here are different from that of a regular
         query, in that we do not fetch directly from the session identity map.
+
         """
         cls = self._mapper_zero().class_
         try:
@@ -69,7 +73,8 @@ class InboxQuery(sqlalchemy.orm.query.Query):
 
 
 class InboxSession(object):
-    """ Inbox custom ORM (with SQLAlchemy compatible API).
+    """
+    Inbox custom ORM (with SQLAlchemy compatible API).
 
     Parameters
     ----------
@@ -81,11 +86,12 @@ class InboxSession(object):
         Whether or not to ignore soft-deleted objects in query results.
     namespace_id : int
         Namespace to limit query results with.
+
     """
     def __init__(self, engine, versioned=True, ignore_soft_deletes=True,
                  namespace_id=None):
         # TODO: support limiting on namespaces
-        assert engine, "Must set the database engine"
+        assert engine, 'Must set the database engine'
 
         args = dict(bind=engine, autoflush=True, autocommit=False)
         self.ignore_soft_deletes = ignore_soft_deletes
@@ -111,14 +117,14 @@ class InboxSession(object):
         if not self.ignore_soft_deletes or not instance.is_deleted:
             self._session.add(instance)
         else:
-            raise Exception("Why are you adding a deleted object?")
+            raise Exception('Why are you adding a deleted object?')
 
     def add_all(self, instances):
         if True not in [i.is_deleted for i in instances] or \
                 not self.ignore_soft_deletes:
             self._session.add_all(instances)
         else:
-            raise Exception("Why are you adding a deleted object?")
+            raise Exception('Why are you adding a deleted object?')
 
     def delete(self, instance):
         if self.ignore_soft_deletes:
@@ -156,7 +162,8 @@ cached_engine = None
 
 @contextmanager
 def session_scope(versioned=True, ignore_soft_deletes=True, namespace_id=None):
-    """ Provide a transactional scope around a series of operations.
+    """
+    Provide a transactional scope around a series of operations.
 
     Takes care of rolling back failed transactions and closing the session
     when it goes out of scope.
@@ -179,12 +186,13 @@ def session_scope(versioned=True, ignore_soft_deletes=True, namespace_id=None):
     ------
     InboxSession
         The created session.
+
     """
 
     global cached_engine
     if cached_engine is None:
         cached_engine = main_engine()
-        log.info("Don't yet have engine... creating default from ignition",
+        log.info("Don't yet have engine...creating default from ignition",
                  engine=id(cached_engine))
 
     session = InboxSession(cached_engine,

@@ -1,5 +1,8 @@
-"""Sanity-check our logic for updating contact data from message addressees
-during a sync."""
+"""
+Sanity-check our logic for updating contact data from message addressees
+during a sync.
+
+"""
 from datetime import datetime
 from inbox.models import Message, Thread, Contact
 from inbox.contacts.process_mail import update_contacts_from_message

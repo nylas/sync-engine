@@ -10,19 +10,21 @@ Create Date: 2014-07-19 00:28:08.258857
 revision = 'bb4f204f192'
 down_revision = '2a748760ac63'
 
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm.exc import NoResultFound
 
 
 def upgrade():
+    from inbox.ignition import main_engine
+    from inbox.models.session import session_scope
+
+    engine = main_engine(pool_size=1, max_overflow=0)
+    Base = declarative_base()
+    Base.metadata.reflect(engine)
+
     if 'easfoldersyncstatus' in Base.metadata.tables:
-        from inbox.ignition import main_engine
-        engine = main_engine(pool_size=1, max_overflow=0)
-        from inbox.models.session import session_scope
-        from sqlalchemy.ext.declarative import declarative_base
-        from sqlalchemy.orm.exc import NoResultFound
-        Base = declarative_base()
-        Base.metadata.reflect(engine)
-        from inbox.models.backends.eas import EASFolderSyncStatus
         from inbox.models import Folder
+        from inbox.models.backends.eas import EASFolderSyncStatus
         from inbox.util.eas.constants import SKIP_FOLDERS
 
         with session_scope(versioned=False, ignore_soft_deletes=False) as \

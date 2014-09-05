@@ -7,7 +7,11 @@ from flask.ext.restful import reqparse
 from sqlalchemy import asc, or_
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import subqueryload
+from err import err
 
+# If we're here, config must've been loaded
+from inbox.config import config
+assert config
 from inbox.models import (Message, Block, Part, Thread, Namespace,
                           Tag, Contact, Calendar, Event, Participant)
 from inbox.api.kellogs import APIEncoder
@@ -25,16 +29,11 @@ from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from inbox.models.action_log import schedule_action, ActionError
 from inbox.models.session import InboxSession
 from inbox.transactions import delta_sync
-
-from err import err
-
 from inbox.ignition import main_engine
 engine = main_engine()
 
-
 DEFAULT_LIMIT = 100
 MAX_LIMIT = 1000
-
 
 app = Blueprint(
     'namespace_api',

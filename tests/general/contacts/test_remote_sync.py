@@ -1,12 +1,7 @@
 import pytest
 
-from tests.util.base import config
 from tests.util.base import (contact_sync, contacts_provider,
                              ContactsProviderStub)
-
-# Need to set up test config before we can import from
-# inbox.models.tables.
-config()
 from inbox.models import Contact
 from inbox.util.misc import MergeError
 
@@ -18,11 +13,11 @@ ACCOUNT_ID = 1
 
 
 @pytest.fixture(scope='function')
-def alternate_contacts_provider(config, db):
+def alternate_contacts_provider(db):
     return ContactsProviderStub('alternate_provider')
 
 
-def test_merge(config):
+def test_merge():
     """Test the basic logic of the merge() function."""
     base = Contact(name='Original Name',
                    email_address='originaladdress@inboxapp.com')
@@ -35,7 +30,7 @@ def test_merge(config):
     assert dest.email_address == 'newaddress@inboxapp.com'
 
 
-def test_merge_conflict(config):
+def test_merge_conflict():
     """Test that merge() raises an error on conflict."""
     base = Contact(name='Original Name',
                    email_address='originaladdress@inboxapp.com')

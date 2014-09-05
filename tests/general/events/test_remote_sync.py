@@ -1,11 +1,7 @@
 import pytest
 
-from tests.util.base import config
 from tests.general.events.conftest import EventsProviderStub
 
-# Need to set up test config before we can import from
-# inbox.models.tables.
-config()
 from inbox.models import Event
 from inbox.events.remote_sync import EventSync
 from inbox.util.misc import MergeError
@@ -17,16 +13,16 @@ ACCOUNT_ID = 1
 
 
 @pytest.fixture(scope='function')
-def alt_event_sync(config, db):
+def alt_event_sync(db):
     return EventSync(2)
 
 
 @pytest.fixture(scope='function')
-def alternate_events_provider(config, db):
+def alternate_events_provider(db):
     return EventsProviderStub('alternate_provider')
 
 
-def test_merge(db, config, event_sync):
+def test_merge(db, event_sync):
     """Test the basic logic of the merge() function."""
     base = default_event(db)
     remote = default_event(db)
@@ -45,7 +41,7 @@ def test_merge(db, config, event_sync):
     assert dest.end == base.end
 
 
-def test_merge_conflict(db, config, event_sync):
+def test_merge_conflict(db, event_sync):
     """Test that merge() raises an error on conflict."""
     base = default_event(db)
 

@@ -1,22 +1,25 @@
 from pytest import fixture
+
 from inbox.events.util import MalformedEventError
 from inbox.events.base import BaseEventProvider
 
 
 @fixture(scope='function')
-def event_sync(config, db):
+def event_sync(db):
     from inbox.events.remote_sync import EventSync
     return EventSync('gmail', 1)
 
 
 @fixture(scope='function')
-def events_provider(config, db):
+def events_provider(db):
     return EventsProviderStub()
 
 
 class EventsProviderStub(BaseEventProvider):
-    """Events provider stub to stand in for an actual provider.
+    """
+    Events provider stub to stand in for an actual provider.
     See ContactsProviderStub.
+
     """
     def __init__(self, provider_name='test_provider'):
         self._events = []

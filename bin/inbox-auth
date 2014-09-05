@@ -6,12 +6,6 @@ import click
 from setproctitle import setproctitle; setproctitle('inbox-auth')
 from sqlalchemy.orm.exc import NoResultFound
 
-from inbox.util.startup import preflight
-from inbox.models.session import session_scope
-from inbox.models import Account
-from inbox.auth import handler_from_email
-from inbox.basicauth import NotSupportedError
-
 
 @click.command()
 @click.argument('email_address')
@@ -21,9 +15,19 @@ from inbox.basicauth import NotSupportedError
                    'automating account creation.')
 @click.option('--reauth', is_flag=True,
               help='Re-authenticate an account even if it already exists')
-def main(email_address, token, exit_after_link, reauth):
+@click.option('--env', type=click.Choice(['prod', 'dev', 'test']),
+              default='dev',
+              help='Loads the corresponding config file for the env.')
+def main(email_address, token, exit_after_link, reauth, env):
     """ Auth an email account. """
-    preflight()
+    # Load config, make checks before anything
+    from inbox.util.startup import preflight
+    preflight(env)
+
+    from inbox.models.session import session_scope
+    from inbox.models import Account
+    from inbox.auth import handler_from_email
+    from inbox.basicauth import NotSupportedError
 
     with session_scope() as db_session:
         auth_handler = handler_from_email(email_address)

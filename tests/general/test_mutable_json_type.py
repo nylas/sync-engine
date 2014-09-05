@@ -5,7 +5,7 @@ from datetime import datetime
 ACCOUNT_ID = 1
 
 
-def test_mutable_json_type(db, config):
+def test_mutable_json_type(db):
     """
     Test that FolderSync._sync_status which is a mutable JSON column is
     updated as expected.

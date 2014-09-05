@@ -1,30 +1,32 @@
 from __future__ import with_statement
-import json
 import sys
-import os
-from alembic import context
-
 from logging.config import fileConfig
 
-# this is the Alembic Config object, which provides
+from alembic import context
+
+# This is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 alembic_config = context.config
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 fileConfig(alembic_config.config_file_name)
 
-# If alembic was invoked with --tag=test, override these main config values
-if context.get_tag_argument() == 'test':
-    from inbox.config import config
-    root_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
-    config_path = os.path.join(root_path, 'etc', "config-%s.json" % 'test')
-    with open(config_path) as f:
-        config.update(json.load(f))
-        if not config.get('MYSQL_HOSTNAME') == "localhost":
-            sys.exit("Tests should only be run on localhost DB!")
+# Pick what db to run migrations against.
+# Default is dev; if alembic was invoked with --tag=test or --tag=prod,
+# load those configs instead.
+env = context.get_tag_argument() or 'dev'
 
+# Load config before anything
+from inbox.config import load_config
+config = load_config(env)
 
-# add your model's MetaData object here
+if env == 'test':
+    if not config.get_required('MYSQL_HOSTNAME') == 'localhost':
+        sys.exit('Tests should only be run on localhost DB!')
+elif env == 'prod':
+    print 'Running migrations against prod database'
+
+# Add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
 from inbox.models.base import MailSyncBase
@@ -32,14 +34,15 @@ target_metadata = MailSyncBase.metadata
 
 from inbox.ignition import main_engine
 
-# other values from the config, defined by the needs of env.py,
+# Other values from the config, defined by the needs of env.py,
 # can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
+# my_important_option = config.get_main_option('my_important_option')
 # ... etc.
 
 
 def run_migrations_offline():
-    """Run migrations in 'offline' mode.
+    """
+    Run migrations in 'offline' mode.
 
     This configures the context with just a URL
     and not an Engine, though an Engine is acceptable
@@ -57,7 +60,8 @@ def run_migrations_offline():
 
 
 def run_migrations_online():
-    """Run migrations in 'online' mode.
+    """
+    Run migrations in 'online' mode.
 
     In this scenario we need to create an Engine
     and associate a connection with the context.

@@ -1,6 +1,9 @@
-# This file contains pytest fixtures as well as some config
+# Load test config before inbox.* imports +
+# fixtures that are available by default
+from tests.util.base import config
+config()
 
-API_BASE = "http://localhost:5555"
+API_BASE = 'http://localhost:5555'
 TEST_MAX_DURATION_SECS = 360
 TEST_GRANULARITY_CHECK_SECS = 0.1
 

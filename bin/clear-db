@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-from inbox.util.db import drop_everything
-
 import sys
 import argparse
 
@@ -10,6 +8,16 @@ def main():
     parser.add_argument('-u', '--with-users', action='store_true',
                         dest='with_users', default=False)
     args = parser.parse_args()
+
+    # We sure as hell don't wanna drop the 'prod' db.
+    # env can't be test either.
+    env = 'dev'
+
+    # Load config before anything
+    from inbox.config import load_config
+    load_config(env)
+
+    from inbox.util.db import drop_everything
     from inbox.ignition import main_engine, init_db
 
     engine = main_engine(pool_size=1)

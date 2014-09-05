@@ -2,19 +2,23 @@
 # remove accounts marked as deleted from the db.
 
 import sys
-import argparse
 import datetime
-from inbox.models.session import session_scope
-from inbox.models.account import Account
 
 
 def main():
+    # Load config before anything
+    from inbox.config import load_config
+    load_config()
+
+    from inbox.models.session import session_scope
+    from inbox.models.account import Account
+
     current_time = datetime.datetime.utcnow()
     grace_period = current_time - datetime.timedelta(days=10)
 
     with session_scope(ignore_soft_deletes=False) as db_session:
-        accounts = db_session.query(Account).\
-                        filter(Account.deleted_at < grace_period)
+        accounts = db_session.query(Account).filter(
+            Account.deleted_at < grace_period)
 
         entry_count = accounts.count()
         if entry_count == 0:
