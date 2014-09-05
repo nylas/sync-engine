@@ -13,6 +13,12 @@ from setproctitle import setproctitle
 setproctitle('inbox_syncback_service')
 
 
+def signal_handler(signum, frame):
+    print 'Signal handler called with signal', signum
+    syncback.stop()
+    sys.stdout.flush()
+
+
 @click.command()
 @click.option('--prod/--no-prod', default=False,
               help='Disables the autoreloader and potentially other '
@@ -34,10 +40,15 @@ def main(prod, config):
 
 
 def start():
+    global syncback
+
+    # Catch SIGTERM so that we can gracefully exit
+    signal.signal(signal.SIGTERM, signal_handler)
+
     # Start the syncback service, and just hang out forever
-    s = SyncbackService()
-    s.start()
-    s.join()
+    syncback = SyncbackService()
+    syncback.start()
+    syncback.join()
 
 if __name__ == '__main__':
     main()

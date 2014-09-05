@@ -31,6 +31,7 @@ class SyncService(object):
         Seconds between polls for account changes.
     """
     def __init__(self, cpu_id, total_cpus, poll_interval=1):
+        self.keep_running = True
         self.cpu_id = cpu_id
         self.total_cpus = total_cpus
         self.monitor_cls_for = {mod.PROVIDER: getattr(
@@ -61,12 +62,17 @@ class SyncService(object):
         setproctitle('inbox-sync-{}'.format(self.cpu_id))
         retry_with_logging(self._run_impl, self.log)
 
+    def stop(self):
+        for k, v in self.monitors.iteritems():
+            gevent.kill(v)
+        self.keep_running = False
+
     def _run_impl(self):
         """
         Polls for newly registered accounts and checks for start/stop commands.
 
         """
-        while True:
+        while self.keep_running:
             with session_scope() as db_session:
                 sync_on_this_node = or_(Account.sync_state.is_(None),
                                         Account.sync_host == platform.node())

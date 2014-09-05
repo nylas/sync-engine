@@ -47,6 +47,7 @@ class SyncbackService(gevent.Greenlet):
     """Asynchronously consumes the action log and executes syncback actions."""
 
     def __init__(self, poll_interval=1, chunk_size=100, max_pool_size=22):
+        self.keep_running = True
         self.log = logger.new(component='syncback')
         self.worker_pool = gevent.pool.Pool(max_pool_size)
         self.poll_interval = poll_interval
@@ -83,7 +84,7 @@ class SyncbackService(gevent.Greenlet):
 
     def _acquire_lock_nb(self):
         """Spin on the global syncback lock."""
-        while True:
+        while self.keep_running:
             try:
                 syncback_lock.acquire()
                 return
@@ -93,12 +94,17 @@ class SyncbackService(gevent.Greenlet):
     def _run_impl(self):
         self._acquire_lock_nb()
         self.log.info('Starting action service')
-        while True:
+        while self.keep_running:
             self._process_log()
             gevent.sleep(self.poll_interval)
 
     def _run(self):
         retry_with_logging(self._run_impl, self.log)
+
+    def stop(self):
+        for k, v in self.monitors.iteritems():
+            gevent.kill(self)
+        self.keep_running = False
 
 
 class SyncbackWorker(gevent.Greenlet):

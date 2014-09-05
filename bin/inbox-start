@@ -2,6 +2,7 @@
 from gevent import monkey
 monkey.patch_all()
 import sys
+import signal
 import os
 import platform
 
@@ -21,6 +22,14 @@ from inbox.util.startup import preflight
 from inbox.log import get_logger, configure_logging
 from inbox.mailsync.service import SyncService
 
+sync_service = None
+
+
+def signal_handler(signum, frame):
+    print 'Signal handler called with signal', signum
+    sync_service.stop()
+    sys.stdout.flush()
+
 
 @click.command()
 @click.option('--prod/--no-prod', default=False,
@@ -32,6 +41,7 @@ from inbox.mailsync.service import SyncService
               help="This process's number in the process group: a unique "
                    "number satisfying 0 <= process_num < total_processes.")
 def main(prod, config, process_num):
+    global sync_service
     """ Launch the Inbox sync service. """
     configure_logging(prod)
 
@@ -51,6 +61,9 @@ def main(prod, config, process_num):
              total_processes=total_processes,
              recursion_limit=sys.getrecursionlimit())
 
+    # Catch SIGTERM so that we can gracefully exit
+    signal.signal(signal.SIGTERM, signal_handler)
+
     print >>sys.stderr, """
     \033[94m     Welcome to... \033[0m\033[1;95m
       _____       _
@@ -65,6 +78,11 @@ def main(prod, config, process_num):
     sync_service = SyncService(process_num, total_processes)
     sync_service.run()
 
+    print >>sys.stderr, "\033[94mInbox exiting...\033[0m"
+
 
 if __name__ == '__main__':
     main()
+
+
+
