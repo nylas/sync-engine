@@ -16,7 +16,6 @@ from inbox.auth.gmail import (OAUTH_CLIENT_ID,
                               OAUTH_CLIENT_SECRET,
                               OAUTH_ACCESS_TOKEN_URL)
 from inbox.events.util import MalformedEventError, parse_datetime
-from inbox.models.event import TITLE_MAX_LEN, LOCATION_MAX_LEN
 from inbox.events.base import BaseEventProvider
 
 SOURCE_APP_NAME = 'InboxApp Calendar Sync Engine'
@@ -126,19 +125,18 @@ class GoogleEventsProvider(BaseEventProvider):
             if 'status' in event and event['status'] == 'cancelled':
                 raise MalformedEventError()
 
-            title = event.get('summary', '')[:TITLE_MAX_LEN]
+            title = event.get('summary', '')
             description = event.get('description', None)
             location = event.get('location', None)
-            if location:
-                location = location[:LOCATION_MAX_LEN]
             all_day = False
             read_only = True
             is_owner = False
 
             start = event['start']
             end = event['end']
-            g_reccur = event.get('recurrence', None)
-            recurrence = str(g_reccur) if g_reccur else None
+            g_recur = event.get('recurrence', None)
+
+            recurrence = str(g_recur) if g_recur else None
 
             busy = event.get('transparency', True)
             if busy == 'transparent':

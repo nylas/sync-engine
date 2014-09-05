@@ -4,7 +4,7 @@ from dateutil.parser import parse as date_parse
 
 from sqlalchemy import (Column, String, ForeignKey, Text, Boolean,
                         DateTime, Enum, UniqueConstraint)
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy.util import OrderedDict
 from sqlalchemy.orm.collections import MappedCollection
 
@@ -25,9 +25,17 @@ class ParticipantMap(OrderedDict, MappedCollection):
         MappedCollection.__init__(self, keyfunc=lambda p: p.email_address)
         OrderedDict.__init__(self, *args, **kw)
 
+
 TITLE_MAX_LEN = 1024
 LOCATION_MAX_LEN = 255
+RECURRENCE_MAX_LEN = 255
+REMINDER_MAX_LEN = 255
 OWNER_MAX_LEN = 1024
+_LENGTHS = {'location': LOCATION_MAX_LEN,
+            'owner': OWNER_MAX_LEN,
+            'recurrence': RECURRENCE_MAX_LEN,
+            'reminders': REMINDER_MAX_LEN,
+            'title': TITLE_MAX_LEN}
 
 
 class Event(MailSyncBase, HasRevisions, HasPublicID):
@@ -68,8 +76,8 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     location = Column(String(LOCATION_MAX_LEN), nullable=True)
     busy = Column(Boolean, nullable=False, default=True)
     read_only = Column(Boolean, nullable=False)
-    reminders = Column(String(255), nullable=True)
-    recurrence = Column(String(255), nullable=True)
+    reminders = Column(String(REMINDER_MAX_LEN), nullable=True)
+    recurrence = Column(String(RECURRENCE_MAX_LEN), nullable=True)
     start = Column(DateTime, nullable=False)
     end = Column(DateTime, nullable=True)
     all_day = Column(Boolean, nullable=False)
@@ -89,6 +97,11 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
                                          collection_class=ParticipantMap,
                                          cascade=_participant_cascade,
                                          load_on_pending=True)
+
+    @validates('reminders', 'recurrence', 'owner', 'location', 'title')
+    def validate_length(self, key, value):
+        max_len = _LENGTHS[key]
+        return value if value is None else value[:max_len]
 
     @property
     def participants(self):

@@ -7,7 +7,6 @@ from inbox.models import Event
 from inbox.models.backends.outlook import OutlookAccount
 from inbox.events.util import MalformedEventError, parse_datetime
 from inbox.auth.outlook import OAUTH_USER_INFO_URL
-from inbox.models.event import TITLE_MAX_LEN, LOCATION_MAX_LEN
 from inbox.events.base import BaseEventProvider
 
 
@@ -39,11 +38,9 @@ class OutlookEventsProvider(BaseEventProvider):
             # The entirety of the raw event data in json representation.
             raw_data = str(event)
 
-            title = event.get('name', '')[:TITLE_MAX_LEN]
+            title = event.get('name', '')
             description = event.get('description', None)
             location = event.get('location', None)
-            if location:
-                location = location[:LOCATION_MAX_LEN]
             all_day = event.get('is_all_day_event', False)
             read_only = True
             is_owner = False
