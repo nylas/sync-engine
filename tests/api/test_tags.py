@@ -88,10 +88,16 @@ def test_delete_tag(api_client, default_namespace):
     tag_resp = json.loads(post_resp.data)
     tag_id = tag_resp['id']
 
+    thread_id = api_client.get_data('/threads')[0]['id']
+    api_client.put_data('/threads/{}'.format(thread_id), {'add_tags': ['foo']})
+
     del_resp = api_client.delete('/tags/' + tag_id)
     assert del_resp.status_code == 200
     tag_data = api_client.get_data('/tags/{}'.format(tag_id))
     assert tag_data['message'] == 'No tag found'
+
+    thread = api_client.get_data('/threads/{}'.format(thread_id))
+    assert 'foo' not in [tag['name'] for tag in thread['tags']]
 
     del_resp = api_client.delete('/tags/!' + tag_id)
     assert del_resp.status_code == 400

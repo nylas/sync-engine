@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import event
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql.expression import false
 
@@ -6,7 +7,8 @@ from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.schema import UniqueConstraint
 
 
-from inbox.sqlalchemy_ext.util import generate_public_id
+from inbox.sqlalchemy_ext.util import (generate_public_id,
+                                       propagate_soft_delete)
 
 from inbox.models.transaction import HasRevisions
 from inbox.models.base import MailSyncBase
@@ -106,3 +108,10 @@ class Tag(MailSyncBase, HasRevisions):
 
     __table_args__ = (UniqueConstraint('namespace_id', 'name'),
                       UniqueConstraint('namespace_id', 'public_id'))
+
+
+@event.listens_for(Tag, 'after_update')
+def _after_tag_update(mapper, connection, target):
+    """ Hook to cascade delete the threads as well."""
+    propagate_soft_delete(mapper, connection, target,
+                          "tagitems", "tag_id", "id")

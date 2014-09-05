@@ -1,7 +1,7 @@
 # This file contains pytest fixtures as well as some config
 
 API_BASE = "http://localhost:5555"
-TEST_MAX_DURATION_SECS = 240
+TEST_MAX_DURATION_SECS = 360
 TEST_GRANULARITY_CHECK_SECS = 0.1
 
 # we don't want to commit passwords to the repo.
