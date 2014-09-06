@@ -39,6 +39,7 @@ def timeout_loop(name):
 
             format_test_result(name, client.provider,
                                client.email_address, start_time)
+            return True
         return wrapped_f
     return wrap
 
