@@ -214,7 +214,7 @@ def patch_network_functions(monkeypatch):
 
 @yield_fixture(scope='session')
 def syncback_service():
-    from inbox.transactions.actions import SyncbackService, syncback_lock
+    from inbox.transactions.actions import SyncbackService
     from gevent import monkey
     # aggressive=False used to avoid AttributeError in other tests, see
     # https://groups.google.com/forum/#!topic/gevent/IzWhGQHq7n0
@@ -222,14 +222,6 @@ def syncback_service():
     # other tests. Can we make this not happen?
     monkey.patch_all(aggressive=False)
     s = SyncbackService(poll_interval=1)
-    # Check that another syncback service isn't running concurrently, which
-    # would cause the tests to fail.
-    try:
-        syncback_lock.acquire()
-        syncback_lock.release()
-    except IOError:
-        raise IOError("Can't acquire syncback lock. Check that the syncback "
-                      "service isn't running concurrently while running tests")
     s.start()
     gevent.sleep()
     yield s
