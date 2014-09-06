@@ -116,7 +116,8 @@ def save_draft(account_id, message_id, db_session):
 
     recipients = Recipients(message.to_addr, message.cc_addr,
                             message.bcc_addr)
-    attachments = generate_attachments(message.attachments)
+    blocks = [p.block for p in message.attachments]
+    attachments = generate_attachments(blocks)
     mimemsg = create_email(account.sender_name, account.email_address,
                            message.inbox_uid, recipients, message.subject,
                            message.sanitized_body, attachments)
