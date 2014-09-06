@@ -4,13 +4,10 @@ refresh tokens.
 """
 from datetime import datetime, timedelta
 
-from sqlalchemy.orm.exc import NoResultFound
-
-from inbox.models.session import session_scope
-from inbox.models.secret import Secret
-from inbox.models.util import NotFound
+from inbox.models.vault import vault
 from inbox.oauth import new_token, validate_token
 from inbox.basicauth import AuthError
+
 from inbox.log import get_logger
 log = get_logger()
 
@@ -25,38 +22,11 @@ class OAuthAccount(object):
 
     @property
     def refresh_token(self):
-        with session_scope() as db_session:
-            try:
-                secret = db_session.query(Secret).filter(
-                    Secret.id == self.refresh_token_id).one()
-                return secret.secret
-            except NoResultFound:
-                raise NotFound()
+        return vault.get(self.refresh_token_id)
 
     @refresh_token.setter
     def refresh_token(self, value):
-        # Must be a valid UTF-8 byte sequence without NULL bytes.
-        if isinstance(value, unicode):
-            value = value.encode('utf-8')
-
-        try:
-            unicode(value, 'utf-8')
-        except UnicodeDecodeError:
-            raise ValueError('Invalid refresh_token')
-
-        if b'\x00' in value:
-            raise ValueError('Invalid refresh_token')
-
-        #TODO[k]: Session should not be grabbed here
-        with session_scope() as db_session:
-            secret = Secret()
-            secret.secret = value
-            secret.type = 'token'
-
-            db_session.add(secret)
-            db_session.commit()
-
-            self.refresh_token_id = secret.id
+        self.refresh_token_id = vault.put(value)
 
     @property
     def access_token(self):

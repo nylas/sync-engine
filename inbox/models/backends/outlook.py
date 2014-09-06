@@ -12,8 +12,7 @@ class OutlookAccount(ImapAccount, OAuthAccount):
 
     __mapper_args__ = {'polymorphic_identity': 'outlookccount'}
 
-    # Secret
-    refresh_token_id = Column(Integer)
+    refresh_token_id = Column(Integer())  # Secret
     # STOPSHIP(emfree) store these either as secrets or as properties of the
     # developer app.
     client_id = Column(String(256))

@@ -8,7 +8,7 @@ Create Date: 2014-08-28 05:27:28.498786
 
 # revision identifiers, used by Alembic.
 revision = '24e9afe91349'
-down_revision = '43e5867a6ef1'
+down_revision = '565c7325c51d'
 
 from alembic import op
 import sqlalchemy as sa
@@ -55,7 +55,7 @@ def upgrade():
     with session_scope(versioned=False, ignore_soft_deletes=False) \
             as db_session:
         for calendar in db_session.query(Calendar):
-            if '-' in calendar.name:
+            if calendar.name and '-' in calendar.name:
                 provider_name, name = calendar.name.split('-')
                 calendar.provider_name = provider_name
                 calendar.name = name
