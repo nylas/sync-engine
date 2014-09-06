@@ -1,10 +1,42 @@
 import json
 import os
 import subprocess
+import sys
+
+# If threading is imported before monkey, it is posisble to get an error like
+# the following:
+#
+#     Exception KeyError: KeyError(38435568,) in <module 'threading' from
+#           '/usr/lib/python2.7/threading.pyc'> ignored
+#
+# To catch this error and avoid the exception (and thus hopefully clean up
+# threads more properly), first check to see if threading has been loaded
+# before importing monkey.
+# See: http://stackoverflow.com/questions/8774958
+if 'threading' in sys.modules:
+            raise Exception('Threading module loaded before patching!')
+from inbox.transactions.actions import SyncbackService
+from gevent import monkey
 
 import zerorpc
 from pytest import fixture, yield_fixture
 import gevent
+
+
+def uid():
+    from uuid import uuid4
+    from struct import unpack
+    a, b = unpack('>QQ', uuid4().bytes)
+    num = a << 64 | b
+
+    alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+
+    base36 = ''
+    while num:
+        num, i = divmod(num, 36)
+        base36 = alphabet[i] + base36
+
+    return base36
 
 
 def absolute_path(path):
@@ -214,8 +246,6 @@ def patch_network_functions(monkeypatch):
 
 @yield_fixture(scope='session')
 def syncback_service():
-    from inbox.transactions.actions import SyncbackService
-    from gevent import monkey
     # aggressive=False used to avoid AttributeError in other tests, see
     # https://groups.google.com/forum/#!topic/gevent/IzWhGQHq7n0
     # TODO(emfree): It's totally whack that monkey-patching here would affect
