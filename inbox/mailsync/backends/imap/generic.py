@@ -227,7 +227,6 @@ class FolderSyncEngine(Greenlet):
             log.info(local_uid_count=len(local_uids))
 
             with self.syncmanager_lock:
-                log.debug("imap_initial_sync acquired syncmanager_lock")
                 with mailsync_session_scope() as db_session:
                     deleted_uids = self.remove_deleted_uids(
                         db_session, local_uids, remote_uids)
@@ -273,8 +272,6 @@ class FolderSyncEngine(Greenlet):
                 db_session, local_uids, remote_uids)
 
             local_uids -= deleted_uids
-            log.info("Removed {} deleted UIDs from {}".format(
-                len(deleted_uids), self.folder_name))
             uids_to_download = remote_uids - local_uids
 
             self.update_uid_counts(db_session,
@@ -282,14 +279,12 @@ class FolderSyncEngine(Greenlet):
                                    download_uid_count=len(uids_to_download),
                                    delete_uid_count=len(deleted_uids))
 
-        log.info("UIDs to download: {}".format(uids_to_download))
         if uids_to_download:
             self.download_uids(crispin_client,
                                uid_list_to_stack(uids_to_download))
 
         uids_to_refresh = sorted(remote_uids -
                                  uids_to_download)[-self.refresh_flags_max:]
-        log.info('UIDs to refresh: ', uids=uids_to_refresh)
         if uids_to_refresh:
             self.update_metadata(crispin_client, uids_to_refresh)
 
@@ -309,9 +304,6 @@ class FolderSyncEngine(Greenlet):
             uid_download_stack.get_nowait()
             report_progress(self.account_id, self.folder_name, 1,
                             uid_download_stack.qsize())
-
-        log.info('saved all messages and metadata',
-                 new_uidvalidity=crispin_client.selected_uidvalidity)
 
     def create_message(self, db_session, acct, folder, msg):
         assert acct is not None and acct.namespace is not None
@@ -382,8 +374,6 @@ class FolderSyncEngine(Greenlet):
         if to_delete:
             common.remove_messages(self.account_id, db_session, to_delete,
                                    self.folder_name)
-            log.info('deleted removed messages', count=len(to_delete))
-
         return to_delete
 
     def download_and_commit_uids(self, crispin_client, folder_name, uids):
@@ -408,8 +398,6 @@ class FolderSyncEngine(Greenlet):
             # Messages can disappear in the meantime; we'll update them next
             # sync.
             uids = [uid for uid in uids if uid in new_flags]
-            log.info("new flags ", new_flags=new_flags,
-                     folder_name=self.folder_name)
             with self.syncmanager_lock:
                 with mailsync_session_scope() as db_session:
                     common.update_metadata(self.account_id, db_session,
