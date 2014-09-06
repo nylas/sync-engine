@@ -13,61 +13,36 @@ down_revision = '2c577a8a01b7'#24e9afe91349'
 from datetime import datetime
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.sql import table, column
+from sqlalchemy.sql import text
 
 
 def upgrade():
-    table_name = 'part'
-
-    # Create a new block_id table to make parts be relational
-    op.add_column(table_name, sa.Column('block_id',
-                  sa.Integer, nullable=True))
-
-    # Add audit timestamps as Parts will no longer inherit from blocks
-    op.add_column(table_name, sa.Column('created_at', sa.DateTime,
-                                        nullable=True))
-    op.add_column(table_name, sa.Column('updated_at', sa.DateTime,
-                                        nullable=True))
-    op.add_column(table_name, sa.Column('deleted_at', sa.DateTime,
-                                        nullable=True))
-
-    # Create a migration table
-    parts = table(table_name,
-                  column('id', sa.Integer),
-                  column('block_id', sa.Integer),
-                  column('created_at', sa.DateTime),
-                  column('updated_at', sa.DateTime))
-
-    # Copy the old id to the block_id column
-    s = parts.update().values(block_id=parts.c['id'],
-                              created_at=datetime.utcnow(),
-                              updated_at=datetime.utcnow())
     conn = op.get_bind()
-    conn.execute(s)
+    # Create a new block_id table to make parts be relational
+    # Add audit timestamps as Parts will no longer inherit from blocks
+    conn.execute(text("""
+        ALTER TABLE part
+            ADD COLUMN block_id INTEGER,
+            ADD COLUMN created_at DATETIME,
+            ADD COLUMN updated_at DATETIME,
+            ADD COLUMN deleted_at DATETIME
+        """))
 
-    # Drop the old foreign key constraint for part.id == block.id
-    op.drop_constraint('part_ibfk_1', table_name, type_='foreignkey')
+    conn.execute(text(
+        "UPDATE part SET block_id=part.id, created_at=:now, updated_at=:now"),
+        now=datetime.utcnow())
 
-    # new constraint part.block_id == block.id
-    op.create_foreign_key('part_ibfk_1', table_name, 'block',
-                          ['block_id'], ['id'])
+    conn.execute(text("""
+        ALTER TABLE part
+            DROP FOREIGN KEY part_ibfk_1,
+            MODIFY block_id INTEGER NOT NULL,
+            MODIFY created_at DATETIME NOT NULL,
+            MODIFY updated_at DATETIME NOT NULL,
+            MODIFY id INTEGER NULL AUTO_INCREMENT
+        """))
 
-    # make part.block_id non-nullable now that they've been set
-    op.alter_column(table_name, 'block_id',
-                    nullable=False,
-                    existing_nullable=True,
-                    existing_type=sa.Integer)
-
-    op.alter_column(table_name, 'created_at', existing_type=sa.DateTime,
-                    existing_nullable=True,
-                    nullable=False)
-
-    op.alter_column(table_name, 'updated_at', existing_type=sa.DateTime,
-                    existing_nullable=True,
-                    nullable=False)
-
-    op.alter_column(table_name, 'id', existing_type=sa.Integer,
-                    autoincrement=True)
+    # can't batch this with other alterations while maintaining foreig key name
+    op.create_foreign_key('part_ibfk_1', 'part', 'block', ['block_id'], ['id'])
 
 
 def downgrade():
