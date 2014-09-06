@@ -48,6 +48,7 @@ class SyncbackService(gevent.Greenlet):
 
     def __init__(self, poll_interval=1, chunk_size=100, max_pool_size=22):
         self.keep_running = True
+        self.running = False
         self.log = logger.new(component='syncback')
         self.worker_pool = gevent.pool.Pool(max_pool_size)
         self.poll_interval = poll_interval
@@ -92,19 +93,24 @@ class SyncbackService(gevent.Greenlet):
                 gevent.sleep()
 
     def _run_impl(self):
+        self.running = True
         self._acquire_lock_nb()
         self.log.info('Starting action service')
         while self.keep_running:
             self._process_log()
             gevent.sleep(self.poll_interval)
+        self.running = False
 
     def _run(self):
         retry_with_logging(self._run_impl, self.log)
 
     def stop(self):
-        for k, v in self.monitors.iteritems():
-            gevent.kill(self)
+        gevent.kill(self)
+
+        # Wait for main thread to stop running
         self.keep_running = False
+        while self.running:
+            gevent.sleep()
 
 
 class SyncbackWorker(gevent.Greenlet):
