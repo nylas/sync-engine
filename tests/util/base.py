@@ -13,9 +13,6 @@ import sys
 # threads more properly), first check to see if threading has been loaded
 # before importing monkey.
 # See: http://stackoverflow.com/questions/8774958
-if 'threading' in sys.modules:
-            raise Exception('Threading module loaded before patching!')
-from inbox.transactions.actions import SyncbackService
 from gevent import monkey
 
 import zerorpc
@@ -251,6 +248,7 @@ def syncback_service():
     # TODO(emfree): It's totally whack that monkey-patching here would affect
     # other tests. Can we make this not happen?
     monkey.patch_all(aggressive=False)
+    from inbox.transactions.actions import SyncbackService
     s = SyncbackService(poll_interval=1)
     s.start()
     gevent.sleep()
