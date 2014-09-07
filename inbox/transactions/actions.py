@@ -92,6 +92,9 @@ class SyncbackService(gevent.Greenlet):
             except IOError:
                 gevent.sleep()
 
+    def _release_lock_nb(self):
+        syncback_lock.release()
+
     def _run_impl(self):
         self.running = True
         self._acquire_lock_nb()
@@ -99,14 +102,13 @@ class SyncbackService(gevent.Greenlet):
         while self.keep_running:
             self._process_log()
             gevent.sleep(self.poll_interval)
+        self._release_lock_nb()
         self.running = False
 
     def _run(self):
         retry_with_logging(self._run_impl, self.log)
 
     def stop(self):
-        gevent.kill(self)
-
         # Wait for main thread to stop running
         self.keep_running = False
         while self.running:
