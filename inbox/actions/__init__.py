@@ -37,6 +37,7 @@ from inbox.sendmail.base import (generate_attachments, get_sendmail_client,
                                  SendMailException)
 from inbox.sendmail.message import create_email, Recipients
 from inbox.log import get_logger
+log = get_logger()
 
 
 def archive(account_id, thread_id, db_session):
@@ -112,7 +113,10 @@ def save_draft(account_id, message_id, db_session):
     """ Sync a new/updated draft back to the remote backend. """
     account = db_session.query(Account).get(account_id)
     message = db_session.query(Message).get(message_id)
-    assert message.is_draft
+    if not message.is_draft:
+        log.warning('tried to save non-draft message as draft',
+                    message_id=message_id)
+        return
 
     recipients = Recipients(message.to_addr, message.cc_addr,
                             message.bcc_addr)
@@ -172,7 +176,6 @@ def _send(account_id, draft_id, db_session):
     """Send the draft with id = `draft_id`."""
     account = db_session.query(Account).get(account_id)
 
-    log = get_logger()
     sendmail_client = get_sendmail_client(account)
     try:
         draft = db_session.query(Message).filter(
