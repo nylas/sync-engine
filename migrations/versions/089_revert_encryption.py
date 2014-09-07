@@ -8,23 +8,16 @@ Create Date: 2014-09-06 03:24:54.292086
 
 # revision identifiers, used by Alembic.
 revision = '2c577a8a01b7'
-down_revision = '24e9afe91349'#31dc0411eecf'
+down_revision = '24e9afe91349'
 
 
 from alembic import op
 import sqlalchemy as sa
 
-import nacl.secret
-import nacl.utils
-
 
 def upgrade():
-    print '\nUpgrading...'
-
     # Block table
-    #op.drop_column('block', 'encryption_scheme')
-
-    print '\nDone with Block table'
+    op.drop_column('block', 'encryption_scheme')
 
     # Secret table
     op.add_column('secret', sa.Column('acl_id', sa.Integer(), nullable=False))
@@ -36,8 +29,8 @@ def upgrade():
     op.add_column('secret',
                   sa.Column('secret', sa.String(length=512), nullable=True))
 
-    print '\nDone with Secret table, now migrating data'
-
+    import nacl.secret
+    import nacl.utils
     from inbox.ignition import main_engine
     from inbox.models.session import session_scope
     from inbox.config import config
@@ -45,9 +38,8 @@ def upgrade():
     engine = main_engine(pool_size=1, max_overflow=0)
     Base = sa.ext.declarative.declarative_base()
     Base.metadata.reflect(engine)
-        
+
     key = config.get_required('SECRET_ENCRYPTION_KEY')
-    print '\nkey: ', key
 
     class Secret(Base):
         __table__ = Base.metadata.tables['secret']
@@ -57,7 +49,7 @@ def upgrade():
         secrets = db_session.query(Secret).filter(
             Secret.encryption_scheme == 1,
             Secret._secret.isnot(None)).order_by(Secret.id).all()
-        
+
         for s in secrets:
             encrypted = s._secret
 
@@ -71,8 +63,7 @@ def upgrade():
             s.type = 0
 
             db_session.add(s)
-            print '\ns.id: ', s.id
-            
+
         db_session.commit()
 
     op.drop_column('secret', '_secret')
