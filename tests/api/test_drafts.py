@@ -248,7 +248,7 @@ def test_send(patch_network_functions, api_client, example_draft,
                               'version': version})
 
     # TODO(emfree) do this more rigorously
-    gevent.sleep(2)
+    gevent.sleep(0.5)
 
     drafts = api_client.get_data('/drafts')
     threads_with_drafts = api_client.get_data('/threads?tag=drafts')
