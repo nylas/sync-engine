@@ -150,7 +150,7 @@ def remote_delete_draft(account, folder_name, inbox_uid, db_session):
     def fn(account, db_session, crispin_client):
         assert folder_name == crispin_client.folder_names()['drafts']
         message = db_session.query(Message).filter_by(
-            public_id=inbox_uid).one()
+            version=inbox_uid).one()
         uids = []
 
         if message.resolved_message is not None:

@@ -310,7 +310,6 @@ class FolderSyncEngine(Greenlet):
 
         new_uid = common.create_imap_message(db_session, log, acct, folder,
                                              msg)
-
         new_uid = self.add_message_attrs(db_session, new_uid, msg, folder)
         return new_uid
 
@@ -335,9 +334,9 @@ class FolderSyncEngine(Greenlet):
                 for index, message in enumerate(constructed_thread):
                     message.thread_order = index
 
+            # Make sure this thread has all the correct labels
             # FIXME: refactor 'new_labels' name. This is generic IMAP, not
             # gmail.
-            # make sure this thread has all the correct labels
             new_labels = common.update_thread_labels(new_uid.message.thread,
                                                      folder.name,
                                                      [folder.canonical_name],
