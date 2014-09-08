@@ -36,7 +36,6 @@ from inbox.util.misc import or_none
 
 from inbox.crispin import GMetadata, connection_pool, GmailSettingError
 from inbox.log import get_logger
-from inbox.models.util import reconcile_message
 from inbox.models import Message, Folder, Thread, Namespace
 from inbox.models.backends.gmail import GmailAccount
 from inbox.models.backends.imap import ImapUid, ImapThread
@@ -330,15 +329,8 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                 db_session, new_uid.account.namespace, new_uid.message)
 
             # make sure this thread has all the correct labels
-            new_labels = common.update_thread_labels(thread, folder.name,
-                                                     msg.g_labels, db_session)
-
-            # Reconciliation for Drafts, Sent Mail folders:
-            if (('draft' in new_labels or 'sent' in new_labels) and not
-                    msg.created and new_uid.message.inbox_uid):
-                reconcile_message(db_session, new_uid.message.inbox_uid,
-                                  new_uid.message)
-
+            common.update_thread_labels(thread, folder.name, msg.g_labels,
+                                        db_session)
             return new_uid
 
     def download_and_commit_uids(self, crispin_client, folder_name, uids):
