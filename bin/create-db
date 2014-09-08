@@ -44,7 +44,7 @@ def main(prod):
                          format(mysql_user=mysql_user,
                                 mysql_database=mysql_database))
 
-    init_db()
+    init_db(inbox_db_engine)
 
     # Stamp initial alembic revision
     if inbox_db_engine.dialect.has_table(inbox_db_engine, "alembic_version"):
