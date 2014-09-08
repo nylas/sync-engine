@@ -338,8 +338,6 @@ class CrispinClient(object):
         self.selected_folder = (folder, select_info)
         # don't propagate cached information from previous session
         self._folder_names = None
-        self.log.info('selected folder', folder=folder,
-                      folder_msg_count=select_info['EXISTS'])
         return uidvalidity_cb(folder, select_info)
 
     @property
