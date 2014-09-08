@@ -77,7 +77,9 @@ class SyncbackService(gevent.Greenlet):
                                         namespace.account_id,
                                         syncback_service=self,
                                         extra_args=log_entry.extra_args)
-                self.log.info('delegating action', action_id=log_entry.id)
+                self.log.info('delegating action',
+                              action_id=log_entry.id,
+                              msg=log_entry.action)
                 self.worker_pool.start(worker)
 
     def remove_from_schedule(self, log_entry_id):
