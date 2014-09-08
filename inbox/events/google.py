@@ -252,7 +252,7 @@ class GoogleEventsProvider(BaseEventProvider):
         description = resp.get('description')
         calendar_id = self.get_calendar_id(resp['summary'], description)
 
-        extra = copy(resp['items'])
+        extra = copy(resp)
         del extra['items']
 
         for response_event in resp['items']:
