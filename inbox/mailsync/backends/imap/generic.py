@@ -80,7 +80,6 @@ from inbox.crispin import connection_pool, retry_crispin
 from inbox.models.session import session_scope
 from inbox.models import Folder
 from inbox.models.backends.imap import ImapFolderSyncStatus, ImapThread
-from inbox.models.util import reconcile_message
 from inbox.mailsync.exc import UidInvalid
 from inbox.mailsync.reporting import report_stopped
 from inbox.mailsync.backends.imap import common
@@ -335,19 +334,8 @@ class FolderSyncEngine(Greenlet):
                     message.thread_order = index
 
             # Make sure this thread has all the correct labels
-            # FIXME: refactor 'new_labels' name. This is generic IMAP, not
-            # gmail.
-            new_labels = common.update_thread_labels(new_uid.message.thread,
-                                                     folder.name,
-                                                     [folder.canonical_name],
-                                                     db_session)
-
-            # Reconciliation for Drafts, Sent Mail folders:
-            if (('draft' in new_labels or 'sent' in new_labels) and not
-                    msg.created and new_uid.message.inbox_uid):
-                reconcile_message(db_session, new_uid.message.inbox_uid,
-                                  new_uid.message)
-
+            common.update_thread_labels(new_uid.message.thread, folder.name,
+                                        [folder.canonical_name], db_session)
             new_uid.update_imap_flags(msg.flags)
 
             return new_uid
