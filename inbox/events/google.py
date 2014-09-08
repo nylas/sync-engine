@@ -1,5 +1,6 @@
 """Provide Google Calendar events."""
 
+from copy import copy
 import httplib2
 import dateutil.parser as date_parser
 
@@ -251,5 +252,8 @@ class GoogleEventsProvider(BaseEventProvider):
         description = resp.get('description')
         calendar_id = self.get_calendar_id(resp['summary'], description)
 
+        extra = copy(resp['items'])
+        del extra['items']
+
         for response_event in resp['items']:
-            yield (calendar_id, response_event, resp)
+            yield (calendar_id, response_event, extra)
