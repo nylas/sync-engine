@@ -373,7 +373,7 @@ class FolderSyncEngine(Greenlet):
                 new_imapuids = create_db_objects(
                     self.account_id, db_session, log, folder_name,
                     raw_messages, self.create_message)
-                commit_uids(db_session, log, new_imapuids)
+                commit_uids(db_session, new_imapuids)
         return len(new_imapuids)
 
     def update_metadata(self, crispin_client, updated):

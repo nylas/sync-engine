@@ -5,7 +5,7 @@ from gevent.queue import Queue, Empty
 from sqlalchemy.exc import DataError, IntegrityError
 
 from inbox.log import get_logger
-logger = get_logger()
+log = get_logger()
 from inbox.util.concurrency import retry_and_report_killed
 from inbox.util.itert import partition
 from inbox.models import (Account, Folder, MAX_FOLDER_NAME_LENGTH)
@@ -148,8 +148,9 @@ def create_db_objects(account_id, db_session, log, folder_name, raw_messages,
     return new_uids
 
 
-def commit_uids(db_session, log, new_uids):
+def commit_uids(db_session, new_uids):
     try:
+        log.info(new_committed_message_count=len(new_uids))
         log.info("Committing {0} UIDs".format(len(new_uids)))
         db_session.add_all(new_uids)
         db_session.commit()
@@ -212,7 +213,7 @@ class BaseMailSyncMonitor(Greenlet):
         self.inbox = Queue()
         # how often to check inbox, in seconds
         self.heartbeat = heartbeat
-        self.log = logger.new(component='mail sync', account_id=account.id)
+        self.log = log.new(component='mail sync', account_id=account.id)
         self.account_id = account.id
         self.email_address = account.email_address
         self.provider_name = account.provider
