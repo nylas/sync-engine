@@ -7,7 +7,6 @@ from sqlalchemy.orm import joinedload
 
 from inbox.actions.backends.imap import uidvalidity_cb, syncback_action
 from inbox.models.backends.imap import ImapThread
-from inbox.models.message import Message
 from inbox.models.folder import Folder
 
 PROVIDER = 'generic'
@@ -149,15 +148,6 @@ def remote_save_draft(account, folder_name, message, db_session, date=None):
 def remote_delete_draft(account, folder_name, inbox_uid, db_session):
     def fn(account, db_session, crispin_client):
         assert folder_name == crispin_client.folder_names()['drafts']
-        message = db_session.query(Message).filter_by(
-            version=inbox_uid).one()
-        uids = []
-
-        if message.resolved_message is not None:
-            for imapuid in message.resolved_message.imapuids:
-                uids.append(imapuid.msg_uid)
-
-        if uids != []:
-            crispin_client.delete_uids(uids)
+        crispin_client.delete_draft(inbox_uid)
 
     return syncback_action(fn, account, folder_name, db_session)

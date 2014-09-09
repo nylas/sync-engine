@@ -9,6 +9,7 @@ import imaplib
 import functools
 import threading
 import random
+from email.parser import HeaderParser
 
 from collections import namedtuple, defaultdict
 
@@ -521,18 +522,28 @@ class CrispinClient(object):
         identifier for the message that both we and the remote know.
 
         """
-        criteria = ['DRAFT', 'NOT DELETED',
-                    'HEADER X-INBOX-ID {0}'.format(inbox_uid)]
-        draft_uids = self.conn.search(criteria)
-        if draft_uids:
-            assert len(draft_uids) == 1
+        assert inbox_uid
+        criteria = ['DRAFT', 'NOT DELETED']
+        all_draft_uids = self.conn.search(criteria)
+        # It would be nice to just search by X-INBOX-ID header too, but some
+        # backends don't support that. So fetch the header for each draft and
+        # see if we can find one that matches.
+        # TODO(emfree): are there other ways we can narrow the result set a
+        # priori (by subject or date, etc.)
+        matching_draft_headers = self.conn.fetch(
+            all_draft_uids, ['BODY.PEEK[HEADER]'])
+        for uid, response in matching_draft_headers.iteritems():
+            headers = response['BODY[HEADER]']
+            parser = HeaderParser()
+            x_inbox_id = parser.parsestr(headers).get('X-Inbox-Id')
+            if x_inbox_id == inbox_uid:
+                # TODO: do we need this part?
+                # Remove IMAP `Draft` label
+                self.conn.remove_flags([uid], ['\Draft'])
 
-            # TODO: do we need this part?
-            # Remove IMAP `Draft` label
-            self.conn.remove_flags(draft_uids, ['\Draft'])
-
-            self.conn.delete_messages(draft_uids)
-            self.conn.expunge()
+                self.conn.delete_messages([uid])
+                self.conn.expunge()
+                return
 
 
 class CondStoreCrispinClient(CrispinClient):
