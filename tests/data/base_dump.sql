@@ -73,7 +73,7 @@ CREATE TABLE `account` (
   CONSTRAINT `account_ibfk_7` FOREIGN KEY (`archive_folder_id`) REFERENCES `folder` (`id`),
   CONSTRAINT `account_ibfk_8` FOREIGN KEY (`all_folder_id`) REFERENCES `folder` (`id`),
   CONSTRAINT `account_ibfk_9` FOREIGN KEY (`starred_folder_id`) REFERENCES `folder` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -82,7 +82,7 @@ CREATE TABLE `account` (
 
 LOCK TABLES `account` WRITE;
 /*!40000 ALTER TABLE `account` DISABLE KEYS */;
-INSERT INTO `account` VALUES (1,'ÔøΩÔøΩÔøΩÔøΩhPID',1,'precise64','2014-05-03 01:15:03','gmailaccount',2,4,5,NULL,NULL,NULL,3,NULL,'2014-05-13 02:19:12','2014-08-22 18:02:36',NULL,NULL,NULL,'inboxapptest@gmail.com','inboxapptest@gmail.com',NULL,'{\"sync_start_time\": \"None\", \"sync_end_time\": \"None\"}',NULL,1),(2,'1øΩÔøΩÔøΩÔøΩhPID',1,'precise64','2014-05-03 01:15:03','gmailaccount',2,4,5,NULL,NULL,NULL,3,NULL,'2014-05-13 02:19:12','2014-08-22 18:02:36',NULL,NULL,NULL,'inboxapptest2@gmail.com','inboxapptest@gmail.com',NULL,'{\"sync_start_time\": \"None\", \"sync_end_time\": \"None\"}',NULL,3);
+INSERT INTO `account` VALUES (1,'ÔøΩÔøΩÔøΩÔøΩhPID',1,'precise64','2014-05-03 01:15:03','gmailaccount',2,4,5,NULL,NULL,NULL,3,NULL,'2014-05-13 02:19:12','2014-08-22 18:02:36',NULL,NULL,NULL,'inboxapptest@gmail.com','inboxapptest@gmail.com',NULL,'{\"sync_start_time\": \"None\", \"sync_end_time\": \"None\"}',NULL,1);
 /*!40000 ALTER TABLE `account` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -206,7 +206,7 @@ CREATE TABLE `calendar` (
   UNIQUE KEY `uuid` (`name`,`provider_name`,`account_id`),
   KEY `account_id` (`account_id`),
   CONSTRAINT `calendar_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -218,7 +218,6 @@ LOCK TABLES `calendar` WRITE;
 INSERT INTO `calendar` VALUES (1,'œ5ˆê¨F\0ªÌ´Åûˆ√¿',1,'default',NULL,NULL,NULL,NULL,'167wjlgf89za2cdhy17p9bsu8',0,''),(2,'œ5ˆê¨F\0ª3´Åûˆ√¿',1,'provider_default',NULL,NULL,NULL,NULL,'167wjlgf89za2cdhy17p9bsu8',1,''),(3,'œ5ˆê¨F\0ª5´Åûˆ√¿',2,'default',NULL,NULL,NULL,NULL,'167wjlgf89za2cdhy17p9bsu8',0,'');
 /*!40000 ALTER TABLE `calendar` ENABLE KEYS */;
 UNLOCK TABLES;
-
 
 --
 -- Table structure for table `contact`
@@ -510,7 +509,7 @@ CREATE TABLE `event` (
   KEY `event_ibfk_2` (`calendar_id`),
   CONSTRAINT `event_ibfk_2` FOREIGN KEY (`calendar_id`) REFERENCES `calendar` (`id`) ON DELETE CASCADE,
   CONSTRAINT `event_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -522,7 +521,6 @@ LOCK TABLES `event` WRITE;
 INSERT INTO `event` VALUES (1,'3bd5983f9d1748d0bca5719c57f72815','inbox','p5ßë‹\rD_∂Î ä@Ø◊˝','',1,'desc1','data1','InboxHeadquarters',1,NULL,NULL,'1970-01-01 00:00:01','1970-02-01 00:00:01',0,'local','2014-08-29 01:22:53','2014-08-29 01:22:53',NULL,1,NULL,1,0),(2,'b9f18495985f4814a95e28f3e119a730','inbox','◊éÌv‘êAπ‡FcÕVø\n','',1,'desc2','data2','InboxHeadquarters',1,NULL,NULL,'1970-01-01 00:00:01','1970-01-01 00:00:01',0,'local','2014-08-29 01:22:54','2014-08-29 01:22:54',NULL,2,NULL,1,1),(3,'c9f18495985f4814a95e28f3e119a730','inbox','◊éÌv‘êAπjFcÕVø\n','',1,'desc5','data3','InboxHeadquarters',1,NULL,NULL,'1970-02-01 00:00:01','1970-03-01 00:00:01',0,'local','2014-08-29 01:22:54','2014-08-29 01:22:54',NULL,1,NULL,1,1);
 /*!40000 ALTER TABLE `event` ENABLE KEYS */;
 UNLOCK TABLES;
-
 
 --
 -- Table structure for table `eventparticipant`
@@ -1078,6 +1076,40 @@ INSERT INTO `messagecontactassociation` VALUES (1,1,1,'to_addr','2014-05-13 02:1
 UNLOCK TABLES;
 
 --
+-- Table structure for table `messagepartassociation`
+--
+
+DROP TABLE IF EXISTS `messagepartassociation`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `messagepartassociation` (
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `message_id` int(11) NOT NULL,
+  `part_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`,`message_id`,`part_id`),
+  KEY `message_id` (`message_id`),
+  KEY `part_id` (`part_id`),
+  KEY `op.f('ix_messagepartassociation_created_at')` (`created_at`),
+  KEY `op.f('ix_messagepartassociation_deleted_at')` (`deleted_at`),
+  KEY `op.f('ix_messagepartassociation_updated_at')` (`updated_at`),
+  CONSTRAINT `messagepartassociation_ibfk_1` FOREIGN KEY (`message_id`) REFERENCES `message` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `messagepartassociation_ibfk_2` FOREIGN KEY (`part_id`) REFERENCES `part` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `messagepartassociation`
+--
+
+LOCK TABLES `messagepartassociation` WRITE;
+/*!40000 ALTER TABLE `messagepartassociation` DISABLE KEYS */;
+/*!40000 ALTER TABLE `messagepartassociation` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `namespace`
 --
 
@@ -1513,4 +1545,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-09-06  2:08:13
+-- Dump completed on 2014-09-09 20:36:10

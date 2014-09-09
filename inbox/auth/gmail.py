@@ -92,8 +92,8 @@ def create_account(db_session, email_address, response):
     return account
 
 
-def connect_account(account):
-    return oauth_connect_account(account)
+def connect_account(provider, email, pw):
+    return oauth_connect_account(provider, email, pw)
 
 
 def verify_account(account):

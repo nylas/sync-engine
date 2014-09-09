@@ -27,6 +27,8 @@ run_for_cover()
     pids+=("$!")
 }
 
+coverage run --source /vagrant/inbox -p -m py.test --junitxml /vagrant/tests/output /vagrant/tests
+
 # Start the services
 run_for_cover inbox-start
 sleep 4
@@ -37,6 +39,12 @@ py.test tests/system/test_sending.py --tb=short -s
 
 kill -15 ${pids[@]}
 wait ${pids[@]}
+
+# for now we don't completely gracefully exit, so unfortunately locks will be
+# left around, however if we've made it this far, we assume that those locks
+# were originally held by us and therefore remove them.
+rm /var/lock/inbox_sync/*.lock
+
 coverage combine
 coverage html
 cwd=`pwd`

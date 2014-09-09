@@ -26,7 +26,12 @@ syncback = None
 http_server = None
 def signal_handler(signum, frame):
     print 'Signal handler called with signal', signum
-    syncback.stop()
+    try:
+        syncback.stop()
+    except:
+        # Ignore errors while stopping, there's not much we can do at this
+        # point.
+        pass
     http_server.stop()
     sys.stdout.flush()
 
@@ -77,7 +82,14 @@ def start(port):
     http_server = WSGIServer(('', int(port)), app, log=inbox_logger,
                              handler_class=InboxWSGIHandler)
     inbox_logger.info('Starting API server', port=port)
-    http_server.serve_forever()
+    try:
+        http_server.serve_forever()
+    except:
+        # Shouldn't ever return, however when we kill due to signal handler,
+        # sometimes an error is output that we simply want to ignore as there
+        # isn't anything special we can do to handle it.
+        pass
+
     syncback.join()
     print "exiting normally."
 

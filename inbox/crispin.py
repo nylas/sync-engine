@@ -8,13 +8,12 @@ time. That's why functions take a connection argument.
 import imaplib
 import functools
 import threading
-import random
 from email.parser import HeaderParser
 
 from collections import namedtuple, defaultdict
 
 import gevent
-from gevent import socket
+from gevent import socket, GreenletExit
 from gevent.coros import BoundedSemaphore
 
 import geventconnpool
@@ -22,11 +21,12 @@ import geventconnpool
 from inbox.util.concurrency import retry
 from inbox.util.misc import or_none, timed
 from inbox.basicauth import (ConnectionError, ValidationError,
-                             TransientConnectionError)
+                             TransientConnectionError, AuthError)
 from inbox.models.session import session_scope
 from inbox.providers import provider_info
 from inbox.models.account import Account
 from inbox.models.backends.imap import ImapAccount
+
 from inbox.log import get_logger
 logger = get_logger()
 
@@ -42,6 +42,10 @@ RawMessage = namedtuple(
     'RawImapMessage',
     'uid internaldate flags body g_thrid g_msgid g_labels created')
 
+# We will retry a couple of times for transient errors, such as an invalid
+# access token or the server being temporariliy unavailable.
+MAX_TRANSIENT_ERRORS = 2
+
 # Lazily-initialized map of account ids to lock objects.
 # This prevents multiple greenlets from concurrently creating duplicate
 # connection pools for a given account.
@@ -53,7 +57,22 @@ class GmailSettingError(Exception):
     pass
 
 
-def connection_pool(account_id, pool_size=6, connection_pool_for=dict()):
+def _get_connection_pool(account_id, pool_size, pool_map, readonly):
+    with _lock_map[account_id]:
+        try:
+            pool = pool_map.get(account_id)
+            return pool if pool else \
+                pool_map.setdefault(
+                    account_id,
+                    CrispinConnectionPool(account_id,
+                                          num_connections=pool_size,
+                                          readonly=readonly))
+        except AuthError:
+            logger.error('Auth error for account {}'.format(account_id))
+            raise GreenletExit()
+
+
+def connection_pool(account_id, pool_size=6, pool_map=dict()):
     """ Per-account crispin connection pool.
 
     Use like this:
@@ -66,17 +85,10 @@ def connection_pool(account_id, pool_size=6, connection_pool_for=dict()):
     none at all! It's up to the calling code to handle folder sessions
     properly. We don't reset to a certain select state because it's slow.
     """
-    with _lock_map[account_id]:
-        pool = connection_pool_for.get(account_id)
-        if pool is None:
-            pool = connection_pool_for[account_id] \
-                = CrispinConnectionPool(account_id, num_connections=pool_size,
-                                        readonly=True)
-        return pool
+    return _get_connection_pool(account_id, pool_size, pool_map, True)
 
 
-def writable_connection_pool(account_id, pool_size=1,
-                             connection_pool_for=dict()):
+def writable_connection_pool(account_id, pool_size=1, pool_map=dict()):
     """ Per-account crispin connection pool, with *read-write* connections.
 
     Use like this:
@@ -86,13 +98,7 @@ def writable_connection_pool(account_id, pool_size=1,
             # your code here
             pass
     """
-    with _lock_map[account_id]:
-        pool = connection_pool_for.get(account_id)
-        if pool is None:
-            pool = connection_pool_for[account_id] \
-                = CrispinConnectionPool(account_id, num_connections=pool_size,
-                                        readonly=False)
-        return pool
+    return _get_connection_pool(account_id, pool_size, pool_map, False)
 
 CONN_DISCARD_EXC_CLASSES = (socket.error, imaplib.IMAP4.error)
 
@@ -117,11 +123,8 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
                     'connections'.format(account_id, num_connections))
         self.account_id = account_id
         self.readonly = readonly
-        self.valid = True
         self._new_conn_lock = BoundedSemaphore(1)
         self._set_account_info()
-        if not self.valid:
-            return
 
         # 1200s == 20min
         geventconnpool.ConnectionPool.__init__(
@@ -130,77 +133,86 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
 
     def _set_account_info(self):
         with session_scope() as db_session:
-            account = db_session.query(ImapAccount).get(self.account_id)
+            account = db_session.query(Account).get(self.account_id)
+            self.provider_name = account.provider
+            self.email_address = account.email_address
+            self.provider_info = provider_info(account.provider)
+            self.sync_state = account.sync_state
 
             # Refresh token if need be, for OAuthed accounts
-            if provider_info(account.provider)['auth'] == 'oauth2':
+            if self.provider_info['auth'] == 'oauth2':
                 try:
-                    self.access_token = account.access_token
+                    self.credential = account.access_token
                 except ValidationError:
                     logger.error("Error obtaining access token",
                                  account_id=self.account_id)
                     account.sync_state = 'invalid'
-                    self.valid = False
+                    db_session.commit()
+                    raise
                 except ConnectionError:
                     logger.error("Error connecting",
                                  account_id=self.account_id)
                     account.sync_state = 'connerror'
-                    self.valid = False
+                    db_session.commit()
+                    raise
+            else:
+                self.credential = account.password
 
-                db_session.add(account)
-                db_session.commit()
-
-            self.email_address = account.email_address
-            self.provider_name = account.provider
-
-    # TODO: simplify auth flow, preferably not need to use the db in this mod
     def _new_connection(self):
         from inbox.auth import handler_from_provider
 
-        num_transients = 0
-        max_transient_retries = 2
-
         # Ensure that connections are initialized serially, so as not to use
         # many db sessions on startup.
-        with self._new_conn_lock as _, session_scope() as db_session:
-            account = db_session.query(ImapAccount).get(self.account_id)
+        with self._new_conn_lock as _:
+            auth_handler = handler_from_provider(self.provider_name)
 
-            auth_handler = handler_from_provider(account.provider)
-
-            while True:
+            for retry_count in range(MAX_TRANSIENT_ERRORS):
                 try:
-                    conn = auth_handler.connect_account(account)
+                    conn = auth_handler.connect_account(self.provider_name,
+                                                        self.email_address,
+                                                        self.credential)
+
+                    # If we can connect the account, then we can set the sate
+                    # to 'running' if it wasn't already
+                    if self.sync_state != 'running':
+                        with session_scope() as db_session:
+                            query = db_session.query(ImapAccount)
+                            account = query.get(self.account_id)
+                            self.sync_state = account.sync_state = 'running'
+
+                    return new_crispin(self.account_id, self.email_address,
+                                       self.provider_name, conn, self.readonly)
 
                 except ConnectionError, e:
-                    if isinstance(e, TransientConnectionError) and \
-                            num_transients < max_transient_retries:
-                        num_transients += 1
-                        gevent.sleep(random.uniform(1, 10))
-                        continue
+                    if isinstance(e, TransientConnectionError):
+                        return None
                     else:
                         logger.error('Error connecting',
                                      account_id=self.account_id)
-                        account.sync_state = 'connerror'
-                        db_session.add(account)
-                        db_session.commit()
+                        with session_scope() as db_session:
+                            query = db_session.query(ImapAccount)
+                            account = query.get(self.account_id)
+                            account.sync_state = 'connerror'
                         return None
-
-                except ValidationError:
-                    logger.error('Error obtaining access token',
-                                 account_id=self.account_id)
-                    account.sync_state = 'invalid'
-                    db_session.add(account)
-                    db_session.commit()
-                    return None
-
-                break
-
-            account.sync_state = 'running'
-            db_session.add(account)
-            db_session.commit()
-
-        return new_crispin(self.account_id, self.email_address,
-                           self.provider_name, conn, self.readonly)
+                except ValidationError, e:
+                    # If we failed to validate, but the account is oauth2, we
+                    # may just need to refresh the access token. Try this one
+                    # time.
+                    if (self.provider_info['auth'] == 'oauth2' and
+                            retry_count == 0):
+                        with session_scope() as db_session:
+                            query = db_session.query(ImapAccount)
+                            account = query.get(self.account_id)
+                            self.credential = account.renew_access_token()
+                    else:
+                        logger.error('Error validating',
+                                     account_id=self.account_id)
+                        with session_scope() as db_session:
+                            query = db_session.query(ImapAccount)
+                            account = query.get(self.account_id)
+                            account.sync_state = 'invalid'
+                        raise
+            return None
 
     def _keepalive(self, c):
         c.conn.noop()

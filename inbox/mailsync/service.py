@@ -73,6 +73,7 @@ class SyncService(object):
 
         """
         while self.keep_running:
+            # Determine which accounts need to be started
             with session_scope() as db_session:
                 sync_on_this_node = or_(Account.sync_state.is_(None),
                                         Account.sync_host == platform.node())
@@ -85,18 +86,18 @@ class SyncService(object):
                         sync_on_this_node,
                         ~sync_explicitly_stopped,
                         start_on_this_cpu)]
-                for account_id in start_accounts:
-                    if account_id not in self.monitors:
-                        self.log.info('sync service starting sync',
-                                      account_id=account_id)
-                        self.start_sync(account_id)
 
-                stop_accounts = set(self.monitors.keys()) - \
-                    set(start_accounts)
-                for account_id in stop_accounts:
-                    self.log.info('sync service stopping sync',
-                                  account_id=account_id)
-                    self.stop_sync(account_id)
+            # perform the appropriate action on each account
+            for account_id in start_accounts:
+                if account_id not in self.monitors:
+                    self.start_sync(account_id)
+
+            stop_accounts = set(self.monitors.keys()) - \
+                set(start_accounts)
+            for account_id in stop_accounts:
+                self.log.info('sync service stopping sync',
+                              account_id=account_id)
+                self.stop_sync(account_id)
 
             gevent.sleep(self.poll_interval)
 

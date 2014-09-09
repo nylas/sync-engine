@@ -74,7 +74,7 @@ def delete_account(db_session, email_address):
     db_session.commit()
 
 
-def connect_account(account):
+def connect_account(provider, email, credential):
     """Provide a connection to a generic IMAP account.
 
     Raises
@@ -88,41 +88,41 @@ def connect_account(account):
         If the credentials are invalid.
     """
 
-    info = provider_info(account.provider)
+    info = provider_info(provider)
     host = info['imap']
     try:
         conn = IMAPClient(host, use_uid=True, ssl=True)
     except IMAPClient.AbortError as e:
         log.error('account_connect_failed',
-                  email=account.email_address,
+                  email=email,
                   host=host,
                   error=("[ALERT] Can't connect to host - may be transient"))
         raise TransientConnectionError(str(e))
     except(IMAPClient.Error, gaierror, socket_error) as e:
         log.error('account_connect_failed',
-                  email=account.email_address,
+                  email=email,
                   host=host,
                   error='[ALERT] (Failure): {0}'.format(str(e)))
         raise ConnectionError(str(e))
 
     conn.debug = False
     try:
-        conn.login(account.email_address, account.password)
+        conn.login(email, credential)
     except IMAPClient.AbortError as e:
         log.error('account_verify_failed',
-                  email=account.email_address,
+                  email=email,
                   host=host,
                   error="[ALERT] Can't connect to host - may be transient")
         raise TransientConnectionError(str(e))
     except IMAPClient.Error as e:
         log.error('account_verify_failed',
-                  email=account.email_address,
+                  email=email,
                   host=host,
                   error='[ALERT] Invalid credentials (Failure)')
         raise ValidationError(str(e))
     except SSLError as e:
         log.error('account_verify_failed',
-                  email=account.email_address,
+                  email=email,
                   host=host,
                   error='[ALERT] SSL Connection error (Failure)')
         raise ConnectionError(str(e))
@@ -153,7 +153,9 @@ def verify_account(account):
     -------
     True: If the client can successfully connect.
     """
-    conn = connect_account(account)
+    conn = connect_account(account.provider,
+                           account.email_address,
+                           account.password)
 
     info = provider_info(account.provider)
     if "condstore" not in info:

@@ -74,6 +74,7 @@ from inbox.util.concurrency import retry_and_report_killed
 from inbox.util.itert import chunk
 from inbox.util.misc import or_none
 from inbox.util.threading import cleanup_subject, thread_messages
+from inbox.basicauth import AuthError
 from inbox.log import get_logger
 log = get_logger()
 from inbox.crispin import connection_pool, retry_crispin
@@ -88,11 +89,11 @@ from inbox.mailsync.backends.base import (create_db_objects,
 
 
 def _pool(account_id):
-    """ Get a crispin pool, throwing an error if it's invalid."""
-    pool = connection_pool(account_id)
-    if not pool.valid:
+    """Get a crispin pool, throwing an error if it's invalid."""
+    try:
+        return connection_pool(account_id)
+    except AuthError:
         raise MailsyncDone()
-    return pool
 
 
 class FolderSyncEngine(Greenlet):
