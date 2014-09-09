@@ -11,7 +11,6 @@ from inbox.util.itert import partition
 from inbox.models import (Account, Folder, MAX_FOLDER_NAME_LENGTH)
 from inbox.models.session import session_scope
 from inbox.mailsync.exc import SyncException
-from inbox.mailsync.reporting import report_stopped
 
 
 mailsync_session_scope = functools.partial(session_scope,
@@ -226,7 +225,6 @@ class BaseMailSyncMonitor(Greenlet):
             self.shared_state = dict()
 
         Greenlet.__init__(self)
-        self.link_value(lambda _: report_stopped(self.account_id))
 
     def _run(self):
         return retry_and_report_killed(self._run_impl,
@@ -237,7 +235,6 @@ class BaseMailSyncMonitor(Greenlet):
     def _run_impl(self):
         sync = Greenlet(retry_and_report_killed, self.sync,
                         account_id=self.account_id, logger=self.log)
-        sync.link_value(lambda _: report_stopped(account_id=self.account_id))
         sync.start()
         while not sync.ready():
             try:

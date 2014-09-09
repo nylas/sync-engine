@@ -81,7 +81,6 @@ from inbox.models.session import session_scope
 from inbox.models import Folder
 from inbox.models.backends.imap import ImapFolderSyncStatus, ImapThread
 from inbox.mailsync.exc import UidInvalid
-from inbox.mailsync.reporting import report_stopped
 from inbox.mailsync.backends.imap import common
 from inbox.mailsync.backends.base import (create_db_objects,
                                           commit_uids, MailsyncDone,
@@ -121,8 +120,6 @@ class FolderSyncEngine(Greenlet):
         }
 
         Greenlet.__init__(self)
-        self.link_value(lambda _: report_stopped(account_id=self.account_id,
-                                                 folder_name=self.folder_name))
 
     def _run(self):
         # Bind greenlet-local logging context.
