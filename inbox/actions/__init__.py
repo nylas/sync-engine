@@ -31,7 +31,6 @@ from inbox.actions.backends import module_registry
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
 from inbox.models import Account, Message, Thread
-from inbox.models.session import session_scope
 from inbox.models.action_log import schedule_action
 from inbox.sendmail.base import (generate_attachments, get_sendmail_client,
                                  SendMailException)
@@ -134,23 +133,21 @@ def save_draft(account_id, message_id, db_session):
 def delete_draft(account_id, draft_id, db_session, args):
     """ Delete a draft from the remote backend. """
     inbox_uid = args.get('inbox_uid')
+    account = db_session.query(Account).get(account_id)
 
-    with session_scope(ignore_soft_deletes=False) as db_session:
-        account = db_session.query(Account).get(account_id)
-
-        # Non-Inbox created draft, therefore standard delete
-        if inbox_uid is None:
-            draft = db_session.query(Message).get(draft_id)
-            remote_delete = \
-                module_registry[account.provider].remote_delete
-            remote_delete(account, account.drafts_folder.name,
-                          draft.thread_id, db_session)
-        # Inbox created draft, therefore use X-INBOX header
-        else:
-            remote_delete_draft = \
-                module_registry[account.provider].remote_delete_draft
-            remote_delete_draft(account, account.drafts_folder.name,
-                                inbox_uid, db_session)
+    # Non-Inbox created draft, therefore standard delete
+    if inbox_uid is None:
+        draft = db_session.query(Message).get(draft_id)
+        remote_delete = \
+            module_registry[account.provider].remote_delete
+        remote_delete(account, account.drafts_folder.name,
+                      draft.thread_id, db_session)
+    # Inbox created draft, therefore use X-INBOX header
+    else:
+        remote_delete_draft = \
+            module_registry[account.provider].remote_delete_draft
+        remote_delete_draft(account, account.drafts_folder.name,
+                            inbox_uid, db_session)
 
 
 def send_directly(account_id, draft_id, db_session):
