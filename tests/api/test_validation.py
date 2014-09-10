@@ -1,3 +1,5 @@
+import json
+
 from inbox.sqlalchemy_ext.util import generate_public_id
 from tests.util.base import api_client
 
@@ -31,3 +33,30 @@ def test_recipient_validation(api_client):
     assert r.status_code == 400
 
 # TODO(emfree): Add more comprehensive parameter-validation tests.
+
+
+def test_account_validation(api_client, db):
+    from inbox.models import Namespace
+
+    draft = {
+        'body': '<html><body><h2>Sea, birds and sand.</h2></body></html>'
+    }
+
+    r = api_client.post_data('/drafts', draft)
+    assert r.status_code == 200
+
+    namespace_id = json.loads(r.data)['namespace_id']
+    account = db.session.query(Namespace).filter(
+        Namespace.public_id == namespace_id).first().account
+
+    account.sync_state = 'invalid'
+    db.session.commit()
+
+    r = api_client.post_data('/drafts', draft)
+    assert r.status_code == 403
+
+    account.sync_state = 'connerror'
+    db.session.commit()
+
+    r = api_client.post_data('/drafts', draft)
+    assert r.status_code == 503

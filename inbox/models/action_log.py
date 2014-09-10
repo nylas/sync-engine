@@ -25,6 +25,16 @@ REMOVE_TAG_ACTIONS = {
 }
 
 
+class ActionError(Exception):
+    def __init__(self, error, namespace_id):
+        self.error = error
+        self.namespace_id = namespace_id
+
+    def __str__(self):
+        return 'Error {0} for namespace_id {1}'.format(
+            self.error, self.namespace_id)
+
+
 def schedule_action_for_tag(tag_public_id, thread, db_session, tag_added):
     if tag_added:
         action = ADD_TAG_ACTIONS.get(tag_public_id)
@@ -35,7 +45,18 @@ def schedule_action_for_tag(tag_public_id, thread, db_session, tag_added):
 
 
 def schedule_action(func_name, record, namespace_id, db_session, **kwargs):
-    db_session.flush()  # Ensure that the record's id is non-null
+    # Ensure that the record's id is non-null
+    db_session.flush()
+
+    # Ensure account is valid
+    account = db_session.query(Namespace).get(namespace_id).account
+
+    if account.sync_state == 'invalid':
+        raise ActionError(error=403, namespace_id=namespace_id)
+
+    if account.sync_state == 'connerror':
+        raise ActionError(error=503, namespace_id=namespace_id)
+
     log_entry = ActionLog(
         action=func_name,
         table_name=record.__tablename__,

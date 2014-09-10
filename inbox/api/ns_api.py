@@ -24,7 +24,7 @@ from inbox.config import config
 from inbox import events, contacts, sendmail
 from inbox.log import get_logger
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
-from inbox.models.action_log import schedule_action
+from inbox.models.action_log import schedule_action, ActionError
 from inbox.models.session import InboxSession
 from inbox.transactions import delta_sync
 
@@ -186,7 +186,6 @@ def tag_update_api(public_id):
             return err(409, 'Tag name already used')
         tag.name = new_name
         g.db_session.commit()
-    # TODO(emfree) also support deleting user-created tags.
 
     return g.encoder.jsonify(tag)
 
@@ -326,7 +325,11 @@ def thread_api_update(public_id):
             return err(404, 'No tag found with name {}'.  format(tag_name))
         if not tag.user_removable:
             return err(400, 'Cannot remove tag {}'.format(tag_name))
-        thread.remove_tag(tag, execute_action=True)
+
+        try:
+            thread.remove_tag(tag, execute_action=True)
+        except ActionError as e:
+            return err(e.error, str(e))
 
     additions = data.get('add_tags', [])
     for tag_name in additions:
@@ -337,7 +340,11 @@ def thread_api_update(public_id):
             return err(404, 'No tag found with name {}'.format(tag_name))
         if not tag.user_addable:
             return err(400, 'Cannot add tag {}'.format(tag_name))
-        thread.apply_tag(tag, execute_action=True)
+
+        try:
+            thread.apply_tag(tag, execute_action=True)
+        except ActionError as e:
+            return err(e.error, str(e))
 
     g.db_session.commit()
     return g.encoder.jsonify(thread)
@@ -1070,9 +1077,12 @@ def draft_create_api():
     except InputError as e:
         return err(404, e.message)
 
-    draft = sendmail.create_draft(g.db_session, g.namespace.account, to,
-                                  subject, body, files, cc, bcc,
-                                  tags, replyto_thread)
+    try:
+        draft = sendmail.create_draft(g.db_session, g.namespace.account, to,
+                                      subject, body, files, cc, bcc,
+                                      tags, replyto_thread)
+    except ActionError as e:
+        return err(e.error, str(e))
 
     return g.encoder.jsonify(draft)
 
@@ -1115,9 +1125,13 @@ def draft_update_api(public_id):
     except InputError as e:
         return err(404, e.message)
 
-    draft = sendmail.update_draft(g.db_session, g.namespace.account,
-                                  original_draft, to, subject, body,
-                                  files, cc, bcc, tags)
+    try:
+        draft = sendmail.update_draft(g.db_session, g.namespace.account,
+                                      original_draft, to, subject, body,
+                                      files, cc, bcc, tags)
+    except ActionError as e:
+        return err(e.error, str(e))
+
     return g.encoder.jsonify(draft)
 
 
@@ -1150,8 +1164,12 @@ def draft_delete_api(public_id):
         return err(409, 'Draft {0}.{1} has already been updated to version '
                    '{2}'.format(public_id, version, draft.version))
 
-    result = sendmail.delete_draft(g.db_session, g.namespace.account,
-                                   public_id)
+    try:
+        result = sendmail.delete_draft(g.db_session, g.namespace.account,
+                                       public_id)
+    except ActionError as e:
+        return err(e.error, str(e))
+
     return g.encoder.jsonify(result)
 
 
@@ -1195,7 +1213,10 @@ def draft_send_api():
                 409, 'Draft {0}.{1} has already been updated to version {2}'.
                 format(draft_public_id, version, draft.version))
 
-        schedule_action('send_draft', draft, g.namespace.id, g.db_session)
+        try:
+            schedule_action('send_draft', draft, g.namespace.id, g.db_session)
+        except ActionError as e:
+            return err(e.error, str(e))
     else:
         to = get_recipients(data.get('to'), 'to', validate_emails=True)
         cc = get_recipients(data.get('cc'), 'cc', validate_emails=True)
@@ -1211,10 +1232,14 @@ def draft_send_api():
         except InputError as e:
             return err(404, e.message)
 
-        draft = sendmail.create_draft(g.db_session, g.namespace.account, to,
-                                      subject, body, files, cc, bcc,
-                                      tags, replyto_thread, syncback=False)
-        schedule_action('send_directly', draft, g.namespace.id, g.db_session)
+        try:
+            draft = sendmail.create_draft(g.db_session, g.namespace.account,
+                                          to, subject, body, files, cc, bcc,
+                                          tags, replyto_thread, syncback=False)
+            schedule_action('send_directly', draft, g.namespace.id,
+                            g.db_session)
+        except ActionError as e:
+            return err(e.error, str(e))
 
     draft.state = 'sending'
     return g.encoder.jsonify(draft)
