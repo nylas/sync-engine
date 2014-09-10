@@ -78,7 +78,6 @@ from inbox.basicauth import AuthError
 from inbox.log import get_logger
 log = get_logger()
 from inbox.crispin import connection_pool, retry_crispin
-from inbox.models.session import session_scope
 from inbox.models import Folder
 from inbox.models.backends.imap import ImapFolderSyncStatus, ImapThread
 from inbox.mailsync.exc import UidInvalid
@@ -94,6 +93,50 @@ def _pool(account_id):
         return connection_pool(account_id)
     except AuthError:
         raise MailsyncDone()
+
+
+class Stack(object):
+    """Thin convenience wrapper around gevent.queue.LifoQueue."""
+    def __init__(self, key, initial_elements=None):
+        self.key = key
+        self._lifoqueue = LifoQueue()
+        if initial_elements is not None:
+            self._lifoqueue.queue = sorted(list(initial_elements),
+                                           key=self.key)
+
+    def empty(self):
+        return self._lifoqueue.empty()
+
+    def get(self):
+        return self._lifoqueue.get_nowait()
+
+    def peek(self):
+        # This should be LifoQueue.peek_nowait(), which is currently buggy in
+        # gevent. Can update with gevent version 1.0.2.
+        return self._lifoqueue.queue[-1]
+
+    def put(self, obj):
+        self._lifoqueue.put(obj)
+
+    def update_from(self, objects):
+        for obj in sorted(list(objects), key=self.key):
+            self._lifoqueue.put(obj)
+
+    def discard(self, objects):
+        self._lifoqueue.queue = [item for item in self._lifoqueue.queue if item
+                                 not in objects]
+
+    def qsize(self):
+        return self._lifoqueue.qsize()
+
+    def __iter__(self):
+        for item in self._lifoqueue.queue:
+            yield item
+
+
+class UIDStack(Stack):
+    def __init__(self, initial_elements=None):
+        Stack.__init__(self, key=int, initial_elements=initial_elements)
 
 
 class FolderSyncEngine(Greenlet):
@@ -177,24 +220,19 @@ class FolderSyncEngine(Greenlet):
 
     @retry_crispin
     def initial_sync(self):
+        log.bind(state='initial')
+        log.info('starting initial sync')
         with self.conn_pool.get() as crispin_client:
-            uid_download_stack = LifoQueue()
-            crispin_client.select_folder(
-                self.folder_name, uidvalidity_cb(crispin_client.account_id))
-
-            with mailsync_session_scope() as db_session:
-                local_uids = common.all_uids(crispin_client.account_id,
-                                             db_session, self.folder_name)
-
-            self.initial_sync_impl(crispin_client, local_uids,
-                                   uid_download_stack)
+            crispin_client.select_folder(self.folder_name, uidvalidity_cb)
+            self.initial_sync_impl(crispin_client)
         return 'poll'
 
     @retry_crispin
     def poll(self):
-        with self.conn_pool.get() as crispin_client:
-            self.poll_impl(crispin_client)
-            return 'poll'
+        log.bind(state='poll')
+        log.info('polling')
+        self.poll_impl()
+        return 'poll'
 
     def resync_uids_from(self, previous_state):
         @retry_crispin
@@ -210,97 +248,65 @@ class FolderSyncEngine(Greenlet):
             return previous_state
         return resync_uids
 
-    def initial_sync_impl(self, crispin_client, local_uids,
-                          uid_download_stack,
-                          spawn_flags_refresh_poller=True):
-        # We wrap the block in a try/finally because the greenlets like
-        # new_uid_poller need to be killed when this greenlet is interrupted
-        new_uid_poller, flags_refresh_poller = None, None
+    def initial_sync_impl(self, crispin_client):
+        # We wrap the block in a try/finally because the change_poller greenlet
+        # needs to be killed when this greenlet is interrupted
+        change_poller = None
         try:
             assert crispin_client.selected_folder_name == self.folder_name
-
             remote_uids = crispin_client.all_uids()
-            log.info(remote_uid_count=len(remote_uids))
-            log.info(local_uid_count=len(local_uids))
-
             with self.syncmanager_lock:
                 with mailsync_session_scope() as db_session:
+                    local_uids = common.all_uids(self.account_id, db_session,
+                                                 self.folder_name)
                     deleted_uids = self.remove_deleted_uids(
                         db_session, local_uids, remote_uids)
 
             local_uids = set(local_uids) - deleted_uids
-
             new_uids = set(remote_uids) - local_uids
-            add_uids_to_stack(new_uids, uid_download_stack)
+            download_stack = UIDStack(new_uids)
 
             with mailsync_session_scope() as db_session:
                 self.update_uid_counts(
                     db_session,
                     remote_uid_count=len(remote_uids),
                     # This is the initial size of our download_queue
-                    download_uid_count=len(new_uids),
-                    # Flags are updated in __imap_flag_change_poller() and
-                    # update_uid_count is set there
-                    delete_uid_count=len(deleted_uids))
+                    download_uid_count=len(new_uids))
 
-            new_uid_poller = spawn(self.check_new_uids, uid_download_stack)
-
-            if spawn_flags_refresh_poller:
-                flags_refresh_poller = spawn(self.__imap_flag_change_poller)
-
-            self.download_uids(crispin_client, uid_download_stack)
+            change_poller = spawn(self.poll_for_changes, download_stack)
+            self.download_uids(crispin_client, download_stack)
 
         finally:
-            if new_uid_poller is not None:
-                new_uid_poller.kill()
+            if change_poller is not None:
+                change_poller.kill()
 
-            if spawn_flags_refresh_poller and flags_refresh_poller is not None:
-                flags_refresh_poller.kill()
-
-    def poll_impl(self, crispin_client):
-        crispin_client.select_folder(self.folder_name,
-                                     uidvalidity_cb(self.account_id))
-
-        remote_uids = set(crispin_client.all_uids())
-        with mailsync_session_scope() as db_session:
-            local_uids = common.all_uids(
-                self.account_id, db_session, self.folder_name)
-            deleted_uids = self.remove_deleted_uids(
-                db_session, local_uids, remote_uids)
-
-            local_uids -= deleted_uids
-            uids_to_download = remote_uids - local_uids
-
-            self.update_uid_counts(db_session,
-                                   remote_uid_count=len(remote_uids),
-                                   download_uid_count=len(uids_to_download),
-                                   delete_uid_count=len(deleted_uids))
-
-        if uids_to_download:
-            self.download_uids(crispin_client,
-                               uid_list_to_stack(uids_to_download))
-
-        uids_to_refresh = sorted(remote_uids -
-                                 uids_to_download)[-self.refresh_flags_max:]
-        if uids_to_refresh:
-            self.update_metadata(crispin_client, uids_to_refresh)
-
+    def poll_impl(self):
+        with self.conn_pool.get() as crispin_client:
+            crispin_client.select_folder(self.folder_name, uidvalidity_cb)
+            download_stack = UIDStack()
+            self.check_uid_changes(crispin_client, download_stack,
+                                   async_download=False)
         sleep(self.poll_frequency)
 
-    # TODO(emfree): figure out better names for this and the function that
-    # it wraps.
-    def download_uids(self, crispin_client, uid_download_stack):
-        while not uid_download_stack.empty():
+    @retry_crispin
+    def poll_for_changes(self, download_stack):
+        with self.conn_pool.get() as crispin_client:
+            crispin_client.select_folder(self.folder_name, uidvalidity_cb)
+            while True:
+                self.check_uid_changes(crispin_client, download_stack,
+                                       async_download=True)
+                sleep(self.poll_frequency)
+
+    def download_uids(self, crispin_client, download_stack):
+        while not download_stack.empty():
             # Defer removing UID from queue until after it's committed to the
-            # DB' to avoid races with check_new_uids() XXX this should be
-            # uid_download_stack.peek_nowait(), which is currently buggy in
-            # gevent (patch pending)
-            uid = uid_download_stack.queue[-1]
+            # DB' to avoid races with poll_for_changes().
+            uid = download_stack.peek()
             self.download_and_commit_uids(crispin_client, self.folder_name,
                                           [uid])
-            uid_download_stack.get_nowait()
+            download_stack.get()
             report_progress(self.account_id, self.folder_name, 1,
-                            uid_download_stack.qsize())
+                            download_stack.qsize())
 
     def create_message(self, db_session, acct, folder, msg):
         assert acct is not None and acct.namespace is not None
@@ -366,6 +372,8 @@ class FolderSyncEngine(Greenlet):
         # because, for example, we download messages via the 'All Mail' folder
         # in Gmail.
         raw_messages = safe_download(crispin_client, uids)
+        if not raw_messages:
+            return 0
         with self.syncmanager_lock:
             with mailsync_session_scope() as db_session:
                 new_imapuids = create_db_objects(
@@ -402,128 +410,56 @@ class FolderSyncEngine(Greenlet):
             metrics = dict(uid_checked_timestamp=datetime.utcnow())
             metrics.update(kwargs)
             saved_status.update_metrics(metrics)
-        db_session.commit()
 
-    def __imap_flag_change_poller(self):
-        """
-        Periodically update message flags for those servers
-        who don't support CONDSTORE.
-        Runs until killed. (Intended to be run in a greenlet)
-        """
-        log.info("Spinning up new flags-refresher for ",
-                 folder_name=self.folder_name)
-        with self.conn_pool.get() as crispin_client:
+    def check_uid_changes(self, crispin_client, download_stack,
+                          async_download):
+        remote_uids = set(crispin_client.all_uids())
+        with self.syncmanager_lock:
             with mailsync_session_scope() as db_session:
-                crispin_client.select_folder(self.folder_name,
-                                             uidvalidity_cb(
-                                                 crispin_client.account_id))
-            while True:
-                remote_uids = set(crispin_client.all_uids())
                 local_uids = common.all_uids(self.account_id, db_session,
                                              self.folder_name)
-                # STOPSHIP(emfree): sorted does nothing here
-                to_refresh = sorted(remote_uids &
-                                    local_uids)[-self.refresh_flags_max:]
-
-                self.update_metadata(crispin_client, to_refresh)
-                with session_scope(ignore_soft_deletes=True) as db_session:
-                    self.update_uid_counts(db_session,
-                                           update_uid_count=len(to_refresh))
-
-                sleep(self.poll_frequency)
-
-    def check_new_uids(self, uid_download_stack):
-        """ Check for new UIDs and add them to the download stack.
-
-        We do this by comparing local UID lists to remote UID lists,
-        maintaining the invariant that (stack uids)+(local uids) == (remote
-        uids).
-
-        We also remove local messages that have disappeared from the remote,
-        since it's totally probable that users will be archiving mail as the
-        initial sync goes on.
-
-        We grab a new IMAP connection from the pool for this to isolate its
-        actions from whatever the main greenlet may be doing.
-
-        Runs until killed. (Intended to be run in a greenlet.)
-        """
-        log.info("starting new UID-check poller")
-        with self.conn_pool.get() as crispin_client:
-            crispin_client.select_folder(
-                self.folder_name, uidvalidity_cb(crispin_client.account_id))
-            while True:
-                remote_uids = set(crispin_client.all_uids())
-                # We lock this section to make sure no messages are being
-                # created while we make sure the queue is in a good state.
-                with self.syncmanager_lock:
-                    with mailsync_session_scope() as db_session:
-                        local_uids = common.all_uids(self.account_id,
-                                                     db_session,
-                                                     self.folder_name)
-                        stack_uids = set(uid_download_stack.queue)
-                        local_with_pending_uids = local_uids | stack_uids
-                        deleted_uids = self.remove_deleted_uids(
-                            db_session, local_uids, remote_uids)
-                        log.info('remoted deleted uids',
-                                 count=len(deleted_uids))
-
-                        # filter out messages that have disappeared on the
-                        # remote side
-                        new_uid_download_stack = {
-                            u for u in uid_download_stack.queue if u in
-                            remote_uids}
-
-                        # add in any new uids from the remote
-                        for uid in remote_uids:
-                            if uid not in local_with_pending_uids:
-                                new_uid_download_stack.add(uid)
-                        uid_download_stack.queue = sorted(
-                            new_uid_download_stack, key=int)
-
-                        self.update_uid_counts(
-                            db_session,
-                            remote_uid_count=len(remote_uids),
-                            download_uid_count=uid_download_stack.qsize(),
-                            delete_uid_count=len(deleted_uids))
-                sleep(self.poll_frequency)
+                # Download new UIDs.
+                stack_uids = {uid for uid in download_stack}
+                local_with_pending_uids = local_uids | stack_uids
+                self.remove_deleted_uids(db_session, local_uids, remote_uids)
+                # filter out messages that have disappeared on the remote side
+                download_stack.discard([u for u in download_stack if u not in
+                                        remote_uids])
+                for uid in remote_uids:
+                    if uid not in local_with_pending_uids:
+                        download_stack.put(uid)
+        if not async_download:
+            self.download_uids(crispin_client, download_stack)
+            with mailsync_session_scope() as db_session:
+                self.update_uid_counts(
+                    db_session,
+                    remote_uid_count=len(remote_uids),
+                    download_uid_count=download_stack.qsize())
+        to_refresh = sorted(remote_uids &
+                            local_uids)[-self.refresh_flags_max:]
+        self.update_metadata(crispin_client, to_refresh)
 
 
-def uid_list_to_stack(uids):
-    """ UID download function needs a stack even for polling. """
-    uid_download_stack = LifoQueue()
-    for uid in sorted(uids, key=int):
-        uid_download_stack.put(uid)
-    return uid_download_stack
+def uidvalidity_cb(account_id, folder_name, select_info):
+    assert folder_name is not None and select_info is not None, \
+        "must start IMAP session before verifying UIDVALIDITY"
+    with mailsync_session_scope() as db_session:
+        saved_folder_info = common.get_folder_info(account_id, db_session,
+                                                   folder_name)
+        saved_uidvalidity = or_none(saved_folder_info, lambda i:
+                                    i.uidvalidity)
+    selected_uidvalidity = select_info['UIDVALIDITY']
 
-
-def uidvalidity_cb(account_id):
-    def fn(folder_name, select_info):
-        assert folder_name is not None and select_info is not None, \
-            "must start IMAP session before verifying UIDVALIDITY"
-        with mailsync_session_scope() as db_session:
-            saved_folder_info = common.get_folder_info(account_id, db_session,
-                                                       folder_name)
-            saved_uidvalidity = or_none(saved_folder_info, lambda i:
-                                        i.uidvalidity)
-        selected_uidvalidity = select_info['UIDVALIDITY']
-
-        if saved_folder_info:
-            is_valid = common.uidvalidity_valid(account_id,
-                                                selected_uidvalidity,
-                                                folder_name, saved_uidvalidity)
-            if not is_valid:
-                raise UidInvalid(
-                    'folder: {}, remote uidvalidity: {}, '
-                    'cached uidvalidity: {}'.format(
-                        folder_name, selected_uidvalidity, saved_uidvalidity))
-        return select_info
-    return fn
-
-
-def add_uids_to_stack(uids, uid_download_stack):
-    for uid in sorted(uids, key=int):
-        uid_download_stack.put(uid)
+    if saved_folder_info:
+        is_valid = common.uidvalidity_valid(account_id,
+                                            selected_uidvalidity,
+                                            folder_name, saved_uidvalidity)
+        if not is_valid:
+            raise UidInvalid(
+                'folder: {}, remote uidvalidity: {}, '
+                'cached uidvalidity: {}'.format(
+                    folder_name, selected_uidvalidity, saved_uidvalidity))
+    return select_info
 
 
 def safe_download(crispin_client, uids):

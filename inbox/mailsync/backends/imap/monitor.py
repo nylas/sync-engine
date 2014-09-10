@@ -29,7 +29,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             periodically.
 
     """
-    def __init__(self, account, heartbeat=1, poll_frequency=300,
+    def __init__(self, account, heartbeat=1, poll_frequency=30,
                  retry_fail_classes=[], refresh_flags_max=2000):
 
         self.poll_frequency = poll_frequency
@@ -57,10 +57,9 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         with mailsync_session_scope() as db_session:
             with _pool(self.account_id).get() as crispin_client:
                 sync_folders = crispin_client.sync_folders()
-                account = db_session.query(ImapAccount)\
-                    .get(self.account_id)
-                save_folder_names(log, account,
+                save_folder_names(log, self.account_id,
                                   crispin_client.folder_names(), db_session)
+            account = db_session.query(ImapAccount).get(self.account_id)
             Tag.create_canonical_tags(account.namespace, db_session)
 
             folder_id_for = {name: id_ for id_, name in db_session.query(
@@ -82,7 +81,6 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
 
             if saved_states.get(folder_name) != 'finish':
                 log.info('initializing folder sync')
-                # STOPSHIP(emfree): replace by appropriate base class.
                 thread = self.sync_engine_class(self.account_id, folder_name,
                                                 folder_id_for[folder_name],
                                                 self.email_address,

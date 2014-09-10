@@ -351,7 +351,7 @@ class CrispinClient(object):
         self.selected_folder = (folder, select_info)
         # don't propagate cached information from previous session
         self._folder_names = None
-        return uidvalidity_cb(folder, select_info)
+        return uidvalidity_cb(self.account_id, folder, select_info)
 
     @property
     def selected_folder_name(self):

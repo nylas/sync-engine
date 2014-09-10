@@ -33,7 +33,7 @@ def verify_folder_name(account_id, old, new):
     return new
 
 
-def save_folder_names(log, account, folder_names, db_session):
+def save_folder_names(log, account_id, folder_names, db_session):
     """
     Create Folder objects & map special folder names on Account objects.
 
@@ -46,6 +46,7 @@ def save_folder_names(log, account, folder_names, db_session):
     comparisons.
 
     """
+    account = db_session.query(Account).get(account_id)
     assert 'inbox' in folder_names, 'Account {} has no detected inbox folder'\
         .format(account.email_address)
 
@@ -150,7 +151,6 @@ def create_db_objects(account_id, db_session, log, folder_name, raw_messages,
 def commit_uids(db_session, new_uids):
     try:
         log.info(new_committed_message_count=len(new_uids))
-        log.info("Committing {0} UIDs".format(len(new_uids)))
         db_session.add_all(new_uids)
         db_session.commit()
     except DataError as e:

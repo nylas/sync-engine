@@ -183,6 +183,7 @@ def update_folder_info(account_id, session, folder_name, uidvalidity,
     cached_folder_info.highestmodseq = highestmodseq
     cached_folder_info.uidvalidity = uidvalidity
     session.add(cached_folder_info)
+    return cached_folder_info
 
 
 def create_imap_message(db_session, log, account, folder, msg):

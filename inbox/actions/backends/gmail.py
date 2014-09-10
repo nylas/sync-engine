@@ -9,7 +9,7 @@ __all__ = ['set_remote_archived', 'set_remote_starred', 'set_remote_unread',
            'remote_save_draft', 'remote_delete_draft', 'remote_delete']
 
 
-def uidvalidity_cb(db_session, account_id):
+def uidvalidity_cb(account_id, folder_name, select_info):
     """
     Gmail Syncback actions never ever touch the database and don't rely on
     local UIDs since they instead do SEARCHes based on X-GM-THRID to find

@@ -26,8 +26,6 @@ import os
 from collections import namedtuple
 
 from gevent import spawn
-from gevent.queue import LifoQueue
-
 from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.util.itert import chunk, partition
@@ -44,14 +42,19 @@ from inbox.mailsync.backends.base import (create_db_objects,
                                           MailsyncError,
                                           mailsync_session_scope)
 from inbox.mailsync.backends.imap.generic import (
-    uidvalidity_cb, safe_download, add_uids_to_stack, uid_list_to_stack,
-    report_progress)
+    uidvalidity_cb, safe_download, report_progress, Stack, UIDStack)
 from inbox.mailsync.backends.imap.condstore import CondstoreFolderSyncEngine
 from inbox.mailsync.backends.imap.monitor import ImapSyncMonitor
 from inbox.mailsync.backends.imap import common
 
 PROVIDER = 'gmail'
 SYNC_MONITOR_CLS = 'GmailSyncMonitor'
+
+
+class GMessageStack(Stack):
+    def __init__(self, initial_elements=None):
+        Stack.__init__(self, key=lambda m: m.uid,
+                       initial_elements=initial_elements)
 
 
 class GmailSyncMonitor(ImapSyncMonitor):
@@ -65,40 +68,28 @@ log = get_logger()
 
 
 class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
-    def initial_sync_impl(self, crispin_client, local_uids,
-                          uid_download_stack):
+    def initial_sync_impl(self, crispin_client):
         # We wrap the block in a try/finally because the greenlets like
-        # new_uid_poller need to be killed when this greenlet is interrupted
-        new_uid_poller = None
+        # change_poller need to be killed when this greenlet is interrupted
+        change_poller = None
         try:
+            with mailsync_session_scope() as db_session:
+                local_uids = common.all_uids(self.account_id, db_session,
+                                             self.folder_name)
             remote_uid_count = len(set(crispin_client.all_uids()))
-            remote_g_metadata, update_uid_count = self.__fetch_g_metadata(
+            remote_g_metadata = self.__fetch_g_metadata(
                 crispin_client, local_uids)
             remote_uids = sorted(remote_g_metadata.keys(), key=int)
-            log.info(remote_uid_count=len(remote_uids))
-            if self.folder_name == crispin_client.folder_names()['all']:
-                log.info(local_uid_count=len(local_uids))
-
             with self.syncmanager_lock:
-                log.debug('gmail_initial_sync grabbed syncmanager_lock')
                 with mailsync_session_scope() as db_session:
                     deleted_uids = self.remove_deleted_uids(
                         db_session, local_uids, remote_uids)
-                    delete_uid_count = len(deleted_uids)
 
                     local_uids = set(local_uids) - deleted_uids
                     unknown_uids = set(remote_uids) - local_uids
-
-                    # Persist the num(messages) to sync (any type of sync:
-                    # download, update or delete) before we start.  Note that
-                    # num_local_deleted, num_local_updated ARE the numbers to
-                    # delete/update too since we make those changes rightaway
-                    # before we start downloading messages.
                     self.update_uid_counts(
                         db_session, remote_uid_count=remote_uid_count,
-                        download_uid_count=len(unknown_uids),
-                        update_uid_count=update_uid_count,
-                        delete_uid_count=delete_uid_count)
+                        download_uid_count=len(unknown_uids))
 
             if self.folder_name == crispin_client.folder_names()['inbox']:
                 # We don't do an initial dedupe for Inbox because we do thread
@@ -106,23 +97,22 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                 # downloaded, we miiight not have the whole thread. This means
                 # that restarts cause duplicate work, but hopefully these
                 # folders aren't too huge.
-                message_download_stack = LifoQueue()
+                download_stack = GMessageStack()
                 flags = crispin_client.flags(unknown_uids)
-                for uid in unknown_uids:
+                for uid in sorted(unknown_uids):
                     if uid in flags:
-                        message_download_stack.put(
+                        download_stack.put(
                             GMessage(uid, remote_g_metadata[uid],
                                      flags[uid].flags, flags[uid].labels))
-                new_uid_poller = spawn(self.__check_new_g_thrids,
-                                       message_download_stack)
+                change_poller = spawn(self.poll_for_changes, download_stack)
                 self.__download_queued_threads(crispin_client,
-                                               message_download_stack)
+                                               download_stack)
             elif self.folder_name in uid_download_folders(crispin_client):
                 full_download = self.__deduplicate_message_download(
                     crispin_client, remote_g_metadata, unknown_uids)
-                add_uids_to_stack(full_download, uid_download_stack)
-                new_uid_poller = spawn(self.check_new_uids, uid_download_stack)
-                self.download_uids(crispin_client, uid_download_stack)
+                download_stack = UIDStack(full_download)
+                change_poller = spawn(self.poll_for_changes, download_stack)
+                self.download_uids(crispin_client, download_stack)
             else:
                 raise MailsyncError(
                     'Unknown Gmail sync folder: {}'.format(self.folder_name))
@@ -132,10 +122,22 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
             rm_cache(remote_g_metadata_cache_file(self.account_id,
                                                   self.folder_name))
         finally:
-            if new_uid_poller is not None:
-                new_uid_poller.kill()
+            if change_poller is not None:
+                change_poller.kill()
 
-    def highestmodseq_callback(self, crispin_client, new_uids, updated_uids):
+    def poll_impl(self):
+        with self.conn_pool.get() as crispin_client:
+            crispin_client.select_folder(self.folder_name, uidvalidity_cb)
+            if self.folder_name == crispin_client.folder_names()['inbox']:
+                download_stack = GMessageStack()
+            else:
+                download_stack = UIDStack()
+            self.check_uid_changes(crispin_client, download_stack,
+                                   async_download=False)
+            self.__idle_wait(crispin_client)
+
+    def highestmodseq_callback(self, crispin_client, new_uids, updated_uids,
+                               download_stack, async_download):
         uids = new_uids + updated_uids
         g_metadata = crispin_client.g_metadata(uids)
         to_download = self.__deduplicate_message_download(
@@ -143,19 +145,19 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
 
         if self.folder_name == crispin_client.folder_names()['inbox']:
             flags = crispin_client.flags(to_download)
-            message_download_stack = LifoQueue()
             for uid in to_download:
                 if uid in flags and uid in g_metadata:
                     # IMAP will just return no data for a UID if it's
                     # disappeared from the folder in the meantime.
-                    message_download_stack.put(GMessage(
-                        uid, g_metadata[uid], flags[uid].flags,
-                        flags[uid].labels))
-            self.__download_queued_threads(crispin_client,
-                                           message_download_stack)
+                    download_stack.put(GMessage(uid, g_metadata[uid],
+                                                flags[uid].flags,
+                                                flags[uid].labels))
+            if not async_download:
+                self.__download_threads(crispin_client, download_stack)
         elif self.folder_name in uid_download_folders(crispin_client):
-            uid_download_stack = uid_list_to_stack(to_download)
-            self.download_uids(crispin_client, uid_download_stack)
+            download_stack.update_from(to_download)
+            if not async_download:
+                self.download_uids(crispin_client, download_stack)
         else:
             raise MailsyncError(
                 'Unknown Gmail sync folder: {}'.format(self.folder_name))
@@ -164,7 +166,6 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
         assert self.folder_name == crispin_client.selected_folder_name, \
             "crispin selected folder isn't as expected"
         remote_g_metadata = None
-        update_uid_count = 0
 
         with mailsync_session_scope() as db_session:
             saved_folder_info = common.get_folder_info(
@@ -173,9 +174,8 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                                           i.highestmodseq)
         if saved_highestmodseq is not None:
             # If there's no cached validity we probably haven't run before.
-            remote_g_metadata, update_uid_count = \
-                self.__retrieve_saved_g_metadata(crispin_client, uids,
-                                                 saved_highestmodseq)
+            remote_g_metadata = self.__retrieve_saved_g_metadata(
+                crispin_client, uids, saved_highestmodseq)
 
         if remote_g_metadata is None:
             remote_g_metadata = crispin_client.g_metadata(
@@ -191,84 +191,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                                       crispin_client.selected_highestmodseq)
             db_session.commit()
 
-        return remote_g_metadata, update_uid_count
-
-    def __check_new_g_thrids(self, message_download_stack):
-        """
-        Check for new X-GM-THRIDs and add them to the download stack.
-
-        We do this by comparing local UID lists to remote UID lists,
-        maintaining the invariant that (stack uids)+(local uids) == (remote
-        uids).
-
-        We also remove local messages that have disappeared from the remote,
-        since it's totally probable that users will be archiving mail as the
-        initial sync goes on.
-
-        We grab a new IMAP connection from the pool for this to isolate its
-        actions from whatever the main greenlet may be doing.
-
-        Runs until killed. (Intended to be run in a greenlet.)
-
-        """
-        with connection_pool(self.account_id).get() as crispin_client:
-            crispin_client.select_folder(self.folder_name,
-                                         uidvalidity_cb(self.account_id))
-            while True:
-                log.info('Checking for new/deleted messages during initial '
-                         'sync.')
-                remote_uids = set(crispin_client.all_uids())
-                # We lock this section to make sure no messages are being
-                # modified in the database while we make sure the queue is in a
-                # good state.
-                with self.syncmanager_lock:
-                    with mailsync_session_scope() as db_session:
-                        local_uids = common.all_uids(self.account_id,
-                                                     db_session,
-                                                     self.folder_name)
-                        stack_uids = {gm.uid for gm in
-                                      message_download_stack.queue}
-                        local_with_pending_uids = local_uids | stack_uids
-                        deleted_uids = self.remove_deleted_uids(
-                            db_session, local_uids, remote_uids)
-                        log.info(deleted_uid_count=len(deleted_uids))
-
-                    # filter out messages that have disappeared on the remote
-                    # side
-                    new_message_download_stack = [gm for gm in
-                                                  message_download_stack.queue
-                                                  if gm.uid in remote_uids]
-
-                    # add in any new uids from the remote
-                    new_uids = [uid for uid in remote_uids if uid not in
-                                local_with_pending_uids]
-                    flags = crispin_client.flags(new_uids)
-                    g_metadata = crispin_client.g_metadata(new_uids)
-                    log.info('adding new messages to download queue',
-                             count=min(len(flags), len(g_metadata)))
-                    for new_uid in new_uids:
-                        # could have disappeared from the folder in the
-                        # meantime
-                        if new_uid in flags and new_uid in g_metadata:
-                            new_message_download_stack.append(
-                                GMessage(new_uid, g_metadata[new_uid],
-                                         flags[new_uid].flags,
-                                         flags[new_uid].labels))
-                    message_download_stack.queue = sorted(
-                        new_message_download_stack, key=lambda m: m.uid)
-
-                    with mailsync_session_scope() as db_session:
-                        self.update_uid_counts(
-                            db_session,
-                            remote_uid_count=len(remote_uids),
-                            download_uid_count=message_download_stack.qsize(),
-                            delete_uid_count=len(deleted_uids))
-
-                log.info('idling', timeout=self.poll_frequency)
-                crispin_client.conn.idle()
-                crispin_client.conn.idle_check(timeout=self.poll_frequency)
-                crispin_client.conn.idle_done()
-                log.info('IDLE detected changes or timeout reached')
+        return remote_g_metadata
 
     def __deduplicate_message_download(self, crispin_client, remote_g_metadata,
                                        uids):
@@ -334,7 +257,6 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
             return new_uid
 
     def download_and_commit_uids(self, crispin_client, folder_name, uids):
-        log.info('downloading uids', uids=uids)
         raw_messages = safe_download(crispin_client, uids)
         with self.syncmanager_lock:
             # there is the possibility that another green thread has already
@@ -375,26 +297,25 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
         # create a new crispin client for querying All Mail.
         with connection_pool(self.account_id).get() as all_mail_crispin_client:
             all_mail_crispin_client.select_folder(
-                crispin_client.folder_names()['all'],
-                uidvalidity_cb(self.account_id))
+                crispin_client.folder_names()['all'], uidvalidity_cb)
 
             # Since we do thread expansion, for any given thread, even if we
             # already have the UID in the given GMessage downloaded, we may not
             # have _every_ message in the thread. We have to expand it and make
             # sure we have all messages.
             while not message_download_stack.empty():
-                message = message_download_stack.get_nowait()
+                message = message_download_stack.get()
                 # Don't try to re-download any messages that are in the same
                 # thread. (Putting this _before_ the download to guarantee no
                 # context switches happen in the meantime; we _should_
                 # re-download if another message arrives on the thread.)
-                processed_msgs = [m for m in message_download_stack.queue if
-                                  m.g_metadata.thrid ==
-                                  message.g_metadata.thrid]
-                processed_msgs.append(message)
-                message_download_stack.queue = [
-                    m for m in message_download_stack.queue if
-                    m.g_metadata.thrid != message.g_metadata.thrid]
+                msgs_to_process = [m for m in message_download_stack if
+                                   m.g_metadata.thrid ==
+                                   message.g_metadata.thrid]
+                msgs_to_process.append(message)
+                message_download_stack.discard([
+                    m for m in message_download_stack if
+                    m.g_metadata.thrid == message.g_metadata.thrid])
                 thread_uids = all_mail_crispin_client.expand_thread(
                     message.g_metadata.thrid)
                 thread_g_metadata = all_mail_crispin_client.g_metadata(
@@ -410,16 +331,17 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                     # separately make sure we have ImapUids recorded for this
                     # folder (used in progress tracking, queuing, and delete
                     # detection).
-                    log.debug('adding imapuid rows', count=len(processed_msgs))
+                    log.debug('adding imapuid rows',
+                              count=len(msgs_to_process))
                     with mailsync_session_scope() as db_session:
                         acc = db_session.query(GmailAccount).get(
                             crispin_client.account_id)
-                        for msg in processed_msgs:
+                        for msg in msgs_to_process:
                             add_new_imapuid(db_session, msg, self.folder_name,
                                             acc)
 
                 report_progress(self.account_id, self.folder_name,
-                                len(processed_msgs),
+                                len(msgs_to_process),
                                 message_download_stack.qsize())
             log.info('Message download queue emptied')
         # Intentionally don't report which UIDVALIDITY we've saved messages to
@@ -449,7 +371,6 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                                     saved_highestmodseq):
         log.info('Attempting to retrieve remote_g_metadata from cache')
 
-        update_uid_count = 0
         remote_g_metadata = get_cache(remote_g_metadata_cache_file(
             crispin_client.account_id, self.folder_name))
 
@@ -461,11 +382,11 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
             log.info('successfully retrieved remote_g_metadata cache',
                      object_count=len(remote_g_metadata))
             if crispin_client.selected_highestmodseq > saved_highestmodseq:
-                update_uid_count = self.__update_saved_g_metadata(
-                    crispin_client, remote_g_metadata, local_uids)
+                self.__update_saved_g_metadata(crispin_client,
+                                               remote_g_metadata, local_uids)
         else:
             log.info("No cached data found")
-        return remote_g_metadata, update_uid_count
+        return remote_g_metadata
 
     def __update_saved_g_metadata(self, crispin_client, remote_g_metadata,
                                   local_uids):
@@ -541,16 +462,6 @@ def g_msgids(account_id, session, in_):
         filter(Namespace.account_id == account_id,
                Message.g_msgid.in_(in_)).all()
     return {g_msgid for g_msgid, in query}
-
-
-def g_metadata(account_id, session, folder_name):
-    query = session.query(ImapUid.msg_uid, Message.g_msgid, Message.g_thrid)\
-        .filter(ImapUid.account_id == account_id,
-                Folder.name == folder_name,
-                ImapUid.message_id == Message.id)
-
-    return dict([(uid, dict(msgid=g_msgid, thrid=g_thrid))
-                 for uid, g_msgid, g_thrid in query])
 
 
 def remote_g_metadata_cache_file(account_id, folder_name):
