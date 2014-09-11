@@ -40,7 +40,7 @@ from inbox.log import get_logger
 logger = get_logger()
 
 
-def uidvalidity_cb(db_session, account_id):
+def uidvalidity_cb(account_id, folder_name, select_info):
     """
     TODO: check that UidValidity hasn't changed since action was queued.
 
