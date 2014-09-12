@@ -48,7 +48,8 @@ def connect_account(provider, email, pw):
     except IMAPClient.Error as e:
         log.error('IMAP Login error during refresh auth token. '
                   'Account: {}, error: {}'.format(email, e))
-        if str(e) == '[ALERT] Invalid credentials (Failure)':
+        if str(e) == '[ALERT] Invalid credentials (Failure)' or \
+           str(e) == '[AUTHENTICATIONFAILED] OAuth authentication failed.':
             raise ValidationError(str(e))
         else:
             raise ConnectionError(str(e))
