@@ -110,7 +110,7 @@ class OAuthAccount(object):
                       account_id=self.id)
             raise
 
-    def _new_token(self, tok):
+    def _new_token(self):
         try:
             return new_token(self.provider_module,
                              self.refresh_token,
