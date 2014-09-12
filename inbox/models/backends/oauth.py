@@ -120,11 +120,14 @@ class OAuthAccount(object):
             log.error('ConnectionError',
                       message="Error while getting access token: " + str(e),
                       account_id=self.id)
+            raise
         except OAuthInvalidGrantError as e:
             log.error('InvalidGrantError',
                       message="Error while getting access token: " + str(e),
                       account_id=self.id)
+            raise
         except OAuthError as e:
             log.error('OAuthError',
                       message="Error while getting access token: " + str(e),
                       account_id=self.id)
+            raise
