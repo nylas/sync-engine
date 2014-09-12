@@ -23,8 +23,7 @@ def test_cancelled_event(google_events_provider):
              u'etag': u'"2632026776000000"',
              u'recurringEventId': u'f3jukdd49bc36smsui4rb35n18',
              u'id': u'f3jukdd49bc36smsui4rb35n18_20111007T063100Z'}
-    with pytest.raises(MalformedEventError):
-        google_events_provider.parse_event(event, cal_info)
+    assert not google_events_provider.parse_event(event, cal_info)
 
 
 def test_malformed_event(google_events_provider):
@@ -44,6 +43,22 @@ def test_malformed_event(google_events_provider):
     event['start'] = {'dateTime': 'asdf'}
     with pytest.raises(MalformedEventError):
         google_events_provider.parse_event(event, cal_info)
+
+    extra = {"kind": "calendar#events",
+             "defaultReminders": [{"minutes": 10, "method": "email"},
+                                  {"minutes": 10, "method": "popup"}],
+             "updated": "2014-09-10T19:06:18.617Z",
+             "summary": "blah",
+             "etag": "\"1410375978617000\"",
+             "timeZone": "America/Los_Angeles",
+             "nextSyncToken": "CKiR0vmr18ACEKiR0vmr18ACGAU=",
+             "accessRole": "owner"}
+    event = {"status": "cancelled", "kind": "calendar#event",
+             "originalStartTime": {"dateTime": "2011-11-09T16:00:00-08:00"},
+             "etag": "\"2715150890942000\"", "recurringEventId":
+             "59q8oasen6im4grvt90hlejing", "id":
+             "59q8oasen6im4grvt90hlejing_20111110T000000Z"}
+    google_events_provider.parse_event(event, extra)
 
 
 def test_no_reminders(google_events_provider):

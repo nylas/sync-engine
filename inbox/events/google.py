@@ -120,11 +120,11 @@ class GoogleEventsProvider(BaseEventProvider):
             # that have been cancelled (for that given series). As such,
             # since full support for dealing with single instances within
             # a reocurring event series is not added, right now we just
-            # treat this event as 'malformed'. -cg3
+            # ignore the event. -cg3
             # TODO: Add support for reocurring events (see ways to handle
             # this generically across providers)
             if 'status' in event and event['status'] == 'cancelled':
-                raise MalformedEventError()
+                return None
 
             title = event.get('summary', '')
             description = event.get('description', None)

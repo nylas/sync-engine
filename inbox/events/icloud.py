@@ -116,6 +116,11 @@ class ICloudEventsProvider(BaseEventProvider):
         # Next validate to get the dsInfo.dsid
         req = session.get(ICLOUD_VALIDATE)
         resp = req.json()
+
+        if 'dsInfo' not in resp:
+            self.log.warn('Event parse error', account_id=self.account_id)
+            return
+
         dsid = resp['dsInfo']['dsid']
 
         calendar_url = resp['webservices']['calendar']['url']
