@@ -1,8 +1,4 @@
 {
-"API_SERVER_LOC": "tcp://0.0.0.0:9999",
-"CRISPIN_SERVER_LOC": "tcp://0.0.0.0:9997",
-"WEBHOOK_SERVER_LOC": "tcp://0.0.0.0:9994",
-
 "MYSQL_DATABASE": "inbox",
 "MYSQL_USER": "root",
 "MYSQL_PASSWORD": "root",
@@ -25,8 +21,6 @@
 
 "STORE_MESSAGES_ON_S3": false,
 "MSG_PARTS_DIRECTORY": "/var/lib/inboxapp/parts",
-
-"VAULT_TYPE": "local",
 
 "EMAIL_EXCEPTIONS": false,
 "SENTRY_EXCEPTIONS": false

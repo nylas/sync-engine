@@ -56,7 +56,7 @@ def main(prod, config, process_num):
 
     log = get_logger()
     log.info('start',
-             components=['mail sync', 'webhooks', 'contact sync'],
+             components=['mail sync', 'contact sync'],
              host=platform.node(), process_num=process_num,
              total_processes=total_processes,
              recursion_limit=sys.getrecursionlimit())

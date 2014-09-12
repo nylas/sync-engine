@@ -3,7 +3,6 @@ import time
 import functools
 
 import gevent
-import zerorpc
 
 from inbox.log import get_logger, log_uncaught_errors
 from inbox.mailsync.reporting import report_killed
@@ -100,21 +99,6 @@ def retry_and_report_killed(func, account_id, folder_name=None, logger=None,
     return retry(func, exc_callback=exc_callback,
                  fail_callback=fail_callback, retry_classes=retry_classes,
                  fail_classes=fail_classes)()
-
-
-def make_zerorpc(cls, location):
-    assert location, "Location to bind for %s cannot be none!" % cls
-
-    def m():
-        """ Exposes `cls` as a ZeroRPC server on the given address+port. """
-        s = zerorpc.Server(cls())
-        s.bind(location)
-        log.info("ZeroRPC: Starting %s at %s" % (cls.__name__, location))
-        s.run()
-    # By default, when an uncaught error is thrown inside a greenlet, gevent
-    # will print the stacktrace to stderr and kill the greenlet. Here we're
-    # wrapping m in order to also log uncaught errors to disk.
-    return gevent.Greenlet.spawn(retry_with_logging, m)
 
 
 def print_dots():

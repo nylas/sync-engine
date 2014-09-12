@@ -6,7 +6,7 @@ from flask import Response
 
 from inbox.models import (Message, Part, Contact, Calendar, Event,
                           Participant, Time, TimeSpan, Date, DateSpan,
-                          Thread, Namespace, Block, Webhook, Lens, Tag)
+                          Thread, Namespace, Block, Tag)
 
 
 def format_address_list(addresses):
@@ -189,41 +189,6 @@ def encode(obj, namespace_public_id=None):
                 'message_id': obj.message.public_id,
             })
         return resp
-
-    elif isinstance(obj, Webhook):
-        resp = encode(obj.lens, namespace_public_id)
-        # resp is deliberately created in this order so that the 'id'
-        # and 'object' values of the webhook and not the lens are
-        # returned.
-        resp.update({
-            'id': obj.public_id,
-            'object': 'webhook',
-            'namespace_id': _get_namespace_public_id(obj),
-            'callback_url': obj.callback_url,
-            'failure_notify_url': obj.failure_notify_url,
-            'include_body': obj.include_body,
-            'active': obj.active,
-        })
-        return resp
-
-    elif isinstance(obj, Lens):
-        return {
-            'id': obj.public_id,
-            'object': 'lens',
-            'namespace_id': _get_namespace_public_id(obj),
-            'to': obj.to_addr,
-            'from': obj.from_addr,
-            'cc': obj.cc_addr,
-            'bcc': obj.bcc_addr,
-            'any_email': obj.any_email,
-            'subject': obj.subject,
-            'thread_id': obj.thread_public_id,
-            'filename': obj.filename,
-            'started_before': obj.started_before,
-            'started_after': obj.started_after,
-            'last_message_before': obj.last_message_before,
-            'last_message_after': obj.last_message_after,
-        }
 
     elif isinstance(obj, Tag):
         return {

@@ -1,8 +1,4 @@
 {
-"API_SERVER_LOC": "tcp://0.0.0.0:9999",
-"CRISPIN_SERVER_LOC": "tcp://0.0.0.0:9997",
-"WEBHOOK_SERVER_LOC": "tcp://0.0.0.0:9994",
-
 "MYSQL_DATABASE": "test",
 "MYSQL_USER": "inboxtest",
 "MYSQL_PASSWORD": "inboxtest",
@@ -28,8 +24,6 @@
 
 "STORE_MESSAGES_ON_S3": false,
 "MSG_PARTS_DIRECTORY": "tests/data/parts",
-
-"VAULT_TYPE": "local",
 
 "EMAIL_EXCEPTIONS": false,
 "SENTRY_EXCEPTIONS": false

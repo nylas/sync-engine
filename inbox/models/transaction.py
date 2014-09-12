@@ -49,8 +49,8 @@ class Transaction(MailSyncBase, Revision, HasPublicID):
     def take_snapshot(self, obj):
         """Record the API's representation of `obj` at the time this
         transaction is generated, as well as any other properties we want to
-        have available in the transaction log. Used for client syncing and
-        webhooks."""
+        have available in the transaction log. Used for delta syncing and
+        the ping API."""
         from inbox.api.kellogs import encode
         self.public_snapshot = encode(obj)
 

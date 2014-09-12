@@ -1,15 +1,14 @@
 import os
 
-import zerorpc
 from datetime import datetime
-from flask import request, g, Blueprint, make_response, Response
+from flask import request, g, Blueprint, make_response
 from flask import jsonify as flask_jsonify
 from flask.ext.restful import reqparse
 from sqlalchemy import asc, or_
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import subqueryload
 
-from inbox.models import (Message, Block, Part, Thread, Namespace, Webhook,
+from inbox.models import (Message, Block, Part, Thread, Namespace,
                           Tag, Contact, Calendar, Event, Participant)
 from inbox.api.kellogs import APIEncoder
 from inbox.api import filtering
@@ -20,7 +19,6 @@ from inbox.api.validation import (InputError, get_tags, get_attachments,
                                   bounded_str, strict_parse_args, limit,
                                   valid_event_action, valid_rsvp,
                                   ValidatableArgument)
-from inbox.config import config
 from inbox import events, contacts, sendmail
 from inbox.log import get_logger
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
@@ -935,70 +933,6 @@ def calendar_delete_api(public_id):
                                          public_id)
 
     return g.encoder.jsonify(result)
-
-
-##
-# Webhooks
-##
-def get_webhook_client():
-    if not hasattr(g, 'webhook_client'):
-        g.webhook_client = zerorpc.Client()
-        g.webhook_client.connect(config.get('WEBHOOK_SERVER_LOC'))
-    return g.webhook_client
-
-
-@app.route('/webhooks/', methods=['GET'])
-def webhooks_read_all_api():
-    return g.encoder.jsonify(g.db_session.query(Webhook).filter(
-        Webhook.namespace_id == g.namespace.id).all())
-
-
-@app.route('/webhooks/', methods=['POST'])
-def webhooks_create_api():
-    try:
-        parameters = request.get_json(force=True)
-        result = get_webhook_client().register_hook(g.namespace.id, parameters)
-        return Response(result, mimetype='application/json')
-    except zerorpc.RemoteError:
-        return err(400, 'Malformed webhook request')
-
-
-@app.route('/webhooks/<public_id>', methods=['GET', 'PUT'])
-def webhooks_read_update_api(public_id):
-    try:
-        valid_public_id(public_id)
-    except InputError:
-        return err(400, 'Invalid webhook id {}'.format(public_id))
-    if request.method == 'GET':
-        try:
-            hook = g.db_session.query(Webhook).filter(
-                Webhook.public_id == public_id,
-                Webhook.namespace_id == g.namespace.id).one()
-            return g.encoder.jsonify(hook)
-        except NoResultFound:
-            return err(404, "Couldn't find webhook with id {}"
-                       .format(public_id))
-
-    if request.method == 'PUT':
-        data = request.get_json(force=True)
-        # We only support updates to the 'active' flag.
-        if data.keys() != ['active']:
-            return err(400, 'Malformed webhook request')
-
-        try:
-            if data['active']:
-                get_webhook_client().start_hook(public_id)
-            else:
-                get_webhook_client().stop_hook(public_id)
-            return g.encoder.jsonify({"success": True})
-        except zerorpc.RemoteError:
-            return err(404, "Couldn't find webhook with id {}"
-                       .format(public_id))
-
-
-@app.route('/webhooks/<public_id>', methods=['DELETE'])
-def webhooks_delete_api(public_id):
-    raise NotImplementedError
 
 
 ##
