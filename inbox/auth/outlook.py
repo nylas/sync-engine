@@ -84,6 +84,4 @@ def connect_account(provider, email, pw):
 
 
 def verify_account(account):
-    return oauth_verify_account(account.provider,
-                                account.email_address,
-                                account.access_token)
+    return oauth_verify_account(account)
