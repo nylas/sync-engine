@@ -12,6 +12,8 @@ __provider_map__ = {'gmail': GoogleEventsProvider,
                     'outlook': OutlookEventsProvider,
                     'icloud': ICloudEventsProvider}
 
+__provider_poll_frequency__ = {'outlook': 1500}
+
 
 class EventSync(BaseSync):
     """Per-account event sync engine.
@@ -30,7 +32,11 @@ class EventSync(BaseSync):
     log: logging.Logger
         Logging handler.
     """
-    def __init__(self, provider_name, account_id, poll_frequency=30):
+    def __init__(self, provider_name, account_id, poll_frequency=None):
+        if poll_frequency is None:
+            poll_frequency = __provider_poll_frequency__.get(provider_name,
+                                                             300)
+
         self._provider_name = provider_name
         self.log = logger.new(account_id=account_id, component='event sync')
         self.log.info('Begin syncing Events...')
