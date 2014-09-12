@@ -102,9 +102,23 @@ class OutlookEventsProvider(BaseEventProvider):
             resp = requests.get(path, params=params)
 
             if resp.status_code != 200:
-                self.log.error("Error obtaining events",
-                               provider=self.PROVIDER_NAME,
-                               account_id=self.account_id)
+                try:
+                    resp_data = resp.json()
+                    if 'error' in resp_data and 'code' in resp_data['error']:
+                        self.log.error("Error obtaining events",
+                                       message=resp_data['error']['code'],
+                                       provider=self.PROVIDER_NAME,
+                                       account_id=self.account_id)
+                    else:
+                        self.log.error("Error obtaining events",
+                                       provider=self.PROVIDER_NAME,
+                                       message="Invalid response from server.",
+                                       account_id=self.account_id)
+                except ValueError:
+                    self.log.error("Error obtaining events",
+                                   provider=self.PROVIDER_NAME,
+                                   message="Invalid response from server.",
+                                   account_id=self.account_id)
                 return
 
             response_items = resp.json()['data']
