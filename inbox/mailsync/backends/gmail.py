@@ -134,7 +134,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                 download_stack = UIDStack()
             self.check_uid_changes(crispin_client, download_stack,
                                    async_download=False)
-            self.__idle_wait(crispin_client)
+            self.idle_wait(crispin_client)
 
     def highestmodseq_callback(self, crispin_client, new_uids, updated_uids,
                                download_stack, async_download):

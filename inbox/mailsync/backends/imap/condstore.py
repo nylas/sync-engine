@@ -27,7 +27,7 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
             download_stack = UIDStack()
             self.check_uid_changes(crispin_client, download_stack,
                                    async_download=False)
-            self.__idle_wait(crispin_client)
+            self.idle_wait(crispin_client)
 
     @retry_crispin
     def poll_for_changes(self, download_stack):
@@ -35,7 +35,7 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
             while True:
                 self.check_uid_changes(crispin_client, download_stack,
                                        async_download=True)
-                self.__idle_wait(crispin_client)
+                self.idle_wait(crispin_client)
 
     def check_uid_changes(self, crispin_client, download_stack,
                           async_download):
@@ -99,7 +99,7 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
         if not async_download:
             self.download_uids(crispin_client, download_stack)
 
-    def __idle_wait(self, crispin_client):
+    def idle_wait(self, crispin_client):
         if self.folder_name.lower() in IDLE_FOLDERS:
             # Idle doesn't pick up flag changes, so we don't want to
             # idle for very long, or we won't detect things like
