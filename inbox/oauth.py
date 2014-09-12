@@ -45,18 +45,13 @@ def validate_token(provider_module, access_token):
     try:
         response = requests.get(validation_url +
                                 '?access_token=' + access_token)
-    except RequestsConnectionError, e:
-        log.error('access token validation failed', error=e)
-        raise ConnectionError()
+    except RequestsConnectionError as e:
+        raise ConnectionError(e)
 
     validation_dict = response.json()
 
     if 'error' in validation_dict:
-        assert validation_dict['error'] == 'invalid_token'
-        log.error('error validating access token',
-                  error=validation_dict['error'],
-                  error_description=validation_dict['error_description'])
-        raise OAuthValidationError()
+        raise OAuthValidationError(validation_dict['error'])
 
     return validation_dict
 
@@ -95,21 +90,12 @@ def new_token(provider_module, refresh_token, client_id=None,
     try:
         session_dict = response.json()
     except JSONDecodeError:
-        log.error("Couldn't convert response to json.",
-                  status_code=response.status_code,
-                  response=response.text)
-        raise ConnectionError()
+        raise ConnectionError("Invalid json: " + response.text)
 
     if u'error' in session_dict:
         if session_dict['error'] == 'invalid_grant':
-            log.error('refresh_token_invalid',
-                      client_id=client_id,
-                      provider=provider_module.PROVIDER)
-            raise OAuthInvalidGrantError('Could not get new token')
+            raise OAuthInvalidGrantError('Invalid refresh token.')
         else:
-            log.error('oauth_error',
-                      client_id=client_id,
-                      provider=provider_module.PROVIDER)
             raise OAuthError(session_dict['error'])
 
     return session_dict['access_token'], session_dict['expires_in']

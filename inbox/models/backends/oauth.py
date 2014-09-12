@@ -7,6 +7,10 @@ from datetime import datetime, timedelta
 from inbox.models.vault import vault
 from inbox.oauth import new_token, validate_token
 from inbox.basicauth import AuthError
+from inbox.basicauth import ConnectionError
+from inbox.oauth import (OAuthInvalidGrantError,
+                         OAuthValidationError,
+                         OAuthError)
 
 from inbox.log import get_logger
 log = get_logger()
@@ -40,12 +44,9 @@ class OAuthAccount(object):
                 return tok
         else:
             # first time getting access token, or perhaps it expired?
-            tok, expires = new_token(self.provider_module,
-                                     self.refresh_token,
-                                     self.client_id,
-                                     self.client_secret)
+            tok, expires = self._new_token()
 
-            validate_token(self.provider_module, tok)
+            self._validate_token(tok)
             self.set_access_token(tok, expires)
             return tok
 
@@ -72,14 +73,14 @@ class OAuthAccount(object):
                 return self.verify()
             else:
                 try:
-                    return validate_token(self.provider_module, tok)
+                    return self._validate_token(tok)
                 except AuthError:
                     del __volatile_tokens__[self.id]
                     raise
 
         else:
-            tok, expires = new_token(self.provider_module, self.refresh_token)
-            valid = validate_token(self.provider_module, tok)
+            tok, expires = self._new_token()
+            valid = self._validate_token(tok)
             self.set_access_token(tok, expires)
             return valid
 
@@ -94,3 +95,36 @@ class OAuthAccount(object):
             return
 
         __volatile_tokens__[self.id] = tok, expires
+
+    def _validate_token(self, tok):
+        try:
+            return validate_token(self.provider_module, tok)
+        except ConnectionError as e:
+            log.error('ConnectionError',
+                      message="Error while validating access token: " + str(e),
+                      account_id=self.id)
+            raise
+        except OAuthValidationError as e:
+            log.error('ValidationError',
+                      message="Error while validating access token: " + str(e),
+                      account_id=self.id)
+            raise
+
+    def _new_token(self, tok):
+        try:
+            return new_token(self.provider_module,
+                             self.refresh_token,
+                             self.client_id,
+                             self.client_secret)
+        except ConnectionError as e:
+            log.error('ConnectionError',
+                      message="Error while getting access token: " + str(e),
+                      account_id=self.id)
+        except OAuthInvalidGrantError as e:
+            log.error('InvalidGrantError',
+                      message="Error while getting access token: " + str(e),
+                      account_id=self.id)
+        except OAuthError as e:
+            log.error('OAuthError',
+                      message="Error while getting access token: " + str(e),
+                      account_id=self.id)
