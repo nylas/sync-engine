@@ -90,7 +90,7 @@ class OAuthAccount(object):
         # 10 should be safe)
         expires = datetime.utcnow() + timedelta(seconds=expires_in - 10)
         if datetime.utcnow() > expires:
-            log.error("Error setting expired access_token for {}"
+            log.error(u"Error setting expired access_token for {}"
                       .format(self.id))
             return
 
@@ -101,12 +101,14 @@ class OAuthAccount(object):
             return validate_token(self.provider_module, tok)
         except ConnectionError as e:
             log.error('ConnectionError',
-                      message="Error while validating access token: " + str(e),
+                      message=u"Error while validating access token: {}"
+                              .format(e),
                       account_id=self.id)
             raise
         except OAuthValidationError as e:
             log.error('ValidationError',
-                      message="Error while validating access token: " + str(e),
+                      message=u"Error while validating access token: {}"
+                              .format(e),
                       account_id=self.id)
             raise
 
@@ -118,16 +120,19 @@ class OAuthAccount(object):
                              self.client_secret)
         except ConnectionError as e:
             log.error('ConnectionError',
-                      message="Error while getting access token: " + str(e),
+                      message=u"Error while getting access token: {}"
+                              .format(e),
                       account_id=self.id)
             raise
         except OAuthInvalidGrantError as e:
             log.error('InvalidGrantError',
-                      message="Error while getting access token: " + str(e),
+                      message=u"Error while getting access token: {}"
+                              .format(e),
                       account_id=self.id)
             raise
         except OAuthError as e:
             log.error('OAuthError',
-                      message="Error while getting access token: " + str(e),
+                      message=u"Error while getting access token: {}"
+                              .format(e),
                       account_id=self.id)
             raise
