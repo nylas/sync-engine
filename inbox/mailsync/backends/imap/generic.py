@@ -321,6 +321,7 @@ class FolderSyncEngine(Greenlet):
         with db_session.no_autoflush:
             clean_subject = cleanup_subject(new_uid.message.subject)
             parent_threads = db_session.query(ImapThread).filter(
+                ImapThread.namespace_id == self.account_id,
                 ImapThread.subject.like(clean_subject)).all()
 
             if parent_threads == []:
