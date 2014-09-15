@@ -140,7 +140,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('63dc7f205da');
+INSERT INTO `alembic_version` VALUES ('159607944f52');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -573,8 +573,9 @@ CREATE TABLE `folder` (
   `updated_at` datetime NOT NULL,
   `deleted_at` datetime DEFAULT NULL,
   `canonical_name` varchar(191) DEFAULT NULL,
+  `identifier` varchar(191) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `account_id` (`account_id`,`name`,`canonical_name`),
+  UNIQUE KEY `account_id` (`account_id`,`name`,`canonical_name`,`identifier`),
   KEY `ix_folder_created_at` (`created_at`),
   KEY `ix_folder_deleted_at` (`deleted_at`),
   KEY `ix_folder_updated_at` (`updated_at`),
@@ -588,7 +589,7 @@ CREATE TABLE `folder` (
 
 LOCK TABLES `folder` WRITE;
 /*!40000 ALTER TABLE `folder` DISABLE KEYS */;
-INSERT INTO `folder` VALUES (1,1,'[Gmail]/Important','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'important'),(2,1,'Inbox','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'inbox'),(3,1,'[Gmail]/All Mail','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'all'),(4,1,'[Gmail]/Sent Mail','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'sent'),(5,1,'[Gmail]/Drafts','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'drafts');
+INSERT INTO `folder` VALUES (1,1,'[Gmail]/Important','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'important',NULL),(2,1,'Inbox','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'inbox',NULL),(3,1,'[Gmail]/All Mail','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'all',NULL),(4,1,'[Gmail]/Sent Mail','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'sent',NULL),(5,1,'[Gmail]/Drafts','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'drafts',NULL);
 /*!40000 ALTER TABLE `folder` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1455,4 +1456,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-09-15 17:05:17
+-- Dump completed on 2014-09-16  3:17:39

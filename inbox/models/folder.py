@@ -37,8 +37,12 @@ class Folder(MailSyncBase):
                          collation='utf8mb4_general_ci'), nullable=True)
     canonical_name = Column(String(MAX_FOLDER_NAME_LENGTH), nullable=True)
 
+    # We use an additional identifier for certain providers,
+    # for e.g. EAS uses it to store the eas_folder_id
+    identifier = Column(String(MAX_FOLDER_NAME_LENGTH), nullable=True)
+
     __table_args__ = (UniqueConstraint('account_id', 'name',
-                                       'canonical_name'),)
+                                       'canonical_name', 'identifier'),)
 
     @property
     def lowercase_name(self):
@@ -51,18 +55,20 @@ class Folder(MailSyncBase):
         return self.account.namespace
 
     @classmethod
-    def create(cls, account, name, session, canonical_name=None):
+    def create(cls, account, name, session, canonical_name=None,
+               identifier=None):
         if name is not None and len(name) > MAX_FOLDER_NAME_LENGTH:
             log.warning("Truncating long folder name for account {}; "
                         "original name was '{}'" .format(account.id, name))
             name = name[:MAX_FOLDER_NAME_LENGTH]
         obj = cls(account=account, name=name,
-                  canonical_name=canonical_name)
+                  canonical_name=canonical_name, identifier=identifier)
         session.add(obj)
         return obj
 
     @classmethod
-    def find_or_create(cls, session, account, name, canonical_name=None):
+    def find_or_create(cls, session, account, name, canonical_name=None,
+                       identifier=None):
         try:
             if name is not None and len(name) > MAX_FOLDER_NAME_LENGTH:
                 name = name[:MAX_FOLDER_NAME_LENGTH]
@@ -71,9 +77,12 @@ class Folder(MailSyncBase):
                 q = q.filter(func.lower(Folder.name) == func.lower(name))
             if canonical_name is not None:
                 q = q.filter_by(canonical_name=canonical_name)
+            if identifier is not None:
+                q = q.filter_by(identifier=identifier)
             obj = q.one()
         except NoResultFound:
-            obj = cls.create(account, name, session, canonical_name)
+            obj = cls.create(account, name, session, canonical_name,
+                             identifier)
         except MultipleResultsFound:
             log.info("Duplicate folder rows for folder {} for account {}"
                      .format(name, account.id))

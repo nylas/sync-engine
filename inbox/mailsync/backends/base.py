@@ -119,14 +119,14 @@ def gevent_check_join(log, threads, errmsg):
 
 
 def create_db_objects(account_id, db_session, log, folder_name, raw_messages,
-                      msg_create_fn, canonical_name=None):
+                      msg_create_fn, canonical_name=None, identifier=None):
     new_uids = []
     # TODO: Detect which namespace to add message to. (shared folders)
     # Look up message thread,
     acc = db_session.query(Account).get(account_id)
 
     folder = Folder.find_or_create(db_session, acc, folder_name,
-                                   canonical_name)
+                                   canonical_name, identifier)
 
     for msg in raw_messages:
         uid = msg_create_fn(db_session, acc, folder, msg)
