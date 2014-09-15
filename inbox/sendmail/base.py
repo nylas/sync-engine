@@ -95,7 +95,8 @@ def update_draft(db_session, account, original_draft, to_addr=None,
             if attr == 'sanitized_body':
                 # Update size, snippet too
                 original_draft.size = len(value)
-                original_draft.calculate_html_snippet(value)
+                original_draft.snippet = original_draft.calculate_html_snippet(
+                    value)
 
     update('to_addr', to_addr)
     update('cc_addr', cc_addr)
@@ -210,7 +211,7 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
         message.inbox_uid = version
 
         # Set the snippet
-        message.calculate_html_snippet(body)
+        message.snippet = message.calculate_html_snippet(body)
 
         # Associate attachments to the draft message
         for block in blocks:

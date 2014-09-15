@@ -327,14 +327,24 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         # TODO: also strip signatures.
         if html_part:
             assert '\r' not in html_part, "newlines not normalized"
-            stripped = extract_from_html(
+            extracted = extract_from_html(
                 html_part.encode('utf-8')).decode('utf-8').strip()
-            self.sanitized_body = unicode(stripped)
-            self.calculate_html_snippet(self.sanitized_body)
+            self.snippet = self.calculate_html_snippet(extracted)
+            # If quote-stripping left us with a blank message, store the
+            # original instead.
+            if self.snippet.strip():
+                self.sanitized_body = unicode(extracted)
+            else:
+                self.snippet = self.calculate_html_snippet(html_part)
+                self.sanitized_body = html_part
         elif plain_part:
-            stripped = extract_from_plain(plain_part).strip()
-            self.sanitized_body = plaintext2html(stripped, False)
-            self.calculate_plaintext_snippet(stripped)
+            extracted = extract_from_plain(plain_part).strip()
+            if extracted.strip():
+                self.snippet = self.calculate_plaintext_snippet(extracted)
+                self.sanitized_body = plaintext2html(extracted, False)
+            else:
+                self.snippet = self.calculate_plaintext_snippet(plain_part)
+                self.sanitized_body = plaintext2html(plain_part, False)
         else:
             self.sanitized_body = u''
             self.snippet = u''
@@ -343,10 +353,10 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         text = text.replace('<br>', ' ').replace('<br/>', ' '). \
             replace('<br />', ' ')
         text = strip_tags(text)
-        self.calculate_plaintext_snippet(text)
+        return self.calculate_plaintext_snippet(text)
 
     def calculate_plaintext_snippet(self, text):
-        self.snippet = ' '.join(text.split())[:self.SNIPPET_LENGTH]
+        return ' '.join(text.split())[:self.SNIPPET_LENGTH]
 
     @property
     def body(self):
