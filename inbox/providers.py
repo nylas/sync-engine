@@ -114,7 +114,7 @@ providers = {
         "imap": "imap.mail.me.com",
         "smtp": "smtp.mail.me.com:587",
         "auth": "password",
-        "events": True,
+        "events": False,
         "folder_map": {"Sent Messages": "sent",
                        "Deleted Messages": "trash"},
         "domains": ["icloud.com"],
