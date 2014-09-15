@@ -90,7 +90,8 @@ def update(namespace, db_session, event_public_id, update_dict):
 def delete(namespace, db_session, event_public_id):
     """ Delete the event with public_id = `event_public_id`. """
     event = db_session.query(Event).filter(
-        Event.public_id == event_public_id).one()
+        Event.public_id == event_public_id,
+        Event.account_id == namespace.account_id).one()
 
     db_session.delete(event)
     db_session.commit()
@@ -148,7 +149,8 @@ def update_calendar(namespace, db_session, calendar_public_id, update_dict):
 def delete_calendar(namespace, db_session, calendar_public_id):
     """ Delete the calendar with public_id = `calendar_public_id`. """
     calendar = db_session.query(Calendar).filter(
-        Calendar.public_id == calendar_public_id).first()
+        Calendar.public_id == calendar_public_id,
+        Calendar.account_id == namespace.account_id).first()
 
     db_session.delete(calendar)
     db_session.commit()
