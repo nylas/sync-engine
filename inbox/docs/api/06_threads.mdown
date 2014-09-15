@@ -82,7 +82,7 @@ Filters also allow you to make more complex queries like the one below, which sh
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=unread&any_email=mark@inboxapp.com&order_by=date
+GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=unread&any_email=mark@inboxapp.com
 ```
 
 Threads are returned in order of their latest message date, most recent first.

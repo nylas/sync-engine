@@ -69,14 +69,14 @@ List the 5 most recent unread threads:
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=unread&limit=5&order_by=date
+GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=unread&limit=5
 ```
 
 List threads that include `mark@inboxapp.com` as a participant and are unread, ordered by date:
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=unread&any_email=mark@inboxapp.com&order_by=date
+GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=unread&any_email=mark@inboxapp.com
 ```
 
 

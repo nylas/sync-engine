@@ -28,7 +28,7 @@ POST https://api.inboxapp.com/n/<namespace_id>/delta/generate_cursor
 ```
 :::json
 {
-    "start": "1401132646"
+    "start": 1401132646
 }
 ```
 
