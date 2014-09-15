@@ -15,13 +15,13 @@ __all__ = ['set_remote_archived', 'set_remote_starred', 'set_remote_unread',
            'remote_save_draft', 'remote_delete_draft', 'remote_delete']
 
 
-def get_thread_uids(db_session, thread_id):
+def get_thread_uids(db_session, thread_id, namespace_id):
     """A shortcut method to get uids of the messages in a thread
     thread_id: integer
     """
     opts = joinedload('messages').joinedload('imapuids').load_only('msg_uid')
-    return db_session.query(ImapThread).options(opts)\
-        .filter_by(id=thread_id).one()
+    return db_session.query(ImapThread).options(opts).filter_by(
+        namespace_id=namespace_id, id=thread_id).one()
 
 
 def set_remote_archived(account, thread_id, archived, db_session):
@@ -44,7 +44,7 @@ def set_remote_starred(account, thread_id, starred, db_session):
     def fn(account, db_session, crispin_client):
         uids = []
 
-        thread = get_thread_uids(db_session, thread_id)
+        thread = get_thread_uids(db_session, thread_id, account.namespace.id)
         for msg in thread.messages:
             uids.extend([uid.msg_uid for uid in msg.imapuids])
 
@@ -57,7 +57,7 @@ def set_remote_unread(account, thread_id, unread, db_session):
     def fn(account, db_session, crispin_client):
         uids = []
 
-        thread = get_thread_uids(db_session, thread_id)
+        thread = get_thread_uids(db_session, thread_id, account.namespace.id)
         for msg in thread.messages:
             uids.extend([uid.msg_uid for uid in msg.imapuids])
         crispin_client.set_unread(uids, unread)
@@ -87,7 +87,7 @@ def remote_move(account, thread_id, from_folder, to_folder, db_session,
         crispin_client.select_folder(from_folder, uidvalidity_cb)
         uids = []
 
-        thread = get_thread_uids(db_session, thread_id)
+        thread = get_thread_uids(db_session, thread_id, account.namespace.id)
         for msg in thread.messages:
             uids.extend([uid.msg_uid for uid in msg.imapuids])
 
@@ -113,7 +113,7 @@ def remote_copy(account, thread_id, from_folder, to_folder, db_session):
            to_folder not in folders['extra']:
                 raise Exception("Unknown to_folder '{}'".format(to_folder))
 
-        thread = get_thread_uids(db_session, thread_id)
+        thread = get_thread_uids(db_session, thread_id, account.namespace.id)
         for msg in thread.messages:
             uids.extend([uid.msg_uid for uid in msg.imapuids])
 
@@ -128,7 +128,8 @@ def remote_delete(account, thread_id, folder_name, db_session):
         if folder_name == crispin_client.folder_names()['drafts']:
             uids = []
 
-            thread = get_thread_uids(db_session, thread_id)
+            thread = get_thread_uids(db_session, thread_id,
+                                     account.namespace.id)
             for msg in thread.messages:
                 uids.extend([uid.msg_uid for uid in msg.imapuids])
 
