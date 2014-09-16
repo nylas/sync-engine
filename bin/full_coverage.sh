@@ -32,7 +32,7 @@ coverage run --source /vagrant/inbox -p -m py.test --junitxml /vagrant/tests/out
 # Start the services
 run_for_cover inbox-start
 sleep 4
-run_for_cover inbox-api --env=prod
+run_for_cover inbox-api --prod
 
 # Run the system tests
 py.test tests/system/test_sending.py --tb=short -s
