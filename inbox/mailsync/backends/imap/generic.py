@@ -95,14 +95,12 @@ def _pool(account_id):
         raise MailsyncDone()
 
 
-class Stack(object):
-    """Thin convenience wrapper around gevent.queue.LifoQueue."""
-    def __init__(self, key, initial_elements=None):
-        self.key = key
+class UIDStack(object):
+    """Thin convenience wrapper around gevent.queue.LifoQueue.
+    Each entry in the stack is a pair (uid, metadata), where the metadata may
+    be None."""
+    def __init__(self):
         self._lifoqueue = LifoQueue()
-        if initial_elements is not None:
-            self._lifoqueue.queue = sorted(list(initial_elements),
-                                           key=self.key)
 
     def empty(self):
         return self._lifoqueue.empty()
@@ -115,12 +113,8 @@ class Stack(object):
         # gevent. Can update with gevent version 1.0.2.
         return self._lifoqueue.queue[-1]
 
-    def put(self, obj):
-        self._lifoqueue.put(obj)
-
-    def update_from(self, objects):
-        for obj in sorted(list(objects), key=self.key):
-            self._lifoqueue.put(obj)
+    def put(self, uid, metadata):
+        self._lifoqueue.put((uid, metadata))
 
     def discard(self, objects):
         self._lifoqueue.queue = [item for item in self._lifoqueue.queue if item
@@ -132,11 +126,6 @@ class Stack(object):
     def __iter__(self):
         for item in self._lifoqueue.queue:
             yield item
-
-
-class UIDStack(Stack):
-    def __init__(self, initial_elements=None):
-        Stack.__init__(self, key=int, initial_elements=initial_elements)
 
 
 class FolderSyncEngine(Greenlet):
@@ -222,6 +211,7 @@ class FolderSyncEngine(Greenlet):
     def initial_sync(self):
         log.bind(state='initial')
         log.info('starting initial sync')
+
         with self.conn_pool.get() as crispin_client:
             crispin_client.select_folder(self.folder_name, uidvalidity_cb)
             self.initial_sync_impl(crispin_client)
@@ -264,7 +254,9 @@ class FolderSyncEngine(Greenlet):
 
             local_uids = set(local_uids) - deleted_uids
             new_uids = set(remote_uids) - local_uids
-            download_stack = UIDStack(new_uids)
+            download_stack = UIDStack()
+            for uid in sorted(new_uids):
+                download_stack.put(uid, None)
 
             with mailsync_session_scope() as db_session:
                 self.update_uid_counts(
@@ -301,7 +293,7 @@ class FolderSyncEngine(Greenlet):
         while not download_stack.empty():
             # Defer removing UID from queue until after it's committed to the
             # DB' to avoid races with poll_for_changes().
-            uid = download_stack.peek()
+            uid, _ = download_stack.peek()
             self.download_and_commit_uids(crispin_client, self.folder_name,
                                           [uid])
             download_stack.get()
@@ -424,11 +416,12 @@ class FolderSyncEngine(Greenlet):
                 local_with_pending_uids = local_uids | stack_uids
                 self.remove_deleted_uids(db_session, local_uids, remote_uids)
                 # filter out messages that have disappeared on the remote side
+                # STOPSHIP(emfree)
                 download_stack.discard([u for u in download_stack if u not in
                                         remote_uids])
-                for uid in remote_uids:
+                for uid in sorted(remote_uids):
                     if uid not in local_with_pending_uids:
-                        download_stack.put(uid)
+                        download_stack.put(uid, None)
         if not async_download:
             self.download_uids(crispin_client, download_stack)
             with mailsync_session_scope() as db_session:

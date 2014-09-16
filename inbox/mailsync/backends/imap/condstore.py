@@ -73,19 +73,22 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
         new_uidvalidity = crispin_client.selected_uidvalidity
         changed_uids = crispin_client.new_and_updated_uids(saved_highestmodseq)
         remote_uids = crispin_client.all_uids()
-        with mailsync_session_scope() as db_session:
-            local_uids = common.all_uids(self.account_id, db_session,
-                                         self.folder_name)
+        with self.syncmanager_lock:
+            with mailsync_session_scope() as db_session:
+                local_uids = common.all_uids(self.account_id, db_session,
+                                             self.folder_name)
+                self.remove_deleted_uids(db_session, local_uids, remote_uids)
+            stack_uids = {uid for uid in download_stack}
+            local_with_pending_uids = local_uids | stack_uids
+            new, updated = new_or_updated(changed_uids,
+                                          local_with_pending_uids)
         if changed_uids:
-            new, updated = new_or_updated(changed_uids, local_uids)
             log.info(new_uid_count=len(new), updated_uid_count=len(updated))
             self.update_metadata(crispin_client, updated)
             self.highestmodseq_callback(crispin_client, new, updated,
                                         download_stack, async_download)
 
         with mailsync_session_scope() as db_session:
-            with self.syncmanager_lock:
-                self.remove_deleted_uids(db_session, local_uids, remote_uids)
             self.update_uid_counts(db_session,
                                    remote_uid_count=len(remote_uids))
             common.update_folder_info(self.account_id, db_session,
@@ -95,7 +98,8 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
 
     def highestmodseq_callback(self, crispin_client, new_uids, updated_uids,
                                download_stack, async_download):
-        download_stack.update_from(new_uids)
+        for uid in sorted(new_uids):
+            download_stack.put(uid, None)
         if not async_download:
             self.download_uids(crispin_client, download_stack)
 
