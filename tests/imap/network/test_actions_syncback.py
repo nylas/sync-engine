@@ -11,7 +11,7 @@ THREAD_ID = 2
 # syncback methods, not to do a system-level test here.
 
 
-def test_archive_move_syncback(db):
+def test_archive_move_syncback(db, config):
     from inbox.actions.backends.gmail import (set_remote_archived,
                                               remote_move, uidvalidity_cb)
     from inbox.models.backends.imap import ImapAccount, ImapThread
@@ -43,7 +43,7 @@ def test_archive_move_syncback(db):
         assert archive_uids, "thread missing from archive"
 
 
-def test_copy_delete_syncback(db):
+def test_copy_delete_syncback(db, config):
     from inbox.actions.backends.gmail import (_remote_copy, _remote_delete,
                                               uidvalidity_cb)
     from inbox.models.backends.imap import ImapAccount, ImapThread
@@ -79,7 +79,7 @@ def test_copy_delete_syncback(db):
         assert not testlabel_uids, "thread still present in testlabel"
 
 
-def test_remote_unread_syncback(db):
+def test_remote_unread_syncback(db, config):
     from inbox.actions.backends.gmail import set_remote_unread, uidvalidity_cb
     from inbox.models.backends.imap import ImapAccount, ImapThread
 

@@ -1,8 +1,8 @@
 import json
 import os
 import subprocess
-
 from gevent import monkey
+
 import zerorpc
 from pytest import fixture, yield_fixture
 
@@ -35,9 +35,10 @@ def absolute_path(path):
 
 @fixture(scope='session', autouse=True)
 def config():
-    from inbox.config import load_config
-    config = load_config(env='test')
-
+    from inbox.config import config
+    assert 'INBOX_ENV' in os.environ and \
+        os.environ['INBOX_ENV'] == 'test', \
+        "INBOX_ENV must be 'test' to run tests"
     return config
 
 
@@ -151,7 +152,6 @@ class TestDB(object):
         from inbox.models.session import InboxSession
         from inbox.ignition import main_engine
         engine = main_engine()
-
         # Set up test database
         self.session = InboxSession(engine, versioned=False)
         self.engine = engine

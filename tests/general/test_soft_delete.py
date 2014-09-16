@@ -9,7 +9,7 @@ from sqlalchemy.orm.exc import NoResultFound
 ACCOUNT_ID = 1
 
 
-def test_soft_delete(db):
+def test_soft_delete(db, config):
     from inbox.models import Folder, Message
     from inbox.models.backends.imap import ImapUid
     f = Folder(name='DOES NOT EXIST', account_id=ACCOUNT_ID)

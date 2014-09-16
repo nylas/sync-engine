@@ -2,11 +2,17 @@ import gc
 import os
 import sys
 import subprocess
+import json
 from pkg_resources import require, DistributionNotFound, VersionConflict
 
 import sqlalchemy
 from alembic.config import Config as alembic_config
 from alembic.script import ScriptDirectory
+
+from inbox.config import config
+
+from inbox.log import get_logger
+log = get_logger()
 
 
 def _absolute_path(relative_path):
@@ -43,7 +49,7 @@ def check_requirements(requirements_path):
             .format('\n\t'.join(failed_deps)))
 
 
-def check_db(log):
+def check_db():
     """ Checks the database revision against the known alembic migrations. """
     from inbox.ignition import main_engine
     inbox_db_engine = main_engine(pool_size=1, max_overflow=0)
@@ -80,8 +86,7 @@ def check_db(log):
             log.info('[OK] Database scheme matches latest')
     else:
         raise Exception(
-            'Un-stamped database! `bin/create-db` should have done this...'
-            'bailing.')
+            'Un-stamped database! `bin/create-db` should have done this... bailing.')
 
 
 def check_sudo():
@@ -89,7 +94,7 @@ def check_sudo():
         raise Exception("Don't run Inbox as root!")
 
 
-def clean_pyc(log):
+def clean_pyc():
     # Keep it clean for development
     log.debug('Removing pyc files...')
     for root, dir, files in os.walk('./src'):
@@ -105,19 +110,35 @@ def git_rev():
     return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'])
 
 
-def preflight(env):
-    # Load config before anything
-    from inbox.config import load_config
-    load_config(env)
+def load_overrides(file_path):
+    """
+    Convenience function for overriding default configuration.
 
-    from inbox.log import get_logger
-    log = get_logger()
+    file_path : <string> the full path to a file containing valid
+                JSON for configuration overrides
+    """
+    with open(file_path) as data_file:
+        try:
+            overrides = json.load(data_file)
+        except ValueError:
+            sys.exit('Failed parsing configuration file at {}'
+                     .format(file_path))
+        if not overrides:
+            log.debug('No config overrides found.')
+            return
+        assert isinstance(overrides, dict), \
+            'overrides must be dictionary'
+        config.update(overrides)
+        log.debug('Imported config overrides {}'.format(
+            overrides.keys()))
 
+
+def preflight():
     check_sudo()
     requirements_path = _absolute_path('../../requirements.txt')
     check_requirements(requirements_path)
-    clean_pyc(log)
-    check_db(log)
+    clean_pyc()
+    check_db()
 
     # Print a traceback when the process receives signal SIGSEGV, SIGFPE,
     # SIGABRT, SIGBUS or SIGILL

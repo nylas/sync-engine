@@ -9,7 +9,7 @@ ACCOUNT_ID = 1
 
 
 @pytest.fixture(scope='function')
-def google_events_provider(db):
+def google_events_provider(config, db):
     return GoogleEventsProvider(ACCOUNT_ID)
 
 

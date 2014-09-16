@@ -1,3 +1,4 @@
+
 from inbox.models import Event
 from default_event import default_event, default_calendar
 

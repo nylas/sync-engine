@@ -2,15 +2,13 @@
 import os
 import shutil
 
+from inbox.config import config
+
 import click
 
 
 @click.command()
 def clear_cache():
-    # Load config before anything
-    from inbox.config import load_config
-    config = load_config()
-
     cache_basedir = config.get('CACHE_BASEDIR')
 
     print 'Removing all contents of {}...'.format(cache_basedir),

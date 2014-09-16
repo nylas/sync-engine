@@ -1,4 +1,6 @@
 #!/usr/bin/python
+import platform
+from subprocess import call
 import json
 import datetime
 from collections import defaultdict

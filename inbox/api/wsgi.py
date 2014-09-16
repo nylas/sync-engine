@@ -5,11 +5,8 @@ import inbox.log
 
 
 class InboxWSGIHandler(WSGIHandler):
-    """
-    Custom WSGI handler class to customize request logging. Based on
-    gunicorn.workers.ggevent.PyWSGIHandler.
-
-    """
+    """Custom WSGI handler class to customize request logging. Based on
+    gunicorn.workers.ggevent.PyWSGIHandler."""
     def log_request(self):
         # gevent.pywsgi tries to call log.write(), but Python logger objects
         # implement log.debug(), log.info(), etc., so we need to monkey-patch
@@ -41,11 +38,8 @@ class InboxWSGIHandler(WSGIHandler):
 
 
 class InboxWSGIWorker(GeventWorker):
-    """
-    Custom worker class for gunicorn. Based on
-    gunicorn.workers.ggevent.GeventPyWSGIWorker.
-
-    """
+    """Custom worker class for gunicorn. Based on
+    gunicorn.workers.ggevent.GeventPyWSGIWorker."""
     server_class = WSGIServer
     wsgi_handler = InboxWSGIHandler
 

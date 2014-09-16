@@ -8,6 +8,20 @@ import platform
 
 import click
 
+# Check that the inbox package is installed. It seems Vagrant may sometimes
+# fail to provision the box appropriately; this check is a reasonable
+# approximation of "Did the setup script run?"
+try:
+    from inbox.config import config
+except ImportError:
+    sys.exit("Could not find Inbox installation. "
+             "Maybe the Vagrant box provisioning didn't succeed?\n"
+             "Try running sudo ./setup.sh")
+
+from inbox.util.startup import preflight
+from inbox.log import get_logger, configure_logging
+from inbox.mailsync.service import SyncService
+
 sync_service = None
 
 
@@ -18,25 +32,25 @@ def signal_handler(signum, frame):
 
 
 @click.command()
-@click.option('--env', type=click.Choice(['prod', 'dev', 'test']),
-              default='dev',
-              help='Loads the corresponding config file for the env.')
+@click.option('--prod/--no-prod', default=False,
+              help='Disables the autoreloader and potentially other '
+                   'non-production features.')
+@click.option('-c', '--config', default=None,
+              help='Path to JSON configuration file.')
 @click.option('--process_num', default=0,
               help="This process's number in the process group: a unique "
                    "number satisfying 0 <= process_num < total_processes.")
-def main(env, process_num):
-    """ Launch the Inbox sync service. """
+def main(prod, config, process_num):
     global sync_service
+    """ Launch the Inbox sync service. """
+    configure_logging(prod)
 
-    # Load config, make checks before anything
-    from inbox.util.startup import preflight
-    preflight(env)
+    if config is not None:
+        from inbox.util.startup import load_overrides
+        config_path = os.path.abspath(config)
+        load_overrides(config_path)
 
-    from inbox.log import get_logger, configure_logging
-    from inbox.mailsync.service import SyncService
-
-    is_prod = True if env == 'prod' else False
-    configure_logging(is_prod)
+    preflight()
 
     total_processes = int(os.environ.get('MAILSYNC_PROCESSES', 1))
 
@@ -69,3 +83,6 @@ def main(env, process_num):
 
 if __name__ == '__main__':
     main()
+
+
+

@@ -49,7 +49,7 @@ def test_many():
     print "time: ", time() - start
 
 
-def test_account(db):
+def test_account(db, config):
     """Creates a fake account, ensuring that the refresh token can be retrieved.
     It also removes the account to ensure that we are not leaking secrets."""
 

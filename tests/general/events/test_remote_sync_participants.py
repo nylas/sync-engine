@@ -1,10 +1,15 @@
+from tests.util.base import config
+
+# Need to set up test config before we can import from
+# inbox.models.tables.
+config()
 from inbox.models import Participant
 from default_event import default_event
 
 # STOPSHIP(emfree): Test multiple distinct remote providers
 
 
-def test_add_participant(db):
+def test_add_participant(db, config):
     """Test the basic logic of the merge() function."""
     base = default_event(db)
     participant = Participant(email_address="foo@example.com")
@@ -17,7 +22,7 @@ def test_add_participant(db):
     assert len(dest.participants) == 1
 
 
-def test_update_participant_status(db):
+def test_update_participant_status(db, config):
     """Test the basic logic of the merge() function."""
     base = default_event(db)
     base.participants = [Participant(email_address="foo@example.com")]
@@ -35,7 +40,7 @@ def test_update_participant_status(db):
     assert dest.participants[0].status == 'yes'
 
 
-def test_update_participant_status2(db):
+def test_update_participant_status2(db, config):
     """Test the basic logic of the merge() function."""
     base = default_event(db)
     base.participants = [Participant(email_address="foo@example.com",
@@ -55,7 +60,7 @@ def test_update_participant_status2(db):
     assert dest.participants[0].status == 'yes'
 
 
-def test_multi_update(db):
+def test_multi_update(db, config):
     """Test the basic logic of the merge() function."""
     base = default_event(db)
     base.participants = [Participant(email_address="foo@example.com",
