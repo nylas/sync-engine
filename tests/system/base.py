@@ -51,13 +51,11 @@ def wait_for_sync_start(client):
 
 @timeout_loop('auth')
 def wait_for_auth(client):
-    if client.namespaces:
-        namespaces = client.namespaces.all()
-
+    namespaces = client.namespaces.all()
+    if len(namespaces):
         client.email_address = namespaces[0]['email_address']
         client.provider = namespaces[0]['provider']
         return True
-
     return False
 
 
