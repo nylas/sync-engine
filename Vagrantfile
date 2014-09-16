@@ -15,6 +15,11 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.box_download_checksum_type = "sha256"
   config.vm.box_download_checksum = "9a8bdea70e1d35c1d7733f587c34af07491872f2832f0bc5f875b536520ec17e"
 
+  config.vm.provider :virtualbox do |vbox, override|
+    vbox.memory = 1024
+    vbox.cpus = 2
+  end
+
   config.vm.provider :vmware_fusion do |vmware, override|
     override.vm.box = "precise64_fusion"
     override.vm.box_url = "http://files.vagrantup.com/precise64_vmware_fusion.box"
@@ -30,7 +35,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   #   'modifyvm', :id,
   #   "--natdnshostresolver1", "on",
   #   "--natdnsproxy1", "on",
-  #   "--memory", 1024
   # ]
   config.vm.network "private_network", ip: "192.168.10.200"
   config.vm.provision :shell, :inline => "apt-get update -q && cd /vagrant && /bin/sh setup.sh"
