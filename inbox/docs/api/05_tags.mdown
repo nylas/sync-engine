@@ -129,7 +129,7 @@ POST https://api.inboxapp.com/n/<namespace_id>/tags
 ```
 ::json
 {
-    "name": <new tag name>
+    "name": "<new tag name>"
 }
 ```
 
@@ -144,7 +144,7 @@ PUT https://api.inboxapp.com/n/<namespace_id>/tags/<tag_id>
 ```
 :::json
 {
-    "name": <new_name>
+    "name": "<new_name>"
 }
 ```
 
