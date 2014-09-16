@@ -153,7 +153,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                                                 flags[uid].flags,
                                                 flags[uid].labels))
             if not async_download:
-                self.__download_threads(crispin_client, download_stack)
+                self.__download_queued_threads(crispin_client, download_stack)
         elif self.folder_name in uid_download_folders(crispin_client):
             download_stack.update_from(to_download)
             if not async_download:
