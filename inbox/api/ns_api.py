@@ -728,7 +728,8 @@ def file_read_api(public_id):
     try:
         valid_public_id(public_id)
         f = g.db_session.query(Block).filter(
-            Block.public_id == public_id).one()
+            Block.public_id == public_id,
+            Block.namespace_id == g.namespace.id).one()
         return g.encoder.jsonify(f)
     except InputError:
         return err(400, 'Invalid file id {}'.format(public_id))
@@ -742,7 +743,8 @@ def file_delete_api(public_id):
     try:
         valid_public_id(public_id)
         f = g.db_session.query(Block).filter(
-            Block.public_id == public_id).one()
+            Block.public_id == public_id,
+            Block.namespace_id == g.namespace.id).one()
 
         if g.db_session.query(Block).join(Part) \
                 .filter(Block.public_id == public_id).first() is not None:
@@ -792,8 +794,8 @@ def file_download_api(public_id):
     try:
         valid_public_id(public_id)
         f = g.db_session.query(Block).filter(
-            Block.public_id == public_id).one()
-        assert int(f.namespace_id) == int(g.namespace.id)
+            Block.public_id == public_id,
+            Block.namespace_id == g.namespace.id).one()
     except InputError:
         return err(400, 'Invalid file id {}'.format(public_id))
     except NoResultFound:
