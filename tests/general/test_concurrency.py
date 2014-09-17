@@ -4,7 +4,7 @@ import pytest
 from gevent import GreenletExit
 
 from inbox.util.concurrency import (retry, retry_with_logging,
-                                    resettable_counter)
+                                    _resettable_counter)
 from inbox.log import log_uncaught_errors
 
 
@@ -37,7 +37,8 @@ def test_retry_with_logging():
     logger = MockLogger()
     failing_function = FailingFunction(ValueError)
     with pytest.raises(ValueError):
-        retry_with_logging(failing_function, logger=logger)
+        retry_with_logging(failing_function, logger=logger, max_count=3,
+                           backoff_delay=0)
     assert logger.call_count == 3
     assert failing_function.call_count == 3
 
@@ -56,22 +57,26 @@ def test_selective_retry():
     failing_function = FailingFunction(ValueError)
     with pytest.raises(ValueError):
         retry_with_logging(failing_function, logger=logger,
-                           fail_classes=[ValueError])
+                           fail_classes=[ValueError],
+                           backoff_delay=0,
+                           max_count=3)
     assert logger.call_count == 1
     assert failing_function.call_count == 1
 
 
 def test_retry_count_resets(monkeypatch):
-    monkeypatch.setattr('inbox.util.concurrency.resettable_counter',
-                        lambda x, y: resettable_counter(reset_interval=0))
+    monkeypatch.setattr('inbox.util.concurrency._resettable_counter',
+                        lambda x, y: _resettable_counter(max_count=3,
+                                                         reset_interval=0))
     logger = MockLogger()
 
     failing_function = FailingFunction(ValueError, max_executions=6,
-                                       delay=.1)
+                                       delay=.001)
 
     exc_callback = lambda: log_uncaught_errors(logger)
 
-    retry(failing_function, exc_callback=exc_callback)()
+    retry(failing_function, exc_callback=exc_callback, max_count=3,
+          backoff_delay=0)()
 
     assert logger.call_count == 5
     assert failing_function.call_count == 6
@@ -85,7 +90,8 @@ def test_configurable_retry_count_resets(monkeypatch):
 
     exc_callback = lambda: log_uncaught_errors(logger)
 
-    retry(default_failing_function, exc_callback=exc_callback)()
+    retry(default_failing_function, exc_callback=exc_callback,
+          max_count=3, backoff_delay=0)()
 
     assert logger.call_count == 2
     assert default_failing_function.call_count == 3
@@ -96,7 +102,8 @@ def test_configurable_retry_count_resets(monkeypatch):
 
     exc_callback = lambda: log_uncaught_errors(logger)
 
-    retry(failing_function, exc_callback=exc_callback, max_count=5)()
+    retry(failing_function, exc_callback=exc_callback, max_count=5,
+          backoff_delay=0)()
 
     assert logger.call_count == 4
     assert failing_function.call_count == 5
