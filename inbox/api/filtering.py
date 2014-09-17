@@ -105,12 +105,12 @@ def _messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
                         last_message_after, filename, tag, limit, offset,
                         db_session):
 
-    query = db_session.query(Message)
+    id_query = db_session.query(Message.id)
 
     if drafts:
-        query = query.filter(Message.is_draft)
+        id_query = id_query.filter(Message.is_draft)
     else:
-        query = query.filter(~Message.is_draft)
+        id_query = id_query.filter(~Message.is_draft)
 
     thread_criteria = [Thread.namespace_id == namespace_id]
 
@@ -141,68 +141,62 @@ def _messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
                    Tag.namespace_id == namespace_id)
     thread_query = thread_query.subquery()
 
-    query = query.join(thread_query)
+    id_query = id_query.join(thread_query)
 
     if subject is not None:
-        query = query.filter(Message.subject == subject)
+        id_query = id_query.filter(Message.subject == subject)
 
     if to_addr is not None:
         to_query = db_session.query(Message). \
             join(MessageContactAssociation).join(Contact). \
             filter(MessageContactAssociation.field == 'to_addr',
                    Contact.email_address == to_addr).subquery()
-        query = query.join(to_query)
+        id_query = id_query.join(to_query)
 
     if from_addr is not None:
         from_query = db_session.query(MessageContactAssociation). \
             join(Contact).filter(
                 MessageContactAssociation.field == 'from_addr',
                 Contact.email_address == from_addr).subquery()
-        query = query.join(from_query)
+        id_query = id_query.join(from_query)
 
     if cc_addr is not None:
         cc_query = db_session.query(MessageContactAssociation). \
             join(Contact).filter(
                 MessageContactAssociation.field == 'cc_addr',
                 Contact.email_address == cc_addr).subquery()
-        query = query.join(cc_query)
+        id_query = id_query.join(cc_query)
 
     if bcc_addr is not None:
         bcc_query = db_session.query(MessageContactAssociation). \
             join(Contact).filter(
                 MessageContactAssociation.field == 'bcc_addr',
                 Contact.email_address == bcc_addr).subquery()
-        query = query.join(bcc_query)
+        id_query = id_query.join(bcc_query)
 
     if any_email is not None:
         any_email_query = db_session.query(
             MessageContactAssociation).join(Contact). \
             filter(Contact.email_address == any_email).subquery()
-        query = query.join(any_email_query)
+        id_query = id_query.join(any_email_query)
 
     if filename is not None:
-        # Eager-load some objects in order to make constructing API
-        # representations faster.
-        # Don't load things like block data
-        block_loads = ['public_id', 'filename', 'size',
-                       '_content_type_other', '_content_type_common']
-        query = query.options(
-            joinedload(Message.parts).load_only('content_disposition').
-            joinedload(Part.block).load_only(*block_loads)). \
-            filter(Block.filename == filename)
+        id_query = id_query.join(Part).join(Block). \
+            filter(Block.filename == filename,
+                   Block.namespace_id == namespace_id)
 
-    # TODO(emfree) we should really eager-load the namespace too
-    # (or just directly store it on the message object)
-
-    if not drafts:
-        query = query.order_by(desc(Message.received_date)).distinct()
-
-    query = query.limit(limit)
-
+    id_query = id_query.distinct().limit(limit)
     if offset:
-        query = query.offset(offset)
+        id_query = id_query.offset(offset)
 
-    return query.all()
+    ids = [id for id, in id_query.all()]
+    # Eager-load part.content_disposition to make constructing API
+    # representations faster
+    messages_query = db_session.query(Message).filter(Message.id.in_(ids)). \
+        options(joinedload(Message.parts).load_only('content_disposition'))
+    if not drafts:
+        messages_query = messages_query.order_by(desc(Message.received_date))
+    return messages_query.all()
 
 
 def messages(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
