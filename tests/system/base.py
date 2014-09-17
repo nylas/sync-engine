@@ -11,6 +11,7 @@ from time import time, sleep
 from inbox.auth import handler_from_email
 from inbox.util.url import provider_from_address
 from inbox.models.session import session_scope
+from inbox.models import Account
 from conftest import (passwords, TEST_MAX_DURATION_SECS,
                       TEST_GRANULARITY_CHECK_SECS)
 from google_auth_helper import google_auth
@@ -64,9 +65,13 @@ def for_all_available_providers(fn):
     handles account setup and teardown."""
     def f(*args, **kwargs):
         for email, password in passwords:
-            # FIXME: Don't create the account if it's already created. --cg3
             with session_scope() as db_session:
-                create_account(db_session, email, password)
+                query = db_session.query(Account) \
+                    .filter_by(email_address=email)
+                if query.first():
+                    sleep(1)
+                else:
+                    create_account(db_session, email, password)
 
             client = InboxTestClient(email)
             wait_for_auth(client)

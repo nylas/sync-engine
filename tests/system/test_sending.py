@@ -33,7 +33,7 @@ def test_sending(client):
     subject = "%s (Self Send Test)" % strftime("%Y-%m-%d %H:%M:%S")
     draft = client.drafts.create(to=[{"email": client.email_address}],
                                  subject=subject,
-                                 body="Test email.")
+                                 body=subject + "Test email.")
     draft.send()
     wait_for_send(client, subject)
 
