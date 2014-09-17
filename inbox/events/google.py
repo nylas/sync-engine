@@ -5,6 +5,7 @@ import httplib2
 import dateutil.parser as date_parser
 
 from apiclient.discovery import build
+from apiclient.errors import HttpError
 from oauth2client.client import OAuth2Credentials
 from oauth2client.client import AccessTokenRefreshError
 
@@ -240,13 +241,17 @@ class GoogleEventsProvider(BaseEventProvider):
         try:
             resp = service.events().list(calendarId=self.email).execute()
         except AccessTokenRefreshError:
-            self.log.error('Invalid user credentials given')
+            self.log.error("Invalid user credentials given")
             with session_scope() as db_session:
                 account = db_session.query(GmailAccount).get(self.account_id)
                 account.sync_state = 'invalid'
                 db_session.add(account)
                 db_session.commit()
             raise ValidationError
+        except HttpError as e:
+            self.log.warn("Error retrieving events",
+                          message=str(e))
+            return
 
         # Make sure we have a calendar associated with these events
         description = resp.get('description')
