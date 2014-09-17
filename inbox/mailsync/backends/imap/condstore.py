@@ -22,20 +22,32 @@ IDLE_FOLDERS = ['inbox', 'sent mail']
 
 
 class CondstoreFolderSyncEngine(FolderSyncEngine):
+    @property
+    def should_idle(self):
+        return self.folder_name.lower() in IDLE_FOLDERS
+
     def poll_impl(self):
         with self.conn_pool.get() as crispin_client:
             download_stack = UIDStack()
             self.check_uid_changes(crispin_client, download_stack,
                                    async_download=False)
-            self.idle_wait(crispin_client)
+            if self.should_idle:
+                self.idle_wait(crispin_client)
+        # Close IMAP connection before sleeping
+        if not self.should_idle:
+            sleep(self.poll_frequency)
 
     @retry_crispin
     def poll_for_changes(self, download_stack):
-        with self.conn_pool.get() as crispin_client:
-            while True:
+        while True:
+            with self.conn_pool.get() as crispin_client:
                 self.check_uid_changes(crispin_client, download_stack,
                                        async_download=True)
-                self.idle_wait(crispin_client)
+                if self.should_idle:
+                    self.idle_wait(crispin_client)
+            # Close IMAP connection before sleeping
+            if not self.should_idle:
+                sleep(self.poll_frequency)
 
     def check_uid_changes(self, crispin_client, download_stack,
                           async_download):
@@ -104,16 +116,12 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
             self.download_uids(crispin_client, download_stack)
 
     def idle_wait(self, crispin_client):
-        if self.folder_name.lower() in IDLE_FOLDERS:
-            # Idle doesn't pick up flag changes, so we don't want to
-            # idle for very long, or we won't detect things like
-            # messages being marked as read.
-            idle_frequency = 30
-            log.info('idling', timeout=idle_frequency)
-            crispin_client.conn.idle()
-            crispin_client.conn.idle_check(timeout=idle_frequency)
-            crispin_client.conn.idle_done()
-            log.info('IDLE triggered poll')
-        else:
-            log.info('IDLE sleeping', seconds=self.poll_frequency)
-            sleep(self.poll_frequency)
+        # Idle doesn't pick up flag changes, so we don't want to
+        # idle for very long, or we won't detect things like
+        # messages being marked as read.
+        idle_frequency = 30
+        log.info('idling', timeout=idle_frequency)
+        crispin_client.conn.idle()
+        crispin_client.conn.idle_check(timeout=idle_frequency)
+        crispin_client.conn.idle_done()
+        log.info('IDLE triggered poll')

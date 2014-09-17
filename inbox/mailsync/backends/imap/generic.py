@@ -282,12 +282,12 @@ class FolderSyncEngine(Greenlet):
 
     @retry_crispin
     def poll_for_changes(self, download_stack):
-        with self.conn_pool.get() as crispin_client:
-            crispin_client.select_folder(self.folder_name, uidvalidity_cb)
-            while True:
+        while True:
+            with self.conn_pool.get() as crispin_client:
+                crispin_client.select_folder(self.folder_name, uidvalidity_cb)
                 self.check_uid_changes(crispin_client, download_stack,
                                        async_download=True)
-                sleep(self.poll_frequency)
+            sleep(self.poll_frequency)
 
     def download_uids(self, crispin_client, download_stack):
         while not download_stack.empty():
