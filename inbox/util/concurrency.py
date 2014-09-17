@@ -83,9 +83,8 @@ def retry(func, retry_classes=None, fail_classes=None,
                 if not should_retry_on(e):
                     break
 
-            # Sleep a bit so that we don't poll too quickly and
-            # re-encounter the error. Also add a random delay to prevent
-            # herding effects.
+            # Sleep a bit so that we don't poll too quickly and re-encounter
+            # the error. Also add a random delay to prevent herding effects.
             initial_sleep = reset_params.get('backoff_delay',
                                              BACKOFF_DELAY)
             if initial_sleep:
