@@ -1,6 +1,7 @@
 import json
 import datetime
 import calendar
+from sqlalchemy import desc
 from inbox.models import Message, Thread
 from inbox.contacts.process_mail import update_contacts_from_message
 from inbox.util.misc import dt_to_timestamp
@@ -162,10 +163,16 @@ def test_filtering(db, api_client):
     assert len(results) == 3
 
 
-def test_ordering(api_client):
+def test_ordering(api_client, db):
     ordered_results = api_client.get_data('/messages')
     ordered_dates = [result['date'] for result in ordered_results]
     assert ordered_dates == sorted(ordered_dates, reverse=True)
+
+    ordered_results = api_client.get_data('/messages?limit=3')
+    expected_public_ids = [public_id for public_id, in
+                           db.session.query(Message.public_id). \
+                           order_by(desc(Message.received_date)).limit(3)]
+    assert expected_public_ids == [r['id'] for r in ordered_results]
 
 
 def test_strict_argument_parsing(api_client):

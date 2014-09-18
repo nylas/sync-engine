@@ -198,7 +198,7 @@ def _messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
     messages_query = db_session.query(Message).filter(Message.id.in_(ids)). \
         options(joinedload(Message.parts).load_only('content_disposition'))
     if not drafts:
-        messages_query = id_query.order_by(desc(Message.received_date))
+        messages_query = messages_query.order_by(desc(Message.received_date))
     return messages_query.all()
 
 
