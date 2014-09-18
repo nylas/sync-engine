@@ -7,16 +7,20 @@ import click
 from inbox.log import get_logger
 log = get_logger()
 
-from inbox.console import start_console
-
+from inbox.console import start_console, start_client_console
 
 @click.command()
 @click.option('-e', '--email_address', default=None,
               help='Initialize a crispin client for a particular account.')
-def console(email_address):
+@click.option('-c', '--client', is_flag=True,
+              help='Start a repl with an APIClient')
+def console(email_address, client):
     """ REPL for Inbox. """
-    log.debug('Starting console...')
-    start_console(email_address)
+    if client:
+        start_client_console(email_address)
+    else:
+        start_console(email_address)
+
 
 if __name__ == '__main__':
     console()

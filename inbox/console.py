@@ -36,3 +36,10 @@ def start_console(user_email_address=None):
         user_console(user_email_address)
     else:
         IPython.embed()
+
+
+def start_client_console(user_email_address=None):
+    from tests.system.client import InboxTestClient
+    client = InboxTestClient(user_email_address)
+    IPython.embed(banner1=("You can access an Inbox API client "
+                           "using the 'client' variable."))
