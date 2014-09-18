@@ -294,6 +294,19 @@ def thread_api(public_id):
 #
 # Update thread
 #
+def _get_tag(tag_identifier, namespace_id, db_session):
+    try:
+        valid_public_id(tag_identifier)
+    except ValueError:
+        tag_criterion = Tag.name == tag_identifier
+    else:
+        tag_criterion = or_(Tag.name == tag_identifier,
+                            Tag.public_id == tag_identifier)
+
+    return g.db_session.query(Tag).filter(
+        Tag.namespace_id == namespace_id, tag_criterion).first()
+
+
 @app.route('/threads/<public_id>', methods=['PUT'])
 def thread_api_update(public_id):
     try:
@@ -312,17 +325,12 @@ def thread_api_update(public_id):
 
     removals = data.get('remove_tags', [])
 
-    # TODO(emfree) possibly also support adding/removing tags by tag public id,
-    # not just name.
-
-    for tag_name in removals:
-        tag = g.db_session.query(Tag).filter(
-            Tag.namespace_id == g.namespace.id,
-            Tag.name == tag_name).first()
+    for tag_identifier in removals:
+        tag = _get_tag(tag_identifier, g.namespace.id, g.db_session)
         if tag is None:
-            return err(404, 'No tag found with name {}'.  format(tag_name))
+            return err(404, 'No tag found with name {}'.format(tag_identifier))
         if not tag.user_removable:
-            return err(400, 'Cannot remove tag {}'.format(tag_name))
+            return err(400, 'Cannot remove tag {}'.format(tag_identifier))
 
         try:
             thread.remove_tag(tag, execute_action=True)
@@ -330,14 +338,12 @@ def thread_api_update(public_id):
             return err(e.error, str(e))
 
     additions = data.get('add_tags', [])
-    for tag_name in additions:
-        tag = g.db_session.query(Tag).filter(
-            Tag.namespace_id == g.namespace.id,
-            Tag.name == tag_name).first()
+    for tag_identifier in additions:
+        tag = _get_tag(tag_identifier, g.namespace.id, g.db_session)
         if tag is None:
-            return err(404, 'No tag found with name {}'.format(tag_name))
+            return err(404, 'No tag found with name {}'.format(tag_identifier))
         if not tag.user_addable:
-            return err(400, 'Cannot add tag {}'.format(tag_name))
+            return err(400, 'Cannot add tag {}'.format(tag_identifier))
 
         try:
             thread.apply_tag(tag, execute_action=True)

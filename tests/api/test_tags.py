@@ -191,7 +191,7 @@ def test_cant_create_existing_tag(api_client):
     assert r.status_code == 409
 
 
-def test_add_remove_tags(api_client):
+def test_add_remove_tags_by_name(api_client):
     assert 'foo' not in [tag['name'] for tag in api_client.get_data('/tags/')]
     assert 'bar' not in [tag['name'] for tag in api_client.get_data('/tags/')]
 
@@ -219,6 +219,30 @@ def test_add_remove_tags(api_client):
     tag_names = get_tag_names(api_client.get_data(thread_path))
     assert 'foo' not in tag_names
     assert 'bar' not in tag_names
+
+
+def test_add_remove_tag_by_public_id(api_client):
+    # Some tag names may not be valid public ids. Make sure we don't fail in
+    # that case.
+    assert 'foo bar' not in [tag['name'] for tag in
+                             api_client.get_data('/tags/')]
+
+    post_resp = api_client.post_data('/tags/', {'name': 'foo bar'})
+    public_id = json.loads(post_resp.data)['id']
+
+    thread_id = api_client.get_data('/threads')[0]['id']
+    thread_path = '/threads/{}'.format(thread_id)
+    r = api_client.put_data(thread_path, {'add_tags': [public_id]})
+    assert r.status_code == 200
+
+    tag_names = [tag['name'] for tag in
+                 api_client.get_data(thread_path)['tags']]
+    assert 'foo bar' in tag_names
+
+    r = api_client.put_data(thread_path, {'remove_tags': [public_id]})
+    assert r.status_code == 200
+    tag_names = get_tag_names(api_client.get_data(thread_path))
+    assert 'foo bar' not in tag_names
 
 
 def test_tag_permissions(api_client, db):
