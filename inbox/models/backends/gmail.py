@@ -1,10 +1,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey
-from sqlalchemy import event
 
-from inbox.models.vault import vault
 from inbox.models.backends.imap import ImapAccount
 from inbox.models.backends.oauth import OAuthAccount
-
 from inbox.log import get_logger
 log = get_logger()
 
@@ -17,7 +14,6 @@ class GmailAccount(OAuthAccount, ImapAccount):
 
     __mapper_args__ = {'polymorphic_identity': 'gmailaccount'}
 
-    refresh_token_id = Column(Integer())  # Secret
     # STOPSHIP(emfree) store these either as secrets or as properties of the
     # developer app.
     client_id = Column(String(256))
@@ -43,11 +39,3 @@ class GmailAccount(OAuthAccount, ImapAccount):
     @property
     def provider(self):
         return PROVIDER
-
-
-@event.listens_for(GmailAccount, 'after_update')
-def _after_gmailaccount_update(mapper, connection, target):
-    """ Hook to cascade delete the refresh_token as it may be remote (and usual
-    ORM mechanisms don't apply)."""
-    if target.deleted_at:
-        vault.remove(target.refresh_token_id)

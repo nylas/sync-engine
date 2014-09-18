@@ -4,14 +4,17 @@ refresh tokens.
 """
 from datetime import datetime, timedelta
 
-from inbox.models.vault import vault
+from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declared_attr
+
+from inbox.models.secret import Secret
 from inbox.oauth import new_token, validate_token
 from inbox.basicauth import AuthError
 from inbox.basicauth import ConnectionError
 from inbox.oauth import (OAuthInvalidGrantError,
                          OAuthValidationError,
                          OAuthError)
-
 from inbox.log import get_logger
 log = get_logger()
 
@@ -19,6 +22,18 @@ __volatile_tokens__ = {}
 
 
 class OAuthAccount(object):
+    # Secret
+    @declared_attr
+    def refresh_token_id(cls):
+        return Column(Integer, ForeignKey(Secret.id), nullable=False)
+
+    @declared_attr
+    def secret(cls):
+        return relationship(
+            'Secret', uselist=False, primaryjoin='and_('
+            '{0}.refresh_token_id == Secret.id, '
+            'Secret.deleted_at.is_(None))'.format(cls.__name__))
+
     @property
     def provider_module(self):
         from inbox.auth import handler_from_provider
@@ -26,11 +41,27 @@ class OAuthAccount(object):
 
     @property
     def refresh_token(self):
-        return vault.get(self.refresh_token_id)
+        return self.secret.secret
 
     @refresh_token.setter
     def refresh_token(self, value):
-        self.refresh_token_id = vault.put(value)
+        # Must be a valid UTF-8 byte sequence without NULL bytes.
+        if isinstance(value, unicode):
+            value = value.encode('utf-8')
+
+        try:
+            unicode(value, 'utf-8')
+        except UnicodeDecodeError:
+            raise ValueError('Invalid refresh_token')
+
+        if b'\x00' in value:
+            raise ValueError('Invalid refresh_token')
+
+        if not self.secret:
+            self.secret = Secret()
+
+        self.secret.secret = value
+        self.secret.type = 'token'
 
     @property
     def access_token(self):

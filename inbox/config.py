@@ -1,5 +1,6 @@
 import os
 import json
+import yaml
 from urllib import quote_plus as urlquote
 
 
@@ -35,14 +36,29 @@ if 'INBOX_ENV' in os.environ:
 else:
     env = 'prod'
 
+
 if env == 'prod':
-    # Read prod config from an unversioned config file.
     config_path = '/etc/inboxapp/config.json'
+    secrets_path = '/etc/inboxapp/secrets.yml'
 else:
     root_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
-    config_path = os.path.join(root_path, 'etc', "config-%s.json" % env)
+
+    config_path = os.path.join(root_path, 'etc', 'config-{0}.json'.format(env))
+    secrets_path = os.path.join(root_path, 'etc',
+                                'secrets-{0}.yml'.format(env))
+
+
 with open(config_path) as f:
     config = Configuration(json.load(f))
+
+try:
+    with open(secrets_path) as f:
+        secrets_config = Configuration(yaml.safe_load(f))
+        config.update(secrets_config)
+except IOError:
+    raise Exception(
+        'Missing secrets config file {0}. Run `sudo cp etc/secrets-dev.yml '
+        '/etc/inboxapp/secrets.yml` and retry'.format(secrets_path))
 
 
 def engine_uri(database=None):

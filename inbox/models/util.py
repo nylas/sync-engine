@@ -1,11 +1,22 @@
+import enum
+
 from inbox.models.thread import Thread
 from inbox.models.folder import Folder, FolderItem
-
 from inbox.util.file import Lock
-
-
 from inbox.log import get_logger
 log = get_logger()
+
+
+class NotFound(Exception):
+    pass
+
+
+class EncryptionScheme(enum.Enum):
+    # No encryption
+    NULL = 0
+
+    # nacl.secret.SecretBox with a static key
+    SECRETBOX_WITH_STATIC_KEY = 1
 
 
 # Namespace Utils

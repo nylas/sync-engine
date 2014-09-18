@@ -140,7 +140,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('159607944f52');
+INSERT INTO `alembic_version` VALUES ('248ec24a39f');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -314,9 +314,11 @@ CREATE TABLE `easaccount` (
   `eas_policy_key` varchar(64) DEFAULT NULL,
   `eas_account_sync_key` varchar(64) NOT NULL DEFAULT '0',
   `eas_state` enum('sync','sync keyinvalid','finish') DEFAULT 'sync',
-  `password` varchar(256) DEFAULT NULL,
+  `password_id` int(11) NOT NULL,
   PRIMARY KEY (`id`),
-  CONSTRAINT `easaccount_ibfk_1` FOREIGN KEY (`id`) REFERENCES `account` (`id`) ON DELETE CASCADE
+  KEY `password_id` (`password_id`),
+  CONSTRAINT `easaccount_ibfk_1` FOREIGN KEY (`id`) REFERENCES `account` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `easaccount_ibfk_2` FOREIGN KEY (`password_id`) REFERENCES `secret` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -676,6 +678,8 @@ CREATE TABLE `genericaccount` (
   `provider` varchar(64) NOT NULL,
   `supports_condstore` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`id`),
+  KEY `genericaccount_ibfk_2` (`password_id`),
+  CONSTRAINT `genericaccount_ibfk_2` FOREIGN KEY (`password_id`) REFERENCES `secret` (`id`),
   CONSTRAINT `genericaccount_ibfk_1` FOREIGN KEY (`id`) REFERENCES `imapaccount` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -715,6 +719,8 @@ CREATE TABLE `gmailaccount` (
   `client_id` varchar(256) DEFAULT NULL,
   `client_secret` varchar(256) DEFAULT NULL,
   PRIMARY KEY (`id`),
+  KEY `gmailaccount_ibfk_2` (`refresh_token_id`),
+  CONSTRAINT `gmailaccount_ibfk_2` FOREIGN KEY (`refresh_token_id`) REFERENCES `secret` (`id`),
   CONSTRAINT `gmailaccount_ibfk_1` FOREIGN KEY (`id`) REFERENCES `imapaccount` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -896,6 +902,52 @@ LOCK TABLES `imapuid` WRITE;
 /*!40000 ALTER TABLE `imapuid` DISABLE KEYS */;
 INSERT INTO `imapuid` VALUES (2,1,1,380,0,0,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(4,1,2,943,0,1,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(6,1,3,934,0,1,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(8,1,4,555,0,0,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(10,1,5,554,0,0,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(12,1,6,406,0,1,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(14,1,7,385,0,0,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(16,1,8,378,0,1,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(18,1,9,377,0,0,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(20,1,10,375,0,0,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(21,1,11,341,0,0,0,0,0,'[]',3,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(22,1,12,339,0,0,0,0,0,'[]',3,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(23,1,13,338,0,0,0,0,0,'[]',3,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(24,1,14,320,0,0,0,0,0,'[]',3,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(25,1,15,316,0,0,0,0,0,'[]',3,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(26,1,16,184,0,1,0,0,0,'[]',3,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL);
 /*!40000 ALTER TABLE `imapuid` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `lens`
+--
+
+DROP TABLE IF EXISTS `lens`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `lens` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `public_id` binary(16) NOT NULL,
+  `namespace_id` int(11) NOT NULL,
+  `subject` varchar(255) DEFAULT NULL,
+  `thread_public_id` binary(16) DEFAULT NULL,
+  `started_before` datetime DEFAULT NULL,
+  `started_after` datetime DEFAULT NULL,
+  `last_message_before` datetime DEFAULT NULL,
+  `last_message_after` datetime DEFAULT NULL,
+  `any_email` varchar(255) DEFAULT NULL,
+  `to_addr` varchar(255) DEFAULT NULL,
+  `from_addr` varchar(255) DEFAULT NULL,
+  `cc_addr` varchar(255) DEFAULT NULL,
+  `bcc_addr` varchar(255) DEFAULT NULL,
+  `filename` varchar(255) DEFAULT NULL,
+  `tag` varchar(255) DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ix_lens_namespace_id` (`namespace_id`),
+  KEY `ix_lens_public_id` (`public_id`),
+  KEY `ix_lens_created_at` (`created_at`),
+  KEY `ix_lens_deleted_at` (`deleted_at`),
+  KEY `ix_lens_updated_at` (`updated_at`),
+  CONSTRAINT `lens_ibfk_1` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `lens`
+--
+
+LOCK TABLES `lens` WRITE;
+/*!40000 ALTER TABLE `lens` DISABLE KEYS */;
+/*!40000 ALTER TABLE `lens` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -1121,6 +1173,8 @@ CREATE TABLE `outlookaccount` (
   `family_name` varchar(256) DEFAULT NULL,
   `given_name` varchar(256) DEFAULT NULL,
   PRIMARY KEY (`id`),
+  KEY `outlookaccount_ibfk_2` (`refresh_token_id`),
+  CONSTRAINT `outlookaccount_ibfk_2` FOREIGN KEY (`refresh_token_id`) REFERENCES `secret` (`id`),
   CONSTRAINT `outlookaccount_ibfk_1` FOREIGN KEY (`id`) REFERENCES `imapaccount` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1182,9 +1236,9 @@ CREATE TABLE `secret` (
   `updated_at` datetime NOT NULL,
   `deleted_at` datetime DEFAULT NULL,
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `acl_id` int(11) NOT NULL,
-  `type` int(11) NOT NULL,
-  `secret` varchar(2048) DEFAULT NULL,
+  `type` enum('password','token') NOT NULL,
+  `encryption_scheme` int(11) NOT NULL DEFAULT '0',
+  `_secret` blob NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1195,7 +1249,7 @@ CREATE TABLE `secret` (
 
 LOCK TABLES `secret` WRITE;
 /*!40000 ALTER TABLE `secret` DISABLE KEYS */;
-INSERT INTO `secret` VALUES ('2014-07-09 18:58:49','2014-07-09 18:58:49',NULL,1,0,0,'1/XUcATARUuEjFSFk9M2ZkIHExnCcFCi5E8veIj2jKetA');
+INSERT INTO `secret` VALUES ('2014-07-09 18:58:49','2014-07-09 18:58:49',NULL,1,'token',0,'1/XUcATARUuEjFSFk9M2ZkIHExnCcFCi5E8veIj2jKetA');
 /*!40000 ALTER TABLE `secret` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1446,6 +1500,50 @@ LOCK TABLES `uidvalidity` WRITE;
 INSERT INTO `uidvalidity` VALUES (1,1,'INBOX',1,106957,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(2,1,'[Gmail]/All Mail',11,106957,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL);
 /*!40000 ALTER TABLE `uidvalidity` ENABLE KEYS */;
 UNLOCK TABLES;
+
+--
+-- Table structure for table `webhook`
+--
+
+DROP TABLE IF EXISTS `webhook`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `webhook` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `public_id` binary(16) NOT NULL,
+  `namespace_id` int(11) NOT NULL,
+  `callback_url` text NOT NULL,
+  `failure_notify_url` text,
+  `include_body` tinyint(1) NOT NULL,
+  `max_retries` int(11) NOT NULL DEFAULT '3',
+  `retry_interval` int(11) NOT NULL DEFAULT '60',
+  `active` tinyint(1) NOT NULL DEFAULT '1',
+  `min_processed_id` int(11) NOT NULL DEFAULT '0',
+  `lens_id` int(11) NOT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `namespace_id` (`namespace_id`),
+  KEY `ix_webhook_namespace_id` (`namespace_id`),
+  KEY `ix_webhook_public_id` (`public_id`),
+  KEY `ix_webhook_lens_id` (`lens_id`),
+  KEY `ix_webhook_created_at` (`created_at`),
+  KEY `ix_webhook_deleted_at` (`deleted_at`),
+  KEY `ix_webhook_updated_at` (`updated_at`),
+  CONSTRAINT `webhooks_ibfk_1` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `webhook_ibfk_1` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `webhook`
+--
+
+LOCK TABLES `webhook` WRITE;
+/*!40000 ALTER TABLE `webhook` DISABLE KEYS */;
+/*!40000 ALTER TABLE `webhook` ENABLE KEYS */;
+UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -1456,4 +1554,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-09-16  3:17:39
+-- Dump completed on 2014-09-19  0:21:38
