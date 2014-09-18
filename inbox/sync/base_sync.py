@@ -5,7 +5,7 @@ from collections import Counter
 from inbox.log import get_logger
 logger = get_logger()
 
-from inbox.basicauth import ValidationError
+from inbox.basicauth import ConnectionError, ValidationError
 from inbox.models.session import session_scope
 from inbox.util.concurrency import retry_with_logging
 from inbox.util.misc import or_none, MergeError
@@ -26,7 +26,11 @@ class BaseSync(gevent.Greenlet):
         try:
             self.provider_instance = self.provider(self.account_id)
             while True:
-                self.poll()
+                try:
+                    self.poll()
+                # If we get a connection error, then sleep 2x poll frequency
+                except ConnectionError:
+                    gevent.sleep(self.poll_frequency)
                 gevent.sleep(self.poll_frequency)
         except ValidationError:
             return False
