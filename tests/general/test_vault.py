@@ -71,7 +71,7 @@ def test_account(db, config):
             'locale': '',
             'picture': '',
             'hd': ''}
-    account = create_account(db.session, email, resp)
+    account = create_account(db.session, resp)
     db.session.add(account)
     db.session.commit()
 

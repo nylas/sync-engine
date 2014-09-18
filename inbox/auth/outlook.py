@@ -40,7 +40,7 @@ def _this_module():
 
 def create_auth_account(db_session, email_address, token, exit):
     response = auth_account(email_address, token, exit)
-    account = create_account(db_session, email_address, response)
+    account = create_account(db_session, response)
 
     return account
 
@@ -54,7 +54,8 @@ def auth_account(email_address, token, exit):
     return oauth_authorize_console(_this_module(), email_address, token, exit)
 
 
-def create_account(db_session, email_address, response):
+def create_account(db_session, response):
+    email_address = response.get('emails')['account']
     try:
         account = db_session.query(OutlookAccount).filter_by(
             email_address=email_address).one()
@@ -68,7 +69,7 @@ def create_account(db_session, email_address, response):
     expires_in = response.get('expires_in')
     account.set_access_token(tok, expires_in)
     account.scope = response.get('scope')
-    account.email_address = response.get('emails')['account']
+    account.email_address = email_address
     account.o_id_token = response.get('user_id')
     account.o_id = response.get('id')
     account.name = response.get('name')
