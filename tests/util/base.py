@@ -3,7 +3,6 @@ import os
 import subprocess
 from gevent import monkey
 
-import zerorpc
 from pytest import fixture, yield_fixture
 
 
@@ -191,17 +190,6 @@ class TestDB(object):
 
         cmd = 'mysqldump {0} > {1}'.format(database, self.dumpfile)
         subprocess.check_call(cmd, shell=True)
-
-
-class TestZeroRPC(object):
-    """ Client/server handle for a ZeroRPC service """
-    def __init__(self, config, cls, service_loc):
-        from inbox.util.concurrency import make_zerorpc
-
-        self.server = make_zerorpc(cls, service_loc)
-
-        self.client = zerorpc.Client(timeout=120)
-        self.client.connect(service_loc)
 
 
 class MockSMTPClient(object):
