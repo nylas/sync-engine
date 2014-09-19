@@ -23,7 +23,7 @@ run_for_cover()
 {
     colorn '32;1' "running:  "
     color '36;1' $1
-    coverage run --source inbox -p bin/$1 $2 2> &1 >  /tmp/$1.out &
+    coverage run --source inbox -p bin/$1 $2 2>&1 >  /tmp/$1.out &
     pids+=("$!")
 }
 
