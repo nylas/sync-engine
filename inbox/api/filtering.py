@@ -193,6 +193,10 @@ def _messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
         id_query = id_query.offset(offset)
 
     ids = [id for id, in id_query.all()]
+    if not ids:
+        # Short-circuit to avoid evaluating in-predicate with empty sequence
+        # below, which causes SAWarning.
+        return []
     # Eager-load part.content_disposition to make constructing API
     # representations faster
     messages_query = db_session.query(Message).filter(Message.id.in_(ids)). \
