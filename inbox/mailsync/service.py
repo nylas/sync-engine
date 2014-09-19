@@ -148,7 +148,8 @@ class SyncService(object):
                     db_session.commit()
                     self.log.info('sync started', account_id=account_id)
                 except Exception as e:
-                    self.log.error('error encountered', msg=e.message)
+                    self.log.error('sync_error', message=str(e.message),
+                                   account_id=account_id)
             else:
                 self.log.info('sync already started', account_id=account_id)
 
