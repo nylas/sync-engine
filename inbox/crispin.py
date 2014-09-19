@@ -804,6 +804,15 @@ class GmailCrispinClient(CondStoreCrispinClient):
         uids = self.find_messages(g_thrid)
         self.conn.remove_gmail_labels(uids, [label_name])
 
+    def get_labels(self, g_thrid):
+        uids = self.find_messages(g_thrid)
+        labels = self.conn.get_gmail_labels(uids)
+
+        # the complicated list comprehension below simply flattens the list
+        unique_labels = set([item for sublist in labels.values()
+                                  for item in sublist])
+        return list(unique_labels)
+
     def set_unread(self, g_thrid, unread):
         uids = self.find_messages(g_thrid)
         if unread:

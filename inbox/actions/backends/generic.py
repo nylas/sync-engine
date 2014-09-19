@@ -8,11 +8,13 @@ from sqlalchemy.orm import joinedload
 from inbox.actions.backends.imap import uidvalidity_cb, syncback_action
 from inbox.models.backends.imap import ImapThread
 from inbox.models.folder import Folder
+from inbox.models.thread import Thread
 
 PROVIDER = 'generic'
 
 __all__ = ['set_remote_archived', 'set_remote_starred', 'set_remote_unread',
-           'remote_save_draft', 'remote_delete_draft', 'remote_delete']
+           'remote_save_draft', 'remote_delete_draft', 'remote_delete',
+           'set_remote_spam', 'set_remote_trash']
 
 
 def get_thread_uids(db_session, thread_id, namespace_id):
@@ -152,3 +154,51 @@ def remote_delete_draft(account, folder_name, inbox_uid, db_session):
         crispin_client.delete_draft(inbox_uid)
 
     return syncback_action(fn, account, folder_name, db_session)
+
+
+def set_remote_spam(account, thread_id, spam, db_session):
+    thread = db_session.query(Thread).get(thread_id)
+    if account.spam_folder is None:
+        # account has no detected spam folder - create one.
+        spam_folder = Folder.find_or_create(db_session, account,
+                                            'Spam', 'spam')
+        account.spam_folder = spam_folder
+
+    if spam:
+        # apparently it's not possible to index an association
+        # proxy.
+        folders = [folder for folder in thread.folders]
+
+        assert len(folders) == 1, "A thread belongs to only one folder"
+        # Arbitrarily pick the first folder since there's no support for
+        # threads belonging to multiple folders on non-gmail backends.
+        return remote_move(account, thread_id, folders[0].name,
+                           account.spam_folder.name, db_session,
+                           create_destination=True)
+    else:
+        return remote_move(account, thread_id, account.spam_folder.name,
+                           account.inbox_folder.name, db_session)
+
+
+def set_remote_trash(account, thread_id, trash, db_session):
+    thread = db_session.query(Thread).get(thread_id)
+    if account.trash_folder is None:
+        # account has no detected trash folder - create one.
+        trash_folder = Folder.find_or_create(db_session, account,
+                                             'Trash', 'trash')
+        account.trash_folder = trash_folder
+
+    if trash:
+        # apparently it's not possible to index an association
+        # proxy.
+        folders = [folder for folder in thread.folders]
+
+        assert len(folders) == 1, "A thread belongs to only one folder"
+        # Arbitrarily pick the first folder since there's no support for
+        # threads belonging to multiple folders on non-gmail backends.
+        return remote_move(account, thread_id, folders[0].name,
+                           account.trash_folder.name, db_session,
+                           create_destination=True)
+    else:
+        return remote_move(account, thread_id, account.trash_folder.name,
+                           account.inbox_folder.name, db_session)

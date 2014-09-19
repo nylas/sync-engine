@@ -93,19 +93,39 @@ def mark_read(account_id, thread_id, db_session):
 
 
 def mark_spam(account_id, thread_id, db_session):
-    raise NotImplementedError
+    """Sync a mark as spam action back to the backend. """
+    account = db_session.query(Account).get(account_id)
+
+    set_remote_spam = module_registry[account.provider]. \
+        set_remote_spam
+    set_remote_spam(account, thread_id, True, db_session)
 
 
 def unmark_spam(account_id, thread_id, db_session):
-    raise NotImplementedError
+    """Sync an unmark as spam action back to the backend. """
+    account = db_session.query(Account).get(account_id)
+
+    set_remote_spam = module_registry[account.provider]. \
+        set_remote_spam
+    set_remote_spam(account, thread_id, False, db_session)
 
 
 def mark_trash(account_id, thread_id, db_session):
-    raise NotImplementedError
+    """Sync an trash action back to the backend. """
+    account = db_session.query(Account).get(account_id)
+
+    set_remote_trash = module_registry[account.provider]. \
+        set_remote_trash
+    set_remote_trash(account, thread_id, True, db_session)
 
 
 def unmark_trash(account_id, thread_id, db_session):
-    raise NotImplementedError
+    """Sync an trash action back to the backend. """
+    account = db_session.query(Account).get(account_id)
+
+    set_remote_trash = module_registry[account.provider]. \
+        set_remote_trash
+    set_remote_trash(account, thread_id, False, db_session)
 
 
 def save_draft(account_id, message_id, db_session):

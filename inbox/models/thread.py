@@ -163,12 +163,18 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         archive_tag = self.namespace.tags['archive']
         sent_tag = self.namespace.tags['sent']
         drafts_tag = self.namespace.tags['drafts']
+        spam_tag = self.namespace.tags['spam']
+        trash_tag = self.namespace.tags['trash']
         if tag == inbox_tag:
             self.tags.discard(archive_tag)
         elif tag == archive_tag:
             self.tags.discard(inbox_tag)
         elif tag == sent_tag:
             self.tags.discard(drafts_tag)
+        elif tag == spam_tag:
+            self.tags.discard(inbox_tag)
+        elif tag == trash_tag:
+            self.tags.discard(inbox_tag)
 
     def remove_tag(self, tag, execute_action=False):
         """Remove the given Tag instance from this thread. Does nothing if the
@@ -195,12 +201,18 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         archive_tag = self.namespace.tags['archive']
         unread_tag = self.namespace.tags['unread']
         unseen_tag = self.namespace.tags['unseen']
+        spam_tag = self.namespace.tags['spam']
+        trash_tag = self.namespace.tags['trash']
         if tag == unread_tag:
             # Remove the 'unseen' tag when the unread tag is removed.
             self.tags.discard(unseen_tag)
         if tag == inbox_tag:
             self.tags.add(archive_tag)
         elif tag == archive_tag:
+            self.tags.add(inbox_tag)
+        elif tag == trash_tag:
+            self.tags.add(inbox_tag)
+        elif tag == spam_tag:
             self.tags.add(inbox_tag)
 
     @property
