@@ -4,6 +4,8 @@
 /man
 # Vagrant
 /.vagrant
+/Vagrantfile.local
+/Vagrantfile.local.d
 node_modules
 *.py[cod]
 *.dat

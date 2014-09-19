@@ -1,0 +1,29 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# You can define your own VM settings by saving this file as Vagrantfile.local
+
+VAGRANTFILE_API_VERSION = "2" unless defined? VAGRANTFILE_API_VERSION
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+
+  # Use fewer memory and CPU resources
+  #config.vm.provider :virtualbox do |vbox, override|
+  #  vbox.memory = 512
+  #  vbox.cpus = 1
+  #end
+  #config.vm.provider :vmware_fusion do |vmware, override|
+  #  vmware.vmx["memsize"] = "512"
+  #  vmware.vmx["numvcpus"] = "1"
+  #end
+
+  # Don't restrict port 5555 forwarding to localhost (note missing 'host_ip' parameter)
+  #config.vm.network "forwarded_port", guest: 5555, host: 5555
+
+  # Disable forwarded port
+  #config.vm.network "forwarded_port", guest: 5555, host: 5555, disabled: true
+
+  # Mount /home/foo/shared_folder as /shared on the guest.
+  #config.vm.synced_folder "/home/foo/shared_folder", "/shared"
+
+end

@@ -68,3 +68,11 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     warn "--------------------------------------------------------"
   end
 end
+
+# Local Vagrantfile overrides.  See Vagrantfile.local.example for examples.
+Dir.glob('Vagrantfile.local.d/*').sort.each do |path|
+  load path
+end
+Dir.glob('Vagrantfile.local').sort.each do |path|
+  load path
+end
