@@ -108,7 +108,7 @@ fi
 
 color '35;1' 'Copying default secrets configuration to /etc/inboxapp'
 src=./etc/secrets-dev.yml
-dest=/etc/inboxapp/secrets-dev.yml
+dest=/etc/inboxapp/secrets.yml
 if [ ! -f $dest ]; then
     cp $src $dest
 elif [ $src -nt $dest ]; then
