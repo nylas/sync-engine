@@ -222,8 +222,6 @@ def test_add_remove_tags_by_name(api_client):
 
 
 def test_add_remove_tag_by_public_id(api_client):
-    # Some tag names may not be valid public ids. Make sure we don't fail in
-    # that case.
     assert 'foo bar' not in [tag['name'] for tag in
                              api_client.get_data('/tags/')]
 

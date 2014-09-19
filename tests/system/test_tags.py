@@ -33,7 +33,6 @@ def test_read_status(client):
         thread.add_tags(["unread"])
         wait_for_tag(client, thread.id, "unread")
 
-@pytest.mark.xfail
 @for_all_available_providers
 def test_custom_tag(client):
     thread = random.choice(client.threads.all())
