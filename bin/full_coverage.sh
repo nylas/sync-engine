@@ -23,11 +23,11 @@ run_for_cover()
 {
     colorn '32;1' "running:  "
     color '36;1' $1
-    coverage run --source /vagrant/inbox -p bin/$1 $2 > /tmp/$1.out 2> /tmp/$1.err  &
+    coverage run --source inbox -p bin/$1 $2 2> &1 >  /tmp/$1.out &
     pids+=("$!")
 }
 
-coverage run --source /vagrant/inbox -p -m py.test --junitxml /vagrant/tests/output /vagrant/tests
+coverage run --source inbox -p -m py.test --junitxml tests/output tests
 
 # Start the services
 run_for_cover inbox-start
