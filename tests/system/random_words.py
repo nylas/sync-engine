@@ -19,7 +19,6 @@ def get_words():
         except IOError:
             print json.dumps({'error': "couldn't open dictionary file",
                               'filename': DICT_FILE})
-        sys.exit(1)
     return words
 
 
