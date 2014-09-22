@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import string
 import random
 import json
 import sys
