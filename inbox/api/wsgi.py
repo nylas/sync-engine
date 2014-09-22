@@ -20,15 +20,23 @@ class InboxWSGIHandler(WSGIHandler):
             client_address = self.client_address[0]
         else:
             client_address = self.client_address
+
+        # client_address is None when requests are forwarded from nginx via
+        # Unix socket. In that case, replace with a menaingful value
+        if client_address is None:
+            client_address = self.headers.get('X-Forward-For')
         status = getattr(self, 'status', None)
         requestline = getattr(self, 'requestline', None)
+
+        additional_context = self.environ.get('log_context') or {}
 
         log.info('request handled',
                  length=length,
                  request_time=request_time,
                  client_address=client_address,
                  status=status,
-                 requestline=requestline)
+                 requestline=requestline,
+                 **additional_context)
 
     def get_environ(self):
         env = super(InboxWSGIHandler, self).get_environ()
