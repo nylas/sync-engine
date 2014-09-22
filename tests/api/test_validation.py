@@ -20,11 +20,20 @@ def test_namespace_id_validation(api_client, db):
 
 
 def test_recipient_validation(api_client):
+    r = api_client.post_data('/drafts', {'to': [{'email': 'foo@example.com'}]})
+    assert r.status_code == 200
+    r = api_client.post_data('/drafts', {'to': {'email': 'foo@example.com'}})
+    assert r.status_code == 400
     r = api_client.post_data('/drafts', {'to': 'foo@example.com'})
     assert r.status_code == 400
     r = api_client.post_data('/drafts', {'to': [{'name': 'foo'}]})
     assert r.status_code == 400
     r = api_client.post_data('/send', {'to': [{'email': 'foo'}]})
+    assert r.status_code == 400
+    r = api_client.post_data('/drafts', {'to': [{'email': ['foo']}]})
+    assert r.status_code == 400
+    r = api_client.post_data('/drafts', {'to': [{'name': ['Mr. Foo'],
+                                                 'email': 'foo@example.com'}]})
     assert r.status_code == 400
     r = api_client.post_data('/drafts',
                              {'to': [{'name': 'Good Recipient',

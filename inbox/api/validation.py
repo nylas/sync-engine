@@ -147,7 +147,10 @@ def get_recipients(recipients, field, validate_emails=False):
     if not isinstance(recipients, list):
         raise InputError('Invalid {} field'.format(field))
     for r in recipients:
-        if not (isinstance(r, dict) and 'email' in r):
+        if not (isinstance(r, dict) and 'email' in r and
+                isinstance(r['email'], basestring)):
+            raise InputError('Invalid {} field'.format(field))
+        if 'name' in r and not isinstance(r['name'], basestring):
             raise InputError('Invalid {} field'.format(field))
         if (validate_emails and not
                 isinstance(address.parse(r['email']), address.EmailAddress)):
