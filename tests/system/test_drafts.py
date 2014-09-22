@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import pytest
 import time
-from base import for_all_available_providers, timeout_loop
+from conftest import timeout_loop, all_accounts
 from inbox.client.errors import NotFoundError
 
 
@@ -31,7 +31,7 @@ def check_draft_is_removed(client, draft_id):
         return True
 
 
-@for_all_available_providers
+@pytest.mark.parametrize("client", all_accounts)
 def test_draft(client):
     # Let's create a draft, attach a file to it and delete it
 

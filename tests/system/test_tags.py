@@ -2,7 +2,7 @@
 import pytest
 import random
 from datetime import datetime
-from base import for_all_available_providers, timeout_loop
+from conftest import timeout_loop, all_accounts
 
 
 @timeout_loop('tag_add')
@@ -19,7 +19,7 @@ def wait_for_tag_removal(client, thread_id, tagname):
     return True if tagname not in tags else False
 
 
-@for_all_available_providers
+@pytest.mark.parametrize("client", all_accounts)
 def test_read_status(client):
     # toggle a thread's read status
     msg = random.choice(client.messages.all())
@@ -33,7 +33,8 @@ def test_read_status(client):
         thread.add_tags(["unread"])
         wait_for_tag(client, thread.id, "unread")
 
-@for_all_available_providers
+
+@pytest.mark.parametrize("client", all_accounts)
 def test_custom_tag(client):
     thread = random.choice(client.threads.all())
     tagname = "custom-tag" + datetime.now().strftime("%s.%f")
@@ -51,7 +52,7 @@ def test_custom_tag(client):
     client.tags.delete(t.id)
 
 
-@for_all_available_providers
+@pytest.mark.parametrize("client", all_accounts)
 def test_archive_tag(client):
     thread = random.choice(client.threads.all())
     thread.add_tags(["archive"])
@@ -73,8 +74,8 @@ def test_archive_tag(client):
                                                        "should add inbox tag")
 
 
-@for_all_available_providers
 @pytest.mark.xfail
+@pytest.mark.parametrize("client", all_accounts)
 def test_spam_tag(client):
     # Just return for now until spam / trash work.
     return

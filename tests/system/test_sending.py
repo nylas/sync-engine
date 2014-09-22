@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import pytest
 from time import strftime
-from base import for_all_available_providers, timeout_loop
+from conftest import timeout_loop, all_accounts
 
 
 @timeout_loop('send')
@@ -27,7 +27,7 @@ def wait_for_trash(client, thread_id):
     return True if ("trash" in tags and "archive" not in tags) else False
 
 
-@for_all_available_providers
+@pytest.mark.parametrize("client", all_accounts)
 def test_sending(client):
     # Create a message and send it to ourselves
     subject = "%s (Self Send Test)" % strftime("%Y-%m-%d %H:%M:%S")
