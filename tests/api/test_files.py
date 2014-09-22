@@ -63,6 +63,9 @@ def test_file_filtering(api_client, uploaded_file_ids, draft):
 
     results = api_client.get_data('/files?message_id={}'
                                   .format(d_id))
+
+    assert all([f['is_embedded'] for f in results])
+    assert all([d_id in f['message_ids'] for f in results])
     assert len(results) == 3
 
     results = api_client.get_data('/files?message_id={}&limit=1'

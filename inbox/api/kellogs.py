@@ -4,7 +4,7 @@ from json import JSONEncoder, dumps
 
 from flask import Response
 
-from inbox.models import (Message, Part, Contact, Calendar, Event,
+from inbox.models import (Message, Contact, Calendar, Event,
                           Participant, Time, TimeSpan, Date, DateSpan,
                           Thread, Namespace, Block, Tag)
 
@@ -181,12 +181,12 @@ def encode(obj, namespace_public_id=None):
             'is_embedded': False,
             'message_id': None
         }
-        if isinstance(obj, Part):
+        if len(obj.parts):
             # if obj is actually a message attachment (and not merely an
             # uploaded file), set additional properties
             resp.update({
-                'is_embedded': obj.is_embedded,
-                'message_id': obj.message.public_id,
+                'is_embedded': True,
+                'message_ids': [p.message.public_id for p in obj.parts]
             })
         return resp
 
