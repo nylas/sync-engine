@@ -52,7 +52,7 @@ And _voilà_! Auth an account via the commandline to start syncing:
 | AOL 	|  :warning: 			|  In development 	|
 | Cyrus (Fastmail)	|  :warning:	|  In development	|
 | iCloud |  :warning:	|  In development	|
-| Dovecot (Gandhi) | :warning: | In development |
+| Dovecot (Gandi) | :warning: | In development |
 | Zimbra  | :no_entry:  | Not implemented |
 | Courier  | :no_entry:  | Not implemented |
 
