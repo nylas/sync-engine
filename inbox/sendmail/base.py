@@ -105,8 +105,18 @@ def update_draft(db_session, account, original_draft, to_addr=None,
     update('sanitized_body', body if body else None)
     update('received_date', datetime.utcnow())
 
+    # Remove any attachments that aren't specified
+    new_block_ids = [b.id for b in blocks]
+    for part in filter(lambda x: x.block_id not in new_block_ids,
+                       original_draft.parts):
+        original_draft.parts.remove(part)
+        db_session.delete(part)
+
     # Parts, tags require special handling
     for block in blocks:
+        # Don't re-add attachments that are already attached
+        if block.id in [p.block_id for p in original_draft.parts]:
+            continue
         part = Part(block=block)
         part.namespace_id = account.namespace.id
         part.content_disposition = 'attachment'

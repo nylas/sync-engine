@@ -122,9 +122,29 @@ def test_create_draft_with_attachments(api_client, attachments, example_draft):
         attachment_id = json.loads(r.data)[0]['id']
         attachment_ids.append(attachment_id)
 
-    example_draft['file_ids'] = attachment_ids
+    first_attachment = attachment_ids.pop()
+
+    example_draft['file_ids'] = [first_attachment]
     r = api_client.post_data('/drafts', example_draft)
     assert r.status_code == 200
+    returned_draft = json.loads(r.data)
+    draft_public_id = returned_draft['id']
+    example_draft['version'] = returned_draft['version']
+    assert len(returned_draft['files']) == 1
+
+    attachment_ids.append(first_attachment)
+    example_draft['file_ids'] = attachment_ids
+    r = api_client.put_data('/drafts/{}'.format(draft_public_id),
+                            example_draft)
+    assert r.status_code == 200
+    returned_draft = json.loads(r.data)
+    assert len(returned_draft['files']) == 3
+    example_draft['version'] = returned_draft['version']
+
+    # Make sure we can't delete the files now
+    for file_id in attachment_ids:
+        r = api_client.delete('/files/{}'.format(file_id))
+        assert r.status_code == 400
 
     threads_with_drafts = api_client.get_data('/threads?tag=drafts')
     assert len(threads_with_drafts) == 1
@@ -132,6 +152,28 @@ def test_create_draft_with_attachments(api_client, attachments, example_draft):
     # Check that thread also gets the attachment tag
     thread_tags = threads_with_drafts[0]['tags']
     assert any('attachment' == tag['name'] for tag in thread_tags)
+
+    # Now remove the attachment
+    example_draft['file_ids'] = [first_attachment]
+    r = api_client.put_data('/drafts/{}'.format(draft_public_id),
+                            example_draft)
+
+    draft_data = api_client.get_data('/drafts/{}'.format(draft_public_id))
+    assert len(draft_data['files']) == 1
+    example_draft['version'] = draft_data['version']
+
+    example_draft['file_ids'] = []
+    r = api_client.put_data('/drafts/{}'.format(draft_public_id),
+                            example_draft)
+    draft_data = api_client.get_data('/drafts/{}'.format(draft_public_id))
+    assert r.status_code == 200
+    assert len(draft_data['files']) == 0
+    returned_draft = json.loads(r.data)
+
+    # now that they're not attached, we should be able to delete them
+    for file_id in attachment_ids:
+        r = api_client.delete('/files/{}'.format(file_id))
+        assert r.status_code == 200
 
 
 def test_get_all_drafts(api_client, example_draft):
