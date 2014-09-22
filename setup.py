@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name = "inbox",
+    name = "inbox-sync",
     version = "0.1",
     packages = find_packages(),
 
