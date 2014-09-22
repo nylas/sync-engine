@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import pytest
+from time import strftime
 from conftest import timeout_loop, all_accounts
 from random_words import random_words
 
@@ -37,7 +38,11 @@ def wait_for_trash(client, thread_id):
 @pytest.mark.parametrize("client", all_accounts)
 def test_sending(client):
     # Create a message and send it to ourselves
-    subject = random_words(8, sig=None)
+    subject = "%s (Self Send Test)" % strftime("%Y-%m-%d %H:%M:%S")
+    draft = client.drafts.create(to=[{"email": client.email_address}],
+                                 subject=subject,
+                                 body=subject + "Test email.")
+
     body = random_words(sig=client.email_address.split('@')[0])
 
     draft = client.drafts.create(to=[{"email": client.email_address}],
