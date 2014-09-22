@@ -78,7 +78,7 @@ from inbox.basicauth import AuthError
 from inbox.log import get_logger
 log = get_logger()
 from inbox.crispin import connection_pool, retry_crispin
-from inbox.models import Folder
+from inbox.models import Folder, Namespace
 from inbox.models.backends.imap import ImapFolderSyncStatus, ImapThread
 from inbox.mailsync.exc import UidInvalid
 from inbox.mailsync.backends.imap import common
@@ -143,6 +143,12 @@ class FolderSyncEngine(Greenlet):
         self.retry_fail_classes = retry_fail_classes
         self.state = None
         self.conn_pool = _pool(self.account_id)
+
+        with mailsync_session_scope() as db_session:
+            self.namespace_id = db_session.query(Namespace).\
+               filter(Namespace.account_id == self.account_id).options(
+               load_only("id"))
+            assert self.namespace_id is not None, "namespace_id is None"
 
         self.state_handlers = {
             'initial': self.initial_sync,
@@ -308,14 +314,18 @@ class FolderSyncEngine(Greenlet):
         new_uid = self.add_message_attrs(db_session, new_uid, msg, folder)
         return new_uid
 
+    def fetch_similar_threads(self, db_session, new_uid, msg, folder):
+        # FIXME: restrict this to messages in the same folder?
+        clean_subject = cleanup_subject(new_uid.message.subject)
+        return db_session.query(ImapThread).filter(
+            ImapThread.namespace_id == self.namespace_id,
+            ImapThread.subject.like(clean_subject)).all()
+
     def add_message_attrs(self, db_session, new_uid, msg, folder):
         """ Post-create-message bits."""
         with db_session.no_autoflush:
-            clean_subject = cleanup_subject(new_uid.message.subject)
-            parent_threads = db_session.query(ImapThread).filter(
-                ImapThread.namespace_id == self.account_id,
-                ImapThread.subject.like(clean_subject)).all()
-
+            parent_threads = self.fetch_similar_threads(db_session, new_uid,
+                                                        msg, folder)
             if parent_threads == []:
                 new_uid.message.thread = ImapThread.from_imap_message(
                     db_session, new_uid.account.namespace, new_uid.message)
