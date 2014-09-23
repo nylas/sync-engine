@@ -20,7 +20,7 @@ GET https://api.inboxapp.com/n/<namespace_id>/files/<file_id>
     "filename": "House-Blueprints.zip",
     "size": 3145728,
     "content-type": "application/zip",
-    "message_id": "152ev3uktfrtk3y2subs4i9mn",
+    "message_ids": ["152ev3uktfrtk3y2subs4i9mn"],
     "is_embedded": false
 }
 ```
@@ -45,7 +45,7 @@ This endpoint supports [filters](#filters), which allow you to fetch multiple fi
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/files?content_type=application%2Fzip
+GET https://api.inboxapp.com/n/<namespace_id>/files?filename=meme.png
 ```
 
 

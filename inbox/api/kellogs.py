@@ -179,7 +179,6 @@ def encode(obj, namespace_public_id=None):
             'size': obj.size,
             'filename': obj.filename,
             'is_embedded': False,
-            'message_id': None
         }
         if len(obj.parts):
             # if obj is actually a message attachment (and not merely an
