@@ -2,8 +2,8 @@ import json
 import sys
 import traceback
 
-from inbox.log import (log_uncaught_errors, get_logger, safe_format_exception,
-                       MAX_EXCEPTION_LENGTH)
+from inbox.log import (log_uncaught_errors, get_logger, get_sentry_client,
+                       safe_format_exception, MAX_EXCEPTION_LENGTH)
 
 
 class ReallyVerboseError(Exception):
@@ -62,3 +62,28 @@ def test_safe_format_exception():
         exc = safe_format_exception(*sys.exc_info())
         # And check that the resulting string is reasonably-sized.
         assert len(exc) < 2 * MAX_EXCEPTION_LENGTH
+
+
+SECRET = 'secret_value'
+
+
+def _fake_load_secret():
+    return SECRET
+
+
+def test_sentry_processing():
+    """Test that we actually strip stack locals from Sentry exception messages.
+    A bit messy to test, but better than nothing at all."""
+    sentry_client = get_sentry_client()
+    exception_data = {}
+
+    def intercept_sentry_message(**kwargs):
+        exception_data.update(kwargs)
+    sentry_client.send = intercept_sentry_message
+    try:
+        local_variable = _fake_load_secret()
+        raise ValueError
+    except:
+        sentry_client.captureException()
+
+    assert SECRET not in str(exception_data)

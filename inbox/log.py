@@ -20,8 +20,6 @@ from inbox.config import config
 
 MAX_EXCEPTION_LENGTH = 10000
 
-sentry_client = None
-
 
 def _find_first_app_frame_and_name(ignores=None):
     """
@@ -162,12 +160,18 @@ def configure_logging(is_prod):
     # Set loglevel DEBUG if config value is missing.
     root_logger.setLevel(config.get('LOGLEVEL', 10))
 
-    if config.get('SENTRY_EXCEPTIONS'):
+
+_sentry_client = None
+
+
+def get_sentry_client():
+    global sentry_client
+    if _sentry_client is None:
         sentry_dsn = config.get_required('SENTRY_DSN')
-        global sentry_client
-        sentry_client = raven.Client(
+        return raven.Client(
             sentry_dsn,
             processors=('inbox.log.TruncatingProcessor',))
+    return _sentry_client
 
 
 def safe_format_exception(etype, value, tb, limit=None):
@@ -189,13 +193,11 @@ def safe_format_exception(etype, value, tb, limit=None):
 
 
 class TruncatingProcessor(raven.processors.Processor):
-    """Truncates the exception value string, and strips all but the last stack
-    locals."""
-    FRAMES_KEPT_NR = 20
-
+    """Truncates the exception value string, and strips stack locals.
+    Sending stack locals could potentially leak information."""
     # Note(emfree): raven.processors.Processor provides a filter_stacktrace
     # method to implement, but won't actually call it correctly. We can
-    # simplify this after submitting an upstream fix.
+    # simplify this if it gets fixed upstream.
     def process(self, data, **kwargs):
         if 'exception' not in data:
             return data
@@ -206,15 +208,14 @@ class TruncatingProcessor(raven.processors.Processor):
             stacktrace = item.get('stacktrace')
             if stacktrace is not None:
                 if 'frames' in stacktrace:
-                    for ix, frame in enumerate(reversed(stacktrace['frames'])):
-                        if ix >= self.FRAMES_KEPT_NR:
-                            frame.pop('vars')
+                    for frame in stacktrace['frames']:
+                        frame.pop('vars')
         return data
 
 
 def sentry_alert(*args, **kwargs):
     if config.get('SENTRY_EXCEPTIONS'):
-        sentry_client.captureException(*args, **kwargs)
+        get_sentry_client().captureException(*args, **kwargs)
 
 
 def get_git_revision():
