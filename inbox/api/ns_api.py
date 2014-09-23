@@ -874,8 +874,9 @@ def calendar_create_api():
 
     name = data['name']
 
-    existing = g.db_session.query(Calendar).filter_by(
-        name=name).first()
+    existing = g.db_session.query(Calendar).filter(
+        Calendar.name == name,
+        Calendar.account_id == g.namespace.account_id).first()
 
     if existing:
         return err(404, "Calendar already exists with name '{}'.".format(name))
