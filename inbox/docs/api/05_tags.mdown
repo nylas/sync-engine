@@ -18,13 +18,15 @@ GET https://api.inboxapp.com/n/<namespace_id>/tags
         "id": "4zv7pgvihjvuptbwv57kiz62",
         "name": "inbox",
         "namespace_id": "awa6ltos76vz5hvphkp8k17nt",
-        "object": "tag"
+        "object": "tag",
+        "readonly": false
     },
     {
         "id": "76zrfd8ln5zo2swalu1yojhty",
         "name": "drafts",
         "namespace_id": "awa6ltos76vz5hvphkp8k17nt",
-        "object": "tag"
+        "object": "tag",
+        "readonly": false
     },
     ...
 ]
@@ -38,7 +40,7 @@ GET https://api.inboxapp.com/n/<namespace_id>/tags/<tag_id>
 
 # Getting Threads with a Tag
 
-You can list all of the threads with a given tag using a [Tag Filter](#filters). The tag parameter can be a tag ID, such as `4zv7pgvihjvuptbwv57kiz62` or a tag name, like `inbox` or `gmail-hiking`.
+You can list all of the threads with a given tag using a [Tag Filter](#filters). The tag parameter can be a tag ID, such as `4zv7pgvihjvuptbwv57kiz62` or a tag name, like `inbox` or `hiking`.
 
 ```
 :::xml
@@ -154,7 +156,9 @@ PUT https://api.inboxapp.com/n/<namespace_id>/tags/<tag_id>
 :::json
 {
     "id": "d121cvdyjhgacaqyymzjg5prl",
-    "name": "housing-search"
+    "name": "housing-search",
+    "object": "tag",
+    "readonly": false
 }
 ```
 
@@ -165,20 +169,18 @@ rename e.g. the `sent` or the `unread` tag.
 
 # Gmail Labels & IMAP Folders
 
-Tags in Inbox are similar to labels in Gmail, but Inbox presents a uniform interface across all providers including Exchange, Yahoo, and generic IMAP. It's important to note that this consistent experience comes with an important limitation: though Inbox exposes tags for Gmail labels and IMAP folders, these tags are prefixed with the provider name and cannot be added or removed from threads. Inbox does not allow changes to these tags and does not sync them back to underlying mail provider with the exception of it's built-in canonical labels (unread, archive, trash, etc.)
+Tags in Inbox are similar to labels in Gmail, but Inbox presents a uniform interface across all providers including Exchange, Yahoo, and generic IMAP. It's important to note that this consistent experience comes with an important limitation: though Inbox exposes tags for Gmail labels and IMAP folders, these tags cannot be added or removed from threads. Inbox does not allow changes to these tags and does not sync them back to underlying mail provider with the exception of its built-in canonical labels (unread, archive, trash, etc.)
 
-What does that mean in practice? Here are some examples of things you can and cannot do with Gmail labels (provider prefixed tags) through Inbox:
+What does that mean in practice? Here are some examples of things you can and cannot do with Gmail labels through Inbox:
 
 **Can I see if a message has been labeled 'climbing' in Gmail?**
 
-Yes. This Gmail label will be exposed as the tag `gmail-climbing` on the Inbox thread.
+Yes. This Gmail label will be exposed as the tag `climbing` on the Inbox thread.
 
 **Can I add the 'climbing' label to a message in Gmail?**
 
-No. Although the Gmail label 'climbing' would appear in Inbox as the tag `gmail-climbing`, this tag is read only. You can't add or remove it from threads or rename it. This is important, because your application should work for users with stock IMAP and Exchange accounts as well as Gmail.
+No. Although the Gmail label would appear in Inbox as the `climbing` tag, this tag is read only. You can't add or remove it from threads or rename it. This is important, because your application should work for users with stock IMAP and Exchange accounts as well as Gmail. Read-only tags contain the attribute `"readonly": true` in their representation.
 
 **Can I add the 'starred' label to a message in Gmail?**
 
 In general, tag changes aren't synced back to Gmail but there are a few exceptions. Adding the Inbox `starred` tag will star the message in Gmail and perform the equivalent action on every other provider supported by Inbox. The need for a consistent behavior means that there are only a few tags this applies to: `unread`, `archive`, `starred`, `inbox` and `trash`.
-
-

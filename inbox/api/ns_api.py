@@ -168,7 +168,7 @@ def tag_update_api(public_id):
         return err(404, 'No tag found')
 
     data = request.get_json(force=True)
-    if 'name' not in data.keys():
+    if not ('name' in data.keys() and isinstance(data['name'], basestring)):
         return err(400, 'Malformed tag update request')
     if 'namespace_id' in data.keys():
         ns_id = data['namespace_id']
@@ -177,7 +177,8 @@ def tag_update_api(public_id):
             return err(400, 'Cannot change the namespace on a tag.')
     if not tag.user_created:
         return err(403, 'Cannot modify tag {}'.format(public_id))
-    new_name = data['name']
+    # Lowercase tag name, regardless of input casing.
+    new_name = data['name'].lower()
 
     if new_name != tag.name:  # short-circuit rename to same value
         if not Tag.name_available(new_name, g.namespace.id, g.db_session):
@@ -191,14 +192,15 @@ def tag_update_api(public_id):
 @app.route('/tags/', methods=['POST'])
 def tag_create_api():
     data = request.get_json(force=True)
-    if 'name' not in data.keys():
+    if not ('name' in data.keys() and isinstance(data['name'], basestring)):
         return err(400, 'Malformed tag request')
     if 'namespace_id' in data.keys():
         ns_id = data['namespace_id']
         valid_public_id(ns_id)
         if ns_id != g.namespace.id:
             return err(400, 'Cannot change the namespace on a tag.')
-    tag_name = data['name']
+    # Lowercase tag name, regardless of input casing.
+    tag_name = data['name'].lower()
     if not Tag.name_available(tag_name, g.namespace.id, g.db_session):
         return err(409, 'Tag name not available')
     if len(tag_name) > MAX_INDEXABLE_LENGTH:

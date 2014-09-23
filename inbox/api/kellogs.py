@@ -194,7 +194,8 @@ def encode(obj, namespace_public_id=None):
             'id': obj.public_id,
             'object': 'tag',
             'name': obj.name,
-            'namespace_id': _get_namespace_public_id(obj)
+            'namespace_id': _get_namespace_public_id(obj),
+            'readonly': obj.readonly
         }
 
 

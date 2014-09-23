@@ -106,9 +106,7 @@ class Folder(MailSyncBase):
                 return tag
 
         else:
-            provider_prefix = self.account.provider
-            tag_name = '-'.join((provider_prefix,
-                                 self.name.lower()))[:MAX_INDEXABLE_LENGTH]
+            tag_name = self.name.lower()[:MAX_INDEXABLE_LENGTH]
             try:
                 return db_session.query(Tag). \
                     filter(Tag.namespace_id == self.namespace.id,

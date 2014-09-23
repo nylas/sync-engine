@@ -52,9 +52,6 @@ class Tag(MailSyncBase, HasRevisions):
 
     user_created = Column(Boolean, server_default=false(), nullable=False)
 
-    RESERVED_PROVIDER_NAMES = ['gmail', 'outlook', 'yahoo', 'exchange',
-                               'inbox', 'icloud', 'aol']
-
     CANONICAL_TAG_NAMES = ['inbox', 'archive', 'drafts', 'sending', 'sent',
                            'spam', 'starred', 'trash', 'unread', 'unseen',
                            'attachment']
@@ -71,6 +68,14 @@ class Tag(MailSyncBase, HasRevisions):
         # The 'unseen' tag can only be removed.
         return (self.user_created or self.public_id in self.USER_MUTABLE_TAGS
                 or self.public_id == 'unseen')
+
+    @property
+    def user_addable(self):
+        return (self.user_created or self.public_id in self.USER_MUTABLE_TAGS)
+
+    @property
+    def readonly(self):
+        return not (self.user_removable or self.user_addable)
 
     @classmethod
     def create_canonical_tags(cls, namespace, db_session):
@@ -89,10 +94,7 @@ class Tag(MailSyncBase, HasRevisions):
 
     @classmethod
     def name_available(cls, name, namespace_id, db_session):
-        if any(name.lower().startswith(provider) for provider in
-               cls.RESERVED_PROVIDER_NAMES):
-            return False
-
+        name = name.lower()
         if name in cls.RESERVED_TAG_NAMES or name in cls.CANONICAL_TAG_NAMES:
             return False
 
@@ -101,10 +103,6 @@ class Tag(MailSyncBase, HasRevisions):
             return False
 
         return True
-
-    @property
-    def user_addable(self):
-        return (self.user_created or self.public_id in self.USER_MUTABLE_TAGS)
 
     __table_args__ = (UniqueConstraint('namespace_id', 'name'),
                       UniqueConstraint('namespace_id', 'public_id'))
