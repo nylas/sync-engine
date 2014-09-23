@@ -10,6 +10,7 @@ from inbox.log import get_logger
 from inbox.models.session import session_scope
 from inbox.models.backends.imap import ImapAccount
 from inbox.sendmail.base import SendMailException, SendError
+from inbox.oauth import OAuthError
 from inbox.providers import provider_info
 from inbox.util.concurrency import retry
 log = get_logger()
@@ -177,6 +178,9 @@ class BaseSMTPClient(object):
     """
     def __init__(self, account_id):
         self.account_id = account_id
+        self.log = get_logger()
+        self.log.bind(account_id=account_id)
+
         with session_scope() as db_session:
             account = db_session.query(ImapAccount).get(self.account_id)
 
@@ -188,13 +192,13 @@ class BaseSMTPClient(object):
             self.auth_type = provider_info(self.provider_name)['auth']
 
             if self.auth_type == 'oauth2':
-                self.auth_token = account.access_token
+                try:
+                    self.auth_token = account.access_token
+                except OAuthError:
+                    raise SendMailException('Error logging in.')
             else:
                 assert self.auth_type == 'password'
                 self.auth_token = account.password
-
-        self.log = get_logger()
-        self.log.bind(account_id=account_id)
 
     @smtpconn_retry
     def _send(self, recipients, msg):
@@ -205,13 +209,12 @@ class BaseSMTPClient(object):
                                              msg)
             # Sent to none successfully
         except smtplib.SMTPRecipientsRefused:
-            raise SendError(failures)
+            raise SendError('Refused', failures=failures)
         except smtplib.SMTPException as e:
-            self.log.error('Sending failed', exception=e)
-            raise socket.error('Sending failed: Exception {0}'.format(e))
+            raise SendError('Sending failed: Exception {0}'.format(e))
         # Send to at least one failed
         if failures:
-            raise SendError(failures)
+            raise SendError('Send failed', failures=failures)
 
         # Sent to all successfully
         self.log.info('Sending successful', sender=self.email_address,

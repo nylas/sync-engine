@@ -134,7 +134,8 @@ def save_draft(account_id, message_id, db_session):
     message = db_session.query(Message).get(message_id)
     if not message.is_draft:
         log.warning('tried to save non-draft message as draft',
-                    message_id=message_id)
+                    message_id=message_id,
+                    account_id=account_id)
         return
 
     recipients = Recipients(message.to_addr, message.cc_addr,
@@ -193,17 +194,27 @@ def _send(account_id, draft_id, db_session):
     """Send the draft with id = `draft_id`."""
     account = db_session.query(Account).get(account_id)
 
-    sendmail_client = get_sendmail_client(account)
+    try:
+        sendmail_client = get_sendmail_client(account)
+    except SendMailException:
+        log.error('Send Error', message="Failed to create sendmail client.",
+                  account_id=account_id)
+        raise
     try:
         draft = db_session.query(Message).filter(
             Message.id == draft_id).one()
 
     except NoResultFound:
-        log.info('NoResultFound for draft_id {0}'.format(draft_id))
+        log.info('Send Error',
+                 message='NoResultFound for draft_id {0}'.format(draft_id),
+                 account_id=account_id)
         raise SendMailException('No draft with id {0}'.format(draft_id))
 
     except MultipleResultsFound:
-        log.info('MultipleResultsFound for draft_id {0}'.format(draft_id))
+        log.info('Send Error',
+                 message='MultipleResultsFound for draft_id'
+                         '{0}'.format(draft_id),
+                 account_id=account_id)
         raise SendMailException('Multiple drafts with id {0}'.format(
             draft_id))
 
