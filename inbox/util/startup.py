@@ -1,3 +1,5 @@
+# XXX(dlitz): Most of this is deployment-related stuff that belongs outside the
+# main Python invocation.
 import gc
 import os
 import sys
@@ -94,18 +96,6 @@ def check_sudo():
         raise Exception("Don't run Inbox as root!")
 
 
-def clean_pyc():
-    # Keep it clean for development
-    log.debug('Removing pyc files...')
-    for root, dir, files in os.walk('./src'):
-        for filename in files:
-            if filename[-4:] == '.pyc':
-                full_path = os.path.join(root, filename)
-                os.remove(full_path)
-    log.debug('Not writing pyc bytecode for this execution')
-    sys.dont_write_bytecode = True
-
-
 def git_rev():
     return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'])
 
@@ -137,7 +127,9 @@ def preflight():
     check_sudo()
     requirements_path = _absolute_path('../../requirements.txt')
     check_requirements(requirements_path)
-    clean_pyc()
+    if os.path.exists('./src'):
+        log.warning(
+            'pip ./src directory detected; It should be removed in production')
     check_db()
 
     # Print a traceback when the process receives signal SIGSEGV, SIGFPE,

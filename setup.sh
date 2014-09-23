@@ -34,6 +34,11 @@ color '36;1' "
      https://www.github.com/inboxapp/inbox
 "
 
+if ! [ -e ./setup.py ] || ! [ -e ./setup.sh ] ; then
+    color '31;1' "Error: setup.sh should be run from the inbox repo" >&2
+    exit 1
+fi
+
 color '35;1' 'Updating packages...'
 apt-get update
 apt-get -y install python-software-properties
@@ -65,6 +70,9 @@ apt-get -y install git \
                    tmux \
                    curl \
                    tnef \
+
+color '35;1' 'Removing .pyc files...'   # they might be stale
+find . -name \*.pyc -delete
 
 color '35;1' 'Ensuring setuptools and pip versions...'
 # If python-setuptools is actually the old 'distribute' fork of setuptools,
@@ -158,9 +166,6 @@ if $configure_db; then
         alembic upgrade head
     fi
 fi
-
-color '35;1' 'Removing .pyc files...'
-find . -name \*.pyc -delete
 
 color '35;1' 'Cleaning up...'
 apt-get -y purge build-essential
