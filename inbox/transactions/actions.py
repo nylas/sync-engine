@@ -6,6 +6,7 @@ TODO(emfree):
    talking to the same database backend things could go really badly.
 """
 from collections import defaultdict
+import platform
 import gevent
 from gevent.coros import BoundedSemaphore
 from sqlalchemy import asc
@@ -77,6 +78,11 @@ class SyncbackService(gevent.Greenlet):
                 action_function = ACTION_FUNCTION_MAP[log_entry.action]
                 namespace = db_session.query(Namespace). \
                     get(log_entry.namespace_id)
+
+                # Only actions on accounts associated with this sync-engine
+                if namespace.account.sync_host != platform.node():
+                    continue
+
                 self._scheduled_actions.add(log_entry.id)
                 self.log.info('delegating action',
                               action_id=log_entry.id,
