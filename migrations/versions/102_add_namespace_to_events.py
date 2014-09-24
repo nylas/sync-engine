@@ -11,25 +11,28 @@ revision = '4d10bc835f44'
 down_revision = '3bb01fcc755e'
 
 from alembic import op
-import sqlalchemy as sa
 from sqlalchemy.sql import text
 
 
 def upgrade():
-    op.add_column('event', sa.Column('namespace_id', sa.Integer(),
-                                     sa.ForeignKey('namespace.id')))
-
     conn = op.get_bind()
+    conn.execute(text('''
+        ALTER TABLE event
+            ADD COLUMN namespace_id INTEGER,
+            ADD FOREIGN KEY(namespace_id) REFERENCES namespace (id)
+            '''))
+
     conn.execute(text('''
         UPDATE event JOIN namespace ON event.account_id=namespace.account_id
         SET event.namespace_id=namespace.id'''))
 
-    op.drop_constraint(u'uuid', 'event', type_='unique')
-    op.drop_constraint('event_ibfk_1', 'event', type_='foreignkey')
-    op.create_unique_constraint('uuid', 'event', ['uid', 'source',
-                                                  'namespace_id',
-                                                  'provider_name'])
-    op.drop_column('event', 'account_id')
+    conn.execute(text('''
+        ALTER TABLE event
+            DROP INDEX uuid,
+            DROP FOREIGN KEY event_ibfk_1,
+            ADD CONSTRAINT uuid UNIQUE (uid, source, namespace_id, provider_name),
+            DROP COLUMN account_id
+            '''))
 
 
 def downgrade():
