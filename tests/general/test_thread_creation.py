@@ -21,6 +21,7 @@ def test_generic_foldersyncengine(db, monkeypatch):
     email = "inboxapptest1@fastmail.fm"
     account = create_account(db.session, email,
                              {"email": email, "password": "BLAH"})
+    db.session.add(account)
     db.session.commit()
 
     engine = None

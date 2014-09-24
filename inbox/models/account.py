@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import (Column, Integer, String, DateTime, Boolean, ForeignKey,
                         Enum)
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql.expression import true
+from sqlalchemy.sql.expression import true, false
 from inbox.sqlalchemy_ext.util import generate_public_id
 
 from inbox.sqlalchemy_ext.util import JSON, MutableDict
@@ -32,6 +32,9 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
     def verify(self):
         """ Verify that the account is still valid."""
         raise NotImplementedError
+
+    # If True, throttle initial sync to reduce resource load
+    throttled = Column(Boolean, server_default=false())
 
     # local flags & data
     save_raw_messages = Column(Boolean, server_default=true())

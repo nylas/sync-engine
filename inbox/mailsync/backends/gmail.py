@@ -25,7 +25,7 @@ import os
 
 from collections import namedtuple
 
-from gevent import spawn
+from gevent import spawn, sleep
 from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.util.itert import chunk, partition
@@ -42,7 +42,7 @@ from inbox.mailsync.backends.base import (create_db_objects,
                                           MailsyncError,
                                           mailsync_session_scope)
 from inbox.mailsync.backends.imap.generic import (
-    uidvalidity_cb, safe_download, report_progress, UIDStack)
+    uidvalidity_cb, safe_download, report_progress, UIDStack, THROTTLE_WAIT)
 from inbox.mailsync.backends.imap.condstore import CondstoreFolderSyncEngine
 from inbox.mailsync.backends.imap.monitor import ImapSyncMonitor
 from inbox.mailsync.backends.imap import common
@@ -57,7 +57,7 @@ class GmailSyncMonitor(ImapSyncMonitor):
         ImapSyncMonitor.__init__(self, *args, **kwargs)
         self.sync_engine_class = GmailFolderSyncEngine
 
-GMessage = namedtuple('GMessage', 'uid g_metadata flags labels')
+GMessage = namedtuple('GMessage', 'uid g_metadata flags labels throttled')
 log = get_logger()
 
 
@@ -98,7 +98,8 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                         download_stack.put(
                             uid,
                             GMessage(uid, remote_g_metadata[uid],
-                                     flags[uid].flags, flags[uid].labels))
+                                     flags[uid].flags, flags[uid].labels,
+                                     throttled=self.throttled))
                 change_poller = spawn(self.poll_for_changes, download_stack)
                 self.__download_queued_threads(crispin_client,
                                                download_stack)
@@ -337,6 +338,9 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                 report_progress(self.account_id, self.folder_name,
                                 len(msgs_to_process),
                                 download_stack.qsize())
+                if message.throttled:
+                    log.debug('throttled; sleeping')
+                    sleep(THROTTLE_WAIT)
             log.info('Message download queue emptied')
         # Intentionally don't report which UIDVALIDITY we've saved messages to
         # because we have All Mail selected and don't have the UIDVALIDITY for

@@ -63,6 +63,7 @@ sessions reduce scalability.
 """
 from __future__ import division
 
+from collections import namedtuple
 from datetime import datetime
 
 from gevent import Greenlet, spawn, sleep
@@ -78,13 +79,17 @@ from inbox.basicauth import AuthError
 from inbox.log import get_logger
 log = get_logger()
 from inbox.crispin import connection_pool, retry_crispin
-from inbox.models import Folder, Namespace
+from inbox.models import Folder, Account
 from inbox.models.backends.imap import ImapFolderSyncStatus, ImapThread
 from inbox.mailsync.exc import UidInvalid
 from inbox.mailsync.backends.imap import common
 from inbox.mailsync.backends.base import (create_db_objects,
                                           commit_uids, MailsyncDone,
                                           mailsync_session_scope)
+
+GenericUIDMetadata = namedtuple('GenericUIDMetadata', 'throttled')
+
+THROTTLE_WAIT = 60
 
 
 def _pool(account_id):
@@ -145,9 +150,9 @@ class FolderSyncEngine(Greenlet):
         self.conn_pool = _pool(self.account_id)
 
         with mailsync_session_scope() as db_session:
-            self.namespace_id = db_session.query(Namespace).\
-               filter(Namespace.account_id == self.account_id).options(
-               load_only("id"))
+            account = db_session.query(Account).get(self.account_id)
+            self.throttled = account.throttled
+            self.namespace_id = account.namespace.id
             assert self.namespace_id is not None, "namespace_id is None"
 
         self.state_handlers = {
@@ -262,7 +267,8 @@ class FolderSyncEngine(Greenlet):
             new_uids = set(remote_uids) - local_uids
             download_stack = UIDStack()
             for uid in sorted(new_uids):
-                download_stack.put(uid, None)
+                download_stack.put(
+                    uid, GenericUIDMetadata(throttled=self.throttled))
 
             with mailsync_session_scope() as db_session:
                 self.update_uid_counts(
@@ -299,12 +305,15 @@ class FolderSyncEngine(Greenlet):
         while not download_stack.empty():
             # Defer removing UID from queue until after it's committed to the
             # DB' to avoid races with poll_for_changes().
-            uid, _ = download_stack.peek()
+            uid, metadata = download_stack.peek()
             self.download_and_commit_uids(crispin_client, self.folder_name,
                                           [uid])
             download_stack.get()
             report_progress(self.account_id, self.folder_name, 1,
                             download_stack.qsize())
+            if metadata is not None and metadata.throttled:
+                log.debug('throttled; sleeping')
+                sleep(THROTTLE_WAIT)
 
     def create_message(self, db_session, acct, folder, msg):
         assert acct is not None and acct.namespace is not None
