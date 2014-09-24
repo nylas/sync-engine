@@ -25,7 +25,8 @@ class BaseSync(gevent.Greenlet):
 
     def _run_impl(self):
         try:
-            self.provider_instance = self.provider(self.account_id)
+            self.provider_instance = self.provider(self.account_id,
+                                                   self.namespace_id)
             while True:
                 try:
                     self.poll()
