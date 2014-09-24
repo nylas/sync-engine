@@ -235,7 +235,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                                 account_id=account.id, folder_name=folder_name,
                                 mid=mid)
                     continue  # TODO should we store relations?
-                msg._parse_mimepart(mimepart, i, mid, account.namespace.id)
+                msg._parse_mimepart(mimepart, mid, i, account.namespace.id)
 
             msg.calculate_sanitized_body()
         except (mime.DecodingError, AttributeError, RuntimeError) as e:
