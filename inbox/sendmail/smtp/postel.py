@@ -7,6 +7,7 @@ import gevent
 from gevent import socket
 
 from inbox.log import get_logger
+from inbox.models import Folder
 from inbox.models.session import session_scope
 from inbox.models.backends.imap import ImapAccount
 from inbox.sendmail.base import SendMailException, SendError
@@ -187,6 +188,13 @@ class BaseSMTPClient(object):
             self.email_address = account.email_address
             self.provider_name = account.provider
             self.sender_name = account.sender_name
+
+            if account.sent_folder is None:
+                # account has no detected sent folder - create one.
+                sent_folder = Folder.find_or_create(db_session, account,
+                                                    'sent', 'sent')
+                account.sent_folder = sent_folder
+
             self.sent_folder = account.sent_folder.name
 
             self.auth_type = provider_info(self.provider_name)['auth']

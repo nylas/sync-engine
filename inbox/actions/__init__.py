@@ -30,7 +30,7 @@ from inbox.actions.backends import module_registry
 
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 
-from inbox.models import Account, Message, Thread
+from inbox.models import Account, Message, Thread, Folder
 from inbox.models.action_log import schedule_action
 from inbox.sendmail.base import (generate_attachments, get_sendmail_client,
                                  SendMailException)
@@ -145,6 +145,12 @@ def save_draft(account_id, message_id, db_session):
     mimemsg = create_email(account.sender_name, account.email_address,
                            message.inbox_uid, recipients, message.subject,
                            message.sanitized_body, attachments)
+
+    if account.drafts_folder is None:
+        # account has no detected drafts folder - create one.
+        drafts_folder = Folder.find_or_create(db_session, account,
+                                              'Drafts', 'drafts')
+        account.drafts_folder = drafts_folder
 
     remote_save_draft = module_registry[account.provider].remote_save_draft
     remote_save_draft(account, account.drafts_folder.name,

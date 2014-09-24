@@ -22,6 +22,7 @@ from inbox.util.concurrency import retry
 from inbox.util.misc import or_none, timed
 from inbox.basicauth import (ConnectionError, ValidationError,
                              TransientConnectionError, AuthError)
+from inbox.models import Folder
 from inbox.models.session import session_scope
 from inbox.providers import provider_info
 from inbox.models.account import Account
@@ -380,10 +381,10 @@ class CrispinClient(object):
         # Different providers have different names for folders, here
         # we have a default map for common name mapping, additional
         # mappings can be provided via the provider configuration file
-        default_folder_map = {'Inbox': 'inbox', 'Drafts': 'drafts',
-                              'Draft': 'drafts', 'Junk': 'spam',
-                              'Archive': 'archive', 'Sent': 'sent',
-                              'Trash': 'trash', 'INBOX': 'inbox'}
+        default_folder_map = {'INBOX': 'inbox', 'DRAFTS': 'drafts',
+                              'DRAFT': 'drafts', 'JUNK': 'spam',
+                              'ARCHIVE': 'archive', 'SENT': 'sent',
+                              'TRASH': 'trash', 'SPAM': 'spam'}
 
         # Some providers also provide flags to determine common folders
         # Here we read these flags and apply the mapping
@@ -406,8 +407,8 @@ class CrispinClient(object):
                 # TODO: internationalization support
                 elif name in folder_map:
                     self._folder_names[folder_map[name]] = name
-                elif name in default_folder_map:
-                    self._folder_names[default_folder_map[name]] = name
+                elif name.upper() in default_folder_map:
+                    self._folder_names[default_folder_map[name.upper()]] = name
                 else:
                     matched = False
                     for flag in flags:
@@ -417,7 +418,29 @@ class CrispinClient(object):
                     if not matched:
                         self._folder_names.setdefault(
                             'extra', list()).append(name)
+
         # TODO: support subfolders
+
+        # Create any needed folders that don't exist on the backend
+        needed_folders = set(['inbox', 'drafts', 'sent', 'spam',
+                             'trash', 'archive'])
+
+        needed_folders -= set(self._folder_names.keys())
+
+        for folder_id in needed_folders:
+            name = folder_id.capitalize()
+            self.create_folder(name)
+
+            with session_scope() as db_session:
+                account = db_session.query(Account).get(self.account_id)
+
+                folder = Folder.find_or_create(db_session, account,
+                                               name, folder_id)
+                setattr(account, folder_id + '_folder', folder)
+                db_session.commit()
+
+            self._folder_names[folder_id] = name
+
         return self._folder_names
 
     def folder_status(self, folder):
@@ -810,7 +833,7 @@ class GmailCrispinClient(CondStoreCrispinClient):
 
         # the complicated list comprehension below simply flattens the list
         unique_labels = set([item for sublist in labels.values()
-                                  for item in sublist])
+                             for item in sublist])
         return list(unique_labels)
 
     def set_unread(self, g_thrid, unread):
