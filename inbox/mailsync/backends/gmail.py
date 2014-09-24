@@ -145,7 +145,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                     # disappeared from the folder in the meantime.
                     download_stack.put(uid, GMessage(uid, g_metadata[uid],
                                                      flags[uid].flags,
-                                                     flags[uid].labels))
+                                                     flags[uid].labels, False))
             if not async_download:
                 self.__download_queued_threads(crispin_client, download_stack)
         elif self.folder_name in uid_download_folders(crispin_client):
