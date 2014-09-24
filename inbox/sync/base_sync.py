@@ -13,8 +13,9 @@ from inbox.models import Account
 
 
 class BaseSync(gevent.Greenlet):
-    def __init__(self, account_id, poll_frequency):
+    def __init__(self, account_id, namespace_id, poll_frequency):
         self.account_id = account_id
+        self.namespace_id = namespace_id
         self.poll_frequency = poll_frequency
 
         gevent.Greenlet.__init__(self)
@@ -86,14 +87,14 @@ def base_poll(account_id, provider_instance, last_sync_fn, target_obj,
         change_counter = Counter()
         to_commit = []
         for item in items:
-            item.account = account
+            item.namespace = account.namespace
             assert item.uid is not None, \
                 'Got remote item with null uid'
             assert isinstance(item.uid, str)
 
             target_obj = target_obj
             matching_items = db_session.query(target_obj).filter(
-                target_obj.account == account,
+                target_obj.namespace == account.namespace,
                 target_obj.provider_name == provider_name,
                 target_obj.uid == item.uid)
             # Snapshot of item data from immediately after last sync:

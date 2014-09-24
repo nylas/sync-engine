@@ -42,8 +42,9 @@ class GoogleContactsProvider(BaseSyncProvider):
     """
     PROVIDER_NAME = 'google'
 
-    def __init__(self, account_id):
+    def __init__(self, account_id, namespace_id):
         self.account_id = account_id
+        self.namespace_id = namespace_id
         self.log = logger.new(account_id=account_id, component='contacts sync',
                               provider=self.PROVIDER_NAME)
 
@@ -125,7 +126,7 @@ class GoogleContactsProvider(BaseSyncProvider):
 
         deleted = google_contact.deleted is not None
 
-        return Contact(account_id=self.account_id, source='remote',
+        return Contact(namespace_id=self.namespace_id, source='remote',
                        uid=g_id, name=name, provider_name=self.PROVIDER_NAME,
                        email_address=email_address, deleted=deleted,
                        raw_data=raw_data)

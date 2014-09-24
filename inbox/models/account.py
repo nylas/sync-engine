@@ -135,7 +135,7 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
             public_id = generate_public_id()
             new_cal = Calendar()
             new_cal.public_id = public_id
-            new_cal.account = self
+            new_cal.namespace = self.namespace
             new_cal.uid = public_id
             new_cal.read_only = False
             new_cal.name = 'default'

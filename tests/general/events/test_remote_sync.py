@@ -11,14 +11,14 @@ from inbox.events.remote_sync import EventSync
 from inbox.util.misc import MergeError
 from default_event import default_event
 
-ACCOUNT_ID = 1
+NAMESPACE_ID = 1
 
 # STOPSHIP(emfree): Test multiple distinct remote providers
 
 
 @pytest.fixture(scope='function')
 def alt_event_sync(config, db):
-    return EventSync(2)
+    return EventSync(2, 2)
 
 
 @pytest.fixture(scope='function')
@@ -72,18 +72,18 @@ def test_merge_conflict(db, config, event_sync):
 def test_add_events(events_provider, event_sync, db):
     """Test that added events get stored."""
     num_original_local_events = db.session.query(Event). \
-        filter_by(account_id=ACCOUNT_ID).filter_by(source='local').count()
+        filter_by(namespace_id=NAMESPACE_ID).filter_by(source='local').count()
     num_original_remote_events = db.session.query(Event). \
-        filter_by(account_id=ACCOUNT_ID).filter_by(source='remote').count()
+        filter_by(namespace_id=NAMESPACE_ID).filter_by(source='remote').count()
     events_provider.supply_event('subj')
     events_provider.supply_event('subj2')
 
     event_sync.provider_instance = events_provider
     event_sync.poll()
     num_current_local_events = db.session.query(Event). \
-        filter_by(account_id=ACCOUNT_ID).filter_by(source='local').count()
+        filter_by(namespace_id=NAMESPACE_ID).filter_by(source='local').count()
     num_current_remote_events = db.session.query(Event). \
-        filter_by(account_id=ACCOUNT_ID).filter_by(source='remote').count()
+        filter_by(namespace_id=NAMESPACE_ID).filter_by(source='remote').count()
     assert num_current_local_events - num_original_local_events == 2
     assert num_current_remote_events - num_original_remote_events == 2
 

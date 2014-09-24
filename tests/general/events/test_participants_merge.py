@@ -3,6 +3,7 @@ from inbox.models import Event
 from default_event import default_event, default_calendar
 
 ACCOUNT_ID = 1
+NAMESPACE_ID = 1
 
 
 def test_initial(db):
@@ -15,7 +16,7 @@ def test_initial(db):
         {'email': 'mary@example.com',
          'status': 'noreply'}]
 
-    local = Event(account_id=ACCOUNT_ID,
+    local = Event(namespace_id=NAMESPACE_ID,
                   calendar=default_calendar(db),
                   provider_name='inbox', raw_data='',
                   read_only=False, all_day=False,

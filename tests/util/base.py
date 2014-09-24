@@ -251,7 +251,7 @@ def default_account(db):
 @fixture(scope='function')
 def contact_sync(config, db):
     from inbox.contacts.remote_sync import ContactSync
-    return ContactSync('gmail', 1)
+    return ContactSync('gmail', 1, 1)
 
 
 @fixture(scope='function')
@@ -272,7 +272,7 @@ class ContactsProviderStub(object):
 
     def supply_contact(self, name, email_address, deleted=False):
         from inbox.models import Contact
-        self._contacts.append(Contact(account_id=1,
+        self._contacts.append(Contact(namespace_id=1,
                                       uid=str(self._next_uid),
                                       source='remote',
                                       provider_name=self.PROVIDER_NAME,

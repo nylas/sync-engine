@@ -6,17 +6,20 @@ from inbox.sqlalchemy_ext.util import (generate_public_id,
                                        propagate_soft_delete)
 
 from inbox.models.base import MailSyncBase
+from inbox.models.namespace import Namespace
 
 from inbox.models.mixins import HasPublicID
 
 
 class Calendar(MailSyncBase, HasPublicID):
-    account_id = Column(ForeignKey('account.id', ondelete='CASCADE'),
-                        nullable=False)
-    account = relationship(
-        'Account', load_on_pending=True,
-        primaryjoin='and_(Calendar.account_id == Account.id, '
-                    'Account.deleted_at.is_(None))')
+    namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
+                          nullable=False)
+
+    namespace = relationship(
+        Namespace, load_on_pending=True,
+        primaryjoin='and_(Calendar.namespace_id == Namespace.id, '
+                    'Namespace.deleted_at.is_(None))')
+
     name = Column(String(128), nullable=True)
     provider_name = Column(String(128), nullable=True)
     description = Column(Text, nullable=True)
@@ -26,7 +29,7 @@ class Calendar(MailSyncBase, HasPublicID):
 
     read_only = Column(Boolean, nullable=False, default=False)
 
-    __table_args__ = (UniqueConstraint('account_id', 'provider_name',
+    __table_args__ = (UniqueConstraint('namespace_id', 'provider_name',
                                        'name', name='uuid'),)
 
     def __init__(self, uid=None, public_id=None, **kwargs):

@@ -6,11 +6,12 @@ from inbox.events.google import MalformedEventError
 from inbox.events.ical import events_from_ics
 
 ACCOUNT_ID = 1
+NAMESPACE_ID = 1
 
 
 @pytest.fixture(scope='function')
 def google_events_provider(config, db):
-    return GoogleEventsProvider(ACCOUNT_ID)
+    return GoogleEventsProvider(ACCOUNT_ID, NAMESPACE_ID)
 
 
 def test_cancelled_event(google_events_provider):

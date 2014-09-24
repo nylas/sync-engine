@@ -74,7 +74,7 @@ def events_from_ics(namespace, calendar, ics_str):
 
             uid = str(component.get('uid'))
             event = Event(
-                account_id=namespace.account_id,
+                namespace=namespace,
                 calendar=calendar,
                 uid=uid,
                 provider_name='ics',

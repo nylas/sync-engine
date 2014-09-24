@@ -134,12 +134,14 @@ class SyncService(object):
 
                     info = provider_info(acc.provider)
                     if info.get('contacts', None):
-                        contact_sync = ContactSync(acc.provider, acc.id)
+                        contact_sync = ContactSync(acc.provider, acc.id,
+                                                   acc.namespace.id)
                         self.contact_sync_monitors[acc.id] = contact_sync
                         contact_sync.start()
 
                     if info.get('events', None):
-                        event_sync = EventSync(acc.provider, acc.id)
+                        event_sync = EventSync(acc.provider, acc.id,
+                                               acc.namespace.id)
                         self.event_sync_monitors[acc.id] = event_sync
                         event_sync.start()
 

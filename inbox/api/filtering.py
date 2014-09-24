@@ -270,13 +270,11 @@ def files(namespace_id, file_public_id, message_public_id, filename,
     return query.all()
 
 
-def events(namespace_id, account_id, event_public_id,
-           calendar_public_id, title, description, location, starts_before,
-           starts_after, ends_before, ends_after, source, limit, offset,
-           db_session):
-
+def events(namespace_id, event_public_id, calendar_public_id, title,
+           description, location, starts_before, starts_after, ends_before,
+           ends_after, source, limit, offset, db_session):
     query = db_session.query(Event). \
-        filter(Event.account_id == account_id)
+        filter(Event.namespace_id == namespace_id)
     event_criteria = []
     if event_public_id:
         query = query.filter(Event.public_id == event_public_id)
@@ -299,7 +297,7 @@ def events(namespace_id, account_id, event_public_id,
     if calendar_public_id is not None:
         query = query.join(Calendar). \
             filter(Calendar.public_id == calendar_public_id,
-                   Calendar.account_id == account_id)
+                   Calendar.namespace_id == namespace_id)
 
     if title is not None:
         query = query.filter(Event.title.like('%{}%'.format(title)))

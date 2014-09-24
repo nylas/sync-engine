@@ -9,7 +9,7 @@ INBOX_PROVIDER_NAME = 'inbox'
 
 def create(namespace, db_session, name, email):
     contact = Contact(
-        account_id=namespace.account_id,
+        namespace=namespace,
         source='local',
         provider_name=INBOX_PROVIDER_NAME,
         uid=uuid.uuid4().hex,
@@ -23,7 +23,7 @@ def create(namespace, db_session, name, email):
 def read(namespace, db_session, contact_public_id):
     return db_session.query(Contact).filter(
         Contact.public_id == contact_public_id,
-        Contact.account_id == namespace.account_id).first()
+        Contact.namespace_id == namespace.id).first()
 
 
 def update(namespace, db_session, contact_public_id, name, email):

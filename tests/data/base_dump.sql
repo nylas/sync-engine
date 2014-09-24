@@ -141,7 +141,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('5a68ac0e3e9');
+INSERT INTO `alembic_version` VALUES ('4015edc83ba');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -194,7 +194,6 @@ DROP TABLE IF EXISTS `calendar`;
 CREATE TABLE `calendar` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `public_id` binary(16) NOT NULL,
-  `account_id` int(11) NOT NULL,
   `name` varchar(128) DEFAULT NULL,
   `created_at` datetime DEFAULT NULL,
   `updated_at` datetime DEFAULT NULL,
@@ -203,10 +202,10 @@ CREATE TABLE `calendar` (
   `uid` varchar(767) CHARACTER SET ascii NOT NULL,
   `read_only` tinyint(1) NOT NULL,
   `provider_name` varchar(64) NOT NULL,
+  `namespace_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uuid` (`name`,`provider_name`,`account_id`),
-  KEY `account_id` (`account_id`),
-  CONSTRAINT `calendar_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
+  UNIQUE KEY `uuid` (`namespace_id`,`provider_name`,`name`),
+  CONSTRAINT `calendar_ibfk_2` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -216,7 +215,7 @@ CREATE TABLE `calendar` (
 
 LOCK TABLES `calendar` WRITE;
 /*!40000 ALTER TABLE `calendar` DISABLE KEYS */;
-INSERT INTO `calendar` VALUES (1,'œ5ˆê¨F\0ªÌ´Åûˆ√¿',1,'default',NULL,NULL,NULL,NULL,'167wjlgf89za2cdhy17p9bsu8',0,''),(2,'œ5ˆê¨F\0ª3´Åûˆ√¿',1,'provider_default',NULL,NULL,NULL,NULL,'167wjlgf89za2cdhy17p9bsu8',1,''),(3,'œ5ˆê¨F\0ª5´Åûˆ√¿',2,'default',NULL,NULL,NULL,NULL,'167wjlgf89za2cdhy17p9bsu8',0,'');
+INSERT INTO `calendar` VALUES (1,'œ5ˆê¨F\0ªÌ´Åûˆ√¿','default',NULL,NULL,NULL,NULL,'167wjlgf89za2cdhy17p9bsu8',0,'',1),(2,'œ5ˆê¨F\0ª3´Åûˆ√¿','provider_default',NULL,NULL,NULL,NULL,'167wjlgf89za2cdhy17p9bsu8',1,'',1),(3,'œ5ˆê¨F\0ª5´Åûˆ√¿','default',NULL,NULL,NULL,NULL,'167wjlgf89za2cdhy17p9bsu8',0,'',NULL);
 /*!40000 ALTER TABLE `calendar` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -230,7 +229,6 @@ DROP TABLE IF EXISTS `contact`;
 CREATE TABLE `contact` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `public_id` binary(16) NOT NULL,
-  `account_id` int(11) NOT NULL,
   `uid` varchar(64) NOT NULL,
   `provider_name` varchar(64) DEFAULT NULL,
   `source` enum('local','remote') DEFAULT NULL,
@@ -242,16 +240,17 @@ CREATE TABLE `contact` (
   `deleted_at` datetime DEFAULT NULL,
   `_canonicalized_address` varchar(191) DEFAULT NULL,
   `_raw_address` varchar(191) DEFAULT NULL,
+  `namespace_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uid` (`uid`,`source`,`account_id`,`provider_name`),
-  KEY `account_id` (`account_id`),
+  UNIQUE KEY `uid` (`uid`,`source`,`namespace_id`,`provider_name`),
   KEY `ix_contact_public_id` (`public_id`),
   KEY `ix_contact_created_at` (`created_at`),
   KEY `ix_contact_deleted_at` (`deleted_at`),
   KEY `ix_contact_updated_at` (`updated_at`),
   KEY `ix_contact__canonicalized_address` (`_canonicalized_address`),
   KEY `ix_contact__raw_address` (`_raw_address`),
-  CONSTRAINT `contact_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
+  KEY `namespace_id` (`namespace_id`),
+  CONSTRAINT `contact_ibfk_2` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -261,7 +260,7 @@ CREATE TABLE `contact` (
 
 LOCK TABLES `contact` WRITE;
 /*!40000 ALTER TABLE `contact` DISABLE KEYS */;
-INSERT INTO `contact` VALUES (1,'ÔøΩZÔøΩzoÔøΩL?Ôø',1,'ac99aa06-5604-4234-9ccc-dfb5f41973d1','inbox','local','',NULL,24,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'inboxapptest@gmail.com','inboxapptest@gmail.com'),(2,'ÔøΩ6\",NA@ÔøΩÔøΩÔ',1,'523f7769-c26e-4728-921d-ffd43e5bb1b4','inbox','local','Ben Bitdiddle',NULL,10,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'benbitdiddle1861@gmail.com','benbitdiddle1861@gmail.com'),(3,'ÔøΩ4ÔøΩ-;KÔøΩÔø',1,'0ff75111-5a72-46a4-a0d0-d1d189422117','inbox','local','Paul Tiseo',NULL,10,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'paulxtiseo@gmail.com','paulxtiseo@gmail.com'),(4,'ÔøΩÔøΩÔøΩ&mN@ÔøΩ',1,'6840fd76-34e3-4b1a-b0a3-6b797bbf92d7','inbox','local','golang-nuts',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'golang-nuts@googlegroups.com','golang-nuts@googlegroups.com'),(5,'ÔøΩ`<]JÔøΩÔøΩ',1,'31d28d81-67df-479b-ae79-6f19589a88dd','inbox','local','Gmail Team',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'mail-noreply@google.com','mail-noreply@google.com'),(6,'\\ÔøΩ#eÔøΩHxÔøΩÔ',1,'c0849c30-e29d-4404-b931-ddf9c3d06201','inbox','local','Christine Spang',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'christine@spang.cc','christine@spang.cc'),(7,'ÔøΩÔøΩ>J0ÔøΩ',1,'94d616ac-3963-442a-9d05-b88d43a94758','inbox','local','',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'no-reply@accounts.google.com','no-reply@accounts.google.com'),(8,'amXÔøΩT@¬ò6ÔøΩ>',1,'47c6565a-2c8e-49a5-a32c-9a7aff921248','inbox','local','kavya joshi',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'kavya719@gmail.com','kavya719@gmail.com');
+INSERT INTO `contact` VALUES (1,'ÔøΩZÔøΩzoÔøΩL?Ôø','ac99aa06-5604-4234-9ccc-dfb5f41973d1','inbox','local','',NULL,24,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'inboxapptest@gmail.com','inboxapptest@gmail.com',1),(2,'ÔøΩ6\",NA@ÔøΩÔøΩÔ','523f7769-c26e-4728-921d-ffd43e5bb1b4','inbox','local','Ben Bitdiddle',NULL,10,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'benbitdiddle1861@gmail.com','benbitdiddle1861@gmail.com',1),(3,'ÔøΩ4ÔøΩ-;KÔøΩÔø','0ff75111-5a72-46a4-a0d0-d1d189422117','inbox','local','Paul Tiseo',NULL,10,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'paulxtiseo@gmail.com','paulxtiseo@gmail.com',1),(4,'ÔøΩÔøΩÔøΩ&mN@ÔøΩ','6840fd76-34e3-4b1a-b0a3-6b797bbf92d7','inbox','local','golang-nuts',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'golang-nuts@googlegroups.com','golang-nuts@googlegroups.com',1),(5,'ÔøΩ`<]JÔøΩÔøΩ','31d28d81-67df-479b-ae79-6f19589a88dd','inbox','local','Gmail Team',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'mail-noreply@google.com','mail-noreply@google.com',1),(6,'\\ÔøΩ#eÔøΩHxÔøΩÔ','c0849c30-e29d-4404-b931-ddf9c3d06201','inbox','local','Christine Spang',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'christine@spang.cc','christine@spang.cc',1),(7,'ÔøΩÔøΩ>J0ÔøΩ','94d616ac-3963-442a-9d05-b88d43a94758','inbox','local','',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'no-reply@accounts.google.com','no-reply@accounts.google.com',1),(8,'amXÔøΩT@¬ò6ÔøΩ>','47c6565a-2c8e-49a5-a32c-9a7aff921248','inbox','local','kavya joshi',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'kavya719@gmail.com','kavya719@gmail.com',1);
 /*!40000 ALTER TABLE `contact` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -488,7 +487,6 @@ CREATE TABLE `event` (
   `provider_name` varchar(64) NOT NULL,
   `public_id` binary(16) NOT NULL,
   `raw_data` text NOT NULL,
-  `account_id` int(11) NOT NULL,
   `title` varchar(1024) DEFAULT NULL,
   `description` text,
   `location` varchar(255) DEFAULT NULL,
@@ -506,12 +504,13 @@ CREATE TABLE `event` (
   `owner` varchar(255) DEFAULT NULL,
   `is_owner` tinyint(1) NOT NULL,
   `read_only` tinyint(1) NOT NULL,
+  `namespace_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uuid` (`uid`,`source`,`account_id`,`provider_name`),
-  KEY `account_id` (`account_id`),
+  UNIQUE KEY `uuid` (`uid`,`source`,`namespace_id`,`provider_name`),
   KEY `event_ibfk_2` (`calendar_id`),
+  KEY `namespace_id` (`namespace_id`),
   CONSTRAINT `event_ibfk_2` FOREIGN KEY (`calendar_id`) REFERENCES `calendar` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `event_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
+  CONSTRAINT `event_ibfk_3` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -521,7 +520,7 @@ CREATE TABLE `event` (
 
 LOCK TABLES `event` WRITE;
 /*!40000 ALTER TABLE `event` DISABLE KEYS */;
-INSERT INTO `event` VALUES (1,'3bd5983f9d1748d0bca5719c57f72815','inbox','p5ßë‹\rD_∂Î ä@Ø◊˝','',1,'desc1','data1','InboxHeadquarters',1,NULL,NULL,'1970-01-01 00:00:01','1970-02-01 00:00:01',0,'local','2014-08-29 01:22:53','2014-08-29 01:22:53',NULL,1,NULL,1,0),(2,'b9f18495985f4814a95e28f3e119a730','inbox','◊éÌv‘êAπ‡FcÕVø\n','',1,'desc2','data2','InboxHeadquarters',1,NULL,NULL,'1970-01-01 00:00:01','1970-01-01 00:00:01',0,'local','2014-08-29 01:22:54','2014-08-29 01:22:54',NULL,2,NULL,1,1),(3,'c9f18495985f4814a95e28f3e119a730','inbox','◊éÌv‘êAπjFcÕVø\n','',1,'desc5','data3','InboxHeadquarters',1,NULL,NULL,'1970-02-01 00:00:01','1970-03-01 00:00:01',0,'local','2014-08-29 01:22:54','2014-08-29 01:22:54',NULL,1,NULL,1,1);
+INSERT INTO `event` VALUES (1,'3bd5983f9d1748d0bca5719c57f72815','inbox','p5ßë‹\rD_∂Î ä@Ø◊˝','','desc1','data1','InboxHeadquarters',1,NULL,NULL,'1970-01-01 00:00:01','1970-02-01 00:00:01',0,'local','2014-08-29 01:22:53','2014-08-29 01:22:53',NULL,1,NULL,1,0,1),(2,'b9f18495985f4814a95e28f3e119a730','inbox','◊éÌv‘êAπ‡FcÕVø\n','','desc2','data2','InboxHeadquarters',1,NULL,NULL,'1970-01-01 00:00:01','1970-01-01 00:00:01',0,'local','2014-08-29 01:22:54','2014-08-29 01:22:54',NULL,2,NULL,1,1,1),(3,'c9f18495985f4814a95e28f3e119a730','inbox','◊éÌv‘êAπjFcÕVø\n','','desc5','data3','InboxHeadquarters',1,NULL,NULL,'1970-02-01 00:00:01','1970-03-01 00:00:01',0,'local','2014-08-29 01:22:54','2014-08-29 01:22:54',NULL,1,NULL,1,1,1);
 /*!40000 ALTER TABLE `event` ENABLE KEYS */;
 UNLOCK TABLES;
 

@@ -26,12 +26,13 @@ class ContactSync(BaseSync):
     log: logging.Logger
         Logging handler.
     """
-    def __init__(self, provider_name, account_id, poll_frequency=300):
+    def __init__(self, provider_name, account_id, namespace_id,
+                 poll_frequency=300):
         self._provider_name = provider_name
         self.log = logger.new(account_id=account_id, component='contact sync')
         self.log.info('Begin syncing contacts...')
 
-        BaseSync.__init__(self, account_id, poll_frequency)
+        BaseSync.__init__(self, account_id, namespace_id, poll_frequency)
 
     @property
     def provider(self):

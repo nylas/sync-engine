@@ -191,7 +191,7 @@ def add_fake_message(account_id, thread, to_email, received_date,
     m.sanitized_body = ''
     m.snippet = ''
     m.thread = thread
-    update_contacts_from_message(db_session, m, account_id)
+    update_contacts_from_message(db_session, m, thread.namespace)
     db_session.add(m)
     db_session.commit()
 

@@ -13,8 +13,8 @@ from inbox.models.transaction import HasRevisions
 from inbox.models.base import MailSyncBase
 from inbox.models.mixins import HasPublicID
 
-from inbox.models.account import Account
 from inbox.models.calendar import Calendar
+from inbox.models.namespace import Namespace
 from inbox.models.participant import Participant
 from inbox.models.when import Time, TimeSpan, Date, DateSpan
 
@@ -40,13 +40,13 @@ _LENGTHS = {'location': LOCATION_MAX_LEN,
 
 class Event(MailSyncBase, HasRevisions, HasPublicID):
     """Data for events."""
-    account_id = Column(ForeignKey(Account.id, ondelete='CASCADE'),
-                        nullable=False)
+    namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
+                          nullable=False)
 
-    account = relationship(
-        Account, load_on_pending=True,
-        primaryjoin='and_(Event.account_id == Account.id, '
-                    'Account.deleted_at.is_(None))')
+    namespace = relationship(
+        Namespace, load_on_pending=True,
+        primaryjoin='and_(Event.namespace_id == Namespace.id, '
+                    'Namespace.deleted_at.is_(None))')
 
     calendar_id = Column(ForeignKey(Calendar.id, ondelete='CASCADE'),
                          nullable=False)
@@ -89,7 +89,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     # database column.)
     deleted = False
 
-    __table_args__ = (UniqueConstraint('uid', 'source', 'account_id',
+    __table_args__ = (UniqueConstraint('uid', 'source', 'namespace_id',
                                        'provider_name', name='uuid'),)
 
     _participant_cascade = "save-update, merge, delete, delete-orphan"
@@ -193,8 +193,8 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
 
     def copy_from(self, src):
         """ Copy fields from src."""
-        self.account_id = src.account_id
-        self.account = src.account
+        self.namespace_id = src.namespace_id
+        self.namespace = src.namespace
         self.uid = src.uid
         self.provider_name = src.provider_name
         self.raw_data = src.raw_data
@@ -253,7 +253,3 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
             self.start = date_parse(when['start_date'])
             self.end = date_parse(when['end_date'])
             self.all_day = True
-
-    @property
-    def namespace(self):
-        return self.account.namespace

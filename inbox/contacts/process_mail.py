@@ -3,7 +3,7 @@ from inbox.util.addr import canonicalize_address as canonicalize
 from inbox.models import Contact, MessageContactAssociation
 
 
-def update_contacts_from_message(db_session, message, account_id):
+def update_contacts_from_message(db_session, message, namespace):
     with db_session.no_autoflush:
         # First create Contact objects for any email addresses that we haven't
         # seen yet. We want to dedupe by canonicalized address, so this part is
@@ -22,14 +22,14 @@ def update_contacts_from_message(db_session, message, account_id):
 
         existing_contacts = db_session.query(Contact).filter(
             Contact._canonicalized_address.in_(canonicalized_addresses),
-            Contact.account_id == account_id).all()
+            Contact.namespace_id == namespace.id).all()
 
         contact_map = {c._canonicalized_address: c for c in existing_contacts}
         for name, email_address in all_addresses:
             canonicalized_address = canonicalize(email_address)
             if canonicalized_address not in contact_map:
                 new_contact = Contact(name=name, email_address=email_address,
-                                      account_id=account_id, source='local',
+                                      namespace=namespace, source='local',
                                       provider_name='inbox',
                                       uid=uuid.uuid4().hex)
                 contact_map[canonicalized_address] = new_contact

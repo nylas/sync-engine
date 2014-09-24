@@ -12,7 +12,7 @@ from inbox.util.misc import MergeError
 
 __all__ = ['contact_sync', 'contacts_provider']
 
-ACCOUNT_ID = 1
+NAMESPACE_ID = 1
 
 # STOPSHIP(emfree): Test multiple distinct remote providers
 
@@ -54,9 +54,9 @@ def test_merge_conflict(config):
 def test_add_contacts(contacts_provider, contact_sync, db):
     """Test that added contacts get stored."""
     num_original_local_contacts = db.session.query(Contact). \
-        filter_by(account_id=ACCOUNT_ID).filter_by(source='local').count()
+        filter_by(namespace_id=NAMESPACE_ID).filter_by(source='local').count()
     num_original_remote_contacts = db.session.query(Contact). \
-        filter_by(account_id=ACCOUNT_ID).filter_by(source='remote').count()
+        filter_by(namespace_id=NAMESPACE_ID).filter_by(source='remote').count()
     contacts_provider.supply_contact('Contact One',
                                      'contact.one@email.address')
     contacts_provider.supply_contact('Contact Two',
@@ -65,9 +65,9 @@ def test_add_contacts(contacts_provider, contact_sync, db):
     contact_sync.provider_instance = contacts_provider
     contact_sync.poll()
     num_current_local_contacts = db.session.query(Contact). \
-        filter_by(account_id=ACCOUNT_ID).filter_by(source='local').count()
+        filter_by(namespace_id=NAMESPACE_ID).filter_by(source='local').count()
     num_current_remote_contacts = db.session.query(Contact). \
-        filter_by(account_id=ACCOUNT_ID).filter_by(source='remote').count()
+        filter_by(namespace_id=NAMESPACE_ID).filter_by(source='remote').count()
     assert num_current_local_contacts - num_original_local_contacts == 2
     assert num_current_remote_contacts - num_original_remote_contacts == 2
 

@@ -10,8 +10,9 @@ logger = get_logger()
 class BaseEventProvider(BaseSyncProvider):
     """Base class for event providers"""
 
-    def __init__(self, account_id):
+    def __init__(self, account_id, namespace_id):
         self.account_id = account_id
+        self.namespace_id = namespace_id
         self.log = logger.new(account_id=account_id, component='event sync',
                               provider=self.PROVIDER_NAME)
 
@@ -19,11 +20,11 @@ class BaseEventProvider(BaseSyncProvider):
         calendar_id = None
         with session_scope() as db_session:
             cal = db_session.query(Calendar). \
-                filter_by(account_id=self.account_id,
+                filter_by(namespace_id=self.namespace_id,
                           provider_name=self.PROVIDER_NAME,
                           name=name).first()
             if not cal:
-                cal = Calendar(account_id=self.account_id,
+                cal = Calendar(namespace_id=self.namespace_id,
                                provider_name=self.PROVIDER_NAME,
                                name=name)
                 db_session.add(cal)

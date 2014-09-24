@@ -6,7 +6,7 @@ from inbox.events.base import BaseEventProvider
 @fixture(scope='function')
 def event_sync(config, db):
     from inbox.events.remote_sync import EventSync
-    return EventSync('gmail', 1)
+    return EventSync('gmail', 1, 1)
 
 
 @fixture(scope='function')
@@ -22,14 +22,14 @@ class EventsProviderStub(BaseEventProvider):
         self._events = []
         self._next_uid = 1
         self.PROVIDER_NAME = provider_name
-        BaseEventProvider.__init__(self, 1)
+        BaseEventProvider.__init__(self, 1, 1)
 
     def supply_event(self, title, description='', when={'time': 0}, busy=True,
                      location='', read_only=False, owner="",
                      reminders='[]', recurrence="", deleted=False,
                      raw_data='', is_owner=True, participants=[]):
         from inbox.models import Event
-        self._events.append(Event(account_id=1,
+        self._events.append(Event(namespace_id=1,
                                   calendar_id=1,
                                   uid=str(self._next_uid),
                                   source='remote',

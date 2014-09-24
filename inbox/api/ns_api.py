@@ -451,7 +451,7 @@ def contact_search_api():
         Contact.name.like(term_filter_string),
         Contact.email_address.like(term_filter_string))
     results = g.db_session.query(Contact). \
-        filter(Contact.account_id == g.namespace.account_id,
+        filter(Contact.namespace_id == g.namespace.id,
                Contact.source == 'local',
                term_filter). \
         order_by(asc(Contact.id)).limit(args['limit']). \
@@ -516,7 +516,6 @@ def event_search_api():
 
     results = filtering.events(
         namespace_id=g.namespace.id,
-        account_id=g.namespace.account_id,
         event_public_id=args['event_id'],
         calendar_public_id=args['calendar_id'],
         title=args['title'],
@@ -856,7 +855,7 @@ def calendar_search_api():
         subqueryload(Event.participants_by_email)
 
     results = g.db_session.query(Calendar). \
-        filter(Calendar.account_id == g.namespace.account_id,
+        filter(Calendar.namespace_id == g.namespace.id,
                term_filter). \
         order_by(asc(Calendar.id)).limit(args['limit']). \
         options(eager). \
@@ -876,7 +875,7 @@ def calendar_create_api():
 
     existing = g.db_session.query(Calendar).filter(
         Calendar.name == name,
-        Calendar.account_id == g.namespace.account_id).first()
+        Calendar.namespace_id == g.namespace.id).first()
 
     if existing:
         return err(404, "Calendar already exists with name '{}'.".format(name))

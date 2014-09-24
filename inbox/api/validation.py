@@ -171,7 +171,7 @@ def get_calendar(calendar_public_id, namespace, db_session):
     try:
         return db_session.query(Calendar). \
             filter(Calendar.public_id == calendar_public_id,
-                   Calendar.account_id == namespace.account_id).one()
+                   Calendar.namespace_id == namespace.id).one()
     except NoResultFound:
         raise InputError('Invalid calendar public id {}'.
                          format(calendar_public_id))

@@ -72,7 +72,7 @@ class OutlookEventsProvider(BaseEventProvider):
 
         stored_uids.append(uid)
 
-        return Event(account_id=self.account_id,
+        return Event(namespace_id=self.namespace_id,
                      uid=uid,
                      provider_name=self.PROVIDER_NAME,
                      raw_data=raw_data,

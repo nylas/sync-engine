@@ -16,7 +16,7 @@ def create(namespace, db_session, calendar, title, description, location,
            reminders, recurrence, when, participants):
     event = Event(
         calendar=calendar,
-        account_id=namespace.account_id,
+        namespace=namespace,
         uid=uuid.uuid4().hex,
         provider_name=INBOX_PROVIDER_NAME,
         raw_data='',
@@ -52,7 +52,7 @@ def read(namespace, db_session, event_public_id):
     eager = subqueryload(Event.participants_by_email)
     return db_session.query(Event).filter(
         Event.public_id == event_public_id,
-        Event.account_id == namespace.account_id). \
+        Event.namespace_id == namespace.id). \
         options(eager). \
         first()
 
@@ -61,7 +61,7 @@ def update(namespace, db_session, event_public_id, update_dict):
     eager = subqueryload(Event.participants_by_email)
     event = db_session.query(Event).filter(
         Event.public_id == event_public_id,
-        Event.account_id == namespace.account_id). \
+        Event.namespace_id == namespace.id). \
         options(eager). \
         first()
 
@@ -91,7 +91,7 @@ def delete(namespace, db_session, event_public_id):
     """ Delete the event with public_id = `event_public_id`. """
     event = db_session.query(Event).filter(
         Event.public_id == event_public_id,
-        Event.account_id == namespace.account_id).one()
+        Event.namespace_id == namespace.id).one()
 
     db_session.delete(event)
     db_session.commit()
@@ -103,7 +103,7 @@ def delete(namespace, db_session, event_public_id):
 
 def create_calendar(namespace, db_session, name, description):
     calendar = Calendar(
-        account_id=namespace.account_id,
+        namespace=namespace,
         name=name,
         provider_name=INBOX_PROVIDER_NAME,
         description=description,
@@ -121,7 +121,7 @@ def read_calendar(namespace, db_session, calendar_public_id):
         subqueryload(Event.participants_by_email)
     return db_session.query(Calendar).filter(
         Calendar.public_id == calendar_public_id,
-        Calendar.account_id == namespace.account_id). \
+        Calendar.namespace_id == namespace.id). \
         options(eager). \
         first()
 
@@ -131,7 +131,7 @@ def update_calendar(namespace, db_session, calendar_public_id, update_dict):
         subqueryload(Event.participants_by_email)
     calendar = db_session.query(Calendar).filter(
         Calendar.public_id == calendar_public_id,
-        Calendar.account_id == namespace.account_id). \
+        Calendar.namespace_id == namespace.id). \
         options(eager). \
         first()
 
@@ -150,7 +150,7 @@ def delete_calendar(namespace, db_session, calendar_public_id):
     """ Delete the calendar with public_id = `calendar_public_id`. """
     calendar = db_session.query(Calendar).filter(
         Calendar.public_id == calendar_public_id,
-        Calendar.account_id == namespace.account_id).first()
+        Calendar.namespace_id == namespace.id).first()
 
     db_session.delete(calendar)
     db_session.commit()

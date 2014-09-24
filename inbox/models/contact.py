@@ -7,18 +7,18 @@ from inbox.models.mixins import HasPublicID, HasEmailAddress
 from inbox.models.transaction import HasRevisions
 from inbox.models.base import MailSyncBase
 
-from inbox.models.account import Account
 from inbox.models.message import Message
+from inbox.models.namespace import Namespace
 
 
 class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
     """Data for a user's contact."""
-    account_id = Column(ForeignKey(Account.id, ondelete='CASCADE'),
-                        nullable=False)
-    account = relationship(
-        Account, load_on_pending=True,
-        primaryjoin='and_(Contact.account_id == Account.id, '
-                    'Account.deleted_at.is_(None))')
+    namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
+                          nullable=False)
+    namespace = relationship(
+        Namespace, load_on_pending=True,
+        primaryjoin='and_(Contact.namespace_id == Namespace.id, '
+                    'Namespace.deleted_at.is_(None))')
 
     # A server-provided unique ID.
     uid = Column(String(64), nullable=False)
@@ -47,12 +47,8 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
     # database column.)
     deleted = False
 
-    __table_args__ = (UniqueConstraint('uid', 'source', 'account_id',
+    __table_args__ = (UniqueConstraint('uid', 'source', 'namespace_id',
                                        'provider_name'),)
-
-    @property
-    def namespace(self):
-        return self.account.namespace
 
     def merge_from(self, base, remote):
         # This must be updated when new fields are added to the class.
@@ -62,8 +58,8 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
 
     def copy_from(self, src):
         """ Copy fields from src."""
-        self.account_id = src.account_id
-        self.account = src.account
+        self.namespace_id = src.namespace_id
+        self.namespace = src.namespace
         self.uid = src.uid
         self.name = src.name
         self.email_address = src.email_address
