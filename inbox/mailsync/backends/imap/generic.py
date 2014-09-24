@@ -147,7 +147,6 @@ class FolderSyncEngine(Greenlet):
         self.refresh_flags_max = refresh_flags_max
         self.retry_fail_classes = retry_fail_classes
         self.state = None
-        self.conn_pool = _pool(self.account_id)
 
         with mailsync_session_scope() as db_session:
             account = db_session.query(Account).get(self.account_id)
@@ -175,6 +174,9 @@ class FolderSyncEngine(Greenlet):
                                        fail_classes=self.retry_fail_classes)
 
     def _run_impl(self):
+        # We defer initializing the pool to here so that we'll retry if there
+        # are any errors (remote server 503s or similar) when initializing it.
+        self.conn_pool = _pool(self.account_id)
         # We do NOT ignore soft deletes in the mail sync because it gets real
         # complicated handling e.g. when backends reuse imapids. ImapUid
         # objects are the only objects deleted by the mail sync backends
