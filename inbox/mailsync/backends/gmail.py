@@ -123,12 +123,19 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                 change_poller.kill()
 
     def poll_impl(self):
+        should_idle = False
         with self.conn_pool.get() as crispin_client:
             crispin_client.select_folder(self.folder_name, uidvalidity_cb)
             download_stack = UIDStack()
             self.check_uid_changes(crispin_client, download_stack,
                                    async_download=False)
-            self.idle_wait(crispin_client)
+            if self.folder_name == crispin_client.folder_names()['inbox']:
+                # Only idle on the inbox folder
+                should_idle = True
+                self.idle_wait(crispin_client)
+        # Relinquish Crispin connection before sleeping.
+        if not should_idle:
+            sleep(self.poll_frequency)
 
     def highestmodseq_callback(self, crispin_client, new_uids, updated_uids,
                                download_stack, async_download):

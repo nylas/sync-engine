@@ -124,4 +124,3 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
         crispin_client.conn.idle()
         crispin_client.conn.idle_check(timeout=idle_frequency)
         crispin_client.conn.idle_done()
-        log.info('IDLE triggered poll')
