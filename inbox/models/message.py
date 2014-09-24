@@ -70,7 +70,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                         info={'versioned_properties': ['id']}))
 
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
-                          index=True)
+                          index=True, nullable=False)
     namespace = relationship(
         'Namespace',
         lazy='joined',

@@ -141,7 +141,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('e27104acb25');
+INSERT INTO `alembic_version` VALUES ('5a68ac0e3e9');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1022,7 +1022,7 @@ CREATE TABLE `message` (
   `resolved_message_id` int(11) DEFAULT NULL,
   `thread_order` int(11) NOT NULL,
   `version` binary(16) DEFAULT NULL,
-  `namespace_id` int(11) DEFAULT NULL,
+  `namespace_id` int(11) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `thread_id_2` (`thread_id`,`g_msgid`),
   KEY `thread_id` (`thread_id`),
@@ -1034,9 +1034,9 @@ CREATE TABLE `message` (
   KEY `ix_message_updated_at` (`updated_at`),
   KEY `message_ibfk_2` (`resolved_message_id`),
   KEY `namespace_id` (`namespace_id`),
-  CONSTRAINT `message_ibfk_3` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`),
   CONSTRAINT `message_ibfk_1` FOREIGN KEY (`thread_id`) REFERENCES `thread` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `message_ibfk_2` FOREIGN KEY (`resolved_message_id`) REFERENCES `message` (`id`)
+  CONSTRAINT `message_ibfk_2` FOREIGN KEY (`resolved_message_id`) REFERENCES `message` (`id`),
+  CONSTRAINT `message_ibfk_3` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
