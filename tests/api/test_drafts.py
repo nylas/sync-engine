@@ -8,7 +8,7 @@ import gevent
 import pytest
 
 from tests.util.base import (patch_network_functions, api_client,
-                             syncback_service)
+                             syncback_service, default_account)
 
 __all__ = ['patch_network_functions', 'api_client', 'syncback_service']
 
@@ -280,7 +280,7 @@ def test_delete_remote_draft(db, api_client):
 
 
 def test_send(patch_network_functions, api_client, example_draft,
-              syncback_service):
+              syncback_service, default_account):
     r = api_client.post_data('/drafts', example_draft)
     draft_public_id = json.loads(r.data)['id']
     version = json.loads(r.data)['version']

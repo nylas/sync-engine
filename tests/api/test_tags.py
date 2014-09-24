@@ -5,7 +5,8 @@ import pytest
 from inbox.models import Tag
 
 from tests.util.base import (patch_network_functions, api_client,
-                             syncback_service, default_namespace)
+                             syncback_service, default_namespace,
+                             default_account)
 
 __all__ = ['patch_network_functions', 'api_client', 'syncback_service',
            'default_namespace']
@@ -285,7 +286,7 @@ def test_read_implies_seen(api_client, db):
 
 
 def test_unread_cascades_to_messages(patch_network_functions, log, api_client,
-                                     syncback_service):
+                                     syncback_service, default_account):
     thread_id = api_client.get_data('/threads/')[0]['id']
     thread_path = '/threads/{}'.format(thread_id)
     api_client.put_data(thread_path, {'add_tags': ['unread']})
@@ -305,7 +306,7 @@ def test_tag_deletes_cascade_to_threads():
 
 
 def test_actions_syncback(patch_network_functions, api_client, db,
-                          syncback_service):
+                          syncback_service, default_account):
     """Adds and removes tags that should trigger syncback actions, and check
     that the appropriate actions get spawned (but doesn't test the
     implementation of the actual syncback methods in inbox.actions).

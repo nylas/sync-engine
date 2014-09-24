@@ -238,8 +238,14 @@ def default_namespace(db):
 
 @fixture(scope='function')
 def default_account(db):
+    import platform
     from inbox.models import Account
-    return db.session.query(Account).filter_by(id=1).one()
+    account = db.session.query(Account).filter_by(id=1).one()
+
+    # Ensure that the account is set to sync locally for unit tests
+    account.sync_host = platform.node()
+    db.session.commit()
+    return account
 
 
 @fixture(scope='function')
