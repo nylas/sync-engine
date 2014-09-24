@@ -252,6 +252,7 @@ def test_delete_remote_draft(db, api_client):
 
     # Non-Inbox created draft, therefore don't set inbox_uid
     message = Message()
+    message.namespace_id = NAMESPACE_ID
     message.thread_id = 1
     message.received_date = datetime.utcnow()
     message.size = len('')

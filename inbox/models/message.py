@@ -15,24 +15,24 @@ from inbox.util.html import (plaintext2html, strip_tags,
 from inbox.sqlalchemy_ext.util import JSON, Base36UID, generate_public_id
 
 from inbox.config import config
-from inbox.util.addr import parse_email_address_list
+from inbox.util.addr import parse_mimepart_address_header
 from inbox.util.file import mkdirp
 from inbox.util.misc import parse_references, get_internaldate
 
 from inbox.models.mixins import HasPublicID
 from inbox.models.transaction import HasRevisions
 from inbox.models.base import MailSyncBase
+from inbox.models.namespace import Namespace
 
 
 from inbox.log import get_logger
 log = get_logger()
 
 
-def _trim_filename(s, account_id, mid, max_len=64):
+def _trim_filename(s, mid, max_len=64):
     if s and len(s) > max_len:
         log.warning('filename is too long, truncating',
-                    account_id=account_id, mid=mid, max_len=max_len,
-                    filename=s)
+                    mid=mid, max_len=max_len, filename=s)
         return s[:max_len - 8] + s[-8:]  # Keep extension
     return s
 
@@ -68,6 +68,15 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                         'Message.deleted_at.is_(None))',
                         order_by='Message.received_date',
                         info={'versioned_properties': ['id']}))
+
+    namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
+                          index=True)
+    namespace = relationship(
+        'Namespace',
+        lazy='joined',
+        primaryjoin='and_(Message.namespace_id==Namespace.id, '
+                    'Namespace.deleted_at==None)',
+        load_on_pending=True)
 
     from_addr = Column(JSON, nullable=False, default=lambda: [])
     sender_addr = Column(JSON, nullable=True)
@@ -136,17 +145,13 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             value = value[:255]
         return value
 
-    @property
-    def namespace(self):
-        return self.thread.namespace
-
-    def __init__(self, account=None, mid=None, folder_name=None,
-                 received_date=None, flags=None, body_string=None,
-                 *args, **kwargs):
+    @classmethod
+    def create_from_synced(cls, account, mid, folder_name,
+                           received_date, body_string):
         """ Parses message data and writes out db metadata and MIME blocks.
 
-        Returns the new Message, which links to the new Block objects through
-        relationships. All new objects are uncommitted.
+        Returns the new Message, which links to the new Part and Block objects
+        through relationships. All new objects are uncommitted.
 
         Threads are not computed here; you gotta do that separately.
 
@@ -159,24 +164,19 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         raw_message : str
             The full message including headers (encoded).
         """
-        _rqd = [account, mid, folder_name, flags, body_string]
-
-        MailSyncBase.__init__(self, *args, **kwargs)
-
-        # for drafts
-        if not any(_rqd):
-            return
-
-        if any(_rqd) and not all([v is not None for v in _rqd]):
+        _rqd = [account, mid, folder_name, body_string]
+        if not all([v is not None for v in _rqd]):
             raise ValueError(
                 "Required keyword arguments: account, mid, folder_name, "
-                "flags, body_string")
-
+                "body_string")
         # stop trickle-down bugs
         assert account.namespace is not None
         assert not isinstance(body_string, unicode)
 
+        msg = Message()
+
         try:
+            msg.namespace_id = account.namespace.id
             parsed = mime.from_string(body_string)
 
             mime_version = parsed.headers.get('Mime-Version')
@@ -186,40 +186,33 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                             account_id=account.id, folder_name=folder_name,
                             mid=mid, mime_version=mime_version)
 
-            self.data_sha256 = sha256(body_string).hexdigest()
+            msg.data_sha256 = sha256(body_string).hexdigest()
 
             # clean_subject strips re:, fwd: etc.
-            self.subject = parsed.clean_subject
-            self.from_addr = parse_email_address_list(
-                parsed.headers.get('From'))
-            self.sender_addr = parse_email_address_list(
-                parsed.headers.get('Sender'))
-            self.reply_to = parse_email_address_list(
-                parsed.headers.get('Reply-To'))
+            msg.subject = parsed.clean_subject
+            msg.from_addr = parse_mimepart_address_header(parsed, 'From')
+            msg.sender_addr = parse_mimepart_address_header(parsed, 'Sender')
+            msg.reply_to = parse_mimepart_address_header(parsed, 'Reply-To')
+            msg.to_addr = parse_mimepart_address_header(parsed, 'To')
+            msg.cc_addr = parse_mimepart_address_header(parsed, 'Cc')
+            msg.bcc_addr = parse_mimepart_address_header(parsed, 'Bcc')
 
-            self.to_addr = parse_email_address_list(
-                parsed.headers.getall('To'))
-            self.cc_addr = parse_email_address_list(
-                parsed.headers.getall('Cc'))
-            self.bcc_addr = parse_email_address_list(
-                parsed.headers.getall('Bcc'))
+            msg.in_reply_to = parsed.headers.get('In-Reply-To')
+            msg.message_id_header = parsed.headers.get('Message-Id')
 
-            self.in_reply_to = parsed.headers.get('In-Reply-To')
-            self.message_id_header = parsed.headers.get('Message-Id')
-
-            self.received_date = received_date if received_date else \
+            msg.received_date = received_date if received_date else \
                 get_internaldate(parsed.headers.get('Date'),
                                  parsed.headers.get('Received'))
 
             # Custom Inbox header
-            self.inbox_uid = parsed.headers.get('X-INBOX-ID')
+            msg.inbox_uid = parsed.headers.get('X-INBOX-ID')
 
             # In accordance with JWZ (http://www.jwz.org/doc/threading.html)
-            self.references = parse_references(
+            msg.references = parse_references(
                 parsed.headers.get('References', ''),
                 parsed.headers.get('In-Reply-To', ''))
 
-            self.size = len(body_string)  # includes headers text
+            msg.size = len(body_string)  # includes headers text
 
             i = 0  # for walk_index
 
@@ -230,9 +223,9 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             block.namespace_id = account.namespace.id
             block.data = json.dumps(parsed.headers.items())
 
-            headers_part = Part(block=block, message=self)
+            headers_part = Part(block=block, message=msg)
             headers_part.walk_index = i
-            self.parts.append(headers_part)
+            msg.parts.append(headers_part)
 
             for mimepart in parsed.walk(
                     with_self=parsed.content_type.is_singlepart()):
@@ -242,76 +235,68 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                                 account_id=account.id, folder_name=folder_name,
                                 mid=mid)
                     continue  # TODO should we store relations?
+                msg._parse_mimepart(mimepart, i, mid, account.namespace.id)
 
-                block = Block()
-                block.namespace_id = account.namespace.id
-                block.content_type = mimepart.content_type.value
-                block.filename = _trim_filename(
-                    mimepart.content_type.params.get('name'),
-                    account.id, mid)
-
-                new_part = Part(block=block, message=self)
-                new_part.walk_index = i
-
-                # TODO maybe also trim other headers?
-                if mimepart.content_disposition[0] is not None:
-                    value, params = mimepart.content_disposition
-                    if value not in ['inline', 'attachment']:
-                        cd = mimepart.content_disposition
-                        log.error('Unknown Content-Disposition',
-                                  account_id=account.id, mid=mid,
-                                  folder_name=folder_name,
-                                  bad_content_disposition=cd,
-                                  parsed_content_disposition=value)
-                        continue
-                    else:
-                        new_part.content_disposition = value
-                        if value == 'attachment':
-                            new_part.block.filename = _trim_filename(
-                                params.get('filename'), account.id, mid)
-
-                if mimepart.body is None:
-                    data_to_write = ''
-                elif new_part.block.content_type.startswith('text'):
-                    data_to_write = mimepart.body.encode('utf-8', 'strict')
-                    # normalize mac/win/unix newlines
-                    data_to_write = data_to_write \
-                        .replace('\r\n', '\n').replace('\r', '\n')
-                else:
-                    data_to_write = mimepart.body
-                if data_to_write is None:
-                    data_to_write = ''
-
-                new_part.content_id = mimepart.headers.get('Content-Id')
-                block.data = data_to_write
-                self.parts.append(new_part)
-            self.calculate_sanitized_body()
-        except mime.DecodingError:
-            # Occasionally iconv will fail via maximum recursion depth. We
-            # still keep the metadata and mark it as b0rked.
+            msg.calculate_sanitized_body()
+        except (mime.DecodingError, AttributeError, RuntimeError) as e:
+            # Message parsing can fail for several reasons. Occasionally iconv
+            # will fail via maximum recursion depth. EAS messages may be
+            # missing Date and Received headers. In such cases, we still keep
+            # the metadata and mark it as b0rked.
             _log_decode_error(account.id, folder_name, mid, body_string)
-            log.error('Message parsing DecodeError', account_id=account.id,
-                      folder_name=folder_name, err_filename=_get_errfilename(
-                          account.id, folder_name, mid))
-            self.mark_error()
-            return
-        except AttributeError:
-            # For EAS messages that are missing Date + Received headers, due
-            # to the processing we do in inbox.util.misc.get_internaldate()
-            _log_decode_error(account.id, folder_name, mid, body_string)
-            log.error('Message parsing AttributeError', account_id=account.id,
-                      folder_name=folder_name, err_filename=_get_errfilename(
-                          account.id, folder_name, mid))
-            self.mark_error()
-            return
-        except RuntimeError:
-            _log_decode_error(account.id, folder_name, mid, body_string)
-            log.error('Message parsing RuntimeError<iconv>'.format(
-                err_filename=_get_errfilename(account.id, folder_name, mid)))
-            self.mark_error()
-            return
+            err_filename = _get_errfilename(account.id, folder_name, mid)
+            log.error('Message parsing error',
+                      folder_name=folder_name, account_id=account.id,
+                      err_filename=err_filename, error=e)
+            msg._mark_error()
 
-    def mark_error(self):
+        return msg
+
+    def _parse_mimepart(self, mimepart, mid, index, namespace_id):
+        """Parse a single MIME part into a Block and Part object linked to this
+        message."""
+        from inbox.models.block import Block, Part
+        block = Block()
+        block.namespace_id = namespace_id
+        block.content_type = mimepart.content_type.value
+        block.filename = _trim_filename(
+            mimepart.content_type.params.get('name'), mid)
+
+        new_part = Part(block=block, message=self)
+        new_part.walk_index = index
+
+        # TODO maybe also trim other headers?
+        if mimepart.content_disposition[0] is not None:
+            value, params = mimepart.content_disposition
+            if value not in ['inline', 'attachment']:
+                cd = mimepart.content_disposition
+                log.error('Unknown Content-Disposition',
+                          mid=mid, bad_content_disposition=cd,
+                          parsed_content_disposition=value)
+                return
+            else:
+                new_part.content_disposition = value
+                if value == 'attachment':
+                    new_part.block.filename = _trim_filename(
+                        params.get('filename'), mid)
+
+        if mimepart.body is None:
+            data_to_write = ''
+        elif new_part.block.content_type.startswith('text'):
+            data_to_write = mimepart.body.encode('utf-8', 'strict')
+            # normalize mac/win/unix newlines
+            data_to_write = data_to_write.replace('\r\n', '\n'). \
+                replace('\r', '\n')
+        else:
+            data_to_write = mimepart.body
+        if data_to_write is None:
+            data_to_write = ''
+
+        new_part.content_id = mimepart.headers.get('Content-Id')
+        block.data = data_to_write
+        self.parts.append(new_part)
+
+    def _mark_error(self):
         self.decode_error = True
         # fill in required attributes with filler data if could not parse them
         self.size = 0
@@ -465,13 +450,3 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                         'remote(Message.resolved_message_id)==Message.id,'
                         'remote(Message.deleted_at)==None)',
                         uselist=False))
-
-    @classmethod
-    def create_draft_message(cls, *args, **kwargs):
-        obj = cls(*args, **kwargs)
-        obj.is_created = True
-        obj.is_draft = True
-        obj.state = 'draft'
-        if obj.inbox_uid:
-            obj.public_id = obj.inbox_uid
-        return obj

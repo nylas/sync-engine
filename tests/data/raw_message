@@ -1,0 +1,334 @@
+Delivered-To: freemaneben@gmail.com
+Received: by 10.66.230.197 with SMTP id ta5csp290458pac;
+        Mon, 22 Sep 2014 10:25:47 -0700 (PDT)
+X-Received: by 10.140.40.169 with SMTP id x38mr24009947qgx.73.1411406746920;
+        Mon, 22 Sep 2014 10:25:46 -0700 (PDT)
+Return-Path: <csail-announce-bounces@lists.csail.mit.edu>
+Received: from dmz-mailsec-scanner-6.mit.edu (dmz-mailsec-scanner-6.mit.edu. [18.7.68.35])
+        by mx.google.com with ESMTPS id 4si9701263qav.89.2014.09.22.10.25.43
+        for <multiple recipients>
+        (version=TLSv1 cipher=RC4-SHA bits=128/128);
+        Mon, 22 Sep 2014 10:25:46 -0700 (PDT)
+Received-SPF: softfail (google.com: domain of transitioning csail-announce-bounces@lists.csail.mit.edu does not designate 18.7.68.35 as permitted sender) client-ip=18.7.68.35;
+Authentication-Results: mx.google.com;
+       spf=softfail (google.com: domain of transitioning csail-announce-bounces@lists.csail.mit.edu does not designate 18.7.68.35 as permitted sender) smtp.mail=csail-announce-bounces@lists.csail.mit.edu
+Received: from mailhub-dmz-1.mit.edu ( [18.9.21.41])
+	(using TLS with cipher AES256-SHA (256/256 bits))
+	(Client did not present a certificate)
+	by dmz-mailsec-scanner-6.mit.edu (Symantec Messaging Gateway) with SMTP id F1.A4.13180.79B50245; Mon, 22 Sep 2014 13:25:43 -0400 (EDT)
+Received: from dmz-mailsec-scanner-3.mit.edu (dmz-mailsec-scanner-3.mit.edu [18.9.25.14])
+	by mailhub-dmz-1.mit.edu (8.13.8/8.9.2) with ESMTP id s8MHPFvU022947;
+	Mon, 22 Sep 2014 13:25:21 -0400
+X-AuditID: 12074423-f799d6d00000337c-07-54205b9792a5
+Authentication-Results: symauth.service.identifier
+Received: from incoming.csail.mit.edu (incoming.csail.mit.edu [128.30.2.16])
+	(using TLS with cipher AES256-SHA (256/256 bits))
+	(Client did not present a certificate)
+	by dmz-mailsec-scanner-3.mit.edu (Symantec Messaging Gateway) with SMTP id 9B.73.13891.08B50245; Mon, 22 Sep 2014 13:25:20 -0400 (EDT)
+Received: from lists.csail.mit.edu ([128.30.2.182])
+	by incoming.csail.mit.edu with esmtps (TLS1.0:RSA_AES_256_CBC_SHA1:32)
+	(Exim 4.72)
+	(envelope-from <csail-announce-bounces@lists.csail.mit.edu>)
+	id 1XW7MR-0003cu-7J; Mon, 22 Sep 2014 13:25:16 -0400
+Received: from localhost ([127.0.0.1] helo=lists.csail.mit.edu)
+	by lists.csail.mit.edu with esmtp (Exim 4.72)
+	(envelope-from <csail-announce-bounces@lists.csail.mit.edu>)
+	id 1XW7MM-0007rE-Ls; Mon, 22 Sep 2014 13:25:10 -0400
+Received: from incoming.csail.mit.edu ([128.30.2.16])
+	by lists.csail.mit.edu with esmtp (Exim 4.72)
+	(envelope-from <tp@ai.mit.edu>)
+	id 1XW7MJ-0007r4-VB; Mon, 22 Sep 2014 13:25:08 -0400
+Received: from outgoing.csail.mit.edu ([128.30.2.149])
+	by incoming.csail.mit.edu with esmtp (Exim 4.72)
+	(envelope-from <tp@ai.mit.edu>)
+	id 1XW7MF-0003Y8-Kb; Mon, 22 Sep 2014 13:25:07 -0400
+Received: from [18.111.17.249] (helo=Tomasos-MacBook-Air-2.local)
+	by outgoing.csail.mit.edu with esmtpsa
+	(TLS1.0:DHE_RSA_AES_128_CBC_SHA1:16) (Exim 4.72)
+	(envelope-from <tp@ai.mit.edu>)
+	id 1XW7MF-0003G2-9c; Mon, 22 Sep 2014 13:25:03 -0400
+Message-ID: <54205B6D.10308@ai.mit.edu>
+Date: Mon, 22 Sep 2014 13:25:01 -0400
+From: Tomaso Poggio <tp@ai.mit.edu>
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9;
+	rv:24.0) Gecko/20100101 Thunderbird/24.6.0
+MIME-Version: 1.0
+To: csail-announce@csail.mit.edu, csail-related@csail.mit.edu,
+        csail-all.lists@mit.edu
+Subject: Fwd: Fwd: Talk: Tuesday 09-23-2014 The Integrated Information Theory
+	of Consciousness
+References: <54204C4C.1070008@csail.mit.edu>
+In-Reply-To: <54204C4C.1070008@csail.mit.edu>
+X-Forwarded-Message-Id: <54204C4C.1070008@csail.mit.edu>
+Content-Type: multipart/mixed; boundary="------------030907040501070005080007"
+X-BeenThere: csail-announce@lists.csail.mit.edu
+X-Mailman-Version: 2.1.13
+Precedence: list
+List-Id: "CSAIL-related announcements." <csail-announce.lists.csail.mit.edu>
+List-Unsubscribe: <https://lists.csail.mit.edu/mailman/options/csail-announce>,
+	<mailto:csail-announce-request@lists.csail.mit.edu?subject=unsubscribe>
+List-Archive: <https://lists.csail.mit.edu/mailman/private/csail-announce>
+List-Post: <mailto:csail-announce@lists.csail.mit.edu>
+List-Help: <mailto:csail-announce-request@lists.csail.mit.edu?subject=help>
+List-Subscribe: <https://lists.csail.mit.edu/mailman/listinfo/csail-announce>,
+	<mailto:csail-announce-request@lists.csail.mit.edu?subject=subscribe>
+Sender: csail-announce-bounces@lists.csail.mit.edu
+Errors-To: csail-announce-bounces@lists.csail.mit.edu
+X-Brightmail-Tracker: H4sIAAAAAAAAA2VTf0xTVxT2vvfaXpo+d6kiR9yElS3uh9X9CrlOR7bMRKPbsi3EzJlNnvRJ
+	u7UFX4sRZxYa0EUzBltARiVkBicGsop1nRAQQjfdqlKZyRguMAcIGb/qHKOyoGbv9bVqsv++
+	c853vu+cm3Mxa4zo0rDN6RYlp2A3afWcMSnlSXPNtoycZxomgUYP/IxoR0OThl6vHdXQRu8c
+	S0Nls4g2zb9FKyr9HK3aP6qjnXeqWRqo92jpnbkuhn7RekRLI1NdWnrjYoSjJ/oHGXp27CZH
+	K0qzX07e2OYd1G28EjnDvsm8q19nEe223aK0OjtXb52cOYEKyzbsudx9lytB0axDKAkDeQHC
+	ZadYFS+B3t9Pag8hPTYSLwOXpy7p1OB7BFf7rqBEh2/mllbBiDwH7eEJjUryMxAcrkBqUMLA
+	rT5PXGsUwd+eQDzoRHCj72w8CCL450tf3CWK4KeGuxpFmScr4GB0klEwRx6HoeYenYK1JBPq
+	Lv4Vc08hIgTCPazKT4ZQ7XVOwYvJdjg6fzs27SKSC3N//hvjGMlKGOnpj+EkYgZvdSenbkTh
+	eLcvps+SN8Az0qFR86vh19BUfOul0Np7NeZLCIH6Y22x2QzkNWg5HY69gIF4EUS+60dqYROc
+	Gw7pVJwFn4y1alS8GX4bGNOqDTUITtddYitRpveBJbwPDKLiLVA+1K71IizjtRBtl9R0OpQG
+	jrAqfhqaynuYRP7MdF08vwG+bbyg+X/+VYiO/8J+hfRN6BGLY6/ZIdjsLjHP7MoTnE5RMmet
+	ctjcq0RLkR8ph6tbn9mKbnebgohgZDLwuyLpOUaNsNtV7AiipZgxpfD47Ywc48IdBZZiq+Cy
+	bpeK7KIriB6TvYZbmntRGucscIqmxTy/SebxFqF4rygVJGjLMGdK5f1zC3OMJF9wix+KYqEo
+	JaoPY2wCfn6r3Jgsifninp02u/t+mcFJ8iFhgyx+XuHwrkLB4bLlq/UL6HncMjtezmDfwWgF
+	Y4zNkZbKY4VKFKq1yHlPLfFNJ1CqvOgifkRhGeRPfE9vQrZiZKtrP6YrVm7hfimtBH363pYX
+	h9birVMvec81t9PZgQ9ODXRsu5ZqtfZVv7O+NCPonv/MWoVXLKtZ0Di4ZvmCH3zZDZ9XHQ7+
+	cTwz1PbN1x8t8aBpIbCvsi1vBId3+Q221907qpbX12fve+VA1/DMox0fH11TcDN3+v0nGjf7
+	a8P8QyvPR1PE8ZPh/cc6d67T5Zo4l1V49ilWcgn/AXaXjqyBBAAA
+X-Brightmail-Tracker: H4sIAAAAAAAAA2VTfUwTZxzmvbter02PvBw4XroJpMMscaJON/cmWxYSkrk4MpeFmOC+vNEb
+	NLaFtcVQ98WHjDEHiBkTS52NGtkgdojyJZOkjWzC+JKEb2EpaqM4HApUGITsrlccy/65PL/n
+	97y/5/m9eY8huTFGywi5NsFi5o06Wk3lxRIwMe/d+NTtN3q24K6qVRLPd+lx38gKiTtLJgg8
+	5CqjcNPoHIknz5UR+MJpnwKf+bpfiSs7Kij8wFlF466mJRo/dM6LJ65207jm+jiBR4palLh1
+	8DKFK4YrAB66OUHhCyf9BO7zl9F4uXVVgYdnjwJc31dE4ppfjyjxxe9NuLTxhBJP3RlR4p++
+	nSDxzKCHxsXjVwh8fqWZxEvfjQLcf6OaSNK9UdDdQb4N9qtf1QtGwyHBsu21A+rM+3M/guwj
+	u3P7PKtUHgjs+gaoGARfRO65x7SEAdyB2nqnFTL/FOqf/Fnk1QwHGwjknSoHcpFHoMdD+aHO
+	HYAe5TeGinaA/hq6Giq8AM1XuZVyEQDo+tnV4GQWPodKAvcJCVNwE/LV9SglTMNnkfP32WCS
+	DVBAjb09pKyPQJ0nb1MSjoJpaGauOIgj4QG0eHcpqOHgFnSrZySIVTAROSrbKXkLjM573MH5
+	JHwL5d/6JbTdNjTc+SeQcQxq6R8N+kII0Q/nWoPZNDAF1V/qVUgLaKADoAdNI0Bu7EEdU51K
+	Ge9Cxf4WhYzfRGM3/bR84ARAl5zdpJx0B/IU1gQdFPAlVL1YRhwDcY51yznWBZTxPlTqa6Md
+	gBHxKyjQZpHpOFTYWE3K+HlUW9pDrPHNM84QvxtdrulS/J9PRoF7g6QLqGvBRr3pcKKJNxit
+	QnqiNZ03mwVL4s6tJoNtq6DPaQDi0+dUMeEtYMGj8wLIAJ2GdRXEpXIK/pDVbvKCGIbQbWCZ
+	d+JTufCPsvT2TN6a+aElxyhYvSBB9Jqqr+sHWsqcZRZ0USy7R9Sxet5+WLBkrcmeZihdNNuw
+	GJ7KwQzeJhwUhGzBstYlGKUXPMMwOsQup4mnIyxChpD7scFoW69RSR+1+NQYjWhD7ZdsrNm8
+	yWrIkEVdYCdTv3CvlGDcJYFyggsm0kazjDQTStLMHPOTkWu//ADYqI1kQVhYGKcRM4nX8t/+
+	NIgWrySS3SQZagxm2xO/aTEKIUb547c4KYqN/7elzQO1whVvbMDVOhvBzR6Pdbd9bn/vA41l
+	cuXiXF3B3SKVNuqr9uR4e+w1T/ooolL+/gLgl/tcgUfjyqP5n56i0xOSC30Dla9/9v7t8YbJ
+	U1nTZU6sHUjBldyxos3+haTIsyljBxMafdeWj9uNzfu4T9LqzOV7vdttxLJvPDlp4suHOsqa
+	yb+wmbRY+X8AFwSpA+0EAAA=
+
+This is a multi-part message in MIME format.
+--------------030907040501070005080007
+Content-Type: multipart/alternative;
+ boundary="------------040108070008060704040409"
+
+
+--------------040108070008060704040409
+Content-Type: text/plain; charset=ISO-8859-1; format=flowed
+Content-Transfer-Encoding: 8bit
+
+
+
+
+-------- Original Message --------
+Subject: 	Fwd: Talk: Tuesday 09-23-2014 The Integrated Information
+Theory of Consciousness
+Date: 	Mon, 22 Sep 2014 12:20:28 -0400
+From: 	Kathleen Sullivan <kdsulliv@csail.mit.edu>
+To: 	bcs-all@mit.edu <bcs-all@mit.edu>
+
+
+
+*Brains, Minds and Machines Seminar Series *
+
+
+    The Integrated Information Theory of Consciousness
+
+Speaker: Dr. Christof Koch, Chief Scientific Officer, Allen Institute
+for Brain Science
+Date: Tuesday, September 23, 2014
+Time: 4:00 PM
+Location: Singleton Auditorium, MIT 46-3002, 43 Vassar St., Cambridge MA
+Host: Prof. Tomaso Poggio, Director CBMM
+
+Abstract:Â  The science of consciousness has made great strides by
+focusing on the behavioral and neuronal correlates of experience.
+However, such correlates are not enough if we are to understand even
+basic facts, for example, why the cerebral cortex gives rise to
+consciousness but the cerebellum does not, though it has even more
+neurons and appears to be just as complicated. Moreover, correlates are
+of little help in many instances where we would like to know if
+consciousness is present: patients with a few remaining islands of
+functioning cortex, pre-term infants, non-mammalian species, and
+machines that are rapidly outperforming people at driving, recognizing
+faces and objects, and answering difficult questions. To address these
+issues, we need a theory of consciousness â?? one that says what
+experience is and what type of physical systems can have it. Giulio
+Tononiâ??s Integrated Information Theory (IIT) does so by starting from
+conscious experience itself via five phenomenological axioms of
+existence, composition, information, integration, and exclusion. From
+these it derives five postulates about the properties required of
+physical mechanisms to support consciousness. The theory provides a
+principled account of both the quantity and the quality of an individual
+experience, and a calculus to evaluate whether or not a particular
+system of mechanisms is conscious and of what. Moreover, IIT can explain
+a range of clinical and laboratory findings, makes a number of testable
+predictions, and extrapolates to a number of unusual conditions. In
+sharp contrast with widespread functionalist beliefs, IIT implies that
+digital computers, even if their behavior were to be functionally
+equivalent to ours, and even if they were to run faithful simulations of
+the human brain, would experience next to nothing.
+
+Relevant URL: http://cbmm.mit.edu/events/
+
+Refreshments to be served immediately after the talk.
+
+See other events that are part of the Brains, Minds and Machines Seminar
+Series September 2015-June 2016.
+<https://calendar.csail.mit.edu/seminar_series/7420>
+
+
+--
+Kathleen D. Sullivan
+Center Manager
+Center for Brains, Minds and Machines (CBMM)
+McGovern Institute for Brain Research at MIT
+Massachusetts Institute of Technology
+Department of Brain and Cognitive Sciences
+Office: MIT 46-5169A
+Tel.: (617) 253-0551
+
+
+
+
+
+
+--------------040108070008060704040409
+Content-Type: text/html; charset=ISO-8859-1
+Content-Transfer-Encoding: 7bit
+
+<html>
+  <head>
+
+    <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1">
+  </head>
+  <body bgcolor="#FFFFFF" text="#000000">
+    <br>
+    <div class="moz-forward-container"><br>
+      <br>
+      -------- Original Message --------
+      <table class="moz-email-headers-table" border="0" cellpadding="0"
+        cellspacing="0">
+        <tbody>
+          <tr>
+            <th align="RIGHT" nowrap="nowrap" valign="BASELINE">Subject:
+            </th>
+            <td>Fwd: Talk: Tuesday 09-23-2014 The Integrated Information
+              Theory of Consciousness</td>
+          </tr>
+          <tr>
+            <th align="RIGHT" nowrap="nowrap" valign="BASELINE">Date: </th>
+            <td>Mon, 22 Sep 2014 12:20:28 -0400</td>
+          </tr>
+          <tr>
+            <th align="RIGHT" nowrap="nowrap" valign="BASELINE">From: </th>
+            <td>Kathleen Sullivan <a class="moz-txt-link-rfc2396E" href="mailto:kdsulliv@csail.mit.edu">&lt;kdsulliv@csail.mit.edu&gt;</a></td>
+          </tr>
+          <tr>
+            <th align="RIGHT" nowrap="nowrap" valign="BASELINE">To: </th>
+            <td><a class="moz-txt-link-abbreviated" href="mailto:bcs-all@mit.edu">bcs-all@mit.edu</a> <a class="moz-txt-link-rfc2396E" href="mailto:bcs-all@mit.edu">&lt;bcs-all@mit.edu&gt;</a></td>
+          </tr>
+        </tbody>
+      </table>
+      <br>
+      <br>
+      <meta http-equiv="content-type" content="text/html;
+        charset=ISO-8859-1">
+      <b>Brains, Minds and Machines Seminar Series </b><br>
+      <div class="moz-forward-container">
+        <h2>The Integrated Information Theory of Consciousness</h2>
+        Speaker: Dr. Christof Koch, Chief Scientific Officer, Allen
+        Institute for Brain Science <br>
+        Date: Tuesday, September 23, 2014 <br>
+        Time: 4:00 PM<br>
+        Location: Singleton Auditorium, MIT 46-3002, 43 Vassar St.,
+        Cambridge MA<br>
+        Host: Prof. Tomaso Poggio, Director CBMM<br>
+        <br>
+        Abstract:&Acirc;&nbsp; The science of consciousness has made great strides
+        by focusing on the behavioral and neuronal correlates of
+        experience. However, such correlates are not enough if we are to
+        understand even basic facts, for example, why the cerebral
+        cortex gives rise to consciousness but the cerebellum does not,
+        though it has even more neurons and appears to be just as
+        complicated. Moreover, correlates are of little help in many
+        instances where we would like to know if consciousness is
+        present: patients with a few remaining islands of functioning
+        cortex, pre-term infants, non-mammalian species, and machines
+        that are rapidly outperforming people at driving, recognizing
+        faces and objects, and answering difficult questions. To address
+        these issues, we need a theory of consciousness &acirc;&#128;&#147; one that
+        says what experience is and what type of physical systems can
+        have it. Giulio Tononi&acirc;&#128;&#153;s Integrated Information Theory (IIT)
+        does so by starting from conscious experience itself via five
+        phenomenological axioms of existence, composition, information,
+        integration, and exclusion. From these it derives five
+        postulates about the properties required of physical mechanisms
+        to support consciousness. The theory provides a principled
+        account of both the quantity and the quality of an individual
+        experience, and a calculus to evaluate whether or not a
+        particular system of mechanisms is conscious and of what.
+        Moreover, IIT can explain a range of clinical and laboratory
+        findings, makes a number of testable predictions, and
+        extrapolates to a number of unusual conditions. In sharp
+        contrast with widespread functionalist beliefs, IIT implies that
+        digital computers, even if their behavior were to be
+        functionally equivalent to ours, and even if they were to run
+        faithful simulations of the human brain, would experience next
+        to nothing. <br>
+        <br>
+        Relevant URL: <a moz-do-not-send="true"
+          class="moz-txt-link-freetext"
+          href="http://cbmm.mit.edu/events/">http://cbmm.mit.edu/events/</a>
+        <br>
+        <br>
+        Refreshments to be served immediately after the talk. <br>
+        <br>
+        <a moz-do-not-send="true"
+          href="https://calendar.csail.mit.edu/seminar_series/7420">See
+          other events that are part of the Brains, Minds and Machines
+          Seminar Series September 2015-June 2016.</a>
+        <p><br>
+        </p>
+        <pre class="moz-signature" cols="72">--
+Kathleen D. Sullivan
+Center Manager
+Center for Brains, Minds and Machines (CBMM)
+McGovern Institute for Brain Research at MIT
+Massachusetts Institute of Technology
+Department of Brain and Cognitive Sciences
+Office: MIT 46-5169A
+Tel.: (617) 253-0551
+</pre>
+        <br>
+      </div>
+      <br>
+      <br>
+    </div>
+    <br>
+  </body>
+</html>
+
+--------------040108070008060704040409--
+
+--------------030907040501070005080007
+Content-Type: text/plain; charset=UTF-8;
+ name="Attached Message Part"
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment;
+ filename="Attached Message Part"
+
+_______________________________________________
+Bcs-all mailing list
+Bcs-all@mit.edu
+http://mailman.mit.edu/mailman/listinfo/bcs-all
+
+
+--------------030907040501070005080007--
+

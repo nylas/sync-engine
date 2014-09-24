@@ -27,3 +27,7 @@ def parse_email_address_list(email_addresses):
     parsed = address.parse_list(email_addresses)
     return [or_none(addr, lambda p:
             (strip_quotes(p.display_name), p.address)) for addr in parsed]
+
+
+def parse_mimepart_address_header(mimepart, header_name):
+    return parse_email_address_list(mimepart.headers.getall(header_name))

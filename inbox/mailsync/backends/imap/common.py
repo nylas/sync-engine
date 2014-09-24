@@ -200,9 +200,10 @@ def create_imap_message(db_session, log, account, folder, msg):
         New db object, which links to new Message and Block objects through
         relationships. All new objects are uncommitted.
     """
-    new_msg = Message(account=account, mid=msg.uid, folder_name=folder.name,
-                      received_date=msg.internaldate, flags=msg.flags,
-                      body_string=msg.body)
+    new_msg = Message.create_from_synced(account=account, mid=msg.uid,
+                                         folder_name=folder.name,
+                                         received_date=msg.internaldate,
+                                         body_string=msg.body)
 
     imapuid = ImapUid(account=account, folder=folder, msg_uid=msg.uid,
                       message=new_msg)

@@ -170,7 +170,7 @@ def test_ordering(api_client, db):
 
     ordered_results = api_client.get_data('/messages?limit=3')
     expected_public_ids = [public_id for public_id, in
-                           db.session.query(Message.public_id). \
+                           db.session.query(Message.public_id).
                            order_by(desc(Message.received_date)).limit(3)]
     assert expected_public_ids == [r['id'] for r in ordered_results]
 
@@ -184,6 +184,7 @@ def add_fake_message(account_id, thread, to_email, received_date,
                      db_session):
     """ One-off helper function to add 'fake' messages to the datastore."""
     m = Message()
+    m.namespace_id = NAMESPACE_ID
     m.from_addr = [('', to_email)]
     m.received_date = received_date
     m.size = 0

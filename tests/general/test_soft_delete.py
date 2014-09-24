@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy.orm.exc import NoResultFound
 
 ACCOUNT_ID = 1
+NAMESPACE_ID = 1
 
 
 def test_soft_delete(db, config):
@@ -17,6 +18,7 @@ def test_soft_delete(db, config):
     db.session.flush()
 
     m = Message()
+    m.namespace_id = NAMESPACE_ID
     m.thread_id = 1
     m.received_date = datetime.datetime.utcnow()
     m.size = 0
@@ -40,8 +42,7 @@ def test_soft_delete(db, config):
     db.new_session(ignore_soft_deletes=True)
 
     with pytest.raises(NoResultFound):
-        folders = db.session.query(Folder).filter(
-            Folder.name == 'DOES NOT EXIST').one()
+        db.session.query(Folder).filter(Folder.name == 'DOES NOT EXIST').one()
 
     count = db.session.query(Folder).filter(
         Folder.name == 'DOES NOT EXIST').count()
