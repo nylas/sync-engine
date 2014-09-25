@@ -316,8 +316,8 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                                    message.g_metadata.thrid]
                 msgs_to_process.append(message)
                 download_stack.discard([
-                    uid for uid, m in download_stack if
-                    m.g_metadata.thrid == message.g_metadata.thrid])
+                    item for item in download_stack if
+                    item[1].g_metadata.thrid == message.g_metadata.thrid])
                 thread_uids = all_mail_crispin_client.expand_thread(
                     message.g_metadata.thrid)
                 thread_g_metadata = all_mail_crispin_client.g_metadata(

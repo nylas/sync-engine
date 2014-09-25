@@ -437,9 +437,8 @@ class FolderSyncEngine(Greenlet):
                 local_with_pending_uids = local_uids | stack_uids
                 self.remove_deleted_uids(db_session, local_uids, remote_uids)
                 # filter out messages that have disappeared on the remote side
-                # STOPSHIP(emfree)
-                download_stack.discard([u for u in download_stack if u not in
-                                        remote_uids])
+                download_stack.discard([item for item in download_stack if
+                                        item[0] not in remote_uids])
                 for uid in sorted(remote_uids):
                     if uid not in local_with_pending_uids:
                         download_stack.put(uid, None)
