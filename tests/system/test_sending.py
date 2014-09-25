@@ -3,6 +3,7 @@ import pytest
 from time import strftime
 from conftest import timeout_loop, all_accounts
 from random_words import random_words
+from inbox.util.url import provider_from_address
 
 
 @timeout_loop('send')
@@ -37,6 +38,10 @@ def wait_for_trash(client, thread_id):
 
 @pytest.mark.parametrize("client", all_accounts)
 def test_sending(client):
+    # because of T478 these tests don't pass on iCloud
+    if provider_from_address(client.email_address) == "icloud":
+        print "Sending disabled for iCloud because of their sent behavior"
+        return
     # Create a message and send it to ourselves
     subject = "%s (Self Send Test)" % strftime("%Y-%m-%d %H:%M:%S")
     draft = client.drafts.create(to=[{"email": client.email_address}],
