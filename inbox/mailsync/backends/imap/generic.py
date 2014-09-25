@@ -68,6 +68,7 @@ from datetime import datetime
 
 from gevent import Greenlet, spawn, sleep
 from gevent.queue import LifoQueue
+from sqlalchemy import desc, func
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import load_only
 
@@ -79,7 +80,7 @@ from inbox.basicauth import AuthError
 from inbox.log import get_logger
 log = get_logger()
 from inbox.crispin import connection_pool, retry_crispin
-from inbox.models import Folder, Account
+from inbox.models import Folder, Account, Message
 from inbox.models.backends.imap import ImapFolderSyncStatus, ImapThread
 from inbox.mailsync.exc import UidInvalid
 from inbox.mailsync.backends.imap import common
@@ -90,6 +91,7 @@ from inbox.mailsync.backends.base import (create_db_objects,
 GenericUIDMetadata = namedtuple('GenericUIDMetadata', 'throttled')
 
 THROTTLE_WAIT = 60
+MAX_THREAD_LENGTH = 500
 
 
 def _pool(account_id):
@@ -325,19 +327,33 @@ class FolderSyncEngine(Greenlet):
         new_uid = self.add_message_attrs(db_session, new_uid, msg, folder)
         return new_uid
 
-    def fetch_similar_threads(self, db_session, new_uid, msg, folder):
+    def fetch_similar_threads(self, db_session, new_uid):
         # FIXME: restrict this to messages in the same folder?
         clean_subject = cleanup_subject(new_uid.message.subject)
+        # Return similar threads ordered by descending id, so that we append
+        # to the most recently created similar thread.
         return db_session.query(ImapThread).filter(
             ImapThread.namespace_id == self.namespace_id,
-            ImapThread.subject.like(clean_subject)).all()
+            ImapThread.subject.like(clean_subject)). \
+            order_by(desc(ImapThread.id)).all()
 
     def add_message_attrs(self, db_session, new_uid, msg, folder):
         """ Post-create-message bits."""
         with db_session.no_autoflush:
-            parent_threads = self.fetch_similar_threads(db_session, new_uid,
-                                                        msg, folder)
-            if parent_threads == []:
+            parent_threads = self.fetch_similar_threads(db_session, new_uid)
+            construct_new_thread = True
+
+            if parent_threads:
+                # If there's a parent thread that isn't too long already,
+                # add to it. Otherwise create a new thread.
+                parent_thread = parent_threads[0]
+                parent_message_count, = db_session.query(
+                    func.count(Message.id)). \
+                    filter(Message.thread_id == parent_thread.id).one()
+                if parent_message_count < MAX_THREAD_LENGTH:
+                    construct_new_thread = False
+
+            if construct_new_thread:
                 new_uid.message.thread = ImapThread.from_imap_message(
                     db_session, new_uid.account.namespace, new_uid.message)
                 new_uid.message.thread_order = 0
