@@ -90,7 +90,7 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
                 local_uids = common.all_uids(self.account_id, db_session,
                                              self.folder_name)
                 self.remove_deleted_uids(db_session, local_uids, remote_uids)
-            stack_uids = {uid for uid in download_stack}
+            stack_uids = {uid for uid, _ in download_stack}
             local_with_pending_uids = local_uids | stack_uids
             new, updated = new_or_updated(changed_uids,
                                           local_with_pending_uids)
