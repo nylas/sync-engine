@@ -63,9 +63,3 @@ def test_account_validation(api_client, db):
 
     r = api_client.post_data('/drafts', draft)
     assert r.status_code == 403
-
-    account.sync_state = 'connerror'
-    db.session.commit()
-
-    r = api_client.post_data('/drafts', draft)
-    assert r.status_code == 503
