@@ -54,9 +54,6 @@ def schedule_action(func_name, record, namespace_id, db_session, **kwargs):
     if account.sync_state == 'invalid':
         raise ActionError(error=403, namespace_id=namespace_id)
 
-    if account.sync_state == 'connerror':
-        raise ActionError(error=503, namespace_id=namespace_id)
-
     log_entry = ActionLog(
         action=func_name,
         table_name=record.__tablename__,
