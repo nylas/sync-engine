@@ -1,0 +1,20 @@
+#!/usr/bin/env python
+# Shows differences between metadata fetched from the specified account(s) and
+# what's stored in the local Inbox database.
+#
+# Usage:
+#
+#   ./bin/inbox-consistency-check --help
+#       show help
+#
+#   ./bin/inbox-consistency-check --list
+#       print a tab-separated list of accounts to stdout
+#
+#   ./bin/inbox-consistency-check [options] [PUBLIC_ID...]
+#       show differences for the specified accounts (default: all gmail
+#       accounts)
+
+from inbox.util.consistency_check.__main__ import main
+
+if __name__ == '__main__':
+    main()
