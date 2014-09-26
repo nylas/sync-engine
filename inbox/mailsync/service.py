@@ -117,10 +117,10 @@ class SyncService(object):
                           email_address=acc.email_address)
 
             if acc.sync_host is not None and acc.sync_host != fqdn:
-                self.log.warning('account is syncing on another host',
-                                 account_id=account_id,
-                                 email_address=acc.email_address,
-                                 sync_host=acc.sync_host)
+                self.log.error('Sync Host Mismatch',
+                               message='account is syncing on another host {}'
+                                       .format(acc.sync_host),
+                               account_id=account_id)
 
             elif acc.id not in self.monitors:
                 try:
@@ -174,14 +174,18 @@ class SyncService(object):
                 if acc.sync_host is None:
                     self.log.info('sync not enabled', account_id=account_id)
 
-                assert acc.sync_host == fqdn, \
-                    "sync host FQDN doesn't match: {0} <--> {1}" \
-                    .format(acc.sync_host, fqdn)
+                if acc.sync_host == fqdn:
+                    acc.sync_stopped()
+                    db_session.add(acc)
+                    db_session.commit()
+                else:
+                    self.log.error("Sync Host Mismatch",
+                                   message="acct.sync_host ({}) != FQDN ({})"
+                                           .format(acc.sync_host, fqdn),
+                                   account_id=account_id)
+
                 # XXX Can processing this command fail in some way?
                 self.monitors[acc.id].inbox.put_nowait('shutdown')
-                acc.sync_stopped()
-                db_session.add(acc)
-                db_session.commit()
 
                 if acc.is_sync_locked:
                     acc.sync_unlock()
