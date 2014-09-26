@@ -172,7 +172,8 @@ def remove_messages(account_id, session, uids, folder):
                 most_recent_message = thread.messages[-1]
                 mrm_folders = [uid.folder
                                for uid in most_recent_message.imapuids]
-                for folder in thread.folders:
+                thread_folders = [folder for folder in thread.folders]
+                for folder in thread_folders:
                     if folder not in mrm_folders:
                         thread.folders.discard(folder)
 
