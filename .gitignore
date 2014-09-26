@@ -77,3 +77,6 @@ nosetests.xml
 # ctags
 tags
 TAGS
+
+# directory used to store build files
+setup/

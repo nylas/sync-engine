@@ -122,8 +122,11 @@ def create_insert_revision(rev_cls, obj, session):
 def create_delete_revision(rev_cls, obj, session):
     # NOTE: The application layer needs to deal with purging all history
     # related to the object at some point.
-    return rev_cls(command='delete', record_id=obj.id,
-                   table_name=obj.__tablename__)
+    revision = rev_cls(command='delete', record_id=obj.id,
+                       table_name=obj.__tablename__)
+    if revision is not None:
+        revision.set_extra_attrs(obj)
+    return revision
 
 
 def create_update_revision(rev_cls, obj, session):

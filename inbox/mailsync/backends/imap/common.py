@@ -138,18 +138,45 @@ def remove_messages(account_id, session, uids, folder):
             Folder.name == folder,
             ImapUid.msg_uid.in_(uids)).all()
 
-        for d in deletes:
-            session.delete(d)
+        # Remove message if he has no associated UIDs.
+        # This may cause the message to disappear transiently
+        # when moved between folders. The delay should be short
+        # enough to be unnoticeable.
+        #
+        # FIXME @karim: we shouldn't be deleting messages --
+        # the clean way to handle this problem is have a daemon
+        # detect "dangling" threads and messages and collect
+        # them periodically (tracked in T477)
+        affected_messages = {uid.message for uid in deletes}
 
         for uid in deletes:
-            if uid.message is not None:
-                thread = uid.message.thread
-                folder = uid.folder
-                thread.folders.discard(folder)
+            session.delete(uid)
         session.commit()
 
-        # XXX TODO: Have a recurring worker permanently remove dangling
-        # messages and threads from the database.
+        messages_to_delete = {m for m in affected_messages if not m.imapuids}
+        affected_threads = {m.thread for m in messages_to_delete}
+
+        for message in messages_to_delete:
+            session.delete(message)
+        session.commit()
+
+        for thread in affected_threads:
+            if not thread.messages:
+                session.delete(thread)
+            else:
+                # We've deleted messages, we've got to update thread.folders.
+                # We use a (temporary) heuristic for this: a thread has
+                # the same folders as its latest message.
+
+                # NB: thread.messages is sorted by date ascending.
+                most_recent_message = thread.messages[-1]
+                mrm_folders = [uid.folder
+                               for uid in most_recent_message.imapuids]
+                for folder in thread.folders:
+                    if folder not in mrm_folders:
+                        thread.folders.discard(folder)
+
+        session.commit()
 
 
 def get_folder_info(account_id, session, folder_name):
