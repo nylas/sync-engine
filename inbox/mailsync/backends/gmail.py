@@ -567,7 +567,8 @@ def add_new_imapuids(crispin_client, remote_g_metadata, syncmanager_lock,
                         folder=Folder.find_or_create(
                             db_session, acc,
                             crispin_client.selected_folder_name),
-                        msg_uid=uid, message=message_for[uid]) for uid in uids]
+                        msg_uid=uid, message=message_for[uid]) for uid in uids
+                        if uid in message_for]
                     for item in new_imapuids:
                         # skip uids which have disappeared in the meantime
                         if item.msg_uid in flags:
