@@ -68,7 +68,7 @@ class MessageTree(object):
     def insert_message(self, message):
         # Are there references? This includes the in-reply-to
         # header.
-        if len(message.references) > 0:
+        if message.references and len(message.references) > 0:
             # Walk up the reference chain
             for reference in reversed(message.references):
                 found = self.find_by_message_id(reference)
