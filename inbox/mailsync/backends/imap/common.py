@@ -154,7 +154,10 @@ def remove_messages(account_id, session, uids, folder):
         session.commit()
 
         messages_to_delete = {m for m in affected_messages if not m.imapuids}
-        affected_threads = {m.thread for m in messages_to_delete}
+
+        # Because we need to update thread folders and tags, threads are
+        # 'affected' even if we're not removing messages from them.
+        affected_threads = {m.thread for m in affected_messages}
 
         for message in messages_to_delete:
             session.delete(message)
