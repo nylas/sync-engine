@@ -166,6 +166,5 @@ class GoogleContactsProvider(BaseSyncProvider):
             results = google_client.GetContacts(q=query).entry
             return [self._parse_contact_result(result) for result in results]
         except gdata.client.RequestError:
-            self.log.error('contact sync request error',
-                           exc_info=True)
+            self.log.warning('contact sync request error', exc_info=True)
             return []
