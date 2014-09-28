@@ -245,7 +245,4 @@ def create_imap_message(db_session, log, account, folder, msg):
 
     update_contacts_from_message(db_session, new_msg, account.namespace)
 
-    # NOTE: This might be a good place to add FolderItem entries for
-    # non-Gmail backends.
-
     return imapuid
