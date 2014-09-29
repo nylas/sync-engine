@@ -19,7 +19,6 @@ def upgrade():
     import nacl.utils
     from inbox.ignition import main_engine
     from inbox.models.session import session_scope
-    from inbox.models.util import EncryptionScheme
 
     engine = main_engine(pool_size=1, max_overflow=0)
     Base = sa.ext.declarative.declarative_base()
@@ -61,7 +60,8 @@ def upgrade():
                     plaintext=plain,
                     nonce=nacl.utils.random(nacl.secret.SecretBox.NONCE_SIZE))
 
-                s.encryption_scheme = EncryptionScheme.SECRETBOX_WITH_STATIC_KEY
+                # 1 is EncryptionScheme.SECRETBOX_WITH_STATIC_KEY
+                s.encryption_scheme = 1
             else:
                 s._secret = plain
 

@@ -1,12 +1,9 @@
-import nacl.secret
-import nacl.utils
 from sqlalchemy import Column, Enum, Integer
 from sqlalchemy.types import BLOB
 from sqlalchemy.orm import validates
 
-from inbox.config import config
 from inbox.models.base import MailSyncBase
-from inbox.models.util import EncryptionScheme
+from inbox.security.oracles import get_encryption_oracle, get_decryption_oracle
 
 
 class Secret(MailSyncBase):
@@ -21,15 +18,10 @@ class Secret(MailSyncBase):
 
     @property
     def secret(self):
-        if (not config.get_required('ENCRYPT_SECRETS')
-                or self.encryption_scheme == EncryptionScheme.NULL):
-            return self._secret
-        elif self.encryption_scheme == \
-                EncryptionScheme.SECRETBOX_WITH_STATIC_KEY:
-            return nacl.secret.SecretBox(
-                key=config.get_required('SECRET_ENCRYPTION_KEY'),
-                encoder=nacl.encoding.HexEncoder
-            ).decrypt(self._secret)
+        with get_decryption_oracle('SECRET_ENCRYPTION_KEY') as d_oracle:
+            return d_oracle.decrypt(
+                self._secret,
+                encryption_scheme=self.encryption_scheme)
 
     @secret.setter
     def secret(self, plaintext):
@@ -41,17 +33,8 @@ class Secret(MailSyncBase):
         if not isinstance(plaintext, bytes):
             raise TypeError('Invalid secret')
 
-        if not config.get_required('ENCRYPT_SECRETS'):
-            self._secret = plaintext
-        else:
-            self.encryption_scheme = EncryptionScheme.SECRETBOX_WITH_STATIC_KEY
-
-            self._secret = nacl.secret.SecretBox(
-                key=config.get_required('SECRET_ENCRYPTION_KEY'),
-                encoder=nacl.encoding.HexEncoder
-            ).encrypt(
-                plaintext=plaintext,
-                nonce=nacl.utils.random(nacl.secret.SecretBox.NONCE_SIZE))
+        with get_encryption_oracle('SECRET_ENCRYPTION_KEY') as e_oracle:
+            self._secret, self.encryption_scheme = e_oracle.encrypt(plaintext)
 
     @validates('type')
     def validate_type(self, k, type):
