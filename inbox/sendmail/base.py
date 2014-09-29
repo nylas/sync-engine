@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from inbox.basicauth import NotSupportedError
+from inbox.contacts.process_mail import update_contacts_from_message
 from inbox.models import Message, Thread, Part
 from inbox.models.action_log import schedule_action
 from inbox.sqlalchemy_ext.util import generate_public_id
@@ -130,6 +131,10 @@ def update_draft(db_session, account, original_draft, to_addr=None,
         tags_to_keep = {tag for tag in thread.tags if not tag.user_created}
         thread.tags = tags | tags_to_keep
 
+    # Remove previous message-contact associations, and create new ones.
+    original_draft.contacts = []
+    update_contacts_from_message(db_session, original_draft, account.namespace)
+
     # Delete previous version on remote
     schedule_action('delete_draft', original_draft,
                     original_draft.namespace.id, db_session,
@@ -238,7 +243,7 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
             message.parts.append(part)
             db_session.add(part)
 
-        # TODO(emfree) Update contact data here.
+        update_contacts_from_message(db_session, message, account.namespace)
 
         if is_reply:
             message.is_reply = True

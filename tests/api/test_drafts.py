@@ -352,3 +352,36 @@ def test_update_to_nonexistent_draft(api_client):
     assert r.status_code == 404
     drafts = api_client.get_data('/drafts')
     assert len(drafts) == 0
+
+
+def test_contacts_updated(api_client):
+    """Tests that draft-contact associations are properly created and
+    updated."""
+    draft = {
+        'to': [{'email': 'alice@example.com'}, {'email': 'bob@example.com'}]
+    }
+
+    r = api_client.post_data('/drafts', draft)
+    assert r.status_code == 200
+    draft_id = json.loads(r.data)['id']
+    draft_version = json.loads(r.data)['version']
+
+    r = api_client.get_data('/threads?to=alice@example.com')
+    assert len(r) == 1
+
+    updated_draft = {
+        'to': [{'email': 'alice@example.com'}, {'email': 'joe@example.com'}],
+        'version': draft_version
+    }
+
+    r = api_client.put_data('/drafts/{}'.format(draft_id), updated_draft)
+    assert r.status_code == 200
+
+    r = api_client.get_data('/threads?to=alice@example.com')
+    assert len(r) == 1
+
+    r = api_client.get_data('/threads?to=bob@example.com')
+    assert len(r) == 0
+
+    r = api_client.get_data('/threads?to=joe@example.com')
+    assert len(r) == 1
