@@ -34,7 +34,7 @@ from inbox.util.misc import or_none
 
 from inbox.crispin import GMetadata, connection_pool, GmailSettingError
 from inbox.log import get_logger
-from inbox.models import Message, Folder, Thread, Namespace
+from inbox.models import Message, Folder, Thread, Namespace, Account
 from inbox.models.backends.gmail import GmailAccount
 from inbox.models.backends.imap import ImapUid, ImapThread
 from inbox.mailsync.backends.base import (create_db_objects,
@@ -345,9 +345,15 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                 report_progress(self.account_id, self.folder_name,
                                 len(msgs_to_process),
                                 download_stack.qsize())
-                if message.throttled:
+                if self.throttled and message.throttled:
+                    # Check to see if the account's throttled state has been
+                    # modified. If so, immediately accelerate.
+                    with mailsync_session_scope() as db_session:
+                        acc = db_session.query(Account).get(self.account_id)
+                        self.throttled = acc.throttled
                     log.debug('throttled; sleeping')
-                    sleep(THROTTLE_WAIT)
+                    if self.throttled:
+                        sleep(THROTTLE_WAIT)
             log.info('Message download queue emptied')
         # Intentionally don't report which UIDVALIDITY we've saved messages to
         # because we have All Mail selected and don't have the UIDVALIDITY for

@@ -315,9 +315,15 @@ class FolderSyncEngine(Greenlet):
             download_stack.get()
             report_progress(self.account_id, self.folder_name, 1,
                             download_stack.qsize())
-            if metadata is not None and metadata.throttled:
-                log.debug('throttled; sleeping')
-                sleep(THROTTLE_WAIT)
+            if self.throttled and metadata is not None and metadata.throttled:
+                # Check to see if the account's throttled state has been
+                # modified. If so, immediately accelerate.
+                with mailsync_session_scope() as db_session:
+                    acc = db_session.query(Account).get(self.account_id)
+                    self.throttled = acc.throttled
+                if self.throttled:
+                    log.debug('throttled; sleeping')
+                    sleep(THROTTLE_WAIT)
 
     def create_message(self, db_session, acct, folder, msg):
         assert acct is not None and acct.namespace is not None
