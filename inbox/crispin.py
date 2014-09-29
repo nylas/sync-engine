@@ -867,6 +867,13 @@ class GmailCrispinClient(CondStoreCrispinClient):
             self.conn.delete_messages(uids)
             self.conn.expunge()
 
+            # Delete from `Trash`
+            self.conn.select_folder(self.folder_names()['trash'])
+
+            trash_uids = self.find_messages(g_thrid)
+            self.conn.delete_messages(trash_uids)
+            self.conn.expunge()
+
     def delete_draft(self, inbox_uid):
         """
         Remove the `\Draft label` and add the `Trash` flag.
@@ -896,4 +903,13 @@ class GmailCrispinClient(CondStoreCrispinClient):
 
             # Move to Gmail's `Trash` folder
             self.conn.delete_messages(draft_uids)
+            self.conn.expunge()
+
+            # Delete from `Trash`
+            self.conn.select_folder(self.folder_names()['trash'])
+
+            criteria = ['HEADER X-INBOX-ID {0}'.format(inbox_uid)]
+            trash_uids = self.conn.search(criteria)
+
+            self.conn.delete_messages(trash_uids)
             self.conn.expunge()
