@@ -558,6 +558,7 @@ class CrispinClient(object):
 
         """
         assert inbox_uid
+
         criteria = ['DRAFT', 'NOT DELETED']
         all_draft_uids = self.conn.search(criteria)
         # It would be nice to just search by X-INBOX-ID header too, but some
@@ -578,7 +579,23 @@ class CrispinClient(object):
 
                 self.conn.delete_messages([uid])
                 self.conn.expunge()
-                return
+
+                # Delete from `Trash`
+                # Needed because otherwise deleting a draft that was sent
+                # results in it synced twice - once via the Trash folder and
+                # once via the Sent folder.
+                self.conn.select_folder(self.folder_names()['trash'])
+
+                all_trash_uids = self.conn.search()
+                all_trash_headers = self.conn.fetch(all_trash_uids,
+                                                    ['BODY.PEEK[HEADER]'])
+                for u, r in all_trash_headers.iteritems():
+                    x_inbox_header = HeaderParser().parsestr(
+                        r['BODY[HEADER]']).get('X-Inbox-Id')
+                    if x_inbox_header == inbox_uid:
+                        self.conn.delete_messages([u])
+                        self.conn.expunge()
+                        return
 
 
 class CondStoreCrispinClient(CrispinClient):
