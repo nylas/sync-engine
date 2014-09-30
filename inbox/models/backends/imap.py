@@ -185,8 +185,7 @@ class ImapThread(Thread):
             except NoResultFound:
                 pass
             except MultipleResultsFound:
-                log.error('Duplicate thread rows'.format(
-                    g_thrid=message.g_thrid))
+                log.error('Duplicate thread rows', g_thrid=message.g_thrid)
                 raise
         thread = cls(subject=message.subject, g_thrid=message.g_thrid,
                      recentdate=message.received_date, namespace=namespace,
