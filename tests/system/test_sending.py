@@ -14,8 +14,11 @@ def wait_for_send(client, subject):
 
     if not threads:
         return False
-    assert len(threads) == 1, \
-        "Warning: Number of threads for unique subject is > 1!"
+    if provider_from_address(client.email_address) not in ['unknown', 'eas']:
+        # Reconciliation doesn't seem to quite work on EAS because the
+        # X-INBOX-ID header is stripped?
+        assert len(threads) == 1, \
+            "Warning: Number of threads for unique subject is > 1!"
 
     tags = [t['name'] for thread in threads for t in thread.tags]
     return True if ("sent" in tags and "inbox" in tags) else False
