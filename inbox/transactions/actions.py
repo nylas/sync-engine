@@ -11,13 +11,14 @@ import gevent
 from gevent.coros import BoundedSemaphore
 from sqlalchemy import asc
 
-from inbox.util.concurrency import retry_with_logging
-from inbox.log import get_logger, log_uncaught_errors
+from inbox.util.concurrency import retry_with_logging, log_uncaught_errors
+from inbox.log import get_logger
 logger = get_logger()
 from inbox.models.session import session_scope
 from inbox.models import ActionLog, Namespace
 from inbox.sqlalchemy_ext.util import safer_yield_per
 from inbox.util.file import Lock
+from inbox.util.misc import ProviderSpecificException
 from inbox.actions import (mark_read, mark_unread, archive, unarchive, star,
                            unstar, save_draft, delete_draft, mark_spam,
                            unmark_spam, mark_trash, unmark_trash, send_draft,
@@ -151,10 +152,20 @@ def syncback_worker(semaphore, func, action_log_id, record_id, account_id,
                     log.info('syncback action completed',
                              action_id=action_log_id)
                     syncback_service.remove_from_schedule(action_log_id)
-            except Exception:
-                log_uncaught_errors(log)
+            except Exception as e:
+                # To reduce error-reporting noise, don't ship to Sentry
+                # if not actionable.
+                if isinstance(e, ProviderSpecificException):
+                    log.warning('Uncaught error', exc_info=True)
+                else:
+                    log_uncaught_errors(log)
+
                 # Wait for a bit, then remove the log id from the scheduled set
                 # so that it can be retried.
                 gevent.sleep(retry_interval)
                 syncback_service.remove_from_schedule(action_log_id)
-                raise
+
+                # Again, don't raise on exceptions that require
+                # provider-specific handling e.g. EAS
+                if not isinstance(e, ProviderSpecificException):
+                    raise

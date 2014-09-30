@@ -209,3 +209,7 @@ def merge_attr(base, remote, dest, attr_name):
 
 class MergeError(Exception):
     pass
+
+
+class ProviderSpecificException(Exception):
+    pass
