@@ -1,4 +1,4 @@
-from sqlalchemy import and_, or_, desc, asc
+from sqlalchemy import and_, or_, desc, asc, func
 from sqlalchemy.orm import joinedload, subqueryload
 from inbox.models import (Contact, Event, Calendar, Message,
                           MessageContactAssociation, Thread, Tag,
@@ -8,8 +8,13 @@ from inbox.models import (Contact, Event, Calendar, Message,
 def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
             any_email, thread_public_id, started_before, started_after,
             last_message_before, last_message_after, filename, tag, limit,
-            offset, db_session):
-    query = db_session.query(Thread)
+            offset, view, db_session):
+
+    if view == 'count':
+        query = db_session.query(func.count(Thread.id))
+    else:
+        query = db_session.query(Thread)
+
     thread_criteria = [Thread.namespace_id == namespace_id]
     if thread_public_id is not None:
         query = query.filter(Thread.public_id == thread_public_id)
@@ -84,6 +89,9 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
             subquery()
         query = query.join(files_query)
 
+    if view == 'count':
+        return {"count": query.one()[0]}
+
     # Eager-load some objects in order to make constructing API
     # representations faster.
     query = query.options(
@@ -96,6 +104,7 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
     query = query.order_by(desc(Thread.recentdate)).distinct().limit(limit)
     if offset:
         query = query.offset(offset)
+
     return query.all()
 
 
@@ -103,9 +112,12 @@ def _messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
                         cc_addr, bcc_addr, any_email, thread_public_id,
                         started_before, started_after, last_message_before,
                         last_message_after, filename, tag, limit, offset,
-                        db_session):
+                        view, db_session):
 
-    id_query = db_session.query(Message.id)
+    if view == 'count':
+        id_query = db_session.query(func.count(Message.id))
+    else:
+        id_query = db_session.query(Message.id)
 
     if drafts:
         id_query = id_query.filter(Message.is_draft)
@@ -188,6 +200,9 @@ def _messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
     if not drafts:
         id_query = id_query.order_by(desc(Message.received_date))
 
+    if view == 'count':
+        return {"count": id_query.one()[0]}
+
     id_query = id_query.distinct().limit(limit)
     if offset:
         id_query = id_query.offset(offset)
@@ -203,38 +218,43 @@ def _messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
         options(joinedload(Message.parts).load_only('content_disposition'))
     if not drafts:
         messages_query = messages_query.order_by(desc(Message.received_date))
+
     return messages_query.all()
 
 
 def messages(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
              any_email, thread_public_id, started_before, started_after,
              last_message_before, last_message_after, filename, tag, limit,
-             offset, db_session):
+             offset, view, db_session):
     return _messages_or_drafts(namespace_id, False, subject, from_addr,
                                to_addr, cc_addr, bcc_addr, any_email,
                                thread_public_id, started_before,
                                started_after, last_message_before,
                                last_message_after, filename, tag, limit,
-                               offset, db_session)
+                               offset, view, db_session)
 
 
 def drafts(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
            any_email, thread_public_id, started_before, started_after,
            last_message_before, last_message_after, filename, tag, limit,
-           offset, db_session):
+           offset, view, db_session):
     return _messages_or_drafts(namespace_id, True, subject, from_addr,
                                to_addr, cc_addr, bcc_addr, any_email,
                                thread_public_id, started_before,
                                started_after, last_message_before,
                                last_message_after, filename, tag, limit,
-                               offset, db_session)
+                               offset, view, db_session)
 
 
 def files(namespace_id, file_public_id, message_public_id, filename,
-          content_type, is_attachment, limit, offset, db_session):
+          content_type, is_attachment, limit, offset, view, db_session):
 
-    query = db_session.query(Block) \
-        .filter(Block.namespace_id == namespace_id)
+    if view == 'count':
+        query = db_session.query(func.count(Block.id))
+    else:
+        query = db_session.query(Block)
+
+    query = query.filter(Block.namespace_id == namespace_id)
 
     # filter out inline attachments while keeping non-attachments
     query = query.outerjoin(Part)
@@ -263,18 +283,28 @@ def files(namespace_id, file_public_id, message_public_id, filename,
         query = query.join(Message) \
             .filter(Message.public_id == message_public_id)
 
+    if view == 'count':
+        return {"count": query.one()[0]}
+
     query = query.order_by(asc(Block.id)).distinct().limit(limit)
 
     if offset:
         query = query.offset(offset)
+
     return query.all()
 
 
 def events(namespace_id, event_public_id, calendar_public_id, title,
            description, location, starts_before, starts_after, ends_before,
-           ends_after, source, limit, offset, db_session):
-    query = db_session.query(Event). \
-        filter(Event.namespace_id == namespace_id)
+           ends_after, source, limit, offset, view, db_session):
+
+    if view == 'count':
+        query = db_session.query(func.count(Event.id))
+    else:
+        query = db_session.query(Event)
+
+    query = query.filter(Event.namespace_id == namespace_id)
+
     event_criteria = []
     if event_public_id:
         query = query.filter(Event.public_id == event_public_id)
@@ -316,6 +346,9 @@ def events(namespace_id, event_public_id, calendar_public_id, title,
     # representations faster.
     query = query.options(
         subqueryload(Event.participants_by_email))
+
+    if view == 'count':
+        return {"count": query.one()[0]}
 
     query = query.order_by(asc(Event.start)).limit(limit)
     if offset:

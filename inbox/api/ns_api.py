@@ -4,7 +4,7 @@ from datetime import datetime
 from flask import request, g, Blueprint, make_response
 from flask import jsonify as flask_jsonify
 from flask.ext.restful import reqparse
-from sqlalchemy import asc, or_
+from sqlalchemy import asc, or_, func
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import subqueryload
 
@@ -16,7 +16,7 @@ from inbox.api.validation import (InputError, get_tags, get_attachments,
                                   get_calendar, get_thread, get_recipients,
                                   valid_public_id, valid_event,
                                   valid_event_update, timestamp, boolean,
-                                  bounded_str, strict_parse_args, limit,
+                                  bounded_str, view, strict_parse_args, limit,
                                   valid_event_action, valid_rsvp,
                                   ValidatableArgument)
 from inbox import events, contacts, sendmail
@@ -122,6 +122,8 @@ def index():
 def tag_query_api():
     g.parser.add_argument('tag_name', type=bounded_str, location='args')
     g.parser.add_argument('tag_id', type=valid_public_id, location='args')
+    g.parser.add_argument('view', type=bounded_str, location='args')
+
     args = strict_parse_args(g.parser, request.args)
 
     query = g.db_session.query(Tag).filter(Tag.namespace_id == g.namespace.id)
@@ -131,6 +133,9 @@ def tag_query_api():
 
     if args['tag_id']:
         query = query.filter_by(public_id=args['tag_id'])
+
+    if args['view'] == 'count':
+        return g.encoder.jsonify({"count": query(func.count(Tag.id))})
 
     query = query.limit(args['limit'])
     if args['offset']:
@@ -254,6 +259,7 @@ def thread_query_api():
     g.parser.add_argument('filename', type=bounded_str, location='args')
     g.parser.add_argument('thread_id', type=valid_public_id, location='args')
     g.parser.add_argument('tag', type=bounded_str, location='args')
+    g.parser.add_argument('view', type=bounded_str, location='args')
     args = strict_parse_args(g.parser, request.args)
 
     threads = filtering.threads(
@@ -273,6 +279,7 @@ def thread_query_api():
         tag=args['tag'],
         limit=args['limit'],
         offset=args['offset'],
+        view=args['view'],
         db_session=g.db_session)
 
     return g.encoder.jsonify(threads)
@@ -378,6 +385,7 @@ def message_query_api():
     g.parser.add_argument('filename', type=bounded_str, location='args')
     g.parser.add_argument('thread_id', type=valid_public_id, location='args')
     g.parser.add_argument('tag', type=bounded_str, location='args')
+    g.parser.add_argument('view', type=view, location='args')
     args = strict_parse_args(g.parser, request.args)
     messages = filtering.messages(
         namespace_id=g.namespace.id,
@@ -396,6 +404,7 @@ def message_query_api():
         tag=args['tag'],
         limit=args['limit'],
         offset=args['offset'],
+        view=args['view'],
         db_session=g.db_session)
 
     return g.encoder.jsonify(messages)
@@ -445,6 +454,8 @@ def message_api(public_id):
 def contact_search_api():
     g.parser.add_argument('filter', type=bounded_str, default='',
                           location='args')
+    g.parser.add_argument('view', type=bounded_str, location='args')
+
     args = strict_parse_args(g.parser, request.args)
     term_filter_string = '%{}%'.format(args['filter'])
     term_filter = or_(
@@ -457,7 +468,11 @@ def contact_search_api():
         order_by(asc(Contact.id)).limit(args['limit']). \
         offset(args['offset']).all()
 
-    return g.encoder.jsonify(results)
+    if args['view'] == 'count':
+        return g.encoder.jsonify(
+            {"count": results.query(func.count(Contact.id))})
+    else:
+        return g.encoder.jsonify(results)
 
 
 @app.route('/contacts/', methods=['POST'])
@@ -512,6 +527,7 @@ def event_search_api():
     g.parser.add_argument('starts_after', type=timestamp, location='args')
     g.parser.add_argument('ends_before', type=timestamp, location='args')
     g.parser.add_argument('ends_after', type=timestamp, location='args')
+    g.parser.add_argument('view', type=bounded_str, location='args')
     args = strict_parse_args(g.parser, request.args)
 
     results = filtering.events(
@@ -528,6 +544,7 @@ def event_search_api():
         limit=args['limit'],
         offset=args['offset'],
         source='local',
+        view=args['view'],
         db_session=g.db_session)
 
     return g.encoder.jsonify(results)
@@ -708,6 +725,8 @@ def files_api():
     g.parser.add_argument('content_type', type=bounded_str, location='args')
     g.parser.add_argument('is_attachment', type=boolean, default=None,
                           location='args')
+    g.parser.add_argument('view', type=view, location='args')
+
     args = strict_parse_args(g.parser, request.args)
     files = filtering.files(
         namespace_id=g.namespace.id,
@@ -718,6 +737,7 @@ def files_api():
         is_attachment=args['is_attachment'],
         limit=args['limit'],
         offset=args['offset'],
+        view=args['view'],
         db_session=g.db_session)
 
     return g.encoder.jsonify(files)
@@ -961,6 +981,7 @@ def draft_query_api():
     g.parser.add_argument('filename', type=bounded_str, location='args')
     g.parser.add_argument('thread_id', type=valid_public_id, location='args')
     g.parser.add_argument('tag', type=bounded_str, location='args')
+    g.parser.add_argument('view', type=view, location='args')
     args = strict_parse_args(g.parser, request.args)
     drafts = filtering.drafts(
         namespace_id=g.namespace.id,
@@ -979,6 +1000,7 @@ def draft_query_api():
         tag=args['tag'],
         limit=args['limit'],
         offset=args['offset'],
+        view=args['view'],
         db_session=g.db_session)
 
     return g.encoder.jsonify(drafts)
