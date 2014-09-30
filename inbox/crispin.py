@@ -668,12 +668,25 @@ class GmailCrispinClient(CondStoreCrispinClient):
         Returns
         -------
         dict
-            Mapping of `uid` (str) : GmailFlags.
+            Mapping of `uid` (long) : GmailFlags.
         """
         uids = [str(u) for u in uids]
         data = self.conn.fetch(uids, ['FLAGS X-GM-LABELS'])
         return dict([(long(uid), GmailFlags(msg['FLAGS'], msg['X-GM-LABELS']))
                      for uid, msg in data.iteritems()])
+
+    def g_msgids(self, uids):
+        """ X-GM-MSGIDs for the given UIDs.
+
+        Returns
+        -------
+        dict
+            Mapping of `uid` (long) : `g_msgid` (long)
+        """
+        uids = [str(u) for u in uids]
+        data = self.conn.fetch(uids, ['X-GM-MSGID'])
+        return dict([(long(uid), long(d['X-GM-MSGID']))
+                     for uid, d in data.iteritems()])
 
     def folder_names(self):
         """ Parses out Gmail-specific folder names based on Gmail IMAP flags.

@@ -27,6 +27,7 @@ from collections import namedtuple
 
 from gevent import spawn, sleep
 from gevent.coros import BoundedSemaphore
+from sqlalchemy.orm import joinedload, load_only, lazyload
 from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.util.itert import chunk, partition
@@ -175,6 +176,14 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
         # Relinquish Crispin connection before sleeping.
         if not should_idle:
             sleep(self.poll_frequency)
+
+    def resync_uids(self, previous_state):
+        def resync_uids_impl():
+            raise NotImplementedError
+            # resync_uids(self.conn_pool, self.log, self.account_id,
+            #             self.folder_id, self.folder_name)
+            return previous_state
+        return resync_uids_impl
 
     def highestmodseq_callback(self, crispin_client, new_uids, updated_uids,
                                download_stack, async_download):
@@ -531,3 +540,56 @@ def add_new_imapuids(crispin_client, remote_g_metadata, syncmanager_lock,
                                                    flags[item.msg_uid].labels)
                 db_session.add_all(new_imapuids)
                 db_session.commit()
+
+
+# TODO: write tests
+def resync_uids(conn_pool, log, account_id, folder_id, folder_name,
+                dry_run=True):
+    """ Update local `msg_uid` based on matching up X-GM-MSGID. """
+
+    with mailsync_session_scope() as db_session:
+        old_uidvalidity = common.get_folder_info(
+            account_id, db_session, folder_name).uidvalidity
+    with conn_pool.get() as crispin_client:
+        # Intentionally bypass normal uidvalidity callback here, since
+        # we already know the uidvalidity is bad.
+        crispin_client.select_folder(folder_name, lambda a, f, i: a)
+        current_uidvalidity = crispin_client.selected_uidvalidity
+        assert old_uidvalidity < current_uidvalidity, \
+            "new uidvalidity is not greater than old uidvalidity"
+        log.warn("UIDVALIDITY changed",
+                 folder_name=folder_name,
+                 old_uidvalidity=old_uidvalidity,
+                 current_uidvalidity=current_uidvalidity)
+        remote_uids = crispin_client.all_uids()
+        g_msgids = {g: u for u, g in
+                    crispin_client.g_msgids(remote_uids).iteritems()}
+    with mailsync_session_scope() as db_session:
+        # Any UIDs on the remote which we don't have records of locally will
+        # be synced on the next poll or initial sync restart, so we can
+        # ignore them here.
+        local_uids = db_session.query(ImapUid).options(
+            lazyload('folder'),
+            joinedload('message').load_only('g_msgid'),
+            load_only('msg_uid', 'folder_id'),
+            lazyload('message.namespace')) \
+            .filter(
+                ImapUid.account_id == account_id,
+                ImapUid.folder_id == folder_id).all()
+        log.warn("Resyncing UIDs",
+                 dry_run=dry_run,
+                 remote_uid_count=len(remote_uids),
+                 local_uid_count=len(local_uids))
+        for uid in local_uids:
+            if uid.message.g_msgid in g_msgids:
+                if dry_run:
+                    log.info("Update UID", old_uid=uid.msg_uid,
+                             new_uid=g_msgids[uid.message.g_msgid])
+                else:
+                    uid.msg_uid = g_msgids[uid.message.g_msgid]
+            else:
+                if dry_run:
+                    log.info("Delete missing UID", uid=uid.id)
+                else:
+                    db_session.delete(uid)
+        db_session.commit()

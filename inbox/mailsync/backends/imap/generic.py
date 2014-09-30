@@ -241,18 +241,20 @@ class FolderSyncEngine(Greenlet):
         return 'poll'
 
     def resync_uids_from(self, previous_state):
-        @retry_crispin
-        def resync_uids(self):
-            """ Call this when UIDVALIDITY is invalid to fix up the database.
+        """ Call this when UIDVALIDITY is invalid to fix up the database.
 
-            What happens here is we fetch new UIDs from the IMAP server and
-            match them with X-GM-MSGIDs and sub in the new UIDs for the old. No
-            messages are re-downloaded.
-            """
+        What happens here is we fetch new UIDs from the IMAP server and
+        match them with X-GM-MSGIDs and sub in the new UIDs for the old. No
+        messages are re-downloaded.
+        """
+        return self.resync_uids(previous_state)
+
+    def resync_uids(self, previous_state):
+        def resync_uids_impl():
             log.error("UIDVALIDITY changed")
             raise NotImplementedError
             return previous_state
-        return resync_uids
+        return resync_uids_impl
 
     def initial_sync_impl(self, crispin_client):
         # We wrap the block in a try/finally because the change_poller greenlet
