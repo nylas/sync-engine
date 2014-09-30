@@ -74,6 +74,7 @@ def save_folder_names(log, account_id, folder_names, db_session):
                     folder = Folder.create(account,
                                            folder_names[canonical_name],
                                            db_session, canonical_name)
+                    folder.get_associated_tag(db_session)
                 attr_name = '{}_folder'.format(canonical_name)
                 setattr(account, attr_name, verify_folder_name(
                     account.id, getattr(account, attr_name), folder))
@@ -87,6 +88,7 @@ def save_folder_names(log, account_id, folder_names, db_session):
             if name.lower() not in folder_for:
                 # Folder.create() takes care of adding to the session
                 folder = Folder.create(account, name, db_session)
+                folder.get_associated_tag(db_session)
             if name.lower() in folder_for:
                 del folder_for[name.lower()]
 
@@ -96,10 +98,6 @@ def save_folder_names(log, account_id, folder_names, db_session):
     for name, folder in folder_for.iteritems():
         db_session.delete(folder)
         # TODO(emfree) delete associated tag
-
-    # Create associated tags for any new folders.
-    for folder in account.folders:
-        folder.get_associated_tag(db_session)
 
     db_session.commit()
 
