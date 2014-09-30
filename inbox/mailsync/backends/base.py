@@ -150,7 +150,7 @@ def commit_uids(db_session, new_uids):
     try:
         msg = u"count: {}".format(len(new_uids))
         log.info("Commit new UIDs", message=msg,
-                new_committed_message_count=len(new_uids))
+                 new_committed_message_count=len(new_uids))
         db_session.add_all(new_uids)
         db_session.commit()
     except DataError as e:
@@ -234,7 +234,8 @@ class BaseMailSyncMonitor(Greenlet):
 
     def _run_impl(self):
         sync = Greenlet(retry_and_report_killed, self.sync,
-                        account_id=self.account_id, logger=self.log)
+                        account_id=self.account_id, logger=self.log,
+                        fail_classes=self.retry_fail_classes)
         sync.start()
         while not sync.ready():
             try:
