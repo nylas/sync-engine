@@ -129,7 +129,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     g_thrid = Column(BigInteger, nullable=True, index=True, unique=False)
 
     # The uid as set in the X-INBOX-ID header of a sent message we create
-    inbox_uid = Column(String(64), nullable=True)
+    inbox_uid = Column(String(64), nullable=True, index=True)
 
     # In accordance with JWZ (http://www.jwz.org/doc/threading.html)
     references = Column(JSON, nullable=True)

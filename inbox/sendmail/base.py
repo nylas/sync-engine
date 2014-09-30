@@ -252,7 +252,11 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
             _set_reply_headers(message, thread)
         if thread is None:
             # Create a new thread object for the draft.
-            thread = Thread(
+            # We specialize the thread class so that we can, for example, add
+            # the g_thrid for Gmail later if we reconcile a synced message with
+            # this one. This is a huge hack, but works.
+            thread_cls = account.thread_cls
+            thread = thread_cls(
                 subject=message.subject,
                 recentdate=message.received_date,
                 namespace=account.namespace,

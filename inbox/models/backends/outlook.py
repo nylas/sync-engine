@@ -33,3 +33,8 @@ class OutlookAccount(ImapAccount, OAuthAccount):
     def verify(self):
         from inbox.auth.generic import verify_account
         return verify_account(self)
+
+    @property
+    def thread_cls(self):
+        from inbox.models.backends.imap import ImapThread
+        return ImapThread

@@ -141,7 +141,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('4015edc83ba');
+INSERT INTO `alembic_version` VALUES ('569b9d365295');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1033,6 +1033,7 @@ CREATE TABLE `message` (
   KEY `ix_message_updated_at` (`updated_at`),
   KEY `message_ibfk_2` (`resolved_message_id`),
   KEY `namespace_id` (`namespace_id`),
+  KEY `ix_message_inbox_uid` (`inbox_uid`),
   CONSTRAINT `message_ibfk_1` FOREIGN KEY (`thread_id`) REFERENCES `thread` (`id`) ON DELETE CASCADE,
   CONSTRAINT `message_ibfk_2` FOREIGN KEY (`resolved_message_id`) REFERENCES `message` (`id`),
   CONSTRAINT `message_ibfk_3` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`)
@@ -1557,4 +1558,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-09-24  0:57:40
+-- Dump completed on 2014-09-29 22:21:28

@@ -33,6 +33,11 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
         """ Verify that the account is still valid."""
         raise NotImplementedError
 
+    @property
+    def thread_cls(self):
+        from inbox.models.thread import Thread
+        return Thread
+
     # If True, throttle initial sync to reduce resource load
     throttled = Column(Boolean, server_default=false())
 

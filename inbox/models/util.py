@@ -1,5 +1,6 @@
 import enum
 
+from inbox.models.message import Message
 from inbox.models.thread import Thread
 from inbox.models.folder import Folder, FolderItem
 from inbox.util.file import Lock
@@ -41,3 +42,10 @@ def threads_for_folder(namespace_id, session, folder_name):
     return session.query(Thread).join(FolderItem).join(Folder).filter(
         Thread.namespace_id == namespace_id,
         Folder.name == folder_name)
+
+
+def reconcile_message(new_message, session):
+    if new_message.inbox_uid is not None:
+        return session.query(Message).filter(
+            Message.namespace_id == new_message.namespace_id,
+            Message.inbox_uid == new_message.inbox_uid).first()
