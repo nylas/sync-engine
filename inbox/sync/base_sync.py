@@ -21,7 +21,8 @@ class BaseSync(gevent.Greenlet):
         gevent.Greenlet.__init__(self)
 
     def _run(self):
-        return retry_with_logging(self._run_impl, self.log)
+        return retry_with_logging(self._run_impl, self.log,
+                                  account_id=self.account_id)
 
     def _run_impl(self):
         try:
