@@ -28,7 +28,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         If you're attempting to display _all_ messages a la Gmail's All Mail,
         don't query based on folder!
     """
-    subject = Column(String(255), nullable=True)
+    subject = Column(String(255), nullable=True, index=True)
     subjectdate = Column(DateTime, nullable=False)
     recentdate = Column(DateTime, nullable=False)
     snippet = Column(String(191), nullable=True, default='')

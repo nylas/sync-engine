@@ -89,7 +89,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     # max message_id_header is 998 characters
     message_id_header = Column(String(998), nullable=True)
     # There is no hard limit on subject limit in the spec, but 255 is common.
-    subject = Column(String(255), nullable=True, default='')
+    subject = Column(String(255), nullable=True, default='', index=True)
     received_date = Column(DateTime, nullable=False)
     size = Column(Integer, nullable=False)
     data_sha256 = Column(String(255), nullable=True)
