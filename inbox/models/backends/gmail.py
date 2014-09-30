@@ -39,3 +39,8 @@ class GmailAccount(OAuthAccount, ImapAccount):
     @property
     def provider(self):
         return PROVIDER
+
+    @property
+    def thread_cls(self):
+        from inbox.models.backends.imap import ImapThread
+        return ImapThread

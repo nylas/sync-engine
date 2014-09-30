@@ -173,6 +173,11 @@ class ImapThread(Thread):
         Returns the updated or new thread, and adds the message to the thread.
         Doesn't commit.
         """
+        if message.thread is not None:
+            # If this message *already* has a thread associated with it, just
+            # update its g_thrid value.
+            message.thread.g_thrid = message.g_thrid
+            return message.thread
         if message.g_thrid is not None:
             try:
                 return session.query(cls).filter_by(
@@ -195,6 +200,10 @@ class ImapThread(Thread):
     @classmethod
     def from_imap_message(cls, session, namespace, message):
         """ For now, each message is its own thread. """
+        if message.thread is not None:
+            # If this message *already* has a thread associated with it, don't
+            # create a new one.
+            return message.thread
         thread = cls(subject=message.subject, recentdate=message.received_date,
                      namespace=namespace, subjectdate=message.received_date,
                      snippet=message.snippet)

@@ -16,6 +16,7 @@ from inbox.contacts.process_mail import update_contacts_from_message
 from inbox.models.message import Message
 from inbox.models.folder import Folder
 from inbox.models.backends.imap import ImapUid, ImapFolderInfo
+from inbox.models.util import reconcile_message
 
 from inbox.log import get_logger
 log = get_logger()
@@ -235,6 +236,12 @@ def create_imap_message(db_session, log, account, folder, msg):
                                          folder_name=folder.name,
                                          received_date=msg.internaldate,
                                          body_string=msg.body)
+
+    # Check to see if this is a copy of a message that was first created by the
+    # Inbox API. If so, don't create a new object; just use the old one.
+    existing_copy = reconcile_message(new_msg, db_session)
+    if existing_copy is not None:
+        new_msg = existing_copy
 
     imapuid = ImapUid(account=account, folder=folder, msg_uid=msg.uid,
                       message=new_msg)

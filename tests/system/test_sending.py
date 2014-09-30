@@ -12,11 +12,10 @@ def wait_for_send(client, subject):
 
     threads = thread_query.all()
 
-    if len(threads) < 2:
+    if not threads:
         return False
-    if len(threads) > 2:
-        # TODO: Remove this warning once the second draft bug has been resolved
-        print "Warning: Number of threads for unique subject is > 2!"
+    assert len(threads) == 1, \
+        "Warning: Number of threads for unique subject is > 1!"
 
     tags = [t['name'] for thread in threads for t in thread.tags]
     return True if ("sent" in tags and "inbox" in tags) else False
