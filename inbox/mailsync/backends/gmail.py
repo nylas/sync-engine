@@ -285,7 +285,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
 
         Threads are downloaded in the order they come out of the stack, which
         _ought_ to be putting newest threads at the top. Messages are
-        downloaded newest-to-oldest in thread. (Threads are expanded to all
+        downloaded oldest-to-newest in thread. (Threads are expanded to all
         messages in the email archive that belong to the threads corresponding
         to the given uids.)
 
@@ -364,15 +364,18 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
         """
         Download all messages in thread identified by `g_thrid`.
 
-        Messages are downloaded most-recent-first via All Mail, which allows us
-        to get the entire thread regardless of which folders it's in.
+        Messages are downloaded oldest-first via All Mail, which allows us
+        to get the entire thread regardless of which folders it's in. We do
+        oldest-first so that if the thread started with a message sent from the
+        Inbox API, we can reconcile this thread appropriately with the existing
+        message/thread.
         """
         log.debug('downloading thread',
                   g_thrid=g_thrid, message_count=len(thread_uids))
         to_download = self.__deduplicate_message_download(
             crispin_client, thread_g_metadata, thread_uids)
         log.debug(deduplicated_message_count=len(to_download))
-        for uids in chunk(reversed(to_download), crispin_client.CHUNK_SIZE):
+        for uids in chunk(to_download, crispin_client.CHUNK_SIZE):
             self.download_and_commit_uids(crispin_client,
                                           crispin_client.selected_folder_name,
                                           uids)
