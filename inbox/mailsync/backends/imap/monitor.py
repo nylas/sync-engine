@@ -55,12 +55,12 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             'initial' state at a time.
         """
         with mailsync_session_scope() as db_session:
+            account = db_session.query(ImapAccount).get(self.account_id)
+            Tag.create_canonical_tags(account.namespace, db_session)
             with _pool(self.account_id).get() as crispin_client:
                 sync_folders = crispin_client.sync_folders()
                 save_folder_names(log, self.account_id,
                                   crispin_client.folder_names(), db_session)
-            account = db_session.query(ImapAccount).get(self.account_id)
-            Tag.create_canonical_tags(account.namespace, db_session)
 
             folder_id_for = {name: id_ for id_, name in db_session.query(
                 Folder.id, Folder.name).filter_by(account_id=self.account_id)}
