@@ -29,8 +29,8 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         don't query based on folder!
     """
     subject = Column(String(255), nullable=True, index=True)
-    subjectdate = Column(DateTime, nullable=False)
-    recentdate = Column(DateTime, nullable=False)
+    subjectdate = Column(DateTime, nullable=False, index=True)
+    recentdate = Column(DateTime, nullable=False, index=True)
     snippet = Column(String(191), nullable=True, default='')
 
     folders = association_proxy(
