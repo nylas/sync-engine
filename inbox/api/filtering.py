@@ -115,111 +115,110 @@ def _messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
                         view, db_session):
 
     if view == 'count':
-        id_query = db_session.query(func.count(Message.id))
+        query = db_session.query(func.count(Message.id))
     else:
-        id_query = db_session.query(Message.id)
+        query = db_session.query(Message)
+
+    query = query.filter(Message.namespace_id == namespace_id)
 
     if drafts:
-        id_query = id_query.filter(Message.is_draft)
+        query = query.filter(Message.is_draft)
     else:
-        id_query = id_query.filter(~Message.is_draft)
+        query = query.filter(~Message.is_draft)
 
-    thread_criteria = [Thread.namespace_id == namespace_id]
+    has_thread_filtering_criteria = any(
+        param is not None for param in (
+            thread_public_id, started_before, started_after,
+            last_message_before, last_message_after, tag))
 
-    if thread_public_id is not None:
-        # TODO(emfree) this is a common case that we should handle
-        # separately by just fetching the thread's messages and only
-        # filtering more if needed.
-        thread_criteria.append(Thread.public_id == thread_public_id)
+    if has_thread_filtering_criteria:
+        thread_criteria = [Thread.namespace_id == namespace_id]
+        if thread_public_id is not None:
+            # TODO(emfree) this is a common case that we should handle
+            # separately by just fetching the thread's messages and only
+            # filtering more if needed.
+            thread_criteria.append(Thread.public_id == thread_public_id)
 
-    if started_before is not None:
-        thread_criteria.append(Thread.subjectdate < started_before)
+        if started_before is not None:
+            thread_criteria.append(Thread.subjectdate < started_before)
 
-    if started_after is not None:
-        thread_criteria.append(Thread.subjectdate > started_after)
+        if started_after is not None:
+            thread_criteria.append(Thread.subjectdate > started_after)
 
-    if last_message_before is not None:
-        thread_criteria.append(Thread.recentdate <
-                               last_message_before)
+        if last_message_before is not None:
+            thread_criteria.append(Thread.recentdate <
+                                   last_message_before)
 
-    if last_message_after is not None:
-        thread_criteria.append(Thread.recentdate > last_message_after)
+        if last_message_after is not None:
+            thread_criteria.append(Thread.recentdate > last_message_after)
 
-    thread_predicate = and_(*thread_criteria)
-    thread_query = db_session.query(Thread).filter(thread_predicate)
-    if tag is not None:
-        thread_query = thread_query.join(TagItem).join(Tag). \
-            filter(or_(Tag.public_id == tag, Tag.name == tag),
-                   Tag.namespace_id == namespace_id)
-    thread_query = thread_query.subquery()
+        thread_predicate = and_(*thread_criteria)
+        thread_query = db_session.query(Thread).filter(thread_predicate)
+        if tag is not None:
+            thread_query = thread_query.join(TagItem).join(Tag). \
+                filter(or_(Tag.public_id == tag, Tag.name == tag),
+                       Tag.namespace_id == namespace_id)
+        thread_query = thread_query.subquery()
 
-    id_query = id_query.join(thread_query)
+        query = query.join(thread_query)
 
     if subject is not None:
-        id_query = id_query.filter(Message.subject == subject)
+        query = query.filter(Message.subject == subject)
 
     if to_addr is not None:
-        to_query = db_session.query(Message). \
-            join(MessageContactAssociation).join(Contact). \
+        to_query = db_session.query(MessageContactAssociation).join(Contact). \
             filter(MessageContactAssociation.field == 'to_addr',
                    Contact.email_address == to_addr).subquery()
-        id_query = id_query.join(to_query)
+        query = query.join(to_query)
 
     if from_addr is not None:
         from_query = db_session.query(MessageContactAssociation). \
             join(Contact).filter(
                 MessageContactAssociation.field == 'from_addr',
                 Contact.email_address == from_addr).subquery()
-        id_query = id_query.join(from_query)
+        query = query.join(from_query)
 
     if cc_addr is not None:
         cc_query = db_session.query(MessageContactAssociation). \
             join(Contact).filter(
                 MessageContactAssociation.field == 'cc_addr',
                 Contact.email_address == cc_addr).subquery()
-        id_query = id_query.join(cc_query)
+        query = query.join(cc_query)
 
     if bcc_addr is not None:
         bcc_query = db_session.query(MessageContactAssociation). \
             join(Contact).filter(
                 MessageContactAssociation.field == 'bcc_addr',
                 Contact.email_address == bcc_addr).subquery()
-        id_query = id_query.join(bcc_query)
+        query = query.join(bcc_query)
 
     if any_email is not None:
         any_email_query = db_session.query(
             MessageContactAssociation).join(Contact). \
             filter(Contact.email_address == any_email).subquery()
-        id_query = id_query.join(any_email_query)
+        query = query.join(any_email_query)
 
     if filename is not None:
-        id_query = id_query.join(Part).join(Block). \
+        query = query.join(Part).join(Block). \
             filter(Block.filename == filename,
                    Block.namespace_id == namespace_id)
 
     if not drafts:
-        id_query = id_query.order_by(desc(Message.received_date))
+        query = query.order_by(desc(Message.received_date))
 
     if view == 'count':
-        return {"count": id_query.one()[0]}
+        return {"count": query.one()[0]}
 
-    id_query = id_query.distinct().limit(limit)
+    query = query.distinct().limit(limit)
     if offset:
-        id_query = id_query.offset(offset)
+        query = query.offset(offset)
 
-    ids = [id for id, in id_query.all()]
-    if not ids:
-        # Short-circuit to avoid evaluating in-predicate with empty sequence
-        # below, which causes SAWarning.
-        return []
     # Eager-load part.content_disposition to make constructing API
     # representations faster
-    messages_query = db_session.query(Message).filter(Message.id.in_(ids)). \
-        options(joinedload(Message.parts).load_only('content_disposition'))
-    if not drafts:
-        messages_query = messages_query.order_by(desc(Message.received_date))
+    query = query.options(joinedload(Message.parts).
+                          load_only('content_disposition'))
 
-    return messages_query.all()
+    return query.all()
 
 
 def messages(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,

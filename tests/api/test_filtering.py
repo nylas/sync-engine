@@ -2,7 +2,7 @@ import json
 import datetime
 import calendar
 from sqlalchemy import desc
-from inbox.models import Message, Thread
+from inbox.models import Message, Thread, Namespace, Block
 from inbox.contacts.process_mail import update_contacts_from_message
 from inbox.util.misc import dt_to_timestamp
 from tests.util.base import api_client, test_client
@@ -180,13 +180,14 @@ def test_strict_argument_parsing(api_client):
     assert r.status_code == 400
 
 
-def add_fake_message(account_id, thread, to_email, received_date,
+def add_fake_message(namespace_id, thread, to_email, received_date, subject,
                      db_session):
     """ One-off helper function to add 'fake' messages to the datastore."""
     m = Message()
-    m.namespace_id = NAMESPACE_ID
+    m.namespace_id = namespace_id
     m.from_addr = [('', to_email)]
     m.received_date = received_date
+    m.subject = subject
     m.size = 0
     m.sanitized_body = ''
     m.snippet = ''
@@ -203,18 +204,18 @@ def test_distinct_results(api_client, db):
     first_thread = db.session.query(Thread).filter(
         Thread.namespace_id == NAMESPACE_ID).get(1)
     add_fake_message(NAMESPACE_ID, first_thread, 'hello@example.com',
-                     datetime.datetime.utcnow(), db.session)
+                     datetime.datetime.utcnow(), '', db.session)
     add_fake_message(NAMESPACE_ID, first_thread, 'hello@example.com',
-                     datetime.datetime.utcnow(), db.session)
+                     datetime.datetime.utcnow(), '', db.session)
 
     # Now create another thread with the same participants
     older_date = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
     second_thread = db.session.query(Thread).filter(
         Thread.namespace_id == NAMESPACE_ID).get(2)
     add_fake_message(NAMESPACE_ID, second_thread, 'hello@example.com',
-                     older_date, db.session)
+                     older_date, '', db.session)
     add_fake_message(NAMESPACE_ID, second_thread, 'hello@example.com',
-                     older_date, db.session)
+                     older_date, '', db.session)
 
     filtered_results = api_client.get_data('/threads?from=hello@example.com'
                                            '&limit=1&offset=0')
@@ -255,3 +256,31 @@ def test_filtering_namespaces(db, test_client):
     filter_ = '?email_address=unknown@email.com'
     namespaces = json.loads(test_client.get('/n/' + filter_).data)
     assert len(namespaces) == 0
+
+
+def test_namespace_limiting(db, test_client):
+    dt = datetime.datetime.utcnow()
+    subject = dt.isoformat()
+    db.session.add(Namespace())
+    db.session.commit()
+    namespaces = db.session.query(Namespace).all()
+    assert len(namespaces) > 1
+    for ns in namespaces:
+        thread = Thread(namespace=ns, subjectdate=dt, recentdate=dt,
+                        subject=subject)
+        add_fake_message(ns.id, thread, '', dt, subject, db.session)
+        db.session.add(Block(namespace=ns, filename=subject))
+    db.session.commit()
+
+    for ns in namespaces:
+        r = json.loads(test_client.get('/n/{}/threads?subject={}'.
+                                       format(ns.public_id, subject)).data)
+        assert len(r) == 1
+
+        r = json.loads(test_client.get('/n/{}/messages?subject={}'.
+                                       format(ns.public_id, subject)).data)
+        assert len(r) == 1
+
+        r = json.loads(test_client.get('/n/{}/files?filename={}'.
+                                       format(ns.public_id, subject)).data)
+        assert len(r) == 1
