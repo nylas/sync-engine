@@ -20,19 +20,21 @@ def connect_account(provider, email, pw):
         If the credentials are invalid.
     """
     info = provider_info(provider)
-    host = info['imap']
+    host, port = info['imap']
     try:
-        conn = IMAPClient(host, use_uid=True, ssl=True)
+        conn = IMAPClient(host, port=port, use_uid=True, ssl=True)
     except IMAPClient.AbortError as e:
         log.error('account_connect_failed',
                   email=email,
                   host=host,
+                  port=port,
                   error=("[ALERT] Can't connect to host - may be transient"))
         raise TransientConnectionError(str(e))
     except(IMAPClient.Error, gaierror, socket_error) as e:
         log.error('account_connect_failed',
                   email=email,
                   host=host,
+                  port=port,
                   error='[ALERT] (Failure): {0}'.format(str(e)))
         raise ConnectionError(str(e))
 
@@ -43,6 +45,7 @@ def connect_account(provider, email, pw):
         log.error('account_verify_failed',
                   email=email,
                   host=host,
+                  port=port,
                   error="[ALERT] Can't connect to host - may be transient")
         raise TransientConnectionError(str(e))
     except IMAPClient.Error as e:
@@ -57,6 +60,7 @@ def connect_account(provider, email, pw):
         log.error('account_verify_failed',
                   email=email,
                   host=host,
+                  port=port,
                   error='[ALERT] (Failure) SSL Connection error')
         raise ConnectionError(str(e))
 
