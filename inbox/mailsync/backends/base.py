@@ -255,9 +255,12 @@ class BaseMailSyncMonitor(Greenlet):
             self.folder_monitors.kill()
             return
 
-        self.log.error("mail sync should run forever",
+        # We just want the name of the exception so don't bother with
+        # sys.exc_info()
+        self.log.error('mail sync should run forever',
                        provider=self.provider_name,
-                       account_id=self.account_id)
+                       account_id=self.account_id,
+                       exception=type(sync.exception).__name__)
         raise sync.exception
 
     def process_command(self, cmd):
