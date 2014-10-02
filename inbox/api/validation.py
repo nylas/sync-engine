@@ -239,3 +239,15 @@ def valid_rsvp(rsvp):
     if rsvp not in ['yes', 'no', 'maybe']:
         raise InputError('Invalid rsvp: {}'.format(rsvp))
     return rsvp
+
+
+def validate_draft_recipients(draft):
+    """Check that all recipient emails are at least plausible email
+    addresses, before we try to send a draft."""
+    for field in draft.to_addr, draft.bcc_addr, draft.cc_addr:
+        if field is not None:
+            for _, email_address in field:
+                if not isinstance(address.parse(email_address),
+                                  address.EmailAddress):
+                    raise InputError('Invalid recipient address {}'.
+                                     format(email_address))

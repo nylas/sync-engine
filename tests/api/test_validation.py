@@ -41,6 +41,24 @@ def test_recipient_validation(api_client):
                                      'badrecipient@example.com']})
     assert r.status_code == 400
 
+    # Test that sending a draft with invalid recipients fails immediately
+    for field in ('to', 'cc', 'bcc'):
+        r = api_client.post_data('/drafts', {field: [{'email': 'foo'}]})
+        draft_id = json.loads(r.data)['id']
+        draft_version = json.loads(r.data)['version']
+
+        r = api_client.post_data('/send', {'draft_id': draft_id,
+                                           'draft_version': draft_version})
+        assert r.status_code == 400
+
+    # And that sending a draft with valid recipients succeeds
+    r = api_client.post_data('/drafts', {'to': [{'email': 'foo@example.com'}]})
+    draft_id = json.loads(r.data)['id']
+    draft_version = json.loads(r.data)['version']
+    r = api_client.post_data('/send', {'draft_id': draft_id,
+                                       'version': draft_version})
+    assert r.status_code == 200
+
 # TODO(emfree): Add more comprehensive parameter-validation tests.
 
 

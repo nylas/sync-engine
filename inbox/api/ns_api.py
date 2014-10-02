@@ -18,7 +18,8 @@ from inbox.api.validation import (InputError, get_tags, get_attachments,
                                   valid_event_update, timestamp, boolean,
                                   bounded_str, view, strict_parse_args, limit,
                                   valid_event_action, valid_rsvp,
-                                  ValidatableArgument)
+                                  ValidatableArgument,
+                                  validate_draft_recipients)
 from inbox import events, contacts, sendmail
 from inbox.log import get_logger
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
@@ -1171,6 +1172,8 @@ def draft_send_api():
             return err(
                 409, 'Draft {0}.{1} has already been updated to version {2}'.
                 format(draft_public_id, version, draft.version))
+
+        validate_draft_recipients(draft)
 
         try:
             schedule_action('send_draft', draft, g.namespace.id, g.db_session)
