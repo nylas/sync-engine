@@ -195,6 +195,11 @@ def safe_format_exception(etype, value, tb, limit=None):
 class TruncatingProcessor(raven.processors.Processor):
     """Truncates the exception value string, and strips stack locals.
     Sending stack locals could potentially leak information."""
+
+    # A whitelist of locals we don't want to strip.
+    # They must be non-PII!
+    locals_whitelist = ['account_id']
+
     # Note(emfree): raven.processors.Processor provides a filter_stacktrace
     # method to implement, but won't actually call it correctly. We can
     # simplify this if it gets fixed upstream.
@@ -209,7 +214,9 @@ class TruncatingProcessor(raven.processors.Processor):
             if stacktrace is not None:
                 if 'frames' in stacktrace:
                     for frame in stacktrace['frames']:
-                        frame.pop('vars')
+                        for stack_local in frame['vars'].keys():
+                            if stack_local not in self.locals_whitelist:
+                                frame['vars'].pop(stack_local)
         return data
 
 
