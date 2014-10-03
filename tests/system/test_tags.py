@@ -77,9 +77,6 @@ def test_archive_tag(client):
 @pytest.mark.xfail
 @pytest.mark.parametrize("client", all_accounts)
 def test_spam_tag(client):
-    # Just return for now until spam / trash work.
-    return
-
     # mark a thread as spam, trash it and check the
     # spam tag is kept.
     thread = random.choice(client.threads.all())

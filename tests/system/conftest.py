@@ -9,7 +9,6 @@ from time import time, sleep
 from client import InboxTestClient
 from inbox.auth import handler_from_email
 from inbox.util.url import provider_from_address
-from inbox.models.session import session_scope
 from google_auth_helper import google_auth
 from outlook_auth_helper import outlook_auth
 from inbox.auth.gmail import create_auth_account as create_gmail_account
@@ -22,6 +21,9 @@ try:
     from accounts import credentials as raw_credentials
     credentials = [(c['user'], c['password']) for c in raw_credentials]
     all_accounts = [InboxTestClient(email) for email, _ in credentials]
+    gmail_accounts = [InboxTestClient(email)
+                      for email, password in credentials
+                          if "gmail.com" in email]
 except ImportError:
     print ("Error: test accounts file not found. "
            "You need to create accounts.py\n"
