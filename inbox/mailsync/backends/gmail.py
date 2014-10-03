@@ -272,7 +272,8 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                 new_imapuids = create_db_objects(
                     self.account_id, db_session, log, folder_name,
                     raw_messages, self.create_message)
-                commit_uids(db_session, new_imapuids)
+                commit_uids(db_session, new_imapuids, self.account_id,
+                            self.provider_name)
         return len(new_imapuids)
 
     def __download_queued_threads(self, crispin_client,

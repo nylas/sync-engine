@@ -146,11 +146,13 @@ def create_db_objects(account_id, db_session, log, folder_name, raw_messages,
     return new_uids
 
 
-def commit_uids(db_session, new_uids):
+def commit_uids(db_session, new_uids, account_id, provider):
     try:
-        msg = u"count: {}".format(len(new_uids))
-        log.info("Commit new UIDs", message=msg,
-                 new_committed_message_count=len(new_uids))
+        msg = u'count: {}'.format(len(new_uids))
+        log.info('Commit new UIDs', message=msg,
+                 new_committed_message_count=len(new_uids),
+                 account_id=account_id, provider=provider)
+
         db_session.add_all(new_uids)
         db_session.commit()
     except DataError as e:
