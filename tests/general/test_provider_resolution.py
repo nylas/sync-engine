@@ -1,4 +1,5 @@
 import pytest
+from inbox.providers import providers
 from inbox.util.url import provider_from_address
 from inbox.util.url import InvalidEmailAddressError
 
@@ -31,3 +32,27 @@ def test_provider_resolution():
         provider_from_address('not@anemail')
     with pytest.raises(InvalidEmailAddressError):
         provider_from_address('notanemail.com')
+
+    # Register a new provider
+    try:
+        providers.register_info('example', {
+            "type": "generic",
+            "imap": ("mail.example.net", 993),
+            "smtp": ("smtp.example.net", 587),
+            "auth": "password",
+            "domains": ["example.com"],
+            "mx_servers": ["mx.example.net"]
+        })
+        assert provider_from_address('foo@example.com') == 'example'
+    finally:
+        providers.reset()
+
+    # Register a filter
+    try:
+        def my_filter(name, info):
+            info['domains'].append('example.net')
+        assert provider_from_address('foo@example.net') == 'unknown'
+        providers.register_info_filter('aol', my_filter)
+        assert provider_from_address('foo@example.net') == 'aol'
+    finally:
+        providers.reset()

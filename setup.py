@@ -30,6 +30,9 @@ setup(
             'imap_gm=inbox.util.consistency_check.imap_gm:ImapGmailPlugin',
             'local_gm=inbox.util.consistency_check.local_gm:LocalGmailPlugin',
         ],
+
+        # See inbox/providers.py
+        # 'inbox.providers': [],
     },
 
     author="Inbox Team",

@@ -1,9 +1,20 @@
+from __future__ import absolute_import, division, print_function
+
+import copy
+import functools
+import pkg_resources
+
+from collections import Mapping, MutableMapping, defaultdict
 from inbox.basicauth import NotSupportedError
 
-__all__ = ['provider_info', 'providers']
+__all__ = ['provider_info', 'providers', 'PluginInterface', 'ProvidersDict']
 
 
 def provider_info(provider_name):
+    """Like providers[provider_name] except raises
+    inbox.basicauth.NotSupportedError instead of KeyError when the provider is
+    not found.
+    """
     if provider_name not in providers:
         raise NotSupportedError("Provider: {} not supported.".format(
             provider_name))
@@ -11,7 +22,188 @@ def provider_info(provider_name):
     return providers[provider_name]
 
 
-providers = {
+class ProvidersDict(MutableMapping):
+    """ProvidersDict dictionary with support for lazy-loading plugins.
+
+    Example setup.py boilerplate:
+
+        entry_points={
+            'inbox.providers': [
+                'register = your.plugin.module:register',
+            ],
+        },
+
+
+    Example plugin registration function (`providers` is a PluginInterface
+    object):
+
+        # your/plugin/module.py
+
+        def register(providers):
+            providers.register_info('example', {
+                "type": "generic",
+                "imap": ("mail.example.net", 993),
+                "smtp": ("smtp.example.net", 587),
+                "auth": "password",
+                "domains": ["example.com"],
+                "mx_servers": ["mx.example.net"]
+            })
+    """
+
+    def __init__(self):
+        self._d = {}
+        self._filters = defaultdict(list)
+        self._loaded = False
+
+    def reset(self):
+        self._d.clear()
+        self._filters.clear()
+        self._loaded = False
+
+    def __getitem__(self, name):
+        self.load()
+        info = self._d[name]
+
+        filters = []
+        filters += self._filters[name] if name in self._filters else []
+        filters += self._filters[None] if None in self._filters else []
+        if filters:
+            info = copy.deepcopy(info)
+            for func in filters:
+                ret = func(name, info)
+                if ret is not None:
+                    info = ret
+
+        return info
+
+    def __setitem__(self, name, info):
+        self.load()
+        self._d[name] = info
+
+    def __delitem__(self, name):
+        self.load()
+        del self._d[name]
+
+    def __iter__(self):
+        self.load()
+        return iter(self._d)
+
+    def __len__(self):
+        self.load()
+        return len(self._d)
+
+    def load(self):
+        if self._loaded:
+            return
+
+        self.reset()
+
+        providers = PluginInterface(self)
+        group = 'inbox.providers'
+        name = 'register'
+        for entry_point in pkg_resources.iter_entry_points(group, name):
+            register_func = entry_point.load()
+            register_func(providers)
+
+        # Load the defaults last so that they can be replaced by plugins.
+        self._d.update({k: v for k, v in get_default_providers().items()
+                        if k not in self._d})
+
+        self._loaded = True
+
+    def register_info(self, name, info):
+        """Register information for a new provider.
+
+        Parameters
+        ----------
+        name : str
+            The programmatic name of the provider as it's referenced in the
+            database.
+
+        info : dict or callable
+            Information about this provider.  The `info` dictionary may
+            contain the items such as:
+
+            type : str
+                Account type, usually `'generic'`.
+
+            imap : (host, port)
+                Address of the IMAPS server.
+
+            smtp : (host, port)
+                Address of the SMTP server.
+
+            auth : str
+                Type of authentication, usually `'password'` or `'oauth2'`.
+
+            domains : list of str
+                List of this provider's domains.
+
+            mx_servers : list of str
+                List of MX servers for email addresses on this domain.  Useful
+                for email providers that allow users to use their own domains.
+
+        Example
+        -------
+
+            providers.register_info('aol', {
+                "imap": ("imap.aol.com", 993),
+                "smtp": ("smtp.aol.com", 587),
+                "auth": "password",
+                "domains": ["aol.com"],
+                "mx_servers": ["mailin-01.mx.aol.com", "mailin-02.mx.aol.com",
+                               "mailin-03.mx.aol.com", "mailin-04.mx.aol.com"],
+            })
+        """
+
+        if not isinstance(name, str):
+            raise TypeError('name must by a str')
+        if not isinstance(info, Mapping):
+            raise TypeError('info must be a dict-like object')
+        if name in self._d:
+            raise ValueError('Conflict: {0!r} already loaded'.format(name))
+        self._d[name] = info
+
+    def register_info_filter(self, name, func):
+        """Register a filter for the return value of __getitem__.
+
+        Parameters
+        ----------
+        name : str or None
+            The programmatic name of the provider as it's referenced in the
+            database.
+
+            If `name` is None, then the function will be applied to all
+            providers.
+
+        func : callable
+            A function that accepts the arguments `name`, and `info`,
+            and returns a dictionary of provider info.
+
+            `info` is a copy of the provider dictionary, so it should be safe
+            to modify.
+        """
+        if not callable(func):
+            raise TypeError('func should be callable')
+        self._filters[name].append(func)
+
+
+class PluginInterface(object):
+    """Wrapper around ProvidersDict class used during plugin load."""
+
+    def __init__(self, providers):
+        self.__providers = providers
+
+    @functools.wraps(ProvidersDict.register_info)
+    def register_info(self, name, info):
+        return self.__providers.register_info(name, info)
+
+    @functools.wraps(ProvidersDict.register_info_filter)
+    def register_info_filter(self, name, func):
+        return self.__providers.register_info_filter(name, func)
+
+
+get_default_providers = lambda: {
     "aol": {
         "type": "generic",
         "imap": ("imap.aol.com", 993),
@@ -170,3 +362,7 @@ providers = {
         "mx_servers": ["mx.mrmail.com"]
     },
 }
+
+
+providers = ProvidersDict()
+providers.load()
