@@ -21,6 +21,7 @@ log = get_logger()
 
 
 SLOW_QUERY_THRESHOLD_MS = 5000
+MAX_TEXT_LENGTH = 65535
 
 
 @event.listens_for(Engine, "before_cursor_execute")
@@ -60,6 +61,10 @@ class JSON(TypeDecorator):
         if not value:
             return None
         return json_util.loads(value)
+
+
+def json_field_too_long(value):
+    return len(json_util.dumps(value)) > MAX_TEXT_LENGTH
 
 
 class LittleJSON(JSON):

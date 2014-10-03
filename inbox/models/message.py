@@ -12,7 +12,8 @@ from sqlalchemy.sql.expression import false
 
 from inbox.util.html import (plaintext2html, strip_tags,
                              extract_from_html, extract_from_plain)
-from inbox.sqlalchemy_ext.util import JSON, Base36UID, generate_public_id
+from inbox.sqlalchemy_ext.util import (JSON, Base36UID, generate_public_id,
+                                       json_field_too_long)
 
 from inbox.config import config
 from inbox.util.addr import parse_mimepart_address_header
@@ -249,6 +250,20 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                       folder_name=folder_name, account_id=account.id,
                       err_filename=err_filename, error=e)
             msg._mark_error()
+
+        # Occasionally people try to send messages to way too many
+        # recipients. In such cases, empty the field and treat as a parsing
+        # error so that we don't break the entire sync.
+        for field in ('to_addr', 'cc_addr', 'bcc_addr', 'references'):
+            value = getattr(msg, field)
+            if json_field_too_long(value):
+                _log_decode_error(account.id, folder_name, mid, body_string)
+                err_filename = _get_errfilename(account.id, folder_name, mid)
+                log.error('Recipient field too long', field=field,
+                          account_id=account.id, folder_name=folder_name,
+                          mid=mid)
+                setattr(msg, field, [])
+                msg._mark_error()
 
         return msg
 

@@ -16,6 +16,16 @@ def raw_message():
         return f.read()
 
 
+@pytest.fixture
+def raw_message_with_many_recipients():
+    # Message carefully constructed s.t. the length of the serialized 'to'
+    # field is 65536.
+    raw_msg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                '../data/raw_message_with_many_recipients')
+    with open(raw_msg_path) as f:
+        return f.read()
+
+
 def test_message_from_synced(db, raw_message):
     account = db.session.query(Account).get(ACCOUNT_ID)
     assert account.namespace.id == NAMESPACE_ID
@@ -30,3 +40,16 @@ def test_message_from_synced(db, raw_message):
     assert 'Attached Message Part' in [part.block.filename for part in m.parts]
     assert m.received_date == received_date
     assert all(part.block.namespace_id == m.namespace_id for part in m.parts)
+
+
+def test_truncate_recipients(db, raw_message_with_many_recipients):
+    account = db.session.query(Account).get(ACCOUNT_ID)
+    assert account.namespace.id == NAMESPACE_ID
+    received_date = datetime.datetime(2014, 9, 22, 17, 25, 46),
+    m = Message.create_from_synced(account, 139219, '[Gmail]/All Mail',
+                                   received_date,
+                                   raw_message_with_many_recipients)
+    m.thread_id = 1
+    db.session.add(m)
+    # Check that no database error is raised.
+    db.session.commit()
