@@ -146,7 +146,7 @@ def create_db_objects(account_id, db_session, log, folder_name, raw_messages,
     return new_uids
 
 
-def commit_uids(db_session, new_uids, account_id, provider):
+def commit_uids(db_session, new_uids, provider):
     try:
         msg = u'count: {}'.format(len(new_uids))
         log.info('Commit new UIDs', message=msg,
