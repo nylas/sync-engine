@@ -369,11 +369,11 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
         for part in self.parts:
             if part.block.content_type == 'text/html':
-                html_data = part.block.data.decode('utf-8')
+                html_data = part.block.data.decode('utf-8').strip()
                 break
         for part in self.parts:
             if part.block.content_type == 'text/plain':
-                plain_data = part.block.data.decode('utf-8')
+                plain_data = part.block.data.decode('utf-8').strip()
                 break
 
         return plain_data, html_data
