@@ -108,6 +108,9 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
     def is_inbox(self, crispin_client):
         return self.folder_name == crispin_client.folder_names()['inbox']
 
+    def is_all_mail(self, crispin_client):
+        return self.folder_name == crispin_client.folder_names()['all']
+
     def initial_sync_impl(self, crispin_client):
         # We wrap the block in a try/finally because the greenlets like
         # change_poller need to be killed when this greenlet is interrupted
@@ -191,7 +194,13 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                                                      flags[uid].flags,
                                                      flags[uid].labels, False))
             if not async_download:
+                # Need to select All Mail before doing thread expansion
+                if not self.is_all_mail(crispin_client):
+                    crispin_client.select_folder(
+                        crispin_client.folder_names()['all'])
                 self.__download_queued_threads(crispin_client, download_stack)
+                if not self.is_all_mail(crispin_client):
+                    crispin_client.select_folder(self.folder_name)
         elif self.folder_name in uid_download_folders(crispin_client):
             for uid in sorted(to_download):
                 download_stack.put(uid, None)
