@@ -25,14 +25,6 @@ class MailsyncDone(GreenletExit):
     pass
 
 
-def verify_folder_name(account_id, old, new):
-    if old is not None and old.name != new.name:
-        raise SyncException(
-            "Core folder on account {} changed name from '{}' to '{}'".format(
-                account_id, old.name, new.name))
-    return new
-
-
 def save_folder_names(log, account_id, folder_names, db_session):
     """
     Create Folder objects & map special folder names on Account objects.
@@ -71,13 +63,22 @@ def save_folder_names(log, account_id, folder_names, db_session):
                     folder.name = folder_names[canonical_name]
                     del dangled_folder_for[canonical_name]
                 else:
-                    folder = Folder.create(account,
-                                           folder_names[canonical_name],
-                                           db_session, canonical_name)
-                    folder.get_associated_tag(db_session)
+                    folder = Folder.find_or_create(
+                        db_session, account, None, canonical_name)
+                    if folder.name != folder_names[canonical_name]:
+                        if folder.name is not None:
+                            old_name = folder.name.lower()
+                        else:
+                            old_name = backend_folder_name
+                        folder.name = folder_names[canonical_name]
+                        # New folders won't exist in folder_for
+                        if old_name in folder_for:
+                            del folder_for[old_name]
+                        folder.get_associated_tag(db_session)
                 attr_name = '{}_folder'.format(canonical_name)
-                setattr(account, attr_name, verify_folder_name(
-                    account.id, getattr(account, attr_name), folder))
+                id_attr_name = '{}_folder_id'.format(canonical_name)
+                if getattr(account, id_attr_name) != folder.id:
+                    setattr(account, attr_name, folder)
             else:
                 del folder_for[backend_folder_name]
 
