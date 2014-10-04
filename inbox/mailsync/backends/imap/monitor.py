@@ -1,8 +1,9 @@
 from gevent import sleep
 from gevent.pool import Group
+from sqlalchemy.orm.exc import NoResultFound
 from inbox.log import get_logger
 from inbox.models import Tag, Folder
-from inbox.models.backends.imap import ImapAccount, ImapFolderSyncStatus
+from inbox.models.backends.imap import ImapAccount
 from inbox.models.util import db_write_lock
 from inbox.mailsync.backends.base import BaseMailSyncMonitor
 from inbox.mailsync.backends.base import (save_folder_names,
@@ -50,10 +51,11 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         BaseMailSyncMonitor.__init__(self, account, heartbeat,
                                      retry_fail_classes)
 
-    def sync(self):
-        """ Start per-folder syncs. Only have one per-folder sync in the
-            'initial' state at a time.
-        """
+    def prepare_sync(self):
+        """Ensures that canonical tags are created for the account, and gets
+        and save Folder objects for folders on the IMAP backend. Returns a list
+        of tuples (folder_name, folder_id) for each folder we want to sync (in
+        order)."""
         with mailsync_session_scope() as db_session:
             account = db_session.query(ImapAccount).get(self.account_id)
             Tag.create_canonical_tags(account.namespace, db_session)
@@ -62,45 +64,48 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                 save_folder_names(log, self.account_id,
                                   crispin_client.folder_names(), db_session)
 
-            folder_id_for = {name: id_ for id_, name in db_session.query(
-                Folder.id, Folder.name).filter_by(account_id=self.account_id)}
+            sync_folder_names_ids = []
+            for folder_name in sync_folders:
+                try:
+                    id_, = db_session.query(Folder.id). \
+                        filter(Folder.name == folder_name,
+                               Folder.account_id == self.account_id).one()
+                    sync_folder_names_ids.append((folder_name, id_))
+                except NoResultFound:
+                    log.error("Missing Folder object when starting sync",
+                              folder_name=folder_name)
+                    raise MailsyncError("Missing Folder '{}' on account {}"
+                                        .format(folder_name, self.account_id))
+            return sync_folder_names_ids
 
-            saved_states = {name: state for name, state in
-                            db_session.query(Folder.name,
-                                             ImapFolderSyncStatus.state)
-                            .join(ImapFolderSyncStatus.folder)
-                            .filter(ImapFolderSyncStatus.account_id ==
-                                    self.account_id)}
+    def sync(self):
+        """ Start per-folder syncs. Only have one per-folder sync in the
+            'initial' state at a time.
+        """
+        sync_folder_names_ids = self.prepare_sync()
+        for folder_name, folder_id in sync_folder_names_ids:
+            log.info('initializing folder sync')
+            thread = self.sync_engine_class(self.account_id,
+                                            folder_name,
+                                            folder_id,
+                                            self.email_address,
+                                            self.provider_name,
+                                            self.poll_frequency,
+                                            self.syncmanager_lock,
+                                            self.refresh_flags_max,
+                                            self.retry_fail_classes)
+            thread.start()
+            self.folder_monitors.add(thread)
+            while not self._thread_polling(thread) and \
+                    not self._thread_finished(thread) and \
+                    not thread.ready():
+                sleep(self.heartbeat)
 
-        for folder_name in sync_folders:
-            if folder_name not in folder_id_for:
-                log.error("Missing Folder object when starting sync",
-                          folder_name=folder_name, folder_id_for=folder_id_for)
-                raise MailsyncError("Missing Folder '{}' on account {}"
-                                    .format(folder_name, self.account_id))
-
-            if saved_states.get(folder_name) != 'finish':
-                log.info('initializing folder sync')
-                thread = self.sync_engine_class(self.account_id, folder_name,
-                                                folder_id_for[folder_name],
-                                                self.email_address,
-                                                self.provider_name,
-                                                self.poll_frequency,
-                                                self.syncmanager_lock,
-                                                self.refresh_flags_max,
-                                                self.retry_fail_classes)
-                thread.start()
-                self.folder_monitors.add(thread)
-                while not self._thread_polling(thread) and \
-                        not self._thread_finished(thread) and \
-                        not thread.ready():
-                    sleep(self.heartbeat)
-
-                # Allow individual folder sync monitors to shut themselves down
-                # after completing the initial sync.
-                if self._thread_finished(thread) or thread.ready():
-                    log.info('folder sync finished/killed',
-                             folder_name=thread.folder_name)
-                    # NOTE: Greenlet is automatically removed from the group.
+            # Allow individual folder sync monitors to shut themselves down
+            # after completing the initial sync.
+            if self._thread_finished(thread) or thread.ready():
+                log.info('folder sync finished/killed',
+                         folder_name=thread.folder_name)
+                # NOTE: Greenlet is automatically removed from the group.
 
         self.folder_monitors.join()
