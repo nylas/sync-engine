@@ -39,7 +39,9 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
 
     @retry_crispin
     def poll_for_changes(self, download_stack):
+        log.new(account_id=self.account_id, folder=self.folder_name)
         while True:
+            log.debug('polling for changes')
             with self.conn_pool.get() as crispin_client:
                 self.check_uid_changes(crispin_client, download_stack,
                                        async_download=True)
