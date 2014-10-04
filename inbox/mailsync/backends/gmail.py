@@ -197,10 +197,11 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                 # Need to select All Mail before doing thread expansion
                 if not self.is_all_mail(crispin_client):
                     crispin_client.select_folder(
-                        crispin_client.folder_names()['all'])
+                        crispin_client.folder_names()['all'], uidvalidity_cb)
                 self.__download_queued_threads(crispin_client, download_stack)
                 if not self.is_all_mail(crispin_client):
-                    crispin_client.select_folder(self.folder_name)
+                    crispin_client.select_folder(self.folder_name,
+                                                 uidvalidity_cb)
         elif self.folder_name in uid_download_folders(crispin_client):
             for uid in sorted(to_download):
                 download_stack.put(uid, None)
