@@ -148,7 +148,8 @@ def remove_messages(account_id, session, uids, folder):
         # the clean way to handle this problem is have a daemon
         # detect "dangling" threads and messages and collect
         # them periodically (tracked in T477)
-        affected_messages = {uid.message for uid in deletes}
+        affected_messages = {uid.message for uid in deletes
+                             if uid.message is not None}
 
         for uid in deletes:
             session.delete(uid)
