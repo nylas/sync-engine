@@ -2,9 +2,6 @@
 import sys
 import getpass
 
-# Certain password auths flows (like EAS) provide their own message
-default_message = 'Password for {0} (hidden): '
-
 
 class AuthError(Exception):
     pass
@@ -28,16 +25,25 @@ class NotSupportedError(AuthError):
     pass
 
 
-def password_auth(email_address, token, exit, message=default_message):
+def password_auth(email_address, token, exit, username_prompt=False):
+    password_message = 'Password for {0} (hidden): '
+
+    # Certain password flows like EAS could require a username
+    username_message = 'Username, if different from email '\
+        '(leave blank otherwise): '
+    username = None
+
     if not token:
         if exit:
-            print message.format(email_address)
+            print password_message.format(email_address)
             sys.exit(0)
-        pw = getpass.getpass(message.format(email_address))
+        username = raw_input(username_message).strip() or username if \
+            username_prompt else username
+        pw = getpass.getpass(password_message.format(email_address))
     else:
         pw = token
 
     if len(pw) <= 0:
         raise AuthError('Password required.')
 
-    return dict(email=email_address, password=pw)
+    return dict(email=email_address, username=username, password=pw)

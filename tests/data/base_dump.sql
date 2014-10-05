@@ -141,7 +141,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('569b9d365295');
+INSERT INTO `alembic_version` VALUES ('2f97277cd86d');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -313,8 +313,9 @@ CREATE TABLE `easaccount` (
   `eas_server` varchar(512) DEFAULT NULL,
   `eas_policy_key` varchar(64) DEFAULT NULL,
   `eas_account_sync_key` varchar(64) NOT NULL DEFAULT '0',
-  `eas_state` enum('sync','sync keyinvalid','finish') DEFAULT 'sync',
   `password_id` int(11) NOT NULL,
+  `username` varchar(255) DEFAULT NULL,
+  `eas_auth` varchar(191) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `password_id` (`password_id`),
   CONSTRAINT `easaccount_ibfk_1` FOREIGN KEY (`id`) REFERENCES `account` (`id`) ON DELETE CASCADE,
@@ -1034,6 +1035,8 @@ CREATE TABLE `message` (
   KEY `message_ibfk_2` (`resolved_message_id`),
   KEY `namespace_id` (`namespace_id`),
   KEY `ix_message_inbox_uid` (`inbox_uid`),
+  KEY `ix_message_subject` (`subject`(191)),
+  KEY `ix_message_received_date` (`received_date`),
   CONSTRAINT `message_ibfk_1` FOREIGN KEY (`thread_id`) REFERENCES `thread` (`id`) ON DELETE CASCADE,
   CONSTRAINT `message_ibfk_2` FOREIGN KEY (`resolved_message_id`) REFERENCES `message` (`id`),
   CONSTRAINT `message_ibfk_3` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`)
@@ -1414,6 +1417,9 @@ CREATE TABLE `thread` (
   KEY `ix_thread_created_at` (`created_at`),
   KEY `ix_thread_deleted_at` (`deleted_at`),
   KEY `ix_thread_updated_at` (`updated_at`),
+  KEY `ix_thread_subject` (`subject`(191)),
+  KEY `ix_thread_recentdate` (`recentdate`),
+  KEY `ix_thread_subjectdate` (`subjectdate`),
   CONSTRAINT `thread_ibfk_1` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1558,4 +1564,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-09-29 22:21:28
+-- Dump completed on 2014-10-07  1:44:00

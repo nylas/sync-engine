@@ -35,7 +35,7 @@ def auth_account(email_address, token, exit):
 
 def create_account(db_session, email_address, response):
     provider_name = provider_from_address(email_address)
-    if provider_name == "unknown":
+    if provider_name == 'unknown':
         raise NotSupportedError('Inbox does not support the email provider.')
 
     try:
