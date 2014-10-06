@@ -198,7 +198,7 @@ class TruncatingProcessor(raven.processors.Processor):
 
     # A whitelist of locals we don't want to strip.
     # They must be non-PII!
-    locals_whitelist = ['account_id']
+    locals_whitelist = ['account_id', 'message_id']
 
     # Note(emfree): raven.processors.Processor provides a filter_stacktrace
     # method to implement, but won't actually call it correctly. We can
