@@ -9,10 +9,10 @@ from sqlalchemy.util import OrderedDict
 from sqlalchemy.orm.collections import MappedCollection
 
 from inbox.util.misc import merge_attr
+from inbox.sqlalchemy_ext.util import MAX_TEXT_LENGTH
 from inbox.models.transaction import HasRevisions
 from inbox.models.base import MailSyncBase
 from inbox.models.mixins import HasPublicID
-
 from inbox.models.calendar import Calendar
 from inbox.models.namespace import Namespace
 from inbox.models.participant import Participant
@@ -35,7 +35,8 @@ _LENGTHS = {'location': LOCATION_MAX_LEN,
             'owner': OWNER_MAX_LEN,
             'recurrence': RECURRENCE_MAX_LEN,
             'reminders': REMINDER_MAX_LEN,
-            'title': TITLE_MAX_LEN}
+            'title': TITLE_MAX_LEN,
+            'raw_data': MAX_TEXT_LENGTH}
 
 
 class Event(MailSyncBase, HasRevisions, HasPublicID):
@@ -98,7 +99,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
                                          cascade=_participant_cascade,
                                          load_on_pending=True)
 
-    @validates('reminders', 'recurrence', 'owner', 'location', 'title')
+    @validates('reminders', 'recurrence', 'owner', 'location', 'title', 'raw_data')
     def validate_length(self, key, value):
         max_len = _LENGTHS[key]
         return value if value is None else value[:max_len]

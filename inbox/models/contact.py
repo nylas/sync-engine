@@ -1,12 +1,12 @@
 from sqlalchemy import Column, Integer, String, Enum, ForeignKey, Text
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy.schema import UniqueConstraint
 
 from inbox.util.misc import merge_attr
+from inbox.sqlalchemy_ext.util import MAX_TEXT_LENGTH
 from inbox.models.mixins import HasPublicID, HasEmailAddress
 from inbox.models.transaction import HasRevisions
 from inbox.models.base import MailSyncBase
-
 from inbox.models.message import Message
 from inbox.models.namespace import Namespace
 
@@ -49,6 +49,10 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
 
     __table_args__ = (UniqueConstraint('uid', 'source', 'namespace_id',
                                        'provider_name'),)
+
+    @validates('raw_data')
+    def validate_length(self, key, value):
+        return value if value is None else value[:MAX_TEXT_LENGTH]
 
     def merge_from(self, base, remote):
         # This must be updated when new fields are added to the class.
