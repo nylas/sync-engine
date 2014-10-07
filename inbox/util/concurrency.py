@@ -78,10 +78,10 @@ def retry(func, retry_classes=None, fail_classes=None,
                 # (somebody intentionally killed the greenlet).
                 raise
             except Exception, e:
-                if exc_callback is not None:
-                    exc_callback()
                 if not should_retry_on(e):
                     break
+                if exc_callback is not None:
+                    exc_callback()
 
             # Sleep a bit so that we don't poll too quickly and re-encounter
             # the error. Also add a random delay to prevent herding effects.
