@@ -489,7 +489,7 @@ def contact_search_api():
     if args['view'] == 'count':
         return g.encoder.jsonify({"count": results.all()})
 
-    results = results.limit(args['limit']).offset(args['offset'])
+    results = results.limit(args['limit']).offset(args['offset']).all()
     return g.encoder.jsonify(results)
 
 
@@ -895,14 +895,14 @@ def calendar_search_api():
         subqueryload(Event.participants_by_email)
 
     if view == 'count':
-        results = g.db_session(func.count(Calendar.id))
+        query = g.db_session(func.count(Calendar.id))
     elif view == 'ids':
-        results = g.db_session.query(Calendar.id)
+        query = g.db_session.query(Calendar.id)
     else:
-        results = g.db_session.query(Calendar)
+        query = g.db_session.query(Calendar)
 
-    results = filter(Calendar.namespace_id == g.namespace.id, term_filter). \
-        order_by(asc(Calendar.id))
+    results = query.filter(Calendar.namespace_id == g.namespace.id,
+                           term_filter).order_by(asc(Calendar.id))
 
     if view == 'count':
         return g.encoder.jsonify({"count": results.one()[0]})
