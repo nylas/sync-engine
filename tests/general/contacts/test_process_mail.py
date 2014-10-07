@@ -1,29 +1,9 @@
 """Sanity-check our logic for updating contact data from message addressees
 during a sync."""
-from datetime import datetime
-from inbox.models import Message, Thread, Contact
-from inbox.contacts.process_mail import update_contacts_from_message
+from inbox.models import Thread, Contact
+from tests.util.base import add_fake_message
 
 NAMESPACE_ID = 1
-
-
-def add_fake_message(db_session, thread, from_addr=None, to_addr=None,
-                     cc_addr=None, bcc_addr=None):
-    m = Message()
-    m.namespace_id = NAMESPACE_ID
-    m.from_addr = from_addr or []
-    m.to_addr = to_addr or []
-    m.cc_addr = cc_addr or []
-    m.bcc_addr = bcc_addr or []
-    m.received_date = datetime.utcnow()
-    m.size = 0
-    m.sanitized_body = ''
-    m.snippet = ''
-    m.thread = thread
-    update_contacts_from_message(db_session, m, thread.namespace)
-    db_session.add(m)
-    db_session.commit()
-    return m
 
 
 def test_update_contacts_from_message(db):
@@ -31,7 +11,7 @@ def test_update_contacts_from_message(db):
         namespace_id=NAMESPACE_ID).first()
     # Check that only one Contact is created for repeatedly-referenced
     # addresses.
-    add_fake_message(db.session, thread,
+    add_fake_message(db.session, NAMESPACE_ID, thread,
                      from_addr=[('', 'alpha@example.com')],
                      cc_addr=[('', 'alpha@example.com')])
 
@@ -40,7 +20,7 @@ def test_update_contacts_from_message(db):
 
     # Check that existing Contacts are used when we process a new message
     # referencing them.
-    add_fake_message(db.session, thread,
+    add_fake_message(db.session, NAMESPACE_ID, thread,
                      from_addr=[('', 'alpha@example.com')],
                      cc_addr=[('', 'alpha@example.com')],
                      to_addr=[('', 'beta@example.com'),
@@ -56,7 +36,7 @@ def test_update_contacts_from_message(db):
 def test_addresses_canonicalized(db):
     thread = db.session.query(Thread).filter_by(
         namespace_id=NAMESPACE_ID).first()
-    msg = add_fake_message(db.session, thread,
+    msg = add_fake_message(db.session, NAMESPACE_ID, thread,
                            from_addr=[('', 'alpha.beta@gmail.com')],
                            cc_addr=[('', 'alphabeta@gmail.com')])
 

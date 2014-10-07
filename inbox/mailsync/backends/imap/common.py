@@ -85,7 +85,8 @@ def update_thread_labels(thread, folder_name, g_labels, db_session):
     return new_labels
 
 
-def update_metadata(account_id, session, folder_name, uids, new_flags):
+def update_metadata(account_id, session, folder_name, folder_id, uids,
+                    new_flags):
     """
     Update flags (the only metadata that can change).
 
@@ -95,37 +96,32 @@ def update_metadata(account_id, session, folder_name, uids, new_flags):
 
     """
     if uids:
-        # When we're updating multiple messages in the same thread and a
-        # call to update_thread_labels() results in a Folder.find_or_create(),
-        # a subsequent access of that thread would trigger a flush,
-        # raising an IntegrityError - so disable autoflush.
-        with session.no_autoflush:
-            for item in session.query(ImapUid).join(Folder)\
-                    .filter(ImapUid.account_id == account_id,
-                            ImapUid.msg_uid.in_(uids),
-                            Folder.name == folder_name)\
-                    .options(joinedload(ImapUid.message)):
-                flags = new_flags[item.msg_uid].flags
-                thread = item.message.thread
-                if hasattr(new_flags[item.msg_uid], 'labels'):
-                    labels = new_flags[item.msg_uid].labels
-                    update_thread_labels(thread, folder_name, labels, session)
-                else:
-                    labels = None
-                item.update_imap_flags(flags, labels)
+        for item in session.query(ImapUid). \
+                filter(ImapUid.account_id == account_id,
+                       ImapUid.msg_uid.in_(uids),
+                       ImapUid.folder_id == folder_id). \
+                options(joinedload(ImapUid.message)):
+            flags = new_flags[item.msg_uid].flags
+            thread = item.message.thread
+            if hasattr(new_flags[item.msg_uid], 'labels'):
+                labels = new_flags[item.msg_uid].labels
+                update_thread_labels(thread, folder_name, labels, session)
+            else:
+                labels = None
+            item.update_imap_flags(flags, labels)
 
-                unread_status_changed = item.message.is_read != item.is_seen
+            unread_status_changed = item.message.is_read != item.is_seen
 
-                item.message.is_draft = item.is_draft
-                item.message.is_read = item.is_seen
+            item.message.is_draft = item.is_draft
+            item.message.is_read = item.is_seen
 
-                # We have to update the thread's read tag separately.
-                if unread_status_changed:
-                    unread_tag = thread.namespace.tags['unread']
-                    if not item.message.is_read:
-                        thread.apply_tag(unread_tag)
-                    elif all(m.is_read for m in thread.messages):
-                        thread.remove_tag(unread_tag)
+            # We have to update the thread's read tag separately.
+            if unread_status_changed:
+                unread_tag = thread.namespace.tags['unread']
+                if not item.message.is_read:
+                    thread.apply_tag(unread_tag)
+                elif all(m.is_read for m in thread.messages):
+                    thread.remove_tag(unread_tag)
 
 
 def remove_messages(account_id, session, uids, folder):

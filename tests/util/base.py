@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+from datetime import datetime
 from gevent import monkey
 
 from pytest import fixture, yield_fixture
@@ -283,3 +284,25 @@ class ContactsProviderStub(object):
 
     def get_items(self, *args, **kwargs):
         return self._contacts
+
+
+def add_fake_message(db_session, namespace_id, thread, from_addr=None,
+                     to_addr=None, cc_addr=None, bcc_addr=None,
+                     received_date=None):
+    from inbox.models import Message
+    from inbox.contacts.process_mail import update_contacts_from_message
+    m = Message()
+    m.namespace_id = namespace_id
+    m.from_addr = from_addr or []
+    m.to_addr = to_addr or []
+    m.cc_addr = cc_addr or []
+    m.bcc_addr = bcc_addr or []
+    m.received_date = received_date or datetime.utcnow()
+    m.size = 0
+    m.sanitized_body = ''
+    m.snippet = ''
+    m.thread = thread
+    update_contacts_from_message(db_session, m, thread.namespace)
+    db_session.add(m)
+    db_session.commit()
+    return m

@@ -3,9 +3,8 @@ import datetime
 import calendar
 from sqlalchemy import desc
 from inbox.models import Message, Thread, Namespace, Block
-from inbox.contacts.process_mail import update_contacts_from_message
 from inbox.util.misc import dt_to_timestamp
-from tests.util.base import api_client, test_client
+from tests.util.base import api_client, test_client, add_fake_message
 
 __all__ = ['api_client', 'test_client']
 
@@ -180,42 +179,29 @@ def test_strict_argument_parsing(api_client):
     assert r.status_code == 400
 
 
-def add_fake_message(namespace_id, thread, to_email, received_date, subject,
-                     db_session):
-    """ One-off helper function to add 'fake' messages to the datastore."""
-    m = Message()
-    m.namespace_id = namespace_id
-    m.from_addr = [('', to_email)]
-    m.received_date = received_date
-    m.subject = subject
-    m.size = 0
-    m.sanitized_body = ''
-    m.snippet = ''
-    m.thread = thread
-    update_contacts_from_message(db_session, m, thread.namespace)
-    db_session.add(m)
-    db_session.commit()
-
-
 def test_distinct_results(api_client, db):
     """Test that limit and offset parameters work correctly when joining on
     multiple matching messages per thread."""
     # Create a thread with multiple messages on it.
     first_thread = db.session.query(Thread).filter(
         Thread.namespace_id == NAMESPACE_ID).get(1)
-    add_fake_message(NAMESPACE_ID, first_thread, 'hello@example.com',
-                     datetime.datetime.utcnow(), '', db.session)
-    add_fake_message(NAMESPACE_ID, first_thread, 'hello@example.com',
-                     datetime.datetime.utcnow(), '', db.session)
+    add_fake_message(db.session, NAMESPACE_ID, first_thread,
+                     from_addr=[('', 'hello@example.com')],
+                     received_date=datetime.datetime.utcnow())
+    add_fake_message(db.session, NAMESPACE_ID, first_thread,
+                     from_addr=[('', 'hello@example.com')],
+                     received_date=datetime.datetime.utcnow())
 
     # Now create another thread with the same participants
     older_date = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
     second_thread = db.session.query(Thread).filter(
         Thread.namespace_id == NAMESPACE_ID).get(2)
-    add_fake_message(NAMESPACE_ID, second_thread, 'hello@example.com',
-                     older_date, '', db.session)
-    add_fake_message(NAMESPACE_ID, second_thread, 'hello@example.com',
-                     older_date, '', db.session)
+    add_fake_message(db.session, NAMESPACE_ID, second_thread,
+                     from_addr=[('', 'hello@example.com')],
+                     received_date=older_date)
+    add_fake_message(db.session, NAMESPACE_ID, second_thread,
+                     from_addr=[('', 'hello@example.com')],
+                     received_date=older_date)
 
     filtered_results = api_client.get_data('/threads?from=hello@example.com'
                                            '&limit=1&offset=0')

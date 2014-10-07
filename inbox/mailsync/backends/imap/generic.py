@@ -431,8 +431,8 @@ class FolderSyncEngine(Greenlet):
             with self.syncmanager_lock:
                 with mailsync_session_scope() as db_session:
                     common.update_metadata(self.account_id, db_session,
-                                           self.folder_name, uids,
-                                           new_flags)
+                                           self.folder_name, self.folder_id,
+                                           uids, new_flags)
                     db_session.commit()
 
     def update_uid_counts(self, db_session, **kwargs):
