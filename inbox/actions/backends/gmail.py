@@ -144,9 +144,8 @@ def remote_delete(account, thread_id, folder_name, db_session):
         if folder_name == inbox_folder:
             return _archive(g_thrid, crispin_client)
         # Remove \Draft, move to Trash
+        # Note: this only moves *drafts* in the thread, not the whole thread.
         elif folder_name == drafts_folder:
-            crispin_client.select_folder(
-                crispin_client.folder_names()['all'], uidvalidity_cb)
             crispin_client.delete(g_thrid, folder_name)
         # Remove label, keep in All Mail
         elif folder_name in crispin_client.folder_names()['labels']:

@@ -171,8 +171,8 @@ def delete_draft(account_id, draft_id, db_session, args):
         draft = db_session.query(Message).get(draft_id)
         remote_delete = \
             module_registry[account.provider].remote_delete
-        remote_delete(account, account.drafts_folder.name,
-                      draft.thread_id, db_session)
+        remote_delete(account, draft.thread_id, account.drafts_folder.name,
+                      db_session)
     # Inbox created draft, therefore use X-INBOX header
     else:
         remote_delete_draft = \
