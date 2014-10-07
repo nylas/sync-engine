@@ -132,6 +132,10 @@ def save_draft(account_id, message_id, db_session):
     """ Sync a new/updated draft back to the remote backend. """
     account = db_session.query(Account).get(account_id)
     message = db_session.query(Message).get(message_id)
+    if message is None:
+        log.info('tried to save nonexistent message as draft',
+                 message_id=message_id, account_id=account_id)
+        return
     if not message.is_draft:
         log.warning('tried to save non-draft message as draft',
                     message_id=message_id,
