@@ -353,6 +353,13 @@ get_default_providers = lambda: {
                        "mx1.biz.mail.yahoo.com", "mx5.biz.mail.yahoo.com",
                        "mxvm2.mail.yahoo.com", "mx-van.mail.am0.yahoodns.net"],
     },
+    "yandex": {
+        "type": "generic",
+        "imap": ("imap.yandex.com", 993),
+        "smtp": ("smtp.yandex.com", 587),
+        "auth": "password",
+        "mx_servers": ["mx.yandex.ru"],
+    },
     "zimbra": {
         "type": "generic",
         "imap": ("mail.you-got-mail.com", 993),
