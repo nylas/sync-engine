@@ -12,6 +12,8 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
 
     if view == 'count':
         query = db_session.query(func.count(Thread.id))
+    elif view == 'ids':
+        query = db_session.query(Thread.public_id)
     else:
         query = db_session.query(Thread)
 
@@ -94,16 +96,20 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
 
     # Eager-load some objects in order to make constructing API
     # representations faster.
-    query = query.options(
-        subqueryload(Thread.messages).
-        load_only('public_id', 'is_draft', 'from_addr', 'to_addr',
-                  'cc_addr', 'bcc_addr'),
-        subqueryload('tagitems').joinedload('tag').
-        load_only('public_id', 'name'))
+    if view != 'ids':
+        query = query.options(
+            subqueryload(Thread.messages).
+            load_only('public_id', 'is_draft', 'from_addr', 'to_addr',
+                      'cc_addr', 'bcc_addr'),
+            subqueryload('tagitems').joinedload('tag').
+            load_only('public_id', 'name'))
 
     query = query.order_by(desc(Thread.recentdate)).distinct().limit(limit)
     if offset:
         query = query.offset(offset)
+
+    if view == 'ids':
+        return [x[0] for x in query.all()]
 
     return query.all()
 
@@ -116,6 +122,8 @@ def _messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
 
     if view == 'count':
         query = db_session.query(func.count(Message.id))
+    elif view == 'ids':
+        query = db_session.query(Message.public_id)
     else:
         query = db_session.query(Message)
 
@@ -203,15 +211,18 @@ def _messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
             filter(Block.filename == filename,
                    Block.namespace_id == namespace_id)
 
-    if not drafts:
-        query = query.order_by(desc(Message.received_date))
+    query = query.order_by(desc(Message.received_date))
 
     if view == 'count':
         return {"count": query.one()[0]}
 
     query = query.distinct().limit(limit)
+
     if offset:
         query = query.offset(offset)
+
+    if view == 'ids':
+        return [x[0] for x in query.all()]
 
     # Eager-load part.content_disposition to make constructing API
     # representations faster
@@ -250,6 +261,8 @@ def files(namespace_id, file_public_id, message_public_id, filename,
 
     if view == 'count':
         query = db_session.query(func.count(Block.id))
+    elif view == 'ids':
+        query = db_session.query(Block.public_id)
     else:
         query = db_session.query(Block)
 
@@ -290,7 +303,10 @@ def files(namespace_id, file_public_id, message_public_id, filename,
     if offset:
         query = query.offset(offset)
 
-    return query.all()
+    if view == 'ids':
+        return [x[0] for x in query.all()]
+    else:
+        return query.all()
 
 
 def events(namespace_id, event_public_id, calendar_public_id, title,
@@ -299,6 +315,8 @@ def events(namespace_id, event_public_id, calendar_public_id, title,
 
     if view == 'count':
         query = db_session.query(func.count(Event.id))
+    elif view == 'ids':
+        query = db_session.query(Event.public_id)
     else:
         query = db_session.query(Event)
 
@@ -341,16 +359,19 @@ def events(namespace_id, event_public_id, calendar_public_id, title,
     if source is not None:
         query = query.filter(Event.source == source)
 
-    # Eager-load some objects in order to make constructing API
-    # representations faster.
-    query = query.options(
-        subqueryload(Event.participants_by_email))
-
     if view == 'count':
         return {"count": query.one()[0]}
 
     query = query.order_by(asc(Event.start)).limit(limit)
+
     if offset:
         query = query.offset(offset)
 
-    return query.all()
+    if view == 'ids':
+        return [x[0] for x in query.all()]
+    else:
+        # Eager-load some objects in order to make constructing API
+        # representations faster.
+        query = query.options(
+            subqueryload(Event.participants_by_email))
+        return query.all()

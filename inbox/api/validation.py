@@ -33,7 +33,7 @@ def bounded_str(value, key):
 
 def view(value, key):
     allowed_views = ["count", "ids"]
-    if view not in allowed_views:
+    if value not in allowed_views:
         raise ValueError('Unknown view type {}.'.format(value))
     return value
 

@@ -161,6 +161,17 @@ def test_filtering(db, api_client):
                                   format('inboxapptest@gmail.com', 3))
     assert len(results) == 3
 
+    results = api_client.get_data('/threads?view=count')
+
+    assert results['count'] == 16
+
+    results = api_client.get_data('/threads?view=ids&to={}&limit=3'.
+                                  format('inboxapptest@gmail.com', 3))
+
+    assert len(results) == 3
+    assert all(isinstance(r, basestring)
+               for r in results), "Returns a list of string"
+
 
 def test_ordering(api_client, db):
     ordered_results = api_client.get_data('/messages')

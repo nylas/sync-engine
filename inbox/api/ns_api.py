@@ -123,11 +123,18 @@ def index():
 def tag_query_api():
     g.parser.add_argument('tag_name', type=bounded_str, location='args')
     g.parser.add_argument('tag_id', type=valid_public_id, location='args')
-    g.parser.add_argument('view', type=bounded_str, location='args')
+    g.parser.add_argument('view', type=view, location='args')
 
     args = strict_parse_args(g.parser, request.args)
 
-    query = g.db_session.query(Tag).filter(Tag.namespace_id == g.namespace.id)
+    if args['view'] == 'count':
+        query = g.db_session.query(func.count(Tag.id))
+    elif args['view'] == 'ids':
+        query = g.db_session.query(Tag.public_id)
+    else:
+        query = g.db_session.query(Tag)
+
+    query = query.filter(Tag.namespace_id == g.namespace.id)
 
     if args['tag_name']:
         query = query.filter_by(name=args['tag_name'])
@@ -136,13 +143,17 @@ def tag_query_api():
         query = query.filter_by(public_id=args['tag_id'])
 
     if args['view'] == 'count':
-        return g.encoder.jsonify({"count": query(func.count(Tag.id))})
+        return g.encoder.jsonify({"count": query.one()[0]})
 
     query = query.limit(args['limit'])
     if args['offset']:
         query = query.offset(args['offset'])
 
-    results = query.all()
+    if args['view'] == 'ids':
+        results = [x[0] for x in query.all()]
+    else:
+        results = query.all()
+
     return g.encoder.jsonify(results)
 
 
@@ -260,7 +271,7 @@ def thread_query_api():
     g.parser.add_argument('filename', type=bounded_str, location='args')
     g.parser.add_argument('thread_id', type=valid_public_id, location='args')
     g.parser.add_argument('tag', type=bounded_str, location='args')
-    g.parser.add_argument('view', type=bounded_str, location='args')
+    g.parser.add_argument('view', type=view, location='args')
     args = strict_parse_args(g.parser, request.args)
 
     threads = filtering.threads(
@@ -462,18 +473,24 @@ def contact_search_api():
     term_filter = or_(
         Contact.name.like(term_filter_string),
         Contact.email_address.like(term_filter_string))
-    results = g.db_session.query(Contact). \
-        filter(Contact.namespace_id == g.namespace.id,
-               Contact.source == 'local',
-               term_filter). \
-        order_by(asc(Contact.id)).limit(args['limit']). \
-        offset(args['offset']).all()
 
     if args['view'] == 'count':
-        return g.encoder.jsonify(
-            {"count": results.query(func.count(Contact.id))})
+        results = g.db_session.query(func.count(Contact.id))
+    elif args['view'] == 'ids':
+        results = g.db_session.query(Contact.id)
     else:
-        return g.encoder.jsonify(results)
+        results = g.db_session.query(Contact)
+
+    results = results.filter(Contact.namespace_id == g.namespace.id,
+                   Contact.source == 'local',
+                   term_filter). \
+        order_by(asc(Contact.id))
+
+    if args['view'] == 'count':
+        return g.encoder.jsonify({"count": results.all()})
+
+    results = results.limit(args['limit']).offset(args['offset'])
+    return g.encoder.jsonify(results)
 
 
 @app.route('/contacts/', methods=['POST'])
@@ -866,6 +883,8 @@ def calendar_search_api():
     """ Calendar events! """
     g.parser.add_argument('filter', type=bounded_str, default='',
                           location='args')
+    g.parser.add_argument('view', type=view, location='args')
+
     args = strict_parse_args(g.parser, request.args)
     term_filter_string = '%{}%'.format(args['filter'])
     term_filter = or_(
@@ -875,12 +894,25 @@ def calendar_search_api():
     eager = subqueryload(Calendar.events). \
         subqueryload(Event.participants_by_email)
 
-    results = g.db_session.query(Calendar). \
-        filter(Calendar.namespace_id == g.namespace.id,
-               term_filter). \
-        order_by(asc(Calendar.id)).limit(args['limit']). \
-        options(eager). \
-        offset(args['offset']).all()
+    if view == 'count':
+        results = g.db_session(func.count(Calendar.id))
+    elif view == 'ids':
+        results = g.db_session.query(Calendar.id)
+    else:
+        results = g.db_session.query(Calendar)
+
+    results = filter(Calendar.namespace_id == g.namespace.id, term_filter). \
+        order_by(asc(Calendar.id))
+
+    if view == 'count':
+        return g.encoder.jsonify({"count": results.one()[0]})
+
+    results = results.limit(args['limit'])
+
+    if view != 'ids':
+        results = results.options(eager)
+
+    results = results.offset(args['offset']).all()
 
     return g.encoder.jsonify(results)
 

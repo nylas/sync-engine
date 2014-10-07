@@ -85,6 +85,12 @@ def test_file_filtering(api_client, uploaded_file_ids, draft):
     results = api_client.get_data('/files?content_type=image%2Fjpeg')
     assert len(results) == 2
 
+    results = api_client.get_data('/files?content_type=image%2Fjpeg&view=count')
+    assert results["count"] == 2
+
+    results = api_client.get_data('/files?content_type=image%2Fjpeg&view=ids')
+    assert len(results) == 2
+
 
 def test_attachment_has_same_id(api_client, uploaded_file_ids, draft):
     attachment_id = uploaded_file_ids.pop()
