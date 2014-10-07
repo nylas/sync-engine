@@ -232,8 +232,8 @@ get_default_providers = lambda: {
         "domains": ["fastmail.fm"],
         "mx_servers": ["in1-smtp.messagingengine.com",
                        "in2-smtp.messagingengine.com"],
-        "ns_servers": ["ns1.messagingengine.com",
-                       "ns2.messagingengine.com"],
+        "ns_servers": ["ns1.messagingengine.com.",
+                       "ns2.messagingengine.com."]
     },
     "gandi": {
         "type": "generic",
