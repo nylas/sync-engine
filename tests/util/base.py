@@ -288,7 +288,7 @@ class ContactsProviderStub(object):
 
 def add_fake_message(db_session, namespace_id, thread, from_addr=None,
                      to_addr=None, cc_addr=None, bcc_addr=None,
-                     received_date=None):
+                     received_date=None, subject=None):
     from inbox.models import Message
     from inbox.contacts.process_mail import update_contacts_from_message
     m = Message()
@@ -301,6 +301,7 @@ def add_fake_message(db_session, namespace_id, thread, from_addr=None,
     m.size = 0
     m.sanitized_body = ''
     m.snippet = ''
+    m.subject = subject or ''
     m.thread = thread
     update_contacts_from_message(db_session, m, thread.namespace)
     db_session.add(m)

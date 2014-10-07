@@ -254,7 +254,8 @@ def test_namespace_limiting(db, test_client):
     for ns in namespaces:
         thread = Thread(namespace=ns, subjectdate=dt, recentdate=dt,
                         subject=subject)
-        add_fake_message(ns.id, thread, '', dt, subject, db.session)
+        add_fake_message(db.session, ns.id, thread, received_date=dt,
+                         subject=subject)
         db.session.add(Block(namespace=ns, filename=subject))
     db.session.commit()
 
