@@ -101,8 +101,9 @@ def retry(func, retry_classes=None, fail_classes=None,
 def retry_with_logging(func, logger=None, retry_classes=None,
                        fail_classes=None, account_id=None, **reset_params):
     callback = lambda: log_uncaught_errors(logger, account_id)
-    return retry(func, exc_callback=callback, retry_classes=retry_classes,
-                 fail_classes=fail_classes, **reset_params)()
+    return retry(func, exc_callback=callback, fail_callback=callback,
+                 retry_classes=retry_classes, fail_classes=fail_classes,
+                 **reset_params)()
 
 
 def retry_and_report_killed(func, account_id, folder_name=None, logger=None,

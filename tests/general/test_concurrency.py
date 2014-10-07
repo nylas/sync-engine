@@ -39,7 +39,7 @@ def test_retry_with_logging():
     with pytest.raises(ValueError):
         retry_with_logging(failing_function, logger=logger, max_count=3,
                            backoff_delay=0)
-    assert logger.call_count == 3
+    assert logger.call_count == 4
     assert failing_function.call_count == 3
 
 
