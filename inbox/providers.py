@@ -282,7 +282,7 @@ get_default_providers = lambda: {
         "imap": ("mail.hover.com", 993),
         "smtp": ("mail.hover.com", 587),
         "auth": "password",
-        "mx_servers": "mx.hover.com.cust.hostedemail.com",
+        "mx_servers": ["mx.hover.com.cust.hostedemail.com"],
     },
     "icloud": {
         "type": "generic",
@@ -328,6 +328,7 @@ get_default_providers = lambda: {
                     "outlook.com.pe", "outlook.ph", "outlook.pt", "outlook.sa",
                     "outlook.sg", "outlook.sk", "outlook.es", "outlook.co.th",
                     "outlook.com.tr", "outlook.com.vn"],
+        "mx_servers": [".*.pamx1.hotmail.com"],
     },
     "yahoo": {
         "type": "generic",

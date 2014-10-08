@@ -66,7 +66,11 @@ def provider_from_address(email_address):
             if mx_domain[-1] == '.':
                 mx_domain = mx_domain[:-1]
 
-            if mx_domain not in mx_servers:
+            # match the given domain against any of the mx_server regular
+            # expressions we have stored for the given domain. If none of them
+            # match, then we cannot confirm this as the given provider
+            match_filter = lambda x: re.match(x + '$', mx_domain)
+            if len(filter(match_filter, mx_servers)) == 0:
                 valid = False
                 break
 
