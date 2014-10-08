@@ -21,13 +21,13 @@ PROVIDER = 'generic'
 
 
 def create_auth_account(db_session, email_address, token, exit):
-    response = auth_account(email_address, token, exit)
+    response = _auth_account(email_address, token, exit)
     account = create_account(db_session, email_address, response)
 
     return account
 
 
-def auth_account(email_address, token, exit):
+def _auth_account(email_address, token, exit):
     return password_auth(email_address, token, exit)
 
 
@@ -112,7 +112,7 @@ def connect_account(provider, email, credential):
     return conn
 
 
-def supports_condstore(conn):
+def _supports_condstore(conn):
     """Check if the connection supports CONDSTORE
     Returns
     -------
@@ -141,7 +141,7 @@ def verify_account(account):
 
     info = provider_info(account.provider)
     if "condstore" not in info:
-        if supports_condstore(conn):
+        if _supports_condstore(conn):
             account.supports_condstore = True
 
     conn.logout()

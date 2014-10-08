@@ -42,13 +42,13 @@ def create_auth_account(db_session, email_address, token, exit):
     if uri != 'urn:ietf:wg:oauth:2.0:oob':
         raise NotImplementedError('Callback-based OAuth is not supported')
 
-    response = auth_account(email_address, token, exit)
+    response = _auth_account(email_address, token, exit)
     account = create_account(db_session, response)
 
     return account
 
 
-def auth_account(email_address, token, exit):
+def _auth_account(email_address, token, exit):
     if not token:
         print ("To authorize Inbox, visit this url and follow the directions:")
     return oauth_authorize_console(_this_module(), email_address, token, exit)

@@ -39,13 +39,13 @@ def _this_module():
 
 
 def create_auth_account(db_session, email_address, token, exit):
-    response = auth_account(email_address, token, exit)
+    response = _auth_account(email_address, token, exit)
     account = create_account(db_session, response)
 
     return account
 
 
-def auth_account(email_address, token, exit):
+def _auth_account(email_address, token, exit):
     if not token:
         print ("Please visit the following url to allow access to this "
                "application. The response will provide "
