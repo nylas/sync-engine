@@ -17,6 +17,7 @@ import subprocess
 from structlog.threadlocal import wrap_dict
 
 from inbox.config import config
+import gevent
 
 MAX_EXCEPTION_LENGTH = 10000
 
@@ -113,6 +114,7 @@ class BoundLogger(structlog._base.BoundLoggerBase):
                          **event_kw):
         if event_args:
             event_kw['_positional_args'] = event_args
+        event_kw['greenlet_id'] = id(gevent.getcurrent())
         return super(BoundLogger, self)._proxy_to_logger(method_name, event,
                                                          **event_kw)
 
