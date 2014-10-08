@@ -65,7 +65,7 @@ def connect_account(provider, email, credential):
         If the credentials are invalid.
     """
 
-    info = provider_info(provider)
+    info = provider_info(provider, email)
     host, port = info['imap']
     try:
         conn = IMAPClient(host, port=port, use_uid=True, ssl=True)
@@ -139,7 +139,7 @@ def verify_account(account):
                            account.email_address,
                            account.password)
 
-    info = provider_info(account.provider)
+    info = provider_info(account.provider, account.email_address)
     if "condstore" not in info:
         if _supports_condstore(conn):
             account.supports_condstore = True

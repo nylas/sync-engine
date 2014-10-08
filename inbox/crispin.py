@@ -137,7 +137,8 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
             account = db_session.query(Account).get(self.account_id)
             self.provider_name = account.provider
             self.email_address = account.email_address
-            self.provider_info = provider_info(account.provider)
+            self.provider_info = provider_info(account.provider,
+                                               account.email_address)
             self.sync_state = account.sync_state
 
             # Refresh token if need be, for OAuthed accounts
@@ -238,7 +239,7 @@ def new_crispin(account_id, email_address, provider_name, conn, readonly=True):
     if provider_name == 'gmail':
         cls = GmailCrispinClient
     else:
-        info = provider_info(provider_name)
+        info = provider_info(provider_name, email_address)
         # look up in the provider database to see
         # if the provider supports CONDSTORE
         if "condstore" in info:
@@ -394,7 +395,7 @@ class CrispinClient(object):
 
         # Additionally we provide a custom mapping for providers that
         # don't fit into the defaults.
-        info = provider_info(self.provider_name)
+        info = provider_info(self.provider_name, self.email_address)
         folder_map = info.get('folder_map', {})
 
         if self._folder_names is None:

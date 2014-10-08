@@ -10,16 +10,22 @@ from inbox.basicauth import NotSupportedError
 __all__ = ['provider_info', 'providers', 'PluginInterface', 'ProvidersDict']
 
 
-def provider_info(provider_name):
+def provider_info(provider_name, email_address=None):
     """Like providers[provider_name] except raises
     inbox.basicauth.NotSupportedError instead of KeyError when the provider is
     not found.
+
+    Parameters
+    ----------
+    email_address : str or None
+        Allows further customization of the return value on a per-account
+        basis.
     """
     if provider_name not in providers:
         raise NotSupportedError("Provider: {} not supported.".format(
             provider_name))
 
-    return providers[provider_name]
+    return providers.lookup_info(provider_name, email_address)
 
 
 class ProvidersDict(MutableMapping):
@@ -61,7 +67,11 @@ class ProvidersDict(MutableMapping):
         self._loaded = False
 
     def __getitem__(self, name):
+        return self.lookup_info(name)
+
+    def lookup_info(self, provider_name, email_address=None):
         self.load()
+        name = provider_name
         info = self._d[name]
 
         filters = []
@@ -70,7 +80,7 @@ class ProvidersDict(MutableMapping):
         if filters:
             info = copy.deepcopy(info)
             for func in filters:
-                ret = func(name, info)
+                ret = func(info=info, provider=name, email=email_address)
                 if ret is not None:
                     info = ret
 
@@ -177,11 +187,17 @@ class ProvidersDict(MutableMapping):
             providers.
 
         func : callable
-            A function that accepts the arguments `name`, and `info`,
-            and returns a dictionary of provider info.
+            A function that accepts the keyword arguments `info`, `provider`,
+            and `email` and returns a dictionary of provider info.
 
             `info` is a copy of the provider dictionary, so it should be safe
             to modify.
+
+        Experimental
+        ------------
+
+        This function is experimental; It may change or be removed in a future
+        release without warning.
         """
         if not callable(func):
             raise TypeError('func should be callable')

@@ -19,7 +19,7 @@ def connect_account(provider, email, pw):
     IMAPClient.error
         If the credentials are invalid.
     """
-    info = provider_info(provider)
+    info = provider_info(provider, email)
     host, port = info['imap']
     try:
         conn = IMAPClient(host, port=port, use_uid=True, ssl=True)

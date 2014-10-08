@@ -37,8 +37,8 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         self.syncmanager_lock = db_write_lock(account.namespace.id)
         self.refresh_flags_max = refresh_flags_max
 
-        provider_supports_condstore = provider_info(account.provider).get(
-            'condstore', False)
+        provider_supports_condstore = provider_info(
+            account.provider, account.email_address).get('condstore', False)
         account_supports_condstore = getattr(account, 'supports_condstore',
                                              False)
         if provider_supports_condstore or account_supports_condstore:

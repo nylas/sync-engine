@@ -42,7 +42,7 @@ class ImapGmailPlugin(DumpGmailMixin):
         return account.provider == 'gmail'
 
     def slurp_namespace(self, namespace, account, db):
-        info = provider_info(account.provider)
+        info = provider_info(account.provider, account.email_address)
         host, port = info['imap']
 
         imap = IMAPClient(host, port=port, use_uid=True, ssl=True)

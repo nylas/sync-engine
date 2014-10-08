@@ -44,7 +44,8 @@ class SMTPConnection(object):
         self.account_id = account_id
         self.email_address = email_address
         self.provider_name = provider_name
-        self.auth_type = provider_info(self.provider_name)['auth']
+        self.auth_type = provider_info(self.provider_name,
+                                       self.email_address)['auth']
         self.auth_token = auth_token
         self.connection = connection
         self.log = log
@@ -156,7 +157,8 @@ class SMTPConnection(object):
 
     def reconnect(self):
         try:
-            host, port = provider_info(self.provider_name)['smtp']
+            host, port = provider_info(self.provider_name,
+                                       self.email_address)['smtp']
             self.connection.connect(host, port)
         except smtplib.SMTPConnectError:
             self.log.error('SMTPConnectError')
@@ -197,7 +199,8 @@ class BaseSMTPClient(object):
 
             self.sent_folder = account.sent_folder.name
 
-            self.auth_type = provider_info(self.provider_name)['auth']
+            self.auth_type = provider_info(self.provider_name,
+                                           self.email_address)['auth']
 
             if self.auth_type == 'oauth2':
                 try:
@@ -273,7 +276,8 @@ class BaseSMTPClient(object):
 
     def _get_connection(self):
         try:
-            host, port = provider_info(self.provider_name)['smtp']
+            host, port = provider_info(self.provider_name,
+                                       self.email_address)['smtp']
             connection = smtplib.SMTP()
             # connection.set_debuglevel(2)
             connection.connect(host, port)
