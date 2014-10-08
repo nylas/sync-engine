@@ -29,6 +29,13 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
         """
         raise NotImplementedError
 
+    # TODO(dlitz): There should perhaps be a 'provider_info' property here.
+
+    @property
+    def auth_handler(self):
+        from inbox.auth import handler_from_provider
+        return handler_from_provider(self.provider)
+
     def verify(self):
         """ Verify that the account is still valid."""
         raise NotImplementedError

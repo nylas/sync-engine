@@ -6,6 +6,7 @@ import sqlalchemy.orm.exc
 from inbox.log import get_logger
 log = get_logger()
 
+from inbox.auth import AuthHandler
 from inbox.auth.oauth import connect_account as oauth_connect_account
 from inbox.auth.oauth import verify_account as oauth_verify_account
 from inbox.oauth import oauth_authorize_console
@@ -86,3 +87,19 @@ def connect_account(provider, email, pw):
 
 def verify_account(account):
     return oauth_verify_account(account)
+
+
+class OutlookAuthHandler(AuthHandler):
+    connect_account = staticmethod(connect_account)
+    create_account = staticmethod(create_account)
+    create_auth_account = staticmethod(create_auth_account)
+    verify_account = staticmethod(verify_account)
+
+    OAUTH_CLIENT_ID = OAUTH_CLIENT_ID
+    OAUTH_CLIENT_SECRET = OAUTH_CLIENT_SECRET
+    OAUTH_REDIRECT_URI = OAUTH_REDIRECT_URI
+    OAUTH_AUTHENTICATE_URL = OAUTH_AUTHENTICATE_URL
+    OAUTH_ACCESS_TOKEN_URL = OAUTH_ACCESS_TOKEN_URL
+    OAUTH_USER_INFO_URL = OAUTH_USER_INFO_URL
+    OAUTH_BASE_URL = OAUTH_BASE_URL
+    OAUTH_SCOPE = OAUTH_SCOPE

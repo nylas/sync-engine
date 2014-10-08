@@ -2,7 +2,7 @@
 import datetime
 import pytest
 from collections import namedtuple
-from inbox.auth.generic import create_account
+from inbox.auth.generic import GenericAuthHandler
 
 
 MockMessage = namedtuple('Message', ['subject'])
@@ -30,8 +30,8 @@ def folder_sync_engine(db, monkeypatch):
     # setup a dummy FolderSyncEngine - we only need to call a couple
     # methods.
     email = "inboxapptest1@fastmail.fm"
-    account = create_account(db.session, email,
-                             {"email": email, "password": "BLAH"})
+    account = GenericAuthHandler().create_account(
+        db.session, email, {"email": email, "password": "BLAH"})
     Tag.create_canonical_tags(account.namespace, db.session)
     db.session.add(account)
     db.session.commit()

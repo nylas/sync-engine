@@ -70,6 +70,7 @@ def new_token(provider_module, refresh_token, client_id=None,
     except AttributeError:
         log.error("Provider module must define OAUTH_CLIENT_ID,"
                   "OAUTH_CLIENT_SECRET and OAUTH_ACCESS_TOKEN_URL")
+        raise
 
     args = {
         'refresh_token': refresh_token,

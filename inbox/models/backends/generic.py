@@ -48,8 +48,7 @@ class GenericAccount(ImapAccount):
         self.secret.type = 'password'
 
     def verify(self):
-        from inbox.auth.generic import verify_account
-        return verify_account(self)
+        return self.auth_handler.verify_account(self)
 
     @property
     def thread_cls(self):
