@@ -191,8 +191,9 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
         self.sync_host = sync_host
 
         # Never run before
-        if self.sync_state is None and \
-                self._sync_status.get('sync_end_time') is None:
+        if self.sync_state is None and (
+                not self._sync_status or
+                self._sync_status.get('sync_end_time') is None):
             self._sync_status['sync_type'] = 'new'
             self._sync_status['sync_start_time'] = datetime.utcnow()
         # Restarting stopped/killed

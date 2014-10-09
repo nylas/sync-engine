@@ -148,7 +148,8 @@ class SyncService(object):
                     acc.start_sync(fqdn)
                     db_session.add(acc)
                     db_session.commit()
-                    self.log.info('sync started', account_id=account_id)
+                    self.log.info('Sync started', account_id=account_id,
+                                  sync_host=fqdn)
                 except Exception as e:
                     self.log.error('sync_error', message=str(e.message),
                                    account_id=account_id)
@@ -164,23 +165,22 @@ class SyncService(object):
         with session_scope() as db_session:
             acc = db_session.query(Account).get(account_id)
             if acc is None:
-                self.log.error('no such account', account_id=account_id)
+                self.log.error('No such account', account_id=account_id)
                 return
             fqdn = platform.node()
             if (acc.id not in self.monitors) or \
                     (not acc.sync_enabled):
-                self.log.info('sync not local', account_id=account_id)
+                self.log.info('Sync not local', account_id=account_id)
             try:
                 if acc.sync_host is None:
-                    self.log.info('sync not enabled', account_id=account_id)
-
-                if acc.sync_host == fqdn:
+                    self.log.info('Sync not enabled', account_id=account_id)
+                elif acc.sync_host == fqdn:
                     acc.sync_stopped()
                     db_session.add(acc)
                     db_session.commit()
                 else:
-                    self.log.error("Sync Host Mismatch",
-                                   message="acct.sync_host ({}) != FQDN ({})"
+                    self.log.error('Sync Host Mismatch',
+                                   message='acct.sync_host ({}) != FQDN ({})'
                                            .format(acc.sync_host, fqdn),
                                    account_id=account_id)
 
