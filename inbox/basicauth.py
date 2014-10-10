@@ -25,6 +25,10 @@ class NotSupportedError(AuthError):
     pass
 
 
+class PermissionsError(Exception):
+    pass
+
+
 def password_auth(email_address, token, exit, username_prompt=False):
     password_message = 'Password for {0} (hidden): '
 

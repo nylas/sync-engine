@@ -1,7 +1,7 @@
 import pytest
 
 from tests.util.base import config
-from tests.util.base import (contact_sync, contacts_provider,
+from tests.util.base import (contact_sync, contacts_provider, default_account,
                              ContactsProviderStub)
 
 # Need to set up test config before we can import from
@@ -159,3 +159,15 @@ def test_deletes(contacts_provider, contact_sync, db):
 
     num_current_contacts = db.session.query(Contact).count()
     assert num_current_contacts == num_original_contacts
+
+
+def test_auth_error_handling(contact_sync, db):
+    """Test that the contact sync greenlet stops if account credentials are
+    invalid."""
+    # Give the default test account patently invalid OAuth credentials.
+    default_account.refresh_token = 'foo'
+    db.session.commit()
+
+    contact_sync.start()
+    contact_sync.join(timeout=5)
+    assert contact_sync.successful(), "contact sync greenlet didn't terminate."

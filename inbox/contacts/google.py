@@ -8,7 +8,7 @@ import gdata.contacts.client
 
 from inbox.log import get_logger
 logger = get_logger()
-from inbox.basicauth import ConnectionError
+from inbox.basicauth import ConnectionError, ValidationError, PermissionsError
 from inbox.oauth import OAuthError
 from inbox.models.session import session_scope
 from inbox.models import Contact
@@ -70,17 +70,17 @@ class GoogleContactsProvider(BaseSyncProvider):
                 google_client.auth_token = two_legged_oauth_token
                 return google_client
             except (gdata.client.BadAuthentication, OAuthError):
-                self.log.error('Invalid user credentials given')
+                self.log.info('Invalid user credentials given')
                 account.sync_state = 'invalid'
                 db_session.add(account)
                 db_session.commit()
-                return None
+                raise ValidationError
             except ConnectionError:
                 self.log.error('Connection error')
                 account.sync_state = 'connerror'
                 db_session.add(account)
                 db_session.commit()
-                return None
+                raise
 
     def _parse_contact_result(self, google_contact):
         """Constructs a Contact object from a Google contact entry.
@@ -147,6 +147,12 @@ class GoogleContactsProvider(BaseSyncProvider):
         ------
         ..models.tables.base.Contact
             The contacts that have been updated since the last account sync.
+
+        Raises
+        ------
+        ValidationError, PermissionsError
+            If no data could be fetched because of invalid credentials or
+            insufficient permissions, respectively.
         """
         query = gdata.contacts.client.ContactsQuery()
         # TODO(emfree): Implement batch fetching
@@ -157,14 +163,11 @@ class GoogleContactsProvider(BaseSyncProvider):
         query.updated_min = sync_from_time
         query.showdeleted = True
         google_client = self._get_google_client()
-        # Return an empty result list if we couldn't create an API client, or
-        # if we get a RequestError
-        if google_client is None:
-            self.log.error('could not create contacts client')
-            return []
         try:
             results = google_client.GetContacts(q=query).entry
             return [self._parse_contact_result(result) for result in results]
-        except gdata.client.RequestError:
-            self.log.warning('contact sync request error', exc_info=True)
-            return []
+        except gdata.client.RequestError as e:
+            # This is nearly always because we authed with Google OAuth
+            # credentials for which the contacts API is not enabled.
+            self.log.info('contact sync request failure', message=e)
+            raise PermissionsError('contact sync request failure')
