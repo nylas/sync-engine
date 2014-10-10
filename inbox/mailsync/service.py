@@ -75,19 +75,31 @@ class SyncService(object):
         while self.keep_running:
             # Determine which accounts need to be started
             with session_scope() as db_session:
-                sync_on_this_node = or_(Account.sync_state.is_(None),
-                                        Account.sync_host == platform.node())
-                sync_explicitly_stopped = and_(Account.sync_state == 'stopped',
-                                               Account.sync_state.isnot(None))
+                # Always start a new sync: both sync_host, sync_state are NULL
+                start = and_(Account.sync_host.is_(None),
+                             Account.sync_state.is_(None))
+
+                # Don't restart a previous sync if it's sync_host is not
+                # this node (i.e. it's running elsewhere),
+                # was explicitly stopped or
+                # killed due to invalid credentials
+                dont_start = or_(Account.sync_host != platform.node(),
+                                 Account.sync_state.in_(['stopped',
+                                                         'invalid']))
+
+                # Start IFF an account IS in the set of startable syncs OR
+                # NOT in the set of dont_start syncs
+                sync_on_this_node = or_(start, ~dont_start)
+
                 start_on_this_cpu = \
                     (func.mod(Account.id, self.total_cpus) == self.cpu_id)
+
                 start_accounts = \
                     [id_ for id_, in db_session.query(Account.id).filter(
                         sync_on_this_node,
-                        ~sync_explicitly_stopped,
                         start_on_this_cpu)]
 
-            # perform the appropriate action on each account
+            # Perform the appropriate action on each account
             for account_id in start_accounts:
                 if account_id not in self.monitors:
                     self.start_sync(account_id)
