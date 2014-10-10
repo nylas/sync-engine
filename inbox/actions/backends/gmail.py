@@ -72,6 +72,7 @@ def remote_move(account, thread_id, from_folder_name, to_folder_name,
     def fn(account, db_session, crispin_client):
         inbox_folder_name = crispin_client.folder_names()['inbox']
         all_folder_name = crispin_client.folder_names()['all']
+        labels = crispin_client.folder_names().get('labels', [])
         if from_folder_name == inbox_folder_name:
             if to_folder_name == all_folder_name:
                 return _archive(thread_id, crispin_client)
@@ -80,8 +81,8 @@ def remote_move(account, thread_id, from_folder_name, to_folder_name,
                                        db_session)
                 _archive(g_thrid, crispin_client)
                 crispin_client.add_label(g_thrid, to_folder_name)
-        elif from_folder_name in crispin_client.folder_names()['labels']:
-            if to_folder_name in crispin_client.folder_names()['labels']:
+        elif from_folder_name in labels:
+            if to_folder_name in labels:
                 g_thrid = _get_g_thrid(account.namespace.id, thread_id,
                                        db_session)
                 crispin_client.add_label(g_thrid, to_folder_name)
@@ -98,7 +99,7 @@ def remote_move(account, thread_id, from_folder_name, to_folder_name,
             # do nothing if moving to all mail
         elif from_folder_name == all_folder_name:
             g_thrid = _get_g_thrid(account.namespace.id, thread_id, db_session)
-            if to_folder_name in crispin_client.folder_names()['labels']:
+            if to_folder_name in labels:
                 crispin_client.add_label(g_thrid, to_folder_name)
             elif to_folder_name == inbox_folder_name:
                 crispin_client.copy_thread(g_thrid, to_folder_name)
@@ -139,6 +140,8 @@ def remote_delete(account, thread_id, folder_name, db_session):
         inbox_folder = crispin_client.folder_names()['inbox']
         all_folder = crispin_client.folder_names()['all']
         drafts_folder = crispin_client.folder_names()['drafts']
+        # Remove label, keep in All Mail
+        labels = crispin_client.folder_names().get('labels', [])
 
         # Move to All Mail
         if folder_name == inbox_folder:
@@ -147,8 +150,7 @@ def remote_delete(account, thread_id, folder_name, db_session):
         # Note: this only moves *drafts* in the thread, not the whole thread.
         elif folder_name == drafts_folder:
             crispin_client.delete(g_thrid, folder_name)
-        # Remove label, keep in All Mail
-        elif folder_name in crispin_client.folder_names()['labels']:
+        elif folder_name in labels:
             crispin_client.select_folder(
                 crispin_client.folder_names()['all'], uidvalidity_cb)
             crispin_client.remove_label(g_thrid, folder_name)
