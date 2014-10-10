@@ -198,7 +198,7 @@ def uidvalidity_valid(account_id, selected_uidvalidity, folder_name,
         # no row is basically equivalent to UIDVALIDITY == -inf
         return True
     else:
-        return selected_uidvalidity >= cached_uidvalidity
+        return selected_uidvalidity <= cached_uidvalidity
 
 
 def update_folder_info(account_id, session, folder_name, uidvalidity,
