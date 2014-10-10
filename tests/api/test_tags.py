@@ -320,6 +320,10 @@ def test_actions_syncback(patch_network_functions, api_client, db,
     api_client.put_data(thread_path, {'remove_tags': ['unread']})
     api_client.put_data(thread_path, {'remove_tags': ['archive']})
     api_client.put_data(thread_path, {'remove_tags': ['starred']})
+
+    action_log_entries = db.session.query(ActionLog)
+    assert all(log_entry.status == 'pending'
+               for log_entry in action_log_entries)
     gevent.sleep()
 
     # Add and remove tags that should trigger actions
@@ -341,4 +345,5 @@ def test_actions_syncback(patch_network_functions, api_client, db,
     assert ({log_entry.action for log_entry in action_log_entries} ==
             {'mark_read', 'mark_unread', 'archive', 'unarchive', 'star',
              'unstar'})
-    assert all(log_entry.executed for log_entry in action_log_entries)
+    assert all(log_entry.status == 'successful'
+               for log_entry in action_log_entries)

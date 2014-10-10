@@ -48,6 +48,7 @@ ACTION_FUNCTION_MAP = {
 
 
 CONCURRENCY_LIMIT = 3
+ACTION_MAX_NR_OF_RETRIES = 20
 
 
 class SyncbackService(gevent.Greenlet):
@@ -68,7 +69,10 @@ class SyncbackService(gevent.Greenlet):
         # TODO(emfree) handle the case that message/thread objects may have
         # been deleted in the interim.
         with session_scope() as db_session:
-            query = db_session.query(ActionLog).filter(~ActionLog.executed)
+            query = db_session.query(ActionLog).filter(
+                ActionLog.status == 'pending',
+                ActionLog.retries < ACTION_MAX_NR_OF_RETRIES)
+
             if self._scheduled_actions:
                 query = query.filter(
                     ~ActionLog.id.in_(self._scheduled_actions))
@@ -147,7 +151,7 @@ def syncback_worker(semaphore, func, action_log_id, record_id, account_id,
                         func(account_id, record_id, db_session)
                     action_log_entry = db_session.query(ActionLog).get(
                         action_log_id)
-                    action_log_entry.executed = True
+                    action_log_entry.status = 'successful'
                     db_session.commit()
                     log.info('syncback action completed',
                              action_id=action_log_id)
@@ -158,11 +162,24 @@ def syncback_worker(semaphore, func, action_log_id, record_id, account_id,
                 if isinstance(e, ProviderSpecificException):
                     log.warning('Uncaught error', exc_info=True)
                 else:
-                    log_uncaught_errors(log)
+                    log_uncaught_errors(log, account_id=account_id)
 
-                # Wait for a bit, then remove the log id from the scheduled set
-                # so that it can be retried.
+                action_log_entry = db_session.query(ActionLog).get(
+                        action_log_id)
+                action_log_entry.retries += 1
+
+                if action_log_entry.retries == ACTION_MAX_NR_OF_RETRIES:
+                    log.error('Max retries reached, giving up.',
+                              action_id=action_log_id, account_id=account_id)
+                    action_log_entry.status = 'failed'
+
+                db_session.commit()
+
+                # Wait for a bit before retrying
                 gevent.sleep(retry_interval)
+
+                # Remove the entry from the scheduled set so that it can be
+                # retried or given up on.
                 syncback_service.remove_from_schedule(action_log_id)
 
                 # Again, don't raise on exceptions that require

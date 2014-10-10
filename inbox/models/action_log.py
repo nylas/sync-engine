@@ -1,6 +1,5 @@
-from sqlalchemy import Column, Integer, Text, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, Text, ForeignKey, Enum
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql.expression import false
 
 from inbox.sqlalchemy_ext.util import JSON
 from inbox.models.base import MailSyncBase
@@ -74,6 +73,8 @@ class ActionLog(MailSyncBase):
     action = Column(Text(40), nullable=False)
     record_id = Column(Integer, nullable=False)
     table_name = Column(Text(40), nullable=False)
-    executed = Column(Boolean, server_default=false(), nullable=False)
+    status = Column(Enum('pending', 'successful', 'failed'),
+                    server_default='pending')
+    retries = Column(Integer, server_default='0', nullable=False)
 
     extra_args = Column(JSON, nullable=True)

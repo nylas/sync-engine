@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.38, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.37, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.5.38-0ubuntu0.12.04.1-log
+-- Server version	5.5.37-0ubuntu0.12.04.1-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -103,15 +103,16 @@ CREATE TABLE `actionlog` (
   `action` tinytext NOT NULL,
   `record_id` int(11) NOT NULL,
   `table_name` tinytext NOT NULL,
-  `executed` tinyint(1) NOT NULL DEFAULT '0',
   `extra_args` text,
+  `retries` int(11) NOT NULL DEFAULT '0',
+  `status` enum('pending','successful','failed') DEFAULT 'pending',
   PRIMARY KEY (`id`),
   KEY `ix_actionlog_created_at` (`created_at`),
   KEY `ix_actionlog_deleted_at` (`deleted_at`),
   KEY `ix_actionlog_namespace_id` (`namespace_id`),
   KEY `ix_actionlog_updated_at` (`updated_at`),
   CONSTRAINT `actionlog_ibfk_1` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -141,7 +142,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('2f97277cd86d');
+INSERT INTO `alembic_version` VALUES ('5709063bff01');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1564,4 +1565,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-10-07  1:44:00
+-- Dump completed on 2014-10-09 11:57:01
