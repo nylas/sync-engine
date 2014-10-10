@@ -19,6 +19,7 @@ from gevent.coros import BoundedSemaphore
 import geventconnpool
 
 from inbox.util.concurrency import retry
+from inbox.util.itert import chunk
 from inbox.util.misc import or_none, timed
 from inbox.basicauth import (ConnectionError, ValidationError,
                              TransientConnectionError, AuthError)
@@ -517,6 +518,8 @@ class CrispinClient(object):
                      for uid, msg in data.iteritems()])
 
     def copy_uids(self, uids, to_folder):
+        if not uids:
+            return
         uids = [str(u) for u in uids]
         self.conn.copy(uids, to_folder)
 
@@ -541,6 +544,16 @@ class CrispinClient(object):
                 self.selected_folder_name)
 
         self.conn.append(self.selected_folder_name, message, ['\\Draft'], date)
+
+    def fetch_headers(self, uids):
+        """Fetch headers for the given uids. Chunked because certain providers
+        fail with 'Command line too large' if you feed them too many uids at
+        once."""
+        headers = {}
+        for uid_chunk in chunk(uids, 100):
+            headers.update(self.conn.fetch(
+                uid_chunk, ['BODY.PEEK[HEADER]']))
+        return headers
 
     def delete_draft(self, inbox_uid):
         """
@@ -567,8 +580,7 @@ class CrispinClient(object):
         # see if we can find one that matches.
         # TODO(emfree): are there other ways we can narrow the result set a
         # priori (by subject or date, etc.)
-        matching_draft_headers = self.conn.fetch(
-            all_draft_uids, ['BODY.PEEK[HEADER]'])
+        matching_draft_headers = self.fetch_headers(all_draft_uids)
         for uid, response in matching_draft_headers.iteritems():
             headers = response['BODY[HEADER]']
             parser = HeaderParser()
@@ -588,8 +600,7 @@ class CrispinClient(object):
                 self.conn.select_folder(self.folder_names()['trash'])
 
                 all_trash_uids = self.conn.search()
-                all_trash_headers = self.conn.fetch(all_trash_uids,
-                                                    ['BODY.PEEK[HEADER]'])
+                all_trash_headers = self.fetch_headers(all_trash_uids)
                 for u, r in all_trash_headers.iteritems():
                     x_inbox_header = HeaderParser().parsestr(
                         r['BODY[HEADER]']).get('X-Inbox-Id')
