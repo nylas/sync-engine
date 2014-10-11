@@ -28,8 +28,8 @@ class Participant(MailSyncBase, HasEmailAddress, HasPublicID):
 
     def copy_from(self, src):
         if src.status is None:
-            log.error("CopyError", src=src.id)
-            assert False
+            src.status = 'noreply'
+            self.status = 'noreply'
         self.email_address = src.email_address
         self.status = src.status
         self.name = src.name
