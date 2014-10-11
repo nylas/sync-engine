@@ -42,6 +42,10 @@ def uidvalidity_cb(account_id, folder_name, select_info):
     pass
 
 
+# Because we wrap with retry_crispin here, IMAP syncback actions can *in
+# theory* be retried up to 5 * ACTION_MAX_NR_OF_RETRIES times in total. In
+# practice, failures handled by retry_crispin should generally resolve
+# immediately after getting a new connection.
 @retry_crispin
 def syncback_action(fn, account, folder_name, db_session):
     """ `folder_name` is a provider folder name, not a local tag
