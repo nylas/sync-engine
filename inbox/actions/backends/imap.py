@@ -31,13 +31,7 @@ the possible cases for IMAP message changes:
 We don't currently handle these operations on the special folders 'junk',
 'trash', 'sent', 'flagged'.
 """
-from inbox.crispin import writable_connection_pool
-from inbox.basicauth import ConnectionError, TransientConnectionError
-import gevent
-import random
-from inbox.log import get_logger
-
-logger = get_logger()
+from inbox.crispin import writable_connection_pool, retry_crispin
 
 
 def uidvalidity_cb(account_id, folder_name, select_info):
@@ -48,6 +42,7 @@ def uidvalidity_cb(account_id, folder_name, select_info):
     pass
 
 
+@retry_crispin
 def syncback_action(fn, account, folder_name, db_session):
     """ `folder_name` is a provider folder name, not a local tag
 
@@ -58,27 +53,6 @@ def syncback_action(fn, account, folder_name, db_session):
 
     # NOTE: This starts a *new* IMAP session every time---we will want
     # to optimize this at some point. But for now, it's most correct.
-    for i in range(2):
-        with writable_connection_pool(account.id).get() as crispin_client:
-            try:
-                crispin_client.select_folder(folder_name, uidvalidity_cb)
-                fn(account, db_session, crispin_client)
-                return
-            except TransientConnectionError:
-                # this was probably a transient server error --
-                # back off and retry once:
-                if i == 2:
-                    # retry only once
-                    logger.error("Error syncing back - second error in a row",
-                                 account_id=account.id)
-                    account.sync_state = 'connerror'
-                    raise
-
-                # wait a random delay because
-                # we don't want to be hammering the server all at once.
-                gevent.sleep(random.uniform(1, 10))
-                continue
-            except ConnectionError:
-                logger.error("Error syncing back", account_id=account.id)
-                account.sync_state = 'connerror'
-                raise
+    with writable_connection_pool(account.id).get() as crispin_client:
+            crispin_client.select_folder(folder_name, uidvalidity_cb)
+            return fn(account, db_session, crispin_client)
