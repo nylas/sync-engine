@@ -42,7 +42,7 @@ GmailFlags = namedtuple('GmailFlags', 'flags labels')
 GMetadata = namedtuple('GMetadata', 'msgid thrid')
 RawMessage = namedtuple(
     'RawImapMessage',
-    'uid internaldate flags body g_thrid g_msgid g_labels created')
+    'uid internaldate flags body g_thrid g_msgid g_labels')
 
 # We will retry a couple of times for transient errors, such as an invalid
 # access token or the server being temporariliy unavailable.
@@ -508,7 +508,7 @@ class CrispinClient(object):
                                        # TODO: use data structure that isn't
                                        # Gmail-specific
                                        g_thrid=None, g_msgid=None,
-                                       g_labels=None, created=None))
+                                       g_labels=None))
         return messages
 
     def flags(self, uids):
@@ -758,8 +758,7 @@ class GmailCrispinClient(CondStoreCrispinClient):
                                        body=msg['BODY[]'],
                                        g_thrid=long(msg['X-GM-THRID']),
                                        g_msgid=long(msg['X-GM-MSGID']),
-                                       g_labels=msg['X-GM-LABELS'],
-                                       created=False))
+                                       g_labels=msg['X-GM-LABELS']))
         return messages
 
     def g_metadata(self, uids):

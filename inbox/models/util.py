@@ -38,4 +38,5 @@ def reconcile_message(new_message, session):
     if new_message.inbox_uid is not None:
         return session.query(Message).filter(
             Message.namespace_id == new_message.namespace_id,
-            Message.inbox_uid == new_message.inbox_uid).first()
+            Message.inbox_uid == new_message.inbox_uid,
+            Message.is_created == True).first()

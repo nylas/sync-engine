@@ -140,11 +140,12 @@ def update_draft(db_session, account, original_draft, to_addr=None,
                     original_draft.namespace.id, db_session,
                     inbox_uid=original_draft.inbox_uid)
 
-    # Update version  + inbox_uid, sync to remote
+    # Update version  + inbox_uid (is_created is already set)
     version = generate_public_id()
     update('version', version)
     update('inbox_uid', version)
 
+    # Sync to remote
     schedule_action('save_draft', original_draft, original_draft.namespace.id,
                     db_session)
 

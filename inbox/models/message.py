@@ -147,9 +147,10 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         return value
 
     @classmethod
-    def create_from_synced(cls, account, mid, folder_name,
-                           received_date, body_string):
-        """ Parses message data and writes out db metadata and MIME blocks.
+    def create_from_synced(cls, account, mid, folder_name, received_date,
+                           body_string):
+        """
+        Parses message data and writes out db metadata and MIME blocks.
 
         Returns the new Message, which links to the new Part and Block objects
         through relationships. All new objects are uncommitted.
@@ -164,12 +165,13 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
         raw_message : str
             The full message including headers (encoded).
+
         """
         _rqd = [account, mid, folder_name, body_string]
         if not all([v is not None for v in _rqd]):
             raise ValueError(
-                "Required keyword arguments: account, mid, folder_name, "
-                "body_string")
+                'Required keyword arguments: account, mid, folder_name, '
+                'body_string')
         # stop trickle-down bugs
         assert account.namespace is not None
         assert not isinstance(body_string, unicode)
@@ -181,7 +183,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             parsed = mime.from_string(body_string)
 
             mime_version = parsed.headers.get('Mime-Version')
-            # sometimes MIME-Version is "1.0 (1.0)", hence the .startswith()
+            # sometimes MIME-Version is '1.0 (1.0)', hence the .startswith()
             if mime_version is not None and not mime_version.startswith('1.0'):
                 log.warning('Unexpected MIME-Version',
                             account_id=account.id, folder_name=folder_name,

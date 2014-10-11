@@ -234,8 +234,8 @@ def create_imap_message(db_session, log, account, folder, msg):
                                          received_date=msg.internaldate,
                                          body_string=msg.body)
 
-    # Check to see if this is a copy of a message that was first created by the
-    # Inbox API. If so, don't create a new object; just use the old one.
+    # Check to see if this is a copy of a message that was first created
+    # by the Inbox API. If so, don't create a new object; just use the old one.
     existing_copy = reconcile_message(new_msg, db_session)
     if existing_copy is not None:
         new_msg = existing_copy
