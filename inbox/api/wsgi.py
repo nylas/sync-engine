@@ -21,9 +21,9 @@ class InboxWSGIHandler(WSGIHandler):
         else:
             client_address = self.client_address
 
-        # client_address is None when requests are forwarded from nginx via
+        # client_address is '' when requests are forwarded from nginx via
         # Unix socket. In that case, replace with a menaingful value
-        if client_address is None:
+        if client_address == '':
             client_address = self.headers.get('X-Forward-For')
         status = getattr(self, 'status', None)
         requestline = getattr(self, 'requestline', None)
