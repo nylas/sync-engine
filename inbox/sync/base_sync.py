@@ -14,9 +14,11 @@ from inbox.models import Account
 
 class BaseSync(gevent.Greenlet):
     def __init__(self, account_id, namespace_id, poll_frequency):
+        self.shutdown = gevent.event.Event()
         self.account_id = account_id
         self.namespace_id = namespace_id
         self.poll_frequency = poll_frequency
+        self.log = logger.new(account_id=account_id)
 
         gevent.Greenlet.__init__(self)
 
@@ -29,8 +31,13 @@ class BaseSync(gevent.Greenlet):
             self.provider_instance = self.provider(self.account_id,
                                                    self.namespace_id)
             while True:
+                # Check to see if this greenlet should exit
+                if self.shutdown.is_set():
+                    return False
+
                 try:
                     self.poll()
+
                 # If we get a connection or API permissions error, then sleep
                 # 2x poll frequency.
                 except (ConnectionError, PermissionsError):

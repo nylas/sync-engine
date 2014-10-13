@@ -3,6 +3,8 @@
 "MYSQL_HOSTNAME": "localhost",
 "MYSQL_PORT": 3306,
 
+"SYNC_STEAL_ACCOUNTS": true,
+
 "DB_POOL_SIZE": 25,
 "TEST_LOGFILE": "tests/log",
 

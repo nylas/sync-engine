@@ -1,7 +1,6 @@
 import functools
 
-from gevent import Greenlet, joinall, sleep, GreenletExit
-from gevent.queue import Queue, Empty
+from gevent import Greenlet, joinall, sleep, GreenletExit, event
 from sqlalchemy.exc import DataError, IntegrityError
 
 from inbox.log import get_logger
@@ -211,7 +210,7 @@ class BaseMailSyncMonitor(Greenlet):
                           IntegrityError, TypeError]
 
     def __init__(self, account, heartbeat=1, retry_fail_classes=[]):
-        self.inbox = Queue()
+        self.shutdown = event.Event()
         # how often to check inbox, in seconds
         self.heartbeat = heartbeat
         self.log = log.new(component='mail sync', account_id=account.id)
@@ -239,18 +238,17 @@ class BaseMailSyncMonitor(Greenlet):
                         account_id=self.account_id, logger=self.log,
                         fail_classes=self.retry_fail_classes)
         sync.start()
+
         while not sync.ready():
-            try:
-                cmd = self.inbox.get_nowait()
-                if not self.process_command(cmd):
-                    # ctrl-c, basically!
-                    self.log.info("Stopping sync", email=self.email_address)
-                    # make sure the parent can't start/stop any folder monitors
-                    # first
-                    sync.kill(block=True)
-                    self.folder_monitors.kill()
-                    return
-            except Empty:
+            if self.shutdown.is_set():
+                # ctrl-c, basically!
+                self.log.info("Stopping sync", email=self.email_address)
+                # make sure the parent can't start/stop any folder monitors
+                # first
+                sync.kill(block=True)
+                self.folder_monitors.kill()
+                return
+            else:
                 sleep(self.heartbeat)
 
         if sync.successful():
