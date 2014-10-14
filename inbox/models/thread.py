@@ -1,7 +1,7 @@
 import itertools
 from collections import defaultdict
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Index
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import relationship, backref, validates, object_session
 
@@ -225,6 +225,13 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
 
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_on': discriminator}
+
+
+# The /threads API endpoint filters on namespace_id and deleted_at, then orders
+# by recentdate; add an explicit index to persuade MySQL to do this in a
+# somewhat performant manner.
+Index('ix_thread_namespace_id_recentdate_deleted_at',
+      Thread.namespace_id, Thread.recentdate, Thread.deleted_at)
 
 
 class TagItem(MailSyncBase):
