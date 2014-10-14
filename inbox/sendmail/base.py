@@ -208,7 +208,7 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
         message.is_created = True
         message.is_draft = True
         message.state = 'draft'
-        message.from_addr = [(account.sender_name, account.email_address)]
+        message.from_addr = [(account.name, account.email_address)]
         # TODO(emfree): we should maybe make received_date nullable, so its
         # value doesn't change in the case of a drafted-and-later-reconciled
         # message.

@@ -19,7 +19,6 @@ class OutlookAccount(ImapAccount, OAuthAccount):
     scope = Column(String(512))
     family_name = Column(String(256))
     given_name = Column(String(256))
-    name = Column(String(256))
     gender = Column(String(16))
     o_id = Column(String(32))  # `id`
     o_id_token = Column(String(1024))  # `id_token`

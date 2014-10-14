@@ -45,6 +45,9 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
         from inbox.models.thread import Thread
         return Thread
 
+    # The default phrase used when sending mail from this account.
+    name = Column(String(256), nullable=False, server_default='')
+
     # If True, throttle initial sync to reduce resource load
     throttled = Column(Boolean, server_default=false())
 
@@ -233,12 +236,6 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
 
         self._sync_status['sync_end_time'] = datetime.utcnow()
         self._sync_status['sync_error'] = error
-
-    @property
-    def sender_name(self):
-        # Used for setting sender information when we send a message.
-        # Can be overridden by subclasses that store account name information.
-        return ''
 
     @classmethod
     def _get_lock_object(cls, account_id, lock_for=dict()):

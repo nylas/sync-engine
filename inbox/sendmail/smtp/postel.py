@@ -189,7 +189,7 @@ class BaseSMTPClient(object):
 
             self.email_address = account.email_address
             self.provider_name = account.provider
-            self.sender_name = account.sender_name
+            self.sender_name = account.name
 
             if account.sent_folder is None:
                 # account has no detected sent folder - create one.

@@ -22,7 +22,6 @@ class GmailAccount(OAuthAccount, ImapAccount):
     access_type = Column(String(64))
     family_name = Column(String(256))
     given_name = Column(String(256))
-    name = Column(String(256))
     gender = Column(String(16))
     g_id = Column(String(32))  # `id`
     g_id_token = Column(String(1024))  # `id_token`
@@ -31,10 +30,6 @@ class GmailAccount(OAuthAccount, ImapAccount):
     locale = Column(String(8))
     picture = Column(String(1024))
     home_domain = Column(String(256))
-
-    @property
-    def sender_name(self):
-        return self.name or ''
 
     @property
     def provider(self):

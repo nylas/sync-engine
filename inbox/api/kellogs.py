@@ -49,6 +49,7 @@ def encode(obj, namespace_public_id=None):
             # Account specific
             'account_id': obj.account.public_id,
             'email_address': obj.account.email_address,
+            'name': obj.account.name,
             'provider': obj.account.provider,
             # 'status':  'syncing',  # TODO what are values here
             # 'last_sync':  1398790077,  # tuesday 4/29
