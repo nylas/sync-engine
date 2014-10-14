@@ -67,6 +67,45 @@ class SyncService(object):
             gevent.kill(v)
         self.keep_running = False
 
+    def _get_local_accounts(self):
+        with session_scope() as db_session:
+            # Whether this node should use a work-stealing style approach
+            # to claiming accounts that don't have a specified sync_host
+            steal = and_(Account.sync_host.is_(None),
+                         config.get('SYNC_STEAL_ACCOUNTS', True))
+
+            # Whether accounts should be claimed via explicis scheduling
+            explicit = Account.sync_host == platform.node()
+
+            # Start new syncs on this node if the sync_host is set
+            # explicitly to this node, or if the sync_host is not set and
+            # this node is configured to use a work-stealing style approach
+            # to scheduling accounts.
+            start = and_(Account.sync_state.is_(None),
+                         or_(steal, explicit))
+
+            # Don't restart a previous sync if it's sync_host is not
+            # this node (i.e. it's running elsewhere),
+            # was explicitly stopped or
+            # killed due to invalid credentials
+            dont_start = or_(Account.sync_host != platform.node(),
+                             Account.sync_state.in_(['stopped',
+                                                     'invalid']))
+
+            # Start IFF an account IS in the set of startable syncs OR
+            # NOT in the set of dont_start syncs
+            sync_on_this_node = or_(start, ~dont_start)
+
+            start_on_this_cpu = \
+                (func.mod(Account.id, self.total_cpus) == self.cpu_id)
+
+            start_accounts = \
+                [id_ for id_, in db_session.query(Account.id).filter(
+                    sync_on_this_node,
+                    start_on_this_cpu)]
+
+            return start_accounts
+
     def _run_impl(self):
         """
         Polls for newly registered accounts and checks for start/stop commands.
@@ -74,41 +113,7 @@ class SyncService(object):
         """
         while self.keep_running:
             # Determine which accounts need to be started
-            with session_scope() as db_session:
-                # Whether this node should use a work-stealing style approach
-                # to claiming accounts that don't have a specified sync_host
-                steal = and_(Account.sync_host.is_(None),
-                             config.get('SYNC_STEAL_ACCOUNTS', True))
-
-                # Whether accounts should be claimed via explicis scheduling
-                explicit = Account.sync_host.is_(platform.node())
-
-                # Start new syncs on this node if the sync_host is set
-                # explicitly to this node, or if the sync_host is not set and
-                # this node is configured to use a work-stealing style approach
-                # to scheduling accounts.
-                start = and_(Account.sync_state.is_(None),
-                             or_(steal, explicit))
-
-                # Don't restart a previous sync if it's sync_host is not
-                # this node (i.e. it's running elsewhere),
-                # was explicitly stopped or
-                # killed due to invalid credentials
-                dont_start = or_(Account.sync_host != platform.node(),
-                                 Account.sync_state.in_(['stopped',
-                                                         'invalid']))
-
-                # Start IFF an account IS in the set of startable syncs OR
-                # NOT in the set of dont_start syncs
-                sync_on_this_node = or_(start, ~dont_start)
-
-                start_on_this_cpu = \
-                    (func.mod(Account.id, self.total_cpus) == self.cpu_id)
-
-                start_accounts = \
-                    [id_ for id_, in db_session.query(Account.id).filter(
-                        sync_on_this_node,
-                        start_on_this_cpu)]
+            start_accounts = self._get_local_accounts()
 
             # Perform the appropriate action on each account
             for account_id in start_accounts:
