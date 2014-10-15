@@ -97,7 +97,9 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
             new, updated = new_or_updated(changed_uids,
                                           local_with_pending_uids)
         if changed_uids:
-            log.info(new_uid_count=len(new), updated_uid_count=len(updated))
+            log.info("Changed UIDs", message="new: {} updated: {}"
+                                             .format(len(new), len(updated)),
+                     new_uid_count=len(new), updated_uid_count=len(updated))
             self.update_metadata(crispin_client, updated)
             self.highestmodseq_callback(crispin_client, new, updated,
                                         download_stack, async_download)
