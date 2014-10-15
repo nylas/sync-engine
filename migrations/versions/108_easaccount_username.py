@@ -17,43 +17,46 @@ import sqlalchemy as sa
 def upgrade():
     from inbox.ignition import main_engine
     engine = main_engine()
-    Base = sa.ext.declarative.declarative_base()
-    Base.metadata.reflect(engine)
+
+    if not engine.has_table('easaccount'):
+        return
 
     # We allow nullable=True because we don't have usernames for existing accounts.
     # Furthermore, we won't always get a username.
-    if 'easaccount' in Base.metadata.tables:
-        from inbox.models.constants import MAX_INDEXABLE_LENGTH
-        from inbox.models.session import session_scope
-        from inbox.models.backends.eas import EASAccount
+    from inbox.models.constants import MAX_INDEXABLE_LENGTH
 
-        op.add_column('easaccount',
-                      sa.Column('username', sa.String(255), nullable=True))
+    op.add_column('easaccount',
+                  sa.Column('username', sa.String(255), nullable=True))
 
-        op.add_column('easaccount',
-                      sa.Column('eas_auth', sa.String(MAX_INDEXABLE_LENGTH),
-                                nullable=True))
+    op.add_column('easaccount',
+                  sa.Column('eas_auth', sa.String(MAX_INDEXABLE_LENGTH),
+                            nullable=True))
 
-        with session_scope(ignore_soft_deletes=False, versioned=False) as \
-                db_session:
-            accts = db_session.query(EASAccount).all()
+    Base = sa.ext.declarative.declarative_base()
+    Base.metadata.reflect(engine)
+    from inbox.models.session import session_scope
 
-            for a in accts:
-                a.eas_auth = a.email_address
-                db_session.add(a)
+    class EASAccount(Base):
+        __table__ = Base.metadata.tables['easaccount']
 
-            db_session.commit()
+    with session_scope(ignore_soft_deletes=False, versioned=False) as \
+            db_session:
+        accts = db_session.query(EASAccount).all()
 
-        op.alter_column('easaccount', 'eas_auth', nullable=False,
-                        existing_type=sa.String(MAX_INDEXABLE_LENGTH))
+        for a in accts:
+            a.eas_auth = a.email_address
+            db_session.add(a)
+
+        db_session.commit()
+
+    op.alter_column('easaccount', 'eas_auth', nullable=False,
+                    existing_type=sa.String(MAX_INDEXABLE_LENGTH))
 
 
 def downgrade():
     from inbox.ignition import main_engine
     engine = main_engine()
-    Base = sa.ext.declarative.declarative_base()
-    Base.metadata.reflect(engine)
 
-    if 'easaccount' in Base.metadata.tables:
+    if engine.has_table('easaccount'):
         op.drop_column('easaccount', 'username')
         op.drop_column('easaccount', 'eas_auth')
