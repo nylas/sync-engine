@@ -55,21 +55,25 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
         if from_addr is not None:
             contact_criteria.append(and_(
                 Contact.email_address == from_addr,
+                Contact.namespace_id == namespace_id,
                 MessageContactAssociation.field == 'from_addr'))
 
         if to_addr is not None:
             contact_criteria.append(and_(
                 Contact.email_address == to_addr,
+                Contact.namespace_id == namespace_id,
                 MessageContactAssociation.field == 'to_addr'))
 
         if cc_addr is not None:
             contact_criteria.append(and_(
                 Contact.email_address == cc_addr,
+                Contact.namespace_id == namespace_id,
                 MessageContactAssociation.field == 'cc_addr'))
 
         if bcc_addr is not None:
             contact_criteria.append(and_(
                 Contact.email_address == bcc_addr,
+                Contact.namespace_id == namespace_id,
                 MessageContactAssociation.field == 'bcc_addr'))
 
         contact_query = db_session.query(Message). \
@@ -81,7 +85,8 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
     if any_email is not None:
         any_contact_query = db_session.query(Message). \
             join(MessageContactAssociation).join(Contact). \
-            filter(Contact.email_address == any_email).subquery()
+            filter(Contact.email_address == any_email,
+                   Contact.namespace_id == namespace_id).subquery()
         query = query.join(any_contact_query)
 
     if filename is not None:
