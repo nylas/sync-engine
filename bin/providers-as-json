@@ -1,0 +1,12 @@
+#!/usr/bin/env python
+# Export the providers list as JSON.
+
+from __future__ import absolute_import, division, print_function
+
+import json
+import sys
+
+from inbox.providers import providers
+
+if __name__ == '__main__':
+    print(json.dumps(dict(providers)))
