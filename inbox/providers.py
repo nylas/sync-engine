@@ -284,7 +284,9 @@ get_default_providers = lambda: {
                        "alt1.gmail-smtp-in.l.google.com",
                        "alt2.gmail-smtp-in.l.google.com",
                        "alt3.gmail-smtp-in.l.google.com",
-                       "alt4.gmail-smtp-in.l.google.com"],
+                       "alt4.gmail-smtp-in.l.google.com",
+                       # Postini
+                       ".*.psmtp.com"],
     },
     "gmx": {
         "type": "generic",

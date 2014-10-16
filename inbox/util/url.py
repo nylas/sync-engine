@@ -1,3 +1,4 @@
+import dns
 from dns.resolver import Resolver
 from dns.resolver import NoNameservers, NXDOMAIN, Timeout, NoAnswer
 from urllib import urlencode
@@ -12,12 +13,25 @@ EMAIL_REGEX = re.compile(r'[A-Z0-9._%+-]+@(?:[A-Z0-9-]+\.)+[A-Z]{2,4}',
                          re.IGNORECASE)
 
 # Use Google's Public DNS server (8.8.8.8)
+GOOGLE_DNS_IP = '8.8.8.8'
 dns_resolver = Resolver()
-dns_resolver.nameservers = ['8.8.8.8']
+dns_resolver.nameservers = [GOOGLE_DNS_IP]
 
 
 class InvalidEmailAddressError(Exception):
     pass
+
+
+def _fallback_get_mx_domains(domain):
+    """Sometimes dns.resolver.Resolver fails to return what we want. See
+    http://stackoverflow.com/questions/18898847. In such cases, try using
+    dns.query.udp()."""
+    try:
+        query = dns.message.make_query(domain, dns.rdatatype.MX)
+        answer = dns.query.udp(query, GOOGLE_DNS_IP).answer[0]
+        return [str(item.exchange).lower() for item in answer]
+    except:
+        return []
 
 
 def provider_from_address(email_address):
@@ -28,6 +42,7 @@ def provider_from_address(email_address):
     mx_records = []
     try:
         mx_records = dns_resolver.query(domain, 'MX')
+        mx_domains = [str(rdata.exchange).lower() for rdata in mx_records]
     except NoNameservers:
         log.error("NoMXservers error", domain=domain)
     except NXDOMAIN:
@@ -36,6 +51,7 @@ def provider_from_address(email_address):
         log.error("Timed out while resolving", domain=domain)
     except NoAnswer:
         log.error("Provider didn't answer", domain=domain)
+        mx_domains = _fallback_get_mx_domains(domain)
 
     ns_records = []
     try:
@@ -56,10 +72,8 @@ def provider_from_address(email_address):
         if domain in domains:
             return p_name
 
-        valid = len(mx_records)
-        for rdata in mx_records:
-            mx_domain = str(rdata.exchange).lower()
-
+        valid = len(mx_domains)
+        for mx_domain in mx_domains:
             # Depending on how the MX server is configured, domain may
             # refer to a relative name or to an absolute one.
             # FIXME @karim: maybe resolve the server instead.
