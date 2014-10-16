@@ -639,8 +639,11 @@ class CondStoreCrispinClient(CrispinClient):
 
     @timed
     def new_and_updated_uids(self, modseq):
-        return sorted([long(s) for s in self.conn.search(
-            ['NOT DELETED', "MODSEQ {}".format(modseq)])])
+        resp = self.conn.fetch('1:*', ['FLAGS'],
+                               modifiers=['CHANGEDSINCE {}'.format(modseq)])
+        # TODO(emfree): It may be useful to hold on to the whole response here
+        # and/or fetch more metadata, not just return the UIDs.
+        return sorted(resp.keys())
 
 
 class GmailCrispinClient(CondStoreCrispinClient):
