@@ -189,6 +189,7 @@ class BaseSMTPClient(object):
 
             self.email_address = account.email_address
             self.provider_name = account.provider
+            self.smtp_endpoint = account.smtp_endpoint
             self.sender_name = account.name
 
             if account.sent_folder is None:

@@ -39,7 +39,7 @@ def provider_from_address(email_address):
         raise InvalidEmailAddressError('Invalid email address')
 
     domain = email_address.split('@')[1].lower()
-    mx_records = []
+    mx_domains = []
     try:
         mx_records = dns_resolver.query(domain, 'MX')
         mx_domains = [str(rdata.exchange).lower() for rdata in mx_records]
