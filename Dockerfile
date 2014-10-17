@@ -33,13 +33,19 @@ ENV INBOX_srv /srv/inbox
 
 WORKDIR /srv/inbox
 
+RUN useradd -ms /bin/bash admin
+
 RUN pip install -r ./requirements.txt && \
     apt-get -y purge build-essential && \
     apt-get -y autoremove && \
     mkdir -p /var/lib/inboxapp && \
     mkdir -p /var/log/inboxapp
 
+USER admin
 ADD . /srv/inbox
 
+USER root
 RUN pip install -e .
+
+USER admin
 
