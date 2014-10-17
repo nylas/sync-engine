@@ -2,6 +2,7 @@ from imapclient import IMAPClient
 
 from socket import gaierror, error as socket_error
 from ssl import SSLError
+from inbox.providers import provider_info
 from inbox.basicauth import (ConnectionError, ValidationError,
                              TransientConnectionError)
 from inbox.log import get_logger
