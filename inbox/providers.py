@@ -387,6 +387,15 @@ get_default_providers = lambda: {
         "domains": ["mrmail.com"],
         "mx_servers": ["mx.mrmail.com"]
     },
+    "godaddy": {
+        "type": "generic",
+        "imap": ("imap.secureserver.net", 993),
+        "smtp": ("smtpout.secureserver.net", 587),
+        "auth": "password",
+        "mx_servers": ["mailstore1.secureserver.net",
+                       "mailstore1.asia.secureserver.net",
+                       "mailstore1.europe.secureserver.net"]
+    },
 }
 
 
