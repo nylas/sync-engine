@@ -128,7 +128,8 @@ class ImapFolderInfo(MailSyncBase):
                            primaryjoin='and_('
                            'ImapFolderInfo.account_id == ImapAccount.id, '
                            'ImapAccount.deleted_at == None)')
-    folder_id = Column(Integer, ForeignKey('folder.id'), nullable=False)
+    folder_id = Column(Integer, ForeignKey('folder.id', ondelete='CASCADE'),
+                       nullable=False)
     # We almost always need the folder name too, so eager load by default.
     primaryjoin = 'and_(ImapFolderInfo.folder_id == Folder.id, ' \
                   'Folder.deleted_at.is_(None))'
@@ -136,7 +137,8 @@ class ImapFolderInfo(MailSyncBase):
                   'ImapFolderInfo.deleted_at == None)'
     folder = relationship('Folder', lazy='joined',
                           backref=backref('imapfolderinfo',
-                                          primaryjoin=backrefjoin),
+                                          primaryjoin=backrefjoin,
+                                          passive_deletes=True),
                           primaryjoin=primaryjoin)
     uidvalidity = Column(BigInteger, nullable=False)
     # Invariant: the local datastore for this folder has always incorporated
@@ -228,12 +230,14 @@ class ImapFolderSyncStatus(MailSyncBase):
         'ImapFolderSyncStatus.account_id == ImapAccount.id, '
         'ImapAccount.deleted_at.is_(None))')
 
-    folder_id = Column(Integer, ForeignKey('folder.id'), nullable=False)
+    folder_id = Column(Integer, ForeignKey('folder.id', ondelete='CASCADE'),
+                       nullable=False)
     # We almost always need the folder name too, so eager load by default.
     folder = relationship('Folder', lazy='joined', backref=backref(
         'imapsyncstatus', primaryjoin='and_('
         'Folder.id == ImapFolderSyncStatus.folder_id, '
-        'ImapFolderSyncStatus.deleted_at == None)'),
+        'ImapFolderSyncStatus.deleted_at == None)',
+        passive_deletes=True),
         primaryjoin='and_(ImapFolderSyncStatus.folder_id == Folder.id, '
         'Folder.deleted_at == None)')
 

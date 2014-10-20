@@ -143,7 +143,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('22d076f48b88');
+INSERT INTO `alembic_version` VALUES ('26911668870a');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -783,7 +783,7 @@ CREATE TABLE `imapfolderinfo` (
   KEY `ix_uidvalidity_deleted_at` (`deleted_at`),
   KEY `ix_uidvalidity_updated_at` (`updated_at`),
   KEY `imapfolderinfo_ibfk_2` (`folder_id`),
-  CONSTRAINT `imapfolderinfo_ibfk_2` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`),
+  CONSTRAINT `imapfolderinfo_ibfk_3` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`) ON DELETE CASCADE,
   CONSTRAINT `imapfolderinfo_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `imapaccount` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -820,7 +820,7 @@ CREATE TABLE `imapfoldersyncstatus` (
   KEY `ix_foldersync_deleted_at` (`deleted_at`),
   KEY `ix_foldersync_updated_at` (`updated_at`),
   KEY `imapfoldersyncstatus_ibfk_2` (`folder_id`),
-  CONSTRAINT `imapfoldersyncstatus_ibfk_2` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`),
+  CONSTRAINT `imapfoldersyncstatus_ibfk_3` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`) ON DELETE CASCADE,
   CONSTRAINT `imapfoldersyncstatus_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `imapaccount` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1565,4 +1565,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-10-14 19:24:24
+-- Dump completed on 2014-10-20 22:15:42
