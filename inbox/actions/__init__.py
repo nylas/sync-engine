@@ -158,7 +158,7 @@ def save_draft(account_id, message_id, db_session):
 
     remote_save_draft = module_registry[account.provider].remote_save_draft
     remote_save_draft(account, account.drafts_folder.name,
-                      mimemsg.to_string(), message.created_at)
+                      mimemsg.to_string(), db_session, message.created_at)
 
 
 def delete_draft(account_id, draft_id, db_session, args):
