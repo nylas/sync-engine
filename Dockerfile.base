@@ -35,3 +35,4 @@ RUN pip install -r ./requirements.txt && \
     mkdir -p /var/lib/inboxapp && \
     mkdir -p /var/log/inboxapp
 
+RUN useradd -ms /bin/bash admin
