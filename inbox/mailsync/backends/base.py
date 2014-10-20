@@ -241,19 +241,18 @@ class BaseMailSyncMonitor(Greenlet):
 
         while not sync.ready():
             if self.shutdown.is_set():
-                # ctrl-c, basically!
-                self.log.info("Stopping sync", email=self.email_address)
-                # make sure the parent can't start/stop any folder monitors
+                # Ctrl-c, basically!
+                self.log.info('Stopping sync', email=self.email_address)
+                # Make sure the parent can't start/stop any folder monitors
                 # first
                 sync.kill(block=True)
-                self.folder_monitors.kill()
-                return
+
+                return self._cleanup()
             else:
                 sleep(self.heartbeat)
 
         if sync.successful():
-            self.folder_monitors.kill()
-            return
+            return self._cleanup()
 
         # We just want the name of the exception so don't bother with
         # sys.exc_info()
@@ -265,16 +264,24 @@ class BaseMailSyncMonitor(Greenlet):
 
     def process_command(self, cmd):
         """ Returns True if successful, or False if process should abort. """
-        self.log.info("processing command {0}".format(cmd))
+        self.log.info('processing command', cmd=cmd)
         return cmd != 'shutdown'
-
-    def _thread_finished(self, thread):
-        state = getattr(thread, 'state')
-        return state == 'finish'
-
-    def _thread_polling(self, thread):
-        state = getattr(thread, 'state')
-        return state is not None and state.startswith('poll')
 
     def sync(self):
         raise NotImplementedError
+
+    def _cleanup(self):
+        self.folder_monitors.kill()
+
+
+def _check_thread_state(thread, is_state):
+    state = getattr(thread, 'state')
+    return state == is_state or (state and state.startswith(is_state))
+
+
+def thread_finished(thread):
+    return _check_thread_state(thread, 'finish')
+
+
+def thread_polling(thread):
+    return _check_thread_state(thread, 'poll')

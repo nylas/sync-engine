@@ -8,30 +8,31 @@ from inbox.models.util import db_write_lock
 from inbox.mailsync.backends.base import BaseMailSyncMonitor
 from inbox.mailsync.backends.base import (save_folder_names,
                                           MailsyncError,
-                                          mailsync_session_scope)
+                                          mailsync_session_scope,
+                                          thread_polling, thread_finished)
 from inbox.mailsync.backends.imap.generic import _pool, FolderSyncEngine
 from inbox.mailsync.backends.imap.condstore import CondstoreFolderSyncEngine
 log = get_logger()
 
 
 class ImapSyncMonitor(BaseMailSyncMonitor):
-    """ Top-level controller for an account's mail sync. Spawns individual
-        FolderSync greenlets for each folder.
+    """
+    Top-level controller for an account's mail sync. Spawns individual
+    FolderSync greenlets for each folder.
 
-        Parameters
-        ----------
-        poll_frequency: Integer
-            Seconds to wait between polling for the greenlets spawned
-        heartbeat: Integer
-            Seconds to wait between checking on folder sync threads.
-        refresh_flags_max: Integer
-            the maximum number of UIDs for which we'll check flags
-            periodically.
+    Parameters
+    ----------
+    poll_frequency: Integer
+        Seconds to wait between polling for the greenlets spawned
+    heartbeat: Integer
+        Seconds to wait between checking on folder sync threads.
+    refresh_flags_max: Integer
+        the maximum number of UIDs for which we'll check flags
+        periodically.
 
     """
     def __init__(self, account, heartbeat=1, poll_frequency=30,
                  retry_fail_classes=[], refresh_flags_max=2000):
-
         self.poll_frequency = poll_frequency
         self.syncmanager_lock = db_write_lock(account.namespace.id)
         self.refresh_flags_max = refresh_flags_max
@@ -95,14 +96,14 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                                             self.retry_fail_classes)
             thread.start()
             self.folder_monitors.add(thread)
-            while not self._thread_polling(thread) and \
-                    not self._thread_finished(thread) and \
+            while not thread_polling(thread) and \
+                    not thread_finished(thread) and \
                     not thread.ready():
                 sleep(self.heartbeat)
 
             # Allow individual folder sync monitors to shut themselves down
             # after completing the initial sync.
-            if self._thread_finished(thread) or thread.ready():
+            if thread_finished(thread) or thread.ready():
                 log.info('folder sync finished/killed',
                          folder_name=thread.folder_name)
                 # NOTE: Greenlet is automatically removed from the group.

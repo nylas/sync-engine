@@ -39,7 +39,8 @@ from inbox.models.backends.imap import ImapUid, ImapThread
 from inbox.mailsync.backends.base import (create_db_objects,
                                           commit_uids,
                                           MailsyncError,
-                                          mailsync_session_scope)
+                                          mailsync_session_scope,
+                                          thread_polling, thread_finished)
 from inbox.mailsync.backends.imap.generic import (
     _pool, uidvalidity_cb, safe_download, report_progress, UIDStack,
     THROTTLE_WAIT)
@@ -74,14 +75,14 @@ class GmailSyncMonitor(ImapSyncMonitor):
             thread.start()
             self.folder_monitors.add(thread)
             if thread.should_block:
-                while not self._thread_polling(thread) and \
-                        not self._thread_finished(thread) and \
+                while not thread_polling(thread) and \
+                        not thread_finished(thread) and \
                         not thread.ready():
                     sleep(self.heartbeat)
 
             # Allow individual folder sync monitors to shut themselves down
             # after completing the initial sync.
-            if self._thread_finished(thread) or thread.ready():
+            if thread_finished(thread) or thread.ready():
                 log.info('folder sync finished/killed',
                          folder_name=thread.folder_name)
                 # NOTE: Greenlet is automatically removed from the group.

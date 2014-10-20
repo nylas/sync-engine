@@ -23,7 +23,7 @@ def main():
         keep_tables += ['user', 'namespace', 'account', 'imapaccount',
                         'user_session', 'easaccount', 'folder', 'gmailaccount',
                         'outlookaccount', 'genericaccount', 'secret',
-                        'calendar']
+                        'calendar', 'easdevice']
 
         reset_columns = {'easaccount': ['eas_account_sync_key', 'eas_state']}
 
