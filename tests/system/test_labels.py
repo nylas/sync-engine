@@ -52,7 +52,8 @@ def test_gmail_labels(client):
             wait_for_tag(client, thread.id, labelname)
 
             draft = client.drafts.create(to=[{'name': 'Inbox SelfSend',
-                                         'email': "Blah, replying to message"}],
+                                         'email': client.email_address}],
+                                         body="Blah, replying to message",
                                          subject=thread.subject)
             draft.send()
             wait_for_tag(client, thread.id, labelname)

@@ -2,7 +2,7 @@ import pytest
 
 from inbox.models.session import session_scope
 from client import InboxTestClient
-from conftest import (timeout_loop, credentials, create_account)
+from conftest import (timeout_loop, credentials, create_account, API_BASE)
 
 
 @timeout_loop('sync_start')
@@ -27,7 +27,7 @@ def test_account_auth(account_credentials):
     with session_scope() as db_session:
         create_account(db_session, email, password)
 
-    client = InboxTestClient(email)
+    client = InboxTestClient(email, API_BASE)
     wait_for_auth(client)
 
     # wait for sync to start. tests rely on things setup at beginning

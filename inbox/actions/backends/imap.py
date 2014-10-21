@@ -32,14 +32,7 @@ We don't currently handle these operations on the special folders 'junk',
 'trash', 'sent', 'flagged'.
 """
 from inbox.crispin import writable_connection_pool, retry_crispin
-
-
-def uidvalidity_cb(account_id, folder_name, select_info):
-    """
-    TODO: check that UidValidity hasn't changed since action was queued.
-
-    """
-    pass
+from inbox.mailsync.backends.imap.generic import uidvalidity_cb
 
 
 # Because we wrap with retry_crispin here, IMAP syncback actions can *in
@@ -59,4 +52,4 @@ def syncback_action(fn, account, folder_name, db_session):
     # to optimize this at some point. But for now, it's most correct.
     with writable_connection_pool(account.id).get() as crispin_client:
             crispin_client.select_folder(folder_name, uidvalidity_cb)
-            return fn(account, db_session, crispin_client)
+            fn(account, db_session, crispin_client)

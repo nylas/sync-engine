@@ -1,12 +1,11 @@
-from conftest import API_BASE
 from inbox import APIClient
 
 
 class InboxTestClient(APIClient):
 
-    def __init__(self, email_address=None):
+    def __init__(self, email_address=None, api_base="http://localhost:5555"):
         self.email_address = email_address
-        APIClient.__init__(self, None, None, None, API_BASE)
+        APIClient.__init__(self, None, None, None, api_base)
 
     @property
     def namespaces(self):
