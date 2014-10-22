@@ -1,8 +1,10 @@
+# -*- coding: utf-8 -*-
 """Sanity-check our construction of a Message object from raw synced data."""
 import datetime
 import os
 import pytest
 from inbox.models import Message, Account
+from inbox.models.message import _get_errfilename
 
 ACCOUNT_ID = 1
 NAMESPACE_ID = 1
@@ -53,3 +55,10 @@ def test_truncate_recipients(db, raw_message_with_many_recipients):
     db.session.add(m)
     # Check that no database error is raised.
     db.session.commit()
+
+
+def test_decode_error_file():
+    """Test that we can save decode errors from non-Unicode folders without
+    getting UnicodeEncodeErrors"""
+    fname = _get_errfilename(1, u'迷惑メール', 22)
+    os.rmdir(os.path.dirname(fname))

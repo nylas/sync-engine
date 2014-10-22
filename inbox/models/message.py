@@ -1,7 +1,7 @@
 import os
 import json
 import datetime
-
+import base64
 from hashlib import sha256
 from flanker import mime
 
@@ -39,10 +39,16 @@ def _trim_filename(s, mid, max_len=64):
 
 
 def _get_errfilename(account_id, folder_name, uid):
-    errdir = os.path.join(config['LOGDIR'], str(account_id), 'errors',
-                          folder_name)
-    errfile = os.path.join(errdir, str(uid))
-    mkdirp(errdir)
+    try:
+        errdir = os.path.join(config['LOGDIR'], str(account_id), 'errors',
+                              folder_name)
+        errfile = os.path.join(errdir, str(uid))
+        mkdirp(errdir)
+    except UnicodeEncodeError:
+        # Rather than wrangling character encodings, just base64-encode the
+        # folder name to construct a directory.
+        b64_folder_name = base64.b64encode(folder_name.encode('utf-8'))
+        return _get_errfilename(account_id, b64_folder_name, uid)
     return errfile
 
 
