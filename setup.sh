@@ -66,10 +66,58 @@ apt-get -y install git \
                    libxslt-dev \
                    lib32z1-dev \
                    libffi-dev \
+                   pkg-config \
                    python-lxml \
                    tmux \
                    curl \
                    tnef \
+                   stow \
+
+# Workaround for "error: sodium.h: No such file or directory" bug
+# https://github.com/pyca/pynacl/issues/79
+libsodium_ver=1.0.0
+color '35;1' 'Ensuring libsodium version...'
+if ! pkg-config --atleast-version="${libsodium_ver}" libsodium; then
+    # Ubuntu precise doesn't have a libsodium-dev package, so we build it
+    # ourselves and install it to /usr/local (using GNU stow so that we can
+    # uninstall it later).
+
+    # Uninstall old version
+    if pkg-config --exists libsodium; then
+        libsodium_oldver=`pkg-config --modversion libsodium`
+        color '35;1' " > Uninstalling libsodium-${libsodium_oldver}..."
+        stow -d /usr/local/stow -D "libsodium-${libsodium_oldver}"
+        ldconfig
+        if pkg-config --exists libsodium; then
+            color '31;1' " > Unable to uninstall libsodium-${libsodium_oldver}"
+            exit 1
+        fi
+    fi
+
+    color '35;1' " > Downloading and installing libsodium-${libsodium_ver}..."
+    mkdir -p setup
+    cd setup
+    curl -L -O https://github.com/jedisct1/libsodium/releases/download/${libsodium_ver}/libsodium-${libsodium_ver}.tar.gz
+    echo 'ced1fe3d2066953fea94f307a92f8ae41bf0643739a44309cbe43aa881dbc9a5 *libsodium-1.0.0.tar.gz' | sha256sum -c || exit 1
+    tar -xzf libsodium-${libsodium_ver}.tar.gz
+    cd libsodium-${libsodium_ver}
+    ./configure --prefix=/usr/local/stow/libsodium-${libsodium_ver}
+    make -j4
+    rm -rf /usr/local/stow/libsodium-${libsodium_ver}
+    mkdir -p /usr/local/stow/libsodium-${libsodium_ver}
+    make install
+    stow -d /usr/local/stow -R libsodium-${libsodium_ver}
+    ldconfig
+    cd ../..
+    rm -rf setup
+
+    if pkg-config --exists libsodium; then
+        color '34;1' " > libsodium-${libsodium_ver} installed."
+    else
+        color '31;1' " > Unable to install libsodium-${libsodium_ver}"
+        exit 1
+    fi
+fi
 
 color '35;1' 'Removing .pyc files...'   # they might be stale
 find . -name \*.pyc -delete
@@ -82,7 +130,7 @@ hash pip        # /usr/bin/pip might now be /usr/local/bin/pip
 pip install 'pip>=1.5.6' 'setuptools>=5.3'
 
 color '35;1' 'Installing dependencies from pip...'
-pip install -r requirements.txt
+SODIUM_INSTALL=system pip install -r requirements.txt
 
 pip install -e .
 if [ -d "../inbox-eas" ]; then
