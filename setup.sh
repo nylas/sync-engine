@@ -113,6 +113,7 @@ elif [ $src -nt $dest ]; then
         exit 1
     fi
 fi
+chmod 644 $dest
 
 color '35;1' 'Copying default secrets configuration to /etc/inboxapp'
 src=./etc/secrets-dev.yml
@@ -132,6 +133,7 @@ elif [ $src -nt $dest ]; then
         exit 1
     fi
 fi
+chmod 644 $dest
 
 if $configure_db; then
     # Mysql config
