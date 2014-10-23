@@ -529,7 +529,10 @@ class CrispinClient(object):
         self.conn.expunge()
 
     def set_starred(self, uids, starred):
-        self.conn.add_flags(uids, ['\\Flagged'])
+        if starred:
+            self.conn.add_flags(uids, ['\\Flagged'])
+        else:
+            self.conn.remove_flags(uids, ['\\Flagged'])
 
     def set_unread(self, uids, unread):
         uids = [str(u) for u in uids]
@@ -886,9 +889,9 @@ class GmailCrispinClient(CondStoreCrispinClient):
     def set_starred(self, g_thrid, starred):
         uids = self.find_messages(g_thrid)
         if starred:
-            self.conn.add_flags(uids, ['\\Starred'])
+            self.conn.add_flags(uids, ['\\Flagged'])
         else:
-            self.conn.remove_flags(uids, ['\\Starred'])
+            self.conn.remove_flags(uids, ['\\Flagged'])
 
     def delete(self, g_thrid, folder_name):
         """
