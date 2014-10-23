@@ -128,6 +128,21 @@ def unmark_trash(account_id, thread_id, db_session):
     set_remote_trash(account, thread_id, False, db_session)
 
 
+def _create_email(account, message, generate_new_uid=False):
+    recipients = Recipients(message.to_addr, message.cc_addr,
+                            message.bcc_addr)
+    blocks = [p.block for p in message.attachments]
+    attachments = generate_attachments(blocks)
+
+    inbox_uid = message.inbox_uid
+    if generate_new_uid:
+        inbox_uid = None
+
+    return create_email(account.name, account.email_address,
+                        inbox_uid, recipients, message.subject,
+                        message.sanitized_body, attachments)
+
+
 def save_draft(account_id, message_id, db_session):
     """ Sync a new/updated draft back to the remote backend. """
     account = db_session.query(Account).get(account_id)
@@ -142,20 +157,13 @@ def save_draft(account_id, message_id, db_session):
                     account_id=account_id)
         return
 
-    recipients = Recipients(message.to_addr, message.cc_addr,
-                            message.bcc_addr)
-    blocks = [p.block for p in message.attachments]
-    attachments = generate_attachments(blocks)
-    mimemsg = create_email(account.name, account.email_address,
-                           message.inbox_uid, recipients, message.subject,
-                           message.sanitized_body, attachments)
-
     if account.drafts_folder is None:
         # account has no detected drafts folder - create one.
         drafts_folder = Folder.find_or_create(db_session, account,
                                               'Drafts', 'drafts')
         account.drafts_folder = drafts_folder
 
+    mimemsg = _create_email(account, message)
     remote_save_draft = module_registry[account.provider].remote_save_draft
     remote_save_draft(account, account.drafts_folder.name,
                       mimemsg.to_string(), db_session, message.created_at)
@@ -179,6 +187,32 @@ def delete_draft(account_id, draft_id, db_session, args):
             module_registry[account.provider].remote_delete_draft
         remote_delete_draft(account, account.drafts_folder.name,
                             inbox_uid, db_session)
+
+
+def save_sent_email(account_id, message_id, db_session):
+    """ Create an email on the remote backend. Only used to work
+    around providers who don't save sent messages themselves
+    (I'm looking at you, iCloud)."""
+    account = db_session.query(Account).get(account_id)
+    message = db_session.query(Message).get(message_id)
+    if message is None:
+        log.info('tried to create nonexistent message',
+                 message_id=message_id, account_id=account_id)
+        return
+
+    create_backend_sent_folder = False
+    if account.sent_folder is None:
+        # account has no detected drafts folder - create one.
+        sent_folder = Folder.find_or_create(db_session, account,
+                                            'Sent', 'sent')
+        account.sent_folder = sent_folder
+        create_backend_sent_folder = True
+
+    mimemsg = _create_email(account, message)
+    remote_save_sent = module_registry[account.provider].remote_save_sent
+    remote_save_sent(account, account.sent_folder.name,
+                     mimemsg.to_string(), message.created_at,
+                     create_backend_sent_folder)
 
 
 def send_directly(account_id, draft_id, db_session):
@@ -232,10 +266,17 @@ def _send(account_id, draft_id, db_session):
         return
 
     recipients = Recipients(draft.to_addr, draft.cc_addr, draft.bcc_addr)
+
     if not draft.is_reply:
         sendmail_client.send_new(db_session, draft, recipients)
     else:
         sendmail_client.send_reply(db_session, draft, recipients)
+
+    if account.provider == 'icloud':
+        # Special case because iCloud doesn't save
+        # sent messages.
+        schedule_action('save_sent_email', draft, draft.namespace.id,
+                        db_session)
 
     # Update message
     draft.is_sent = True

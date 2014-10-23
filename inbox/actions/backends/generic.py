@@ -207,6 +207,20 @@ def remote_delete_draft(account, folder, inbox_uid, db_session):
         crispin_client.delete_draft(inbox_uid)
 
 
+def remote_save_sent(account, folder_name, message, db_session, date=None,
+                     create_backend_sent_folder=False):
+    def fn(account, db_session, crispin_client):
+        if create_backend_sent_folder:
+            if 'sent' not in crispin_client.folder_names():
+                crispin_client.create_folder('Sent')
+
+        crispin_client.select_folder(folder_name, uidvalidity_cb)
+        crispin_client.create_message(message, date)
+
+    return syncback_action(fn, account, folder_name, db_session,
+                           select_folder=False)
+
+
 def set_remote_spam(account, thread_id, spam, db_session):
 
     if account.spam_folder is None:

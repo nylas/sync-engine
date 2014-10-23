@@ -40,7 +40,7 @@ from inbox.mailsync.backends.imap.generic import uidvalidity_cb
 # practice, failures handled by retry_crispin should generally resolve
 # immediately after getting a new connection.
 @retry_crispin
-def syncback_action(fn, account, folder_name, db_session):
+def syncback_action(fn, account, folder_name, db_session, select_folder=True):
     """ `folder_name` is a provider folder name, not a local tag
 
     `folder_name` is the folder which is selected before `fn` is called.
@@ -51,5 +51,7 @@ def syncback_action(fn, account, folder_name, db_session):
     # NOTE: This starts a *new* IMAP session every time---we will want
     # to optimize this at some point. But for now, it's most correct.
     with writable_connection_pool(account.id).get() as crispin_client:
-            crispin_client.select_folder(folder_name, uidvalidity_cb)
-            fn(account, db_session, crispin_client)
+            if select_folder:
+                crispin_client.select_folder(folder_name, uidvalidity_cb)
+
+            return fn(account, db_session, crispin_client)

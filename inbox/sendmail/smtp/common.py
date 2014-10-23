@@ -28,6 +28,7 @@ class SMTPClient(BaseSMTPClient):
         smtpmsg = create_email(self.sender_name, self.email_address,
                                inbox_uid, recipients, subject, body,
                                attachments)
+
         return self._send_mail(db_session, draft, smtpmsg)
 
     def send_reply(self, db_session, draft, recipients):
@@ -46,4 +47,5 @@ class SMTPClient(BaseSMTPClient):
                                draft.in_reply_to, draft.references,
                                inbox_uid, recipients, subject, body,
                                attachments)
+
         return self._send_mail(db_session, draft, smtpmsg)

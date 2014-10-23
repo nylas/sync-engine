@@ -22,7 +22,7 @@ from inbox.util.misc import ProviderSpecificException
 from inbox.actions import (mark_read, mark_unread, archive, unarchive, star,
                            unstar, save_draft, delete_draft, mark_spam,
                            unmark_spam, mark_trash, unmark_trash, send_draft,
-                           send_directly)
+                           send_directly, save_sent_email)
 
 # Global lock to ensure that only one instance of the syncback service is
 # running at once. Otherwise different instances might execute the same action
@@ -43,7 +43,8 @@ ACTION_FUNCTION_MAP = {
     'send_draft': send_draft,
     'save_draft': save_draft,
     'delete_draft': delete_draft,
-    'send_directly': send_directly
+    'send_directly': send_directly,
+    'save_sent_email': save_sent_email,
 }
 
 

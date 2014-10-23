@@ -539,11 +539,20 @@ class CrispinClient(object):
             self.conn.add_flags(uids, ['\\Seen'])
 
     def save_draft(self, message, date=None):
-        self.selected_folder_name == self.folder_names()['drafts'], \
+        assert self.selected_folder_name == self.folder_names()['drafts'], \
             'Must select drafts folder first ({0})'.format(
                 self.selected_folder_name)
 
         self.conn.append(self.selected_folder_name, message, ['\\Draft'], date)
+
+    def create_message(self, message, date=None):
+        """Create a message on the server. Only used to fix server-side bugs,
+        like iCloud not saving Sent messages"""
+        assert self.selected_folder_name == self.folder_names()['sent'], \
+            'Must select sent folder first ({0})'.format(
+                self.selected_folder_name)
+
+        self.conn.append(self.selected_folder_name, message, [], date)
 
     def fetch_headers(self, uids):
         """Fetch headers for the given uids. Chunked because certain providers
