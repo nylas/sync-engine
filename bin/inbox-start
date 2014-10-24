@@ -7,6 +7,7 @@ import os
 import platform
 
 import click
+import gevent
 
 # Check that the inbox package is installed. It seems Vagrant may sometimes
 # fail to provision the box appropriately; this check is a reasonable

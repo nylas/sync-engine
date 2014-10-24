@@ -19,5 +19,6 @@
 
 "EMAIL_EXCEPTIONS": false,
 "SENTRY_EXCEPTIONS": false,
-"ENCRYPT_SECRETS": false
+"ENCRYPT_SECRETS": false,
+"DEBUG_CONSOLE_ON": true
 }

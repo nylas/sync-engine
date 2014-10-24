@@ -53,3 +53,4 @@ pyaml==14.05.7
 enum==0.4.4
 git+https://github.com/inboxapp/inbox-python.git@master#egg=inbox
 msgpack-python==0.4.2
+guppy==0.1.10
