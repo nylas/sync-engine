@@ -73,6 +73,12 @@ apt-get -y install git \
                    tnef \
                    stow \
 
+# Switch to a temporary directory to install dependencies, since the source
+# directory might be mounted from a VM host with weird permissions.
+src_dir=$(pwd)
+temp_dir=`mktemp -d`
+cd "$temp_dir"
+
 # Workaround for "error: sodium.h: No such file or directory" bug
 # https://github.com/pyca/pynacl/issues/79
 libsodium_ver=1.0.0
@@ -95,8 +101,6 @@ if ! pkg-config --atleast-version="${libsodium_ver}" libsodium; then
     fi
 
     color '35;1' " > Downloading and installing libsodium-${libsodium_ver}..."
-    mkdir -p setup
-    cd setup
     curl -L -O https://github.com/jedisct1/libsodium/releases/download/${libsodium_ver}/libsodium-${libsodium_ver}.tar.gz
     echo 'ced1fe3d2066953fea94f307a92f8ae41bf0643739a44309cbe43aa881dbc9a5 *libsodium-1.0.0.tar.gz' | sha256sum -c || exit 1
     tar -xzf libsodium-${libsodium_ver}.tar.gz
@@ -108,8 +112,8 @@ if ! pkg-config --atleast-version="${libsodium_ver}" libsodium; then
     make install
     stow -d /usr/local/stow -R libsodium-${libsodium_ver}
     ldconfig
-    cd ../..
-    rm -rf setup
+    cd ..
+    rm -rf libsodium-${libsodium_ver} libsodium-${libsodium_ver}.tar.gz
 
     if pkg-config --exists libsodium; then
         color '34;1' " > libsodium-${libsodium_ver} installed."
@@ -119,15 +123,19 @@ if ! pkg-config --atleast-version="${libsodium_ver}" libsodium; then
     fi
 fi
 
-color '35;1' 'Removing .pyc files...'   # they might be stale
-find . -name \*.pyc -delete
-
 color '35;1' 'Ensuring setuptools and pip versions...'
 # If python-setuptools is actually the old 'distribute' fork of setuptools,
 # then the first 'pip install setuptools' will be a no-op.
 pip install 'pip>=1.5.6' 'setuptools>=5.3'
 hash pip        # /usr/bin/pip might now be /usr/local/bin/pip
 pip install 'pip>=1.5.6' 'setuptools>=5.3'
+
+# Now that the new version of pip and our other non-pip dependencies are
+# installed, we can switch back to the source directory.
+cd "$src_dir"
+
+color '35;1' 'Removing .pyc files...'   # they might be stale
+find . -name \*.pyc -delete
 
 color '35;1' 'Installing dependencies from pip...'
 SODIUM_INSTALL=system pip install -r requirements.txt
@@ -147,7 +155,7 @@ color '35;1' 'Copying default development configuration to /etc/inboxapp'
 src=./etc/config-dev.json
 dest=/etc/inboxapp/config.json
 if [ ! -f $dest ]; then
-    cp $src $dest
+    install -m0644 $src $dest
 elif [ $src -nt $dest ]; then
     set +e
     diff_result=$(diff -q $src $dest)
@@ -167,7 +175,7 @@ color '35;1' 'Copying default secrets configuration to /etc/inboxapp'
 src=./etc/secrets-dev.yml
 dest=/etc/inboxapp/secrets.yml
 if [ ! -f $dest ]; then
-    cp $src $dest
+    install -m0644 $src $dest
 elif [ $src -nt $dest ]; then
     set +e
     diff_result=$(diff -q $src $dest)
@@ -189,7 +197,7 @@ if $configure_db; then
     src=./etc/my.cnf
     dest=/etc/mysql/conf.d/inboxapp.cnf
     if [ ! -f $dest ]; then
-        cp $src $dest
+        install -m0644 $src $dest
     elif [ $src -nt $dest ]; then
         set +e
         diff_result=$(diff -q $src $dest)
