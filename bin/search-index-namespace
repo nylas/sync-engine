@@ -1,0 +1,45 @@
+#!/usr/bin/env python
+import click
+import time
+import dateutil.parser
+from inbox.search.adapter import NamespaceSearchEngine
+from inbox.models.session import session_scope
+from inbox.models import Message, Thread, Namespace
+from inbox.api.kellogs import encode
+
+
+@click.command()
+@click.option('--namespace_id')
+@click.option('--updated_since', default=None)
+def index_namespace(namespace_id, updated_since):
+    start_time = time.time()
+    if updated_since is not None:
+        updated_since = dateutil.parser.parse(updated_since)
+    namespace_id = int(namespace_id)
+    indexed_count = 0
+    for obj_type in (Message, Thread):
+        with session_scope() as db_session:
+            namespace = db_session.query(Namespace).get(namespace_id)
+            search_engine = NamespaceSearchEngine(namespace.public_id)
+            # TODO: paginate the query so that we don't run out of memory on
+            # life-sized accounts.
+            objects = db_session.query(obj_type).filter(
+                obj_type.namespace_id == namespace_id)
+            if updated_since is not None:
+                objects = objects.filter(obj_type.updated_at > updated_since)
+            for obj in objects:
+                encoded_obj = encode(
+                    obj, namespace_public_id=namespace.public_id)
+                if obj_type == Message:
+                    search_engine.messages.index(encoded_obj)
+                elif obj_type == Thread:
+                    search_engine.threads.index(encoded_obj)
+                print "indexed object"
+                indexed_count += 1
+    elapsed_time = time.time() - start_time
+    print "indexed {} objects in {} seconds".format(indexed_count,
+                                                    elapsed_time)
+
+
+if __name__ == '__main__':
+    index_namespace()

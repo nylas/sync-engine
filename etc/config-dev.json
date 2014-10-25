@@ -20,5 +20,8 @@
 "EMAIL_EXCEPTIONS": false,
 "SENTRY_EXCEPTIONS": false,
 "ENCRYPT_SECRETS": false,
-"DEBUG_CONSOLE_ON": true
+"DEBUG_CONSOLE_ON": true,
+
+"ELASTICSEARCH_HOSTS": [{"host": "localhost", "port": 9200}]
+
 }

@@ -25,6 +25,7 @@ from inbox.log import get_logger
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from inbox.models.action_log import schedule_action, ActionError
 from inbox.models.session import InboxSession
+from inbox.search.adapter import NamespaceSearchEngine, SearchInterfaceError
 from inbox.transactions import delta_sync
 
 from err import err
@@ -297,6 +298,20 @@ def thread_query_api():
     return g.encoder.jsonify(threads)
 
 
+@app.route('/threads/search')
+def thread_search_api():
+    g.parser.add_argument('q', type=bounded_str, location='args')
+    args = strict_parse_args(g.parser, request.args)
+    try:
+        search_engine = NamespaceSearchEngine(g.namespace_public_id)
+        results = search_engine.threads.search(query=args.q,
+                                               max_results=args.limit,
+                                               offset=args.offset)
+    except SearchInterfaceError:
+        return err(501, 'Search endpoint not available')
+    return g.encoder.jsonify(results)
+
+
 @app.route('/threads/<public_id>')
 def thread_api(public_id):
     try:
@@ -420,6 +435,20 @@ def message_query_api():
         db_session=g.db_session)
 
     return g.encoder.jsonify(messages)
+
+
+@app.route('/messages/search')
+def message_search_api():
+    g.parser.add_argument('q', type=bounded_str, location='args')
+    args = strict_parse_args(g.parser, request.args)
+    try:
+        search_engine = NamespaceSearchEngine(g.namespace_public_id)
+        results = search_engine.messages.search(query=args.q,
+                                                max_results=args.limit,
+                                                offset=args.offset)
+    except SearchInterfaceError:
+        return err(501, 'Search endpoint not available')
+    return g.encoder.jsonify(results)
 
 
 @app.route('/messages/<public_id>', methods=['GET', 'PUT'])
