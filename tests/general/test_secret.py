@@ -71,7 +71,7 @@ def test_token(db, config, encrypt):
             'locale': '',
             'picture': '',
             'hd': ''}
-    account = GmailAuthHandler('gmail').create_account(db.session, resp)
+    account = GmailAuthHandler('gmail').create_account(db.session, email, resp)
 
     db.session.add(account)
     db.session.commit()
