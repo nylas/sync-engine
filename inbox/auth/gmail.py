@@ -42,7 +42,7 @@ class GmailAuthHandler(OAuthAuthHandler):
     OAUTH_USER_INFO_URL = OAUTH_USER_INFO_URL
     OAUTH_SCOPE = OAUTH_SCOPE
 
-    def create_account(self, db_session, response):
+    def create_account(self, db_session, email_address, response):
         email_address = response.get('email')
         # See if the account exists in db, otherwise create it
         try:

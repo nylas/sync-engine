@@ -131,9 +131,9 @@ class OAuthAuthHandler(AuthHandler):
 
     def _get_authenticated_user(self, authorization_code):
         args = {
-            'client_id': self.CLIENT_ID,
-            'client_secret': self.CLIENT_SECRET,
-            'redirect_uri': self.REDIRECT_URI,
+            'client_id': self.OAUTH_CLIENT_ID,
+            'client_secret': self.OAUTH_CLIENT_SECRET,
+            'redirect_uri': self.OAUTH_REDIRECT_URI,
             'code': authorization_code,
             'grant_type': 'authorization_code'
         }
@@ -141,7 +141,8 @@ class OAuthAuthHandler(AuthHandler):
         headers = {'Content-type': 'application/x-www-form-urlencoded',
                    'Accept': 'text/plain'}
         data = urllib.urlencode(args)
-        resp = requests.post(self.ACCESS_TOKEN_URL, data=data, headers=headers)
+        resp = requests.post(self.OAUTH_ACCESS_TOKEN_URL, data=data,
+                             headers=headers)
 
         session_dict = resp.json()
 
@@ -150,7 +151,7 @@ class OAuthAuthHandler(AuthHandler):
 
         access_token = session_dict['access_token']
         validation_dict = self.validate_token(access_token)
-        userinfo_dict = self._get_user_info(self.USER_INFO_URL, access_token)
+        userinfo_dict = self._get_user_info(access_token)
 
         z = session_dict.copy()
         z.update(validation_dict)
@@ -160,7 +161,7 @@ class OAuthAuthHandler(AuthHandler):
 
     def _get_user_info(self, access_token):
         try:
-            response = requests.get(self.USER_INFO_URL,
+            response = requests.get(self.OAUTH_USER_INFO_URL,
                                     params={'access_token': access_token})
         except RequestsConnectionError as e:
             log.error('user_info_fetch_failed', error=e)
