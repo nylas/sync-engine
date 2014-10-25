@@ -19,7 +19,6 @@ from inbox.util.misc import register_backends
 import pkg_resources
 from abc import ABCMeta, abstractmethod
 from inbox.providers import providers
-from inbox.util.url import provider_from_address
 from inbox.basicauth import NotSupportedError
 
 
@@ -41,12 +40,6 @@ def handler_from_provider(provider_name):
     Note that if a plugin provides mixin classes, the type of the object may be
     generated dynamically, and may not necessarily be directly importable.
     """
-
-    # TODO: Console auth doesn't have support for handling unknown providers
-    # and just trying eas first with a fallback, so just assume EAS for now.
-    # -cg3
-    if provider_name == 'unknown':
-        provider_name = 'eas'
     auth_mod = module_registry.get(provider_name)
 
     if auth_mod is None:
@@ -113,25 +106,20 @@ def handler_from_provider(provider_name):
             bases,
             {})
 
-    auth_handler = auth_handler_class()
+    auth_handler = auth_handler_class(provider_name=provider_name)
     return auth_handler
-
-
-def handler_from_email(email_address):
-    if '@mit.edu' in email_address:
-        user, domain = email_address.split('@')
-        email_address = user + '@exchange.mit.edu'
-
-    provider_name = provider_from_address(email_address)
-    return handler_from_provider(provider_name)
 
 
 class AuthHandler(object):
     __metaclass__ = ABCMeta
 
+    def __init__(self, provider_name):
+        self.provider_name = provider_name
+
     # optional
-    def connect_account(self, provider, email, secret):
-        """Return an authenticated IMAPClient instance for the given credentials.
+    def connect_account(self, email, secret, imap_endpoint):
+        """Return an authenticated IMAPClient instance for the given
+        credentials.
 
         This is an optional interface, which is only needed for accounts that
         are synced using IMAP.
@@ -143,11 +131,11 @@ class AuthHandler(object):
         raise NotImplementedError
 
     @abstractmethod
-    def create_auth_account(self, db_session, email_address, token, exit):
+    def verify_account(self, account):
         raise NotImplementedError
 
     @abstractmethod
-    def verify_account(self, account):
+    def interactive_auth(self, email_address=None):
         raise NotImplementedError
 
 

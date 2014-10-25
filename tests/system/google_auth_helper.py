@@ -1,8 +1,8 @@
-import sys
 import requests
 from HTMLParser import HTMLParser
 
-from inbox.oauth import authorize_link
+from inbox.auth.gmail import GmailAuthHandler
+from inbox.util.url import url_concat
 
 
 class GoogleAuthParser(HTMLParser):
@@ -67,9 +67,14 @@ class GoogleTokenParser(HTMLParser):
 
 
 def google_auth(email, password):
-    gmail_provider = sys.modules['inbox.auth.gmail']
     session = requests.Session()
-    url = authorize_link(gmail_provider, email)
+    url_args = {'redirect_uri': GmailAuthHandler.OAUTH_REDIRECT_URI,
+                'client_id': GmailAuthHandler.OAUTH_CLIENT_ID,
+                'response_type': 'code',
+                'scope': GmailAuthHandler.OAUTH_SCOPE,
+                'access_type': 'offline',
+                'login_hint': email}
+    url = url_concat(GmailAuthHandler.OAUTH_AUTHENTICATE_URL, url_args)
     req = session.get(url)
     assert req.ok
     auth_parser = GoogleAuthParser()

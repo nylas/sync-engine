@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 import pytest
 
-from inbox.auth.gmail import create_account
+from inbox.auth.gmail import GmailAuthHandler
 from inbox.models.backends.gmail import GmailAccount
 from inbox.models.secret import Secret
 
@@ -71,7 +71,7 @@ def test_token(db, config, encrypt):
             'locale': '',
             'picture': '',
             'hd': ''}
-    account = create_account(db.session, resp)
+    account = GmailAuthHandler('gmail').create_account(db.session, resp)
 
     db.session.add(account)
     db.session.commit()

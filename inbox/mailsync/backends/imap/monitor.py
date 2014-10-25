@@ -11,7 +11,6 @@ from inbox.mailsync.backends.base import (save_folder_names,
                                           mailsync_session_scope)
 from inbox.mailsync.backends.imap.generic import _pool, FolderSyncEngine
 from inbox.mailsync.backends.imap.condstore import CondstoreFolderSyncEngine
-from inbox.providers import provider_info
 log = get_logger()
 
 
@@ -37,8 +36,8 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         self.syncmanager_lock = db_write_lock(account.namespace.id)
         self.refresh_flags_max = refresh_flags_max
 
-        provider_supports_condstore = provider_info(
-            account.provider, account.email_address).get('condstore', False)
+        provider_supports_condstore = account.provider_info.get('condstore',
+                                                                False)
         account_supports_condstore = getattr(account, 'supports_condstore',
                                              False)
         if provider_supports_condstore or account_supports_condstore:

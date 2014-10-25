@@ -1,6 +1,5 @@
 from datetime import datetime
 
-from inbox.basicauth import NotSupportedError
 from inbox.contacts.process_mail import update_contacts_from_message
 from inbox.models import Message, Thread, Part
 from inbox.models.action_log import schedule_action
@@ -30,9 +29,6 @@ def get_sendmail_client(account):
     from inbox.sendmail import module_registry
 
     sendmail_mod = module_registry.get(account.provider)
-    if not sendmail_mod:
-        raise NotSupportedError('Inbox does not support the email provider.')
-
     sendmail_cls = getattr(sendmail_mod, sendmail_mod.SENDMAIL_CLS)
     sendmail_client = sendmail_cls(account.id)
     return sendmail_client

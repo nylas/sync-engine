@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import (Column, Integer, BigInteger, Boolean, Enum,
-                        ForeignKey, Index)
+                        ForeignKey, Index, String)
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
@@ -27,9 +27,33 @@ class ImapAccount(Account):
 
     __mapper_args__ = {'polymorphic_identity': 'imapaccount'}
 
+    _imap_server_host = Column(String(255), nullable=True)
+    _imap_server_port = Column(Integer, nullable=False, server_default='993')
+
+    _smtp_server_host = Column(String(255), nullable=True)
+    _smtp_server_port = Column(Integer, nullable=False, server_default='587')
+
     @property
-    def provider(self):
-        return PROVIDER.lower()
+    def imap_endpoint(self):
+        if self._imap_server_host is not None:
+            return (self._imap_server_host, self._imap_server_port)
+        else:
+            return self.provider_info['imap']
+
+    @imap_endpoint.setter
+    def imap_endpoint(self, endpoint):
+        self._imap_server_host, self._imap_server_port = endpoint
+
+    @property
+    def smtp_endpoint(self):
+        if self._smtp_server_host is not None:
+            return (self._smtp_server_host, self._smtp_server_port)
+        else:
+            return self.provider_info['smtp']
+
+    @smtp_endpoint.setter
+    def smtp_endpoint(self, endpoint):
+        self._smtp_server_host, self._smtp_server_port = endpoint
 
 
 class ImapUid(MailSyncBase):

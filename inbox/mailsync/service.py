@@ -5,7 +5,7 @@ from setproctitle import setproctitle
 
 from sqlalchemy import func, or_, and_
 
-from inbox.providers import providers, provider_info
+from inbox.providers import providers
 from inbox.config import config
 from inbox.contacts.remote_sync import ContactSync
 from inbox.events.remote_sync import EventSync
@@ -172,7 +172,7 @@ class SyncService(object):
                     self.monitors[acc.id] = monitor
                     monitor.start()
 
-                    info = provider_info(acc.provider, acc.email_address)
+                    info = acc.provider_info
                     if info.get('contacts', None):
                         contact_sync = ContactSync(acc.provider, acc.id,
                                                    acc.namespace.id)

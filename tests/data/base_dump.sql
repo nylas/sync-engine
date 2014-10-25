@@ -143,7 +143,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('26911668870a');
+INSERT INTO `alembic_version` VALUES ('26bfb2e45c47');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -746,6 +746,10 @@ DROP TABLE IF EXISTS `imapaccount`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `imapaccount` (
   `id` int(11) NOT NULL,
+  `_imap_server_host` varchar(255) DEFAULT NULL,
+  `_imap_server_port` int(11) NOT NULL DEFAULT '993',
+  `_smtp_server_host` varchar(255) DEFAULT NULL,
+  `_smtp_server_port` int(11) NOT NULL DEFAULT '587',
   PRIMARY KEY (`id`),
   CONSTRAINT `imapaccount_ibfk_1` FOREIGN KEY (`id`) REFERENCES `account` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -757,7 +761,7 @@ CREATE TABLE `imapaccount` (
 
 LOCK TABLES `imapaccount` WRITE;
 /*!40000 ALTER TABLE `imapaccount` DISABLE KEYS */;
-INSERT INTO `imapaccount` VALUES (1);
+INSERT INTO `imapaccount` VALUES (1,NULL,993,NULL,587);
 /*!40000 ALTER TABLE `imapaccount` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1565,4 +1569,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-10-20 22:15:42
+-- Dump completed on 2014-10-22 23:27:29

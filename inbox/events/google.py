@@ -9,8 +9,7 @@ from apiclient.errors import HttpError
 from oauth2client.client import OAuth2Credentials
 from oauth2client.client import AccessTokenRefreshError
 
-from inbox.basicauth import ConnectionError, ValidationError
-from inbox.oauth import OAuthError
+from inbox.basicauth import (ConnectionError, ValidationError, OAuthError)
 from inbox.models import Event, Participant
 from inbox.models.session import session_scope
 from inbox.models.backends.gmail import GmailAccount

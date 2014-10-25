@@ -9,7 +9,7 @@ import gdata.contacts.client
 from inbox.log import get_logger
 logger = get_logger()
 from inbox.basicauth import ConnectionError, ValidationError, PermissionsError
-from inbox.oauth import OAuthError
+from inbox.basicauth import OAuthError
 from inbox.models.session import session_scope
 from inbox.models import Contact
 from inbox.models.backends.gmail import GmailAccount

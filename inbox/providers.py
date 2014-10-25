@@ -396,6 +396,10 @@ get_default_providers = lambda: {
                        "mailstore1.asia.secureserver.net",
                        "mailstore1.europe.secureserver.net"]
     },
+    "custom": {
+        "type": "generic",
+        "auth": "password"
+    }
 }
 
 

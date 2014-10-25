@@ -2,6 +2,11 @@ import pytest
 from inbox.providers import providers
 from inbox.util.url import provider_from_address
 from inbox.util.url import InvalidEmailAddressError
+from inbox.auth import handler_from_provider
+from inbox.auth.generic import GenericAuthHandler
+from inbox.auth.gmail import GmailAuthHandler
+from inbox.auth.outlook import OutlookAuthHandler
+from inbox.basicauth import NotSupportedError
 
 
 def test_provider_resolution():
@@ -81,3 +86,15 @@ def test_provider_resolution():
                 orig_imap)
     finally:
         providers.reset()
+
+
+def test_auth_handler_dispatch():
+    assert isinstance(handler_from_provider('custom'), GenericAuthHandler)
+    assert isinstance(handler_from_provider('fastmail'), GenericAuthHandler)
+    assert isinstance(handler_from_provider('aol'), GenericAuthHandler)
+    assert isinstance(handler_from_provider('yahoo'), GenericAuthHandler)
+    assert isinstance(handler_from_provider('gmail'), GmailAuthHandler)
+    assert isinstance(handler_from_provider('outlook'), OutlookAuthHandler)
+
+    with pytest.raises(NotSupportedError):
+        handler_from_provider('NOTAREALMAILPROVIDER')

@@ -6,12 +6,10 @@ TEST_GRANULARITY_CHECK_SECS = 0.1
 
 from time import time, sleep
 from client import InboxTestClient
-from inbox.auth import handler_from_email
 from inbox.util.url import provider_from_address
 from google_auth_helper import google_auth
 from outlook_auth_helper import outlook_auth
-from inbox.auth.gmail import create_auth_account as create_gmail_account
-from inbox.auth.outlook import create_auth_account as create_outlook_account
+from inbox.auth import handler_from_provider
 
 
 # we don't want to commit passwords to the repo.
@@ -62,19 +60,20 @@ def format_test_result(function_name, provider, email, start_time):
 
 def create_account(db_session, email, password):
     provider = provider_from_address(email)
-    auth_handler = handler_from_email(email)
+    auth_handler = handler_from_provider(provider)
     # Special-case Gmail and Outlook, because we need to provide an oauth token
     # and not merely a password.
+    response = {'email': email}
     if provider == 'gmail':
-        token = google_auth(email, password)
-        account = create_gmail_account(db_session, email, token, False)
+        code = google_auth(email, password)
+        response = auth_handler._get_authenticated_user(code)
     elif provider == 'outlook':
-        token = outlook_auth(email, password)
-        account = create_outlook_account(db_session, email, token, False)
+        code = outlook_auth(email, password)
+        response = auth_handler._get_authenticated_user(code)
     else:
         response = {"email": email, "password": password}
-        account = auth_handler.create_account(db_session, email, response)
 
+    account = auth_handler.create_account(db_session, email, response)
     auth_handler.verify_account(account)
 
     db_session.add(account)

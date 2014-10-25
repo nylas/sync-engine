@@ -1,8 +1,8 @@
-import sys
 import requests
 from HTMLParser import HTMLParser
 
-from inbox.oauth import authorize_link
+from inbox.auth.outlook import OutlookAuthHandler
+from inbox.util.url import url_concat
 import re
 
 
@@ -107,9 +107,14 @@ class OutlookConsentParser(HTMLParser):
 
 
 def outlook_auth(email, password):
-    provider_mod = sys.modules['inbox.auth.outlook']
     session = requests.Session()
-    url = authorize_link(provider_mod, email)
+    url_args = {'redirect_uri': OutlookAuthHandler.OAUTH_REDIRECT_URI,
+                'client_id': OutlookAuthHandler.OAUTH_CLIENT_ID,
+                'response_type': 'code',
+                'scope': OutlookAuthHandler.OAUTH_SCOPE,
+                'access_type': 'offline',
+                'login_hint': email}
+    url = url_concat(OutlookAuthHandler.OAUTH_AUTHENTICATE_URL, url_args)
     req = session.get(url)
     assert req.ok
 

@@ -1,13 +1,12 @@
-import sys
+import requests
 from sqlalchemy.orm.exc import NoResultFound
 
-from inbox.auth import AuthHandler
-from inbox.oauth import oauth_authorize_console
 from inbox.models import Namespace
 from inbox.models.backends.gmail import GmailAccount
 from inbox.config import config
-from inbox.auth.oauth import connect_account as oauth_connect_account
-from inbox.auth.oauth import verify_account as oauth_verify_account
+from inbox.auth.oauth import OAuthAuthHandler
+from inbox.basicauth import OAuthValidationError, OAuthError
+from inbox.util.url import url_concat
 
 from inbox.log import get_logger
 log = get_logger()
@@ -33,81 +32,7 @@ OAUTH_SCOPE = ' '.join([
 ])
 
 
-def _this_module():
-    return sys.modules[__name__]
-
-
-def create_auth_account(db_session, email_address, token, exit):
-    uri = config.get('GOOGLE_OAUTH_REDIRECT_URI', None)
-
-    if uri != 'urn:ietf:wg:oauth:2.0:oob':
-        raise NotImplementedError('Callback-based OAuth is not supported')
-
-    response = _auth_account(email_address, token, exit)
-    account = create_account(db_session, response)
-
-    return account
-
-
-def _auth_account(email_address, token, exit):
-    if not token:
-        print ("To authorize Inbox, visit this url and follow the directions:")
-    return oauth_authorize_console(_this_module(), email_address, token, exit)
-
-
-def create_account(db_session, response):
-    email_address = response.get('email')
-    # See if the account exists in db, otherwise create it
-    try:
-        account = db_session.query(GmailAccount) \
-            .filter_by(email_address=email_address).one()
-    except NoResultFound:
-        namespace = Namespace()
-        account = GmailAccount(namespace=namespace)
-
-    # We only get refresh tokens on initial login (or failed credentials)
-    # otherwise, we don't force the login screen and therefore don't get a
-    # refresh token back from google.
-    new_refresh_token = response.get('refresh_token')
-    if new_refresh_token:
-        account.refresh_token = new_refresh_token
-
-    tok = response.get('access_token')
-    expires_in = response.get('expires_in')
-    account.set_access_token(tok, expires_in)
-    account.scope = response.get('scope')
-    account.email_address = email_address
-    account.family_name = response.get('family_name')
-    account.given_name = response.get('given_name')
-    account.name = response.get('name')
-    account.gender = response.get('gender')
-    account.g_id = response.get('id')
-    account.g_user_id = response.get('user_id')
-    account.g_id_token = response.get('id_token')
-    account.link = response.get('link')
-    account.locale = response.get('locale')
-    account.picture = response.get('picture')
-    account.home_domain = response.get('hd')
-    account.client_id = response.get('client_id')
-    account.client_secret = response.get('client_secret')
-
-    return account
-
-
-def connect_account(provider, email, pw):
-    return oauth_connect_account(provider, email, pw)
-
-
-def verify_account(account):
-    return oauth_verify_account(account)
-
-
-class GmailAuthHandler(AuthHandler):
-    connect_account = staticmethod(connect_account)
-    create_account = staticmethod(create_account)
-    create_auth_account = staticmethod(create_auth_account)
-    verify_account = staticmethod(verify_account)
-
+class GmailAuthHandler(OAuthAuthHandler):
     OAUTH_CLIENT_ID = OAUTH_CLIENT_ID
     OAUTH_CLIENT_SECRET = OAUTH_CLIENT_SECRET
     OAUTH_REDIRECT_URI = OAUTH_REDIRECT_URI
@@ -116,3 +41,73 @@ class GmailAuthHandler(AuthHandler):
     OAUTH_TOKEN_VALIDATION_URL = OAUTH_TOKEN_VALIDATION_URL
     OAUTH_USER_INFO_URL = OAUTH_USER_INFO_URL
     OAUTH_SCOPE = OAUTH_SCOPE
+
+    def create_account(self, db_session, response):
+        email_address = response.get('email')
+        # See if the account exists in db, otherwise create it
+        try:
+            account = db_session.query(GmailAccount) \
+                .filter_by(email_address=email_address).one()
+        except NoResultFound:
+            namespace = Namespace()
+            account = GmailAccount(namespace=namespace)
+
+        # We only get refresh tokens on initial login (or failed credentials)
+        # otherwise, we don't force the login screen and therefore don't get a
+        # refresh token back from google.
+        new_refresh_token = response.get('refresh_token')
+        if new_refresh_token:
+            account.refresh_token = new_refresh_token
+
+        tok = response.get('access_token')
+        expires_in = response.get('expires_in')
+        account.set_access_token(tok, expires_in)
+        account.scope = response.get('scope')
+        account.email_address = email_address
+        account.family_name = response.get('family_name')
+        account.given_name = response.get('given_name')
+        account.name = response.get('name')
+        account.gender = response.get('gender')
+        account.g_id = response.get('id')
+        account.g_user_id = response.get('user_id')
+        account.g_id_token = response.get('id_token')
+        account.link = response.get('link')
+        account.locale = response.get('locale')
+        account.picture = response.get('picture')
+        account.home_domain = response.get('hd')
+        account.client_id = response.get('client_id')
+        account.client_secret = response.get('client_secret')
+
+        return account
+
+    def validate_token(self, access_token):
+        response = requests.get(self.OAUTH_TOKEN_VALIDATION_URL,
+                                params={'access_token': access_token})
+        validation_dict = response.json()
+
+        if 'error' in validation_dict:
+            raise OAuthValidationError(validation_dict['error'])
+
+        return validation_dict
+
+    def interactive_auth(self, email_address=None):
+        url_args = {'redirect_uri': self.OAUTH_REDIRECT_URI,
+                    'client_id': self.OAUTH_CLIENT_ID,
+                    'response_type': 'code',
+                    'scope': self.OAUTH_SCOPE,
+                    'access_type': 'offline'}
+        if email_address:
+            url_args['login_hint'] = email_address
+        url = url_concat(self.OAUTH_AUTHENTICATE_URL, url_args)
+
+        print 'To authorize Inbox, visit this URL and follow the directions:'
+        print '\n{}'.format(url)
+
+        while True:
+            auth_code = raw_input('Enter authorization code: ').strip()
+            try:
+                auth_response = self._get_authenticated_user(auth_code)
+                return auth_response
+            except OAuthError:
+                print "\nInvalid authorization code, try again...\n"
+                auth_code = None

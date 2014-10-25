@@ -25,7 +25,6 @@ from inbox.basicauth import (ConnectionError, ValidationError,
                              TransientConnectionError, AuthError)
 from inbox.models import Folder
 from inbox.models.session import session_scope
-from inbox.providers import provider_info
 from inbox.models.account import Account
 from inbox.models.backends.imap import ImapAccount
 
@@ -138,9 +137,18 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
             account = db_session.query(Account).get(self.account_id)
             self.provider_name = account.provider
             self.email_address = account.email_address
-            self.provider_info = provider_info(account.provider,
-                                               account.email_address)
+            self.provider_info = account.provider_info
+            self.imap_endpoint = account.imap_endpoint
             self.sync_state = account.sync_state
+
+            if self.provider_name == 'gmail':
+                self.client_cls = GmailCrispinClient
+            elif getattr(account, 'supports_condstore', False):
+                self.client_cls = CondStoreCrispinClient
+            elif self.provider_info.get('condstore'):
+                self.client_cls = CondStoreCrispinClient
+            else:
+                self.client_cls = CrispinClient
 
             # Refresh token if need be, for OAuthed accounts
             if self.provider_info['auth'] == 'oauth2':
@@ -171,9 +179,9 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
 
             for retry_count in range(MAX_TRANSIENT_ERRORS):
                 try:
-                    conn = auth_handler.connect_account(self.provider_name,
-                                                        self.email_address,
-                                                        self.credential)
+                    conn = auth_handler.connect_account(self.email_address,
+                                                        self.credential,
+                                                        self.imap_endpoint)
 
                     # If we can connect the account, then we can set the sate
                     # to 'running' if it wasn't already
@@ -182,9 +190,9 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
                             query = db_session.query(ImapAccount)
                             account = query.get(self.account_id)
                             self.sync_state = account.sync_state = 'running'
-
-                    return new_crispin(self.account_id, self.email_address,
-                                       self.provider_name, conn, self.readonly)
+                    return self.client_cls(self.account_id, self.provider_info,
+                                           self.email_address, conn,
+                                           readonly=self.readonly)
 
                 except ConnectionError, e:
                     if isinstance(e, TransientConnectionError):
@@ -236,33 +244,6 @@ retry_crispin = functools.partial(
     fail_callback=_fail_callback, max_count=5, reset_interval=150)
 
 
-def new_crispin(account_id, email_address, provider_name, conn, readonly=True):
-    if provider_name == 'gmail':
-        cls = GmailCrispinClient
-    else:
-        info = provider_info(provider_name, email_address)
-        # look up in the provider database to see
-        # if the provider supports CONDSTORE
-        if "condstore" in info:
-            if info["condstore"]:
-                cls = CondStoreCrispinClient
-            else:
-                # condstore=False in provider file
-                cls = CrispinClient
-        else:
-            # no match in provider file, check in the
-            # account settings.
-            with session_scope() as db_session:
-                acc = db_session.query(Account).get(account_id)
-                if acc is not None:
-                    if getattr(acc, 'supports_condstore', False):
-                        cls = CondStoreCrispinClient
-                    else:
-                        cls = CrispinClient
-    return cls(account_id, provider_name, email_address, conn,
-               readonly=readonly)
-
-
 class CrispinClient(object):
     """ Generic IMAP client wrapper.
 
@@ -300,11 +281,11 @@ class CrispinClient(object):
     # cause memory errors that only pop up in extreme edge cases.
     CHUNK_SIZE = 1
 
-    def __init__(self, account_id, provider_name, email_address, conn,
+    def __init__(self, account_id, provider_info, email_address, conn,
                  readonly=True):
         self.log = logger.new(account_id=account_id, module='crispin')
         self.account_id = account_id
-        self.provider_name = provider_name
+        self.provider_info = provider_info
         self.email_address = email_address
         # IMAP isn't stateless :(
         self.selected_folder = None
@@ -396,8 +377,7 @@ class CrispinClient(object):
 
         # Additionally we provide a custom mapping for providers that
         # don't fit into the defaults.
-        info = provider_info(self.provider_name, self.email_address)
-        folder_map = info.get('folder_map', {})
+        folder_map = self.provider_info.get('folder_map', {})
 
         if self._folder_names is None:
             folders = self._fetch_folder_list()

@@ -1,4 +1,5 @@
 import datetime
+import getpass
 from imapclient import IMAPClient
 from socket import gaierror, error as socket_error
 from ssl import SSLError
@@ -9,35 +10,16 @@ from inbox.log import get_logger
 log = get_logger()
 
 from inbox.auth import AuthHandler
-from inbox.basicauth import password_auth
 from inbox.basicauth import (ConnectionError, ValidationError,
                              TransientConnectionError)
 from inbox.models import Namespace
 from inbox.models.backends.generic import GenericAccount
-from inbox.providers import provider_info
-from inbox.util.url import provider_from_address
-from inbox.basicauth import NotSupportedError
 
 PROVIDER = 'generic'
 
 
 class GenericAuthHandler(AuthHandler):
-
-    def create_auth_account(self, db_session, email_address, token, exit):
-        response = self._auth_account(email_address, token, exit)
-        account = self.create_account(db_session, email_address, response)
-
-        return account
-
-    def _auth_account(self, email_address, token, exit):
-        return password_auth(email_address, token, exit)
-
     def create_account(self, db_session, email_address, response):
-        provider_name = provider_from_address(email_address)
-        if provider_name == 'unknown':
-            raise NotSupportedError(
-                'Inbox does not support the email provider.')
-
         try:
             account = db_session.query(GenericAccount).filter_by(
                 email_address=email_address).one()
@@ -48,11 +30,18 @@ class GenericAuthHandler(AuthHandler):
         account.email_address = response['email']
         account.password = response['password']
         account.date = datetime.datetime.utcnow()
+
+        provider_name = self.provider_name
         account.provider = provider_name
+        if provider_name == 'custom':
+            account.imap_endpoint = (response['imap_server_host'],
+                                     response['imap_server_port'])
+            account.smtp_endpoint = (response['smtp_server_host'],
+                                     response['smtp_server_port'])
 
         return account
 
-    def connect_account(self, provider, email, credential):
+    def connect_account(self, email, credential, imap_endpoint):
         """Provide a connection to a generic IMAP account.
 
         Raises
@@ -65,9 +54,7 @@ class GenericAuthHandler(AuthHandler):
         ValidationError
             If the credentials are invalid.
         """
-
-        info = provider_info(provider, email)
-        host, port = info['imap']
+        host, port = imap_endpoint
         try:
             conn = IMAPClient(host, port=port, use_uid=True, ssl=True)
         except IMAPClient.AbortError as e:
@@ -134,14 +121,33 @@ class GenericAuthHandler(AuthHandler):
         -------
         True: If the client can successfully connect.
         """
-        conn = self.connect_account(account.provider,
-                                    account.email_address,
-                                    account.password)
-
-        info = provider_info(account.provider, account.email_address)
+        conn = self.connect_account(account.email_address,
+                                    account.password,
+                                    account.imap_endpoint)
+        info = account.provider_info
         if "condstore" not in info:
             if self._supports_condstore(conn):
                 account.supports_condstore = True
 
         conn.logout()
         return True
+
+    def interactive_auth(self, email_address):
+        password_message = 'Password for {0} (hidden): '
+        pw = ''
+        while not pw:
+            pw = getpass.getpass(password_message.format(email_address))
+
+        response = dict(email=email_address, password=pw)
+
+        if self.provider_name == 'custom':
+            imap_server_host = raw_input('IMAP server host: ').strip()
+            imap_server_port = raw_input('IMAP server port: ').strip() or 993
+            smtp_server_host = raw_input('SMTP server host: ').strip()
+            smtp_server_port = raw_input('SMTP server port: ').strip() or 587
+            response.update(imap_server_host=imap_server_host,
+                            imap_server_port=imap_server_port,
+                            smtp_server_host=smtp_server_host,
+                            smtp_server_port=smtp_server_port)
+
+        return response

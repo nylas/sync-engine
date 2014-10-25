@@ -9,12 +9,9 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declared_attr
 
 from inbox.models.secret import Secret
-from inbox.oauth import new_token, validate_token
-from inbox.basicauth import AuthError
-from inbox.basicauth import ConnectionError
-from inbox.oauth import (OAuthInvalidGrantError,
-                         OAuthValidationError,
-                         OAuthError)
+from inbox.basicauth import (AuthError, ConnectionError,
+                             OAuthInvalidGrantError, OAuthValidationError,
+                             OAuthError)
 from inbox.log import get_logger
 log = get_logger()
 
@@ -33,11 +30,6 @@ class OAuthAccount(object):
             'Secret', uselist=False, primaryjoin='and_('
             '{0}.refresh_token_id == Secret.id, '
             'Secret.deleted_at.is_(None))'.format(cls.__name__))
-
-    @property
-    def provider_module(self):
-        from inbox.auth import handler_from_provider
-        return handler_from_provider(self.provider)
 
     @property
     def refresh_token(self):
@@ -129,7 +121,7 @@ class OAuthAccount(object):
 
     def _validate_token(self, tok):
         try:
-            return validate_token(self.provider_module, tok)
+            return self.auth_handler.validate_token(tok)
         except ConnectionError as e:
             log.error('ConnectionError',
                       message=u"Error while validating access token: {}"
@@ -145,10 +137,9 @@ class OAuthAccount(object):
 
     def _new_token(self):
         try:
-            return new_token(self.provider_module,
-                             self.refresh_token,
-                             self.client_id,
-                             self.client_secret)
+            return self.auth_handler.new_token(self.refresh_token,
+                                               self.client_id,
+                                               self.client_secret)
         except ConnectionError as e:
             log.error('ConnectionError',
                       message=u"Error while getting access token: {}"

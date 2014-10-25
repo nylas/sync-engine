@@ -11,7 +11,7 @@ from inbox.models import Folder
 from inbox.models.session import session_scope
 from inbox.models.backends.imap import ImapAccount
 from inbox.sendmail.base import SendMailException, SendError
-from inbox.oauth import OAuthError
+from inbox.basicauth import OAuthError
 from inbox.providers import provider_info
 from inbox.util.concurrency import retry
 log = get_logger()
@@ -190,6 +190,7 @@ class BaseSMTPClient(object):
             self.email_address = account.email_address
             self.provider_name = account.provider
             self.sender_name = account.name
+            self.smtp_endpoint = account.smtp_endpoint
 
             if account.sent_folder is None:
                 # account has no detected sent folder - create one.
@@ -276,8 +277,7 @@ class BaseSMTPClient(object):
 
     def _get_connection(self):
         try:
-            host, port = provider_info(self.provider_name,
-                                       self.email_address)['smtp']
+            host, port = self.smtp_endpoint
             connection = smtplib.SMTP()
             # connection.set_debuglevel(2)
             connection.connect(host, port)

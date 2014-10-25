@@ -13,6 +13,7 @@ from inbox.models.mixins import HasPublicID, HasEmailAddress
 from inbox.models.base import MailSyncBase
 from inbox.models.folder import Folder
 from inbox.models.calendar import Calendar
+from inbox.providers import provider_info
 
 
 class Account(MailSyncBase, HasPublicID, HasEmailAddress):
@@ -29,12 +30,14 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
         """
         raise NotImplementedError
 
-    # TODO(dlitz): There should perhaps be a 'provider_info' property here.
-
     @property
     def auth_handler(self):
         from inbox.auth import handler_from_provider
         return handler_from_provider(self.provider)
+
+    @property
+    def provider_info(self):
+        return provider_info(self.provider, self.email_address)
 
     def verify(self):
         """ Verify that the account is still valid."""

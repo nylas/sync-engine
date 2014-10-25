@@ -30,7 +30,7 @@ def folder_sync_engine(db, monkeypatch):
     # setup a dummy FolderSyncEngine - we only need to call a couple
     # methods.
     email = "inboxapptest1@fastmail.fm"
-    account = GenericAuthHandler().create_account(
+    account = GenericAuthHandler('fastmail').create_account(
         db.session, email, {"email": email, "password": "BLAH"})
     Tag.create_canonical_tags(account.namespace, db.session)
     db.session.add(account)
