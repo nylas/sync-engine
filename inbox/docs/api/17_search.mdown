@@ -1,0 +1,153 @@
+Title: Search (Work in progress)
+
+The search endpoints are used to run full-text searches against the messages and threads of a namespace.
+
+# Constructing a search request
+
+The search query is specified in the POST body using the syntax below.
+Pagination of results can be done using the limit and offset request parameters.
+
+**Query Syntax**
+
+The API supports both AND-queries and OR-queries.
+
+The root "query" is specified as a list of query objects to be OR-ed together.
+Each query object is a set of field/value mappings to match i.e. is an AND-query.
+
+To match all messages/threads (no search criteria), simply omit
+the `query` object.
+
+```
+:::xml
+POST https://api.inboxapp.com/n/<namespace_id>/messages/search?limit=2&offset=1
+```
+
+All messages sent to:inboxapptest AND from:ben.bitdiddle -
+
+```
+:::json
+{
+    "query": [{"to": "inboxapptest@gmail.com",
+               "from": "ben.bitdiddle@inboxapp.com"}]
+}
+```
+
+All messages sent to:inboxapptest OR from:ben.bitdiddle -
+
+```
+:::json
+{
+    "query": [{"to": "inboxapptest@gmail.com"},
+              {"from": "ben.bitdiddle@inboxapp.com"}]
+}
+```
+
+* Any attribute can be specified as a field.
+
+For example, to get all threads with a particular `participant` -
+
+```
+:::xml
+POST https://api.inboxapp.com/n/<namespace_id>/threads/search
+```
+
+```
+:::json
+{
+    "query": [{"participants": "inboxapptest@gmail.com"}]
+}
+```
+
+* To search against all the attributes, simply provide `all` as the field.
+
+Matches in certain fields can be weighted higher than those in others. By default,
+a match in the `subject`, `snippet`, `body` Message fields and the `subject`, `snippet`,
+`participants` and `tags` Thread fields are weighted 3x the other fields.
+The default scoring can be overriden by passing in a "weights" dict containing the fields and weights.
+
+For example, to get the messages where any field (subject/body/to/from/cc/etc.) contains "symphony" -
+
+```
+:::xml
+POST https://api.inboxapp.com/n/<namespace_id>/messages/search
+```
+
+```
+:::json
+{
+    "query": [{"all": "symphony"}]
+}
+```
+
+To weight matches in the `from` field 4x and matches in `subject` only 2x
+(the other fields are weighted equally) -
+
+```
+:::json
+{
+    "query": [{"all": "symphony",
+               "weights": {"from": 4, "subject": 2}
+               }]
+}
+```
+
+* To perform an exact phrase search (the default), the value is specified as a string.
+To perform a full-text search, the value is specified as a list of strings.
+Note capitalization is ignored in both cases.
+
+For example, to get all messages whose bodies contain the exact phrase "Red Rock" -
+
+```
+:::json
+{
+    "query": [{"body": "Red Rock"}]
+}
+```
+
+To get all messages whose bodies contain the word "Red", the word "Rock", or both -
+
+```
+:::json
+{
+    "query": [{"body": ["Red", "Rock"]}]
+}
+```
+
+# The search response
+
+A search returns a list of results.
+Each result is a JSON object that contains an:
+"object" - the Inbox API representation of the message/thread.
+For example, a message result object would contain to, from, cc, bcc, subject, body etc. fields
+"relevance" - the ranking score for the result.
+
+```
+:::json
+ [
+    {
+        "object": {
+            "bcc": [],
+            "body": "<html><body><div dir=\"ltr\">I'd think you'll get more help if you can reproduce the issue with smaller code and paste it to Go Playground.<div class=\"gmail_extra\"></div></div>\n<p></p>\n\n-- <br/>\nYou received this message because you are subscribed to the Google Groups \"golang-nuts\" group.<br/>\nTo unsubscribe from this group and stop receiving emails from it, send an email to <a href=\"mailto:golang-nuts+unsubscribe@googlegroups.com\">golang-nuts+unsubscribe@googlegroups.com</a>.<br/>\nFor more options, visit <a href=\"https://groups.google.com/d/optout\">https://groups.google.com/d/optout</a>.<br/></body></html>",
+            "cc": [
+                "golang-nuts@googlegroups.com"
+            ],
+            "date": "2014-05-03T00:26:05",
+            "files": [],
+            "from": [
+                "golang-nuts@googlegroups.com"
+            ],
+            "id": "78pgxboai332pi9p2smo4db73",
+            "namespace_id": "3q4vzllntcsea53vxz4erbnxr",
+            "object": "message",
+            "snippet": "I'd think you'll get more help if you can reproduce the issue with smaller code and paste it to Go Playground. \n \n\n--  \nYou received this message because you are subscribed to the Google Grou",
+            "subject": "[go-nuts] Runtime Panic On Method Call",
+            "thread_id": "e6z2862swmdmyqmegz4hvzm5r",
+            "to": [
+                "paulxtiseo@gmail.com"
+            ],
+            "unread": false
+        },
+        "relevance": 3.0323157
+    }
+]
+```

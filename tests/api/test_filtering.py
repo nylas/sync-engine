@@ -20,6 +20,7 @@ def test_filtering(db, api_client):
     subject = message.subject
     to_addr = message.to_addr[0][1]
     from_addr = message.from_addr[0][1]
+
     received_date = message.received_date
 
     results = api_client.get_data('/threads?thread_id={}'

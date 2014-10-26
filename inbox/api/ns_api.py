@@ -21,13 +21,14 @@ from inbox.api.validation import (InputError, get_tags, get_attachments,
                                   bounded_str, view, strict_parse_args, limit,
                                   valid_event_action, valid_rsvp,
                                   ValidatableArgument,
-                                  validate_draft_recipients)
+                                  validate_draft_recipients,
+                                  validate_search_query)
 from inbox import events, contacts, sendmail
 from inbox.log import get_logger
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from inbox.models.action_log import schedule_action, ActionError
 from inbox.models.session import InboxSession
-from inbox.search.adapter import NamespaceSearchEngine, SearchInterfaceError
+from inbox.search.adaptor import NamespaceSearchEngine, SearchEngineError
 from inbox.transactions import delta_sync
 
 from err import err
@@ -300,17 +301,22 @@ def thread_query_api():
     return g.encoder.jsonify(threads)
 
 
-@app.route('/threads/search')
+@app.route('/threads/search', methods=['POST'])
 def thread_search_api():
-    g.parser.add_argument('q', type=bounded_str, location='args')
     args = strict_parse_args(g.parser, request.args)
+    data = request.get_json(force=True)
+    query = data.get('query')
+
+    validate_search_query(query)
+
     try:
         search_engine = NamespaceSearchEngine(g.namespace_public_id)
-        results = search_engine.threads.search(query=args.q,
+        results = search_engine.threads.search(query=query,
                                                max_results=args.limit,
                                                offset=args.offset)
-    except SearchInterfaceError:
-        return err(501, 'Search endpoint not available')
+    except SearchEngineError:
+        return err(501, 'Search error')
+
     return g.encoder.jsonify(results)
 
 
@@ -439,17 +445,22 @@ def message_query_api():
     return g.encoder.jsonify(messages)
 
 
-@app.route('/messages/search')
+@app.route('/messages/search', methods=['POST'])
 def message_search_api():
-    g.parser.add_argument('q', type=bounded_str, location='args')
     args = strict_parse_args(g.parser, request.args)
+    data = request.get_json(force=True)
+    query = data.get('query')
+
+    validate_search_query(query)
+
     try:
         search_engine = NamespaceSearchEngine(g.namespace_public_id)
-        results = search_engine.messages.search(query=args.q,
+        results = search_engine.messages.search(query=query,
                                                 max_results=args.limit,
                                                 offset=args.offset)
-    except SearchInterfaceError:
-        return err(501, 'Search endpoint not available')
+    except SearchEngineError:
+        return err(501, 'Search error')
+
     return g.encoder.jsonify(results)
 
 
@@ -536,9 +547,8 @@ def contact_search_api():
         results = g.db_session.query(Contact)
 
     results = results.filter(Contact.namespace_id == g.namespace.id,
-                   Contact.source == 'local',
-                   term_filter). \
-        order_by(asc(Contact.id))
+                             Contact.source == 'local',
+                             term_filter).order_by(asc(Contact.id))
 
     if args['view'] == 'count':
         return g.encoder.jsonify({"count": results.all()})

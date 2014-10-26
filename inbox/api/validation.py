@@ -3,8 +3,9 @@ from datetime import datetime
 from flanker.addresslib import address
 from flask.ext.restful import reqparse
 from sqlalchemy.orm.exc import NoResultFound
-from inbox.models import Account, Calendar, Tag, Thread, Block
+from inbox.models import Account, Calendar, Tag, Thread, Block, Message
 from inbox.models.when import parse_as_when
+from inbox.api.kellogs import encode
 
 MAX_LIMIT = 1000
 
@@ -79,14 +80,17 @@ def boolean(value, key):
 
 
 def strict_parse_args(parser, raw_args):
-    """Wrapper around parser.parse_args that raises a ValueError if unexpected
-    arguments are present."""
+    """
+    Wrapper around parser.parse_args that raises a ValueError if unexpected
+    arguments are present.
+
+    """
     args = parser.parse_args()
     unexpected_params = (set(raw_args) - {allowed_arg.name for allowed_arg in
                                           parser.args})
     if unexpected_params:
-        raise InputError('Unexpected query parameters {}'.
-                         format(unexpected_params))
+        raise InputError('Unexpected query parameters {}'.format(
+                         unexpected_params))
     return args
 
 
@@ -251,3 +255,11 @@ def validate_draft_recipients(draft):
                                   address.EmailAddress):
                     raise InputError('Invalid recipient address {}'.
                                      format(email_address))
+
+
+# TODO[k]
+def validate_search_query(query):
+    if query is None:
+        return
+
+    return

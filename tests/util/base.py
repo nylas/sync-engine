@@ -71,9 +71,11 @@ def log(request, config):
 
 @yield_fixture(scope='function')
 def db(request, config):
-    """ NOTE: You cannot rely on IMAP UIDs from the test db being correctly
-        up-to-date. If you need to test sync functionality, start with a
-        test database containing only an authed user, not this dump.
+    """
+    NOTE: You cannot rely on IMAP UIDs from the test db being correctly
+    up-to-date. If you need to test sync functionality, start with a
+    test database containing only an authed user, not this dump.
+
     """
     dumpfile = request.param[0]
     savedb = request.param[1]
@@ -110,9 +112,12 @@ class TestAPIClient(object):
         self.ns_public_ids = {}
 
     def full_path(self, path, ns_id=1):
-        """For testing purposes, replace a path such as '/tags' by
+        """
+        For testing purposes, replace a path such as '/tags' by
         '/n/<ns_id>/tags', where <ns_id> is the id of the first result of a
-        call to '/n/'."""
+        call to '/n/'.
+
+        """
         if ns_id in self.ns_public_ids:
             ns_public_id = self.ns_public_ids[ns_id]
         else:
@@ -179,9 +184,12 @@ class TestDB(object):
                                     ignore_soft_deletes=ignore_soft_deletes)
 
     def teardown(self):
-        """Closes the session. We need to explicitly do this to prevent certain
+        """
+        Closes the session. We need to explicitly do this to prevent certain
         tests from hanging. Note that we don't need to actually destroy or
-        rolback the database because we create it anew on each test."""
+        rolback the database because we create it anew on each test.
+
+        """
         self.session.rollback()
         self.session.close()
 
@@ -206,8 +214,11 @@ class MockSMTPClient(object):
 
 @fixture
 def patch_network_functions(monkeypatch):
-    """Monkeypatch functions that actually talk to Gmail so that the tests can
-    run faster."""
+    """
+    Monkeypatch functions that actually talk to Gmail so that the tests can
+    run faster.
+
+    """
     monkeypatch.setattr('inbox.sendmail.base.get_sendmail_client',
                         lambda *args, **kwargs: MockSMTPClient())
     import inbox.actions
@@ -261,10 +272,12 @@ def contacts_provider(config, db):
 
 
 class ContactsProviderStub(object):
-    """Contacts provider stub to stand in for an actual provider.
+    """
+    Contacts provider stub to stand in for an actual provider.
     When an instance's get_items() method is called, return an iterable of
     Contact objects corresponding to the data it's been fed via
     supply_contact().
+
     """
     def __init__(self, provider_name='test_provider'):
         self._contacts = []

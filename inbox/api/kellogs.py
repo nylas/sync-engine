@@ -15,7 +15,15 @@ def format_address_list(addresses):
     return [{'name': name, 'email': email} for name, email in addresses]
 
 
-def encode(obj, namespace_public_id=None):
+def format_tags_list(tags):
+    if tags is None:
+        return []
+    return [{'name': tag.name, 'id': tag.public_id} for tag in tags]
+
+
+def encode(obj, namespace_public_id=None,
+           format_address_fn=format_address_list,
+           format_tags_fn=format_tags_list):
     """Returns a dictionary representation of an Inbox model object obj, or
     None if there is no such representation defined. If the optional
     namespace_public_id parameter is passed, it will used instead of fetching
@@ -62,10 +70,10 @@ def encode(obj, namespace_public_id=None):
             'object': 'message',
             'namespace_id': _get_namespace_public_id(obj),
             'subject': obj.subject,
-            'from': format_address_list(obj.from_addr),
-            'to': format_address_list(obj.to_addr),
-            'cc': format_address_list(obj.cc_addr),
-            'bcc': format_address_list(obj.bcc_addr),
+            'from': format_address_fn(obj.from_addr),
+            'to': format_address_fn(obj.to_addr),
+            'cc': format_address_fn(obj.cc_addr),
+            'bcc': format_address_fn(obj.bcc_addr),
             'date': obj.received_date,
             'thread_id': obj.thread.public_id,
             'snippet': obj.snippet,
@@ -92,15 +100,14 @@ def encode(obj, namespace_public_id=None):
             'object': 'thread',
             'namespace_id': _get_namespace_public_id(obj),
             'subject': obj.subject,
-            'participants': format_address_list(obj.participants),
+            'participants': format_address_fn(obj.participants),
             'last_message_timestamp': obj.recentdate,
             'first_message_timestamp': obj.subjectdate,
             'snippet': obj.snippet,
             'message_ids': [m.public_id for m in obj.messages if not
                             m.is_draft],
             'draft_ids': [m.public_id for m in obj.drafts],
-            'tags': [{'name': tag.name, 'id': tag.public_id}
-                     for tag in obj.tags]
+            'tags': format_tags_fn(obj.tags)
         }
 
     elif isinstance(obj, Contact):
