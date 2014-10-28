@@ -409,42 +409,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         return s
 
     @property
-    def prettified_body(self):
-        html_data = self.sanitized_body
-
-        prettified = None
-        if 'font:' in html_data or 'font-face:' \
-                in html_data or 'font-family:' in html_data:
-            prettified = html_data
-        else:
-            prettified = """
-            <html><head>
-            <style rel="stylesheet" type="text/css">
-            body { background-color:#FFF;
-            font-family: HelveticaNeue, courier, sans-serif;
-            font-size: 15px;
-            color:#333;
-            font-variant:normal;
-            line-height:1.6em;
-            font-style:normal;
-            text-align:left;
-            position:relative;
-            margin:0;
-            padding:20px; }
-            a { text-decoration: underline;}
-            a:hover {
-             border-radius:3px; background-color: #E9E9E9;
-             }
-            </style>
-            <base target="_blank" />
-            </head><body>
-            %s
-            </body></html>
-            """.strip() % html_data
-
-        return prettified
-
-    @property
     def headers(self):
         """ Returns headers for the message, decoded. """
         assert self.parts, \
@@ -470,21 +434,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     # Whether this draft is a reply to an existing thread.
     is_reply = Column(Boolean)
 
-    # Null till reconciled.
-    # Deletes should not be cascaded! i.e. delete on remote -> delete the
-    # resolved_message *only*, not the original Message we created.
-    # We need this to correctly maintain draft versions (created on
-    # update_draft())
-    resolved_message_id = Column(Integer,
-                                 ForeignKey('message.id'),
+    # Deprecated
+    # TODO(emfree): remove from schema
+    resolved_message_id = Column(Integer, ForeignKey('message.id'),
                                  nullable=True)
-    resolved_message = relationship(
-        'Message',
-        remote_side='Message.id',
-        primaryjoin='and_('
-        'Message.resolved_message_id==remote(Message.id), '
-        'remote(Message.deleted_at)==None)',
-        backref=backref('created_messages', primaryjoin='and_('
-                        'remote(Message.resolved_message_id)==Message.id,'
-                        'remote(Message.deleted_at)==None)',
-                        uselist=False))
