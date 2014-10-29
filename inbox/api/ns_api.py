@@ -2,7 +2,7 @@ import os
 import base64
 
 from datetime import datetime
-from flask import request, g, Blueprint, make_response
+from flask import request, g, Blueprint, make_response, Response
 from flask import jsonify as flask_jsonify
 from flask.ext.restful import reqparse
 from sqlalchemy import asc, or_, func
@@ -10,9 +10,11 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import subqueryload
 
 from inbox.models import (Message, Block, Part, Thread, Namespace,
-                          Tag, Contact, Calendar, Event, Participant)
+                          Tag, Contact, Calendar, Event, Participant,
+                          Transaction)
 from inbox.api.kellogs import APIEncoder
 from inbox.api import filtering
+from inbox.api.streaming import streaming_change_generator
 from inbox.api.validation import (InputError, get_tags, get_attachments,
                                   get_calendar, get_thread, get_recipients,
                                   valid_public_id, valid_event,
@@ -1320,3 +1322,27 @@ def generate_cursor():
     cursor = delta_sync.get_public_id_from_ts(g.namespace.id, timestamp,
                                               g.db_session)
     return g.encoder.jsonify({'cursor': cursor})
+
+
+##
+# Streaming
+##
+
+@app.route('/delta/streaming')
+def stream_changes():
+    g.parser.add_argument('timeout', type=float, location='args')
+    g.parser.add_argument('cursor', type=valid_public_id, location='args')
+    args = strict_parse_args(g.parser, request.args)
+    timeout = args['timeout'] or 3600
+    transaction_pointer = None
+    if args['cursor'] is not None:
+        query_result = g.db_session.query(Transaction.id).filter(
+            Transaction.namespace_id == g.namespace.id,
+            Transaction.public_id == args['cursor']).first()
+        if query_result is not None:
+            transaction_pointer = query_result[0]
+    generator = streaming_change_generator(
+        g.namespace.id, g.namespace.public_id,
+        transaction_pointer=transaction_pointer, poll_interval=1,
+        timeout=timeout)
+    return Response(generator, mimetype='text/event-stream')
