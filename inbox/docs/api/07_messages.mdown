@@ -92,3 +92,20 @@ PUT https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>
     "unread": false
 }
 ```
+
+# Getting the raw contents of a message
+
+If you need to access some specific email headers that are not exposed by our API (e.g: mailing-list specific headers) you can use our "raw" message endpoint. This endpoint returns the raw, unparsed message as a base64 string.
+
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>/rfc2822
+```
+
+```
+:::json
+{
+    "rfc2822": "dGhpcyBpcyBiYXNlNjQ="
+}
+```
+

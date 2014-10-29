@@ -1,4 +1,5 @@
 import os
+import base64
 
 from datetime import datetime
 from flask import request, g, Blueprint, make_response
@@ -456,8 +457,8 @@ def message_api(public_id):
     try:
         valid_public_id(public_id)
         message = g.db_session.query(Message).filter(
-            Message.public_id == public_id).one()
-        assert int(message.namespace.id) == int(g.namespace.id)
+            Message.public_id == public_id,
+            Message.namespace_id == g.namespace.id).one()
     except InputError:
         return err(400, 'Invalid message id {}'.format(public_id))
     except NoResultFound:
@@ -486,6 +487,29 @@ def message_api(public_id):
             if all(m.is_read for m in message.thread.messages):
                 message.thread.remove_tag(unread_tag)
         return g.encoder.jsonify(message)
+
+
+@app.route('/messages/<public_id>/rfc2822', methods=['GET'])
+def raw_message_api(public_id):
+    try:
+        valid_public_id(public_id)
+        message = g.db_session.query(Message).filter(
+            Message.public_id == public_id,
+            Message.namespace_id == g.namespace.id).one()
+    except InputError:
+        return err(400, 'Invalid message id {}'.format(public_id))
+    except NoResultFound:
+        return err(404,
+                   "Couldn't find raw message with id {0} "
+                   "on namespace {1}".format(public_id, g.namespace_public_id))
+
+    if message.full_body is None:
+        return err(404,
+                   "Couldn't find raw message with id {0} "
+                   "on namespace {1}".format(public_id, g.namespace_public_id))
+
+    b64_contents = base64.b64encode(message.full_body.data)
+    return g.encoder.jsonify({"rfc2822": b64_contents})
 
 
 #

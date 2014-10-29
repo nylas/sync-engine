@@ -119,6 +119,15 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     snippet = Column(String(191), nullable=False)
     SNIPPET_LENGTH = 191
 
+    # A reference to the block holding the full contents of the message
+    full_body_id = Column(ForeignKey('block.id', name='full_body_id_fk'),
+                          nullable=True)
+    full_body = relationship(
+        'Block',
+        cascade='all, delete',
+        primaryjoin='and_(Message.full_body_id==Block.id, '
+                    'Block.deleted_at==None)')
+
     # this might be a mail-parsing bug, or just a message from a bad client
     decode_error = Column(Boolean, server_default=false(), nullable=False)
 
@@ -221,11 +230,16 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                 parsed.headers.get('References', ''),
                 parsed.headers.get('In-Reply-To', ''))
 
+            from inbox.models.block import Block, Part
+            body_block = Block()
+            body_block.namespace_id = account.namespace.id
+            body_block.data = body_string
+            body_block.content_type = "text/plain"
+            msg.full_body = body_block
+
             msg.size = len(body_string)  # includes headers text
 
             i = 0  # for walk_index
-
-            from inbox.models.block import Block, Part
 
             # Store all message headers as object with index 0
             block = Block()
