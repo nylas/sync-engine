@@ -43,7 +43,7 @@ class OutlookAuthHandler(OAuthAuthHandler):
     OAUTH_BASE_URL = OAUTH_BASE_URL
     OAUTH_SCOPE = OAUTH_SCOPE
 
-    def create_account(self, db_session, response):
+    def create_account(self, db_session, email_address, response):
         email_address = response.get('emails')['account']
         try:
             account = db_session.query(OutlookAccount).filter_by(
