@@ -130,6 +130,9 @@ pip install 'pip>=1.5.6' 'setuptools>=5.3'
 hash pip        # /usr/bin/pip might now be /usr/local/bin/pip
 pip install 'pip>=1.5.6' 'setuptools>=5.3'
 
+# Install tox for running tests
+pip install 'tox'
+
 # Now that the new version of pip and our other non-pip dependencies are
 # installed, we can switch back to the source directory.
 cd "$src_dir"
