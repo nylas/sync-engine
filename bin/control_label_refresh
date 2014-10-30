@@ -1,0 +1,50 @@
+#!/usr/bin/env python
+# control refresh-imapuid-labels. Runs on every account of the db
+# and prints a list of the accounts that failed.
+# Optionally, takes a list of account ids as arguments and runs for
+# only those accounts.
+import sys
+import os
+from sqlalchemy import func
+from inbox.util.itert import chunk
+from inbox.mailsync.backends.imap.generic import uidvalidity_cb
+from inbox.crispin import connection_pool
+from inbox.models.session import session_scope
+from inbox.models import Account, Folder
+from inbox.models.backends.imap import ImapUid
+
+
+if __name__ == '__main__':
+
+    account_ids = None
+    dry_run = False
+    if len(sys.argv) != 1:
+        if sys.argv[1] == '-p':
+            dry_run = True
+        else:
+            account_ids = [int(num) for num in sys.argv[1:]]
+
+    failed_accounts = []
+
+    with session_scope() as db_session:
+        accounts = db_session.query(Account).filter(
+            Account.discriminator =='gmailaccount')
+        if account_ids is not None:
+           accounts = accounts.filter(Account.id.in_(account_ids))
+
+        accounts_list = [account for account in accounts]
+        # Expunge these objects from the session since we don't
+        # want to keep a mysql connection open for 10+ hours.
+        for account in accounts_list:
+            db_session.expunge(account)
+
+        if dry_run:
+            print [account.id for account in accounts_list]
+            sys.exit(0)
+
+    for account in accounts_list:
+        ret = os.system("bin/refresh_imapuid_labels %d" % account.id)
+        if os.WEXITSTATUS(ret) != 0:
+            failed_accounts.append(account.id)
+
+    print "Failed accounts: %s" % failed_accounts

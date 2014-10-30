@@ -7,7 +7,7 @@ from sqlalchemy.orm import relationship, backref
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.sql.expression import false
 
-from inbox.sqlalchemy_ext.util import LittleJSON, JSON, MutableDict
+from inbox.sqlalchemy_ext.util import (LittleJSON, JSON, MutableDict)
 
 from inbox.log import get_logger
 log = get_logger()
@@ -106,6 +106,8 @@ class ImapUid(MailSyncBase):
     is_answered = Column(Boolean, server_default=false(), nullable=False)
     # things like: ['$Forwarded', 'nonjunk', 'Junk']
     extra_flags = Column(LittleJSON, default=[], nullable=False)
+    # labels (Gmail-specific)
+    g_labels = Column(JSON, default=lambda: [], nullable=True)
 
     def update_imap_flags(self, new_flags, x_gm_labels=None):
         new_flags = set(new_flags)

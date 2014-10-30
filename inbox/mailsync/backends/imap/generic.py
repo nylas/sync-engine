@@ -365,15 +365,13 @@ class FolderSyncEngine(Greenlet):
                     db_session, new_uid.account.namespace, new_uid.message)
                 new_uid.message.thread_order = 0
             else:
-                # FIXME: arbitrarily select the first thread. This shouldn't
-                # be a problem now but it could become one if we choose
-                # to implement thread-splitting.
                 parent_thread = parent_threads[0]
                 parent_thread.messages.append(new_uid.message)
                 constructed_thread = thread_messages(parent_thread.messages)
                 for index, message in enumerate(constructed_thread):
                     message.thread_order = index
 
+            db_session.flush()
             # Make sure this thread has all the correct labels
             common.update_thread_labels(new_uid.message.thread, folder.name,
                                         [folder.canonical_name], db_session)
