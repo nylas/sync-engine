@@ -78,21 +78,6 @@ class Tag(MailSyncBase, HasRevisions):
         return not (self.user_removable or self.user_addable)
 
     @classmethod
-    def create_canonical_tags(cls, namespace, db_session):
-        """If they don't already exist yet, create tags that should always
-        exist."""
-        existing_canonical_tags = db_session.query(Tag).filter(
-            Tag.namespace_id == namespace.id,
-            Tag.public_id.in_(cls.CANONICAL_TAG_NAMES)).all()
-        missing_canonical_names = set(cls.CANONICAL_TAG_NAMES).difference(
-            {tag.public_id for tag in existing_canonical_tags})
-        for canonical_name in missing_canonical_names:
-            tag = Tag(namespace=namespace,
-                      public_id=canonical_name,
-                      name=canonical_name)
-            db_session.add(tag)
-
-    @classmethod
     def name_available(cls, name, namespace_id, db_session):
         name = name.lower()
         if name in cls.RESERVED_TAG_NAMES or name in cls.CANONICAL_TAG_NAMES:

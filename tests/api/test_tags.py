@@ -21,8 +21,8 @@ def get_tag_names(thread):
 @pytest.fixture(autouse=True)
 def create_canonical_tags(db, default_namespace):
     """Ensure that all canonical tags exist for the namespace we're testing
-    against. This is normally done when an account sync starts."""
-    Tag.create_canonical_tags(default_namespace, db.session)
+    against."""
+    default_namespace.create_canonical_tags()
     db.session.commit()
 
 

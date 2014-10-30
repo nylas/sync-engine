@@ -16,12 +16,12 @@ from sqlalchemy.sql import text
 
 def upgrade():
     from inbox.models.session import session_scope
-    from inbox.models import Namespace, Tag
+    from inbox.models import Namespace
     with session_scope() as db_session:
         # Create the attachment tag
         print "creating canonical tags..."
         for ns in db_session.query(Namespace):
-            Tag.create_canonical_tags(ns, db_session)
+            ns.create_canonical_tags()
             db_session.commit()
 
     conn = op.get_bind()

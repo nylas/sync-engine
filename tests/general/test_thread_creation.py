@@ -24,7 +24,6 @@ def folder_sync_engine(db, monkeypatch):
     # super ugly, but I don't want to have to mock tons of stuff
     import inbox.mailsync.backends.imap.generic
     from inbox.mailsync.backends.imap.generic import FolderSyncEngine
-    from inbox.models import Tag
     monkeypatch.setattr(inbox.mailsync.backends.imap.generic,
                         "_pool", lambda(account): True)
     # setup a dummy FolderSyncEngine - we only need to call a couple
@@ -32,7 +31,6 @@ def folder_sync_engine(db, monkeypatch):
     email = "inboxapptest1@fastmail.fm"
     account = GenericAuthHandler('fastmail').create_account(
         db.session, email, {"email": email, "password": "BLAH"})
-    Tag.create_canonical_tags(account.namespace, db.session)
     db.session.add(account)
     db.session.commit()
 

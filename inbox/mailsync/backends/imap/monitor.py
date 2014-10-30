@@ -2,8 +2,7 @@ from gevent import sleep
 from gevent.pool import Group
 from sqlalchemy.orm.exc import NoResultFound
 from inbox.log import get_logger
-from inbox.models import Tag, Folder
-from inbox.models.backends.imap import ImapAccount
+from inbox.models import Folder
 from inbox.models.util import db_write_lock
 from inbox.mailsync.backends.base import BaseMailSyncMonitor
 from inbox.mailsync.backends.base import (save_folder_names,
@@ -57,8 +56,6 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         of tuples (folder_name, folder_id) for each folder we want to sync (in
         order)."""
         with mailsync_session_scope() as db_session:
-            account = db_session.query(ImapAccount).get(self.account_id)
-            Tag.create_canonical_tags(account.namespace, db_session)
             with _pool(self.account_id).get() as crispin_client:
                 sync_folders = crispin_client.sync_folders()
                 save_folder_names(log, self.account_id,
