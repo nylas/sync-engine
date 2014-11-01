@@ -1,19 +1,13 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Index
+from sqlalchemy import Column, Integer, String, ForeignKey, Index, Enum
 from sqlalchemy.orm import relationship
 
-from inbox.log import get_logger
-log = get_logger()
-
-from inbox.sqlalchemy_ext.util import BigJSON
-from inbox.sqlalchemy_ext.revision import Revision, gen_rev_role
-
 from inbox.models.base import MailSyncBase
-from inbox.models.mixins import HasPublicID
+from inbox.models.mixins import HasPublicID, HasRevisions
 from inbox.models.namespace import Namespace
+from inbox.sqlalchemy_ext.util import BigJSON
 
 
-class Transaction(MailSyncBase, Revision, HasPublicID):
-
+class Transaction(MailSyncBase, HasPublicID):
     """ Transactional log to enable client syncing. """
     # Do delete transactions if their associated namespace is deleted.
     namespace_id = Column(Integer,
@@ -24,45 +18,47 @@ class Transaction(MailSyncBase, Revision, HasPublicID):
         primaryjoin='and_(Transaction.namespace_id == Namespace.id, '
                     'Namespace.deleted_at.is_(None))')
 
-    object_public_id = Column(String(191), nullable=True)
-
+    object_type = Column(String(20), nullable=False, index=True)
+    record_id = Column(Integer, nullable=False, index=True)
+    object_public_id = Column(String(191), nullable=False, index=True)
+    command = Column(Enum('insert', 'update', 'delete'), nullable=False)
     # The API representation of the object at the time the transaction is
     # generated.
-    public_snapshot = Column(BigJSON)
-    # Dictionary of any additional properties we wish to snapshot when the
-    # transaction is generated.
-    private_snapshot = Column(BigJSON)
+    snapshot = Column(BigJSON, nullable=True)
 
-    def set_extra_attrs(self, obj):
-        try:
-            self.namespace = obj.namespace
-        except AttributeError:
-            log.info("Couldn't create {2} revision for {0}:{1}".format(
-                self.table_name, self.record_id, self.command))
-            log.info("Delta is {0}".format(self.delta))
-            log.info("Thread is: {0}".format(obj.thread_id))
-            raise
-        object_public_id = getattr(obj, 'public_id', None)
-        if object_public_id is not None:
-            self.object_public_id = object_public_id
-
-    def take_snapshot(self, obj):
-        """Record the API's representation of `obj` at the time this
-        transaction is generated, as well as any other properties we want to
-        have available in the transaction log. Used for delta syncing and
-        the ping API."""
-        from inbox.api.kellogs import encode
-        self.public_snapshot = encode(obj)
-
-        from inbox.models.message import Message
-        if isinstance(obj, Message):  # hack
-            self.private_snapshot = {
-                'recentdate': obj.thread.recentdate,
-                'subjectdate': obj.thread.subjectdate,
-                'filenames': [part.block.filename for part in obj.parts if
-                              part.is_attachment]}
 
 Index('namespace_id_deleted_at', Transaction.namespace_id,
       Transaction.deleted_at)
+Index('object_type_record_id', Transaction.object_type, Transaction.record_id)
 
-HasRevisions = gen_rev_role(Transaction)
+
+def create_revisions(session):
+    for obj in session.new:
+        # Unlikely that you could have new but also soft-deleted objects, but
+        # just in case, handle it.
+        if obj.deleted_at is None:
+            create_revision(obj, session, 'insert')
+    for obj in session.dirty:
+        if obj.deleted_at is not None:
+            create_revision(obj, session, 'delete')
+        else:
+            create_revision(obj, session, 'update')
+    for obj in session.deleted:
+        create_revision(obj, session, 'delete')
+
+
+def create_revision(obj, session, revision_type):
+    from inbox.api.kellogs import encode
+    assert revision_type in ('insert', 'update', 'delete')
+    if (not isinstance(obj, HasRevisions) or
+            obj.should_suppress_transaction_creation):
+        return
+    if revision_type == 'update' and not obj.has_versioned_changes():
+        return
+    revision = Transaction(command=revision_type, record_id=obj.id,
+                           object_type=obj.API_OBJECT_NAME,
+                           object_public_id=obj.public_id,
+                           namespace_id=obj.namespace.id)
+    if revision_type != 'delete':
+        revision.snapshot = encode(obj)
+    session.add(revision)

@@ -4,8 +4,7 @@ from sqlalchemy.schema import UniqueConstraint
 
 from inbox.util.misc import merge_attr
 from inbox.sqlalchemy_ext.util import MAX_TEXT_LENGTH
-from inbox.models.mixins import HasPublicID, HasEmailAddress
-from inbox.models.transaction import HasRevisions
+from inbox.models.mixins import HasPublicID, HasEmailAddress, HasRevisions
 from inbox.models.base import MailSyncBase
 from inbox.models.message import Message
 from inbox.models.namespace import Namespace
@@ -13,6 +12,12 @@ from inbox.models.namespace import Namespace
 
 class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
     """Data for a user's contact."""
+    API_OBJECT_NAME = 'contact'
+
+    @property
+    def should_suppress_transaction_creation(self):
+        return self.source == 'remote'
+
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           nullable=False)
     namespace = relationship(

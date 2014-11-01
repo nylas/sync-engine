@@ -20,8 +20,7 @@ from inbox.util.addr import parse_mimepart_address_header
 from inbox.util.file import mkdirp
 from inbox.util.misc import parse_references, get_internaldate
 
-from inbox.models.mixins import HasPublicID
-from inbox.models.transaction import HasRevisions
+from inbox.models.mixins import HasPublicID, HasRevisions
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
 
@@ -60,6 +59,8 @@ def _log_decode_error(account_id, folder_name, uid, msg_string):
 
 
 class Message(MailSyncBase, HasRevisions, HasPublicID):
+    API_OBJECT_NAME = 'message'
+
     # Do delete messages if their associated thread is deleted.
     thread_id = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
                        nullable=False)
@@ -73,8 +74,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                         primaryjoin='and_('
                         'Message.thread_id == Thread.id, '
                         'Message.deleted_at.is_(None))',
-                        order_by='Message.received_date',
-                        info={'versioned_properties': ['id']}))
+                        order_by='Message.received_date'))
 
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           index=True, nullable=False)
@@ -438,3 +438,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     # TODO(emfree): remove from schema
     resolved_message_id = Column(Integer, ForeignKey('message.id'),
                                  nullable=True)
+
+    @property
+    def versioned_relationships(self):
+        return ['parts']

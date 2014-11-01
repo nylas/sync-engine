@@ -28,13 +28,13 @@ def alternate_events_provider(config, db):
 
 def test_merge(db, config, event_sync):
     """Test the basic logic of the merge() function."""
-    base = default_event(db)
-    remote = default_event(db)
+    base = default_event(db.session)
+    remote = default_event(db.session)
     remote.title = 'new title'
     remote.description = 'new description'
     remote.location = 'new location'
 
-    dest = default_event(db)
+    dest = default_event(db.session)
 
     dest.merge_from(base, remote)
     assert dest.title == 'new title'
@@ -47,15 +47,15 @@ def test_merge(db, config, event_sync):
 
 def test_merge_conflict(db, config, event_sync):
     """Test that merge() raises an error on conflict."""
-    base = default_event(db)
+    base = default_event(db.session)
 
-    remote = default_event(db)
+    remote = default_event(db.session)
 
     remote.title = 'new title'
     remote.description = 'new description'
     remote.location = 'new location'
 
-    dest = default_event(db)
+    dest = default_event(db.session)
     dest.title = 'title2'
     dest.description = 'description2'
     dest.location = 'location2'

@@ -5,8 +5,7 @@ from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.sql.expression import false
 
 from inbox.models.roles import Blob
-from inbox.models.mixins import HasPublicID
-from inbox.models.transaction import HasRevisions
+from inbox.models.mixins import HasPublicID, HasRevisions
 from inbox.models.base import MailSyncBase
 from inbox.models.message import Message
 
@@ -31,6 +30,10 @@ COMMON_CONTENT_TYPES = ['text/plain',
 
 class Block(Blob, MailSyncBase, HasRevisions, HasPublicID):
     """ Metadata for any file that we store """
+    API_OBJECT_NAME = 'block'
+
+    def should_suppress_transaction_creation(self):
+        return not any(part.is_attachment for part in self.parts)
 
     from inbox.models.namespace import Namespace
 

@@ -1,3 +1,4 @@
+import abc
 import uuid
 import struct
 import time
@@ -13,6 +14,7 @@ from sqlalchemy.types import TypeDecorator, BINARY
 from sqlalchemy.interfaces import PoolListener
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.mutable import Mutable
+from sqlalchemy.ext.declarative import DeclarativeMeta
 
 from inbox.util.encoding import base36encode, base36decode
 
@@ -43,6 +45,21 @@ def after_cursor_execute(conn, cursor, statement,
         except UnicodeDecodeError:
             log.warning('slow query', query_time=total)
             log.error('logging UnicodeDecodeError')
+
+
+class SQLAlchemyCompatibleAbstractMetaClass(DeclarativeMeta, abc.ABCMeta):
+    """Declarative model classes that *also* inherit from an abstract base
+    class need a metaclass like this one, in order to prevent metaclass
+    conflict errors."""
+    pass
+
+
+class ABCMixin(object):
+    """Use this if you want a mixin class which is actually an abstract base
+    class, for example in order to enforce that concrete subclasses define
+    particular methods or properties."""
+    __metaclass__ = SQLAlchemyCompatibleAbstractMetaClass
+    __abstract__ = True
 
 
 # Column Types

@@ -307,3 +307,12 @@ def add_fake_message(db_session, namespace_id, thread, from_addr=None,
     db_session.add(m)
     db_session.commit()
     return m
+
+
+def add_fake_thread(db_session, namespace_id):
+    from inbox.models import Thread
+    dt = datetime.utcnow()
+    thr = Thread(subjectdate=dt, recentdate=dt, namespace_id=namespace_id)
+    db_session.add(thr)
+    db_session.commit()
+    return thr

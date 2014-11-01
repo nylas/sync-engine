@@ -7,14 +7,14 @@ START = datetime.utcnow()
 END = START + timedelta(0, 1)
 
 
-def default_calendar(db):
-    account = db.session.query(Account).filter(
+def default_calendar(db_session):
+    account = db_session.query(Account).filter(
         Account.id == ACCOUNT_ID).one()
     return account.default_calendar
 
 
-def default_event(db):
-    cal = default_calendar(db)
+def default_event(db_session):
+    cal = default_calendar(db_session)
     ev = Event(namespace_id=NAMESPACE_ID,
                calendar=cal,
                title='title',
@@ -31,6 +31,6 @@ def default_event(db):
                raw_data='',
                source='remote')
 
-    db.session.add(ev)
-    db.session.commit()
+    db_session.add(ev)
+    db_session.commit()
     return ev

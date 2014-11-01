@@ -2,6 +2,7 @@ import sys
 import time
 from contextlib import contextmanager
 
+from sqlalchemy import event
 from sqlalchemy.orm.session import Session
 from sqlalchemy.orm.interfaces import MapperOption
 from sqlalchemy.orm.exc import NoResultFound
@@ -12,8 +13,6 @@ from inbox.config import config
 from inbox.ignition import main_engine
 from inbox.log import get_logger
 log = get_logger()
-
-from inbox.sqlalchemy_ext.revision import versioned_session
 
 
 class IgnoreSoftDeletesOption(MapperOption):
@@ -91,14 +90,18 @@ class InboxSession(object):
         self.ignore_soft_deletes = ignore_soft_deletes
         if ignore_soft_deletes:
             args['query_cls'] = InboxQuery
-        sqlalchemy_session = Session(**args)
+        self._session = Session(**args)
+
         if versioned:
-            from inbox.models import Transaction
-            from inbox.models.transaction import HasRevisions
-            self._session = versioned_session(
-                sqlalchemy_session, Transaction, HasRevisions)
-        else:
-            self._session = sqlalchemy_session
+            from inbox.models.transaction import create_revisions
+
+            @event.listens_for(self._session, 'after_flush')
+            def after_flush(session, flush_context):
+                """
+                Hook to log revision snapshots. Must be post-flush in order to
+                grab object IDs on new objects.
+                """
+                create_revisions(session)
 
     def query(self, *args, **kwargs):
         q = self._session.query(*args, **kwargs)

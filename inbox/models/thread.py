@@ -8,9 +8,8 @@ from sqlalchemy.orm import relationship, backref, validates, object_session
 from inbox.log import get_logger
 log = get_logger()
 
-from inbox.models.mixins import HasPublicID
+from inbox.models.mixins import HasPublicID, HasRevisions
 from inbox.models.base import MailSyncBase
-from inbox.models.transaction import HasRevisions
 from inbox.models.namespace import Namespace
 
 from inbox.models.action_log import schedule_action_for_tag
@@ -28,6 +27,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         If you're attempting to display _all_ messages a la Gmail's All Mail,
         don't query based on folder!
     """
+    API_OBJECT_NAME = 'thread'
     subject = Column(String(255), nullable=True, index=True)
     subjectdate = Column(DateTime, nullable=False, index=True)
     recentdate = Column(DateTime, nullable=False, index=True)
@@ -100,6 +100,10 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
     tags = association_proxy(
         'tagitems', 'tag',
         creator=lambda tag: TagItem(tag=tag))
+
+    @property
+    def versioned_relationships(self):
+        return ['tagitems', 'messages']
 
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           nullable=False, index=True)
@@ -246,8 +250,7 @@ class TagItem(MailSyncBase):
                         collection_class=set,
                         cascade='all, delete-orphan',
                         primaryjoin='and_(TagItem.thread_id==Thread.id, '
-                                    'TagItem.deleted_at.is_(None))',
-                        info={'versioned_properties': ['tag_id']}),
+                                    'TagItem.deleted_at.is_(None))'),
         primaryjoin='and_(TagItem.thread_id==Thread.id, '
         'Thread.deleted_at.is_(None))')
     tag = relationship(

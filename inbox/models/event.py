@@ -10,9 +10,8 @@ from sqlalchemy.orm.collections import MappedCollection
 
 from inbox.util.misc import merge_attr
 from inbox.sqlalchemy_ext.util import MAX_TEXT_LENGTH
-from inbox.models.transaction import HasRevisions
 from inbox.models.base import MailSyncBase
-from inbox.models.mixins import HasPublicID
+from inbox.models.mixins import HasPublicID, HasRevisions
 from inbox.models.calendar import Calendar
 from inbox.models.namespace import Namespace
 from inbox.models.participant import Participant
@@ -41,6 +40,7 @@ _LENGTHS = {'location': LOCATION_MAX_LEN,
 
 class Event(MailSyncBase, HasRevisions, HasPublicID):
     """Data for events."""
+    API_OBJECT_NAME = 'event'
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           nullable=False)
 
@@ -254,3 +254,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
             self.start = date_parse(when['start_date'])
             self.end = date_parse(when['end_date'])
             self.all_day = True
+
+    @property
+    def versioned_relationships(self):
+        return ['participants_by_email']

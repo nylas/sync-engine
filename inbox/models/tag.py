@@ -10,9 +10,9 @@ from sqlalchemy.schema import UniqueConstraint
 from inbox.sqlalchemy_ext.util import (generate_public_id,
                                        propagate_soft_delete)
 
-from inbox.models.transaction import HasRevisions
 from inbox.models.base import MailSyncBase
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
+from inbox.models.mixins import HasRevisions
 from inbox.models.namespace import Namespace
 
 
@@ -30,7 +30,7 @@ class Tag(MailSyncBase, HasRevisions):
     someday expose localized names ('DAS INBOX'), or that we somehow manage to
     sync renamed gmail labels, etc.
     """
-
+    API_OBJECT_NAME = 'tag'
     namespace = relationship(
         Namespace, backref=backref(
             'tags',
@@ -40,9 +40,6 @@ class Tag(MailSyncBase, HasRevisions):
         primaryjoin='and_(Tag.namespace_id==Namespace.id, '
         'Namespace.deleted_at.is_(None))',
         load_on_pending=True)
-    # (Because this class inherits from HasRevisions, we need
-    # load_on_pending=True here so that setting Transaction.namespace in
-    # Transaction.set_extra_attrs() doesn't raise an IntegrityError.)
     namespace_id = Column(Integer, ForeignKey(
         'namespace.id', ondelete='CASCADE'), nullable=False)
 
