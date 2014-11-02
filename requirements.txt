@@ -6,7 +6,7 @@ wsgiref==0.1.2
 futures==2.1.3
 SQLAlchemy==0.9.6
 pymongo==2.5.2  # For json_util in bson
-dnspython==1.12.0
+dnspython==1.11.1
 boto==2.10.0
 ipython==1.0.0
 Flask==0.10.1
