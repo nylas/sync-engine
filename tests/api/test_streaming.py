@@ -1,8 +1,8 @@
 import json
+import time
 import pytest
-from sqlalchemy import asc, desc
-from tests.util.base import api_client, default_namespace
-from inbox.models import Transaction, Namespace
+from tests.util.base import default_namespace
+from inbox.models import Namespace
 from inbox.util.url import url_concat
 
 
@@ -19,44 +19,54 @@ def api_prefix(default_namespace):
     return '/n/{}/delta/streaming'.format(default_namespace.public_id)
 
 
-def test_empty_response_when_no_changes(streaming_test_client, api_prefix):
-    url = url_concat(api_prefix, {'timeout': .1})
-    r = streaming_test_client.get(url)
-    assert r.status_code == 200
-    assert r.data == ''
+def get_cursor(api_client, timestamp, namespace):
+    cursor_response = api_client.post(
+        '/n/{}/delta/generate_cursor'.format(namespace.public_id),
+        data=json.dumps({'start': timestamp}))
+    return json.loads(cursor_response.data)['cursor']
 
 
-def test_response_when_cursor_given(db, api_prefix, streaming_test_client,
-                                    default_namespace):
-    old_transaction = db.session.query(Transaction).filter(
-        Transaction.namespace_id == default_namespace.id). \
-        order_by(asc(Transaction.id)).first()
+def validate_response_format(response_string):
+    response = json.loads(response_string)
+    assert 'cursor' in response
+    assert 'attributes' in response
+    assert 'object' in response
+    assert 'id' in response
+    assert 'event' in response
+
+
+def test_response_when_old_cursor_given(db, api_prefix, streaming_test_client,
+                                        default_namespace):
     url = url_concat(api_prefix, {'timeout': .1,
-                                  'cursor': old_transaction.public_id})
+                                  'cursor': '0'})
     r = streaming_test_client.get(url)
     assert r.status_code == 200
-    assert json.loads(r.data) == {'namespace_id': default_namespace.public_id}
+    responses = r.data.split('\n')
+    for response_string in responses:
+        if response_string:
+            validate_response_format(response_string)
 
 
 def test_empty_response_when_latest_cursor_given(db, api_prefix,
                                                  streaming_test_client,
                                                  default_namespace):
-    newest_transaction = db.session.query(Transaction).filter(
-        Transaction.namespace_id == default_namespace.id). \
-        order_by(desc(Transaction.id)).first()
+    cursor = get_cursor(streaming_test_client, int(time.time()),
+                        default_namespace)
     url = url_concat(api_prefix, {'timeout': .1,
-                                  'cursor': newest_transaction.public_id})
+                                  'cursor': cursor})
     r = streaming_test_client.get(url)
     assert r.status_code == 200
     assert r.data == ''
 
 
-def test_gracefully_handle_no_transactions(db, streaming_test_client):
+def test_gracefully_handle_new_namespace(db, streaming_test_client):
     new_namespace = Namespace()
     db.session.add(new_namespace)
     db.session.commit()
+    cursor = get_cursor(streaming_test_client, int(time.time()),
+                        new_namespace)
     url = url_concat('/n/{}/delta/streaming'.format(new_namespace.public_id),
-                     {'timeout': .1})
+                     {'timeout': .1, 'cursor': cursor})
     r = streaming_test_client.get(url)
     assert r.status_code == 200
     assert r.data == ''

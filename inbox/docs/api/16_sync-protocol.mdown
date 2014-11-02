@@ -65,9 +65,29 @@ GET https://api.inboxapp.com/n/<namespace_id>/delta?cursor=<cursor>
             "object_id": "aqb0llc2ioo0bclh7uxkim9z6",
             "event": "modify",
             "type": "thread",
+            "cursor": "7ciyf89wprvvkw3p9oz86swcs",
             "attributes": {
+                "draft_ids": [
+                    "diu1tytx7p9wnx64hdbxsypqe"
+                ],
+                "first_message_timestamp": 1414778436,
+                "id": "71ormxuivtg52p141tpgjk3vi",
+                "last_message_timestamp": 1414778436,
+                "message_ids": [],
+                "namespace_id": "f3b0j663wmm2bluq77uc4db9m",
+                "object": "thread",
+                "participants": [],
+                "snippet": "",
+                "subject": "Hello World!",
                 "tags": [
-                    "inbox"
+                    {
+                        "id": "drafts",
+                        "name": "drafts"
+                    },
+                    {
+                        "id": "starred",
+                        "name": "starred"
+                    }
                 ]
             }
         },
@@ -75,6 +95,7 @@ GET https://api.inboxapp.com/n/<namespace_id>/delta?cursor=<cursor>
             "id": "2fhs446h1uiomjg2sa7r5n1w6",
             "event": "create",
             "type": "thread",
+            "cursor": "9vsuralamrmitihpf2zszmpmd",
             "attributes": {
                 "id": "2fhs446h1uiomjg2sa7r5n1w6",
                 "last_message_timestamp": 1401132649,
@@ -100,18 +121,52 @@ GET https://api.inboxapp.com/n/<namespace_id>/delta?cursor=<cursor>
             }
         },
         {
+            "cursor": "9vsuralamrmitihpf2zszmpmd",
             "event": "delete",
-            "id": "2312313",
-            "type": "5oly0nmkfbgnjhw00xa4i0k5l"
+            "id": "5oly0nmkfbgnjhw00xa4i0k5l",
+            "object": "tag"
         }
     ]
 }
 ```
+Each element of the response contains the following fields:
+* `"cursor"`: The cursor value for this delta.
+* `"object"`: The type of the changed object, e.g., "`message`" or "`thread`".
+* `"id"`: The id of the changed object.
+* `"event"`: The type of change, either `"create"`, `"modify"` or `"delete"`.
+* `"attributes"`: The state of the object when the delta was generated.
 
-After you've processed the deltas, your application should update it's stored
+After you've processed the deltas, your application should update its stored
 `cursor` to the value of `cursor_end` in the response. Inbox may only return the
 first batch of changes, so it's important to make this API call repeatedly until
 you receive the same `cursor_end` that you sent (`cursor_start`). This indicates
 that you have consumed the entire transaction log of the user's mailbox and your
 application is up-to-date.
 
+# Streaming delta updates
+The streaming endpoint allows you to get changes in real time, without needing
+to repeatedly poll. First obtain a delta sync cursor as described above, and
+then use it to query the `/delta/streaming` endpoint:
+
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/delta/streaming?cursor=<cursor>
+```
+
+This will start a long-polling HTTP connection. The server will stream deltas
+starting from that cursor, but then keep the connection open and continue to
+stream new changes.
+
+Each change event has the same format as a single delta above:
+```
+{
+    "cursor": "9vsuralamrmitihpf2zszmpmd",
+    "event": "delete",
+    "id": "5oly0nmkfbgnjhw00xa4i0k5l",
+    "object": "tag"
+}
+```
+
+If the connection is interrupted or your client goes offline, you can issue
+a new query, passing the cursor for the last delta you processed. This ensures
+that you don't miss any changes.

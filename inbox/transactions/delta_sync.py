@@ -1,40 +1,21 @@
+import time
+import gevent
 from datetime import datetime
 
 from sqlalchemy import asc, desc
-from sqlalchemy.orm.exc import NoResultFound
-
+from inbox.api.kellogs import APIEncoder
 from inbox.models import Transaction
+from inbox.models.session import session_scope
 
 
-def create_events(transactions):
-    events = []
-    # If there are multiple transactions for the same object, only publish the
-    # msot recent.
-    object_identifiers = set()
-    for transaction in sorted(transactions, key=lambda trx: trx.id,
-                              reverse=True):
-        object_identifier = (transaction.object_type, transaction.record_id)
-        if object_identifier in object_identifiers:
-            continue
-        object_identifiers.add(object_identifier)
-        event = {
-            'object': transaction.object_type,
-            'event': transaction.command,
-            'id': transaction.object_public_id
-        }
-        if transaction.command != 'delete':
-            event['attributes'] = transaction.snapshot
-        events.append(event)
-    return list(reversed(events))
-
-
-def get_public_id_from_ts(namespace_id, timestamp, db_session):
-    """Return the public_id of the first transaction with given namespace_id
-    after the given timestamp.
-
+def get_transaction_cursor_near_timestamp(namespace_id, timestamp, db_session):
+    """Exchange a timestamp for a 'cursor' into the transaction log entry near
+    to that timestamp in age. The cursor is the public_id of that transaction
+    (or '0' if there are no such transactions).
     Arguments
     ---------
     namespace_id: int
+        Id of the namespace for which to get a cursor.
     timestamp: int
         Unix timestamp
     db_session: InboxSession
@@ -43,8 +24,8 @@ def get_public_id_from_ts(namespace_id, timestamp, db_session):
     Returns
     -------
     string
-        A transaction public_id that can be passed as a 'stamp' parameter by
-        API clients, or None if there is no such public id.
+        A transaction public_id that can be passed as a 'cursor' parameter by
+        API clients.
     """
 
     dt = datetime.utcfromtimestamp(timestamp)
@@ -59,67 +40,97 @@ def get_public_id_from_ts(namespace_id, timestamp, db_session):
     return transaction.public_id
 
 
-def get_entries_from_public_id(namespace_id, cursor_start, db_session,
-                               result_limit):
-    """Returns up to result_limit processed transaction log entries for the
-    given namespace_id. Begins processing the log after the transaction with
-    public_id equal to the cursor_start parameter.
+def format_transactions_after_pointer(namespace_id, pointer, db_session,
+                                      result_limit):
+    """Return a pair (deltas, new_pointer), where deltas is a list of change
+    events, represented as dictionaries:
+    {
+      "object": <API object type, e.g. "thread">,
+      "event": <"insert", "update", or "delete>,
+      "attributes": <API representation of the object for insert/update events>
+      "cursor": <public_id of the transaction>
+    }
+
+    and new_pointer is the integer id of the last included transaction
 
     Arguments
     ---------
     namespace_id: int
-    cursor_start: string
-        The public_id of the transaction log entry after which to begin
-        processing. Normally this should be the return value of a previous call
-        to get_public_id_from_ts, or the value of 'cursor_end' from a previous
-        call to this function.
+        Id of the namespace for which to get changes.
+    pointer: int
+        Process transactions starting after this id.
     db_session: InboxSession
+        database session
     result_limit: int
-        The maximum number of deltas to return.
-
-    Returns
-    -------
-    Dictionary with keys:
-     - 'cursor_start'
-     - 'deltas': list of serialized add/modify/delete deltas
-     - (optional) 'cursor_end': the public_id of the last transaction log entry
-       in the returned deltas, if available. This value can be passed as
-       cursor_start in a subsequent call to this function to get the next page
-       of results.
-
-    Raises
-    ------
-    ValueError
-        If cursor_start is invalid.
+        Maximum number of results to return. (Because we may roll up multiple
+        changes to the same object, fewer results can be returned.)
     """
-    try:
-        # Check that cursor_start can be a public id, and interpret the special
-        # stamp value '0'.
-        int_value = int(cursor_start, 36)
-        if not int_value:
-            internal_start_id = 0
-        else:
-            internal_start_id, = db_session.query(Transaction.id). \
-                filter(Transaction.public_id == cursor_start,
-                       Transaction.namespace_id == namespace_id).one()
-    except (ValueError, NoResultFound):
-        raise ValueError('Invalid first_public_id parameter: {}'.
-                         format(cursor_start))
     transactions = db_session.query(Transaction). \
         order_by(asc(Transaction.id)). \
         filter(Transaction.namespace_id == namespace_id,
-               Transaction.id > internal_start_id).limit(result_limit).all()
+               Transaction.id > pointer).limit(result_limit).all()
+    if not transactions:
+        return ([], pointer)
 
-    deltas = create_events(transactions)
-    if transactions:
-        cursor_end = transactions[-1].public_id
+    deltas = []
+    # If there are multiple transactions for the same object, only publish the
+    # most recent.
+    object_identifiers = set()
+    for transaction in sorted(transactions, key=lambda trx: trx.id,
+                              reverse=True):
+        object_identifier = (transaction.object_type, transaction.record_id)
+        if object_identifier in object_identifiers:
+            continue
+        object_identifiers.add(object_identifier)
+        delta = _format_transaction(transaction)
+        deltas.append(delta)
+
+    return (list(reversed(deltas)), transactions[-1].id)
+
+
+def streaming_change_generator(namespace_id, poll_interval, timeout,
+                               transaction_pointer):
+    """Poll the transaction log for the given `namespace_id` until `timeout`
+    expires, and yield each time new entries are detected.
+    Arguments
+    ---------
+    namespace_id: int
+        Id of the namespace for which to check changes.
+    poll_interval: float
+        How often to check for changes.
+    timeout: float
+        How many seconds to allow the connection to remain open.
+    transaction_pointer: int, optional
+        Yield transaction rows starting after the transaction with id equal to
+        `transaction_pointer`.
+    """
+    encoder = APIEncoder()
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        with session_scope() as db_session:
+            deltas, new_pointer = format_transactions_after_pointer(
+                namespace_id, transaction_pointer, db_session, 100)
+        if new_pointer is not None and new_pointer != transaction_pointer:
+            transaction_pointer = new_pointer
+            for delta in deltas:
+                yield encoder.cereal(delta) + '\n'
+        else:
+            gevent.sleep(poll_interval)
+
+
+def _format_transaction(transaction):
+    if transaction.command == 'insert':
+        event = 'create'
+    elif transaction.command == 'update':
+        event = 'modify'
     else:
-        cursor_end = cursor_start
-
-    result = {
-        'cursor_start': cursor_start,
-        'deltas': deltas,
-        'cursor_end': cursor_end
+        event = 'delete'
+    delta = {
+        'object': transaction.object_type,
+        'event': event,
+        'id': transaction.object_public_id,
+        'cursor': transaction.public_id
     }
-
-    return result
+    if transaction.command != 'delete':
+        delta['attributes'] = transaction.snapshot
+    return delta

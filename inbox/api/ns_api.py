@@ -14,7 +14,6 @@ from inbox.models import (Message, Block, Part, Thread, Namespace,
                           Transaction)
 from inbox.api.kellogs import APIEncoder
 from inbox.api import filtering
-from inbox.api.streaming import streaming_change_generator
 from inbox.api.validation import (InputError, get_tags, get_attachments,
                                   get_calendar, get_thread, get_recipients,
                                   valid_public_id, valid_event,
@@ -1303,12 +1302,28 @@ def sync_deltas():
     g.parser.add_argument('cursor', type=valid_public_id, location='args',
                           required=True)
     args = strict_parse_args(g.parser, request.args)
-    try:
-        results = delta_sync.get_entries_from_public_id(
-            g.namespace.id, args['cursor'], g.db_session, args['limit'])
-        return g.encoder.jsonify(results)
-    except ValueError:
-        return err(404, 'Invalid cursor parameter')
+    cursor = args['cursor']
+    if cursor == '0':
+        start_pointer = 0
+    else:
+        try:
+            start_pointer, = g.db_session.query(Transaction.id). \
+                filter(Transaction.public_id == cursor,
+                       Transaction.namespace_id == g.namespace.id).one()
+        except NoResultFound:
+            return err(404, 'Invalid cursor parameter')
+    deltas, _ = delta_sync.format_transactions_after_pointer(
+        g.namespace.id, start_pointer, g.db_session, args['limit'])
+    response = {
+        'cursor_start': cursor,
+        'deltas': deltas,
+    }
+    if deltas:
+        response['cursor_end'] = deltas[-1]['cursor']
+    else:
+        # No changes.
+        response['cursor_end'] = cursor
+    return g.encoder.jsonify(response)
 
 
 @app.route('/delta/generate_cursor', methods=['POST'])
@@ -1319,8 +1334,8 @@ def generate_cursor():
                         '{"start": <Unix timestamp>}')
 
     timestamp = int(data['start'])
-    cursor = delta_sync.get_public_id_from_ts(g.namespace.id, timestamp,
-                                              g.db_session)
+    cursor = delta_sync.get_transaction_cursor_near_timestamp(
+        g.namespace.id, timestamp, g.db_session)
     return g.encoder.jsonify({'cursor': cursor})
 
 
@@ -1331,18 +1346,26 @@ def generate_cursor():
 @app.route('/delta/streaming')
 def stream_changes():
     g.parser.add_argument('timeout', type=float, location='args')
-    g.parser.add_argument('cursor', type=valid_public_id, location='args')
+    g.parser.add_argument('cursor', type=valid_public_id, location='args',
+                          required=True)
     args = strict_parse_args(g.parser, request.args)
     timeout = args['timeout'] or 3600
     transaction_pointer = None
-    if args['cursor'] is not None:
+    cursor = args['cursor']
+    if cursor == '0':
+        transaction_pointer = 0
+    else:
         query_result = g.db_session.query(Transaction.id).filter(
             Transaction.namespace_id == g.namespace.id,
-            Transaction.public_id == args['cursor']).first()
-        if query_result is not None:
-            transaction_pointer = query_result[0]
-    generator = streaming_change_generator(
-        g.namespace.id, g.namespace.public_id,
-        transaction_pointer=transaction_pointer, poll_interval=1,
-        timeout=timeout)
+            Transaction.public_id == cursor).first()
+        if query_result is None:
+            return err(400, 'Invalid cursor {}'.format(args['cursor']))
+        transaction_pointer = query_result[0]
+
+    # Hack to not keep a database session open for the entire (long) request
+    # duration.
+    g.db_session.close()
+    generator = delta_sync.streaming_change_generator(
+        g.namespace.id, transaction_pointer=transaction_pointer,
+        poll_interval=1, timeout=timeout)
     return Response(generator, mimetype='text/event-stream')
