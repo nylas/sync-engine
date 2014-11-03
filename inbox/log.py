@@ -228,8 +228,11 @@ def sentry_alert(*args, **kwargs):
 
 
 def get_git_revision():
-    params = ['git', 'rev-parse', '--short', 'HEAD']
-    return subprocess.check_output(params).strip()
+    try:
+        params = ['git', 'rev-parse', '--short', 'HEAD']
+        return subprocess.check_output(params).strip()
+    except subprocess.CalledProcessError:
+        return None
 
 git_revision = get_git_revision()
 
