@@ -5,7 +5,7 @@
  *
  * @group unitrun
  */
-final class PytestTestEngine extends ArcanistBaseUnitTestEngine {
+final class PytestTestEngine extends ArcanistUnitTestEngine {
 
   public function run() {
     $working_copy = $this->getWorkingCopy();
