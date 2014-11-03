@@ -71,7 +71,8 @@ class GmailSyncMonitor(ImapSyncMonitor):
                                            self.poll_frequency,
                                            self.syncmanager_lock,
                                            self.refresh_flags_max,
-                                           self.retry_fail_classes)
+                                           self.retry_fail_classes,
+                                           self.sync_status_queue)
             thread.start()
             self.folder_monitors.add(thread)
             if thread.should_block:

@@ -140,7 +140,7 @@ class FolderSyncEngine(Greenlet):
 
     def __init__(self, account_id, folder_name, folder_id, email_address,
                  provider_name, poll_frequency, syncmanager_lock,
-                 refresh_flags_max, retry_fail_classes):
+                 refresh_flags_max, retry_fail_classes, sync_status_queue):
         self.account_id = account_id
         self.folder_name = folder_name
         self.folder_id = folder_id
@@ -150,6 +150,7 @@ class FolderSyncEngine(Greenlet):
         self.retry_fail_classes = retry_fail_classes
         self.state = None
         self.provider_name = provider_name
+        self.sync_status_queue = sync_status_queue
 
         with mailsync_session_scope() as db_session:
             account = db_session.query(Account).get(self.account_id)
@@ -184,7 +185,7 @@ class FolderSyncEngine(Greenlet):
         # complicated handling e.g. when backends reuse imapids. ImapUid
         # objects are the only objects deleted by the mail sync backends
         # anyway.
-        saved_folder_status = self._load_state()
+        self._load_state()
         # NOTE: The parent ImapSyncMonitor handler could kill us at any
         # time if it receives a shutdown command. The shutdown command is
         # equivalent to ctrl-c.
@@ -197,11 +198,7 @@ class FolderSyncEngine(Greenlet):
             # State handlers are idempotent, so it's okay if we're
             # killed between the end of the handler and the commit.
             if self.state != old_state:
-                # Don't need to re-query, will auto refresh on re-associate.
-                with mailsync_session_scope() as db_session:
-                    db_session.add(saved_folder_status)
-                    saved_folder_status.state = self.state
-                    db_session.commit()
+                self.sync_status_queue.put((self.folder_id, self.state))
             if self.state == 'finish':
                 return
 
