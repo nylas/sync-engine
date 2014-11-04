@@ -23,6 +23,7 @@ from inbox.actions import (mark_read, mark_unread, archive, unarchive, star,
                            unstar, save_draft, delete_draft, mark_spam,
                            unmark_spam, mark_trash, unmark_trash, send_draft,
                            send_directly, save_sent_email)
+from inbox.events.actions import (create_event, delete_event, update_event)
 
 # Global lock to ensure that only one instance of the syncback service is
 # running at once. Otherwise different instances might execute the same action
@@ -45,6 +46,9 @@ ACTION_FUNCTION_MAP = {
     'delete_draft': delete_draft,
     'send_directly': send_directly,
     'save_sent_email': save_sent_email,
+    'create_event': create_event,
+    'delete_event': delete_event,
+    'update_event': update_event,
 }
 
 
@@ -82,6 +86,7 @@ class SyncbackService(gevent.Greenlet):
             for log_entry in safer_yield_per(query, ActionLog.id, 0,
                                              self.chunk_size):
                 action_function = ACTION_FUNCTION_MAP[log_entry.action]
+
                 namespace = db_session.query(Namespace). \
                     get(log_entry.namespace_id)
 

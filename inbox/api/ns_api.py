@@ -671,7 +671,7 @@ def event_create_api():
         if 'status' not in p:
             p['status'] = 'noreply'
 
-    new_contact = events.crud.create(g.namespace, g.db_session,
+    new_event = events.crud.create(g.namespace, g.db_session,
                                      calendar,
                                      title,
                                      description,
@@ -680,7 +680,9 @@ def event_create_api():
                                      recurrence,
                                      when,
                                      participants)
-    return g.encoder.jsonify(new_contact)
+
+    schedule_action('create_event', new_event, g.namespace.id, g.db_session)
+    return g.encoder.jsonify(new_event)
 
 
 @app.route('/events/<public_id>', methods=['GET'])
@@ -767,6 +769,8 @@ def event_update_api(public_id):
     if result is None:
         return err(404, "Couldn't find event with id {0}".
                    format(public_id))
+
+    schedule_action('update_event', result, g.namespace.id, g.db_session)
     return g.encoder.jsonify(result)
 
 
@@ -785,14 +789,12 @@ def event_delete_api(public_id):
     if event.namespace != g.namespace:
         return err(404, 'No event found with public_id {}'.
                    format(public_id))
-    if event.provider_name != 'inbox':
-        return err(404, 'Cannot delete provider-based event with public_id {}'.
-                        format(public_id))
     if event.calendar.read_only:
         return err(404, 'Cannot delete event with public_id {} from '
                    ' read_only calendar.'.format(public_id))
 
     result = events.crud.delete(g.namespace, g.db_session, public_id)
+    schedule_action('delete_event', event, g.namespace.id, g.db_session)
     return g.encoder.jsonify(result)
 
 

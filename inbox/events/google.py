@@ -235,6 +235,20 @@ class GoogleEventsProvider(BaseEventProvider):
                      source='remote',
                      participants=participants)
 
+    def dump_event(self, event):
+        dump = {}
+        dump["summary"] = event.title
+        dump["description"] = event.description
+        if event.all_day:
+            dump["start"] = {"date": event.start.strftime('%Y-%m-%d')}
+        else:
+            dump["start"] = {"dateTime": event.start.isoformat('T'),
+                             "timeZone": "UTC"}
+            dump["end"] = {"dateTime": event.end.isoformat('T'),
+                           "timeZone": "UTC"}
+        dump["location"] = event.location
+        return dump
+
     def fetch_items(self, sync_from_time=None):
         service = self._get_google_service()
         try:
