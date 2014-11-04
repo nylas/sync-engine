@@ -7,6 +7,7 @@ See imap.py for notes about implementation.
 from sqlalchemy.orm import joinedload
 
 from inbox.crispin import writable_connection_pool, retry_crispin
+from inbox.actions.backends.imap import syncback_action
 from inbox.mailsync.backends.imap.generic import uidvalidity_cb
 from inbox.models.backends.imap import ImapThread, ImapUid
 from inbox.models.folder import Folder
