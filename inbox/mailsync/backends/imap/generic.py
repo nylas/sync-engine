@@ -239,7 +239,7 @@ class FolderSyncEngine(Greenlet):
 
     def resync_uids_from(self, previous_state):
         @retry_crispin
-        def resync_uids(self):
+        def resync_uids():
             """ Call this when UIDVALIDITY is invalid to fix up the database.
 
             What happens here is we fetch new UIDs from the IMAP server and
