@@ -138,7 +138,7 @@ def base_poll(account_id, provider_instance, last_sync_fn, target_obj,
                         cached_item.copy_from(local_item)
 
                     except MergeError:
-                        log.error('Conflicting local and remote updates'
+                        log.error('Conflicting local and remote updates '
                                   'to item.',
                                   local=local_item, cached=cached_item,
                                   remote=item)

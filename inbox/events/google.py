@@ -236,9 +236,17 @@ class GoogleEventsProvider(BaseEventProvider):
                      participants=participants)
 
     def dump_event(self, event):
+        """Convert an event db object to the Google API JSON format."""
         dump = {}
         dump["summary"] = event.title
         dump["description"] = event.description
+        dump["location"] = event.location
+
+        if not event.busy:
+            # transparency: is the event shown in the gmail calendar as
+            # as a solid or semi-transparent block.
+            dump["transparency"] = "transparent"
+
         if event.all_day:
             dump["start"] = {"date": event.start.strftime('%Y-%m-%d')}
         else:
@@ -246,7 +254,6 @@ class GoogleEventsProvider(BaseEventProvider):
                              "timeZone": "UTC"}
             dump["end"] = {"dateTime": event.end.isoformat('T'),
                            "timeZone": "UTC"}
-        dump["location"] = event.location
         return dump
 
     def fetch_items(self, sync_from_time=None):

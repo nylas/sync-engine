@@ -5,8 +5,7 @@ from dateutil.parser import parse as date_parse
 from sqlalchemy import (Column, String, ForeignKey, Text, Boolean,
                         DateTime, Enum, UniqueConstraint)
 from sqlalchemy.orm import relationship, backref, validates
-from sqlalchemy.util import OrderedDict
-from sqlalchemy.orm.collections import MappedCollection
+from sqlalchemy.orm.collections import attribute_mapped_collection
 
 from inbox.util.misc import merge_attr
 from inbox.sqlalchemy_ext.util import MAX_TEXT_LENGTH
@@ -16,13 +15,6 @@ from inbox.models.calendar import Calendar
 from inbox.models.namespace import Namespace
 from inbox.models.participant import Participant
 from inbox.models.when import Time, TimeSpan, Date, DateSpan
-
-
-# This collection provides the partiicpants as a map
-class ParticipantMap(OrderedDict, MappedCollection):
-    def __init__(self, *args, **kw):
-        MappedCollection.__init__(self, keyfunc=lambda p: p.email_address)
-        OrderedDict.__init__(self, *args, **kw)
 
 
 TITLE_MAX_LEN = 1024
@@ -94,10 +86,11 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
                                        'provider_name', name='uuid'),)
 
     _participant_cascade = "save-update, merge, delete, delete-orphan"
-    participants_by_email = relationship(Participant,
-                                         collection_class=ParticipantMap,
-                                         cascade=_participant_cascade,
-                                         load_on_pending=True)
+    participants_by_email = relationship(
+        Participant,
+        collection_class=attribute_mapped_collection('email_address'),
+        cascade=_participant_cascade,
+        load_on_pending=True)
 
     @validates('reminders', 'recurrence', 'owner', 'location', 'title', 'raw_data')
     def validate_length(self, key, value):
@@ -223,7 +216,10 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
                 old_p = self.participants_by_email[p_email]
                 old_p.copy_from(p)
 
-        for p_email in self.participants_by_email:
+        # For some reason sqlalchemy doesn't like iterating and modifying
+        # a collection at the same time.
+        emails = [p_email for p_email in self.participants_by_email]
+        for p_email in emails:
             if p_email not in src.participants_by_email:
                 del self.participants_by_email[p_email]
 
