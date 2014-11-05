@@ -9,4 +9,4 @@ import sys
 from inbox.providers import providers
 
 if __name__ == '__main__':
-    print(json.dumps(dict(providers)))
+    print(json.dumps(dict(providers), indent=4, sort_keys=True))
