@@ -46,7 +46,7 @@ def format_transactions_after_pointer(namespace_id, pointer, db_session,
     events, represented as dictionaries:
     {
       "object": <API object type, e.g. "thread">,
-      "event": <"insert", "update", or "delete>,
+      "event": <"create", "modify", or "delete>,
       "attributes": <API representation of the object for insert/update events>
       "cursor": <public_id of the transaction>
     }
