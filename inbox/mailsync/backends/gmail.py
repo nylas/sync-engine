@@ -40,10 +40,10 @@ from inbox.mailsync.backends.base import (create_db_objects,
                                           commit_uids,
                                           MailsyncError,
                                           mailsync_session_scope,
-                                          thread_polling, thread_finished)
+                                          thread_polling, thread_finished,
+                                          THROTTLE_WAIT)
 from inbox.mailsync.backends.imap.generic import (
-    _pool, uidvalidity_cb, safe_download, report_progress, UIDStack,
-    THROTTLE_WAIT)
+    _pool, uidvalidity_cb, safe_download, report_progress, UIDStack)
 from inbox.mailsync.backends.imap.condstore import CondstoreFolderSyncEngine
 from inbox.mailsync.backends.imap.monitor import ImapSyncMonitor
 from inbox.mailsync.backends.imap import common

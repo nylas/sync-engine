@@ -86,11 +86,11 @@ from inbox.mailsync.exc import UidInvalid
 from inbox.mailsync.backends.imap import common
 from inbox.mailsync.backends.base import (create_db_objects,
                                           commit_uids, MailsyncDone,
-                                          mailsync_session_scope)
+                                          mailsync_session_scope,
+                                          THROTTLE_WAIT)
 
 GenericUIDMetadata = namedtuple('GenericUIDMetadata', 'throttled')
 
-THROTTLE_WAIT = 60
 MAX_THREAD_LENGTH = 500
 
 

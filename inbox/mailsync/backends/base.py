@@ -11,6 +11,7 @@ from inbox.models import (Account, Folder, MAX_FOLDER_NAME_LENGTH)
 from inbox.models.session import session_scope
 from inbox.mailsync.exc import SyncException
 
+THROTTLE_WAIT = 60
 
 mailsync_session_scope = functools.partial(session_scope,
                                            ignore_soft_deletes=False)
