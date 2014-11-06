@@ -39,6 +39,12 @@ class GenericAuthHandler(AuthHandler):
             account.smtp_endpoint = (response['smtp_server_host'],
                                      response['smtp_server_port'])
 
+        # Hack to ensure that account syncs get restarted if they were stopped
+        # because of e.g. invalid credentials and the user re-auths.
+        # TODO(emfree): remove after status overhaul.
+        if account.sync_state != 'running':
+            account.sync_state = None
+
         return account
 
     def connect_account(self, email, credential, imap_endpoint):

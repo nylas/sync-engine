@@ -78,6 +78,12 @@ class GmailAuthHandler(OAuthAuthHandler):
         account.client_id = response.get('client_id')
         account.client_secret = response.get('client_secret')
 
+        # Hack to ensure that account syncs get restarted if they were stopped
+        # because of e.g. invalid credentials and the user re-auths.
+        # TODO(emfree): remove after status overhaul.
+        if account.sync_state != 'running':
+            account.sync_state = None
+
         return account
 
     def validate_token(self, access_token):
