@@ -1,8 +1,7 @@
 import socket
 import os
 import sys
-import random
-from gevent import monkey; monkey.patch_all()
+from gevent import monkey; monkey.patch_all(aggressive=False)
 from code import InteractiveConsole
 from inbox.log import get_logger
 

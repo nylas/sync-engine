@@ -21,6 +21,6 @@ phutil_register_library_map(array(
   array(
     'InboxServerLintEngine' => 'ArcanistLintEngine',
     'MGArcanistPyLintLinter' => 'ArcanistLinter',
-    'PytestTestEngine' => 'ArcanistBaseUnitTestEngine',
+    'PytestTestEngine' => 'ArcanistUnitTestEngine',
   ),
 ));
