@@ -186,6 +186,7 @@ class FolderSyncEngine(Greenlet):
         # objects are the only objects deleted by the mail sync backends
         # anyway.
         self._load_state()
+        self.sync_status_queue.put((self.folder_id, self.state))
         # NOTE: The parent ImapSyncMonitor handler could kill us at any
         # time if it receives a shutdown command. The shutdown command is
         # equivalent to ctrl-c.
