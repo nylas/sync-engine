@@ -3,7 +3,7 @@ import time
 
 import click
 
-from inbox.search.util import index_namespaces as create_namespaces_indexes
+from inbox.search.util import index_namespace as create_namespaces_indexes
 
 
 @click.command()

@@ -2,6 +2,7 @@ import copy
 import functools
 
 import elasticsearch
+from elasticsearch.helpers import bulk
 
 from inbox.config import config
 from inbox.log import get_logger
@@ -124,8 +125,38 @@ class BaseSearchAdaptor(object):
         index_args.update(**kwargs)
         try:
             self._connection.index(**index_args)
-        except elasticsearch.exceptions.NotFoundError:
+        except elasticsearch.exceptions.TransportError:
+            log.error('Index failure',
+                      index=self.index_id, doc_type=self.doc_type,
+                      object_id=index_args['_id'])
             raise
+
+    @wrap_es_errors
+    def _bulk_index(self, objects, parent=None):
+        index_args = []
+
+        for object_repr in objects:
+            args = dict(_index=self.index_id,
+                        _type=self.doc_type,
+                        _id=object_repr['id'],
+                        _source=object_repr)
+
+            if parent is not None:
+                args.update(dict(_parent=object_repr[parent]))
+
+            index_args.append(args)
+
+        try:
+            count, failures = bulk(self._connection, index_args)
+        except elasticsearch.exceptions.TransportError:
+            # TODO[k]: log here
+            log.error('Bulk index failure',
+                      index=self.index_id, doc_type=self.doc_type,
+                      object_ids=[i['_id'] for i in index_args],
+                      failures=failures)
+            raise
+
+        return count
 
     @wrap_es_errors
     def search(self, query, max_results=100, offset=0, explain=True):
@@ -147,6 +178,11 @@ class BaseSearchAdaptor(object):
         api_results = self.query_engine.process_results(raw_results)
         return api_results
 
+    @wrap_es_errors
+    def get_mapping(self):
+        return self._connection.indices.get_mapping(index=self.index_id,
+                                                    doc_type=self.doc_type)
+
     def _log_query(self, query, raw_results):
         """
         Log query and result info, stripping out actual result bodies but
@@ -158,11 +194,6 @@ class BaseSearchAdaptor(object):
             del hit['_source']
         log.debug('search query results', query=query, results=log_results)
 
-    @wrap_es_errors
-    def get_mapping(self):
-        return self._connection.indices.get_mapping(index=self.index_id,
-                                                    doc_type=self.doc_type)
-
 
 class MessageSearchAdaptor(BaseSearchAdaptor):
     def __init__(self, index_id):
@@ -173,6 +204,9 @@ class MessageSearchAdaptor(BaseSearchAdaptor):
         """(Re)index a message with API representation `object_repr`."""
         self._index_document(object_repr, parent=object_repr['thread_id'])
 
+    def bulk_index(self, objects):
+        return self._bulk_index(objects, parent='thread_id')
+
 
 class ThreadSearchAdaptor(BaseSearchAdaptor):
     def __init__(self, index_id):
@@ -182,3 +216,6 @@ class ThreadSearchAdaptor(BaseSearchAdaptor):
     def index(self, object_repr):
         """(Re)index a thread with API representation `object_repr`."""
         self._index_document(object_repr)
+
+    def bulk_index(self, objects):
+        return self._bulk_index(objects)
