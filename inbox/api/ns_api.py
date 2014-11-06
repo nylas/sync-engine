@@ -314,7 +314,8 @@ def thread_search_api():
         results = search_engine.threads.search(query=query,
                                                max_results=args.limit,
                                                offset=args.offset)
-    except SearchEngineError:
+    except SearchEngineError as e:
+        g.log.error('Search error: {0}'.format(e))
         return err(501, 'Search error')
 
     return g.encoder.jsonify(results)
@@ -458,7 +459,8 @@ def message_search_api():
         results = search_engine.messages.search(query=query,
                                                 max_results=args.limit,
                                                 offset=args.offset)
-    except SearchEngineError:
+    except SearchEngineError as e:
+        g.log.error('Search error: {0}'.format(e))
         return err(501, 'Search error')
 
     return g.encoder.jsonify(results)
