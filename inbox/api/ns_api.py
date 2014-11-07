@@ -1237,7 +1237,7 @@ def draft_delete_api(public_id):
 def draft_send_api():
     data = request.get_json(force=True)
     if data.get('draft_id') is None:
-        if data.get('to') is None:
+        if not data.get('to'):
             return err(400, 'Must specify either draft id + version or '
                        'message recipients.')
     else:
