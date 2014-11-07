@@ -1,14 +1,16 @@
 # TODO[k]: participants as nested, tags too.
+# first/last_message_timestamp as {'type': 'date', 'format': 'dateOptionalTime'}
+# for range filters and such?
 THREAD_MAPPING = {
     'properties': {
         'namespace_id': {'type': 'string'},
         'tags': {'type': 'string'},
-        'last_message_timestamp': {'type': 'date', 'format': 'dateOptionalTime'},
+        'last_message_timestamp': {'type': 'string'},
         'object': {'type': 'string'},
         'message_ids': {'type': 'string'},
         'snippet': {'type': 'string'},
         'participants': {'type': 'string'},
-        'first_message_timestamp': {'type': 'date', 'format': 'dateOptionalTime'},
+        'first_message_timestamp': {'type': 'string'},
         'id': {'type': 'string'},
         'subject': {'type': 'string'}
     }
