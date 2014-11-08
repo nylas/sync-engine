@@ -3,13 +3,13 @@ import time
 
 import click
 
-from inbox.search.util import index_namespace as create_namespaces_indexes
+from inbox.search.util import index_namespace
 
 
 @click.command()
 @click.option('--namespace_public_id', default=None)
 @click.option('--updated_since', default=None)
-def index_namespaces(namespace_public_id, updated_since):
+def create_namespace_index(namespace_public_id, updated_since):
     """
     Create an Elasticsearch index for a namespace and index its threads and
     messages. All namespaces are indexed by default, use `namespace_public_id`
@@ -18,8 +18,7 @@ def index_namespaces(namespace_public_id, updated_since):
     """
     start_time = time.time()
 
-    indexed_count = create_namespaces_indexes(namespace_public_id,
-                                              updated_since)
+    indexed_count = index_namespace(namespace_public_id, updated_since)
 
     elapsed_time = time.time() - start_time
     print 'indexed {} objects in {} seconds'.format(indexed_count,
@@ -27,4 +26,4 @@ def index_namespaces(namespace_public_id, updated_since):
 
 
 if __name__ == '__main__':
-    index_namespaces()
+    create_namespace_index()
