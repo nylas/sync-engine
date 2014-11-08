@@ -172,7 +172,13 @@ class TestDB(object):
         user = self.config.get('MYSQL_USER')
         password = self.config.get('MYSQL_PASSWORD')
 
-        cmd = 'mysql {0} -u{1} -p{2} < {3}'.format(database, user, password,
+        #Check for env override of host and port
+        hostname = self.config.get('MYSQL_HOSTNAME')
+        hostname = os.getenv('MYSQL_PORT_3306_TCP_ADDR',hostname)
+        port = self.config.get('MYSQL_PORT')
+        port = os.getenv('MYSQL_PORT_3306_TCP_PORT',port)
+
+        cmd = 'mysql {0} -h{1} -P{2} -u{3} -p{4} < {5}'.format(database,hostname,port, user, password,
                                                    self.dumpfile)
         subprocess.check_call(cmd, shell=True)
 

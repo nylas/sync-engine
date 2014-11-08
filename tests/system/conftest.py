@@ -1,6 +1,6 @@
 # This file contains pytest fixtures as well as some config
-
-API_BASE = "http://localhost:5555"
+import os
+API_BASE = "http://%s:%s" % (os.getenv("API_PORT_5555_TCP_ADDR","localhost"),os.getenv("API_PORT_5555_TCP_PORT","5555"))
 TEST_MAX_DURATION_SECS = 360
 TEST_GRANULARITY_CHECK_SECS = 0.1
 

@@ -65,9 +65,16 @@ def engine_uri(database=None):
     """ By default doesn't include the specific database. """
     username = config.get_required('MYSQL_USER')
     password = config.get_required('MYSQL_PASSWORD')
+
     host = config.get_required('MYSQL_HOSTNAME')
+
+    host = os.getenv('MYSQL_PORT_3306_TCP_ADDR',host)
+
     port = config.get_required('MYSQL_PORT')
 
+    port = os.getenv('MYSQL_PORT_3306_TCP_PORT',port)
+
+    print username,password,host,port
     uri_template = 'mysql+pymysql://{username}:{password}@{host}' +\
                    ':{port}/{database}?charset=utf8mb4'
 
