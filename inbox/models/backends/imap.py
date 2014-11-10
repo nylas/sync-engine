@@ -1,10 +1,9 @@
 from datetime import datetime
 
 from sqlalchemy import (Column, Integer, BigInteger, Boolean, Enum,
-                        ForeignKey, Index, String)
+                        ForeignKey, Index, String, desc)
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.sql.expression import false
 
 from inbox.sqlalchemy_ext.util import (LittleJSON, JSON, MutableDict)
@@ -179,6 +178,37 @@ class ImapFolderInfo(MailSyncBase):
     __table_args__ = (UniqueConstraint('account_id', 'folder_id'),)
 
 
+def _choose_existing_thread_for_gmail(message, db_session):
+    """
+    For Gmail, determine if `message` should be added to an existing thread
+    based on the value of `g_thrid`. If so, return the existing ImapThread
+    object; otherwise return None.
+
+    If a thread in Gmail (as identified by g_thrid) is split among multiple
+    Inbox threads, try to choose which thread to put the new message in based
+    on the In-Reply-To header. If that doesn't succeed because the In-Reply-To
+    header is missing or doesn't match existing synced messages, return the
+    most recent thread."""
+    # TODO(emfree): also use the References header, or better yet, change API
+    # semantics so that we don't have to do this at all.
+    prior_threads = db_session.query(ImapThread).filter_by(
+        g_thrid=message.g_thrid, namespace_id=message.namespace_id). \
+        order_by(desc(ImapThread.recentdate)).all()
+    if not prior_threads:
+        return None
+
+    if not message.in_reply_to:
+        # If no header, add the new message to the most recent thread.
+        return prior_threads[0]
+    for prior_thread in prior_threads:
+        prior_message_ids = [m.message_id_header for m in
+                             prior_thread.messages]
+        if message.in_reply_to in prior_message_ids:
+            return prior_thread
+
+    return prior_threads[0]
+
+
 class ImapThread(Thread):
     """ TODO: split into provider-specific classes. """
 
@@ -207,18 +237,13 @@ class ImapThread(Thread):
             message.thread.g_thrid = message.g_thrid
             return message.thread
         if message.g_thrid is not None:
-            try:
-                return session.query(cls).filter_by(
-                    g_thrid=message.g_thrid, namespace_id=namespace.id).one()
-            except NoResultFound:
-                pass
-            except MultipleResultsFound:
-                log.error('Duplicate thread rows', g_thrid=message.g_thrid)
-                raise
-        thread = cls(subject=message.subject, g_thrid=message.g_thrid,
-                     recentdate=message.received_date, namespace=namespace,
-                     subjectdate=message.received_date,
-                     snippet=message.snippet)
+            thread = _choose_existing_thread_for_gmail(message, session)
+            if thread is None:
+                thread = cls(subject=message.subject, g_thrid=message.g_thrid,
+                             recentdate=message.received_date,
+                             namespace=namespace,
+                             subjectdate=message.received_date,
+                             snippet=message.snippet)
         if not message.is_read:
             thread.apply_tag(namespace.tags['unread'])
             thread.apply_tag(namespace.tags['unseen'])
