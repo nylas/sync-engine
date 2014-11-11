@@ -1,0 +1,48 @@
+#!/usr/bin/env python
+import time
+
+from inbox.models.session import session_scope
+from inbox.models.backends.eas import EASAccount, EASDevice
+
+CHUNK_SIZE = 1000
+
+
+def delete_extra_easdevices():
+    """
+    For EASAccounts that have more than one pair of EASDevices
+    due to multiple reauths, delete all but the most recent pair i.e.
+    the devices that are currently set as account.primary_device,
+    account.secondary_device.
+
+    """
+    devices = []
+    start = time.time()
+
+    with session_scope(ignore_soft_deletes=False) as db_session:
+        for p, s in db_session.query(EASAccount.primary_device_id,
+                                     EASAccount.secondary_device_id).all():
+            devices.append(p)
+            devices.append(s)
+
+    print 'devices: ', len(devices), devices
+
+    t = time.time()
+    print 'db query time:', t - start
+
+    # TODO[k]:
+    # Check don't need to delete messages, threads.
+    with session_scope(ignore_soft_deletes=False) as db_session:
+        deletes = db_session.query(EASDevice).filter(
+            EASDevice.id.notin_(devices)).all()
+        print 'len(deletes): ', len(deletes)
+        for d in deletes:
+            db_session.delete(d)
+
+        db_session.commit()
+
+    d = time.time()
+    print 'delete time:', d - t
+
+
+if __name__ == '__main__':
+    delete_extra_easdevices()
