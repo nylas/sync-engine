@@ -99,8 +99,12 @@ class Blob(object):
         # See if it alreays exists and has the same hash
         data_obj = bucket.get_key(self.data_sha256)
         if data_obj:
-            assert data_obj.get_metadata('data_sha256') == self.data_sha256, \
-                "Block hash doesn't match what we previously stored on s3!"
+            if data_obj.get_metadata('data_sha256') != self.data_sha256:
+                log.error("Block key doesn't match metadata",
+                          key=self.data_sha256,
+                          saved_metadata=data_obj.get_metadata('data_sha256'))
+                raise AssertionError(
+                    "Block hash doesn't match what we previously stored on s3!")
             # log.info("Block already exists on S3.")
             return
 
