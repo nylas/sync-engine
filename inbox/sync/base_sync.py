@@ -97,7 +97,6 @@ def base_poll(account_id, provider_instance, last_sync_fn, target_obj,
     with session_scope() as db_session:
         account = db_session.query(Account).get(account_id)
         change_counter = Counter()
-        to_commit = []
         for item in items:
             item.namespace = account.namespace
             assert item.uid is not None, \
@@ -155,8 +154,8 @@ def base_poll(account_id, provider_instance, last_sync_fn, target_obj,
                 local_item = target_obj()
                 local_item.copy_from(item)
                 local_item.source = 'local'
-                to_commit.append(item)
-                to_commit.append(local_item)
+                db_session.add_all([item, local_item])
+                db_session.flush()
                 change_counter['added'] += 1
 
         set_last_sync_fn(account)
@@ -165,5 +164,4 @@ def base_poll(account_id, provider_instance, last_sync_fn, target_obj,
                  updated=change_counter['updated'],
                  deleted=change_counter['deleted'])
 
-        db_session.add_all(to_commit)
         db_session.commit()
