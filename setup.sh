@@ -152,13 +152,13 @@ fi
 color '35;1' 'Finished installing dependencies.'
 
 mkdir -p /etc/inboxapp
-chown $SUDO_USER /etc/inboxapp
+chown $SUDO_UID /etc/inboxapp
 
 color '35;1' 'Copying default development configuration to /etc/inboxapp'
 src=./etc/config-dev.json
 dest=/etc/inboxapp/config.json
 if [ ! -f $dest ]; then
-    install -m0644 $src $dest
+    install -m0644 -o$SUDO_UID $src $dest
 elif [ $src -nt $dest ]; then
     set +e
     diff_result=$(diff -q $src $dest)
@@ -172,13 +172,16 @@ elif [ $src -nt $dest ]; then
         exit 1
     fi
 fi
-chmod 644 $dest
+# make sure that users upgrading from a previous release get file permissions
+# right
+chmod 0644 $dest
+chown $SUDO_UID $dest
 
 color '35;1' 'Copying default secrets configuration to /etc/inboxapp'
 src=./etc/secrets-dev.yml
 dest=/etc/inboxapp/secrets.yml
 if [ ! -f $dest ]; then
-    install -m0644 $src $dest
+    install -m0600 -o$SUDO_UID $src $dest
 elif [ $src -nt $dest ]; then
     set +e
     diff_result=$(diff -q $src $dest)
@@ -192,7 +195,10 @@ elif [ $src -nt $dest ]; then
         exit 1
     fi
 fi
-chmod 644 $dest
+# make sure that users upgrading from a previous release get file permissions
+# right
+chmod 0600 $dest
+chown $SUDO_UID $dest
 
 if $configure_db; then
     # Mysql config
@@ -233,10 +239,10 @@ apt-get -y purge build-essential
 apt-get -y autoremove
 
 mkdir -p /var/lib/inboxapp
-chown $SUDO_USER /var/lib/inboxapp
+chown $SUDO_UID /var/lib/inboxapp
 
 mkdir -p /var/log/inboxapp
-chown $SUDO_USER /var/log/inboxapp
+chown $SUDO_UID /var/log/inboxapp
 
 git config branch.master.rebase true
 
