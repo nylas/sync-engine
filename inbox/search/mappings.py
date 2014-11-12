@@ -5,12 +5,12 @@ THREAD_MAPPING = {
     'properties': {
         'namespace_id': {'type': 'string'},
         'tags': {'type': 'string'},
-        'last_message_timestamp': {'type': 'string'},
+        'last_message_timestamp': {'type': 'date', 'format': 'dateOptionalTime'},
         'object': {'type': 'string'},
         'message_ids': {'type': 'string'},
         'snippet': {'type': 'string'},
         'participants': {'type': 'string'},
-        'first_message_timestamp': {'type': 'string'},
+        'first_message_timestamp': {'type': 'date', 'format': 'dateOptionalTime'},
         'id': {'type': 'string'},
         'subject': {'type': 'string'}
     }
@@ -32,7 +32,7 @@ MESSAGE_MAPPING = {
         'to': {'type': 'string'},
         'cc': {'type': 'string'},
         'bcc': {'type': 'string'},
-        'date': {'type': 'string'},
+        'date': {'type': 'date', 'format': 'dateOptionalTime'},
         'thread_id': {'type': 'string'},
         'snippet': {'type': 'string'},
         'body': {'type': 'string'},

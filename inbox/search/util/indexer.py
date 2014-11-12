@@ -30,8 +30,8 @@ class NamespaceIndexer(object):
             q = db_session.query(Namespace.id, Namespace.public_id)
 
             if namespace_public_id is not None:
-                namespaces = q.filter(
-                    Namespace.public_id == namespace_public_id).one()
+                namespaces = [q.filter(
+                    Namespace.public_id == namespace_public_id).one()]
             else:
                 namespaces = q.all()
 
@@ -40,6 +40,7 @@ class NamespaceIndexer(object):
             self.pool.append(gevent.spawn(index_messages, ns, updated_since))
 
         gevent.joinall(self.pool)
+
         return sum([g.value for g in self.pool])
 
     def delete(self, namespace_public_id=None):
@@ -53,8 +54,8 @@ class NamespaceIndexer(object):
             q = db_session.query(Namespace.id, Namespace.public_id)
 
             if namespace_public_id is not None:
-                namespaces = q.filter(
-                    Namespace.public_id == namespace_public_id).one()
+                namespaces = [q.filter(
+                    Namespace.public_id == namespace_public_id).one()]
             else:
                 namespaces = q.all()
 

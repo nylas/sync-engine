@@ -79,9 +79,11 @@ class Query(object):
     def _field_dict(self, field, value):
         # TODO[k]: check works as expected with non-string values
         if isinstance(value, list):
-            field_dict = {field: dict(query=' '.join(v for v in value))}
+            field_dict = {field: dict(query=' '.join(v for v in value),
+                          lenient=True)}
         else:
-            field_dict = {field: dict(query=value, type='phrase')}
+            field_dict = {field: dict(query=value, type='phrase',
+                          lenient=True)}
 
         return field_dict
 
