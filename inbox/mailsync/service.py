@@ -63,7 +63,7 @@ class SyncService(object):
 
         if config.get('DEBUG_CONSOLE_ON'):
             # Enable the debugging console if this flag is set. Connect to
-            # localhost on port $PID to get access to a REPL
+            # localhost on the port shown in the logs to get access to a REPL
             port = None
             start_port = config.get('DEBUG_START_PORT')
             if start_port:

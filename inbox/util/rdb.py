@@ -108,16 +108,18 @@ class RemoteConsole(InteractiveConsole):
         return self.handle.readline()
 
 
-def break_to_interpreter(address="localhost", port=None):
+def break_to_interpreter(host="localhost", port=None):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
     if port is None:
-        port = os.getpid()
+        # Let the OS pick a port automatically.
+        port = 0
 
-    sock.bind((address, port))
+    sock.bind((host, port))
     sock.listen(1)
-    log.debug("Inbox console waiting", port=port, address=address)
+    address = sock.getsockname()
+    log.debug("Inbox console waiting", address=address)
     while True:
         (clientsocket, address) = sock.accept()
         console = RemoteConsole(clientsocket, locals())
