@@ -9,7 +9,6 @@ from inbox.models.session import session_scope
 from inbox.models import Namespace, Thread, Message
 from inbox.api.kellogs import encode
 from inbox.search.adaptor import NamespaceSearchEngine
-from inbox.search.util.misc import es_format_address_list, es_format_tags_list
 from inbox.sqlalchemy_ext.util import safer_yield_per
 
 CHUNK_SIZE = 1000
@@ -100,11 +99,7 @@ def index_threads(namespace, updated_since=None):
 
         encoded = []
         for obj in safer_yield_per(query, Thread.id, 0, CHUNK_SIZE):
-            encoded_obj = encode(
-                obj, namespace_public_id=namespace_public_id,
-                format_address_fn=es_format_address_list,
-                format_tags_fn=es_format_tags_list)
-
+            encoded_obj = encode(obj, namespace_public_id=namespace_public_id)
             encoded.append(encoded_obj)
 
     indexed_count += search_engine.threads.bulk_index(encoded)
@@ -138,11 +133,7 @@ def index_messages(namespace, updated_since=None):
 
         encoded = []
         for obj in safer_yield_per(query, Message.id, 0, CHUNK_SIZE):
-            encoded_obj = encode(
-                obj, namespace_public_id=namespace_public_id,
-                format_address_fn=es_format_address_list,
-                format_tags_fn=es_format_tags_list)
-
+            encoded_obj = encode(obj, namespace_public_id=namespace_public_id)
             encoded.append(encoded_obj)
 
     indexed_count += search_engine.messages.bulk_index(encoded)

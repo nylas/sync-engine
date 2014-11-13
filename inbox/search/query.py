@@ -50,6 +50,9 @@ class DSLQueryEngine(object):
 class Query(object):
     # TODO[k]: Document more here
     """ Representation of an Elasticsearch DSL query. """
+
+    NESTED_FIELD_FORMAT = '{}.{}'
+
     def __init__(self, query, query_type='and'):
         self.query = query
         self.query_type = query_type
@@ -60,10 +63,11 @@ class Query(object):
         return dict(query={'bool': query_dict})
 
     def convert_or(self):
-        d_list = [self.__class__(q) for q in self.query]
+        #d_list = [self.__class__(q) for q in self.query]
 
         # TODO[k]: DO SOMETHING WITH d_list!
-        return d_list
+        # return d_list
+        raise NotImplementedError
 
     def convert_and(self):
         must_list = []
@@ -88,8 +92,30 @@ class Query(object):
         return field_dict
 
     def match(self, field):
+        value = self.query[field]
+
+        # Can _match directly
+        if field not in self.nested_fields:
+            return self._match(field, value)
+
+        # _match each sub-field for nested fields
+        sub_fields = self.nested_fields[field]
+
+        should_list = [self._match(self.NESTED_FIELD_FORMAT.format(field, s),
+                                   value) for s in sub_fields]
+
+        query_dict = {'bool': dict(should=should_list)}
+        nested_dict = {
+            'path': field,
+            'score_mode': 'avg',
+            'query': query_dict
+        }
+
+        return dict(nested=nested_dict)
+
+    def _match(self, field, value):
         """ Generate an Elasticsearch match or match_phrase query. """
-        field_dict = self._field_dict(field, self.query[field])
+        field_dict = self._field_dict(field, value)
         return dict(match=field_dict)
 
     def multi_match(self, field, boost=True):
@@ -102,22 +128,23 @@ class Query(object):
 
         """
         assert field == 'all' and self._fields
+        value = self.query[field]
 
         if boost:
-            return self._boosted_multi_match(field)
+            return self._boosted_multi_match(field, value)
         else:
-            return self._simple_multi_match(field)
+            return self._simple_multi_match(field, value)
 
-    def _simple_multi_match(self, field):
+    def _simple_multi_match(self, field, value):
         d = dict(fields=self._fields.keys())
 
-        field_dict = self._field_dict(field, self.query[field])
+        field_dict = self._field_dict(field, value)
         d.update(field_dict[field])
         d['type'] = 'most_fields'
 
         return dict(multi_match=d)
 
-    def _boosted_multi_match(self, field):
+    def _boosted_multi_match(self, field, value):
         boosted_fields = []
         for f in self._fields:
             multiplier = self._fields.get(f)
@@ -128,7 +155,7 @@ class Query(object):
 
         d = dict(fields=boosted_fields)
 
-        field_dict = self._field_dict(field, self.query[field])
+        field_dict = self._field_dict(field, value)
         d.update(field_dict[field])
         d['type'] = 'most_fields'
 
@@ -142,6 +169,14 @@ class Query(object):
 
 
 class MessageQuery(Query):
+    nested_fields = {
+        'from': ['email', 'name'],
+        'to': ['email', 'name'],
+        'cc': ['email', 'name'],
+        'bcc': ['email', 'name'],
+        'files': ['size', 'id', 'content_type', 'filename']
+    }
+
     def __init__(self, query, query_type='and'):
         # TODO[k]: files have content_type, size, filename, id.
         # We exclude the namespace_id.
@@ -181,6 +216,11 @@ class MessageQuery(Query):
 
 
 class ThreadQuery(Query):
+    nested_fields = {
+        'tags': ['id', 'name'],
+        'participants': ['email', 'name']
+    }
+
     def __init__(self, query, query_type='and'):
         # TODO[k]: tags have name, id.
         # We exclude the namespace_id.
