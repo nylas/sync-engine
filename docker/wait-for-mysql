@@ -1,0 +1,51 @@
+#!/usr/bin/env python
+
+import os
+import signal
+import subprocess
+import sys
+import tempfile
+import time
+
+if not hasattr(time, 'monotonic'):
+    # HACK for Python 2.x
+    time.monotonic = time.time
+
+if not hasattr(subprocess, 'TimeoutExpired'):
+    import subprocess32 as subprocess
+
+# Number of seconds for this whole script.
+TIMEOUT = 60
+
+mysql_cnf_data = """\
+[client]
+host = {MYSQL_PORT_3306_TCP_ADDR}
+port = {MYSQL_PORT_3306_TCP_PORT}
+user = {MYSQL_ENV_MYSQL_USER}
+password = {MYSQL_ENV_MYSQL_PASSWORD}
+""".format(**os.environ)
+
+t0 = time.monotonic()
+
+with tempfile.NamedTemporaryFile('w+') as tf:
+    tf.write(mysql_cnf_data)
+    tf.flush()
+
+    while time.monotonic() - t0 < TIMEOUT:
+        proc = subprocess.Popen(['mysql', '--defaults-file=' + tf.name,
+                                 os.environ['MYSQL_ENV_MYSQL_DATABASE']],
+                                stdin=subprocess.PIPE,
+                                universal_newlines=True)
+        try:
+            proc.communicate("SHOW TABLES;", timeout=TIMEOUT - (time.monotonic() - t0))
+        except subprocess.TimeoutExpired:
+            proc.terminate()
+            raise
+        if proc.returncode == 0:
+            sys.exit(0)
+
+        # Failed.  Sleep and try again.
+        time.sleep(2)
+
+    # Timeout expired
+    sys.exit(1)

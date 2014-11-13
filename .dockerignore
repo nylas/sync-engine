@@ -1,0 +1,4 @@
+# This clears out the large git objects & packs while still allowing
+# "git rev-parse HEAD" to return the correct revision, provided that you
+# re-create an empty .git/objects directory.
+.git/objects/*

@@ -1,0 +1,76 @@
+#!/bin/sh
+# Docker entrypoint
+# Runs as root
+set -e
+
+# For convenience, we can set USING_FIG=1 to get all of these settings:
+if [ "${USE_FIG_DEFAULTS:-0}" -ne 0 ]; then
+    GENERATE_CONFIG=${GENERATE_CONFIG:-1}; export GENERATE_CONFIG
+    PIP_INSTALL=${PIP_INSTALL:-1}; export PIP_INSTALL
+    WAIT_FOR_DB=${WAIT_FOR_DB:-1}; export WAIT_FOR_DB
+    CREATE_DB=${CREATE_DB:-1}; export CREATE_DB
+    MIGRATE_DB=${MIGRATE_DB:-1}; export MIGRATE_DB
+    INBOX_ENV=${INBOX_ENV:-dev}; export INBOX_ENV
+fi
+unset USE_FIG_DEFAULTS
+
+# FIXME: Is this needed?
+if [ "${GENERATE_CONFIG:-0}" -ne 0 ]; then
+    chpst -u admin /srv/docker/gen-config-from-env
+fi
+unset GENERATE_CONFIG
+
+# This is useful when the source tree is mounted as a volume.
+if [ "${PIP_INSTALL:-0}" -ne 0 ]; then
+    # Install requirements
+    for path in $( find -L /srv/* -maxdepth 1 -name requirements.txt |
+                   sed -Ee 's/\/requirements\.txt$//' |
+                   LC_COLLATE=C.UTF-8 sort )
+    do
+        pip install -q -r "$path/requirements.txt"
+    done
+
+    # Install Python distributions (editable mode)
+    # Each directory must have its own -e flag.  Example:
+    #   pip install -q -e /srv/inbox -e /srv/inbox-eas
+    pip install -q $( find -L /srv/* -maxdepth 1 -name setup.py |
+                      sed -Ee 's/\/setup\.py$//' |
+                      LC_COLLATE=C.UTF-8 sort |
+                      sed -Ee 's/^/-e /')
+fi
+unset PIP_INSTALL
+
+if [ -n "$RUN_AS" ];  then
+    runas=$RUN_AS
+else
+    runas=admin
+fi
+unset RUN_AS
+
+# Ensure permissions of volumes
+install -d -m0775 -o root -g admin /var/lib/inboxapp
+install -d -m0775 -o root -g admin /var/log/inboxapp
+install -d -m0775 -o root -g admin /var/log/supervisor
+
+# Hooks
+if [ -e /srv/inbox-hooks/entrypoint.d ]; then
+    for p in $( find -L /srv/inbox-hooks/entrypoint.d -mindepth 1 -maxdepth 1 |
+                LC_COLLATE=C.UTF-8 sort )
+    do
+        case "$p" in
+            *.sh)
+                . "$p"
+                ;;
+            *)
+                "$p"
+                ;;
+        esac
+    done
+fi
+
+# Run the specified command as admin
+if [ -z "$*" ]; then
+    exec chpst -u "$runas" -- /srv/docker/startup
+else
+    exec chpst -u "$runas" -- "$@"
+fi

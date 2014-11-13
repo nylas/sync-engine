@@ -1,0 +1,31 @@
+inbox:
+  build: .
+  environment:
+    USE_FIG_DEFAULTS: 1
+  links:
+    - inboxdb:mysql
+  ports:
+    - "127.0.0.1:5555:5555"
+  volumes:
+    - /var/lib/inboxapp
+    - /var/log/inboxapp
+    - /var/log/supervisor
+    # Uncomment the line below to mount the source directory as a volume.
+    #- .:/srv/inbox
+
+inboxdb:
+  # FIXME: create-db currently breaks on mysql 5.6 (the thread.subject index is
+  # too large when using utf8mb4.)
+  image: mysql:5.5
+  environment:
+    # inbox will create its own databases using the root account
+    MYSQL_ROOT_PASSWORD: root
+    # XXX: The names below are used as a workaround for the lack of proper test
+    # database initialization.
+    MYSQL_DATABASE: test
+    MYSQL_USER: inboxtest
+    MYSQL_PASSWORD: inboxtest
+  volumes:
+    - /var/log/mysql
+    # Uncomment the line below to put the database in RAM (speeds up testing).
+    #- /dev/shm/inboxdb:/var/lib/mysql

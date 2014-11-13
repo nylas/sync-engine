@@ -1,11 +1,68 @@
-FROM quay.io/inbox/inbox-base:${IMAGE_TAG}
+FROM debian:wheezy
 
-USER admin
-ADD ./inbox /srv/inbox
+MAINTAINER inboxapp
+RUN apt-get -q update && \
+    DEBIAN_FRONTEND=noninteractive apt-get -qy install \
+        build-essential \
+        cron \
+        curl \
+        g++ \
+        gcc \
+        git \
+        lib32z1-dev \
+        libffi-dev \
+        libmysqlclient-dev \
+        libxml2-dev \
+        libxslt-dev \
+        libzmq-dev \
+        mysql-client \
+        net-tools \
+        procps \
+        python \
+        python-dev \
+        python-lxml \
+        python-pip \
+        python-setuptools \
+        python-software-properties\
+        runit \
+        sudo \
+        supervisor \
+        tnef \
+        wget \
+    && \
+    pip install 'setuptools>=5.3' subprocess32 tox
 
-USER root
-RUN pip install -e . && rm -f `find . -name *.pyc` && chown -R admin .
+RUN useradd -ms /bin/sh admin && \
+    install -d -m0775 -o root -g admin /srv/inbox
+WORKDIR /srv/inbox
 
-USER admin
+ADD requirements.txt /srv/inbox/requirements.txt
+RUN pip install -r /srv/inbox/requirements.txt
 
+# XXX: This is to work around some problem with installing the deps from tox.ini
+RUN pip install \
+        pytest \
+        pytest-flask \
+        pytest-instafail \
+        pytest-timeout \
+        pytest-xdist \
+        requests
+
+RUN install -d -m0775 -o root -g admin /etc/inboxapp && \
+    install -d -m0775 -o root -g admin /etc/mysql/conf.d && \
+    install -d -m0775 -o root -g admin /run/supervisor && \
+    ln -s /srv/inbox/docker /srv/docker && \
+    chown -R admin /usr/local/lib/python2.7
+
+##### END BASE #####
+
+ADD . /srv/inbox
+RUN /srv/docker/postinstall-src /srv/inbox
+
+ENTRYPOINT ["/srv/docker/entrypoint"]
 EXPOSE 5555
+
+# Permissions for these are set in docker/entrypoint.
+# XXX: /etc/inboxapp isn't a volume, because docker/gen-config-from-env
+# modifies it.
+VOLUME ["/var/lib/inboxapp", "/var/log/inboxapp", "/var/log/supervisor"]

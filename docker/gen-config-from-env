@@ -1,0 +1,24 @@
+#!/usr/bin/env python
+from __future__ import absolute_import, print_function
+
+import json
+import os
+import yaml
+
+with open("/srv/inbox/etc/config-dev.json", "r") as f:
+    config = json.loads(f.read())
+with open("/srv/inbox/etc/secrets-dev.yml", "r") as f:
+    secrets = yaml.safe_load(f.read())
+
+config['MYSQL_HOSTNAME'] = os.environ['MYSQL_PORT_3306_TCP_ADDR']
+config['MYSQL_PORT'] = int(os.environ['MYSQL_PORT_3306_TCP_PORT'])
+secrets['MYSQL_USER'] = 'root'
+secrets['MYSQL_PASSWORD'] = os.environ['MYSQL_ENV_MYSQL_ROOT_PASSWORD']
+
+os.umask(0o022)
+with open('/etc/inboxapp/config.json', "w") as f:
+    print(json.dumps(config, indent=True, sort_keys=True), file=f)
+
+os.umask(0o027)
+with open('/etc/inboxapp/secrets.yml', "w") as f:
+    yaml.safe_dump(secrets, stream=f)

@@ -1,0 +1,46 @@
+#!/bin/sh
+# Docker default command
+# Runs as 'admin'
+set -e
+set -x
+
+if [ "${WAIT_FOR_DB:-0}" -ne 0 ]; then
+    /srv/docker/wait-for-mysql
+fi
+
+if [ "${CREATE_DB:-0}" -ne 0 ]; then
+    # XXX: Should we avoid running create-db if the database is already
+    # created?
+    if [ "$INBOX_ENV" = "prod" ]; then
+        prod_flag=--prod
+    else
+        prod_flag=--no-prod
+    fi
+    ( cd /srv/inbox && ./bin/create-db $prod_flag ) || exit 1
+fi
+unset CREATE_DB
+
+if [ "${MIGRATE_DB:-0}" -ne 0 ]; then
+    ( cd /srv/inbox && alembic upgrade head ) || exit 1
+fi
+unset MIGRATE_DB
+
+# Hooks
+if [ -e /srv/inbox-hooks/startup.d ]; then
+    for p in $( ls -1 /srv/inbox-hooks/startup.d/* | LC_ALL=C.UTF-8 sort); do
+        case "$p" in
+            *.sh)
+                source "$p"
+                ;;
+            *)
+                "$p"
+                ;;
+        esac
+    done
+fi
+
+if [ -z "$*" ]; then
+    exec /usr/bin/supervisord -n -c /srv/docker/supervisord.conf
+else
+    exec "$@"
+fi
