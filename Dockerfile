@@ -50,6 +50,7 @@ RUN pip install \
 
 RUN install -d -m0775 -o root -g admin /etc/inboxapp && \
     install -d -m0775 -o root -g admin /etc/mysql/conf.d && \
+    install -d -m0775 -o root -g admin /run/inboxapp && \
     install -d -m0775 -o root -g admin /run/supervisor && \
     ln -s /srv/inbox/docker /srv/docker && \
     chown -R admin /usr/local/lib/python2.7
@@ -60,9 +61,8 @@ ADD . /srv/inbox
 RUN /srv/docker/postinstall-src /srv/inbox
 
 ENTRYPOINT ["/srv/docker/entrypoint"]
+ENV INBOX_CFG_PATH /etc/inboxapp/secrets.yml:/etc/inboxapp/config.json:/run/inboxapp/secrets.yml:/run/inboxapp/config.json
 EXPOSE 5555
 
-# Permissions for these are set in docker/entrypoint.
-# XXX: /etc/inboxapp isn't a volume, because docker/gen-config-from-env
-# modifies it.
-VOLUME ["/var/lib/inboxapp", "/var/log/inboxapp", "/var/log/supervisor"]
+# Permissions for some of these are set in docker/entrypoint.
+VOLUME ["/etc/inboxapp", "/var/lib/inboxapp", "/var/log/inboxapp", "/var/log/supervisor"]

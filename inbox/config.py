@@ -1,5 +1,5 @@
+import errno
 import os
-import json
 import yaml
 from urllib import quote_plus as urlquote
 
@@ -29,66 +29,92 @@ class Configuration(dict):
         return self[key]
 
 
-if 'INBOX_ENV' in os.environ:
-    assert os.environ['INBOX_ENV'] in ('dev', 'test', 'prod'), \
-        "INBOX_ENV must be either 'dev', 'test', or 'prod'"
-    env = os.environ['INBOX_ENV']
-else:
-    env = 'prod'
+def _update_config_from_env(config):
+    """Update a config dictionary from configuration files specified in the
+    environment.
 
+    The environment variable `INBOX_CFG_PATH` contains a list of .json or .yml
+    paths separated by colons.  The files are read in reverse order, so that
+    the settings specified in the leftmost configuration files take precedence.
+    (This is to emulate the behavior of the unix PATH variable, but the current
+    implementation always reads all config files.)
 
-if env == 'prod':
-    config_path = '/etc/inboxapp/config.json'
-    secrets_path = '/etc/inboxapp/secrets.yml'
-else:
-    root_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
+    The following paths will always be appended:
 
-    config_path = os.path.join(root_path, 'etc', 'config-{0}.json'.format(env))
-    secrets_path = os.path.join(root_path, 'etc',
-                                'secrets-{0}.yml'.format(env))
+    If `INBOX_ENV` is 'prod':
+      /etc/inboxapp/secrets.yml:/etc/inboxapp/config.json
 
+    If `INBOX_ENV` is 'test':
+      {srcdir}/etc/secrets-test.yml:{srcdir}/etc/config-test.yml
 
-with open(config_path) as f:
-    config = Configuration(json.load(f))
+    If `INBOX_ENV` is 'dev':
+      {srcdir}/etc/secrets-dev.yml:{srcdir}/etc/config-dev.yml
 
-try:
-    with open(secrets_path) as f:
-        secrets_config = Configuration(yaml.safe_load(f))
-        config.update(secrets_config)
-except IOError:
+    Missing files in the path will be ignored.
+    """
+
+    srcdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
+
+    if 'INBOX_ENV' in os.environ:
+        assert os.environ['INBOX_ENV'] in ('dev', 'test', 'prod'), \
+            "INBOX_ENV must be either 'dev', 'test', or 'prod'"
+        env = os.environ['INBOX_ENV']
+    else:
+        env = 'prod'
+
+    if env == 'prod':
+        base_cfg_path = [
+            '/etc/inboxapp/secrets.yml',
+            '/etc/inboxapp/config.json',
+        ]
+    else:
+        v = {'env': env, 'srcdir': srcdir}
+        base_cfg_path = [
+            '{srcdir}/etc/secrets-{env}.yml'.format(**v),
+            '{srcdir}/etc/config-{env}.json'.format(**v),
+        ]
+
+    if 'INBOX_CFG_PATH' in os.environ:
+        cfg_path = os.environ.get('INBOX_CFG_PATH', '').split(os.path.pathsep)
+        cfg_path = list(p.strip() for p in cfg_path if p.strip())
+
+    path = cfg_path + base_cfg_path
+
+    for filename in reversed(path):
+        try:
+            f = open(filename)
+        except (IOError, OSError) as e:
+            if e.errno != errno.ENOENT:
+                raise
+        else:
+            with f:
+                # this also parses json, which is a subset of yaml
+                config.update(yaml.safe_load(f))
+
+config = Configuration()
+_update_config_from_env(config)
+
+if 'MYSQL_PASSWORD' not in config:
     raise Exception(
-        'Missing secrets config file {0}. Run `sudo cp etc/secrets-dev.yml '
-        '/etc/inboxapp/secrets.yml` and retry'.format(secrets_path))
+        'Missing secrets config file? Run `sudo cp etc/secrets-dev.yml '
+        '/etc/inboxapp/secrets.yml` and retry')
 
 
 def engine_uri(database=None):
     """ By default doesn't include the specific database. """
-    username = config.get_required('MYSQL_USER')
-    password = config.get_required('MYSQL_PASSWORD')
 
-    host = config.get_required('MYSQL_HOSTNAME')
+    info = {
+        'username': config.get_required('MYSQL_USER'),
+        'password': config.get_required('MYSQL_PASSWORD'),
+        'host': config.get_required('MYSQL_HOSTNAME'),
+        'port': str(config.get_required('MYSQL_PORT')),
+        'database': database if database else '',
+    }
 
-    # Allow docker to override in the case that mysql is also docker-hosted
-    # (rather than e.g. RDS or another external service).
-    #
-    # See http://docs.docker.com/userguide/dockerlinks/#environment-variables
-    # for more info.
-    host = os.getenv('MYSQL_PORT_3306_TCP_ADDR', host)
-
-    port = config.get_required('MYSQL_PORT')
-
-    port = os.getenv('MYSQL_PORT_3306_TCP_PORT', port)
-
-    uri_template = 'mysql+pymysql://{username}:{password}@{host}' +\
+    uri_template = 'mysql+pymysql://{username}:{password}@{host}' \
                    ':{port}/{database}?charset=utf8mb4'
 
-    return uri_template.format(
-        username=username,
-        # http://stackoverflow.com/a/15728440 (also applicable to '+' sign)
-        password=urlquote(password),
-        host=host,
-        port=port,
-        database=database if database else '')
+    return uri_template.format(**{k: urlquote(v) for k, v in info.items()})
 
 
 def db_uri():
