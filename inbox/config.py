@@ -77,6 +77,8 @@ def _update_config_from_env(config):
     if 'INBOX_CFG_PATH' in os.environ:
         cfg_path = os.environ.get('INBOX_CFG_PATH', '').split(os.path.pathsep)
         cfg_path = list(p.strip() for p in cfg_path if p.strip())
+    else:
+        cfg_path = []
 
     path = cfg_path + base_cfg_path
 
