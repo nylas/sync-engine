@@ -1,7 +1,7 @@
 import functools
 
 from gevent import Greenlet, joinall, sleep, GreenletExit, event
-from sqlalchemy.exc import DataError, IntegrityError
+from sqlalchemy.exc import DataError
 
 from inbox.log import get_logger
 log = get_logger()
@@ -204,12 +204,8 @@ class BaseMailSyncMonitor(Greenlet):
     heartbeat : int
         How often to check for commands.
     retry_fail_classes : list
-        Additional exceptions to *not* retry on. (This base class sets some
-        defaults.)
+        Exceptions to *not* retry on.
     """
-    RETRY_FAIL_CLASSES = [MailsyncError, ValueError, AttributeError, DataError,
-                          IntegrityError, TypeError]
-
     def __init__(self, account, heartbeat=1, retry_fail_classes=[]):
         self.shutdown = event.Event()
         # how often to check inbox, in seconds
@@ -218,8 +214,7 @@ class BaseMailSyncMonitor(Greenlet):
         self.account_id = account.id
         self.email_address = account.email_address
         self.provider_name = account.provider
-        self.retry_fail_classes = self.RETRY_FAIL_CLASSES
-        self.retry_fail_classes.extend(retry_fail_classes)
+        self.retry_fail_classes = retry_fail_classes
 
         # Stuff that might be updated later and we want to keep a shared
         # reference on child greenlets.
