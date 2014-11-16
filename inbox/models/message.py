@@ -261,8 +261,8 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                 msg._parse_mimepart(mimepart, mid, i, account.namespace.id)
 
             msg.calculate_sanitized_body()
-        except (mime.DecodingError, AttributeError, RuntimeError, TypeError) \
-                as e:
+        except (mime.DecodingError, AttributeError, RuntimeError, TypeError,
+                ValueError) as e:
             # Message parsing can fail for several reasons. Occasionally iconv
             # will fail via maximum recursion depth. EAS messages may be
             # missing Date and Received headers. In such cases, we still keep
