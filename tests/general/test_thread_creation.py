@@ -1,7 +1,6 @@
 # test that T441 doesn't reappear, ever.
 import datetime
 import pytest
-from gevent.queue import Queue
 from collections import namedtuple
 from inbox.auth.generic import GenericAuthHandler
 
@@ -38,7 +37,7 @@ def folder_sync_engine(db, monkeypatch):
     engine = None
     engine = FolderSyncEngine(account.id, "Inbox", 0,
                               email, "fastmail",
-                              3200, None, 20, None, Queue())
+                              3200, None, 20, None)
     return engine
 
 

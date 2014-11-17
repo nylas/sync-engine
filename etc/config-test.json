@@ -12,6 +12,9 @@
 "LOGDIR": "/var/log/inboxapp",
 "LOGLEVEL": 10,
 
+"REDIS_HOSTNAME": "localhost",
+"REDIS_PORT": 6379,
+
 "BASE_DUMP": "data/base_dump.sql",
 
 "GOOGLE_OAUTH_REDIRECT_URI": "urn:ietf:wg:oauth:2.0:oob",

@@ -1,0 +1,45 @@
+#!/usr/bin/env python
+
+import click
+from datetime import datetime, timedelta
+from redis import StrictRedis
+
+from inbox.status.sync import _get_redis_client, SyncStatusKey
+
+
+@click.command()
+@click.option('--time-delta', '-t', type=click.IntRange(60), default=60,
+              help='Elapsed time between subsequent heartbeats (in seconds).')
+def main(time_delta):
+    """
+    Very basic draft script to monitor the sync status of the folder engines.
+    At the moment, it only takes into account the timestamp, if a folder engine
+    record has not been in a while (see command options), the folder engine is
+    considered "dead" and the account in unhealthy conditions.
+    """
+    delta = timedelta(seconds=time_delta)
+    redis_client = _get_redis_client()
+
+    sync_status = dict()
+    for k in redis_client.scan_iter():
+        account_id, folder_id = map(int, k.split())
+        redis_timestamp = datetime.strptime(redis_client.hget(k, 'timestamp'),
+                                            "%Y-%m-%d %H:%M:%S.%f")
+        timestamp = datetime.utcnow()
+        if redis_timestamp < timestamp:
+            account_sync_status = (timestamp - redis_timestamp) < delta
+        else:
+            account_sync_status = (redis_timestamp - timestamp) < delta
+        sync_status[account_id] = account_sync_status and \
+            sync_status.get(account_id, True)
+
+    for account_id in sync_status:
+        message = 'account {}: '.format(account_id)
+        if sync_status[account_id]:
+            print message + 'OK'
+        else:
+            print message + 'BAD'
+
+
+if __name__ == '__main__':
+    main()

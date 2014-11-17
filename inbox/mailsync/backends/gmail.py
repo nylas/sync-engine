@@ -71,8 +71,7 @@ class GmailSyncMonitor(ImapSyncMonitor):
                                            self.poll_frequency,
                                            self.syncmanager_lock,
                                            self.refresh_flags_max,
-                                           self.retry_fail_classes,
-                                           self.sync_status_queue)
+                                           self.retry_fail_classes)
             thread.start()
             self.folder_monitors.add(thread)
             if thread.should_block:
@@ -321,6 +320,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
         # have _every_ message in the thread. We have to expand it and make
         # sure we have all messages.
         while not download_stack.empty():
+            self.sync_status.publish()
             _, message = download_stack.get()
             # Don't try to re-download any messages that are in the same
             # thread. (Putting this _before_ the download to guarantee no

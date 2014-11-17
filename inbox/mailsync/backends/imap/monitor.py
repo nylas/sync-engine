@@ -1,11 +1,8 @@
-from gevent import Greenlet, sleep
+from gevent import sleep
 from gevent.pool import Group
-from gevent.queue import Queue
-from sqlalchemy.orm import load_only
 from sqlalchemy.orm.exc import NoResultFound
 from inbox.log import get_logger
 from inbox.models import Folder
-from inbox.models.backends.imap import ImapFolderSyncStatus
 from inbox.models.util import db_write_lock
 from inbox.mailsync.backends.base import BaseMailSyncMonitor
 from inbox.mailsync.backends.base import (save_folder_names,
@@ -50,9 +47,6 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
 
         self.folder_monitors = Group()
 
-        self.sync_status_queue = Queue()
-        self.folder_monitors.start(Greenlet(self.sync_status_consumer))
-
         BaseMailSyncMonitor.__init__(self, account, heartbeat,
                                      retry_fail_classes)
 
@@ -96,8 +90,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                                             self.poll_frequency,
                                             self.syncmanager_lock,
                                             self.refresh_flags_max,
-                                            self.retry_fail_classes,
-                                            self.sync_status_queue)
+                                            self.retry_fail_classes)
             thread.start()
             self.folder_monitors.add(thread)
             while not thread_polling(thread) and \
@@ -113,18 +106,3 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                 # NOTE: Greenlet is automatically removed from the group.
 
         self.folder_monitors.join()
-
-    def sync_status_consumer(self):
-        """Consume per-monitor sync status queue and update the
-        ImapFolderSyncStatus table accordingly.
-        Nothing fancy is happening as of now but here we may implement some
-        batching to reduce the stress of the database."""
-        while True:
-            folder_id, state = self.sync_status_queue.get()
-            with mailsync_session_scope() as db_session:
-                sync_status_entry = db_session.query(ImapFolderSyncStatus)\
-                    .filter_by(account_id=self.account_id, folder_id=folder_id)\
-                    .options(load_only(ImapFolderSyncStatus.state)).one()
-                sync_status_entry.state = state
-                db_session.add(sync_status_entry)
-                db_session.commit()

@@ -88,6 +88,7 @@ from inbox.mailsync.backends.base import (create_db_objects,
                                           commit_uids, MailsyncDone,
                                           mailsync_session_scope,
                                           THROTTLE_WAIT)
+from inbox.status.sync import SyncStatus
 
 GenericUIDMetadata = namedtuple('GenericUIDMetadata', 'throttled')
 
@@ -140,7 +141,7 @@ class FolderSyncEngine(Greenlet):
 
     def __init__(self, account_id, folder_name, folder_id, email_address,
                  provider_name, poll_frequency, syncmanager_lock,
-                 refresh_flags_max, retry_fail_classes, sync_status_queue):
+                 refresh_flags_max, retry_fail_classes):
         self.account_id = account_id
         self.folder_name = folder_name
         self.folder_id = folder_id
@@ -150,7 +151,11 @@ class FolderSyncEngine(Greenlet):
         self.retry_fail_classes = retry_fail_classes
         self.state = None
         self.provider_name = provider_name
-        self.sync_status_queue = sync_status_queue
+        self.sync_status = SyncStatus(self.account_id, self.folder_id)
+        self.sync_status.publish(force=True,
+                                 account_id=self.account_id,
+                                 folder_id=self.folder_id,
+                                 folder_name=self.folder_name)
 
         with mailsync_session_scope() as db_session:
             account = db_session.query(Account).get(self.account_id)
@@ -185,12 +190,14 @@ class FolderSyncEngine(Greenlet):
         # complicated handling e.g. when backends reuse imapids. ImapUid
         # objects are the only objects deleted by the mail sync backends
         # anyway.
-        self._load_state()
-        self.sync_status_queue.put((self.folder_id, self.state))
+        saved_folder_status = self._load_state()
+        # eagerly signal the sync status
+        self.sync_status.publish(force=True, state=self.state)
         # NOTE: The parent ImapSyncMonitor handler could kill us at any
         # time if it receives a shutdown command. The shutdown command is
         # equivalent to ctrl-c.
         while True:
+            self.sync_status.publish()
             old_state = self.state
             try:
                 self.state = self.state_handlers[old_state]()
@@ -199,7 +206,13 @@ class FolderSyncEngine(Greenlet):
             # State handlers are idempotent, so it's okay if we're
             # killed between the end of the handler and the commit.
             if self.state != old_state:
-                self.sync_status_queue.put((self.folder_id, self.state))
+                # eagerly publish a sync status update
+                self.sync_status.publish(force=True, state=self.state)
+                # Don't need to re-query, will auto refresh on re-associate.
+                with mailsync_session_scope() as db_session:
+                    db_session.add(saved_folder_status)
+                    saved_folder_status.state = self.state
+                    db_session.commit()
             if self.state == 'finish':
                 return
 
@@ -306,6 +319,7 @@ class FolderSyncEngine(Greenlet):
 
     def download_uids(self, crispin_client, download_stack):
         while not download_stack.empty():
+            self.sync_status.publish()
             # Defer removing UID from queue until after it's committed to the
             # DB' to avoid races with poll_for_changes().
             uid, metadata = download_stack.peek()
