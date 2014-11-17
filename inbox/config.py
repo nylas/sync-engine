@@ -113,6 +113,12 @@ def engine_uri(database=None):
         'database': database if database else '',
     }
 
+    # So we can use docker links to dynamically attach containerized databases
+    # https://docs.docker.com/userguide/dockerlinks/#environment-variables
+
+    info['host'] = os.getenv("MYSQL_PORT_3306_TCP_ADDR",info['host'])
+    info['port'] = os.getenv("MYSQL_PORT_3306_TCP_PORT",info['port'])
+
     uri_template = 'mysql+pymysql://{username}:{password}@{host}' \
                    ':{port}/{database}?charset=utf8mb4'
 
