@@ -27,6 +27,7 @@ from collections import namedtuple
 
 from gevent import spawn, sleep
 from gevent.coros import BoundedSemaphore
+from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.util.itert import chunk, partition
@@ -35,7 +36,7 @@ from inbox.crispin import GmailSettingError
 from inbox.log import get_logger
 from inbox.models import Message, Folder, Thread, Namespace, Account
 from inbox.models.backends.gmail import GmailAccount
-from inbox.models.backends.imap import ImapUid, ImapThread
+from inbox.models.backends.imap import ImapFolderInfo, ImapUid, ImapThread
 from inbox.mailsync.backends.base import (create_db_objects,
                                           commit_uids,
                                           MailsyncError,
@@ -176,6 +177,48 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
         # Relinquish Crispin connection before sleeping.
         if not should_idle:
             sleep(self.poll_frequency)
+
+    def resync_uids_impl(self):
+        with mailsync_session_scope() as db_session:
+            imap_folder_info_entry = db_session.query(ImapFolderInfo)\
+                .options(load_only('uidvalidity', 'highestmodseq'))\
+                .filter_by(account_id=self.account_id,
+                           folder_id=self.folder_id)\
+                .one()
+            with self.conn_pool.get() as crispin_client:
+                crispin_client.select_folder(self.folder_name,
+                                             lambda *args: True)
+                uidvalidity = crispin_client.selected_uidvalidity
+                if uidvalidity <= imap_folder_info_entry.uidvalidity:
+                    # if the remote UIDVALIDITY is less than or equal to -
+                    # from my (siro) understanding it should not be less than -
+                    # the local UIDVALIDITY log a debug message and exit right
+                    # away
+                    log.debug('UIDVALIDITY unchanged')
+                    return
+                msg_uids = crispin_client.all_uids()
+                mapping = {g_msgid: msg_uid for msg_uid, g_msgid in
+                           crispin_client.g_msgids(msg_uids).iteritems()}
+            imap_uid_entries = db_session.query(ImapUid)\
+                .options(load_only('msg_uid'),
+                         joinedload('message').load_only('g_msgid'))\
+                .filter_by(account_id=self.account_id,
+                           folder_id=self.folder_id)
+            CHUNK_SIZE = 1000
+            for entry in imap_uid_entries.yield_per(CHUNK_SIZE):
+                if entry.message.g_msgid in mapping:
+                    log.debug('X-GM-MSGID {} from UID {} to UID {}'.format(
+                        entry.message.g_msgid,
+                        entry.msg_uid,
+                        mapping[entry.message.g_msgid]))
+                    entry.msg_uid = mapping[entry.message.g_msgid]
+                else:
+                    db_session.delete(entry)
+            log.debug('UIDVALIDITY from {} to {}'.format(
+                imap_folder_info_entry.uidvalidity, uidvalidity))
+            imap_folder_info_entry.uidvalidity = uidvalidity
+            imap_folder_info_entry.highestmodseq = None
+            db_session.commit()
 
     def highestmodseq_callback(self, crispin_client, new_uids, updated_uids,
                                download_stack, async_download):

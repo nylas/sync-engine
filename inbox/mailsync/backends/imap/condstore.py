@@ -60,7 +60,8 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
                 self.account_id, db_session, self.folder_name)
             # Ensure that we have an initial highestmodseq value stored before
             # we begin polling for changes.
-            if saved_folder_info is None:
+            if saved_folder_info is None or \
+                    saved_folder_info.highestmodseq is None:
                 assert (crispin_client.selected_uidvalidity is not None
                         and crispin_client.selected_highestmodseq is
                         not None)

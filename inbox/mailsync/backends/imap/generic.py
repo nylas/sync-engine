@@ -41,9 +41,10 @@ Here's the state machine:
         |   ----------------         ----------------------
         ∨   | initial sync | <-----> | initial uidinvalid |
 ----------  ----------------         ----------------------
-| finish |          |
-----------          ∨
-        ^   ----------------         ----------------------
+| finish |      |    ^
+----------      |    |_________________________
+        ^       ∨                              |
+        |   ----------------         ----------------------
         |---|      poll    | <-----> |   poll uidinvalid  |
             ----------------         ----------------------
             |  ∧
@@ -165,9 +166,9 @@ class FolderSyncEngine(Greenlet):
 
         self.state_handlers = {
             'initial': self.initial_sync,
-            'initial uidinvalid': self.resync_uids_from('initial'),
+            'initial uidinvalid': self.resync_uids,
             'poll': self.poll,
-            'poll uidinvalid': self.resync_uids_from('poll'),
+            'poll uidinvalid': self.resync_uids,
             'finish': lambda self: 'finish',
         }
 
@@ -251,19 +252,12 @@ class FolderSyncEngine(Greenlet):
         self.poll_impl()
         return 'poll'
 
-    def resync_uids_from(self, previous_state):
-        @retry_crispin
-        def resync_uids():
-            """ Call this when UIDVALIDITY is invalid to fix up the database.
-
-            What happens here is we fetch new UIDs from the IMAP server and
-            match them with X-GM-MSGIDs and sub in the new UIDs for the old. No
-            messages are re-downloaded.
-            """
-            log.error("UIDVALIDITY changed")
-            raise NotImplementedError
-            return previous_state
-        return resync_uids
+    @retry_crispin
+    def resync_uids(self):
+        log.bind(state=self.state)
+        log.info('UIDVALIDITY changed')
+        self.resync_uids_impl()
+        return 'initial'
 
     def initial_sync_impl(self, crispin_client):
         # We wrap the block in a try/finally because the change_poller greenlet
@@ -307,6 +301,9 @@ class FolderSyncEngine(Greenlet):
             self.check_uid_changes(crispin_client, download_stack,
                                    async_download=False)
         sleep(self.poll_frequency)
+
+    def resync_uids_impl(self):
+        raise NotImplementedError
 
     @retry_crispin
     def poll_for_changes(self, download_stack):
