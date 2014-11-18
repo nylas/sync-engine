@@ -3,14 +3,8 @@ import re
 import cgi
 import htmlentitydefs
 from HTMLParser import HTMLParser, HTMLParseError
-from talon.quotations import (register_xpath_extensions, extract_from_html,
-                              extract_from_plain)  # noqa
-register_xpath_extensions()
 
 from inbox.log import get_logger
-
-__all__ = ['strip_tags', 'plaintext2html', 'extract_from_html',
-           'extract_from_plain']
 
 
 # http://stackoverflow.com/questions/753052/strip-html-from-strings-in-python

@@ -10,8 +10,7 @@ from sqlalchemy import (Column, Integer, BigInteger, String, DateTime,
 from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy.sql.expression import false
 
-from inbox.util.html import (plaintext2html, strip_tags,
-                             extract_from_html, extract_from_plain)
+from inbox.util.html import plaintext2html, strip_tags
 from inbox.sqlalchemy_ext.util import (JSON, Base36UID, generate_public_id,
                                        json_field_too_long)
 
@@ -350,24 +349,11 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         # TODO: also strip signatures.
         if html_part:
             assert '\r' not in html_part, "newlines not normalized"
-            extracted = extract_from_html(
-                html_part.encode('utf-8')).decode('utf-8').strip()
-            self.snippet = self.calculate_html_snippet(extracted)
-            # If quote-stripping left us with a blank message, store the
-            # original instead.
-            if self.snippet.strip():
-                self.sanitized_body = unicode(extracted)
-            else:
-                self.snippet = self.calculate_html_snippet(html_part)
-                self.sanitized_body = html_part
+            self.snippet = self.calculate_html_snippet(html_part)
+            self.sanitized_body = html_part
         elif plain_part:
-            extracted = extract_from_plain(plain_part).strip()
-            if extracted.strip():
-                self.snippet = self.calculate_plaintext_snippet(extracted)
-                self.sanitized_body = plaintext2html(extracted, False)
-            else:
-                self.snippet = self.calculate_plaintext_snippet(plain_part)
-                self.sanitized_body = plaintext2html(plain_part, False)
+            self.snippet = self.calculate_plaintext_snippet(plain_part)
+            self.sanitized_body = plaintext2html(plain_part, False)
         else:
             self.sanitized_body = u''
             self.snippet = u''
