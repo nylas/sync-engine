@@ -170,3 +170,20 @@ Each change event has the same format as a single delta above:
 If the connection is interrupted or your client goes offline, you can issue
 a new query, passing the cursor for the last delta you processed. This ensures
 that you don't miss any changes.
+
+# Getting a subset of all changes
+If you don't want to get changes for all the API object types, you can pass an
+additional parameter `exclude_types` in your request to the `/delta` or
+`delta/streaming` endpoint. The response won't contain any change events for
+objects of the types that you specify. For example, if your application doesn't
+need to know about changes to contacts or calendar events, you can make the
+request
+
+```
+:::xml
+GET
+https://api.inboxapp.com/n/<namespace_id>/delta/streaming?cursor=<cursor>&exclude_types=message,contact
+```
+
+The value of `exclude_types` must be a comma-separated list whose elements are
+any of `contact`, `event`, `file`, `message`, `tag`, `thread`.

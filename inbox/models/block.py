@@ -30,7 +30,7 @@ COMMON_CONTENT_TYPES = ['text/plain',
 
 class Block(Blob, MailSyncBase, HasRevisions, HasPublicID):
     """ Metadata for any file that we store """
-    API_OBJECT_NAME = 'block'
+    API_OBJECT_NAME = 'file'
 
     def should_suppress_transaction_creation(self):
         return not any(part.is_attachment for part in self.parts)

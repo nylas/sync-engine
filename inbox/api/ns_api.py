@@ -22,7 +22,8 @@ from inbox.api.validation import (InputError, get_tags, get_attachments,
                                   valid_event_action, valid_rsvp,
                                   ValidatableArgument,
                                   validate_draft_recipients,
-                                  validate_search_query)
+                                  validate_search_query,
+                                  valid_delta_object_types)
 from inbox import events, contacts, sendmail
 from inbox.log import get_logger
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
@@ -1315,6 +1316,8 @@ def draft_send_api():
 def sync_deltas():
     g.parser.add_argument('cursor', type=valid_public_id, location='args',
                           required=True)
+    g.parser.add_argument('exclude_types', type=valid_delta_object_types,
+                          location='args')
     args = strict_parse_args(g.parser, request.args)
     cursor = args['cursor']
     if cursor == '0':
@@ -1326,8 +1329,10 @@ def sync_deltas():
                        Transaction.namespace_id == g.namespace.id).one()
         except NoResultFound:
             return err(404, 'Invalid cursor parameter')
+    exclude_types = args.get('exclude_types')
     deltas, _ = delta_sync.format_transactions_after_pointer(
-        g.namespace.id, start_pointer, g.db_session, args['limit'])
+        g.namespace.id, start_pointer, g.db_session, args['limit'],
+        exclude_types)
     response = {
         'cursor_start': cursor,
         'deltas': deltas,
@@ -1362,6 +1367,8 @@ def stream_changes():
     g.parser.add_argument('timeout', type=float, location='args')
     g.parser.add_argument('cursor', type=valid_public_id, location='args',
                           required=True)
+    g.parser.add_argument('exclude_types', type=valid_delta_object_types,
+                          location='args')
     args = strict_parse_args(g.parser, request.args)
     timeout = args['timeout'] or 3600
     transaction_pointer = None
@@ -1375,11 +1382,12 @@ def stream_changes():
         if query_result is None:
             return err(400, 'Invalid cursor {}'.format(args['cursor']))
         transaction_pointer = query_result[0]
+    exclude_types = args.get('exclude_types')
 
     # Hack to not keep a database session open for the entire (long) request
     # duration.
     g.db_session.close()
     generator = delta_sync.streaming_change_generator(
         g.namespace.id, transaction_pointer=transaction_pointer,
-        poll_interval=1, timeout=timeout)
+        poll_interval=1, timeout=timeout, exclude_types=exclude_types)
     return Response(generator, mimetype='text/event-stream')

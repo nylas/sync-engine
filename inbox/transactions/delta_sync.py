@@ -41,7 +41,7 @@ def get_transaction_cursor_near_timestamp(namespace_id, timestamp, db_session):
 
 
 def format_transactions_after_pointer(namespace_id, pointer, db_session,
-                                      result_limit):
+                                      result_limit, exclude_types=None):
     """Return a pair (deltas, new_pointer), where deltas is a list of change
     events, represented as dictionaries:
     {
@@ -64,11 +64,18 @@ def format_transactions_after_pointer(namespace_id, pointer, db_session,
     result_limit: int
         Maximum number of results to return. (Because we may roll up multiple
         changes to the same object, fewer results can be returned.)
+    exclude_types: list, optional
+        If given, don't include transactions for these types of objects.
     """
+    filters = [Transaction.namespace_id == namespace_id,
+               Transaction.id > pointer]
+    if exclude_types is not None:
+        filters.append(~Transaction.object_type.in_(exclude_types))
     transactions = db_session.query(Transaction). \
         order_by(asc(Transaction.id)). \
-        filter(Transaction.namespace_id == namespace_id,
-               Transaction.id > pointer).limit(result_limit).all()
+        filter(*filters).limit(result_limit)
+
+    transactions = transactions.all()
     if not transactions:
         return ([], pointer)
 
@@ -89,7 +96,7 @@ def format_transactions_after_pointer(namespace_id, pointer, db_session,
 
 
 def streaming_change_generator(namespace_id, poll_interval, timeout,
-                               transaction_pointer):
+                               transaction_pointer, exclude_types=None):
     """Poll the transaction log for the given `namespace_id` until `timeout`
     expires, and yield each time new entries are detected.
     Arguments
@@ -109,7 +116,8 @@ def streaming_change_generator(namespace_id, poll_interval, timeout,
     while time.time() - start_time < timeout:
         with session_scope() as db_session:
             deltas, new_pointer = format_transactions_after_pointer(
-                namespace_id, transaction_pointer, db_session, 100)
+                namespace_id, transaction_pointer, db_session, 100,
+                exclude_types)
         if new_pointer is not None and new_pointer != transaction_pointer:
             transaction_pointer = new_pointer
             for delta in deltas:

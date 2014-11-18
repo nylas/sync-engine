@@ -3,9 +3,8 @@ from datetime import datetime
 from flanker.addresslib import address
 from flask.ext.restful import reqparse
 from sqlalchemy.orm.exc import NoResultFound
-from inbox.models import Account, Calendar, Tag, Thread, Block, Message
+from inbox.models import Account, Calendar, Tag, Thread, Block
 from inbox.models.when import parse_as_when
-from inbox.api.kellogs import encode
 
 MAX_LIMIT = 1000
 
@@ -243,6 +242,16 @@ def valid_rsvp(rsvp):
     if rsvp not in ['yes', 'no', 'maybe']:
         raise InputError('Invalid rsvp: {}'.format(rsvp))
     return rsvp
+
+
+def valid_delta_object_types(types_arg):
+    types = [item.strip() for item in types_arg.split(',')]
+    allowed_types = ('contact', 'message', 'event', 'file', 'message', 'tag',
+                     'thread')
+    for type_ in types:
+        if type_ not in allowed_types:
+            raise InputError('Invalid object type {}'.format(type_))
+    return types
 
 
 def validate_draft_recipients(draft):

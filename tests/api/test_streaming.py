@@ -70,3 +70,26 @@ def test_gracefully_handle_new_namespace(db, streaming_test_client):
     r = streaming_test_client.get(url)
     assert r.status_code == 200
     assert r.data == ''
+
+
+def test_exclude_object_types(db, api_prefix, streaming_test_client):
+    # Check that we do get message and contact changes by default.
+    url = url_concat(api_prefix, {'timeout': .1,
+                                  'cursor': '0'})
+    r = streaming_test_client.get(url)
+    assert r.status_code == 200
+    responses = r.data.split('\n')
+    parsed_responses = [json.loads(resp) for resp in responses if resp != '']
+    assert any(resp['object'] == 'message' for resp in parsed_responses)
+    assert any(resp['object'] == 'contact' for resp in parsed_responses)
+
+    # And check that we don't get message/contact changes if we exclude them.
+    url = url_concat(api_prefix, {'timeout': .1,
+                                  'cursor': '0',
+                                  'exclude_types': 'message,contact'})
+    r = streaming_test_client.get(url)
+    assert r.status_code == 200
+    responses = r.data.split('\n')
+    parsed_responses = [json.loads(resp) for resp in responses if resp != '']
+    assert not any(resp['object'] == 'message' for resp in parsed_responses)
+    assert not any(resp['object'] == 'contact' for resp in parsed_responses)
