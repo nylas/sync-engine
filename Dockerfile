@@ -3,6 +3,7 @@ FROM debian:wheezy
 MAINTAINER inboxapp
 RUN apt-get -q update && \
     DEBIAN_FRONTEND=noninteractive apt-get -qy install \
+        anacron \
         build-essential \
         cron \
         curl \
@@ -58,7 +59,11 @@ RUN install -d -m0775 -o root -g admin /etc/inboxapp && \
 ##### END BASE #####
 
 ADD . /srv/inbox
-RUN /srv/docker/postinstall-src /srv/inbox
+RUN /srv/docker/postinstall-src /srv/inbox && \
+    install -m0755 docker/inbox-cron-hourly /etc/cron.hourly/inbox-cron-hourly && \
+    install -m0755 docker/inbox-cron-daily /etc/cron.daily/inbox-cron-daily && \
+    install -m0755 docker/inbox-cron-weekly /etc/cron.weekly/inbox-cron-weekly && \
+    install -m0755 docker/inbox-cron-monthly /etc/cron.monthly/inbox-cron-monthly
 
 ENTRYPOINT ["/srv/docker/entrypoint"]
 ENV INBOX_CFG_PATH /etc/inboxapp/secrets.yml:/etc/inboxapp/config.json:/run/inboxapp/secrets.yml:/run/inboxapp/config.json

@@ -10,6 +10,7 @@ if [ "${USE_FIG_DEFAULTS:-0}" -ne 0 ]; then
     WAIT_FOR_DB=${WAIT_FOR_DB:-1}; export WAIT_FOR_DB
     CREATE_DB=${CREATE_DB:-1}; export CREATE_DB
     MIGRATE_DB=${MIGRATE_DB:-1}; export MIGRATE_DB
+    RUN_CRON=${RUN_CRON:-1}; export RUN_CRON
     INBOX_ENV=${INBOX_ENV:-dev}; export INBOX_ENV
 fi
 unset USE_FIG_DEFAULTS
@@ -70,6 +71,13 @@ fi
 
 # Run the specified command as admin
 if [ -z "$*" ]; then
+    # Start cron as root if no command is specified.
+    # XXX: This is ugly!
+    if [ -n "$RUN_CRON" ]; then
+        /etc/init.d/cron start
+        /etc/init.d/anacron start
+    fi
+
     exec chpst -u "$runas" -- /srv/docker/startup
 else
     exec chpst -u "$runas" -- "$@"

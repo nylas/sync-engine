@@ -1,0 +1,4 @@
+#!/bin/sh
+# /etc/cron.daily/inbox-cron-monthly
+set -e
+cd / && exec chpst -u admin run-parts --report /srv/inbox-hooks/cron.monthly
