@@ -1,13 +1,23 @@
 #!/usr/bin/env python
 
-# Logging is really noisy, but sometimes useful
-# from inbox.log import get_logger
-# log = get_logger()
-
+from inbox.log import configure_logging, get_logger
+configure_logging(is_prod=False)
+log = get_logger()
+import gevent
+from gevent import monkey
+monkey.patch_all()
+from collections import Counter
+import time
+from gevent.pool import Pool
+from boto.s3.connection import S3Connection
+from sqlalchemy.orm import subqueryload
+from inbox.config import config
 from inbox.models.session import session_scope
-from inbox.models import Message, Part
+from inbox.models import Message, Namespace
+from inbox.util.html import plaintext2html
 
 PAGE_SIZE = 500
+MAX_CONCURRENCY = 4
 
 
 def page_query(q):
@@ -21,17 +31,95 @@ def page_query(q):
         if not r:
             break
 
-print 'Paging through 500 at a time...'
 
-with session_scope() as db_session:
-    c = 1
-    for msg in page_query(db_session.query(Message).join(Part)):
-        print msg.id,
-        if not msg.decode_error:
-            msg.calculate_sanitized_body()
+def load_from_s3(block, s3_bucket):
+    if block.size == 0:
+        return ''
+    data_obj = s3_bucket.get_key(block.data_sha256)
+    assert data_obj, "No data returned!"
+    return data_obj.get_contents_as_string()
 
-            c += 1
-            if c % PAGE_SIZE == 0:
-                db_session.commit()
 
-    db_session.commit()
+def fast_fetch_body_parts(message, s3_bucket):
+    plain_data = None
+    html_data = None
+    for part in message.parts:
+        if part.block.content_type == 'text/html':
+            if config.get('STORE_MSG_ON_S3'):
+                raw_data = load_from_s3(part.block, s3_bucket)
+            else:
+                raw_data = part.block.data
+            html_data = raw_data.decode('utf-8').strip()
+            break
+    for part in message.parts:
+        if part.block.content_type == 'text/plain':
+            if config.get('STORE_MSG_ON_S3'):
+                raw_data = load_from_s3(part.block, s3_bucket)
+            else:
+                raw_data = part.block.data
+            plain_data = raw_data.decode('utf-8').strip()
+            break
+    return (plain_data, html_data)
+
+
+def calculate_sanitized_body(message, s3_bucket):
+    plain_part, html_part = fast_fetch_body_parts(message, s3_bucket)
+    if html_part:
+        assert '\r' not in html_part, "newlines not normalized"
+        message.snippet = message.calculate_html_snippet(html_part)
+        message.sanitized_body = html_part
+    elif plain_part:
+        message.snippet = message.calculate_plaintext_snippet(plain_part)
+        message.sanitized_body = plaintext2html(plain_part, False)
+    else:
+        message.sanitized_body = u''
+        message.snippet = u''
+
+
+def track_overall_progress(counter):
+    start_time = time.time()
+    while True:
+        print 'Messages processed: {}'.format(counter['messages'])
+        print 'Avg rate: {}'.format(counter['messages'] / (time.time() - start_time))
+        time.sleep(10)
+
+
+def regen_for_namespace(namespace_id, counter):
+    if config.get('STORE_MSG_ON_S3'):
+        conn = S3Connection(config.get('AWS_ACCESS_KEY_ID'),
+                            config.get('AWS_SECRET_ACCESS_KEY'))
+        bucket = conn.get_bucket(config.get('MESSAGE_STORE_BUCKET_NAME'),
+                                 validate=False)
+    else:
+        bucket = None
+    with session_scope() as db_session:
+        c = 1
+	for msg in page_query(db_session.query(Message).options(
+		subqueryload('parts').subqueryload('block'))):
+            if not msg.decode_error:
+                calculate_sanitized_body(msg, bucket)
+
+                c += 1
+		log.info('regenerated message body', namespace_id=namespace_id,
+				count=c)
+                counter['messages'] += 1
+                if c % PAGE_SIZE == 0:
+                    db_session.commit()
+
+        db_session.commit()
+
+
+def main():
+    pool = Pool(size=MAX_CONCURRENCY)
+    counter = Counter()
+    gevent.spawn(track_overall_progress, counter)
+    with session_scope() as db_session:
+        namespace_ids = [ns.id for ns in db_session.query(Namespace)]
+        for ns_id in namespace_ids:
+            pool.add(gevent.spawn(regen_for_namespace, ns_id, counter))
+
+    pool.join()
+
+
+if __name__ == '__main__':
+    main()
