@@ -10,7 +10,7 @@ from oauth2client.client import OAuth2Credentials
 from oauth2client.client import AccessTokenRefreshError
 
 from inbox.basicauth import (ConnectionError, ValidationError, OAuthError)
-from inbox.models import Event, Participant
+from inbox.models import Event, Participant, Calendar
 from inbox.models.session import session_scope
 from inbox.models.backends.gmail import GmailAccount
 from inbox.auth.gmail import (OAUTH_CLIENT_ID,
@@ -45,6 +45,10 @@ class GoogleEventsProvider(BaseEventProvider):
         Logging handler.
     """
     PROVIDER_NAME = 'google'
+
+    # A mapping from Google's status to our own
+    status_map = {'accepted': 'yes', 'needsAction': 'noreply',
+                  'declined': 'no', 'tentative': 'maybe'}
 
     def _get_google_service(self):
         """Return the Google API client."""
@@ -130,7 +134,7 @@ class GoogleEventsProvider(BaseEventProvider):
             description = event.get('description', None)
             location = event.get('location', None)
             all_day = False
-            read_only = True
+            read_only = False
             is_owner = False
 
             start = event['start']
@@ -174,13 +178,11 @@ class GoogleEventsProvider(BaseEventProvider):
 
             # Convert google's notion of status into our own
             participants = []
-            status_map = {'accepted': 'yes', 'needsAction': 'noreply',
-                          'declined': 'no', 'tentative': 'maybe'}
             for attendee in event.get('attendees', []):
                 g_status = attendee.get('responseStatus')
-                if g_status not in status_map:
+                if g_status not in GoogleEventsProvider.status_map:
                     raise MalformedEventError()
-                status = status_map[g_status]
+                status = GoogleEventsProvider.status_map[g_status]
 
                 email = attendee.get('email')
                 if not email:
@@ -235,6 +237,25 @@ class GoogleEventsProvider(BaseEventProvider):
                      source='remote',
                      participants=participants)
 
+    def create_attendee(self, participant):
+        inv_status_map = {value: key for key, value in
+                          GoogleEventsProvider.status_map.iteritems()}
+
+        att = {}
+        if participant.name is not None:
+            att["displayName"] = participant.name
+
+            if participant.status is not None:
+                att["responseStatus"] = inv_status_map[participant.status]
+
+            if participant.email_address is not None:
+                att["email"] = participant.email_address
+
+            if participant.guests is not None:
+                att["additionalGuests"] = participant.guests
+
+        return att
+
     def dump_event(self, event):
         """Convert an event db object to the Google API JSON format."""
         dump = {}
@@ -254,12 +275,45 @@ class GoogleEventsProvider(BaseEventProvider):
                              "timeZone": "UTC"}
             dump["end"] = {"dateTime": event.end.isoformat('T'),
                            "timeZone": "UTC"}
+
+        if len(event.participants) > 0:
+            attendees = [self.create_attendee(participant) for participant
+                         in event.participants]
+            dump["attendees"] = [attendee for attendee in attendees
+                                 if attendee]
+
         return dump
 
+    def fetch_calendar_items(self, provider_calendar_name, calendar_id,
+                             sync_from_time=None):
+        """Fetch the events for an individual calendar.
+        parameters:
+            calendarId: the google identifier for the calendar. Usually,
+                username@gmail.com for the primary calendar otherwise
+                random-alphanumeric-address@google.com
+            calendar_id: the id of the calendar in our db.
+
+        This function yields tuples to fetch_items. These tuples are eventually
+        consumed by base_poll in inbox.sync.base_sync.
+        """
+
+        service = self._get_google_service()
+        resp = service.events().list(
+                calendarId=provider_calendar_name).execute()
+
+        extra = copy(resp)
+        del extra['items']
+
+        for response_event in resp['items']:
+            yield (calendar_id, response_event, extra)
+
     def fetch_items(self, sync_from_time=None):
+        """Fetch all events for all calendars. This function proxies
+        fetch_calendar_items and yields the results to inbox.sync.base_sync."""
+
         service = self._get_google_service()
         try:
-            resp = service.events().list(calendarId=self.email).execute()
+            calendars = service.calendarList().list().execute()['items']
         except AccessTokenRefreshError:
             self.log.error("Invalid user credentials given")
             with session_scope() as db_session:
@@ -273,12 +327,20 @@ class GoogleEventsProvider(BaseEventProvider):
                           message=str(e))
             return
 
-        # Make sure we have a calendar associated with these events
-        description = resp.get('description')
-        calendar_id = self.get_calendar_id(resp['summary'], description)
+        for response_calendar in calendars:
+            # update the calendar
+            with session_scope() as db_session:
+                # FIXME: refactor this to take a db session.
+                calendar_id = self.get_calendar_id(
+                                response_calendar['id'],
+                                description=response_calendar['summary'])
+                # Update calendar statuses. They may have changed.
+                calendar = db_session.query(Calendar).get(calendar_id)
+                if response_calendar['accessRole'] == 'reader':
+                    calendar.read_only = True
 
-        extra = copy(resp)
-        del extra['items']
+                calendar_id = calendar.id
 
-        for response_event in resp['items']:
-            yield (calendar_id, response_event, extra)
+            for item in self.fetch_calendar_items(response_calendar['id'],
+                         calendar_id, sync_from_time=sync_from_time):
+                yield item
