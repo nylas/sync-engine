@@ -50,11 +50,12 @@ class NamespaceSearchEngine(object):
     MAPPINGS = NAMESPACE_INDEX_MAPPING
 
     def __init__(self, namespace_public_id):
-        # TODO(emfree): probably want to try to keep persistent connections
-        # around, instead of creating a new one each time.
         self.index_id = namespace_public_id
 
+        # TODO(emfree): probably want to try to keep persistent connections
+        # around, instead of creating a new one each time.
         self._connection = new_connection()
+
         self.create_index()
 
         self.messages = MessageSearchAdaptor(index_id=namespace_public_id)
@@ -73,8 +74,7 @@ class NamespaceSearchEngine(object):
                 body={'mappings': NAMESPACE_INDEX_MAPPING})
         except elasticsearch.exceptions.RequestError:
             # If the index already exists, ensure the right mappings are still
-            # configured.
-            # Only works if action.auto_create_index = False.
+            # configured. Only works if action.auto_create_index = False.
             return self.configure_index()
 
     @wrap_es_errors
@@ -90,6 +90,10 @@ class NamespaceSearchEngine(object):
     @wrap_es_errors
     def delete_index(self):
         self._connection.indices.delete(index=[self.index_id])
+
+    @wrap_es_errors
+    def refresh_index(self):
+        self._connection.indices.refresh(index=[self.index_id])
 
 
 class BaseSearchAdaptor(object):
@@ -125,10 +129,9 @@ class BaseSearchAdaptor(object):
         index_args.update(**kwargs)
         try:
             self._connection.index(**index_args)
-        except elasticsearch.exceptions.TransportError:
-            log.error('Index failure',
-                      index=self.index_id, doc_type=self.doc_type,
-                      object_id=index_args['_id'])
+        except elasticsearch.exceptions.TransportError as e:
+            log.error('Index failure', error=e.error, index=self.index_id,
+                      doc_type=self.doc_type, object_id=index_args['_id'])
             raise
 
     @wrap_es_errors
@@ -148,13 +151,16 @@ class BaseSearchAdaptor(object):
 
         try:
             count, failures = bulk(self._connection, index_args)
-        except elasticsearch.exceptions.TransportError:
-            # TODO[k]: log here
-            log.error('Bulk index failure',
+        except elasticsearch.exceptions.TransportError as e:
+            log.error('Bulk index failure', error=e.error, index=self.index_id,
+                      doc_type=self.doc_type,
+                      object_ids=[i['_id'] for i in index_args])
+            raise
+        if count != len(objects):
+            log.error('Bulk index failure', error='Not all indices created',
                       index=self.index_id, doc_type=self.doc_type,
                       object_ids=[i['_id'] for i in index_args],
                       failures=failures)
-            raise
 
         return count
 

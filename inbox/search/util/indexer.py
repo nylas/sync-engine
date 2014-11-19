@@ -85,7 +85,7 @@ def index_threads(namespace, updated_since=None):
 
     with session_scope() as db_session:
         query = db_session.query(Thread).filter(
-            Thread.namespace_id == namespace.id)
+            Thread.namespace_id == namespace_id)
 
         if updated_since is not None:
             query = query.filter(Thread.updated_at > updated_since)
@@ -123,7 +123,7 @@ def index_messages(namespace, updated_since=None):
 
     with session_scope() as db_session:
         query = db_session.query(Message).filter(
-            Message.namespace_id == namespace.id)
+            Message.namespace_id == namespace_id)
 
         if updated_since is not None:
             query = query.filter(Message.updated_at > updated_since)
