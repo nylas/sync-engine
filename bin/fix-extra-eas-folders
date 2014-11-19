@@ -1,0 +1,43 @@
+#!/usr/bin/env python
+import time
+
+import click
+
+from inbox.models.session import session_scope
+from inbox.models import Folder
+from inbox.models.backends.eas import EASFolderSyncStatus
+
+
+@click.command()
+@click.argument('account_id')
+def delete_extra_eas_folders(account_id):
+    start = time.time()
+
+    with session_scope(ignore_soft_deletes=False) as db_session:
+        folders = [f for f, in db_session.query(
+                   EASFolderSyncStatus.folder_id).filter(
+                   EASFolderSyncStatus.account_id == account_id).all()]
+
+    print 'folders: ', len(folders), folders
+
+    mid = time.time()
+    print 'db query time:', mid - start
+
+    with session_scope(ignore_soft_deletes=False) as db_session:
+        deletes = db_session.query(Folder).filter(
+            Folder.account_id == account_id,
+            Folder.id.notin_(folders)).all()
+
+        print 'deletes: ', len(deletes), [d.id for d in deletes]
+
+        for d in deletes:
+            db_session.delete(d)
+
+        db_session.commit()
+
+    end = time.time()
+    print 'delete time:', end - mid
+
+
+if __name__ == '__main__':
+    delete_extra_eas_folders()
