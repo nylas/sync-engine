@@ -82,13 +82,16 @@ def test_api_create_multiple(db, api_client):
     e_resp_data = json.loads(e_resp.data)
 
     assert len(e_resp_data['participants']) == 2
+    for participant in e_resp_data['participants']:
+        res = [e for e in e_data['participants']
+               if e['email'] == participant['email']]
+        assert len(res) == 1
+
     participant0 = e_resp_data['participants'][0]
     participant1 = e_resp_data['participants'][1]
     assert participant0['name'] is None
-    assert participant0['email'] == e_data['participants'][0]['email']
     assert participant0['status'] == 'noreply'
     assert participant1['name'] is None
-    assert participant1['email'] == e_data['participants'][1]['email']
     assert participant1['status'] == 'noreply'
 
 
@@ -221,28 +224,6 @@ def test_api_create_bad_status(db, api_client):
     assert e_resp_data["type"] == "invalid_request_error"
 
 
-def test_api_create_preserve_order(db, api_client):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
-    e_data = {
-        'title': 'Friday Office Party',
-        'when': {'time': 1407542195},
-        'participants': [{'email': 'alyssa@example.com'},
-                         {'email': 'ben.bitdiddle@example.com'},
-                         {'email': 'pei.mihn@example.com'},
-                         {'email': 'bill.ling@example.com'},
-                         {'email': 'john.q@example.com'}]
-    }
-
-    e_resp = api_client.post_data('/events', e_data, ns_id)
-    e_resp_data = json.loads(e_resp.data)
-    assert len(e_resp_data['participants']) == 5
-    for i, p in enumerate(e_resp_data['participants']):
-        assert p['email'] == e_data['participants'][i]['email']
-        assert p['name'] is None
-
-
 def test_api_add_participant(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
@@ -261,8 +242,10 @@ def test_api_add_participant(db, api_client):
     e_resp_data = json.loads(e_resp.data)
     assert len(e_resp_data['participants']) == 5
     for i, p in enumerate(e_resp_data['participants']):
-        assert p['email'] == e_data['participants'][i]['email']
-        assert p['name'] is None
+        res = [e for e in e_resp_data['participants']
+               if e['email'] == p['email']]
+        assert len(res) == 1
+        assert res[0]['name'] is None
 
     event_id = e_resp_data['id']
     e_data['participants'].append({'email': 'filet.minyon@example.com'})
@@ -271,8 +254,10 @@ def test_api_add_participant(db, api_client):
 
     assert len(e_resp_data['participants']) == 6
     for i, p in enumerate(e_resp_data['participants']):
-        assert p['email'] == e_data['participants'][i]['email']
-        assert p['name'] is None
+        res = [e for e in e_resp_data['participants']
+               if e['email'] == p['email']]
+        assert len(res) == 1
+        assert res[0]['name'] is None
 
 
 def test_api_remove_participant(db, api_client):
@@ -293,8 +278,10 @@ def test_api_remove_participant(db, api_client):
     e_resp_data = json.loads(e_resp.data)
     assert len(e_resp_data['participants']) == 5
     for i, p in enumerate(e_resp_data['participants']):
-        assert p['email'] == e_data['participants'][i]['email']
-        assert p['name'] is None
+        res = [e for e in e_resp_data['participants']
+               if e['email'] == p['email']]
+        assert len(res) == 1
+        assert res[0]['name'] is None
 
     event_id = e_resp_data['id']
     e_data['participants'].pop()
@@ -302,7 +289,9 @@ def test_api_remove_participant(db, api_client):
     e_resp_data = json.loads(e_resp.data)
     assert len(e_resp_data['participants']) == 4
     for i, p in enumerate(e_resp_data['participants']):
-        assert p['email'] == e_data['participants'][i]['email']
+        res = [e for e in e_resp_data['participants']
+               if e['email'] == p['email']]
+        assert len(res) == 1
         assert p['name'] is None
 
 
@@ -324,7 +313,8 @@ def test_api_update_participant_status(db, api_client):
     e_resp_data = json.loads(e_resp.data)
     assert len(e_resp_data['participants']) == 5
     for i, p in enumerate(e_resp_data['participants']):
-        assert p['email'] == e_data['participants'][i]['email']
+        res = [e for e in e_data['participants'] if e['email'] == p['email']]
+        assert len(res) == 1
         assert p['name'] is None
 
     event_id = e_resp_data['id']
@@ -348,11 +338,11 @@ def test_api_update_participant_status(db, api_client):
     assert e_resp_data['when']['time'] == 1407542195
 
     assert len(e_resp_data['participants']) == 5
-    expected = ['yes', 'no', 'maybe', 'noreply', 'noreply']
     for i, p in enumerate(e_resp_data['participants']):
-        assert p['email'] == e_data['participants'][i]['email']
-        assert p['status'] == expected[i]
+        res = [e for e in e_data['participants'] if e['email'] == p['email']]
+        assert len(res) == 1
         assert p['name'] is None
+
 
 
 @pytest.mark.parametrize('rsvp', ['yes', 'no', 'maybe'])

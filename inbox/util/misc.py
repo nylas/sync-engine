@@ -197,22 +197,10 @@ def merge_attr(base, remote, dest, attr_name):
     remote_attr = getattr(remote, attr_name) if remote else None
     dest_attr = getattr(dest, attr_name) if dest else None
 
-    # Basically, raise a conflict only when we're replacing a set value
-    # with None. In all other cases, we let the remote backend have the last
-    # word. It makes sense because if there's local modifications,
-    # they probably haven't been synced back yet so it's ok to discard
-    # them and wait for the system to become eventually consistent.
-    #
-    # Actually, this is a kind of assert. This should never be reached.
-    # -karim
-    if ((remote_attr is None and base_attr is not None) or
-        (isinstance(base_attr, dict) and
-         isinstance(remote_attr, dict) and
-         isinstance(dest_attr, dict))):
+    if (base_attr != dest_attr != remote_attr != base_attr):
         raise MergeError('Conflicting updates to {0}, {1} from {2} on: {3}'
                          .format(remote, dest, base, attr_name))
 
-    # No conflicts, can merge
     if base_attr != remote_attr:
         setattr(dest, attr_name, remote_attr)
 
