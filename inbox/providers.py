@@ -1,5 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
+from inbox.config import config
+
 import copy
 import functools
 import pkg_resources
@@ -118,6 +120,10 @@ class ProvidersDict(MutableMapping):
         # Load the defaults last so that they can be replaced by plugins.
         self._d.update({k: v for k, v in get_default_providers().items()
                         if k not in self._d})
+
+        # XXX temporary
+        if config.get('GMAIL_SMTP_PROXY'):
+            self._d['gmail']['smtp'] = config.get('GMAIL_SMTP_PROXY')
 
         self._loaded = True
 
