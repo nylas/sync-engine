@@ -3,6 +3,7 @@ import pytest
 from inbox.models.session import session_scope
 from client import InboxTestClient
 from conftest import (timeout_loop, credentials, create_account, API_BASE)
+from accounts import broken_credentials
 
 
 @timeout_loop('sync_start')
@@ -33,3 +34,24 @@ def test_account_auth(account_credentials):
     # wait for sync to start. tests rely on things setup at beginning
     # of sync (e.g. folder hierarchy)
     wait_for_sync_start(client)
+
+
+errors = __import__('inbox.basicauth', fromlist=['basicauth'])
+
+
+def test_account_create_should_fail():
+    """Test that creation fails with appropriate errors, as defined in
+       the broken_credentials list.
+       Credentials have the format:
+       ({email, password}, error_type)
+       e.g.
+       ({'user': 'foo@foo.com', 'password': 'pass'}, 'ConfigError')
+    """
+    credentials = [((c['user'], c['password']), e)
+                   for (c, e) in broken_credentials]
+
+    for ((email, password), error) in credentials:
+        error_obj = getattr(errors, error)
+        with session_scope() as db_session:
+            with pytest.raises(error_obj):
+                create_account(db_session, email, password)
