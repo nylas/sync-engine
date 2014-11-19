@@ -71,7 +71,9 @@ def test_token(db, config, encrypt):
             'locale': '',
             'picture': '',
             'hd': ''}
-    account = GmailAuthHandler('gmail').create_account(db.session, email, resp)
+    g = GmailAuthHandler('gmail')
+    g.verify_config = lambda x: True
+    account = g.create_account(db.session, email, resp)
 
     db.session.add(account)
     db.session.commit()
@@ -84,7 +86,8 @@ def test_token(db, config, encrypt):
     if encrypt:
         assert secret._secret != token, 'token not encrypted'
     else:
-        assert secret._secret == token, 'token encrypted when encryption disabled'
+        assert secret._secret == token, \
+            'token encrypted when encryption disabled'
 
     decrypted_secret = secret.secret
     assert decrypted_secret == token and \

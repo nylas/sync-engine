@@ -5,8 +5,11 @@ from inbox.models import Namespace
 from inbox.models.backends.gmail import GmailAccount
 from inbox.config import config
 from inbox.auth.oauth import OAuthAuthHandler
-from inbox.basicauth import OAuthValidationError, OAuthError
+from inbox.basicauth import (OAuthValidationError, OAuthError,
+                             UserRecoverableConfigError)
 from inbox.util.url import url_concat
+from inbox.providers import provider_info
+from inbox.crispin import GmailCrispinClient, GmailSettingError
 
 from inbox.log import get_logger
 log = get_logger()
@@ -78,6 +81,11 @@ class GmailAuthHandler(OAuthAuthHandler):
         account.client_id = response.get('client_id')
         account.client_secret = response.get('client_secret')
 
+        try:
+            self.verify_config(account)
+        except GmailSettingError as e:
+            raise UserRecoverableConfigError(e)
+
         # Hack to ensure that account syncs get restarted if they were stopped
         # because of e.g. invalid credentials and the user re-auths.
         # TODO(emfree): remove after status overhaul.
@@ -95,6 +103,23 @@ class GmailAuthHandler(OAuthAuthHandler):
             raise OAuthValidationError(validation_dict['error'])
 
         return validation_dict
+
+    def verify_config(self, account):
+        """Verifies configuration, specifically presence of 'All Mail' folder.
+           Will raise an inbox.crispin.GmailSettingError if not present.
+        """
+        conn = self.connect_account(account.email_address,
+                                    account.access_token,
+                                    account.imap_endpoint)
+        # make a crispin client and check the folders
+        client = GmailCrispinClient(account.id,
+                                    provider_info('gmail'),
+                                    account.email_address,
+                                    conn,
+                                    readonly=True)
+        client.sync_folders()
+        conn.logout()
+        return True
 
     def interactive_auth(self, email_address=None):
         url_args = {'redirect_uri': self.OAUTH_REDIRECT_URI,

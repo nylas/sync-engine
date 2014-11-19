@@ -38,3 +38,11 @@ class OAuthValidationError(OAuthError):
 
 class OAuthInvalidGrantError(OAuthError):
     pass
+
+
+class ConfigError(Exception):
+    pass
+
+
+class UserRecoverableConfigError(ConfigError):
+    pass
