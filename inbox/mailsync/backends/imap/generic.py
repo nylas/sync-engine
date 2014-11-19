@@ -82,7 +82,8 @@ from inbox.log import get_logger
 log = get_logger()
 from inbox.crispin import connection_pool, retry_crispin
 from inbox.models import Folder, Account, Message
-from inbox.models.backends.imap import ImapFolderSyncStatus, ImapThread
+from inbox.models.backends.imap import (ImapFolderSyncStatus, ImapThread,
+                                        ImapUid)
 from inbox.mailsync.exc import UidInvalid
 from inbox.mailsync.backends.imap import common
 from inbox.mailsync.backends.base import (create_db_objects,
@@ -337,6 +338,17 @@ class FolderSyncEngine(Greenlet):
 
     def create_message(self, db_session, acct, folder, msg):
         assert acct is not None and acct.namespace is not None
+
+        # Check if we somehow already saved the imapuid (shouldn't happen, but
+        # possible due to race condition). If so, don't commit changes.
+        existing_imapuid = db_session.query(ImapUid).filter(
+            ImapUid.account_id == acct.id, ImapUid.folder_id == folder.id,
+            ImapUid.msg_uid == msg.uid).first()
+        if existing_imapuid is not None:
+            log.error('Expected to create imapuid, but existing row found',
+                      remote_msg_uid=msg.uid,
+                      existing_imapuid=existing_imapuid.id)
+            return None
 
         new_uid = common.create_imap_message(db_session, log, acct, folder,
                                              msg)

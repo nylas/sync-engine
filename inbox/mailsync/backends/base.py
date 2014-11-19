@@ -138,9 +138,9 @@ def create_db_objects(account_id, db_session, log, folder_name, raw_messages,
         # We should probably refactor this later to use provider-specific
         # Message constructors to avoid creating incomplete objects in the
         # first place.
-        db_session.add(uid)
-        db_session.flush()
         if uid is not None:
+            db_session.add(uid)
+            db_session.flush()
             new_uids.append(uid)
 
     # imapuid, message, thread, labels
