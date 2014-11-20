@@ -21,10 +21,9 @@ def format_tags_list(tags):
     return [{'name': tag.name, 'id': tag.public_id} for tag in tags]
 
 
-def encode(obj, namespace_public_id=None,
-           format_address_fn=format_address_list,
-           format_tags_fn=format_tags_list):
-    """Returns a dictionary representation of an Inbox model object obj, or
+def encode(obj, namespace_public_id=None):
+    """
+    Returns a dictionary representation of an Inbox model object obj, or
     None if there is no such representation defined. If the optional
     namespace_public_id parameter is passed, it will used instead of fetching
     the namespace public id for each object. This improves performance when
@@ -39,6 +38,7 @@ def encode(obj, namespace_public_id=None,
     Returns
     -------
     dictionary or None
+
     """
     def _get_namespace_public_id(obj):
         return namespace_public_id or obj.namespace.public_id
@@ -70,10 +70,10 @@ def encode(obj, namespace_public_id=None,
             'object': 'message',
             'namespace_id': _get_namespace_public_id(obj),
             'subject': obj.subject,
-            'from': format_address_fn(obj.from_addr),
-            'to': format_address_fn(obj.to_addr),
-            'cc': format_address_fn(obj.cc_addr),
-            'bcc': format_address_fn(obj.bcc_addr),
+            'from': format_address_list(obj.from_addr),
+            'to': format_address_list(obj.to_addr),
+            'cc': format_address_list(obj.cc_addr),
+            'bcc': format_address_list(obj.bcc_addr),
             'date': obj.received_date,
             'thread_id': obj.thread.public_id,
             'snippet': obj.snippet,
@@ -100,14 +100,14 @@ def encode(obj, namespace_public_id=None,
             'object': 'thread',
             'namespace_id': _get_namespace_public_id(obj),
             'subject': obj.subject,
-            'participants': format_address_fn(obj.participants),
+            'participants': format_address_list(obj.participants),
             'last_message_timestamp': obj.recentdate,
             'first_message_timestamp': obj.subjectdate,
             'snippet': obj.snippet,
             'message_ids': [m.public_id for m in obj.messages if not
                             m.is_draft],
             'draft_ids': [m.public_id for m in obj.drafts],
-            'tags': format_tags_fn(obj.tags)
+            'tags': format_tags_list(obj.tags)
         }
 
     elif isinstance(obj, Contact):
@@ -208,7 +208,8 @@ def encode(obj, namespace_public_id=None,
 
 
 class APIEncoder(object):
-    """Provides methods for serializing Inbox objects. If the optional
+    """
+    Provides methods for serializing Inbox objects. If the optional
     namespace_public_id parameter is passed, it will be bound and used instead
     of fetching the namespace public id for each object. This improves
     performance when serializing large numbers of objects, but also means that
@@ -235,7 +236,8 @@ class APIEncoder(object):
         return InternalEncoder
 
     def cereal(self, obj, pretty=False):
-        """Returns the JSON string representation of obj.
+        """
+        Returns the JSON string representation of obj.
 
         Parameters
         ----------
@@ -247,6 +249,7 @@ class APIEncoder(object):
         ------
         TypeError
             If obj is not serializable.
+
         """
         if pretty:
             return dumps(obj,
@@ -257,7 +260,8 @@ class APIEncoder(object):
         return dumps(obj, cls=self.encoder_class)
 
     def jsonify(self, obj):
-        """Returns a Flask Response object encapsulating the JSON
+        """
+        Returns a Flask Response object encapsulating the JSON
         representation of obj.
 
         Parameters
@@ -268,6 +272,7 @@ class APIEncoder(object):
         ------
         TypeError
             If obj is not serializable.
+
         """
         return Response(self.cereal(obj, pretty=True),
                         mimetype='application/json')
