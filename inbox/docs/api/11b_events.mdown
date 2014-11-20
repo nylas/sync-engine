@@ -66,7 +66,7 @@ GET https://api.inboxapp.com/n/<namespace_id>/events?limit=3
 
 # Adding a new event
 
-New events can easily be created with the following API. Note these currently only exist within Inbox, and do not sync back to the provider (e.g., Google Calendar).
+New events can easily be created with the following API. They are automatically synced back to the provider (e.g., Google Calendar, Microsoft Exchange).
 
 Note that timestamps are expected to be in UTC timezone.
 
