@@ -2,7 +2,7 @@ Title: Calendars
 
 Inbox supports calendars and events with a variety of functionality. Each namespace has one or more calendars, and each calendar has a collection of individual events. Each event has a title and description as well as a list of participants.
 
-The calendars endpoint is used to manage calendars which hold events. Calendars are quite simple, having only a name and description as well as a list of event_ids. **Note**: Inbox does not yet support sync-back of provider calendars. The `read_only` flag on a calendar indicates that you cannot modify its properties or make changes to its events. Calendar sync-back for provider calendars such as Gmail, Exchange and iCloud is coming soon.
+The calendars endpoint is used to manage calendars which hold events. Calendars are quite simple, having only a name and description as well as a list of event_ids. **Note**: The `read_only` flag on a calendar indicates whether or not you can modify its properties or make changes to its events. Event changes are currently automatically synced back for Gmail and Exchange accounts. iCloud support is coming soon.
 
 # Retrieving a list of calendars
 
