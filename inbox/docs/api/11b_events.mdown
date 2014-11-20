@@ -82,8 +82,8 @@ POST https://api.inboxapp.com/n/<namespace_id>/events
 {
     "title":"Friday meeting",
     "when" : {
-        "start_time": "1407542195",
-        "end_time":"1407543195"
+        "start_time": 1407542195,
+        "end_time": 1407543195
     },
     "location": "Inbox HQ",
     "calendar_id": "ci0k1wfyv533ccgox4t7uri4h",
