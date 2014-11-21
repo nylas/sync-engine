@@ -23,7 +23,6 @@ from inbox.util.itert import chunk
 from inbox.util.misc import or_none, timed
 from inbox.basicauth import (ConnectionError, ValidationError,
                              TransientConnectionError, AuthError)
-from inbox.models import Folder
 from inbox.models.session import session_scope
 from inbox.models.account import Account
 from inbox.models.backends.imap import ImapAccount
@@ -402,27 +401,6 @@ class CrispinClient(object):
                             'extra', list()).append(name)
 
         # TODO: support subfolders
-
-        # Create any needed folders that don't exist on the backend
-        needed_folders = set(['inbox', 'drafts', 'sent', 'spam',
-                             'trash', 'archive'])
-
-        needed_folders -= set(self._folder_names.keys())
-
-        for folder_id in needed_folders:
-            name = folder_id.capitalize()
-            self.create_folder(name)
-
-            with session_scope() as db_session:
-                account = db_session.query(Account).get(self.account_id)
-
-                folder = Folder.find_or_create(db_session, account,
-                                               name, folder_id)
-                setattr(account, folder_id + '_folder', folder)
-                db_session.commit()
-
-            self._folder_names[folder_id] = name
-
         return self._folder_names
 
     def folder_status(self, folder):

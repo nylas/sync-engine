@@ -169,6 +169,10 @@ def remote_copy(account, thread_id, from_folder, to_folder, db_session):
         crispin_client.copy_uids(uids, to_folder)
 
 
+# TODO(emfree) ensure that drafts folder exists locally and remotely for custom
+# IMAP accounts.
+
+
 @retry_crispin
 def remote_delete(account, thread_id, folder, db_session):
     """ We currently only allow this for Drafts. """
