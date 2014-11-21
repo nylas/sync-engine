@@ -239,8 +239,9 @@ get_default_providers = lambda: {
         "auth": "password",
         "domains": [
             "onmicrosoft.com",
-            "exchange.mit.edu"
+            "exchange.mit.edu",
             ],
+        "mx_servers": ["protection.outlook.com",],
     },
     "fastmail": {
         "type": "generic",

@@ -34,6 +34,8 @@ def test_provider_resolution():
     assert provider_from_address('foo@getrhombus.com') == 'outlook'
     assert provider_from_address('foo@forumone.com') == 'gmail'
     assert provider_from_address('foo@getbannerman.com') == 'gmail'
+    assert provider_from_address('foo@inboxapp.onmicrosoft.com') == 'eas'
+    assert provider_from_address('foo@espertech.onmicrosoft.com') == 'eas'
     with pytest.raises(InvalidEmailAddressError):
         provider_from_address('notanemail')
     with pytest.raises(InvalidEmailAddressError):

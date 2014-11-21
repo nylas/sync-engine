@@ -83,7 +83,7 @@ def provider_from_address(email_address):
             # match the given domain against any of the mx_server regular
             # expressions we have stored for the given domain. If none of them
             # match, then we cannot confirm this as the given provider
-            match_filter = lambda x: re.match(x + '$', mx_domain)
+            match_filter = lambda x: re.search(x + '$', mx_domain)
             if len(filter(match_filter, mx_servers)) == 0:
                 valid = False
                 break

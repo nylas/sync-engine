@@ -3,7 +3,15 @@ import pytest
 from inbox.models.session import session_scope
 from client import InboxTestClient
 from conftest import (timeout_loop, credentials, create_account, API_BASE)
-from accounts import broken_credentials
+
+try:
+    # If there's no broken accounts file, well, tough luck but don't crash.
+    # This should only be a problem locally; the jenkins jobs generates those
+    # credentials.
+    from accounts import broken_credentials
+except ImportError:
+    print "test_auth.py: Warning -- No broken accounts credentials."
+    broken_credentials = []
 
 
 @timeout_loop('sync_start')
@@ -55,3 +63,7 @@ def test_account_create_should_fail():
         with session_scope() as db_session:
             with pytest.raises(error_obj):
                 create_account(db_session, email, password)
+
+
+if __name__ == '__main__':
+    pytest.main([__file__])

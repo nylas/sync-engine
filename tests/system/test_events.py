@@ -4,7 +4,7 @@ import datetime
 import time
 
 from inbox.client.errors import NotFoundError
-from conftest import gmail_accounts, timeout_loop
+from conftest import calendar_accounts, timeout_loop
 
 random.seed(None)
 
@@ -26,7 +26,7 @@ def wait_for_calendar_deletion(client, calendar_id):
         return True
 
 
-@pytest.mark.parametrize("client", gmail_accounts)
+@pytest.mark.parametrize("client", calendar_accounts)
 def test_calendar_creation(client):
     ns = client.namespaces[0]
     cal = ns.calendars.create()
@@ -64,7 +64,7 @@ def wait_for_event_deletion(client, event_id):
         return True
 
 
-@pytest.mark.parametrize("client", gmail_accounts)
+@pytest.mark.parametrize("client", calendar_accounts)
 def test_event_crud(client):
     # create an event
     ns = client.namespaces[0]

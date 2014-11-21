@@ -21,6 +21,12 @@ try:
     gmail_accounts = [InboxTestClient(email, API_BASE)
                       for email, password in credentials
                           if "gmail.com" in email]
+
+    calendar_providers = ["gmail.com", "onmicrosoft.com"]
+    calendar_accounts = [InboxTestClient(email, API_BASE)
+                         for email, password in credentials
+                            if any(domain in email for domain in calendar_providers)]
+
 except ImportError:
     print ("Error: test accounts file not found. "
            "You need to create accounts.py\n"
