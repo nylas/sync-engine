@@ -27,7 +27,7 @@ def update_event(account_id, event_id, db_session):
     event = db_session.query(Event).get(event_id)
 
     remote_update_event = module_registry[account.provider]. \
-         remote_update
+         remote_update_event
 
     remote_update_event(account, event, db_session)
 
@@ -37,6 +37,6 @@ def delete_event(account_id, event_id, db_session):
     event = db_session.query(Event).get(event_id)
 
     remote_delete_event = module_registry[account.provider]. \
-         remote_delete
+         remote_delete_event
 
     remote_delete_event(account, event, db_session)
