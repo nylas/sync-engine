@@ -1,9 +1,13 @@
-from datetime import datetime
-
+from datetime import datetime, timedelta
+from sqlalchemy import func
+from inbox.config import config
 from inbox.contacts.process_mail import update_contacts_from_message
-from inbox.models import Message, Thread, Part
+from inbox.models import Message, Thread, Part, ActionLog
 from inbox.models.action_log import schedule_action
 from inbox.sqlalchemy_ext.util import generate_public_id
+
+
+DEFAULT_DAILY_SENDING_LIMIT = 300
 
 
 class SendMailException(Exception):
@@ -289,3 +293,20 @@ def _set_reply_headers(new_message, thread):
                                           [last_message.message_id_header])
             else:
                 new_message.references = [last_message.message_id_header]
+
+
+def rate_limited(namespace_id, db_session):
+    """Check whether sending for the given namespace should be rate-limited.
+    Returns
+    -------
+    bool
+        True if the namespace has exceeded its sending quota.
+    """
+    max_sends = (config.get('DAILY_SENDING_LIMIT') or
+                 DEFAULT_DAILY_SENDING_LIMIT)
+    window_start = datetime.utcnow() - timedelta(seconds=86400)
+    prior_send_actions, = db_session.query(func.count(ActionLog.id)). \
+        filter(ActionLog.namespace_id == namespace_id,
+               ActionLog.created_at > window_start,
+               ActionLog.action.in_(('send_directly', 'send_draft'))).one()
+    return prior_send_actions >= max_sends

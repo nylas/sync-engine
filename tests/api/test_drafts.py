@@ -385,3 +385,16 @@ def test_contacts_updated(api_client):
 
     r = api_client.get_data('/threads?to=joe@example.com')
     assert len(r) == 1
+
+
+def test_rate_limiting(patch_network_functions, api_client):
+    """Test that sending is rate-limited appropriately.
+    (Relies on a low value for DAILY_SENDING_LIMIT being set in the test
+    config, for performance.)"""
+    for _ in range(7):
+        r = api_client.post_data('/send', {'to': [{'email':
+                                                   'kermit@example.com'}]})
+        assert r.status_code == 200
+    r = api_client.post_data('/send', {'to': [{'email':
+                                               'kermit@example.com'}]})
+    assert r.status_code == 429

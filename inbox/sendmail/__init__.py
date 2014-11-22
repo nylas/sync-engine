@@ -19,7 +19,7 @@ from inbox.util.misc import register_backends
 module_registry = register_backends(__name__, __path__)
 
 from inbox.sendmail.base import (create_draft, update_draft, delete_draft,
-                                 get_draft)
+                                 get_draft, rate_limited)
 
 __all__ = ['create_draft', 'update_draft', 'delete_draft',
-           'get_draft']
+           'get_draft', 'rate_limited']

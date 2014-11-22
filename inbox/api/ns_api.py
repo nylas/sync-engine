@@ -30,6 +30,7 @@ from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from inbox.models.action_log import schedule_action, ActionError
 from inbox.models.session import InboxSession
 from inbox.search.adaptor import NamespaceSearchEngine, SearchEngineError
+from inbox.sendmail import rate_limited
 from inbox.transactions import delta_sync
 
 from err import err
@@ -1236,6 +1237,8 @@ def draft_delete_api(public_id):
 
 @app.route('/send', methods=['POST'])
 def draft_send_api():
+    if rate_limited(g.namespace.id, g.db_session):
+        return err(429, 'Daily sending quota exceeded.')
     data = request.get_json(force=True)
     if data.get('draft_id') is None:
         if not data.get('to'):
