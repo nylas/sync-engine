@@ -175,15 +175,17 @@ def syncback_worker(semaphore, func, action_log_id, record_id, account_id,
             else:
                 log_uncaught_errors(log, account_id=account_id)
 
-            action_log_entry = db_session.query(ActionLog).get(action_log_id)
-            action_log_entry.retries += 1
+            with session_scope() as db_session:
+                action_log_entry = db_session.query(ActionLog).get(
+                    action_log_id)
+                action_log_entry.retries += 1
 
-            if action_log_entry.retries == ACTION_MAX_NR_OF_RETRIES:
-                log.error('Max retries reached, giving up.',
-                          action_id=action_log_id, account_id=account_id)
-                action_log_entry.status = 'failed'
+                if action_log_entry.retries == ACTION_MAX_NR_OF_RETRIES:
+                    log.error('Max retries reached, giving up.',
+                              action_id=action_log_id, account_id=account_id)
+                    action_log_entry.status = 'failed'
 
-            db_session.commit()
+                db_session.commit()
 
             # Wait for a bit before retrying
             gevent.sleep(retry_interval)
