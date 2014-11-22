@@ -6,6 +6,7 @@ TODO(emfree):
    talking to the same database backend things could go really badly.
 """
 from collections import defaultdict
+from datetime import datetime
 import platform
 import gevent
 from gevent.coros import BoundedSemaphore
@@ -142,53 +143,56 @@ class SyncbackService(gevent.Greenlet):
 
 def syncback_worker(semaphore, func, action_log_id, record_id, account_id,
                     syncback_service, retry_interval=30, extra_args=None):
-        with semaphore:
-            log = logger.new(record_id=record_id, action_log_id=action_log_id,
-                             action=func, account_id=account_id,
-                             extra_args=extra_args)
-            # Not ignoring soft-deleted objects here because if you, say,
-            # delete a draft, we still need to access the object to delete it
-            # on the remote.
-            try:
-                with session_scope(ignore_soft_deletes=False) as db_session:
-                    if extra_args:
-                        func(account_id, record_id, db_session, extra_args)
-                    else:
-                        func(account_id, record_id, db_session)
-                    action_log_entry = db_session.query(ActionLog).get(
-                        action_log_id)
-                    action_log_entry.status = 'successful'
-                    db_session.commit()
-                    log.info('syncback action completed',
-                             action_id=action_log_id)
-                    syncback_service.remove_from_schedule(action_log_id)
-            except Exception as e:
-                # To reduce error-reporting noise, don't ship to Sentry
-                # if not actionable.
-                if isinstance(e, ProviderSpecificException):
-                    log.warning('Uncaught error', exc_info=True)
+    with semaphore:
+        log = logger.new(record_id=record_id, action_log_id=action_log_id,
+                         action=func, account_id=account_id,
+                         extra_args=extra_args)
+        # Not ignoring soft-deleted objects here because if you, say,
+        # delete a draft, we still need to access the object to delete it
+        # on the remote.
+        try:
+            with session_scope(ignore_soft_deletes=False) as db_session:
+                if extra_args:
+                    func(account_id, record_id, db_session, extra_args)
                 else:
-                    log_uncaught_errors(log, account_id=account_id)
-
+                    func(account_id, record_id, db_session)
                 action_log_entry = db_session.query(ActionLog).get(
-                        action_log_id)
-                action_log_entry.retries += 1
-
-                if action_log_entry.retries == ACTION_MAX_NR_OF_RETRIES:
-                    log.error('Max retries reached, giving up.',
-                              action_id=action_log_id, account_id=account_id)
-                    action_log_entry.status = 'failed'
-
+                    action_log_id)
+                action_log_entry.status = 'successful'
                 db_session.commit()
-
-                # Wait for a bit before retrying
-                gevent.sleep(retry_interval)
-
-                # Remove the entry from the scheduled set so that it can be
-                # retried or given up on.
+                latency = round((datetime.utcnow() -
+                                 action_log_entry.created_at).
+                                total_seconds(), 2)
+                log.info('syncback action completed',
+                         action_id=action_log_id,
+                         latency=latency)
                 syncback_service.remove_from_schedule(action_log_id)
+        except Exception as e:
+            # To reduce error-reporting noise, don't ship to Sentry
+            # if not actionable.
+            if isinstance(e, ProviderSpecificException):
+                log.warning('Uncaught error', exc_info=True)
+            else:
+                log_uncaught_errors(log, account_id=account_id)
 
-                # Again, don't raise on exceptions that require
-                # provider-specific handling e.g. EAS
-                if not isinstance(e, ProviderSpecificException):
-                    raise
+            action_log_entry = db_session.query(ActionLog).get(action_log_id)
+            action_log_entry.retries += 1
+
+            if action_log_entry.retries == ACTION_MAX_NR_OF_RETRIES:
+                log.error('Max retries reached, giving up.',
+                          action_id=action_log_id, account_id=account_id)
+                action_log_entry.status = 'failed'
+
+            db_session.commit()
+
+            # Wait for a bit before retrying
+            gevent.sleep(retry_interval)
+
+            # Remove the entry from the scheduled set so that it can be
+            # retried or given up on.
+            syncback_service.remove_from_schedule(action_log_id)
+
+            # Again, don't raise on exceptions that require
+            # provider-specific handling e.g. EAS
+            if not isinstance(e, ProviderSpecificException):
+                raise
