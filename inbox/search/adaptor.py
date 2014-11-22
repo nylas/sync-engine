@@ -12,17 +12,13 @@ from inbox.search.mappings import NAMESPACE_INDEX_MAPPING
 
 
 class SearchEngineError(Exception):
-    """
-    Exception raised if an error occurs connecting to the Elasticsearch
-    backend.
-
-    """
+    """ Raised when connecting to the Elasticsearch server fails. """
     pass
 
 
 def new_connection():
     """
-    Get a new connection to the Elasticsearch hosts defined in config.
+    Get a new connection to the Elasticsearch server defined in the config.
 
     """
     elasticsearch_hosts = config.get('ELASTICSEARCH_HOSTS')
@@ -55,68 +51,90 @@ class NamespaceSearchEngine(object):
         # TODO(emfree): probably want to try to keep persistent connections
         # around, instead of creating a new one each time.
         self._connection = new_connection()
+        self.log = log.new(component='search', index=namespace_public_id)
 
         self.create_index()
 
-        self.messages = MessageSearchAdaptor(index_id=namespace_public_id)
-        self.threads = ThreadSearchAdaptor(index_id=namespace_public_id)
+        self.messages = MessageSearchAdaptor(index_id=namespace_public_id,
+                                             log=self.log)
+        self.threads = ThreadSearchAdaptor(index_id=namespace_public_id,
+                                           log=self.log)
 
     @wrap_es_errors
     def create_index(self):
         """
-        Create an index for the given namespace.
-        If it already exists, re-configure it.
+        Create an index for the namespace. If it already exists,
+        re-configure it.
 
         """
         try:
+            self.log.info('create_index')
             self._connection.indices.create(
                 index=self.index_id,
                 body={'mappings': NAMESPACE_INDEX_MAPPING})
         except elasticsearch.exceptions.RequestError:
+            self.log.warning('create_index error, will re-configure.')
             # If the index already exists, ensure the right mappings are still
             # configured. Only works if action.auto_create_index = False.
             return self.configure_index()
 
     @wrap_es_errors
     def configure_index(self):
+        """
+        Configure the index for the namespace. In case of mapping conflicts,
+        delete and re-create it.
+
+        """
         try:
+            self.log.info('configure_index')
             for doc_type, mapping in self.MAPPINGS.items():
                 self._connection.indices.put_mapping(
                     index=self.index_id, doc_type=doc_type, body=mapping)
         except elasticsearch.exceptions.RequestError:
+            self.log.warning('configure_index error, will delete + create.')
             self.delete_index()
             self.create_index()
 
     @wrap_es_errors
     def delete_index(self):
+        """ Delete the index for the namespace. Obviously use with care. """
+        self.log.info('delete_index')
         self._connection.indices.delete(index=[self.index_id])
 
     @wrap_es_errors
     def refresh_index(self):
+        """
+        Manually refresh the index for the namespace (happens periodically by
+        default). Makes all operations performed since the last refresh
+        available for search.
+
+        """
+        self.log.info('refresh_index')
         self._connection.indices.refresh(index=[self.index_id])
 
 
 class BaseSearchAdaptor(object):
     """
-    Adapter between the API and an Elasticsearch backend, for a single index
-    and document type.
+    Base adaptor between the Inbox API and Elasticsearch for a single index and
+    document type. Subclasses implement the document type specific logic.
 
     """
-    def __init__(self, index_id, doc_type, query_class):
+    def __init__(self, index_id, doc_type, query_class, log):
+        self.index_id = index_id
+        self.doc_type = doc_type
+        self.query_engine = DSLQueryEngine(query_class)
+
+        self.log = log
+
         # TODO(emfree): probably want to try to keep persistent connections
         # around, instead of creating a new one each time.
         self._connection = new_connection()
-        self.index_id = index_id
-        self.doc_type = doc_type
-
-        self.query_engine = DSLQueryEngine(query_class)
 
     @wrap_es_errors
     def _index_document(self, object_repr, **kwargs):
         """
-        (Re)index a document for the object with API representation
-        `object_repr`. Creates the actual index for the namespace if it doesn't
-        already exist.
+        (Re)index a document for the object with Inbox API representation
+        `object_repr`.
 
         """
         assert self.index_id == object_repr['namespace_id']
@@ -130,19 +148,41 @@ class BaseSearchAdaptor(object):
         try:
             self._connection.index(**index_args)
         except elasticsearch.exceptions.TransportError as e:
-            log.error('Index failure', error=e.error, index=self.index_id,
-                      doc_type=self.doc_type, object_id=index_args['_id'])
+            self.log.error('Index failure', error=e.error,
+                           doc_type=self.doc_type, object_id=index_args['_id'])
             raise
 
     @wrap_es_errors
-    def _bulk_index(self, objects, parent=None):
+    def _bulk(self, objects, parent=None):
+        """
+        Perform a batch of index operations rather than a single one.
+
+        Arguments
+        ---------
+        objects:
+            list of (op_type, object) tuples.
+
+            op_type defines the index operation to perform
+            ('index' for creates, updates and 'delete' for deletes)
+
+            object is a dict of document attributes required for the operation.
+
+        Returns
+        -------
+        Count of index operations on success, raises SearchEngineError on
+        failure.
+
+        """
         index_args = []
 
-        for object_repr in objects:
-            args = dict(_index=self.index_id,
+        for op, object_repr in objects:
+            args = dict(_op_type=op,
+                        _index=self.index_id,
                         _type=self.doc_type,
-                        _id=object_repr['id'],
-                        _source=object_repr)
+                        _id=object_repr['id'])
+
+            if op != 'delete':
+                args.update(dict(_source=object_repr))
 
             if parent is not None:
                 args.update(dict(_parent=object_repr[parent]))
@@ -152,24 +192,26 @@ class BaseSearchAdaptor(object):
         try:
             count, failures = bulk(self._connection, index_args)
         except elasticsearch.exceptions.TransportError as e:
-            log.error('Bulk index failure', error=e.error, index=self.index_id,
-                      doc_type=self.doc_type,
-                      object_ids=[i['_id'] for i in index_args])
-            raise
+            self.log.error('Bulk index failure', error=e.error,
+                           doc_type=self.doc_type,
+                           object_ids=[i['_id'] for i in index_args])
+            raise SearchEngineError('Bulk index failure!')
         if count != len(objects):
-            log.error('Bulk index failure', error='Not all indices created',
-                      index=self.index_id, doc_type=self.doc_type,
-                      object_ids=[i['_id'] for i in index_args],
-                      failures=failures)
+            self.log.error('Bulk index failure',
+                           error='Not all indices created',
+                           doc_type=self.doc_type,
+                           object_ids=[i['_id'] for i in index_args],
+                           failures=failures)
+            raise SearchEngineError('Bulk index failure!')
 
         return count
 
     @wrap_es_errors
     def search(self, query, max_results=100, offset=0, explain=True):
-        """Perform a search and return the results."""
+        """ Perform a search and return the results. """
         dsl_query = self.query_engine.generate_query(query)
 
-        log.debug('search query', query=query, dsl_query=dsl_query)
+        self.log.debug('search query', query=query, dsl_query=dsl_query)
 
         raw_results = self._connection.search(
             index=self.index_id,
@@ -198,30 +240,31 @@ class BaseSearchAdaptor(object):
         log_results = copy.deepcopy(raw_results)
         for hit in log_results['hits']['hits']:
             del hit['_source']
-        log.debug('search query results', query=query, results=log_results)
+        self.log.debug('search query results', query=query,
+                       results=log_results)
 
 
 class MessageSearchAdaptor(BaseSearchAdaptor):
-    def __init__(self, index_id):
+    """ Adaptor for the 'message' document type. """
+    def __init__(self, index_id, log):
         BaseSearchAdaptor.__init__(self, index_id=index_id, doc_type='message',
-                                   query_class=MessageQuery)
+                                   query_class=MessageQuery, log=log)
 
     def index(self, object_repr):
-        """(Re)index a message with API representation `object_repr`."""
         self._index_document(object_repr, parent=object_repr['thread_id'])
 
     def bulk_index(self, objects):
-        return self._bulk_index(objects, parent='thread_id')
+        return self._bulk(objects, parent='thread_id')
 
 
 class ThreadSearchAdaptor(BaseSearchAdaptor):
-    def __init__(self, index_id):
+    """ Adaptor for the 'thread' document type. """
+    def __init__(self, index_id, log):
         BaseSearchAdaptor.__init__(self, index_id=index_id, doc_type='thread',
-                                   query_class=ThreadQuery)
+                                   query_class=ThreadQuery, log=log)
 
     def index(self, object_repr):
-        """(Re)index a thread with API representation `object_repr`."""
         self._index_document(object_repr)
 
     def bulk_index(self, objects):
-        return self._bulk_index(objects)
+        return self._bulk(objects)

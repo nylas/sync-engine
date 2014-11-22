@@ -100,7 +100,7 @@ def index_threads(namespace, updated_since=None):
         encoded = []
         for obj in safer_yield_per(query, Thread.id, 0, CHUNK_SIZE):
             encoded_obj = encode(obj, namespace_public_id=namespace_public_id)
-            encoded.append(encoded_obj)
+            encoded.append(('index', encoded_obj))
 
     indexed_count += search_engine.threads.bulk_index(encoded)
 
@@ -134,7 +134,7 @@ def index_messages(namespace, updated_since=None):
         encoded = []
         for obj in safer_yield_per(query, Message.id, 0, CHUNK_SIZE):
             encoded_obj = encode(obj, namespace_public_id=namespace_public_id)
-            encoded.append(encoded_obj)
+            encoded.append(('index', encoded_obj))
 
     indexed_count += search_engine.messages.bulk_index(encoded)
 

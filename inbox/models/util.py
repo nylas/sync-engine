@@ -10,19 +10,18 @@ class NotFound(Exception):
     pass
 
 
-# Namespace Utils
-
-
 def _db_write_lockfile_name(account_id):
-    return "/var/lock/inbox_datastore/{0}.lock".format(account_id)
+    return '/var/lock/inbox_datastore/{0}.lock'.format(account_id)
 
 
 def db_write_lock(namespace_id):
-    """ Protect updating this namespace's Inbox datastore data.
+    """
+    Protect updating this namespace's Inbox datastore data.
 
     Note that you should also use this to wrap any code that _figures
     out_ what to update the datastore with, because outside the lock
     you can't guarantee no one is updating the data behind your back.
+
     """
     return Lock(_db_write_lockfile_name(namespace_id), block=True)
 
@@ -58,3 +57,16 @@ def reconcile_message(new_message, session):
         existing_message.references = new_message.references
 
         return existing_message
+
+
+def transaction_objects():
+    """
+    Return the mapping from model name to API object name - which becomes the
+    Transaction.object_type - for models that generate Transactions (i.e.
+    models that implement the HasRevisions mixin).
+
+    """
+    from inbox.models.mixins import HasRevisions
+
+    return dict((m.__tablename__, m.API_OBJECT_NAME) for
+                m in HasRevisions.__subclasses__())

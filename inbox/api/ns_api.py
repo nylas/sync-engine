@@ -1335,7 +1335,7 @@ def sync_deltas():
     exclude_types = args.get('exclude_types')
     deltas, _ = delta_sync.format_transactions_after_pointer(
         g.namespace.id, start_pointer, g.db_session, args['limit'],
-        exclude_types)
+        delta_sync._format_transaction_for_delta_sync, exclude_types)
     response = {
         'cursor_start': cursor,
         'deltas': deltas,

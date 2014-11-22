@@ -1,6 +1,7 @@
 #import datetime
 import json
 
+from gevent import monkey
 from pytest import yield_fixture
 
 from inbox.models.message import Message
@@ -16,6 +17,16 @@ __all__ = ['api_client', 'default_namespace']
 
 
 @yield_fixture(scope='function')
+def search_index_service(db):
+    # Based on the syncback_service fixture in tests/util/base.
+    monkey.patch_all(aggressive=False)
+    from inbox.transactions.search import SearchIndexService
+    s = SearchIndexService(poll_interval=0.1)
+    s.start()
+    yield s
+
+
+@yield_fixture(scope='function')
 def search_engine(db, default_namespace):
     index_namespace(default_namespace.public_id)
 
@@ -25,6 +36,28 @@ def search_engine(db, default_namespace):
     yield engine
 
     engine.delete_index()
+
+
+# TODO[k]
+# def test_search_index_service(search_index_service, db, default_namespace,
+#                               api_client):
+#     from inbox.models import Transaction
+
+#     q = db.session.query(Transaction).filter(
+#         Transaction.namespace_id == default_namespace.id)
+
+#     message_count = q.filter(Transaction.object_type == 'message').count()
+#     thread_count = q.filter(Transaction.object_type == 'thread').count()
+
+#     resp = api_client.post_data('/messages/search', {})
+#     assert resp.status_code == 200
+#     results = json.loads(resp.data)
+#     assert len(results) == message_count
+
+#     resp = api_client.post_data('/threads/search', {})
+#     assert resp.status_code == 200
+#     results = json.loads(resp.data)
+#     assert len(results) == thread_count
 
 
 def test_index_creation(db, default_namespace, search_engine):
@@ -217,8 +250,7 @@ def test_thread_search(db, api_client, search_engine):
 
 
 # TODO[k]
-def test_parent_child_search(db, api_client, search_engine):
-    pass
+#def test_parent_child_search(db, api_client, search_engine):
     # message = db.session.query(Message).get(2)
     # from_addr = message.from_addr[0][1]
 

@@ -9,9 +9,11 @@ from inbox.models.session import session_scope
 
 
 def get_transaction_cursor_near_timestamp(namespace_id, timestamp, db_session):
-    """Exchange a timestamp for a 'cursor' into the transaction log entry near
+    """
+    Exchange a timestamp for a 'cursor' into the transaction log entry near
     to that timestamp in age. The cursor is the public_id of that transaction
     (or '0' if there are no such transactions).
+
     Arguments
     ---------
     namespace_id: int
@@ -26,8 +28,8 @@ def get_transaction_cursor_near_timestamp(namespace_id, timestamp, db_session):
     string
         A transaction public_id that can be passed as a 'cursor' parameter by
         API clients.
-    """
 
+    """
     dt = datetime.utcfromtimestamp(timestamp)
     transaction = db_session.query(Transaction). \
         order_by(desc(Transaction.id)). \
@@ -41,8 +43,10 @@ def get_transaction_cursor_near_timestamp(namespace_id, timestamp, db_session):
 
 
 def format_transactions_after_pointer(namespace_id, pointer, db_session,
-                                      result_limit, exclude_types=None):
-    """Return a pair (deltas, new_pointer), where deltas is a list of change
+                                      result_limit, format_transaction_fn,
+                                      exclude_types=None):
+    """
+    Return a pair (deltas, new_pointer), where deltas is a list of change
     events, represented as dictionaries:
     {
       "object": <API object type, e.g. "thread">,
@@ -64,24 +68,35 @@ def format_transactions_after_pointer(namespace_id, pointer, db_session,
     result_limit: int
         Maximum number of results to return. (Because we may roll up multiple
         changes to the same object, fewer results can be returned.)
+    format_transaction_fn: function pointer
+        Function that defines how to format the transactions.
     exclude_types: list, optional
         If given, don't include transactions for these types of objects.
+
     """
-    filters = [Transaction.namespace_id == namespace_id,
-               Transaction.id > pointer]
+    filters = [Transaction.id > pointer]
+
+    if namespace_id is not None:
+        filters.append(Transaction.namespace_id == namespace_id)
+
     if exclude_types is not None:
         filters.append(~Transaction.object_type.in_(exclude_types))
+
     transactions = db_session.query(Transaction). \
         order_by(asc(Transaction.id)). \
         filter(*filters).limit(result_limit)
 
     transactions = transactions.all()
+
     if not transactions:
         return ([], pointer)
 
     deltas = []
     # If there are multiple transactions for the same object, only publish the
     # most recent.
+    # Note: Works as is even when we're querying across all namespaces (i.e.
+    # namespace_id = None) because the object is identified by its id in
+    # addition to type, and all objects are restricted to a single namespace.
     object_identifiers = set()
     for transaction in sorted(transactions, key=lambda trx: trx.id,
                               reverse=True):
@@ -89,7 +104,7 @@ def format_transactions_after_pointer(namespace_id, pointer, db_session,
         if object_identifier in object_identifiers:
             continue
         object_identifiers.add(object_identifier)
-        delta = _format_transaction(transaction)
+        delta = format_transaction_fn(transaction)
         deltas.append(delta)
 
     return (list(reversed(deltas)), transactions[-1].id)
@@ -97,7 +112,8 @@ def format_transactions_after_pointer(namespace_id, pointer, db_session,
 
 def streaming_change_generator(namespace_id, poll_interval, timeout,
                                transaction_pointer, exclude_types=None):
-    """Poll the transaction log for the given `namespace_id` until `timeout`
+    """
+    Poll the transaction log for the given `namespace_id` until `timeout`
     expires, and yield each time new entries are detected.
     Arguments
     ---------
@@ -110,6 +126,7 @@ def streaming_change_generator(namespace_id, poll_interval, timeout,
     transaction_pointer: int, optional
         Yield transaction rows starting after the transaction with id equal to
         `transaction_pointer`.
+
     """
     encoder = APIEncoder()
     start_time = time.time()
@@ -117,7 +134,7 @@ def streaming_change_generator(namespace_id, poll_interval, timeout,
         with session_scope() as db_session:
             deltas, new_pointer = format_transactions_after_pointer(
                 namespace_id, transaction_pointer, db_session, 100,
-                exclude_types)
+                _format_transaction_for_delta_sync, exclude_types)
         if new_pointer is not None and new_pointer != transaction_pointer:
             transaction_pointer = new_pointer
             for delta in deltas:
@@ -126,7 +143,7 @@ def streaming_change_generator(namespace_id, poll_interval, timeout,
             gevent.sleep(poll_interval)
 
 
-def _format_transaction(transaction):
+def _format_transaction_for_delta_sync(transaction):
     if transaction.command == 'insert':
         event = 'create'
     elif transaction.command == 'update':

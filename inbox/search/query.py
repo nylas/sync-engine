@@ -1,7 +1,7 @@
 class DSLQueryEngine(object):
     """
-    Generates Elasticsearch DSL queries from API queries.
-    Converts Elasticsearch query responses to API responses.
+    Generate Elasticsearch DSL queries from API queries.
+    Convert Elasticsearch query responses to API responses.
 
     """
 
