@@ -4,9 +4,11 @@ from inbox.sqlalchemy_ext.util import ForceStrictMode
 from inbox.config import db_uri, config
 
 DB_POOL_SIZE = config.get_required('DB_POOL_SIZE')
+# Sane default of max overflow=5 if value missing in config.
+DB_POOL_MAX_OVERFLOW = config.get('DB_POOL_MAX_OVERFLOW') or 5
 
 
-def main_engine(pool_size=DB_POOL_SIZE, max_overflow=5):
+def main_engine(pool_size=DB_POOL_SIZE, max_overflow=DB_POOL_MAX_OVERFLOW):
     engine = create_engine(db_uri(),
                            listeners=[ForceStrictMode()],
                            isolation_level='READ COMMITTED',
