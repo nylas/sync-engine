@@ -88,15 +88,12 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
         new_uidvalidity = crispin_client.selected_uidvalidity
         changed_uids = crispin_client.new_and_updated_uids(saved_highestmodseq)
         remote_uids = crispin_client.all_uids()
-        with self.syncmanager_lock:
-            with mailsync_session_scope() as db_session:
-                local_uids = common.all_uids(self.account_id, db_session,
-                                             self.folder_name)
-                self.remove_deleted_uids(db_session, local_uids, remote_uids)
-            stack_uids = {uid for uid, _ in download_stack}
-            local_with_pending_uids = local_uids | stack_uids
-            new, updated = new_or_updated(changed_uids,
-                                          local_with_pending_uids)
+        with mailsync_session_scope() as db_session:
+            local_uids = common.all_uids(self.account_id, db_session,
+                                         self.folder_name)
+        stack_uids = {uid for uid, _ in download_stack}
+        local_with_pending_uids = local_uids | stack_uids
+        new, updated = new_or_updated(changed_uids, local_with_pending_uids)
         if changed_uids:
             log.info("Changed UIDs", message="new: {} updated: {}"
                                              .format(len(new), len(updated)),
@@ -106,6 +103,8 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
                                         download_stack, async_download)
 
         with mailsync_session_scope() as db_session:
+            with self.syncmanager_lock:
+                self.remove_deleted_uids(db_session, local_uids, remote_uids)
             self.update_uid_counts(db_session,
                                    remote_uid_count=len(remote_uids))
             common.update_folder_info(self.account_id, db_session,

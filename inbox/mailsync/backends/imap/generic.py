@@ -477,13 +477,13 @@ class FolderSyncEngine(Greenlet):
                 # Download new UIDs.
                 stack_uids = {uid for uid, _ in download_stack}
                 local_with_pending_uids = local_uids | stack_uids
-                self.remove_deleted_uids(db_session, local_uids, remote_uids)
                 # filter out messages that have disappeared on the remote side
                 download_stack.discard([item for item in download_stack if
                                         item[0] not in remote_uids])
                 for uid in sorted(remote_uids):
                     if uid not in local_with_pending_uids:
                         download_stack.put(uid, None)
+                self.remove_deleted_uids(db_session, local_uids, remote_uids)
         if not async_download:
             self.download_uids(crispin_client, download_stack)
             with mailsync_session_scope() as db_session:
