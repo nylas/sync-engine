@@ -1,0 +1,28 @@
+#!/usr/bin/env python
+from inbox.models.session import session_scope
+from inbox.models import Folder
+from inbox.models.backends.eas import EASAccount, EASFolderSyncStatus
+
+
+def check_extra_eas_folders(account_id):
+    with session_scope(ignore_soft_deletes=False) as db_session:
+        accounts = db_session.query(EASAccount).all()
+
+        print 'eas accounts: ', len(accounts)
+
+        for a in accounts:
+            folders = [f for f, in db_session.query(
+                       EASFolderSyncStatus.folder_id).filter(
+                       EASFolderSyncStatus.account_id == a.id).all()]
+            extras = [e for e, in db_session.query(
+                      Folder.id).filter(
+                      Folder.account_id == a.id,
+                      Folder.id.notin_(folders)).all()]
+
+            if extras:
+                print 'account_id: {}, num_extras: {}, extras: {}'.format(
+                    a.id, len(extras), extras)
+
+
+if __name__ == '__main__':
+    check_extra_eas_folders()
