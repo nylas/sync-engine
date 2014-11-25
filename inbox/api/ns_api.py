@@ -639,7 +639,7 @@ def event_search_api():
 @app.route('/events/', methods=['POST'])
 def event_create_api():
     # Handle ical uploads
-    if request.headers['content-type'] == 'text/calendar':
+    if request.headers.get('content-type') == 'text/calendar':
         ics_str = request.data
         new_events = events.crud.create_from_ics(g.namespace, g.db_session,
                                                  ics_str)
