@@ -79,13 +79,9 @@ def encode(obj, namespace_public_id=None):
             'snippet': obj.snippet,
             'body': obj.sanitized_body,
             'unread': not obj.is_read,
-            'files': [{
-                'content_type': b.content_type,
-                'size': b.size,
-                'filename': b.filename,
-                'id': b.public_id} for b in [p.block for p in obj.parts
-                                             if p.is_attachment]]
+            'files': obj.api_attachment_metadata
         }
+
         # If the message is a draft (Inbox-created or otherwise):
         if obj.is_draft:
             resp['object'] = 'draft'
@@ -186,15 +182,14 @@ def encode(obj, namespace_public_id=None):
             'content_type': obj.content_type,
             'size': obj.size,
             'filename': obj.filename,
-            'is_embedded': False,
         }
         if len(obj.parts):
             # if obj is actually a message attachment (and not merely an
             # uploaded file), set additional properties
             resp.update({
-                'is_embedded': True,
                 'message_ids': [p.message.public_id for p in obj.parts]
             })
+
         return resp
 
     elif isinstance(obj, Tag):

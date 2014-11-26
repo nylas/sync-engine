@@ -38,7 +38,7 @@ def test_message_from_synced(db, raw_message):
     assert sorted(m.to_addr) == [(u'', u'csail-all.lists@mit.edu'),
                                  (u'', u'csail-announce@csail.mit.edu'),
                                  (u'', u'csail-related@csail.mit.edu')]
-    assert len(m.parts) == 8
+    assert len(m.parts) == 4
     assert 'Attached Message Part' in [part.block.filename for part in m.parts]
     assert m.received_date == received_date
     assert all(part.block.namespace_id == m.namespace_id for part in m.parts)

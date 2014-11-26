@@ -38,7 +38,8 @@ GET https://api.inboxapp.com/n/<namespace_id>/messages/<message_id>
             "content_type": "image/jpeg",
             "filename": "walter.jpg",
             "id": "7jm8bplrg5tx0c7pon56tx30r",
-            "size": 38633
+            "size": 38633,
+            "content_id": "ii_i2cg7byn1_1499bfd99727e569"
         }
     ],
     "snippet": "Sounds good--that bottle of Pinot should go well with the meal. I'll also bring a surprise for dessert. :) Do you have ice cream? Looking fo",

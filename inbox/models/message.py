@@ -247,7 +247,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
             headers_part = Part(block=block, message=msg)
             headers_part.walk_index = i
-            msg.parts.append(headers_part)
 
             for mimepart in parsed.walk(
                     with_self=parsed.content_type.is_singlepart()):
@@ -330,8 +329,8 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             data_to_write = ''
 
         new_part.content_id = mimepart.headers.get('Content-Id')
+
         block.data = data_to_write
-        self.parts.append(new_part)
 
     def _mark_error(self):
         self.decode_error = True
@@ -412,6 +411,24 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     @property
     def attachments(self):
         return [part for part in self.parts if part.is_attachment]
+
+    @property
+    def api_attachment_metadata(self):
+        resp = []
+        for part in self.parts:
+            if not part.is_attachment:
+                continue
+            k = {'content_type': part.block.content_type,
+                 'size': part.block.size,
+                 'filename': part.block.filename,
+                 'id': part.block.public_id}
+            content_id = part.content_id
+            if content_id:
+                if content_id[0] == '<' and content_id[-1] == '>':
+                    content_id = content_id[1:-1]
+                k['content_id'] = content_id
+            resp.append(k)
+        return resp
 
     # FOR INBOX-CREATED MESSAGES:
 
