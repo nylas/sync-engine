@@ -5,8 +5,22 @@ import time
 
 from inbox.client.errors import NotFoundError
 from conftest import calendar_accounts, timeout_loop
+from inbox.models.session import InboxSession
+from inbox.ignition import main_engine
 
 random.seed(None)
+
+
+@pytest.yield_fixture(scope="module")
+def real_db():
+    """A fixture to get access to the real mysql db. We need this
+    to log in to providers like gmail to check that events changes
+    are synced back."""
+    engine = main_engine()
+    session = InboxSession(engine)
+    yield session
+    session.rollback()
+    session.close()
 
 
 @timeout_loop('calendar')
@@ -39,7 +53,7 @@ def test_calendar_creation(client):
 
 
 @timeout_loop('event')
-def wait_for_event(client, event_id):
+def wait_for_event(client, event_id, real_db):
     try:
         return client.events.find(event_id)
     except NotFoundError:
@@ -47,7 +61,7 @@ def wait_for_event(client, event_id):
 
 
 @timeout_loop('event')
-def wait_for_event_rename(client, event_id, new_title):
+def wait_for_event_rename(client, event_id, new_title, real_db):
     try:
         ev = client.events.find(event_id)
         return ev.title == new_title
@@ -56,7 +70,7 @@ def wait_for_event_rename(client, event_id, new_title):
 
 
 @timeout_loop('event')
-def wait_for_event_deletion(client, event_id):
+def wait_for_event_deletion(client, event_id, real_db):
     try:
         client.events.find(event_id)
         return False
@@ -64,8 +78,13 @@ def wait_for_event_deletion(client, event_id):
         return True
 
 
-@pytest.mark.parametrize("client", calendar_accounts)
-def test_event_crud(client):
+# We define this test function separately from test_event_crud
+# because we want to be able to pass different types of accounts
+# to it. For instance, test_event_crud here takes a list of
+# generic accounts which support calendars but in test_google_events.py
+# test_event_crud takes a list of gmail accounts.
+# - karim
+def real_test_event_crud(client, real_db):
     # create an event
     ns = client.namespaces[0]
     ev = ns.events.create()
@@ -77,17 +96,21 @@ def test_event_crud(client):
     end = int(time.mktime(d2.timetuple()))
     ev.when = {"start_time": start, "end_time": end}
     ev.save()
-    wait_for_event(client, ev.id)
+    wait_for_event(client, ev.id, real_db)
 
     # now, update it
     ev.title = "Renamed title"
     ev.save()
-    wait_for_event_rename(client, ev.id, ev.title)
+    wait_for_event_rename(client, ev.id, ev.title, real_db)
 
     # finally, delete it
     ns.events.delete(ev.id)
-    wait_for_event_deletion(client, ev.id)
+    wait_for_event_deletion(client, ev.id, real_db)
 
+
+@pytest.mark.parametrize("client", calendar_accounts)
+def test_event_crud(client, real_db):
+    real_test_event_crud(client, real_db)
 
 if __name__ == '__main__':
     pytest.main([__file__])
