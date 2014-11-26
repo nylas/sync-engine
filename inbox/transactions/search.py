@@ -95,12 +95,12 @@ class SearchIndexService(Greenlet):
             engine = NamespaceSearchEngine(namespace_id)
 
             messages = namespace_map[namespace_id]['message']
-            if messages:
-                message_count = engine.messages.bulk_index(messages)
+            message_count = engine.messages.bulk_index(messages) if messages \
+                else 0
 
             threads = namespace_map[namespace_id]['thread']
-            if threads:
-                thread_count = engine.threads.bulk_index(threads)
+            thread_count = engine.threads.bulk_index(threads) if threads \
+                else 0
 
             self.log.info('per-namespace index counts',
                           namespace_id=namespace_id,

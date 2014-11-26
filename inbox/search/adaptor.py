@@ -184,8 +184,8 @@ class BaseSearchAdaptor(object):
             if op != 'delete':
                 args.update(dict(_source=object_repr))
 
-            if parent is not None:
-                args.update(dict(_parent=object_repr[parent]))
+                if parent is not None:
+                    args.update(dict(_parent=object_repr[parent]))
 
             index_args.append(args)
 
