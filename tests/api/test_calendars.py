@@ -23,7 +23,7 @@ def test_api_list(db, api_client):
     assert cal['object'] == 'calendar'
     assert cal['name'] == 'default'
     assert cal['read_only'] is False
-    assert cal['namespace'] == ns_id
+    assert cal['namespace_id'] == ns_id
 
 
 def test_create_calendar(db, api_client):
@@ -36,7 +36,7 @@ def test_create_calendar(db, api_client):
     resp_data = json.loads(resp.data)
     cal_id = resp_data['id']
 
-    assert resp_data['namespace'] == ns_id
+    assert resp_data['namespace_id'] == ns_id
     assert resp_data['name'] == c_data['name']
     assert resp_data['description'] is None
     assert resp_data['read_only'] is False
@@ -77,7 +77,7 @@ def test_get_calendar(db, api_client):
     cal_id = resp_data['id']
 
     resp_data = api_client.get_data('/calendars/' + cal_id, ns_id)
-    assert resp_data['namespace'] == ns_id
+    assert resp_data['namespace_id'] == ns_id
     assert resp_data['name'] == c_data['name']
     assert resp_data['description'] is None
     assert resp_data['read_only'] is False
@@ -102,7 +102,7 @@ def test_filter_calendar(db, api_client):
     _filter = "?filter=Holidays"
 
     resp_data = api_client.get_data('/calendars' + _filter, ns_id)[0]
-    assert resp_data['namespace'] == ns_id
+    assert resp_data['namespace_id'] == ns_id
     assert resp_data['name'] == c_data['name']
     assert resp_data['description'] == 'Local Holidays'
     assert resp_data['read_only'] is False
@@ -133,7 +133,7 @@ def test_update_calendar(db, api_client):
     resp = api_client.put_data('/calendars/' + cal_id, c_update_data, ns_id)
     c_put_data = json.loads(resp.data)
     assert resp.status_code == 200
-    assert c_put_data['namespace'] == ns_id
+    assert c_put_data['namespace_id'] == ns_id
     assert c_put_data['name'] == c_update_data['name']
     assert c_put_data['description'] is None
     assert c_put_data['read_only'] is False
@@ -141,7 +141,7 @@ def test_update_calendar(db, api_client):
     assert c_put_data['event_ids'] == []
 
     resp_data = api_client.get_data('/calendars/' + cal_id, ns_id)
-    assert resp_data['namespace'] == ns_id
+    assert resp_data['namespace_id'] == ns_id
     assert resp_data['name'] == c_update_data['name']
     assert resp_data['description'] is None
     assert resp_data['read_only'] is False

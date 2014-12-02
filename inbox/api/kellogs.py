@@ -133,7 +133,7 @@ def encode(obj, namespace_public_id=None):
         return {
             'id': obj.public_id,
             'object': 'calendar',
-            'namespace': _get_namespace_public_id(obj),
+            'namespace_id': _get_namespace_public_id(obj),
             'name': obj.name,
             'description': obj.description,
             'read_only': obj.read_only,
