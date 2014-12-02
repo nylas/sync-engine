@@ -9,6 +9,7 @@ from inbox.models.session import session_scope
 from inbox.models import Namespace
 from inbox.models.backends.imap import ImapAccount, ImapThread
 from inbox.mailsync.backends.imap.common import recompute_thread_labels
+from inbox.sqlalchemy_ext.util import safer_yield_per
 configure_logging(False)
 log = get_logger()
 
@@ -21,9 +22,11 @@ def regen_labels_for_namespace(namespace_id):
         account = namespace.account
         if not isinstance(account, ImapAccount):
             return
-        threads = db_session.query(ImapThread).filter(
-            ImapThread.namespace_id == namespace_id).all()
-        for index, thread in enumerate(threads):
+        query = db_session.query(ImapThread).filter(
+            ImapThread.namespace_id == namespace_id)
+        index = 0
+        for thread in safer_yield_per(query, ImapThread.id, 0, 100):
+            index += 1
             recompute_thread_labels(thread, db_session)
             log.info('Recomputed labels', thread_id=thread.id,
                      namespace_id=namespace_id)
