@@ -317,10 +317,9 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
             thread = new_uid.message.thread = ImapThread.from_gmail_message(
                 db_session, new_uid.account.namespace, new_uid.message)
 
-            # make sure this thread has all the correct labels
-            common.update_thread_labels(thread, folder.name, msg.g_labels,
-                                        db_session)
-            return new_uid
+        # make sure this thread has all the correct labels
+        common.add_any_new_thread_labels(thread, new_uid, db_session)
+        return new_uid
 
     def download_and_commit_uids(self, crispin_client, folder_name, uids):
         raw_messages = safe_download(crispin_client, uids)

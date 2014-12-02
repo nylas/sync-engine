@@ -13,8 +13,7 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.contacts.process_mail import update_contacts_from_message
-from inbox.models.message import Message
-from inbox.models.folder import Folder
+from inbox.models import Message, Folder
 from inbox.models.backends.imap import ImapUid, ImapFolderInfo
 from inbox.models.util import reconcile_message
 
@@ -28,84 +27,72 @@ def all_uids(account_id, session, folder_name):
         Folder.name == folder_name)}
 
 
-def update_thread_labels(thread, folder_name, g_labels, db_session):
-    """ Make sure `thread` has all the right labels. """
-    existing_labels = {folder.name.lower() for folder in thread.folders
-                       if folder.name is not None} | \
-                      {folder.canonical_name for folder in thread.folders
-                       if folder.canonical_name is not None}
+def _folders_for_labels(g_labels, account, db_session):
+    """Given a set of Gmail label strings, return the set of associated Folder
+    objects. Creates new (un-added, uncommitted) Folder instances if needed."""
+    labels = {l.lstrip('\\').lower() for l in g_labels}
+    special_folders = {
+        'inbox': account.inbox_folder,
+        'sent': account.sent_folder,
+        'draft': account.drafts_folder,
+        'important': account.important_folder,
+    }
 
-    labels = {l.lstrip('\\').lower() if isinstance(l, unicode)
-              else unicode(l) for l in g_labels if l is not None}
-
-    # FIXME @karim: We should probably do a joinedload or something here.
-    for message in thread.messages:
-        for imapuid in message.imapuids:
-            if imapuid.g_labels is not None:
-                for label in imapuid.g_labels:
-                    if isinstance(label, unicode):
-                        labels.add(label.lstrip('\\').lower())
-                    else:
-                        labels.add(unicode(label))
-
-    labels.add(folder_name.lower())
-
-    # Remove labels that have been deleted -- note that the \Inbox, \Sent,
-    # \Important, \Starred, and \Drafts labels are per-message, not per-thread,
-    # but since we always work at the thread level, _we_ apply the label to the
-    # whole thread.
-    # TODO: properly aggregate \Inbox, \Sent, \Important, and \Drafts
-    # per-message so we can detect deletions properly.
-    folders_to_discard = []
-    for folder in thread.folders:
-        if folder.canonical_name not in ('inbox', 'sent', 'drafts',
-                                         'important', 'starred', 'all'):
-            if folder.lowercase_name not in labels:
-                folders_to_discard.append(folder)
-    for folder in folders_to_discard:
-        thread.folders.discard(folder)
-
-    # add new labels
+    folders = set()
     for label in labels:
-        if label.lower() not in existing_labels:
-            # The problem here is that Gmail's attempt to squash labels and
-            # IMAP folders into the same abstraction doesn't work perfectly. In
-            # particular, there is a '[Gmail]/Sent' folder, but *also* a 'Sent'
-            # label, and so on. We handle this by only maintaining one folder
-            # object that encapsulates both of these. If a Gmail user does not
-            # have these folders enabled via IMAP, we create Folder rows
-            # with no 'name' attribute and fill in the 'name' if the account
-            # is later reconfigured.
-            canonical_labels = {
-                'sent': thread.namespace.account.sent_folder,
-                'draft': thread.namespace.account.drafts_folder,
-                'starred': thread.namespace.account.starred_folder,
-                'important': thread.namespace.account.important_folder}
-            if label in canonical_labels:
-                folder = canonical_labels[label]
-                if folder:
-                    thread.folders.add(folder)
-                else:
-                    folder = Folder.find_or_create(
-                        db_session, thread.namespace.account, None, label)
-                    thread.folders.add(folder)
-            else:
-                folder = Folder.find_or_create(db_session,
-                                               thread.namespace.account, label)
-                thread.folders.add(folder)
-    return labels
+        if label in special_folders:
+            folders.add(special_folders[label])
+        else:
+            folders.add(
+                Folder.find_or_create(db_session, account, label))
+    return folders
+
+
+def add_any_new_thread_labels(thread, new_uid, db_session):
+    """Update the folders associated with a thread when a new uid is synced for
+    it."""
+    thread.folders.add(new_uid.folder)
+    if new_uid.g_labels is not None:
+        folders_for_labels = _folders_for_labels(
+            new_uid.g_labels, thread.namespace.account, db_session)
+        for folder in folders_for_labels:
+            thread.folders.add(folder)
+
+
+def recompute_thread_labels(thread, db_session):
+    """Aggregate folders and labels for a thread's Imapuids, and make sure the
+    thread has the right folders associated with it."""
+    g_labels = set()
+    expected_folders = set()
+    for message in thread.messages:
+        for uid in message.imapuids:
+            if uid.g_labels is not None:
+                g_labels.update(uid.g_labels)
+            expected_folders.add(uid.folder)
+
+    folders_for_labels = _folders_for_labels(
+        g_labels, thread.namespace.account, db_session)
+    expected_folders.update(folders_for_labels)
+
+    for folder in set(thread.folders):
+        if folder not in expected_folders:
+            thread.folders.discard(folder)
+
+    for folder in expected_folders:
+        thread.folders.add(folder)
 
 
 def update_metadata(account_id, session, folder_name, folder_id, uids,
                     new_flags):
     """
-    Update flags (the only metadata that can change).
+    Update flags and labels (the only metadata that can change).
 
     Make sure you're holding a db write lock on the account. (We don't try
     to grab the lock in here in case the caller needs to put higher-level
     functionality in the lock.)
 
     """
+    affected_threads = set()
     if uids:
         for item in session.query(ImapUid). \
                 filter(ImapUid.account_id == account_id,
@@ -114,10 +101,10 @@ def update_metadata(account_id, session, folder_name, folder_id, uids,
                 options(joinedload(ImapUid.message)):
             flags = new_flags[item.msg_uid].flags
             thread = item.message.thread
+            affected_threads.add(thread)
             if hasattr(new_flags[item.msg_uid], 'labels'):  # i.e: gmail
                 labels = new_flags[item.msg_uid].labels
                 item.g_labels = [label for label in labels]
-                update_thread_labels(thread, folder_name, labels, session)
             else:
                 labels = None
             item.update_imap_flags(flags, labels)
@@ -134,6 +121,9 @@ def update_metadata(account_id, session, folder_name, folder_id, uids,
                     thread.apply_tag(unread_tag)
                 elif all(m.is_read for m in thread.messages):
                     thread.remove_tag(unread_tag)
+
+        for thread in affected_threads:
+            recompute_thread_labels(thread, session)
 
 
 def remove_messages(account_id, session, uids, folder):
@@ -177,18 +167,7 @@ def remove_messages(account_id, session, uids, folder):
             if not thread.messages:
                 session.delete(thread)
             else:
-                # We've deleted messages, we've got to update thread.folders.
-                # We use a (temporary) heuristic for this: a thread has
-                # the same folders as its latest message.
-
-                # NB: thread.messages is sorted by date ascending.
-                most_recent_message = thread.messages[-1]
-                mrm_folders = [uid.folder
-                               for uid in most_recent_message.imapuids]
-                thread_folders = [fld for fld in thread.folders]
-                for fld in thread_folders:
-                    if fld not in mrm_folders:
-                        thread.folders.discard(fld)
+                recompute_thread_labels(thread, session)
 
         session.commit()
 

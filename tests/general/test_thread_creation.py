@@ -3,20 +3,14 @@ import datetime
 import pytest
 from collections import namedtuple
 from inbox.auth.generic import GenericAuthHandler
+from inbox.models import Folder
+from inbox.models.backends.imap import ImapUid
+from tests.util.base import add_fake_thread, add_fake_message
 
+NAMESPACE_ID = 1
+ACCOUNT_ID = 1
 
-MockMessage = namedtuple('Message', ['subject'])
-MockFolder = namedtuple('Message', ['name', 'canonical_name'])
 MockRawMessage = namedtuple('RawMessage', ['flags'])
-
-
-class MockImapUID(object):
-    def __init__(self, message, account):
-        self.message = message
-        self.account = account
-
-    def update_imap_flags(self, *args, **kwargs):
-        pass
 
 
 @pytest.fixture
@@ -42,8 +36,11 @@ def folder_sync_engine(db, monkeypatch):
 
 
 def test_generic_foldersyncengine(db, folder_sync_engine):
-    message = MockMessage("Golden Gate Park next Sat")
-    imapuid = MockImapUID(message, None)
+    thread = add_fake_thread(db.session, NAMESPACE_ID)
+    message = add_fake_message(db.session, NAMESPACE_ID, thread,
+                               subject="Golden Gate Park next Sat")
+    imapuid = ImapUid(message=message, account_id=ACCOUNT_ID,
+                      msg_uid=2222)
     messages = folder_sync_engine.fetch_similar_threads(db.session, imapuid)
     assert messages == [], ("fetch_similar_threads should "
                             "heed namespace boundaries")
@@ -60,9 +57,12 @@ def test_threading_limit(db, folder_sync_engine, monkeypatch):
         MAX_THREAD_LENGTH)
     namespace_id = folder_sync_engine.namespace_id
     account = db.session.query(Account).get(folder_sync_engine.account_id)
-    folder = MockFolder('inbox', 'inbox')
-    msg = MockRawMessage(None)
-    for _ in range(3 * MAX_THREAD_LENGTH):
+    account.inbox_folder = Folder(account=account,
+                                  name='Inbox',
+                                  canonical_name='inbox')
+    folder = account.inbox_folder
+    msg = MockRawMessage([])
+    for i in range(3 * MAX_THREAD_LENGTH):
         m = Message()
         m.namespace_id = namespace_id
         m.received_date = datetime.datetime.utcnow()
@@ -71,7 +71,8 @@ def test_threading_limit(db, folder_sync_engine, monkeypatch):
         m.sanitized_body = ''
         m.snippet = ''
         m.subject = 'unique subject'
-        uid = MockImapUID(m, account)
+        uid = ImapUid(message=m, account=account, msg_uid=2222 + i,
+                      folder=folder)
         folder_sync_engine.add_message_attrs(db.session, uid, msg, folder)
         db.session.add(m)
         db.session.commit()

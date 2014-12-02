@@ -1,0 +1,51 @@
+#!/usr/bin/env python
+import gevent
+import gevent.monkey
+import gevent.pool
+gevent.monkey.patch_all()
+import click
+from inbox.log import configure_logging, get_logger
+from inbox.models.session import session_scope
+from inbox.models import Namespace
+from inbox.models.backends.imap import ImapAccount, ImapThread
+from inbox.mailsync.backends.imap.common import recompute_thread_labels
+configure_logging(False)
+log = get_logger()
+
+
+def regen_labels_for_namespace(namespace_id):
+    log.info('Regenerating labels for namespace',
+             namespace_id=namespace_id)
+    with session_scope() as db_session:
+        namespace = db_session.query(Namespace).get(namespace_id)
+        account = namespace.account
+        if not isinstance(account, ImapAccount):
+            return
+        threads = db_session.query(ImapThread).filter(
+            ImapThread.namespace_id == namespace_id).all()
+        for index, thread in enumerate(threads):
+            recompute_thread_labels(thread, db_session)
+            log.info('Recomputed labels', thread_id=thread.id,
+                     namespace_id=namespace_id)
+            if index % 100 == 0:
+                db_session.commit()
+        db_session.commit()
+
+
+@click.command()
+@click.option('--namespace_ids')
+def main(namespace_ids):
+    if namespace_ids:
+        ns_ids = [int(ns_id) for ns_id in namespace_ids.split(',')]
+    else:
+        with session_scope() as db_session:
+            ns_ids = [ns.id for ns in db_session.query(Namespace)]
+    pool = gevent.pool.Pool(size=10)
+    for ns_id in ns_ids:
+        pool.add(gevent.spawn(regen_labels_for_namespace, ns_id))
+
+    pool.join()
+
+
+if __name__ == '__main__':
+    main()

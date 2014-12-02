@@ -392,13 +392,12 @@ class FolderSyncEngine(Greenlet):
                 for index, message in enumerate(constructed_thread):
                     message.thread_order = index
 
-            db_session.flush()
-            # Make sure this thread has all the correct labels
-            common.update_thread_labels(new_uid.message.thread, folder.name,
-                                        [folder.canonical_name], db_session)
-            new_uid.update_imap_flags(msg.flags)
-
-            return new_uid
+        db_session.flush()
+        # Make sure this thread has all the correct labels
+        common.add_any_new_thread_labels(new_uid.message.thread, new_uid,
+                                         db_session)
+        new_uid.update_imap_flags(msg.flags)
+        return new_uid
 
     def remove_deleted_uids(self, db_session, local_uids, remote_uids):
         """ Remove imapuid entries that no longer exist on the remote.
