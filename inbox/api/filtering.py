@@ -1,5 +1,5 @@
 from sqlalchemy import and_, or_, desc, asc, func
-from sqlalchemy.orm import subqueryload
+from sqlalchemy.orm import subqueryload, joinedload
 from inbox.models import (Contact, Event, Calendar, Message,
                           MessageContactAssociation, Thread, Tag,
                           TagItem, Block, Part)
@@ -233,7 +233,7 @@ def _messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
     # faster. (Thread.discriminator needed to prevent SQLAlchemy from breaking
     # on resloving inheritance.)
     query = query.options(subqueryload(Message.parts).joinedload(Part.block),
-                          subqueryload(Message.thread).
+                          joinedload(Message.thread).
                           load_only('public_id', 'discriminator'))
 
     return query.all()
