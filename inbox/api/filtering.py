@@ -1,5 +1,5 @@
 from sqlalchemy import and_, or_, desc, asc, func
-from sqlalchemy.orm import joinedload, subqueryload
+from sqlalchemy.orm import subqueryload
 from inbox.models import (Contact, Event, Calendar, Message,
                           MessageContactAssociation, Thread, Tag,
                           TagItem, Block, Part)
@@ -229,10 +229,12 @@ def _messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
     if view == 'ids':
         return [x[0] for x in query.all()]
 
-    # Eager-load part.content_disposition to make constructing API
-    # representations faster
-    query = query.options(joinedload(Message.parts).
-                          load_only('content_disposition'))
+    # Eager-load related attributes to make constructing API representations
+    # faster. (Thread.discriminator needed to prevent SQLAlchemy from breaking
+    # on resloving inheritance.)
+    query = query.options(subqueryload(Message.parts).joinedload(Part.block),
+                          subqueryload(Message.thread).
+                          load_only('public_id', 'discriminator'))
 
     return query.all()
 
