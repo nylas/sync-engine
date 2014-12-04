@@ -2,6 +2,7 @@
 
 import click
 from datetime import datetime, timedelta
+from functools import partial
 import json
 from redis import StrictRedis
 import sys
@@ -34,7 +35,7 @@ def print_sync_status_stats(accounts):
 
 
 def print_sync_status(accounts):
-    value = []
+    report = {'verbose': []}
 
     for account_id in accounts:
         account_is_alive, provider_name, folders = accounts[account_id]
@@ -42,9 +43,9 @@ def print_sync_status(accounts):
         if account_is_alive:
             continue
 
-        _value = {'account': account_id,
-                  'provider_name': provider_name,
-                  'folders': []}
+        account_report = {'account': account_id,
+                          'provider_name': provider_name,
+                          'folders': []}
 
         for folder_id in folders:
             folder_is_alive, folder_name, devices = folders[folder_id]
@@ -52,35 +53,37 @@ def print_sync_status(accounts):
             if folder_is_alive:
                 continue
 
-            __value = {'id': folder_id, 'name': folder_name, 'devices': []}
+            folder_report = {'id': folder_id,
+                             'name': folder_name,
+                             'devices': []}
 
             for device_id in devices:
-                __value['devices'].append({
-                    'id': device_id,
-                    'heartbeat_at': str(devices[device_id]['heartbeat_at']),
-                    'state': devices[device_id]['state'],
-                    'action': devices[device_id]['action']})
+                device_report = {'id': device_id}
+                device_report.update({k: str(v) for k, v in devices[device_id].iteritems() if v is not None} or {})
+                folder_report['devices'].append(device_report)
 
-            _value['folders'].append(__value)
+            account_report['folders'].append(folder_report)
 
-        value.append(_value)
+        report['verbose'].append(account_report)
 
-    return {'verbose': value}
+    return report
 
 
 @click.command()
-@click.option('--alive-threshold', type=click.IntRange(60), default=60,
+@click.option('--alive-threshold', type=click.IntRange(60), default=180,
               help='Alive threshold (seconds).')
 @click.option('--alive-threshold-eas', type=click.IntRange(1800), default=1920,
               help='Alive threshold for EAS accounts (seconds).')
 @click.option('--redis-hostname', type=str,
               help='Hostname where the Redis instance lives.')
-@click.option('--redis-port', type=int,
+@click.option('--redis-port', type=int, default=6379,
               help='Port where the Redis instance listens.')
-@click.option('--redis-database', type=int,
+@click.option('--redis-database', type=int, default=1,
               help='Database where the Redis instance stores KV-pairs.')
+@click.option('--pretty', is_flag=True)
 def main(alive_threshold, alive_threshold_eas,
-         redis_hostname, redis_port, redis_database):
+         redis_hostname, redis_port, redis_database,
+         pretty):
     """
     Very basic draft script to monitor the sync status of the folder engines.
     At the moment, it only takes into account the heartbeat and the state (if
@@ -146,12 +149,17 @@ def main(alive_threshold, alive_threshold_eas,
             folders[folder_id] = (folder_is_alive, folder_name, devices)
             accounts[account_id] = (account_is_alive, provider_name, folders)
 
+    if not pretty:
+        json_dumps = partial(json.dumps, sort_keys=True)
+    else:
+        json_dumps = partial(json.dumps, sort_keys=True, indent=2)
+
     report = print_sync_status_stats(accounts)
     if report['dead_accounts'] == 0:
-        print json.dumps(report)
+        print json_dumps(report)
         return
     report.update(print_sync_status(accounts))
-    print json.dumps(report)
+    print json_dumps(report)
     sys.exit(2)
 
 
