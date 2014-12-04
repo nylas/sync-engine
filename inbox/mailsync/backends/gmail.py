@@ -20,7 +20,7 @@ user always gets the full thread when they look at mail.
 
 """
 from __future__ import division
-
+from functools import partial
 import os
 
 from collections import namedtuple
@@ -41,7 +41,6 @@ from inbox.mailsync.backends.base import (create_db_objects,
                                           commit_uids,
                                           MailsyncError,
                                           mailsync_session_scope,
-                                          thread_polling, thread_finished,
                                           THROTTLE_WAIT)
 from inbox.mailsync.backends.imap.generic import (
     _pool, uidvalidity_cb, safe_download, report_progress, UIDStack)
@@ -57,37 +56,12 @@ class GmailSyncMonitor(ImapSyncMonitor):
     def __init__(self, *args, **kwargs):
         kwargs['retry_fail_classes'] = [GmailSettingError]
         ImapSyncMonitor.__init__(self, *args, **kwargs)
-        self.sync_engine_class = GmailFolderSyncEngine
+        self.thread_download_lock = BoundedSemaphore(1)
+        self.sync_engine_class = partial(GmailFolderSyncEngine,
+                                         self.thread_download_lock)
 
     def sync(self):
-        sync_folder_names_ids = self.prepare_sync()
-        thread_download_lock = BoundedSemaphore(1)
-        for folder_name, folder_id in sync_folder_names_ids:
-            log.info('initializing folder sync')
-            thread = GmailFolderSyncEngine(thread_download_lock,
-                                           self.account_id, folder_name,
-                                           folder_id,
-                                           self.email_address,
-                                           self.provider_name,
-                                           self.poll_frequency,
-                                           self.syncmanager_lock,
-                                           self.refresh_flags_max,
-                                           self.retry_fail_classes)
-            thread.start()
-            self.folder_monitors.add(thread)
-            if thread.should_block:
-                while not thread_polling(thread) and \
-                        not thread_finished(thread) and \
-                        not thread.ready():
-                    sleep(self.heartbeat)
-
-            # Allow individual folder sync monitors to shut themselves down
-            # after completing the initial sync.
-            if thread_finished(thread) or thread.ready():
-                log.info('folder sync finished/killed',
-                         folder_name=thread.folder_name)
-                # NOTE: Greenlet is automatically removed from the group.
-
+        self.start_new_folder_sync_engines(set())
         self.folder_monitors.join()
 
 GMessage = namedtuple('GMessage', 'uid g_metadata flags labels throttled')

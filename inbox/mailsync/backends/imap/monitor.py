@@ -21,17 +21,21 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
 
     Parameters
     ----------
-    poll_frequency: Integer
-        Seconds to wait between polling for the greenlets spawned
     heartbeat: Integer
         Seconds to wait between checking on folder sync threads.
+    refresh_frequency: Integer
+        Seconds to wait between checking for new folders to sync.
+    poll_frequency: Integer
+        Seconds to wait between polling for the greenlets spawned
     refresh_flags_max: Integer
         the maximum number of UIDs for which we'll check flags
         periodically.
 
     """
-    def __init__(self, account, heartbeat=1, poll_frequency=30,
+    def __init__(self, account,
+                 heartbeat=1, refresh_frequency=30, poll_frequency=30,
                  retry_fail_classes=[], refresh_flags_max=2000):
+        self.refresh_frequency = refresh_frequency
         self.poll_frequency = poll_frequency
         self.syncmanager_lock = db_write_lock(account.namespace.id)
         self.refresh_flags_max = refresh_flags_max
@@ -75,13 +79,13 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                                         .format(folder_name, self.account_id))
             return sync_folder_names_ids
 
-    def sync(self):
-        """ Start per-folder syncs. Only have one per-folder sync in the
-            'initial' state at a time.
-        """
-        sync_folder_names_ids = self.prepare_sync()
-        for folder_name, folder_id in sync_folder_names_ids:
-            log.info('initializing folder sync')
+    def start_new_folder_sync_engines(self, folders):
+        new_folders = set(self.prepare_sync()) - folders
+        for folder_name, folder_id in new_folders:
+            log.info('Folder sync engine started',
+                     account_id=self.account_id,
+                     folder_id=folder_id,
+                     folder_name=folder_name)
             thread = self.sync_engine_class(self.account_id,
                                             folder_name,
                                             folder_id,
@@ -91,18 +95,29 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                                             self.syncmanager_lock,
                                             self.refresh_flags_max,
                                             self.retry_fail_classes)
-            thread.start()
-            self.folder_monitors.add(thread)
-            while not thread_polling(thread) and \
-                    not thread_finished(thread) and \
-                    not thread.ready():
-                sleep(self.heartbeat)
+            self.folder_monitors.start(thread)
+            if thread.should_block:
+                while not thread_polling(thread) and \
+                        not thread_finished(thread) and \
+                        not thread.ready():
+                    sleep(self.heartbeat)
 
-            # Allow individual folder sync monitors to shut themselves down
-            # after completing the initial sync.
+            # allow individual folder sync monitors to shut themselves down
+            # after completing the initial sync
             if thread_finished(thread) or thread.ready():
-                log.info('folder sync finished/killed',
-                         folder_name=thread.folder_name)
-                # NOTE: Greenlet is automatically removed from the group.
+                log.info('Folder sync engine finished/killed',
+                         account_id=self.account_id,
+                         folder_id=folder_id,
+                         folder_name=folder_name)
+                # note: thread is automatically removed from
+                # self.folder_monitors
+            else:
+                folders.add((folder_name, folder_id))
 
-        self.folder_monitors.join()
+    def sync(self):
+        folders = set()
+
+        self.start_new_folder_sync_engines(folders)
+        while True:
+            sleep(self.refresh_frequency)
+            self.start_new_folder_sync_engines(folders)

@@ -174,6 +174,10 @@ class FolderSyncEngine(Greenlet):
         self.sync_status.publish(provider_name=self.provider_name,
                                  folder_name=self.folder_name)
 
+    @property
+    def should_block(self):
+        return True
+
     def _run(self):
         # Bind greenlet-local logging context.
         log.new(account_id=self.account_id, folder=self.folder_name)
