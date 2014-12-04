@@ -1,0 +1,157 @@
+#!/usr/bin/env python
+
+import click
+from datetime import datetime, timedelta
+import json
+from redis import StrictRedis
+import sys
+
+
+# TODO(siro): remember to keep this function up to date with the key we define
+# in inbox.status.key, otherwise this won't never work
+# I know this is ugly, but I don't like the idea of install a bunch of
+# dependencies just for a two lines function
+def ids_from_string_key(string_key):
+    return map(int, string_key.split(':'))
+
+
+def datetime_from_string(string):
+    return datetime.strptime(string, '%Y-%m-%d %H:%M:%S.%f')
+
+
+def print_sync_status_stats(accounts):
+    num_accounts = len(accounts)
+    num_alive_accounts = 0
+
+    for account_id in accounts:
+        num_alive_accounts = num_alive_accounts + accounts[account_id][0]
+
+    num_dead_accounts = num_accounts - num_alive_accounts
+
+    return {'accounts': num_accounts,
+            'alive_accounts': num_alive_accounts,
+            'dead_accounts': num_dead_accounts}
+
+
+def print_sync_status(accounts):
+    value = []
+
+    for account_id in accounts:
+        account_is_alive, provider_name, folders = accounts[account_id]
+
+        if account_is_alive:
+            continue
+
+        _value = {'account': account_id,
+                  'provider_name': provider_name,
+                  'folders': []}
+
+        for folder_id in folders:
+            folder_is_alive, folder_name, devices = folders[folder_id]
+
+            if folder_is_alive:
+                continue
+
+            __value = {'id': folder_id, 'name': folder_name, 'devices': []}
+
+            for device_id in devices:
+                __value['devices'].append({
+                    'id': device_id,
+                    'heartbeat_at': str(devices[device_id]['heartbeat_at']),
+                    'state': devices[device_id]['state']})
+
+            _value['folders'].append(__value)
+
+        value.append(_value)
+
+    return {'verbose': value}
+
+
+@click.command()
+@click.option('--alive-threshold', type=click.IntRange(60), default=60,
+              help='Alive threshold (seconds).')
+@click.option('--alive-threshold-eas', type=click.IntRange(1800), default=1920,
+              help='Alive threshold for EAS accounts (seconds).')
+@click.option('--redis-hostname', type=str,
+              help='Hostname where the Redis instance lives.')
+@click.option('--redis-port', type=int,
+              help='Port where the Redis instance listens.')
+@click.option('--redis-database', type=int,
+              help='Database where the Redis instance stores KV-pairs.')
+def main(alive_threshold, alive_threshold_eas,
+         redis_hostname, redis_port, redis_database):
+    """
+    Very basic draft script to monitor the sync status of the folder engines.
+    At the moment, it only takes into account the heartbeat and the state (if
+    any), if a folder engine row has not been updated in a while (see command
+    options), the folder engine is considered "dead" otherwise it is considered
+    "alive".
+    """
+    alive_threshold = timedelta(seconds=alive_threshold)
+    alive_threshold_eas = timedelta(seconds=alive_threshold_eas)
+    assert redis_hostname is not None
+    assert redis_port is not None
+    assert redis_database is not None
+
+    redis_client = StrictRedis(host=redis_hostname,
+                               port=redis_port,
+                               db=redis_database)
+
+    accounts = {}
+    for k in redis_client.scan_iter():
+        # this shouldn't happen since we won't use db=0 anymore
+        if k == 'ElastiCacheMasterReplicationTimestamp':
+            continue
+
+        now = datetime.utcnow()
+
+        v = redis_client.hgetall(k)
+
+        account_id, folder_id = ids_from_string_key(k)
+        account_is_alive, provider_name, folders = accounts.get(account_id,
+                                                                (True, '', {}))
+        folder_is_alive, folder_name, devices = folders.get(folder_id,
+                                                            (True, '', {}))
+
+        # a folder is alive if and only if all the devices that are syncing the
+        # folder send heartbeats regularly and are in a healthy state, this is
+        # an artifact due to EAS's weirdness
+        for device_id in v:
+            value = json.loads(v[device_id])
+
+            provider_name = value['provider_name']
+            folder_name = value['folder_name']
+            heartbeat_at = datetime_from_string(value['heartbeat_at'])
+            state = value.get('state', None)
+            action = value.get('action', None)
+
+            if provider_name != 'eas' or \
+                    (provider_name == 'eas' and action != 'ping'):
+                folder_is_alive = folder_is_alive and \
+                    (now - heartbeat_at) < alive_threshold and \
+                    (state in set([None, 'initial', 'poll']))
+            else:
+                folder_is_alive = folder_is_alive and \
+                    (now - heartbeat_at) < alive_threshold_eas and \
+                    (state in set([None, 'initial', 'poll']))
+
+            devices[int(device_id)] = {'heartbeat_at': str(heartbeat_at),
+                                       'state': state}
+
+            # an account is alive if and only if all the folders are alive
+            account_is_alive = account_is_alive and folder_is_alive
+
+            folders[folder_id] = (folder_is_alive, folder_name, devices)
+            accounts[account_id] = (account_is_alive, provider_name, folders)
+
+    report = print_sync_status_stats(accounts)
+    if report['dead_accounts'] == 0:
+        print json.dumps(report)
+        return
+    report.update(print_sync_status(accounts))
+    print json.dumps(report)
+    sys.exit(2)
+
+
+if __name__ == '__main__':
+    main()

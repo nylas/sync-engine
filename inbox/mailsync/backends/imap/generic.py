@@ -153,11 +153,6 @@ class FolderSyncEngine(Greenlet):
         self.retry_fail_classes = retry_fail_classes
         self.state = None
         self.provider_name = provider_name
-        self.sync_status = SyncStatus(self.account_id, self.folder_id)
-        self.sync_status.publish(force=True,
-                                 account_id=self.account_id,
-                                 folder_id=self.folder_id,
-                                 folder_name=self.folder_name)
 
         with mailsync_session_scope() as db_session:
             account = db_session.query(Account).get(self.account_id)
@@ -174,6 +169,10 @@ class FolderSyncEngine(Greenlet):
         }
 
         Greenlet.__init__(self)
+
+        self.sync_status = SyncStatus(self.account_id, self.folder_id)
+        self.sync_status.publish(provider_name=self.provider_name,
+                                 folder_name=self.folder_name)
 
     def _run(self):
         # Bind greenlet-local logging context.
@@ -194,22 +193,20 @@ class FolderSyncEngine(Greenlet):
         # anyway.
         saved_folder_status = self._load_state()
         # eagerly signal the sync status
-        self.sync_status.publish(force=True, state=self.state)
+        self.sync_status.publish(state=self.state)
         # NOTE: The parent ImapSyncMonitor handler could kill us at any
         # time if it receives a shutdown command. The shutdown command is
         # equivalent to ctrl-c.
         while True:
-            self.sync_status.publish()
             old_state = self.state
             try:
                 self.state = self.state_handlers[old_state]()
+                self.sync_status.publish(state=self.state)
             except UidInvalid:
                 self.state = self.state + ' uidinvalid'
             # State handlers are idempotent, so it's okay if we're
             # killed between the end of the handler and the commit.
             if self.state != old_state:
-                # eagerly publish a sync status update
-                self.sync_status.publish(force=True, state=self.state)
                 # Don't need to re-query, will auto refresh on re-associate.
                 with mailsync_session_scope() as db_session:
                     db_session.add(saved_folder_status)

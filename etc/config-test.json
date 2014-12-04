@@ -14,6 +14,7 @@
 
 "REDIS_HOSTNAME": "localhost",
 "REDIS_PORT": 6379,
+"REDIS_DATABASE": 1,
 
 "BASE_DUMP": "data/base_dump.sql",
 
