@@ -54,14 +54,14 @@ class SyncStatus(object):
 
     def __init__(self, account_id, folder_id, device_id=0,
                  alive_threshold=timedelta(seconds=60)):
+        self.key = SyncStatusKey(account_id, folder_id)
+        self.device_id = device_id
+        self.alive_threshold = alive_threshold
+        self.heartbeat_at = datetime.min
+        self.value = {}
         try:
             global redis_client
             redis_client = _get_redis_client()
-            self.key = SyncStatusKey(account_id, folder_id)
-            self.device_id = device_id
-            self.alive_threshold = alive_threshold
-            self.heartbeat_at = datetime.min
-            self.value = {}
         except Exception:
             log.error('Error while initializing the sync status',
                       account_id=account_id,
