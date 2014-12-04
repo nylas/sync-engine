@@ -1,9 +1,7 @@
 import base64
-import functools
 from collections import namedtuple
 
 import smtplib
-import gevent
 from gevent import socket
 
 from inbox.log import get_logger
@@ -13,7 +11,6 @@ from inbox.models.backends.imap import ImapAccount
 from inbox.sendmail.base import SendMailException, SendError
 from inbox.basicauth import OAuthError
 from inbox.providers import provider_info
-from inbox.util.concurrency import retry
 log = get_logger()
 
 # TODO[k]: Other types (LOGIN, XOAUTH, PLAIN-CLIENTTOKEN, CRAM-MD5)
@@ -22,20 +19,6 @@ AUTH_EXTNS = {'oauth2': 'XOAUTH2',
 
 AccountInfo = namedtuple('AccountInfo',
                          'id email provider auth_type auth_token')
-
-
-def _exc_callback():
-    gevent.sleep(5)
-    log.warning('Sending failed with exception; retrying', exc_info=True)
-
-
-def _fail_callback():
-    log.error('Max retries reached. Aborting', exc_info=True)
-
-
-smtpconn_retry = functools.partial(retry, exc_callback=_exc_callback,
-                                   fail_callback=_fail_callback,
-                                   max_count=5)
 
 
 class SMTPConnection(object):
@@ -212,7 +195,6 @@ class BaseSMTPClient(object):
                 assert self.auth_type == 'password'
                 self.auth_token = account.password
 
-    @smtpconn_retry
     def _send(self, recipients, msg):
         """ Send the email message over the network. """
         try:

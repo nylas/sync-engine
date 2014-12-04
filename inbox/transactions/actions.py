@@ -23,7 +23,7 @@ from inbox.util.misc import ProviderSpecificException
 from inbox.actions import (mark_read, mark_unread, archive, unarchive, star,
                            unstar, save_draft, delete_draft, mark_spam,
                            unmark_spam, mark_trash, unmark_trash, send_draft,
-                           send_directly, save_sent_email)
+                           send_directly, save_sent_email, handle_failed_send)
 from inbox.events.actions import (create_event, delete_event, update_event)
 
 # Global lock to ensure that only one instance of the syncback service is
@@ -52,6 +52,11 @@ ACTION_FUNCTION_MAP = {
     'update_event': update_event,
 }
 
+FAIL_HANDLER_MAP = {
+    'send_directly': handle_failed_send,
+    'send_draft': handle_failed_send
+}
+
 
 CONCURRENCY_LIMIT = 3
 ACTION_MAX_NR_OF_RETRIES = 20
@@ -60,13 +65,14 @@ ACTION_MAX_NR_OF_RETRIES = 20
 class SyncbackService(gevent.Greenlet):
     """Asynchronously consumes the action log and executes syncback actions."""
 
-    def __init__(self, poll_interval=1, chunk_size=100):
+    def __init__(self, poll_interval=1, chunk_size=100, retry_interval=30):
         semaphore_factory = lambda: BoundedSemaphore(CONCURRENCY_LIMIT)
         self.semaphore_map = defaultdict(semaphore_factory)
         self.keep_running = True
         self.running = False
         self.log = logger.new(component='syncback')
         self.poll_interval = poll_interval
+        self.retry_interval = retry_interval
         self.chunk_size = chunk_size
         self._scheduled_actions = set()
         gevent.Greenlet.__init__(self)
@@ -86,8 +92,6 @@ class SyncbackService(gevent.Greenlet):
 
             for log_entry in safer_yield_per(query, ActionLog.id, 0,
                                              self.chunk_size):
-                action_function = ACTION_FUNCTION_MAP[log_entry.action]
-
                 namespace = db_session.query(Namespace). \
                     get(log_entry.namespace_id)
 
@@ -101,9 +105,14 @@ class SyncbackService(gevent.Greenlet):
                               msg=log_entry.action)
                 semaphore = self.semaphore_map[(namespace.account_id,
                                                 log_entry.action)]
-                gevent.spawn(syncback_worker, semaphore, action_function,
-                             log_entry.id, log_entry.record_id,
-                             namespace.account_id, syncback_service=self,
+                gevent.spawn(syncback_worker,
+                             semaphore=semaphore,
+                             action=log_entry.action,
+                             action_log_id=log_entry.id,
+                             record_id=log_entry.record_id,
+                             account_id=namespace.account_id,
+                             syncback_service=self,
+                             retry_interval=self.retry_interval,
                              extra_args=log_entry.extra_args)
 
     def remove_from_schedule(self, log_entry_id):
@@ -141,8 +150,10 @@ class SyncbackService(gevent.Greenlet):
             gevent.sleep()
 
 
-def syncback_worker(semaphore, func, action_log_id, record_id, account_id,
+def syncback_worker(semaphore, action, action_log_id, record_id, account_id,
                     syncback_service, retry_interval=30, extra_args=None):
+    func = ACTION_FUNCTION_MAP[action]
+
     with semaphore:
         log = logger.new(record_id=record_id, action_log_id=action_log_id,
                          action=func, account_id=account_id,
@@ -181,10 +192,13 @@ def syncback_worker(semaphore, func, action_log_id, record_id, account_id,
                 action_log_entry.retries += 1
 
                 if action_log_entry.retries == ACTION_MAX_NR_OF_RETRIES:
-                    log.error('Max retries reached, giving up.',
-                              action_id=action_log_id, account_id=account_id)
+                    log.critical('Max retries reached, giving up.',
+                                 action_id=action_log_id,
+                                 account_id=account_id, exc_info=True)
                     action_log_entry.status = 'failed'
-
+                    if action in FAIL_HANDLER_MAP:
+                        fail_handler = FAIL_HANDLER_MAP[action]
+                        fail_handler(account_id, record_id, db_session)
                 db_session.commit()
 
             # Wait for a bit before retrying

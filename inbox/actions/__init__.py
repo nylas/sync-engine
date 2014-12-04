@@ -292,3 +292,11 @@ def _send(account_id, draft_id, db_session):
         draft.thread.remove_tag(draft_tag)
 
     return draft
+
+
+def handle_failed_send(account_id, draft_id, db_session):
+    draft = db_session.query(Message).get(draft_id)
+    if draft is None or not draft.is_draft or draft.is_sent:
+        # If object was concurrently deleted or otherwise sent, do nothing.
+        return
+    draft.state = 'sending failed'

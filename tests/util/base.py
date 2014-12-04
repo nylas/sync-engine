@@ -211,8 +211,12 @@ class MockSMTPClient(object):
     def __init__(self, *args, **kwargs):
         pass
 
-    def send_new(*args, **kwargs):
-        pass
+    def send_new(self, db_session, draft, recipients):
+        # Special mock case to test sending failure handling.
+        if 'fail@example.com' in [email for phrase, email in recipients.to]:
+            raise Exception
+        else:
+            pass
 
     def send_reply(*args, **kwargs):
         pass
@@ -242,7 +246,7 @@ def syncback_service():
     # other tests. Can we make this not happen?
     monkey.patch_all(aggressive=False)
     from inbox.transactions.actions import SyncbackService
-    s = SyncbackService(poll_interval=0.1)
+    s = SyncbackService(poll_interval=0, retry_interval=0)
     s.start()
     yield s
     s.stop()

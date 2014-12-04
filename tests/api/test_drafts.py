@@ -306,6 +306,15 @@ def test_send(patch_network_functions, api_client, example_draft,
     assert message['object'] == 'message'
 
 
+def test_handle_sending_failures(patch_network_functions, api_client,
+                                 syncback_service):
+    r = api_client.post_data('/send', {'to': [{'email': 'fail@example.com'}]})
+    draft_public_id = json.loads(r.data)['id']
+    gevent.sleep(2)
+    r = api_client.get_data('/drafts/{}'.format(draft_public_id))
+    assert r['state'] == 'sending failed'
+
+
 def test_conflicting_updates(api_client):
     original_draft = {
         'subject': 'parent draft',
