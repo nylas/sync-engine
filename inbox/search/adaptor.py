@@ -175,6 +175,12 @@ class BaseSearchAdaptor(object):
         """
         index_args = []
 
+        def raise_error(failure):
+            for op_type, info in failure.iteritems():
+                if info.get('status') not in [None, 404]:
+                    return True
+            return False
+
         for op, object_repr in objects:
             args = dict(_op_type=op,
                         _index=self.index_id,
@@ -202,7 +208,9 @@ class BaseSearchAdaptor(object):
                            doc_type=self.doc_type,
                            object_ids=[i['_id'] for i in index_args],
                            failures=failures)
-            raise SearchEngineError('Bulk index failure!')
+
+            if any(raise_error(f) for f in failures):
+                raise SearchEngineError('Bulk index failure!')
 
         return count
 
