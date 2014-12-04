@@ -31,17 +31,31 @@ def _folders_for_labels(g_labels, account, db_session):
     """Given a set of Gmail label strings, return the set of associated Folder
     objects. Creates new (un-added, uncommitted) Folder instances if needed."""
     labels = {l.lstrip('\\').lower() for l in g_labels}
+
+    # The problem here is that Gmail's attempt to squash labels and
+    # IMAP folders into the same abstraction doesn't work perfectly. In
+    # particular, there is a '[Gmail]/Sent' folder, but *also* a 'Sent'
+    # label, and so on. We handle this by only maintaining one folder
+    # object that encapsulates both of these. If a Gmail user does not
+    # have these folders enabled via IMAP, we create Folder rows
+    # with no 'name' attribute and fill in the 'name' if the account
+    # is later reconfigured.
     special_folders = {
         'inbox': account.inbox_folder,
         'sent': account.sent_folder,
         'draft': account.drafts_folder,
+        'starred': account.starred_folder,
         'important': account.important_folder,
     }
 
     folders = set()
     for label in labels:
         if label in special_folders:
-            folders.add(special_folders[label])
+            folder = special_folders[label]
+            if folder is None:
+                folder = Folder.find_or_create(db_session, account, None,
+                                               label)
+            folders.add(folder)
         else:
             folders.add(
                 Folder.find_or_create(db_session, account, label))
