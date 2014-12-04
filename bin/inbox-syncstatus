@@ -58,7 +58,8 @@ def print_sync_status(accounts):
                 __value['devices'].append({
                     'id': device_id,
                     'heartbeat_at': str(devices[device_id]['heartbeat_at']),
-                    'state': devices[device_id]['state']})
+                    'state': devices[device_id]['state'],
+                    'action': devices[device_id]['action']})
 
             _value['folders'].append(__value)
 
@@ -136,7 +137,8 @@ def main(alive_threshold, alive_threshold_eas,
                     (state in set([None, 'initial', 'poll']))
 
             devices[int(device_id)] = {'heartbeat_at': str(heartbeat_at),
-                                       'state': state}
+                                       'state': state,
+                                       'action': action}
 
             # an account is alive if and only if all the folders are alive
             account_is_alive = account_is_alive and folder_is_alive
