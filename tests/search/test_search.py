@@ -43,6 +43,8 @@ def search_engine(db, default_namespace):
 #                               api_client):
 #     from inbox.models import Transaction
 
+#     sleep(5)
+
 #     q = db.session.query(Transaction).filter(
 #         Transaction.namespace_id == default_namespace.id)
 
@@ -77,13 +79,12 @@ def test_index_creation(db, default_namespace, search_engine):
 
     # Test index mappings
     thread_mapping = search_engine.threads.get_mapping()
-    assert thread_mapping[namespace_public_id]['mappings']['thread'] == \
-        THREAD_MAPPING
+    assert thread_mapping[namespace_public_id]['mappings']['thread']['properties'] == \
+        THREAD_MAPPING['properties']
 
     message_mapping = search_engine.messages.get_mapping()
-    assert all(item in
-               message_mapping[namespace_public_id]['mappings']['message'].items()
-               for item in MESSAGE_MAPPING.items())
+    assert all(item in message_mapping[namespace_public_id]['mappings']['message']['properties']
+               for item in MESSAGE_MAPPING['properties'])
 
 
 def test_message_search(db, api_client, search_engine):
@@ -101,46 +102,55 @@ def test_message_search(db, api_client, search_engine):
     # No query i.e. return all
     resp = api_client.post_data(endpoint, {})
     assert resp.status_code == 200
-    results = json.loads(resp.data)
-    assert len(results) == 16
+    result_dict = json.loads(resp.data)
+    total = result_dict['total']
+    results = result_dict['results']
+    assert total == 16 and len(results) == 16
     third_msg_id = results[2]['object']['id']
 
     resp = api_client.post_data(endpoint + '?limit={}&offset={}'.
                                 format(2, 2), {})
     assert resp.status_code == 200
-    results = json.loads(resp.data)
-    assert len(results) == 2
+    result_dict = json.loads(resp.data)
+    total = result_dict['total']
+    results = result_dict['results']
+    assert total > 2 and len(results) == 2
     assert results[0]['object']['id'] == third_msg_id
 
     # Simple field match-phrase queries:
     data = dict(query=[{'thread_id': 'e6z26rjrxs2gu8at6gsa8svr1'}])
     resp = api_client.post_data(endpoint, data)
     assert resp.status_code == 200
-    results = json.loads(resp.data)
+    result_dict = json.loads(resp.data)
+    results = result_dict['results']
     assert len(results) == 1
 
     data = dict(query=[{'cc': cc_addr}])
     resp = api_client.post_data(endpoint, data)
     assert resp.status_code == 200
-    results = json.loads(resp.data)
+    result_dict = json.loads(resp.data)
+    results = result_dict['results']
     assert len(results) == 1
 
     data = dict(query=[{'bcc': bcc_addr}])
     resp = api_client.post_data(endpoint, data)
     assert resp.status_code == 200
-    results = json.loads(resp.data)
+    result_dict = json.loads(resp.data)
+    results = result_dict['results']
     assert len(results) == 0
 
     data = dict(query=[{'from': from_addr}])
     resp = api_client.post_data(endpoint, data)
     assert resp.status_code == 200
-    results = json.loads(resp.data)
+    result_dict = json.loads(resp.data)
+    results = result_dict['results']
     assert len(results) == 1
 
     data = dict(query=[{'subject': subject}])
     resp = api_client.post_data(endpoint, data)
     assert resp.status_code == 200
-    results = json.loads(resp.data)
+    result_dict = json.loads(resp.data)
+    results = result_dict['results']
     assert len(results) == 1
 
     data = dict(query=[{
@@ -148,32 +158,37 @@ def test_message_search(db, api_client, search_engine):
         'to': to_addr}])
     resp = api_client.post_data(endpoint, data)
     assert resp.status_code == 200
-    results = json.loads(resp.data)
+    result_dict = json.loads(resp.data)
+    results = result_dict['results']
     assert len(results) == 1
 
     data = dict(query=[{'to': 'inboxapptest@gmail.com'}])
     resp = api_client.post_data(endpoint + '?limit={}&offset={}'.
                                 format(2, 1), data)
     assert resp.status_code == 200
-    results = json.loads(resp.data)
+    result_dict = json.loads(resp.data)
+    results = result_dict['results']
     assert len(results) == 2
 
     data = dict(query=[{'body': 'Google Search'}])
     resp = api_client.post_data(endpoint, data)
     assert resp.status_code == 200
-    results = json.loads(resp.data)
+    result_dict = json.loads(resp.data)
+    results = result_dict['results']
     assert len(results) == 1
 
     # Simple field match queries:
     data = dict(query=[{'body': 'reproduce paste'}])
     resp = api_client.post_data(endpoint, data)
     assert resp.status_code == 200
-    match_phrase_results = json.loads(resp.data)
+    result_dict = json.loads(resp.data)
+    match_phrase_results = result_dict['results']
 
     data = dict(query=[{'body': ['reproduce', 'paste']}])
     resp = api_client.post_data(endpoint, data)
     assert resp.status_code == 200
-    match_results = json.loads(resp.data)
+    result_dict = json.loads(resp.data)
+    match_results = result_dict['results']
 
     assert len(match_phrase_results) == 0 and len(match_results) == 1
 
@@ -181,7 +196,8 @@ def test_message_search(db, api_client, search_engine):
     data = dict(query=[{'all': 'yoga'}])
     resp = api_client.post_data(endpoint, data)
     assert resp.status_code == 200
-    default_results = json.loads(resp.data)
+    result_dict = json.loads(resp.data)
+    default_results = result_dict['results']
     assert len(default_results) >= 5
 
     default = [(r['object']['id'], r['relevance']) for r in default_results]
@@ -189,7 +205,8 @@ def test_message_search(db, api_client, search_engine):
     data = dict(query=[{'all': 'yoga', 'weights': {'from': 2}}])
     resp = api_client.post_data(endpoint, data)
     assert resp.status_code == 200
-    rescored_results = json.loads(resp.data)
+    result_dict = json.loads(resp.data)
+    rescored_results = result_dict['results']
     assert len(rescored_results) >= 5
 
     rescored = [(r['object']['id'], r['relevance']) for r in rescored_results]
@@ -216,33 +233,40 @@ def test_thread_search(db, api_client, search_engine):
     # No query i.e. return all
     resp = api_client.post_data(endpoint, {})
     assert resp.status_code == 200
-    results = json.loads(resp.data)
-    assert len(results) == 16
+    result_dict = json.loads(resp.data)
+    total = result_dict['total']
+    results = result_dict['results']
+    assert total == 16 and len(results) == 16
 
     # Simple field match-phrase queries:
     data = dict(query=[{'id': 'e6z26rjrxs2gu8at6gsa8svr1'}])
     resp = api_client.post_data(endpoint, data)
     assert resp.status_code == 200
-    results = json.loads(resp.data)
+    result_dict = json.loads(resp.data)
+    results = result_dict['results']
     assert len(results) == 1
 
     data = dict(query=[{'subject': subject}])
     resp = api_client.post_data(endpoint, data)
     assert resp.status_code == 200
-    results = json.loads(resp.data)
+    result_dict = json.loads(resp.data)
+    results = result_dict['results']
     assert len(results) == 1
 
     data = dict(query=[{'tags': 'inbox'}])
     resp = api_client.post_data(endpoint, data)
     assert resp.status_code == 200
-    results = json.loads(resp.data)
+    result_dict = json.loads(resp.data)
+    results = result_dict['results']
     assert len(results) == 10
 
     data = dict(query=[{'tags': 'inbox'}])
     resp = api_client.post_data(endpoint + '?limit={}'.format(1), data)
     assert resp.status_code == 200
-    results = json.loads(resp.data)
-    assert len(results) == 1
+    result_dict = json.loads(resp.data)
+    total = result_dict['total']
+    results = result_dict['results']
+    assert total > 1 and len(results) == 1
 
     # TODO[k]:
     # Different weights
@@ -281,7 +305,8 @@ def test_search_response(db, api_client, search_engine):
     resp = api_client.post_data(endpoint + '?limit={}&offset={}'.
                                 format(1, 0), {})
     assert resp.status_code == 200
-    results = json.loads(resp.data)
+    result_dict = json.loads(resp.data)
+    results = result_dict['results']
     assert len(results) == 1
 
     search_repr = results[0]['object']
@@ -299,7 +324,8 @@ def test_search_response(db, api_client, search_engine):
     resp = api_client.post_data(endpoint + '?limit={}&offset={}'.
                                 format(1, 0), {})
     assert resp.status_code == 200
-    results = json.loads(resp.data)
+    result_dict = json.loads(resp.data)
+    results = result_dict['results']
     assert len(results) == 1
 
     search_repr = results[0]['object']

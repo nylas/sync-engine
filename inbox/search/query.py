@@ -34,17 +34,18 @@ class DSLQueryEngine(object):
         """
         raw_results = es_results['hits']
 
-        #total = raw_results['total']
+        # Total number of hits
+        total = raw_results['total']
 
+        # Hits returned (#(hits) <= `size` passed in the request)
         results = []
         for h in raw_results['hits']:
-            # TODO[k]: snippet too? with highlighting
             r = dict(relevance=h['_score'],
                      object=h['_source'])
 
             results.append(r)
 
-        return results
+        return total, results
 
 
 class Query(object):

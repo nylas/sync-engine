@@ -115,7 +115,9 @@ To get all messages whose bodies contain the word "Red", the word "Rock", or bot
 
 # The search response
 
-A search returns a list of results.
+A search returns the total count of matches and the list of results.
+Note that the number of results returned (i.e. the length of the list of results) is determined by the `limit` param specified in the request,
+and defaults to 100.
 Each result is a JSON object that contains an:
 "object" - the Inbox API representation of the message/thread.
 For example, a message result object would contain to, from, cc, bcc, subject, body etc. fields

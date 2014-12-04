@@ -231,8 +231,8 @@ class BaseSearchAdaptor(object):
 
         self._log_query(query, raw_results)
 
-        api_results = self.query_engine.process_results(raw_results)
-        return api_results
+        total, api_results = self.query_engine.process_results(raw_results)
+        return dict(total=total, results=api_results)
 
     @wrap_es_errors
     def get_mapping(self):

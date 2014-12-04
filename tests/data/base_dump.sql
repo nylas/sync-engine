@@ -143,7 +143,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('8c2406df6f8');
+INSERT INTO `alembic_version` VALUES ('526eefc1d600');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1282,6 +1282,37 @@ INSERT INTO `part` VALUES (1,1,0,NULL,NULL,0,1,'2014-09-06 02:07:52','2014-09-06
 UNLOCK TABLES;
 
 --
+-- Table structure for table `searchindexcursor`
+--
+
+DROP TABLE IF EXISTS `searchindexcursor`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `searchindexcursor` (
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `transaction_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `ix_searchindexcursor_created_at` (`created_at`),
+  KEY `ix_searchindexcursor_deleted_at` (`deleted_at`),
+  KEY `ix_searchindexcursor_updated_at` (`updated_at`),
+  KEY `ix_searchindexcursor_transaction_id` (`transaction_id`),
+  CONSTRAINT `searchindexcursor_ibfk_1` FOREIGN KEY (`transaction_id`) REFERENCES `transaction` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `searchindexcursor`
+--
+
+LOCK TABLES `searchindexcursor` WRITE;
+/*!40000 ALTER TABLE `searchindexcursor` DISABLE KEYS */;
+/*!40000 ALTER TABLE `searchindexcursor` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `secret`
 --
 
@@ -1614,4 +1645,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-11-01 21:12:56
+-- Dump completed on 2014-12-04  1:08:43
