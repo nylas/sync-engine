@@ -102,15 +102,19 @@ def main(alive_threshold, alive_threshold_eas,
                                db=redis_database)
 
     accounts = {}
-    for k in redis_client.scan_iter():
+    keys = []
+    pipe = redis_client.pipeline()
+    for k in redis_client.scan_iter(count=100):
         # this shouldn't happen since we won't use db=0 anymore
         if k == 'ElastiCacheMasterReplicationTimestamp':
             continue
+        pipe.hgetall(k)
+        keys.append(k)
 
-        now = datetime.utcnow()
+    results = pipe.execute()
+    now = datetime.utcnow()
 
-        v = redis_client.hgetall(k)
-
+    for (k, v) in zip(keys, results):
         account_id, folder_id = ids_from_string_key(k)
         account_is_alive, provider_name, folders = accounts.get(account_id,
                                                                 (True, '', {}))
