@@ -80,7 +80,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             return sync_folder_names_ids
 
     def start_new_folder_sync_engines(self, folders):
-        new_folders = set(self.prepare_sync()) - folders
+        new_folders = [f for f in self.prepare_sync() if f not in folders]
         for folder_name, folder_id in new_folders:
             log.info('Folder sync engine started',
                      account_id=self.account_id,
