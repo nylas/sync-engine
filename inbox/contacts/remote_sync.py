@@ -10,7 +10,8 @@ __provider_map__ = {'gmail': GoogleContactsProvider}
 
 
 class ContactSync(BaseSync):
-    """Per-account contact sync engine.
+    """
+    Per-account contact sync engine.
 
     Parameters
     ----------
@@ -25,6 +26,7 @@ class ContactSync(BaseSync):
     ---------
     log: logging.Logger
         Logging handler.
+
     """
     def __init__(self, provider_name, account_id, namespace_id,
                  poll_frequency=300):

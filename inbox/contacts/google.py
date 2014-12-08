@@ -22,7 +22,8 @@ SOURCE_APP_NAME = 'InboxApp Contact Sync Engine'
 
 
 class GoogleContactsProvider(BaseSyncProvider):
-    """A utility class to fetch and parse Google contact data for the specified
+    """
+    A utility class to fetch and parse Google contact data for the specified
     account using the Google Contacts API.
 
     Parameters
@@ -39,6 +40,7 @@ class GoogleContactsProvider(BaseSyncProvider):
         Google API client to do the actual data fetching.
     log: logging.Logger
         Logging handler.
+
     """
     PROVIDER_NAME = 'google'
 
@@ -132,7 +134,8 @@ class GoogleContactsProvider(BaseSyncProvider):
                        raw_data=raw_data)
 
     def get_items(self, sync_from_time=None, max_results=100000):
-        """Fetches and parses fresh contact data.
+        """
+        Fetches and parses fresh contact data.
 
         Parameters
         ----------
@@ -153,6 +156,7 @@ class GoogleContactsProvider(BaseSyncProvider):
         ValidationError, PermissionsError
             If no data could be fetched because of invalid credentials or
             insufficient permissions, respectively.
+
         """
         query = gdata.contacts.client.ContactsQuery()
         # TODO(emfree): Implement batch fetching

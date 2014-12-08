@@ -16,6 +16,7 @@ BaseMailSyncMonitor class.
 `PROVIDER` and `SYNC_MONITOR_CLS` variables must be defined in a direct
 submodule of `backends`, and that top-level module must import the
 referenced class.
+
 """
 # Allow out-of-tree backend submodules.
 from pkgutil import extend_path

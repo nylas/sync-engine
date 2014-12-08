@@ -141,6 +141,7 @@ def load_modules(base_name, base_path):
     -------
     list
         All the modules in the base module tree.
+
     """
     modules = []
 
@@ -161,6 +162,7 @@ def register_backends(base_name, base_path):
     """
     Dynamically loads all packages contained within thread
     backends module, including those by other module install paths
+
     """
     modules = load_modules(base_name, base_path)
 
