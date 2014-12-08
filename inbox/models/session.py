@@ -149,6 +149,9 @@ class InboxSession(object):
     def expunge(self, obj):
         self._session.expunge(obj)
 
+    def merge(self, obj):
+        return self._session.merge(obj)
+
     @property
     def no_autoflush(self):
         return self._session.no_autoflush
