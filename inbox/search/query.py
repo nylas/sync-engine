@@ -32,6 +32,8 @@ class DSLQueryEngine(object):
         Extract the Inbox API search results from the Elasticsearch results.
 
         """
+        from inbox.search.util.misc import process_datetime
+
         raw_results = es_results['hits']
 
         # Total number of hits
@@ -40,8 +42,9 @@ class DSLQueryEngine(object):
         # Hits returned (#(hits) <= `size` passed in the request)
         results = []
         for h in raw_results['hits']:
+            source = process_datetime(h['_source'])
             r = dict(relevance=h['_score'],
-                     object=h['_source'])
+                     object=source)
 
             results.append(r)
 
