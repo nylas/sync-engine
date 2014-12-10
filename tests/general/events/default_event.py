@@ -29,7 +29,7 @@ def default_event(db_session):
                all_day=False,
                provider_name='inbox',
                raw_data='',
-               source='remote')
+               source='local')
 
     db_session.add(ev)
     db_session.commit()
