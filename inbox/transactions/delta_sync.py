@@ -103,6 +103,7 @@ def format_transactions_after_pointer(namespace_id, pointer, db_session,
         object_identifier = (transaction.object_type, transaction.record_id)
         if object_identifier in object_identifiers:
             continue
+
         object_identifiers.add(object_identifier)
         delta = format_transaction_fn(transaction)
         deltas.append(delta)

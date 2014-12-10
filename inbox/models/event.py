@@ -33,6 +33,14 @@ _LENGTHS = {'location': LOCATION_MAX_LEN,
 class Event(MailSyncBase, HasRevisions, HasPublicID):
     """Data for events."""
     API_OBJECT_NAME = 'event'
+
+    # Don't surface 'remote' events in the transaction log since
+    # they're an implementation detail we don't want our customers
+    # to worry about.
+    @property
+    def should_suppress_transaction_creation(self):
+        return self.source == 'remote'
+
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           nullable=False)
 
