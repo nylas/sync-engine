@@ -1,6 +1,4 @@
 """Provide Google Calendar events."""
-
-from copy import copy
 import httplib2
 import dateutil.parser as date_parser
 
@@ -301,11 +299,18 @@ class GoogleEventsProvider(BaseEventProvider):
         resp = service.events().list(
                 calendarId=provider_calendar_name).execute()
 
-        extra = copy(resp)
-        del extra['items']
+        extra = {k: v for k, v in resp.iteritems() if k != 'items'}
+        raw_events = resp['items']
+        # The Google calendar API may return paginated results; make sure we
+        # get all of them.
+        while 'nextPageToken' in resp:
+            resp = service.events().list(
+                calendarId=provider_calendar_name,
+                pageToken=resp['nextPageToken']).execute()
+            raw_events += resp['items']
 
-        for response_event in resp['items']:
-            yield (calendar_id, response_event, extra)
+        for event in raw_events:
+            yield (calendar_id, event, extra)
 
     def fetch_items(self, sync_from_time=None):
         """Fetch all events for all calendars. This function proxies
