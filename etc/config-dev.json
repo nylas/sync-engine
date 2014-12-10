@@ -16,6 +16,9 @@
 "REDIS_PORT": 6379,
 "REDIS_DATABASE": 1,
 
+"ALIVE_THRESHOLD": 180,
+"ALIVE_THRESHOLD_EAS": 420,
+
 "GOOGLE_OAUTH_REDIRECT_URI": "urn:ietf:wg:oauth:2.0:oob",
 "MS_LIVE_OAUTH_REDIRECT_URI": "https://login.live.com/oauth20_desktop.srf",
 
