@@ -83,7 +83,7 @@ log = get_logger()
 from inbox.crispin import connection_pool, retry_crispin
 from inbox.models import Folder, Account, Message
 from inbox.models.backends.imap import (ImapFolderSyncStatus, ImapThread,
-                                        ImapUid)
+                                        ImapUid, ImapFolderInfo)
 from inbox.mailsync.exc import UidInvalid
 from inbox.mailsync.backends.imap import common
 from inbox.mailsync.backends.base import (create_db_objects,
@@ -305,6 +305,20 @@ class FolderSyncEngine(Greenlet):
         sleep(self.poll_frequency)
 
     def resync_uids_impl(self):
+        # First check if the changed UIDVALIDITY we got from the remote was
+        # spurious.
+        with mailsync_session_scope() as db_session:
+            imap_folder_info_entry = db_session.query(ImapFolderInfo). \
+                filter(ImapFolderInfo.account_id == self.account_id,
+                       ImapFolderInfo.folder_id == self.folder_id).one()
+            saved_uidvalidity = imap_folder_info_entry.uidvalidity
+        with self.conn_pool.get() as crispin_client:
+            crispin_client.select_folder(self.folder_name, lambda *args: True)
+            if crispin_client.selected_uidvalidity <= saved_uidvalidity:
+                log.debug('UIDVALIDITY unchanged')
+                return
+
+        # TODO: Implement actual UID resync.
         raise NotImplementedError
 
     @retry_crispin
@@ -505,7 +519,6 @@ def uidvalidity_cb(account_id, folder_name, select_info):
         saved_uidvalidity = or_none(saved_folder_info, lambda i:
                                     i.uidvalidity)
     selected_uidvalidity = select_info['UIDVALIDITY']
-
     if saved_folder_info:
         is_valid = common.uidvalidity_valid(account_id,
                                             selected_uidvalidity,
