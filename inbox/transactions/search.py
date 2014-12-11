@@ -1,4 +1,6 @@
+import datetime
 from collections import defaultdict
+import calendar
 
 from gevent import Greenlet, sleep
 
@@ -136,6 +138,8 @@ def _format_transaction_for_search(transaction):
         operation = 'delete'
         attributes = dict(id=transaction.object_public_id)
 
+    attributes = _process_attributes(attributes)
+
     delta = {
         'namespace_id': transaction.namespace.public_id,
         'object': transaction.object_type,
@@ -146,3 +150,18 @@ def _format_transaction_for_search(transaction):
     }
 
     return delta
+
+
+def _process_attributes(source):
+    """
+    Convert the default datetime format to Unix timestamp format.
+    So for example, 2014-12-11 00:07:06 is converted to 1418256426.
+
+    """
+    # Fields would be Message.date, Thread.last_message_timestamp,
+    # Thread.first_message_timestamp
+    for field, value in source.iteritems():
+        if isinstance(value, datetime.datetime):
+            source[field] = calendar.timegm(value.utctimetuple())
+
+    return source
