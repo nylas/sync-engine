@@ -12,6 +12,7 @@ from inbox.models.participant import Participant
 from inbox.models.folder import Folder, FolderItem
 from inbox.models.message import Message
 from inbox.models.namespace import Namespace
+from inbox.models.search import SearchIndexCursor
 from inbox.models.tag import Tag
 from inbox.models.thread import Thread, TagItem
 from inbox.models.transaction import Transaction
@@ -23,5 +24,5 @@ __all__ = ['Account', 'ActionLog', 'MailSyncBase', 'Block', 'Part',
            'MessageContactAssociation', 'Contact', 'Date', 'DateSpan', 'Event',
            'Folder', 'FolderItem', 'Message', 'Namespace', 'Calendar',
            'Tag', 'TagItem', 'Thread', 'Time', 'TimeSpan', 'Transaction',
-           'Participant', 'When', 'MAX_FOLDER_NAME_LENGTH',
-           'backend_module_registry']
+           'Participant', 'When', 'SearchIndexCursor',
+           'MAX_FOLDER_NAME_LENGTH', 'backend_module_registry']
