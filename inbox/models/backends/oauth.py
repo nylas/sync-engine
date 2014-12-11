@@ -79,7 +79,7 @@ class OAuthAccount(object):
             tok, expires = __volatile_tokens__[self.id]
             return expires
         else:
-            self.access_token()
+            self.access_token
             tok, expires = __volatile_tokens__[self.id]
             return expires
 
