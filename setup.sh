@@ -2,12 +2,12 @@
 
 set -e
 
-configure_db=true
+prod=false
 while getopts "p" opt; do
     case $opt in
         p)
-            configure_db=false
-        ;;
+            prod=true
+            ;;
     esac
 done
 
@@ -123,23 +123,27 @@ if ! pkg-config --atleast-version="${libsodium_ver}" libsodium; then
     fi
 fi
 
-color "35;1" "Ensuring redis version..."
-redis_version=2.8.17
-color "35;1" "Downloading and installing redis-${redis_version}..."
-curl -L -O --progress-bar http://download.redis.io/releases/redis-${redis_version}.tar.gz
-echo "913479f9d2a283bfaadd1444e17e7bab560e5d1e *redis-${redis_version}.tar.gz" | sha1sum -c --quiet || exit 1
-tar -xf redis-${redis_version}.tar.gz
-cd redis-${redis_version}
-make -j2 || exit 1
-rm -rf /usr/local/stow/redis-${redis_version}
-make PREFIX=/usr/local/stow/redis-${redis_version} install
-stow -d /usr/local/stow/ -R redis-${redis_version}
-cd utils
-echo -e -n "\n\n\n\n\n\n" | ./install_server.sh
-rm -f /tmp/6379.conf
-cd ../..
-rm -rf redis-${redis_version} redis-${redis_version}.tar.gz
-color '34;1' 'redis-'${redis_version}' installed.'
+if ! ${prod}; then
+    color "35;1" "Ensuring redis version..."
+    redis_version=2.8.17
+    if ! [ -e /usr/local/stow/redis-${redis_version} ]; then
+        color "35;1" "Downloading and installing redis-${redis_version}..."
+        curl -L -O --progress-bar http://download.redis.io/releases/redis-${redis_version}.tar.gz
+        echo "913479f9d2a283bfaadd1444e17e7bab560e5d1e *redis-${redis_version}.tar.gz" | sha1sum -c --quiet || exit 1
+        tar -xf redis-${redis_version}.tar.gz
+        cd redis-${redis_version}
+        make -j2 || exit 1
+        rm -rf /usr/local/stow/redis-${redis_version}
+        make PREFIX=/usr/local/stow/redis-${redis_version} install
+        stow -d /usr/local/stow/ -R redis-${redis_version}
+        cd utils
+        echo -e -n "\n\n\n\n\n\n" | ./install_server.sh
+        rm -f /tmp/6379.conf
+        cd ../..
+        rm -rf redis-${redis_version} redis-${redis_version}.tar.gz
+    fi
+    color '34;1' 'redis-'${redis_version}' installed.'
+fi
 
 color '35;1' 'Ensuring setuptools and pip versions...'
 # If python-setuptools is actually the old 'distribute' fork of setuptools,
@@ -170,7 +174,7 @@ fi
 color '35;1' 'Finished installing dependencies.'
 
 mkdir -p /etc/inboxapp
-chown $SUDO_UID /etc/inboxapp
+chown $SUDO_UID:$SUDO_GID /etc/inboxapp
 
 color '35;1' 'Copying default development configuration to /etc/inboxapp'
 src=./etc/config-dev.json
@@ -193,7 +197,7 @@ fi
 # make sure that users upgrading from a previous release get file permissions
 # right
 chmod 0644 $dest
-chown $SUDO_UID $dest
+chown $SUDO_UID:$SUDO_GID $dest
 
 color '35;1' 'Copying default secrets configuration to /etc/inboxapp'
 src=./etc/secrets-dev.yml
@@ -216,9 +220,9 @@ fi
 # make sure that users upgrading from a previous release get file permissions
 # right
 chmod 0600 $dest
-chown $SUDO_UID $dest
+chown $SUDO_UID:$SUDO_GID $dest
 
-if $configure_db; then
+if ! $prod; then
     # Mysql config
     color '35;1' 'Copying default mysql configuration to /etc/mysql/conf.d'
     src=./etc/my.cnf
@@ -257,10 +261,10 @@ apt-get -y purge build-essential
 apt-get -y autoremove
 
 mkdir -p /var/lib/inboxapp
-chown $SUDO_UID /var/lib/inboxapp
+chown $SUDO_UID:$SUDO_GID /var/lib/inboxapp
 
 mkdir -p /var/log/inboxapp
-chown $SUDO_UID /var/log/inboxapp
+chown $SUDO_UID:$SUDO_GID /var/log/inboxapp
 
 git config branch.master.rebase true
 
