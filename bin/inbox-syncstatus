@@ -66,15 +66,17 @@ def print_sync_status(accounts, verbose):
 @click.option('--hostname', type=str)
 @click.option('--port', type=int, default=6379)
 @click.option('--database', type=click.IntRange(1, 15), default=1)
+@click.option('--account-id', type=int)
 @click.option('--pretty', is_flag=True)
 @click.option('--verbose', is_flag=True)
-def main(hostname, port, database, pretty, verbose):
+def main(hostname, port, database, account_id, pretty, verbose):
     if hostname:
         accounts = get_sync_status(hostname=hostname,
                                    port=port,
-                                   database=database)
+                                   database=database,
+                                   account_id=account_id)
     else:
-        accounts = get_sync_status()
+        accounts = get_sync_status(account_id=account_id)
 
     if not pretty:
         json_dumps = partial(json.dumps, sort_keys=True)
