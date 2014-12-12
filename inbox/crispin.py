@@ -525,59 +525,63 @@ class CrispinClient(object):
                 uid_chunk, ['BODY.PEEK[HEADER]']))
         return headers
 
-    def delete_draft(self, inbox_uid):
-        """
-        Move the message from the "Drafts" folder and into the "Trash" folder.
-
-        Parameters
-        ----------
-        inbox_uid : str
-            The public_id of the draft we want to delete on the remote,
-            which is its X-INBOX-ID header too.
-
-        Notes
-        -----
-        Need the public_id == inbox_uid since that is the only unique
-        identifier for the message that both we and the remote know.
-
-        """
-        assert inbox_uid
-
-        criteria = ['DRAFT', 'NOT DELETED']
-        all_draft_uids = self.conn.search(criteria)
-        # It would be nice to just search by X-INBOX-ID header too, but some
-        # backends don't support that. So fetch the header for each draft and
-        # see if we can find one that matches.
+    def find_by_header(self, header_name, header_value):
+        """Find all uids in the selected folder with the given header value."""
+        all_uids = self.all_uids()
+        # It would be nice to just search by header too, but some backends
+        # don't support that, at least not if you want to search by X-INBOX-ID
+        # header. So fetch the header for each draft and see if we
+        # can find one that matches.
         # TODO(emfree): are there other ways we can narrow the result set a
         # priori (by subject or date, etc.)
-        matching_draft_headers = self.fetch_headers(all_draft_uids)
+        matching_draft_headers = self.fetch_headers(all_uids)
+        results = []
         for uid, response in matching_draft_headers.iteritems():
             headers = response['BODY[HEADER]']
             parser = HeaderParser()
-            x_inbox_id = parser.parsestr(headers).get('X-Inbox-Id')
-            if x_inbox_id == inbox_uid:
-                # TODO: do we need this part?
-                # Remove IMAP `Draft` label
-                self.conn.remove_flags([uid], ['\Draft'])
+            header = parser.parsestr(headers).get(header_name)
+            if header == header_value:
+                results.append(uid)
 
-                self.conn.delete_messages([uid])
-                self.conn.expunge()
+        return results
 
-                # Delete from `Trash`
-                # Needed because otherwise deleting a draft that was sent
-                # results in it synced twice - once via the Trash folder and
-                # once via the Sent folder.
-                self.conn.select_folder(self.folder_names()['trash'])
+    def delete_draft(self, inbox_uid, message_id_header):
+        """Delete a draft, as identified either by its X-Inbox-Id or by its
+        Message-Id header. We first delete the message from the Drafts folder,
+        and then also delete it from the Trash folder if necessary."""
+        drafts_folder_name = self.folder_names()['drafts']
+        trash_folder_name = self.folder_names()['trash']
+        self.conn.select_folder(drafts_folder_name)
+        self._delete_message(inbox_uid, message_id_header)
+        self.conn.select_folder(trash_folder_name)
+        self._delete_message(inbox_uid, message_id_header)
 
-                all_trash_uids = self.conn.search()
-                all_trash_headers = self.fetch_headers(all_trash_uids)
-                for u, r in all_trash_headers.iteritems():
-                    x_inbox_header = HeaderParser().parsestr(
-                        r['BODY[HEADER]']).get('X-Inbox-Id')
-                    if x_inbox_header == inbox_uid:
-                        self.conn.delete_messages([u])
-                        self.conn.expunge()
-                        return
+    def _delete_message(self, inbox_uid, message_id_header):
+        """
+        Delete a message from the selected folder, using either the X-Inbox-Id
+        header or the Message-Id header to locate it. Does nothing if no
+        matching messages are found, or if more than one matching message is
+        found.
+        """
+        assert inbox_uid or message_id_header, 'Need at least one header'
+        if inbox_uid:
+            matching_uids = self.find_by_header('X-Inbox-Id', inbox_uid)
+        else:
+            matching_uids = self.find_by_header('Message-Id',
+                                                message_id_header)
+        if not matching_uids:
+            self.log.error('No remote messages found to delete',
+                           inbox_uid=inbox_uid,
+                           message_id_header=message_id_header)
+            return
+        if len(matching_uids) > 1:
+            self.log.error('Multiple remote messages found to delete',
+                           inbox_uid=inbox_uid,
+                           message_id_header=message_id_header,
+                           uids=matching_uids)
+            return
+        self.conn.delete_messages(matching_uids)
+        self.conn.expunge()
 
 
 class CondStoreCrispinClient(CrispinClient):
@@ -888,42 +892,7 @@ class GmailCrispinClient(CondStoreCrispinClient):
             self.conn.delete_messages(trash_uids)
             self.conn.expunge()
 
-    def delete_draft(self, inbox_uid):
-        """
-        Remove the `\Draft label` and add the `Trash` flag.
-        Need both since that is the intended behaviour i.e. so the message is
-        removed from the user's `Drafts` folder and into the `Trash` folder.
-
-        Parameters
-        ----------
-        inbox_uid : str
-            The public_id of the draft we want to delete on the remote,
-            which is its X-INBOX-ID header too.
-
-        Notes
-        -----
-        Need the public_id == inbox_uid since that is the only unique
-        identifier for the message that both we and the remote know.
-
-        """
-        criteria = ['DRAFT', 'NOT DELETED',
-                    'HEADER X-INBOX-ID {0}'.format(inbox_uid)]
-        draft_uids = self.conn.search(criteria)
-        if draft_uids:
-            assert len(draft_uids) == 1
-
-            # Remove Gmail's `Draft` label
-            self.conn.remove_gmail_labels(draft_uids, ['\Draft'])
-
-            # Move to Gmail's `Trash` folder
-            self.conn.delete_messages(draft_uids)
-            self.conn.expunge()
-
-            # Delete from `Trash`
-            self.conn.select_folder(self.folder_names()['trash'])
-
-            criteria = ['HEADER X-INBOX-ID {0}'.format(inbox_uid)]
-            trash_uids = self.conn.search(criteria)
-
-            self.conn.delete_messages(trash_uids)
-            self.conn.expunge()
+    def find_by_header(self, header_name, header_value):
+        criteria = ['NOT DELETED',
+                    'HEADER {} {}'.format(header_name, header_value)]
+        return self.conn.search(criteria)

@@ -1,5 +1,6 @@
 """ Operations for syncing back local datastore changes to Gmail. """
 
+from inbox.crispin import writable_connection_pool, retry_crispin
 from inbox.models.backends.imap import ImapThread
 from inbox.actions.backends.imap import syncback_action
 from sqlalchemy.orm import load_only
@@ -7,7 +8,7 @@ from sqlalchemy.orm import load_only
 PROVIDER = 'gmail'
 
 __all__ = ['set_remote_archived', 'set_remote_starred', 'set_remote_unread',
-           'remote_save_draft', 'remote_delete_draft', 'remote_delete']
+           'remote_save_draft', 'remote_delete_draft']
 
 
 def uidvalidity_cb(account_id, folder_name, select_info):
@@ -133,43 +134,6 @@ def _remote_copy(account, thread_id, from_folder, to_folder, db_session):
     return syncback_action(fn, account, from_folder, db_session)
 
 
-def remote_delete(account, thread_id, folder_name, db_session):
-    def fn(account, db_session, crispin_client):
-        g_thrid = _get_g_thrid(account.namespace.id, thread_id, db_session)
-
-        inbox_folder = crispin_client.folder_names()['inbox']
-        all_folder = crispin_client.folder_names()['all']
-        drafts_folder = crispin_client.folder_names()['drafts']
-        # Remove label, keep in All Mail
-        labels = crispin_client.folder_names().get('labels', [])
-
-        # Move to All Mail
-        if folder_name == inbox_folder:
-            return _archive(g_thrid, crispin_client)
-        # Remove \Draft, move to Trash
-        # Note: this only moves *drafts* in the thread, not the whole thread.
-        elif folder_name == drafts_folder:
-            crispin_client.delete(g_thrid, folder_name)
-        elif folder_name in labels:
-            crispin_client.select_folder(
-                crispin_client.folder_names()['all'], uidvalidity_cb)
-            crispin_client.remove_label(g_thrid, folder_name)
-        # Move to Trash
-        elif folder_name == all_folder:
-            # delete thread from all mail: really delete it (move it to trash
-            # where it will be permanently deleted after 30 days, see
-            # https://support.google.com/mail/answer/78755?hl=en)
-            # XXX: does copy() work here, or do we have to actually _move_
-            # the message? do we also need to delete it from all labels and
-            # stuff? not sure how this works really.
-            crispin_client.copy_thread(
-                g_thrid, crispin_client.folder_names()['trash'])
-        else:
-            raise Exception("Unknown folder_name '{0}'".format(folder_name))
-
-    return syncback_action(fn, account, folder_name, db_session)
-
-
 def remote_save_draft(account, folder_name, message, db_session, date=None):
     def fn(account, db_session, crispin_client):
         assert folder_name == crispin_client.folder_names()['drafts']
@@ -178,12 +142,10 @@ def remote_save_draft(account, folder_name, message, db_session, date=None):
     return syncback_action(fn, account, folder_name, db_session)
 
 
-def remote_delete_draft(account, folder_name, inbox_uid, db_session):
-    def fn(account, db_session, crispin_client):
-        assert folder_name == crispin_client.folder_names()['drafts']
-        crispin_client.delete_draft(inbox_uid)
-
-    return syncback_action(fn, account, folder_name, db_session)
+@retry_crispin
+def remote_delete_draft(account, inbox_uid, message_id_header, db_session):
+    with writable_connection_pool(account.id).get() as crispin_client:
+        crispin_client.delete_draft(inbox_uid, message_id_header)
 
 
 def set_remote_spam(account, thread_id, spam, db_session):

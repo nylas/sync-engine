@@ -17,8 +17,8 @@ from inbox.models.message import Message
 PROVIDER = 'generic'
 
 __all__ = ['set_remote_archived', 'set_remote_starred', 'set_remote_unread',
-           'remote_save_draft', 'remote_delete_draft', 'remote_delete',
-           'set_remote_spam', 'set_remote_trash']
+           'remote_save_draft', 'remote_delete_draft', 'set_remote_spam',
+           'set_remote_trash']
 
 
 def get_thread_uids(db_session, thread_id, namespace_id):
@@ -174,27 +174,6 @@ def remote_copy(account, thread_id, from_folder, to_folder, db_session):
 
 
 @retry_crispin
-def remote_delete(account, thread_id, folder, db_session):
-    """ We currently only allow this for Drafts. """
-
-    uids = []
-
-    thread = get_thread_uids(db_session, thread_id,
-                             account.namespace.id)
-    for msg in thread.messages:
-        uids.extend([uid.msg_uid for uid in msg.imapuids])
-
-    if not uids:
-        return
-
-    with writable_connection_pool(account.id).get() as crispin_client:
-        crispin_client.select_folder(folder, uidvalidity_cb)
-
-        if folder == crispin_client.folder_names()['drafts']:
-            crispin_client.delete_uids(uids)
-
-
-@retry_crispin
 def remote_save_draft(account, folder_name, message, db_session, date=None):
     with writable_connection_pool(account.id).get() as crispin_client:
         assert folder_name == crispin_client.folder_names()['drafts']
@@ -204,12 +183,9 @@ def remote_save_draft(account, folder_name, message, db_session, date=None):
 
 
 @retry_crispin
-def remote_delete_draft(account, folder, inbox_uid, db_session):
+def remote_delete_draft(account, inbox_uid, message_id_header, db_session):
     with writable_connection_pool(account.id).get() as crispin_client:
-        assert folder == crispin_client.folder_names()['drafts']
-
-        crispin_client.select_folder(folder, uidvalidity_cb)
-        crispin_client.delete_draft(inbox_uid)
+        crispin_client.delete_draft(inbox_uid, message_id_header)
 
 
 def remote_save_sent(account, folder_name, message, db_session, date=None,

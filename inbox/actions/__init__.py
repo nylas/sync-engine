@@ -170,23 +170,15 @@ def save_draft(account_id, message_id, db_session):
 
 
 def delete_draft(account_id, draft_id, db_session, args):
-    """ Delete a draft from the remote backend. """
+    """ Delete a draft from the remote backend. `args` should contain an
+    `inbox_uid` or a `message_id_header` key. This is used to find the draft on
+    "the backend."""
     inbox_uid = args.get('inbox_uid')
+    message_id_header = args.get('message_id_header')
+    assert inbox_uid or message_id_header, 'Need at least one header value'
     account = db_session.query(Account).get(account_id)
-
-    # Non-Inbox created draft, therefore standard delete
-    if inbox_uid is None:
-        draft = db_session.query(Message).get(draft_id)
-        remote_delete = \
-            module_registry[account.provider].remote_delete
-        remote_delete(account, draft.thread_id, account.drafts_folder.name,
-                      db_session)
-    # Inbox created draft, therefore use X-INBOX header
-    else:
-        remote_delete_draft = \
-            module_registry[account.provider].remote_delete_draft
-        remote_delete_draft(account, account.drafts_folder.name,
-                            inbox_uid, db_session)
+    remote_delete_draft = module_registry[account.provider].remote_delete_draft
+    remote_delete_draft(account, inbox_uid, message_id_header, db_session)
 
 
 def save_sent_email(account_id, message_id, db_session):
@@ -231,7 +223,8 @@ def send_draft(account_id, draft_id, db_session):
     # Schedule the deletion separately (we don't want to resend if sending
     # succeeds but deletion fails!)
     schedule_action('delete_draft', draft, draft.namespace.id, db_session,
-                    inbox_uid=draft.inbox_uid)
+                    inbox_uid=draft.inbox_uid,
+                    message_id_header=draft.message_id_header)
 
 
 def _send(account_id, draft_id, db_session):
