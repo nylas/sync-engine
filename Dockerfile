@@ -74,5 +74,3 @@ EXPOSE 5555
 
 # Permissions for some of these are set in docker/entrypoint.
 VOLUME ["/etc/inboxapp", "/var/lib/inboxapp", "/var/log/inboxapp", "/var/log/supervisor"]
-
-USER admin
