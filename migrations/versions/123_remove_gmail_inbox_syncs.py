@@ -17,6 +17,8 @@ def upgrade():
     from inbox.models.backends.imap import ImapFolderSyncStatus, ImapUid
     from inbox.models.backends.gmail import GmailAccount
     from inbox.models.session import session_scope
+    from inbox.status.sync import get_redis_client
+    redis_client = get_redis_client()
     with session_scope(ignore_soft_deletes=False, versioned=False) as \
             db_session:
         for account in db_session.query(GmailAccount):
@@ -30,6 +32,11 @@ def upgrade():
                 ImapUid.folder_id == account.inbox_folder.id)
             q.delete()
             db_session.commit()
+
+            # Also remove the corresponding status entry from Redis.
+            key = '{}:{}'.format(account.id, account.inbox_folder.id)
+            redis_client.hdel(key, '0')
+
 
 
 def downgrade():
