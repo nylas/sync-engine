@@ -41,7 +41,7 @@ RUN useradd -ms /bin/sh admin && \
     install -d -m0775 -o root -g admin /srv/inbox
 WORKDIR /srv/inbox
 
-ADD ./inbox/requirements.txt /srv/inbox/requirements.txt
+ADD requirements.txt /srv/inbox/requirements.txt
 RUN pip install -r /srv/inbox/requirements.txt
 
 # XXX: This is to work around some problem with installing the deps from tox.ini
@@ -61,7 +61,7 @@ RUN install -d -m0775 -o root -g admin /etc/inboxapp && \
     chown -R admin /usr/local/lib/python2.7
 
 #@DYNAMIC base
-ADD ./inbox /srv/inbox
+ADD . /srv/inbox
 RUN /srv/inbox/docker/postinstall-src /srv/inbox && \
     install -m0755 docker/inbox-cron-hourly /etc/cron.hourly/inbox-cron-hourly && \
     install -m0755 docker/inbox-cron-daily /etc/cron.daily/inbox-cron-daily && \
@@ -74,5 +74,3 @@ EXPOSE 5555
 
 # Permissions for some of these are set in docker/entrypoint.
 VOLUME ["/etc/inboxapp", "/var/lib/inboxapp", "/var/log/inboxapp", "/var/log/supervisor"]
-
-USER admin

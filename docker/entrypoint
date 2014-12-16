@@ -3,6 +3,11 @@
 # Runs as root
 set -e
 
+if [ "$(id -u)" -ne 0 ]; then
+    echo "Docker entrypoint must be run as root"
+    exit 1
+fi
+
 # For convenience, we can set USING_FIG=1 to get all of these settings:
 if [ "${USE_FIG_DEFAULTS:-0}" -ne 0 ]; then
     GENERATE_CONFIG=${GENERATE_CONFIG:-1}; export GENERATE_CONFIG
