@@ -13,16 +13,11 @@ g_alive_threshold_eas = None
 def get_heartbeat_config():
     global g_alive_threshold
     if g_alive_threshold is None:
-        g_alive_threshold = config.get('ALIVE_THRESHOLD')
-        if g_alive_threshold is None or not isinstance(g_alive_threshold, int):
-            raise Exception('Error while reading ALIVE_THRESHOLD')
+        g_alive_threshold = int(config.get_required('ALIVE_THRESHOLD'))
 
     global g_alive_threshold_eas
     if g_alive_threshold_eas is None:
-        g_alive_threshold_eas = config.get('ALIVE_THRESHOLD_EAS')
-        if g_alive_threshold_eas is None or \
-                not isinstance(g_alive_threshold_eas, int):
-            raise Exception('Error while reading ALIVE_THRESHOLD_EAS')
+        g_alive_threshold_eas = int(config.get_required('ALIVE_THRESHOLD_EAS'))
 
     return (g_alive_threshold, g_alive_threshold_eas)
 
@@ -38,22 +33,16 @@ def get_redis_client():
     if redis_client is None:
         global redis_hostname
         if redis_hostname is None:
-            redis_hostname = config.get('REDIS_HOSTNAME')
-        if redis_hostname is None or not isinstance(redis_hostname, str):
-            raise Exception('Error while reading REDIS_HOSTNAME')
+            redis_hostname = str(config.get_required('REDIS_HOSTNAME'))
 
         global redis_port
         if redis_port is None:
-            redis_port = config.get('REDIS_PORT')
-        if redis_port is None or not isinstance(redis_port, int):
-            raise Exception('Error while reading REDIS_PORT')
+            redis_port = int(config.get_required('REDIS_PORT'))
 
         global redis_database
         if redis_database is None:
-            redis_database = config.get('REDIS_DATABASE')
-        if redis_database is None or not isinstance(redis_database, int) or \
-                redis_database < 1 or redis_database > 15:
-            raise Exception('Error while reading REDIS_DATABASE')
+            redis_database = int(config.get_required('REDIS_DATABASE'))
+            assert redis_database >= 1 and redis_database <= 15
 
         redis_client = StrictRedis(host=redis_hostname,
                                    port=redis_port,
