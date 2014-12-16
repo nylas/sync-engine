@@ -44,23 +44,13 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           nullable=False)
 
-    namespace = relationship(
-        Namespace, load_on_pending=True,
-        primaryjoin='and_(Event.namespace_id == Namespace.id, '
-                    'Namespace.deleted_at.is_(None))')
+    namespace = relationship(Namespace, load_on_pending=True)
 
     calendar_id = Column(ForeignKey(Calendar.id, ondelete='CASCADE'),
                          nullable=False)
-
-    _backref_primary_join = ('and_(Event.calendar_id == Calendar.id, '
-                             'Calendar.deleted_at.is_(None))')
-    _primary_join = ('and_(Event.calendar_id == Calendar.id, '
-                     'Calendar.deleted_at.is_(None))')
-    _backref = backref('events', primaryjoin=_backref_primary_join)
     calendar = relationship(Calendar,
-                            backref=_backref,
-                            load_on_pending=True,
-                            primaryjoin=_primary_join)
+                            backref=backref('events', passive_deletes=True),
+                            load_on_pending=True)
 
     # A server-provided unique ID.
     uid = Column(String(767, collation='ascii_general_ci'), nullable=False)

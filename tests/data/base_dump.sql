@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.38, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.40, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.5.38-0ubuntu0.12.04.1-log
+-- Server version	5.5.40-0ubuntu0.12.04.1-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -143,7 +143,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('526eefc1d600');
+INSERT INTO `alembic_version` VALUES ('476c5185121b');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -368,6 +368,45 @@ CREATE TABLE `easdevice` (
 LOCK TABLES `easdevice` WRITE;
 /*!40000 ALTER TABLE `easdevice` DISABLE KEYS */;
 /*!40000 ALTER TABLE `easdevice` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `easeventuid`
+--
+
+DROP TABLE IF EXISTS `easeventuid`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `easeventuid` (
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `easaccount_id` int(11) NOT NULL,
+  `event_id` int(11) NOT NULL,
+  `folder_id` int(11) NOT NULL,
+  `fld_uid` int(11) NOT NULL,
+  `msg_uid` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_folder_id` (`folder_id`,`msg_uid`,`easaccount_id`),
+  KEY `easaccount_id` (`easaccount_id`),
+  KEY `event_id` (`event_id`),
+  KEY `ix_easeventuid_created_at` (`created_at`),
+  KEY `ix_easeventuid_updated_at` (`updated_at`),
+  KEY `ix_easeventuid_deleted_at` (`deleted_at`),
+  CONSTRAINT `easeventuid_ibfk_1` FOREIGN KEY (`easaccount_id`) REFERENCES `easaccount` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `easeventuid_ibfk_2` FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `easeventuid_ibfk_3` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `easeventuid`
+--
+
+LOCK TABLES `easeventuid` WRITE;
+/*!40000 ALTER TABLE `easeventuid` DISABLE KEYS */;
+/*!40000 ALTER TABLE `easeventuid` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -1645,4 +1684,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-12-04  1:08:43
+-- Dump completed on 2014-12-12  4:02:00

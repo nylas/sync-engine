@@ -62,35 +62,18 @@ class ImapUid(MailSyncBase):
     """
     account_id = Column(ForeignKey(ImapAccount.id, ondelete='CASCADE'),
                         nullable=False)
-    account = relationship(ImapAccount,
-                           primaryjoin='and_('
-                           'ImapUid.account_id == ImapAccount.id, '
-                           'ImapAccount.deleted_at.is_(None))')
+    account = relationship(ImapAccount)
 
     message_id = Column(Integer, ForeignKey(Message.id, ondelete='CASCADE'),
                         nullable=False)
-    message = relationship(Message,
-                           backref=backref('imapuids',
-                                           primaryjoin='and_('
-                                           'Message.id == ImapUid.message_id, '
-                                           'ImapUid.deleted_at.is_(None))'),
-                           primaryjoin='and_('
-                           'ImapUid.message_id == Message.id,'
-                           'Message.deleted_at.is_(None))')
+    message = relationship(Message, backref=backref('imapuids'))
     msg_uid = Column(BigInteger, nullable=False, index=True)
 
     folder_id = Column(Integer, ForeignKey(Folder.id, ondelete='CASCADE'),
                        nullable=False)
     # We almost always need the folder name too, so eager load by default.
     folder = relationship(Folder, lazy='joined',
-                          backref=backref('imapuids',
-                                          passive_deletes=True,
-                                          primaryjoin='and_('
-                                          'Folder.id == ImapUid.folder_id, '
-                                          'ImapUid.deleted_at.is_(None))'),
-                          primaryjoin='and_('
-                          'ImapUid.folder_id == Folder.id, '
-                          'Folder.deleted_at.is_(None))')
+                          backref=backref('imapuids', passive_deletes=True))
 
     # Flags #
     # Message has not completed composition (marked as a draft).
@@ -149,22 +132,13 @@ class ImapFolderInfo(MailSyncBase):
     """
     account_id = Column(ForeignKey(ImapAccount.id, ondelete='CASCADE'),
                         nullable=False)
-    account = relationship(ImapAccount,
-                           primaryjoin='and_('
-                           'ImapFolderInfo.account_id == ImapAccount.id, '
-                           'ImapAccount.deleted_at == None)')
+    account = relationship(ImapAccount)
     folder_id = Column(Integer, ForeignKey('folder.id', ondelete='CASCADE'),
                        nullable=False)
     # We almost always need the folder name too, so eager load by default.
-    primaryjoin = 'and_(ImapFolderInfo.folder_id == Folder.id, ' \
-                  'Folder.deleted_at.is_(None))'
-    backrefjoin = 'and_(Folder.id == ImapFolderInfo.folder_id,' \
-                  'ImapFolderInfo.deleted_at == None)'
     folder = relationship('Folder', lazy='joined',
                           backref=backref('imapfolderinfo',
-                                          primaryjoin=backrefjoin,
-                                          passive_deletes=True),
-                          primaryjoin=primaryjoin)
+                                          passive_deletes=True))
     uidvalidity = Column(BigInteger, nullable=False)
     # Invariant: the local datastore for this folder has always incorporated
     # remote changes up to _at least_ this modseq (we can't guarantee that we
@@ -271,26 +245,13 @@ class ImapFolderSyncStatus(MailSyncBase):
     """ Per-folder status state saving for IMAP folders. """
     account_id = Column(ForeignKey(ImapAccount.id, ondelete='CASCADE'),
                         nullable=False)
-    account = relationship(ImapAccount, backref=backref(
-        'foldersyncstatuses',
-        cascade='delete',
-        primaryjoin='and_('
-        'ImapFolderSyncStatus.account_id == ImapAccount.id, '
-        'ImapFolderSyncStatus.deleted_at.is_(None))'),
-        primaryjoin='and_('
-        'ImapFolderSyncStatus.account_id == ImapAccount.id, '
-        'ImapAccount.deleted_at.is_(None))')
+    account = relationship(ImapAccount, backref=backref('foldersyncstatuses'))
 
     folder_id = Column(Integer, ForeignKey('folder.id', ondelete='CASCADE'),
                        nullable=False)
     # We almost always need the folder name too, so eager load by default.
     folder = relationship('Folder', lazy='joined', backref=backref(
-        'imapsyncstatus', primaryjoin='and_('
-        'Folder.id == ImapFolderSyncStatus.folder_id, '
-        'ImapFolderSyncStatus.deleted_at == None)',
-        passive_deletes=True),
-        primaryjoin='and_(ImapFolderSyncStatus.folder_id == Folder.id, '
-        'Folder.deleted_at == None)')
+        'imapsyncstatus', passive_deletes=True))
 
     # see state machine in mailsync/backends/imap/imap.py
     state = Column(Enum('initial', 'initial uidinvalid',

@@ -21,13 +21,8 @@ class Folder(MailSyncBase):
     # TOFIX this causes an import error due to circular dependencies
     # from inbox.models.account import Account
     account = relationship(
-        'Account', backref=backref('folders',
-                                   cascade='delete',
-                                   primaryjoin='and_('
-                                   'Folder.account_id == Account.id, '
-                                   'Folder.deleted_at.is_(None))'),
-        primaryjoin='and_(Folder.account_id==Account.id, '
-        'Account.deleted_at==None)')
+        'Account', backref=backref('folders', cascade='delete'),
+        foreign_keys=[account_id])
 
     # Explicitly set collation to be case insensitive. This is mysql's default
     # but never trust defaults! This allows us to store the original casing to
@@ -146,12 +141,8 @@ class FolderItem(MailSyncBase):
         backref=backref('threads',
                         # If associated folder is deleted, don't load child
                         # objects and let database-level cascade do its thing.
-                        passive_deletes=True,
-                        primaryjoin='and_(FolderItem.folder_id==Folder.id, '
-                        'FolderItem.deleted_at==None)'),
-        lazy='joined',
-        primaryjoin='and_(FolderItem.folder_id==Folder.id, '
-        'Folder.deleted_at==None)')
+                        passive_deletes=True),
+        lazy='joined')
 
     @property
     def account(self):

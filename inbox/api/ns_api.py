@@ -151,6 +151,7 @@ def tag_query_api():
     if args['view'] == 'count':
         return g.encoder.jsonify({"count": query.one()[0]})
 
+    query = query.order_by(Tag.id)
     query = query.limit(args['limit'])
     if args['offset']:
         query = query.offset(args['offset'])
@@ -797,9 +798,11 @@ def event_delete_api(public_id):
         return err(404, 'Cannot delete event with public_id {} from '
                    ' read_only calendar.'.format(public_id))
 
-    result = events.crud.delete(g.namespace, g.db_session, public_id)
-    schedule_action('delete_event', event, g.namespace.id, g.db_session)
-    return g.encoder.jsonify(result)
+    schedule_action('delete_event', event, g.namespace.id, g.db_session,
+                    event_uid=event.uid,
+                    calendar_name=event.calendar.name)
+    events.crud.delete(g.namespace, g.db_session, public_id)
+    return g.encoder.jsonify(None)
 
 
 #

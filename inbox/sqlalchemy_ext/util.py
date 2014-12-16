@@ -219,30 +219,3 @@ def safer_yield_per(query, id_field, start_id, count):
         for result in results:
             start_id = result.id + 1
             yield result
-
-
-def propagate_soft_delete(mapper, connection, target, rel_table, rel_column,
-                          local_column):
-    """ cascade delete child items then the target is deleted.
-
-    Since we're using soft-deletes to update a deleted_at column rather than
-    actually deleting the entries, the usual cascade mechanisms don't work for
-    relationships. For example, deleting a calendar will set its 'deleted_at'
-    column to the current time, however sqlalchemy doesn't know that it needs
-    to propagate this to the events that are managed by that calendar. As a
-    consequence we can propagate this change using this function.
-
-    Note: this only handles 1-level of relationships.
-
-    This should be called from an "after_update" event.
-    """
-
-    # Note that the 'deleted_at' is only being set on this object if
-    # we are _not_ ignoring soft deletes. Therefore we can just mark
-    # these as deleted as well.
-    if target.deleted_at:
-        children = mapper.relationships[rel_table].table
-        where_clause = children.c[rel_column] == getattr(target, local_column)
-        update_sql = children.update().where(where_clause). \
-            values(deleted_at=datetime.utcnow())
-        connection.execute(update_sql)

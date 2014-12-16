@@ -162,18 +162,17 @@ def delete_draft(db_session, account, draft_public_id):
 
     assert draft.is_draft
 
-    db_session.delete(draft)
+    # Delete remotely.
+    schedule_action('delete_draft', draft, draft.namespace.id, db_session,
+                    inbox_uid=draft.inbox_uid,
+                    message_id_header=draft.message_id_header)
 
     # Remove the drafts tag from the thread if there are no more drafts.
     if not draft.thread.drafts:
         draft.thread.remove_tag(draft.namespace.tags['drafts'])
 
+    db_session.delete(draft)
     db_session.commit()
-
-    # Delete remotely.
-    schedule_action('delete_draft', draft, draft.namespace.id, db_session,
-                    inbox_uid=draft.inbox_uid,
-                    message_id_header=draft.message_id_header)
 
 
 def generate_attachments(blocks):

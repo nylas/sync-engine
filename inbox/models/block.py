@@ -52,13 +52,7 @@ class Block(Blob, MailSyncBase, HasRevisions, HasPublicID):
                           ForeignKey(Namespace.id, ondelete='CASCADE'),
                           nullable=False)
     namespace = relationship(
-        'Namespace', backref=backref('blocks',
-                                     primaryjoin='and_('
-                                     'Block.namespace_id == Namespace.id, '
-                                     'Block.deleted_at.is_(None))'),
-        primaryjoin='and_(Block.namespace_id==Namespace.id, '
-        'Namespace.deleted_at==None)',
-        load_on_pending=True)
+        'Namespace', backref=backref('blocks'), load_on_pending=True)
 
     @reconstructor
     def init_on_load(self):
@@ -85,22 +79,13 @@ class Part(MailSyncBase):
     block_id = Column(Integer, ForeignKey(Block.id, ondelete='CASCADE'))
     block = relationship(
         Block,
-        primaryjoin='and_(Part.block_id==Block.id, '
-        'Block.deleted_at==None)',
-        backref=backref("parts", primaryjoin='and_('
-                        'Part.block_id == Block.id, '
-                        'Part.deleted_at.is_(None))',
-                        cascade="all, delete, delete-orphan"),
+        backref=backref("parts", cascade="all, delete, delete-orphan"),
         load_on_pending=True)
 
     message_id = Column(Integer, ForeignKey(Message.id, ondelete='CASCADE'))
     message = relationship(
         'Message',
-        primaryjoin='and_(Part.message_id==Message.id, '
-        'Message.deleted_at==None)',
-        backref=backref("parts", primaryjoin='and_('
-                        'Part.message_id == Message.id, '
-                        'Part.deleted_at.is_(None))',
+        backref=backref("parts",
                         cascade="all, delete, delete-orphan"),
         load_on_pending=True)
 

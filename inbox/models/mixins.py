@@ -103,14 +103,5 @@ class AutoTimestampMixin(object):
                         nullable=False, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow,
                         onupdate=datetime.utcnow, nullable=False, index=True)
+    # DEPRECATED
     deleted_at = Column(DateTime, nullable=True, index=True)
-
-    @property
-    def is_deleted(self):
-        return self.deleted_at is not None
-
-    def mark_deleted(self):
-        """
-        Safer object deletion: mark as deleted and garbage collect later.
-        """
-        self.deleted_at = datetime.utcnow()

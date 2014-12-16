@@ -196,7 +196,7 @@ def test_distinct_results(api_client, db):
     multiple matching messages per thread."""
     # Create a thread with multiple messages on it.
     first_thread = db.session.query(Thread).filter(
-        Thread.namespace_id == NAMESPACE_ID).get(1)
+        Thread.namespace_id == NAMESPACE_ID)[0]
     add_fake_message(db.session, NAMESPACE_ID, first_thread,
                      from_addr=[('', 'hello@example.com')],
                      received_date=datetime.datetime.utcnow())
@@ -207,7 +207,7 @@ def test_distinct_results(api_client, db):
     # Now create another thread with the same participants
     older_date = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
     second_thread = db.session.query(Thread).filter(
-        Thread.namespace_id == NAMESPACE_ID).get(2)
+        Thread.namespace_id == NAMESPACE_ID)[1]
     add_fake_message(db.session, NAMESPACE_ID, second_thread,
                      from_addr=[('', 'hello@example.com')],
                      received_date=older_date)

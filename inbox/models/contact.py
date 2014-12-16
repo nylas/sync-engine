@@ -20,10 +20,7 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
 
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           nullable=False)
-    namespace = relationship(
-        Namespace, load_on_pending=True,
-        primaryjoin='and_(Contact.namespace_id == Namespace.id, '
-                    'Namespace.deleted_at.is_(None))')
+    namespace = relationship(Namespace, load_on_pending=True)
 
     # A server-provided unique ID.
     uid = Column(String(64), nullable=False)
@@ -98,19 +95,7 @@ class MessageContactAssociation(MailSyncBase):
     # when you try to delete a message or a contact.
     contact = relationship(
         Contact,
-        primaryjoin='and_(MessageContactAssociation.contact_id == Contact.id, '
-        'Contact.deleted_at.is_(None))',
-        backref=backref('message_associations',
-                        primaryjoin='and_('
-                        'MessageContactAssociation.contact_id == Contact.id, '
-                        'MessageContactAssociation.deleted_at.is_(None))',
-                        cascade='all, delete-orphan'))
+        backref=backref('message_associations', cascade='all, delete-orphan'))
     message = relationship(
         Message,
-        primaryjoin='and_(MessageContactAssociation.message_id == Message.id, '
-                    'Message.deleted_at.is_(None))',
-        backref=backref('contacts',
-                        primaryjoin='and_('
-                        'MessageContactAssociation.message_id == Message.id, '
-                        'MessageContactAssociation.deleted_at.is_(None))',
-                        cascade='all, delete-orphan'))
+        backref=backref('contacts', cascade='all, delete-orphan'))

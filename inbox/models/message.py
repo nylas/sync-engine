@@ -67,21 +67,14 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
     thread = relationship(
         'Thread',
-        primaryjoin='and_(Message.thread_id == Thread.id, '
-                    'Thread.deleted_at.is_(None))',
-        backref=backref('messages',
-                        primaryjoin='and_('
-                        'Message.thread_id == Thread.id, '
-                        'Message.deleted_at.is_(None))',
-                        order_by='Message.received_date'))
+        backref=backref('messages', order_by='Message.received_date',
+                        passive_deletes=True))
 
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           index=True, nullable=False)
     namespace = relationship(
         'Namespace',
         lazy='joined',
-        primaryjoin='and_(Message.namespace_id==Namespace.id, '
-                    'Namespace.deleted_at==None)',
         load_on_pending=True)
 
     from_addr = Column(JSON, nullable=False, default=lambda: [])
@@ -121,11 +114,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     # A reference to the block holding the full contents of the message
     full_body_id = Column(ForeignKey('block.id', name='full_body_id_fk'),
                           nullable=True)
-    full_body = relationship(
-        'Block',
-        cascade='all, delete',
-        primaryjoin='and_(Message.full_body_id==Block.id, '
-                    'Block.deleted_at==None)')
+    full_body = relationship('Block', cascade='all, delete')
 
     # this might be a mail-parsing bug, or just a message from a bad client
     decode_error = Column(Boolean, server_default=false(), nullable=False)

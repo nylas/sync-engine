@@ -86,13 +86,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
 
     folderitems = relationship(
         FolderItem,
-        backref=backref('thread',
-                        uselist=False,
-                        primaryjoin='and_('
-                        'FolderItem.thread_id==Thread.id, '
-                        'Thread.deleted_at==None)'),
-        primaryjoin='and_(FolderItem.thread_id==Thread.id, '
-        'FolderItem.deleted_at==None)',
+        backref=backref('thread', uselist=False),
         single_parent=True,
         collection_class=set,
         cascade='all, delete-orphan')
@@ -109,12 +103,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
                           nullable=False, index=True)
     namespace = relationship(
         'Namespace',
-        primaryjoin='and_(Thread.namespace_id==Namespace.id, '
-                    'Namespace.deleted_at==None)',
-        backref=backref('threads',
-                        primaryjoin='and_('
-                        'Thread.namespace_id == Namespace.id, '
-                        'Thread.deleted_at.is_(None))'),
+        backref=backref('threads'),
         load_on_pending=True)
 
     @property
@@ -248,20 +237,11 @@ class TagItem(MailSyncBase):
         'Thread',
         backref=backref('tagitems',
                         collection_class=set,
-                        cascade='all, delete-orphan',
-                        primaryjoin='and_(TagItem.thread_id==Thread.id, '
-                                    'TagItem.deleted_at.is_(None))'),
-        primaryjoin='and_(TagItem.thread_id==Thread.id, '
-        'Thread.deleted_at.is_(None))')
+                        cascade='all, delete-orphan'))
     tag = relationship(
         Tag,
         backref=backref('tagitems',
-                        primaryjoin='and_('
-                        'TagItem.tag_id  == Tag.id, '
-                        'TagItem.deleted_at.is_(None))',
-                        cascade='all, delete-orphan'),
-        primaryjoin='and_(TagItem.tag_id==Tag.id, '
-        'Tag.deleted_at.is_(None))')
+                        cascade='all, delete-orphan'))
 
     @property
     def namespace(self):

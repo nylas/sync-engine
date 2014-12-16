@@ -1,9 +1,7 @@
 from sqlalchemy import (Column, String, Text, Boolean,
                         UniqueConstraint, ForeignKey)
 from sqlalchemy.orm import relationship
-from sqlalchemy import event
-from inbox.sqlalchemy_ext.util import (generate_public_id,
-                                       propagate_soft_delete)
+from inbox.sqlalchemy_ext.util import generate_public_id
 
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
@@ -15,10 +13,7 @@ class Calendar(MailSyncBase, HasPublicID):
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           nullable=False)
 
-    namespace = relationship(
-        Namespace, load_on_pending=True,
-        primaryjoin='and_(Calendar.namespace_id == Namespace.id, '
-                    'Namespace.deleted_at.is_(None))')
+    namespace = relationship(Namespace, load_on_pending=True)
 
     name = Column(String(128), nullable=True)
     provider_name = Column(String(128), nullable=True)
@@ -41,10 +36,3 @@ class Calendar(MailSyncBase, HasPublicID):
             self.uid = uid
         for key, value in kwargs.items():
             setattr(self, key, value)
-
-
-@event.listens_for(Calendar, 'after_update')
-def _after_calendar_update(mapper, connection, target):
-    """ Hook to cascade delete the events as well."""
-    propagate_soft_delete(mapper, connection, target,
-                          "events", "calendar_id", "id")

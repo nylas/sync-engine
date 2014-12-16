@@ -16,10 +16,7 @@ class GenericAccount(ImapAccount):
 
     # Secret
     password_id = Column(Integer, ForeignKey(Secret.id), nullable=False)
-    secret = relationship(
-        'Secret', uselist=False,
-        primaryjoin='and_(GenericAccount.password_id == Secret.id, '
-                    'Secret.deleted_at.is_(None))')
+    secret = relationship('Secret', uselist=False)
 
     __mapper_args__ = {'polymorphic_identity': 'genericaccount'}
 
