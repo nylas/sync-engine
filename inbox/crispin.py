@@ -72,7 +72,7 @@ def _get_connection_pool(account_id, pool_size, pool_map, readonly):
             raise GreenletExit()
 
 
-def connection_pool(account_id, pool_size=4, pool_map=dict()):
+def connection_pool(account_id, pool_size=3, pool_map=dict()):
     """ Per-account crispin connection pool.
 
     Use like this:
@@ -644,7 +644,7 @@ class GmailCrispinClient(CondStoreCrispinClient):
                 "Please enable at "
                 "https://mail.google.com/mail/#settings/labels"
                 .format(self.account_id, self.email_address))
-        folders = [self.folder_names()['inbox'], self.folder_names()['all']]
+        folders = [self.folder_names()['all']]
         # Non-essential folders, so don't error out if they're not present.
         for tag in ('trash', 'spam'):
             if tag in self.folder_names():

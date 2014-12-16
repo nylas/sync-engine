@@ -18,23 +18,23 @@ from inbox.mailsync.backends.imap.generic import (FolderSyncEngine,
 from inbox.log import get_logger
 log = get_logger()
 
-IDLE_FOLDERS = ['inbox', 'sent mail']
-
 
 class CondstoreFolderSyncEngine(FolderSyncEngine):
-    @property
-    def should_idle(self):
-        return self.folder_name.lower() in IDLE_FOLDERS
+    def should_idle(self, crispin_client):
+        return self.folder_name == crispin_client.folder_names()['inbox']
 
     def poll_impl(self):
         with self.conn_pool.get() as crispin_client:
             download_stack = UIDStack()
             self.check_uid_changes(crispin_client, download_stack,
                                    async_download=False)
-            if self.should_idle:
+            if self.should_idle(crispin_client):
+                idling = True
                 self.idle_wait(crispin_client)
+            else:
+                idling = False
         # Close IMAP connection before sleeping
-        if not self.should_idle:
+        if not idling:
             sleep(self.poll_frequency)
 
     @retry_crispin
@@ -45,10 +45,13 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
             with self.conn_pool.get() as crispin_client:
                 self.check_uid_changes(crispin_client, download_stack,
                                        async_download=True)
-                if self.should_idle:
+                if self.should_idle(crispin_client):
+                    idling = True
                     self.idle_wait(crispin_client)
+                else:
+                    idling = False
             # Close IMAP connection before sleeping
-            if not self.should_idle:
+            if not idling:
                 sleep(self.poll_frequency)
 
     def check_uid_changes(self, crispin_client, download_stack,

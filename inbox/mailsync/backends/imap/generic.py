@@ -94,6 +94,7 @@ from inbox.status.sync import SyncStatus
 
 GenericUIDMetadata = namedtuple('GenericUIDMetadata', 'throttled')
 
+
 MAX_THREAD_LENGTH = 500
 
 
@@ -173,10 +174,6 @@ class FolderSyncEngine(Greenlet):
         self.sync_status = SyncStatus(self.account_id, self.folder_id)
         self.sync_status.publish(provider_name=self.provider_name,
                                  folder_name=self.folder_name)
-
-    @property
-    def should_block(self):
-        return True
 
     def _run(self):
         # Bind greenlet-local logging context.
@@ -280,7 +277,7 @@ class FolderSyncEngine(Greenlet):
             download_stack = UIDStack()
             for uid in sorted(new_uids):
                 download_stack.put(
-                    uid, GenericUIDMetadata(throttled=self.throttled))
+                    uid, GenericUIDMetadata(self.throttled))
 
             with mailsync_session_scope() as db_session:
                 self.update_uid_counts(

@@ -96,11 +96,10 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                                             self.refresh_flags_max,
                                             self.retry_fail_classes)
             self.folder_monitors.start(thread)
-            if thread.should_block:
-                while not thread_polling(thread) and \
-                        not thread_finished(thread) and \
-                        not thread.ready():
-                    sleep(self.heartbeat)
+            while not thread_polling(thread) and \
+                    not thread_finished(thread) and \
+                    not thread.ready():
+                sleep(self.heartbeat)
 
             # allow individual folder sync monitors to shut themselves down
             # after completing the initial sync
