@@ -66,7 +66,8 @@ class ImapUid(MailSyncBase):
 
     message_id = Column(Integer, ForeignKey(Message.id, ondelete='CASCADE'),
                         nullable=False)
-    message = relationship(Message, backref=backref('imapuids'))
+    message = relationship(Message, backref=backref('imapuids',
+                                                    passive_deletes=True))
     msg_uid = Column(BigInteger, nullable=False, index=True)
 
     folder_id = Column(Integer, ForeignKey(Folder.id, ondelete='CASCADE'),

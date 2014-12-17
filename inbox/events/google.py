@@ -207,13 +207,15 @@ class GoogleEventsProvider(BaseEventProvider):
             elif 'guestsCanModify' in event:
                 read_only = False
 
-            owner = ""
+            owner = ''
             if 'creator' in event:
                 creator = event['creator']
                 owner = u'{} <{}>'.format(creator['displayName'],
                                           creator['email'])
 
         except (KeyError, AttributeError):
+            import pdb; pdb.set_trace()
+
             raise MalformedEventError()
 
         return Event(namespace_id=self.namespace_id,
