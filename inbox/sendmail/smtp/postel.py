@@ -2,7 +2,6 @@ import base64
 from collections import namedtuple
 
 import smtplib
-from gevent import socket
 
 from inbox.log import get_logger
 from inbox.models import Folder
@@ -17,20 +16,21 @@ log = get_logger()
 AUTH_EXTNS = {'oauth2': 'XOAUTH2',
               'password': 'PLAIN'}
 
+SMTP_OVER_SSL_PORT = 465
+
 AccountInfo = namedtuple('AccountInfo',
                          'id email provider auth_type auth_token')
 
 
 class SMTPConnection(object):
     def __init__(self, account_id, email_address, provider_name, auth_type,
-                 auth_token, connection, log):
+                 auth_token, smtp_endpoint, log):
         self.account_id = account_id
         self.email_address = email_address
         self.provider_name = provider_name
-        self.auth_type = provider_info(self.provider_name,
-                                       self.email_address)['auth']
+        self.auth_type = auth_type
         self.auth_token = auth_token
-        self.connection = connection
+        self.smtp_endpoint = smtp_endpoint
         self.log = log
         self.log.bind(account_id=self.account_id)
         self.auth_handlers = {'oauth2': self.smtp_oauth2,
@@ -50,18 +50,22 @@ class SMTPConnection(object):
             return
 
     def setup(self):
-        connection = self.connection
-
-        # Put the SMTP connection in TLS mode
-        connection.ehlo()
-
-        if not connection.has_extn('starttls'):
-            raise SendMailException('Required SMTP STARTTLS not supported.')
-
-        connection.starttls()
-        connection.ehlo()
+        host, port = self.smtp_endpoint
+        if port == SMTP_OVER_SSL_PORT:
+            self.connection = smtplib.SMTP_SSL()
+            self.connection.connect(host, port)
+        else:
+            self.connection = smtplib.SMTP()
+            self.connection.connect(host, port)
+            # Put the SMTP connection in TLS mode
+            self.connection.ehlo()
+            if not self.connection.has_extn('starttls'):
+                raise SendMailException('Required SMTP STARTTLS not '
+                                        'supported.')
+            self.connection.starttls()
 
         # Auth the connection
+        self.connection.ehlo()
         self.auth_connection()
 
     def auth_connection(self):
@@ -258,19 +262,11 @@ class BaseSMTPClient(object):
         raise NotImplementedError
 
     def _get_connection(self):
-        try:
-            host, port = self.smtp_endpoint
-            connection = smtplib.SMTP()
-            # connection.set_debuglevel(2)
-            connection.connect(host, port)
-        # Convert to a socket.error so geventconnpool will retry automatically
-        # to establish new connections. We do this so the pool is resistant to
-        # temporary connection errors.
-        except smtplib.SMTPConnectError as e:
-            self.log.error(str(e))
-            raise socket.error('SMTPConnectError')
-
-        smtp_connection = SMTPConnection(self.account_id, self.email_address,
-                                         self.provider_name, self.auth_type,
-                                         self.auth_token, connection, self.log)
+        smtp_connection = SMTPConnection(account_id=self.account_id,
+                                         email_address=self.email_address,
+                                         provider_name=self.provider_name,
+                                         auth_type=self.auth_type,
+                                         auth_token=self.auth_token,
+                                         smtp_endpoint=self.smtp_endpoint,
+                                         log=self.log)
         return smtp_connection
