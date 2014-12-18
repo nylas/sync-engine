@@ -8,9 +8,9 @@
 "DB_POOL_SIZE": 25,
 
 "CACHE_BASEDIR" : "tests/cache",
-"LOGDIR": "/tests/log",
+"LOGDIR": "/tmp/log",
 "LOGLEVEL": 10,
-"TEST_LOGFILE": "tests/log/test.log",
+"TEST_LOGFILE": "/tmp/log/test.log",
 
 "REDIS_HOSTNAME": "localhost",
 "REDIS_PORT": 6379,
