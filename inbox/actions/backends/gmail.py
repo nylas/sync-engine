@@ -149,44 +149,32 @@ def remote_delete_draft(account, inbox_uid, message_id_header, db_session):
 
 
 def set_remote_spam(account, thread_id, spam, db_session):
-    all_folder_name = account.all_folder.name
-
-    def fn(account, db_session, crispin_client):
+    with writable_connection_pool(account.id).get() as crispin_client:
         thread = db_session.query(ImapThread).filter_by(
-                 namespace_id=account.namespace.id,
-                 id=thread_id).one()
+            namespace_id=account.namespace.id,
+            id=thread_id).options(load_only('g_thrid')).one()
         g_thrid = thread.g_thrid
-
         if spam:
-            labels = crispin_client.get_labels(g_thrid)
-            if '\\Inbox' in labels:
-                crispin_client.remove_label(g_thrid, '\\Inbox')
-
-            crispin_client.add_label(g_thrid, account.spam_folder.name)
+            crispin_client.select_folder(account.all_folder.name,
+                                         uidvalidity_cb)
+            crispin_client.add_label(g_thrid, '\\Spam')
         else:
-            crispin_client.remove_label(g_thrid, account.spam_folder.name)
+            crispin_client.select_folder(account.trash_folder.name,
+                                         uidvalidity_cb)
             crispin_client.add_label(g_thrid, '\\Inbox')
-
-    return syncback_action(fn, account, all_folder_name, db_session)
 
 
 def set_remote_trash(account, thread_id, trash, db_session):
-    all_folder_name = account.all_folder.name
-
-    def fn(account, db_session, crispin_client):
+    with writable_connection_pool(account.id).get() as crispin_client:
         thread = db_session.query(ImapThread).filter_by(
-                 namespace_id=account.namespace.id,
-                 id=thread_id).options(load_only('g_thrid')).one()
+            namespace_id=account.namespace.id,
+            id=thread_id).options(load_only('g_thrid')).one()
         g_thrid = thread.g_thrid
-
         if trash:
-            labels = crispin_client.get_labels(g_thrid)
-            if '\\Inbox' in labels:
-                crispin_client.remove_label(g_thrid, '\\Inbox')
-
-            crispin_client.add_label(g_thrid, account.trash_folder.name)
+            crispin_client.select_folder(account.all_folder.name,
+                                         uidvalidity_cb)
+            crispin_client.add_label(g_thrid, '\\Trash')
         else:
-            crispin_client.remove_label(g_thrid, account.trash_folder.name)
+            crispin_client.select_folder(account.trash_folder.name,
+                                         uidvalidity_cb)
             crispin_client.add_label(g_thrid, '\\Inbox')
-
-    return syncback_action(fn, account, all_folder_name, db_session)
