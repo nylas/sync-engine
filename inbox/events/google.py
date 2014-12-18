@@ -214,8 +214,6 @@ class GoogleEventsProvider(BaseEventProvider):
                                           creator['email'])
 
         except (KeyError, AttributeError):
-            import pdb; pdb.set_trace()
-
             raise MalformedEventError()
 
         return Event(namespace_id=self.namespace_id,
