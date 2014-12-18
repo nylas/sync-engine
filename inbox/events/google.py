@@ -8,7 +8,7 @@ from oauth2client.client import OAuth2Credentials
 from oauth2client.client import AccessTokenRefreshError
 
 from inbox.basicauth import (ConnectionError, ValidationError, OAuthError)
-from inbox.models import Event, Participant, Calendar
+from inbox.models import Event, Calendar
 from inbox.models.session import session_scope
 from inbox.models.backends.gmail import GmailAccount
 from inbox.auth.gmail import (OAUTH_CLIENT_ID,
@@ -195,11 +195,11 @@ class GoogleEventsProvider(BaseEventProvider):
                 elif 'comment' in attendee:
                     notes = attendee['comment']
 
-                participants.append(Participant(email_address=email,
-                                                name=name,
-                                                status=status,
-                                                notes=notes,
-                                                guests=guests))
+                participants.append({'email_address': email,
+                                     'name': name,
+                                     'status': status,
+                                     'notes': notes,
+                                     'guests': guests})
 
             if 'self' in event['creator']:
                 is_owner = True
@@ -240,17 +240,17 @@ class GoogleEventsProvider(BaseEventProvider):
                           GoogleEventsProvider.status_map.iteritems()}
 
         att = {}
-        if participant.name is not None:
-            att["displayName"] = participant.name
+        if 'name' in participant:
+            att["displayName"] = participant['name']
 
-            if participant.status is not None:
-                att["responseStatus"] = inv_status_map[participant.status]
+            if 'status' in participant:
+                att["responseStatus"] = inv_status_map[participant['status']]
 
-            if participant.email_address is not None:
-                att["email"] = participant.email_address
+            if 'email_address' in participant:
+                att["email"] = participant['email_address']
 
-            if participant.guests is not None:
-                att["additionalGuests"] = participant.guests
+            if 'guests' in participant:
+                att["additionalGuests"] = participant['guests']
 
         return att
 

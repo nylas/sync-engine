@@ -5,15 +5,13 @@ from dateutil.parser import parse as date_parse
 from sqlalchemy import (Column, String, ForeignKey, Text, Boolean,
                         DateTime, Enum, UniqueConstraint)
 from sqlalchemy.orm import relationship, backref, validates
-from sqlalchemy.orm.collections import attribute_mapped_collection
 
 from inbox.util.misc import merge_attr
-from inbox.sqlalchemy_ext.util import MAX_TEXT_LENGTH
+from inbox.sqlalchemy_ext.util import MAX_TEXT_LENGTH, JSON, MutableDict
 from inbox.models.base import MailSyncBase
 from inbox.models.mixins import HasPublicID, HasRevisions
 from inbox.models.calendar import Calendar
 from inbox.models.namespace import Namespace
-from inbox.models.participant import Participant
 from inbox.models.when import Time, TimeSpan, Date, DateSpan
 
 
@@ -84,11 +82,13 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
                                        'provider_name', name='uuid'),)
 
     _participant_cascade = "save-update, merge, delete, delete-orphan"
-    participants_by_email = relationship(
-        Participant,
-        collection_class=attribute_mapped_collection('email_address'),
-        cascade=_participant_cascade,
-        load_on_pending=True)
+    participants_by_email = Column(MutableDict.as_mutable(JSON), default={},
+                                   nullable=True)
+
+    def __init__(self, *args, **kwargs):
+        MailSyncBase.__init__(self, *args, **kwargs)
+        if self.participants_by_email is None:
+            self.participants_by_email = {}
 
     @validates('reminders', 'recurrence', 'owner', 'location', 'title', 'raw_data')
     def validate_length(self, key, value):
@@ -101,17 +101,24 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
 
     @participants.setter
     def participants(self, participants):
+        # We need to do this because the codes which creates event often
+        # does it by calling something like event = Event(..., participants=[])
+        # in this case self.participants_by_email is None since the constructor
+        # hasn't run yet.
+        if self.participants_by_email is None:
+            self.participants_by_email = {}
+
         for p in participants:
-            self.participants_by_email[p.email_address] = p
+            self.participants_by_email[p['email_address']] = p
 
     # Use a list for lowing to json to preserve original order
     @property
     def participant_list(self):
-        return [{'name': p.name,
-                 'email': p.email_address,
-                 'status': p.status,
-                 'notes': p.notes,
-                 'id': p.public_id}
+        return [{'name': p['name'],
+                 'email': p['email_address'],
+                 'status': p['status'],
+                 'notes': p['notes'],
+                 'id': p['public_id']}
                 for p in self.participants_by_email.values()]
 
     @participant_list.setter
@@ -121,19 +128,19 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
 
         # First add or update the ones we don't have yet
         all_emails = []
+
         for p in p_list:
             all_emails.append(p['email'])
             existing = self.participants_by_email.get(p['email'])
             if existing:
-                existing.name = p.get('name')
-                existing.notes = p.get('notes')
-                existing.status = p.get('status')
+                existing['name'] = p.get('name')
+                existing['notes'] = p.get('notes')
+                existing['status'] = p.get('status')
             else:
-                new_p = Participant(name=p.get('name'),
-                                    email_address=p['email'],
-                                    notes=p.get('notes'),
-                                    status=p.get('status'))
-                new_p.event = self
+                new_p = {"name": p.get('name'),
+                         "email_address": p['email'],
+                         "notes": p.get('notes'),
+                         "status": p.get('status')}
                 self.participants_by_email[p['email']] = new_p
 
         # Now remove the ones we have stored that are not in the list
@@ -146,7 +153,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
             # Removed locally, so don't add
             if base and remote:
                 return
-            new_p = Participant(email_address=p_email)
+            new_p = {"email_address": p_email}
             self.participants_by_email[p_email] = new_p
         else:
             # Removed by remote, don't add
@@ -183,6 +190,23 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
         self.merge_participants(base.participants_by_email,
                                 remote.participants_by_email)
 
+    def _copy_participant(self, copy, src):
+        if src['status'] is None:
+            src['status'] = 'noreply'
+            copy['status'] = 'noreply'
+
+        if 'email_address' in src:
+            copy['email_address'] = src['email_address']
+
+        if 'status' in src:
+            copy['status'] = src['status']
+
+        if 'name' in src:
+            copy['name'] = src['name']
+
+        if 'notes' in src:
+            copy['notes'] = src['notes']
+
     def copy_from(self, src):
         """ Copy fields from src."""
         self.namespace_id = src.namespace_id
@@ -205,18 +229,15 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
         self.calendar_id = src.calendar_id
 
         for p_email, p in src.participants_by_email.iteritems():
-            self.participants_by_email[p_email] = p
             if p_email not in self.participants_by_email:
-                new_p = Participant(event_id=self.id, name=p.name,
-                                    notes=p.notes, status=p.status)
-                self.participants_by_email[p_email] = new_p
+                self.participants_by_email[p_email] = p
             else:
                 old_p = self.participants_by_email[p_email]
-                old_p.copy_from(p)
+                self._copy_participant(old_p, p)
 
         # For some reason sqlalchemy doesn't like iterating and modifying
         # a collection at the same time.
-        emails = [p_email for p_email in self.participants_by_email]
+        emails = self.participants_by_email.keys()
         for p_email in emails:
             if p_email not in src.participants_by_email:
                 del self.participants_by_email[p_email]

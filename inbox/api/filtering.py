@@ -379,6 +379,4 @@ def events(namespace_id, event_public_id, calendar_public_id, title,
     else:
         # Eager-load some objects in order to make constructing API
         # representations faster.
-        query = query.options(
-            subqueryload(Event.participants_by_email))
         return query.all()

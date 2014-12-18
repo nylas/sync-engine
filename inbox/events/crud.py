@@ -26,6 +26,7 @@ def create(namespace, db_session, calendar, title, description, location,
         when=when,
         read_only=False,
         is_owner=True,
+        participants={},
         source='local')
 
     event.participant_list = participants
@@ -49,20 +50,16 @@ def create_from_ics(namespace, db_session, ics_str):
 
 
 def read(namespace, db_session, event_public_id):
-    eager = subqueryload(Event.participants_by_email)
     return db_session.query(Event).filter(
         Event.public_id == event_public_id,
         Event.namespace_id == namespace.id). \
-        options(eager). \
         first()
 
 
 def update(namespace, db_session, event_public_id, update_dict):
-    eager = subqueryload(Event.participants_by_email)
     event = db_session.query(Event).filter(
         Event.public_id == event_public_id,
         Event.namespace_id == namespace.id). \
-        options(eager). \
         first()
 
     if event is None:
@@ -117,8 +114,7 @@ def create_calendar(namespace, db_session, name, description):
 
 
 def read_calendar(namespace, db_session, calendar_public_id):
-    eager = subqueryload(Calendar.events). \
-        subqueryload(Event.participants_by_email)
+    eager = subqueryload(Calendar.events)
     return db_session.query(Calendar).filter(
         Calendar.public_id == calendar_public_id,
         Calendar.namespace_id == namespace.id). \
@@ -127,8 +123,7 @@ def read_calendar(namespace, db_session, calendar_public_id):
 
 
 def update_calendar(namespace, db_session, calendar_public_id, update_dict):
-    eager = subqueryload(Calendar.events). \
-        subqueryload(Event.participants_by_email)
+    eager = subqueryload(Calendar.events)
     calendar = db_session.query(Calendar).filter(
         Calendar.public_id == calendar_public_id,
         Calendar.namespace_id == namespace.id). \

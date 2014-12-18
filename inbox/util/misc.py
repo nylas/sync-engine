@@ -195,16 +195,26 @@ def merge_attr(base, remote, dest, attr_name):
         If there is a conflict.
     """
 
-    base_attr = getattr(base, attr_name) if base else None
-    remote_attr = getattr(remote, attr_name) if remote else None
-    dest_attr = getattr(dest, attr_name) if dest else None
+    try:
+        base_attr = getattr(base, attr_name) if base else None
+        remote_attr = getattr(remote, attr_name) if remote else None
+        dest_attr = getattr(dest, attr_name) if dest else None
+    except AttributeError:
+        # We may have received dicts instead of objects. In this case, use get()
+        base_attr = base.get(attr_name) if base else None
+        remote_attr = remote.get(attr_name) if remote else None
+        dest_attr = dest.get(attr_name) if dest else None
 
     if (base_attr != dest_attr != remote_attr != base_attr):
         raise MergeError('Conflicting updates to {0}, {1} from {2} on: {3}'
                          .format(remote, dest, base, attr_name))
 
     if base_attr != remote_attr:
-        setattr(dest, attr_name, remote_attr)
+        try:
+            setattr(dest, attr_name, remote_attr)
+        except AttributeError:
+            # Once again, we may have received dicts instead of objects
+            dest[attr_name] = remote_attr
 
 
 class MergeError(Exception):

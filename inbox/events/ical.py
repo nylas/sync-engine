@@ -1,7 +1,7 @@
 from datetime import datetime
 from icalendar import Calendar
 
-from inbox.models import Event, Participant
+from inbox.models import Event
 from inbox.events.util import MalformedEventError
 
 
@@ -59,12 +59,12 @@ def events_from_ics(namespace, calendar, ics_str):
                 except KeyError:
                     pass
 
-                participant = Participant(email_address=email,
-                                          status=status,
-                                          name=name,
-                                          notes=notes)
+                participants.append({'email_address': email,
+                                     'name': name,
+                                     'status': status,
+                                     'notes': notes,
+                                     'guests': []})
 
-                participants.append(participant)
             location = component.get('location')
             organizer = component.get('organizer')
             if(organizer):
@@ -89,8 +89,8 @@ def events_from_ics(namespace, calendar, ics_str):
                 busy=True,
                 all_day=all_day,
                 read_only=True,
-                source='local')
+                source='local',
+                participants=participants)
 
-            event.participants = participants
             events.append(event)
     return events

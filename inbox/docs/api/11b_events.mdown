@@ -25,7 +25,6 @@ GET https://api.inboxapp.com/n/<namespace_id>/events/<event_id>
     "participants": [
         {
             "email": "example@gmail.com",
-            "id": "4fnimdbuuyeoy1mk6lcymoemc",
             "name": "Ben Bitdiddle",
             "status": "yes"
         }
@@ -137,7 +136,7 @@ In the above example, the location of the event is updated and an additional par
 
 # Managing Participants
 
-The participants field is a list of items that contain an `name`, `email`, `status` and `id`. The participants can be managed explicitly through the event update protocol. Another way for participants to be managed is via a GET to the event endpoint. This mechanism allows links to be provided (e.g. in an email) that allows participants to choose whether they are attending the event or not.
+The participants field is a list of items that contain an `name`, `email`, and `status`. The participants can be managed explicitly through the event update protocol. Another way for participants to be managed is via a GET to the event endpoint. This mechanism allows links to be provided (e.g. in an email) that allows participants to choose whether they are attending the event or not.
 
 This can be performed via the following:
 

@@ -143,7 +143,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('476c5185121b');
+INSERT INTO `alembic_version` VALUES ('955792afd00');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -589,6 +589,7 @@ CREATE TABLE `event` (
   `is_owner` tinyint(1) NOT NULL,
   `read_only` tinyint(1) NOT NULL,
   `namespace_id` int(11) DEFAULT NULL,
+  `participants_by_email` text NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uuid` (`uid`,`source`,`namespace_id`,`provider_name`),
   KEY `event_ibfk_2` (`calendar_id`),
@@ -604,44 +605,8 @@ CREATE TABLE `event` (
 
 LOCK TABLES `event` WRITE;
 /*!40000 ALTER TABLE `event` DISABLE KEYS */;
-INSERT INTO `event` VALUES (1,'3bd5983f9d1748d0bca5719c57f72815','inbox','p5ßë‹\rD_∂Î ä@Ø◊˝','','desc1','data1','InboxHeadquarters',1,NULL,NULL,'1970-01-01 00:00:01','1970-02-01 00:00:01',0,'local','2014-08-29 01:22:53','2014-08-29 01:22:53',NULL,1,NULL,1,0,1),(2,'b9f18495985f4814a95e28f3e119a730','inbox','◊éÌv‘êAπ‡FcÕVø\n','','desc2','data2','InboxHeadquarters',1,NULL,NULL,'1970-01-01 00:00:01','1970-01-01 00:00:01',0,'local','2014-08-29 01:22:54','2014-08-29 01:22:54',NULL,2,NULL,1,1,1),(3,'c9f18495985f4814a95e28f3e119a730','inbox','◊éÌv‘êAπjFcÕVø\n','','desc5','data3','InboxHeadquarters',1,NULL,NULL,'1970-02-01 00:00:01','1970-03-01 00:00:01',0,'local','2014-08-29 01:22:54','2014-08-29 01:22:54',NULL,1,NULL,1,1,1);
+INSERT INTO `event` VALUES (1,'3bd5983f9d1748d0bca5719c57f72815','inbox','p5ßë‹\rD_∂Î ä@Ø◊˝','','desc1','data1','InboxHeadquarters',1,NULL,NULL,'1970-01-01 00:00:01','1970-02-01 00:00:01',0,'local','2014-08-29 01:22:53','2014-08-29 01:22:53',NULL,1,NULL,1,0,1,'{}'),(2,'b9f18495985f4814a95e28f3e119a730','inbox','◊éÌv‘êAπ‡FcÕVø\n','','desc2','data2','InboxHeadquarters',1,NULL,NULL,'1970-01-01 00:00:01','1970-01-01 00:00:01',0,'local','2014-08-29 01:22:54','2014-08-29 01:22:54',NULL,2,NULL,1,1,1,'{}'),(3,'c9f18495985f4814a95e28f3e119a730','inbox','◊éÌv‘êAπjFcÕVø\n','','desc5','data3','InboxHeadquarters',1,NULL,NULL,'1970-02-01 00:00:01','1970-03-01 00:00:01',0,'local','2014-08-29 01:22:54','2014-08-29 01:22:54',NULL,1,NULL,1,1,1,'{}');
 /*!40000 ALTER TABLE `event` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `eventparticipant`
---
-
-DROP TABLE IF EXISTS `eventparticipant`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `eventparticipant` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `public_id` binary(16) NOT NULL,
-  `event_id` int(11) NOT NULL,
-  `name` varchar(255) DEFAULT NULL,
-  `_raw_address` varchar(191) DEFAULT NULL,
-  `_canonicalized_address` varchar(191) DEFAULT NULL,
-  `status` enum('yes','no','maybe','noreply') NOT NULL,
-  `notes` text,
-  `created_at` datetime DEFAULT NULL,
-  `updated_at` datetime DEFAULT NULL,
-  `deleted_at` datetime DEFAULT NULL,
-  `guests` int(11) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uid` (`_raw_address`,`event_id`),
-  KEY `event_id` (`event_id`),
-  CONSTRAINT `eventparticipant_ibfk_1` FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `eventparticipant`
---
-
-LOCK TABLES `eventparticipant` WRITE;
-/*!40000 ALTER TABLE `eventparticipant` DISABLE KEYS */;
-/*!40000 ALTER TABLE `eventparticipant` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -916,7 +881,7 @@ CREATE TABLE `imapfoldersyncstatus` (
 
 LOCK TABLES `imapfoldersyncstatus` WRITE;
 /*!40000 ALTER TABLE `imapfoldersyncstatus` DISABLE KEYS */;
-INSERT INTO `imapfoldersyncstatus` VALUES (1,1,'poll','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL,2),(2,1,'poll','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL,3);
+INSERT INTO `imapfoldersyncstatus` VALUES (2,1,'poll','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL,2);
 /*!40000 ALTER TABLE `imapfoldersyncstatus` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -988,7 +953,7 @@ CREATE TABLE `imapuid` (
 
 LOCK TABLES `imapuid` WRITE;
 /*!40000 ALTER TABLE `imapuid` DISABLE KEYS */;
-INSERT INTO `imapuid` VALUES (2,1,1,380,0,0,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,'[]'),(4,1,2,943,0,1,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,'[]'),(6,1,3,934,0,1,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,'[]'),(8,1,4,555,0,0,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,'[]'),(10,1,5,554,0,0,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,'[]'),(12,1,6,406,0,1,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,'[]'),(14,1,7,385,0,0,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,'[]'),(16,1,8,378,0,1,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,'[]'),(18,1,9,377,0,0,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,'[]'),(20,1,10,375,0,0,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,'[]'),(21,1,11,341,0,0,0,0,0,'[]',3,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,'[]'),(22,1,12,339,0,0,0,0,0,'[]',3,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,'[]'),(23,1,13,338,0,0,0,0,0,'[]',3,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,'[]'),(24,1,14,320,0,0,0,0,0,'[]',3,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,'[]'),(25,1,15,316,0,0,0,0,0,'[]',3,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,'[]'),(26,1,16,184,0,1,0,0,0,'[]',3,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,'[]');
+INSERT INTO `imapuid` VALUES (2,1,1,380,0,0,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,'[]'),(22,1,12,339,0,0,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,'[]'),(23,1,13,338,0,0,0,0,0,'[]',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,'[]'),(24,1,14,320,0,0,0,0,0,'[]',3,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,'[]'),(25,1,15,316,0,0,0,0,0,'[]',3,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,'[]'),(26,1,16,184,0,1,0,0,0,'[]',3,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL,'[]');
 /*!40000 ALTER TABLE `imapuid` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1684,4 +1649,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-12-12  4:02:00
+-- Dump completed on 2014-12-17 11:15:35

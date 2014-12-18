@@ -103,23 +103,6 @@ def test_event_insert_creates_transaction(db):
             assert transaction.command == 'insert'
 
 
-def test_participant_update_creates_transaction(db):
-    from tests.general.events.default_event import default_event
-    from inbox.models.participant import Participant
-    with session_scope() as db_session:
-        with db_session.no_autoflush:
-            event = default_event(db_session)
-            participant = Participant(email_address="foo@example.com")
-            event.participants = [participant]
-            db_session.commit()
-
-            transaction = get_latest_transaction(db_session, 'event',
-                                                 event.id, NAMESPACE_ID)
-            assert transaction.record_id == event.id
-            assert transaction.object_type == 'event'
-            assert transaction.command == 'update'
-
-
 def test_object_deletions_create_transaction(db):
     with session_scope() as db_session:
         with db_session.no_autoflush:

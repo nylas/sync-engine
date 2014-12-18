@@ -8,7 +8,6 @@ from inbox.models.constants import MAX_FOLDER_NAME_LENGTH
 from inbox.models.contact import MessageContactAssociation, Contact
 from inbox.models.calendar import Calendar
 from inbox.models.event import Event
-from inbox.models.participant import Participant
 from inbox.models.folder import Folder, FolderItem
 from inbox.models.message import Message
 from inbox.models.namespace import Namespace
@@ -24,5 +23,5 @@ __all__ = ['Account', 'ActionLog', 'MailSyncBase', 'Block', 'Part',
            'MessageContactAssociation', 'Contact', 'Date', 'DateSpan', 'Event',
            'Folder', 'FolderItem', 'Message', 'Namespace', 'Calendar',
            'Tag', 'TagItem', 'Thread', 'Time', 'TimeSpan', 'Transaction',
-           'Participant', 'When', 'SearchIndexCursor',
+           'When', 'SearchIndexCursor',
            'MAX_FOLDER_NAME_LENGTH', 'backend_module_registry']

@@ -89,7 +89,7 @@ def real_test_event_crud(client, real_db):
     ns = client.namespaces[0]
     ev = ns.events.create()
     ev.calendar_id = ns.calendars[0].id
-    ev.title = "This is a test event"
+    ev.title = "Rodomontades"
     d1 = datetime.datetime.now() + datetime.timedelta(hours=2)
     d2 = datetime.datetime.now() + datetime.timedelta(hours=9)
     start = int(time.mktime(d1.timetuple()))
@@ -100,6 +100,7 @@ def real_test_event_crud(client, real_db):
 
     # now, update it
     ev.title = "Renamed title"
+    ev.participants = [{'email': 'bland@example.com', 'name': 'John Bland'}]
     ev.save()
     wait_for_event_rename(client, ev.id, ev.title, real_db)
 

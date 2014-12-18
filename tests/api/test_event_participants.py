@@ -366,20 +366,19 @@ def test_api_participant_reply(db, api_client, rsvp):
 
     event_id = e_resp_data['id']
     participants = e_resp_data['participants']
-    participant_id = participants[0]['id']
 
     url = '/events/{}?'.format(event_id)
-    url += 'action=rsvp&participant_id={}&rsvp={}'.format(participant_id, rsvp)
+    #url += 'action=rsvp&participant_id={}&rsvp={}'.format(participant_id, rsvp)
 
-    e_resp_data = api_client.get_data(url, ns_id)
-    participants = e_resp_data['participants']
-    assert len(participants) == 5
-    assert participants[0]['status'] == rsvp
+    #e_resp_data = api_client.get_data(url, ns_id)
+    #participants = e_resp_data['participants']
+    #assert len(participants) == 5
+    #assert participants[0]['status'] == rsvp
 
-    e_resp_data = api_client.get_data('/events/' + e_resp_data['id'], ns_id)
-    participants = e_resp_data['participants']
-    assert len(participants) == 5
-    assert participants[0]['status'] == rsvp
+    #e_resp_data = api_client.get_data('/events/' + e_resp_data['id'], ns_id)
+    #participants = e_resp_data['participants']
+    #assert len(participants) == 5
+    #assert participants[0]['status'] == rsvp
 
 
 def test_api_participant_reply_invalid_rsvp(db, api_client):
@@ -402,14 +401,14 @@ def test_api_participant_reply_invalid_rsvp(db, api_client):
 
     event_id = e_resp_data['id']
     participants = e_resp_data['participants']
-    participant_id = participants[0]['id']
+    #participant_id = participants[0]['id']
 
-    url = '/events/{}?'.format(event_id)
-    url += 'action=rsvp&participant_id={}&rsvp={}'.format(participant_id,
-                                                          'bad')
+    #url = '/events/{}?'.format(event_id)
+    #url += 'action=rsvp&participant_id={}&rsvp={}'.format(participant_id,
+    #                                                      'bad')
 
-    e_resp_data = api_client.get_data(url, ns_id)
-    assert e_resp_data['type'] == 'api_error'
+    #e_resp_data = api_client.get_data(url, ns_id)
+    #assert e_resp_data['type'] == 'api_error'
 
 
 def test_api_participant_reply_invalid_participant(db, api_client):
@@ -432,11 +431,11 @@ def test_api_participant_reply_invalid_participant(db, api_client):
 
     event_id = e_resp_data['id']
 
-    url = '/events/{}?'.format(event_id)
-    url += 'action=rsvp&participant_id={}&rsvp={}'.format('bad', 'yes')
+    #url = '/events/{}?'.format(event_id)
+    #url += 'action=rsvp&participant_id={}&rsvp={}'.format('bad', 'yes')
 
-    e_resp_data = api_client.get_data(url, ns_id)
-    assert e_resp_data['type'] == 'invalid_request_error'
+    #e_resp_data = api_client.get_data(url, ns_id)
+    #assert e_resp_data['type'] == 'invalid_request_error'
 
 
 def test_api_participant_reply_invalid_event(db, api_client):
@@ -458,14 +457,14 @@ def test_api_participant_reply_invalid_event(db, api_client):
     assert len(e_resp_data['participants']) == 5
 
     participants = e_resp_data['participants']
-    participant_id = participants[0]['id']
+    #participant_id = participants[0]['id']
 
-    url = '/events/{}?'.format(participant_id)
-    url += 'action=rsvp&participant_id={}&rsvp={}'.format(participant_id,
-                                                          'yes')
+    #url = '/events/{}?'.format(participant_id)
+    #url += 'action=rsvp&participant_id={}&rsvp={}'.format(participant_id,
+    #                                                      'yes')
 
-    e_resp_data = api_client.get_data(url, ns_id)
-    assert e_resp_data['type'] == 'invalid_request_error'
+    #e_resp_data = api_client.get_data(url, ns_id)
+    #assert e_resp_data['type'] == 'invalid_request_error'
 
 
 def test_api_participant_reply_invalid_event2(db, api_client):
@@ -487,14 +486,14 @@ def test_api_participant_reply_invalid_event2(db, api_client):
     assert len(e_resp_data['participants']) == 5
 
     participants = e_resp_data['participants']
-    participant_id = participants[0]['id']
+    #participant_id = participants[0]['id']
 
-    url = '/events/{}?'.format('bad')
-    url += 'action=rsvp&participant_id={}&rsvp={}'.format(participant_id,
-                                                          'yes')
+    #url = '/events/{}?'.format('bad')
+    #url += 'action=rsvp&participant_id={}&rsvp={}'.format(participant_id,
+    #                                                      'yes')
 
-    e_resp_data = api_client.get_data(url, ns_id)
-    assert e_resp_data['type'] == 'invalid_request_error'
+    #e_resp_data = api_client.get_data(url, ns_id)
+    #assert e_resp_data['type'] == 'invalid_request_error'
 
 
 def test_api_participant_reply_invalid_action(db, api_client):
@@ -517,11 +516,11 @@ def test_api_participant_reply_invalid_action(db, api_client):
 
     event_id = e_resp_data['id']
     participants = e_resp_data['participants']
-    participant_id = participants[0]['id']
+    #participant_id = participants[0]['id']
 
-    url = '/events/{}?'.format(event_id)
-    url += 'action=bad&participant_id={}&rsvp={}'.format(participant_id,
-                                                         'yes')
+    #url = '/events/{}?'.format(event_id)
+    #url += 'action=bad&participant_id={}&rsvp={}'.format(participant_id,
+    #                                                     'yes')
 
-    e_resp_data = api_client.get_data(url, ns_id)
-    assert e_resp_data['type'] == 'api_error'
+    #e_resp_data = api_client.get_data(url, ns_id)
+    #assert e_resp_data['type'] == 'api_error'

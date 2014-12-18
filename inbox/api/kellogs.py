@@ -5,7 +5,7 @@ from json import JSONEncoder, dumps
 from flask import Response
 
 from inbox.models import (Message, Contact, Calendar, Event,
-                          Participant, Time, TimeSpan, Date, DateSpan,
+                          Time, TimeSpan, Date, DateSpan,
                           Thread, Namespace, Block, Tag)
 
 
@@ -42,6 +42,19 @@ def encode(obj, namespace_public_id=None):
     """
     def _get_namespace_public_id(obj):
         return namespace_public_id or obj.namespace.public_id
+
+    def _format_participant_data(participant):
+        """Event.participants_by_emails is a JSON blob which may contain internal data.
+        This function returns a dict with only the data we can make public."""
+        dct = {}
+        if 'email_address' in participant:
+            dct['email'] = participant['email_address']
+
+        for attribute in ['name', 'status']:
+            if attribute in participant:
+                dct[attribute] = participant[attribute]
+
+        return dct
 
     # Flask's jsonify() doesn't handle datetimes or json arrays as primary
     # objects.
@@ -123,7 +136,8 @@ def encode(obj, namespace_public_id=None):
             'calendar_id': obj.calendar.public_id if obj.calendar else None,
             'title': obj.title,
             'description': obj.description,
-            'participants': [encode(p) for p in obj.participants],
+            'participants': [_format_participant_data(participant)
+                             for participant in obj.participants],
             'read_only': obj.read_only,
             'location': obj.location,
             'when': encode(obj.when)
@@ -138,14 +152,6 @@ def encode(obj, namespace_public_id=None):
             'description': obj.description,
             'read_only': obj.read_only,
             'event_ids': [e.public_id for e in obj.events],
-        }
-
-    elif isinstance(obj, Participant):
-        return {
-            'id': obj.public_id,
-            'name': obj.name,
-            'email': obj.email_address,
-            'status': obj.status,
         }
 
     elif isinstance(obj, Time):
