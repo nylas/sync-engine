@@ -30,7 +30,7 @@ def all_uids(account_id, session, folder_name):
 def _folders_for_labels(g_labels, account, db_session):
     """Given a set of Gmail label strings, return the set of associated Folder
     objects. Creates new (un-added, uncommitted) Folder instances if needed."""
-    labels = {l.lstrip('\\').lower() for l in g_labels}
+    labels = {unicode(l).lstrip('\\').lower() for l in g_labels}
 
     # The problem here is that Gmail's attempt to squash labels and
     # IMAP folders into the same abstraction doesn't work perfectly. In
