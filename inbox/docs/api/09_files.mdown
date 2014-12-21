@@ -26,7 +26,12 @@ GET https://api.inboxapp.com/n/<namespace_id>/files/<file_id>
 
 # Retrieving many files
 
-This endpoint supports [filters](#filters), which allow you to fetch multiple files matching specific critera. For example, the following will return all zip files. Note the `/` character in the content type has been replaced by the [percent-encoded](http://en.wikipedia.org/wiki/Percent-encoding) value `%2F`.
+This endpoint supports [filters](#filters), which allow you to fetch multiple files matching specific critera. For example, the following will return all zip files. Note the `/` character in the content-type has been replaced by the [percent-encoded](http://en.wikipedia.org/wiki/Percent-encoding) value `%2F`.
+
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/files?content_type=application%2Fzip
+```
 
 ## Options
 
@@ -42,10 +47,8 @@ This endpoint supports [filters](#filters), which allow you to fetch multiple fi
 
 * **`is_attachment`** (bool) either `true` or `false` specifying if the results should be filtered to files that are attachments or not.
 
-```
-:::xml
-GET https://api.inboxapp.com/n/<namespace_id>/files?filename=meme.png
-```
+* **`content_type`** (string) Return only files with this content-type. Note the `/` character in the content-type has been replaced by the [percent-encoded](http://en.wikipedia.org/wiki/Percent-encoding) value `%2F`.
+
 
 
 ## A note on content-types
