@@ -329,7 +329,6 @@ class FolderSyncEngine(Greenlet):
 
     def download_uids(self, crispin_client, download_stack):
         while not download_stack.empty():
-            self.sync_status.publish()
             # Defer removing UID from queue until after it's committed to the
             # DB' to avoid races with poll_for_changes().
             uid, metadata = download_stack.peek()
@@ -338,6 +337,7 @@ class FolderSyncEngine(Greenlet):
             download_stack.get()
             report_progress(self.account_id, self.folder_name, 1,
                             download_stack.qsize())
+            self.sync_status.publish()
             if self.throttled and metadata is not None and metadata.throttled:
                 # Check to see if the account's throttled state has been
                 # modified. If so, immediately accelerate.

@@ -288,7 +288,6 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
         # have _every_ message in the thread. We have to expand it and make
         # sure we have all messages.
         while not download_stack.empty():
-            self.sync_status.publish()
             uid, metadata = download_stack.get()
             if uid in self.saved_uids:
                 continue
@@ -300,6 +299,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
             self.__download_thread(crispin_client,
                                    thread_g_metadata,
                                    metadata.thrid, thread_uids)
+            self.sync_status.publish()
             if self.throttled and metadata is not None and metadata.throttled:
                 # Check to see if the account's throttled state has been
                 # modified. If so, immediately accelerate.
