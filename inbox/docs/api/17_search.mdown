@@ -1,4 +1,5 @@
 Title: Search (Work in progress)
+SkipDoc: True
 
 The search endpoints are used to run full-text searches against the messages and threads of a namespace.
 
