@@ -22,6 +22,10 @@ def upgrade():
     with session_scope(ignore_soft_deletes=False, versioned=False) as \
             db_session:
         for account in db_session.query(GmailAccount):
+            if account.inbox_folder is None:
+                # May be the case for accounts that we can't sync, e.g. due to
+                # All Mail being disabled in IMAP.
+                continue
             q = db_session.query(ImapFolderSyncStatus).filter(
                 ImapFolderSyncStatus.account_id == account.id,
                 ImapFolderSyncStatus.folder_id == account.inbox_folder.id)
