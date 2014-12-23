@@ -171,7 +171,8 @@ def _choose_existing_thread_for_gmail(message, db_session):
         order_by(desc(ImapThread.recentdate)).all()
     if not prior_threads:
         return None
-
+    if len(prior_threads) == 1:
+        return prior_threads[0]
     if not message.in_reply_to:
         # If no header, add the new message to the most recent thread.
         return prior_threads[0]
