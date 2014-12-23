@@ -57,6 +57,11 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
     # local flags & data
     save_raw_messages = Column(Boolean, server_default=true())
 
+    # if True we sync contacts/events
+    # NOTE: these columns are meaningless for EAS accounts
+    sync_contacts = Column(Boolean, nullable=False, default=False)
+    sync_events = Column(Boolean, nullable=False, default=False)
+
     last_synced_contacts = Column(DateTime, nullable=True)
     last_synced_events = Column(DateTime, nullable=True)
 

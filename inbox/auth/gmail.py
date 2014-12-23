@@ -80,6 +80,8 @@ class GmailAuthHandler(OAuthAuthHandler):
         account.home_domain = response.get('hd')
         account.client_id = response.get('client_id')
         account.client_secret = response.get('client_secret')
+        account.sync_contacts = response.get('contacts', True)
+        account.sync_events = response.get('events', True)
 
         try:
             self.verify_config(account)
@@ -138,6 +140,8 @@ class GmailAuthHandler(OAuthAuthHandler):
             auth_code = raw_input('Enter authorization code: ').strip()
             try:
                 auth_response = self._get_authenticated_user(auth_code)
+                auth_response['contacts'] = True
+                auth_response['events'] = True
                 return auth_response
             except OAuthError:
                 print "\nInvalid authorization code, try again...\n"
