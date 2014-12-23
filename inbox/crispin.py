@@ -607,6 +607,19 @@ class CondStoreCrispinClient(CrispinClient):
 
         return status
 
+    def idle(self, timeout):
+        """Idle for up to `timeout` seconds. Make sure we take the connection
+        back out of idle mode so that we can reuse this connection in another
+        context."""
+        self.conn.idle()
+        try:
+            r = self.conn.idle_check(timeout)
+        except:
+            self.conn.idle_done()
+            raise
+        self.conn.idle_done()
+        return r
+
     @property
     def selected_highestmodseq(self):
         return or_none(self.selected_folder_info, lambda i: i['HIGHESTMODSEQ'])

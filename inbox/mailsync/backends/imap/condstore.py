@@ -128,6 +128,4 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
         # messages being marked as read.
         idle_frequency = 30
         log.info('idling', timeout=idle_frequency)
-        crispin_client.conn.idle()
-        crispin_client.conn.idle_check(timeout=idle_frequency)
-        crispin_client.conn.idle_done()
+        crispin_client.idle(idle_frequency)
