@@ -30,6 +30,8 @@ def all_uids(account_id, session, folder_name):
 def _folders_for_labels(g_labels, account, db_session):
     """Given a set of Gmail label strings, return the set of associated Folder
     objects. Creates new (un-added, uncommitted) Folder instances if needed."""
+    # Elements of g_labels may not have unicode type (in particular, if you
+    # have a numeric label, e.g., '42'), so we need to coerce to unicode.
     labels = {unicode(l).lstrip('\\').lower() for l in g_labels}
 
     # The problem here is that Gmail's attempt to squash labels and

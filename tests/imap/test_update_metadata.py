@@ -57,7 +57,10 @@ def test_gmail_label_sync(db):
                            msg_uid=22222, folder=folder))
     db.session.commit()
 
-    new_flags = {22222: GmailFlags((), (u'\\Important', u'\\Starred', u'foo'))}
+    # Note that IMAPClient parses numeric labels into integer types. We have to
+    # correctly handle those too.
+    new_flags = {22222: GmailFlags((), (u'\\Important', u'\\Starred', u'foo',
+                                        42))}
     update_metadata(ACCOUNT_ID, db.session, folder.name, folder.id, [22222],
                     new_flags)
     thread_tag_names = {tag.name for tag in thread.tags}
