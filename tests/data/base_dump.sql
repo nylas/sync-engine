@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.40, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.34, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.5.40-0ubuntu0.12.04.1-log
+-- Server version	5.5.34-0ubuntu0.12.04.1-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -609,6 +609,42 @@ LOCK TABLES `event` WRITE;
 /*!40000 ALTER TABLE `event` DISABLE KEYS */;
 INSERT INTO `event` VALUES (1,'3bd5983f9d1748d0bca5719c57f72815','inbox','p5ßë‹\rD_∂Î ä@Ø◊˝','','desc1','data1','InboxHeadquarters',1,NULL,NULL,'1970-01-01 00:00:01','1970-02-01 00:00:01',0,'local','2014-08-29 01:22:53','2014-08-29 01:22:53',NULL,1,NULL,1,0,1,'{}'),(2,'b9f18495985f4814a95e28f3e119a730','inbox','◊éÌv‘êAπ‡FcÕVø\n','','desc2','data2','InboxHeadquarters',1,NULL,NULL,'1970-01-01 00:00:01','1970-01-01 00:00:01',0,'local','2014-08-29 01:22:54','2014-08-29 01:22:54',NULL,2,NULL,1,1,1,'{}'),(3,'c9f18495985f4814a95e28f3e119a730','inbox','◊éÌv‘êAπjFcÕVø\n','','desc5','data3','InboxHeadquarters',1,NULL,NULL,'1970-02-01 00:00:01','1970-03-01 00:00:01',0,'local','2014-08-29 01:22:54','2014-08-29 01:22:54',NULL,1,NULL,1,1,1,'{}');
 /*!40000 ALTER TABLE `event` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `eventparticipant`
+--
+
+DROP TABLE IF EXISTS `eventparticipant`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `eventparticipant` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `public_id` binary(16) NOT NULL,
+  `event_id` int(11) NOT NULL,
+  `name` varchar(255) DEFAULT NULL,
+  `_raw_address` varchar(191) DEFAULT NULL,
+  `_canonicalized_address` varchar(191) DEFAULT NULL,
+  `status` enum('yes','no','maybe','noreply') NOT NULL,
+  `notes` text,
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `guests` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uid` (`_raw_address`,`event_id`),
+  KEY `event_id` (`event_id`),
+  CONSTRAINT `eventparticipant_ibfk_1` FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `eventparticipant`
+--
+
+LOCK TABLES `eventparticipant` WRITE;
+/*!40000 ALTER TABLE `eventparticipant` DISABLE KEYS */;
+/*!40000 ALTER TABLE `eventparticipant` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -1319,6 +1355,74 @@ LOCK TABLES `searchindexcursor` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `searchsignal`
+--
+
+DROP TABLE IF EXISTS `searchsignal`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `searchsignal` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(40) DEFAULT NULL,
+  `value` int(11) DEFAULT NULL,
+  `contact_id` int(11) NOT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `contact_id` (`contact_id`),
+  KEY `ix_searchsignal_created_at` (`created_at`),
+  KEY `ix_searchsignal_deleted_at` (`deleted_at`),
+  KEY `ix_searchsignal_updated_at` (`updated_at`),
+  CONSTRAINT `searchsignal_ibfk_1` FOREIGN KEY (`contact_id`) REFERENCES `contact` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=20 DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `searchsignal`
+--
+
+LOCK TABLES `searchsignal` WRITE;
+/*!40000 ALTER TABLE `searchsignal` DISABLE KEYS */;
+INSERT INTO `searchsignal` VALUES (1,'to_count',15,1,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(2,'latest_timestamp',1398902894,1,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(3,'from_count',6,2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(4,'latest_timestamp',1398902894,2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(5,'to_count',1,3,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(6,'latest_timestamp',1399076765,3,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(7,'cc_count',1,4,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(8,'latest_timestamp',1399076765,4,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(9,'from_count',1,4,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(10,'from_count',1,5,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(11,'latest_timestamp',1377021748,5,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(12,'from_count',1,6,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(13,'latest_timestamp',1395377580,6,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(14,'from_count',1,7,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(15,'latest_timestamp',1382324143,7,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(16,'cc_count',5,2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(17,'from_count',5,1,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(18,'from_count',1,8,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(19,'latest_timestamp',1398329884,8,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL);
+/*!40000 ALTER TABLE `searchsignal` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `searchtoken`
+--
+
+DROP TABLE IF EXISTS `searchtoken`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `searchtoken` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `token` varchar(255) DEFAULT NULL,
+  `source` enum('name','email_address') DEFAULT NULL,
+  `contact_id` int(11) DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `contact_id` (`contact_id`),
+  KEY `ix_searchtoken_created_at` (`created_at`),
+  KEY `ix_searchtoken_deleted_at` (`deleted_at`),
+  KEY `ix_searchtoken_updated_at` (`updated_at`),
+  CONSTRAINT `searchtoken_ibfk_1` FOREIGN KEY (`contact_id`) REFERENCES `contact` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=30 DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `searchtoken`
+--
+
+LOCK TABLES `searchtoken` WRITE;
+/*!40000 ALTER TABLE `searchtoken` DISABLE KEYS */;
+INSERT INTO `searchtoken` VALUES (1,'inboxapptest@gmail.com','email_address',1,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(2,'','name',1,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(3,'benbitdiddle1861@gmail.com','email_address',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(4,'Ben','name',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(5,'Bitdiddle','name',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(6,'Ben Bitdiddle','name',2,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(7,'paulxtiseo@gmail.com','email_address',3,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(8,'Paul','name',3,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(9,'Tiseo','name',3,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(10,'Paul Tiseo','name',3,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(11,'golang-nuts@googlegroups.com','email_address',4,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(12,'golang-nuts','name',4,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(13,'golang-nuts','name',4,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(14,'mail-noreply@google.com','email_address',5,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(15,'Gmail','name',5,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(16,'Team','name',5,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(17,'Gmail Team','name',5,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(18,'christine@spang.cc','email_address',6,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(19,'Christine','name',6,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(20,'Spang','name',6,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(21,'Christine Spang','name',6,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(22,'no-reply@accounts.google.com','email_address',7,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(23,'','name',7,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(24,'kavya719@gmail.com','email_address',8,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(25,'kavya','name',8,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(26,'joshi','name',8,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(27,'kavya joshi','name',8,'2014-05-13 02:19:13','2014-05-13 02:19:13',NULL),(28,'test','name',9,'2014-07-31 00:29:54','2014-07-31 00:29:54',NULL),(29,'test','name',9,'2014-07-31 00:29:54','2014-07-31 00:29:54',NULL);
+/*!40000 ALTER TABLE `searchtoken` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `secret`
 --
 
@@ -1641,6 +1745,30 @@ LOCK TABLES `webhook` WRITE;
 /*!40000 ALTER TABLE `webhook` DISABLE KEYS */;
 /*!40000 ALTER TABLE `webhook` ENABLE KEYS */;
 UNLOCK TABLES;
+
+--
+-- Table structure for table `yahooaccount`
+--
+
+DROP TABLE IF EXISTS `yahooaccount`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `yahooaccount` (
+  `id` int(11) NOT NULL,
+  `password` varchar(256) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `yahooaccount_ibfk_1` FOREIGN KEY (`id`) REFERENCES `imapaccount` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `yahooaccount`
+--
+
+LOCK TABLES `yahooaccount` WRITE;
+/*!40000 ALTER TABLE `yahooaccount` DISABLE KEYS */;
+/*!40000 ALTER TABLE `yahooaccount` ENABLE KEYS */;
+UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -1651,4 +1779,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-12-19 14:42:51
+-- Dump completed on 2014-12-23 22:06:37
