@@ -364,7 +364,7 @@ class FolderSyncEngine(Greenlet):
 
         new_uid = common.create_imap_message(db_session, log, acct, folder,
                                              msg)
-        new_uid = self.add_message_attrs(db_session, new_uid, msg, folder)
+        new_uid = self.add_message_attrs(db_session, new_uid, msg)
         return new_uid
 
     def fetch_similar_threads(self, db_session, new_uid):
@@ -377,7 +377,7 @@ class FolderSyncEngine(Greenlet):
             ImapThread.subject.like(clean_subject)). \
             order_by(desc(ImapThread.id)).all()
 
-    def add_message_attrs(self, db_session, new_uid, msg, folder):
+    def add_message_attrs(self, db_session, new_uid, msg):
         """ Post-create-message bits."""
         with db_session.no_autoflush:
             parent_threads = self.fetch_similar_threads(db_session, new_uid)
@@ -408,7 +408,7 @@ class FolderSyncEngine(Greenlet):
         # Make sure this thread has all the correct labels
         common.add_any_new_thread_labels(new_uid.message.thread, new_uid,
                                          db_session)
-        new_uid.update_imap_flags(msg.flags)
+        new_uid.update_flags_and_labels(msg.flags)
         return new_uid
 
     def remove_deleted_uids(self, db_session, local_uids, remote_uids):

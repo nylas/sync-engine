@@ -92,7 +92,11 @@ class ImapUid(MailSyncBase):
     # labels (Gmail-specific)
     g_labels = Column(JSON, default=lambda: [], nullable=True)
 
-    def update_imap_flags(self, new_flags, x_gm_labels=None):
+    def update_flags_and_labels(self, new_flags, x_gm_labels=None):
+        """Sets flag and g_labels values based on the new_flags and x_gm_labels
+        parameters. Returns True if any values have changed compared to what we
+        previously stored."""
+        changed = False
         new_flags = set(new_flags)
         col_for_flag = {
             u'\\Draft': 'is_draft',
@@ -102,12 +106,29 @@ class ImapUid(MailSyncBase):
             u'\\Flagged': 'is_flagged',
         }
         for flag, col in col_for_flag.iteritems():
-            setattr(self, col, flag in new_flags)
+            prior_flag_value = getattr(self, col)
+            new_flag_value = flag in new_flags
+            if prior_flag_value != new_flag_value:
+                changed = True
+                setattr(self, col, new_flag_value)
             new_flags.discard(flag)
-        # Gmail doesn't use the \Draft flag. Go figure.
-        if x_gm_labels is not None and '\\Draft' in x_gm_labels:
-            self.is_draft = True
-        self.extra_flags = sorted(new_flags)
+        extra_flags = sorted(new_flags)
+        if extra_flags != self.extra_flags:
+            changed = True
+        self.extra_flags = extra_flags
+
+        if x_gm_labels is not None:
+            new_labels = sorted(x_gm_labels)
+            if new_labels != self.g_labels:
+                changed = True
+            self.g_labels = new_labels
+
+            # Gmail doesn't use the \Draft flag. Go figure.
+            if '\\Draft' in x_gm_labels:
+                if not self.is_draft:
+                    changed = True
+                self.is_draft = True
+        return changed
 
     @property
     def namespace(self):

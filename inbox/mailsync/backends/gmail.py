@@ -222,7 +222,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
         return [msg for msg in raw_messages if msg.g_msgid not in
                 existing_g_msgids]
 
-    def add_message_attrs(self, db_session, new_uid, msg, folder):
+    def add_message_attrs(self, db_session, new_uid, msg):
         """ Gmail-specific post-create-message bits. """
         # Disable autoflush so we don't try to flush a message with null
         # thread_id, causing a crash, and so that we don't flush on each
@@ -234,11 +234,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
 
             # we rely on Gmail's threading instead of our threading algorithm.
             new_uid.message.thread_order = 0
-            new_uid.update_imap_flags(msg.flags, msg.g_labels)
-
-            # FIXME: @karim not sure if it's necessary to clean up strings like
-            # \\Inbox, \\Trash, etc.
-            new_uid.g_labels = [label for label in msg.g_labels]
+            new_uid.update_flags_and_labels(msg.flags, msg.g_labels)
 
             thread = new_uid.message.thread = ImapThread.from_gmail_message(
                 db_session, new_uid.account.namespace, new_uid.message)
@@ -412,7 +408,8 @@ def add_new_imapuids(crispin_client, remote_g_metadata, syncmanager_lock,
                     for item in new_imapuids:
                         # skip uids which have disappeared in the meantime
                         if item.msg_uid in flags:
-                            item.update_imap_flags(flags[item.msg_uid].flags,
-                                                   flags[item.msg_uid].labels)
+                            item.update_flags_and_labels(
+                                flags[item.msg_uid].flags,
+                                flags[item.msg_uid].labels)
                 db_session.add_all(new_imapuids)
                 db_session.commit()

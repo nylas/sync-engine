@@ -108,45 +108,44 @@ def update_metadata(account_id, session, folder_name, folder_id, uids,
     functionality in the lock.)
 
     """
+    if not uids:
+        return
     affected_threads = set()
-    if uids:
-        for item in session.query(ImapUid). \
-                filter(ImapUid.account_id == account_id,
-                       ImapUid.msg_uid.in_(uids),
-                       ImapUid.folder_id == folder_id). \
-                options(joinedload(ImapUid.message)):
-            flags = new_flags[item.msg_uid].flags
-            thread = item.message.thread
-            affected_threads.add(thread)
-            if hasattr(new_flags[item.msg_uid], 'labels'):  # i.e: gmail
-                labels = new_flags[item.msg_uid].labels
-                item.g_labels = [label for label in labels]
+    for item in session.query(ImapUid). \
+            filter(ImapUid.account_id == account_id,
+                   ImapUid.msg_uid.in_(uids),
+                   ImapUid.folder_id == folder_id). \
+            options(joinedload(ImapUid.message)):
+        flags = new_flags[item.msg_uid].flags
+        labels = getattr(new_flags[item.msg_uid], 'labels', None)
+        changed = item.update_flags_and_labels(flags, labels)
+        if not changed:
+            continue
+
+        thread = item.message.thread
+        affected_threads.add(thread)
+        unread_status_changed = item.message.is_read != item.is_seen
+        draft_status_changed = item.message.is_draft != item.is_draft
+
+        item.message.is_draft = item.is_draft
+        item.message.is_read = item.is_seen
+
+        # We have to update the thread's read tag separately.
+        if unread_status_changed:
+            unread_tag = thread.namespace.tags['unread']
+            if not item.message.is_read:
+                thread.apply_tag(unread_tag)
+            elif all(m.is_read for m in thread.messages):
+                thread.remove_tag(unread_tag)
+
+        if draft_status_changed:
+            if not item.is_draft:
+                item.message.state = 'sent'
             else:
-                labels = None
-            item.update_imap_flags(flags, labels)
+                item.message.state = 'draft'
 
-            unread_status_changed = item.message.is_read != item.is_seen
-            draft_status_changed = item.message.is_draft != item.is_draft
-
-            item.message.is_draft = item.is_draft
-            item.message.is_read = item.is_seen
-
-            # We have to update the thread's read tag separately.
-            if unread_status_changed:
-                unread_tag = thread.namespace.tags['unread']
-                if not item.message.is_read:
-                    thread.apply_tag(unread_tag)
-                elif all(m.is_read for m in thread.messages):
-                    thread.remove_tag(unread_tag)
-
-            if draft_status_changed:
-                if not item.is_draft:
-                    item.message.state = 'sent'
-                else:
-                    item.message.state = 'draft'
-
-        for thread in affected_threads:
-            recompute_thread_labels(thread, session)
+    for thread in affected_threads:
+        recompute_thread_labels(thread, session)
 
 
 def remove_messages(account_id, session, uids, folder):
@@ -256,7 +255,7 @@ def create_imap_message(db_session, log, account, folder, msg):
 
     imapuid = ImapUid(account=account, folder=folder, msg_uid=msg.uid,
                       message=new_msg)
-    imapuid.update_imap_flags(msg.flags, msg.g_labels)
+    imapuid.update_flags_and_labels(msg.flags, msg.g_labels)
 
     new_msg.is_draft = imapuid.is_draft
     if imapuid.is_draft:

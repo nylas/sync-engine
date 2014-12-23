@@ -73,7 +73,7 @@ def test_threading_limit(db, folder_sync_engine, monkeypatch):
         m.subject = 'unique subject'
         uid = ImapUid(message=m, account=account, msg_uid=2222 + i,
                       folder=folder)
-        folder_sync_engine.add_message_attrs(db.session, uid, msg, folder)
+        folder_sync_engine.add_message_attrs(db.session, uid, msg)
         db.session.add(m)
         db.session.commit()
     new_threads = db.session.query(Thread). \
