@@ -69,7 +69,6 @@ class SearchIndexService(Greenlet):
             # This currently indexes <= chunk_size, and it varies each time.
             if new_pointer is not None and \
                     new_pointer != self.transaction_pointer:
-
                 self.index(deltas)
                 self.update_pointer(new_pointer)
             else:
@@ -138,8 +137,13 @@ def _format_transaction_for_search(transaction):
         operation = 'delete'
         attributes = dict(id=transaction.object_public_id)
 
-    attributes = _process_attributes(attributes)
+    # transaction.snapshot is None in case of JSON decoding errors.
+    # We choose not to index in such cases, rather than index incompletely/
+    # incorrectly.
+    if not attributes:
+        return
 
+    attributes = _process_attributes(attributes)
     delta = {
         'namespace_id': transaction.namespace.public_id,
         'object': transaction.object_type,

@@ -105,7 +105,11 @@ def format_transactions_after_pointer(namespace_id, pointer, db_session,
             continue
 
         object_identifiers.add(object_identifier)
+
         delta = format_transaction_fn(transaction)
+        if not delta:
+            continue
+
         deltas.append(delta)
 
     return (list(reversed(deltas)), transactions[-1].id)

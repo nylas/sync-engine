@@ -2,7 +2,6 @@ import abc
 import uuid
 import struct
 import time
-from datetime import datetime
 
 from bson import json_util, EPOCH_NAIVE
 # Monkeypatch to not include tz_info in decoded JSON.
@@ -77,7 +76,15 @@ class JSON(TypeDecorator):
     def process_result_value(self, value, dialect):
         if not value:
             return None
-        return json_util.loads(value)
+
+        # Unfortunately loads() is strict about invalid utf-8 whereas dumps()
+        # is not. This can result in ValueErrors during decoding - we simply
+        # log and return None for now.
+        # http://bugs.python.org/issue11489
+        try:
+            return json_util.loads(value)
+        except ValueError:
+            log.error('ValueError on decoding JSON', value=value)
 
 
 def json_field_too_long(value):
