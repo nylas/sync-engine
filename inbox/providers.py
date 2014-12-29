@@ -399,7 +399,8 @@ get_default_providers = lambda: {
         "imap": ("imap.secureserver.net", 993),
         "smtp": ("smtpout.secureserver.net", 465),
         "auth": "password",
-        "mx_servers": ["mailstore1.secureserver.net",
+        "mx_servers": ["smtp.secureserver.net",
+                       "mailstore1.secureserver.net",
                        "mailstore1.asia.secureserver.net",
                        "mailstore1.europe.secureserver.net"]
     },
