@@ -140,9 +140,11 @@ class SyncStatus(object):
 def del_device(account_id, device_id):
     try:
         client = get_redis_client()
+        client_batch = client.pipeline()
         match_key = SyncStatusKey.all_folders(account_id)
         for k in client.scan_iter(match=match_key):
-            client.hdel(k, device_id)
+            client_batch.hdel(k, device_id)
+        client_batch.execute()
     except Exception:
         log = get_logger()
         log.error('Error while deleting from the sync status',
