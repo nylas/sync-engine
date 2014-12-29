@@ -39,8 +39,11 @@ def after_cursor_execute(conn, cursor, statement,
     if total > SLOW_QUERY_THRESHOLD_MS and statement.startswith('SELECT'):
         statement = ' '.join(statement.split())
         try:
+            # Turn `parameters` into a string as a quick fix for easier
+            # downstream parsing (Elasticsearch has trouble with arrays of
+            # heterogeneous type such as [1, 'a']).
             log.warning('slow query', query_time=total, statement=statement,
-                        parameters=parameters)
+                        parameters=str(parameters))
         except UnicodeDecodeError:
             log.warning('slow query', query_time=total)
             log.error('logging UnicodeDecodeError')
