@@ -9,7 +9,7 @@ from inbox.log import get_logger, log_uncaught_errors
 from inbox.mailsync.reporting import report_killed
 log = get_logger()
 BACKOFF_DELAY = 30  # seconds to wait before retrying after a failure
-MAX_COUNT = 100  # maximum number of tries before plain giving up
+MAX_COUNT = 5  # maximum number of tries before plain giving up
 RESET_INTERVAL = 300  # amount of time to pass before resetting the counter
 
 
