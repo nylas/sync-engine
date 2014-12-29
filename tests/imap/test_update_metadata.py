@@ -1,35 +1,31 @@
 from inbox.crispin import GmailFlags
-from inbox.models import Thread, Folder, Account
-from inbox.models.backends.imap import ImapUid
 from inbox.mailsync.backends.imap.common import update_metadata
-from tests.util.base import add_fake_message, add_fake_thread
+from tests.util.base import (add_fake_message, add_fake_thread,
+                             add_fake_imapuid)
 
 ACCOUNT_ID = 1
 NAMESPACE_ID = 1
 
 
-def test_update_metadata(db):
+def test_update_metadata(db, folder):
     """Check that threads are updated correctly when a label that we haven't
     seen before is added to multiple threads -- previously, this would fail
     with an IntegrityError because autoflush was disabled."""
     first_thread = add_fake_thread(db.session, NAMESPACE_ID)
     second_thread = add_fake_thread(db.session, NAMESPACE_ID)
-    folder = db.session.query(Folder).filter(
-        Folder.account_id == ACCOUNT_ID,
-        Folder.name == '[Gmail]/All Mail').one()
     uids = []
 
     first_thread_uids = (22222, 22223)
     for msg_uid in first_thread_uids:
         message = add_fake_message(db.session, NAMESPACE_ID, first_thread)
-        uids.append(ImapUid(account_id=ACCOUNT_ID, message=message,
-                            msg_uid=msg_uid, folder=folder))
+        uids.append(add_fake_imapuid(db.session, ACCOUNT_ID, message, folder,
+                                     msg_uid))
 
     second_thread_uids = (22224, 22226)
     for msg_uid in second_thread_uids:
         message = add_fake_message(db.session, NAMESPACE_ID, second_thread)
-        uids.append(ImapUid(account_id=ACCOUNT_ID, message=message,
-                            msg_uid=msg_uid, folder=folder))
+        uids.append(add_fake_imapuid(db.session, ACCOUNT_ID, message, folder,
+                                     msg_uid))
     db.session.add_all(uids)
     db.session.commit()
 
@@ -44,20 +40,10 @@ def test_update_metadata(db):
     assert 'some_new_label' in [tag.name for tag in second_thread.tags]
 
 
-def test_unread_and_draft_tags_applied(db):
+def test_unread_and_draft_tags_applied(db, thread, message, folder, imapuid):
     """Test that the unread and draft tags are added/removed from a thread
     after UID flag changes."""
-    msg_uid = 2222
-    thread = add_fake_thread(db.session, NAMESPACE_ID)
-    message = add_fake_message(db.session, NAMESPACE_ID, thread)
-    folder = db.session.query(Folder).filter(
-        Folder.account_id == ACCOUNT_ID,
-        Folder.name == '[Gmail]/All Mail').one()
-    uid = ImapUid(account_id=ACCOUNT_ID, message=message,
-                  msg_uid=msg_uid, folder=folder)
-    db.session.add(uid)
-    db.session.commit()
-
+    msg_uid = imapuid.msg_uid
     update_metadata(ACCOUNT_ID, db.session, folder.name, folder.id, [msg_uid],
                     {msg_uid: GmailFlags((u'\\Seen',), (u'\\Draft',))})
     assert 'unread' not in [t.name for t in thread.tags]
@@ -73,24 +59,19 @@ def test_unread_and_draft_tags_applied(db):
     assert message.state == 'sent'
 
 
-def test_gmail_label_sync(db):
-    folder = db.session.query(Folder).filter(
-        Folder.account_id == ACCOUNT_ID,
-        Folder.name == '[Gmail]/All Mail').one()
-    account = db.session.query(Account).get(ACCOUNT_ID)
-    if account.important_folder is not None:
-        db.session.delete(account.important_folder)
-    thread = db.session.query(Thread).get(1)
-    message = add_fake_message(db.session, NAMESPACE_ID, thread)
-    db.session.add(ImapUid(account_id=ACCOUNT_ID, message=message,
-                           msg_uid=22222, folder=folder))
-    db.session.commit()
+def test_gmail_label_sync(db, default_account, message, thread, folder,
+                          imapuid):
+    if default_account.important_folder is not None:
+        db.session.delete(default_account.important_folder)
+
+    msg_uid = imapuid.msg_uid
 
     # Note that IMAPClient parses numeric labels into integer types. We have to
     # correctly handle those too.
-    new_flags = {22222: GmailFlags((), (u'\\Important', u'\\Starred', u'foo',
-                                        42))}
-    update_metadata(ACCOUNT_ID, db.session, folder.name, folder.id, [22222],
+    new_flags = {
+        msg_uid: GmailFlags((), (u'\\Important', u'\\Starred', u'foo', 42))
+    }
+    update_metadata(ACCOUNT_ID, db.session, folder.name, folder.id, [msg_uid],
                     new_flags)
     thread_tag_names = {tag.name for tag in thread.tags}
     assert {'important', 'starred', 'foo'}.issubset(thread_tag_names)

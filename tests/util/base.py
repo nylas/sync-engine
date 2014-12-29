@@ -2,25 +2,8 @@ import json
 import os
 import subprocess
 from datetime import datetime
-from gevent import monkey
 
 from pytest import fixture, yield_fixture
-
-
-def uid():
-    from uuid import uuid4
-    from struct import unpack
-    a, b = unpack('>QQ', uuid4().bytes)
-    num = a << 64 | b
-
-    alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-
-    base36 = ''
-    while num:
-        num, i = divmod(num, 36)
-        base36 = alphabet[i] + base36
-
-    return base36
 
 
 def absolute_path(path):
@@ -81,13 +64,8 @@ def db(request, config):
 
     """
     dumpfile = request.param[0]
-    savedb = request.param[1]
-
     testdb = TestDB(config, dumpfile)
     yield testdb
-
-    if savedb:
-        testdb.save()
     testdb.teardown()
 
 
@@ -174,23 +152,12 @@ class TestDB(object):
         database = self.config.get('MYSQL_DATABASE')
         user = self.config.get('MYSQL_USER')
         password = self.config.get('MYSQL_PASSWORD')
-
-        #Check for env override of host and port
         hostname = self.config.get('MYSQL_HOSTNAME')
-        hostname = os.getenv('MYSQL_PORT_3306_TCP_ADDR',hostname)
         port = self.config.get('MYSQL_PORT')
-        port = os.getenv('MYSQL_PORT_3306_TCP_PORT',port)
 
-        cmd = 'mysql {0} -h{1} -P{2} -u{3} -p{4} < {5}'.format(database,hostname,port, user, password,
-                                                   self.dumpfile)
+        cmd = 'mysql {0} -h{1} -P{2} -u{3} -p{4} < {5}'. \
+            format(database, hostname, port, user, password, self.dumpfile)
         subprocess.check_call(cmd, shell=True)
-
-    def new_session(self, ignore_soft_deletes=True):
-        from inbox.models.session import InboxSession
-        self.session.close()
-        self.session = InboxSession(self.engine,
-                                    versioned=False,
-                                    ignore_soft_deletes=ignore_soft_deletes)
 
     def teardown(self):
         """
@@ -199,15 +166,7 @@ class TestDB(object):
         rolback the database because we create it anew on each test.
 
         """
-        self.session.rollback()
         self.session.close()
-
-    def save(self):
-        """ Updates the test dumpfile. """
-        database = self.config.get('MYSQL_DATABASE')
-
-        cmd = 'mysqldump {0} > {1}'.format(database, self.dumpfile)
-        subprocess.check_call(cmd, shell=True)
 
 
 class MockSMTPClient(object):
@@ -243,11 +202,6 @@ def patch_network_functions(monkeypatch):
 
 @yield_fixture(scope='function')
 def syncback_service():
-    # aggressive=False used to avoid AttributeError in other tests, see
-    # https://groups.google.com/forum/#!topic/gevent/IzWhGQHq7n0
-    # TODO(emfree): It's totally whack that monkey-patching here would affect
-    # other tests. Can we make this not happen?
-    monkey.patch_all(aggressive=False)
     from inbox.transactions.actions import SyncbackService
     s = SyncbackService(poll_interval=0, retry_interval=0)
     s.start()
@@ -342,3 +296,37 @@ def add_fake_thread(db_session, namespace_id):
     db_session.add(thr)
     db_session.commit()
     return thr
+
+
+def add_fake_imapuid(db_session, account_id, message, folder, msg_uid):
+    from inbox.models.backends.imap import ImapUid
+    imapuid = ImapUid(account_id=account_id,
+                      message=message,
+                      folder=folder,
+                      msg_uid=msg_uid)
+    db_session.add(imapuid)
+    db_session.commit()
+    return imapuid
+
+
+@fixture
+def thread(db, default_namespace):
+    return add_fake_thread(db.session, default_namespace.id)
+
+
+@fixture
+def message(db, default_namespace, thread):
+    return add_fake_message(db.session, default_namespace.id, thread)
+
+
+@fixture
+def folder(db, default_account):
+    from inbox.models.folder import Folder
+    return Folder.find_or_create(db.session, default_account,
+                                 '[Gmail]/All Mail', 'all')
+
+
+@fixture
+def imapuid(db, default_account, message, folder):
+    return add_fake_imapuid(db.session, default_account.id, message,
+                            folder, 2222)

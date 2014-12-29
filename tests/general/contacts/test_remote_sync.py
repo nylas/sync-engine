@@ -1,12 +1,8 @@
 import pytest
 
-from tests.util.base import config
 from tests.util.base import (contact_sync, contacts_provider, default_account,
                              ContactsProviderStub)
 
-# Need to set up test config before we can import from
-# inbox.models.tables.
-config()
 from inbox.models import Contact
 from inbox.util.misc import MergeError
 
@@ -14,11 +10,9 @@ __all__ = ['contact_sync', 'contacts_provider']
 
 NAMESPACE_ID = 1
 
-# STOPSHIP(emfree): Test multiple distinct remote providers
-
 
 @pytest.fixture(scope='function')
-def alternate_contacts_provider(config, db):
+def alternate_contacts_provider():
     return ContactsProviderStub('alternate_provider')
 
 
@@ -78,14 +72,13 @@ def test_update_contact(contacts_provider, contact_sync, db):
     contact_sync.provider_instance = contacts_provider
     contact_sync.poll()
     results = db.session.query(Contact).filter_by(source='remote').all()
-    db.new_session()
     email_addresses = [r.email_address for r in results]
     assert 'old@email.address' in email_addresses
 
     contacts_provider.__init__()
     contacts_provider.supply_contact('New Name', 'new@email.address')
     contact_sync.poll()
-    db.new_session()
+    db.session.commit()
 
     results = db.session.query(Contact).filter_by(source='remote').all()
     names = [r.name for r in results]

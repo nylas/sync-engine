@@ -94,14 +94,13 @@ def test_update_event(events_provider, event_sync, db):
     event_sync.provider_instance = events_provider
     event_sync.poll()
     results = db.session.query(Event).filter_by(source='remote').all()
-    db.new_session()
     titles = [r.title for r in results]
     assert 'subj' in titles
 
     events_provider.__init__()
     events_provider.supply_event('newsubj', 'newdescription')
     event_sync.poll()
-    db.new_session()
+    db.session.commit()
 
     results = db.session.query(Event).filter_by(source='remote').all()
     subjs = [r.title for r in results]
