@@ -3,8 +3,10 @@
 import datetime
 import os
 import pytest
+from flanker import mime
 from inbox.models import Message, Account
 from inbox.models.message import _get_errfilename
+from inbox.util.addr import parse_mimepart_address_header
 
 ACCOUNT_ID = 1
 NAMESPACE_ID = 1
@@ -62,3 +64,47 @@ def test_decode_error_file():
     getting UnicodeEncodeErrors"""
     fname = _get_errfilename(1, u'迷惑メール', 22)
     os.rmdir(os.path.dirname(fname))
+
+
+def test_address_parsing_edge_cases():
+    """Check that header parsing can handle a variety of tricky input."""
+    # Extra quotes around display name
+    mimepart = mime.from_string('From: ""Bob"" <bob@foocorp.com>')
+    parsed = parse_mimepart_address_header(mimepart, 'From')
+    assert parsed == [(' Bob ', 'bob@foocorp.com')]
+
+    # Comments after addr-spec
+    mimepart = mime.from_string(
+        'From: "Bob" <bob@foocorp.com>(through Yahoo!  Store Order System)')
+    parsed = parse_mimepart_address_header(mimepart, 'From')
+    assert parsed == [('Bob', 'bob@foocorp.com')]
+
+    mimepart = mime.from_string(
+        'From: Indiegogo <noreply@indiegogo.com> (no reply)')
+    parsed = parse_mimepart_address_header(mimepart, 'From')
+    assert parsed == [('Indiegogo', 'noreply@indiegogo.com')]
+
+    mimepart = mime.from_string(
+        'From: Anon <support@github.com> (GitHub Staff)')
+    parsed = parse_mimepart_address_header(mimepart, 'From')
+    assert parsed == [('Anon', 'support@github.com')]
+
+    # Display name in comment
+    mimepart = mime.from_string('From: root@gunks (Cron Daemon)')
+    parsed = parse_mimepart_address_header(mimepart, 'From')
+    assert parsed == [('Cron Daemon', 'root@gunks')]
+
+    # Missing closing angle bracket
+    mimepart = mime.from_string('From: Bob <bob@foocorp.com')
+    parsed = parse_mimepart_address_header(mimepart, 'From')
+    assert parsed == [('Bob', 'bob@foocorp.com')]
+
+    # Blank (spammers)
+    mimepart = mime.from_string('From:  ()')
+    parsed = parse_mimepart_address_header(mimepart, 'From')
+    assert parsed == []
+
+    # Missing header
+    mimepart = mime.from_string('')
+    parsed = parse_mimepart_address_header(mimepart, 'From')
+    assert parsed == []
