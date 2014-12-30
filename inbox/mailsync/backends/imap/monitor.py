@@ -11,6 +11,7 @@ from inbox.mailsync.backends.base import (save_folder_names,
                                           thread_polling, thread_finished)
 from inbox.mailsync.backends.imap.generic import _pool, FolderSyncEngine
 from inbox.mailsync.backends.imap.condstore import CondstoreFolderSyncEngine
+from inbox.mailsync.gc import DeleteHandler
 log = get_logger()
 
 
@@ -113,9 +114,15 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             else:
                 folders.add((folder_name, folder_id))
 
-    def sync(self):
-        folders = set()
+    def start_delete_handler(self):
+        self.delete_handler = DeleteHandler(account_id=self.account_id,
+                                            namespace_id=self.namespace_id,
+                                            uid_accessor=lambda m: m.imapuids)
+        self.delete_handler.start()
 
+    def sync(self):
+        self.start_delete_handler()
+        folders = set()
         self.start_new_folder_sync_engines(folders)
         while True:
             sleep(self.refresh_frequency)

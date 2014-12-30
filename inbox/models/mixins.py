@@ -103,5 +103,6 @@ class AutoTimestampMixin(object):
                         nullable=False, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow,
                         onupdate=datetime.utcnow, nullable=False, index=True)
-    # DEPRECATED
+    # MOSTLY DEPRECATED (but currently used for async deletion of Message
+    # objects).
     deleted_at = Column(DateTime, nullable=True, index=True)

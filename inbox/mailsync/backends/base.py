@@ -213,6 +213,7 @@ class BaseMailSyncMonitor(Greenlet):
         self.heartbeat = heartbeat
         self.log = log.new(component='mail sync', account_id=account.id)
         self.account_id = account.id
+        self.namespace_id = account.namespace.id
         self.email_address = account.email_address
         self.provider_name = account.provider
         self.retry_fail_classes = retry_fail_classes

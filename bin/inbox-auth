@@ -10,6 +10,8 @@ from inbox.auth import handler_from_provider
 from inbox.models.session import session_scope
 from inbox.models import Account
 from inbox.basicauth import NotSupportedError
+from inbox.log import configure_logging
+configure_logging(False)
 
 
 @click.command()
