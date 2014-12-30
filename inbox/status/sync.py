@@ -1,3 +1,4 @@
+from collections import namedtuple
 from datetime import datetime, timedelta
 import json
 from redis import StrictRedis
@@ -6,20 +7,33 @@ from inbox.config import config
 from inbox.log import get_logger
 
 
-g_alive_threshold = None
-g_alive_threshold_eas = None
+ALIVE_THRESHOLD = 180
+ALIVE_THRESHOLD_CONTACTS = 420
+ALIVE_THRESHOLD_EVENTS = 420
+ALIVE_THRESHOLD_EAS = 420
+
+
+AliveThresholds = namedtuple('AliveThresholds',
+                             ['base', 'contacts', 'events', 'eas'])
+g_alive_thresholds = None
 
 
 def get_heartbeat_config():
-    global g_alive_threshold
-    if g_alive_threshold is None:
-        g_alive_threshold = int(config.get_required('ALIVE_THRESHOLD'))
+    global g_alive_thresholds
+    if not g_alive_thresholds:
+        base = int(config.get_required('ALIVE_THRESHOLD'))
+        contacts = int(config.get_required('ALIVE_THRESHOLD_CONTACTS'))
+        events = int(config.get_required('ALIVE_THRESHOLD_EVENTS'))
+        eas = int(config.get_required('ALIVE_THRESHOLD_EAS'))
 
-    global g_alive_threshold_eas
-    if g_alive_threshold_eas is None:
-        g_alive_threshold_eas = int(config.get_required('ALIVE_THRESHOLD_EAS'))
+        g_alive_thresholds = AliveThresholds(
+            timedelta(seconds=base),
+            timedelta(seconds=contacts),
+            timedelta(seconds=events),
+            timedelta(seconds=eas)
+        )
 
-    return (g_alive_threshold, g_alive_threshold_eas)
+    return g_alive_thresholds
 
 
 redis_hostname = None
@@ -93,6 +107,14 @@ class SyncStatusKey(object):
         return cls(account_id, '*')
 
     @classmethod
+    def contacts(cls, account_id):
+        return cls(account_id, '-1')
+
+    @classmethod
+    def events(cls, account_id):
+        return cls(account_id, '-2')
+
+    @classmethod
     def from_string(cls, string_key):
         account_id, folder_id = map(int, string_key.split(':'))
         return cls(account_id, folder_id)
@@ -153,18 +175,35 @@ def del_device(account_id, device_id):
                   exc_info=True)
 
 
+def has_contacts_events(account_id):
+    try:
+        client = get_redis_client()
+        client_batch = client.pipeline()
+        client_batch.keys(pattern=SyncStatusKey.contacts(account_id))
+        client_batch.keys(pattern=SyncStatusKey.events(account_id))
+        values = client_batch.execute()
+        return (len(values[0]) == 1, len(values[1]) == 1)
+    except Exception:
+        log = get_logger()
+        log.error('Error while reading from the sync status',
+                  account_id=account_id,
+                  exc_info=True)
+        return (False, False)
+
+
 def get_sync_status(hostname=None, port=6379, database=1,
-                    alive_threshold=timedelta(seconds=180),
-                    alive_threshold_eas=timedelta(seconds=420),
+                    alive_thresholds=AliveThresholds(
+                        timedelta(seconds=ALIVE_THRESHOLD),
+                        timedelta(seconds=ALIVE_THRESHOLD_CONTACTS),
+                        timedelta(seconds=ALIVE_THRESHOLD_EVENTS),
+                        timedelta(seconds=ALIVE_THRESHOLD_EAS)
+                    ),
                     account_id=None):
     if hostname:
         client = StrictRedis(host=hostname, port=port, db=database)
     else:
-        try:
-            client = get_redis_client()
-            alive_threshold_eas, alive_threshold_eas = get_heartbeat_config()
-        except Exception as e:
-            raise e
+        client = get_redis_client()
+        alive_thresholds = get_heartbeat_config()
     client_batch = client.pipeline()
 
     keys = []
@@ -180,8 +219,6 @@ def get_sync_status(hostname=None, port=6379, database=1,
     values = client_batch.execute()
 
     now = datetime.utcnow()
-    alive_threshold = timedelta(seconds=180)
-    alive_threshold_eas = timedelta(seconds=420)
 
     accounts = {}
     for (k, v) in zip(keys, values):
@@ -202,11 +239,17 @@ def get_sync_status(hostname=None, port=6379, database=1,
             state = value.get('state', None)
             action = value.get('action', None)
 
-            if provider_name != 'eas' or \
-                    (provider_name == 'eas' and action != 'ping'):
-                device_alive = (now - heartbeat_at) < alive_threshold
+            if key.folder_id == -1:
+                # contacts
+                device_alive = (now - heartbeat_at) < alive_thresholds.contacts
+            elif key.folder_id == -2:
+                # events
+                device_alive = (now - heartbeat_at) < alive_thresholds.events
+            elif provider_name == 'eas' and action == 'ping':
+                # eas w/ ping
+                device_alive = (now - heartbeat_at) < alive_thresholds.eas
             else:
-                device_alive = (now - heartbeat_at) < alive_threshold_eas
+                device_alive = (now - heartbeat_at) < alive_thresholds.base
             device_alive = device_alive and \
                 (state in set([None, 'initial', 'poll']))
 

@@ -11,15 +11,23 @@ from inbox.models.session import session_scope
 from inbox.util.concurrency import retry_with_logging
 from inbox.util.misc import or_none, MergeError
 from inbox.models import Account
+from inbox.status.sync import SyncStatus
 
 
 class BaseSync(gevent.Greenlet):
-    def __init__(self, account_id, namespace_id, poll_frequency):
+    def __init__(self, account_id, namespace_id, poll_frequency, folder_id,
+                 folder_name, provider_name):
         self.shutdown = gevent.event.Event()
         self.account_id = account_id
         self.namespace_id = namespace_id
         self.poll_frequency = poll_frequency
         self.log = logger.new(account_id=account_id)
+        self.folder_id = folder_id
+        self.folder_name = folder_name
+        self._provider_name = provider_name
+        self.sync_status = SyncStatus(self.account_id, self.folder_id)
+        self.sync_status.publish(provider_name=self._provider_name,
+                                 folder_name=self.folder_name)
 
         gevent.Greenlet.__init__(self)
 
@@ -38,10 +46,12 @@ class BaseSync(gevent.Greenlet):
 
                 try:
                     self.poll()
+                    self.sync_status.publish(state='poll')
 
                 # If we get a connection or API permissions error, then sleep
                 # 2x poll frequency.
                 except (ConnectionError, PermissionsError):
+                    self.sync_status.publish(state='poll error')
                     gevent.sleep(self.poll_frequency)
                 gevent.sleep(self.poll_frequency)
         except ValidationError:
