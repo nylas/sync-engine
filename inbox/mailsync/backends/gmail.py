@@ -54,7 +54,7 @@ class GmailSyncMonitor(ImapSyncMonitor):
 
     def sync(self):
         self.start_delete_handler()
-        self.start_new_folder_sync_engines(set())
+        self.start_new_folder_sync_engines()
         self.folder_monitors.join()
 
 log = get_logger()
