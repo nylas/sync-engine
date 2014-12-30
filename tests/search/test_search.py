@@ -7,7 +7,7 @@ from pytest import yield_fixture
 from inbox.models.message import Message
 from inbox.models.thread import Thread
 from inbox.search.adaptor import NamespaceSearchEngine
-from inbox.search.util import index_namespace, index_messages, index_threads
+from inbox.search.util import index_namespaces, index_messages, index_threads
 from inbox.search.mappings import THREAD_MAPPING, MESSAGE_MAPPING
 #from inbox.util.misc import dt_to_timestamp
 
@@ -28,7 +28,7 @@ def search_index_service(db):
 
 @yield_fixture(scope='function')
 def search_engine(db, default_namespace):
-    index_namespace(default_namespace.public_id)
+    index_namespaces([default_namespace.id])
 
     engine = NamespaceSearchEngine(default_namespace.public_id)
     engine.refresh_index()
@@ -67,11 +67,11 @@ def test_index_creation(db, default_namespace, search_engine):
     namespace_public_id = default_namespace.public_id
 
     # Test number of indices
-    message_indices = index_messages((namespace_id, namespace_public_id))
+    message_indices = index_messages(namespace_id, namespace_public_id)
     message_count = db.session.query(Message).filter(
         Message.namespace_id == namespace_id).count()
 
-    thread_indices = index_threads((namespace_id, namespace_public_id))
+    thread_indices = index_threads(namespace_id, namespace_public_id)
     thread_count = db.session.query(Thread).filter(
         Thread.namespace_id == namespace_id).count()
 

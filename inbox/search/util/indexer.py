@@ -10,75 +10,65 @@ from inbox.models import Namespace, Thread, Message
 from inbox.api.kellogs import encode
 from inbox.search.adaptor import NamespaceSearchEngine
 from inbox.sqlalchemy_ext.util import safer_yield_per
+from inbox.transactions.search import _process_attributes
 
-CHUNK_SIZE = 1000
-
-
-class NamespaceIndexer(object):
-    def __init__(self):
-        self.pool = []
-
-    def index(self, namespace_public_id=None, updated_since=None):
-        """
-        Create an Elasticsearch index for a namespace and index its threads and
-        messages. If `namespace_public_id` is None, all namespaces are indexed.
-        Else, the specified one is.
-
-        """
-        with session_scope() as db_session:
-            q = db_session.query(Namespace.id, Namespace.public_id)
-
-            if namespace_public_id is not None:
-                namespaces = [q.filter(
-                    Namespace.public_id == namespace_public_id).one()]
-            else:
-                namespaces = q.all()
-
-        for ns in namespaces:
-            self.pool.append(gevent.spawn(index_threads, ns, updated_since))
-            self.pool.append(gevent.spawn(index_messages, ns, updated_since))
-
-        gevent.joinall(self.pool)
-
-        return sum([g.value for g in self.pool])
-
-    def delete(self, namespace_public_id=None):
-        """
-        Delete an Elasticsearch index for a namespace.
-        If `namespace_public_id` is None, all namespaces are indexed. Else,
-        the specified one is.
-
-        """
-        with session_scope() as db_session:
-            q = db_session.query(Namespace.id, Namespace.public_id)
-
-            if namespace_public_id is not None:
-                namespaces = [q.filter(
-                    Namespace.public_id == namespace_public_id).one()]
-            else:
-                namespaces = q.all()
-
-        for ns in namespaces:
-            self.pool.append(gevent.spawn(delete_index, ns))
-
-        gevent.joinall(self.pool)
+CHUNK_SIZE = 500
 
 
-def index_namespace(namespace_public_id=None, updated_since=None):
-    count = NamespaceIndexer().index(namespace_public_id, updated_since)
-    return count
+def index_namespaces(namespace_ids=None, created_before=None):
+    """
+    Create an Elasticsearch index for each namespace in the `namespace_ids`
+    list (specified by id), and index its threads and messages.
+    If `namespace_ids` is None, all namespaces are indexed.
+
+    """
+    pool = []
+
+    with session_scope() as db_session:
+        q = db_session.query(Namespace.id, Namespace.public_id)
+
+        if namespace_ids is not None:
+            namespaces = q.filter(Namespace.id.in_(namespace_ids)).all()
+        else:
+            namespaces = q.all()
+
+    for (id_, public_id) in namespaces:
+        pool.append(gevent.spawn(index_threads, id_, public_id,
+                                 created_before))
+        pool.append(gevent.spawn(index_messages, id_, public_id,
+                                 created_before))
+
+    gevent.joinall(pool)
+
+    return sum([g.value for g in pool])
 
 
-def delete_namespace_index(namespace_public_id=None):
-    NamespaceIndexer().delete(namespace_public_id)
+def delete_namespace_indexes(namespace_ids=None):
+    """
+    Delete the Elasticsearch indexes for the namespaces in the `namespace_ids`
+    list. If `namespace_ids` is None, all namespaces are deleted.
+
+    """
+    pool = []
+
+    with session_scope() as db_session:
+        q = db_session.query(Namespace.id, Namespace.public_id)
+
+        if namespace_ids is not None:
+            namespaces = q.filter(Namespace.id.in_(namespace_ids)).all()
+        else:
+            namespaces = q.all()
+
+    for (id_, public_id) in namespaces:
+        pool.append(gevent.spawn(delete_index, id_, public_id))
+
+    gevent.joinall(pool)
 
 
-def index_threads(namespace, updated_since=None):
+def index_threads(namespace_id, namespace_public_id, created_before=None):
     """ Index the threads of a namespace. """
-    namespace_id, namespace_public_id = namespace
-
-    if updated_since is not None:
-        updated_since = dateutil.parser.parse(updated_since)
+    if created_before is not None:
+        created_before = dateutil.parser.parse(created_before)
 
     indexed_count = 0
     search_engine = NamespaceSearchEngine(namespace_public_id)
@@ -87,8 +77,8 @@ def index_threads(namespace, updated_since=None):
         query = db_session.query(Thread).filter(
             Thread.namespace_id == namespace_id)
 
-        if updated_since is not None:
-            query = query.filter(Thread.updated_at > updated_since)
+        if created_before is not None:
+            query = query.filter(Thread.created_at <= created_before)
 
         query = query.options(
             subqueryload(Thread.messages).
@@ -100,7 +90,9 @@ def index_threads(namespace, updated_since=None):
         encoded = []
         for obj in safer_yield_per(query, Thread.id, 0, CHUNK_SIZE):
             encoded_obj = encode(obj, namespace_public_id=namespace_public_id)
-            encoded.append(('index', encoded_obj))
+            index_obj = _process_attributes(encoded_obj)
+
+            encoded.append(('index', index_obj))
 
     indexed_count += search_engine.threads.bulk_index(encoded)
 
@@ -111,12 +103,10 @@ def index_threads(namespace, updated_since=None):
     return indexed_count
 
 
-def index_messages(namespace, updated_since=None):
+def index_messages(namespace_id, namespace_public_id, created_before=None):
     """ Index the messages of a namespace. """
-    namespace_id, namespace_public_id = namespace
-
-    if updated_since is not None:
-        updated_since = dateutil.parser.parse(updated_since)
+    if created_before is not None:
+        created_before = dateutil.parser.parse(created_before)
 
     indexed_count = 0
     search_engine = NamespaceSearchEngine(namespace_public_id)
@@ -125,8 +115,8 @@ def index_messages(namespace, updated_since=None):
         query = db_session.query(Message).filter(
             Message.namespace_id == namespace_id)
 
-        if updated_since is not None:
-            query = query.filter(Message.updated_at > updated_since)
+        if created_before is not None:
+            query = query.filter(Message.created_at <= created_before)
 
         query = query.options(joinedload(Message.parts).
                               load_only('content_disposition'))
@@ -134,7 +124,9 @@ def index_messages(namespace, updated_since=None):
         encoded = []
         for obj in safer_yield_per(query, Message.id, 0, CHUNK_SIZE):
             encoded_obj = encode(obj, namespace_public_id=namespace_public_id)
-            encoded.append(('index', encoded_obj))
+            index_obj = _process_attributes(encoded_obj)
+
+            encoded.append(('index', index_obj))
 
     indexed_count += search_engine.messages.bulk_index(encoded)
 
@@ -145,10 +137,8 @@ def index_messages(namespace, updated_since=None):
     return indexed_count
 
 
-def delete_index(namespace):
+def delete_index(namespace_id, namespace_public_id):
     """ Delete a namespace index. """
-
-    namespace_id, namespace_public_id = namespace
     search_engine = NamespaceSearchEngine(namespace_public_id)
     search_engine.delete_index()
 

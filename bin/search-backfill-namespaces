@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+import click
+
+from inbox.search.util import index_namespaces
+
+
+@click.command()
+@click.argument('filename')
+@click.option('--created_before', default=None)
+def create_namespace_indexes(filename, created_before):
+    """
+    Create Elasticsearch indexes for the namespace_ids contained in the
+    file specified by `filename`, the expected format is one namespace_id/ line.
+    Use `created_before` to only index the threads and messages of the
+    namespace that were created before a certain date (the default is to index
+    all).
+
+    """
+    namespace_ids = []
+
+    with open(filename, 'r') as f:
+        for id_ in f.readlines():
+            try:
+                namespace_ids.append(int(id_))
+            except ValueError:
+                continue
+
+    index_namespaces(namespace_ids, created_before)
+
+
+if __name__ == '__main__':
+    create_namespace_indexes()

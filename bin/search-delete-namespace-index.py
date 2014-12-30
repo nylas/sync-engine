@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 import click
 
-from inbox.search.util import delete_namespace_index as delete_index
+from inbox.search.util import delete_namespace_indexes as delete_indexes
 
 
 @click.command()
-@click.option('--namespace_public_id', default=None)
-def delete_namespace_index(namespace_public_id):
+@click.option('--namespace_ids', default=None)
+def delete_namespace_indexes(namespace_ids):
     """
-    Delete an Elasticsearch index for a namespace. All namespace indexes are
-    deleted by default, use `namespace_public_id` to specify only one.
+    Delete the Elasticsearch indexes for a list of namespaces, specified by id.
+    If namespace_ids=None, all namespace indexes are deleted (the default).
 
     """
-    delete_index(namespace_public_id)
+    delete_indexes(namespace_ids)
 
 
 if __name__ == '__main__':
-    delete_namespace_index()
+    delete_namespace_indexes()
