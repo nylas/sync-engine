@@ -10,10 +10,9 @@ VAGRANTFILE_API_VERSION = "2"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
-  config.vm.box = "precise64"
-  config.vm.box_url = "http://files.vagrantup.com/precise64.box"
+  config.vm.box = "ffuenf/ubuntu-14.04.1-server-amd64"
   config.vm.box_download_checksum_type = "sha256"
-  config.vm.box_download_checksum = "9a8bdea70e1d35c1d7733f587c34af07491872f2832f0bc5f875b536520ec17e"
+  config.vm.box_download_checksum = "259c5b3c7d4b07879c76f08390710e66a9158d687787a935e435d3f73f73c062"
 
   config.vm.provider :virtualbox do |vbox, override|
     vbox.memory = 1024
@@ -21,10 +20,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   end
 
   config.vm.provider :vmware_fusion do |vmware, override|
-    override.vm.box = "precise64_fusion"
-    override.vm.box_url = "http://files.vagrantup.com/precise64_vmware_fusion.box"
     override.vm.box_download_checksum_type = "sha256"
-    override.vm.box_download_checksum = "b79e900774b6a27500243d28bd9b1770e428faa3d8a3e45997f2a939b2b63570"
+    override.vm.box_download_checksum = "5e09c1839e8469384bf2e83b708fee48f7da31579b34893b06cdc1375c804ea5"
     vmware.vmx["memsize"] = "1024"
     vmware.vmx["numvcpus"] = "2"
   end
