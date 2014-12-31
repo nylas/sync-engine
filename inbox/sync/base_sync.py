@@ -1,6 +1,6 @@
 import gevent
 import gevent.event
-import datetime
+from datetime import datetime
 from collections import Counter
 
 from inbox.log import get_logger
@@ -9,7 +9,7 @@ logger = get_logger()
 from inbox.basicauth import ConnectionError, ValidationError, PermissionsError
 from inbox.models.session import session_scope
 from inbox.util.concurrency import retry_with_logging
-from inbox.util.misc import or_none, MergeError
+from inbox.util.misc import MergeError
 from inbox.models import Account
 from inbox.status.sync import SyncStatus
 
@@ -95,13 +95,18 @@ def base_poll(account_id, provider_instance, last_sync_fn, target_obj,
         Must have a PROVIDER_NAME attribute and implement the get()
         method.
     """
+    # Get a timestamp before polling, so that we don't subsequently miss remote
+    # updates that happen while the poll loop is executing.
+    sync_timestamp = datetime.utcnow()
 
     log = logger.new(account_id=account_id)
     provider_name = provider_instance.PROVIDER_NAME
     with session_scope() as db_session:
         account = db_session.query(Account).get(account_id)
-        last_sync = or_none(last_sync_fn(account),
-                            datetime.datetime.isoformat)
+        last_sync = None
+        if last_sync_fn(account) is not None:
+            # Note explicit offset is required by e.g. Google calendar API.
+            last_sync = datetime.isoformat(last_sync_fn(account)) + 'Z'
 
     items = provider_instance.get_items(last_sync)
     with session_scope() as db_session:
@@ -151,7 +156,7 @@ def base_poll(account_id, provider_instance, last_sync_fn, target_obj,
                                   'to item.',
                                   local=local_item, cached=cached_item,
                                   remote=item)
-                        # For now, just don't update if conflict ing
+                        # For now, just don't update if conflicting
                         continue
                 else:
                     log.warning('Item already present as remote but not '
@@ -168,7 +173,7 @@ def base_poll(account_id, provider_instance, last_sync_fn, target_obj,
                 db_session.flush()
                 change_counter['added'] += 1
 
-        set_last_sync_fn(account)
+        set_last_sync_fn(account, sync_timestamp)
 
         log.info('sync', added=change_counter['added'],
                  updated=change_counter['updated'],

@@ -1,4 +1,3 @@
-import datetime
 from inbox.log import get_logger
 logger = get_logger()
 
@@ -52,5 +51,5 @@ class EventSync(BaseSync):
     def last_sync(self, account):
         return account.last_synced_events
 
-    def set_last_sync(self, account):
-        account.last_synced_events = datetime.datetime.now()
+    def set_last_sync(self, account, dt):
+        account.last_synced_events = dt

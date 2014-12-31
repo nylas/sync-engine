@@ -1,5 +1,3 @@
-import datetime
-
 from inbox.log import get_logger
 logger = get_logger()
 from inbox.models import Contact
@@ -49,5 +47,5 @@ class ContactSync(BaseSync):
     def last_sync(self, account):
         return account.last_synced_contacts
 
-    def set_last_sync(self, account):
-        account.last_synced_contacts = datetime.datetime.now()
+    def set_last_sync(self, account, dt):
+        account.last_synced_contacts = dt

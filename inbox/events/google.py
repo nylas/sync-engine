@@ -294,10 +294,14 @@ class GoogleEventsProvider(BaseEventProvider):
         This function yields tuples to fetch_items. These tuples are eventually
         consumed by base_poll in inbox.sync.base_sync.
         """
-
         service = self._get_google_service()
+        # If applicable, only fetch results that have changed since we last
+        # synced.
+        kwargs = {}
+        if sync_from_time is not None:
+            kwargs = {'updatedMin': sync_from_time}
         resp = service.events().list(
-                calendarId=provider_calendar_name).execute()
+                calendarId=provider_calendar_name, **kwargs).execute()
 
         extra = {k: v for k, v in resp.iteritems() if k != 'items'}
         raw_events = resp['items']
@@ -306,7 +310,8 @@ class GoogleEventsProvider(BaseEventProvider):
         while 'nextPageToken' in resp:
             resp = service.events().list(
                 calendarId=provider_calendar_name,
-                pageToken=resp['nextPageToken']).execute()
+                pageToken=resp['nextPageToken'],
+                **kwargs).execute()
             raw_events += resp['items']
 
         for event in raw_events:
@@ -346,6 +351,7 @@ class GoogleEventsProvider(BaseEventProvider):
 
                 calendar_id = calendar.id
 
-            for item in self.fetch_calendar_items(response_calendar['id'],
-                         calendar_id, sync_from_time=sync_from_time):
+            for item in self.fetch_calendar_items(
+                    response_calendar['id'], calendar_id,
+                    sync_from_time=sync_from_time):
                 yield item
