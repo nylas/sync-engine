@@ -134,6 +134,6 @@ def preflight():
 
     # Print a traceback when the process receives signal SIGSEGV, SIGFPE,
     # SIGABRT, SIGBUS or SIGILL
-    import faulthandler
-    faulthandler.enable()
+    #import faulthandler
+    #faulthandler.enable()
     log.debug('Current git revision: {}'.format(git_rev().strip()))
