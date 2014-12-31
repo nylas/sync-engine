@@ -100,7 +100,7 @@ class Tracer(object):
     def log_stats(self, max_stats=60):
         total_time = round(time.time() - self.start_time, 2)
         greenlets_by_cost = sorted(self.time_spent_by_context.items(),
-                                   key=lambda (k, v): v)
+                                   key=lambda (k, v): v, reverse=True)
         formatted_times = {k: round(v, 2) for k, v in
                            greenlets_by_cost[:max_stats]}
         self.log.info('greenlet stats',
