@@ -1,0 +1,39 @@
+#!/usr/bin/env python
+import json
+import rfc822
+import click
+from sqlalchemy.orm import joinedload
+from inbox.models import Message, Part
+from inbox.models.session import session_scope
+
+
+@click.command()
+@click.option('--namespace_id')
+def regen_headers(namespace_id):
+    with session_scope() as db_session:
+        q = db_session.query(Message).filter(
+            Message.from_addr == []). \
+            options(joinedload(Message.parts).joinedload(Part.block))
+        if namespace_id:
+            q.filter(Message.namespace_id == int(namespace_id))
+        offset = 0
+        while True:
+            is_more = False
+            for msg in q.limit(100).offset(offset):
+                is_more = True
+                if not msg.parts:
+                    continue
+                headers = dict(json.loads(msg.parts[0].block.data))
+                header_value = headers.get('From')
+                if not header_value:
+                    continue
+                msg.from_addr = rfc822.AddressList(header_value).addresslist
+            db_session.commit()
+            offset += 100
+            print 'Reparsed {} messages'.format(offset)
+            if not is_more:
+                break
+
+
+if __name__ == '__main__':
+    regen_headers()
