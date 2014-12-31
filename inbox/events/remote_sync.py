@@ -7,6 +7,7 @@ from inbox.events.outlook import OutlookEventsProvider
 from inbox.events.icloud import ICloudEventsProvider
 from inbox.sync.base_sync import BaseSync
 from inbox.models import Event
+from inbox.util.debug import bind_context
 
 
 __provider_map__ = {'gmail': GoogleEventsProvider,
@@ -33,6 +34,7 @@ class EventSync(BaseSync):
     """
     def __init__(self, provider_name, account_id, namespace_id,
                  poll_frequency=300):
+        bind_context(self, 'eventsync', account_id)
         self.log = logger.new(account_id=account_id, component='event sync')
         self.log.info('Begin syncing Events...')
 

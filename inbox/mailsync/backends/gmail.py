@@ -25,6 +25,7 @@ from gevent import spawn, sleep
 from sqlalchemy.orm import joinedload, load_only
 
 from inbox.util.itert import chunk, partition
+from inbox.util.debug import bind_context
 
 from inbox.crispin import GmailSettingError
 from inbox.log import get_logger
@@ -93,6 +94,8 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
             remote_g_metadata = crispin_client.g_metadata(unknown_uids)
             download_stack = UIDStack()
             change_poller = spawn(self.poll_for_changes, download_stack)
+            bind_context(change_poller, 'changepoller', self.account_id,
+                         self.folder_id)
             if self.is_all_mail(crispin_client):
                 # Put UIDs on the stack such that UIDs for messages in the
                 # inbox get downloaded first, and such that higher (i.e., more

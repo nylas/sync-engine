@@ -4,6 +4,7 @@ from inbox.log import get_logger
 from inbox.models import Message
 from inbox.models.session import session_scope
 from inbox.util.concurrency import retry_and_report_killed
+from inbox.util.debug import bind_context
 
 log = get_logger()
 
@@ -34,6 +35,7 @@ class DeleteHandler(gevent.Greenlet):
     """
     def __init__(self, account_id, namespace_id, uid_accessor,
                  message_ttl=DEFAULT_MESSAGE_TTL):
+        bind_context(self, 'deletehandler', account_id)
         self.account_id = account_id
         self.namespace_id = namespace_id
         self.uids_for_message = uid_accessor

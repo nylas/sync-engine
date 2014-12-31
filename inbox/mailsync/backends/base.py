@@ -5,6 +5,7 @@ from sqlalchemy.exc import DataError
 
 from inbox.log import get_logger
 log = get_logger()
+from inbox.util.debug import bind_context
 from inbox.util.concurrency import retry_and_report_killed
 from inbox.util.itert import partition
 from inbox.models import (Account, Folder, MAX_FOLDER_NAME_LENGTH)
@@ -208,6 +209,7 @@ class BaseMailSyncMonitor(Greenlet):
         Exceptions to *not* retry on.
     """
     def __init__(self, account, heartbeat=1, retry_fail_classes=[]):
+        bind_context(self, 'mailsyncmonitor', account.id)
         self.shutdown = event.Event()
         # how often to check inbox, in seconds
         self.heartbeat = heartbeat

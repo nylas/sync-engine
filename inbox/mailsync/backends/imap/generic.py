@@ -74,6 +74,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import load_only
 
 from inbox.util.concurrency import retry_and_report_killed
+from inbox.util.debug import bind_context
 from inbox.util.itert import chunk
 from inbox.util.misc import or_none
 from inbox.util.threading import cleanup_subject, thread_messages
@@ -145,6 +146,7 @@ class FolderSyncEngine(Greenlet):
     def __init__(self, account_id, folder_name, folder_id, email_address,
                  provider_name, poll_frequency, syncmanager_lock,
                  refresh_flags_max, retry_fail_classes):
+        bind_context(self, 'foldersyncengine', account_id, folder_id)
         self.account_id = account_id
         self.folder_name = folder_name
         self.folder_id = folder_id
@@ -287,6 +289,8 @@ class FolderSyncEngine(Greenlet):
                     download_uid_count=len(new_uids))
 
             change_poller = spawn(self.poll_for_changes, download_stack)
+            bind_context(change_poller, 'changepoller', self.account_id,
+                         self.folder_id)
             self.download_uids(crispin_client, download_stack)
 
         finally:

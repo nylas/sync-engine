@@ -20,6 +20,7 @@ except ImportError:
              "Try running sudo ./setup.sh")
 
 from inbox.util.startup import preflight
+from inbox.util.debug import trace_greenlets
 from inbox.log import get_logger, configure_logging
 from inbox.mailsync.service import SyncService
 
@@ -76,6 +77,8 @@ def main(prod, config, process_num):
 
      Use CTRL-C to stop.
      """
+
+    gevent.spawn(trace_greenlets)
     sync_service = SyncService(process_num, total_processes)
     sync_service.run()
 
@@ -84,6 +87,3 @@ def main(prod, config, process_num):
 
 if __name__ == '__main__':
     main()
-
-
-

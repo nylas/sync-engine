@@ -201,17 +201,17 @@ class GoogleEventsProvider(BaseEventProvider):
                                      'notes': notes,
                                      'guests': guests})
 
-            if 'self' in event['creator']:
-                is_owner = True
+            if 'guestsCanModify' in event:
                 read_only = False
-            elif 'guestsCanModify' in event:
-                read_only = False
-
             owner = ''
             if 'creator' in event:
                 creator = event['creator']
-                owner = u'{} <{}>'.format(creator['displayName'],
-                                          creator['email'])
+                if 'self' in creator:
+                    is_owner = True
+                    read_only = False
+
+                owner = u'{} <{}>'.format(creator.get('displayName', ''),
+                                          creator.get('email', ''))
 
         except (KeyError, AttributeError):
             raise MalformedEventError()

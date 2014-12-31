@@ -5,6 +5,7 @@ logger = get_logger()
 from inbox.models import Contact
 from inbox.contacts.google import GoogleContactsProvider
 from inbox.sync.base_sync import BaseSync
+from inbox.util.debug import bind_context
 
 __provider_map__ = {'gmail': GoogleContactsProvider}
 
@@ -30,6 +31,7 @@ class ContactSync(BaseSync):
     """
     def __init__(self, provider_name, account_id, namespace_id,
                  poll_frequency=300):
+        bind_context(self, 'contactsync', account_id)
         self.log = logger.new(account_id=account_id, component='contact sync')
         self.log.info('Begin syncing contacts...')
 
