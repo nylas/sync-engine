@@ -271,10 +271,9 @@ class FolderSyncEngine(Greenlet):
                 with mailsync_session_scope() as db_session:
                     local_uids = common.all_uids(self.account_id, db_session,
                                                  self.folder_name)
-                    deleted_uids = self.remove_deleted_uids(
-                        db_session, local_uids, remote_uids)
+                    self.remove_deleted_uids(db_session, local_uids,
+                                             remote_uids)
 
-            local_uids = set(local_uids) - deleted_uids
             new_uids = set(remote_uids) - local_uids
             download_stack = UIDStack()
             for uid in sorted(new_uids):
