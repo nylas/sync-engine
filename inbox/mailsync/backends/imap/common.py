@@ -146,10 +146,6 @@ def update_metadata(account_id, session, folder_name, folder_id, uids,
                 item.message.state = 'draft'
 
     for thread in affected_threads:
-        # Note that recompute_thread_labels uses all the ImapUids for the
-        # thread to figure out what the thread's tags should be, so at this
-        # point it's necessary (and sufficient) that all the ImapUid rows that
-        # should be deleted actually are deleted.
         recompute_thread_labels(thread, session)
 
 
@@ -183,6 +179,10 @@ def remove_deleted_uids(account_id, session, uids, folder_id):
         session.commit()
 
         for thread in affected_threads:
+            # Note that recompute_thread_labels uses all the ImapUids for the
+            # thread to figure out what the thread's tags should be, so at this
+            # point it's necessary (and sufficient) that all the ImapUid rows
+            # that should be deleted actually are deleted.
             recompute_thread_labels(thread, session)
 
         session.commit()
