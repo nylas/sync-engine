@@ -43,10 +43,10 @@ def index_namespaces(namespace_ids=None, created_before=None):
     return sum([g.value for g in pool])
 
 
-def delete_namespace_indexes(namespace_ids=None):
+def delete_namespace_indexes(namespace_ids):
     """
     Delete the Elasticsearch indexes for the namespaces in the `namespace_ids`
-    list. If `namespace_ids` is None, all namespaces are deleted.
+    list.
 
     """
     pool = []
@@ -94,6 +94,9 @@ def index_threads(namespace_id, namespace_public_id, created_before=None):
 
             encoded.append(('index', index_obj))
 
+    log.info('Going to index threads', namespace_id=namespace_id,
+             namespace_public_id=namespace_public_id)
+
     indexed_count += search_engine.threads.bulk_index(encoded)
 
     log.info('Indexed threads', namespace_id=namespace_id,
@@ -127,6 +130,9 @@ def index_messages(namespace_id, namespace_public_id, created_before=None):
             index_obj = _process_attributes(encoded_obj)
 
             encoded.append(('index', index_obj))
+
+    log.info('Going to index messages', namespace_id=namespace_id,
+             namespace_public_id=namespace_public_id)
 
     indexed_count += search_engine.messages.bulk_index(encoded)
 
