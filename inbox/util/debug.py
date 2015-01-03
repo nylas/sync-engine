@@ -121,7 +121,8 @@ class Tracer(object):
             self.time_spent_by_context[context] += time_spent
             if origin is not self._hub and time_spent > self.max_blocking_time:
                 self.log.warning('greenlet blocked', blocked_time=time_spent,
-                                 frame=self._format_frame(origin.gr_frame))
+                                 frame=self._format_frame(origin.gr_frame),
+                                 context=getattr(origin, 'context', None))
         self._last_switch_time = current_time
 
     def _format_frame(self, frame):
