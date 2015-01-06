@@ -1,0 +1,58 @@
+#!/usr/bin/env python
+"""Rudimentary benchmarking of resource utilization during initial sync.
+Run this with one account authed so as not to skew results."""
+import atexit
+import json
+import subprocess
+import time
+
+import click
+import psutil
+
+
+def get_sync_process():
+    for p in psutil.process_iter():
+        if p.name() == 'inbox-sync-0':
+            return p
+
+
+@click.command()
+@click.option('--max-messages', default=1000)
+@click.argument('account_id', type=int)
+@click.argument('folder_name', default='')
+def benchmark_initial_sync(account_id, folder_name, max_messages):
+    start_time = time.time()
+    sync_worker = subprocess.Popen(['bin/inbox-start', '--prod'],
+                                   stdout=subprocess.PIPE)
+    atexit.register(sync_worker.terminate)
+    num_committed_messages = 0
+    while True:
+        line = sync_worker.stdout.readline()
+        print line
+        try:
+            parsed = json.loads(line)
+        except ValueError:
+            continue
+        if (not isinstance(parsed, dict) or
+                parsed.get('account_id') != account_id):
+            continue
+        if folder_name and parsed.get('folder') != folder_name:
+            continue
+        if 'new_committed_message_count' in parsed:
+            num_committed_messages += parsed['new_committed_message_count']
+        if (num_committed_messages >= max_messages or
+                parsed.get('state') == 'poll'):
+            break
+    elapsed_time = time.time() - start_time
+    proc = get_sync_process()
+    cpu_times = proc.cpu_times()
+    total_cpu_time = cpu_times.user + cpu_times.system
+    cpu_secs_per_message = total_cpu_time / num_committed_messages
+    avg_utilization = total_cpu_time / elapsed_time
+    mem = proc.memory_info().rss
+    print (cpu_secs_per_message, avg_utilization, mem, elapsed_time,
+           num_committed_messages)
+
+
+if __name__ == '__main__':
+    benchmark_initial_sync()
