@@ -132,7 +132,7 @@ class GoogleEventsProvider(BaseEventProvider):
             description = event.get('description', None)
             location = event.get('location', None)
             all_day = False
-            read_only = False
+            read_only = True
             is_owner = False
 
             start = event['start']
