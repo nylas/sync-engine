@@ -1,0 +1,27 @@
+#!/usr/bin/env python
+
+import click
+
+from inbox.crispin import writable_connection_pool
+
+
+@click.command()
+@click.option('--account-id', '-a', required=True, type=int)
+@click.option('--folder', '-f', required=True, type=str, multiple=True)
+@click.option('--label', '-l', required=True, type=str, multiple=True)
+def main(account_id, folder, label):
+    folders = {f for f in folder}
+    labels = {l for l in label}
+    with writable_connection_pool(account_id).get() as crispin_client:
+        client = crispin_client.conn._imap
+        for f in folders:
+            client.select('"' + f + '"')
+            for l in labels:
+                result, data = client.search(None, '(X-GM-LABELS "' + l + '")')
+                assert result == 'OK'
+                for mailid in data[0].split():
+                    client.store(mailid, '-X-GM-LABELS', '"' + l + '"')
+
+
+if __name__ == '__main__':
+    main()
