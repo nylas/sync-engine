@@ -6,7 +6,7 @@ from collections import Counter
 from inbox.log import get_logger
 logger = get_logger()
 
-from inbox.basicauth import ConnectionError, ValidationError, PermissionsError
+from inbox.basicauth import ConnectionError, ValidationError
 from inbox.models.session import session_scope
 from inbox.util.concurrency import retry_with_logging
 from inbox.util.misc import MergeError
@@ -50,12 +50,15 @@ class BaseSync(gevent.Greenlet):
 
                 # If we get a connection or API permissions error, then sleep
                 # 2x poll frequency.
-                except (ConnectionError, PermissionsError):
+                except ConnectionError:
+                    self.log.error('Error while polling', exc_info=True)
                     self.sync_status.publish(state='poll error')
                     gevent.sleep(self.poll_frequency)
                 gevent.sleep(self.poll_frequency)
         except ValidationError:
             # Bad account credentials; exit.
+            self.log.error('Error while establishing the connection',
+                           exc_info=True)
             return False
 
     @property
