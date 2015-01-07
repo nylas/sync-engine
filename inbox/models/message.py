@@ -6,7 +6,7 @@ from hashlib import sha256
 from flanker import mime
 
 from sqlalchemy import (Column, Integer, BigInteger, String, DateTime,
-                        Boolean, Enum, ForeignKey, Text)
+                        Boolean, Enum, ForeignKey, Text, Index)
 from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy.sql.expression import false
 
@@ -88,7 +88,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     # max message_id_header is 998 characters
     message_id_header = Column(String(998), nullable=True)
     # There is no hard limit on subject limit in the spec, but 255 is common.
-    subject = Column(String(255), nullable=True, default='', index=True)
+    subject = Column(String(255), nullable=True, default='')
     received_date = Column(DateTime, nullable=False)
     size = Column(Integer, nullable=False)
     data_sha256 = Column(String(255), nullable=True)
@@ -439,3 +439,8 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     @property
     def versioned_relationships(self):
         return ['parts']
+
+
+# Need to explicitly specify the index length for MySQL 5.6, because the
+# subject column is too long to be fully indexed with utf8mb4 collation.
+Index('ix_message_subject', Message.subject, mysql_length=191)

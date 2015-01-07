@@ -28,7 +28,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         don't query based on folder!
     """
     API_OBJECT_NAME = 'thread'
-    subject = Column(String(255), nullable=True, index=True)
+    subject = Column(String(255), nullable=True)
     subjectdate = Column(DateTime, nullable=False, index=True)
     recentdate = Column(DateTime, nullable=False, index=True)
     snippet = Column(String(191), nullable=True, default='')
@@ -225,6 +225,10 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
 # somewhat performant manner.
 Index('ix_thread_namespace_id_recentdate_deleted_at',
       Thread.namespace_id, Thread.recentdate, Thread.deleted_at)
+
+# Need to explicitly specify the index length for MySQL 5.6, because the
+# subject column is too long to be fully indexed with utf8mb4 collation.
+Index('ix_thread_subject', Thread.subject, mysql_length=191)
 
 
 class TagItem(MailSyncBase):
