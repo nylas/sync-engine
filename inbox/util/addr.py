@@ -15,4 +15,8 @@ def canonicalize_address(addr):
 
 def parse_mimepart_address_header(mimepart, header_name):
     header_list_string = ', '.join(mimepart.headers.getall(header_name))
-    return rfc822.AddressList(header_list_string).addresslist
+    addresslist = rfc822.AddressList(header_list_string).addresslist
+    if len(addresslist) > 1:
+        # Deduplicate entries
+        return list(set(addresslist))
+    return addresslist

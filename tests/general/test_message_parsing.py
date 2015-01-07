@@ -108,3 +108,9 @@ def test_address_parsing_edge_cases():
     mimepart = mime.from_string('')
     parsed = parse_mimepart_address_header(mimepart, 'From')
     assert parsed == []
+
+    # Duplicate header
+    mimepart = mime.from_string('From: bob@foocorp.com\r\n'
+                                'From: bob@foocorp.com')
+    parsed = parse_mimepart_address_header(mimepart, 'From')
+    assert parsed == [('', 'bob@foocorp.com')]
