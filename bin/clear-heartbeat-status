@@ -1,0 +1,28 @@
+#!/usr/bin/env python
+
+import click
+from redis import StrictRedis
+
+from inbox.status.sync import get_redis_client, SyncStatusKey
+
+
+@click.command()
+@click.option('--hostname', '-h', type=str)
+@click.option('--port', '-p', type=int, default=6379)
+@click.option('--database', '-n', type=click.IntRange(1, 15), default=1)
+@click.option('--account-id', '-a', type=int, required=True)
+def main(hostname, port, database, account_id):
+    if hostname:
+        client = StrictRedis(host=hostname, port=port, db=database)
+    else:
+        client = get_redis_client()
+    keys = client.keys(SyncStatusKey.all_folders(account_id))
+    if not keys:
+        return
+    batch_client = client.pipeline()
+    for k in keys:
+        batch_client.delete(k)
+    batch_client.execute()
+
+if __name__ == '__main__':
+    main()
