@@ -1,0 +1,28 @@
+#!/usr/bin/env python
+import click
+
+from inbox.search.util import verify_backfilled_index, IndexException
+
+
+@click.command()
+@click.argument('namespace_ids')
+@click.argument('--created_before', default=None)
+def verify_backfill(namespace_ids, created_before):
+    """
+    Verify that the search-backfill-namespaces script correctly indexed the
+    desired namespaces, as specified by the `namespace_ids` list,
+    into Elasticsearch.
+    Note: Only a "random" sample of namespaces are checked.
+
+    """
+    for namespace_id in namespace_ids:
+        try:
+            verify_backfilled_index(namespace_id, created_before)
+            print 'Success! namespace_id: {}', namespace_id
+        except IndexException:
+            print 'Failure! namespace_id: {}', namespace_id
+            continue
+
+
+if __name__ == '__main__':
+    verify_backfill()
