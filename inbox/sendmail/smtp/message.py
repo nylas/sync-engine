@@ -18,7 +18,8 @@ def _smtp_attrs(msg):
              msg.headers.get('Cc'),
              msg.headers.get('Bcc') if m])
 
-    recipients = [a.full_spec() for a in address.parse_list(all_recipients)]
+    recipients = [a.full_spec()
+                  for a in address.parse_list(', '.join(all_recipients))]
 
     # Keep Cc-, but strip Bcc-
     # Gmail actually keeps Bcc- on the bcc- recipients (only!) but
