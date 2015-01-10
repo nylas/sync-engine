@@ -39,9 +39,6 @@ click==2.4
 faulthandler==2.3
 pyinstrument==0.12
 structlog==0.4.1
-lxml==3.3.5  # For talon
-cssselect==0.9.1  # For talon
-git+https://github.com/inboxapp/talon.git@master#egg=talon
 raven==5.0.0
 simplejson==3.6.0
 Flask-RESTful==0.2.12
