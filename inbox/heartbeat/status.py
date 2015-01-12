@@ -154,7 +154,7 @@ def get_heartbeat_status(host=None, port=6379, account_id=None):
 
 def clear_heartbeat_status(account_id, device_id=None):
     try:
-        client = get_redis_client()
+        client = get_redis_client(STATUS_DATABASE)
         batch_client = client.pipeline()
         for name in client.scan_iter(
                 HeartbeatStatusKey.all_folders(account_id), 100):
