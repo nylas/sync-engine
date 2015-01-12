@@ -91,7 +91,8 @@ class OAuthAuthHandler(AuthHandler):
         raise NotImplementedError
 
     def new_token(self, refresh_token, client_id=None, client_secret=None):
-        assert refresh_token is not None, 'refresh_token required'
+        if not refresh_token:
+            raise OAuthError('refresh_token required')
 
         # If these aren't set on the Account object, use the values from
         # config so that the dev version of the sync engine continues to work.

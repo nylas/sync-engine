@@ -61,6 +61,12 @@ class GmailAuthHandler(OAuthAuthHandler):
         new_refresh_token = response.get('refresh_token')
         if new_refresh_token:
             account.refresh_token = new_refresh_token
+        else:
+            if not account.refresh_token or account.sync_state == 'invalid':
+                # We got a new auth without a refresh token, so we need to back
+                # out and force the auth flow, since we don't already have
+                # a refresh (or the one we have doesn't work.)
+                raise OAuthError("Missing refresh token")
 
         tok = response.get('access_token')
         expires_in = response.get('expires_in')

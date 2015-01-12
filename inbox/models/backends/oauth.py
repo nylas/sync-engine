@@ -30,6 +30,8 @@ class OAuthAccount(object):
 
     @property
     def refresh_token(self):
+        if not self.secret:
+            return None
         return self.secret.secret
 
     @refresh_token.setter
