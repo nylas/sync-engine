@@ -150,3 +150,17 @@ def get_heartbeat_status(host=None, port=6379, account_id=None):
             accounts[key.account_id] = (account_alive, provider_name, folders)
 
     return accounts
+
+
+def clear_heartbeat_status(account_id):
+    try:
+        client = get_redis_client()
+        batch_client = client.pipeline()
+        for name in client.scan_iter(SyncStatusKey.all_folders(account_id)):
+            batch_client.delete(name)
+        batch_client.execute()
+    except Exception:
+        log = get_logger()
+        log.error('Error while deleting from the heartbeat status',
+                  account_id=account_id,
+                  exc_info=True)

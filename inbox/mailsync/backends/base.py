@@ -11,6 +11,7 @@ from inbox.util.itert import partition
 from inbox.models import (Account, Folder, MAX_FOLDER_NAME_LENGTH)
 from inbox.models.session import session_scope
 from inbox.mailsync.exc import SyncException
+from inbox.heartbeat.status import clear_heartbeat_status
 
 THROTTLE_WAIT = 60
 
@@ -272,6 +273,7 @@ class BaseMailSyncMonitor(Greenlet):
 
     def _cleanup(self):
         self.folder_monitors.kill()
+        clear_heartbeat_status(self.account_id)
 
 
 def _check_thread_state(thread, is_state):
