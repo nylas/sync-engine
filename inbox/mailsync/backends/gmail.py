@@ -299,7 +299,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
             self.__download_thread(crispin_client,
                                    thread_g_metadata,
                                    metadata.thrid, thread_uids)
-            self.sync_status.publish()
+            self.heartbeat_status.publish()
             if self.throttled and metadata is not None and metadata.throttled:
                 # Check to see if the account's throttled state has been
                 # modified. If so, immediately accelerate.

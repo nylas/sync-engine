@@ -91,7 +91,7 @@ from inbox.mailsync.backends.base import (create_db_objects,
                                           commit_uids, MailsyncDone,
                                           mailsync_session_scope,
                                           THROTTLE_WAIT)
-from inbox.status.sync import SyncStatus
+from inbox.heartbeat.status import HeartbeatStatusProxy
 
 GenericUIDMetadata = namedtuple('GenericUIDMetadata', 'throttled')
 
@@ -173,9 +173,10 @@ class FolderSyncEngine(Greenlet):
 
         Greenlet.__init__(self)
 
-        self.sync_status = SyncStatus(self.account_id, self.folder_id)
-        self.sync_status.publish(provider_name=self.provider_name,
-                                 folder_name=self.folder_name)
+        self.heartbeat_status = HeartbeatStatusProxy(self.account_id,
+                                                     self.folder_id)
+        self.heartbeat_status.publish(provider_name=self.provider_name,
+                                      folder_name=self.folder_name)
 
     def _run(self):
         # Bind greenlet-local logging context.
@@ -196,7 +197,7 @@ class FolderSyncEngine(Greenlet):
         # anyway.
         saved_folder_status = self._load_state()
         # eagerly signal the sync status
-        self.sync_status.publish(state=self.state)
+        self.heartbeat_status.publish(state=self.state)
         # NOTE: The parent ImapSyncMonitor handler could kill us at any
         # time if it receives a shutdown command. The shutdown command is
         # equivalent to ctrl-c.
@@ -204,7 +205,7 @@ class FolderSyncEngine(Greenlet):
             old_state = self.state
             try:
                 self.state = self.state_handlers[old_state]()
-                self.sync_status.publish(state=self.state)
+                self.heartbeat_status.publish(state=self.state)
             except UidInvalid:
                 self.state = self.state + ' uidinvalid'
             # State handlers are idempotent, so it's okay if we're
@@ -340,7 +341,7 @@ class FolderSyncEngine(Greenlet):
             download_stack.get()
             report_progress(self.account_id, self.folder_name, 1,
                             download_stack.qsize())
-            self.sync_status.publish()
+            self.heartbeat_status.publish()
             if self.throttled and metadata is not None and metadata.throttled:
                 # Check to see if the account's throttled state has been
                 # modified. If so, immediately accelerate.

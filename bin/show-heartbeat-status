@@ -2,13 +2,13 @@
 
 import click
 from functools import partial
-import json
-import sys
+from json import dumps
+from sys import exit
 
-from inbox.status.sync import get_sync_status
+from inbox.heartbeat.status import get_heartbeat_status
 
 
-def print_sync_status_stats(accounts):
+def print_heartbeat_status_stats(accounts):
     num_accounts = len(accounts)
     num_alive_accounts = 0
 
@@ -22,7 +22,7 @@ def print_sync_status_stats(accounts):
             'dead_accounts': num_dead_accounts}
 
 
-def print_sync_status(accounts, verbose):
+def print_heartbeat_status(accounts, verbose):
     summary = {'verbose': []}
 
     for account_id in accounts:
@@ -63,34 +63,27 @@ def print_sync_status(accounts, verbose):
 
 
 @click.command()
-@click.option('--hostname', type=str)
-@click.option('--port', type=int, default=6379)
-@click.option('--database', type=click.IntRange(1, 15), default=1)
-@click.option('--account-id', type=int)
+@click.option('--host', '-h', type=str)
+@click.option('--port', '-p', type=int, default=6379)
+@click.option('--account-id', '-a', type=int)
 @click.option('--pretty', is_flag=True)
-@click.option('--verbose', is_flag=True)
-def main(hostname, port, database, account_id, pretty, verbose):
-    if hostname:
-        accounts = get_sync_status(hostname=hostname,
-                                   port=port,
-                                   database=database,
-                                   account_id=account_id)
-    else:
-        accounts = get_sync_status(account_id=account_id)
+@click.option('--verbose', '-v', is_flag=True)
+def main(host, port, account_id, pretty, verbose):
+    accounts = get_heartbeat_status(host, port, account_id)
 
     if not pretty:
-        json_dumps = partial(json.dumps, sort_keys=True)
+        _dumps = partial(dumps, sort_keys=True)
     else:
-        json_dumps = partial(json.dumps, sort_keys=True, indent=2)
+        _dumps = partial(dumps, sort_keys=True, indent=2)
 
-    summary = print_sync_status_stats(accounts)
+    summary = print_heartbeat_status_stats(accounts)
     if summary['dead_accounts'] == 0 and not verbose:
-        print json_dumps(summary)
-        return
-    summary.update(print_sync_status(accounts, verbose))
-    print json_dumps(summary)
-    sys.exit(2)
+        print _dumps(summary)
+        return 0
+    summary.update(print_heartbeat_status(accounts, verbose))
+    print _dumps(summary)
+    return 2
 
 
 if __name__ == '__main__':
-    main()
+    exit(main())
