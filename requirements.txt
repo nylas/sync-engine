@@ -22,7 +22,7 @@ chardet==2.1.1
 setproctitle==1.1.8
 gdata==2.0.18
 python-dateutil==2.3
-flanker==0.4.24
+git+https://github.com/inboxapp/flanker.git@9ed2a184e1e422ba8936af24b5d1a7d8b877a2ba#egg=flanker
 # imapclient==0.11
 git+https://github.com/inboxapp/imapclient.git@inbox-modseq-hotfix#egg=imapclient
 alembic==0.6.4
