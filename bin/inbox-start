@@ -54,7 +54,7 @@ def main(prod, cpu, config, process_num):
     """ Launch the Inbox sync service. """
     configure_logging(prod)
 
-    affinity.sched_setaffinity(0, [cpu])
+    # affinity.sched_setaffinity(0, [cpu])
 
     if config is not None:
         from inbox.util.startup import load_overrides
