@@ -120,7 +120,7 @@ def base_poll(account_id, provider_instance, last_sync_fn, target_obj,
             item.namespace = account.namespace
             assert item.uid is not None, \
                 'Got remote item with null uid'
-            assert isinstance(item.uid, str)
+            assert isinstance(item.uid, basestring)
 
             target_obj = target_obj
             matching_items = db_session.query(target_obj).filter(
