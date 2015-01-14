@@ -8,7 +8,6 @@ import platform
 import signal
 import sys
 
-import affinity
 import click
 import gevent
 
@@ -42,19 +41,12 @@ def signal_handler(signum, frame):
                    'non-production features.')
 @click.option('-c', '--config', default=None,
               help='Path to JSON configuration file.')
-@click.option('--cpu', default=0,
-              type=click.IntRange(min=0, max=multiprocessing.cpu_count()),
-              help='The CPU on which this process should execute on. '
-                   'NOTE: this value must fall between 0 and the number of '
-                   'available CPUs.')
 @click.option('--process_num', default=0,
               help="This process's number in the process group: a unique "
                    "number satisfying 0 <= process_num < total_processes.")
-def main(prod, cpu, config, process_num):
+def main(prod, config, process_num):
     """ Launch the Inbox sync service. """
     configure_logging(prod)
-
-    # affinity.sched_setaffinity(0, [cpu])
 
     if config is not None:
         from inbox.util.startup import load_overrides
@@ -68,7 +60,7 @@ def main(prod, cpu, config, process_num):
     log = get_logger()
     log.info('start',
              components=['mail sync', 'contact sync'],
-             host=platform.node(), cpu=cpu, process_num=process_num,
+             host=platform.node(), process_num=process_num,
              total_processes=total_processes,
              recursion_limit=sys.getrecursionlimit())
 
