@@ -2,7 +2,7 @@ Title: Events
 
 The events endpoint is used to manage events within a calendar.
 
-Each event has a `title` and `description` as well as a list of participants and a (when)[#when] object that indicates the time and length of the event.
+Each event has a `title` and `description` as well as a list of participants and a [when](#when) object that indicates the time and length of the event.
 
 # Retrieving a specific event's metadata
 
@@ -145,7 +145,8 @@ This can be performed via the following:
 GET https://api.inboxapp.com/n/<namespace_id>/events/<event_id>?action=rsvp&rvsp=<rsvp_response>
 ```
 
-The `rsvp_response` paramter can be one of the following:
+The `rsvp_response` parameter can be one of the following:
+
 * **`yes`** If the participant is attending
 * **`no`** If the participant is not attending
 * **`maybe`** If the participant is unsure
