@@ -2,7 +2,6 @@
 sending."""
 import json
 import os
-import time
 from datetime import datetime
 
 import gevent
@@ -329,19 +328,6 @@ def test_send(patch_network_functions, api_client, example_draft,
     message = api_client.get_data('/messages/{}'.format(draft_public_id))
     assert message['state'] == 'sent'
     assert message['object'] == 'message'
-
-
-def test_handle_sending_failures(patch_network_functions, api_client,
-                                 syncback_service):
-    r = api_client.post_data('/send', {'to': [{'email': 'fail@example.com'}]})
-    draft_public_id = json.loads(r.data)['id']
-    start = time.time()
-    while time.time() - start < 10:
-        r = api_client.get_data('/drafts/{}'.format(draft_public_id))
-        if r['state'] == 'sending failed':
-            return
-        gevent.sleep()
-    assert False, 'sending not marked as failed before timeout'
 
 
 def test_conflicting_updates(api_client):
