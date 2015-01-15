@@ -22,8 +22,8 @@ def main(host, port, account_id):
                                  100):
         batch_client.delete(name)
     batch_client.execute()
-    return 0
+    exit(0)
 
 
 if __name__ == '__main__':
-    exit(main())
+    main()

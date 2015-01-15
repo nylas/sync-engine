@@ -20,9 +20,9 @@ def main(host, port):
     set_heartbeat_report(host, port, new_report)
     dying = analyze_heartbeat_report(report, new_report)
     if not dying:
-        return 0
+        exit(0)
     print dumps(dying)
-    return 2
+    exit(2)
 
 if __name__ == '__main__':
-    exit(main())
+    main()

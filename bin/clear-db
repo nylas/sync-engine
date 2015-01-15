@@ -31,7 +31,7 @@ def main():
                     reset_columns=reset_columns)
     # recreate dropped tables
     init_db(engine)
-    return 0
+    sys.exit(0)
 
 if __name__ == '__main__':
-    sys.exit(main())
+    main()
