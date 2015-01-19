@@ -133,12 +133,12 @@ def test_get_invalid(api_client, uploaded_file_ids):
     data = api_client.get_data('/files/0000000000000000000000000')
     assert data['message'].startswith("Couldn't find file")
     data = api_client.get_data('/files/!')
-    assert data['message'].startswith("Invalid file id")
+    assert data['message'].startswith("Invalid id")
 
     data = api_client.get_data('/files/0000000000000000000000000/download')
     assert data['message'].startswith("Couldn't find file")
     data = api_client.get_data('/files/!/download')
-    assert data['message'].startswith("Invalid file id")
+    assert data['message'].startswith("Invalid id")
 
     r = api_client.delete('/files/0000000000000000000000000')
     assert r.status_code == 404
@@ -176,7 +176,7 @@ def test_download(api_client, uploaded_file_ids, filename):
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..',
                         'data', filename)
     in_file = api_client.get_data('/files?filename={}'.format(filename))[0]
-    data = api_client.get_raw('/files/{}/download'.format(in_file['id']))
+    data = api_client.get_raw('/files/{}/download'.format(in_file['id'])).data
 
     local_data = open(path, 'rb').read()
     local_md5 = md5.new(local_data).digest()

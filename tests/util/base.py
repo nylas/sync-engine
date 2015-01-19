@@ -110,7 +110,7 @@ class TestAPIClient(object):
 
     def get_raw(self, short_path, ns_id=1):
         path = self.full_path(short_path, ns_id)
-        return self.client.get(path).data
+        return self.client.get(path)
 
     def get_data(self, short_path, ns_id=1):
         path = self.full_path(short_path, ns_id)

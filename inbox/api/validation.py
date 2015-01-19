@@ -5,17 +5,9 @@ from flask.ext.restful import reqparse
 from sqlalchemy.orm.exc import NoResultFound
 from inbox.models import Account, Calendar, Tag, Thread, Block
 from inbox.models.when import parse_as_when
+from inbox.api.err import InputError, NotFoundError
 
 MAX_LIMIT = 1000
-
-
-class InputError(Exception):
-    """Raised when bad user input is processed."""
-    def __init__(self, error):
-        self.error = error
-
-    def __str__(self):
-        return self.error
 
 
 class ValidatableArgument(reqparse.Argument):
@@ -57,7 +49,7 @@ def valid_public_id(value):
         # raise TypeError if an integer is passed in
         int(value, 36)
     except (TypeError, ValueError):
-        raise InputError('Invalid id {}'.format(value))
+        raise InputError('Invalid id: {}'.format(value))
     return value
 
 
@@ -183,8 +175,7 @@ def get_calendar(calendar_public_id, namespace, db_session):
             filter(Calendar.public_id == calendar_public_id,
                    Calendar.namespace_id == namespace.id).one()
     except NoResultFound:
-        raise InputError('Invalid calendar public id {}'.
-                         format(calendar_public_id))
+        raise NotFoundError('Calendar {} not found'.format(calendar_public_id))
 
 
 def valid_when(when):

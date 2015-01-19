@@ -7,7 +7,7 @@ from sqlalchemy.orm import subqueryload
 from inbox.models import Account, Event, Calendar
 from inbox.events.ical import events_from_ics
 from inbox.events.util import MalformedEventError
-from inbox.api.validation import InputError
+from inbox.api.err import InputError
 
 INBOX_PROVIDER_NAME = 'inbox'
 

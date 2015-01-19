@@ -89,6 +89,11 @@ def test_get_calendar(db, api_client):
     db.session.commit()
 
 
+def test_handle_not_found_calendar(api_client):
+    resp_data = api_client.get_raw('/calendars/foo')
+    assert resp_data.status_code == 404
+
+
 def test_filter_calendar(db, api_client):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id

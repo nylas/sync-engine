@@ -54,7 +54,7 @@ def test_get_invalid(api_client):
 
     bad_tag_id = 'asdf!'
     tag_data = api_client.get_data('/tags/{}'.format(bad_tag_id))
-    assert 'is not a valid id' in tag_data['message']
+    assert 'Invalid id' in tag_data['message']
 
 
 def test_create_tag(api_client, default_namespace):
@@ -102,7 +102,7 @@ def test_delete_tag(api_client, default_namespace):
 
     del_resp = api_client.delete('/tags/!' + tag_id)
     assert del_resp.status_code == 400
-    assert json.loads(del_resp.data)['message'].startswith('Invalid tag id')
+    assert json.loads(del_resp.data)['message'].startswith('Invalid id')
 
     del_resp = api_client.delete('/tags/0000000000000000000000000')
     assert del_resp.status_code == 404
@@ -183,7 +183,7 @@ def test_can_only_update_user_tags(api_client):
     assert r['id'] == 'unread'
 
     r = api_client.put_data('/tags/unread', {'name': 'new name'})
-    assert r.status_code == 403
+    assert r.status_code == 400
 
 
 def test_cant_create_existing_tag(api_client):

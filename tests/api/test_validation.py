@@ -16,7 +16,7 @@ def test_namespace_id_validation(api_client, db):
 
     malformed_namespace_id = 'this string is definitely not base36-decodable'
     r = api_client.client.get('/n/{}'.format(malformed_namespace_id))
-    assert r.status_code == 404
+    assert r.status_code == 400
 
 
 def test_recipient_validation(api_client):
