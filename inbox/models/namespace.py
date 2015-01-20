@@ -18,8 +18,11 @@ class Namespace(MailSyncBase, HasPublicID):
     account = relationship('Account',
                            lazy='joined',
                            single_parent=True,
-                           backref=backref('namespace', uselist=False,
-                                           lazy='joined'),
+                           backref=backref('namespace',
+                                           uselist=False,
+                                           lazy='joined',
+                                           passive_deletes=True,
+                                           cascade='all,delete-orphan'),
                            uselist=False)
 
     # invariant: imapaccount is non-null iff type is root

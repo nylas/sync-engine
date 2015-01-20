@@ -1,0 +1,42 @@
+#!/usr/bin/env python
+
+import click
+from sqlalchemy.orm.exc import NoResultFound
+from sys import exit
+
+from inbox.models.account import Account
+from inbox.models.session import session_scope as mailsync_session_scope
+
+
+@click.command()
+@click.option('--account-id', '-a', type=int, required=True)
+def main(account_id):
+    with mailsync_session_scope() as mailsync_session:
+        try:
+            account = mailsync_session.query(Account).\
+                filter_by(id=account_id).one()
+            prompt = 'hey buddy, are you sure? [y/N] '.format(account_id)
+            proceed = raw_input(prompt).strip().lower()
+            if proceed != 'y':
+                # assuming 'N' for safety
+                print 'bailing!'
+            elif proceed == 'y':
+                mailsync_session.execute(
+                    '''UPDATE message
+                    SET full_body_id = NULL
+                    WHERE namespace_id = :namespace_id;''',
+                    {'namespace_id': account.namespace.id})
+                mailsync_session.delete(account)
+                mailsync_session.commit()
+                print 'you got what you asked for!'
+                exit(0)
+            else:
+                print 'I didn\'t get your answer, bailing!'
+                exit(22)
+        except NoResultFound:
+            print 'account {} not found'.format(account_id)
+            exit(22)
+
+
+if __name__ == '__main__':
+    main()

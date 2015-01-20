@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.34, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.40, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.5.34-0ubuntu0.12.04.1-log
+-- Server version	5.5.40-0ubuntu0.12.04.1-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -114,7 +114,7 @@ CREATE TABLE `actionlog` (
   KEY `ix_actionlog_deleted_at` (`deleted_at`),
   KEY `ix_actionlog_namespace_id` (`namespace_id`),
   KEY `ix_actionlog_updated_at` (`updated_at`),
-  CONSTRAINT `actionlog_ibfk_1` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`)
+  CONSTRAINT `actionlog_ibfk_1` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -145,7 +145,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('262436681c4');
+INSERT INTO `alembic_version` VALUES ('284227d72f51');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -373,45 +373,6 @@ LOCK TABLES `easdevice` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `easeventuid`
---
-
-DROP TABLE IF EXISTS `easeventuid`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `easeventuid` (
-  `created_at` datetime NOT NULL,
-  `updated_at` datetime NOT NULL,
-  `deleted_at` datetime DEFAULT NULL,
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `easaccount_id` int(11) NOT NULL,
-  `event_id` int(11) NOT NULL,
-  `folder_id` int(11) NOT NULL,
-  `fld_uid` int(11) NOT NULL,
-  `msg_uid` int(11) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_folder_id` (`folder_id`,`msg_uid`,`easaccount_id`),
-  KEY `easaccount_id` (`easaccount_id`),
-  KEY `event_id` (`event_id`),
-  KEY `ix_easeventuid_created_at` (`created_at`),
-  KEY `ix_easeventuid_updated_at` (`updated_at`),
-  KEY `ix_easeventuid_deleted_at` (`deleted_at`),
-  CONSTRAINT `easeventuid_ibfk_1` FOREIGN KEY (`easaccount_id`) REFERENCES `easaccount` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `easeventuid_ibfk_2` FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `easeventuid_ibfk_3` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `easeventuid`
---
-
-LOCK TABLES `easeventuid` WRITE;
-/*!40000 ALTER TABLE `easeventuid` DISABLE KEYS */;
-/*!40000 ALTER TABLE `easeventuid` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `easfoldersync`
 --
 
@@ -474,9 +435,9 @@ CREATE TABLE `easfoldersyncstatus` (
   KEY `ix_easfoldersyncstatus_deleted_at` (`deleted_at`),
   KEY `ix_easfoldersyncstatus_updated_at` (`updated_at`),
   KEY `device_id` (`device_id`),
+  CONSTRAINT `easfoldersyncstatus_ibfk_3` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`) ON DELETE CASCADE,
   CONSTRAINT `easfoldersyncstatus_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `easaccount` (`id`),
-  CONSTRAINT `easfoldersyncstatus_ibfk_2` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`),
-  CONSTRAINT `easfoldersyncstatus_ibfk_3` FOREIGN KEY (`device_id`) REFERENCES `easdevice` (`id`) ON DELETE CASCADE
+  CONSTRAINT `easfoldersyncstatus_ibfk_2` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1779,4 +1740,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-12-23 22:06:37
+-- Dump completed on 2015-01-20 10:21:17

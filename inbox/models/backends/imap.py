@@ -268,7 +268,9 @@ class ImapFolderSyncStatus(MailSyncBase):
     """ Per-folder status state saving for IMAP folders. """
     account_id = Column(ForeignKey(ImapAccount.id, ondelete='CASCADE'),
                         nullable=False)
-    account = relationship(ImapAccount, backref=backref('foldersyncstatuses'))
+    account = relationship(ImapAccount,
+                           backref=backref('foldersyncstatuses',
+                                           passive_deletes=True))
 
     folder_id = Column(Integer, ForeignKey('folder.id', ondelete='CASCADE'),
                        nullable=False)

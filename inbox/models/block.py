@@ -51,8 +51,11 @@ class Block(Blob, MailSyncBase, HasRevisions, HasPublicID):
     namespace_id = Column(Integer,
                           ForeignKey(Namespace.id, ondelete='CASCADE'),
                           nullable=False)
-    namespace = relationship(
-        'Namespace', backref=backref('blocks'), load_on_pending=True)
+    namespace = relationship('Namespace',
+                             backref=backref('blocks',
+                                             passive_deletes=True,
+                                             cascade='all,delete-orphan'),
+                             load_on_pending=True)
 
     @reconstructor
     def init_on_load(self):

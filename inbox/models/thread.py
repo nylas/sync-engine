@@ -101,10 +101,9 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
 
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           nullable=False, index=True)
-    namespace = relationship(
-        'Namespace',
-        backref=backref('threads'),
-        load_on_pending=True)
+    namespace = relationship('Namespace',
+                             backref=backref('threads', passive_deletes=True),
+                             load_on_pending=True)
 
     @property
     def participants(self):
