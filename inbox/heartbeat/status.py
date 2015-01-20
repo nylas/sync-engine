@@ -77,6 +77,63 @@ class HeartbeatStatusProxy(object):
                       exc_info=True)
 
 
+class AccountHeartbeatStatus(object):
+    folders = []
+    alive = False
+    missing = False
+
+    def __init__(self, account):
+        if account is None or account == {}:
+            self.missing = True
+            return
+        self.raw = account
+        # initialize from JSON
+        # if format {acct_id: ... }
+        if len(account.keys()) == 1:
+            self.account_id = account.keys()[0]
+            account = account.get(self.account_id)
+        self.alive, self.provider, raw_folders = account
+        self.init_folders(raw_folders)
+
+    def init_folders(self, raw_folders):
+        self.folders = []
+        for folder_id in raw_folders:
+            self.folders.append(FolderHeartbeatStatus(raw_folders[folder_id],
+                                                      folder_id))
+
+    @property
+    def dead_folders(self):
+        return [f.folder_id for f in self.folders if not f.alive]
+
+    @property
+    def initial_sync(self):
+        return any([f.status == 'initial' for f in self.folders])
+
+    @property
+    def poll_sync(self):
+        # should also be 'not initial'
+        return all([f.status == 'poll' for f in self.folders])
+
+
+class FolderHeartbeatStatus(object):
+    folder_id = None
+    alive = False
+    status = None
+
+    def __init__(self, folder, folder_id=None):
+        if folder_id:
+            self.folder_id = folder_id
+        else:
+            self.folder_id = folder.keys()[0]
+            folder = folder[self.folder_id]
+        self.alive, self.folder_name, device = folder
+        device_key = device.keys()[0]
+        device_status = device[device_key]
+        self.status = device_status['state']
+        self.heartbeat_at = device_status['heartbeat_at']
+        self.action = device_status['action']
+
+
 def get_heartbeat_status(host=None, port=6379, account_id=None):
     if host:
         thresholds = _get_alive_thresholds()
