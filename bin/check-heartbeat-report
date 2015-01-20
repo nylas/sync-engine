@@ -18,11 +18,14 @@ def main(host, port):
     new_report = make_heartbeat_report(status)
     report = get_heartbeat_report(host, port)
     set_heartbeat_report(host, port, new_report)
-    dying = analyze_heartbeat_report(report, new_report)
-    if not dying:
-        exit(0)
-    print dumps(dying)
-    exit(2)
+    dead, new_dead = analyze_heartbeat_report(report, new_report)
+    if new_dead:
+        print dumps(dict(dead=dead, new_dead=new_dead))
+        exit(2)
+    elif dead:
+        print dumps(dict(dead=dead))
+        exit(1)
+    exit(0)
 
 if __name__ == '__main__':
     main()

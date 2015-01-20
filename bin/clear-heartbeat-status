@@ -18,9 +18,14 @@ def main(host, port, account_id):
     else:
         client = get_redis_client(STATUS_DATABASE)
     batch_client = client.pipeline()
+    op = False
     for name in client.scan_iter(HeartbeatStatusKey.all_folders(account_id),
                                  100):
+        op = True
         batch_client.delete(name)
+    if not op:
+        print 'account {} not found'.format(account_id)
+        exit(22)
     batch_client.execute()
     exit(0)
 

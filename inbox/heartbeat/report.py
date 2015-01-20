@@ -28,6 +28,8 @@ def set_heartbeat_report(host, port, report):
         return
     client = _get_redis_client(host, port, REPORT_DATABASE)
     batch_client = client.pipeline()
+    # flush the db to avoid stale information
+    batch_client.flushdb()
     for name, value in report.iteritems():
         batch_client.set(name, value)
     batch_client.execute()
@@ -36,10 +38,18 @@ def set_heartbeat_report(host, port, report):
 def analyze_heartbeat_report(report, new_report):
     assert report is not None
     assert new_report is not None
-    dying = []
+    dead = []
+    new_dead = []
     for name, new_value in new_report.iteritems():
-        # make the default True to eagerly signal dead syncs
+        # if alive, do nothing
+        if new_value:
+            continue
+        # make the default True to eagerly signal new dead accounts
         value = report.get(name, True)
-        if value and not new_value:
-            dying.append(name)
-    return sorted(dying)
+        if value:
+            # new dead account, since previously was alive
+            new_dead.append(name)
+        else:
+            # already dead account
+            dead.append(name)
+    return (sorted(dead), sorted(new_dead))
