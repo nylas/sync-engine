@@ -15,6 +15,11 @@ final class PytestTestEngine extends ArcanistUnitTestEngine {
     $cover_output = $this->project_root . '/tests/coverage';
 
     $future = $this->buildTestFuture($test_output, $cover_output);
+    while (!$future->isReady()) {
+      $stdout = $future->readStdout();
+      print $stdout;
+    }
+
     $future->resolvex();
 
     return $this->parseTestResults($test_output, $cover_output);

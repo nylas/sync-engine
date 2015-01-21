@@ -11,7 +11,8 @@ log = get_logger()
 
 from inbox.auth import AuthHandler
 from inbox.basicauth import (ConnectionError, ValidationError,
-                             TransientConnectionError)
+                             TransientConnectionError,
+                             UserRecoverableConfigError)
 from inbox.models import Namespace
 from inbox.models.backends.generic import GenericAccount
 
@@ -134,8 +135,19 @@ class GenericAuthHandler(AuthHandler):
         if "condstore" not in info:
             if self._supports_condstore(conn):
                 account.supports_condstore = True
-
-        conn.logout()
+        try:
+            conn.list_folders()
+        except Exception as e:
+            log.error("account_folder_list_failed",
+                      email=account.email_address,
+                      account_id=account.id,
+                      error=e.message)
+            raise UserRecoverableConfigError("Full IMAP support is not "
+                                             "enabled for this account. "
+                                             "Please contact your domain "
+                                             "administrator and try again.")
+        finally:
+            conn.logout()
         return True
 
     def interactive_auth(self, email_address):
