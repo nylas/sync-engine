@@ -423,7 +423,7 @@ class CrispinClient(object):
         See http://tools.ietf.org/html/rfc3501.html#section-6.4.4 for valid
         criteria.
         """
-        full_criteria = ['NOT DELETED']
+        full_criteria = ['UNDELETED']
         if isinstance(criteria, list):
             full_criteria.extend(criteria)
         else:
@@ -438,7 +438,7 @@ class CrispinClient(object):
         list
             UIDs as integers sorted in ascending order.
         """
-        data = self.conn.search(['NOT DELETED'])
+        data = self.conn.search(['UNDELETED'])
         return sorted([long(s) for s in data])
 
     def uids(self, uids):
@@ -808,7 +808,7 @@ class GmailCrispinClient(CondStoreCrispinClient):
             "must select All Mail first ({})".format(
                 self.selected_folder_name)
         criterion = 'X-GM-THRID {}'.format(g_thrid)
-        uids = [long(uid) for uid in self.conn.search(['NOT DELETED',
+        uids = [long(uid) for uid in self.conn.search(['UNDELETED',
                                                        criterion])]
         # UIDs ascend over time; return in order most-recent first
         return sorted(uids, reverse=True)
@@ -819,7 +819,7 @@ class GmailCrispinClient(CondStoreCrispinClient):
         """
         criteria = 'X-GM-THRID {}'.format(g_thrid)
         return sorted([long(uid) for uid in
-                       self.conn.search(['NOT DELETED', criteria])])
+                       self.conn.search(['UNDELETED', criteria])])
 
     # -----------------------------------------
     # following methods WRITE to IMAP account!
@@ -911,6 +911,6 @@ class GmailCrispinClient(CondStoreCrispinClient):
             self.conn.expunge()
 
     def find_by_header(self, header_name, header_value):
-        criteria = ['NOT DELETED',
+        criteria = ['UNDELETED',
                     'HEADER {} {}'.format(header_name, header_value)]
         return self.conn.search(criteria)
