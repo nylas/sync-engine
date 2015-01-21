@@ -11,7 +11,7 @@ from inbox.models.session import session_scope
 from inbox.util.concurrency import retry_with_logging
 from inbox.util.misc import MergeError
 from inbox.models import Account
-from inbox.heartbeat.status import HeartbeatStatusProxy
+from inbox.heartbeat.status import HeartbeatStatusProxy, clear_heartbeat_status
 
 
 class BaseSync(gevent.Greenlet):
@@ -43,6 +43,7 @@ class BaseSync(gevent.Greenlet):
             while True:
                 # Check to see if this greenlet should exit
                 if self.shutdown.is_set():
+                    clear_heartbeat_status(self.account_id, self.folder_id)
                     return False
 
                 try:
