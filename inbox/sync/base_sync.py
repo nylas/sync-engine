@@ -23,23 +23,23 @@ class BaseSyncMonitor(Greenlet):
         Exceptions to *not* retry on.
 
     """
-    def __init__(self, account_id, namespace_id, folder_id, poll_frequency=1,
+    def __init__(self, account_id, namespace_id, email_address, folder_id,
+                 folder_name, provider_name, poll_frequency=1,
                  retry_fail_classes=[]):
 
         self.account_id = account_id
         self.namespace_id = namespace_id
         self.poll_frequency = poll_frequency
         self.retry_fail_classes = retry_fail_classes
-        self.folder_id = folder_id
 
         self.log = logger.new(account_id=account_id)
 
         self.shutdown = event.Event()
         self.heartbeat_status = HeartbeatStatusProxy(self.account_id,
-                                                     self.folder_id,
-                                                     self.folder_name,
-                                                     self.email_address,
-                                                     self.provider_name)
+                                                     folder_id,
+                                                     folder_name,
+                                                     email_address,
+                                                     provider_name)
         Greenlet.__init__(self)
 
     def _run(self):

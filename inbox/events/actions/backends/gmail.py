@@ -9,10 +9,7 @@ __all__ = ['remote_create_event', 'remote_update_event', 'remote_delete_event']
 
 def remote_create_event(account, event, db_session):
     provider = GoogleEventsProvider(account.id, account.namespace.id)
-    dump = provider.dump_event(event)
-    service = provider._get_google_service()
-    result = service.events().insert(calendarId=event.calendar.name,
-                                     body=dump).execute()
+    result = provider.create_remote_event(event)
     # The events crud API assigns a random uid to an event when creating it.
     # We need to update it to the value returned by the Google calendar API.
     event.uid = result['id']
@@ -21,16 +18,10 @@ def remote_create_event(account, event, db_session):
 
 def remote_update_event(account, event, db_session):
     provider = GoogleEventsProvider(account.id, account.namespace.id)
-    dump = provider.dump_event(event)
-    service = provider._get_google_service()
-    service.events().update(calendarId=event.calendar.name,
-                            eventId=event.uid, body=dump).execute()
+    provider.update_remote_event(event)
 
 
 def remote_delete_event(account, event_uid, calendar_name, calendar_uid,
                         db_session):
-    # Note the calendar_uid argument is used by other providers like EAS.
     provider = GoogleEventsProvider(account.id, account.namespace.id)
-    service = provider._get_google_service()
-    service.events().delete(calendarId=calendar_name,
-                            eventId=event_uid).execute()
+    provider.delete_remote_event(calendar_uid, event_uid)

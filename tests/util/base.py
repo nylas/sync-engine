@@ -1,7 +1,7 @@
 import json
 import os
 import subprocess
-from datetime import datetime
+from datetime import datetime, timedelta
 from mockredis import mock_strict_redis_client
 
 from pytest import fixture, yield_fixture
@@ -256,6 +256,17 @@ class ContactsProviderStub(object):
         return self._contacts
 
 
+def add_fake_account(db_session, email_address='test@nilas.com'):
+    from inbox.models import Account, Namespace
+    account = Account(email_address=email_address)
+    namespace = Namespace()
+    namespace.account = account
+    db_session.add(account)
+    db_session.add(namespace)
+    db_session.commit()
+    return account
+
+
 def add_fake_message(db_session, namespace_id, thread, from_addr=None,
                      to_addr=None, cc_addr=None, bcc_addr=None,
                      received_date=None, subject=None):
@@ -297,6 +308,37 @@ def add_fake_imapuid(db_session, account_id, message, folder, msg_uid):
     db_session.add(imapuid)
     db_session.commit()
     return imapuid
+
+
+def add_fake_event(db_session, namespace_id):
+    from inbox.models import Namespace, Event
+    start = datetime.utcnow()
+    end = datetime.utcnow() + timedelta(seconds=1)
+    account = db_session.query(Namespace).get(namespace_id).account
+    calendar = account.default_calendar
+    event = Event(namespace_id=namespace_id,
+                  calendar=calendar,
+                  title='title',
+                  description='',
+                  location='',
+                  busy=False,
+                  read_only=False,
+                  reminders='',
+                  recurrence='',
+                  start=start,
+                  end=end,
+                  all_day=False,
+                  provider_name='inbox',
+                  raw_data='',
+                  source='local')
+    db_session.add(event)
+    db_session.commit()
+    return event
+
+
+@fixture
+def new_account(db):
+    return add_fake_account(db.session)
 
 
 @fixture

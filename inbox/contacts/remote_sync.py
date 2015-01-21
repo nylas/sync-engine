@@ -46,8 +46,6 @@ class ContactSync(BaseSyncMonitor):
         self.log = logger.new(account_id=account_id, component='contact sync')
         self.log.info('Begin syncing contacts...')
 
-        self.folder_name = CONTACT_SYNC_FOLDER_NAME
-        self.email_address = email_address
         self.provider_name = provider_name
 
         provider_cls = CONTACT_SYNC_PROVIDER_MAP[self.provider_name]
@@ -56,7 +54,10 @@ class ContactSync(BaseSyncMonitor):
         BaseSyncMonitor.__init__(self,
                                  account_id,
                                  namespace_id,
+                                 email_address,
                                  CONTACT_SYNC_FOLDER_ID,
+                                 CONTACT_SYNC_FOLDER_NAME,
+                                 provider_name,
                                  poll_frequency=poll_frequency,
                                  retry_fail_classes=[ValidationError])
 

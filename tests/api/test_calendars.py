@@ -29,6 +29,7 @@ def test_get_calendar(db, api_client):
     ns_id = acct.namespace.public_id
     cal = Calendar(
         namespace_id=acct.namespace.id,
+        uid='uid',
         provider_name='WTF',
         name='Holidays')
     db.session.add(cal)
@@ -53,6 +54,7 @@ def test_add_to_specific_calendar(db, api_client):
     ns_id = acct.namespace.public_id
     cal = Calendar(
         namespace_id=acct.namespace.id,
+        uid='uid',
         provider_name='WTF',
         name='Custom')
     db.session.add(cal)

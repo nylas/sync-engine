@@ -1,16 +1,16 @@
-import dateutil.parser as date_parser
-from dateutil import tz
+import dateutil.parser
+import dateutil.tz
 
 
+# TODO(emfree) remove (currently used in other repos)
 class MalformedEventError(Exception):
     pass
 
 
-def parse_datetime(date):
-    if not date:
-        raise MalformedEventError()
-    try:
-        dt = date_parser.parse(date)
-        return dt.astimezone(tz.gettz('UTC')).replace(tzinfo=None)
-    except ValueError:
-        raise MalformedEventError()
+def parse_datetime(datetime):
+    dt = dateutil.parser.parse(datetime)
+    if dt.tzinfo is not None:
+        # Convert to naive datetime representing UTC.
+        return dt.astimezone(dateutil.tz.gettz('UTC')).replace(tzinfo=None)
+    else:
+        return dt

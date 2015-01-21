@@ -1,373 +1,328 @@
 """Provide Google Calendar events."""
-import httplib2
+import collections
+import datetime
 import json
-import dateutil.parser as date_parser
-from datetime import datetime
+import urllib
+import requests
 
-from apiclient.discovery import build
-from apiclient.errors import HttpError
-from oauth2client.client import OAuth2Credentials
-from oauth2client.client import AccessTokenRefreshError
-
-from inbox.basicauth import (ConnectionError, ValidationError, OAuthError)
-from inbox.models import Event, Calendar
+from inbox.log import get_logger
+from inbox.models import Event, Calendar, Account
 from inbox.models.session import session_scope
-from inbox.models.backends.gmail import GmailAccount
 from inbox.models.backends.oauth import token_manager
-from inbox.auth.gmail import (OAUTH_CLIENT_ID,
-                              OAUTH_CLIENT_SECRET,
-                              OAUTH_ACCESS_TOKEN_URL)
-from inbox.events.util import MalformedEventError, parse_datetime
-from inbox.events.base import BaseEventProvider
+from inbox.events.util import parse_datetime
 
-SOURCE_APP_NAME = 'InboxApp Calendar Sync Engine'
-
-
-# Silence the stupid Google API client logger
-import logging
-apiclient_logger = logging.getLogger('googleapiclient.discovery')
-apiclient_logger.setLevel(40)
+log = get_logger()
+CALENDARS_URL = 'https://www.googleapis.com/calendar/v3/users/me/calendarList'
+STATUS_MAP = {'accepted': 'yes', 'needsAction': 'noreply',
+              'declined': 'no', 'tentative': 'maybe'}
 
 
-class GoogleEventsProvider(BaseEventProvider):
-    """A utility class to fetch and parse Google calendar data for the
-    specified account using the Google Calendar API.
+# Container for a parsed API response. API calls return adds/updates/deletes
+# all together, but we want to handle deletions separately in our persistence
+# logic. deleted_uids should be a list of uids, and updated_objects should be a
+# list of (un-added, uncommitted) model instances.
+SyncResponse = collections.namedtuple('SyncResponse',
+                                      ['deleted_uids', 'updated_objects'])
 
-    Parameters
-    ----------
-    account_id: GmailAccount.id
-        The user account for which to fetch event data.
 
-    Attributes
-    ----------
-    google_client: gdata.calendar.client.CalendarClient
-        Google API client to do the actual data fetching.
-    log: logging.Logger
-        Logging handler.
+class GoogleEventsProvider(object):
     """
-    PROVIDER_NAME = 'google'
+    A utility class to fetch and parse Google calendar data for the
+    specified account using the Google Calendar API.
+    """
 
-    # A mapping from Google's status to our own
-    status_map = {'accepted': 'yes', 'needsAction': 'noreply',
-                  'declined': 'no', 'tentative': 'maybe'}
+    def __init__(self, account_id, namespace_id):
+        self.account_id = account_id
+        self.namespace_id = namespace_id
+        self.log = log.new(account_id=account_id)
 
-    def _get_google_service(self):
-        """Return the Google API client."""
-        with session_scope() as db_session:
-            try:
-                account = db_session.query(GmailAccount).get(self.account_id)
-                client_id = account.client_id or OAUTH_CLIENT_ID
-                client_secret = (account.client_secret or
-                                 OAUTH_CLIENT_SECRET)
+    def sync_calendars(self):
+        """ Fetches data for the user's calendars.
+        Returns
+        -------
+        SyncResponse
+        """
 
-                self.email = account.email_address
+        deletes = []
+        updates = []
+        items = self._get_raw_calendars()
+        for item in items:
+            if item.get('deleted'):
+                deletes.append(item['id'])
+            else:
+                updates.append(parse_calendar_response(item))
 
-                access_token = token_manager.get_token(account)
-                refresh_token = account.refresh_token
+        return SyncResponse(deletes, updates)
 
-                credentials = OAuth2Credentials(
-                    access_token=access_token,
-                    client_id=client_id,
-                    client_secret=client_secret,
-                    refresh_token=refresh_token,
-                    token_expiry=None,  # Value not actually needed by library.
-                    token_uri=OAUTH_ACCESS_TOKEN_URL,
-                    user_agent=SOURCE_APP_NAME)
-
-                http = httplib2.Http()
-                http = credentials.authorize(http)
-
-                service = build(serviceName='calendar',
-                                version='v3',
-                                http=http)
-
-                return service
-
-            except OAuthError:
-                self.log.error('Invalid user credentials given')
-                account.mark_invalid()
-                db_session.add(account)
-                db_session.commit()
-                raise ValidationError
-            except ConnectionError:
-                self.log.error('Connection error')
-                account.sync_state = 'connerror'
-                db_session.add(account)
-                db_session.commit()
-                raise ConnectionError
-
-    def parse_event(self, event, cal_info):
-        """Constructs an Event object from a Google calendar entry.
+    def sync_events(self, calendar_uid, sync_from_time=None):
+        """ Fetches event data for an individual calendar.
 
         Parameters
         ----------
-        event: gdata.calendar.entry.CalendarEntry
-            The Google calendar entry to parse.
+        calendar_uid: the google identifier for the calendar.
+            Usually username@gmail.com for the primary calendar, otherwise
+            random-alphanumeric-address@*.google.com
+        sync_from_time: datetime
+            Only sync events which have been added or changed since this time.
+            Note that if this is too far in the past, the Google calendar API
+            may return an HTTP 410 error, in which case we transparently fetch
+            all event data.
 
         Returns
         -------
-        ..models.tables.base.Event
-            A corresponding Inbox Event instance.
-
-        Raises
-        ------
-        MalformedEventError
-           If the calendar data could not be parsed correctly.
+        SyncResponse
         """
-        try:
-            uid = str(event['id'])
-
-            # The entirety of the raw event data in json representation.
-            raw_data = str(event)
-
-            # 'cancelled' events signify those instances within a series
-            # that have been cancelled (for that given series). As such,
-            # since full support for dealing with single instances within
-            # a reocurring event series is not added, right now we just
-            # ignore the event. -cg3
-            # TODO: Add support for reocurring events (see ways to handle
-            # this generically across providers)
-            if 'status' in event and event['status'] == 'cancelled':
-                return None
-
-            title = event.get('summary', '')
-            description = event.get('description', None)
-            location = event.get('location', None)
-            all_day = False
-            read_only = True
-            is_owner = False
-
-            start = event['start']
-            end = event['end']
-            g_recur = event.get('recurrence', None)
-
-            recurrence = str(g_recur) if g_recur else None
-
-            busy = event.get('transparency', True)
-            if busy == 'transparent':
-                busy = False
-
-            reminders = []
-            if 'dateTime' in start:
-
-                if 'reminders' in event:
-                    if event['reminders']['useDefault']:
-                        reminder_source = cal_info['defaultReminders']
-                    elif 'overrides' in event['reminders']:
-                        reminder_source = event['reminders']['overrides']
-                    else:
-                        reminder_source = None
-
-                    if reminder_source:
-                        for reminder in reminder_source:
-                            reminders.append(reminder['minutes'])
-
-                try:
-                    start = parse_datetime(start['dateTime'])
-                    end = parse_datetime(end['dateTime'])
-                except TypeError:
-                    self.log.error('Invalid start: {} or end: {}'
-                                   .format(start['dateTime'],
-                                           end['dateTime']))
-                    raise MalformedEventError()
-
+        deletes = []
+        updates = []
+        items = self._get_raw_events(calendar_uid, sync_from_time)
+        for item in items:
+            if item.get('status') == 'cancelled':
+                deletes.append(item['id'])
             else:
-                start = date_parser.parse(start['date'])
-                end = date_parser.parse(end['date'])
-                all_day = True
+                updates.append(parse_event_response(item))
+        return SyncResponse(deletes, updates)
 
-            reminders = str(reminders) if reminders else None
+    def _get_raw_calendars(self):
+        """Gets raw data for the user's calendars."""
+        return self._get_resource_list(CALENDARS_URL)
 
-            # Convert google's notion of status into our own
-            participants = []
-            for attendee in event.get('attendees', []):
-                g_status = attendee.get('responseStatus')
-                if g_status not in GoogleEventsProvider.status_map:
-                    self.log.error("Unknown event responseStatus: {}"
-                                   .format(g_status))
-                    raise MalformedEventError()
-                status = GoogleEventsProvider.status_map[g_status]
+    def _get_raw_events(self, calendar_uid, sync_from_time=None):
+        """ Gets raw event data for the given calendar.
 
-                dct = {'status': status}
+        Parameters
+        ----------
+        calendar_uid: string
+            Google's ID for the calendar we're getting events on.
+        sync_from_time: datetime, optional
+            If given, only fetch data for events that have changed since this
+            time.
 
-                email = attendee.get('email')
-                if email:
-                    dct['email'] = email
-
-                name = attendee.get('displayName')
-                if name:
-                    dct['name'] = name
-
-                if 'additionalGuests' in attendee:
-                    dct['guests'] = attendee['additionalGuests']
-                elif 'comment' in attendee:
-                    dct['notes'] = attendee['comment']
-
-                participants.append(dct)
-
-            if 'guestsCanModify' in event:
-                read_only = False
-            owner = ''
-            if 'creator' in event:
-                creator = event['creator']
-                if 'self' in creator:
-                    is_owner = True
-                    read_only = False
-
-                owner = u'{} <{}>'.format(creator.get('displayName', ''),
-                                          creator.get('email', ''))
-
-        except (KeyError, AttributeError) as e:
-            raise MalformedEventError(e)
-
-        return Event(namespace_id=self.namespace_id,
-                     uid=uid,
-                     provider_name=self.PROVIDER_NAME,
-                     raw_data=raw_data,
-                     title=title,
-                     description=description,
-                     location=location,
-                     reminders=reminders,
-                     recurrence=recurrence,
-                     start=start,
-                     end=end,
-                     owner=owner,
-                     is_owner=is_owner,
-                     busy=busy,
-                     all_day=all_day,
-                     read_only=read_only,
-                     source='remote',
-                     participants=participants)
-
-    def create_attendee(self, participant):
-        inv_status_map = {value: key for key, value in
-                          GoogleEventsProvider.status_map.iteritems()}
-
-        att = {}
-        if 'name' in participant:
-            att["displayName"] = participant['name']
-
-            if 'status' in participant:
-                att["responseStatus"] = inv_status_map[participant['status']]
-
-            if 'email' in participant:
-                att["email"] = participant['email']
-
-            if 'guests' in participant:
-                att["additionalGuests"] = participant['guests']
-
-        return att
-
-    def dump_event(self, event):
-        """Convert an event db object to the Google API JSON format."""
-        dump = {}
-        dump["summary"] = event.title
-        dump["description"] = event.description
-        dump["location"] = event.location
-
-        if not event.busy:
-            # transparency: is the event shown in the gmail calendar as
-            # as a solid or semi-transparent block.
-            dump["transparency"] = "transparent"
-
-        if event.all_day:
-            dump["start"] = {"date": event.start.strftime('%Y-%m-%d')}
-        else:
-            dump["start"] = {"dateTime": event.start.isoformat('T'),
-                             "timeZone": "UTC"}
-            dump["end"] = {"dateTime": event.end.isoformat('T'),
-                           "timeZone": "UTC"}
-
-        if len(event.participants) > 0:
-            attendees = [self.create_attendee(participant) for participant
-                         in event.participants]
-            dump["attendees"] = [attendee for attendee in attendees
-                                 if attendee]
-
-        return dump
-
-    def fetch_calendar_items(self, provider_calendar_name, calendar_id,
-                             sync_from_dt=None):
-        """Fetch the events for an individual calendar.
-        parameters:
-            calendarId: the google identifier for the calendar. Usually,
-                username@gmail.com for the primary calendar otherwise
-                random-alphanumeric-address@google.com
-            calendar_id: the id of the calendar in our db.
-
-        This function yields tuples to fetch_items. These tuples are eventually
-        consumed by base_poll in inbox.sync.base_sync.
+        Returns
+        -------
+        list of dictionaries representing JSON.
         """
-        service = self._get_google_service()
-        # If applicable, only fetch results that have changed since we last
-        # synced.
-        kwargs = {}
-        if sync_from_dt:
-            # convert date to ISO 8601 format
-            kwargs = {'updatedMin': datetime.isoformat(sync_from_dt) + 'Z'}
+        if sync_from_time is not None:
+            # Note explicit offset is required by Google calendar API.
+            sync_from_time = datetime.datetime.isoformat(sync_from_time) + 'Z'
+
+        url = 'https://www.googleapis.com/calendar/v3/' \
+              'calendars/{}/events'.format(urllib.quote(calendar_uid))
         try:
-            resp = service.events().list(
-                calendarId=provider_calendar_name, **kwargs).execute()
-        except HttpError as e:
-            error = json.loads(e.content)
-            if error.get('error', {}).get('code') == 410:
-                # Minimum modification too far in the past: sync again.
-                # https://developers.google.com/google-apps/calendar/v3/sync
-                del kwargs['updatedMin']
-                resp = service.events().list(
-                    calendarId=provider_calendar_name, **kwargs).execute()
+            return self._get_resource_list(url, updatedMin=sync_from_time)
+        except requests.exceptions.HTTPError as exc:
+            if exc.response.status_code == 410:
+                # The calendar API may return 410 if you pass a value for
+                # updatedMin that's too far in the past. In that case, refetch
+                # all events.
+                return self._get_resource_list(url)
             else:
                 raise
 
-        extra = {k: v for k, v in resp.iteritems() if k != 'items'}
-        raw_events = resp['items']
-        # The Google calendar API may return paginated results; make sure we
-        # get all of them.
-        while 'nextPageToken' in resp:
-            resp = service.events().list(
-                calendarId=provider_calendar_name,
-                pageToken=resp['nextPageToken'],
-                **kwargs).execute()
-            raw_events += resp['items']
+    def _get_access_token(self):
+        with session_scope() as db_session:
+            acc = db_session.query(Account).get(self.account_id)
+            # This will raise OAuthError if OAuth access was revoked. The
+            # BaseSyncMonitor loop will catch this, clean up, and exit.
+            return token_manager.get_token(acc)
 
-        for event in raw_events:
-            yield (calendar_id, event, extra)
+    def _get_resource_list(self, url, **params):
+        """Handles response pagination."""
+        token = self._get_access_token()
+        items = []
+        next_page_token = None
+        params['showDeleted'] = True
+        while True:
+            if next_page_token is not None:
+                params['pageToken'] = next_page_token
+            r = requests.get(url, params=params, auth=OAuth(token))
+            if r.status_code == 200:
+                data = r.json()
+                items += data['items']
+                next_page_token = data.get('nextPageToken')
+                if next_page_token is None:
+                    return items
+            elif r.status_code == 401:
+                # get a new access token and retry
+                self.log.warning('google calendar API request rejected; '
+                                 'refreshing token')
+                token = self._get_access_token()
+            # TODO(emfree): handle HTTP 403 / Calendar API not enabled here.
+            else:
+                r.raise_for_status()
 
-    def fetch_items(self, sync_from_dt=None):
-        """Fetch all events for all calendars. This function proxies
-        fetch_calendar_items and yields the results to inbox.sync.base_sync."""
+    def _make_event_request(self, method, calendar_uid, event_uid=None,
+                            **kwargs):
+        """Makes a POST/PUT/DELETE request for a particular event."""
+        event_uid = event_uid or ''
+        url = 'https://www.googleapis.com/calendar/v3/' \
+              'calendars/{}/events/{}'.format(urllib.quote(calendar_uid),
+                                              urllib.quote(event_uid))
+        token = self._get_access_token()
+        r = requests.request(method, url, auth=OAuth(token), **kwargs)
+        r.raise_for_status()
+        return r
 
-        service = self._get_google_service()
-        try:
-            calendars = service.calendarList().list().execute()['items']
-        except AccessTokenRefreshError:
-            self.log.error("Invalid user credentials given")
-            with session_scope() as db_session:
-                account = db_session.query(GmailAccount).get(self.account_id)
-                account.mark_invalid()
-                db_session.add(account)
-                db_session.commit()
-            raise ValidationError
-        except HttpError as e:
-            self.log.warn("Error retrieving events",
-                          message=str(e))
-            return
+    def create_remote_event(self, event):
+        data = _dump_event(event)
+        r = self._make_event_request('post', event.calendar.uid, json=data)
+        return r.json()
 
-        for response_calendar in calendars:
-            # update the calendar
-            with session_scope() as db_session:
-                # FIXME: refactor this to take a db session.
-                calendar_id = self.get_calendar_id(
-                    response_calendar['id'],
-                    description=response_calendar['summary'])
-                # Update calendar statuses. They may have changed.
-                calendar = db_session.query(Calendar).get(calendar_id)
-                if response_calendar['accessRole'] == 'reader':
-                    calendar.read_only = True
+    def update_remote_event(self, event):
+        data = _dump_event(event)
+        self._make_event_request('put', event.calendar.uid, event.uid,
+                                 json=data)
 
-                calendar_id = calendar.id
+    def delete_remote_event(self, calendar_uid, event_uid):
+        self._make_event_request('delete', calendar_uid, event_uid)
 
-            for item in self.fetch_calendar_items(
-                    response_calendar['id'], calendar_id,
-                    sync_from_dt=sync_from_dt):
-                yield item
+
+def parse_calendar_response(calendar):
+    """
+    Constructs a Calendar object from a Google calendarList resource (a
+    dictionary).  See
+    http://developers.google.com/google-apps/calendar/v3/reference/calendarList
+
+    Parameters
+    ----------
+    calendar: dict
+
+    Returns
+    -------
+    A corresponding Calendar instance.
+    """
+    uid = calendar['id']
+    name = calendar['summary']
+    read_only = calendar['accessRole'] == 'reader'
+    description = calendar.get('description', None)
+    return Calendar(uid=uid,
+                    name=name,
+                    read_only=read_only,
+                    description=description)
+
+
+def parse_event_response(event):
+    """
+    Constructs an Event object from a Google event resource (a dictionary).
+    See https://developers.google.com/google-apps/calendar/v3/reference/events
+
+    Parameters
+    ----------
+    event: dict
+
+    Returns
+    -------
+    A corresponding Event instance. This instance is not committed or added to
+    a session.
+    """
+    uid = str(event['id'])
+    # The entirety of the raw event data in json representation.
+    raw_data = json.dumps(event)
+    title = event.get('summary', '')
+
+    # Timing data
+    _start = event['start']
+    _end = event['end']
+    all_day = ('date' in _start and 'date' in _end)
+    if all_day:
+        start = parse_datetime(_start['date'])
+        end = parse_datetime(_end['date']) - datetime.timedelta(days=1)
+    else:
+        start = parse_datetime(_start['dateTime'])
+        end = parse_datetime(_end['dateTime'])
+
+    description = event.get('description')
+    location = event.get('location')
+    busy = event.get('transparency') != 'transparent'
+
+    # Ownership, read_only information
+    creator = event.get('creator')
+
+    if creator:
+        owner = u'{} <{}>'.format(
+            creator.get('displayName', ''), creator.get('email', ''))
+    else:
+        owner = ''
+
+    is_owner = bool(creator and creator.get('self'))
+    read_only = not (is_owner or event.get('guestsCanModify'))
+
+    participants = []
+    attendees = event.get('attendees', [])
+    for attendee in attendees:
+        status = STATUS_MAP[attendee.get('responseStatus')]
+        participants.append({
+            'email': attendee.get('email'),
+            'name': attendee.get('displayName'),
+            'status': status,
+            'notes': attendee.get('comment')
+        })
+
+    recurrence = None
+    if 'recurrence' in event:
+        recurrence = str(event['recurrence'])
+
+    return Event(uid=uid,
+                 raw_data=raw_data,
+                 title=title,
+                 description=description,
+                 location=location,
+                 busy=busy,
+                 start=start,
+                 end=end,
+                 all_day=all_day,
+                 owner=owner,
+                 is_owner=is_owner,
+                 read_only=read_only,
+                 participants=participants,
+                 recurrence=recurrence,
+                 # TODO(emfree): remove after data cleanup
+                 source='local')
+
+
+def _dump_event(event):
+    """Convert an event db object to the Google API JSON format."""
+    dump = {}
+    dump["summary"] = event.title
+    dump["description"] = event.description
+    dump["location"] = event.location
+
+    # Whether the event blocks time on the calendar.
+    dump['transparency'] = 'opaque' if event.busy else 'transparent'
+
+    if event.all_day:
+        dump["start"] = {"date": event.start.strftime('%Y-%m-%d')}
+        dump["end"] = {"date": event.start.strftime('%Y-%m-%d')}
+    else:
+        dump["start"] = {"dateTime": event.start.isoformat('T'),
+                         "timeZone": "UTC"}
+        dump["end"] = {"dateTime": event.end.isoformat('T'),
+                       "timeZone": "UTC"}
+
+    if event.participants:
+        dump['attendees'] = []
+        inverse_status_map = {value: key for key, value in STATUS_MAP.items()}
+        for participant in event.participants:
+            attendee = {}
+            if 'name' in participant:
+                attendee['displayName'] = participant['name']
+            if 'status' in participant:
+                attendee['responseStatus'] = inverse_status_map[
+                    participant['status']]
+            if 'email' in participant:
+                attendee['email'] = participant['email']
+            if 'guests' in participant:
+                attendee['additionalGuests'] = participant['guests']
+            if attendee:
+                dump['attendees'].append(attendee)
+
+    return dump
+
+
+class OAuth(requests.auth.AuthBase):
+    """Helper class for setting the Authorization header on HTTP requests."""
+    def __init__(self, token):
+        self.token = token
+
+    def __call__(self, r):
+        r.headers['Authorization'] = 'Bearer {}'.format(self.token)
+        return r

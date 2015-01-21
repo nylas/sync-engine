@@ -1,8 +1,7 @@
-import pytest
 from sqlalchemy import desc
 from inbox.models import Transaction, Tag
 from inbox.models.session import session_scope
-from tests.util.base import add_fake_message, add_fake_thread
+from tests.util.base import add_fake_message, add_fake_thread, add_fake_event
 
 NAMESPACE_ID = 1
 
@@ -83,10 +82,9 @@ def test_message_updates_create_transaction(db):
 
 
 def test_event_insert_creates_transaction(db):
-    from tests.general.events.default_event import default_event
     with session_scope() as db_session:
         with db_session.no_autoflush:
-            event = default_event(db_session)
+            event = add_fake_event(db_session, NAMESPACE_ID)
             transaction = get_latest_transaction(db_session, 'event',
                                                  event.id, NAMESPACE_ID)
             assert transaction.record_id == event.id
