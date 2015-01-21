@@ -22,7 +22,7 @@ class ConnectionStub(object):
 def get_auth_handler(monkeypatch, folders):
     g = GmailAuthHandler('gmail')
 
-    def mock_connect(x, y, z):
+    def mock_connect(x, y, z, a=None):
         return ConnectionStub()
 
     g.connect_account = mock_connect

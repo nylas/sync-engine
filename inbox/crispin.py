@@ -153,16 +153,18 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
             if self.provider_info['auth'] == 'oauth2':
                 try:
                     self.credential = account.access_token
-                except ValidationError:
+                except ValidationError as e:
                     logger.error("Error obtaining access token",
                                  account_id=self.account_id)
                     account.sync_state = 'invalid'
+                    account.update_sync_error(str(e))
                     db_session.commit()
                     raise
-                except ConnectionError:
+                except ConnectionError as e:
                     logger.error("Error connecting",
                                  account_id=self.account_id)
                     account.sync_state = 'connerror'
+                    account.update_sync_error(str(e))
                     db_session.commit()
                     raise
             else:
@@ -180,7 +182,8 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
                 try:
                     conn = auth_handler.connect_account(self.email_address,
                                                         self.credential,
-                                                        self.imap_endpoint)
+                                                        self.imap_endpoint,
+                                                        self.account_id)
 
                     # If we can connect the account, then we can set the sate
                     # to 'running' if it wasn't already
@@ -203,6 +206,7 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
                             query = db_session.query(ImapAccount)
                             account = query.get(self.account_id)
                             account.sync_state = 'connerror'
+                            account.update_sync_error(str(e))
                         return None
                 except ValidationError, e:
                     # If we failed to validate, but the account is oauth2, we
@@ -221,6 +225,7 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
                             query = db_session.query(ImapAccount)
                             account = query.get(self.account_id)
                             account.sync_state = 'invalid'
+                            account.update_sync_error(str(e))
                         raise
             return None
 

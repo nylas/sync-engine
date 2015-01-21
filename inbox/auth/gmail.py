@@ -118,7 +118,8 @@ class GmailAuthHandler(OAuthAuthHandler):
         """
         conn = self.connect_account(account.email_address,
                                     account.access_token,
-                                    account.imap_endpoint)
+                                    account.imap_endpoint,
+                                    account.id)
         # make a crispin client and check the folders
         client = GmailCrispinClient(account.id,
                                     provider_info('gmail'),

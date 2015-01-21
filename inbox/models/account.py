@@ -177,6 +177,13 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
 
         return d
 
+    @property
+    def sync_error(self):
+        return self._sync_status.get('sync_error')
+
+    def update_sync_error(self, error=None):
+        self._sync_status['sync_error'] = error
+
     def start_sync(self, sync_host=None):
         if sync_host:
             self.sync_started(sync_host)

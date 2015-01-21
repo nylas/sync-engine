@@ -48,7 +48,8 @@ class GenericAuthHandler(AuthHandler):
 
         return account
 
-    def connect_account(self, email, credential, imap_endpoint):
+    def connect_account(self, email, credential, imap_endpoint,
+                        account_id=None):
         """Provide a connection to a generic IMAP account.
 
         Raises
@@ -66,6 +67,7 @@ class GenericAuthHandler(AuthHandler):
             conn = IMAPClient(host, port=port, use_uid=True, ssl=True)
         except IMAPClient.AbortError as e:
             log.error('account_connect_failed',
+                      account_id=account_id,
                       email=email,
                       host=host,
                       port=port,
@@ -73,6 +75,7 @@ class GenericAuthHandler(AuthHandler):
             raise TransientConnectionError(str(e))
         except(IMAPClient.Error, gaierror, socket_error) as e:
             log.error('account_connect_failed',
+                      account_id=account_id,
                       email=email,
                       host=host,
                       port=port,
@@ -84,6 +87,7 @@ class GenericAuthHandler(AuthHandler):
             conn.login(email, credential)
         except IMAPClient.AbortError as e:
             log.error('account_verify_failed',
+                      account_id=account_id,
                       email=email,
                       host=host,
                       port=port,
@@ -91,6 +95,7 @@ class GenericAuthHandler(AuthHandler):
             raise TransientConnectionError(str(e))
         except IMAPClient.Error as e:
             log.error('account_verify_failed',
+                      account_id=account_id,
                       email=email,
                       host=host,
                       port=port,
@@ -98,6 +103,7 @@ class GenericAuthHandler(AuthHandler):
             raise ValidationError(str(e))
         except SSLError as e:
             log.error('account_verify_failed',
+                      account_id=account_id,
                       email=email,
                       host=host,
                       port=port,
