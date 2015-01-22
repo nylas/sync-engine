@@ -7,6 +7,10 @@ from inbox.heartbeat.config import (STATUS_DATABASE,
                                     _get_alive_thresholds, _get_redis_client)
 
 
+CONTACTS_FOLDER_ID = '-1'
+EVENTS_FOLDER_ID = '-2'
+
+
 class HeartbeatStatusKey(object):
     def __init__(self, account_id, folder_id):
         self.account_id = account_id
@@ -31,11 +35,11 @@ class HeartbeatStatusKey(object):
 
     @classmethod
     def contacts(cls, account_id):
-        return cls(account_id, '-1')
+        return cls(account_id, CONTACTS_FOLDER_ID)
 
     @classmethod
     def events(cls, account_id):
-        return cls(account_id, '-2')
+        return cls(account_id, EVENTS_FOLDER_ID)
 
     @classmethod
     def from_string(cls, string_key):
@@ -103,7 +107,7 @@ class AccountHeartbeatStatus(object):
 
     @property
     def dead_folders(self):
-        return [f.folder_id for f in self.folders if not f.alive]
+        return [f.folder_name for f in self.folders if not f.alive]
 
     @property
     def initial_sync(self):
