@@ -159,7 +159,8 @@ def get_recipients(recipients, field, validate_emails=False):
             # flanker purports to have a more comprehensive validate_address
             # function, but it doesn't actually work. So just invoke the
             # parser.
-            raise InputError('Invalid recipient address {}'.format(r['email']))
+            raise InputError(u'Invalid recipient address {}'.
+                             format(r['email']))
 
     return [(r.get('name', ''), r.get('email', '')) for r in recipients]
 
@@ -253,7 +254,7 @@ def validate_draft_recipients(draft):
             for _, email_address in field:
                 if not isinstance(address.parse(email_address),
                                   address.EmailAddress):
-                    raise InputError('Invalid recipient address {}'.
+                    raise InputError(u'Invalid recipient address {}'.
                                      format(email_address))
 
 

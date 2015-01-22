@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import json
 
 from inbox.sqlalchemy_ext.util import generate_public_id
@@ -29,6 +30,8 @@ def test_recipient_validation(api_client):
     r = api_client.post_data('/drafts', {'to': [{'name': 'foo'}]})
     assert r.status_code == 400
     r = api_client.post_data('/send', {'to': [{'email': 'foo'}]})
+    assert r.status_code == 400
+    r = api_client.post_data('/send', {'to': [{'email': 'föö'}]})
     assert r.status_code == 400
     r = api_client.post_data('/drafts', {'to': [{'email': ['foo']}]})
     assert r.status_code == 400
