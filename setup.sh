@@ -257,7 +257,6 @@ if ! $prod; then
 fi
 
 color '35;1' 'Cleaning up...'
-apt-get -y purge build-essential
 apt-get -y autoremove
 
 mkdir -p /var/lib/inboxapp

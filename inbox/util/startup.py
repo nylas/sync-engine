@@ -21,43 +21,14 @@ def _absolute_path(relative_path):
     return os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         relative_path)
 
-
-def check_requirements(requirements_path):
-    # Check our requirements package
-    failed_deps = []
-    with open(requirements_path, 'r') as f:
-        for x in f:
-            x = x.strip()
-            if not x or x.startswith('#'):
-                # skip blank lines and comments
-                continue
-            elif x.startswith('-e ') or '://' in x:
-                # ignore vcs URIs
-                # XXX(dlitz): we could probably parse `#egg=<version_req>` from
-                # the URI if we wanted to, assuming we want to parse
-                # requirements.txt ourselves at all.
-                continue
-            try:
-                require(x)
-            except (DistributionNotFound, VersionConflict):
-                failed_deps.append(x)
-
-    if failed_deps:
-        raise ImportError(
-            '\nPython module dependency verification failed! \n\n'
-            'The following dependencies are either missing or out of '
-            'date: \n\t{}\n\nYou probably need to run --> sudo pip '
-            'install -r requirements.txt\n'
-            .format('\n\t'.join(failed_deps)))
-
-
 def check_db():
     """ Checks the database revision against the known alembic migrations. """
     from inbox.ignition import main_engine
     inbox_db_engine = main_engine(pool_size=1, max_overflow=0)
 
     # top-level, with setup.sh
-    alembic_ini_filename = _absolute_path('../../alembic.ini')
+    alembic_ini_filename = os.environ.get("ALEMBIC_INI_PATH",
+                                          _absolute_path('../../alembic.ini'))
     assert os.path.isfile(alembic_ini_filename), \
         'Must have alembic.ini file at {}'.format(alembic_ini_filename)
     alembic_cfg = alembic_config(alembic_ini_filename)
@@ -96,10 +67,6 @@ def check_sudo():
         raise Exception("Don't run Inbox as root!")
 
 
-def git_rev():
-    return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD'])
-
-
 def load_overrides(file_path):
     """
     Convenience function for overriding default configuration.
@@ -125,15 +92,9 @@ def load_overrides(file_path):
 
 def preflight():
     check_sudo()
-    requirements_path = _absolute_path('../../requirements.txt')
-    check_requirements(requirements_path)
-    if os.path.exists('./src'):
-        log.warning(
-            'pip ./src directory detected; It should be removed in production')
     check_db()
 
     # Print a traceback when the process receives signal SIGSEGV, SIGFPE,
     # SIGABRT, SIGBUS or SIGILL
     import faulthandler
     faulthandler.enable()
-    log.debug('Current git revision: {}'.format(git_rev().strip()))

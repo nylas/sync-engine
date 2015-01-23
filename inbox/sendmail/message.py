@@ -22,7 +22,7 @@ from html2text import html2text
 
 from inbox.sqlalchemy_ext.util import generate_public_id
 
-VERSION = pkg_resources.get_distribution('inbox').version
+VERSION = pkg_resources.get_distribution('inbox-sync').version
 
 REPLYSTR = 'Re: '
 

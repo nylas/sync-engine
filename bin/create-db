@@ -55,7 +55,8 @@ def main(prod):
             'Need current revision in alembic_version table.'
         print 'Already revisioned by alembic {0}'.format(current_revision)
     else:
-        alembic_ini_filename = 'alembic.ini'  # top-level, with setup.sh
+        alembic_ini_filename = os.environ.get('ALEMBIC_INI_PATH',
+                                              'alembic.ini')
         assert os.path.isfile(alembic_ini_filename), \
             'Must have alembic.ini file at {0}'.format(alembic_ini_filename)
         alembic_cfg = alembic_config(alembic_ini_filename)
