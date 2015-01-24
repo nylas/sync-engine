@@ -86,16 +86,12 @@ def test_create_reply_draft(api_client):
 
 def test_drafts_filter(api_client, example_draft):
     r = api_client.post_data('/drafts', example_draft)
-    public_id = json.loads(r.data)['id']
-
-    r = api_client.get_data('/drafts')
-    matching_saved_drafts = [draft for draft in r if draft['id'] == public_id]
-    thread_public_id = matching_saved_drafts[0]['thread_id']
+    thread_id = json.loads(r.data)['thread_id']
 
     reply_draft = {
         'subject': 'test reply',
         'body': 'test reply',
-        'thread_id': thread_public_id
+        'thread_id': thread_id
     }
     r = api_client.post_data('/drafts', reply_draft)
 
@@ -104,11 +100,11 @@ def test_drafts_filter(api_client, example_draft):
     assert len(results) == 0
 
     results = api_client.get_data('/drafts?thread_id={}'
-                                  .format(thread_public_id))
+                                  .format(thread_id))
     assert len(results) == 2
 
     results = api_client.get_data('/drafts?offset={}&thread_id={}'
-                                  .format(1, thread_public_id))
+                                  .format(1, thread_id))
     assert len(results) == 1
 
 
