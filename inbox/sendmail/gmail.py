@@ -1,4 +1,4 @@
-from inbox.sendmail.smtp.common import SMTPClient
+from inbox.sendmail.smtp.postel import SMTPClient
 
 __all__ = ['SMTPClient']
 

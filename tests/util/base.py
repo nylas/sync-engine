@@ -169,30 +169,13 @@ class TestDB(object):
         self.session.close()
 
 
-class MockSMTPClient(object):
-    def __init__(self, *args, **kwargs):
-        pass
-
-    def send_new(self, db_session, draft, recipients):
-        # Special mock case to test sending failure handling.
-        if 'fail@example.com' in [email for phrase, email in recipients.to]:
-            raise Exception
-        else:
-            pass
-
-    def send_reply(*args, **kwargs):
-        pass
-
-
 @fixture
 def patch_network_functions(monkeypatch):
     """
-    Monkeypatch functions that actually talk to Gmail so that the tests can
-    run faster.
+    Monkeypatch syncback functions that actually talk to Gmail so that the
+    tests can run faster.
 
     """
-    monkeypatch.setattr('inbox.sendmail.base.get_sendmail_client',
-                        lambda *args, **kwargs: MockSMTPClient())
     import inbox.actions
     for backend in inbox.actions.module_registry.values():
         for method_name in backend.__all__:

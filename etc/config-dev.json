@@ -32,7 +32,6 @@
 "ENCRYPT_SECRETS": false,
 "DEBUG_CONSOLE_ON": true,
 
-"ELASTICSEARCH_HOSTS": [{"host": "localhost", "port": 9200}],
-"DAILY_SENDING_LIMIT": 300
+"ELASTICSEARCH_HOSTS": [{"host": "localhost", "port": 9200}]
 
 }

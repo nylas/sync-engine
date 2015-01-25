@@ -34,6 +34,5 @@
 "SENTRY_DSN": "http://public:secret@example.com/1",
 "ENCRYPT_SECRETS": false,
 
-"ELASTICSEARCH_HOSTS": [{"host": "localhost", "port": 9200}],
-"DAILY_SENDING_LIMIT": 7
+"ELASTICSEARCH_HOSTS": [{"host": "localhost", "port": 9200}]
 }
