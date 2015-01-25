@@ -99,8 +99,6 @@ def encode(obj, namespace_public_id=None):
         if obj.is_draft:
             resp['object'] = 'draft'
             resp['version'] = obj.version
-        if obj.state:
-            resp['state'] = obj.state
         return resp
 
     elif isinstance(obj, Thread):

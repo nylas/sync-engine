@@ -33,8 +33,6 @@ def test_send_draft(db, api_client, example_draft, default_account):
     assert len(matching_saved_drafts) == 1
     draft = matching_saved_drafts[0]
 
-    assert draft['state'] == 'draft'
-
     sent = _send(default_account.id, draft.id, db.session)
     assert not sent.is_draft and sent.state == 'sent'
 

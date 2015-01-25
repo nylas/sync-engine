@@ -20,48 +20,6 @@ def test_namespace_id_validation(api_client, db):
     assert r.status_code == 400
 
 
-def test_recipient_validation(api_client):
-    r = api_client.post_data('/drafts', {'to': [{'email': 'foo@example.com'}]})
-    assert r.status_code == 200
-    r = api_client.post_data('/drafts', {'to': {'email': 'foo@example.com'}})
-    assert r.status_code == 400
-    r = api_client.post_data('/drafts', {'to': 'foo@example.com'})
-    assert r.status_code == 400
-    r = api_client.post_data('/drafts', {'to': [{'name': 'foo'}]})
-    assert r.status_code == 400
-    r = api_client.post_data('/send', {'to': [{'email': 'foo'}]})
-    assert r.status_code == 400
-    r = api_client.post_data('/send', {'to': [{'email': 'föö'}]})
-    assert r.status_code == 400
-    r = api_client.post_data('/drafts', {'to': [{'email': ['foo']}]})
-    assert r.status_code == 400
-    r = api_client.post_data('/drafts', {'to': [{'name': ['Mr. Foo'],
-                                                 'email': 'foo@example.com'}]})
-    assert r.status_code == 400
-    r = api_client.post_data('/drafts',
-                             {'to': [{'name': 'Good Recipient',
-                                      'email': 'goodrecipient@example.com'},
-                                     'badrecipient@example.com']})
-    assert r.status_code == 400
-
-    # Test that sending a draft with invalid recipients fails immediately
-    for field in ('to', 'cc', 'bcc'):
-        r = api_client.post_data('/drafts', {field: [{'email': 'foo'}]})
-        draft_id = json.loads(r.data)['id']
-        draft_version = json.loads(r.data)['version']
-
-        r = api_client.post_data('/send', {'draft_id': draft_id,
-                                           'draft_version': draft_version})
-        assert r.status_code == 400
-
-    # And that sending a draft with valid recipients succeeds
-    r = api_client.post_data('/drafts', {'to': [{'email': 'foo@example.com'}]})
-    draft_id = json.loads(r.data)['id']
-    draft_version = json.loads(r.data)['version']
-    r = api_client.post_data('/send', {'draft_id': draft_id,
-                                       'version': draft_version})
-    assert r.status_code == 200
-
 # TODO(emfree): Add more comprehensive parameter-validation tests.
 
 

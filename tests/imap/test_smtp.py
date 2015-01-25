@@ -8,7 +8,6 @@ def test_use_smtp_over_ssl():
     # initialization here and below.
     conn = SMTPConnection(account_id=1,
                           email_address='inboxapptest@gmail.com',
-                          provider_name='gmail',
                           auth_type='password',
                           auth_token='secret_password',
                           smtp_endpoint=('smtp.gmail.com', 465),
@@ -19,7 +18,6 @@ def test_use_smtp_over_ssl():
 def test_use_starttls():
     conn = SMTPConnection(account_id=1,
                           email_address='inboxapptest@gmail.com',
-                          provider_name='gmail',
                           auth_type='password',
                           auth_token='secret_password',
                           smtp_endpoint=('smtp.gmail.com', 587),

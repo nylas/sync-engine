@@ -29,8 +29,6 @@ You can send messages without saving them as drafts beforehand. Instead of provi
 
 If the message is in reply to a thread, provide the `thread_id` key with the ID of the existing thread.  Note that you must explicitly specify the message's recipients in the `to`, `cc` and `bcc` fields of the post body; this is to prevent any ambiguity about whom the message will be sent to.
 
-Messages you create or send __should not include quoted text__ when they are in reply to an existing thread.
-
 ```
 :::json
 {
@@ -46,52 +44,16 @@ Messages you create or send __should not include quoted text__ when they are in 
 }
 ```
 
-#Monitoring Message Delivery
+#Handling Errors
+If your message is sent successsfully, the server will respond with an HTTP
+response code of 200 OK. If your message couldn't be sent, the server will
+respond with an appropriate error code:
 
-The `/send` API returns the JSON of the draft that was queued for delivery, including it's ID.
-
-**Response Body**
-
-```
-:::json
-{
-    "id": "9nhhb7w3tinsn4zkg9vjr3cxz",
-    "version": "evrm018jqzwbgmzg0qp61oqrr",
-    "state": "sending",
-    "subject": "Dinner on Friday?",
-    "to": [
-        {
-            "name": "Ben Bitdiddle",
-            "email": "ben.bitdiddle@gmail.com"
-        }
-    ],
-    "body": "<html><body>....</body></html>"
-    ...
-}
-```
-
-
-The draft's `state` attribute allows you to track it's state through the delivery process. You can request the draft object after calling the `/send` API to see if the message has been sent.
-
-```
-:::xml
-GET /n/<namespace_id>/drafts/<draft_id>
-```
-
-**Response Body**
-
-```
-:::json
-{
-    "state": "sent",
-    "subject": "Dinner on Friday?",
-    "to": [
-        {
-            "name": "Ben Bitdiddle",
-            "email": "ben.bitdiddle@gmail.com",
-        }
-    ],
-    "body": "<html><body>....</body></html>",
-    ...
-}
-```
+Code | Description
+-- | --
+200 | OK - Your message was sent
+400 | Bad Request - Your message was malformed, or contained an invalid parameter
+402 | Recipients Rejected - Delivery to some or all recipients was refused.
+403 | Unauthorized - The server was unable to authenticate with the user's mail provider. Re-authenticate the user and try again.
+429 | Rate-limited - Too many messages sent recently. Wait and try again.
+503 | Service Unavailable - There was an error connecting to the user's mail provider. Wait and try again.

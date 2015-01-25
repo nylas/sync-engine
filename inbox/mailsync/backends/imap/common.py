@@ -252,8 +252,6 @@ def create_imap_message(db_session, log, account, folder, msg):
     imapuid.update_flags_and_labels(msg.flags, msg.g_labels)
 
     new_msg.is_draft = imapuid.is_draft
-    if imapuid.is_draft:
-        new_msg.state = 'draft'
     new_msg.is_read = imapuid.is_seen
 
     update_contacts_from_message(db_session, new_msg, account.namespace)

@@ -1,32 +1,30 @@
-from datetime import datetime, timedelta
-from sqlalchemy import func
-from inbox.config import config
+from datetime import datetime
 from inbox.contacts.process_mail import update_contacts_from_message
-from inbox.models import Message, Thread, Part, ActionLog
+from inbox.models import Message, Part
 from inbox.models.action_log import schedule_action
 from inbox.sqlalchemy_ext.util import generate_public_id
 
 
-DEFAULT_DAILY_SENDING_LIMIT = 300
-
-
 class SendMailException(Exception):
-    pass
-
-
-class SendError(SendMailException):
-    def __init__(self, msg=None, failures=None):
-        assert msg or failures
-        self.msg = msg
+    """
+    Raised when sending fails.
+    Parameters
+    ----------
+    message: string
+        A descriptive error message.
+    http_code: int
+        An appropriate HTTP error code for the particular type of failure.
+    failures: dict, optional
+        If sending only failed for some recipients, information on the specific
+        failures.
+    """
+    def __init__(self, message, http_code, failures=None):
+        self.message = message
+        self.http_code = http_code
         self.failures = failures
 
     def __str__(self):
-        if not self.failures:
-            return 'Send failed, message: {0}'.format(self.msg)
-
-        e = ['(to: {0}, error: {1})'.format(k, v[0]) for
-             k, v in self.failures.iteritems()]
-        return 'Send failed, failures: {0}'.format(', '.join(e))
+        return self.message
 
 
 def get_sendmail_client(account):
@@ -34,15 +32,8 @@ def get_sendmail_client(account):
 
     sendmail_mod = module_registry.get(account.provider)
     sendmail_cls = getattr(sendmail_mod, sendmail_mod.SENDMAIL_CLS)
-    sendmail_client = sendmail_cls(account.id)
+    sendmail_client = sendmail_cls(account)
     return sendmail_client
-
-
-def get_draft(db_session, account, draft_public_id):
-    """ Get the draft with public_id = `draft_public_id`, or None. """
-    return db_session.query(Message).join(Thread).filter(
-        Message.public_id == draft_public_id,
-        Thread.namespace_id == account.namespace.id).first()
 
 
 def create_draft(db_session, account, to_addr=None, subject=None,
@@ -70,23 +61,7 @@ def update_draft(db_session, account, original_draft, to_addr=None,
                  subject=None, body=None, blocks=None, cc_addr=None,
                  bcc_addr=None, tags=None):
     """
-    Update draft.
-
-    To maintain our messages are immutable invariant, we create a new draft
-    message object.
-
-
-    Returns
-    -------
-    Message
-        The new draft message object.
-
-    Notes
-    -----
-    Messages, including draft messages, are immutable in Inbox.
-    So to update a draft, we create a new draft message object and
-    return its public_id (which is different than the original's).
-
+    Update draft with new attributes.
     """
 
     def update(attr, value=None):
@@ -135,6 +110,9 @@ def update_draft(db_session, account, original_draft, to_addr=None,
     original_draft.contacts = []
     update_contacts_from_message(db_session, original_draft, account.namespace)
 
+    # Sync to remote
+    schedule_action('save_draft', original_draft, original_draft.namespace.id,
+                    db_session)
     # Delete previous version on remote
     schedule_action('delete_draft', original_draft,
                     original_draft.namespace.id, db_session,
@@ -146,22 +124,15 @@ def update_draft(db_session, account, original_draft, to_addr=None,
     update('version', version)
     update('inbox_uid', version)
 
-    # Sync to remote
-    schedule_action('save_draft', original_draft, original_draft.namespace.id,
-                    db_session)
-
     db_session.commit()
 
     return original_draft
 
 
-def delete_draft(db_session, account, draft_public_id):
-    """ Delete the draft with public_id = `draft_public_id`. """
-    draft = db_session.query(Message).filter(
-        Message.public_id == draft_public_id).one()
+def delete_draft(db_session, account, draft):
+    """ Delete the given draft. """
     thread = draft.thread
     namespace = draft.namespace
-
     assert draft.is_draft
 
     # Delete remotely.
@@ -215,7 +186,6 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
         message.namespace = account.namespace
         message.is_created = True
         message.is_draft = True
-        message.state = 'draft'
         message.from_addr = [(account.name, account.email_address)]
         # TODO(emfree): we should maybe make received_date nullable, so its
         # value doesn't change in the case of a drafted-and-later-reconciled
@@ -301,20 +271,3 @@ def _set_reply_headers(new_message, thread):
                                           [last_message.message_id_header])
             else:
                 new_message.references = [last_message.message_id_header]
-
-
-def rate_limited(namespace_id, db_session):
-    """Check whether sending for the given namespace should be rate-limited.
-    Returns
-    -------
-    bool
-        True if the namespace has exceeded its sending quota.
-    """
-    max_sends = (config.get('DAILY_SENDING_LIMIT') or
-                 DEFAULT_DAILY_SENDING_LIMIT)
-    window_start = datetime.utcnow() - timedelta(seconds=86400)
-    prior_send_actions, = db_session.query(func.count(ActionLog.id)). \
-        filter(ActionLog.namespace_id == namespace_id,
-               ActionLog.created_at > window_start,
-               ActionLog.action.in_(('send_directly', 'send_draft'))).one()
-    return prior_send_actions >= max_sends

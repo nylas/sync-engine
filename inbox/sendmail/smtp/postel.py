@@ -1,14 +1,14 @@
 import base64
-from collections import namedtuple
+import itertools
 
 import smtplib
 
 from inbox.log import get_logger
-from inbox.models import Folder
 from inbox.models.session import session_scope
 from inbox.models.backends.imap import ImapAccount
-from inbox.sendmail.base import SendMailException, SendError
 from inbox.models.backends.oauth import token_manager
+from inbox.sendmail.base import generate_attachments, SendMailException
+from inbox.sendmail.message import create_email
 from inbox.basicauth import OAuthError
 from inbox.providers import provider_info
 log = get_logger()
@@ -19,16 +19,12 @@ AUTH_EXTNS = {'oauth2': 'XOAUTH2',
 
 SMTP_OVER_SSL_PORT = 465
 
-AccountInfo = namedtuple('AccountInfo',
-                         'id email provider auth_type auth_token')
-
 
 class SMTPConnection(object):
-    def __init__(self, account_id, email_address, provider_name, auth_type,
+    def __init__(self, account_id, email_address, auth_type,
                  auth_token, smtp_endpoint, log):
         self.account_id = account_id
         self.email_address = email_address
-        self.provider_name = provider_name
         self.auth_type = auth_type
         self.auth_token = auth_token
         self.smtp_endpoint = smtp_endpoint
@@ -41,8 +37,7 @@ class SMTPConnection(object):
     def __enter__(self):
         if not self.is_connected():
             self.reconnect()
-
-        return self.connection
+        return self
 
     def __exit__(self, type, value, traceback):
         try:
@@ -146,8 +141,7 @@ class SMTPConnection(object):
 
     def reconnect(self):
         try:
-            host, port = provider_info(self.provider_name,
-                                       self.email_address)['smtp']
+            host, port = self.smtp_endpoint
             self.connection.connect(host, port)
         except smtplib.SMTPConnectError:
             self.log.error('SMTPConnectError')
@@ -155,121 +149,96 @@ class SMTPConnection(object):
 
         self.setup()
 
-    def sendmail(self, email_address, recipients, msg):
-        return self.connection.sendmail(email_address, recipients, msg)
+    def sendmail(self, recipients, msg):
+        return self.connection.sendmail(self.email_address, recipients, msg)
 
 
-class BaseSMTPClient(object):
-    """
-    Base class for an SMTPClient.
-    The SMTPClient is responsible for creating/closing SMTP connections
-    and sending mail.
-
-    Subclasses must implement the _send_mail, send_new & send_reply functions.
-
-    """
-    def __init__(self, account_id):
-        self.account_id = account_id
+class SMTPClient(object):
+    """ SMTPClient for Gmail and other IMAP providers. """
+    def __init__(self, account):
+        self.account_id = account.id
         self.log = get_logger()
-        self.log.bind(account_id=account_id)
+        self.log.bind(account_id=account.id)
+        self.email_address = account.email_address
+        self.provider_name = account.provider
+        self.sender_name = account.name
+        self.smtp_endpoint = account.smtp_endpoint
+        self.auth_type = provider_info(self.provider_name,
+                                       self.email_address)['auth']
 
-        with session_scope() as db_session:
-            account = db_session.query(ImapAccount).get(self.account_id)
-
-            self.email_address = account.email_address
-            self.provider_name = account.provider
-            self.sender_name = account.name
-            self.smtp_endpoint = account.smtp_endpoint
-
-            if account.sent_folder is None:
-                # account has no detected sent folder - create one.
-                sent_folder = Folder.find_or_create(db_session, account,
-                                                    'sent', 'sent')
-                account.sent_folder = sent_folder
-
-            self.sent_folder = account.sent_folder.name
-
-            self.auth_type = provider_info(self.provider_name,
-                                           self.email_address)['auth']
-
-            if self.auth_type == 'oauth2':
-                try:
-                    self.auth_token = token_manager.get_token(account)
-                except OAuthError:
-                    raise SendMailException('Error logging in.')
-            else:
-                assert self.auth_type == 'password'
-                self.auth_token = account.password
+        if self.auth_type == 'oauth2':
+            try:
+                self.auth_token = token_manager.get_token(account)
+            except OAuthError:
+                raise SendMailException(
+                    'Could not authenticate with the SMTP server.', 403)
+        else:
+            assert self.auth_type == 'password'
+            self.auth_token = account.password
 
     def _send(self, recipients, msg):
         """ Send the email message over the network. """
         try:
             with self._get_connection() as smtpconn:
-                failures = smtpconn.sendmail(self.email_address, recipients,
-                                             msg)
-        # Sent to none successfully
-        except smtplib.SMTPRecipientsRefused:
-            raise SendError('Sending to all recipients failed',
-                            exception='Refused')
-        except smtplib.SMTPException as e:
-            raise SendError('Sending to all recipients failed',
-                            exception=str(e))
-        # Send to at least one failed
+                failures = smtpconn.sendmail(recipients, msg)
+        except smtplib.SMTPException as err:
+            self._handle_sending_exception(err)
         if failures:
-            raise SendError('Sending to atleast one recipent failed',
-                            failures=failures)
+            # At least one recipient was rejected by the server.
+            raise SendMailException('Sending to at least one recipent '
+                                    'failed', 402, failures=failures)
 
         # Sent to all successfully
         self.log.info('Sending successful', sender=self.email_address,
                       recipients=recipients)
 
-    def _send_mail(self, recipients, mimemsg):
-        """
-        Send the email message, update the message stored in the local data
-        store.
+    def _handle_sending_exception(self, err):
+        self.log.error("Error sending", error=err, exc_info=True)
+        if isinstance(err, smtplib.SMTPServerDisconnected):
+            raise SendMailException('The server unexpectedly closed the '
+                                    'connection', 503)
+        elif (isinstance(err, smtplib.SMTPDataError) and err.smtp_code == 550
+              and err.smtp_error.startswith('5.4.5')):
+            # Gmail-specific quota exceeded error.
+            raise SendMailException('Daily sending quota exceeded', 429)
+        elif isinstance(err, smtplib.SMTPRecipientsRefused):
+            raise SendMailException('Sending to all recipients failed', 402)
+        else:
+            raise SendMailException('Sending failed: {}'.format(err), 503)
 
-        The message is stored in the local data store as a draft message and
-        is converted to a sent message so it is immediately available to the
-        user as such (for e.g. if they search the `sent` folder).
-        It is reconciled with the message we get from the remote backend
-        on a subsequent sync of the folder (see inbox.models.util.py)
-
+    def send(self, draft):
         """
-        raise NotImplementedError
-
-    def send_new(self, db_session, draft, recipients):
-        """
-        Send a previously created + saved draft email from this user account.
-
-        Parameters
-        ----------
-        db_session
-        draft : models.tables.base.Message object
-            the draft message to send.
-        recipients: Recipients(to, cc, bcc) namedtuple
-            to, cc, bcc are a lists of utf-8 encoded strings or None.
-        """
-        raise NotImplementedError
-
-    def send_reply(self, db_session, draft, recipients):
-        """
-        Send a previously created + saved draft email reply from this user
-        account.
+        Turn a draft object into a MIME message and send it.
 
         Parameters
         ----------
-        db_session
-        draft : models.tables.base.Message object
+        draft : models.message.Message object
             the draft message to send.
-        recipients: Recipients(to, cc, bcc) namedtuple
-            to, cc, bcc are a lists of utf-8 encoded strings or None.
         """
-        raise NotImplementedError
+        blocks = [p.block for p in draft.attachments]
+        attachments = generate_attachments(blocks)
+
+        # Note that we intentionally don't set the Bcc header in the message we
+        # construct.
+        msg = create_email(sender_name=self.sender_name,
+                           sender_email=self.email_address,
+                           inbox_uid=draft.inbox_uid,
+                           to_addr=draft.to_addr,
+                           cc_addr=draft.cc_addr,
+                           bcc_addr=None,
+                           subject=draft.subject,
+                           html=draft.sanitized_body,
+                           in_reply_to=draft.in_reply_to,
+                           references=draft.references,
+                           attachments=attachments)
+
+        recipient_emails = [email for name, email in itertools.chain(
+            draft.to_addr, draft.cc_addr, draft.bcc_addr)]
+        return self._send(recipient_emails, msg)
 
     def _get_connection(self):
         smtp_connection = SMTPConnection(account_id=self.account_id,
                                          email_address=self.email_address,
-                                         provider_name=self.provider_name,
                                          auth_type=self.auth_type,
                                          auth_token=self.auth_token,
                                          smtp_endpoint=self.smtp_endpoint,

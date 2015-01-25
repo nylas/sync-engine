@@ -13,7 +13,6 @@ This is because not all servers support 8BIT and so flanker drops to b64.
 http://www.w3.org/Protocols/rfc1341/5_Content-Transfer-Encoding.html
 
 """
-from collections import namedtuple
 import pkg_resources
 
 from flanker import mime
@@ -26,11 +25,18 @@ VERSION = pkg_resources.get_distribution('inbox-sync').version
 
 REPLYSTR = 'Re: '
 
-Recipients = namedtuple('Recipients', 'to cc bcc')
 
-
-def create_email(sender_name, sender_email, inbox_uid, recipients, subject,
-                 html, attachments):
+def create_email(sender_name,
+                 sender_email,
+                 inbox_uid,
+                 to_addr,
+                 cc_addr,
+                 bcc_addr,
+                 subject,
+                 html,
+                 in_reply_to,
+                 references,
+                 attachments):
     """
     Creates a MIME email message (both body and sets the needed headers).
 
@@ -40,22 +46,21 @@ def create_email(sender_name, sender_email, inbox_uid, recipients, subject,
         The name aka phrase of the sender.
     sender_email: string
         The sender's email address.
-    recipients: Recipients(to, cc, bcc) namedtuple
-        to, cc, bcc are a lists of utf-8 encoded strings or None.
+    to_addr, cc_addr, bcc_addr: list of pairs (name, email_address), or None
+        Message recipients.
     subject : string
         a utf-8 encoded string
     html : string
         a utf-8 encoded string
+    in_reply_to: string or None
+        If this message is a reply, the Message-Id of the message being replied
+        to.
+    references: list or None
+        If this message is a reply, the Message-Ids of prior messages in the
+        thread.
     attachments: list of dicts, optional
         a list of dicts(filename, data, content_type)
-
     """
-    to = [address.EmailAddress(*addr) for addr in recipients.to] \
-        if recipients.to else []
-    cc = [address.EmailAddress(*addr) for addr in recipients.cc] \
-        if recipients.cc else []
-    bcc = [address.EmailAddress(*addr) for addr in recipients.bcc] \
-        if recipients.bcc else []
     html = html if html else ''
     plaintext = html2text(html)
 
@@ -92,19 +97,31 @@ def create_email(sender_name, sender_email, inbox_uid, recipients, subject,
     from_addr = address.EmailAddress(sender_name, sender_email)
     msg.headers['From'] = from_addr.full_spec()
 
-    # Need to set these headers so recipients know we sent the email to them:
-
-    # Note also that the To: header has different semantics than the envelope
-    # recipient. For example, you can use '"Tony Meyer" <tony.meyer@gmail.com>'
-    # as an address in the To: header, but the envelope recipient must be only
-    # 'tony.meyer@gmail.com'.
-    msg.headers['To'] = u', '.join([addr.full_spec() for addr in to])
-    msg.headers['Cc'] = u', '.join([addr.full_spec() for addr in cc])
-    msg.headers['Bcc'] = u', '.join([addr.full_spec() for addr in bcc])
+    # Need to set these headers so recipients know we sent the email to them
+    # TODO(emfree): should these really be unicode?
+    if to_addr:
+        full_to_specs = [address.EmailAddress(name, spec).full_spec()
+                         for name, spec in to_addr]
+        msg.headers['To'] = u', '.join(full_to_specs)
+    if cc_addr:
+        full_cc_specs = [address.EmailAddress(name, spec).full_spec()
+                         for name, spec in cc_addr]
+        msg.headers['Cc'] = u', '.join(full_cc_specs)
+    if bcc_addr:
+        full_bcc_specs = [address.EmailAddress(name, spec).full_spec()
+                          for name, spec in cc_addr]
+        msg.headers['Bcc'] = u', '.join(full_bcc_specs)
 
     add_inbox_headers(msg, inbox_uid)
 
-    return msg
+    if in_reply_to:
+        msg.headers['In-Reply-To'] = in_reply_to
+    if references:
+        msg.headers['References'] = '\t'.join(references)
+
+    rfcmsg = _rfc_transform(msg)
+
+    return rfcmsg
 
 
 def add_inbox_headers(msg, inbox_uid):
@@ -130,8 +147,14 @@ def add_inbox_headers(msg, inbox_uid):
     msg.headers['User-Agent'] = 'Inbox/{0}'.format(VERSION)
 
 
-def rfc_transform(msg):
-    """ Create an RFC-2821 compliant SMTP message. """
+def _rfc_transform(msg):
+    """ Create an RFC-2821 compliant SMTP message.
+    (Specifically, this means splitting the References header to conform to
+    line length limits.)
+
+    TODO(emfree): should we split recipient headers too?
+    (The answer is probably yes)
+    """
     msgstring = msg.to_string()
 
     start = msgstring.find('References: ')

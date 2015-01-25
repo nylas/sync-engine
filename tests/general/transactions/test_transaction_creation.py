@@ -73,15 +73,6 @@ def test_message_updates_create_transaction(db):
             assert transaction.command == 'update'
 
             msg = add_fake_message(db_session, NAMESPACE_ID, thr)
-            msg.state = 'sent'
-            db_session.commit()
-            transaction = get_latest_transaction(db_session, 'message', msg.id,
-                                                 NAMESPACE_ID)
-            assert transaction.record_id == msg.id
-            assert transaction.object_type == 'message'
-            assert transaction.command == 'update'
-
-            msg = add_fake_message(db_session, NAMESPACE_ID, thr)
             msg.is_draft = True
             db_session.commit()
             transaction = get_latest_transaction(db_session, 'message', msg.id,

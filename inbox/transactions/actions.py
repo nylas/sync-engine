@@ -22,8 +22,8 @@ from inbox.util.file import Lock
 from inbox.util.misc import ProviderSpecificException
 from inbox.actions import (mark_read, mark_unread, archive, unarchive, star,
                            unstar, save_draft, delete_draft, mark_spam,
-                           unmark_spam, mark_trash, unmark_trash, send_draft,
-                           send_directly, save_sent_email, handle_failed_send)
+                           unmark_spam, mark_trash, unmark_trash,
+                           save_sent_email)
 from inbox.events.actions import (create_event, delete_event, update_event)
 
 # Global lock to ensure that only one instance of the syncback service is
@@ -42,19 +42,12 @@ ACTION_FUNCTION_MAP = {
     'unmark_spam': unmark_spam,
     'mark_trash': mark_trash,
     'unmark_trash': unmark_trash,
-    'send_draft': send_draft,
     'save_draft': save_draft,
     'delete_draft': delete_draft,
-    'send_directly': send_directly,
     'save_sent_email': save_sent_email,
     'create_event': create_event,
     'delete_event': delete_event,
     'update_event': update_event,
-}
-
-FAIL_HANDLER_MAP = {
-    'send_directly': handle_failed_send,
-    'send_draft': handle_failed_send
 }
 
 
@@ -196,9 +189,6 @@ def syncback_worker(semaphore, action, action_log_id, record_id, account_id,
                                  action_id=action_log_id,
                                  account_id=account_id, exc_info=True)
                     action_log_entry.status = 'failed'
-                    if action in FAIL_HANDLER_MAP:
-                        fail_handler = FAIL_HANDLER_MAP[action]
-                        fail_handler(account_id, record_id, db_session)
                 db_session.commit()
 
             # Wait for a bit before retrying

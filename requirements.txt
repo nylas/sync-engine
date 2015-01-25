@@ -48,7 +48,6 @@ icalendar==3.8.2
 git+https://github.com/kav-ya/pynacl.git@libsodium_fix#egg=pynacl
 pyaml==14.05.7
 enum==0.4.4
-inbox==0.1.4
 msgpack-python==0.4.2
 guppy==0.1.10
 elasticsearch==1.2.0

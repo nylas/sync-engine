@@ -48,7 +48,6 @@ def test_unread_and_draft_tags_applied(db, thread, message, folder, imapuid):
                     {msg_uid: GmailFlags((u'\\Seen',), (u'\\Draft',))})
     assert 'unread' not in [t.name for t in thread.tags]
     assert 'drafts' in [t.name for t in thread.tags]
-    assert message.state == 'draft'
     assert message.is_read
 
     update_metadata(ACCOUNT_ID, db.session, folder.name, folder.id, [msg_uid],

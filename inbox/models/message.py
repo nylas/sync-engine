@@ -98,6 +98,8 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     # For drafts (both Inbox-created and otherwise)
     is_draft = Column(Boolean, server_default=false(), nullable=False)
     is_sent = Column(Boolean, server_default=false(), nullable=False)
+
+    # DEPRECATED
     state = Column(Enum('draft', 'sending', 'sending failed', 'sent'))
 
     # Most messages are short and include a lot of quoted text. Preprocessing

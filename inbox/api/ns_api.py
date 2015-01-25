@@ -11,11 +11,12 @@ from sqlalchemy.orm import subqueryload
 
 from inbox.models import (Message, Block, Part, Thread, Namespace,
                           Tag, Contact, Calendar, Event, Transaction)
+from inbox.api.sending import send_draft
 from inbox.api.kellogs import APIEncoder
 from inbox.api import filtering
 from inbox.api.validation import (get_tags, get_attachments,
                                   get_calendar, get_thread, get_recipients,
-                                  valid_public_id, valid_event,
+                                  get_draft, valid_public_id, valid_event,
                                   valid_event_update, timestamp, boolean,
                                   bounded_str, view, strict_parse_args, limit,
                                   valid_event_action, valid_rsvp,
@@ -29,10 +30,9 @@ from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from inbox.models.action_log import schedule_action, ActionError
 from inbox.models.session import InboxSession
 from inbox.search.adaptor import NamespaceSearchEngine, SearchEngineError
-from inbox.sendmail import rate_limited
 from inbox.transactions import delta_sync
 
-from inbox.api.err import err, InputError, NotFoundError
+from inbox.api.err import err, APIException, NotFoundError, InputError
 
 from inbox.ignition import main_engine
 engine = main_engine()
@@ -106,16 +106,8 @@ def handle_not_implemented_error(error):
     return response
 
 
-@app.errorhandler(InputError)
+@app.errorhandler(APIException)
 def handle_input_error(error):
-    response = flask_jsonify(message=error.message,
-                             type='invalid_request_error')
-    response.status_code = error.status_code
-    return response
-
-
-@app.errorhandler(NotFoundError)
-def handle_not_found_error(error):
     response = flask_jsonify(message=error.message,
                              type='invalid_request_error')
     response.status_code = error.status_code
@@ -1051,7 +1043,9 @@ def draft_query_api():
 @app.route('/drafts/<public_id>', methods=['GET'])
 def draft_get_api(public_id):
     valid_public_id(public_id)
-    draft = sendmail.get_draft(g.db_session, g.namespace.account, public_id)
+    draft = g.db_session.query(Message).filter(
+        Message.public_id == public_id,
+        Message.namespace_id == g.namespace.id).first()
     if draft is None:
         raise NotFoundError("Couldn't find draft {}".format(public_id))
     return g.encoder.jsonify(draft)
@@ -1084,21 +1078,9 @@ def draft_create_api():
 
 @app.route('/drafts/<public_id>', methods=['PUT'])
 def draft_update_api(public_id):
-    valid_public_id(public_id)
-
     data = request.get_json(force=True)
-    if data.get('version') is None:
-        raise InputError('Must specify version to update')
-
-    version = data.get('version')
-    original_draft = g.db_session.query(Message).filter(
-        Message.public_id == public_id).first()
-    if original_draft is None or not original_draft.is_draft or \
-            original_draft.namespace.id != g.namespace.id:
-        raise NotFoundError("Couldn't find draft {}".format(public_id))
-    if original_draft.version != version:
-        return err(409, 'Draft {0}.{1} has already been updated to version '
-                   '{2}'.format(public_id, version, original_draft.version))
+    original_draft = get_draft(public_id, data.get('version'), g.namespace.id,
+                               g.db_session)
 
     # TODO(emfree): what if you try to update a draft on a *thread* that's been
     # deleted?
@@ -1126,29 +1108,13 @@ def draft_update_api(public_id):
 @app.route('/drafts/<public_id>', methods=['DELETE'])
 def draft_delete_api(public_id):
     data = request.get_json(force=True)
-    if data.get('version') is None:
-        raise InputError('Must specify version to delete')
-    version = data.get('version')
-
-    valid_public_id(public_id)
-    try:
-        draft = g.db_session.query(Message).filter(
-            Message.public_id == public_id,
-            Message.namespace_id == g.namespace.id).one()
-    except NoResultFound:
-        raise NotFoundError("Couldn't find draft {}".format(public_id))
-
-    if not draft.is_draft:
-        raise InputError('Message {} is not a draft'.
-                                format(public_id))
-
-    if draft.version != version:
-        return err(409, 'Draft {0}.{1} has already been updated to version '
-                   '{2}'.format(public_id, version, draft.version))
+    # Validate draft id, version, etc.
+    draft = get_draft(public_id, data.get('version'), g.namespace.id,
+                      g.db_session)
 
     try:
         result = sendmail.delete_draft(g.db_session, g.namespace.account,
-                                       public_id)
+                                       draft)
     except ActionError as e:
         return err(e.error, str(e))
 
@@ -1157,64 +1123,37 @@ def draft_delete_api(public_id):
 
 @app.route('/send', methods=['POST'])
 def draft_send_api():
-    if rate_limited(g.namespace.id, g.db_session):
-        return err(429, 'Daily sending quota exceeded.')
     data = request.get_json(force=True)
     draft_public_id = data.get('draft_id')
     if draft_public_id is not None:
-        version = data.get('version')
-        if version is None:
-            raise InputError('Must specify version to send')
-        valid_public_id(draft_public_id)
-        try:
-            draft = g.db_session.query(Message).filter(
-                Message.public_id == draft_public_id,
-                Message.namespace_id == g.namespace.id).one()
-        except NoResultFound:
-            raise NotFoundError("Couldn't find draft {}".
-                                format(draft_public_id))
-
-        if draft.is_sent or not draft.is_draft:
-            raise InputError('Message {} is not a draft'.
-                             format(draft_public_id))
-
-        if not draft.to_addr:
-            raise InputError(400, "No 'to:' recipients specified")
-
-        if draft.version != version:
-            return err(
-                409, 'Draft {0}.{1} has already been updated to version {2}'.
-                format(draft_public_id, version, draft.version))
-
+        draft = get_draft(draft_public_id, data.get('version'), g.namespace.id,
+                          g.db_session)
+        if not any((draft.to_addr, draft.cc_addr, draft.bcc_addr)):
+            raise InputError('No recipients specified')
         validate_draft_recipients(draft)
-
-        try:
-            schedule_action('send_draft', draft, g.namespace.id, g.db_session)
-        except ActionError as e:
-            return err(e.error, str(e))
+        resp = send_draft(g.namespace.account, draft, g.db_session,
+                          schedule_remote_delete=True)
     else:
         to = get_recipients(data.get('to'), 'to', validate_emails=True)
         cc = get_recipients(data.get('cc'), 'cc', validate_emails=True)
         bcc = get_recipients(data.get('bcc'), 'bcc', validate_emails=True)
+        if not any((to, cc, bcc)):
+            raise InputError('No recipients specified')
         subject = data.get('subject')
         body = data.get('body')
         tags = get_tags(data.get('tags'), g.namespace.id, g.db_session)
         files = get_attachments(data.get('file_ids'), g.namespace.id,
                                 g.db_session)
-        replyto_thread = get_thread(data.get('thread_id'),
-                                    g.namespace.id, g.db_session)
+        replyto_thread = get_thread(data.get('thread_id'), g.namespace.id,
+                                    g.db_session)
 
-        try:
-            draft = sendmail.create_draft(g.db_session, g.namespace.account,
-                                          to, subject, body, files, cc, bcc,
-                                          tags, replyto_thread, syncback=False)
-            schedule_action('send_directly', draft, g.namespace.id,
-                            g.db_session)
-        except ActionError as e:
-            return err(e.error, str(e))
+        draft = sendmail.create_draft(g.db_session, g.namespace.account,
+                                      to, subject, body, files, cc, bcc,
+                                      tags, replyto_thread, syncback=False)
+        resp = send_draft(g.namespace.account, draft, g.db_session,
+                          schedule_remote_delete=False)
 
-    draft.state = 'sending'
-    return g.encoder.jsonify(draft)
+    return resp
 
 
 ##
