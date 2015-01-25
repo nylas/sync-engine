@@ -3,10 +3,10 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.models import Namespace
 from inbox.models.backends.gmail import GmailAccount
+from inbox.models.backends.oauth import token_manager
 from inbox.config import config
 from inbox.auth.oauth import OAuthAuthHandler
-from inbox.basicauth import (OAuthValidationError, OAuthError,
-                             UserRecoverableConfigError)
+from inbox.basicauth import OAuthError, UserRecoverableConfigError
 from inbox.util.url import url_concat
 from inbox.providers import provider_info
 from inbox.crispin import GmailCrispinClient, GmailSettingError
@@ -70,7 +70,7 @@ class GmailAuthHandler(OAuthAuthHandler):
 
         tok = response.get('access_token')
         expires_in = response.get('expires_in')
-        account.set_access_token(tok, expires_in)
+        token_manager.cache_token(account, tok, expires_in)
         account.scope = response.get('scope')
         account.email_address = email_address
         account.family_name = response.get('family_name')
@@ -108,7 +108,7 @@ class GmailAuthHandler(OAuthAuthHandler):
         validation_dict = response.json()
 
         if 'error' in validation_dict:
-            raise OAuthValidationError(validation_dict['error'])
+            raise OAuthError(validation_dict['error'])
 
         return validation_dict
 
@@ -116,8 +116,9 @@ class GmailAuthHandler(OAuthAuthHandler):
         """Verifies configuration, specifically presence of 'All Mail' folder.
            Will raise an inbox.crispin.GmailSettingError if not present.
         """
+        access_token = token_manager.get_token(account)
         conn = self.connect_account(account.email_address,
-                                    account.access_token,
+                                    access_token,
                                     account.imap_endpoint,
                                     account.id)
         # make a crispin client and check the folders

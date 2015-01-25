@@ -10,6 +10,7 @@ from inbox.basicauth import OAuthError
 from inbox.models import Namespace
 from inbox.config import config
 from inbox.models.backends.outlook import OutlookAccount
+from inbox.models.backends.oauth import token_manager
 from inbox.util.url import url_concat
 
 PROVIDER = 'outlook'
@@ -29,8 +30,7 @@ OAUTH_SCOPE = ' '.join([
     'wl.offline_access',   # ability to read / update user's info at any time
     'wl.signin',           # users already signed in:  also signed in to app
     'wl.emails',           # Read access to user's email addresses
-    'wl.imap'             # R/W access to user's email using IMAP / SMTP
-    ])
+    'wl.imap'])            # R/W access to user's email using IMAP / SMTP
 
 
 class OutlookAuthHandler(OAuthAuthHandler):
@@ -56,7 +56,7 @@ class OutlookAuthHandler(OAuthAuthHandler):
         account.date = datetime.datetime.utcnow()
         tok = response.get('access_token')
         expires_in = response.get('expires_in')
-        account.set_access_token(tok, expires_in)
+        token_manager.cache_token(account, tok, expires_in)
         account.scope = response.get('scope')
         account.email_address = email_address
         account.o_id_token = response.get('user_id')

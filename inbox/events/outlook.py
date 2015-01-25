@@ -4,6 +4,7 @@ from inbox.log import get_logger
 logger = get_logger()
 from inbox.models.session import session_scope
 from inbox.models import Event
+from inbox.models.backends.oauth import token_manager
 from inbox.models.backends.outlook import OutlookAccount
 from inbox.events.util import MalformedEventError, parse_datetime
 from inbox.auth.outlook import OAUTH_USER_INFO_URL
@@ -94,7 +95,7 @@ class OutlookEventsProvider(BaseEventProvider):
     def fetch_items(self, sync_from_time=None):
         with session_scope() as db_session:
             account = db_session.query(OutlookAccount).get(self.account_id)
-            access_token = account.access_token
+            access_token = token_manager.get_token(account)
 
             params = {'access_token': access_token}
 

@@ -8,6 +8,7 @@ from inbox.models import Folder
 from inbox.models.session import session_scope
 from inbox.models.backends.imap import ImapAccount
 from inbox.sendmail.base import SendMailException, SendError
+from inbox.models.backends.oauth import token_manager
 from inbox.basicauth import OAuthError
 from inbox.providers import provider_info
 log = get_logger()
@@ -89,7 +90,8 @@ class SMTPConnection(object):
     def _smtp_oauth2_try_refresh(self):
         with session_scope() as db_session:
             account = db_session.query(ImapAccount).get(self.account_id)
-            self.auth_token = account.renew_access_token()
+            self.auth_token = token_manager.get_token(account,
+                                                      force_refresh=True)
 
     def smtp_oauth2(self):
         c = self.connection
@@ -192,7 +194,7 @@ class BaseSMTPClient(object):
 
             if self.auth_type == 'oauth2':
                 try:
-                    self.auth_token = account.access_token
+                    self.auth_token = token_manager.get_token(account)
                 except OAuthError:
                     raise SendMailException('Error logging in.')
             else:

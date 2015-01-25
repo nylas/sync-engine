@@ -11,6 +11,7 @@ from inbox.basicauth import (ConnectionError, ValidationError, OAuthError)
 from inbox.models import Event, Calendar
 from inbox.models.session import session_scope
 from inbox.models.backends.gmail import GmailAccount
+from inbox.models.backends.oauth import token_manager
 from inbox.auth.gmail import (OAUTH_CLIENT_ID,
                               OAUTH_CLIENT_SECRET,
                               OAUTH_ACCESS_TOKEN_URL)
@@ -59,18 +60,17 @@ class GoogleEventsProvider(BaseEventProvider):
 
                 self.email = account.email_address
 
-                access_token = account.access_token
+                access_token = token_manager.get_token(account)
                 refresh_token = account.refresh_token
-                expiry = account.access_expiry
 
                 credentials = OAuth2Credentials(
-                    access_token,
-                    client_id,
-                    client_secret,
-                    refresh_token,
-                    expiry,
-                    OAUTH_ACCESS_TOKEN_URL,
-                    SOURCE_APP_NAME)
+                    access_token=access_token,
+                    client_id=client_id,
+                    client_secret=client_secret,
+                    refresh_token=refresh_token,
+                    token_expiry=None,  # Value not actually needed by library.
+                    token_uri=OAUTH_ACCESS_TOKEN_URL,
+                    user_agent=SOURCE_APP_NAME)
 
                 http = httplib2.Http()
                 http = credentials.authorize(http)

@@ -26,6 +26,7 @@ from inbox.basicauth import (ConnectionError, ValidationError,
 from inbox.models.session import session_scope
 from inbox.models.account import Account
 from inbox.models.backends.imap import ImapAccount
+from inbox.models.backends.oauth import token_manager
 
 from inbox.log import get_logger
 logger = get_logger()
@@ -152,7 +153,7 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
             # Refresh token if need be, for OAuthed accounts
             if self.provider_info['auth'] == 'oauth2':
                 try:
-                    self.credential = account.access_token
+                    self.credential = token_manager.get_token(account)
                 except ValidationError as e:
                     logger.error("Error obtaining access token",
                                  account_id=self.account_id)
@@ -217,7 +218,8 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
                         with session_scope() as db_session:
                             query = db_session.query(ImapAccount)
                             account = query.get(self.account_id)
-                            self.credential = account.renew_access_token()
+                            self.credential = token_manager.get_token(
+                                account, force_refresh=True)
                     else:
                         logger.error('Error validating',
                                      account_id=self.account_id)

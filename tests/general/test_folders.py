@@ -13,6 +13,12 @@ class AccountStub(object):
     access_token = None
     imap_endpoint = None
 
+    def new_token(self):
+        return ('foo', 22)
+
+    def validate_token(self, new_token):
+        return True
+
 
 class ConnectionStub(object):
     def logout(self):

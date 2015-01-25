@@ -7,8 +7,8 @@ from ssl import SSLError
 from simplejson import JSONDecodeError
 from inbox.auth import AuthHandler
 from inbox.basicauth import (ConnectionError, ValidationError,
-                             TransientConnectionError, OAuthError,
-                             OAuthInvalidGrantError, OAuthValidationError)
+                             TransientConnectionError, OAuthError)
+from inbox.models.backends.oauth import token_manager
 from inbox.log import get_logger
 log = get_logger()
 
@@ -78,15 +78,17 @@ class OAuthAuthHandler(AuthHandler):
     def verify_account(self, account):
         """Verifies a IMAP account by logging in."""
         try:
+            access_token = token_manager.get_token(account)
             conn = self.connect_account(account.email_address,
-                                        account.access_token,
+                                        access_token,
                                         account.imap_endpoint,
                                         account.id)
             conn.logout()
         except ValidationError:
             # Access token could've expired, refresh and try again.
+            access_token = token_manager.get_token(account, force_refresh=True)
             conn = self.connect_account(account.email_address,
-                                        account.renew_access_token(),
+                                        access_token,
                                         account.imap_endpoint,
                                         account.id)
             conn.logout()
@@ -130,10 +132,7 @@ class OAuthAuthHandler(AuthHandler):
             raise ConnectionError("Invalid json: " + response.text)
 
         if u'error' in session_dict:
-            if session_dict['error'] == 'invalid_grant':
-                raise OAuthInvalidGrantError('Invalid refresh token.')
-            else:
-                raise OAuthError(session_dict['error'])
+            raise OAuthError(session_dict['error'])
 
         return session_dict['access_token'], session_dict['expires_in']
 
@@ -184,6 +183,6 @@ class OAuthAuthHandler(AuthHandler):
                       error_description=userinfo_dict['error_description'])
             log.error('%s - %s' % (userinfo_dict['error'],
                                    userinfo_dict['error_description']))
-            raise OAuthValidationError()
+            raise OAuthError()
 
         return userinfo_dict

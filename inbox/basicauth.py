@@ -32,14 +32,6 @@ class OAuthError(ValidationError):
     pass
 
 
-class OAuthValidationError(OAuthError):
-    pass
-
-
-class OAuthInvalidGrantError(OAuthError):
-    pass
-
-
 class ConfigError(Exception):
     pass
 

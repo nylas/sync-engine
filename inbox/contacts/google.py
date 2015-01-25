@@ -13,6 +13,7 @@ from inbox.basicauth import OAuthError
 from inbox.models.session import session_scope
 from inbox.models import Contact
 from inbox.models.backends.gmail import GmailAccount
+from inbox.models.backends.oauth import token_manager
 from inbox.auth.gmail import (OAUTH_CLIENT_ID,
                               OAUTH_CLIENT_SECRET,
                               OAUTH_SCOPE)
@@ -60,12 +61,13 @@ class GoogleContactsProvider(BaseSyncProvider):
                 client_id = account.client_id or OAUTH_CLIENT_ID
                 client_secret = (account.client_secret or
                                  OAUTH_CLIENT_SECRET)
+                access_token = token_manager.get_token(account)
                 two_legged_oauth_token = gdata.gauth.OAuth2Token(
                     client_id=client_id,
                     client_secret=client_secret,
                     scope=OAUTH_SCOPE,
                     user_agent=SOURCE_APP_NAME,
-                    access_token=account.access_token,
+                    access_token=access_token,
                     refresh_token=account.refresh_token)
                 google_client = gdata.contacts.client.ContactsClient(
                     source=SOURCE_APP_NAME)
