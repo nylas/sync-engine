@@ -1,6 +1,6 @@
 Title: Installation
 
-You can run the Inbox Sync Engine almost anywhere. A hosted version of the Inbox platform will be launching later this year, but you can start developing on top of the Inbox API today by running your own instance of the Inbox Sync Engine. For development, we recommend installing it on a VirtualBox or VMWare Fusion virtual machine and running it with Vagrant:
+You can run the Inbox Sync Engine almost anywhere. A hosted version of the Inbox platform is available (including extra features such as Microsoft Exchange support and authentication), but you can also develop on top of the Inbox API by running your own instance of the Inbox Sync Engine. For development, we recommend installing it on a VirtualBox or VMWare Fusion virtual machine and running it with Vagrant:
 
 1. [Install VirtualBox](https://www.virtualbox.org/wiki/Downloads)
 
