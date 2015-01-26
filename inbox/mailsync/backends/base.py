@@ -49,7 +49,7 @@ def save_folder_names(log, account_id, folder_names, db_session):
     # dangled_folders don't map to upstream account folders (may be used for
     # keeping track of e.g. special Gmail labels which are exposed as IMAP
     # flags but not folders)
-    folder_for = {f.name.lower(): f for f in all_folders if f.name is not None}
+    folder_for = {f.name: f for f in all_folders if f.name is not None}
     dangled_folder_for = {f.canonical_name: f for f in all_folders
                           if f.name is None}
 
@@ -57,7 +57,7 @@ def save_folder_names(log, account_id, folder_names, db_session):
                        'starred', 'important', 'archive', 'all'}
     for canonical_name in canonical_names:
         if canonical_name in folder_names:
-            backend_folder_name = folder_names[canonical_name].lower()
+            backend_folder_name = folder_names[canonical_name]
             if backend_folder_name not in folder_for:
                 # Reconcile dangled folders which now exist on the remote
                 if canonical_name in dangled_folder_for:
@@ -69,17 +69,14 @@ def save_folder_names(log, account_id, folder_names, db_session):
                         db_session, account, None, canonical_name)
                     if folder.name != folder_names[canonical_name]:
                         if folder.name is not None:
-                            old_name = folder.name.lower()
-                        else:
-                            old_name = backend_folder_name
+                            del folder_for[folder.name]
                         folder.name = folder_names[canonical_name]
-                        # New folders won't exist in folder_for
-                        if old_name in folder_for:
-                            del folder_for[old_name]
                         folder.get_associated_tag(db_session)
                 attr_name = '{}_folder'.format(canonical_name)
                 id_attr_name = '{}_folder_id'.format(canonical_name)
                 if getattr(account, id_attr_name) != folder.id:
+                    # NOTE: updating the relationship (i.e., attr_name) also
+                    # updates the associated foreign key (i.e., id_attr_name)
                     setattr(account, attr_name, folder)
             else:
                 del folder_for[backend_folder_name]
@@ -88,12 +85,12 @@ def save_folder_names(log, account_id, folder_names, db_session):
     if 'extra' in folder_names:
         for name in folder_names['extra']:
             name = name[:MAX_FOLDER_NAME_LENGTH]
-            if name.lower() not in folder_for:
+            if name not in folder_for:
                 # Folder.create() takes care of adding to the session
                 folder = Folder.create(account, name, db_session)
                 folder.get_associated_tag(db_session)
-            if name.lower() in folder_for:
-                del folder_for[name.lower()]
+            else:
+                del folder_for[name]
 
     # This may cascade to FolderItems and ImapUid (ONLY), which is what we
     # want--doing the update here short-circuits us syncing that change later.
