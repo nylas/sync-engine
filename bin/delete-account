@@ -15,7 +15,7 @@ def main(account_id):
         try:
             account = mailsync_session.query(Account).\
                 filter_by(id=account_id).one()
-            prompt = 'hey buddy, are you sure? [y/N] '.format(account_id)
+            prompt = 'hey buddy, are you sure you want to delete {}? [y/N] '.format(account.email_address)
             proceed = raw_input(prompt).strip().lower()
             if proceed != 'y':
                 # assuming 'N' for safety
