@@ -17,7 +17,7 @@ def upgrade():
     connection = op.get_bind()
     connection.execute(
         '''
-        ALTER TABLE folder CHANGE name name varchar(191) BINARY DEFAULT NULL;
+        ALTER TABLE folder CHANGE name name varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL;
         '''
     )
 
@@ -26,6 +26,6 @@ def downgrade():
     connection = op.get_bind()
     connection.execute(
         '''
-        ALTER TABLE folder CHANGE name name varchar(191) DEFAULT NULL;
+        ALTER TABLE folder CHANGE name name varchar(191) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL;
         '''
     )
