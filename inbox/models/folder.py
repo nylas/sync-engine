@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, func
+from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy.schema import UniqueConstraint
@@ -68,7 +68,7 @@ class Folder(MailSyncBase):
                 name = name[:MAX_FOLDER_NAME_LENGTH]
             q = session.query(cls).filter_by(account_id=account.id)
             if name is not None:
-                q = q.filter(func.lower(Folder.name) == func.lower(name))
+                q = q.filter_by(name=name)
             if canonical_name is not None:
                 q = q.filter_by(canonical_name=canonical_name)
             if identifier is not None:
