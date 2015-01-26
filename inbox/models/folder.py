@@ -24,12 +24,11 @@ class Folder(MailSyncBase):
         'Account', backref=backref('folders', cascade='delete'),
         foreign_keys=[account_id])
 
-    # Explicitly set collation to be case insensitive. This is mysql's default
-    # but never trust defaults! This allows us to store the original casing to
-    # not confuse users when displaying it, but still only allow a single
-    # folder with any specific name, canonicalized to lowercase.
+    # Set the name column to be case sensitive, which isn't the default for
+    # MySQL. This is a requirement since IMAP allows users to create both a
+    # 'Test' and a 'test' (or a 'tEST' for what we care) folders.
     name = Column(String(MAX_FOLDER_NAME_LENGTH,
-                         collation='utf8mb4_general_ci'), nullable=True)
+                         collation='utf8mb4_bin'), nullable=True)
     canonical_name = Column(String(MAX_FOLDER_NAME_LENGTH), nullable=True)
 
     # We use an additional identifier for certain providers,
