@@ -9,7 +9,6 @@ Types returned for data are the column types defined via SQLAlchemy.
 Eventually we're going to want a better way of ACLing functions that operate on
 accounts.
 """
-from datetime import datetime
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -149,16 +148,26 @@ def update_metadata(account_id, session, folder_name, folder_id, uids,
         recompute_thread_labels(thread, session)
 
 
-def remove_deleted_uids(account_id, session, uids, folder_id):
+def remove_messages(account_id, session, uids, folder):
     """ Make sure you're holding a db write lock on the account. (We don't try
         to grab the lock in here in case the caller needs to put higher-level
         functionality in the lock.)
     """
     if uids:
-        deletes = session.query(ImapUid).filter(
+        deletes = session.query(ImapUid).join(Folder).filter(
             ImapUid.account_id == account_id,
-            ImapUid.folder_id == folder_id,
+            Folder.name == folder,
             ImapUid.msg_uid.in_(uids)).all()
+
+        # Remove message if he has no associated UIDs.
+        # This may cause the message to disappear transiently
+        # when moved between folders. The delay should be short
+        # enough to be unnoticeable.
+        #
+        # FIXME @karim: we shouldn't be deleting messages --
+        # the clean way to handle this problem is have a daemon
+        # detect "dangling" threads and messages and collect
+        # them periodically (tracked in T477)
         affected_messages = {uid.message for uid in deletes
                              if uid.message is not None}
 
@@ -172,18 +181,15 @@ def remove_deleted_uids(account_id, session, uids, folder_id):
         # 'affected' even if we're not removing messages from them.
         affected_threads = {m.thread for m in affected_messages}
 
-        # Don't outright delete messages. Just mark them as 'deleted' and wait
-        # for the asynchronous dangling-message-collector to delete them.
         for message in messages_to_delete:
-            message.mark_for_deletion()
+            session.delete(message)
         session.commit()
 
         for thread in affected_threads:
-            # Note that recompute_thread_labels uses all the ImapUids for the
-            # thread to figure out what the thread's tags should be, so at this
-            # point it's necessary (and sufficient) that all the ImapUid rows
-            # that should be deleted actually are deleted.
-            recompute_thread_labels(thread, session)
+            if not thread.messages:
+                session.delete(thread)
+            else:
+                recompute_thread_labels(thread, session)
 
         session.commit()
 
