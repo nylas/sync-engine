@@ -1,15 +1,15 @@
 Title: Namespaces
 
-Namespaces are essentially references to linked accounts. They are the top-level unit of a user's data. For example, a user who has one Exchange account and two Gmail accounts linked to Inbox will have three distinct namespaces.
+Namespaces are essentially references to linked accounts. They are the top-level unit of a user's data. For example, a user who has one Exchange account and two Gmail accounts linked to Nilas will have three distinct namespaces.
 
-If you're using the Inbox Hosted Platform, the `/n` endpoint returns the list of namespaces you can access with the access token you provide. Generally, `GET /n` should be the first request you make after authenticating a new user. Typically, access tokens provide access to a single namespace, but this may change in the future.
+The `/n` endpoint returns the list of namespaces you can access with the access token you provide. Generally, `GET /n` should be the first request you make after authenticating a new user. Typically, access tokens provide access to a single namespace, but this may change in the future.
 
 
 # Listing Namespaces
 
 ```
 :::xml
-GET https://api.inboxapp.com/n
+GET https://api.nilas.com/n
 ```
 
 **Response**
@@ -36,5 +36,5 @@ The top-level URI will return information about a namespace with the given `name
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>
+GET https://api.nilas.com/n/<namespace_id>
 ```

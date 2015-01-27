@@ -1,12 +1,12 @@
 Title: Contacts
 
-The Inbox API provides access to the user's contacts, making it easy to add contact autocomplete, address book integration, and more to your application.
+The Nilas API provides access to the user's contacts, making it easy to add contact autocomplete, address book integration, and more to your application.
 
 # Retrieving contacts
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/contacts
+GET https://api.nilas.com/n/<namespace_id>/contacts
 ```
 
 Fetch the user's contact list. This API supports query parameters which make it easy to search the user's contacts. Available query parameters are listed below:
@@ -37,10 +37,10 @@ Fetch the user's contact list. This API supports query parameters which make it 
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/contacts/<contact_id>
+GET https://api.nilas.com/n/<namespace_id>/contacts/<contact_id>
 ```
 
-This endpoint retreives details about a specific contact.
+This endpoint retrieves details about a specific contact.
 
 **Sample response:**
 ```
@@ -56,11 +56,11 @@ This endpoint retreives details about a specific contact.
 
 # Creating a contact
 
-New contacts can be easily created. Note these currently only exist within Inbox, and do not sync back to the provider (e.g., Google Contacts).
+New contacts can be easily created. Note these currently only exist within Nilas, and do not sync back to the provider (e.g., Google Contacts).
 
 ```
 :::xml
-POST https://api.inboxapp.com/n/<namespace_id>/contacts/
+POST https://api.nilas.com/n/<namespace_id>/contacts/
 ```
 
 **Sample post body**
@@ -86,10 +86,6 @@ POST https://api.inboxapp.com/n/<namespace_id>/contacts/
 
 ```
 
-# Updating an existing contact
+# Updating or deleting contacts
 
-The Inbox API does not yet support updating existing contacts or syncing changes back to underlying mail providers. Check back soon for this functionality.
-
-# Deleting an existing contact
-
-The Inbox API does not yet support deleting contacts. Check back soon for this functionality.
+Nilas does not yet support updating or deleting contacts, or syncing changes back to underlying mail providers.

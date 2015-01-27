@@ -20,26 +20,26 @@ the `query` object.
 
 ```
 :::xml
-POST https://api.inboxapp.com/n/<namespace_id>/messages/search?limit=2&offset=1
+POST https://api.nilas.com/n/<namespace_id>/messages/search?limit=2&offset=1
 ```
 
-All messages sent to:inboxapptest AND from:ben.bitdiddle -
+All messages sent to:nilastestdrive AND from:ben.bitdiddle -
 
 ```
 :::json
 {
-    "query": [{"to": "inboxapptest@gmail.com",
-               "from": "ben.bitdiddle@inboxapp.com"}]
+    "query": [{"to": "nilastestdrive@gmail.com",
+               "from": "ben.bitdiddle@nilas.com"}]
 }
 ```
 
-All messages sent to:inboxapptest OR from:ben.bitdiddle -
+All messages sent to:nilastestdrive OR from:ben.bitdiddle -
 
 ```
 :::json
 {
-    "query": [{"to": "inboxapptest@gmail.com"},
-              {"from": "ben.bitdiddle@inboxapp.com"}]
+    "query": [{"to": "nilastestdrive@gmail.com"},
+              {"from": "ben.bitdiddle@nilas.com"}]
 }
 ```
 
@@ -49,13 +49,13 @@ For example, to get all threads with a particular `participant` -
 
 ```
 :::xml
-POST https://api.inboxapp.com/n/<namespace_id>/threads/search
+POST https://api.nilas.com/n/<namespace_id>/threads/search
 ```
 
 ```
 :::json
 {
-    "query": [{"participants": "inboxapptest@gmail.com"}]
+    "query": [{"participants": "nilastestdrive@gmail.com"}]
 }
 ```
 
@@ -70,7 +70,7 @@ For example, to get the messages where any field (subject/body/to/from/cc/etc.) 
 
 ```
 :::xml
-POST https://api.inboxapp.com/n/<namespace_id>/messages/search
+POST https://api.nilas.com/n/<namespace_id>/messages/search
 ```
 
 ```
@@ -120,7 +120,7 @@ A search returns the total count of matches and the list of results.
 Note that the number of results returned (i.e. the length of the list of results) is determined by the `limit` param specified in the request,
 and defaults to 100.
 Each result is a JSON object that contains an:
-"object" - the Inbox API representation of the message/thread.
+"object" - the Nilas API representation of the message/thread.
 For example, a message result object would contain to, from, cc, bcc, subject, body etc. fields
 "relevance" - the ranking score for the result.
 

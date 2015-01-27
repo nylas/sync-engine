@@ -1,6 +1,8 @@
 Title: Installation
 
-You can run the Inbox Sync Engine almost anywhere. A hosted version of the Inbox platform is available (including extra features such as Microsoft Exchange support and authentication), but you can also develop on top of the Inbox API by running your own instance of the Inbox Sync Engine. For development, we recommend installing it on a VirtualBox or VMWare Fusion virtual machine and running it with Vagrant:
+You can run the Nilas Sync Engine almost anywhere. A [hosted version of the Nilas platform](https://www.nilas.com) is also available (including extra features such as Microsoft Exchange support and authentication).
+
+For development, we recommend installing on a VirtualBox or VMWare Fusion virtual machine and running it with Vagrant:
 
 1. [Install VirtualBox](https://www.virtualbox.org/wiki/Downloads)
 
@@ -20,4 +22,4 @@ You can run the Inbox Sync Engine almost anywhere. A hosted version of the Inbox
 
     The `inbox` directory you started with should be synced to `/vagrant`. If this directory is empty, then logout and run `vagrant reload` and `vagrant ssh` again.
 
-At this point the Inbox Sync Engine is installed and ready to process mail! The next steps are to start the processes that come with the open-source toolkit and authenticate a mail account.
+At this point the Nilas Sync Engine is installed and ready to process mail! The next steps are to start the processes that come with the open-source toolkit and authenticate a mail account.

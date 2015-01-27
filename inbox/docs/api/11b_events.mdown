@@ -8,7 +8,7 @@ Each event has a `title` and `description` as well as a list of participants and
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/events/<event_id>
+GET https://api.nilas.com/n/<namespace_id>/events/<event_id>
 ```
 
 **Response:**
@@ -60,7 +60,7 @@ This endpoint supports [filters](#filters), which allow you to fetch multiple ev
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/events?limit=3
+GET https://api.nilas.com/n/<namespace_id>/events?limit=3
 ```
 
 # Adding a new event
@@ -71,7 +71,7 @@ Note that timestamps are expected to be in UTC timezone.
 
 ```
 :::xml
-POST https://api.inboxapp.com/n/<namespace_id>/events
+POST https://api.nilas.com/n/<namespace_id>/events
 ```
 
 **Sample post body**
@@ -84,7 +84,7 @@ POST https://api.inboxapp.com/n/<namespace_id>/events
         "start_time": 1407542195,
         "end_time": 1407543195
     },
-    "location": "Inbox HQ",
+    "location": "Nilas HQ",
     "calendar_id": "ci0k1wfyv533ccgox4t7uri4h",
     "participants": [
         {
@@ -108,7 +108,7 @@ Updating and deleting an event is managed in a similar fashion to other endpoint
 
 ```
 :::xml
-PUT https://api.inboxapp.com/n/<namespace_id>/events/<event_id>
+PUT https://api.nilas.com/n/<namespace_id>/events/<event_id>
 ```
 
 **Sample post body**
@@ -142,7 +142,7 @@ This can be performed via the following:
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/events/<event_id>?action=rsvp&rvsp=<rsvp_response>
+GET https://api.nilas.com/n/<namespace_id>/events/<event_id>?action=rsvp&rvsp=<rsvp_response>
 ```
 
 The `rsvp_response` parameter can be one of the following:
@@ -192,7 +192,7 @@ The 2014 San Francisco earthquake:
 }
 ```
 
-The last InboxHQ Monday meeting:
+The last NilasHQ Monday meeting:
 ```
 :::json
 {

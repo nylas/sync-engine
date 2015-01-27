@@ -6,7 +6,7 @@ The files endpoint manages data attached to messages. If you'd like to add attac
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/files/<file_id>
+GET https://api.nilas.com/n/<namespace_id>/files/<file_id>
 ```
 
 **Response:**
@@ -24,28 +24,29 @@ GET https://api.inboxapp.com/n/<namespace_id>/files/<file_id>
 }
 ```
 
+
 # Downloading a file
 
 Files can be downloaded by appending `/download` to the URI. The body response will include the filename.
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/files/<file_id>/download
+GET https://api.nilas.com/n/<namespace_id>/files/<file_id>/download
 ```
 
 # Uploading a new file
 
 ```
 :::xml
-POST https://api.inboxapp.com/n/<namespace_id>/files
+POST https://api.nilas.com/n/<namespace_id>/files
 ```
 
 
-This endpoint is used to transfer files to Inbox, which must be done before adding them to a draft message. Data should be sent as multipart-form data with a single file field named `file`. An example of a correct request is shown below. Rather than using this endpoint directly, you may want to consider using one of the Inbox SDKs, which internally handle native data types and build the form request.
+This endpoint is used to transfer files to Nilas, which must be done before adding them to a draft message. Data should be sent as multipart-form data with a single file field named `file`. An example of a correct request is shown below. Rather than using this endpoint directly, you may want to consider using one of the Nilas SDKs, which internally handle native data types and build the form request.
 
 ```
 :::http
-POST https://api.inboxapp.com/n/<namespace_id>/files HTTP/1.1
+POST https://api.nilas.com/n/<namespace_id>/files HTTP/1.1
 Accept-Encoding: gzip, deflate
 Content-Type: multipart/form-data; boundary=---------------------------41184676334
 Content-Length: 29278

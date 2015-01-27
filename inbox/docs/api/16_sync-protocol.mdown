@@ -1,9 +1,6 @@
 Title: Delta Sync
 
-As Inbox syncs your users' mailboxes, it builds a transaction log that records
-every change. Your application can use these changes, exposed through the Delta
-Sync API, to build email applications that process new data quickly without
-fetching an index of the user's mailbox or performing a large number of API calls.
+As the Nilas Sync Engine syncs your users' mailboxes, it builds a transaction log that records every change. Your application can use these changes, exposed through the Delta Sync API, to build email applications that process new data quickly without fetching an index of the user's mailbox or performing a large number of API calls.
 
 To use the Delta Sync API, your application needs to maintain a sync `cursor`,
 a record of the last change you successfully processed. Each time you perform a
@@ -12,17 +9,13 @@ sync, you process the delta updates provided by the API and update your stored `
 
 # Obtaining a Delta Sync Cursor
 
-The first time you sync using the Delta Sync API, you need to obtain a cursor. The
-`generate_cursor` API allows you to exchange a unix timestamp for a cursor so you can
-begin a sync at an arbitrary point in the user's mailbox history. Alternatively,
-if you want to start consuming the user's entire mailbox history you can set
-your cursor to `0`.
+The first time you sync using the Delta Sync API, you need to obtain a cursor. The `generate_cursor` API allows you to exchange a unix timestamp for a cursor so you can begin a sync at an arbitrary point in the user's mailbox history. Alternatively, if you want to start consuming the user's entire mailbox history you can set your cursor to `0`.
 
 Once you have a cursor, you should store it and update it as you make sync requests.
 
 ```
 :::xml
-POST https://api.inboxapp.com/n/<namespace_id>/delta/generate_cursor
+POST https://api.nilas.com/n/<namespace_id>/delta/generate_cursor
 ```
 
 ```
@@ -43,14 +36,14 @@ POST https://api.inboxapp.com/n/<namespace_id>/delta/generate_cursor
 
 # Requesting a Delta
 
-Each time your application syncs with Inbox, you provide the cursor indicating
+Each time your application syncs with Nilas, you provide the cursor indicating
 your position in the user's mailbox history. The API request below returns a
 set of JSON objects representing individual changes to the user's mailbox: tag
 changes, new messages, etc.
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/delta?cursor=<cursor>
+GET https://api.nilas.com/n/<namespace_id>/delta?cursor=<cursor>
 ```
 
 **Sample response:**
@@ -112,7 +105,7 @@ GET https://api.inboxapp.com/n/<namespace_id>/delta?cursor=<cursor>
                         "name": "Michael Grinich"
                     },
                     {
-                        "email": "ben@inboxapp.com",
+                        "email": "ben@nilas.com",
                         "name": ""
                     }
                 ],
@@ -137,14 +130,15 @@ Each element of the response contains the following fields:
 * `"event"`: The type of change, either `"create"`, `"modify"` or `"delete"`.
 * `"attributes"`: The state of the object when the delta was generated.
 
-After you've processed the deltas, your application should update its stored `cursor` to the value of `cursor_end` in the response. Inbox may only return the first batch of changes, so it's important to make this API call repeatedly until you receive the same `cursor_end` that you sent (`cursor_start`). This indicates that you have consumed the entire transaction log of the user's mailbox and your application is up-to-date.
+After you've processed the deltas, your application should update its stored
+`cursor` to the value of `cursor_end` in the response. Nilas may only return the first batch of changes, so it's important to make this API call repeatedly until you receive the same `cursor_end` that you sent (`cursor_start`). This indicates that you have consumed the entire transaction log of the user's mailbox and your application is up-to-date.
 
 # Streaming delta updates
 The streaming endpoint allows you to get changes in real time, without needing to repeatedly poll. First obtain a delta sync cursor as described above, and then use it to query the `/delta/streaming` endpoint:
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/delta/streaming?cursor=<cursor>
+GET https://api.nilas.com/n/<namespace_id>/delta/streaming?cursor=<cursor>
 ```
 
 This will start a long-polling HTTP connection. The server will stream deltas
@@ -176,7 +170,7 @@ request
 ```
 :::xml
 GET
-https://api.inboxapp.com/n/<namespace_id>/delta/streaming?cursor=<cursor>&exclude_types=message,contact
+https://api.nilas.com/n/<namespace_id>/delta/streaming?cursor=<cursor>&exclude_types=message,contact
 ```
 
 The value of `exclude_types` must be a comma-separated list whose elements are

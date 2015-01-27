@@ -1,9 +1,9 @@
-# Inbox
+# Nilas
 
 #### The next-generation email platform.
 
 
-Inbox is a set of tools to make it simple to develop apps and services on top of email. This includes a modern RESTful API that return JSON and Unicode objects. See the [full API documentation](https://www.inboxapp.com/docs/api#overview) for more details.
+The Nilas Sync Engine provides a RESTful API on top of a powerful email sync platform, making it easy to build apps on top of email. See the [full API documentation](https://www.nilas.com/docs/api#overview) for more details.
 
 
 
@@ -44,28 +44,20 @@ And _voilà_! Auth an account via the commandline to start syncing:
 
 |  Provider  	|  Status      			| 	Details  |
 |:------------	|:--------------------:	|:----------|
-| Gmail 		|  :white_check_mark:	| Supported   |
-| Google Apps 		|  :white_check_mark:	| Supported   |
-| Microsoft Exchange | :large_blue_diamond: | Included in the [Inbox Developer Program](https://www.inboxapp.com/features)  |
-| Yahoo! Mail   |  :white_check_mark:   | Supported  |
-| Hotmail/Outlook.com  |  :warning:   | In development |
-| AOL 	|  :warning: 			|  In development 	|
-| Cyrus (Fastmail)	|  :warning:	|  In development	|
-| iCloud |  :warning:	|  In development	|
-| Dovecot (Gandi) | :warning: | In development |
-| Zimbra  | :no_entry:  | Not implemented |
-| Courier  | :no_entry:  | Not implemented |
+| Gmail 		|  :white_check_mark:	| Mail, Calendar, Contacts   |
+| Google Apps 		|  :white_check_mark:	| Mail, Calendar, Contacts   |
+| Microsoft Exchange | :large_blue_diamond: | Included in the [Nilas Developer Program](https://www.nilas.com/features)  |
+| Other Providers   |  :white_check_mark:   | Mail  |
 
-Please [create an issue](https://github.com/inboxapp/inbox/issues) if you use a mail provider not listed here.
+Please [create an issue](https://github.com/inboxapp/inbox/issues) if your mail provider is not supported, or if you want to see calendar and contacts support for a specific provider.
 
 ## Contributing
 
-We'd love your help making Inbox better! Join the [Google
-Group](http://groups.google.com/group/inbox-dev) for project updates and feature
-discussion. We also hang out in `##inbox` on `irc.freenode.net`, or you can email
-[help@inboxapp.com](mailto:help@inboxapp.com).
+We'd love your help making Nilas better! Join the [Google
+Group](http://groups.google.com/group/inbox-dev) for project updates and feature discussion. We also hang out in `#nilas` on `irc.freenode.net`, or you can email
+[support@nilas.com](mailto:support@nilas.com).
 
-Please sign the [Contributor License Agreement](https://www.inboxapp.com/cla.html)
+Please sign the [Contributor License Agreement](https://www.nilas.com/cla.html)
 before submitting patches. (It's similar to other projects, like NodeJS or Meteor.)
 
 We maintain strict code style, following [pep8](http://legacy.python.org/dev/peps/pep-0008/), the [Google Python style

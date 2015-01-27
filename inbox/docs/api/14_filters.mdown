@@ -14,7 +14,7 @@ Filters allow you to query mail data based on specific parameters. The more spec
 
 * **`bcc`** Return messages or threads bcc'd to the given address (likely by you, since that header is removed by SMTP gateways)
 
-* **`tag`** Return messages or threads with the given tag. The value can be the name or ID of a user-created tag, a provider-specific label for a folder (`gmail-climbing`), or one of Inbox's canonical symbolic tag names (`unread`, `starred`, etc.)  See [Tags](#tags) for more details.
+* **`tag`** Return messages or threads with the given tag. The value can be the name or ID of a user-created tag, a provider-specific label for a folder (`gmail-climbing`), or one of Nilas's canonical symbolic tag names (`unread`, `starred`, etc.)  See [Tags](#tags) for more details.
 
 * **`filename`** Return messages or threads that have a file with the given name attached.
 
@@ -39,7 +39,7 @@ Filters allow you to query mail data based on specific parameters. The more spec
 
 # Search
 
-The filters API is not intended to be a replacement for full search functionality. Inbox will eventually include a decicated search API for freeform queries of mail data that you can use to perform high performance, full-text search in your application.
+The filters API is not intended to be a replacement for full search functionality. We are working on a dedicated search API for freeform queries of mail data that you can use to perform high performance, full-text search in your application. We'd love to [hear your use-cases](mailto:support@nilas.com).
 
 
 # Wildcards & Multiple Value Support
@@ -51,32 +51,32 @@ Filters do not currently support wildcards, such as `from=*@expedia.com`. Suppor
 
 **Threads**
 
-List threads with the Inbox tag:
+List threads with the inbox tag:
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=inbox
+GET https://api.nilas.com/n/<namespace_id>/threads?tag=inbox
 ```
 
 List threads with a user-created tag using the tag ID:
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=aqb0llc2ioo0bclh7uxkim9z6
+GET https://api.nilas.com/n/<namespace_id>/threads?tag=aqb0llc2ioo0bclh7uxkim9z6
 ```
 
 List the 5 most recent unread threads:
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=unread&limit=5
+GET https://api.nilas.com/n/<namespace_id>/threads?tag=unread&limit=5
 ```
 
-List threads that include `mark@inboxapp.com` as a participant and are unread, ordered by date:
+List threads that include `mark@nilas.com` as a participant and are unread, ordered by date:
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=unread&any_email=mark@inboxapp.com
+GET https://api.nilas.com/n/<namespace_id>/threads?tag=unread&any_email=mark@nilas.com
 ```
 
 
@@ -86,19 +86,19 @@ List messages in a particular thread:
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/messages?thread_id=aqb0llc2ioo0bclh7uxkim9z6
+GET https://api.nilas.com/n/<namespace_id>/messages?thread_id=aqb0llc2ioo0bclh7uxkim9z6
 ```
 
 List messages from `no-reply@asana.com`:
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/messages?from=no-reply@asana.com
+GET https://api.nilas.com/n/<namespace_id>/messages?from=no-reply@asana.com
 ```
 
 List messages that have an attachment named `image.jpg`:
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/messages?filename=image.jpg
+GET https://api.nilas.com/n/<namespace_id>/messages?filename=image.jpg
 ```
