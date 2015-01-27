@@ -15,7 +15,7 @@ from inbox.api.kellogs import APIEncoder
 from inbox.api import filtering
 from inbox.api.validation import (get_tags, get_attachments,
                                   get_calendar, get_thread, get_recipients,
-                                  get_draft, valid_public_id, valid_event,
+                                  valid_public_id, valid_event,
                                   valid_event_update, timestamp,
                                   bounded_str, view, strict_parse_args, limit,
                                   valid_event_action, valid_rsvp,
