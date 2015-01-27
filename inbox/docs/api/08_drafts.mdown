@@ -1,16 +1,6 @@
 Title: Drafts
 
-A draft is a special kind of message which has not been sent, and therefore its body contents are mutable. Once sent, the body cannot be changed. Draft objects are identical to message objects sent via the API, except that they have two additional parameters:
-
-1. A `state` parameter. The `state` parameter has three states:
-
-- `draft`: The default state.
-- `sending`: The draft has been queued for sending using the [Sending](#sending) API.
-- `sent`: The draft has been successfully sent.
-
-2. A `version` parameter that refers to a particular revision. 
-A draft has an unchanging ID but each revision to it receives a new version. Having a constant ID is useful for caching and
-repeated querying, while the unique version is used to prevent conflicting operations.
+A draft is a special kind of message which has not been sent, and therefore its body contents are mutable. Once sent, the body cannot be changed. Draft objects are identical to message objects sent via the API, except that they have an additional `version` parameter. A draft's ID doesn't change, but each time the draft is updated, its version parameter is updated as well.  Having a constant ID is useful for caching and repeated querying, while the unique version is used to prevent conflicting operations.
 
 
 # Retrieving Drafts
@@ -75,8 +65,6 @@ Also note that creating a draft will fail if the files with the referenced `file
 
 If the draft is a response to an existing thread, you should provide the thread's ID in the `thread_id` parameter and omit the `subject` parameter. Note that you must explicitly specify the message's recipients in the `to`, `cc` and `bcc` fields of the post body; this is to prevent any ambiguity about whom the message will be sent to.
 
-Messages you create or send __should not include quoted text__ when they are in reply to an existing thread.
-
 ```
 :::json
 {
@@ -109,8 +97,7 @@ Put body parameters:
 
 * `version`
 
-The request body must contain the version of the draft you wish to update.
-Other fields are optional and will overwrite previous values.
+The request body must contain the version of the draft you wish to update. Other fields are optional and will overwrite previous values.
 
 Updating a draft returns a draft object with the same ID but different version. When submitting subsequent send or save actions, you must use this new version.
 
@@ -138,12 +125,9 @@ The Inbox API provides a single API for sending both new messages and existing d
 
 # Listing Threads with Drafts
 
-In some scenarios, you may want to display all of the threads in the user's inbox that have draft messages. To get a list of all threads with drafts, use the [Threads](#threads) API call with a [filter](#filters) on the `draft` tag:
+In some scenarios, you may want to display all of the threads in the user's inbox that have draft messages. To get a list of all threads with drafts, use the [Threads](#threads) API call with a [filter](#filters) on the `drafts` tag:
 
 ```
 :::xml
 GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=drafts
 ```
-
-
-

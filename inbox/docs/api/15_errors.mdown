@@ -3,14 +3,14 @@ Title: Errors
 Inbox uses conventional HTTP response codes to indicate the success or failure of an API request.
 
 Code | Description
---- | --- 
+--- | ---
 200 | OK -- Everything worked as expected.
 400 | Bad Request -- Missing a required parameter.
 401 | Unauthorized -- No valid API key provided.
 402 | Request Failed -- Parameters were valid but the request failed.
 404 | Not Found -- The requested item doesn't exist.
-429 | Too Many Requests -- Read more about [API Rate Limiting](#).
-500, 502, <br/>503, 504 | Server errors --  An error occured in the Inbox server
+429 | Too Many Requests.
+500, 502, <br/>503, 504 | Server errors --  An error occured in the Inbox server.
 
 For a full list of possible codes, we recommend the [Wikipedia article](http://en.wikipedia.org/wiki/List_of_HTTP_status_codes).
 
