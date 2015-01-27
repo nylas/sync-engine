@@ -209,11 +209,10 @@ class BaseSMTPClient(object):
                                              msg)
         # Sent to none successfully
         except smtplib.SMTPRecipientsRefused:
-            raise SendError('Sending to all recipients failed',
-                            exception='Refused')
+            raise SendError('Sending to all recipients failed; Refused')
         except smtplib.SMTPException as e:
-            raise SendError('Sending to all recipients failed',
-                            exception=str(e))
+            raise SendError('Sending to all recipients failed; {}'.format(
+                str(e)))
         # Send to at least one failed
         if failures:
             raise SendError('Sending to atleast one recipent failed',
