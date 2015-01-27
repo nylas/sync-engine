@@ -7,8 +7,8 @@ A draft is a special kind of message which has not been sent, and therefore its 
 
 ```
 :::xml
-GET  https://api.inboxapp.com/n/<namespace_id>/drafts
-GET  https://api.inboxapp.com/n/<namespace_id>/drafts/<draft_id>
+GET  https://api.nilas.com/n/<namespace_id>/drafts
+GET  https://api.nilas.com/n/<namespace_id>/drafts/<draft_id>
 ```
 
 This endpoint supports [filters](#filters), which allow you to fetch multiple drafts matching specific critera. The same parameters are supported as that of the [messages](#messages) endpoint.
@@ -17,7 +17,7 @@ This endpoint supports [filters](#filters), which allow you to fetch multiple dr
 
 ```
 :::xml
-POST https://api.inboxapp.com/n/<namespace_id>/drafts
+POST https://api.nilas.com/n/<namespace_id>/drafts
 ```
 
 Post body parameters:
@@ -90,7 +90,7 @@ Updating a draft is as simple as issuing a PUT request to the draft's URI.
 
 ```
 :::xml
-PUT https://api.inboxapp.com/n/<namespace_id>/drafts/<draft_id>
+PUT https://api.nilas.com/n/<namespace_id>/drafts/<draft_id>
 ```
 
 Put body parameters:
@@ -107,7 +107,7 @@ To delete a draft simply issue a DELETE request to the draft's URI.
 
 ```
 :::xml
-DELETE https://api.inboxapp.com/n/<namespace_id>/drafts/<draft_id>
+DELETE https://api.nilas.com/n/<namespace_id>/drafts/<draft_id>
 ```
 
 Delete body parameters:
@@ -120,7 +120,7 @@ If the draft does not exist, this request will fail.
 
 # Sending a draft
 
-The Inbox API provides a single API for sending both new messages and existing drafts. See [Sending](#sending) for more information.
+The Nilas API provides a single API for sending both new messages and existing drafts. See [Sending](#sending) for more information.
 
 
 # Listing Threads with Drafts
@@ -129,5 +129,5 @@ In some scenarios, you may want to display all of the threads in the user's inbo
 
 ```
 :::xml
-GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=drafts
+GET https://api.nilas.com/n/<namespace_id>/threads?tag=drafts
 ```

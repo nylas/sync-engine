@@ -1,15 +1,15 @@
 Title:   Overview
 
-Inbox is a modern API that works with existing email providers. It makes it easy to integrate with your users' email data, and eliminates the complexity of old protocols like IMAP and MIME.
+The Nilas Sync Engine provides a modern API that works with existing email providers. It makes it easy to integrate with your users' email data, and eliminates the complexity of old protocols like IMAP and MIME.
 
-The Inbox API is designed around the [REST](http://en.wikipedia.org/wiki/Representational_State_Transfer) ideology, providing simple and predictable URIs to access and modify objects. Requests support standard HTTP methods like GET, PUT, POST, and DELETE. Response bodies are always UTF-8 encoded JSON objects, unless explicitly documented otherwise.
+The API is designed around the [REST](http://en.wikipedia.org/wiki/Representational_State_Transfer) ideology, providing simple and predictable URIs to access and modify objects. Requests support standard HTTP methods like GET, PUT, POST, and DELETE. Response bodies are always UTF-8 encoded JSON objects, unless explicitly documented otherwise.
 
-[Threads](#threads) are a first-class object in Inbox, allowing you to build beautiful mail applications that behave the way users have come to expect. Actions like archiving or deleting are performed on threads, not individual messages.
+[Threads](#threads) are a first-class object, allowing you to build beautiful mail applications that behave the way users have come to expect. Actions like archiving or deleting are performed on threads, not individual messages.
 
 [Tags](#tags) are used to group threads, and a thread can have zero or more tags. Note: tags are not equivalent to IMAP folders or Gmail labels, although these properties may be accessed via tags.
 
-Inbox uses [OAuth2](http://oauth.net/documentation/getting-started/) for authentication with a specific user's account. Subsequent API requests are made with an `access_token` for that user, secured by HTTP basic auth over SSL (TLS). The user auth flow is documented below.
+Nilas uses [OAuth2](http://oauth.net/documentation/getting-started/) for authentication with a specific user's account. Subsequent API requests are made with an `access_token` for that user, secured by HTTP basic auth over SSL (TLS). The user auth flow is documented below.
 
 # Help
 
-If you need help, check out our answers to some [common questions](#FAQ) or chat live with our engineering team in `##inbox` on [freenode](http://webchat.freenode.net/).
+If you need help, you can [contact support](mailto:support@nilas.com) or chat live with our engineering team in `#nilas` on [freenode](http://webchat.freenode.net/).
