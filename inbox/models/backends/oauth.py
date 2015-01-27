@@ -8,6 +8,7 @@ from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declared_attr
 
+from inbox.basicauth import AuthError
 from inbox.models.secret import Secret
 from inbox.log import get_logger
 log = get_logger()
@@ -91,4 +92,11 @@ class OAuthAccount(object):
             log.error('Error while getting access token: {}'.format(e),
                       account_id=self.id,
                       exc_info=True)
+            raise
+
+    def verify(self):
+        token = token_manager.get_token(self)
+        try:
+            return self.validate_token(token)
+        except AuthError:
             raise
