@@ -47,11 +47,6 @@ def uploaded_file_ids(api_client, files):
 
 
 def test_file_filtering(api_client, uploaded_file_ids, draft):
-    for f_id in uploaded_file_ids:
-        results = api_client.get_data('/files?file_id={}'
-                                      .format(f_id))
-        assert len(results) == 1
-
     # Attach the files to a draft and search there
     draft['file_ids'] = uploaded_file_ids
     r = api_client.post_data('/drafts', draft)
@@ -144,30 +139,6 @@ def test_get_invalid(api_client, uploaded_file_ids):
     assert r.status_code == 404
     r = api_client.delete('/files/!')
     assert r.status_code == 400
-
-
-def test_is_attachment_filtering(api_client, uploaded_file_ids, draft):
-    """Attach files to draft, make sure we can use is_attachment specifier"""
-    old_total = len(api_client.get_data('/files'))
-    old_orphan = len(api_client.get_data('/files?is_attachment=0'))
-    old_attach = len(api_client.get_data('/files?is_attachment=1'))
-    assert old_attach + old_orphan == old_total
-
-    draft['file_ids'] = [uploaded_file_ids.pop()]
-    r = api_client.post_data('/drafts', draft)
-    assert r.status_code == 200
-
-    draft_resp = json.loads(r.data)
-    assert len(draft_resp['files']) == 1
-
-    new_total = len(api_client.get_data('/files'))
-    new_orphan = len(api_client.get_data('/files?is_attachment=0'))
-    new_attach = len(api_client.get_data('/files?is_attachment=1'))
-    assert new_attach + new_orphan == new_total
-    assert new_attach == old_attach + 1
-
-    assert new_orphan == old_orphan - 1
-    assert new_total == old_total
 
 
 @pytest.mark.parametrize("filename", FILENAMES)

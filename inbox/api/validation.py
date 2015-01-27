@@ -61,15 +61,6 @@ def timestamp(value, key):
                          format(value, key))
 
 
-def boolean(value, key):
-    if value.lower() in ('false', '0'):
-        return False
-    elif value.lower() in ('true', '1'):
-        return True
-    raise ValueError('Invalid boolean value {} for {}'.
-                     format(value, key))
-
-
 def strict_parse_args(parser, raw_args):
     """
     Wrapper around parser.parse_args that raises a ValueError if unexpected

@@ -250,8 +250,8 @@ def drafts(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
                                offset, view, db_session)
 
 
-def files(namespace_id, file_public_id, message_public_id, filename,
-          content_type, is_attachment, limit, offset, view, db_session):
+def files(namespace_id, message_public_id, filename, content_type,
+          limit, offset, view, db_session):
 
     if view == 'count':
         query = db_session.query(func.count(Block.id))
@@ -262,24 +262,13 @@ def files(namespace_id, file_public_id, message_public_id, filename,
 
     query = query.filter(Block.namespace_id == namespace_id)
 
-    # filter out inline attachments while keeping non-attachments
     query = query.outerjoin(Part)
-    if is_attachment is True:
-        query = query.filter(Part.content_disposition,
-                             Part.content_disposition != 'inline')
-    elif is_attachment is False:
-        query = query.filter(Part.id.is_(None))
-    else:
-        query = query.filter(or_(Part.id.is_(None),
-                             and_(Part.content_disposition,
-                                  Part.content_disposition != 'inline')))
+    query = query.filter(or_(Part.id.is_(None),
+                         Part.content_disposition.isnot(None)))
 
     if content_type is not None:
         query = query.filter(or_(Block._content_type_common == content_type,
                                  Block._content_type_other == content_type))
-
-    if file_public_id is not None:
-        query = query.filter(Block.public_id == file_public_id)
 
     if filename is not None:
         query = query.filter(Block.filename == filename)
