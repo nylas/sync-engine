@@ -40,10 +40,12 @@ def signal_handler(signum, frame):
 @click.option('--prod/--no-prod', default=False,
               help='Disables the autoreloader and potentially other '
                    'non-production features.')
+@click.option('--start-syncback/--no-start-syncback', default=True,
+              help='Also start the syncback service')
 @click.option('-c', '--config', default=None,
               help='Path to JSON configuration file.')
 @click.option('-p', '--port', default=5555, help='Port to run flask app on.')
-def main(prod, config, port):
+def main(prod, start_syncback, config, port):
     """ Launch the Inbox API service. """
     configure_logging(prod)
 
@@ -54,13 +56,13 @@ def main(prod, config, port):
     preflight()
 
     if prod:
-        start(port)
+        start(port, start_syncback)
     else:
         from werkzeug.serving import run_with_reloader
-        run_with_reloader(lambda: start(port))
+        run_with_reloader(lambda: start(port, start_syncback))
 
 
-def start(port):
+def start(port, start_syncback):
     global syncback
     global http_server
 
@@ -72,10 +74,11 @@ def start(port):
     # Catch SIGTERM so that we can gracefully exit
     signal.signal(signal.SIGTERM, signal_handler)
 
-    # start actions service
-    from inbox.transactions.actions import SyncbackService
-    syncback = SyncbackService()
-    syncback.start()
+    if start_syncback:
+        # start actions service
+        from inbox.transactions.actions import SyncbackService
+        syncback = SyncbackService()
+        syncback.start()
 
     inbox_logger = get_logger()
 
