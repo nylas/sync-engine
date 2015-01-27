@@ -6,7 +6,7 @@ The Inbox API is designed around the [REST](http://en.wikipedia.org/wiki/Represe
 
 [Threads](#threads) are a first-class object in Inbox, allowing you to build beautiful mail applications that behave the way users have come to expect. Actions like archiving or deleting are performed on threads, not individual messages.
 
-[Tags](#tags) are used to group threads, and a thread can have zero or more tags. Tags are also used to represent state, such as `sending`. Note: tags are not equivalent to IMAP folders or Gmail labels, although these properties may be accessed via tags.
+[Tags](#tags) are used to group threads, and a thread can have zero or more tags. Note: tags are not equivalent to IMAP folders or Gmail labels, although these properties may be accessed via tags.
 
 Inbox uses [OAuth2](http://oauth.net/documentation/getting-started/) for authentication with a specific user's account. Subsequent API requests are made with an `access_token` for that user, secured by HTTP basic auth over SSL (TLS). The user auth flow is documented below.
 

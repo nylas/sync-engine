@@ -11,9 +11,7 @@ You can use this API in two ways:
 
 #Sending an Existing Draft
 
-Perform a POST request with the POST body below to send an existing draft. If the draft is not already in response to a thread, a new thread will be created. The drafts `state` will change from `draft` to `sending`, and Inbox will attempt to deliver the message through the provider's SMTP gateway. Once the message has been sent, the thread receives the `sent` tag and the drafts `status` becomes `sent`. Sent drafts no longer appear in the user's drafts list, but you can continue to query them by ID to check that the message was delivered successfully.
-
-In rare cases, message delivery can fail if the user's email gateway rejects the message. This could happen for a number of reasons, including illegial attachment data, bad credentials, or rate limiting. Inbox will always return a `200 Success` response to `/send` and continue trying to send the message if the initial attempt fails. To check whether a message has been successfully delivered, see [Confirming Message Delivery](#confirming-message-delivery).
+Perform a POST request with the POST body below to send an existing draft. If the message is sent successfully, the thread receives the `sent` tag. Sent drafts no longer appear in the user's drafts list.
 
 ```
 :::json
@@ -46,52 +44,14 @@ Messages you create or send __should not include quoted text__ when they are in 
 }
 ```
 
-#Monitoring Message Delivery
+#Handling Errors
+In rare cases, message delivery can fail if the user's email gateway rejects the message. This could happen for a number of reasons, including illegal attachment data, bad credentials, or rate limiting. If your message is sent successsfully, the server will respond with an HTTP response code of 200 OK. If your message couldn't be sent, the server will respond with an appropriate error code.
 
-The `/send` API returns the JSON of the draft that was queued for delivery, including it's ID.
-
-**Response Body**
-
-```
-:::json
-{
-    "id": "9nhhb7w3tinsn4zkg9vjr3cxz",
-    "version": "evrm018jqzwbgmzg0qp61oqrr",
-    "state": "sending",
-    "subject": "Dinner on Friday?",
-    "to": [
-        {
-            "name": "Ben Bitdiddle",
-            "email": "ben.bitdiddle@gmail.com"
-        }
-    ],
-    "body": "<html><body>....</body></html>"
-    ...
-}
-```
-
-
-The draft's `state` attribute allows you to track it's state through the delivery process. You can request the draft object after calling the `/send` API to see if the message has been sent.
-
-```
-:::xml
-GET /n/<namespace_id>/drafts/<draft_id>
-```
-
-**Response Body**
-
-```
-:::json
-{
-    "state": "sent",
-    "subject": "Dinner on Friday?",
-    "to": [
-        {
-            "name": "Ben Bitdiddle",
-            "email": "ben.bitdiddle@gmail.com",
-        }
-    ],
-    "body": "<html><body>....</body></html>",
-    ...
-}
-```
+Code | Description
+-- | --
+200 | OK - Your message was sent.
+400 | Bad Request - Your message was malformed, or contained an invalid parameter.
+402 | Recipients Rejected - Delivery to some or all recipients was refused.
+403 | Unauthorized - The server was unable to authenticate with the user's mail provider. Re-authenticate the user and try again.
+429 | Rate-limited - Too many messages sent recently. Wait and try again.
+503 | Service Unavailable - There was an error connecting to the user's mail provider. Wait and try again.

@@ -79,7 +79,7 @@ GET https://api.inboxapp.com/n/<namespace_id>/calendars/<calendar_id>
 
 # Adding a new calendar
 
-New calendars can easily be created with the following API. Note these currently only exist within Inbox, and do not sync back to the users underlying email provider (e.g., Google Calendars).
+New calendars can easily be created with the following API. Note these currently only exist within Inbox, and do not sync back to the user's underlying email provider (e.g., Google Calendars).
 
 ```
 :::xml

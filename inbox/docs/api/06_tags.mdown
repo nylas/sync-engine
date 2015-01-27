@@ -54,7 +54,6 @@ Inbox exposes a set of standard, canonical tags: an extended version of [RFC-615
 * **`inbox`**
 * **`archive`**
 * **`drafts`**
-* **`sending`**
 * **`sent`**
 * **`spam`**
 * **`starred`**
