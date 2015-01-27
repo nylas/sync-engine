@@ -17,7 +17,7 @@ from inbox.api import filtering
 from inbox.api.validation import (get_tags, get_attachments,
                                   get_calendar, get_thread, get_recipients,
                                   get_draft, valid_public_id, valid_event,
-                                  valid_event_update, timestamp, boolean,
+                                  valid_event_update, timestamp,
                                   bounded_str, view, strict_parse_args, limit,
                                   valid_event_action, valid_rsvp,
                                   ValidatableArgument,
@@ -760,20 +760,15 @@ def event_delete_api(public_id):
 def files_api():
     g.parser.add_argument('filename', type=bounded_str, location='args')
     g.parser.add_argument('message_id', type=valid_public_id, location='args')
-    g.parser.add_argument('file_id', type=valid_public_id, location='args')
     g.parser.add_argument('content_type', type=bounded_str, location='args')
-    g.parser.add_argument('is_attachment', type=boolean, default=None,
-                          location='args')
     g.parser.add_argument('view', type=view, location='args')
 
     args = strict_parse_args(g.parser, request.args)
     files = filtering.files(
         namespace_id=g.namespace.id,
-        file_public_id=args['file_id'],
         message_public_id=args['message_id'],
         filename=args['filename'],
         content_type=args['content_type'],
-        is_attachment=args['is_attachment'],
         limit=args['limit'],
         offset=args['offset'],
         view=args['view'],
