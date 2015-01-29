@@ -67,7 +67,7 @@ from __future__ import division
 from collections import namedtuple
 from datetime import datetime
 
-from gevent import Greenlet, spawn, sleep
+from gevent import Greenlet, kill, spawn, sleep
 from gevent.queue import LifoQueue
 from sqlalchemy import desc, func
 from sqlalchemy.orm.exc import NoResultFound
@@ -295,7 +295,8 @@ class FolderSyncEngine(Greenlet):
 
         finally:
             if change_poller is not None:
-                change_poller.kill()
+                # schedule change_poller to die
+                kill(change_poller)
 
     def poll_impl(self):
         with self.conn_pool.get() as crispin_client:

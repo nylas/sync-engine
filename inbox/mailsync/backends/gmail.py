@@ -21,7 +21,7 @@ user always gets the full thread when they look at mail.
 """
 from __future__ import division
 from collections import namedtuple
-from gevent import spawn, sleep
+from gevent import kill, spawn, sleep
 from sqlalchemy.orm import joinedload, load_only
 
 from inbox.util.itert import chunk, partition
@@ -118,7 +118,8 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                 self.download_uids(crispin_client, download_stack)
         finally:
             if change_poller is not None:
-                change_poller.kill()
+                # schedule change_poller to die
+                kill(change_poller)
 
     def resync_uids_impl(self):
         with mailsync_session_scope() as db_session:
