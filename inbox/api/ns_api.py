@@ -1147,6 +1147,9 @@ def draft_send_api():
                                       tags, replyto_thread, syncback=False)
         resp = send_draft(g.namespace.account, draft, g.db_session,
                           schedule_remote_delete=False)
+        if resp.status_code != 200:
+            g.db_session.delete(draft)
+            g.db_session.commit()
 
     return resp
 
