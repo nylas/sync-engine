@@ -27,6 +27,9 @@ class Folder(MailSyncBase):
     # Set the name column to be case sensitive, which isn't the default for
     # MySQL. This is a requirement since IMAP allows users to create both a
     # 'Test' and a 'test' (or a 'tEST' for what we care) folders.
+    # NOTE: this doesn't hold for EAS, which is case insensitive for non-Inbox
+    # folders (see
+    # https://msdn.microsoft.com/en-us/library/ee624913(v=exchg.80).aspx).
     name = Column(String(MAX_FOLDER_NAME_LENGTH,
                          collation='utf8mb4_bin'), nullable=True)
     canonical_name = Column(String(MAX_FOLDER_NAME_LENGTH), nullable=True)
