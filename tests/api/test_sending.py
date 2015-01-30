@@ -4,6 +4,7 @@ import json
 import pytest
 from flanker import mime
 from inbox.basicauth import OAuthError
+from inbox.models import Message
 from tests.util.base import api_client, default_account
 
 
@@ -261,3 +262,11 @@ def test_reply_headers_set(patch_smtp, api_client, example_draft):
     parsed = mime.from_string(msg)
     assert 'In-Reply-To' in parsed.headers
     assert 'References' in parsed.headers
+
+
+def test_draft_not_persisted_if_sending_fails(recipients_refused, api_client,
+                                              db):
+    api_client.post_data('/send', {'to': [{'email': 'bob@foocorp.com'}],
+                                   'subject': 'some unique subject'})
+    assert db.session.query(Message).filter_by(
+        subject='some unique subject').first() is None

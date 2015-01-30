@@ -1,4 +1,4 @@
-from flask import jsonify
+from flask import jsonify, make_response
 
 
 class APIException(Exception):
@@ -35,4 +35,4 @@ def err(http_code, message, **kwargs):
         'message': message
     }
     resp.update(kwargs)
-    return jsonify(resp), http_code
+    return make_response(jsonify(resp), http_code)
