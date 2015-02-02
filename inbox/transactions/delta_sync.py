@@ -32,7 +32,7 @@ def get_transaction_cursor_near_timestamp(namespace_id, timestamp, db_session):
     """
     dt = datetime.utcfromtimestamp(timestamp)
     transaction = db_session.query(Transaction). \
-        order_by(desc(Transaction.id)). \
+        order_by(desc(Transaction.created_at)). \
         filter(Transaction.created_at < dt,
                Transaction.namespace_id == namespace_id).first()
     if transaction is None:
