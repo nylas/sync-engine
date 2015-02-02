@@ -9,7 +9,6 @@ Types returned for data are the column types defined via SQLAlchemy.
 Eventually we're going to want a better way of ACLing functions that operate on
 accounts.
 """
-from datetime import datetime
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
 
