@@ -352,7 +352,7 @@ class FolderSyncEngine(Greenlet):
                         del data_sha256_message[data_sha256]
                     else:
                         self.download_and_commit_uids(crispin_client,
-                                                      self.folder_id,
+                                                      self.folder_name,
                                                       [uid])
                     self.heartbeat_status.publish()
                     # FIXME: do we want to throttle the account when recovering
