@@ -57,7 +57,7 @@ def create_draft(db_session, account, to_addr=None, subject=None,
                                  replyto_thread, is_reply, syncback=syncback)
 
 
-def update_draft(db_session, account, original_draft, to_addr=None,
+def update_draft(db_session, account, draft, to_addr=None,
                  subject=None, body=None, blocks=None, cc_addr=None,
                  bcc_addr=None, tags=None):
     """
@@ -66,12 +66,12 @@ def update_draft(db_session, account, original_draft, to_addr=None,
 
     def update(attr, value=None):
         if value is not None:
-            setattr(original_draft, attr, value)
+            setattr(draft, attr, value)
 
             if attr == 'sanitized_body':
                 # Update size, snippet too
-                original_draft.size = len(value)
-                original_draft.snippet = original_draft.calculate_html_snippet(
+                draft.size = len(value)
+                draft.snippet = draft.calculate_html_snippet(
                     value)
 
     update('to_addr', to_addr)
@@ -84,49 +84,63 @@ def update_draft(db_session, account, original_draft, to_addr=None,
     # Remove any attachments that aren't specified
     new_block_ids = [b.id for b in blocks]
     for part in filter(lambda x: x.block_id not in new_block_ids,
-                       original_draft.parts):
-        original_draft.parts.remove(part)
+                       draft.parts):
+        draft.parts.remove(part)
         db_session.delete(part)
 
     # Parts, tags require special handling
     for block in blocks:
         # Don't re-add attachments that are already attached
-        if block.id in [p.block_id for p in original_draft.parts]:
+        if block.id in [p.block_id for p in draft.parts]:
             continue
         part = Part(block=block)
         part.namespace_id = account.namespace.id
         part.content_disposition = 'attachment'
         part.is_inboxapp_attachment = True
-        original_draft.parts.append(part)
+        draft.parts.append(part)
 
         db_session.add(part)
 
-    thread = original_draft.thread
+    thread = draft.thread
+    if len(thread.messages) == 1:
+        # If there are no prior messages on the thread, update its subject and
+        # dates to match the draft.
+        thread.subject = draft.subject
+        thread.subjectdate = draft.received_date
+        thread.recentdate = draft.received_date
+        attachment_tag = thread.namespace.tags['attachment']
+        if draft.attachments:
+            thread.apply_tag(attachment_tag)
+        else:
+            thread.remove_tag(attachment_tag)
+
     if tags:
         tags_to_keep = {tag for tag in thread.tags if not tag.user_created}
         thread.tags = tags | tags_to_keep
 
     # Remove previous message-contact associations, and create new ones.
-    original_draft.contacts = []
-    update_contacts_from_message(db_session, original_draft, account.namespace)
+    draft.contacts = []
+    update_contacts_from_message(db_session, draft, account.namespace)
 
-    # Sync to remote
-    schedule_action('save_draft', original_draft, original_draft.namespace.id,
-                    db_session)
-    # Delete previous version on remote
-    schedule_action('delete_draft', original_draft,
-                    original_draft.namespace.id, db_session,
-                    inbox_uid=original_draft.inbox_uid,
-                    message_id_header=original_draft.message_id_header)
+    prior_inbox_uid = draft.inbox_uid
+    prior_message_id_header = draft.message_id_header
 
     # Update version  + inbox_uid (is_created is already set)
     version = generate_public_id()
     update('version', version)
     update('inbox_uid', version)
 
-    db_session.commit()
+    # Sync to remote
+    schedule_action('save_draft', draft, draft.namespace.id,
+                    db_session)
+    # Delete previous version on remote
+    schedule_action('delete_draft', draft,
+                    draft.namespace.id, db_session,
+                    inbox_uid=prior_inbox_uid,
+                    message_id_header=prior_message_id_header)
 
-    return original_draft
+    db_session.commit()
+    return draft
 
 
 def delete_draft(db_session, account, draft):
@@ -240,6 +254,9 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
                 recentdate=message.received_date,
                 namespace=account.namespace,
                 subjectdate=message.received_date)
+            if message.attachments:
+                attachment_tag = thread.namespace.tags['attachment']
+                thread.apply_tag(attachment_tag)
             db_session.add(thread)
 
         message.thread = thread
