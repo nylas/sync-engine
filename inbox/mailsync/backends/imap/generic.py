@@ -353,7 +353,7 @@ class FolderSyncEngine(Greenlet):
                     else:
                         self.download_and_commit_uids(crispin_client,
                                                       self.folder_name,
-                                                      [uid])
+                                                      [remote_uid])
                     self.heartbeat_status.publish()
                     # FIXME: do we want to throttle the account when recovering
                     # from UIDVALIDITY changes? -siro
