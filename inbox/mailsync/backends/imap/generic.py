@@ -208,6 +208,7 @@ class FolderSyncEngine(Greenlet):
                 self.heartbeat_status.publish(state=self.state)
             except UidInvalid:
                 self.state = self.state + ' uidinvalid'
+                self.heartbeat_status.publish(state=self.state)
             # State handlers are idempotent, so it's okay if we're
             # killed between the end of the handler and the commit.
             if self.state != old_state:
