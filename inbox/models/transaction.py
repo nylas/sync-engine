@@ -27,6 +27,8 @@ class Transaction(MailSyncBase, HasPublicID):
 Index('namespace_id_deleted_at', Transaction.namespace_id,
       Transaction.deleted_at)
 Index('object_type_record_id', Transaction.object_type, Transaction.record_id)
+Index('namespace_id_created_at', Transaction.namespace_id,
+      Transaction.created_at)
 
 
 def create_revisions(session):

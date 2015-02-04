@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.41, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.40, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.5.41-0ubuntu0.12.04.1
+-- Server version	5.5.40-0ubuntu0.12.04.1-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -145,8 +145,32 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('5349c1a03fde');
+INSERT INTO `alembic_version` VALUES ('3bb4a941639c');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `aolaccount`
+--
+
+DROP TABLE IF EXISTS `aolaccount`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `aolaccount` (
+  `id` int(11) NOT NULL,
+  `password` varchar(256) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `aolaccount_ibfk_1` FOREIGN KEY (`id`) REFERENCES `imapaccount` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `aolaccount`
+--
+
+LOCK TABLES `aolaccount` WRITE;
+/*!40000 ALTER TABLE `aolaccount` DISABLE KEYS */;
+/*!40000 ALTER TABLE `aolaccount` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -1090,6 +1114,7 @@ CREATE TABLE `message` (
   KEY `ix_message_subject` (`subject`(191)),
   KEY `ix_message_received_date` (`received_date`),
   KEY `full_body_id_fk` (`full_body_id`),
+  KEY `ix_message_ns_id_is_draft_received_date` (`namespace_id`,`is_draft`,`received_date`),
   CONSTRAINT `full_body_id_fk` FOREIGN KEY (`full_body_id`) REFERENCES `block` (`id`),
   CONSTRAINT `message_ibfk_1` FOREIGN KEY (`thread_id`) REFERENCES `thread` (`id`) ON DELETE CASCADE,
   CONSTRAINT `message_ibfk_2` FOREIGN KEY (`resolved_message_id`) REFERENCES `message` (`id`),
@@ -1614,6 +1639,7 @@ CREATE TABLE `transaction` (
   KEY `ix_transaction_public_id` (`public_id`),
   KEY `namespace_id_deleted_at` (`namespace_id`,`deleted_at`),
   KEY `ix_transaction_object_public_id` (`object_public_id`),
+  KEY `namespace_id_created_at` (`namespace_id`,`created_at`),
   CONSTRAINT `transaction_ibfk_1` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=144 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1740,4 +1766,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-01-26 10:18:42
+-- Dump completed on 2015-02-03 17:56:10
