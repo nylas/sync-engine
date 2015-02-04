@@ -80,17 +80,18 @@ class Part(MailSyncBase):
         as well as attachments.
     """
     block_id = Column(Integer, ForeignKey(Block.id, ondelete='CASCADE'))
-    block = relationship(
-        Block,
-        backref=backref("parts", cascade="all, delete, delete-orphan"),
-        load_on_pending=True)
+    block = relationship(Block,
+                         backref=backref("parts",
+                                         passive_deletes=True,
+                                         cascade="all,delete,delete-orphan"),
+                         load_on_pending=True)
 
     message_id = Column(Integer, ForeignKey(Message.id, ondelete='CASCADE'))
-    message = relationship(
-        'Message',
-        backref=backref("parts",
-                        cascade="all, delete, delete-orphan"),
-        load_on_pending=True)
+    message = relationship('Message',
+                           backref=backref("parts",
+                                           passive_deletes=True,
+                                           cascade="all,delete,delete-orphan"),
+                           load_on_pending=True)
 
     walk_index = Column(Integer)
     content_disposition = Column(Enum('inline', 'attachment'))
