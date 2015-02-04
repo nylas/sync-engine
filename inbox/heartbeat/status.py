@@ -179,15 +179,14 @@ def get_heartbeat_status(host=None, port=6379, account_id=None):
             state = value.get('state', None)
             action = value.get('action', None)
 
-            if key.folder_id == -1:
-                # contacts
+            if key.folder_id == CONTACTS_FOLDER_ID:
                 device_alive = (now - heartbeat_at) < thresholds.contacts
-            elif key.folder_id == -2:
-                # events
+            elif key.folder_id == EVENTS_FOLDER_ID:
                 device_alive = (now - heartbeat_at) < thresholds.events
+            elif provider_name == 'eas' and action == 'throttled':
+                device_alive = (now - heartbeat_at) < thresholds.eas_throttled
             elif provider_name == 'eas' and action == 'ping':
-                # eas w/ ping
-                device_alive = (now - heartbeat_at) < thresholds.eas
+                device_alive = (now - heartbeat_at) < thresholds.eas_ping
             else:
                 device_alive = (now - heartbeat_at) < thresholds.base
             device_alive = device_alive and \
