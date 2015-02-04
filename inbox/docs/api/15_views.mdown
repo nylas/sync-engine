@@ -1,0 +1,43 @@
+Title: Views
+
+Instead of returning all data about an object, the following views allow you to customize the response for any endpoint. They can be combined with [filters](#filters).
+
+* **`count`** Return the number of objects in the collection being queried.
+
+* **`ids`** Return only the IDs of objects.
+
+# Examples
+
+## Count:
+
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/threads?tag=inbox&view=count
+```
+
+**Response**
+
+```
+:::json
+{
+    "count": 386
+}
+```
+
+## IDs:
+
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/messages?thread_id=aqb0llc2ioo0bclh7uxkim9z6&view=ids
+```
+
+**Response**
+
+```
+:::json
+[
+   "f594seo6izjks2s7qxjbwquol",
+   "3a95fq0askqgj7mnh6i281ahz",
+   "4vfg8p1om177q2cfx9sselkea"
+]
+```

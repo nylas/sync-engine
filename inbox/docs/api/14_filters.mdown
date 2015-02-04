@@ -41,10 +41,9 @@ Filters allow you to query mail data based on specific parameters. The more spec
 
 The filters API is not intended to be a replacement for full search functionality. We are working on a dedicated search API for freeform queries of mail data that you can use to perform high performance, full-text search in your application. We'd love to [hear your use-cases](mailto:support@nilas.com).
 
-
 # Wildcards & Multiple Value Support
 
-Filters do not currently support wildcards, such as `from=*@expedia.com`. Support for wildcards on specific filters may be added in the future, and we encourage you to submit pull requests for additional filter functionality you would find useful. Providing multiple values for a single filter, such as `tag=unread AND inbox` is also unsupported. The search API will likely add support for these complex use cases.
+Filters do not currently support wildcards, such as `from=*@expedia.com`. Support for wildcards on specific filters may be added in the future, and we encourage you to submit pull requests for additional filter functionality you would find useful. Providing multiple values for a single filter, such as `tag=unread AND inbox` is also unsupported.
 
 
 # Examples
