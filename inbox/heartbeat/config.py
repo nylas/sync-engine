@@ -31,8 +31,9 @@ def get_alive_thresholds():
         base = int(config.get_required('BASE_ALIVE_THRESHOLD'))
         contacts = int(config.get_required('CONTACTS_ALIVE_THRESHOLD'))
         events = int(config.get_required('EVENTS_ALIVE_THRESHOLD'))
-        eas_throttled = int(config.get_required('EAS_ALIVE_THRESHOLD'))
-        eas_ping = int(config.get_required('EAS_ALIVE_THRESHOLD'))
+        eas_throttled = int(
+            config.get_required('EAS_THROTTLED_ALIVE_THRESHOLD'))
+        eas_ping = int(config.get_required('EAS_PING_ALIVE_THRESHOLD'))
 
         alive_thresholds = AliveThresholds(
             base=timedelta(seconds=base),
