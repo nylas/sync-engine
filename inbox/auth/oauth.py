@@ -5,7 +5,7 @@ from imapclient import IMAPClient
 from socket import gaierror, error as socket_error
 from ssl import SSLError
 from simplejson import JSONDecodeError
-from inbox.auth import AuthHandler
+from inbox.auth.base import AuthHandler
 from inbox.basicauth import (ConnectionError, ValidationError,
                              TransientConnectionError, OAuthError)
 from inbox.models.backends.oauth import token_manager

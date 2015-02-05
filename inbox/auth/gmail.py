@@ -15,6 +15,7 @@ from inbox.log import get_logger
 log = get_logger()
 
 PROVIDER = 'gmail'
+AUTH_HANDLER_CLS = 'GmailAuthHandler'
 
 # Google OAuth app credentials
 OAUTH_CLIENT_ID = config.get_required('GOOGLE_OAUTH_CLIENT_ID')

@@ -172,7 +172,7 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
                 self.credential = account.password
 
     def _new_connection(self):
-        from inbox.auth import handler_from_provider
+        from inbox.auth.base import handler_from_provider
 
         # Ensure that connections are initialized serially, so as not to use
         # many db sessions on startup.

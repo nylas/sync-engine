@@ -9,7 +9,7 @@ from client import InboxTestClient
 from inbox.util.url import provider_from_address
 from google_auth_helper import google_auth
 from outlook_auth_helper import outlook_auth
-from inbox.auth import handler_from_provider
+from inbox.auth.base import handler_from_provider
 
 
 # we don't want to commit passwords to the repo.

@@ -2,7 +2,7 @@ import pytest
 from inbox.providers import providers
 from inbox.util.url import provider_from_address
 from inbox.util.url import InvalidEmailAddressError
-from inbox.auth import handler_from_provider
+from inbox.auth.base import handler_from_provider
 from inbox.auth.generic import GenericAuthHandler
 from inbox.auth.gmail import GmailAuthHandler
 from inbox.auth.outlook import OutlookAuthHandler

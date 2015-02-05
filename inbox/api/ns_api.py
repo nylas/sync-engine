@@ -24,7 +24,9 @@ from inbox.api.validation import (get_tags, get_attachments,
                                   validate_draft_recipients,
                                   validate_search_query,
                                   valid_delta_object_types)
-from inbox import events, contacts, sendmail
+import inbox.contacts.crud
+import inbox.events.crud
+from inbox.sendmail.base import (create_draft, update_draft, delete_draft)
 from inbox.log import get_logger
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from inbox.models.action_log import schedule_action, ActionError
@@ -548,8 +550,8 @@ def contact_create_api():
     email = data.get('email')
     if not any((name, email)):
         raise InputError('Contact name and email cannot both be null.')
-    new_contact = contacts.crud.create(g.namespace, g.db_session,
-                                       name, email)
+    new_contact = inbox.contacts.crud.create(g.namespace, g.db_session, name,
+                                             email)
     return g.encoder.jsonify(new_contact)
 
 
@@ -557,7 +559,7 @@ def contact_create_api():
 def contact_read_api(public_id):
     # Get all data for an existing contact.
     valid_public_id(public_id)
-    result = contacts.crud.read(g.namespace, g.db_session, public_id)
+    result = inbox.contacts.crud.read(g.namespace, g.db_session, public_id)
     if result is None:
         raise NotFoundError("Couldn't find contact {0}".format(public_id))
     return g.encoder.jsonify(result)
@@ -615,8 +617,8 @@ def event_create_api():
     # Handle ical uploads
     if request.headers.get('content-type') == 'text/calendar':
         ics_str = request.data
-        new_events = events.crud.create_from_ics(g.namespace, g.db_session,
-                                                 ics_str)
+        new_events = inbox.events.crud.create_from_ics(g.namespace,
+                                                       g.db_session, ics_str)
         if not new_events:
             raise InputError("Couldn't parse .ics file.")
 
@@ -643,15 +645,10 @@ def event_create_api():
         if 'status' not in p:
             p['status'] = 'noreply'
 
-    new_event = events.crud.create(g.namespace, g.db_session,
-                                     calendar,
-                                     title,
-                                     description,
-                                     location,
-                                     reminders,
-                                     recurrence,
-                                     when,
-                                     participants)
+    new_event = inbox.events.crud.create(g.namespace, g.db_session, calendar,
+                                         title, description, location,
+                                         reminders, recurrence, when,
+                                         participants)
 
     schedule_action('create_event', new_event, g.namespace.id, g.db_session)
     return g.encoder.jsonify(new_event)
@@ -665,9 +662,10 @@ def event_read_api(public_id):
                           location='args')
     g.parser.add_argument('action', type=valid_event_action, location='args')
     g.parser.add_argument('rsvp', type=valid_rsvp, location='args')
-    args = strict_parse_args(g.parser, request.args)
-
-    # FIXME karim -- re-enable this after landing the participants refactor (T687)
+    # FIXME karim -- re-enable this after landing the participants refactor
+    # (T687)
+    #args = strict_parse_args(g.parser, request.args)
+    #
     #if 'action' in args:
     #    # Participants are able to RSVP to events by clicking on links (e.g.
     #    # that are emailed to them). Therefore, the RSVP action is invoked via
@@ -696,7 +694,7 @@ def event_read_api(public_id):
     #            return err(404, "Couldn't find participant with id `{0}` "
     #                       .format(participant_id))
 
-    result = events.crud.read(g.namespace, g.db_session, public_id)
+    result = inbox.events.crud.read(g.namespace, g.db_session, public_id)
     if result is None:
         raise NotFoundError("Couldn't find event id {0}".format(public_id))
     return g.encoder.jsonify(result)
@@ -723,7 +721,8 @@ def event_update_api(public_id):
             data['participant_list'].append(p)
         del data['participants']
 
-    result = events.crud.update(g.namespace, g.db_session, public_id, data)
+    result = inbox.events.crud.update(g.namespace, g.db_session, public_id,
+                                      data)
 
     if result is None:
         raise NotFoundError("Couldn't find event {0}".format(public_id))
@@ -749,7 +748,7 @@ def event_delete_api(public_id):
     schedule_action('delete_event', event, g.namespace.id, g.db_session,
                     event_uid=event.uid,
                     calendar_name=event.calendar.name)
-    events.crud.delete(g.namespace, g.db_session, public_id)
+    inbox.events.crud.delete(g.namespace, g.db_session, public_id)
     return g.encoder.jsonify(None)
 
 
@@ -942,7 +941,7 @@ def calendar_create_api():
 
     description = data.get('description', None)
 
-    cal_create = events.crud.create_calendar
+    cal_create = inbox.events.crud.create_calendar
     new_calendar = cal_create(g.namespace, g.db_session, name, description)
     return g.encoder.jsonify(new_calendar)
 
@@ -952,7 +951,8 @@ def calendar_read_api(public_id):
     """Get all data for an existing calendar."""
     valid_public_id(public_id)
 
-    result = events.crud.read_calendar(g.namespace, g.db_session, public_id)
+    result = inbox.events.crud.read_calendar(g.namespace, g.db_session,
+                                             public_id)
     if result is None:
         raise NotFoundError("Couldn't find calendar {0}".format(public_id))
     return g.encoder.jsonify(result)
@@ -966,8 +966,8 @@ def calendar_update_api(public_id):
         raise InputError("Cannot update a read_only calendar.")
 
     data = request.get_json(force=True)
-    result = events.crud.update_calendar(g.namespace, g.db_session,
-                                         public_id, data)
+    result = inbox.events.crud.update_calendar(g.namespace, g.db_session,
+                                               public_id, data)
 
     if result is None:
         raise NotFoundError("Couldn't find calendar {0}".format(public_id))
@@ -981,8 +981,8 @@ def calendar_delete_api(public_id):
     if calendar.read_only:
         raise InputError("Cannot delete a read_only calendar.")
 
-    result = events.crud.delete_calendar(g.namespace, g.db_session,
-                                         public_id)
+    result = inbox.events.crud.delete_calendar(g.namespace, g.db_session,
+                                               public_id)
 
     return g.encoder.jsonify(result)
 
@@ -1062,9 +1062,8 @@ def draft_create_api():
                                 g.db_session)
 
     try:
-        draft = sendmail.create_draft(g.db_session, g.namespace.account, to,
-                                      subject, body, files, cc, bcc,
-                                      tags, replyto_thread)
+        draft = create_draft(g.db_session, g.namespace.account, to, subject,
+                             body, files, cc, bcc, tags, replyto_thread)
     except ActionError as e:
         return err(e.error, str(e))
 
@@ -1091,9 +1090,8 @@ def draft_update_api(public_id):
     files = get_attachments(data.get('file_ids'), g.namespace.id, g.db_session)
 
     try:
-        draft = sendmail.update_draft(g.db_session, g.namespace.account,
-                                      original_draft, to, subject, body,
-                                      files, cc, bcc, tags)
+        draft = update_draft(g.db_session, g.namespace.account, original_draft,
+                             to, subject, body, files, cc, bcc, tags)
     except ActionError as e:
         return err(e.error, str(e))
 
@@ -1108,8 +1106,7 @@ def draft_delete_api(public_id):
                       g.db_session)
 
     try:
-        result = sendmail.delete_draft(g.db_session, g.namespace.account,
-                                       draft)
+        result = delete_draft(g.db_session, g.namespace.account, draft)
     except ActionError as e:
         return err(e.error, str(e))
 
@@ -1142,9 +1139,9 @@ def draft_send_api():
         replyto_thread = get_thread(data.get('thread_id'), g.namespace.id,
                                     g.db_session)
 
-        draft = sendmail.create_draft(g.db_session, g.namespace.account,
-                                      to, subject, body, files, cc, bcc,
-                                      tags, replyto_thread, syncback=False)
+        draft = create_draft(g.db_session, g.namespace.account, to, subject,
+                             body, files, cc, bcc, tags, replyto_thread,
+                             syncback=False)
         resp = send_draft(g.namespace.account, draft, g.db_session,
                           schedule_remote_delete=False)
         if resp.status_code != 200:

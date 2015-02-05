@@ -8,7 +8,8 @@ log = get_logger()
 from inbox.util.debug import bind_context
 from inbox.util.concurrency import retry_and_report_killed
 from inbox.util.itert import partition
-from inbox.models import (Account, Folder, MAX_FOLDER_NAME_LENGTH)
+from inbox.models import Account, Folder
+from inbox.models.constants import MAX_FOLDER_NAME_LENGTH
 from inbox.models.session import session_scope
 from inbox.mailsync.exc import SyncException
 from inbox.heartbeat.status import clear_heartbeat_status

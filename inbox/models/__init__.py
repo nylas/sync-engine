@@ -1,28 +1,31 @@
-""" Top level module for all models """
+"""
+Caution: subtleties ahead.
+
+It's desirable to ensure that all SQLAlchemy models are imported before you
+try to issue any sort of query. The reason you want this assurance is because
+if you have mutually dependent relationships between models in separate
+files, at least one of those relationships must be specified by a string
+reference, in order to avoid circular import errors. But if you haven't
+actually imported the referenced model by query time, SQLAlchemy can't resolve
+the reference.
+
+Previously, this was accomplished by doing:
 
 from inbox.models.account import Account
-from inbox.models.base import MailSyncBase
-from inbox.models.action_log import ActionLog
-from inbox.models.block import Block, Part
-from inbox.models.constants import MAX_FOLDER_NAME_LENGTH
-from inbox.models.contact import MessageContactAssociation, Contact
-from inbox.models.calendar import Calendar
-from inbox.models.event import Event
-from inbox.models.folder import Folder, FolderItem
-from inbox.models.message import Message
-from inbox.models.namespace import Namespace
-from inbox.models.search import SearchIndexCursor
-from inbox.models.secret import Secret
-from inbox.models.tag import Tag
-from inbox.models.thread import Thread, TagItem
-from inbox.models.transaction import Transaction
-from inbox.models.when import When, Time, TimeSpan, Date, DateSpan
+
+etc. right here.
+
+However, this file is part of a namespace package: the contents of
+inbox.models.backends may be extended by separately distributed projects.
+Thus, those projects also contain their own "inbox/models/__init__.py". If
+its contents differ from this one, things break if the wrong __init__ file is
+loaded first. But it's painful to have to change all the __init__ files each
+time you add a model. So we hoist the actual importing out of this file and
+into inbox.models.meta, and engage in a bit of trickery to make model classes
+actually available via e.g.
+>>> from inbox.models import Account
+"""
 
 from inbox.models.backends import module_registry as backend_module_registry
-
-__all__ = ['Account', 'ActionLog', 'MailSyncBase', 'Block', 'Part',
-           'MessageContactAssociation', 'Contact', 'Date', 'DateSpan', 'Event',
-           'Folder', 'FolderItem', 'Message', 'Namespace', 'Calendar',
-           'Tag', 'TagItem', 'Thread', 'Time', 'TimeSpan', 'Transaction',
-           'When', 'SearchIndexCursor', 'Secret',
-           'MAX_FOLDER_NAME_LENGTH', 'backend_module_registry']
+from inbox.models.meta import load_models
+locals().update({model.__name__: model for model in load_models()})

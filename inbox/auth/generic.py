@@ -9,7 +9,7 @@ import sqlalchemy.orm.exc
 from inbox.log import get_logger
 log = get_logger()
 
-from inbox.auth import AuthHandler
+from inbox.auth.base import AuthHandler
 from inbox.basicauth import (ConnectionError, ValidationError,
                              TransientConnectionError,
                              UserRecoverableConfigError)
@@ -17,6 +17,7 @@ from inbox.models import Namespace
 from inbox.models.backends.generic import GenericAccount
 
 PROVIDER = 'generic'
+AUTH_HANDLER_CLS = 'GenericAuthHandler'
 
 
 class GenericAuthHandler(AuthHandler):

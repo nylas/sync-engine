@@ -77,20 +77,6 @@ setup(
             'imap_gm=inbox.util.consistency_check.imap_gm:ImapGmailPlugin',
             'local_gm=inbox.util.consistency_check.local_gm:LocalGmailPlugin',
         ],
-
-        # See inbox/providers.py
-        # 'inbox.providers': [],
-
-        # Pluggable auth providers.  See inbox/auth/__init__.py
-        'inbox.auth': [
-            'generic = inbox.auth.generic:GenericAuthHandler',
-            'gmail = inbox.auth.gmail:GmailAuthHandler',
-            # 'oauth = inbox.auth.oauth:OAuthAuthHandler',
-            'outlook = inbox.auth.outlook:OutlookAuthHandler',
-        ],
-
-        # Pluggable auth provider mixins.  See inbox/auth/__init__.py
-        # 'inbox.auth.mixins': [],
     },
     zip_safe=False,
     author="Inbox Team",
