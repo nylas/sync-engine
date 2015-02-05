@@ -6,7 +6,7 @@ from setproctitle import setproctitle; setproctitle('inbox-auth')
 
 from inbox.util.startup import preflight
 from inbox.util.url import provider_from_address
-from inbox.auth import handler_from_provider
+from inbox.auth.base import handler_from_provider
 from inbox.models.session import session_scope
 from inbox.models import Account
 from inbox.basicauth import NotSupportedError

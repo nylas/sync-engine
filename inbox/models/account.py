@@ -33,7 +33,7 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
 
     @property
     def auth_handler(self):
-        from inbox.auth import handler_from_provider
+        from inbox.auth.base import handler_from_provider
         return handler_from_provider(self.provider)
 
     @property

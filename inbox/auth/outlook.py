@@ -14,6 +14,7 @@ from inbox.models.backends.oauth import token_manager
 from inbox.util.url import url_concat
 
 PROVIDER = 'outlook'
+AUTH_HANDLER_CLS = 'OutlookAuthHandler'
 
 # Outlook OAuth app credentials
 OAUTH_CLIENT_ID = config.get_required('MS_LIVE_OAUTH_CLIENT_ID')
