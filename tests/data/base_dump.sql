@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.40, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.41, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.5.40-0ubuntu0.12.04.1-log
+-- Server version	5.5.41-0ubuntu0.12.04.1
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -53,6 +53,7 @@ CREATE TABLE `account` (
   `sync_contacts` tinyint(1) NOT NULL,
   `sync_events` tinyint(1) NOT NULL,
   PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_account_address` (`_canonicalized_address`),
   KEY `ix_account_public_id` (`public_id`),
   KEY `account_ibfk_2` (`inbox_folder_id`),
   KEY `account_ibfk_3` (`sent_folder_id`),
@@ -145,7 +146,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('3bb4a941639c');
+INSERT INTO `alembic_version` VALUES ('1d93c9f9f506');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1294,7 +1295,7 @@ CREATE TABLE `part` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `message_id` (`message_id`,`walk_index`),
   KEY `part_ibfk_1` (`block_id`),
-  CONSTRAINT `part_ibfk_1` FOREIGN KEY (`block_id`) REFERENCES `block` (`id`),
+  CONSTRAINT `part_ibfk_1` FOREIGN KEY (`block_id`) REFERENCES `block` (`id`) ON DELETE CASCADE,
   CONSTRAINT `part_ibfk_2` FOREIGN KEY (`message_id`) REFERENCES `message` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=51 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1766,4 +1767,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-02-03 17:56:10
+-- Dump completed on 2015-02-04 16:58:27
