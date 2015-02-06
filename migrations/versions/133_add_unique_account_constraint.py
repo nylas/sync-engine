@@ -1,14 +1,14 @@
 """add unique account constraint
 
 Revision ID: 13faec74da45
-Revises: 2b288dc444f
+Revises: 1d93c9f9f506
 Create Date: 2015-02-02 13:38:21.725739
 
 """
 
 # revision identifiers, used by Alembic.
 revision = '13faec74da45'
-down_revision = '3bb4a941639c'
+down_revision = '1d93c9f9f506'
 
 from alembic import op
 
