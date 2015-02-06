@@ -1174,7 +1174,7 @@ def draft_send_api():
                              format(draft_public_id))
 
         if not draft.to_addr:
-            raise InputError(400, "No 'to:' recipients specified")
+            raise InputError("No 'to:' recipients specified")
 
         if draft.version != version:
             return err(
