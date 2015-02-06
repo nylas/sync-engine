@@ -6,7 +6,7 @@ from inbox.events.base import BaseEventProvider
 @fixture(scope='function')
 def event_sync(config, db):
     from inbox.events.remote_sync import EventSync
-    return EventSync('gmail', 1, 1)
+    return EventSync('inboxapptest@gmail.com', 'gmail', 1, 1)
 
 
 @fixture(scope='function')

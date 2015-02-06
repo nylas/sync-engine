@@ -175,7 +175,8 @@ class FolderSyncEngine(Greenlet):
 
         self.heartbeat_status = HeartbeatStatusProxy(self.account_id,
                                                      self.folder_id)
-        self.heartbeat_status.publish(provider_name=self.provider_name,
+        self.heartbeat_status.publish(email_address=email_address,
+                                      provider_name=self.provider_name,
                                       folder_name=self.folder_name)
 
     def _run(self):

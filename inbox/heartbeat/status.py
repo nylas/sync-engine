@@ -12,6 +12,7 @@ EVENTS_FOLDER_ID = '-2'
 
 
 class HeartbeatStatusKey(object):
+
     def __init__(self, account_id, folder_id):
         self.account_id = account_id
         self.folder_id = folder_id
@@ -48,6 +49,7 @@ class HeartbeatStatusKey(object):
 
 
 class HeartbeatStatusProxy(object):
+
     def __init__(self, account_id, folder_id, device_id=0):
         self.key = HeartbeatStatusKey(account_id, folder_id)
         self.device_id = device_id
@@ -55,8 +57,8 @@ class HeartbeatStatusProxy(object):
         self.value = {}
 
     def publish(self, **kwargs):
-        schema = {'provider_name', 'folder_name', 'heartbeat_at', 'state',
-                  'action'}
+        schema = {'email_address', 'provider_name', 'folder_name',
+                  'heartbeat_at', 'state', 'action'}
 
         def check_schema(**kwargs):
             for kw in kwargs:
@@ -81,61 +83,72 @@ class HeartbeatStatusProxy(object):
                       exc_info=True)
 
 
-class AccountHeartbeatStatus(object):
-    folders = []
-    alive = False
-    missing = False
+class DeviceHeartbeatStatus(object):
 
-    def __init__(self, account):
-        if account is None or account == {}:
-            self.missing = True
-            return
-        self.raw = account
-        # initialize from JSON
-        # if format {acct_id: ... }
-        if len(account.keys()) == 1:
-            self.account_id = account.keys()[0]
-            account = account.get(self.account_id)
-        self.alive, self.provider, raw_folders = account
-        self.init_folders(raw_folders)
+    def __init__(self):
+        self.alive = True
+        self.state = None
+        self.heartbeat_at = None
 
-    def init_folders(self, raw_folders):
-        self.folders = []
-        for folder_id in raw_folders:
-            self.folders.append(FolderHeartbeatStatus(raw_folders[folder_id],
-                                                      folder_id))
-
-    @property
-    def dead_folders(self):
-        return [f.folder_name for f in self.folders if not f.alive]
-
-    @property
-    def initial_sync(self):
-        return any([f.status == 'initial' for f in self.folders])
-
-    @property
-    def poll_sync(self):
-        # should also be 'not initial'
-        return all([f.status == 'poll' for f in self.folders])
+    def jsonify(self):
+        return {'alive': self.alive,
+                'state': self.state,
+                'heartbeat_at': str(self.heartbeat_at)}
 
 
 class FolderHeartbeatStatus(object):
-    folder_id = None
-    alive = False
-    status = None
 
-    def __init__(self, folder, folder_id=None):
-        if folder_id:
-            self.folder_id = folder_id
-        else:
-            self.folder_id = folder.keys()[0]
-            folder = folder[self.folder_id]
-        self.alive, self.folder_name, device = folder
-        device_key = device.keys()[0]
-        device_status = device[device_key]
-        self.status = device_status['state']
-        self.heartbeat_at = device_status['heartbeat_at']
-        self.action = device_status['action']
+    def __init__(self):
+        self.alive = True
+        self.name = ''
+        self.devices = {}
+
+    @property
+    def initial_sync(self):
+        return any(device.state == 'initial'
+                   for device in self.devices.itervalues())
+
+    @property
+    def poll_sync(self):
+        return all(device.state == 'poll'
+                   for device in self.devices.itervalues())
+
+    def jsonify(self):
+        return {'alive': self.alive,
+                'name': self.name,
+                'devices': {device_id: device.jsonify()
+                            for device_id, device in self.devices.iteritems()}}
+
+
+class AccountHeartbeatStatus(object):
+
+    def __init__(self, missing=False):
+        self.missing = missing
+        self.alive = not self.missing
+        self.email_address = ''
+        self.provider_name = ''
+        self.folders = {}
+
+    @property
+    def dead_folders(self):
+        return [folder.name
+                for folder in self.folders.itervalue() if not folder.alive]
+
+    @property
+    def initial_sync(self):
+        return any(folder.initial_sync for folder in self.folders.itervalue())
+
+    @property
+    def poll_sync(self):
+        return all(folder.poll_sync for folder in self.folders.itervalue())
+
+    def jsonify(self):
+        return {'missing': self.missing,
+                'alive': self.alive,
+                'email_address': self.email_address,
+                'provider_name': self.provider_name,
+                'folders': {folder_id: folder.jsonify()
+                            for folder_id, folder in self.folders.iteritems()}}
 
 
 def get_heartbeat_status(host=None, port=6379, account_id=None):
@@ -163,51 +176,55 @@ def get_heartbeat_status(host=None, port=6379, account_id=None):
     accounts = {}
     for (k, v) in zip(keys, values):
         key = HeartbeatStatusKey.from_string(k)
-        account_alive, provider_name, folders = accounts.get(key.account_id,
-                                                             (True, '', {}))
-        folder_alive, folder_name, devices = folders.get(key.folder_id,
-                                                         (True, '', {}))
+
+        account = accounts.get(key.account_id, AccountHeartbeatStatus())
+        folder = account.folders.get(key.folder_id, FolderHeartbeatStatus())
 
         for device_id in v:
             value = json.loads(v[device_id])
 
-            provider_name = value['provider_name']
-            folder_name = value['folder_name']
+            # eventually overwrite the following two fields, no big deal
+            account.email_address = value['email_address']
+            account.provider_name = value['provider_name']
+            folder.name = value['folder_name']
 
-            heartbeat_at = datetime.strptime(value['heartbeat_at'],
-                                             '%Y-%m-%d %H:%M:%S.%f')
-            state = value.get('state', None)
+            device = DeviceHeartbeatStatus()
+            device.heartbeat_at = datetime.strptime(value['heartbeat_at'],
+                                                    '%Y-%m-%d %H:%M:%S.%f')
+            device.state = value.get('state', None)
+
             action = value.get('action', None)
 
             if key.folder_id == CONTACTS_FOLDER_ID:
-                device_alive = (now - heartbeat_at) < thresholds.contacts
+                device.alive = (now - device.heartbeat_at) < \
+                    thresholds.contacts
             elif key.folder_id == EVENTS_FOLDER_ID:
-                device_alive = (now - heartbeat_at) < thresholds.events
-            elif provider_name == 'eas' and action == 'throttled':
-                device_alive = (now - heartbeat_at) < thresholds.eas_throttled
-            elif provider_name == 'eas' and action == 'ping':
-                device_alive = (now - heartbeat_at) < thresholds.eas_ping
+                device.alive = (now - device.heartbeat_at) < thresholds.events
+            elif account.provider_name == 'eas' and action == 'throttled':
+                device.alive = (now - device.heartbeat_at) < \
+                    thresholds.eas_throttled
+            elif account.provider_name == 'eas' and action == 'ping':
+                device.alive = (now - device.heartbeat_at) < \
+                    thresholds.eas_ping
             else:
-                device_alive = (now - heartbeat_at) < thresholds.base
-            device_alive = device_alive and \
-                (state in set([None, 'initial', 'poll']))
+                device.alive = (now - device.heartbeat_at) < thresholds.base
+            device.alive = device.alive and \
+                (device.state in {None, 'initial', 'poll'})
 
-            devices[int(device_id)] = {'heartbeat_at': str(heartbeat_at),
-                                       'state': state,
-                                       'action': action,
-                                       'alive': device_alive}
+            folder.devices[int(device_id)] = device
 
             # a folder is alive if and only if all the devices handling that
             # folder are alive
-            folder_alive = folder_alive and device_alive
-
-            folders[key.folder_id] = (folder_alive, folder_name, devices)
+            folder.alive = folder.alive and device.alive
+            account.folders[key.folder_id] = folder
 
             # an account is alive if and only if all the folders of the account
             # are alive
-            account_alive = account_alive and folder_alive
+            account.alive = account.alive and folder.alive
+            accounts[key.account_id] = account
 
-            accounts[key.account_id] = (account_alive, provider_name, folders)
+    if account_id and account_id not in accounts:
+        accounts[account_id] = AccountHeartbeatStatus(missing=True)
 
     return accounts
 

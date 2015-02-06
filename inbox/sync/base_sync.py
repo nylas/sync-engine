@@ -16,7 +16,7 @@ from inbox.heartbeat.status import HeartbeatStatusProxy, clear_heartbeat_status
 
 class BaseSync(gevent.Greenlet):
     def __init__(self, account_id, namespace_id, poll_frequency, folder_id,
-                 folder_name, provider_name):
+                 folder_name, email_address, provider_name):
         self.shutdown = gevent.event.Event()
         self.account_id = account_id
         self.namespace_id = namespace_id
@@ -24,10 +24,12 @@ class BaseSync(gevent.Greenlet):
         self.log = logger.new(account_id=account_id)
         self.folder_id = folder_id
         self.folder_name = folder_name
+        self.email_address = email_address
         self._provider_name = provider_name
         self.heartbeat_status = HeartbeatStatusProxy(self.account_id,
                                                      self.folder_id)
-        self.heartbeat_status.publish(provider_name=self._provider_name,
+        self.heartbeat_status.publish(email_address=self.email_address,
+                                      provider_name=self._provider_name,
                                       folder_name=self.folder_name)
 
         gevent.Greenlet.__init__(self)
