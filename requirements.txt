@@ -22,8 +22,7 @@ setproctitle==1.1.8
 gdata==2.0.18
 python-dateutil==2.3
 flanker==0.4.26
-# imapclient==0.11
-git+https://github.com/inboxapp/imapclient.git@inbox-modseq-hotfix#egg=imapclient
+imapclient==0.12
 alembic==0.6.4
 iconv==1.0
 pep8==1.4.6
