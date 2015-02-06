@@ -34,7 +34,9 @@ def cleanup_subject(subject_str):
     For instance, 'Re: Re: Re: Birthday party' becomes 'Birthday party'"""
     if subject_str is None:
         return ''
-    cleanup_regexp = "^((Re:|RE:|fwd:|FWD:)\s*)+"
+    # TODO consider expanding to all
+    # http://en.wikipedia.org/wiki/List_of_email_subject_abbreviations
+    cleanup_regexp = "(?i)^((re|fw|fwd|aw|wg):\s*)+"
     return re.sub(cleanup_regexp, "", subject_str)
 
 
@@ -88,8 +90,8 @@ class MessageTree(object):
             if len(prior_messages) > 0:
                 prior_messages[0].insert_message(message)
             else:
-                # there are no messages prior to this one. Insert directly under
-                # parent.
+                # there are no messages prior to this one. Insert
+                # directly under parent.
                 mt = MessageTree(message)
                 self.insert_child(mt)
             return

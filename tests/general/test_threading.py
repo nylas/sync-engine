@@ -13,6 +13,11 @@ def test_message_cleanup():
                 == "Alors, comment ça s'est passé ?")
     assert cleanup_subject("Re: FWD:FWD: Re:La chaise") == "La chaise"
 
+    assert cleanup_subject("Aw: über cool") == "über cool"
+    assert cleanup_subject("Aw:Re:wienerschnitzel") == "wienerschnitzel"
+    assert cleanup_subject("Aw: wienerschnitzel") == "wienerschnitzel"
+    assert cleanup_subject("aw: wg:wienerschnitzel") == "wienerschnitzel"
+
 
 def test_threading():
     Message = namedtuple('Message', ['message_id_header', 'references',
@@ -36,7 +41,6 @@ def test_threading():
                  Message("ddd_header", ["bbb_header"], datetime(2000, 12, 23))]
 
     assert thread_messages(messages3) == messages3
-
 
 
 # hack but my test won't run in the test runner. All the

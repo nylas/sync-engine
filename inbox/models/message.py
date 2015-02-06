@@ -201,8 +201,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
             msg.data_sha256 = sha256(body_string).hexdigest()
 
-            # clean_subject strips re:, fwd: etc.
-            msg.subject = parsed.clean_subject
+            msg.subject = parsed.subject
             msg.from_addr = parse_mimepart_address_header(parsed, 'From')
             msg.sender_addr = parse_mimepart_address_header(parsed, 'Sender')
             msg.reply_to = parse_mimepart_address_header(parsed, 'Reply-To')
