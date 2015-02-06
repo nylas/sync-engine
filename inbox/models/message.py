@@ -450,3 +450,7 @@ Index('ix_message_subject', Message.subject, mysql_length=191)
 # For API querying performance.
 Index('ix_message_ns_id_is_draft_received_date', Message.namespace_id,
       Message.is_draft, Message.received_date)
+
+# For async deletion.
+Index('ix_message_namespace_id_deleted_at', Message.namespace_id,
+      Message.deleted_at)
