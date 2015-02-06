@@ -1,14 +1,14 @@
 """add message index
 
 Revision ID: 4270a032b943
-Revises: 1d93c9f9f506
+Revises:13faec74da45
 Create Date: 2015-02-06 05:14:00.041485
 
 """
 
 # revision identifiers, used by Alembic.
 revision = '4270a032b943'
-down_revision = '1d93c9f9f506'
+down_revision = '13faec74da45'
 
 from alembic import op
 
