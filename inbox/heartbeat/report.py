@@ -1,11 +1,34 @@
+from ast import literal_eval
+
 from inbox.heartbeat.config import REPORT_DATABASE, _get_redis_client
+
+
+class ReportEntry(object):
+
+    def __init__(self, alive=True, email_address=u'', provider_name=u''):
+        self.alive = alive
+        self.email_address = email_address
+        self.provider_name = provider_name
+
+    def __repr__(self):
+        return str((self.alive, self.email_address, self.provider_name))
+
+    @classmethod
+    def from_string(cls, string_value):
+        value = literal_eval(string_value)
+        return cls(value[0], value[1], value[2])
 
 
 def make_heartbeat_report(status):
     assert status is not None
     report = {}
-    for account_id, account_info in status.iteritems():
-        report[account_id] = account_info[0]
+    for account_id, account in status.iteritems():
+        # if missing, do nothing... but this isn't supposed to happen
+        if account.missing:
+            continue
+        report[account_id] = ReportEntry(account.alive,
+                                         account.email_address,
+                                         account.provider_name)
     return report
 
 
@@ -18,8 +41,7 @@ def get_heartbeat_report(host, port):
             continue
         names.append(int(name))
         batch_client.get(name)
-    values = map(lambda v: True if v == 'True' else False,
-                 batch_client.execute())
+    values = map(ReportEntry.from_string, batch_client.execute())
     return dict(zip(names, values))
 
 
@@ -42,14 +64,15 @@ def analyze_heartbeat_report(report, new_report):
     new_dead = []
     for name, new_value in new_report.iteritems():
         # if alive, do nothing
-        if new_value:
+        if new_value.alive:
             continue
         # make the default True to eagerly signal new dead accounts
-        value = report.get(name, True)
-        if value:
+        value = report.get(name, ReportEntry())
+        if value.alive:
             # new dead account, since previously was alive
-            new_dead.append(name)
+            new_dead.append((name, value.email_address, value.provider_name))
         else:
             # already dead account
-            dead.append(name)
-    return (sorted(dead), sorted(new_dead))
+            dead.append((name, value.email_address, value.provider_name))
+    return (sorted(dead, key=lambda t: t[0]),
+            sorted(new_dead, key=lambda t: t[0]))

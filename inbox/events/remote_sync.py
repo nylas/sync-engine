@@ -31,14 +31,14 @@ class EventSync(BaseSync):
     log: logging.Logger
         Logging handler.
     """
-    def __init__(self, provider_name, account_id, namespace_id,
+    def __init__(self, email_address, provider_name, account_id, namespace_id,
                  poll_frequency=300):
         bind_context(self, 'eventsync', account_id)
         self.log = logger.new(account_id=account_id, component='event sync')
         self.log.info('Begin syncing Events...')
 
         BaseSync.__init__(self, account_id, namespace_id, poll_frequency, -2,
-                          'Events', provider_name)
+                          'Events', email_address, provider_name)
 
     @property
     def provider(self):

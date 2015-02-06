@@ -18,7 +18,7 @@ NAMESPACE_ID = 1
 
 @pytest.fixture(scope='function')
 def alt_event_sync(config, db):
-    return EventSync(2, 2)
+    return EventSync('inboxapptest@gmail.com', 'gmail', 2, 2)
 
 
 @pytest.fixture(scope='function')

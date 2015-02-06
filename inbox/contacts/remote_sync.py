@@ -27,14 +27,14 @@ class ContactSync(BaseSync):
         Logging handler.
 
     """
-    def __init__(self, provider_name, account_id, namespace_id,
+    def __init__(self, email_address, provider_name, account_id, namespace_id,
                  poll_frequency=300):
         bind_context(self, 'contactsync', account_id)
         self.log = logger.new(account_id=account_id, component='contact sync')
         self.log.info('Begin syncing contacts...')
 
         BaseSync.__init__(self, account_id, namespace_id, poll_frequency, -1,
-                          'Contacts', provider_name)
+                          'Contacts', email_address, provider_name)
 
     @property
     def provider(self):

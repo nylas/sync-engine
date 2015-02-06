@@ -7,10 +7,10 @@ def has_contacts_and_events(account_id):
     try:
         client = get_redis_client(STATUS_DATABASE)
         batch_client = client.pipeline()
-        batch_client.keys(HeartbeatStatusKey.contacts(account_id))
-        batch_client.keys(HeartbeatStatusKey.events(account_id))
+        batch_client.exists(HeartbeatStatusKey.contacts(account_id))
+        batch_client.exists(HeartbeatStatusKey.events(account_id))
         values = batch_client.execute()
-        return (len(values[0]) == 1, len(values[1]) == 1)
+        return (values[0], values[1])
     except Exception:
         log = get_logger()
         log.error('Error while reading the heartbeat status',
