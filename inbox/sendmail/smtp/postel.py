@@ -88,30 +88,30 @@ class SMTPConnection(object):
             self.auth_token = token_manager.get_token(account,
                                                       force_refresh=True)
 
-    def smtp_oauth2(self):
-        c = self.connection
+    def _try_xoauth2(self):
+        auth_string = 'user={0}\1auth=Bearer {1}\1\1'.\
+            format(self.email_address, self.auth_token)
+        code, resp = self.connection.docmd('AUTH', 'XOAUTH2 {0}'.format(
+            base64.b64encode(auth_string)))
+        if code == 235:
+            self.log.info('SMTP Auth(OAuth2) success',
+                          email_address=self.email_address)
+            return True
+        else:
+            log.error('Error in SMTP XOAUTH2 authentication',
+                      response_code=code, response_line=resp)
+            return False
 
+    def smtp_oauth2(self):
         # Try to auth, but if it fails then try to refresh the access_token
         # and authenticate again.
-        try:
-            auth_string = 'user={0}\1auth=Bearer {1}\1\1'.\
-                format(self.email_address, self.auth_token)
-            c.docmd('AUTH', 'XOAUTH2 {0}'.format(
-                base64.b64encode(auth_string)))
-        except smtplib.SMTPAuthenticationError as e:
+        auth_success = self._try_xoauth2()
+        if not auth_success:
             self._smtp_oauth2_try_refresh()
-            try:
-                auth_string = 'user={0}\1auth=Bearer {1}\1\1'.\
-                    format(self.email_address, self.auth_token)
-                c.docmd('AUTH', 'XOAUTH2 {0}'.format(
-                    base64.b64encode(auth_string)))
-            except smtplib.SMTPAuthenticationError as e:
-                self.log.error('SMTP Auth failed for: {0}'.format(
-                    self.email_address))
-                raise e
-
-        self.log.info('SMTP Auth(OAuth2) success for: {0}'.format(
-            self.email_address))
+            auth_success = self._try_xoauth2()
+        if not auth_success:
+            raise SendMailException(
+                'Could not authenticate with the SMTP server.', 403)
 
     # Password authentication
     def smtp_password(self):
