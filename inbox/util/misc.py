@@ -93,7 +93,7 @@ def parse_references(references, in_reply_to):
 
 
 def dt_to_timestamp(dt):
-    return int(time.mktime(dt.timetuple()))
+    return int(time.mktime(dt.utctimetuple()))
 
 
 def get_internaldate(date, received):
