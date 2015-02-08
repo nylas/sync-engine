@@ -41,7 +41,7 @@ GET https://api.nilas.com/n/<namespace_id>/events/<event_id>
 
 # Retrieving many events
 
-This endpoint supports [filters](#filters), which allow you to fetch multiple events matching specific critera. For example, the following will limit the number of results to 3.
+This endpoint supports [filters](#filters), which allow you to fetch multiple events matching specific critera.
 
 **Options:**
 
@@ -57,6 +57,7 @@ This endpoint supports [filters](#filters), which allow you to fetch multiple ev
 * **`ends_before`** (integer, Unix timestamp) Return events that end before this timestamp.
 * **`ends_after`** (integer, Unix timestamp) Return events that end after this timestamp.
 
+For example, the following will limit the number of results to 3.
 
 ```
 :::xml
