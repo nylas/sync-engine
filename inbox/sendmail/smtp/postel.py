@@ -35,8 +35,6 @@ class SMTPConnection(object):
         self.setup()
 
     def __enter__(self):
-        if not self.is_connected():
-            self.reconnect()
         return self
 
     def __exit__(self, type, value, traceback):
@@ -97,6 +95,15 @@ class SMTPConnection(object):
             self.log.info('SMTP Auth(OAuth2) success',
                           email_address=self.email_address)
             return True
+        elif code == 334:
+            log.error('Challenge in SMTP XOAUTH2 authentication',
+                      response_code=code, response_line=resp)
+            # Handle server challenge so that we can properly retry with the
+            # connection.
+            code, resp = self.connection.noop()
+            log.error('Error in SMTP XOAUTH2 authentication',
+                      response_code=code, response_line=resp)
+            return False
         else:
             log.error('Error in SMTP XOAUTH2 authentication',
                       response_code=code, response_line=resp)
@@ -138,16 +145,6 @@ class SMTPConnection(object):
             return False
 
         return (status == 250)
-
-    def reconnect(self):
-        try:
-            host, port = self.smtp_endpoint
-            self.connection.connect(host, port)
-        except smtplib.SMTPConnectError:
-            self.log.error('SMTPConnectError')
-            raise
-
-        self.setup()
 
     def sendmail(self, recipients, msg):
         return self.connection.sendmail(self.email_address, recipients, msg)
