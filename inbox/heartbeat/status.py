@@ -136,11 +136,11 @@ class AccountHeartbeatStatus(object):
 
     @property
     def initial_sync(self):
-        return any(folder.initial_sync for folder in self.folders.itervalue())
+        return any(folder.initial_sync for folder in self.folders.itervalues())
 
     @property
     def poll_sync(self):
-        return all(folder.poll_sync for folder in self.folders.itervalue())
+        return all(folder.poll_sync for folder in self.folders.itervalues())
 
     def jsonify(self):
         return {'missing': self.missing,
