@@ -195,7 +195,7 @@ def tag_update_api(public_id):
     if 'namespace_id' in data.keys():
         ns_id = data['namespace_id']
         valid_public_id(ns_id)
-        if ns_id != g.namespace.id:
+        if ns_id != g.namespace.public_id:
             raise InputError('Cannot change the namespace on a tag.')
     if not tag.user_created:
         raise InputError('Cannot modify tag {}'.format(public_id))
@@ -219,7 +219,7 @@ def tag_create_api():
     if 'namespace_id' in data.keys():
         ns_id = data['namespace_id']
         valid_public_id(ns_id)
-        if ns_id != g.namespace.id:
+        if ns_id != g.namespace.public_id:
             raise InputError('Cannot change the namespace on a tag.')
     # Lowercase tag name, regardless of input casing.
     tag_name = data['name'].lower()
