@@ -77,11 +77,10 @@ def test_create_tag(api_client, default_namespace):
     assert 'foo' in [tag['name'] for tag in api_client.get_data('/tags/')]
 
     # Make sure we can specify the namespace that we are creating the tag in
-    bad_ns_id = 0000000000000000000000000
-    tag_data = {'name': 'foo3', 'namespace_id': bad_ns_id}
+    tag_data = {'name': 'foo3', 'namespace_id': ns_id}
     put_resp = api_client.post_data('/tags/', tag_data)
-    assert put_resp.status_code == 400
-    assert 'foo3' not in [tag['name'] for tag in api_client.get_data('/tags/')]
+    assert put_resp.status_code == 200
+    assert 'foo3' in [tag['name'] for tag in api_client.get_data('/tags/')]
 
 
 def test_delete_tag(api_client, default_namespace):
@@ -143,11 +142,11 @@ def test_read_update_tags(api_client):
 
     # include namespace
     r = api_client.put_data('/tags/{}'.format(public_id),
-                            {'name': 'bar', 'namepace_id': tag_ns_id})
-    assert json.loads(r.data)['name'] == 'bar'
+                            {'name': 'baz', 'namespace_id': tag_ns_id})
+    assert json.loads(r.data)['name'] == 'baz'
 
     updated_tag_data = api_client.get_data('/tags/{}'.format(public_id))
-    assert updated_tag_data['name'] == 'bar'
+    assert updated_tag_data['name'] == 'baz'
     assert updated_tag_data['id'] == public_id
 
 
