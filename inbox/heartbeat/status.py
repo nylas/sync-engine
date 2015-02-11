@@ -132,7 +132,7 @@ class AccountHeartbeatStatus(object):
     @property
     def dead_folders(self):
         return [folder.name
-                for folder in self.folders.itervalue() if not folder.alive]
+                for folder in self.folders.itervalues() if not folder.alive]
 
     @property
     def initial_sync(self):
