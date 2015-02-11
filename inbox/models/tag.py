@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, func
+from sqlalchemy.orm import relationship, backref, aliased
 from sqlalchemy.sql.expression import false
+from sqlalchemy.ext.associationproxy import association_proxy
 
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.schema import UniqueConstraint
@@ -81,6 +82,29 @@ class Tag(MailSyncBase, HasRevisions):
             return False
 
         return True
+
+    unread_count = None
+    thread_count = None
+
+    def intersection(self, tag_id, db_session):
+        from inbox.models.thread import TagItem
+
+        if tag_id == self.id:
+            return db_session.query(func.count(TagItem.thread_id)).\
+                filter_by(tag_id=self.id).scalar()
+
+        tagitem_alias = aliased(TagItem, name="tagitem_alias")
+        query = db_session.query(func.count(1)).\
+            select_from(TagItem).\
+            join(tagitem_alias, TagItem.thread_id == tagitem_alias.thread_id).\
+            filter(TagItem.tag_id == self.id).\
+            filter(tagitem_alias.tag_id == tag_id)
+        return query.scalar()
+
+    threads = association_proxy('tagitems', 'thread')
+
+    def count_threads(self):
+        return len(self.threads)
 
     __table_args__ = (UniqueConstraint('namespace_id', 'name'),
                       UniqueConstraint('namespace_id', 'public_id'))

@@ -162,7 +162,6 @@ def tag_query_api():
         results = [x[0] for x in query.all()]
     else:
         results = query.all()
-
     return g.encoder.jsonify(results)
 
 
@@ -176,6 +175,12 @@ def tag_read_api(public_id):
     except NoResultFound:
         raise NotFoundError('No tag found')
 
+    unread_tag = g.db_session.query(Tag).filter_by(
+        namespace_id=g.namespace.id,
+        name='unread').first()
+    if unread_tag:
+        tag.unread_count = tag.intersection(unread_tag.id, g.db_session)
+        tag.thread_count = tag.count_threads()
     return g.encoder.jsonify(tag)
 
 
@@ -664,9 +669,9 @@ def event_read_api(public_id):
     g.parser.add_argument('rsvp', type=valid_rsvp, location='args')
     # FIXME karim -- re-enable this after landing the participants refactor
     # (T687)
-    #args = strict_parse_args(g.parser, request.args)
+    # args = strict_parse_args(g.parser, request.args)
     #
-    #if 'action' in args:
+    # if 'action' in args:
     #    # Participants are able to RSVP to events by clicking on links (e.g.
     #    # that are emailed to them). Therefore, the RSVP action is invoked via
     #    # a GET.

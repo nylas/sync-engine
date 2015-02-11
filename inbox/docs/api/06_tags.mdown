@@ -33,11 +33,28 @@ GET https://api.nilas.com/n/<namespace_id>/tags
 ```
 
 # Getting a Single Tag
+
+The response for a single tag includes the number of unread threads with that tag, as well as the total number of threads tagged.
+
 ```
 :::xml
 GET https://api.nilas.com/n/<namespace_id>/tags/<tag_id>
 ```
 
+**Response**
+
+```
+:::json
+{
+    "id": "4zv7pgvihjvuptbwv57kiz62",
+    "name": "inbox",
+    "namespace_id": "awa6ltos76vz5hvphkp8k17nt",
+    "object": "tag",
+    "readonly": false,
+    "thread_count": 190,
+    "unread_count": 7
+}
+```
 # Getting Threads with a Tag
 
 You can list all of the threads with a given tag using a [Tag Filter](#filters). The tag parameter can be a tag ID, such as `4zv7pgvihjvuptbwv57kiz62` or a tag name, like `inbox` or `hiking`.

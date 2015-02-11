@@ -9,7 +9,7 @@ from tests.util.base import (patch_network_functions, api_client,
                              default_account)
 
 __all__ = ['patch_network_functions', 'api_client', 'syncback_service',
-           'default_namespace']
+           'default_namespace', 'default_account']
 
 
 # Utility functions to simplify hitting the API.
@@ -45,6 +45,16 @@ def test_get_tags(api_client):
     tag_count = len(tags)
     offset_tags = api_client.get_data('/tags/?offset=1')
     assert len(offset_tags) == tag_count - 1
+
+
+def test_get_tag(api_client):
+    tag_name = 'inbox'
+    tag = api_client.get_data('/tags/{}'.format(tag_name))
+    assert tag['object'] == 'tag'
+    assert tag['id'] == tag['id']
+    assert tag['name'] == tag['name']
+    assert 'unread_count' in tag
+    assert 'thread_count' in tag
 
 
 def test_get_invalid(api_client):

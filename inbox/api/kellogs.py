@@ -197,13 +197,18 @@ def encode(obj, namespace_public_id=None):
         return resp
 
     elif isinstance(obj, Tag):
-        return {
+        resp = {
             'id': obj.public_id,
             'object': 'tag',
             'name': obj.name,
             'namespace_id': _get_namespace_public_id(obj),
             'readonly': obj.readonly
         }
+        if obj.unread_count is not None:
+            resp['unread_count'] = obj.unread_count
+        if obj.thread_count is not None:
+            resp['thread_count'] = obj.thread_count
+        return resp
 
 
 class APIEncoder(object):
