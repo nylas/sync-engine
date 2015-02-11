@@ -146,16 +146,20 @@ def _messages_or_drafts(namespace_id, drafts, subject, from_addr, to_addr,
         filters.append(Thread.public_id == thread_public_id)
 
     if started_before is not None:
-        filters.append(Thread.subjectdate < started_before)
+        filters.append(Thread.subjectdate < started_before,
+                       Thread.namespace_id == namespace_id)
 
     if started_after is not None:
-        filters.append(Thread.subjectdate > started_after)
+        filters.append(Thread.subjectdate > started_after,
+                       Thread.namespace_id == namespace_id)
 
     if last_message_before is not None:
-        filters.append(Thread.recentdate < last_message_before)
+        filters.append(Thread.recentdate < last_message_before,
+                       Thread.namespace_id == namespace_id)
 
     if last_message_after is not None:
-        filters.append(Thread.recentdate > last_message_after)
+        filters.append(Thread.recentdate > last_message_after,
+                       Thread.namespace_id == namespace_id)
 
     if tag is not None:
         query = query.join(TagItem).join(Tag). \
