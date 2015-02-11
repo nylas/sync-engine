@@ -198,7 +198,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
 
         """
         with mailsync_session_scope() as db_session:
-            local_g_msgids = g_msgids(self.account_id, db_session,
+            local_g_msgids = g_msgids(self.namespace_id, db_session,
                                       in_={remote_g_metadata[uid].msgid
                                            for uid in uids if uid in
                                            remote_g_metadata})
@@ -222,7 +222,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
 
     def __deduplicate_message_object_creation(self, db_session, raw_messages):
         new_g_msgids = {msg.g_msgid for msg in raw_messages}
-        existing_g_msgids = g_msgids(self.account_id, db_session,
+        existing_g_msgids = g_msgids(self.namespace_id, db_session,
                                      in_=new_g_msgids)
         return [msg for msg in raw_messages if msg.g_msgid not in
                 existing_g_msgids]
@@ -337,7 +337,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
         return len(to_download)
 
 
-def g_msgids(account_id, session, in_):
+def g_msgids(namespace_id, session, in_):
     if not in_:
         return []
     # Easiest way to account-filter Messages is to namespace-filter from
@@ -348,12 +348,12 @@ def g_msgids(account_id, session, in_):
         # If in_ is really large, passing all the values to MySQL can get
         # deadly slow. (Approximate threshold empirically determined)
         query = session.query(Message.g_msgid).join(Namespace). \
-            filter(Namespace.account_id == account_id).all()
+            filter(Message.namespace_id == namespace_id).all()
         return sorted(g_msgid for g_msgid, in query if g_msgid in in_)
     # But in the normal case that in_ only has a few elements, it's way better
     # to not fetch a bunch of values from MySQL only to return a few of them.
-    query = session.query(Message.g_msgid).join(Namespace). \
-        filter(Namespace.account_id == account_id,
+    query = session.query(Message.g_msgid). \
+        filter(Message.namespace_id == namespace_id,
                Message.g_msgid.in_(in_)).all()
     return {g_msgid for g_msgid, in query}
 
