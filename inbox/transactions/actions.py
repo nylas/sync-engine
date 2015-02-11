@@ -10,14 +10,13 @@ from datetime import datetime
 import platform
 import gevent
 from gevent.coros import BoundedSemaphore
-from sqlalchemy import asc
+from sqlalchemy.orm import joinedload
 
 from inbox.util.concurrency import retry_with_logging, log_uncaught_errors
 from inbox.log import get_logger
 logger = get_logger()
 from inbox.models.session import session_scope
-from inbox.models import ActionLog, Namespace
-from inbox.sqlalchemy_ext.util import safer_yield_per
+from inbox.models import ActionLog, Namespace, Account
 from inbox.util.file import Lock
 from inbox.util.misc import ProviderSpecificException
 from inbox.actions.base import (mark_read, mark_unread, archive, unarchive,
@@ -75,20 +74,18 @@ class SyncbackService(gevent.Greenlet):
         # TODO(emfree) handle the case that message/thread objects may have
         # been deleted in the interim.
         with session_scope() as db_session:
-            query = db_session.query(ActionLog).filter(
-                ActionLog.status == 'pending',
-                ActionLog.retries < ACTION_MAX_NR_OF_RETRIES)
+            query = db_session.query(ActionLog). \
+                filter(ActionLog.status == 'pending',
+                       ActionLog.retries < ACTION_MAX_NR_OF_RETRIES). \
+                options(joinedload(ActionLog.namespace).
+                        joinedload(Namespace.account).
+                        load_only(Account.sync_host, Account.discriminator))
 
             if self._scheduled_actions:
                 query = query.filter(
                     ~ActionLog.id.in_(self._scheduled_actions))
-            query = query.order_by(asc(ActionLog.id))
-
-            for log_entry in safer_yield_per(query, ActionLog.id, 0,
-                                             self.chunk_size):
-                namespace = db_session.query(Namespace). \
-                    get(log_entry.namespace_id)
-
+            for log_entry in query:
+                namespace = log_entry.namespace
                 # Only actions on accounts associated with this sync-engine
                 if namespace.account.sync_host != platform.node():
                     continue

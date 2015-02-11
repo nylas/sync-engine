@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.5.41, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.40, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.5.41-0ubuntu0.12.04.1
+-- Server version	5.5.40-0ubuntu0.12.04.1-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -115,6 +115,7 @@ CREATE TABLE `actionlog` (
   KEY `ix_actionlog_deleted_at` (`deleted_at`),
   KEY `ix_actionlog_namespace_id` (`namespace_id`),
   KEY `ix_actionlog_updated_at` (`updated_at`),
+  KEY `ix_actionlog_status_retries` (`status`,`retries`),
   CONSTRAINT `actionlog_ibfk_1` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -146,7 +147,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('1d93c9f9f506');
+INSERT INTO `alembic_version` VALUES ('39fa82d3168e');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1116,6 +1117,7 @@ CREATE TABLE `message` (
   KEY `ix_message_received_date` (`received_date`),
   KEY `full_body_id_fk` (`full_body_id`),
   KEY `ix_message_ns_id_is_draft_received_date` (`namespace_id`,`is_draft`,`received_date`),
+  KEY `ix_message_namespace_id_deleted_at` (`namespace_id`,`deleted_at`),
   CONSTRAINT `full_body_id_fk` FOREIGN KEY (`full_body_id`) REFERENCES `block` (`id`),
   CONSTRAINT `message_ibfk_1` FOREIGN KEY (`thread_id`) REFERENCES `thread` (`id`) ON DELETE CASCADE,
   CONSTRAINT `message_ibfk_2` FOREIGN KEY (`resolved_message_id`) REFERENCES `message` (`id`),
@@ -1553,6 +1555,7 @@ CREATE TABLE `tagitem` (
   KEY `ix_tagitem_created_at` (`created_at`),
   KEY `ix_tagitem_deleted_at` (`deleted_at`),
   KEY `ix_tagitem_updated_at` (`updated_at`),
+  KEY `tag_thread_ids` (`thread_id`,`tag_id`),
   CONSTRAINT `tagitem_ibfk_1` FOREIGN KEY (`tag_id`) REFERENCES `tag` (`id`),
   CONSTRAINT `tagitem_ibfk_2` FOREIGN KEY (`thread_id`) REFERENCES `thread` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=38 DEFAULT CHARSET=utf8mb4;
@@ -1767,4 +1770,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-02-04 16:58:27
+-- Dump completed on 2015-02-11 21:46:33

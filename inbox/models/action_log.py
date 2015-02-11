@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Text, ForeignKey, Enum
+from sqlalchemy import Column, Integer, Text, ForeignKey, Enum, Index
 from sqlalchemy.orm import relationship
 
 from inbox.sqlalchemy_ext.util import JSON
@@ -76,3 +76,5 @@ class ActionLog(MailSyncBase):
     retries = Column(Integer, server_default='0', nullable=False)
 
     extra_args = Column(JSON, nullable=True)
+
+Index('ix_actionlog_status_retries', ActionLog.status, ActionLog.retries)
