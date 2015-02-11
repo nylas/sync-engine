@@ -187,7 +187,7 @@ class SMTPClient(object):
         SendMailException
             If the message couldn't be sent to all recipients successfully.
         """
-        for _ in range(SMTP_MAX_RETRIES):
+        for _ in range(SMTP_MAX_RETRIES + 1):
             try:
                 with self._get_connection() as smtpconn:
                     failures = smtpconn.sendmail(recipients, msg)
