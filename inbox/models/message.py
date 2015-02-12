@@ -287,6 +287,15 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         """Parse a single MIME part into a Block and Part object linked to this
         message."""
         from inbox.models.block import Block, Part
+        disposition, disposition_params = mimepart.content_disposition
+        if (disposition is not None and
+                disposition not in ['inline', 'attachment']):
+            cd = mimepart.content_disposition
+            log.error('Unknown Content-Disposition',
+                      mid=mid, bad_content_disposition=cd,
+                      parsed_content_disposition=disposition)
+            self._mark_error()
+            return
         block = Block()
         block.namespace_id = namespace_id
         block.content_type = mimepart.content_type.value
@@ -297,19 +306,11 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         new_part.walk_index = index
 
         # TODO maybe also trim other headers?
-        if mimepart.content_disposition[0] is not None:
-            value, params = mimepart.content_disposition
-            if value not in ['inline', 'attachment']:
-                cd = mimepart.content_disposition
-                log.error('Unknown Content-Disposition',
-                          mid=mid, bad_content_disposition=cd,
-                          parsed_content_disposition=value)
-                return
-            else:
-                new_part.content_disposition = value
-                if value == 'attachment':
-                    new_part.block.filename = _trim_filename(
-                        params.get('filename'), mid)
+        if disposition is not None:
+            new_part.content_disposition = disposition
+            if disposition == 'attachment':
+                new_part.block.filename = _trim_filename(
+                    disposition_params.get('filename'), mid)
 
         if mimepart.body is None:
             data_to_write = ''
