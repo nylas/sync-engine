@@ -7,15 +7,16 @@ from flanker import mime
 from inbox.models import Message, Account
 from inbox.models.message import _get_errfilename
 from inbox.util.addr import parse_mimepart_address_header
+from tests.util.base import default_account, default_namespace
 
-ACCOUNT_ID = 1
-NAMESPACE_ID = 1
+
+def full_path(relpath):
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), relpath)
 
 
 @pytest.fixture
 def raw_message():
-    raw_msg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                '../data/raw_message')
+    raw_msg_path = full_path('../data/raw_message')
     with open(raw_msg_path) as f:
         return f.read()
 
@@ -24,19 +25,26 @@ def raw_message():
 def raw_message_with_many_recipients():
     # Message carefully constructed s.t. the length of the serialized 'to'
     # field is 65536.
-    raw_msg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                '../data/raw_message_with_many_recipients')
+    raw_msg_path = full_path('../data/raw_message_with_many_recipients')
     with open(raw_msg_path) as f:
         return f.read()
 
 
-def test_message_from_synced(db, raw_message):
-    account = db.session.query(Account).get(ACCOUNT_ID)
-    assert account.namespace.id == NAMESPACE_ID
+@pytest.fixture
+def raw_message_with_bad_content_disposition():
+    # Message with a MIME part that has an invalid content-disposition.
+    raw_msg_path = full_path(
+        '../data/raw_message_with_bad_content_disposition')
+    with open(raw_msg_path) as f:
+        return f.read()
+
+
+def test_message_from_synced(db, default_account, default_namespace,
+                             raw_message):
     received_date = datetime.datetime(2014, 9, 22, 17, 25, 46),
-    m = Message.create_from_synced(account, 139219, '[Gmail]/All Mail',
+    m = Message.create_from_synced(default_account, 139219, '[Gmail]/All Mail',
                                    received_date, raw_message)
-    assert m.namespace_id == NAMESPACE_ID
+    assert m.namespace_id == default_namespace.id
     assert sorted(m.to_addr) == [(u'', u'csail-all.lists@mit.edu'),
                                  (u'', u'csail-announce@csail.mit.edu'),
                                  (u'', u'csail-related@csail.mit.edu')]
@@ -46,11 +54,10 @@ def test_message_from_synced(db, raw_message):
     assert all(part.block.namespace_id == m.namespace_id for part in m.parts)
 
 
-def test_truncate_recipients(db, raw_message_with_many_recipients):
-    account = db.session.query(Account).get(ACCOUNT_ID)
-    assert account.namespace.id == NAMESPACE_ID
+def test_truncate_recipients(db, default_account, default_namespace,
+                             raw_message_with_many_recipients):
     received_date = datetime.datetime(2014, 9, 22, 17, 25, 46),
-    m = Message.create_from_synced(account, 139219, '[Gmail]/All Mail',
+    m = Message.create_from_synced(default_account, 139219, '[Gmail]/All Mail',
                                    received_date,
                                    raw_message_with_many_recipients)
     m.thread_id = 1
@@ -114,3 +121,19 @@ def test_address_parsing_edge_cases():
                                 'From: bob@foocorp.com')
     parsed = parse_mimepart_address_header(mimepart, 'From')
     assert parsed == [('', 'bob@foocorp.com')]
+
+
+def test_handle_bad_content_disposition(
+        default_account, default_namespace,
+        raw_message_with_bad_content_disposition):
+    received_date = datetime.datetime(2014, 9, 22, 17, 25, 46),
+    m = Message.create_from_synced(default_account, 139219, '[Gmail]/All Mail',
+                                   received_date,
+                                   raw_message_with_bad_content_disposition)
+    assert m.namespace_id == default_namespace.id
+    assert sorted(m.to_addr) == [(u'', u'csail-all.lists@mit.edu'),
+                                 (u'', u'csail-announce@csail.mit.edu'),
+                                 (u'', u'csail-related@csail.mit.edu')]
+    assert len(m.parts) == 3
+    assert m.received_date == received_date
+    assert all(part.block.namespace_id == m.namespace_id for part in m.parts)
