@@ -19,7 +19,7 @@ class ReportEntry(object):
         return cls(value[0], value[1], value[2])
 
 
-def make_heartbeat_report(status):
+def construct_heartbeat_report(status):
     assert status is not None
     report = {}
     for account_id, account in status.iteritems():
@@ -32,7 +32,7 @@ def make_heartbeat_report(status):
     return report
 
 
-def get_heartbeat_report(host, port):
+def fetch_heartbeat_report(host, port):
     client = _get_redis_client(host, port, REPORT_DATABASE)
     batch_client = client.pipeline()
     names = []
@@ -45,7 +45,7 @@ def get_heartbeat_report(host, port):
     return dict(zip(names, values))
 
 
-def set_heartbeat_report(host, port, report):
+def store_heartbeat_report(host, port, report):
     if not report:
         return
     client = _get_redis_client(host, port, REPORT_DATABASE)
@@ -57,7 +57,7 @@ def set_heartbeat_report(host, port, report):
     batch_client.execute()
 
 
-def analyze_heartbeat_report(report, new_report):
+def diff_heartbeat_reports(report, new_report):
     assert report is not None
     assert new_report is not None
     dead = []
