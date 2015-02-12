@@ -1,31 +1,64 @@
 #!/usr/bin/env python
 
 import click
-from json import dumps
 from sys import exit
+from collections import defaultdict
 
-from inbox.heartbeat.report import (make_heartbeat_report,
-                                    get_heartbeat_report, set_heartbeat_report,
-                                    analyze_heartbeat_report)
+from inbox.heartbeat.report import (construct_heartbeat_report,
+                                    fetch_heartbeat_report,
+                                    store_heartbeat_report,
+                                    diff_heartbeat_reports)
 from inbox.heartbeat.status import get_heartbeat_status
+
+
+def print_summary(dead):
+    counts = defaultdict(lambda: 0)
+    for (account_id, email, provider) in dead:
+        counts[provider] += 1
+    for provider, count in counts.iteritems():
+        print "{} x {} ".format(provider, count),
+    print
+
+
+def provider_groups(dead, verbose):
+    groups = defaultdict(list)
+    for (account_id, email, provider) in dead:
+        if verbose:
+            groups[provider].append("{} ({})".format(account_id, email))
+        else:
+            groups[provider].append("{}".format(account_id))
+    return groups
+
+
+def print_groups(groups):
+    for provider in groups:
+        print " {}:".format(provider), ", ".join(groups[provider])
 
 
 @click.command()
 @click.option('--host', '-h', type=str, required=True)
 @click.option('--port', '-p', type=int, default=6379)
-def main(host, port):
+@click.option('--verbose', '-v', is_flag=True, default=False)
+def main(host, port, verbose):
     status = get_heartbeat_status(host, port)
-    new_report = make_heartbeat_report(status)
-    report = get_heartbeat_report(host, port)
-    set_heartbeat_report(host, port, new_report)
-    dead, new_dead = analyze_heartbeat_report(report, new_report)
+    new_report = construct_heartbeat_report(status)
+    last_report = fetch_heartbeat_report(host, port)
+    store_heartbeat_report(host, port, new_report)
+    dead, new_dead = diff_heartbeat_reports(last_report, new_report)
+    if not dead and not new_dead:
+        exit(0)
+    print "Dead accounts: ",
+    print_summary(dead)
+    print "Accounts:"
+    print_groups(provider_groups(dead, verbose))
     if new_dead:
-        print dumps(dict(dead=dead, new_dead=new_dead))
+        print "\nNewly dead accounts: ",
+        print_summary(new_dead)
+        print "Accounts:"
+        print_groups(provider_groups(new_dead, True))
         exit(2)
-    elif dead:
-        print dumps(dict(dead=dead))
+    else:
         exit(1)
-    exit(0)
 
 if __name__ == '__main__':
     main()
