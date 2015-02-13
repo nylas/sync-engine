@@ -32,6 +32,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
     subjectdate = Column(DateTime, nullable=False, index=True)
     recentdate = Column(DateTime, nullable=False, index=True)
     snippet = Column(String(191), nullable=True, default='')
+    version = Column(Integer, nullable=True, server_default='0')
 
     folders = association_proxy(
         'folderitems', 'folder',
@@ -39,37 +40,38 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
 
     @validates('messages')
     def update_from_message(self, k, message):
-        if message.attachments:
-            attachment_tag = self.namespace.tags['attachment']
-            self.apply_tag(attachment_tag)
+        with object_session(self).no_autoflush:
+            if message.attachments:
+                attachment_tag = self.namespace.tags['attachment']
+                self.apply_tag(attachment_tag)
 
-        if message.is_draft:
-            # Don't change subjectdate, recentdate, or unread/unseen based on
-            # drafts
+            if message.is_draft:
+                # Don't change subjectdate, recentdate, or unread/unseen based
+                # on drafts
+                return message
+
+            if message.received_date > self.recentdate:
+                self.recentdate = message.received_date
+                # Only update the thread's unread/unseen properties if this is
+                # the most recent message we have synced in the thread.
+                # This is so that if a user has already marked the thread as
+                # read or seen via the API, but we later sync older messages in
+                # the thread, it doesn't become re-unseen.
+                unread_tag = self.namespace.tags['unread']
+                unseen_tag = self.namespace.tags['unseen']
+                if message.is_read:
+                    self.remove_tag(unread_tag)
+                else:
+                    self.apply_tag(unread_tag)
+                    self.apply_tag(unseen_tag)
+                self.snippet = message.snippet
+
+            # subject is subject of original message in the thread
+            if message.received_date < self.subjectdate:
+                self.subject = message.subject
+                self.subjectdate = message.received_date
+
             return message
-
-        if message.received_date > self.recentdate:
-            self.recentdate = message.received_date
-            # Only update the thread's unread/unseen properties if this is the
-            # most recent message we have synced in the thread.
-            # This is so that if a user has already marked the thread as read
-            # or seen via the API, but we later sync older messages in the
-            # thread, it doesn't become re-unseen.
-            unread_tag = self.namespace.tags['unread']
-            unseen_tag = self.namespace.tags['unseen']
-            if message.is_read:
-                self.remove_tag(unread_tag)
-            else:
-                self.apply_tag(unread_tag)
-                self.apply_tag(unseen_tag)
-            self.snippet = message.snippet
-
-        # subject is subject of original message in the thread
-        if message.received_date < self.subjectdate:
-            self.subject = message.subject
-            self.subjectdate = message.received_date
-
-        return message
 
     @validates('folderitems', include_removes=True)
     def also_set_tag(self, key, folderitem, is_remove):

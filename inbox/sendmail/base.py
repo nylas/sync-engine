@@ -126,9 +126,8 @@ def update_draft(db_session, account, draft, to_addr=None,
     prior_message_id_header = draft.message_id_header
 
     # Update version  + inbox_uid (is_created is already set)
-    version = generate_public_id()
-    update('version', version)
-    update('inbox_uid', version)
+    draft.version += 1
+    draft.regenerate_inbox_uid()
 
     # Sync to remote
     schedule_action('save_draft', draft, draft.namespace.id,
@@ -185,7 +184,6 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
     with db_session.no_autoflush:
         dt = datetime.utcnow()
         uid = generate_public_id()
-        version = generate_public_id()
         to_addr = to_addr or []
         cc_addr = cc_addr or []
         bcc_addr = bcc_addr or []
@@ -217,8 +215,8 @@ def create_and_save_draft(db_session, account, to_addr=None, subject=None,
         message.is_sent = False
         message.is_reply = is_reply
         message.public_id = uid
-        message.version = version
-        message.inbox_uid = version
+        message.version = 0
+        message.regenerate_inbox_uid()
 
         # Set the snippet
         message.snippet = message.calculate_html_snippet(body)

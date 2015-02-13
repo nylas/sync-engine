@@ -143,7 +143,7 @@ def test_send_rejected_with_wrong_version(api_client, example_draft):
     r = api_client.post_data('/drafts', example_draft)
     draft_public_id = json.loads(r.data)['id']
     r = api_client.post_data('/send', {'draft_id': draft_public_id,
-                                       'version': '2y58melmnqy9fl15u7afucppo'})
+                                       'version': 222})
     assert r.status_code == 409
 
 

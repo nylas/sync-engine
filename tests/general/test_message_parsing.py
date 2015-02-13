@@ -4,10 +4,10 @@ import datetime
 import os
 import pytest
 from flanker import mime
-from inbox.models import Message, Account
+from inbox.models import Message
 from inbox.models.message import _get_errfilename
 from inbox.util.addr import parse_mimepart_address_header
-from tests.util.base import default_account, default_namespace
+from tests.util.base import default_account, default_namespace, thread
 
 
 def full_path(relpath):
@@ -41,7 +41,7 @@ def raw_message_with_bad_content_disposition():
 
 def test_message_from_synced(db, default_account, default_namespace,
                              raw_message):
-    received_date = datetime.datetime(2014, 9, 22, 17, 25, 46),
+    received_date = datetime.datetime(2014, 9, 22, 17, 25, 46)
     m = Message.create_from_synced(default_account, 139219, '[Gmail]/All Mail',
                                    received_date, raw_message)
     assert m.namespace_id == default_namespace.id
@@ -54,13 +54,13 @@ def test_message_from_synced(db, default_account, default_namespace,
     assert all(part.block.namespace_id == m.namespace_id for part in m.parts)
 
 
-def test_truncate_recipients(db, default_account, default_namespace,
+def test_truncate_recipients(db, default_account, default_namespace, thread,
                              raw_message_with_many_recipients):
-    received_date = datetime.datetime(2014, 9, 22, 17, 25, 46),
+    received_date = datetime.datetime(2014, 9, 22, 17, 25, 46)
     m = Message.create_from_synced(default_account, 139219, '[Gmail]/All Mail',
                                    received_date,
                                    raw_message_with_many_recipients)
-    m.thread_id = 1
+    m.thread = thread
     db.session.add(m)
     # Check that no database error is raised.
     db.session.commit()
@@ -126,7 +126,7 @@ def test_address_parsing_edge_cases():
 def test_handle_bad_content_disposition(
         default_account, default_namespace,
         raw_message_with_bad_content_disposition):
-    received_date = datetime.datetime(2014, 9, 22, 17, 25, 46),
+    received_date = datetime.datetime(2014, 9, 22, 17, 25, 46)
     m = Message.create_from_synced(default_account, 139219, '[Gmail]/All Mail',
                                    received_date,
                                    raw_message_with_bad_content_disposition)

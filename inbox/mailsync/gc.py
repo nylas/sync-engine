@@ -58,18 +58,38 @@ class DeleteHandler(gevent.Greenlet):
             dangling_messages = db_session.query(Message).filter(
                 Message.namespace_id == self.namespace_id,
                 Message.deleted_at <= current_time - self.message_ttl)
-            affected_threads = set()
             for message in dangling_messages:
                 # If the message isn't *actually* dangling (i.e., it has
                 # imapuids associated with it), undelete it.
                 if self.uids_for_message(message):
                     message.deleted_at = None
-                else:
-                    affected_threads.add(message.thread)
-                    db_session.delete(message)
+                    continue
 
-            db_session.commit()
-            for thread in affected_threads:
+                thread = message.thread
+                # Remove message from thread rather than deleting it
+                # outright, so that the change to the thread gets properly
+                # versioned.
+                thread.messages.remove(message)
                 if not thread.messages:
                     db_session.delete(thread)
+                else:
+                    # TODO(emfree): This is messy. We need better
+                    # abstractions for recomputing a thread's attributes
+                    # from messages, here and in mail sync.
+                    non_draft_messages = [m for m in thread.messages if not
+                                          m.is_draft]
+                    if not non_draft_messages:
+                        continue
+                    # The value of thread.messages is ordered oldest-to-newest.
+                    first_message = non_draft_messages[0]
+                    last_message = non_draft_messages[-1]
+                    thread.subject = first_message.subject
+                    thread.subjectdate = first_message.received_date
+                    thread.recentdate = last_message.received_date
+                    unread_tag = thread.namespace.tags['unread']
+                    attachment_tag = thread.namespace.tags['attachment']
+                    if all(m.is_read for m in non_draft_messages):
+                        thread.tags.discard(unread_tag)
+                    if not any(m.attachments for m in non_draft_messages):
+                        thread.tags.discard(attachment_tag)
             db_session.commit()

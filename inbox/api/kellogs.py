@@ -114,7 +114,8 @@ def encode(obj, namespace_public_id=None):
             'message_ids': [m.public_id for m in obj.messages if not
                             m.is_draft],
             'draft_ids': [m.public_id for m in obj.drafts],
-            'tags': format_tags_list(obj.tags)
+            'tags': format_tags_list(obj.tags),
+            'version': obj.version
         }
 
     elif isinstance(obj, Contact):

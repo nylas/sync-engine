@@ -62,3 +62,11 @@ def create_revision(obj, session, revision_type):
     if revision_type != 'delete':
         revision.snapshot = encode(obj)
     session.add(revision)
+
+
+def increment_versions(session):
+    from inbox.models.thread import Thread
+    for obj in session.dirty:
+        if isinstance(obj, Thread) and obj.has_versioned_changes():
+            # This issues SQL for an atomic increment.
+            obj.version = Thread.version + 1

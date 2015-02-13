@@ -18,7 +18,12 @@ def new_session(engine, versioned=True, ignore_soft_deletes=False):
     """Returns a session bound to the given engine."""
     session = Session(bind=engine, autoflush=True, autocommit=False)
     if versioned:
-        from inbox.models.transaction import create_revisions
+        from inbox.models.transaction import (create_revisions,
+                                              increment_versions)
+
+        @event.listens_for(session, 'before_flush')
+        def before_flush(session, flush_context, instances):
+            increment_versions(session)
 
         @event.listens_for(session, 'after_flush')
         def after_flush(session, flush_context):

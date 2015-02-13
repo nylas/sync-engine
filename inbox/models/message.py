@@ -11,8 +11,7 @@ from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy.sql.expression import false
 
 from inbox.util.html import plaintext2html, strip_tags
-from inbox.sqlalchemy_ext.util import (JSON, Base36UID, generate_public_id,
-                                       json_field_too_long)
+from inbox.sqlalchemy_ext.util import JSON, json_field_too_long
 
 from inbox.config import config
 from inbox.util.addr import parse_mimepart_address_header
@@ -68,7 +67,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     thread = relationship(
         'Thread',
         backref=backref('messages', order_by='Message.received_date',
-                        passive_deletes=True))
+                        passive_deletes=True, cascade='all, delete-orphan'))
 
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           index=True, nullable=False)
@@ -130,18 +129,26 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     # but it's unlikely.
     #
     # (Gmail info from
-    # http://mailman13.u.washington.edu/pipermail/imap-protocol/2014-July/002290.html.)
+    # http://mailman13.u.washington.edu/pipermail/imap-protocol/
+    # 2014-July/002290.html.)
     g_msgid = Column(BigInteger, nullable=True, index=True, unique=False)
     g_thrid = Column(BigInteger, nullable=True, index=True, unique=False)
 
     # The uid as set in the X-INBOX-ID header of a sent message we create
     inbox_uid = Column(String(64), nullable=True, index=True)
 
+    def regenerate_inbox_uid(self):
+        """The value of inbox_uid is simply the draft public_id and version,
+        concatenated. Because the inbox_uid identifies the draft on the remote
+        provider, we regenerate it on each draft revision so that we can delete
+        the old draft and add the new one on the remote."""
+        self.inbox_uid = '{}-{}'.format(self.public_id, self.version)
+
     # In accordance with JWZ (http://www.jwz.org/doc/threading.html)
     references = Column(JSON, nullable=True)
 
-    # Only used on drafts
-    version = Column(Base36UID, nullable=True, default=generate_public_id)
+    # Only used for drafts.
+    version = Column(Integer, nullable=False, server_default='0')
 
     def mark_for_deletion(self):
         """Mark this message to be deleted by an asynchronous delete

@@ -55,7 +55,6 @@ def test_unread_and_draft_tags_applied(db, thread, message, folder, imapuid):
     assert 'unread' in [t.name for t in thread.tags]
     assert 'drafts' not in [t.name for t in thread.tags]
     assert not message.is_read
-    assert message.state == 'sent'
 
 
 def test_gmail_label_sync(db, default_account, message, thread, folder,

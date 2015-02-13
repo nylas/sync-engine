@@ -81,6 +81,10 @@ def get_draft(draft_public_id, version, namespace_id, db_session):
     if version is None:
         raise InputError('Must specify draft version')
     try:
+        version = int(version)
+    except ValueError:
+        raise InputError('Invalid draft version')
+    try:
         draft = db_session.query(Message).filter(
             Message.public_id == draft_public_id,
             Message.namespace_id == namespace_id).one()

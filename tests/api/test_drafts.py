@@ -7,7 +7,8 @@ import gevent
 
 import pytest
 
-from tests.util.base import api_client, default_account
+from tests.util.base import (api_client, default_account, default_namespace,
+                             message, thread)
 
 __all__ = ['default_account', 'api_client']
 
@@ -43,7 +44,7 @@ def test_create_and_get_draft(api_client, example_draft):
 
     public_id = json.loads(r.data)['id']
     version = json.loads(r.data)['version']
-    assert public_id != version
+    assert version == 0
 
     r = api_client.get_data('/drafts')
     matching_saved_drafts = [draft for draft in r if draft['id'] == public_id]
@@ -122,6 +123,7 @@ def test_create_draft_with_attachments(api_client, attachments, example_draft):
     assert r.status_code == 200
     returned_draft = json.loads(r.data)
     draft_public_id = returned_draft['id']
+    assert returned_draft['version'] == 0
     example_draft['version'] = returned_draft['version']
     assert len(returned_draft['files']) == 1
 
@@ -132,6 +134,7 @@ def test_create_draft_with_attachments(api_client, attachments, example_draft):
     assert r.status_code == 200
     returned_draft = json.loads(r.data)
     assert len(returned_draft['files']) == 3
+    assert returned_draft['version'] == 1
     example_draft['version'] = returned_draft['version']
 
     # Make sure we can't delete the files now
@@ -153,6 +156,7 @@ def test_create_draft_with_attachments(api_client, attachments, example_draft):
 
     draft_data = api_client.get_data('/drafts/{}'.format(draft_public_id))
     assert len(draft_data['files']) == 1
+    assert draft_data['version'] == 2
     example_draft['version'] = draft_data['version']
 
     example_draft['file_ids'] = []
@@ -161,7 +165,7 @@ def test_create_draft_with_attachments(api_client, attachments, example_draft):
     draft_data = api_client.get_data('/drafts/{}'.format(draft_public_id))
     assert r.status_code == 200
     assert len(draft_data['files']) == 0
-    returned_draft = json.loads(r.data)
+    assert draft_data['version'] == 3
 
     # now that they're not attached, we should be able to delete them
     for file_id in attachment_ids:
@@ -192,6 +196,7 @@ def test_update_draft(api_client):
     r = api_client.post_data('/drafts', original_draft)
     draft_public_id = json.loads(r.data)['id']
     version = json.loads(r.data)['version']
+    assert version == 0
 
     # Sleep so that timestamp on updated draft is different.
     gevent.sleep(1)
@@ -207,8 +212,8 @@ def test_update_draft(api_client):
     updated_public_id = json.loads(r.data)['id']
     updated_version = json.loads(r.data)['version']
 
-    assert updated_public_id == draft_public_id and \
-        updated_version != version
+    assert updated_public_id == draft_public_id
+    assert updated_version > 0
 
     drafts = api_client.get_data('/drafts')
     assert len(drafts) == 1
@@ -272,21 +277,8 @@ def test_delete_draft(api_client):
     assert 'drafts' not in [t['name'] for t in thread['tags']]
 
 
-def test_delete_remote_draft(db, api_client):
-    from inbox.models.message import Message
-
-    # Non-Inbox created draft, therefore don't set inbox_uid
-    message = Message()
-    message.namespace_id = NAMESPACE_ID
-    message.thread_id = 1
-    message.received_date = datetime.utcnow()
-    message.size = len('')
+def test_delete_remote_draft(db, api_client, message):
     message.is_draft = True
-    message.is_read = True
-    message.sanitized_body = ''
-    message.snippet = ''
-
-    db.session.add(message)
     db.session.commit()
 
     drafts = api_client.get_data('/drafts')
@@ -344,7 +336,7 @@ def test_update_to_nonexistent_draft(api_client):
     updated_draft = {
         'subject': 'updated draft',
         'body': 'updated draft',
-        'version': 'notarealversion'
+        'version': 22
     }
 
     r = api_client.put_data('/drafts/{}'.format('notarealid'), updated_draft)

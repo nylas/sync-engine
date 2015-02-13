@@ -69,7 +69,6 @@ def test_gracefully_handle_new_namespace(db, streaming_test_client):
                      {'timeout': .1, 'cursor': cursor})
     r = streaming_test_client.get(url)
     assert r.status_code == 200
-    assert r.data == ''
 
 
 def test_exclude_object_types(db, api_prefix, streaming_test_client):

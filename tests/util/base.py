@@ -139,7 +139,7 @@ class TestDB(object):
         from inbox.ignition import main_engine
         engine = main_engine()
         # Set up test database
-        self.session = InboxSession(engine, versioned=False)
+        self.session = InboxSession(engine)
         self.engine = engine
         self.config = config
         self.dumpfile = dumpfile
@@ -265,7 +265,7 @@ def add_fake_message(db_session, namespace_id, thread, from_addr=None,
     m.sanitized_body = ''
     m.snippet = ''
     m.subject = subject or ''
-    m.thread = thread
+    thread.messages.append(m)
     update_contacts_from_message(db_session, m, thread.namespace)
     db_session.add(m)
     db_session.commit()

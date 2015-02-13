@@ -34,7 +34,8 @@ from inbox.models.session import InboxSession
 from inbox.search.adaptor import NamespaceSearchEngine, SearchEngineError
 from inbox.transactions import delta_sync
 
-from inbox.api.err import err, APIException, NotFoundError, InputError
+from inbox.api.err import (err, APIException, NotFoundError, InputError,
+                           ConflictError)
 
 from inbox.ignition import main_engine
 engine = main_engine()
@@ -350,8 +351,12 @@ def thread_api_update(public_id):
     except NoResultFound:
         raise NotFoundError("Couldn't find thread `{0}` ".format(public_id))
     data = request.get_json(force=True)
-    if not set(data).issubset({'add_tags', 'remove_tags'}):
+    if not set(data).issubset({'add_tags', 'remove_tags', 'version'}):
         raise InputError('Can only add or remove tags from thread.')
+    if (data.get('version') is not None and data.get('version') !=
+            thread.version):
+        raise ConflictError('Thread {} has been updated to version {}'.
+                            format(thread.public_id, thread.version))
 
     removals = data.get('remove_tags', [])
 
