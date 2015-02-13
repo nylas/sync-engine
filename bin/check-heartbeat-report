@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import click
+import json
 from sys import exit
 from collections import defaultdict
 
@@ -39,15 +40,36 @@ def print_groups(groups):
 @click.option('--host', '-h', type=str, required=True)
 @click.option('--port', '-p', type=int, default=6379)
 @click.option('--verbose', '-v', is_flag=True, default=False)
-def main(host, port, verbose):
+@click.option('--summary', '-s', is_flag=True, default=False)
+def main(host, port, verbose, summary):
     status = get_heartbeat_status(host, port)
     new_report = construct_heartbeat_report(status)
     last_report = fetch_heartbeat_report(host, port)
     store_heartbeat_report(host, port, new_report)
+    alives = 0
+    for name, new_value in new_report.iteritems():
+        if new_value.alive:
+            alives += 1
     dead, new_dead = diff_heartbeat_reports(last_report, new_report)
+    if summary:
+        dead_summary = " ".join([str(acc) for acc, _, _ in dead])
+        new_dead_summary = " ".join([str(acc) for acc, _, _ in new_dead])
+
+        # Hacky assumption
+        host_type = 'staging' if 'staging' in host else 'production'
+        print json.dumps({"dead": len(dead),
+                          "new_dead": len(new_dead),
+                          "alive": alives,
+                          "host": host,
+                          "host_type": host_type,
+                          "dead_accounts": dead_summary,
+                          "new_dead_accounts": new_dead_summary,
+                          "event": "heartbeat"
+                          })
+        exit(0)
     if not dead and not new_dead:
         exit(0)
-    print "Dead accounts: ",
+    print "Dead accounts {}/{}: ".format(len(dead), alives),
     print_summary(dead)
     print "Accounts:"
     print_groups(provider_groups(dead, verbose))
