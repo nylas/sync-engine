@@ -62,7 +62,9 @@ def set_remote_unread(account, thread_id, unread, db_session):
         g_thrid = _get_g_thrid(account.namespace.id, thread_id, db_session)
         crispin_client.set_unread(g_thrid, unread)
 
-    return syncback_action(fn, account, account.all_folder.name, db_session)
+    for folder in [account.all_folder.name, account.trash_folder.name,
+                   account.spam_folder.name]:
+        syncback_action(fn, account, folder, db_session)
 
 
 def remote_move(account, thread_id, from_folder_name, to_folder_name,
