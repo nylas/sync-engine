@@ -23,7 +23,7 @@ SOURCE_APP_NAME = 'InboxApp Calendar Sync Engine'
 
 # Silence the stupid Google API client logger
 import logging
-apiclient_logger = logging.getLogger('apiclient.discovery')
+apiclient_logger = logging.getLogger('googleapiclient.discovery')
 apiclient_logger.setLevel(40)
 
 
