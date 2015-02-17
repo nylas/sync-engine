@@ -14,4 +14,4 @@ Code | Description
 
 For a full list of possible codes, we recommend the [Wikipedia article](http://en.wikipedia.org/wiki/List_of_HTTP_status_codes).
 
-Error bodies includes a JSON object with a standard set of attributes, including an `error_type` and a human-readable `error` string. These are designed to make debugging easier and allow for different handling of scenarios that produce the same HTTP status code.
+Error bodies includes a JSON object with a standard set of attributes, including an `error_type` and a human-readable `message` string. These are designed to make debugging easier and allow for different handling of scenarios that produce the same HTTP status code.

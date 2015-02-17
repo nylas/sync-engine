@@ -13,9 +13,12 @@ def send_draft(account, draft, db_session, schedule_remote_delete):
         sendmail_client = get_sendmail_client(account)
         sendmail_client.send(draft)
     except SendMailException as exc:
+        kwargs = {}
         if exc.failures:
-            return err(exc.http_code, exc.message, failures=exc.failures)
-        return err(exc.http_code, exc.message)
+            kwargs['failures'] = exc.failures
+        if exc.server_error:
+            kwargs['server_error'] = exc.server_error
+        return err(exc.http_code, exc.message, **kwargs)
 
     # We want to return success to the API client if the message was sent, even
     # if there are errors in post-send updating. Otherwise the client may think

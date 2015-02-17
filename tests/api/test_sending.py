@@ -92,6 +92,29 @@ def recipients_refused(patch_token_manager, monkeypatch):
                                                 (550, 'User unknown')}))
 
 
+# Different providers use slightly different errors, so parametrize this test
+# fixture to imitate them.
+@pytest.fixture(params=[
+    "5.2.3 Your message exceeded Google's message size limits"
+    "5.3.4 Message size exceeds fixed maximum message size"])
+def message_too_large(patch_token_manager, monkeypatch, request):
+    monkeypatch.setattr(
+        'inbox.sendmail.smtp.postel.SMTPConnection',
+        erring_smtp_connection(
+            smtplib.SMTPSenderRefused, 552,
+            request.param, None))
+
+
+@pytest.fixture
+def insecure_content(patch_token_manager, monkeypatch):
+    monkeypatch.setattr(
+        'inbox.sendmail.smtp.postel.SMTPConnection',
+        erring_smtp_connection(
+            smtplib.SMTPDataError, 552,
+            '5.7.0 This message was blocked because its content presents a '
+            'potential\\n5.7.0 security issue.'))
+
+
 @pytest.fixture
 def example_draft(db):
     from inbox.models import Account
@@ -232,6 +255,21 @@ def test_handle_recipients_rejected(recipients_refused, api_client,
     r = api_client.post_data('/send', example_draft)
     assert r.status_code == 402
     assert json.loads(r.data)['message'] == 'Sending to all recipients failed'
+
+
+def test_handle_message_too_large(message_too_large, api_client,
+                                  example_draft):
+    r = api_client.post_data('/send', example_draft)
+    assert r.status_code == 402
+    assert json.loads(r.data)['message'] == 'Message too large'
+
+
+def test_message_rejected_for_security(insecure_content, api_client,
+                                       example_draft):
+    r = api_client.post_data('/send', example_draft)
+    assert r.status_code == 402
+    assert json.loads(r.data)['message'] == \
+        'Message content rejected for security reasons'
 
 
 def test_bcc_in_recipients_but_stripped_from_headers(patch_smtp, api_client):

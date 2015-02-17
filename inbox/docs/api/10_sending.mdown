@@ -48,8 +48,24 @@ In rare cases, message delivery can fail if the user's email gateway rejects the
 Code | Description
 -- | --
 200 | OK - Your message was sent.
-400 | Bad Request - Your message was malformed, or contained an invalid parameter.
-402 | Recipients Rejected - Delivery to some or all recipients was refused.
+400 | Bad Request - Your request was malformed, or contained an invalid parameter.
+402 | Message Rejected - The mail provider rejected your message because of its content or recipients.
 403 | Unauthorized - The server was unable to authenticate with the user's mail provider. Re-authenticate the user and try again.
-429 | Rate-limited - Too many messages sent recently. Wait and try again.
+429 | Quota Exceeded - The user has exceeded their mail provider's sending quota.
 503 | Service Unavailable - There was an error connecting to the user's mail provider. Wait and try again.
+
+In addition, the response body contains a JSON object with information about the specific error, including the following attributes:
+
+* `message` A brief human-readable description of the error.
+* `server_error` The original error returned by the user's mail server.
+
+**Sample Response:**
+
+```
+:::json
+{
+    "message": "Message too large",
+    "server_error": "552 : 5.3.4 Message size exceeds fixed maximum message size",
+    "type": "api_error"
+}
+```
