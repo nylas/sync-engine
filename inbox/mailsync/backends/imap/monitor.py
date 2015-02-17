@@ -3,6 +3,7 @@ from gevent.pool import Group
 from gevent.coros import BoundedSemaphore
 from sqlalchemy.orm.exc import NoResultFound
 from inbox.log import get_logger
+from inbox.crispin import retry_crispin
 from inbox.models import Folder
 from inbox.mailsync.backends.base import BaseMailSyncMonitor
 from inbox.mailsync.backends.base import (save_folder_names,
@@ -55,6 +56,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         BaseMailSyncMonitor.__init__(self, account, heartbeat,
                                      retry_fail_classes)
 
+    @retry_crispin
     def prepare_sync(self):
         """Ensures that canonical tags are created for the account, and gets
         and save Folder objects for folders on the IMAP backend. Returns a list
