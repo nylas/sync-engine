@@ -199,7 +199,8 @@ class SMTPClient(object):
                         # but at least one recipient got it. Don't retry; raise
                         # exception so that we fail to client.
                         raise SendMailException(
-                            'Sending to at least one recipent failed', 402,
+                            'Sending to at least one recipent failed',
+                            http_code=402,
                             failures=failures)
             except smtplib.SMTPException as err:
                 self.log.error('Error sending', error=err, exc_info=True)
@@ -210,16 +211,37 @@ class SMTPClient(object):
 
     def _handle_sending_exception(self, err):
         if isinstance(err, smtplib.SMTPServerDisconnected):
-            raise SendMailException('The server unexpectedly closed the '
-                                    'connection', 503)
-        elif (isinstance(err, smtplib.SMTPDataError) and err.smtp_code == 550
-              and err.smtp_error.startswith('5.4.5')):
-            # Gmail-specific quota exceeded error.
-            raise SendMailException('Daily sending quota exceeded', 429)
+            raise SendMailException(
+                'The server unexpectedly closed the connection', 503)
+
         elif isinstance(err, smtplib.SMTPRecipientsRefused):
             raise SendMailException('Sending to all recipients failed', 402)
+
+        elif isinstance(err, smtplib.SMTPResponseException):
+            # Distinguish between permanent failures due to message
+            # content or recipients, and temporary failures for other reasons.
+            # In particular, see https://support.google.com/a/answer/3726730
+            if err.smtp_code == 550 and err.smtp_error.startswith('5.4.5'):
+                message = 'Daily sending quota exceeded'
+                http_code = 429
+            elif (err.smtp_code == 552 and
+                  (err.smtp_error.startswith('5.2.3') or
+                   err.smtp_error.startswith('5.3.4'))):
+                message = 'Message too large'
+                http_code = 402
+            elif err.smtp_code == 552 and err.smtp_error.startswith('5.7.0'):
+                message = 'Message content rejected for security reasons'
+                http_code = 402
+            else:
+                message = 'Sending failed'
+                http_code = 503
+
+            server_error = '{} : {}'.format(err.smtp_code, err.smtp_error)
+            raise SendMailException(message, http_code=http_code,
+                                    server_error=server_error)
         else:
-            raise SendMailException('Sending failed: {}'.format(err), 503)
+            raise SendMailException('Sending failed', http_code=503,
+                                    server_error=str(err))
 
     def send(self, draft):
         """

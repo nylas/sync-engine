@@ -14,13 +14,16 @@ class SendMailException(Exception):
         A descriptive error message.
     http_code: int
         An appropriate HTTP error code for the particular type of failure.
+    server_error: string, optional
+        The error returned by the mail server.
     failures: dict, optional
         If sending only failed for some recipients, information on the specific
         failures.
     """
-    def __init__(self, message, http_code, failures=None):
+    def __init__(self, message, http_code, server_error=None, failures=None):
         self.message = message
         self.http_code = http_code
+        self.server_error = server_error
         self.failures = failures
 
     def __str__(self):
