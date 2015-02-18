@@ -154,6 +154,57 @@ class MutableDict(Mutable, dict):
         self.update(state)
 
 
+class MutableList(Mutable, list):
+    @classmethod
+    def coerce(cls, key, value):
+        """Convert plain list to MutableList"""
+        if not isinstance(value, MutableList):
+            if isinstance(value, list):
+                return MutableList(value)
+
+            # this call will raise ValueError
+            return Mutable.coerce(key, value)
+        else:
+            return value
+
+    def __setitem__(self, idx, value):
+        list.__setitem__(self, idx, value)
+        self.changed()
+
+    def __setslice__(self, start, stop, values):
+        list.__setslice__(self, start, stop, values)
+        self.changed()
+
+    def __delitem__(self, idx):
+        list.__delitem__(self, idx)
+        self.changed()
+
+    def __delslice__(self, start, stop):
+        list.__delslice__(self, start, stop)
+        self.changed()
+
+    def append(self, value):
+        list.append(self, value)
+        self.changed()
+
+    def insert(self, idx, value):
+        list.insert(self, idx, value)
+        self.changed()
+
+    def extend(self, values):
+        list.extend(self, values)
+        self.changed()
+
+    def pop(self, *args, **kw):
+        value = list.pop(self, *args, **kw)
+        self.changed()
+        return value
+
+    def remove(self, value):
+        list.remove(self, value)
+        self.changed()
+
+
 def int128_to_b36(int128):
     """ int128: a 128 bit unsigned integer
         returns a base-36 string representation

@@ -1,3 +1,4 @@
+import copy
 from datetime import datetime
 time_parse = datetime.utcfromtimestamp
 from dateutil.parser import parse as date_parse
@@ -7,7 +8,8 @@ from sqlalchemy import (Column, String, ForeignKey, Text, Boolean,
 from sqlalchemy.orm import relationship, backref, validates
 
 from inbox.util.misc import merge_attr
-from inbox.sqlalchemy_ext.util import MAX_TEXT_LENGTH, JSON, MutableDict
+from inbox.sqlalchemy_ext.util import (MAX_TEXT_LENGTH, JSON, BigJSON,
+                                       MutableDict, MutableList)
 from inbox.models.base import MailSyncBase
 from inbox.models.mixins import HasPublicID, HasRevisions
 from inbox.models.calendar import Calendar
@@ -84,6 +86,8 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     _participant_cascade = "save-update, merge, delete, delete-orphan"
     participants_by_email = Column(MutableDict.as_mutable(JSON), default={},
                                    nullable=True)
+    __participants = Column('participants', MutableList.as_mutable(BigJSON),
+                            default=[], nullable=True)
 
     def __init__(self, *args, **kwargs):
         MailSyncBase.__init__(self, *args, **kwargs)
@@ -107,9 +111,11 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
         # hasn't run yet.
         if self.participants_by_email is None:
             self.participants_by_email = {}
+            self.__participants = []
 
         for p in participants:
             self.participants_by_email[p['email_address']] = p
+        self.extract_participants_list()
 
     # Use a list for lowing to json to preserve original order
     @property
@@ -148,6 +154,8 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
         for email in remove:
             del self.participants_by_email[email]
 
+        self.extract_participants_list()
+
     def merge_participant(self, p_email, base, remote):
         if p_email not in self.participants_by_email:
             # Removed locally, so don't add
@@ -177,6 +185,8 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
             base_value = base.get(p_email)
             remote_value = remote.get(p_email)
             self.merge_participant(p_email, base_value, remote_value)
+
+        self.extract_participants_list()
 
     def merge_from(self, base, remote):
         # This must be updated when new fields are added to the class.
@@ -242,6 +252,8 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
             if p_email not in src.participants_by_email:
                 del self.participants_by_email[p_email]
 
+        self.extract_participants_list()
+
     @property
     def when(self):
         if self.all_day:
@@ -273,3 +285,15 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     @property
     def versioned_relationships(self):
         return ['participants_by_email']
+
+    def extract_participants_list(self):
+        # This is an interim solution to avoid long downtimes when updating
+        # the table. This function is to be called wherever participants_by_email
+        # is used.
+        self.__participants = [copy.copy(self.participants_by_email[email])
+                               for email in self.participants_by_email.keys()]
+
+        for participant in self.__participants:
+            if 'email_address' in participant:
+                participant['email'] = participant['email_address']
+                del participant['email_address']
