@@ -724,12 +724,9 @@ def event_update_api(public_id):
     if 'end' in data:
         data['end'] = datetime.utcfromtimestamp(int(data.get('end')))
     if 'participants' in data:
-        data['participant_list'] = []
         for p in data['participants']:
             if 'status' not in p:
                 p['status'] = 'noreply'
-            data['participant_list'].append(p)
-        del data['participants']
 
     result = inbox.events.crud.update(g.namespace, g.db_session, public_id,
                                       data)

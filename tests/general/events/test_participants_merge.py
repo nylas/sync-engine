@@ -8,7 +8,7 @@ NAMESPACE_ID = 1
 
 def test_initial(db):
     remote = default_event(db.session)
-    remote.participant_list = [
+    remote.participants = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
         {'email': 'paul@example.com',
@@ -34,7 +34,7 @@ def test_initial(db):
 
 def test_no_change(db):
     local = default_event(db.session)
-    local.participant_list = [
+    local.participants = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
         {'email': 'paul@example.com',
@@ -42,7 +42,7 @@ def test_no_change(db):
         {'email': 'mary@example.com',
          'status': 'noreply'}]
     remote = default_event(db.session)
-    remote.participant_list = [
+    remote.participants = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
         {'email': 'paul@example.com',
@@ -50,7 +50,7 @@ def test_no_change(db):
         {'email': 'mary@example.com',
          'status': 'noreply'}]
     new = default_event(db.session)
-    new.participant_list = [
+    new.participants = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
         {'email': 'paul@example.com',
@@ -70,7 +70,7 @@ def test_no_change(db):
 
 def test_add_participant_remote(db):
     local = default_event(db.session)
-    local.participant_list = [
+    local.participants = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
         {'email': 'paul@example.com',
@@ -78,7 +78,7 @@ def test_add_participant_remote(db):
         {'email': 'mary@example.com',
          'status': 'noreply'}]
     remote = default_event(db.session)
-    remote.participant_list = [
+    remote.participants = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
         {'email': 'paul@example.com',
@@ -86,7 +86,7 @@ def test_add_participant_remote(db):
         {'email': 'mary@example.com',
          'status': 'noreply'}]
     new = default_event(db.session)
-    new.participant_list = [
+    new.participants = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
         {'email': 'sarah@example.com',
@@ -108,7 +108,7 @@ def test_add_participant_remote(db):
 
 def test_add_participant_local(db):
     local = default_event(db.session)
-    local.participant_list = [
+    local.participants = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
         {'email': 'paul@example.com',
@@ -118,7 +118,7 @@ def test_add_participant_local(db):
         {'email': 'mary@example.com',
          'status': 'noreply'}]
     remote = default_event(db.session)
-    remote.participant_list = [
+    remote.participants = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
         {'email': 'paul@example.com',
@@ -126,7 +126,7 @@ def test_add_participant_local(db):
         {'email': 'mary@example.com',
          'status': 'noreply'}]
     new = default_event(db.session)
-    new.participant_list = [
+    new.participants = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
         {'email': 'paul@example.com',
@@ -137,21 +137,21 @@ def test_add_participant_local(db):
     local.merge_from(remote, new)
     remote.copy_from(local)
 
-    assert len(local.participants) == 4
-    assert len(remote.participants) == 4
+    assert len(local.participants) == 3
+    assert len(remote.participants) == 3
 
     db.session.add_all([local, remote, new])
 
 
 def test_remove_participant_local(db):
     local = default_event(db.session)
-    local.participant_list = [
+    local.participants = [
         {'email': 'paul@example.com',
          'status': 'noreply'},
         {'email': 'mary@example.com',
          'status': 'noreply'}]
     remote = default_event(db.session)
-    remote.participant_list = [
+    remote.participants = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
         {'email': 'paul@example.com',
@@ -159,7 +159,7 @@ def test_remove_participant_local(db):
         {'email': 'mary@example.com',
          'status': 'noreply'}]
     new = default_event(db.session)
-    new.participant_list = [
+    new.participants = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
         {'email': 'paul@example.com',
@@ -170,15 +170,15 @@ def test_remove_participant_local(db):
     local.merge_from(remote, new)
     remote.copy_from(local)
 
-    assert len(local.participants) == 2
-    assert len(remote.participants) == 2
+    assert len(local.participants) == 3
+    assert len(remote.participants) == 3
 
     db.session.add_all([local, remote, new])
 
 
 def test_remove_participant_remote(db):
     local = default_event(db.session)
-    local.participant_list = [
+    local.participants = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
         {'email': 'paul@example.com',
@@ -186,7 +186,7 @@ def test_remove_participant_remote(db):
         {'email': 'mary@example.com',
          'status': 'noreply'}]
     remote = default_event(db.session)
-    remote.participant_list = [
+    remote.participants = [
         {'email': 'peter@example.com',
          'status': 'noreply'},
         {'email': 'paul@example.com',
@@ -194,7 +194,7 @@ def test_remove_participant_remote(db):
         {'email': 'mary@example.com',
          'status': 'noreply'}]
     new = default_event(db.session)
-    new.participant_list = [
+    new.participants = [
         {'email': 'paul@example.com',
          'status': 'noreply'},
         {'email': 'mary@example.com',
