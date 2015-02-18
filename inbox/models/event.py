@@ -4,7 +4,7 @@ from dateutil.parser import parse as date_parse
 from copy import deepcopy
 
 from sqlalchemy import (Column, String, ForeignKey, Text, Boolean,
-                        DateTime, Enum, UniqueConstraint)
+                        DateTime, Enum, UniqueConstraint, Index)
 from sqlalchemy.orm import relationship, backref, validates
 
 from inbox.util.misc import merge_attr
@@ -80,12 +80,15 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     deleted = False
 
     __table_args__ = (UniqueConstraint('uid', 'source', 'namespace_id',
-                                       'provider_name', name='uuid'),)
+                                       'provider_name', name='uuid'),
+                      Index('ix_event_ns_uid_provider_name',
+                            'namespace_id', 'uid', 'provider_name'))
 
     participants = Column(MutableList.as_mutable(BigJSON), default=[],
                           nullable=True)
 
-    @validates('reminders', 'recurrence', 'owner', 'location', 'title', 'raw_data')
+    @validates('reminders', 'recurrence', 'owner', 'location', 'title',
+               'raw_data')
     def validate_length(self, key, value):
         max_len = _LENGTHS[key]
         return value if value is None else value[:max_len]
