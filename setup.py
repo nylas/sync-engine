@@ -60,7 +60,10 @@ setup(
                  filter(os.path.isfile, glob.glob("migrations/versions/*")))
                 ],
 
-    scripts=['bin/inbox-start', 'bin/search-index-service', 'bin/syncback-service'],
+    scripts=['bin/inbox-start',
+             'bin/search-index-service',
+             'bin/migrate-participant-format',
+             'bin/syncback-service'],
 
     # See:
     # https://pythonhosted.org/setuptools/setuptools.html#dynamic-discovery-of-services-and-plugins
