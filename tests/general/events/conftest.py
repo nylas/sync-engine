@@ -1,4 +1,6 @@
 from pytest import fixture
+from apiclient.errors import HttpError
+
 from inbox.events.util import MalformedEventError
 from inbox.events.base import BaseEventProvider
 
@@ -61,3 +63,23 @@ class EventsProviderStub(BaseEventProvider):
         calendar_id = self.get_calendar_id('test')
         for e in self._events:
             yield (calendar_id, e, None)
+
+
+class GoogleServiceStub(dict):
+
+    def __init__(self, error_code):
+        self['items'] = [True]
+        self.error_code = error_code
+
+    def events(self):
+        return self
+
+    def list(self, calendarId, **kwargs):
+        # Throw an error to test updatedMin
+        if 'updatedMin' in kwargs:
+            raise HttpError('error',
+                            '{ "error": {"code": %s} }' % self.error_code)
+        return self
+
+    def execute(self):
+        return self

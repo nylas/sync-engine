@@ -1,5 +1,6 @@
 """Provide Google Calendar events."""
 import httplib2
+import json
 import dateutil.parser as date_parser
 
 from apiclient.discovery import build
@@ -309,8 +310,19 @@ class GoogleEventsProvider(BaseEventProvider):
         kwargs = {}
         if sync_from_time is not None:
             kwargs = {'updatedMin': sync_from_time}
-        resp = service.events().list(
+        try:
+            resp = service.events().list(
                 calendarId=provider_calendar_name, **kwargs).execute()
+        except HttpError as e:
+            error = json.loads(e.content)
+            if error.get('error', {}).get('code') == 410:
+                # Minimum modification too far in the past: sync again.
+                # https://developers.google.com/google-apps/calendar/v3/sync
+                del kwargs['updatedMin']
+                resp = service.events().list(
+                    calendarId=provider_calendar_name, **kwargs).execute()
+            else:
+                raise
 
         extra = {k: v for k, v in resp.iteritems() if k != 'items'}
         raw_events = resp['items']
@@ -351,8 +363,8 @@ class GoogleEventsProvider(BaseEventProvider):
             with session_scope() as db_session:
                 # FIXME: refactor this to take a db session.
                 calendar_id = self.get_calendar_id(
-                                response_calendar['id'],
-                                description=response_calendar['summary'])
+                    response_calendar['id'],
+                    description=response_calendar['summary'])
                 # Update calendar statuses. They may have changed.
                 calendar = db_session.query(Calendar).get(calendar_id)
                 if response_calendar['accessRole'] == 'reader':

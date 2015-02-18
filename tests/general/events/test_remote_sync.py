@@ -1,13 +1,14 @@
 import pytest
 
 from tests.util.base import config
-from tests.general.events.conftest import EventsProviderStub
+from tests.general.events.conftest import EventsProviderStub, GoogleServiceStub
 
 # Need to set up test config before we can import from
 # inbox.models.tables.
 config()
 from inbox.models import Event
 from inbox.events.remote_sync import EventSync
+from inbox.events.google import GoogleEventsProvider
 from inbox.util.misc import MergeError
 from default_event import default_event
 
@@ -181,3 +182,23 @@ def test_malformed(events_provider, event_sync, db):
     event_sync.provider_instance = events_provider
     event_sync.poll()
     assert db.session.query(Event).count() == num_original_events
+
+
+def test_minimum_modification():
+    provider = GoogleEventsProvider(1, 1)
+    # Use a Google service stand-in that requires removing the minimum
+    # modification time to work.
+    provider._get_google_service = lambda: GoogleServiceStub(410)
+    (_, cal, _) = provider.fetch_calendar_items('bob', 1, '2014').next()
+    assert cal is True
+
+
+def test_minimum_modification_passthrough():
+    # Test that non-410 errors don't get swallowed.
+    provider = GoogleEventsProvider(1, 1)
+    # Use a Google service stand-in that requires removing the minimum
+    # modification time to work.
+    provider._get_google_service = lambda: GoogleServiceStub(400)
+    with pytest.raises(Exception) as excinfo:
+        (_, cal, _) = provider.fetch_calendar_items('bob', 1, '2014').next()
+    assert excinfo.typename == 'HttpError'
