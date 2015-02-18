@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Enum, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, Enum, ForeignKey, Text, Index
 from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy.schema import UniqueConstraint
 
@@ -50,7 +50,9 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
     deleted = False
 
     __table_args__ = (UniqueConstraint('uid', 'source', 'namespace_id',
-                                       'provider_name'),)
+                                       'provider_name'),
+                      Index('ix_contact_ns_uid_provider_name',
+                            'namespace_id', 'uid', 'provider_name'))
 
     @validates('raw_data')
     def validate_length(self, key, value):
