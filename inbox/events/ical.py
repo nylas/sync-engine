@@ -59,7 +59,7 @@ def events_from_ics(namespace, calendar, ics_str):
                 except KeyError:
                     pass
 
-                participants.append({'email_address': email,
+                participants.append({'email': email,
                                      'name': name,
                                      'status': status,
                                      'notes': notes,
