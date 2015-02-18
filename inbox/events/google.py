@@ -147,16 +147,18 @@ class GoogleEventsProvider(BaseEventProvider):
 
             reminders = []
             if 'dateTime' in start:
-                if event['reminders']['useDefault']:
-                    reminder_source = cal_info['defaultReminders']
-                elif 'overrides' in event['reminders']:
-                    reminder_source = event['reminders']['overrides']
-                else:
-                    reminder_source = None
 
-                if reminder_source:
-                    for reminder in reminder_source:
-                        reminders.append(reminder['minutes'])
+                if 'reminders' in event:
+                    if event['reminders']['useDefault']:
+                        reminder_source = cal_info['defaultReminders']
+                    elif 'overrides' in event['reminders']:
+                        reminder_source = event['reminders']['overrides']
+                    else:
+                        reminder_source = None
+
+                    if reminder_source:
+                        for reminder in reminder_source:
+                            reminders.append(reminder['minutes'])
 
                 try:
                     start = parse_datetime(start['dateTime'])
@@ -172,19 +174,26 @@ class GoogleEventsProvider(BaseEventProvider):
                 end = date_parser.parse(end['date'])
                 all_day = True
 
-            reminders = str(reminders)
+            reminders = str(reminders) if reminders else None
 
             # Convert google's notion of status into our own
             participants = []
             for attendee in event.get('attendees', []):
                 g_status = attendee.get('responseStatus')
                 if g_status not in GoogleEventsProvider.status_map:
+                    self.log.error("Unknown event responseStatus: {}"
+                                   .format(g_status))
                     raise MalformedEventError()
                 status = GoogleEventsProvider.status_map[g_status]
 
                 email = attendee.get('email')
                 if not email:
-                    raise MalformedEventError()
+                    raise MalformedEventError(
+                        'Participant in event without email')
+                # TOFIX
+                # Sometimes the attendee email can be none in Google Calendar
+                # My theory is that it happens when responding to G+ events,
+                # in which case an `id` field is included for the contact
 
                 name = attendee.get('displayName')
 
@@ -213,8 +222,8 @@ class GoogleEventsProvider(BaseEventProvider):
                 owner = u'{} <{}>'.format(creator.get('displayName', ''),
                                           creator.get('email', ''))
 
-        except (KeyError, AttributeError):
-            raise MalformedEventError()
+        except (KeyError, AttributeError) as e:
+            raise MalformedEventError(e)
 
         return Event(namespace_id=self.namespace_id,
                      uid=uid,

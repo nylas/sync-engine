@@ -16,7 +16,7 @@ def test_only_uids_deleted_synchronously(db, default_account,
                     [msg_uid], {msg_uid: GmailFlags((), ('label',))})
     assert 'label' in [t.name for t in thread.tags]
     remove_deleted_uids(default_account.id, db.session, [msg_uid], folder.id)
-    assert abs((message.deleted_at - datetime.utcnow()).total_seconds()) < 1
+    assert abs((message.deleted_at - datetime.utcnow()).total_seconds()) < 2
     # Check that thread tags do get updated synchronously.
     assert 'label' not in [t.name for t in thread.tags]
 
