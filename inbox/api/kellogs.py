@@ -44,11 +44,15 @@ def encode(obj, namespace_public_id=None):
         return namespace_public_id or obj.namespace.public_id
 
     def _format_participant_data(participant):
-        """Event.participants is a JSON blob which may contain internal data.
-        This function returns a dict with only the data we want to make public."""
+        """Event.participants_by_emails is a JSON blob which may contain internal data.
+        This function returns a dict with only the data we can make public."""
         dct = {}
-        for attribute in ['name', 'status', 'email']:
-            dct[attribute] = participant.get(attribute)
+        if 'email_address' in participant:
+            dct['email'] = participant['email_address']
+
+        for attribute in ['name', 'status']:
+            if attribute in participant:
+                dct[attribute] = participant[attribute]
 
         return dct
 

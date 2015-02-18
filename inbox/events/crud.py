@@ -26,8 +26,10 @@ def create(namespace, db_session, calendar, title, description, location,
         when=when,
         read_only=False,
         is_owner=True,
-        participants=participants,
+        participants={},
         source='local')
+
+    event.participant_list = participants
 
     db_session.add(event)
     db_session.commit()
@@ -73,7 +75,7 @@ def update(namespace, db_session, event_public_id, update_dict):
         update_dict['calendar_id'] = new_cal.id
 
     for attr in ['title', 'description', 'location', 'reminders', 'recurrence',
-                 'when', 'participants', 'calendar_id']:
+                 'when', 'participant_list', 'calendar_id']:
         if attr in update_dict:
             setattr(event, attr, update_dict[attr])
 

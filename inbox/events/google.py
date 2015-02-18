@@ -186,24 +186,29 @@ class GoogleEventsProvider(BaseEventProvider):
                     raise MalformedEventError()
                 status = GoogleEventsProvider.status_map[g_status]
 
-                dct = {}
-
                 email = attendee.get('email')
-                if email:
-                    dct['email'] = email
+                if not email:
+                    raise MalformedEventError(
+                        'Participant in event without email')
+                # TOFIX
+                # Sometimes the attendee email can be none in Google Calendar
+                # My theory is that it happens when responding to G+ events,
+                # in which case an `id` field is included for the contact
 
                 name = attendee.get('displayName')
-                if name:
-                    dct['name'] = name
 
                 notes = None
                 guests = 0
                 if 'additionalGuests' in attendee:
-                    dct['guests'] = attendee['additionalGuests']
+                    guests = attendee['additionalGuests']
                 elif 'comment' in attendee:
-                    dct['notes'] = attendee['comment']
+                    notes = attendee['comment']
 
-                participants.append(dct)
+                participants.append({'email_address': email,
+                                     'name': name,
+                                     'status': status,
+                                     'notes': notes,
+                                     'guests': guests})
 
             if 'guestsCanModify' in event:
                 read_only = False
@@ -250,8 +255,8 @@ class GoogleEventsProvider(BaseEventProvider):
             if 'status' in participant:
                 att["responseStatus"] = inv_status_map[participant['status']]
 
-            if 'email' in participant:
-                att["email"] = participant['email']
+            if 'email_address' in participant:
+                att["email"] = participant['email_address']
 
             if 'guests' in participant:
                 att["additionalGuests"] = participant['guests']
