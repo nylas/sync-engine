@@ -61,7 +61,7 @@ class BaseEventProvider(BaseSyncProvider):
                     new_event.calendar_id = calendar_id
                     events.append(new_event)
             except MalformedEventError:
-                self.log.warning('Malformed event', _event=p_event,
+                self.log.error('Malformed event', _event=p_event,
                                  extra=extra)
 
         return events
