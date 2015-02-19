@@ -12,7 +12,7 @@ def test_add_participant(db, config):
     """Test the basic logic of the merge() function."""
     base = default_event(db.session)
     remote = default_event(db.session)
-    remote.participants = [{'email_address': 'foo@example.com'}]
+    remote.participants = [{'email': 'foo@example.com'}]
 
     dest = default_event(db.session)
 
@@ -23,12 +23,12 @@ def test_add_participant(db, config):
 def test_update_participant_status(db, config):
     """Test the basic logic of the merge() function."""
     base = default_event(db.session)
-    base.participants = [{'email_address':"foo@example.com"}]
+    base.participants = [{'email':"foo@example.com"}]
 
     dest = default_event(db.session)
-    dest.participants = [{'email_address':"foo@example.com"}]
+    dest.participants = [{'email':"foo@example.com"}]
 
-    participant1 = {'email_address': "foo@example.com", 'status': "yes"}
+    participant1 = {'email': "foo@example.com", 'status': "yes"}
     remote = default_event(db.session)
     remote.participants = [participant1]
 
@@ -40,13 +40,13 @@ def test_update_participant_status(db, config):
 def test_update_participant_status2(db, config):
     """Test the basic logic of the merge() function."""
     base = default_event(db.session)
-    base.participants = [{'email_address':"foo@example.com", "status": "no"}]
+    base.participants = [{'email':"foo@example.com", "status": "no"}]
 
     dest = default_event(db.session)
-    dest.participants = [{'email_address':"foo@example.com", "status": "no"}]
+    dest.participants = [{'email':"foo@example.com", "status": "no"}]
 
     remote = default_event(db.session)
-    remote.participants = [{'email_address':"foo@example.com", "status": "yes"}]
+    remote.participants = [{'email':"foo@example.com", "status": "yes"}]
 
     dest.merge_from(base, remote)
     assert len(dest.participants) == 1
@@ -56,19 +56,17 @@ def test_update_participant_status2(db, config):
 def test_multi_update(db, config):
     """Test the basic logic of the merge() function."""
     base = default_event(db.session)
-    base.participants = [{'email_address':"foo@example.com", "status": "no"}]
+    base.participants = [{'email':"foo@example.com", "status": "no"}]
 
     dest = default_event(db.session)
-    dest.participants = [{'email_address':"foo@example.com", "status": "no"},
-                         {'email_address':"foo2@example.com", "status": "no"}]
+    dest.participants = [{'email':"foo@example.com", "status": "no"},
+                         {'email':"foo2@example.com", "status": "no"}]
 
     remote = default_event(db.session)
-    remote.participants = [{'email_address':"foo@example.com", "status": "yes"}]
+    remote.participants = [{'email':"foo@example.com", "status": "yes"}]
 
     dest.merge_from(base, remote)
-    assert len(dest.participants) == 2
+    assert len(dest.participants) == 1
     for p in dest.participants:
-        if p['email_address'] == "foo@example.com":
+        if p['email'] == "foo@example.com":
             assert p['status'] == "yes"
-        if p['email_address'] == "foo2@example.com":
-            assert p['status'] == "no"
