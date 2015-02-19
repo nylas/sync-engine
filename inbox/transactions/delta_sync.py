@@ -74,7 +74,12 @@ def format_transactions_after_pointer(namespace_id, pointer, db_session,
         If given, don't include transactions for these types of objects.
 
     """
-    filters = [Transaction.id > pointer]
+    # deleted_at condition included to allow this query to be satisfied via the
+    # legacy index on (namespace_id, deleted_at) for performance.
+    # TODO(emfree): Remove this hack and ensure that the right index (on
+    # namespace_id only) exists.
+    filters = [Transaction.id > pointer,
+               Transaction.deleted_at.is_(None)]
 
     if namespace_id is not None:
         filters.append(Transaction.namespace_id == namespace_id)
@@ -82,7 +87,11 @@ def format_transactions_after_pointer(namespace_id, pointer, db_session,
     if exclude_types is not None:
         filters.append(~Transaction.object_type.in_(exclude_types))
 
+    # Need to explicitly specify the index hint because the query planner is
+    # dumb as nails and otherwise would make this super slow for some values of
+    # namespace_id and pointer.
     transactions = db_session.query(Transaction). \
+        with_hint(Transaction, 'USE INDEX (namespace_id_deleted_at)'). \
         order_by(asc(Transaction.id)). \
         filter(*filters).limit(result_limit)
 
