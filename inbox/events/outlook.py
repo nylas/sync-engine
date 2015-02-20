@@ -92,7 +92,7 @@ class OutlookEventsProvider(BaseEventProvider):
                      source='remote',
                      participants=participants)
 
-    def fetch_items(self, sync_from_time=None):
+    def fetch_items(self, sync_from_dt=None):
         with session_scope() as db_session:
             account = db_session.query(OutlookAccount).get(self.account_id)
             access_token = token_manager.get_token(account)

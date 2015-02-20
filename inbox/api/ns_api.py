@@ -532,7 +532,6 @@ def contact_search_api():
         results = g.db_session.query(Contact)
 
     results = results.filter(Contact.namespace_id == g.namespace.id,
-                             Contact.source == 'local',
                              term_filter).order_by(asc(Contact.id))
 
     if args['view'] == 'count':
@@ -540,19 +539,6 @@ def contact_search_api():
 
     results = results.limit(args['limit']).offset(args['offset']).all()
     return g.encoder.jsonify(results)
-
-
-@app.route('/contacts/', methods=['POST'])
-def contact_create_api():
-    # TODO(emfree) Detect attempts at duplicate insertions.
-    data = request.get_json(force=True)
-    name = data.get('name')
-    email = data.get('email')
-    if not any((name, email)):
-        raise InputError('Contact name and email cannot both be null.')
-    new_contact = inbox.contacts.crud.create(g.namespace, g.db_session, name,
-                                             email)
-    return g.encoder.jsonify(new_contact)
 
 
 @app.route('/contacts/<public_id>', methods=['GET'])
@@ -563,16 +549,6 @@ def contact_read_api(public_id):
     if result is None:
         raise NotFoundError("Couldn't find contact {0}".format(public_id))
     return g.encoder.jsonify(result)
-
-
-@app.route('/contacts/<public_id>', methods=['PUT'])
-def contact_update_api(public_id):
-    raise NotImplementedError
-
-
-@app.route('/contacts/<public_id>', methods=['DELETE'])
-def contact_delete_api(public_id):
-    raise NotImplementedError
 
 
 ##

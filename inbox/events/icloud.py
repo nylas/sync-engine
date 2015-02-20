@@ -88,7 +88,7 @@ class ICloudEventsProvider(BaseEventProvider):
                      is_owner=True,
                      participants=participants)
 
-    def fetch_items(self, sync_from_time=None):
+    def fetch_items(self, sync_from_dt=None):
         response_items = []
         with session_scope() as db_session:
             account = db_session.query(GenericAccount).get(self.account_id)

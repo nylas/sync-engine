@@ -238,7 +238,6 @@ class ContactsProviderStub(object):
         from inbox.models import Contact
         self._contacts.append(Contact(namespace_id=1,
                                       uid=str(self._next_uid),
-                                      source='remote',
                                       provider_name=self.PROVIDER_NAME,
                                       name=name,
                                       email_address=email_address,

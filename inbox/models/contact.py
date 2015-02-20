@@ -2,7 +2,6 @@ from sqlalchemy import Column, Integer, String, Enum, ForeignKey, Text, Index
 from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy.schema import UniqueConstraint
 
-from inbox.util.misc import merge_attr
 from inbox.sqlalchemy_ext.util import MAX_TEXT_LENGTH
 from inbox.models.mixins import HasPublicID, HasEmailAddress, HasRevisions
 from inbox.models.base import MailSyncBase
@@ -14,10 +13,6 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
     """Data for a user's contact."""
     API_OBJECT_NAME = 'contact'
 
-    @property
-    def should_suppress_transaction_creation(self):
-        return self.source == 'remote'
-
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           nullable=False)
     namespace = relationship(Namespace, load_on_pending=True)
@@ -27,13 +22,6 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
     # A constant, unique identifier for the remote backend this contact came
     # from. E.g., 'google', 'eas', 'inbox'
     provider_name = Column(String(64))
-
-    # We essentially maintain two copies of a user's contacts.
-    # The contacts with source 'remote' give the contact data as it was
-    # immediately after the last sync with the remote provider.
-    # The contacts with source 'local' also contain any subsequent local
-    # modifications to the data.
-    source = Column('source', Enum('local', 'remote'))
 
     name = Column(Text)
     # phone_number = Column(String(64))
@@ -49,7 +37,7 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
     # database column.)
     deleted = False
 
-    __table_args__ = (UniqueConstraint('uid', 'source', 'namespace_id',
+    __table_args__ = (UniqueConstraint('uid', 'namespace_id',
                                        'provider_name'),
                       Index('ix_contact_ns_uid_provider_name',
                             'namespace_id', 'uid', 'provider_name'))
@@ -58,21 +46,12 @@ class Contact(MailSyncBase, HasRevisions, HasPublicID, HasEmailAddress):
     def validate_length(self, key, value):
         return value if value is None else value[:MAX_TEXT_LENGTH]
 
-    def merge_from(self, base, remote):
+    def merge_from(self, new_contact):
         # This must be updated when new fields are added to the class.
         merge_attrs = ['name', 'email_address', 'raw_data']
         for attr in merge_attrs:
-            merge_attr(base, remote, self, attr)
-
-    def copy_from(self, src):
-        """ Copy fields from src."""
-        self.namespace_id = src.namespace_id
-        self.namespace = src.namespace
-        self.uid = src.uid
-        self.name = src.name
-        self.email_address = src.email_address
-        self.provider_name = src.provider_name
-        self.raw_data = src.raw_data
+            if getattr(self, attr) != getattr(new_contact, attr):
+                setattr(self, attr, getattr(new_contact, attr))
 
 
 class MessageContactAssociation(MailSyncBase):
