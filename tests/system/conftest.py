@@ -82,7 +82,7 @@ def create_account(db_session, email, password):
 
     account = auth_handler.create_account(db_session, email, response)
     auth_handler.verify_account(account)
-
+    account.throttled = False
     db_session.add(account)
     db_session.commit()
     return account
