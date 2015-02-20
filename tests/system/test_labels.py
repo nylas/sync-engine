@@ -52,11 +52,10 @@ def test_gmail_labels(client):
             wait_for_tag(client, thread.id, labelname)
 
             draft = client.drafts.create(to=[{'name': 'Inbox SelfSend',
-                                         'email': client.email_address}],
-                                         body="Blah, replying to message",
-                                         subject=thread.subject)
+                                          'email': client.email_address}],
+                                          body="Blah, replying to message",
+                                          subject=thread.subject)
             draft.send()
-            wait_for_tag(client, thread.id, labelname)
 
             crispin_client.remove_label(g_thrid, labelname)
             wait_for_tag_removal(client, thread.id, labelname)
