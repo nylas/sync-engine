@@ -157,7 +157,7 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
                 except ValidationError as e:
                     logger.error("Error obtaining access token",
                                  account_id=self.account_id)
-                    account.sync_state = 'invalid'
+                    account.mark_invalid()
                     account.update_sync_error(str(e))
                     db_session.commit()
                     raise
@@ -226,7 +226,7 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
                         with session_scope() as db_session:
                             query = db_session.query(ImapAccount)
                             account = query.get(self.account_id)
-                            account.sync_state = 'invalid'
+                            account.mark_invalid()
                             account.update_sync_error(str(e))
                         raise
             return None

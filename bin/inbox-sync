@@ -52,7 +52,7 @@ def main(cmd, email_address, all):
 
         for account in accounts:
             if cmd == 'start':
-                account.start_sync(platform.node())
+                account.enable_sync(platform.node())
                 print "Marked account '{}' to start sync on {}.".format(
                     account.email_address, platform.node())
                 db_session.add(account)
@@ -60,7 +60,7 @@ def main(cmd, email_address, all):
             elif cmd == 'stop':
                 old_host = account.sync_host
                 if account.sync_enabled:
-                    account.stop_sync()
+                    account.disable_sync()
                     print "Marked account '{}' to stop sync on {}.".format(
                         account.email_address, old_host)
                     db_session.add(account)

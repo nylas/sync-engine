@@ -38,25 +38,24 @@ def test_sync_start(db, default_account, config):
     ss = SyncService(cpu_id=0, total_cpus=1)
     assert ss._get_local_accounts() == []
 
-    default_account.sync_state = 'stopped'
-
-    # Stopped
+    default_account.disable_sync()
     default_account.sync_host = None
     db.session.commit()
 
-    # Don't steal stopped accounts
+    # Don't steal disabled accounts
     config['SYNC_STEAL_ACCOUNTS'] = True
     ss = SyncService(cpu_id=0, total_cpus=1)
     assert ss._get_local_accounts() == []
 
-    # Don't explicitly start stopped accounts
+    # Don't explicitly start disabled accounts
     default_account.sync_host = platform.node()
     db.session.commit()
     ss = SyncService(cpu_id=0, total_cpus=1)
     assert ss._get_local_accounts() == []
 
     # Invalid Credentials
-    default_account.sync_state = 'invalid'
+    default_account.mark_invalid()
+    default_account.sync_host = None
     db.session.commit()
 
     # Don't steal invalid accounts
@@ -69,3 +68,22 @@ def test_sync_start(db, default_account, config):
     db.session.commit()
     ss = SyncService(cpu_id=0, total_cpus=1)
     assert ss._get_local_accounts() == []
+
+
+def test_sync_transitions(db, default_account, config):
+    ss = SyncService(cpu_id=0, total_cpus=1)
+    default_account.enable_sync()
+    db.session.commit()
+    assert ss._get_local_accounts() == [1]
+
+    default_account.disable_sync('manual')
+    db.session.commit()
+    assert ss._get_local_accounts() == []
+    assert default_account._sync_status['sync_disabled_reason'] == 'manual'
+
+    default_account.mark_invalid()
+    db.session.commit()
+    assert ss._get_local_accounts() == []
+    assert default_account.sync_state == 'invalid'
+    assert default_account._sync_status['sync_disabled_reason'] == \
+        'invalid credentials'

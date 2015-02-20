@@ -73,9 +73,10 @@ class GoogleContactsProvider(BaseSyncProvider):
                     source=SOURCE_APP_NAME)
                 google_client.auth_token = two_legged_oauth_token
                 return google_client
-            except (gdata.client.BadAuthentication, OAuthError):
-                self.log.info('Invalid user credentials given')
-                account.sync_state = 'invalid'
+            except (gdata.client.BadAuthentication, OAuthError) as e:
+                self.log.debug('Invalid user credentials given: {}'
+                               .format(e))
+                account.mark_invalid()
                 db_session.add(account)
                 db_session.commit()
                 raise ValidationError

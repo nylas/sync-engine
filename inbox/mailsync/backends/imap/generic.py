@@ -239,6 +239,14 @@ class FolderSyncEngine(Greenlet):
             self.state = saved_folder_status.state
             return saved_folder_status
 
+    def set_stopped(self, db_session):
+        saved_folder_status = db_session.query(ImapFolderSyncStatus)\
+            .filter_by(account_id=self.account_id,
+                       folder_id=self.folder_id).one()
+
+        saved_folder_status.stop_sync()
+        self.state = saved_folder_status.state
+
     @retry_crispin
     def initial_sync(self):
         log.bind(state='initial')
