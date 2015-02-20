@@ -39,7 +39,7 @@ class BaseSyncMonitor(Greenlet):
         self.heartbeat_status = HeartbeatStatusProxy(self.account_id,
                                                      self.folder_id)
         self.heartbeat_status.publish(email_address=self.email_address,
-                                      provider_name=self._provider_name,
+                                      provider_name=self.provider_name,
                                       folder_name=self.folder_name)
 
         Greenlet.__init__(self)
@@ -62,13 +62,21 @@ class BaseSyncMonitor(Greenlet):
 
                 try:
                     self.sync()
-                    self.heartbeat_status.publish(state='poll')
+                    self.heartbeat_status.publish(
+                        email_address=self.email_address,
+                        provider_name=self.provider_name,
+                        folder_name=self.folder_name,
+                        state='poll')
 
                 # If we get a connection or API permissions error, then sleep
                 # 2x poll frequency.
                 except ConnectionError:
                     self.log.error('Error while polling', exc_info=True)
-                    self.heartbeat_status.publish(state='poll error')
+                    self.heartbeat_status.publish(
+                        email_address=self.email_address,
+                        provider_name=self.provider_name,
+                        folder_name=self.folder_name,
+                        state='poll error')
                     sleep(self.poll_frequency)
                 sleep(self.poll_frequency)
         except ValidationError:
