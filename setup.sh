@@ -40,7 +40,12 @@ if ! [ -e ./setup.py ] || ! [ -e ./setup.sh ] ; then
 fi
 
 color '35;1' 'Updating packages...'
+
+# Don't fail builds if apt-get update fails (eg due to ksplice being down)
+set +e
 apt-get update
+set -e
+
 apt-get -y install python-software-properties
 
 # Preconfigure MySQL root password
