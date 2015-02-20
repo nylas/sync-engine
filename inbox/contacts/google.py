@@ -76,7 +76,7 @@ class GoogleContactsProvider(object):
             except (gdata.client.BadAuthentication, OAuthError) as e:
                 self.log.debug('Invalid user credentials given: {}'
                                .format(e))
-                account.sync_state = 'invalid'
+                account.mark_invalid()
                 db_session.add(account)
                 db_session.commit()
 

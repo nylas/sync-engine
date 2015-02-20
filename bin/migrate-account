@@ -9,6 +9,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from inbox.models.account import Account
 from inbox.models.session import session_scope as mailsync_session_scope
 
+
 @click.command()
 @click.option('--account-id', '-a', type=int, required=True)
 @click.option('--host', '-h', type=str, required=True)
@@ -25,15 +26,15 @@ def main(account_id, host):
             print "Account {} not found".format(account_id)
             sys.exit(22)
 
-        account.stop_sync()
+        account.disable_sync()
         mailsync_session.commit()
 
-        #wait until sync is stopped
-        while account.sync_enabled:
+        # wait until sync is stopped
+        while account.is_running:
             mailsync_session.refresh(account)
             time.sleep(1)
 
-        account.start_sync(host)
+        account.enable_sync(host)
 
 
 if __name__ == "__main__":

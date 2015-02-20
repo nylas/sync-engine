@@ -67,11 +67,8 @@ class OutlookAuthHandler(OAuthAuthHandler):
         account.link = response.get('link')
         account.locale = response.get('locale')
 
-        # Hack to ensure that account syncs get restarted if they were stopped
-        # because of e.g. invalid credentials and the user re-auths.
-        # TODO(emfree): remove after status overhaul.
-        if account.sync_state != 'running':
-            account.sync_state = None
+        # Ensure account has sync enabled.
+        account.enable_sync()
 
         return account
 

@@ -99,6 +99,7 @@ def save_folder_names(log, account_id, folder_names, db_session):
         log.info("folders deleted from remote", folders=folder_for.keys())
     for name, folder in folder_for.iteritems():
         db_session.delete(folder)
+        clear_heartbeat_status(account_id, folder.id)
         # TODO(emfree) delete associated tag
 
     db_session.commit()
@@ -241,7 +242,8 @@ class BaseMailSyncMonitor(Greenlet):
         while not sync.ready():
             if self.shutdown.is_set():
                 # Ctrl-c, basically!
-                self.log.info('Stopping sync', email=self.email_address)
+                self.log.info('Stopping sync', email=self.email_address,
+                              account_id=self.account_id)
                 # Make sure the parent can't start/stop any folder monitors
                 # first
                 sync.kill(block=True)
@@ -270,6 +272,9 @@ class BaseMailSyncMonitor(Greenlet):
         raise NotImplementedError
 
     def _cleanup(self):
+        with session_scope() as mailsync_db_session:
+            map(lambda x: x.set_stopped(mailsync_db_session),
+                self.folder_monitors)
         self.folder_monitors.kill()
         clear_heartbeat_status(self.account_id)
 

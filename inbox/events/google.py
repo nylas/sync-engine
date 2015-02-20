@@ -85,7 +85,7 @@ class GoogleEventsProvider(BaseEventProvider):
 
             except OAuthError:
                 self.log.error('Invalid user credentials given')
-                account.sync_state = 'invalid'
+                account.mark_invalid()
                 db_session.add(account)
                 db_session.commit()
                 raise ValidationError
@@ -344,7 +344,7 @@ class GoogleEventsProvider(BaseEventProvider):
             self.log.error("Invalid user credentials given")
             with session_scope() as db_session:
                 account = db_session.query(GmailAccount).get(self.account_id)
-                account.sync_state = 'invalid'
+                account.mark_invalid()
                 db_session.add(account)
                 db_session.commit()
             raise ValidationError

@@ -86,23 +86,18 @@ class SyncService(object):
             steal = and_(Account.sync_host.is_(None),
                          config.get('SYNC_STEAL_ACCOUNTS', True))
 
-            # Whether accounts should be claimed via explicis scheduling
+            # Whether account is explicitly assigned to this node already
             explicit = Account.sync_host == platform.node()
 
             # Start new syncs on this node if the sync_host is set
             # explicitly to this node, or if the sync_host is not set and
             # this node is configured to use a work-stealing style approach
             # to scheduling accounts.
-            start = and_(Account.sync_state.is_(None),
-                         or_(steal, explicit))
+            start = or_(steal, explicit)
 
-            # Don't restart a previous sync if it's sync_host is not
-            # this node (i.e. it's running elsewhere),
-            # was explicitly stopped or
-            # killed due to invalid credentials
-            dont_start = or_(Account.sync_host != platform.node(),
-                             Account.sync_state.in_(['stopped',
-                                                     'invalid']))
+            # Don't restart a previous sync if its sync_host is not
+            # this node (i.e. it's running elsewhere)
+            dont_start = Account.sync_host != platform.node()
 
             # Start IFF an account IS in the set of startable syncs OR
             # NOT in the set of dont_start syncs
@@ -111,8 +106,10 @@ class SyncService(object):
             start_on_this_cpu = \
                 (func.mod(Account.id, self.total_cpus) == self.cpu_id)
 
+            # Filter by node and CPU, iff the account should be syncing
             start_accounts = \
                 [id_ for id_, in db_session.query(Account.id).filter(
+                    Account.sync_should_run,
                     sync_on_this_node,
                     start_on_this_cpu)]
 
@@ -131,6 +128,8 @@ class SyncService(object):
             for account_id in start_accounts:
                 if account_id not in self.monitors:
                     self.start_sync(account_id)
+                # If the account's sync was killed due to an exception, its
+                # monitor sticks around; to restart, manually stop and start it
 
             stop_accounts = set(self.monitors.keys()) - \
                 set(start_accounts)
@@ -138,7 +137,6 @@ class SyncService(object):
                 self.log.info('sync service stopping sync',
                               account_id=account_id)
                 self.stop_sync(account_id)
-
             gevent.sleep(self.poll_interval)
 
     def start_sync(self, account_id):
@@ -189,7 +187,7 @@ class SyncService(object):
                         self.event_sync_monitors[acc.id] = event_sync
                         event_sync.start()
 
-                    acc.start_sync(fqdn)
+                    acc.sync_started(fqdn)
                     db_session.add(acc)
                     db_session.commit()
                     self.log.info('Sync started', account_id=account_id,

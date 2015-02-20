@@ -13,10 +13,10 @@ def main():
     parser.add_option('--email', action="store", dest="email", default=None)
     parser.add_option('--id', action="store", dest="account_id", default=None)
     parser.add_option('--server', action="store", dest="server", default=None)
-
     options, remainder = parser.parse_args(sys.argv[1:])
     if options.start == options.stop:
         print "usage: start-stop-account [--start|--stop] --email karim@nilas.com --server sync-engine-debug"
+        print "       start-stop-account [--start|--stop] --id 1000 --server sync-engine-debug"
         sys.exit(-1)
 
     with session_scope() as db_session:
@@ -30,13 +30,13 @@ def main():
             print "Starting account %s" % account.email_address
 
             if options.server is not None:
-                account.start_sync(options.server)
+                account.enable_sync(options.server)
             else:
-                account.start_sync(None)
+                account.enable_sync(None)
         elif options.stop:
             print "Stopping account %s" % account.email_address
 
-            account.stop_sync()
+            account.disable_sync()
 
         db_session.commit()
 

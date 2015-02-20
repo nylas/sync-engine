@@ -157,11 +157,19 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
 
     @property
     def sync_enabled(self):
-        return self.sync_host is not None
+        return self.sync_should_run
 
     sync_state = Column(Enum('running', 'stopped', 'killed',
                              'invalid', 'connerror'),
                         nullable=True)
+
+    # Based on account status, should the sync be running?
+    # This is set to false if:
+    #  - Account credentials are invalid (see mark_invalid())
+    #  - External factors no longer require this account to sync
+    # The value of this bit should always equal the AND value of all its
+    # folders and heartbeats.
+    sync_should_run = Column(Boolean, server_default=true())
 
     _sync_status = Column(MutableDict.as_mutable(JSON), default={},
                           nullable=True)
@@ -192,17 +200,12 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
     def update_sync_error(self, error=None):
         self._sync_status['sync_error'] = error
 
-    def start_sync(self, sync_host=None):
-        if sync_host:
-            self.sync_started(sync_host)
-        else:
-            # If a host isn't provided then start it as a new sync.
-            # Setting sync_state = None makes the start condition in service.py
-            # hold true, ensuring this sync is picked up and started.
-            self.sync_state = None
-
     def sync_started(self, sync_host):
-        self.sync_host = sync_host
+        """ Record transition to started state. Should be called after the
+            sync is actually started, not when the request to start it is made.
+        """
+        if sync_host:
+            self.sync_host = sync_host
 
         current_time = datetime.utcnow()
 
@@ -218,24 +221,37 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
 
         self.sync_state = 'running'
 
-    def stop_sync(self):
-        """ Set a flag for the monitor to stop the sync. """
+    def enable_sync(self, sync_host=None):
+        """ Tell the monitor that this account should be syncing. """
+        self.sync_should_run = True
+        self.sync_host = sync_host
 
-        # Don't overwrite state if Invalid credentials/Connection error/
-        # Killed because foldersyncs were killed.
-        if not self.sync_state or self.sync_state == 'running':
+    def disable_sync(self, reason=None):
+        """ Tell the monitor that this account should stop syncing. """
+        self.sync_should_run = False
+        if reason:
+            self._sync_status['sync_disabled_reason'] = reason
+
+    def mark_invalid(self, reason='invalid credentials'):
+        """ In the event that the credentials for this account are invalid,
+            update the status and sync flag accordingly. Should only be called
+            after trying to re-authorize / get new token.
+        """
+        self.disable_sync(reason)
+        self.sync_state = 'invalid'
+
+    def sync_stopped(self, reason=None):
+        """ Record transition to stopped state. Should be called after the
+            sync is actually stopped, not when the request to stop it is made.
+        """
+        if self.sync_state == 'running':
             self.sync_state = 'stopped'
-
-    def sync_stopped(self):
-        """ Called when the sync has actually been stopped. """
         self.sync_host = None
         self._sync_status['sync_end_time'] = datetime.utcnow()
 
     def kill_sync(self, error=None):
-        # Don't change sync_host if moving to state 'killed'
-
+        # Don't disable sync: syncs are not killed on purpose.
         self.sync_state = 'killed'
-
         self._sync_status['sync_end_time'] = datetime.utcnow()
         self._sync_status['sync_error'] = error
 
@@ -268,6 +284,10 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
     @property
     def is_killed(self):
         return self.sync_state == 'killed'
+
+    @property
+    def is_running(self):
+        return self.sync_state == 'running'
 
     @property
     def is_sync_locked(self):
