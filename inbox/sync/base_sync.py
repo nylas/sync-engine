@@ -38,6 +38,9 @@ class BaseSyncMonitor(Greenlet):
         self.shutdown = event.Event()
         self.heartbeat_status = HeartbeatStatusProxy(self.account_id,
                                                      self.folder_id)
+        self.heartbeat_status.publish(email_address=self.email_address,
+                                      provider_name=self._provider_name,
+                                      folder_name=self.folder_name)
 
         Greenlet.__init__(self)
 
