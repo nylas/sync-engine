@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
-import enum
+import enum  # Python 3 style enums from enum34
 import nacl.secret
 import nacl.utils
 
@@ -91,10 +91,10 @@ class _EncryptionOracle(object):
         # sanity check
         if isinstance(plaintext, unicode):
             raise TypeError("plaintext should be bytes, not unicode")
-        if not isinstance(encryption_scheme, (int, long)):
-            raise TypeError("encryption_scheme should be an integer")
-        if not 0 <= encryption_scheme <= 2**31-1:
-            raise ValueError("encryption_scheme out of range")
+        if not isinstance(encryption_scheme, enum.Enum):
+            raise TypeError("encryption_scheme should be an Enum")
+        if not 0 <= encryption_scheme.value <= 2 ** 31 - 1:
+            raise ValueError("encryption_scheme value out of range")
         if (encryption_scheme != EncryptionScheme.NULL and
                 not config.get_required('ENCRYPT_SECRETS')):
             raise ValueError("ENCRYPT_SECRETS not enabled in config")
@@ -112,7 +112,7 @@ class _EncryptionOracle(object):
             raise ValueError("encryption_scheme not supported: %d" %
                              encryption_scheme)
 
-        return (ciphertext, encryption_scheme)
+        return (ciphertext, encryption_scheme.value)
 
 
 class _DecryptionOracle(_EncryptionOracle):
@@ -153,21 +153,24 @@ class _DecryptionOracle(_EncryptionOracle):
         if self._closed:
             raise ValueError("Connection to crypto oracle already closed")
 
+        encryption_scheme_value = encryption_scheme  # expect an Enum value
+
         # sanity check
         if isinstance(ciphertext, unicode):
             raise TypeError("ciphertext should be bytes, not unicode")
-        if not isinstance(encryption_scheme, (int, long)):
-            raise TypeError("encryption_scheme should be an integer")
-        if not 0 <= encryption_scheme <= 2**31-1:
-            raise ValueError("encryption_scheme out of range")
+        if not isinstance(encryption_scheme_value, (int, long)):
+            raise TypeError("encryption_scheme_value should be a number")
+        if not 0 <= encryption_scheme_value <= 2 ** 31 - 1:
+            raise ValueError("encryption_scheme_value out of range")
 
         # decrypt differently depending on the scheme
-        if encryption_scheme == EncryptionScheme.NULL:
+        if encryption_scheme_value == EncryptionScheme.NULL.value:
             return ciphertext
 
-        elif encryption_scheme == EncryptionScheme.SECRETBOX_WITH_STATIC_KEY:
+        elif encryption_scheme_value == \
+                EncryptionScheme.SECRETBOX_WITH_STATIC_KEY.value:
             return self._secret_box.decrypt(ciphertext)
 
         else:
             raise ValueError("encryption_scheme not supported: %d" %
-                             encryption_scheme)
+                             encryption_scheme_value)
