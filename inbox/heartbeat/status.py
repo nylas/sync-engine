@@ -184,9 +184,9 @@ def get_heartbeat_status(host=None, port=6379, account_id=None):
             value = json.loads(v[device_id])
 
             # eventually overwrite the following two fields, no big deal
-            account.email_address = value['email_address']
-            account.provider_name = value['provider_name']
-            folder.name = value['folder_name']
+            account.email_address = value.get('email_address')
+            account.provider_name = value.get('provider_name')
+            folder.name = value.get('folder_name')
 
             device = DeviceHeartbeatStatus()
             device.heartbeat_at = datetime.strptime(value['heartbeat_at'],
