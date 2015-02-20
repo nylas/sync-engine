@@ -1,13 +1,12 @@
 from inbox.models.session import session_scope
 from inbox.models import Calendar
-from inbox.sync.base_sync_provider import BaseSyncProvider
 from inbox.events.util import MalformedEventError
 
 from inbox.log import get_logger
 logger = get_logger()
 
 
-class BaseEventProvider(BaseSyncProvider):
+class BaseEventProvider(object):
     """Base class for event providers"""
 
     def __init__(self, account_id, namespace_id):
@@ -38,15 +37,14 @@ class BaseEventProvider(BaseSyncProvider):
 
         return calendar_id
 
-    def get_items(self, sync_from_time=None):
+    def get_items(self, sync_from_dt=None):
         """Fetches and parses fresh event data.
 
         Parameters
         ----------
-        sync_from_time: str, optional
-            A time in ISO 8601 format: If not None, fetch data for calendars
-            that have been updated since this time. Otherwise fetch all
-            calendar data.
+        sync_from_dt: str, optional
+            If given, fetch events that have been updated since this time.
+            Otherwise fetch all events
 
         Yields
         ------
@@ -54,7 +52,8 @@ class BaseEventProvider(BaseSyncProvider):
             List of events that have been updated since the last account sync.
         """
         events = []
-        for calendar_id, p_event, extra in self.fetch_items(sync_from_time):
+        for calendar_id, p_event, extra in self.fetch_items(
+                sync_from_dt=sync_from_dt):
             try:
                 new_event = self.parse_event(p_event, extra)
                 if new_event:
@@ -62,11 +61,11 @@ class BaseEventProvider(BaseSyncProvider):
                     events.append(new_event)
             except MalformedEventError:
                 self.log.error('Malformed event', _event=p_event,
-                                 extra=extra)
+                               extra=extra)
 
         return events
 
-    def fetch_items(self, sync_from_time=None):
+    def fetch_items(self, sync_from_dt=None):
         """Generator that yields items from the provider.
 
         This function is called by the base_sync to obtain individual items
@@ -76,7 +75,7 @@ class BaseEventProvider(BaseSyncProvider):
 
         Parameters
         ----------
-        sync_from_time: str, optional
+        sync_from_dt: str, optional
             Same parameter as passed to the 'get_items' function.
 
         Yields

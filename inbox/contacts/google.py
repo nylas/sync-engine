@@ -1,6 +1,7 @@
 """Provide Google contacts."""
 
 import posixpath
+from datetime import datetime
 
 import gdata.auth
 import gdata.client
@@ -17,12 +18,11 @@ from inbox.models.backends.oauth import token_manager
 from inbox.auth.gmail import (OAUTH_CLIENT_ID,
                               OAUTH_CLIENT_SECRET,
                               OAUTH_SCOPE)
-from inbox.sync.base_sync_provider import BaseSyncProvider
 
-SOURCE_APP_NAME = 'InboxApp Contact Sync Engine'
+SOURCE_APP_NAME = 'Nilas Sync Engine'
 
 
-class GoogleContactsProvider(BaseSyncProvider):
+class GoogleContactsProvider(object):
     """
     A utility class to fetch and parse Google contact data for the specified
     account using the Google Contacts API.
@@ -51,7 +51,7 @@ class GoogleContactsProvider(BaseSyncProvider):
         self.log = logger.new(account_id=account_id, component='contacts sync',
                               provider=self.PROVIDER_NAME)
 
-    def _get_google_client(self):
+    def _get_google_client(self, retry_conn_errors=True):
         """Return the Google API client."""
         # TODO(emfree) figure out a better strategy for refreshing OAuth
         # credentials as needed
@@ -73,12 +73,22 @@ class GoogleContactsProvider(BaseSyncProvider):
                     source=SOURCE_APP_NAME)
                 google_client.auth_token = two_legged_oauth_token
                 return google_client
-            except (gdata.client.BadAuthentication, OAuthError):
-                self.log.info('Invalid user credentials given')
+            except (gdata.client.BadAuthentication, OAuthError) as e:
+                self.log.debug('Invalid user credentials given: {}'
+                               .format(e))
                 account.sync_state = 'invalid'
                 db_session.add(account)
                 db_session.commit()
-                raise ValidationError
+
+                if not retry_conn_errors:  # end of the line
+                    raise ValidationError
+
+                try:
+                    token_manager.get_token(account, force_refresh=True)
+                    return self._get_google_client(retry_conn_errors=False)
+                except OAuthError as e:
+                    raise ValidationError
+
             except ConnectionError:
                 self.log.error('Connection error')
                 account.sync_state = 'connerror'
@@ -130,21 +140,20 @@ class GoogleContactsProvider(BaseSyncProvider):
 
         deleted = google_contact.deleted is not None
 
-        return Contact(namespace_id=self.namespace_id, source='remote',
-                       uid=g_id, name=name, provider_name=self.PROVIDER_NAME,
+        return Contact(namespace_id=self.namespace_id, uid=g_id, name=name,
+                       provider_name=self.PROVIDER_NAME,
                        email_address=email_address, deleted=deleted,
                        raw_data=raw_data)
 
-    def get_items(self, sync_from_time=None, max_results=100000):
+    def get_items(self, sync_from_dt=None, max_results=100000):
         """
         Fetches and parses fresh contact data.
 
         Parameters
         ----------
-        sync_from_time: str, optional
-            A time in ISO 8601 format: If not None, fetch data for contacts
-            that have been updated since this time. Otherwise fetch all contact
-            data.
+        sync_from_dt: datetime, optional
+            If given, fetch contacts that have been updated since this time.
+            Otherwise fetch all contacts
         max_results: int, optional
             The maximum number of contact entries to fetch.
 
@@ -166,7 +175,8 @@ class GoogleContactsProvider(BaseSyncProvider):
         # query.max_results is not explicitly set, so have to set it to a large
         # number by default.
         query.max_results = max_results
-        query.updated_min = sync_from_time
+        if sync_from_dt:
+            query.updated_min = datetime.isoformat(sync_from_dt) + 'Z'
         query.showdeleted = True
         google_client = self._get_google_client()
         try:

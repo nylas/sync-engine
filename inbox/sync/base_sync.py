@@ -1,55 +1,64 @@
-import gevent
-import gevent.event
-from datetime import datetime
-from collections import Counter
+from gevent import event, Greenlet, sleep
 
 from inbox.log import get_logger
 logger = get_logger()
 
-from inbox.basicauth import ConnectionError, ValidationError
-from inbox.models.session import session_scope
-from inbox.util.concurrency import retry_with_logging
-from inbox.util.misc import MergeError
-from inbox.models import Account
+from inbox.util.concurrency import retry_and_report_killed
 from inbox.heartbeat.status import HeartbeatStatusProxy, clear_heartbeat_status
+from inbox.basicauth import ConnectionError, ValidationError
+from inbox.models import Account
+from inbox.models.session import session_scope
 
 
-class BaseSync(gevent.Greenlet):
-    def __init__(self, account_id, namespace_id, poll_frequency, folder_id,
-                 folder_name, email_address, provider_name):
-        self.shutdown = gevent.event.Event()
+class BaseSyncMonitor(Greenlet):
+    """
+    Abstracted sync monitor, based on BaseMailSyncMonitor but not mail-specific
+
+    Subclasses should run
+    bind_context(self, 'mailsyncmonitor', account.id)
+
+
+    poll_frequency : int
+        How often to check for commands.
+    retry_fail_classes : list
+        Exceptions to *not* retry on.
+
+    """
+    def __init__(self, account_id, namespace_id, folder_id, poll_frequency=1,
+                 retry_fail_classes=[]):
+
         self.account_id = account_id
         self.namespace_id = namespace_id
         self.poll_frequency = poll_frequency
-        self.log = logger.new(account_id=account_id)
+        self.retry_fail_classes = retry_fail_classes
         self.folder_id = folder_id
-        self.folder_name = folder_name
-        self.email_address = email_address
-        self._provider_name = provider_name
+
+        self.log = logger.new(account_id=account_id)
+
+        self.shutdown = event.Event()
         self.heartbeat_status = HeartbeatStatusProxy(self.account_id,
                                                      self.folder_id)
-        self.heartbeat_status.publish(email_address=self.email_address,
-                                      provider_name=self._provider_name,
-                                      folder_name=self.folder_name)
 
-        gevent.Greenlet.__init__(self)
+        Greenlet.__init__(self)
 
     def _run(self):
-        return retry_with_logging(self._run_impl, self.log,
-                                  account_id=self.account_id)
+        return retry_and_report_killed(self._run_impl,
+                                       account_id=self.account_id,
+                                       logger=self.log,
+                                       fail_classes=self.retry_fail_classes)
 
     def _run_impl(self):
+        # Return true/false based on whether the greenlet succeeds or throws
+        # and error. Note this is not how the mailsync monitor works
         try:
-            self.provider_instance = self.provider(self.account_id,
-                                                   self.namespace_id)
             while True:
                 # Check to see if this greenlet should exit
                 if self.shutdown.is_set():
-                    clear_heartbeat_status(self.account_id, self.folder_id)
+                    self._cleanup()
                     return False
 
                 try:
-                    self.poll()
+                    self.sync()
                     self.heartbeat_status.publish(state='poll')
 
                 # If we get a connection or API permissions error, then sleep
@@ -57,133 +66,22 @@ class BaseSync(gevent.Greenlet):
                 except ConnectionError:
                     self.log.error('Error while polling', exc_info=True)
                     self.heartbeat_status.publish(state='poll error')
-                    gevent.sleep(self.poll_frequency)
-                gevent.sleep(self.poll_frequency)
+                    sleep(self.poll_frequency)
+                sleep(self.poll_frequency)
         except ValidationError:
             # Bad account credentials; exit.
             self.log.error('Error while establishing the connection',
                            exc_info=True)
+            self._cleanup()
+            with session_scope() as db_session:
+                account = db_session.query(Account).get(self.account_id)
+                account.sync_state = 'invalid'
+
             return False
 
-    @property
-    def target_obj(self):
-        raise NotImplementedError  # return Contact or Event
+    def sync(self):
+        """ Subclasses should override this to do work """
+        raise NotImplementedError
 
-    @property
-    def provider(self):
-        raise NotImplementedError  # Implement in subclasses
-
-    @property
-    def provider_name(self):
-        raise NotImplementedError  # Implement in subclasses
-
-    def last_sync(self, account):
-        raise NotImplementedError  # Implement in subclasses
-
-    def poll(self):
-        return base_poll(self.account_id, self.provider_instance,
-                         self.last_sync, self.target_obj,
-                         self.set_last_sync)
-
-
-def base_poll(account_id, provider_instance, last_sync_fn, target_obj,
-              set_last_sync_fn):
-    """Query a remote provider for updates and persist them to the
-    database.
-
-    Parameters
-    ----------
-    account_id: int
-        ID for the account whose items should be queried.
-    db_session: sqlalchemy.orm.session.Session
-        Database session
-
-    provider: Interface to the remote item data provider.
-        Must have a PROVIDER_NAME attribute and implement the get()
-        method.
-    """
-    # Get a timestamp before polling, so that we don't subsequently miss remote
-    # updates that happen while the poll loop is executing.
-    sync_timestamp = datetime.utcnow()
-
-    log = logger.new(account_id=account_id)
-    provider_name = provider_instance.PROVIDER_NAME
-    with session_scope() as db_session:
-        account = db_session.query(Account).get(account_id)
-        last_sync = None
-        if last_sync_fn(account) is not None:
-            # Note explicit offset is required by e.g. Google calendar API.
-            last_sync = datetime.isoformat(last_sync_fn(account)) + 'Z'
-
-    items = provider_instance.get_items(last_sync)
-    with session_scope() as db_session:
-        account = db_session.query(Account).get(account_id)
-        change_counter = Counter()
-        for item in items:
-            item.namespace = account.namespace
-            assert item.uid is not None, \
-                'Got remote item with null uid'
-            assert isinstance(item.uid, basestring)
-
-            target_obj = target_obj
-            matching_items = db_session.query(target_obj).filter(
-                target_obj.namespace == account.namespace,
-                target_obj.provider_name == provider_name,
-                target_obj.uid == item.uid)
-            # Snapshot of item data from immediately after last sync:
-            cached_item = matching_items. \
-                filter(target_obj.source == 'remote').first()
-
-            # Item data reflecting any local modifications since the last
-            # sync with the remote provider:
-            local_item = matching_items. \
-                filter(target_obj.source == 'local').first()
-            # If the remote item was deleted, purge the corresponding
-            # database entries.
-            if item.deleted:
-                if cached_item is not None:
-                    db_session.delete(cached_item)
-                    change_counter['deleted'] += 1
-                if local_item is not None:
-                    db_session.delete(local_item)
-                continue
-            # Otherwise, update the database.
-            if cached_item is not None:
-                # The provider gave an update to a item we already have.
-                if local_item is not None:
-                    try:
-                        # Attempt to merge remote updates into local_item
-                        local_item.merge_from(cached_item, item)
-                        # And update cached_item to reflect both local and
-                        # remote updates
-                        cached_item.copy_from(local_item)
-
-                    except MergeError:
-                        log.error('Conflicting local and remote updates '
-                                  'to item.',
-                                  local=local_item, cached=cached_item,
-                                  remote=item)
-                        # For now, just don't update if conflicting
-                        continue
-                else:
-                    log.warning('Item already present as remote but not '
-                                'local item', cached_item=cached_item)
-                    cached_item.copy_from(item)
-                change_counter['updated'] += 1
-            else:
-                # This is a new item, create both local and remote DB
-                # entries.
-                local_item = target_obj()
-                local_item.copy_from(item)
-                local_item.source = 'local'
-                db_session.add_all([item, local_item])
-                db_session.flush()
-                change_counter['added'] += 1
-
-        set_last_sync_fn(account, sync_timestamp)
-
-        log.info('sync', added=change_counter['added'],
-                 updated=change_counter['updated'],
-                 deleted=change_counter['deleted'])
-
-        db_session.commit()
+    def _cleanup(self):
+        clear_heartbeat_status(self.account_id, folder_id=self.folder_id)

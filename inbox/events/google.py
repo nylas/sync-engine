@@ -2,6 +2,7 @@
 import httplib2
 import json
 import dateutil.parser as date_parser
+from datetime import datetime
 
 from apiclient.discovery import build
 from apiclient.errors import HttpError
@@ -187,7 +188,7 @@ class GoogleEventsProvider(BaseEventProvider):
                     raise MalformedEventError()
                 status = GoogleEventsProvider.status_map[g_status]
 
-                dct = {}
+                dct = {'status': status}
 
                 email = attendee.get('email')
                 if email:
@@ -197,8 +198,6 @@ class GoogleEventsProvider(BaseEventProvider):
                 if name:
                     dct['name'] = name
 
-                notes = None
-                guests = 0
                 if 'additionalGuests' in attendee:
                     dct['guests'] = attendee['additionalGuests']
                 elif 'comment' in attendee:
@@ -288,7 +287,7 @@ class GoogleEventsProvider(BaseEventProvider):
         return dump
 
     def fetch_calendar_items(self, provider_calendar_name, calendar_id,
-                             sync_from_time=None):
+                             sync_from_dt=None):
         """Fetch the events for an individual calendar.
         parameters:
             calendarId: the google identifier for the calendar. Usually,
@@ -303,8 +302,9 @@ class GoogleEventsProvider(BaseEventProvider):
         # If applicable, only fetch results that have changed since we last
         # synced.
         kwargs = {}
-        if sync_from_time is not None:
-            kwargs = {'updatedMin': sync_from_time}
+        if sync_from_dt:
+            # convert date to ISO 8601 format
+            kwargs = {'updatedMin': datetime.isoformat(sync_from_dt) + 'Z'}
         try:
             resp = service.events().list(
                 calendarId=provider_calendar_name, **kwargs).execute()
@@ -333,7 +333,7 @@ class GoogleEventsProvider(BaseEventProvider):
         for event in raw_events:
             yield (calendar_id, event, extra)
 
-    def fetch_items(self, sync_from_time=None):
+    def fetch_items(self, sync_from_dt=None):
         """Fetch all events for all calendars. This function proxies
         fetch_calendar_items and yields the results to inbox.sync.base_sync."""
 
@@ -369,5 +369,5 @@ class GoogleEventsProvider(BaseEventProvider):
 
             for item in self.fetch_calendar_items(
                     response_calendar['id'], calendar_id,
-                    sync_from_time=sync_from_time):
+                    sync_from_dt=sync_from_dt):
                 yield item

@@ -38,8 +38,8 @@ def retry(func, retry_classes=None, fail_classes=None,
     ---------
     func : function
     exc_callback : function, optional
-    Function to execute if an exception is raised within func (e.g., log
-    something)
+        Function to execute if an exception is raised within func
+        (e.g., log something)
     fail_callback: function, optional
         Function to execute if we exit without func ever returning successfully
         (e.g., log something more severe)

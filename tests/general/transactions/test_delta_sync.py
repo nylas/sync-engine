@@ -2,6 +2,8 @@ import json
 import time
 from tests.util.base import api_client
 
+__all__ = ['api_client']
+
 
 def get_cursor(api_client, timestamp):
     cursor_response = api_client.post_data('/delta/generate_cursor',
@@ -34,18 +36,13 @@ def test_event_generation(api_client):
 
     sync_data = api_client.get_data('/delta?cursor={}'.format(cursor))
     assert len(sync_data['deltas']) == 1
-    api_client.post_data('/contacts/', {'name': 'test',
-                                        'email': 'test@example.com'})
-
-    sync_data = api_client.get_data('/delta?cursor={}'.format(cursor))
-    assert len(sync_data['deltas']) == 2
 
     thread_id = api_client.get_data('/threads/')[0]['id']
     thread_path = '/threads/{}'.format(thread_id)
     api_client.put_data(thread_path, {'add_tags': ['foo']})
 
     sync_data = api_client.get_data('/delta?cursor={}'.format(cursor))
-    assert len(sync_data['deltas']) == 3
+    assert len(sync_data['deltas']) == 2
 
     time.sleep(1)
 

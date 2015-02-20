@@ -10,7 +10,6 @@ INBOX_PROVIDER_NAME = 'inbox'
 def create(namespace, db_session, name, email):
     contact = Contact(
         namespace=namespace,
-        source='local',
         provider_name=INBOX_PROVIDER_NAME,
         uid=uuid.uuid4().hex,
         name=name,

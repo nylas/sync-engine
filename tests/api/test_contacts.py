@@ -1,5 +1,3 @@
-import json
-
 from inbox.models import Account
 from tests.util.base import (contact_sync, contacts_provider,
                              api_client)
@@ -16,8 +14,8 @@ def test_api_list(contacts_provider, contact_sync, db, api_client):
     contacts_provider.supply_contact('Contact Two',
                                      'contact.two@email.address')
 
-    contact_sync.provider_instance = contacts_provider
-    contact_sync.poll()
+    contact_sync.provider = contacts_provider
+    contact_sync.sync()
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
@@ -37,8 +35,8 @@ def test_api_get(contacts_provider, contact_sync, db, api_client):
     contacts_provider.supply_contact('Contact Two',
                                      'contact.two@email.address')
 
-    contact_sync.provider_instance = contacts_provider
-    contact_sync.poll()
+    contact_sync.provider = contacts_provider
+    contact_sync.sync()
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
@@ -59,29 +57,3 @@ def test_api_get(contacts_provider, contact_sync, db, api_client):
 
     assert c1found
     assert c2found
-
-
-def test_api_create(contacts_provider, contact_sync, db, api_client):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
-    c_data = {
-        'name': 'Contact One',
-        'email': 'contact.one@email.address'
-    }
-
-    c_resp = api_client.post_data('/contacts', c_data, ns_id)
-    c_resp_data = json.loads(c_resp.data)
-    assert c_resp_data['object'] == 'contact'
-    assert c_resp_data['namespace_id'] == acct.namespace.public_id
-    assert c_resp_data['email'] == c_data['email']
-    assert c_resp_data['name'] == c_data['name']
-    assert 'id' in c_resp_data
-    c_id = c_resp_data['id']
-    c_get_resp = api_client.get_data('/contacts/' + c_id, ns_id)
-
-    assert c_get_resp['object'] == 'contact'
-    assert c_get_resp['namespace_id'] == acct.namespace.public_id
-    assert c_get_resp['email'] == c_data['email']
-    assert c_get_resp['name'] == c_data['name']
-    assert c_get_resp['id'] == c_id

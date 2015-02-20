@@ -1,4 +1,5 @@
 import pytest
+from datetime import datetime
 
 from tests.util.base import config
 from tests.general.events.conftest import EventsProviderStub, GoogleServiceStub
@@ -79,8 +80,8 @@ def test_add_events(events_provider, event_sync, db):
     events_provider.supply_event('subj')
     events_provider.supply_event('subj2')
 
-    event_sync.provider_instance = events_provider
-    event_sync.poll()
+    event_sync.provider = events_provider
+    event_sync.sync()
     num_current_local_events = db.session.query(Event). \
         filter_by(namespace_id=NAMESPACE_ID).filter_by(source='local').count()
     num_current_remote_events = db.session.query(Event). \
@@ -92,15 +93,15 @@ def test_add_events(events_provider, event_sync, db):
 def test_update_event(events_provider, event_sync, db):
     """Test that subsequent event updates get stored."""
     events_provider.supply_event('subj', '')
-    event_sync.provider_instance = events_provider
-    event_sync.poll()
+    event_sync.provider = events_provider
+    event_sync.sync()
     results = db.session.query(Event).filter_by(source='remote').all()
     titles = [r.title for r in results]
     assert 'subj' in titles
 
     events_provider.__init__()
     events_provider.supply_event('newsubj', 'newdescription')
-    event_sync.poll()
+    event_sync.sync()
     db.session.commit()
 
     results = db.session.query(Event).filter_by(source='remote').all()
@@ -114,8 +115,8 @@ def test_uses_local_updates(events_provider, event_sync, db):
     """Test that non-conflicting local and remote updates to the same event
     both get stored."""
     events_provider.supply_event('subj', '')
-    event_sync.provider_instance = events_provider
-    event_sync.poll()
+    event_sync.provider = events_provider
+    event_sync.sync()
     results = db.session.query(Event).filter_by(source='local').all()
     # Fake a local event update.
     results[-1].title = 'New title'
@@ -123,8 +124,8 @@ def test_uses_local_updates(events_provider, event_sync, db):
 
     events_provider.__init__()
     events_provider.supply_event('subj', 'newdescription')
-    event_sync.provider_instance = events_provider
-    event_sync.poll()
+    event_sync.provider = events_provider
+    event_sync.sync()
 
     remote_results = db.session.query(Event).filter_by(source='remote').all()
     titles = [r.title for r in remote_results]
@@ -144,11 +145,11 @@ def test_multiple_remotes(events_provider, alternate_events_provider,
     events_provider.supply_event('subj', '')
     alternate_events_provider.supply_event('subj2', 'description')
 
-    event_sync.provider_instance = events_provider
-    event_sync.poll()
+    event_sync.provider = events_provider
+    event_sync.sync()
 
-    event_sync.provider_instance = alternate_events_provider
-    event_sync.poll()
+    event_sync.provider = alternate_events_provider
+    event_sync.sync()
 
     result = db.session.query(Event). \
         filter_by(source='local', provider_name='test_provider').one()
@@ -163,14 +164,14 @@ def test_multiple_remotes(events_provider, alternate_events_provider,
 def test_deletes(events_provider, event_sync, db):
     num_original_events = db.session.query(Event).count()
     events_provider.supply_event('subj')
-    event_sync.provider_instance = events_provider
-    event_sync.poll()
+    event_sync.provider = events_provider
+    event_sync.sync()
     num_current_events = db.session.query(Event).count()
     assert num_current_events - num_original_events == 2
 
     events_provider.__init__()
     events_provider.supply_event('subj', deleted=True)
-    event_sync.poll()
+    event_sync.sync()
 
     num_current_events = db.session.query(Event).count()
     assert num_current_events == num_original_events
@@ -179,8 +180,8 @@ def test_deletes(events_provider, event_sync, db):
 def test_malformed(events_provider, event_sync, db):
     num_original_events = db.session.query(Event).count()
     events_provider.supply_bad()
-    event_sync.provider_instance = events_provider
-    event_sync.poll()
+    event_sync.provider = events_provider
+    event_sync.sync()
     assert db.session.query(Event).count() == num_original_events
 
 
@@ -189,7 +190,9 @@ def test_minimum_modification():
     # Use a Google service stand-in that requires removing the minimum
     # modification time to work.
     provider._get_google_service = lambda: GoogleServiceStub(410)
-    (_, cal, _) = provider.fetch_calendar_items('bob', 1, '2014').next()
+    twenty_fourteen = datetime(2014, 1, 1, 0, 0, 0, 0)
+    (_, cal, _) = provider.fetch_calendar_items(
+        'bob', 1, sync_from_dt=twenty_fourteen).next()
     assert cal is True
 
 
@@ -200,5 +203,7 @@ def test_minimum_modification_passthrough():
     # modification time to work.
     provider._get_google_service = lambda: GoogleServiceStub(400)
     with pytest.raises(Exception) as excinfo:
-        (_, cal, _) = provider.fetch_calendar_items('bob', 1, '2014').next()
+        twenty_fourteen = datetime(2014, 1, 1, 0, 0, 0, 0)
+        (_, cal, _) = provider.fetch_calendar_items(
+            'bob', 1, sync_from_dt=twenty_fourteen).next()
     assert excinfo.typename == 'HttpError'
