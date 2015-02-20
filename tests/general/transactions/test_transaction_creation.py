@@ -1,4 +1,3 @@
-import pytest
 from sqlalchemy import desc
 from inbox.models import Transaction, Tag
 from inbox.models.session import session_scope
@@ -106,6 +105,7 @@ def test_object_deletions_create_transaction(db):
             assert transaction.record_id == msg.id
             assert transaction.object_type == 'message'
             assert transaction.command == 'delete'
+            assert transaction.snapshot is None
 
             db_session.delete(thr)
             db_session.commit()
@@ -114,3 +114,26 @@ def test_object_deletions_create_transaction(db):
             assert transaction.record_id == thr.id
             assert transaction.object_type == 'thread'
             assert transaction.command == 'delete'
+            assert transaction.snapshot is None
+
+
+# TODO[k]: Remove when T853 is properly fixed.
+def test_draft_deletions_include_version(db):
+    with session_scope() as db_session:
+        with db_session.no_autoflush:
+            thr = add_fake_thread(db_session, NAMESPACE_ID)
+
+            draft = add_fake_message(db_session, NAMESPACE_ID, thr)
+            draft.is_draft = True
+            draft.version += 1
+
+            version = draft.version
+
+            db_session.delete(draft)
+            db_session.commit()
+            transaction = get_latest_transaction(db_session, 'message',
+                                                 draft.id, NAMESPACE_ID)
+            assert transaction.record_id == draft.id
+            assert transaction.object_type == 'message'
+            assert transaction.command == 'delete'
+            assert transaction.snapshot == {'version': version}

@@ -175,4 +175,13 @@ def _format_transaction_for_delta_sync(transaction):
     }
     if transaction.command != 'delete':
         delta['attributes'] = transaction.snapshot
+
+    # This is a /BIG/ hack to fix T853 -
+    # For deleted Messages that are drafts, we store the version in
+    # Transaction.snapshot; return that in a 'version' attribute.
+    # TODO[k]: Fix this properly.
+    if transaction.command == 'delete' and transaction.object_type == 'message':
+        if transaction.snapshot and 'version' in transaction.snapshot:
+            delta['version'] = transaction.snapshot.get('version')
+
     return delta
