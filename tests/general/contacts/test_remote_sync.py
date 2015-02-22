@@ -98,5 +98,8 @@ def test_auth_error_handling(contact_sync, db):
     db.session.commit()
 
     contact_sync.start()
-    contact_sync.join(timeout=5)
-    assert contact_sync.successful(), "contact sync greenlet didn't terminate."
+    contact_sync.join(timeout=10)
+    success = contact_sync.successful()
+    if not success:
+        contact_sync.kill()
+    assert success, "contact sync greenlet didn't terminate."
