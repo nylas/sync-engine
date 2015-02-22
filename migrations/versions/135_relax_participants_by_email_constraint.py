@@ -17,9 +17,17 @@ from sqlalchemy.sql import text
 
 def upgrade():
     conn = op.get_bind()
+
+    conn.execute(text("SET FOREIGN_KEY_CHECKS=0;"))
     conn.execute(text("ALTER TABLE event MODIFY participants_by_email TEXT;"))
+    conn.execute(text("ALTER TABLE event DROP FOREIGN KEY `event_ibfk_2`"))
+    conn.execute(text("ALTER TABLE event ADD CONSTRAINT `event_ibfk_2` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE"))
+    conn.execute(text("SET FOREIGN_KEY_CHECKS=1;"))
 
 
 def downgrade():
     conn = op.get_bind()
-    conn.execute(text("ALTER TABLE event MODIFY participants_by_email TEXT NOT NULL;"))
+    conn.execute(text("SET FOREIGN_KEY_CHECKS=0;"))
+    conn.execute(text("ALTER TABLE event DROP FOREIGN KEY `event_ibfk_2`"))
+    conn.execute(text("ALTER TABLE event ADD CONSTRAINT `event_ibfk_2` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`)"))
+    conn.execute(text("SET FOREIGN_KEY_CHECKS=1;"))
