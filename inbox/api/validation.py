@@ -49,7 +49,7 @@ def valid_public_id(value):
         # raise TypeError if an integer is passed in
         int(value, 36)
     except (TypeError, ValueError):
-        raise InputError('Invalid id: {}'.format(value))
+        raise InputError(u'Invalid id: {}'.format(value))
     return value
 
 

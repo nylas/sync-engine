@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Test local behavior for the drafts API. Doesn't test syncback or actual
 sending."""
 import json
@@ -29,7 +30,7 @@ def example_draft(db):
 
 @pytest.fixture(scope='function')
 def attachments(db):
-    filenames = ['muir.jpg', 'LetMeSendYouEmail.wav', 'first-attachment.jpg']
+    filenames = ['muir.jpg', 'LetMeSendYouEmail.wav', u'pièce-jointe.jpg']
     data = []
     for filename in filenames:
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..',

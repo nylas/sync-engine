@@ -857,8 +857,8 @@ def file_download_api(public_id):
     response = make_response(f.data)
 
     response.headers['Content-Type'] = 'application/octet-stream'  # ct
-    response.headers[
-        'Content-Disposition'] = "attachment; filename={0}".format(name)
+    response.headers['Content-Disposition'] = \
+        u"attachment; filename={0}".format(name)
     g.log.info(response.headers)
     return response
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import json
 from datetime import datetime
@@ -6,7 +7,7 @@ from tests.util.base import api_client
 
 __all__ = ['api_client']
 
-FILENAMES = ['muir.jpg', 'LetMeSendYouEmail.wav', 'first-attachment.jpg']
+FILENAMES = ['muir.jpg', 'LetMeSendYouEmail.wav', u'pièce-jointe.jpg']
 
 
 @pytest.fixture
@@ -119,7 +120,7 @@ def test_delete(api_client, uploaded_file_ids, draft):
 
 @pytest.mark.parametrize("filename", FILENAMES)
 def test_get_with_id(api_client, uploaded_file_ids, filename):
-    in_file = api_client.get_data('/files?filename={}'.format(filename))[0]
+    in_file = api_client.get_data(u'/files?filename={}'.format(filename))[0]
     data = api_client.get_data('/files/{}'.format(in_file['id']))
     assert data['filename'] == filename
 
@@ -146,7 +147,7 @@ def test_download(api_client, uploaded_file_ids, filename):
     import md5
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..',
                         'data', filename)
-    in_file = api_client.get_data('/files?filename={}'.format(filename))[0]
+    in_file = api_client.get_data(u'/files?filename={}'.format(filename))[0]
     data = api_client.get_raw('/files/{}/download'.format(in_file['id'])).data
 
     local_data = open(path, 'rb').read()
