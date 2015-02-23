@@ -1,5 +1,7 @@
 # This file contains pytest fixtures as well as some config
 import os
+import platform
+
 API_BASE = "http://%s:%s" % (os.getenv("API_PORT_5555_TCP_ADDR","localhost"),os.getenv("API_PORT_5555_TCP_PORT","5555"))
 TEST_MAX_DURATION_SECS = 360
 TEST_GRANULARITY_CHECK_SECS = 0.1
@@ -83,6 +85,7 @@ def create_account(db_session, email, password):
     account = auth_handler.create_account(db_session, email, response)
     auth_handler.verify_account(account)
     account.throttled = False
+    account.sync_host = platform.node()
     db_session.add(account)
     db_session.commit()
     return account

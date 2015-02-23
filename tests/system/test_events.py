@@ -6,6 +6,7 @@ import time
 from inbox.client.errors import NotFoundError
 from conftest import calendar_accounts, timeout_loop
 from inbox.models.session import InboxSession
+from inbox.models import ActionLog
 from inbox.ignition import main_engine
 
 random.seed(None)
@@ -78,6 +79,22 @@ def wait_for_event_deletion(client, event_id, real_db):
         return True
 
 
+@timeout_loop('event action')
+def wait_for_syncback_success(client, real_db, action):
+    # Waits for the most recent action of the specified type to transition
+    # to 'successful'. Otherwise, we don't know the test has actually passed.
+    action_log = real_db.query(ActionLog).filter_by(
+        table_name='event',
+        action=action).order_by('created_at desc').first()
+    if not action_log:
+        return False
+    if action_log.status == 'successful':
+        return True
+    if action_log.status == 'pending' and action_log.retries > 2:
+        # Give up after two retries in the test environment.
+        return False
+
+
 # We define this test function separately from test_event_crud
 # because we want to be able to pass different types of accounts
 # to it. For instance, test_event_crud here takes a list of
@@ -96,17 +113,23 @@ def real_test_event_crud(client, real_db):
     end = int(time.mktime(d2.timetuple()))
     ev.when = {"start_time": start, "end_time": end}
     ev.save()
+
     wait_for_event(client, ev.id, real_db)
+    wait_for_syncback_success(client, real_db, 'create_event')
 
     # now, update it
     ev.title = "Renamed title"
     ev.participants = [{'email': 'bland@example.com', 'name': 'John Bland'}]
     ev.save()
+
     wait_for_event_rename(client, ev.id, ev.title, real_db)
+    wait_for_syncback_success(client, real_db, 'update_event')
 
     # finally, delete it
     ns.events.delete(ev.id)
+
     wait_for_event_deletion(client, ev.id, real_db)
+    wait_for_syncback_success(client, real_db, 'delete_event')
 
 
 @pytest.mark.parametrize("client", calendar_accounts)
