@@ -61,6 +61,7 @@ setup(
                 ],
 
     scripts=['bin/inbox-start',
+             'bin/inbox-console',
              'bin/search-index-service',
              'bin/migrate-participant-format',
              'bin/syncback-service'],
