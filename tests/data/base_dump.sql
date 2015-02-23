@@ -148,7 +148,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('5305d4ae30b4');
+INSERT INTO `alembic_version` VALUES ('1d7a72222b7c');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -281,6 +281,7 @@ CREATE TABLE `contact` (
   KEY `ix_contact__canonicalized_address` (`_canonicalized_address`),
   KEY `ix_contact__raw_address` (`_raw_address`),
   KEY `namespace_id` (`namespace_id`),
+  KEY `ix_contact_ns_uid_provider_name` (`namespace_id`,`uid`,`provider_name`),
   CONSTRAINT `contact_ibfk_2` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -584,6 +585,7 @@ CREATE TABLE `event` (
   UNIQUE KEY `uuid` (`uid`,`source`,`namespace_id`,`provider_name`),
   KEY `event_ibfk_2` (`calendar_id`),
   KEY `namespace_id` (`namespace_id`),
+  KEY `ix_event_ns_uid_provider_name` (`namespace_id`,`uid`,`provider_name`),
   CONSTRAINT `event_ibfk_2` FOREIGN KEY (`calendar_id`) REFERENCES `calendar` (`id`) ON DELETE CASCADE,
   CONSTRAINT `event_ibfk_3` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4;
@@ -1097,7 +1099,7 @@ CREATE TABLE `message` (
   `is_sent` tinyint(1) NOT NULL DEFAULT '0',
   `state` enum('draft','sending','sending failed','sent') DEFAULT NULL,
   `is_reply` tinyint(1) DEFAULT NULL,
-  `resolved_message_id` int(11) DEFAULT NULL,
+  `reply_to_message_id` int(11) DEFAULT NULL,
   `thread_order` int(11) NOT NULL,
   `namespace_id` int(11) NOT NULL,
   `full_body_id` int(11) DEFAULT NULL,
@@ -1111,7 +1113,7 @@ CREATE TABLE `message` (
   KEY `ix_message_created_at` (`created_at`),
   KEY `ix_message_deleted_at` (`deleted_at`),
   KEY `ix_message_updated_at` (`updated_at`),
-  KEY `message_ibfk_2` (`resolved_message_id`),
+  KEY `message_ibfk_2` (`reply_to_message_id`),
   KEY `namespace_id` (`namespace_id`),
   KEY `ix_message_inbox_uid` (`inbox_uid`),
   KEY `ix_message_subject` (`subject`(191)),
@@ -1119,9 +1121,9 @@ CREATE TABLE `message` (
   KEY `full_body_id_fk` (`full_body_id`),
   KEY `ix_message_ns_id_is_draft_received_date` (`namespace_id`,`is_draft`,`received_date`),
   KEY `ix_message_namespace_id_deleted_at` (`namespace_id`,`deleted_at`),
+  CONSTRAINT `message_ibfk_2` FOREIGN KEY (`reply_to_message_id`) REFERENCES `message` (`id`),
   CONSTRAINT `full_body_id_fk` FOREIGN KEY (`full_body_id`) REFERENCES `block` (`id`),
   CONSTRAINT `message_ibfk_1` FOREIGN KEY (`thread_id`) REFERENCES `thread` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `message_ibfk_2` FOREIGN KEY (`resolved_message_id`) REFERENCES `message` (`id`),
   CONSTRAINT `message_ibfk_3` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1772,4 +1774,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-02-18  0:45:54
+-- Dump completed on 2015-02-20  0:03:55

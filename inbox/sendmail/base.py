@@ -1,4 +1,7 @@
 from datetime import datetime
+from inbox.api.validation import (
+    get_recipients, get_tags, get_attachments, get_thread, get_message)
+from inbox.api.err import InputError
 from inbox.contacts.process_mail import update_contacts_from_message
 from inbox.models import Message, Part
 from inbox.models.action_log import schedule_action
@@ -39,25 +42,130 @@ def get_sendmail_client(account):
     return sendmail_client
 
 
-def create_draft(db_session, account, to_addr=None, subject=None,
-                 body=None, blocks=None, cc_addr=None, bcc_addr=None,
-                 tags=None, replyto_thread=None, syncback=True):
-    """
-    Create a new draft. If `thread_public_id` is specified, the draft is a
-    reply to the last message in the thread; otherwise, it is an independant
-    draft.
+def create_draft(data, namespace, db_session, syncback):
+    """ Construct a draft object (a Message instance) from `data`, a dictionary
+    representing the POST body of an API request. All new objects are un-added
+    and uncommitted."""
 
-    Returns
-    -------
-    Message
-        The created draft message object.
+    # Validate the input and get referenced objects (tags, thread, attachments)
+    # as necessary.
+    to_addr = get_recipients(data.get('to'), 'to')
+    cc_addr = get_recipients(data.get('cc'), 'cc')
+    bcc_addr = get_recipients(data.get('bcc'), 'bcc')
+    subject = data.get('subject')
+    body = data.get('body')
+    tags = get_tags(data.get('tags'), namespace.id, db_session)
+    blocks = get_attachments(data.get('file_ids'), namespace.id, db_session)
+    reply_to_thread = get_thread(data.get('thread_id'), namespace.id,
+                                 db_session)
+    reply_to_message = get_message(data.get('reply_to_message_id'),
+                                   namespace.id, db_session)
+    if reply_to_message is not None and reply_to_thread is not None:
+        if reply_to_message not in reply_to_thread.messages:
+            raise InputError('Message {} is not in thread {}'.
+                             format(reply_to_message.public_id,
+                                    reply_to_thread.public_id))
 
-    """
-    is_reply = replyto_thread is not None
+    with db_session.no_autoflush:
+        account = namespace.account
+        dt = datetime.utcnow()
+        uid = generate_public_id()
+        to_addr = to_addr or []
+        cc_addr = cc_addr or []
+        bcc_addr = bcc_addr or []
+        blocks = blocks or []
+        body = body or ''
+        if subject is None:
+            # If this is a reply with no explicitly specified subject, set the
+            # subject from the prior message/thread by default.
+            # TODO(emfree): Do we want to allow changing the subject on a reply
+            # at all?
+            if reply_to_message is not None:
+                subject = reply_to_message.subject
+            elif reply_to_thread is not None:
+                subject = reply_to_thread.subject
+        subject = subject or ''
 
-    return create_and_save_draft(db_session, account, to_addr, subject, body,
-                                 blocks, cc_addr, bcc_addr, tags,
-                                 replyto_thread, is_reply, syncback=syncback)
+        message = Message()
+        message.namespace = namespace
+        message.is_created = True
+        message.is_draft = True
+        message.from_addr = [(account.name, account.email_address)]
+        # TODO(emfree): we should maybe make received_date nullable, so its
+        # value doesn't change in the case of a drafted-and-later-reconciled
+        # message.
+        message.received_date = dt
+        message.subject = subject
+        message.sanitized_body = body
+        message.to_addr = to_addr
+        message.cc_addr = cc_addr
+        message.bcc_addr = bcc_addr
+        # TODO(emfree): this is different from the normal 'size' value of a
+        # message, which is the size of the entire MIME message.
+        message.size = len(body)
+        message.is_read = True
+        message.is_sent = False
+        message.public_id = uid
+        message.version = 0
+        message.regenerate_inbox_uid()
+
+        # Set the snippet
+        message.snippet = message.calculate_html_snippet(body)
+
+        # Associate attachments to the draft message
+        for block in blocks:
+            # Create a new Part object to associate to the message object.
+            # (You can't just set block.message, because if block is an
+            # attachment on an existing message, that would dissociate it from
+            # the existing message.)
+            part = Part(block=block)
+            part.namespace_id = namespace.id
+            part.content_disposition = 'attachment'
+            part.is_inboxapp_attachment = True
+            message.parts.append(part)
+            db_session.add(part)
+
+        update_contacts_from_message(db_session, message, namespace)
+
+        if reply_to_message is not None:
+            message.is_reply = True
+            _set_reply_headers(message, reply_to_message)
+            thread = reply_to_message.thread
+            message.reply_to_message = reply_to_message
+        elif reply_to_thread is not None:
+            message.is_reply = True
+            thread = reply_to_thread
+            # Construct the in-reply-to and references headers from the last
+            # message currently in the thread.
+            previous_messages = [m for m in thread.messages if not m.is_draft]
+            if previous_messages:
+                last_message = previous_messages[-1]
+                message.reply_to_message = last_message
+                _set_reply_headers(message, last_message)
+        else:
+            # If this isn't a reply to anything, create a new thread object for
+            # the draft.  We specialize the thread class so that we can, for
+            # example, add the g_thrid for Gmail later if we reconcile a synced
+            # message with this one. This is a huge hack, but works.
+            message.is_reply = False
+            thread_cls = account.thread_cls
+            thread = thread_cls(
+                subject=message.subject,
+                recentdate=message.received_date,
+                namespace=namespace,
+                subjectdate=message.received_date)
+            if message.attachments:
+                attachment_tag = namespace.tags['attachment']
+                thread.apply_tag(attachment_tag)
+
+        message.thread = thread
+        thread.apply_tag(namespace.tags['drafts'])
+        for tag in tags:
+            thread.apply_tag(tag)
+
+        if syncback:
+            schedule_action('save_draft', message, namespace.id, db_session)
+        return message
 
 
 def update_draft(db_session, account, draft, to_addr=None,
@@ -179,113 +287,13 @@ def generate_attachments(blocks):
     return attachment_dicts
 
 
-def create_and_save_draft(db_session, account, to_addr=None, subject=None,
-                          body=None, blocks=None, cc_addr=None, bcc_addr=None,
-                          new_tags=None, thread=None, is_reply=False,
-                          syncback=True):
-    """Create a draft object and commit it to the database."""
-    with db_session.no_autoflush:
-        dt = datetime.utcnow()
-        uid = generate_public_id()
-        to_addr = to_addr or []
-        cc_addr = cc_addr or []
-        bcc_addr = bcc_addr or []
-        blocks = blocks or []
-        body = body or ''
-        if subject is None and thread is not None:
-            # Set subject from thread by default.
-            subject = thread.subject
-        subject = subject or ''
-
-        message = Message()
-        message.namespace = account.namespace
-        message.is_created = True
-        message.is_draft = True
-        message.from_addr = [(account.name, account.email_address)]
-        # TODO(emfree): we should maybe make received_date nullable, so its
-        # value doesn't change in the case of a drafted-and-later-reconciled
-        # message.
-        message.received_date = dt
-        message.subject = subject
-        message.sanitized_body = body
-        message.to_addr = to_addr
-        message.cc_addr = cc_addr
-        message.bcc_addr = bcc_addr
-        # TODO(emfree): this is different from the normal 'size' value of a
-        # message, which is the size of the entire MIME message.
-        message.size = len(body)
-        message.is_read = True
-        message.is_sent = False
-        message.is_reply = is_reply
-        message.public_id = uid
-        message.version = 0
-        message.regenerate_inbox_uid()
-
-        # Set the snippet
-        message.snippet = message.calculate_html_snippet(body)
-
-        # Associate attachments to the draft message
-        for block in blocks:
-            # Create a new Part object to associate to the message object.
-            # (You can't just set block.message, because if block is an
-            # attachment on an existing message, that would dissociate it from
-            # the existing message.)
-            part = Part(block=block)
-            part.namespace_id = account.namespace.id
-            part.content_disposition = 'attachment'
-            part.is_inboxapp_attachment = True
-            message.parts.append(part)
-            db_session.add(part)
-
-        update_contacts_from_message(db_session, message, account.namespace)
-
-        if is_reply:
-            message.is_reply = True
-            # Construct the in-reply-to and references headers from the last
-            # message currently in the thread.
-            _set_reply_headers(message, thread)
-        if thread is None:
-            # Create a new thread object for the draft.
-            # We specialize the thread class so that we can, for example, add
-            # the g_thrid for Gmail later if we reconcile a synced message with
-            # this one. This is a huge hack, but works.
-            thread_cls = account.thread_cls
-            thread = thread_cls(
-                subject=message.subject,
-                recentdate=message.received_date,
-                namespace=account.namespace,
-                subjectdate=message.received_date)
-            if message.attachments:
-                attachment_tag = thread.namespace.tags['attachment']
-                thread.apply_tag(attachment_tag)
-            db_session.add(thread)
-
-        message.thread = thread
-        thread.apply_tag(account.namespace.tags['drafts'])
-
-        if new_tags:
-            tags_to_keep = {tag for tag in thread.tags if not tag.user_created}
-            thread.tags = new_tags | tags_to_keep
-
-        if syncback:
-            schedule_action('save_draft', message, message.namespace.id,
-                            db_session)
-
-    db_session.add(message)
-    db_session.commit()
-    return message
-
-
-def _set_reply_headers(new_message, thread):
+def _set_reply_headers(new_message, previous_message):
     """When creating a draft in reply to a thread, set the In-Reply-To and
     References headers appropriately, if possible."""
-    previous_messages = [m for m in thread.messages if not m.is_draft]
-    if previous_messages:
-        last_message = previous_messages[-1]
-        if last_message.message_id_header:
-            new_message.in_reply_to = last_message.message_id_header
-            if last_message.references:
-                new_message.references = (last_message.references +
-                                          [last_message.message_id_header])
-            else:
-                new_message.references = [last_message.message_id_header]
+    if previous_message.message_id_header:
+        new_message.in_reply_to = previous_message.message_id_header
+        if previous_message.references:
+            new_message.references = (previous_message.references +
+                                      [previous_message.message_id_header])
+        else:
+            new_message.references = [previous_message.message_id_header]

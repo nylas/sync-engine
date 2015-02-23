@@ -145,6 +145,19 @@ def get_attachments(block_public_ids, namespace_id, db_session):
     return attachments
 
 
+def get_message(message_public_id, namespace_id, db_session):
+    if message_public_id is None:
+        return None
+    valid_public_id(message_public_id)
+    try:
+        return db_session.query(Message). \
+            filter(Message.public_id == message_public_id,
+                   Message.namespace_id == namespace_id).one()
+    except NoResultFound:
+        raise InputError('Invalid message public id {}'.
+                         format(message_public_id))
+
+
 def get_thread(thread_public_id, namespace_id, db_session):
     if thread_public_id is None:
         return None
@@ -158,7 +171,7 @@ def get_thread(thread_public_id, namespace_id, db_session):
                          format(thread_public_id))
 
 
-def get_recipients(recipients, field, validate_emails=False):
+def get_recipients(recipients, field):
     if recipients is None:
         return None
     if not isinstance(recipients, list):
@@ -169,14 +182,6 @@ def get_recipients(recipients, field, validate_emails=False):
             raise InputError('Invalid {} field'.format(field))
         if 'name' in r and not isinstance(r['name'], basestring):
             raise InputError('Invalid {} field'.format(field))
-        if validate_emails:
-            # flanker purports to have a more comprehensive validate_address
-            # function, but it doesn't actually work. So just invoke the
-            # parser.
-            parsed = address.parse(r['email'], addr_spec_only=True)
-            if not isinstance(parsed, address.EmailAddress):
-                raise InputError(u'Invalid recipient address {}'.
-                                 format(r['email']))
 
     return [(r.get('name', ''), r.get('email', '')) for r in recipients]
 
@@ -263,8 +268,10 @@ def valid_delta_object_types(types_arg):
 
 
 def validate_draft_recipients(draft):
-    """Check that all recipient emails are at least plausible email
-    addresses, before we try to send a draft."""
+    """Check that a draft has at least one recipient, and that all recipient
+    emails are at least plausible email addresses, before we try to send it."""
+    if not any((draft.to_addr, draft.bcc_addr, draft.cc_addr)):
+        raise InputError('No recipients specified')
     for field in draft.to_addr, draft.bcc_addr, draft.cc_addr:
         if field is not None:
             for _, email_address in field:

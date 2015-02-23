@@ -62,24 +62,55 @@ def test_create_and_get_draft(api_client, example_draft):
     assert not any('attachment' == tag['name'] for tag in thread_tags)
 
 
-def test_create_reply_draft(api_client):
-    thread_public_id = api_client.get_data('/threads')[0]['id']
+def test_create_draft_replying_to_thread(api_client):
+    thread = api_client.get_data('/threads')[0]
+    thread_id = thread['id']
+    latest_message_id = thread['message_ids'][-1]
 
     reply_draft = {
         'subject': 'test reply',
         'body': 'test reply',
-        'thread_id': thread_public_id
+        'thread_id': thread_id
     }
     r = api_client.post_data('/drafts', reply_draft)
-    draft_public_id = json.loads(r.data)['id']
+    draft_id = json.loads(r.data)['id']
 
     drafts = api_client.get_data('/drafts')
     assert len(drafts) == 1
 
-    assert thread_public_id == drafts[0]['thread_id']
+    assert thread_id == drafts[0]['thread_id']
+    assert drafts[0]['reply_to_message_id'] == latest_message_id
 
-    thread_data = api_client.get_data('/threads/{}'.format(thread_public_id))
-    assert draft_public_id in thread_data['draft_ids']
+    thread_data = api_client.get_data('/threads/{}'.format(thread_id))
+    assert draft_id in thread_data['draft_ids']
+
+
+def test_create_draft_replying_to_message(api_client):
+    message = api_client.get_data('/messages')[0]
+    reply_draft = {
+        'subject': 'test reply',
+        'body': 'test reply',
+        'reply_to_message_id': message['id']
+    }
+    r = api_client.post_data('/drafts', reply_draft)
+    data = json.loads(r.data)
+    assert data['reply_to_message_id'] == message['id']
+    assert data['thread_id'] == message['thread_id']
+
+
+def test_reject_incompatible_reply_thread_and_message(api_client):
+    # TODO(emfree) set up this state instead of making assumptions about the
+    # contents of the test dump.
+    message = api_client.get_data('/messages')[0]
+    thread = api_client.get_data('/threads')[-1]
+    assert thread['id'] != message['thread_id']
+    reply_draft = {
+        'subject': 'test reply',
+        'reply_to_message_id': message['id'],
+        'thread_id': thread['id']
+    }
+    r = api_client.post_data('/drafts', reply_draft)
+    assert r.status_code == 400
 
 
 def test_drafts_filter(api_client, example_draft):

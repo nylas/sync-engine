@@ -14,10 +14,9 @@ from inbox.models import (Message, Block, Part, Thread, Namespace,
 from inbox.api.sending import send_draft
 from inbox.api.kellogs import APIEncoder
 from inbox.api import filtering
-from inbox.api.validation import (get_tags, get_attachments,
-                                  get_calendar, get_thread, get_recipients,
-                                  get_draft, valid_public_id, valid_event,
-                                  valid_event_update, timestamp,
+from inbox.api.validation import (get_tags, get_attachments, get_calendar,
+                                  get_recipients, get_draft, valid_public_id,
+                                  valid_event, valid_event_update, timestamp,
                                   bounded_str, view, strict_parse_args, limit,
                                   valid_event_action, valid_rsvp,
                                   ValidatableArgument,
@@ -1032,21 +1031,10 @@ def draft_get_api(public_id):
 @app.route('/drafts/', methods=['POST'])
 def draft_create_api():
     data = request.get_json(force=True)
-
-    to = get_recipients(data.get('to'), 'to')
-    cc = get_recipients(data.get('cc'), 'cc')
-    bcc = get_recipients(data.get('bcc'), 'bcc')
-    subject = data.get('subject')
-    body = data.get('body')
-    tags = get_tags(data.get('tags'), g.namespace.id, g.db_session)
-    files = get_attachments(data.get('file_ids'), g.namespace.id,
-                            g.db_session)
-    replyto_thread = get_thread(data.get('thread_id'), g.namespace.id,
-                                g.db_session)
-
     try:
-        draft = create_draft(g.db_session, g.namespace.account, to, subject,
-                             body, files, cc, bcc, tags, replyto_thread)
+        draft = create_draft(data, g.namespace, g.db_session, syncback=True)
+        g.db_session.add(draft)
+        g.db_session.commit()
     except ActionError as e:
         return err(e.error, str(e))
 
@@ -1103,34 +1091,25 @@ def draft_send_api():
     if draft_public_id is not None:
         draft = get_draft(draft_public_id, data.get('version'), g.namespace.id,
                           g.db_session)
-        if not any((draft.to_addr, draft.cc_addr, draft.bcc_addr)):
-            raise InputError('No recipients specified')
         validate_draft_recipients(draft)
         resp = send_draft(g.namespace.account, draft, g.db_session,
                           schedule_remote_delete=True)
     else:
-        to = get_recipients(data.get('to'), 'to', validate_emails=True)
-        cc = get_recipients(data.get('cc'), 'cc', validate_emails=True)
-        bcc = get_recipients(data.get('bcc'), 'bcc', validate_emails=True)
-        if not any((to, cc, bcc)):
-            raise InputError('No recipients specified')
-        subject = data.get('subject')
-        body = data.get('body')
-        tags = get_tags(data.get('tags'), g.namespace.id, g.db_session)
-        files = get_attachments(data.get('file_ids'), g.namespace.id,
-                                g.db_session)
-        replyto_thread = get_thread(data.get('thread_id'), g.namespace.id,
-                                    g.db_session)
-
-        draft = create_draft(g.db_session, g.namespace.account, to, subject,
-                             body, files, cc, bcc, tags, replyto_thread,
-                             syncback=False)
+        draft = create_draft(data, g.namespace, g.db_session, syncback=False)
+        validate_draft_recipients(draft)
         resp = send_draft(g.namespace.account, draft, g.db_session,
                           schedule_remote_delete=False)
-        if resp.status_code != 200:
-            g.db_session.delete(draft)
-            g.db_session.commit()
-
+        if resp.status_code == 200:
+            # At this point, the message has been successfully sent. If there's
+            # any sort of error in committing the updated state, don't allow it
+            # to cause the request to fail. Otherwise a client may think their
+            # message hasn't been sent, when it fact it has.
+            try:
+                g.db_session.add(draft)
+                g.db_session.commit()
+            except Exception as exc:
+                g.log.critical('Error committing draft after successful send',
+                               exc_info=True, error=exc)
     return resp
 
 

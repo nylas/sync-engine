@@ -95,6 +95,10 @@ def encode(obj, namespace_public_id=None):
         if obj.is_draft:
             resp['object'] = 'draft'
             resp['version'] = obj.version
+            if obj.reply_to_message is not None:
+                resp['reply_to_message_id'] = obj.reply_to_message.public_id
+            else:
+                resp['reply_to_message_id'] = None
         return resp
 
     elif isinstance(obj, Thread):
