@@ -64,6 +64,10 @@ setup(
              'bin/inbox-console',
              'bin/search-index-service',
              'bin/migrate-participant-format',
+             'bin/inbox-console',
+             'bin/start-stop-account',
+             'bin/inbox-auth',
+             'bin/delete-account',
              'bin/syncback-service'],
 
     # See:
