@@ -19,7 +19,7 @@ def upgrade():
     conn = op.get_bind()
 
     conn.execute(text("SET FOREIGN_KEY_CHECKS=0;"))
-    # conn.execute(text("ALTER TABLE easfoldersyncstatus DROP FOREIGN KEY `easfoldersyncstatus_ibfk_1`"))
+    conn.execute(text("ALTER TABLE easfoldersyncstatus DROP FOREIGN KEY `easfoldersyncstatus_ibfk_1`"))
     conn.execute(text("ALTER TABLE easfoldersyncstatus ADD CONSTRAINT `easfoldersyncstatus_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `easaccount` (`id`) ON DELETE CASCADE"))
 
     conn.execute(text("ALTER TABLE easfoldersyncstatus DROP FOREIGN KEY `easfoldersyncstatus_ibfk_2`"))
