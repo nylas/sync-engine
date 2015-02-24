@@ -54,15 +54,6 @@ def create_revision(obj, session, revision_type):
                            namespace_id=obj.namespace.id)
     if revision_type != 'delete':
         revision.snapshot = encode(obj)
-
-    # This is a /BIG/ hack to fix T853 -
-    # For drafts that are deleted, we store the version number as the `snapshot`
-    # so it can be returned in delete deltas.
-    # TODO[k]: Fix this properly.
-    if revision_type == 'delete' and obj.API_OBJECT_NAME == 'message' and \
-            obj.is_draft:
-        revision.snapshot = {'version': obj.version}
-
     session.add(revision)
 
 
