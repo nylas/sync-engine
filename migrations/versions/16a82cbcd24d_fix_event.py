@@ -18,9 +18,7 @@ from sqlalchemy.sql import text
 def upgrade():
     conn = op.get_bind()
     conn.execute(text("SET FOREIGN_KEY_CHECKS=0;"))
-    # Technically we should also update the charset to be strict ascii but this is
-    # a very costly operation.
-    conn.execute(text("ALTER TABLE event MODIFY uid varchar(767) NOT NULL"))
+    conn.execute(text("ALTER TABLE event MODIFY uid varchar(767) CHARACTER SET ASCII NOT NULL"))
     conn.execute(text("ALTER TABLE event MODIFY created_at DATETIME NOT NULL"))
     conn.execute(text("ALTER TABLE event MODIFY updated_at DATETIME NOT NULL"))
     conn.execute(text("ALTER TABLE event MODIFY namespace_id int(11) NOT NULL"))
@@ -35,7 +33,7 @@ def upgrade():
 def downgrade():
     conn = op.get_bind()
     conn.execute(text("SET FOREIGN_KEY_CHECKS=0;"))
-    conn.execute(text("ALTER TABLE event MODIFY uid varchar(767)"))
+    conn.execute(text("ALTER TABLE event MODIFY uid varchar(767) CHARACTER SET ASCII"))
     conn.execute(text("ALTER TABLE event MODIFY created_at DATETIME"))
     conn.execute(text("ALTER TABLE event MODIFY updated_at DATETIME"))
     conn.execute(text("ALTER TABLE event MODIFY namespace_id int(11)"))
