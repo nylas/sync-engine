@@ -69,7 +69,6 @@ def session_scope(versioned=True, ignore_soft_deletes=False):
                  engine=id(cached_engine))
 
     session = new_session(cached_engine, versioned)
-
     try:
         if config.get('LOG_DB_SESSIONS'):
             start_time = time.time()
@@ -82,16 +81,13 @@ def session_scope(versioned=True, ignore_soft_deletes=False):
                         sessions_used=cached_engine.pool.checkedout())
         yield session
         session.commit()
-    except:
+    except BaseException as exc:
         try:
             session.rollback()
-        except OperationalError as e:
-            log.warn('Encountered OperationalError on rollback: {}'.format(e))
-            # Close cleanly if we encounter a command out of sync
-            # after a greenlet exit
-            session.close()
-            return
-        raise
+            raise
+        except OperationalError:
+            log.warn('Encountered OperationalError on rollback')
+            raise exc
     finally:
         if config.get('LOG_DB_SESSIONS'):
             lifetime = time.time() - start_time
