@@ -4,6 +4,7 @@ from contextlib import contextmanager
 
 from sqlalchemy import event
 from sqlalchemy.orm.session import Session
+from sqlalchemy.exc import OperationalError
 
 from inbox.config import config
 from inbox.ignition import main_engine
@@ -82,7 +83,14 @@ def session_scope(versioned=True, ignore_soft_deletes=False):
         yield session
         session.commit()
     except:
-        session.rollback()
+        try:
+            session.rollback()
+        except OperationalError as e:
+            log.warn('Encountered OperationalError on rollback: {}'.format(e))
+            # Close cleanly if we encounter a command out of sync
+            # after a greenlet exit
+            session.close()
+            return
         raise
     finally:
         if config.get('LOG_DB_SESSIONS'):
