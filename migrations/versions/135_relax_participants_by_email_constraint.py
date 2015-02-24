@@ -17,8 +17,8 @@ from sqlalchemy.sql import text
 
 def upgrade():
     conn = op.get_bind()
-
     conn.execute(text("ALTER TABLE event MODIFY participants_by_email TEXT;"))
+
 
 def downgrade():
     conn = op.get_bind()
