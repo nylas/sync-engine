@@ -360,7 +360,7 @@ DROP TABLE IF EXISTS `event`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `event` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `uid` varchar(767) CHARACTER SET ascii DEFAULT NULL,
+  `uid` varchar(767) CHARACTER SET ascii NOT NULL,
   `provider_name` varchar(64) NOT NULL,
   `public_id` binary(16) NOT NULL,
   `raw_data` text NOT NULL,
@@ -960,4 +960,4 @@ CREATE TABLE `transaction` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-02-24 18:52:25
+-- Dump completed on 2015-02-24 19:48:32
