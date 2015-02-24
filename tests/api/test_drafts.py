@@ -34,7 +34,7 @@ def attachments(db):
     data = []
     for filename in filenames:
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..',
-                            'data', filename)
+                            'data', filename).encode('utf-8')
         data.append((filename, path))
     return data
 

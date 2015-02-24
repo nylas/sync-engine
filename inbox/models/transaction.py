@@ -33,16 +33,9 @@ Index('namespace_id_created_at', Transaction.namespace_id,
 
 def create_revisions(session):
     for obj in session.new:
-        # Unlikely that you could have new but also soft-deleted objects, but
-        # just in case, handle it.
-        # TODO(emfree): remove deleted_at handling
-        if obj.deleted_at is None:
-            create_revision(obj, session, 'insert')
+        create_revision(obj, session, 'insert')
     for obj in session.dirty:
-        if obj.deleted_at is not None:
-            create_revision(obj, session, 'delete')
-        else:
-            create_revision(obj, session, 'update')
+        create_revision(obj, session, 'update')
     for obj in session.deleted:
         create_revision(obj, session, 'delete')
 

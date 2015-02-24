@@ -28,7 +28,7 @@ def files(db):
     data = []
     for filename in filenames:
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..',
-                            'data', filename)
+                            'data', filename).encode('utf-8')
         data.append((filename, path))
     return data
 
@@ -146,7 +146,7 @@ def test_get_invalid(api_client, uploaded_file_ids):
 def test_download(api_client, uploaded_file_ids, filename):
     import md5
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..',
-                        'data', filename)
+                        'data', filename).encode('utf-8')
     in_file = api_client.get_data(u'/files?filename={}'.format(filename))[0]
     data = api_client.get_raw('/files/{}/download'.format(in_file['id'])).data
 
