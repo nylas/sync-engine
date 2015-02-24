@@ -17,11 +17,16 @@ from sqlalchemy.sql import text
 
 def upgrade():
     conn = op.get_bind()
+    conn.execute(text("SET FOREIGN_KEY_CHECKS=0;"))
     conn.execute(text("ALTER TABLE account DROP FOREIGN KEY `account_ibfk_10`"))
     conn.execute(text("ALTER TABLE account ADD CONSTRAINT `account_ibfk_10` FOREIGN KEY (`default_calendar_id`) REFERENCES `calendar` (`id`) ON DELETE SET NULL"))
+    conn.execute(text("SET FOREIGN_KEY_CHECKS=1;"))
 
 
 def downgrade():
     conn = op.get_bind()
+
+    conn.execute(text("SET FOREIGN_KEY_CHECKS=0;"))
     conn.execute(text("ALTER TABLE account DROP FOREIGN KEY `account_ibfk_10`"))
     conn.execute(text("ALTER TABLE account ADD CONSTRAINT `account_ibfk_10` FOREIGN KEY (`default_calendar_id`) REFERENCES `calendar` (`id`)"))
+    conn.execute(text("SET FOREIGN_KEY_CHECKS=1;"))

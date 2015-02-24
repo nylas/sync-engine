@@ -17,11 +17,17 @@ from sqlalchemy.sql import text
 
 def upgrade():
     conn = op.get_bind()
+
+    conn.execute(text("SET FOREIGN_KEY_CHECKS=0;"))
     conn.execute(text("ALTER TABLE folder DROP FOREIGN KEY `folder_fk1`"))
     conn.execute(text("ALTER TABLE folder ADD CONSTRAINT `folder_fk1` FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE"))
+
+    conn.execute(text("SET FOREIGN_KEY_CHECKS=1;"))
 
 
 def downgrade():
     conn = op.get_bind()
+    conn.execute(text("SET FOREIGN_KEY_CHECKS=0;"))
     conn.execute(text("ALTER TABLE folder DROP FOREIGN KEY `folder_fk1`"))
     conn.execute(text("ALTER TABLE folder ADD CONSTRAINT `folder_fk1` FOREIGN KEY (`account_id`) REFERENCES `account` (`id`)"))
+    conn.execute(text("SET FOREIGN_KEY_CHECKS=1;"))

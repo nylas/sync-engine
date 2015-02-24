@@ -17,15 +17,19 @@ from sqlalchemy.sql import text
 
 def upgrade():
     conn = op.get_bind()
+    conn.execute(text("SET FOREIGN_KEY_CHECKS=0;"))
     conn.execute(text("ALTER TABLE tagitem DROP FOREIGN KEY `tagitem_ibfk_1`"))
     conn.execute(text("ALTER TABLE tagitem ADD CONSTRAINT `tagitem_ibfk_1` FOREIGN KEY (`thread_id`) REFERENCES `thread` (`id`) ON DELETE CASCADE"))
     conn.execute(text("ALTER TABLE tagitem DROP FOREIGN KEY `tagitem_ibfk_2`"))
     conn.execute(text("ALTER TABLE tagitem ADD CONSTRAINT `tagitem_ibfk_2` FOREIGN KEY (`tag_id`) REFERENCES `tag` (`id`) ON DELETE CASCADE"))
+    conn.execute(text("SET FOREIGN_KEY_CHECKS=1;"))
 
 
 def downgrade():
     conn = op.get_bind()
+    conn.execute(text("SET FOREIGN_KEY_CHECKS=0;"))
     conn.execute(text("ALTER TABLE tagitem DROP FOREIGN KEY `tagitem_ibfk_1`"))
     conn.execute(text("ALTER TABLE tagitem ADD CONSTRAINT `tagitem_ibfk_1` FOREIGN KEY (`thread_id`) REFERENCES `thread` (`id`)"))
     conn.execute(text("ALTER TABLE tagitem DROP FOREIGN KEY `tagitem_ibfk_2`"))
     conn.execute(text("ALTER TABLE tagitem ADD CONSTRAINT `tagitem_ibfk_2` FOREIGN KEY (`tag_id`) REFERENCES `tag` (`id`)"))
+    conn.execute(text("SET FOREIGN_KEY_CHECKS=1;"))

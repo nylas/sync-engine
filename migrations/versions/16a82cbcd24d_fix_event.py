@@ -17,9 +17,24 @@ from sqlalchemy.sql import text
 
 def upgrade():
     conn = op.get_bind()
+    conn.execute(text("SET FOREIGN_KEY_CHECKS=0;"))
     conn.execute(text("ALTER TABLE event MODIFY uid varchar(767) CHARACTER SET ascii NOT NULL"))
-
+    conn.execute(text("ALTER TABLE event MODIFY created_at DATETIME NOT NULL"))
+    conn.execute(text("ALTER TABLE event MODIFY updated_at DATETIME NOT NULL"))
+    conn.execute(text("ALTER TABLE event MODIFY namespace_id int(11) NOT NULL"))
+    conn.execute(text("ALTER TABLE event MODIFY owner varchar(1024)"))
+    conn.execute(text("ALTER TABLE event DROP FOREIGN KEY `event_ibfk_3`"))
+    conn.execute(text("ALTER TABLE event ADD CONSTRAINT `event_ibfk_3` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE"))
+    conn.execute(text("SET FOREIGN_KEY_CHECKS=1;"))
 
 def downgrade():
     conn = op.get_bind()
+    conn.execute(text("SET FOREIGN_KEY_CHECKS=0;"))
     conn.execute(text("ALTER TABLE event MODIFY uid varchar(767) CHARACTER SET ascii DEFAULT NULL"))
+    conn.execute(text("ALTER TABLE event MODIFY created_at DATETIME"))
+    conn.execute(text("ALTER TABLE event MODIFY updated_at DATETIME"))
+    conn.execute(text("ALTER TABLE event MODIFY namespace_id int(11)"))
+    conn.execute(text("ALTER TABLE event MODIFY owner varchar(255)"))
+    conn.execute(text("ALTER TABLE event DROP FOREIGN KEY `event_ibfk_3`"))
+    conn.execute(text("ALTER TABLE event ADD CONSTRAINT `event_ibfk_3` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`)"))
+    conn.execute(text("SET FOREIGN_KEY_CHECKS=1;"))
