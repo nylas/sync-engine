@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 
 import click
+import time
 from functools import partial
 from json import dumps
 from sys import exit
 
-from inbox.heartbeat.status import get_heartbeat_status
+from inbox.heartbeat.status import get_heartbeat_status, \
+    get_account_timestamps, get_account_summary
 
 
 def print_heartbeat_status_stats(status):
@@ -72,8 +74,19 @@ def print_heartbeat_status(status, verbose):
 @click.option('--port', '-p', type=int, default=6379)
 @click.option('--account-id', '-a', type=int)
 @click.option('--pretty', is_flag=True)
-@click.option('--verbose', '-v', is_flag=True)
-def main(host, port, account_id, pretty, verbose):
+@click.option('--verbose', '-v', is_flag=True, default=True)
+@click.option('--debug', '-d', is_flag=True, default=False)
+def main(host, port, account_id, pretty, verbose, debug):
+    if debug:
+        now = time.time()
+        hs = get_account_timestamps(host, port, account_id)
+        for (acc, ts) in hs:
+            print "Oldest heart for {} was {:.0f}s ago".format(acc, now - ts)
+            folders = get_account_summary(host, port, acc)
+            for (f, ts) in folders:
+                print " Folder {} : {:.0f}s ago".format(f, now - ts)
+        exit(0)
+
     status = get_heartbeat_status(host, port, account_id)
 
     if not pretty:

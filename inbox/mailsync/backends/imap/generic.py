@@ -91,7 +91,7 @@ from inbox.mailsync.backends.base import (create_db_objects,
                                           commit_uids, MailsyncDone,
                                           mailsync_session_scope,
                                           THROTTLE_WAIT)
-from inbox.heartbeat.status import HeartbeatStatusProxy
+from inbox.heartbeat.store import HeartbeatStatusProxy
 
 GenericUIDMetadata = namedtuple('GenericUIDMetadata', 'throttled')
 
@@ -174,10 +174,10 @@ class FolderSyncEngine(Greenlet):
         Greenlet.__init__(self)
 
         self.heartbeat_status = HeartbeatStatusProxy(self.account_id,
-                                                     self.folder_id)
-        self.heartbeat_status.publish(email_address=email_address,
-                                      provider_name=self.provider_name,
-                                      folder_name=self.folder_name)
+                                                     self.folder_id,
+                                                     self.folder_name,
+                                                     email_address,
+                                                     self.provider_name)
 
     def _run(self):
         # Bind greenlet-local logging context.

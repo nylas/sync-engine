@@ -1,6 +1,6 @@
 from ast import literal_eval
 
-from inbox.heartbeat.config import REPORT_DATABASE, _get_redis_client
+from inbox.heartbeat.config import REPORT_DATABASE, get_redis_client
 
 
 class ReportEntry(object):
@@ -33,7 +33,7 @@ def construct_heartbeat_report(status):
 
 
 def fetch_heartbeat_report(host, port):
-    client = _get_redis_client(host, port, REPORT_DATABASE)
+    client = get_redis_client(host, port, REPORT_DATABASE)
     batch_client = client.pipeline()
     names = []
     for name in client.scan_iter(count=100):
@@ -48,7 +48,7 @@ def fetch_heartbeat_report(host, port):
 def store_heartbeat_report(host, port, report):
     if not report:
         return
-    client = _get_redis_client(host, port, REPORT_DATABASE)
+    client = get_redis_client(host, port, REPORT_DATABASE)
     batch_client = client.pipeline()
     # flush the db to avoid stale information
     batch_client.flushdb()

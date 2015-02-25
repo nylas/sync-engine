@@ -1,94 +1,29 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
+import time
 
 from inbox.log import get_logger
-from inbox.heartbeat.config import (STATUS_DATABASE,
-                                    get_alive_thresholds, get_redis_client,
-                                    _get_alive_thresholds, _get_redis_client)
+from inbox.heartbeat.config import ALIVE_EXPIRY
+from inbox.heartbeat.store import HeartbeatStore, HeartbeatStatusKey
 
 
-CONTACTS_FOLDER_ID = '-1'
-EVENTS_FOLDER_ID = '-2'
+ALIVE_THRESHOLD = timedelta(seconds=ALIVE_EXPIRY)
 
-
-class HeartbeatStatusKey(object):
-
-    def __init__(self, account_id, folder_id):
-        self.account_id = account_id
-        self.folder_id = folder_id
-        self.key = '{}:{}'.format(self.account_id, self.folder_id)
-
-    def __repr__(self):
-        return self.key
-
-    def __lt__(self, other):
-        if self.account_id != other.account_id:
-            return self.account_id < other.account_id
-        return self.folder_id < other.folder_id
-
-    def __eq__(self, other):
-        return self.account_id == other.account_id and \
-            self.folder_id == other.folder_id
-
-    @classmethod
-    def all_folders(cls, account_id):
-        return cls(account_id, '*')
-
-    @classmethod
-    def contacts(cls, account_id):
-        return cls(account_id, CONTACTS_FOLDER_ID)
-
-    @classmethod
-    def events(cls, account_id):
-        return cls(account_id, EVENTS_FOLDER_ID)
-
-    @classmethod
-    def from_string(cls, string_key):
-        account_id, folder_id = map(int, string_key.split(':'))
-        return cls(account_id, folder_id)
-
-
-class HeartbeatStatusProxy(object):
-
-    def __init__(self, account_id, folder_id, device_id=0):
-        self.key = HeartbeatStatusKey(account_id, folder_id)
-        self.device_id = device_id
-        self.heartbeat_at = datetime.min
-        self.value = {}
-
-    def publish(self, **kwargs):
-        schema = {'email_address', 'provider_name', 'folder_name',
-                  'heartbeat_at', 'state', 'action'}
-
-        def check_schema(**kwargs):
-            for kw in kwargs:
-                assert kw in schema
-
-        try:
-            client = get_redis_client(STATUS_DATABASE)
-            check_schema(**kwargs)
-            now = datetime.utcnow()
-            self.value['heartbeat_at'] = str(now)
-            self.value.update(kwargs or {})
-            client.hset(self.key, self.device_id, json.dumps(self.value))
-            self.heartbeat_at = now
-            if 'action' in self.value:
-                del self.value['action']
-        except Exception:
-            log = get_logger()
-            log.error('Error while writing the heartbeat status',
-                      account_id=self.key.account_id,
-                      folder_id=self.key.folder_id,
-                      device_id=self.device_id,
-                      exc_info=True)
+log = get_logger()
 
 
 class DeviceHeartbeatStatus(object):
+    alive = True
+    state = None
+    heartbeat_at = None
 
-    def __init__(self):
-        self.alive = True
-        self.state = None
-        self.heartbeat_at = None
+    def __init__(self, device_id, device_status, threshold=ALIVE_THRESHOLD):
+        self.id = device_id
+        self.heartbeat_at = datetime.strptime(device_status['heartbeat_at'],
+                                              '%Y-%m-%d %H:%M:%S.%f')
+        self.state = device_status.get('state', None)
+        time_since_heartbeat = (datetime.utcnow() - self.heartbeat_at)
+        self.alive = time_since_heartbeat < threshold
 
     def jsonify(self):
         return {'alive': self.alive,
@@ -97,11 +32,25 @@ class DeviceHeartbeatStatus(object):
 
 
 class FolderHeartbeatStatus(object):
+    alive = True
+    name = ''
+    devices = {}
 
-    def __init__(self):
-        self.alive = True
-        self.name = ''
-        self.devices = {}
+    def __init__(self, folder_id, folder_status, threshold=ALIVE_THRESHOLD):
+        """ Initialize a FolderHeartbeatStatus from a folder status dictionary
+            containing individual device reports for that folder.
+        """
+        self.id = folder_id
+        for device_id, device_status in folder_status.iteritems():
+            self.email_address = device_status['email_address']
+            self.provider_name = device_status['provider_name']
+            self.name = device_status['folder_name']
+
+            device = DeviceHeartbeatStatus(device_id, device_status, threshold)
+            self.devices[device_id] = device
+
+            # a folder is alive iff all the devices handling it are alive
+            self.alive = self.alive and device.alive
 
     @property
     def initial_sync(self):
@@ -121,132 +70,206 @@ class FolderHeartbeatStatus(object):
 
 
 class AccountHeartbeatStatus(object):
+    email_address = ''
+    provider_name = ''
+    id = None
 
-    def __init__(self, missing=False):
+    def __init__(self, id, missing=False):
+        # 'missing' denotes a heartbeat that was explicitly checked for and
+        # not found. on initialization, a missing heartbeat should not be
+        # defaulted to alive, but all other heartbeats should be.
+        self.id = id
         self.missing = missing
-        self.alive = not self.missing
-        self.email_address = ''
-        self.provider_name = ''
-        self.folders = {}
+        self._folders = {}
+        if missing:
+            self.alive = False
+        else:
+            self.alive = True
+
+    def add_folder(self, folder):
+        self._folders[folder.id] = folder
+        # email and provider are stored in folder heartbeats since we don't
+        # send per-account heartbeats, so update the account metadata here.
+        if folder.email_address:
+            self.email_address = folder.email_address
+        if folder.provider_name:
+            self.provider_name = folder.provider_name
+        # Update alive state: alive only iff all folders are alive.
+        self.alive = self.alive and folder.alive
+
+    def get_timestamp(self):
+        store = HeartbeatStore.store()
+        store.get_account_timestamp(self.id)
+
+    @property
+    def folders(self):
+        return self._folders.values()
 
     @property
     def dead_folders(self):
         return [folder.name
-                for folder in self.folders.itervalues() if not folder.alive]
+                for folder in self.folders if not folder.alive]
 
     @property
     def initial_sync(self):
-        return any(folder.initial_sync for folder in self.folders.itervalues())
+        return any(folder.initial_sync for folder in self.folders)
 
     @property
     def poll_sync(self):
-        return all(folder.poll_sync for folder in self.folders.itervalues())
+        return all(folder.poll_sync for folder in self.folders)
+
+    def __repr__(self):
+        return "<AccountHeartbeatStatus: Account {}: {}>".format(
+            self.id, self.alive)
 
     def jsonify(self):
         return {'missing': self.missing,
                 'alive': self.alive,
                 'email_address': self.email_address,
                 'provider_name': self.provider_name,
-                'folders': {folder_id: folder.jsonify()
-                            for folder_id, folder in self.folders.iteritems()}}
+                'folders': {folder.id: folder.jsonify()
+                            for folder in self.folders}}
+
+
+def load_folder_status(k, v):
+    folder = {}
+    for device_id in v:
+        folder[int(device_id)] = json.loads(v[device_id])
+    return folder
 
 
 def get_heartbeat_status(host=None, port=6379, account_id=None):
-    if host:
-        thresholds = _get_alive_thresholds()
-        client = _get_redis_client(host, port, STATUS_DATABASE)
-    else:
-        thresholds = get_alive_thresholds()
-        client = get_redis_client(STATUS_DATABASE)
-    batch_client = client.pipeline()
-
-    keys = []
-    match_key = None
-    if account_id:
-        match_key = HeartbeatStatusKey.all_folders(account_id)
-    for k in client.scan_iter(match=match_key, count=100):
-        if k == 'ElastiCacheMasterReplicationTimestamp':
-            continue
-        batch_client.hgetall(k)
-        keys.append(k)
-    values = batch_client.execute()
-
-    now = datetime.utcnow()
-
+    # Gets the full (folder-by-folder) heartbeat status report for all
+    # accounts or a specific account ID.
+    store = HeartbeatStore.store(host, port)
+    folders = store.get_folders(load_folder_status, account_id)
     accounts = {}
-    for (k, v) in zip(keys, values):
-        key = HeartbeatStatusKey.from_string(k)
-
-        account = accounts.get(key.account_id, AccountHeartbeatStatus())
-        folder = account.folders.get(key.folder_id, FolderHeartbeatStatus())
-
-        for device_id in v:
-            value = json.loads(v[device_id])
-
-            # eventually overwrite the following two fields, no big deal
-            account.email_address = value.get('email_address')
-            account.provider_name = value.get('provider_name')
-            folder.name = value.get('folder_name')
-
-            device = DeviceHeartbeatStatus()
-            device.heartbeat_at = datetime.strptime(value['heartbeat_at'],
-                                                    '%Y-%m-%d %H:%M:%S.%f')
-            device.state = value.get('state', None)
-
-            action = value.get('action', None)
-
-            if key.folder_id == CONTACTS_FOLDER_ID:
-                device.alive = (now - device.heartbeat_at) < \
-                    thresholds.contacts
-            elif key.folder_id == EVENTS_FOLDER_ID:
-                device.alive = (now - device.heartbeat_at) < thresholds.events
-            elif account.provider_name == 'eas' and action == 'throttled':
-                device.alive = (now - device.heartbeat_at) < \
-                    thresholds.eas_throttled
-            elif account.provider_name == 'eas' and action == 'ping':
-                device.alive = (now - device.heartbeat_at) < \
-                    thresholds.eas_ping
-            else:
-                device.alive = (now - device.heartbeat_at) < thresholds.base
-            device.alive = device.alive and \
-                (device.state in {None, 'initial', 'poll'})
-
-            folder.devices[int(device_id)] = device
-
-            # a folder is alive if and only if all the devices handling that
-            # folder are alive
-            folder.alive = folder.alive and device.alive
-            account.folders[key.folder_id] = folder
-
-            # an account is alive if and only if all the folders of the account
-            # are alive
-            account.alive = account.alive and folder.alive
-            accounts[key.account_id] = account
+    for composite_key, folder in folders.iteritems():
+        # Unwrap the folder reports from Redis into AccountHeartbeatStatus
+        key = HeartbeatStatusKey.from_string(composite_key)
+        account = accounts.get(key.account_id,
+                               AccountHeartbeatStatus(key.account_id))
+        # Update accounts list by adding folder heartbeat.
+        folder_hb = FolderHeartbeatStatus(key.folder_id, folder,
+                                          ALIVE_THRESHOLD)
+        account.add_folder(folder_hb)
+        accounts[key.account_id] = account
 
     if account_id and account_id not in accounts:
-        accounts[account_id] = AccountHeartbeatStatus(missing=True)
+        # If we asked about a specific folder and it didn't come back,
+        # report it as missing.
+        accounts[account_id] = AccountHeartbeatStatus(account_id, missing=True)
 
     return accounts
 
 
-def clear_heartbeat_status(account_id, folder_id=None, device_id=None):
-    try:
-        client = get_redis_client(STATUS_DATABASE)
-        batch_client = client.pipeline()
-        if folder_id:
-            match_name = HeartbeatStatusKey(account_id, folder_id)
+def get_account_timestamps(host=None, port=6379, account_id=None):
+    store = HeartbeatStore.store(host, port)
+    if account_id:
+        return [(account_id, store.get_account_timestamp(account_id))]
+    else:
+        return store.get_account_list()
+
+
+def get_account_summary(host=None, port=6379, account_id=None):
+    if not account_id:
+        return []
+    store = HeartbeatStore.store(host, port)
+    folders = store.get_account_folders(account_id)
+    return folders
+
+
+def get_account_metadata(host=None, port=6379, account_id=None):
+    # Get account metadata (email, provider) from a folder entry.
+    if not account_id:
+        return
+    store = HeartbeatStore.store(host, port)
+    folder_id, folder_hb = store.get_single_folder(account_id)
+    folder = FolderHeartbeatStatus(folder_id,
+                                   load_folder_status(folder_id, folder_hb))
+    return (folder.email_address, folder.provider_name)
+
+
+def list_alive_accounts(host=None, port=None, alive_since=ALIVE_EXPIRY,
+                        count=False, timestamps=False):
+    # List accounts that have checked in during the last alive_since seconds.
+    # Returns a list of account IDs.
+    # If `count` is specified, returns count.
+    # If `timestamps` specified, returns (account_id, timestamp) tuples.
+    store = HeartbeatStore.store(host, port)
+    if count:
+        return store.count_accounts(alive_since)
+    else:
+        accounts = store.get_account_list(alive_since)
+    if timestamps:
+        return accounts
+    return [a for a, ts in accounts]
+
+
+def list_dead_accounts(host=None, port=None, dead_threshold=ALIVE_EXPIRY,
+                       dead_since=None, count=False, timestamps=False):
+    # List accounts that haven't checked in for dead_threshold seconds.
+    # Optionally, provide dead_since to find accounts whose last
+    # checkin time was after dead_since seconds ago.
+    # Returns a list of account IDs.
+    # If `count` is specified, returns count.
+    # If `timestamps` specified, returns (account_id, timestamp) tuples.
+    store = HeartbeatStore.store(host, port)
+    if dead_since:
+        if count:
+            return store.count_accounts(dead_since, dead_threshold)
         else:
-            match_name = HeartbeatStatusKey.all_folders(account_id)
-        for name in client.scan_iter(match_name, 100):
-            if device_id:
-                batch_client.hdel(name, device_id)
-            else:
-                batch_client.delete(name)
-        batch_client.execute()
-    except Exception:
-        log = get_logger()
-        log.error('Error while deleting from the heartbeat status',
-                  account_id=account_id,
-                  folder_id=(folder_id or 'all'),
-                  device_id=(device_id or 'all'),
-                  exc_info=True)
+            accounts = store.get_accounts_between(dead_since, dead_threshold)
+    else:
+        if count:
+            return store.count_accounts(dead_threshold, above=False)
+        else:
+            accounts = store.get_accounts_below(dead_threshold)
+    if timestamps:
+        return accounts
+    return [a for a, ts in accounts]
+
+
+def list_all_accounts(host=None, port=None, dead_threshold=ALIVE_EXPIRY,
+                      timestamps=False):
+    # List all accounts with true/false heartbeats if alive or not.
+    # If `timestamps` specified, returns (alive_or_not, timestamp) tuples.
+    threshold = time.time() - dead_threshold
+    store = HeartbeatStore.store(host, port)
+    accounts = store.get_account_list()
+    heartbeats = {}
+    for (account, ts) in accounts:
+        if timestamps:
+            heartbeats[account] = (ts > threshold, ts)
+        else:
+            heartbeats[account] = ts > threshold
+    return heartbeats
+
+
+def heartbeat_summary(host=None, port=None, dead_threshold=ALIVE_EXPIRY):
+    num_dead_accounts = list_dead_accounts(dead_threshold=dead_threshold,
+                                           count=True)
+    num_alive_accounts = list_alive_accounts(alive_since=dead_threshold,
+                                             count=True)
+    num_accounts = num_alive_accounts + num_dead_accounts
+    if num_alive_accounts:
+        accounts_percent = float(num_alive_accounts) / num_accounts
+    else:
+        accounts_percent = 0
+    status = {
+        'accounts': num_accounts,
+        'accounts_percent': "{:.2%}".format(accounts_percent),
+        'alive_accounts': num_alive_accounts,
+        'dead_accounts': num_dead_accounts,
+        'timestamp': datetime.strftime(datetime.utcnow(), '%H:%M:%S %b %d, %Y')
+    }
+    return status
+
+
+def clear_heartbeat_status(account_id, folder_id=None, device_id=None,
+                           host=None, port=None):
+    # Clears the status for the account, folder and/or device.
+    # Returns the number of folders cleared.
+    store = HeartbeatStore.store(host, port)
+    n = store.remove_folders(account_id, folder_id, device_id)
+    return n

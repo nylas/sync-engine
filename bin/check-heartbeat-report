@@ -5,82 +5,82 @@ import json
 from sys import exit
 from collections import defaultdict
 
-from inbox.heartbeat.report import (construct_heartbeat_report,
-                                    fetch_heartbeat_report,
-                                    store_heartbeat_report,
-                                    diff_heartbeat_reports)
-from inbox.heartbeat.status import get_heartbeat_status
+from inbox.heartbeat.status import list_dead_accounts, list_alive_accounts, \
+    get_account_metadata
+
+CHECK_INTERVAL = 10 * 60
+ALIVE_THRESHOLD = 480
 
 
-def print_summary(dead):
-    counts = defaultdict(lambda: 0)
-    for (account_id, email, provider) in dead:
-        counts[provider] += 1
-    for provider, count in counts.iteritems():
-        print "{} x {} ".format(provider, count),
-    print
-
-
-def provider_groups(dead, verbose):
-    groups = defaultdict(list)
-    for (account_id, email, provider) in dead:
+def pretty_print(host, port, dead_list, verbose=False):
+    # Group by account providers.
+    providers = defaultdict(list)
+    for (a, ts) in dead_list:
+        # Get account metadata by looking in a folder for it (to avoid a live
+        # query to production accounts db)
+        (email, provider) = get_account_metadata(host, port, a)
         if verbose:
-            groups[provider].append("{} ({})".format(account_id, email))
+            providers[provider].append("{} ({})".format(a, email))
         else:
-            groups[provider].append("{}".format(account_id))
-    return groups
+            providers[provider].append(a)
 
-
-def print_groups(groups):
-    for provider in groups:
-        print " {}:".format(provider), ", ".join(groups[provider])
+    # Print a per-provider summary
+    for provider, deads in providers.iteritems():
+        print "{} x {}".format(provider, len(deads)),
+    print
+    for provider, deads in providers.iteritems():
+        print " {}: {}".format(provider, ", ".join(sorted(deads)))
 
 
 @click.command()
 @click.option('--host', '-h', type=str, required=True)
 @click.option('--port', '-p', type=int, default=6379)
+@click.option('--interval', '-i', type=int, default=CHECK_INTERVAL)
 @click.option('--verbose', '-v', is_flag=True, default=False)
 @click.option('--summary', '-s', is_flag=True, default=False)
-def main(host, port, verbose, summary):
-    status = get_heartbeat_status(host, port)
-    new_report = construct_heartbeat_report(status)
-    last_report = fetch_heartbeat_report(host, port)
-    store_heartbeat_report(host, port, new_report)
-    alives = 0
-    for name, new_value in new_report.iteritems():
-        if new_value.alive:
-            alives += 1
-    dead, new_dead = diff_heartbeat_reports(last_report, new_report)
-    if summary:
-        dead_summary = " ".join([str(acc) for acc, _, _ in dead])
-        new_dead_summary = " ".join([str(acc) for acc, _, _ in new_dead])
+def main(host, port, interval, verbose, summary):
+    # Get all the accounts that haven't checked in recently
 
-        # Hacky assumption
+    new_dead_threshold = interval + ALIVE_THRESHOLD
+
+    num_dead = list_dead_accounts(host, port, ALIVE_THRESHOLD, count=True)
+
+    if num_dead == 0:
+        exit(0)
+
+    num_alive = list_alive_accounts(host, port, ALIVE_THRESHOLD, count=True)
+
+    # Accounts dead when we last checked
+    old_dead = list_dead_accounts(host, port, new_dead_threshold,
+                                  timestamps=True)
+    # Accounts dead since we last checked
+    new_dead = list_dead_accounts(host, port, ALIVE_THRESHOLD,
+                                  new_dead_threshold, timestamps=True)
+
+    if summary:
         host_type = 'staging' if 'staging' in host else 'production'
-        print json.dumps({"dead": len(dead),
-                          "new_dead": len(new_dead),
-                          "alive": alives,
-                          "host": host,
-                          "host_type": host_type,
-                          "dead_accounts": dead_summary,
-                          "new_dead_accounts": new_dead_summary,
-                          "event": "heartbeat"
-                          })
+        old_dead.extend(new_dead)
+        print json.dumps({
+            "dead": num_dead,
+            "new_dead": len(new_dead),
+            "alive": num_alive,
+            "host": host,
+            "host_type": host_type,
+            "dead_accounts": " ".join([a for a, _ in sorted(old_dead)]),
+            "new_dead_accounts": " ".join([a for a, _ in sorted(new_dead)]),
+            "event": "heartbeat"})
         exit(0)
-    if not dead and not new_dead:
-        exit(0)
-    print "Dead accounts {}/{}: ".format(len(dead), alives),
-    print_summary(dead)
-    print "Accounts:"
-    print_groups(provider_groups(dead, verbose))
-    if new_dead:
-        print "\nNewly dead accounts: ",
-        print_summary(new_dead)
-        print "Accounts:"
-        print_groups(provider_groups(new_dead, True))
-        exit(2)
-    else:
+
+    print "Dead accounts {}/{}: ".format(num_dead, num_dead + num_alive),
+    pretty_print(host, port, old_dead)
+
+    if len(new_dead) == 0:
         exit(1)
+
+    print "\nNewly dead accounts: ",
+    pretty_print(host, port, new_dead, True)
+
+    exit(2)
 
 if __name__ == '__main__':
     main()

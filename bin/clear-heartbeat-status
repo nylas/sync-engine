@@ -3,30 +3,23 @@
 import click
 from sys import exit
 
-from inbox.heartbeat.config import (STATUS_DATABASE,
-                                    get_redis_client, _get_redis_client)
-from inbox.heartbeat.status import HeartbeatStatusKey
+from inbox.heartbeat.status import clear_heartbeat_status
+from inbox.log import configure_logging, get_logger
+
+configure_logging(False)
+log = get_logger()
 
 
 @click.command()
 @click.option('--host', '-h', type=str)
 @click.option('--port', '-p', type=int, default=6379)
 @click.option('--account-id', '-a', type=int, required=True)
-def main(host, port, account_id):
-    if host:
-        client = _get_redis_client(host, port, STATUS_DATABASE)
-    else:
-        client = get_redis_client(STATUS_DATABASE)
-    batch_client = client.pipeline()
-    op = False
-    for name in client.scan_iter(HeartbeatStatusKey.all_folders(account_id),
-                                 100):
-        op = True
-        batch_client.delete(name)
-    if not op:
-        print 'account {} not found'.format(account_id)
-        exit(22)
-    batch_client.execute()
+@click.option('--folder-id', '-f', type=int)
+@click.option('--device-id', '-d', type=int)
+def main(host, port, account_id, folder_id, device_id):
+    print 'Clearing heartbeat status...'
+    n = clear_heartbeat_status(account_id, folder_id, device_id, host, port)
+    print '{} folders cleared.'.format(n)
     exit(0)
 
 

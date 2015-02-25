@@ -4,7 +4,7 @@ from inbox.log import get_logger
 logger = get_logger()
 
 from inbox.util.concurrency import retry_and_report_killed
-from inbox.heartbeat.status import HeartbeatStatusProxy, clear_heartbeat_status
+from inbox.heartbeat.store import HeartbeatStatusProxy
 from inbox.basicauth import ConnectionError, ValidationError
 from inbox.models import Account
 from inbox.models.session import session_scope
@@ -16,7 +16,6 @@ class BaseSyncMonitor(Greenlet):
 
     Subclasses should run
     bind_context(self, 'mailsyncmonitor', account.id)
-
 
     poll_frequency : int
         How often to check for commands.
@@ -37,11 +36,10 @@ class BaseSyncMonitor(Greenlet):
 
         self.shutdown = event.Event()
         self.heartbeat_status = HeartbeatStatusProxy(self.account_id,
-                                                     self.folder_id)
-        self.heartbeat_status.publish(email_address=self.email_address,
-                                      provider_name=self.provider_name,
-                                      folder_name=self.folder_name)
-
+                                                     self.folder_id,
+                                                     self.folder_name,
+                                                     self.email_address,
+                                                     self.provider_name)
         Greenlet.__init__(self)
 
     def _run(self):
@@ -62,21 +60,13 @@ class BaseSyncMonitor(Greenlet):
 
                 try:
                     self.sync()
-                    self.heartbeat_status.publish(
-                        email_address=self.email_address,
-                        provider_name=self.provider_name,
-                        folder_name=self.folder_name,
-                        state='poll')
+                    self.heartbeat_status.publish(state='poll')
 
                 # If we get a connection or API permissions error, then sleep
                 # 2x poll frequency.
                 except ConnectionError:
                     self.log.error('Error while polling', exc_info=True)
-                    self.heartbeat_status.publish(
-                        email_address=self.email_address,
-                        provider_name=self.provider_name,
-                        folder_name=self.folder_name,
-                        state='poll error')
+                    self.heartbeat_status.publish(state='poll error')
                     sleep(self.poll_frequency)
                 sleep(self.poll_frequency)
         except ValidationError:
@@ -86,7 +76,7 @@ class BaseSyncMonitor(Greenlet):
             self._cleanup()
             with session_scope() as db_session:
                 account = db_session.query(Account).get(self.account_id)
-                account.sync_state = 'invalid'
+                account.mark_invalid()
 
             return False
 
@@ -95,4 +85,4 @@ class BaseSyncMonitor(Greenlet):
         raise NotImplementedError
 
     def _cleanup(self):
-        clear_heartbeat_status(self.account_id, folder_id=self.folder_id)
+        self.heartbeat_status.clear()

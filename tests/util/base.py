@@ -2,6 +2,7 @@ import json
 import os
 import subprocess
 from datetime import datetime
+from mockredis import mock_strict_redis_client
 
 from pytest import fixture, yield_fixture
 
@@ -67,6 +68,12 @@ def db(request, config):
     testdb = TestDB(config, dumpfile)
     yield testdb
     testdb.teardown()
+
+
+@fixture(autouse=True)
+def mock_redis(monkeypatch):
+    monkeypatch.setattr("inbox.heartbeat.store.HeartbeatStore.__init__",
+                        mock_strict_redis_client)
 
 
 @yield_fixture
