@@ -81,12 +81,21 @@ class HeartbeatStatusProxy(object):
 
         try:
             check_schema(**kwargs)
-            now = time.time()
-            self.value['heartbeat_at'] = str(datetime.fromtimestamp(now))
             self.value.update(kwargs or {})
+            # If we got a 'heartbeat_at' datetime argument, publish this
+            # heartbeat with that timestamp.
+            if 'heartbeat_at' in kwargs and \
+                    isinstance(kwargs['heartbeat_at'], datetime):
+                epoch = time.mktime(kwargs.get('heartbeat_at').timetuple())
+                self.heartbeat_at = epoch
+                self.value['heartbeat_at'] = str(kwargs['heartbeat_at'])
+            else:
+                self.heartbeat_at = time.time()
+                self.value['heartbeat_at'] = str(datetime.fromtimestamp(
+                    self.heartbeat_at))
             self.store.publish(
-                self.key, self.device_id, json.dumps(self.value), now)
-            self.heartbeat_at = now
+                self.key, self.device_id, json.dumps(self.value),
+                self.heartbeat_at)
             if 'action' in self.value:
                 del self.value['action']
         except Exception:

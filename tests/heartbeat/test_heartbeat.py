@@ -172,6 +172,16 @@ def test_remove_account_from_index(store):
     assert store.get_folder_list() == []
 
 
+def test_publish_with_timestamp(store):
+    # Test that if we publish with an explicit timestamp argument, the
+    # heartbeat has that timestamp, not now.
+    proxy = proxy_for(1, 2)
+    timestamp = datetime(2015, 01, 01, 02, 02, 02)
+    proxy.publish(heartbeat_at=timestamp)
+    account_timestamp = store.get_account_timestamp(1)
+    assert account_timestamp == time.mktime(timestamp.timetuple())
+
+
 # Test querying heartbeats
 
 

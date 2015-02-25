@@ -24,31 +24,31 @@ class DeviceHeartbeatStatus(object):
         self.state = device_status.get('state', None)
         time_since_heartbeat = (datetime.utcnow() - self.heartbeat_at)
         self.alive = time_since_heartbeat < threshold
+        self.action = device_status.get('action', None)
 
     def jsonify(self):
         return {'alive': self.alive,
                 'state': self.state,
+                'action': self.action,
                 'heartbeat_at': str(self.heartbeat_at)}
 
 
 class FolderHeartbeatStatus(object):
     alive = True
     name = ''
-    devices = {}
 
     def __init__(self, folder_id, folder_status, threshold=ALIVE_THRESHOLD):
         """ Initialize a FolderHeartbeatStatus from a folder status dictionary
             containing individual device reports for that folder.
         """
         self.id = folder_id
+        self.devices = {}
         for device_id, device_status in folder_status.iteritems():
             self.email_address = device_status['email_address']
             self.provider_name = device_status['provider_name']
             self.name = device_status['folder_name']
-
             device = DeviceHeartbeatStatus(device_id, device_status, threshold)
             self.devices[device_id] = device
-
             # a folder is alive iff all the devices handling it are alive
             self.alive = self.alive and device.alive
 
