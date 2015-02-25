@@ -156,7 +156,8 @@ class HeartbeatStore(object):
             for key in self.client.scan_iter(match, 100):
                 self.remove(key, device_id, pipeline)
                 n += 1
-            self.remove_from_account_index(account_id, pipeline)
+            if not device_id:
+                self.remove_from_account_index(account_id, pipeline)
             pipeline.execute()
             pipeline.reset()
             return n
@@ -170,9 +171,14 @@ class HeartbeatStore(object):
 
     def update_accounts_index(self, key):
         # Find the oldest heartbeat from the account-folder index
-        f, oldest_heartbeat = self.client.zrange(key.account_id, 0, 0,
-                                                 withscores=True).pop()
-        self.client.zadd('account_index', oldest_heartbeat, key.account_id)
+        try:
+            f, oldest_heartbeat = self.client.zrange(key.account_id, 0, 0,
+                                                     withscores=True).pop()
+            self.client.zadd('account_index', oldest_heartbeat, key.account_id)
+        except:
+            # If all heartbeats were deleted at the same time as this, the pop
+            # will fail -- ignore it.
+            pass
 
     def remove_from_folder_index(self, key, client):
         client.zrem('folder_index', key)
