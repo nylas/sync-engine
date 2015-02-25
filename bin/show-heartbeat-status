@@ -44,11 +44,11 @@ def print_heartbeat_status(status, verbose):
                            'provider_name': account.provider_name,
                            'folders': []}
 
-        for folder_id, folder in account.folders.iteritems():
+        for folder in account.folders:
             if folder.alive and not verbose:
                 continue
 
-            folder_summary = {'id': folder_id,
+            folder_summary = {'id': folder.id,
                               'name': folder.name,
                               'devices': []}
 
@@ -81,7 +81,10 @@ def main(host, port, account_id, pretty, verbose, debug):
         now = time.time()
         hs = get_account_timestamps(host, port, account_id)
         for (acc, ts) in hs:
-            print "Oldest heart for {} was {:.0f}s ago".format(acc, now - ts)
+            if ts:
+                print "Oldest heart for {}: {:.0f}s ago".format(acc, now - ts)
+            else:
+                print "No heartbeat for {} in store.".format(acc)
             folders = get_account_summary(host, port, acc)
             for (f, ts) in folders:
                 print " Folder {} : {:.0f}s ago".format(f, now - ts)
