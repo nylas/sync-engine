@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+
+import click
+
+from inbox.heartbeat.status import list_dead_accounts, heartbeat_summary
+
+CHECK_INTERVAL = 10 * 60
+ALIVE_THRESHOLD = 480
+
+
+@click.command()
+@click.option('--host', '-h', type=str, required=True)
+@click.option('--port', '-p', type=int, default=6379)
+@click.option('--interval', '-i', type=int, default=CHECK_INTERVAL)
+@click.option('--verbose', '-v', is_flag=True, default=False)
+def main(host, port, interval, verbose):
+    """ Prints summary metrics on the number of dead and alive accounts
+        in the heartbeat store.
+        In verbose mode, will print the account IDs rather than totals.
+    """
+
+    # Time threshold to report 'dead since last check'
+    new_dead_threshold = interval + ALIVE_THRESHOLD
+
+    count = not verbose  # Return counts rather than account IDs
+    metrics = heartbeat_summary(host, port, ALIVE_THRESHOLD)
+    new_dead = list_dead_accounts(host, port, new_dead_threshold,
+                                  ALIVE_THRESHOLD, count=count)
+    metrics['new_dead'] = new_dead
+    print metrics
+
+
+if __name__ == '__main__':
+    main()
