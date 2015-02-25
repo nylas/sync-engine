@@ -266,6 +266,8 @@ def files(namespace_id, message_public_id, filename, content_type,
 
     query = query.filter(Block.namespace_id == namespace_id)
 
+    # limit to actual attachments (no content-disposition == not a real
+    # attachment)
     query = query.outerjoin(Part)
     query = query.filter(or_(Part.id.is_(None),
                          Part.content_disposition.isnot(None)))

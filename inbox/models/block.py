@@ -94,7 +94,8 @@ class Part(MailSyncBase):
                            load_on_pending=True)
 
     walk_index = Column(Integer)
-    content_disposition = Column(Enum('inline', 'attachment'))
+    # https://www.ietf.org/rfc/rfc2183.txt
+    content_disposition = Column(Enum('inline', 'attachment'), nullable=True)
     content_id = Column(String(255))  # For attachments
 
     is_inboxapp_attachment = Column(Boolean, server_default=false())
