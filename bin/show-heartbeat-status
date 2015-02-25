@@ -7,26 +7,7 @@ from json import dumps
 from sys import exit
 
 from inbox.heartbeat.status import get_heartbeat_status, \
-    get_account_timestamps, get_account_summary
-
-
-def print_heartbeat_status_stats(status):
-    num_accounts = len(status)
-    num_missing_accounts = 0
-    num_alive_accounts = 0
-    num_dead_accounts = 0
-    for account in status.itervalues():
-        if account.missing:
-            num_missing_accounts += 1
-        elif account.alive:
-            num_alive_accounts += 1
-        else:
-            num_dead_accounts += 1
-
-    return {'accounts': num_accounts,
-            'missing_accounts': num_missing_accounts,
-            'alive_accounts': num_alive_accounts,
-            'dead_accounts': num_dead_accounts}
+    get_account_timestamps, get_account_summary, heartbeat_summary
 
 
 def print_heartbeat_status(status, verbose):
@@ -39,31 +20,7 @@ def print_heartbeat_status(status, verbose):
         if account.alive and not verbose:
             continue
 
-        account_summary = {'account': account_id,
-                           'email_address': account.email_address,
-                           'provider_name': account.provider_name,
-                           'folders': []}
-
-        for folder in account.folders:
-            if folder.alive and not verbose:
-                continue
-
-            folder_summary = {'id': folder.id,
-                              'name': folder.name,
-                              'devices': []}
-
-            for device_id, device in folder.devices.iteritems():
-                if device.alive and not verbose:
-                    continue
-                device_summary = {'id': device_id}
-                device_summary.update({
-                    k: str(v)
-                    for k, v in device.__dict__.iteritems() if v is not None
-                } or {})
-                folder_summary['devices'].append(device_summary)
-
-            account_summary['folders'].append(folder_summary)
-
+        account_summary = account.jsonify()
         summary['verbose'].append(account_summary)
 
     return summary
@@ -97,7 +54,7 @@ def main(host, port, account_id, pretty, verbose, debug):
     else:
         _dumps = partial(dumps, sort_keys=True, indent=2)
 
-    summary = print_heartbeat_status_stats(status)
+    summary = heartbeat_summary(host, port)
     if summary['dead_accounts'] == 0 and not verbose:
         print _dumps(summary)
         exit(0)
