@@ -36,6 +36,8 @@ class DeviceHeartbeatStatus(object):
 class FolderHeartbeatStatus(object):
     alive = True
     name = ''
+    email_address = ''
+    provider_name = ''
 
     def __init__(self, folder_id, folder_status, threshold=ALIVE_THRESHOLD):
         """ Initialize a FolderHeartbeatStatus from a folder status dictionary
