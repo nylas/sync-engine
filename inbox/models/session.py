@@ -4,6 +4,7 @@ from contextlib import contextmanager
 
 from sqlalchemy import event
 from sqlalchemy.orm.session import Session
+from sqlalchemy.exc import OperationalError
 
 from inbox.config import config
 from inbox.ignition import main_engine
