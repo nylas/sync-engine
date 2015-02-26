@@ -10,7 +10,7 @@ from datetime import datetime
 import platform
 import gevent
 from gevent.coros import BoundedSemaphore
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import contains_eager
 
 from inbox.util.concurrency import retry_with_logging, log_uncaught_errors
 from inbox.log import get_logger
@@ -18,7 +18,6 @@ logger = get_logger()
 from inbox.models.session import session_scope
 from inbox.models import ActionLog, Namespace, Account
 from inbox.util.file import Lock
-from inbox.util.misc import ProviderSpecificException
 from inbox.actions.base import (mark_read, mark_unread, archive, unarchive,
                                 star, unstar, save_draft, delete_draft,
                                 mark_spam, unmark_spam, mark_trash,
@@ -29,7 +28,8 @@ from inbox.events.actions.base import (create_event, delete_event,
 # Global lock to ensure that only one instance of the syncback service is
 # running at once. Otherwise different instances might execute the same action
 # twice.
-syncback_lock = Lock('/var/lock/inbox_syncback/global.lock', block=False)
+syncback_lock = Lock('/var/lock/inbox_syncback/global.lock', block=True)
+
 
 ACTION_FUNCTION_MAP = {
     'archive': archive,
@@ -51,152 +51,136 @@ ACTION_FUNCTION_MAP = {
 }
 
 
-CONCURRENCY_LIMIT = 3
 ACTION_MAX_NR_OF_RETRIES = 20
 
 
 class SyncbackService(gevent.Greenlet):
     """Asynchronously consumes the action log and executes syncback actions."""
 
-    def __init__(self, poll_interval=1, chunk_size=100, retry_interval=30):
-        semaphore_factory = lambda: BoundedSemaphore(CONCURRENCY_LIMIT)
-        self.semaphore_map = defaultdict(semaphore_factory)
-        self.keep_running = True
-        self.running = False
+    def __init__(self, poll_interval=1, retry_interval=30):
         self.log = logger.new(component='syncback')
+        self.keep_running = True
         self.poll_interval = poll_interval
         self.retry_interval = retry_interval
-        self.chunk_size = chunk_size
-        self._scheduled_actions = set()
+        self.workers = gevent.pool.Group()
+        # Dictionary account_id -> semaphore to serialize action syncback for
+        # any particular account.
+        # TODO(emfree): We really only need to serialize actions that operate
+        # on any given object. But IMAP actions are already effectively
+        # serialized by using an IMAP connection pool of size 1, so it doesn't
+        # matter too much.
+        self.account_semaphores = defaultdict(lambda: BoundedSemaphore(1))
         gevent.Greenlet.__init__(self)
 
     def _process_log(self):
-        # TODO(emfree) handle the case that message/thread objects may have
-        # been deleted in the interim.
         with session_scope() as db_session:
+            # Only actions on accounts associated with this sync-engine
             query = db_session.query(ActionLog). \
+                join(Namespace).join(Account). \
                 filter(ActionLog.status == 'pending',
-                       ActionLog.retries < ACTION_MAX_NR_OF_RETRIES). \
-                options(joinedload(ActionLog.namespace).
-                        joinedload(Namespace.account).
-                        load_only(Account.sync_host, Account.discriminator))
+                       Account.sync_host == platform.node()). \
+                order_by(ActionLog.id). \
+                options(contains_eager(ActionLog.namespace, Namespace.account))
 
-            if self._scheduled_actions:
-                query = query.filter(
-                    ~ActionLog.id.in_(self._scheduled_actions))
+            running_action_ids = [worker.action_log_id for worker in
+                                  self.workers]
+            if running_action_ids:
+                query = query.filter(~ActionLog.id.in_(running_action_ids))
             for log_entry in query:
                 namespace = log_entry.namespace
-                # Only actions on accounts associated with this sync-engine
-                if namespace.account.sync_host != platform.node():
-                    continue
-
-                self._scheduled_actions.add(log_entry.id)
                 self.log.info('delegating action',
                               action_id=log_entry.id,
                               msg=log_entry.action)
-                semaphore = self.semaphore_map[(namespace.account_id,
-                                                log_entry.action)]
-                gevent.spawn(syncback_worker,
-                             semaphore=semaphore,
-                             action=log_entry.action,
-                             action_log_id=log_entry.id,
-                             record_id=log_entry.record_id,
-                             account_id=namespace.account_id,
-                             syncback_service=self,
-                             retry_interval=self.retry_interval,
-                             extra_args=log_entry.extra_args)
-
-    def remove_from_schedule(self, log_entry_id):
-        self._scheduled_actions.discard(log_entry_id)
-
-    def _acquire_lock_nb(self):
-        """Spin on the global syncback lock."""
-        while self.keep_running:
-            try:
-                syncback_lock.acquire()
-                return
-            except IOError:
-                gevent.sleep()
-
-    def _release_lock_nb(self):
-        syncback_lock.release()
+                semaphore = self.account_semaphores[namespace.account_id]
+                worker = SyncbackWorker(action_name=log_entry.action,
+                                        semaphore=semaphore,
+                                        action_log_id=log_entry.id,
+                                        record_id=log_entry.record_id,
+                                        account_id=namespace.account_id,
+                                        retry_interval=self.retry_interval,
+                                        extra_args=log_entry.extra_args)
+                self.workers.add(worker)
+                worker.start()
 
     def _run_impl(self):
-        self.running = True
-        self._acquire_lock_nb()
+        syncback_lock.acquire()
         self.log.info('Starting action service')
         while self.keep_running:
             self._process_log()
             gevent.sleep(self.poll_interval)
-        self._release_lock_nb()
-        self.running = False
+
+    def stop(self):
+        syncback_lock.release()
+        self.keep_running = False
 
     def _run(self):
         retry_with_logging(self._run_impl, self.log)
 
-    def stop(self):
-        # Wait for main thread to stop running
-        self.keep_running = False
-        while self.running:
-            gevent.sleep()
 
+class SyncbackWorker(gevent.Greenlet):
+    """ Worker greenlet responsible for executing a single syncback action.
+    The worker can retry the action up to ACTION_MAX_NR_OF_RETRIES times
+    before marking it as failed.
+    Note: Each worker holds an account-level lock, in order to ensure that
+    actions are executed in the order they were first scheduled. This means
+    that in the worst case, a misbehaving action can block other actions for
+    the account from executing, for up to about
+    retry_interval * ACTION_MAX_NR_OF_RETRIES = 600 seconds
 
-def syncback_worker(semaphore, action, action_log_id, record_id, account_id,
-                    syncback_service, retry_interval=30, extra_args=None):
-    func = ACTION_FUNCTION_MAP[action]
+    TODO(emfree): Fix this with more granular locking (or a better strategy
+    altogether). We only really need ordering guarantees for actions on any
+    given object, not on the whole account.
+    """
+    def __init__(self, action_name, semaphore, action_log_id, record_id,
+                 account_id, retry_interval=30, extra_args=None):
+        self.action_name = action_name
+        self.semaphore = semaphore
+        self.func = ACTION_FUNCTION_MAP[action_name]
+        self.action_log_id = action_log_id
+        self.record_id = record_id
+        self.account_id = account_id
+        self.extra_args = extra_args
+        self.retry_interval = retry_interval
+        gevent.Greenlet.__init__(self)
 
-    with semaphore:
-        log = logger.new(record_id=record_id, action_log_id=action_log_id,
-                         action=func, account_id=account_id,
-                         extra_args=extra_args)
-        # Not ignoring soft-deleted objects here because if you, say,
-        # delete a draft, we still need to access the object to delete it
-        # on the remote.
-        try:
-            with session_scope(ignore_soft_deletes=False) as db_session:
-                if extra_args:
-                    func(account_id, record_id, db_session, extra_args)
-                else:
-                    func(account_id, record_id, db_session)
-                action_log_entry = db_session.query(ActionLog).get(
-                    action_log_id)
-                action_log_entry.status = 'successful'
-                db_session.commit()
-                latency = round((datetime.utcnow() -
-                                 action_log_entry.created_at).
-                                total_seconds(), 2)
-                log.info('syncback action completed',
-                         action_id=action_log_id,
-                         latency=latency)
-                syncback_service.remove_from_schedule(action_log_id)
-        except Exception as e:
-            # To reduce error-reporting noise, don't ship to Sentry
-            # if not actionable.
-            if isinstance(e, ProviderSpecificException):
-                log.warning('Uncaught error', exc_info=True)
-            else:
-                log_uncaught_errors(log, account_id=account_id)
+    def _run(self):
+        with self.semaphore:
+            log = logger.new(
+                record_id=self.record_id, action_log_id=self.action_log_id,
+                action=self.action_name, account_id=self.account_id,
+                extra_args=self.extra_args)
 
-            with session_scope() as db_session:
-                action_log_entry = db_session.query(ActionLog).get(
-                    action_log_id)
-                action_log_entry.retries += 1
+            for _ in range(ACTION_MAX_NR_OF_RETRIES):
+                with session_scope() as db_session:
+                    try:
+                        action_log_entry = db_session.query(ActionLog).get(
+                            self.action_log_id)
+                        if self.extra_args:
+                            self.func(self.account_id, self.record_id,
+                                      db_session, self.extra_args)
+                        else:
+                            self.func(self.account_id, self.record_id,
+                                      db_session)
+                        action_log_entry.status = 'successful'
+                        db_session.commit()
+                        latency = round((datetime.utcnow() -
+                                         action_log_entry.created_at).
+                                        total_seconds(), 2)
+                        log.info('syncback action completed',
+                                 action_id=self.action_log_id,
+                                 latency=latency)
+                        return
 
-                if action_log_entry.retries == ACTION_MAX_NR_OF_RETRIES:
-                    log.critical('Max retries reached, giving up.',
-                                 action_id=action_log_id,
-                                 account_id=account_id, exc_info=True)
-                    action_log_entry.status = 'failed'
-                db_session.commit()
+                    except Exception:
+                        log_uncaught_errors(log, account_id=self.account_id)
+                        with session_scope() as db_session:
+                            action_log_entry.retries += 1
+                            if (action_log_entry.retries ==
+                                    ACTION_MAX_NR_OF_RETRIES):
+                                log.critical('Max retries reached, giving up.',
+                                             exc_info=True)
+                                action_log_entry.status = 'failed'
+                            db_session.commit()
 
-            # Wait for a bit before retrying
-            gevent.sleep(retry_interval)
-
-            # Remove the entry from the scheduled set so that it can be
-            # retried or given up on.
-            syncback_service.remove_from_schedule(action_log_id)
-
-            # Again, don't raise on exceptions that require
-            # provider-specific handling e.g. EAS
-            if not isinstance(e, ProviderSpecificException):
-                raise
+                # Wait before retrying
+                gevent.sleep(self.retry_interval)

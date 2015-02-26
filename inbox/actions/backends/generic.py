@@ -176,8 +176,11 @@ def remote_copy(account, thread_id, from_folder, to_folder, db_session):
 @retry_crispin
 def remote_save_draft(account, folder_name, message, db_session, date=None):
     with writable_connection_pool(account.id).get() as crispin_client:
-        assert folder_name == crispin_client.folder_names()['drafts']
+        # Create drafts folder on the backend if it doesn't exist.
+        if 'drafts' not in crispin_client.folder_names():
+            crispin_client.create_folder('Drafts')
 
+        assert folder_name == crispin_client.folder_names()['drafts']
         crispin_client.select_folder(folder_name, uidvalidity_cb)
         crispin_client.save_draft(message, date)
 

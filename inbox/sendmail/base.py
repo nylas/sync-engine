@@ -164,7 +164,8 @@ def create_draft(data, namespace, db_session, syncback):
             thread.apply_tag(tag)
 
         if syncback:
-            schedule_action('save_draft', message, namespace.id, db_session)
+            schedule_action('save_draft', message, namespace.id, db_session,
+                            version=message.version)
         return message
 
 
@@ -241,8 +242,8 @@ def update_draft(db_session, account, draft, to_addr=None,
     draft.regenerate_inbox_uid()
 
     # Sync to remote
-    schedule_action('save_draft', draft, draft.namespace.id,
-                    db_session)
+    schedule_action('save_draft', draft, draft.namespace.id, db_session,
+                    version=draft.version)
     # Delete previous version on remote
     schedule_action('delete_draft', draft,
                     draft.namespace.id, db_session,

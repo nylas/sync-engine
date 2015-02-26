@@ -137,10 +137,11 @@ def _create_email(account, message):
     return msg
 
 
-def save_draft(account_id, message_id, db_session):
+def save_draft(account_id, message_id, db_session, args):
     """ Sync a new/updated draft back to the remote backend. """
     account = db_session.query(Account).get(account_id)
     message = db_session.query(Message).get(message_id)
+    version = args.get('version')
     if message is None:
         log.info('tried to save nonexistent message as draft',
                  message_id=message_id, account_id=account_id)
@@ -150,11 +151,14 @@ def save_draft(account_id, message_id, db_session):
                     message_id=message_id,
                     account_id=account_id)
         return
+    if version != message.version:
+        log.warning('tried to save outdated version of draft')
+        return
 
     if account.drafts_folder is None:
         # account has no detected drafts folder - create one.
-        drafts_folder = Folder.find_or_create(db_session, account,
-                                              'Drafts', 'drafts')
+        drafts_folder = Folder.find_or_create(db_session, account, 'Drafts',
+                                              'drafts')
         account.drafts_folder = drafts_folder
 
     mimemsg = _create_email(account, message)
