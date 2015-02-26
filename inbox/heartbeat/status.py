@@ -247,10 +247,12 @@ def list_all_accounts(host=None, port=None, dead_threshold=ALIVE_EXPIRY,
 
 
 def heartbeat_summary(host=None, port=None, dead_threshold=ALIVE_EXPIRY):
-    num_dead_accounts = list_dead_accounts(dead_threshold=dead_threshold,
+    num_dead_accounts = list_dead_accounts(host, port,
+                                           dead_threshold=dead_threshold,
                                            count=True)
-    num_alive_accounts = list_alive_accounts(alive_since=dead_threshold,
-                                             count=True)
+    num_alive_accounts = list_alive_accounts(host, port, 
+                                            alive_since=dead_threshold,
+                                            count=True)
     num_accounts = num_alive_accounts + num_dead_accounts
     if num_alive_accounts:
         accounts_percent = float(num_alive_accounts) / num_accounts
