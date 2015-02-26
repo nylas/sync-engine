@@ -57,7 +57,7 @@ GET https://api.nilas.com/n/<namespace_id>/calendars
 
 From this response we can see that there are two available calendars. The first calendar is the user's default calendar. When events are created, if a specific calendar is not provided, they will be added to this calendar. Additionally, there is a calendar being synced from a provider. In this situation we can see that the provider-backed calendar is marked as *read_only* and therefore events cannot be added to it through the Nilas API.
 
-This endpoint supports [filters](#filters), which allow you to fetch multiple events matching specific critera. For example, the following will limit the results to calendars named `work`.
+This endpoint supports [filters](#filters), which allow you to limit results to calendars matching specific critera. For example, the following will limit the results to calendars named `work`.
 
 **Options:**
 
