@@ -161,7 +161,7 @@ def set_remote_spam(account, thread_id, spam, db_session):
                                          uidvalidity_cb)
             crispin_client.add_label(g_thrid, '\\Spam')
         else:
-            crispin_client.select_folder(account.trash_folder.name,
+            crispin_client.select_folder(account.spam_folder.name,
                                          uidvalidity_cb)
             crispin_client.add_label(g_thrid, '\\Inbox')
 

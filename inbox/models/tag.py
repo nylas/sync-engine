@@ -51,7 +51,7 @@ class Tag(MailSyncBase, HasRevisions):
                            'attachment']
 
     RESERVED_TAG_NAMES = ['all', 'archive', 'drafts', 'send', 'replied',
-                          'file', 'attachment', 'unseen']
+                          'file', 'attachment', 'unseen', 'important']
 
     # Tags that are allowed to be both added and removed via the API.
     USER_MUTABLE_TAGS = ['unread', 'starred', 'spam', 'trash', 'inbox',

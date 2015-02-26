@@ -81,9 +81,9 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
             folder = folderitem.folder
             tag = folder.get_associated_tag(object_session(self))
             if is_remove:
-                self.remove_tag(tag)
+                self.tags.discard(tag)
             else:
-                self.apply_tag(tag)
+                self.tags.add(tag)
         return folderitem
 
     folderitems = relationship(
@@ -143,22 +143,21 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         execute_action: bool
             True if adding the tag should trigger a syncback action.
         """
-        if tag in self.tags:
-            return
-        self.tags.add(tag)
+        if tag not in self.tags:
+            self.tags.add(tag)
 
         if execute_action:
             schedule_action_for_tag(tag.public_id, self, object_session(self),
                                     tag_added=True)
 
         # Add or remove dependent tags.
-        # TODO(emfree) this should eventually live in its own utility function.
         inbox_tag = self.namespace.tags['inbox']
         archive_tag = self.namespace.tags['archive']
         sent_tag = self.namespace.tags['sent']
         drafts_tag = self.namespace.tags['drafts']
         spam_tag = self.namespace.tags['spam']
         trash_tag = self.namespace.tags['trash']
+
         if tag == inbox_tag:
             self.tags.discard(archive_tag)
         elif tag == archive_tag:

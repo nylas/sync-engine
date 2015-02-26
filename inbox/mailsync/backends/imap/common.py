@@ -48,6 +48,7 @@ def _folders_for_labels(g_labels, account, db_session):
         'draft': account.drafts_folder,
         'starred': account.starred_folder,
         'important': account.important_folder,
+        'trash': account.trash_folder,
     }
 
     folders = set()
@@ -68,6 +69,8 @@ def add_any_new_thread_labels(thread, new_uid, db_session):
     """Update the folders associated with a thread when a new uid is synced for
     it."""
     thread.folders.add(new_uid.folder)
+
+    # Gmail only.
     if new_uid.g_labels is not None:
         folders_for_labels = _folders_for_labels(
             new_uid.g_labels, thread.namespace.account, db_session)
@@ -119,6 +122,7 @@ def update_metadata(account_id, session, folder_name, folder_id, uids,
         flags = new_flags[item.msg_uid].flags
         labels = getattr(new_flags[item.msg_uid], 'labels', None)
         changed = item.update_flags_and_labels(flags, labels)
+
         if not changed:
             continue
 

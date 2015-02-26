@@ -57,10 +57,13 @@ def test_threading_limit(db, folder_sync_engine, monkeypatch):
         MAX_THREAD_LENGTH)
     namespace_id = folder_sync_engine.namespace_id
     account = db.session.query(Account).get(folder_sync_engine.account_id)
+    account.namespace.create_canonical_tags()
+
     account.inbox_folder = Folder(account=account,
                                   name='Inbox',
                                   canonical_name='inbox')
     folder = account.inbox_folder
+
     msg = MockRawMessage([])
     for i in range(3 * MAX_THREAD_LENGTH):
         m = Message()
