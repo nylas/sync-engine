@@ -3,13 +3,11 @@
 import gc
 import os
 import sys
-import subprocess
 import json
-from pkg_resources import require, DistributionNotFound, VersionConflict
 
 import sqlalchemy
-from alembic.config import Config as alembic_config
 from alembic.script import ScriptDirectory
+from alembic.config import Config as alembic_config
 
 from inbox.config import config
 
@@ -21,17 +19,25 @@ def _absolute_path(relative_path):
     return os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         relative_path)
 
+
 def check_db():
     """ Checks the database revision against the known alembic migrations. """
     from inbox.ignition import main_engine
     inbox_db_engine = main_engine(pool_size=1, max_overflow=0)
 
     # top-level, with setup.sh
-    alembic_ini_filename = os.environ.get("ALEMBIC_INI_PATH",
-                                          _absolute_path('../../alembic.ini'))
-    assert os.path.isfile(alembic_ini_filename), \
-        'Must have alembic.ini file at {}'.format(alembic_ini_filename)
-    alembic_cfg = alembic_config(alembic_ini_filename)
+    alembic_ini_path = os.environ.get("ALEMBIC_INI_PATH",
+                                      _absolute_path('../../alembic.ini'))
+    alembic_cfg = alembic_config(alembic_ini_path)
+
+    alembic_basedir = os.path.dirname(alembic_ini_path)
+    alembic_script_dir = os.path.join(
+        alembic_basedir,
+        alembic_cfg.get_main_option("script_location")
+    )
+
+    assert os.path.isdir(alembic_script_dir), \
+        'Must have migrations directory at {}'.format(alembic_script_dir)
 
     try:
         inbox_db_engine.dialect.has_table(inbox_db_engine, 'alembic_version')
@@ -39,12 +45,13 @@ def check_db():
         sys.exit("Databases don't exist! Run bin/create-db")
 
     if inbox_db_engine.dialect.has_table(inbox_db_engine, 'alembic_version'):
-        res = inbox_db_engine.execute('SELECT version_num from alembic_version')
+        res = inbox_db_engine.execute(
+            'SELECT version_num from alembic_version')
         current_revision = [r for r in res][0][0]
         assert current_revision, \
             'Need current revision in alembic_version table...'
 
-        script = ScriptDirectory.from_config(alembic_cfg)
+        script = ScriptDirectory(alembic_script_dir)
         head_revision = script.get_current_head()
         log.info('Head database revision: {0}'.format(head_revision))
         log.info('Current database revision: {0}'.format(current_revision))
@@ -59,7 +66,7 @@ def check_db():
             log.info('[OK] Database scheme matches latest')
     else:
         raise Exception(
-            'Un-stamped database! `bin/create-db` should have done this... bailing.')
+            'Un-stamped database! Run `bin/create-db`. bailing.')
 
 
 def check_sudo():
