@@ -501,7 +501,8 @@ class CrispinClient(object):
             'Must select drafts folder first ({0})'.format(
                 self.selected_folder_name)
 
-        self.conn.append(self.selected_folder_name, message, ['\\Draft'], date)
+        self.conn.append(self.selected_folder_name, message, ['\\Draft',
+                                                              '\\Seen'], date)
 
     def create_message(self, message, date=None):
         """Create a message on the server. Only used to fix server-side bugs,
