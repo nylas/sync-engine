@@ -19,11 +19,13 @@ from mockredis import MockRedis
 # Note that all Redis commands are mocked via mockredis in conftest.py.
 
 
-def proxy_for(account_id, folder_id, email='test@test.com', provider='gmail'):
+def proxy_for(account_id, folder_id, email='test@test.com', provider='gmail',
+              device_id=0):
     return HeartbeatStatusProxy(account_id=account_id, folder_id=folder_id,
                                 folder_name="Inbox",
                                 email_address=email,
-                                provider_name=provider)
+                                provider_name=provider,
+                                device_id=device_id)
 
 
 def fuzzy_equals(a, b):
@@ -180,6 +182,26 @@ def test_publish_with_timestamp(store):
     proxy.publish(heartbeat_at=timestamp)
     account_timestamp = store.get_account_timestamp(1)
     assert account_timestamp == time.mktime(timestamp.timetuple())
+
+
+def test_kill_device_multiple(store):
+    # If we kill a device and the folder has multiple devices, don't clear
+    # the heartbeat status
+    proxy_for(1, 2, device_id=2)
+    proxy_for(1, 2, device_id=3)
+    clear_heartbeat_status(1, device_id=2)
+    folders = store.get_account_folders(1)
+    (f, ts) = folders[0]
+    assert f == '2'
+
+
+def test_kill_device_lastone(store):
+    # If we kill a device and it's the only device publishing heartbeats for
+    # that folder, the folder is removed when the device is removed.
+    proxy_for(1, 2, device_id=2)
+    clear_heartbeat_status(1, device_id=2)
+    folders = store.get_account_folders(1)
+    assert len(folders) == 0
 
 
 # Test querying heartbeats
