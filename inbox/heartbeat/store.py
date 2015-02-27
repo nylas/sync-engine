@@ -144,6 +144,10 @@ class HeartbeatStore(object):
             client = self.client
         if device_id:
             client.hdel(key, device_id)
+            # If that was the only entry, also remove from folder index.
+            devices = self.client.hkeys(key)
+            if devices == [str(device_id)]:
+                self.remove_from_folder_index(key, client)
         else:
             client.delete(key)
             self.remove_from_folder_index(key, client)
