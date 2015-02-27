@@ -23,6 +23,7 @@ def upgrade():
     conn.execute(text("ALTER TABLE easfoldersyncstatus ADD CONSTRAINT `easfoldersyncstatus_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `easaccount` (`id`) ON DELETE CASCADE"))
 
     conn.execute(text("ALTER TABLE easfoldersyncstatus DROP FOREIGN KEY `easfoldersyncstatus_ibfk_2`"))
+    conn.execute(text("ALTER TABLE easfoldersyncstatus ADD CONSTRAINT `easfoldersyncstatus_ibfk_2` FOREIGN KEY (`device_id`) REFERENCES `easdevice` (`id`) ON DELETE CASCADE"))
 
     conn.execute(text("SET FOREIGN_KEY_CHECKS=1;"))
 
@@ -33,5 +34,9 @@ def downgrade():
 
     conn.execute(text("ALTER TABLE easfoldersyncstatus DROP FOREIGN KEY `easfoldersyncstatus_ibfk_1`"))
     conn.execute(text("ALTER TABLE easfoldersyncstatus ADD CONSTRAINT `easfoldersyncstatus_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `easaccount` (`id`)"))
+
+    conn.execute(text("ALTER TABLE easfoldersyncstatus DROP FOREIGN KEY `easfoldersyncstatus_ibfk_2`"))
+    conn.execute(text("CONSTRAINT `easfoldersyncstatus_ibfk_2` FOREIGN KEY (`device_id`) REFERENCES `easdevice` (`id`)"))
+
 
     conn.execute(text("SET FOREIGN_KEY_CHECKS=1;"))

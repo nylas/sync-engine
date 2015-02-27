@@ -17,9 +17,9 @@ from sqlalchemy.sql import text
 
 def upgrade():
     conn = op.get_bind()
-    conn.execute(text("ALTER TABLE part MODIFY block_id int(11) DEFAULT NULL"))
+    # conn.execute(text("ALTER TABLE part MODIFY block_id int(11) DEFAULT NULL"))
 
 
 def downgrade():
     conn = op.get_bind()
-    conn.execute(text("ALTER TABLE part MODIFY block_id int(11) NOT NULL"))
+    # conn.execute(text("ALTER TABLE part MODIFY block_id int(11) NOT NULL"))

@@ -16,11 +16,11 @@ from sqlalchemy.sql import text
 
 def upgrade():
     conn = op.get_bind()
-    conn.execute(text("ALTER TABLE transaction MODIFY object_type varchar(20) NOT NULL"))
-    conn.execute(text("ALTER TABLE transaction MODIFY object_public_id varchar(191) NOT NULL"))
+    # conn.execute(text("ALTER TABLE transaction MODIFY object_type varchar(20) NOT NULL"))
+    # conn.execute(text("ALTER TABLE transaction MODIFY object_public_id varchar(191) NOT NULL"))
 
 
 def downgrade():
     conn = op.get_bind()
-    conn.execute(text("ALTER TABLE transaction MODIFY object_type` varchar(20)"))
-    conn.execute(text("ALTER TABLE transaction MODIFY object_public_id varchar(191)"))
+    # conn.execute(text("ALTER TABLE transaction MODIFY object_type` varchar(20)"))
+    # conn.execute(text("ALTER TABLE transaction MODIFY object_public_id varchar(191)"))
