@@ -36,12 +36,14 @@ def print_heartbeat_status(status, verbose):
 def main(host, port, account_id, pretty, verbose, debug):
     if debug:
         now = time.time()
+        # Checks account is in index
         hs = get_account_timestamps(host, port, account_id)
         for (acc, ts) in hs:
             if ts:
                 print "Oldest heart for {}: {:.0f}s ago".format(acc, now - ts)
             else:
                 print "No heartbeat for {} in store.".format(acc)
+            # Checks account-folder index
             folders = get_account_summary(host, port, acc)
             for (f, ts) in folders:
                 print " Folder {} : {:.0f}s ago".format(f, now - ts)

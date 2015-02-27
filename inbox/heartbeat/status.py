@@ -146,9 +146,7 @@ def get_heartbeat_status(host=None, port=6379, account_id=None):
     store = HeartbeatStore.store(host, port)
     folders = store.get_folders(load_folder_status, account_id)
     accounts = {}
-    for composite_key, folder in folders.iteritems():
-        # Unwrap the folder reports from Redis into AccountHeartbeatStatus
-        key = HeartbeatStatusKey.from_string(composite_key)
+    for key, folder in folders.iteritems():
         account = accounts.get(key.account_id,
                                AccountHeartbeatStatus(key.account_id))
         # Update accounts list by adding folder heartbeat.

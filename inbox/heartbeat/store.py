@@ -273,26 +273,22 @@ class HeartbeatStore(object):
         else:
             return self.client.zcard('account_index')
 
-    def folder_iterator(self, filter=None, timestamp_threshold=None):
+    def folder_iterator(self, account_id=None, timestamp_threshold=None):
         # Iterate through the folder heartbeat list
-        # :param filter: restrict to folders matching filter
+        # :param account_id: restrict to folders for account account_id
         # :param timestamp_threshold: restrict to updates since threshold
-        if filter:
-            for (k, ts) in self.client.zscan_iter(
-                    'folder_index', match=filter):
-                yield k
+        if account_id:
+            for (k, ts) in self.get_account_folders(account_id):
+                # We have to construct a key from this
+                yield HeartbeatStatusKey(account_id, k)
         else:
             # getting all folders from the index is cheaper than zscan
             for (f, ts) in self.get_folder_list(timestamp_threshold):
-                yield f
+                yield HeartbeatStatusKey.from_string(f)
 
     def get_folders(self, callback, account_id=None):
-        if account_id:
-            filter = "{}:*".format(account_id)
-        else:
-            filter = None
         return self.fetch(self.client,
-                          lambda c: self.folder_iterator(filter),
+                          lambda c: self.folder_iterator(account_id),
                           lambda p, k: p.hgetall(k),
                           [],
                           callback)
