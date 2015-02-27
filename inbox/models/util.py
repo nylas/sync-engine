@@ -17,7 +17,7 @@ def reconcile_message(new_message, session):
         existing_message = session.query(Message).filter(
             Message.namespace_id == new_message.namespace_id,
             Message.inbox_uid == new_message.inbox_uid,
-            Message.is_created.is_(True)).first()
+            Message.is_created == True).first()
         version = None
     else:
         # new_message has the new X-Inbox-Id format <public_id>-<version>
