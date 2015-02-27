@@ -86,7 +86,8 @@ def session_scope(versioned=True, ignore_soft_deletes=False):
             session.rollback()
             raise
         except OperationalError:
-            log.warn('Encountered OperationalError on rollback')
+            log.warn('Encountered OperationalError on rollback',
+                     original_exception=type(exc))
             raise exc
     finally:
         if config.get('LOG_DB_SESSIONS'):
