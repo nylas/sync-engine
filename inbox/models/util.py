@@ -29,7 +29,7 @@ def reconcile_message(new_message, session):
         existing_message = session.query(Message).filter(
             Message.namespace_id == new_message.namespace_id,
             Message.public_id == expected_public_id,
-            Message.is_created.is_(True)).first()
+            Message.is_created == True).first()
 
     if existing_message is None:
         return None
