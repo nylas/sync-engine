@@ -1,0 +1,165 @@
+#!/usr/bin/env python
+
+import click
+import readline  # Used for up-arrow command history (automatically happens)
+import time
+from functools import partial
+from json import dumps
+from sys import exit
+
+from inbox.config import config
+
+from inbox.heartbeat.status import get_heartbeat_status, \
+    get_account_timestamps, get_account_summary, heartbeat_summary
+from inbox.heartbeat.store import HeartbeatStore
+
+
+# Note: In order to use this script with the 'staging' convenience argument,
+# set these two variables to the correct redis hostnames.
+# You can always specify the full hostname instead.
+HOSTS = {
+    'staging': config.get('HEARTBEAT_STAGING_HOST'),
+    'prod': config.get('HEARTBEAT_PROD_HOST')
+}
+
+
+def print_heartbeat_status(status, verbose):
+    summary = {'verbose': []}
+
+    for account_id, account in status.iteritems():
+        if account.missing:
+            continue
+
+        if account.alive and not verbose:
+            continue
+
+        account_summary = account.jsonify()
+        summary['verbose'].append(account_summary)
+
+    return summary
+
+
+def show_accounts(store):
+    now = time.time()
+    acct_index = store.get_account_list()
+    print "Account index:"
+    # Use relative times for easier debugging
+    acct_index = [(a, int(now - ts)) for (a, ts) in acct_index]
+    print acct_index
+
+
+def show_folders(store, account_id):
+    now = time.time()
+    folder_index = store.get_account_folders(account_id)
+    print "Folder index for {}:".format(account_id)
+    folder_index = [(f, int(now - ts)) for (f, ts) in folder_index]
+    print folder_index
+
+
+def show_keys(store, account_id=None):
+    now = time.time()
+    all_folders = store.get_folder_list()
+    all_folders = [(k, int(now - ts)) for (k, ts) in all_folders]
+    if account_id:
+        all_folders = filter(lambda (f, t): f.startswith(str(account_id)),
+                             all_folders)
+    print all_folders
+
+
+def get_key(store, key):
+    # only supports folder keys for now
+    folder = store.client.hgetall(key)
+    print folder
+
+
+def get_account(host, port, account_id):
+    status = get_heartbeat_status(host, port, account_id)
+    summary = print_heartbeat_status(status, True)
+    _dumps = partial(dumps, sort_keys=True, indent=2)
+    print _dumps(summary)
+
+
+@click.command()
+@click.option('--host', '-h', type=str, default='localhost')
+@click.option('--port', '-p', type=int, default=6379)
+def main(host, port):
+
+    if host in HOSTS:
+        host = HOSTS.get(host)
+    if host is None:
+        print "Please set the HEARTBEAT_X_HOST variables in config-dev.json."
+        exit(1)
+
+    store = HeartbeatStore.store(host, port)
+
+    print "Heartbeat debug console. Type quit to quit."
+    print "Currently checking: {}. Use -h to change.".format(host)
+    print "All timestamps shown as 'seconds ago'."
+    while True:
+        print
+        cmd = raw_input("> ")
+        if cmd == 'quit' or cmd == 'q':
+            exit()
+
+        if cmd == "help":
+            print
+            print "Commands:"
+            print " accounts - show account index"
+            print " folders <account_id> - show folder index"
+            print " keys (<account_id>) - show folder keys"
+            print " get <key> - get contents of key"
+            print " show <account_id> - show full heartbeat for account"
+            print
+            continue
+
+        if cmd == 'accounts':
+            show_accounts(store)
+            continue
+
+        if cmd.startswith('folders'):
+            cmd = cmd.split()
+            try:
+                acct_id = int(cmd[1])
+            except:
+                print "Syntax: folders <account_id>"
+                continue
+            show_folders(store, acct_id)
+            continue
+
+        if cmd.startswith('keys'):
+            cmd = cmd.split()
+            if len(cmd) == 1:
+                show_keys(store)
+            else:
+                try:
+                    acct_id = int(cmd[1])
+                except:
+                    print "Syntax: keys [<account_id>]"
+                    continue
+                show_keys(store, acct_id)
+            continue
+
+        if cmd.startswith('get'):
+            cmd = cmd.split()
+            if len(cmd) == 1:
+                print "Syntax: get <key>"
+            else:
+                if ":" not in cmd[1]:
+                    print "Key must be in account_id:folder_id format"
+                else:
+                    get_key(store, cmd[1])
+            continue
+
+        if cmd.startswith('show'):
+            cmd = cmd.split()
+            try:
+                acct_id = int(cmd[1])
+            except:
+                print "Syntax: show <account_id>"
+                continue
+            get_account(host, port, acct_id)
+            continue
+
+
+if __name__ == '__main__':
+    main()
