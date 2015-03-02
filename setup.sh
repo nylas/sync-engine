@@ -41,6 +41,17 @@ fi
 
 color '35;1' 'Updating packages...'
 
+
+if command -v mysql >/dev/null 2>&1 
+then 
+    echo "MySQL Exists. Not adding upstream mysql package";
+else
+    echo "Adding MySQL APT Repo";
+    #Trust MySQL APT Repo
+    echo "deb http://repo.mysql.com/apt/ubuntu/ precise mysql-5.6" > /etc/apt/sources.list.d/mysql.list;
+    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5072E1F5;
+fi
+
 # Don't fail builds if apt-get update fails (eg due to ksplice being down)
 set +e
 apt-get update
@@ -259,6 +270,11 @@ if ! $prod; then
         color '35;1' 'Upgrading databases...'
         alembic upgrade head
     fi
+fi
+
+if [[ $(mysql --version) != *"5.6"* ]]
+then
+    echo "WARNING: We've detected that you are not using mysql 5.6. Please upgrade.";
 fi
 
 color '35;1' 'Cleaning up...'
