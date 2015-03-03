@@ -25,7 +25,7 @@ class Calendar(MailSyncBase, HasPublicID):
     read_only = Column(Boolean, nullable=False, default=False)
 
     __table_args__ = (UniqueConstraint('namespace_id', 'provider_name',
-                                       'name', name='uuid'),)
+                                       'name', 'uid', name='uuid'),)
 
     def __init__(self, uid=None, public_id=None, **kwargs):
         if not uid and not public_id:

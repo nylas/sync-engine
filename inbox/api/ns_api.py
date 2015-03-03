@@ -729,7 +729,8 @@ def event_delete_api(public_id):
 
     schedule_action('delete_event', event, g.namespace.id, g.db_session,
                     event_uid=event.uid,
-                    calendar_name=event.calendar.name)
+                    calendar_name=event.calendar.name,
+                    calendar_uid=event.calendar.uid)
     inbox.events.crud.delete(g.namespace, g.db_session, public_id)
     return g.encoder.jsonify(None)
 

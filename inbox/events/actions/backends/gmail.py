@@ -27,7 +27,9 @@ def remote_update_event(account, event, db_session):
                             eventId=event.uid, body=dump).execute()
 
 
-def remote_delete_event(account, event_uid, calendar_name, db_session):
+def remote_delete_event(account, event_uid, calendar_name, calendar_uid,
+                        db_session):
+    # Note the calendar_uid argument is used by other providers like EAS.
     provider = GoogleEventsProvider(account.id, account.namespace.id)
     service = provider._get_google_service()
     service.events().delete(calendarId=calendar_name,

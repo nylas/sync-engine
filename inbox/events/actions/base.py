@@ -29,5 +29,8 @@ def delete_event(account_id, event_id, db_session, args):
          remote_delete_event
     event_uid = args.get('event_uid')
     calendar_name = args.get('calendar_name')
+    # The calendar_uid argument is required for some providers, like EAS.
+    calendar_uid = args.get('calendar_uid')
 
-    remote_delete_event(account, event_uid, calendar_name, db_session)
+    remote_delete_event(account, event_uid, calendar_name, calendar_uid,
+                        db_session)
