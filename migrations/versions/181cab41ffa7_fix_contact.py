@@ -18,7 +18,7 @@ from sqlalchemy.sql import text
 def upgrade():
     conn = op.get_bind()
     conn.execute(text("SET FOREIGN_KEY_CHECKS=0;"))
-    conn.execute(text("ALTER TABLE contact MODIFY namespace_id int(11) NOT NULL;"))
+    # conn.execute(text("ALTER TABLE contact MODIFY namespace_id int(11) NOT NULL;"))
     conn.execute(text("ALTER TABLE contact DROP FOREIGN KEY `contact_ibfk_2`"))
     conn.execute(text("ALTER TABLE contact ADD CONSTRAINT `contact_ibfk_2` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE"))
     conn.execute(text("SET FOREIGN_KEY_CHECKS=1;"))
@@ -27,7 +27,7 @@ def upgrade():
 def downgrade():
     conn = op.get_bind()
     conn.execute(text("SET FOREIGN_KEY_CHECKS=0;"))
-    conn.execute(text("ALTER TABLE contact MODIFY namespace_id int(11);"))
+    # conn.execute(text("ALTER TABLE contact MODIFY namespace_id int(11);"))
     conn.execute(text("ALTER TABLE contact DROP FOREIGN KEY `contact_ibfk_2`"))
     conn.execute(text("ALTER TABLE contact ADD CONSTRAINT `contact_ibfk_2` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE"))
     conn.execute(text("SET FOREIGN_KEY_CHECKS=1;"))

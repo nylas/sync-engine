@@ -17,9 +17,9 @@ from sqlalchemy.sql import text
 
 def upgrade():
     conn = op.get_bind()
-    conn.execute(text("ALTER TABLE imapfolderinfo MODIFY uidvalidity BIGINT(20) NOT NULL"))
+    # conn.execute(text("ALTER TABLE imapfolderinfo MODIFY uidvalidity BIGINT(20) NOT NULL"))
 
 
 def downgrade():
     conn = op.get_bind()
-    conn.execute(text("ALTER TABLE imapfolderinfo MODIFY uidvalidity BIGINT(20) DEFAULT NULL"))
+    # conn.execute(text("ALTER TABLE imapfolderinfo MODIFY uidvalidity BIGINT(20) DEFAULT NULL"))

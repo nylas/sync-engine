@@ -17,8 +17,8 @@ from sqlalchemy.sql import text
 
 def upgrade():
     conn = op.get_bind()
-    conn.execute(text("ALTER TABLE genericaccount MODIFY password_id int(11) NOT NULL"))
+    # conn.execute(text("ALTER TABLE genericaccount MODIFY password_id int(11) NOT NULL"))
 
 def downgrade():
     conn = op.get_bind()
-    conn.execute(text("ALTER TABLE genericaccount MODIFY password_id int(11)"))
+    # conn.execute(text("ALTER TABLE genericaccount MODIFY password_id int(11)"))
