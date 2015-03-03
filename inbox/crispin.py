@@ -444,18 +444,18 @@ class CrispinClient(object):
         return sorted([long(s) for s in data])
 
     def uids(self, uids):
-        uids = [str(u) for u in uids]
         raw_messages = self.conn.fetch(uids,
                                        ['BODY.PEEK[] INTERNALDATE FLAGS'])
-        for uid, msg in raw_messages.iteritems():
+        messages = []
+        for uid in sorted(raw_messages.iterkeys(), key=long):
+            # Skip handling unsolicited FETCH responses
+            if uid not in uids:
+                continue
+            msg = raw_messages[uid]
             if 'BODY[]' not in msg:
                 raise Exception(
                     'No BODY[] element in IMAP response. Tags given: {}'
                     .format(msg.keys()))
-
-        messages = []
-        for uid in sorted(raw_messages.iterkeys(), key=long):
-            msg = raw_messages[uid]
             messages.append(RawMessage(uid=long(uid),
                                        internaldate=msg['INTERNALDATE'],
                                        flags=msg['FLAGS'],
@@ -467,10 +467,9 @@ class CrispinClient(object):
         return messages
 
     def flags(self, uids):
-        uids = [str(u) for u in uids]
         data = self.conn.fetch(uids, ['FLAGS'])
-        return dict([(long(uid), Flags(msg['FLAGS']))
-                     for uid, msg in data.iteritems()])
+        return {uid: Flags(ret['FLAGS'])
+                for uid, ret in data.items() if uid in uids}
 
     def copy_uids(self, uids, to_folder):
         if not uids:
@@ -670,10 +669,9 @@ class GmailCrispinClient(CondStoreCrispinClient):
         dict
             Mapping of `uid` (str) : GmailFlags.
         """
-        uids = [str(u) for u in uids]
         data = self.conn.fetch(uids, ['FLAGS X-GM-LABELS'])
-        return dict([(long(uid), GmailFlags(msg['FLAGS'], msg['X-GM-LABELS']))
-                     for uid, msg in data.iteritems()])
+        return {uid: GmailFlags(ret['FLAGS'], ret['X-GM-LABELS'])
+                for uid, ret in data.items() if uid in uids}
 
     def g_msgids(self, uids):
         """ X-GM-MSGIDs for the given UIDs.
@@ -683,10 +681,9 @@ class GmailCrispinClient(CondStoreCrispinClient):
         dict
             Mapping of `uid` (long) : `g_msgid` (long)
         """
-        uids = [str(u) for u in uids]
         data = self.conn.fetch(uids, ['X-GM-MSGID'])
-        return dict([(long(uid), long(d['X-GM-MSGID']))
-                     for uid, d in data.iteritems()])
+        return {uid: ret['X-GM-MSGID']
+                for uid, ret in data.items() if uid in uids}
 
     def folder_names(self):
         """ Parses out Gmail-specific folder names based on Gmail IMAP flags.
@@ -734,13 +731,15 @@ class GmailCrispinClient(CondStoreCrispinClient):
         return self._folder_names
 
     def uids(self, uids):
-        uids = [str(u) for u in uids]
         raw_messages = self.conn.fetch(uids, ['BODY.PEEK[] INTERNALDATE FLAGS',
                                               'X-GM-THRID', 'X-GM-MSGID',
                                               'X-GM-LABELS'])
 
         messages = []
         for uid in sorted(raw_messages.iterkeys(), key=long):
+            # Skip handling unsolicited FETCH responses
+            if uid not in uids:
+                continue
             msg = raw_messages[uid]
             messages.append(RawMessage(uid=long(uid),
                                        internaldate=msg['INTERNALDATE'],
@@ -767,13 +766,11 @@ class GmailCrispinClient(CondStoreCrispinClient):
         dict
             uid: GMetadata(msgid, thrid)
         """
-        uids = [str(u) for u in uids]
         self.log.debug('fetching X-GM-MSGID and X-GM-THRID',
                        uid_count=len(uids))
-        return dict([(long(uid), GMetadata(long(ret['X-GM-MSGID']),
-                                           long(ret['X-GM-THRID']))) for uid,
-                     ret in self.conn.fetch(uids, ['X-GM-MSGID',
-                                                   'X-GM-THRID']).iteritems()])
+        data = self.conn.fetch(uids, ['X-GM-MSGID', 'X-GM-THRID'])
+        return {uid: GMetadata(ret['X-GM-MSGID'], ret['X-GM-THRID'])
+                for uid, ret in data.items() if uid in uids}
 
     def expand_thread(self, g_thrid):
         """ Find all message UIDs in this account with X-GM-THRID equal to
