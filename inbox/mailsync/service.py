@@ -3,8 +3,6 @@ import platform
 import gevent
 from setproctitle import setproctitle
 
-from sqlalchemy import func, or_, and_
-
 from inbox.providers import providers
 from inbox.config import config
 from inbox.contacts.remote_sync import ContactSync
@@ -33,6 +31,7 @@ class SyncService(object):
     """
     def __init__(self, cpu_id, total_cpus, poll_interval=1):
         self.keep_running = True
+        self.host = platform.node()
         self.cpu_id = cpu_id
         self.total_cpus = total_cpus
         self.monitor_cls_for = {mod.PROVIDER: getattr(
@@ -79,41 +78,23 @@ class SyncService(object):
             gevent.kill(v)
         self.keep_running = False
 
-    def _get_local_accounts(self):
+    def accounts_to_start(self):
         with session_scope() as db_session:
-            # Whether this node should use a work-stealing style approach
-            # to claiming accounts that don't have a specified sync_host
-            steal = and_(Account.sync_host.is_(None),
-                         config.get('SYNC_STEAL_ACCOUNTS', True))
-
-            # Whether account is explicitly assigned to this node already
-            explicit = Account.sync_host == platform.node()
-
-            # Start new syncs on this node if the sync_host is set
-            # explicitly to this node, or if the sync_host is not set and
-            # this node is configured to use a work-stealing style approach
-            # to scheduling accounts.
-            start = or_(steal, explicit)
-
-            # Don't restart a previous sync if its sync_host is not
-            # this node (i.e. it's running elsewhere)
-            dont_start = Account.sync_host != platform.node()
-
-            # Start IFF an account IS in the set of startable syncs OR
-            # NOT in the set of dont_start syncs
-            sync_on_this_node = or_(start, ~dont_start)
-
-            start_on_this_cpu = \
-                (func.mod(Account.id, self.total_cpus) == self.cpu_id)
-
-            # Filter by node and CPU, iff the account should be syncing
-            start_accounts = \
-                [id_ for id_, in db_session.query(Account.id).filter(
+            start_on_this_cpu = (Account.id % self.total_cpus == self.cpu_id)
+            if config.get('SYNC_STEAL_ACCOUNTS', True):
+                # First, atomically claim unscheduled syncs by setting
+                # sync_host.
+                db_session.query(Account).filter(
+                    Account.sync_host.is_(None),
                     Account.sync_should_run,
-                    sync_on_this_node,
-                    start_on_this_cpu)]
+                    start_on_this_cpu).update({'sync_host': self.host},
+                                              synchronize_session=False)
+                db_session.commit()
 
-            return start_accounts
+            return [id_ for id_, in db_session.query(Account.id).filter(
+                Account.sync_should_run,
+                Account.sync_host == self.host,
+                start_on_this_cpu)]
 
     def _run_impl(self):
         """
@@ -122,7 +103,7 @@ class SyncService(object):
         """
         while self.keep_running:
             # Determine which accounts need to be started
-            start_accounts = self._get_local_accounts()
+            start_accounts = self.accounts_to_start()
 
             # Perform the appropriate action on each account
             for account_id in start_accounts:
@@ -187,7 +168,7 @@ class SyncService(object):
                         self.event_sync_monitors[acc.id] = event_sync
                         event_sync.start()
 
-                    acc.sync_started(fqdn)
+                    acc.sync_started()
                     db_session.add(acc)
                     db_session.commit()
                     self.log.info('Sync started', account_id=account_id,

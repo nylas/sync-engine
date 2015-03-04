@@ -200,13 +200,10 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
     def update_sync_error(self, error=None):
         self._sync_status['sync_error'] = error
 
-    def sync_started(self, sync_host):
+    def sync_started(self):
         """ Record transition to started state. Should be called after the
             sync is actually started, not when the request to start it is made.
         """
-        if sync_host:
-            self.sync_host = sync_host
-
         current_time = datetime.utcnow()
 
         # Never run before (vs restarting stopped/killed)
