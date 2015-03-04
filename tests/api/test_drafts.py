@@ -30,11 +30,16 @@ def example_draft(db):
 
 @pytest.fixture(scope='function')
 def attachments(db):
-    filenames = ['muir.jpg', 'LetMeSendYouEmail.wav', u'pièce-jointe.jpg']
+    filenames = ['muir.jpg', 'LetMeSendYouEmail.wav', 'piece-jointe.jpg']
     data = []
     for filename in filenames:
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..',
                             'data', filename).encode('utf-8')
+        # Mac and linux fight over filesystem encodings if we store this
+        # filename on the fs. Work around by changing the filename we upload
+        # instead.
+        if filename == 'piece-jointe.jpg':
+            filename = u'pièce-jointe.jpg'
         data.append((filename, path))
     return data
 

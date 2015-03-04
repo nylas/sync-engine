@@ -1,13 +1,18 @@
 # -*- coding: utf-8 -*-
 import os
+import md5
 import json
+
 from datetime import datetime
+
 import pytest
+
 from tests.util.base import api_client
+
 
 __all__ = ['api_client']
 
-FILENAMES = ['muir.jpg', 'LetMeSendYouEmail.wav', u'pièce-jointe.jpg']
+FILENAMES = ['muir.jpg', 'LetMeSendYouEmail.wav', 'piece-jointe.jpg']
 
 
 @pytest.fixture
@@ -38,6 +43,11 @@ def uploaded_file_ids(api_client, files):
     file_ids = []
     upload_path = api_client.full_path('/files')
     for filename, path in files:
+        # Mac and linux fight over filesystem encodings if we store this
+        # filename on the fs. Work around by changing the filename we upload
+        # instead.
+        if filename == 'piece-jointe.jpg':
+            filename = u'pièce-jointe.jpg'
         data = {'file': (open(path, 'rb'), filename)}
         r = api_client.client.post(upload_path, data=data)
         assert r.status_code == 200
@@ -120,6 +130,9 @@ def test_delete(api_client, uploaded_file_ids, draft):
 
 @pytest.mark.parametrize("filename", FILENAMES)
 def test_get_with_id(api_client, uploaded_file_ids, filename):
+    # See comment in uploaded_file_ids()
+    if filename == 'piece-jointe.jpg':
+        filename = u'pièce-jointe.jpg'
     in_file = api_client.get_data(u'/files?filename={}'.format(filename))[0]
     data = api_client.get_data('/files/{}'.format(in_file['id']))
     assert data['filename'] == filename
@@ -144,12 +157,16 @@ def test_get_invalid(api_client, uploaded_file_ids):
 
 @pytest.mark.parametrize("filename", FILENAMES)
 def test_download(api_client, uploaded_file_ids, filename):
-    import md5
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..',
-                        'data', filename).encode('utf-8')
+    # See comment in uploaded_file_ids()
+    original_filename = filename
+    if filename == 'piece-jointe.jpg':
+        filename = u'pièce-jointe.jpg'
+
     in_file = api_client.get_data(u'/files?filename={}'.format(filename))[0]
     data = api_client.get_raw('/files/{}/download'.format(in_file['id'])).data
 
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..',
+                        'data', original_filename.encode('utf-8'))
     local_data = open(path, 'rb').read()
     local_md5 = md5.new(local_data).digest()
     dl_md5 = md5.new(data).digest()
