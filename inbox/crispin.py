@@ -389,7 +389,8 @@ class CrispinClient(object):
             folders = self._fetch_folder_list()
             self._folder_names = dict()
             for flags, delimiter, name in folders:
-                if (u'\\Noselect', u'\\NoSelect', u'\\NonExistent') in flags:
+                if u'\\Noselect' in flags or u'\\NoSelect' in flags \
+                        or u'\\NonExistent' in flags:
                     # special folders that can't contain messages
                     pass
                 # TODO: internationalization support
@@ -698,7 +699,8 @@ class GmailCrispinClient(CondStoreCrispinClient):
             folders = self._fetch_folder_list()
             self._folder_names = dict()
             for flags, delimiter, name in folders:
-                if (u'\\Noselect', u'\\NoSelect', u'\\NonExistent') in flags:
+                if u'\\Noselect' in flags or u'\\NoSelect' in flags \
+                        or u'\\NonExistent' in flags:
                     # special folders that can't contain messages, usually
                     # just '[Gmail]'
                     pass
