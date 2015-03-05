@@ -98,11 +98,6 @@ POST https://api.nilas.com/n/<namespace_id>/events
 
 Note that if the `calendar_id` parameter is not provided, then the event will be added to the default calendar.
 
-# Adding a new event with an .ics file
-
-It is also possible to create new events by uploading a .ics file. To do so, post the file data to the event creation endpoint with the `content-type` header set to `text/calendar`.
-
-
 # Updating / Deleting an existing event
 
 Updating and deleting an event is managed in a similar fashion to other endpoints with the restriction that `read_only` events cannot be updated and events cannot be updated or deleted from a `read_only` calendar.
@@ -134,24 +129,6 @@ PUT https://api.nilas.com/n/<namespace_id>/events/<event_id>
 ```
 
 In the above example, the location of the event is updated and an additional participant is added.
-
-# Managing Participants
-
-The participants field is a list of items that contain an `name`, `email`, and `status`. The participants can be managed explicitly through the event update protocol. Another way for participants to be managed is via a GET to the event endpoint. This mechanism allows links to be provided (e.g. in an email) that allows participants to choose whether they are attending the event or not.
-
-This can be performed via the following:
-
-```
-:::xml
-GET https://api.nilas.com/n/<namespace_id>/events/<event_id>?action=rsvp&rvsp=<rsvp_response>
-```
-
-The `rsvp_response` parameter can be one of the following:
-
-* **`yes`** If the participant is attending
-* **`no`** If the participant is not attending
-* **`maybe`** If the participant is unsure
-* **`noreply`** (Default) When the participant hasn't responded yet.
 
 # When
 

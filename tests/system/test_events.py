@@ -24,35 +24,6 @@ def real_db():
     session.close()
 
 
-@timeout_loop('calendar')
-def wait_for_calendar(client, calendar_id):
-    try:
-        return client.calendars.find(calendar_id)
-    except NotFoundError:
-        return False
-
-
-@timeout_loop('calendar')
-def wait_for_calendar_deletion(client, calendar_id):
-    try:
-        client.calendars.find(calendar_id)
-        return False
-    except NotFoundError:
-        return True
-
-
-@pytest.mark.parametrize("client", calendar_accounts)
-def test_calendar_creation(client):
-    ns = client.namespaces[0]
-    cal = ns.calendars.create()
-    cal.name = "Random %d" % random.randint(1, 10000)
-    cal.save()
-    wait_for_calendar(client, cal.id)
-
-    ns.calendars.delete(cal.id)
-    wait_for_calendar_deletion(client, cal.id)
-
-
 @timeout_loop('event')
 def wait_for_event(client, event_id, real_db):
     try:

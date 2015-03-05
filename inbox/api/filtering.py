@@ -300,7 +300,7 @@ def files(namespace_id, message_public_id, filename, content_type,
 
 def events(namespace_id, event_public_id, calendar_public_id, title,
            description, location, starts_before, starts_after, ends_before,
-           ends_after, source, limit, offset, view, db_session):
+           ends_after, limit, offset, view, db_session):
 
     if view == 'count':
         query = db_session.query(func.count(Event.id))
@@ -345,8 +345,10 @@ def events(namespace_id, event_public_id, calendar_public_id, title,
     if location is not None:
         query = query.filter(Event.location.like('%{}%'.format(location)))
 
-    if source is not None:
-        query = query.filter(Event.source == source)
+    # Only return "local" events
+    # TODO(emfree): remove 'remote' events from datastore and remove this
+    # criterion.
+    query = query.filter(Event.source == 'local')
 
     if view == 'count':
         return {"count": query.one()[0]}

@@ -45,7 +45,8 @@ def encode(obj, namespace_public_id=None):
 
     def _format_participant_data(participant):
         """Event.participants is a JSON blob which may contain internal data.
-        This function returns a dict with only the data we want to make public."""
+        This function returns a dict with only the data we want to make
+        public."""
         dct = {}
         for attribute in ['name', 'status', 'email']:
             dct[attribute] = participant.get(attribute)
@@ -150,7 +151,6 @@ def encode(obj, namespace_public_id=None):
             'name': obj.name,
             'description': obj.description,
             'read_only': obj.read_only,
-            'event_ids': [e.public_id for e in obj.events],
         }
 
     elif isinstance(obj, Time):

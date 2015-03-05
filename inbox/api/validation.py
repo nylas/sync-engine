@@ -230,11 +230,6 @@ def valid_event_update(event, namespace, db_session):
     if 'busy' in event and not isinstance(event.get('busy'), bool):
         raise InputError('\'busy\' must be true or false')
 
-    calendar = get_calendar(event.get('calendar_id'),
-                            namespace, db_session)
-    if calendar and calendar.read_only:
-        raise InputError("Cannot move event to read_only calendar.")
-
     participants = event.get('participants', [])
     for p in participants:
         if 'email' not in p:
@@ -243,18 +238,6 @@ def valid_event_update(event, namespace, db_session):
             if p['status'] not in ('yes', 'no', 'maybe', 'noreply'):
                 raise InputError("'participants' status must be one of: "
                                  "yes, no, maybe, noreply")
-
-
-def valid_event_action(action):
-    if action not in ['rsvp']:
-        raise InputError('Invalid event action: {}'.format(action))
-    return action
-
-
-def valid_rsvp(rsvp):
-    if rsvp not in ['yes', 'no', 'maybe']:
-        raise InputError('Invalid rsvp: {}'.format(rsvp))
-    return rsvp
 
 
 def valid_delta_object_types(types_arg):
