@@ -309,9 +309,9 @@ def test_unread_cascades_to_messages(patch_network_functions, log, api_client,
     assert not any([msg['unread'] for msg in messages])
 
 
-def test_tag_deletes_cascade_to_threads():
-    # TODO(emfree)
-    pass
+# def test_tag_deletes_cascade_to_threads():
+#     # TODO(emfree)
+#     pass
 
 
 def test_actions_syncback(patch_network_functions, api_client, db,
