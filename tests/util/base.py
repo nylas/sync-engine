@@ -166,21 +166,6 @@ class TestDB(object):
             format(database, hostname, port, user, password, self.dumpfile)
         subprocess.check_call(cmd, shell=True)
 
-    def mysqlcmd(self, cmd):
-        """
-        Execute a mysql command.
-        """
-        database = self.config.get('MYSQL_DATABASE')
-        user = 'root'
-        password = 'root'
-        hostname = self.config.get('MYSQL_HOSTNAME')
-        port = self.config.get('MYSQL_PORT')
-
-        cmd = "mysql {0} -h{1} -P{2} -u{3} -p{4} -e '{5}'". \
-            format(database, hostname, port, user, password, cmd)
-        subprocess.check_call(cmd, shell=True)
-
-
     def teardown(self):
         """
         Closes the session. We need to explicitly do this to prevent certain
@@ -192,11 +177,8 @@ class TestDB(object):
 
         # Also kill any remaining db connection -- they often aren't closed
         # when a test fails.
-        try:
-            self.mysqlcmd("select concat(\"KILL \",id,\";\") from information_schema.processlist where user=\"inboxtest\" into outfile \"/tmp/inbox_tests_kill_db_connections.txt\"")
-            self.mysqlcmd("source \'/tmp/inbox_tests_kill_db_connections.txt\'")
-        finally:
-            os.system("sudo rm /tmp/inbox_tests_kill_db_connections.txt")
+        self.engine.dispose()
+        # os.system("sudo ./tests/cleanup_db_connections.sh")
 
 
 @fixture
