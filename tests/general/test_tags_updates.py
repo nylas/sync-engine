@@ -6,7 +6,8 @@ from inbox.models.folder import Folder, FolderItem
 from inbox.models.message import Message
 from inbox.models.backends.imap import ImapUid
 from inbox.mailsync.backends.imap.common import (recompute_thread_labels,
-                                                 add_any_new_thread_labels)
+                                                 add_any_new_thread_labels,
+                                                 update_unread_status)
 
 ACCOUNT_ID = 1
 THREAD_ID = 1
@@ -83,3 +84,21 @@ def test_adding_message_to_thread(db):
     folder_names = [folder.name for folder in thread.folders]
     assert 'test-2' not in folder_names,\
         "test-2 label should have been removed from thread"
+
+
+def test_update_unread_status(db, thread, message, imapuid):
+    imapuid.is_seen = False
+    update_unread_status(imapuid)
+
+    assert message.is_read is False, "message shouldn't be read"
+
+    tag_names = [tag.name for tag in thread.tags]
+    assert 'unread' in tag_names, "thread should be unread"
+
+    imapuid.is_seen = True
+    update_unread_status(imapuid)
+
+    assert message.is_read is True, "message should be read"
+
+    tag_names = [tag.name for tag in thread.tags]
+    assert 'unread' not in tag_names, "thread should be read"

@@ -101,6 +101,29 @@ def recompute_thread_labels(thread, db_session):
         thread.folders.add(folder)
 
 
+def update_unread_status(uid):
+    """
+    Update the unread tags for an uid's message and thread.
+
+    parameters
+    ----------
+        uid: a newly created uid.
+    """
+    message = uid.message
+    thread = message.thread
+
+    unread_status_changed = message.is_read != uid.is_seen
+    message.is_read = uid.is_seen
+
+    if unread_status_changed:
+        # Now, update the threads tags
+        unread_tag = thread.namespace.tags['unread']
+        if not message.is_read:
+            thread.apply_tag(unread_tag)
+        elif all(m.is_read for m in thread.messages):
+            thread.remove_tag(unread_tag)
+
+
 def update_metadata(account_id, session, folder_name, folder_id, uids,
                     new_flags):
     """
@@ -127,19 +150,10 @@ def update_metadata(account_id, session, folder_name, folder_id, uids,
             continue
 
         thread = item.message.thread
-        affected_threads.add(thread)
-        unread_status_changed = item.message.is_read != item.is_seen
-
         item.message.is_draft = item.is_draft
-        item.message.is_read = item.is_seen
 
-        # We have to update the thread's read tag separately.
-        if unread_status_changed:
-            unread_tag = thread.namespace.tags['unread']
-            if not item.message.is_read:
-                thread.apply_tag(unread_tag)
-            elif all(m.is_read for m in thread.messages):
-                thread.remove_tag(unread_tag)
+        update_unread_status(item)
+        affected_threads.add(thread)
 
     for thread in affected_threads:
         recompute_thread_labels(thread, session)

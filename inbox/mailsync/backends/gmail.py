@@ -416,22 +416,13 @@ def add_new_imapuids(crispin_client, remote_g_metadata, syncmanager_lock,
                             item.update_flags_and_labels(
                                 flags[item.msg_uid].flags,
                                 flags[item.msg_uid].labels)
+
+                            item.message.is_draft = item.is_draft
+                            common.update_unread_status(item)
                 db_session.add_all(new_imapuids)
                 db_session.flush()
 
-                folder = db_session.query(Folder).filter(
-                    Folder.name == crispin_client.selected_folder_name,
-                    Folder.account_id == crispin_client.account_id).one()
-
-                common.update_metadata(crispin_client.account_id, db_session,
-                                       folder.name, folder.id, uids, flags)
-
-                # FIXME: Update_metadata doesn't always recompute thread labels
-                # --- in the general case it doesn't have to.
-                # However, in some specific cases -- for example when reading
-                # and then moving a message to the trash, we need to force a
-                # labels update.
-                # - karim
+                # Don't forget to update thread labels.
                 messages = set(message_for.values())
                 unique_threads = set([message.thread for message in messages])
 
