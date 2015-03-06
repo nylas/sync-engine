@@ -8,8 +8,8 @@ from inbox.heartbeat.status import list_dead_accounts, list_alive_accounts
 ALIVE_THRESHOLD = 480
 METRIC_TEMPLATE = "accounts.%(environment)s.%(account_id)s.status"
 
-DEAD_STATUS = 0
-ALIVE_STATUS = 1
+DEAD_STATUS = 1
+ALIVE_STATUS = 0
 
 def _metric(account_id, environment):
     return METRIC_TEMPLATE % {'account_id': account_id, 'environment': environment}
