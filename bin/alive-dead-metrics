@@ -1,0 +1,33 @@
+#!/usr/bin/env python
+
+import click
+import datetime
+
+from inbox.heartbeat.status import list_dead_accounts, list_alive_accounts
+
+ALIVE_THRESHOLD = 480
+METRIC_TEMPLATE = "accounts.%(environment)s.%(account_id)s.status"
+
+DEAD_STATUS = 0
+ALIVE_STATUS = 1
+
+def _metric(account_id, environment):
+    return METRIC_TEMPLATE % {'account_id': account_id, 'environment': environment}
+
+@click.command()
+@click.option('--host', '-h', type=str, required=True)
+@click.option('--port', '-p', type=int, default=6379)
+@click.option('--environment', '-e', type=str, default="prod")
+def main(host, port, environment):
+    timestamp = datetime.datetime.utcnow().strftime('%s')
+    dead_accounts = list_dead_accounts(host, port, ALIVE_THRESHOLD)
+    alive_accounts = list_alive_accounts(host, port, ALIVE_THRESHOLD)
+
+    for account in dead_accounts:
+        print "%s %s %s" % (_metric(account, environment), DEAD_STATUS, timestamp)
+
+    for account in alive_accounts:
+        print "%s %s %s" % (_metric(account, environment), ALIVE_STATUS, timestamp)
+
+if __name__ == '__main__':
+    main()

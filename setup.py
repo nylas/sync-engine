@@ -68,6 +68,8 @@ setup(
              'bin/start-stop-account',
              'bin/inbox-auth',
              'bin/regen-labels',
+             'bin/delete-account',
+             'bin/alive-dead-metrics',
              'bin/syncback-service'],
 
     # See:
