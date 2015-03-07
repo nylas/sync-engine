@@ -21,6 +21,7 @@ from inbox.util.misc import parse_references, get_internaldate
 from inbox.models.mixins import HasPublicID, HasRevisions
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
+from inbox.events.ical import import_attached_events
 
 
 from inbox.log import get_logger
@@ -259,6 +260,9 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                                 mid=mid)
                     continue  # TODO should we store relations?
                 msg._parse_mimepart(mimepart, mid, i, account.namespace.id)
+                if (mimepart.content_type.format_type == 'text' and
+                    mimepart.content_type.subtype == 'calendar'):
+                        import_attached_events(account.id, mimepart.body)
 
             msg.calculate_sanitized_body()
         except (mime.DecodingError, AttributeError, RuntimeError, TypeError,

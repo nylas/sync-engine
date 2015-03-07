@@ -1,23 +1,35 @@
+import pytz
 from datetime import datetime
-from icalendar import Calendar
+from icalendar import Calendar as iCalendar
 
-from inbox.models import Event
+from inbox.models.account import Account
+from inbox.models.event import Event
+from inbox.models.calendar import Calendar
+from inbox.models.session import session_scope
 from inbox.events.util import MalformedEventError
 
 
 def events_from_ics(namespace, calendar, ics_str):
     try:
-        cal = Calendar.from_ical(ics_str)
+        cal = iCalendar.from_ical(ics_str)
     except ValueError:
         raise MalformedEventError()
 
+    print ics_str
     events = []
     for component in cal.walk():
         if component.name == "VEVENT":
-            start = component.get('dtstart').dt
-            end = component.get('dtend').dt
+            # Make sure the times are in UTC.
+            original_start = component.get('dtstart').dt.astimezone(pytz.utc)
+            original_end = component.get('dtend').dt.astimezone(pytz.utc)
+
+            # MySQL doesn't like localized datetimes.
+            start = original_start.replace(tzinfo=None)
+            end = original_end.replace(tzinfo=None)
+
             title = component.get('summary')
-            description = str(component.get('description'))
+            description = unicode(component.get('description'))
+
             if isinstance(start, datetime):
                 all_day = False
             else:
@@ -31,10 +43,17 @@ def events_from_ics(namespace, calendar, ics_str):
             else:
                 reccur = ''
             participants = []
-            for attendee in component.get('attendee'):
-                email = str(attendee)
+            attendees = component.get('attendee')
+
+            # the iCalendar python module doesn't return a list when
+            # there's only one attendee. Go figure.
+            if not isinstance(attendees, list):
+                attendees = [attendees]
+
+            for attendee in attendees:
+                email = unicode(attendee)
                 # strip mailto: if it exists
-                if email.startswith('mailto:'):
+                if email.lower().startswith('mailto:'):
                     email = email[7:]
                 try:
                     name = attendee.params['CN']
@@ -68,7 +87,7 @@ def events_from_ics(namespace, calendar, ics_str):
             location = component.get('location')
             organizer = component.get('organizer')
             if(organizer):
-                organizer = str(organizer)
+                organizer = unicode(organizer)
                 if organizer.startswith('mailto:'):
                     organizer = organizer[7:]
 
@@ -94,3 +113,26 @@ def events_from_ics(namespace, calendar, ics_str):
 
             events.append(event)
     return events
+
+
+def import_attached_events(account_id, ics_str):
+    """Import events from a file in the 'Attached Events' calendar."""
+
+    with session_scope() as db_session:
+        account = db_session.query(Account).get(account_id)
+        assert account is not None
+
+        calendar = db_session.query(Calendar).filter(
+            Calendar.namespace_id == account.namespace.id,
+            Calendar.name == 'Attached Events').first()
+        if not calendar:
+            calendar = Calendar(
+                namespace_id=account.namespace.id,
+                description='Attached Events',
+                name='Attached Events')
+            db_session.add(calendar)
+
+        events = events_from_ics(account.namespace, calendar, ics_str)
+        db_session.add(calendar)
+        db_session.add_all(events)
+        db_session.flush()
