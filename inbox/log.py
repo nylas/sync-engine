@@ -13,7 +13,6 @@ import raven
 import raven.processors
 import colorlog
 import structlog
-import subprocess
 from structlog.threadlocal import wrap_dict
 
 from inbox.config import config
@@ -227,16 +226,6 @@ def sentry_alert(*args, **kwargs):
         get_sentry_client().captureException(*args, **kwargs)
 
 
-def get_git_revision():
-    try:
-        params = ['git', 'rev-parse', '--short', 'HEAD']
-        return subprocess.check_output(params).strip()
-    except subprocess.CalledProcessError:
-        return None
-
-git_revision = get_git_revision()
-
-
 def log_uncaught_errors(logger=None, account_id=None):
     """
     Helper to log uncaught exceptions.
@@ -248,5 +237,5 @@ def log_uncaught_errors(logger=None, account_id=None):
     """
     logger = logger or get_logger()
     logger.error('Uncaught error', exc_info=True)
-    user_data = {'account_id': account_id, 'revision': git_revision}
+    user_data = {'account_id': account_id}
     sentry_alert(extra=user_data)
