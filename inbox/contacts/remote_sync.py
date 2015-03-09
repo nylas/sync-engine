@@ -7,13 +7,15 @@ from inbox.log import get_logger
 logger = get_logger()
 from inbox.models import Contact, Account
 from inbox.sync.base_sync import BaseSyncMonitor
+from inbox.contacts.google import GoogleContactsProvider
+from inbox.contacts.icloud import ICloudContactsProvider
 from inbox.util.debug import bind_context
 from inbox.models.session import session_scope
 from inbox.basicauth import ValidationError
 
-from inbox.contacts.google import GoogleContactsProvider
 
-CONTACT_SYNC_PROVIDER_MAP = {'gmail': GoogleContactsProvider}
+CONTACT_SYNC_PROVIDER_MAP = {'gmail': GoogleContactsProvider,
+                             'icloud': ICloudContactsProvider}
 
 CONTACT_SYNC_FOLDER_ID = -1
 CONTACT_SYNC_FOLDER_NAME = 'Contacts'

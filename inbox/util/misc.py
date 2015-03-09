@@ -200,7 +200,8 @@ def merge_attr(base, remote, dest, attr_name):
         remote_attr = getattr(remote, attr_name) if remote else None
         dest_attr = getattr(dest, attr_name) if dest else None
     except AttributeError:
-        # We may have received dicts instead of objects. In this case, use get()
+        # We may have received dicts instead of objects.
+        # In this case, use get()
         base_attr = base.get(attr_name) if base else None
         remote_attr = remote.get(attr_name) if remote else None
         dest_attr = dest.get(attr_name) if dest else None

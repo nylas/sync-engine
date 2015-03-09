@@ -315,6 +315,7 @@ get_default_providers = lambda: {
         "smtp": ("smtp.mail.me.com", 587),
         "auth": "password",
         "events": False,
+        "contacts": True,
         "folder_map": {"Sent Messages": "sent",
                        "Deleted Messages": "trash"},
         "domains": ["icloud.com"],
