@@ -197,6 +197,7 @@ def syncback_service():
     s.start()
     yield s
     s.stop()
+    s.join()
 
 
 @fixture(scope='function')
