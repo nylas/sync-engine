@@ -1,6 +1,5 @@
 import urllib
 import requests
-from requests import ConnectionError as RequestsConnectionError
 from imapclient import IMAPClient
 from socket import gaierror, error as socket_error
 from ssl import SSLError
@@ -122,7 +121,8 @@ class OAuthAuthHandler(AuthHandler):
             data = urllib.urlencode(args)
             response = requests.post(access_token_url, data=data,
                                      headers=headers)
-        except (requests.exceptions.HTTPError, RequestsConnectionError), e:
+        except (requests.exceptions.HTTPError,
+                requests.exceptions.ConnectionError), e:
             log.error(e)
             raise ConnectionError()
 
@@ -170,7 +170,7 @@ class OAuthAuthHandler(AuthHandler):
         try:
             response = requests.get(self.OAUTH_USER_INFO_URL,
                                     params={'access_token': access_token})
-        except RequestsConnectionError as e:
+        except requests.exceptions.ConnectionError as e:
             log.error('user_info_fetch_failed', error=e)
             raise ConnectionError()
 
