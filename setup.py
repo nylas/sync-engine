@@ -42,7 +42,8 @@ setup(
         "httplib2>=0.8",
         "google-api-python-client>=1.2",
         "oauth2client==1.3",
-        "six>=1.8"
+        "six>=1.8",
+        "vobject>=0.8.1c"
     ],
     dependency_links=[],
 
