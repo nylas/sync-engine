@@ -199,6 +199,13 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             msg.namespace_id = account.namespace.id
             parsed = mime.from_string(body_string)
 
+            from inbox.models.block import Block, Part
+            body_block = Block()
+            body_block.namespace_id = account.namespace.id
+            body_block.data = body_string
+            body_block.content_type = "text/plain"
+            msg.full_body = body_block
+
             mime_version = parsed.headers.get('Mime-Version')
             # sometimes MIME-Version is '1.0 (1.0)', hence the .startswith()
             if mime_version is not None and not mime_version.startswith('1.0'):
@@ -230,13 +237,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             msg.references = parse_references(
                 parsed.headers.get('References', ''),
                 parsed.headers.get('In-Reply-To', ''))
-
-            from inbox.models.block import Block, Part
-            body_block = Block()
-            body_block.namespace_id = account.namespace.id
-            body_block.data = body_string
-            body_block.content_type = "text/plain"
-            msg.full_body = body_block
 
             msg.size = len(body_string)  # includes headers text
 
