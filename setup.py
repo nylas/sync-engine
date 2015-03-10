@@ -43,7 +43,8 @@ setup(
         "google-api-python-client>=1.2",
         "oauth2client==1.3",
         "six>=1.8",
-        "vobject>=0.8.1c"
+        "vobject>=0.8.1c",
+        "lxml>=3.4.2"
     ],
     dependency_links=[],
 

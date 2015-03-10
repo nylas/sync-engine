@@ -55,3 +55,4 @@ hiredis==0.1.5
 mock==1.0.1
 mockredispy==2.9.0.10
 vobject==0.8.1c
+lxml==3.4.2
