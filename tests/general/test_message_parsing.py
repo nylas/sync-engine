@@ -39,6 +39,15 @@ def raw_message_with_bad_content_disposition():
         return f.read()
 
 
+@pytest.fixture
+def raw_message_with_bad_date():
+    # Message with a MIME part that has an invalid content-disposition.
+    raw_msg_path = full_path(
+        '../data/raw_message_with_bad_date')
+    with open(raw_msg_path) as f:
+        return f.read()
+
+
 def test_message_from_synced(db, default_account, default_namespace,
                              raw_message):
     received_date = datetime.datetime(2014, 9, 22, 17, 25, 46)
@@ -137,3 +146,13 @@ def test_handle_bad_content_disposition(
     assert len(m.parts) == 3
     assert m.received_date == received_date
     assert all(part.block.namespace_id == m.namespace_id for part in m.parts)
+
+
+def test_store_full_body_on_parse_error(
+        default_account, default_namespace,
+        raw_message_with_bad_date):
+    received_date = None
+    m = Message.create_from_synced(default_account, 139219, '[Gmail]/All Mail',
+                                   received_date,
+                                   raw_message_with_bad_date)
+    assert m.full_body

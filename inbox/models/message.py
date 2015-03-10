@@ -196,15 +196,15 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         msg = Message()
 
         try:
-            msg.namespace_id = account.namespace.id
-            parsed = mime.from_string(body_string)
-
             from inbox.models.block import Block, Part
             body_block = Block()
             body_block.namespace_id = account.namespace.id
             body_block.data = body_string
             body_block.content_type = "text/plain"
             msg.full_body = body_block
+
+            msg.namespace_id = account.namespace.id
+            parsed = mime.from_string(body_string)
 
             mime_version = parsed.headers.get('Mime-Version')
             # sometimes MIME-Version is '1.0 (1.0)', hence the .startswith()
