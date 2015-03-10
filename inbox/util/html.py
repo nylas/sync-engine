@@ -17,6 +17,9 @@ class HTMLTagStripper(HTMLParser):
         self.strip_tag_contents_mode = False
 
     def handle_starttag(self, tag, attrs):
+        # Replace <br> tags by spaces
+        if tag.lower() == 'br':
+            self.fed.append(' ')
         # Strip the contents of a tag when it's
         # in strippedTags. We can do this because
         # HTMLParser won't try to parse the inner

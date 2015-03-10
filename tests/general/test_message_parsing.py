@@ -156,3 +156,36 @@ def test_store_full_body_on_parse_error(
                                    received_date,
                                    raw_message_with_bad_date)
     assert m.full_body
+
+
+def test_calculate_snippet():
+    m = Message()
+    # Check that we strip contents of title, script, style tags
+    body = '<title>EMAIL</title><script>function() {}</script>' \
+           '<style>h1 {color:red;}</style>Hello, world'
+    assert m.calculate_html_snippet(body) == 'Hello, world'
+
+    # Check that we replace various incarnations of <br> by spaces
+    body = 'Hello,<br>world'
+    assert m.calculate_html_snippet(body) == 'Hello, world'
+
+    body = 'Hello,<br class=\"\">world'
+    assert m.calculate_html_snippet(body) == 'Hello, world'
+
+    body = 'Hello,<br />world'
+    assert m.calculate_html_snippet(body) == 'Hello, world'
+
+    body = 'Hello,<br><br> world'
+    assert m.calculate_html_snippet(body) == 'Hello, world'
+
+    # Check that snippets are properly truncated to 191 characters.
+    body = '''Etenim quid est, <strong>Catilina</strong>, quod iam amplius
+              exspectes, si neque nox tenebris obscurare coetus nefarios nec
+              privata domus parietibus continere voces coniurationis tuae
+              potest, si illustrantur, si erumpunt omnia?'''
+    expected_snippet = 'Etenim quid est, Catilina, quod iam amplius ' \
+                       'exspectes, si neque nox tenebris obscurare coetus ' \
+                       'nefarios nec privata domus parietibus continere ' \
+                       'voces coniurationis tuae potest, si illustrantur,'
+    assert len(expected_snippet) == 191
+    assert m.calculate_html_snippet(body) == expected_snippet

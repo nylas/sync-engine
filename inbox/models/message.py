@@ -361,8 +361,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             self.snippet = u''
 
     def calculate_html_snippet(self, text):
-        text = text.replace('<br>', ' ').replace('<br/>', ' '). \
-            replace('<br />', ' ')
         text = strip_tags(text)
         return self.calculate_plaintext_snippet(text)
 
