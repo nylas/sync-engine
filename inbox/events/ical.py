@@ -7,6 +7,20 @@ from inbox.models.event import Event
 from inbox.models.calendar import Calendar
 from inbox.models.session import session_scope
 from inbox.events.util import MalformedEventError
+from inbox.util.timezones import win_tz
+
+
+STATUS_MAP = {'NEEDS-ACTION': 'noreply',
+              'ACCEPTED': 'yes',
+              'DECLINED': 'no',
+              'TENTATIVE': 'maybe'}
+
+
+def _remove_tz(d):
+    if d.tzinfo:
+        d = d - d.utcoffset()
+        d = d.replace(tzinfo=None)
+    return d
 
 
 def events_from_ics(namespace, calendar, ics_str):
@@ -15,13 +29,28 @@ def events_from_ics(namespace, calendar, ics_str):
     except ValueError:
         raise MalformedEventError()
 
-    print ics_str
     events = []
+    print ics_str
+
+    # FIXME @karim: this assumes events are grouped by timezone. This may not
+    # always be the case.
+    calendar_timezone = 'UTC'
+
     for component in cal.walk():
+        if component.name == "VTIMEZONE":
+            tzname = component.get('TZID')
+            assert tzname in win_tz, "Non-UTC timezone should be in table"
+            calendar_timezone = win_tz[tzname]
+
         if component.name == "VEVENT":
             # Make sure the times are in UTC.
-            original_start = component.get('dtstart').dt.astimezone(pytz.utc)
-            original_end = component.get('dtend').dt.astimezone(pytz.utc)
+            original_start = component.get('dtstart').dt
+            original_end = component.get('dtend').dt
+
+            # icalendar doesn't parse inline timezones yet (see: https://github.com/collective/icalendar/issues/44)
+            # so we do some magic lookup
+            if original_start.tzinfo is None:
+                 import pdb ; pdb.set_trace()
 
             # MySQL doesn't like localized datetimes.
             start = original_start.replace(tzinfo=None)
