@@ -221,7 +221,8 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
     def enable_sync(self, sync_host=None):
         """ Tell the monitor that this account should be syncing. """
         self.sync_should_run = True
-        self.sync_host = sync_host
+        if sync_host is not None:
+            self.sync_host = sync_host
 
     def disable_sync(self, reason=None):
         """ Tell the monitor that this account should stop syncing. """
