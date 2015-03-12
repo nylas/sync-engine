@@ -96,17 +96,24 @@ PUT https://api.nilas.com/n/<namespace_id>/messages/<message_id>
 
 # Getting the raw contents of a message
 
-If you need to access some specific email headers that are not exposed by our API (e.g: mailing-list specific headers) you can use our "raw" message endpoint. This endpoint returns the raw, unparsed message as a base64 string.
+If you need to access some specific email headers that are not exposed by our API (e.g: mailing-list specific headers) you can request the original message data by setting the `Accept` header to `message/rfc822`.
+
 
 ```
 :::xml
-GET https://api.nilas.com/n/<namespace_id>/messages/<message_id>/rfc2822
+curl -H "Accept: message/rfc822" \
+    https://api.nilas.com/n/<namespace_id>/messages/<message_id>
 ```
 
 ```
-:::json
-{
-    "rfc2822": "dGhpcyBpcyBiYXNlNjQ="
-}
+Delivered-To: ben.bitdiddle1861@gmail.com
+Received: by 10.36.105.83 with SMTP id e80csp448398itc;
+        Mon, 2 Mar 2015 22:32:19 -0800 (PST)
+X-Received: by 10.140.146.6 with SMTP id 6mr57679712qhs.44.1425364337630;
+        Mon, 02 Mar 2015 22:32:17 -0800 (PST)
+Return-Path: <golang-nuts+bncBC35DTG33YGBB3NK2WTQKGQEPOXSM4Q@googlegroups.com>
+Received: from mail-qg0-x23b.google.com (mail-qg0-x23b.google.com. [2607:f8b0:400d:c04::23b])
+...
+
 ```
 

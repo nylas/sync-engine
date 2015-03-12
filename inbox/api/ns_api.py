@@ -475,6 +475,8 @@ def message_api(public_id):
     except NoResultFound:
         raise NotFoundError("Couldn't find message {0} ".format(public_id))
     if request.method == 'GET':
+        if request.headers.get('Accept', None) == 'message/rfc822':
+            return Response(message.full_body.data, mimetype='message/rfc822')
         return g.encoder.jsonify(message)
     elif request.method == 'PUT':
         data = request.get_json(force=True)
@@ -498,6 +500,7 @@ def message_api(public_id):
         return g.encoder.jsonify(message)
 
 
+# TODO Deprecate this endpoint once API usage falls off
 @app.route('/messages/<public_id>/rfc2822', methods=['GET'])
 def raw_message_api(public_id):
     try:
