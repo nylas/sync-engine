@@ -302,6 +302,29 @@ def test_reply_headers_set(patch_smtp, api_client, example_draft):
     assert 'References' in parsed.headers
 
 
+def test_body_construction(patch_smtp, api_client, example_draft):
+    thread_id = api_client.get_data('/threads')[0]['id']
+
+    api_client.post_data('/send',
+                         {'to': [{'email': 'bob@foocorp.com'}],
+                          'thread_id': thread_id,
+                          'subject': 'Banalities',
+                          'body': '<html>Hello there</html>'})
+    _, msg = patch_smtp[-1]
+    parsed = mime.from_string(msg)
+    assert len(parsed.parts) == 2
+    plain_part_found = False
+    html_part_found = False
+    for part in parsed.parts:
+        if part.content_type.value == 'text/plain':
+            plain_part_found = True
+            assert part.body.strip() == 'Hello there'
+        elif part.content_type.value == 'text/html':
+            html_part_found = True
+            assert part.body.strip() == '<html>Hello there</html>'
+    assert plain_part_found and html_part_found
+
+
 def test_draft_not_persisted_if_sending_fails(recipients_refused, api_client,
                                               db):
     api_client.post_data('/send', {'to': [{'email': 'bob@foocorp.com'}],

@@ -67,7 +67,7 @@ def create_email(sender_name,
     # Create a multipart/alternative message
     msg = mime.create.multipart('alternative')
     msg.append(
-        mime.create.text('text', plaintext),
+        mime.create.text('plain', plaintext),
         mime.create.text('html', html))
 
     # Create an outer multipart/mixed message
