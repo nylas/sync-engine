@@ -33,9 +33,6 @@ class GenericAuthHandler(AuthHandler):
         account.password = response['password']
         account.date = datetime.datetime.utcnow()
 
-        account.sync_contacts = account.provider_info.get("contacts", False)
-        account.sync_events = account.provider_info.get("events", False)
-
         provider_name = self.provider_name
         account.provider = provider_name
         if provider_name == 'custom':

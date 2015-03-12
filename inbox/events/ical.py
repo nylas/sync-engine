@@ -1,4 +1,5 @@
 import pytz
+import uuid
 from datetime import datetime, date
 from icalendar import Calendar as iCalendar
 
@@ -7,7 +8,7 @@ from inbox.models.event import Event
 from inbox.models.calendar import Calendar
 from inbox.models.session import session_scope
 from inbox.events.util import MalformedEventError
-from inbox.util.timezones import win_tz
+from timezones import timezones_table
 
 
 STATUS_MAP = {'NEEDS-ACTION': 'noreply',
@@ -31,14 +32,11 @@ def events_from_ics(namespace, calendar, ics_str):
 
     events = []
 
-    # FIXME @karim: this assumes events are grouped by timezone. This may not
-    # always be the case.
-    calendar_timezone = 'UTC'
-
     for component in cal.walk():
         if component.name == "VTIMEZONE":
             tzname = component.get('TZID')
-            assert tzname in win_tz, "Non-UTC timezone should be in table"
+            assert tzname in timezones_table,\
+                 "Non-UTC timezone should be in table"
 
         if component.name == "VEVENT":
             # Make sure the times are in UTC.
@@ -50,21 +48,23 @@ def events_from_ics(namespace, calendar, ics_str):
 
             if isinstance(start, datetime) and isinstance(end, datetime):
                 all_day = False
-                # icalendar doesn't parse inline timezones yet (see: https://github.com/collective/icalendar/issues/44)
-                # so we look if the timezone isn't in our Windows-TZ to Olson-TZ table.
-                if original_start.tzinfo != pytz.utc:
+                # icalendar doesn't parse Windows timezones yet (see: https://github.com/collective/icalendar/issues/44)
+                # so we look if the timezone isn't in our Windows-TZ
+                # to Olson-TZ table.
+                if original_start.tzinfo is None:
                     tzid = component.get('dtstart').params.get('TZID', None)
-                    assert tzid in win_tz, "Non-UTC timezone should be in table"
+                    assert tzid in timezones_table,\
+                         "Non-UTC timezone should be in table"
 
-                    corresponding_tz = win_tz[tzid]
+                    corresponding_tz = timezones_table[tzid]
                     local_timezone = pytz.timezone(corresponding_tz)
                     start = local_timezone.localize(original_start)
 
-                if original_end.tzinfo != pytz.utc:
+                if original_end.tzinfo is None:
                     tzid = component.get('dtend').params.get('TZID', None)
-                    assert tzid in win_tz, "Non-UTC timezone should be in table"
+                    assert tzid in timezones_table, "Non-UTC timezone should be in table"
 
-                    corresponding_tz = win_tz[tzid]
+                    corresponding_tz = timezones_table[tzid]
                     local_timezone = pytz.timezone(corresponding_tz)
                     end = local_timezone.localize(original_end)
 
@@ -76,7 +76,6 @@ def events_from_ics(namespace, calendar, ics_str):
                 start = datetime.combine(start, datetime.min.time())
                 end = datetime.combine(end, datetime.min.time())
 
-
             title = component.get('summary')
             description = unicode(component.get('description'))
 
@@ -87,6 +86,18 @@ def events_from_ics(namespace, calendar, ics_str):
                 reccur = ''
             participants = []
             attendees = component.get('attendee')
+
+            organizer = component.get('organizer')
+            if organizer:
+                organizer = unicode(organizer)
+                if organizer.startswith('mailto:'):
+                    organizer = organizer[7:]
+
+            # FIXME: normalize email address too
+            if namespace.account.email_address == organizer:
+                is_owner = True
+            else:
+                is_owner = False
 
             # the iCalendar python module doesn't return a list when
             # there's only one attendee. Go figure.
@@ -128,17 +139,14 @@ def events_from_ics(namespace, calendar, ics_str):
                                      'guests': []})
 
             location = component.get('location')
-            organizer = component.get('organizer')
-            if(organizer):
-                organizer = unicode(organizer)
-                if organizer.startswith('mailto:'):
-                    organizer = organizer[7:]
-
             uid = str(component.get('uid'))
+
             event = Event(
                 namespace=namespace,
                 calendar=calendar,
-                uid=uid,
+                # FIXME @karim: use correct uid when syncing events,
+                # instead of a randomly-generated one.
+                uid=uuid.uuid4().hex,
                 provider_name='ics',
                 raw_data=component.to_ical(),
                 title=title,
@@ -151,6 +159,7 @@ def events_from_ics(namespace, calendar, ics_str):
                 busy=True,
                 all_day=all_day,
                 read_only=True,
+                is_owner=is_owner,
                 source='local',
                 participants=participants)
 

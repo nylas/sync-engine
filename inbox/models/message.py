@@ -261,8 +261,8 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                     continue  # TODO should we store relations?
                 msg._parse_mimepart(mimepart, mid, i, account.namespace.id)
                 if (mimepart.content_type.format_type == 'text' and
-                    mimepart.content_type.subtype == 'calendar'):
-                        import_attached_events(account.id, mimepart.body)
+                        mimepart.content_type.subtype == 'calendar'):
+                    import_attached_events(account.id, mimepart.body)
 
             msg.calculate_sanitized_body()
         except (mime.DecodingError, AttributeError, RuntimeError, TypeError,

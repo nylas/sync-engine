@@ -1,9 +1,7 @@
 import pytest
 
-from inbox.models import Account
 from inbox.events.google import GoogleEventsProvider
 from inbox.events.google import MalformedEventError
-from inbox.events.ical import events_from_ics
 
 ACCOUNT_ID = 1
 NAMESPACE_ID = 1
