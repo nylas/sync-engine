@@ -1,5 +1,5 @@
 import pytz
-from datetime import datetime
+from datetime import datetime, date
 from icalendar import Calendar as iCalendar
 
 from inbox.models.account import Account
@@ -30,7 +30,6 @@ def events_from_ics(namespace, calendar, ics_str):
         raise MalformedEventError()
 
     events = []
-    print ics_str
 
     # FIXME @karim: this assumes events are grouped by timezone. This may not
     # always be the case.
@@ -40,31 +39,46 @@ def events_from_ics(namespace, calendar, ics_str):
         if component.name == "VTIMEZONE":
             tzname = component.get('TZID')
             assert tzname in win_tz, "Non-UTC timezone should be in table"
-            calendar_timezone = win_tz[tzname]
 
         if component.name == "VEVENT":
             # Make sure the times are in UTC.
             original_start = component.get('dtstart').dt
             original_end = component.get('dtend').dt
 
-            # icalendar doesn't parse inline timezones yet (see: https://github.com/collective/icalendar/issues/44)
-            # so we do some magic lookup
-            if original_start.tzinfo is None:
-                 import pdb ; pdb.set_trace()
+            start = original_start
+            end = original_end
 
-            # MySQL doesn't like localized datetimes.
-            start = original_start.replace(tzinfo=None)
-            end = original_end.replace(tzinfo=None)
-
-            title = component.get('summary')
-            description = unicode(component.get('description'))
-
-            if isinstance(start, datetime):
+            if isinstance(start, datetime) and isinstance(end, datetime):
                 all_day = False
-            else:
+                # icalendar doesn't parse inline timezones yet (see: https://github.com/collective/icalendar/issues/44)
+                # so we look if the timezone isn't in our Windows-TZ to Olson-TZ table.
+                if original_start.tzinfo != pytz.utc:
+                    tzid = component.get('dtstart').params.get('TZID', None)
+                    assert tzid in win_tz, "Non-UTC timezone should be in table"
+
+                    corresponding_tz = win_tz[tzid]
+                    local_timezone = pytz.timezone(corresponding_tz)
+                    start = local_timezone.localize(original_start)
+
+                if original_end.tzinfo != pytz.utc:
+                    tzid = component.get('dtend').params.get('TZID', None)
+                    assert tzid in win_tz, "Non-UTC timezone should be in table"
+
+                    corresponding_tz = win_tz[tzid]
+                    local_timezone = pytz.timezone(corresponding_tz)
+                    end = local_timezone.localize(original_end)
+
+                # MySQL doesn't like localized datetimes.
+                start = _remove_tz(start)
+                end = _remove_tz(end)
+            elif isinstance(start, date) and isinstance(end, date):
                 all_day = True
                 start = datetime.combine(start, datetime.min.time())
                 end = datetime.combine(end, datetime.min.time())
+
+
+            title = component.get('summary')
+            description = unicode(component.get('description'))
 
             reccur = component.get('rrule')
             if reccur:

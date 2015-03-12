@@ -132,10 +132,3 @@ def test_long_eventid(google_events_provider):
                           u'email': u'fakeemail@gmail.com'},
              u'id': long_id}
     google_events_provider.parse_event(event, cal_info)
-
-
-def test_invalid_ical(db):
-    with pytest.raises(MalformedEventError):
-        account = db.session.query(Account).filter_by(id=ACCOUNT_ID).first()
-        events_from_ics(account.namespace,
-                        account.default_calendar, "asdf")
