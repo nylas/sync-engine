@@ -23,6 +23,13 @@ def bounded_str(value, key):
     return value
 
 
+def strict_bool(value, key):
+    if value not in ['true', 'false']:
+        raise ValueError('Value must be "true" or "false" (not "{}") for {}'
+                         .format(value, key))
+    return value == 'true'
+
+
 def view(value, key):
     allowed_views = ["count", "ids"]
     if value not in allowed_views:
@@ -213,6 +220,9 @@ def valid_event(event):
 
     valid_when(event['when'])
 
+    if 'busy' in event and not isinstance(event.get('busy'), bool):
+        raise InputError("'busy' must be true or false")
+
     participants = event.get('participants', [])
     for p in participants:
         if 'email' not in p:
@@ -228,7 +238,7 @@ def valid_event_update(event, namespace, db_session):
         valid_when(event['when'])
 
     if 'busy' in event and not isinstance(event.get('busy'), bool):
-        raise InputError('\'busy\' must be true or false')
+        raise InputError("'busy' must be true or false")
 
     participants = event.get('participants', [])
     for p in participants:

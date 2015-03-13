@@ -35,7 +35,8 @@ GET https://api.nilas.com/n/<namespace_id>/events/<event_id>
         "object": "timespan",
         "end_time": 1408123800,
         "start_time": 1408120200
-    }
+    },
+    "busy": true
 }
 ```
 

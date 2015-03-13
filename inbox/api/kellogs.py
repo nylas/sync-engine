@@ -140,7 +140,8 @@ def encode(obj, namespace_public_id=None):
                              for participant in obj.participants],
             'read_only': obj.read_only,
             'location': obj.location,
-            'when': encode(obj.when)
+            'when': encode(obj.when),
+            'busy': obj.busy,
         }
 
     elif isinstance(obj, Calendar):
