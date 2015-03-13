@@ -69,7 +69,7 @@ from datetime import datetime
 from gevent import Greenlet, kill, spawn, sleep
 from gevent.queue import LifoQueue
 from hashlib import sha256
-from sqlalchemy import desc, func
+from sqlalchemy import func
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import load_only
 
@@ -77,7 +77,9 @@ from inbox.util.concurrency import retry_and_report_killed
 from inbox.util.debug import bind_context
 from inbox.util.itert import chunk
 from inbox.util.misc import or_none
-from inbox.util.threading import cleanup_subject, thread_messages
+from inbox.util.threading import (thread_messages,
+                                  fetch_corresponding_thread,
+                                  MAX_THREAD_LENGTH)
 from inbox.basicauth import AuthError
 from inbox.log import get_logger
 log = get_logger()
@@ -94,9 +96,6 @@ from inbox.mailsync.backends.base import (create_db_objects,
 from inbox.heartbeat.store import HeartbeatStatusProxy
 
 GenericUIDMetadata = namedtuple('GenericUIDMetadata', 'throttled')
-
-
-MAX_THREAD_LENGTH = 500
 
 
 def _pool(account_id):
@@ -420,29 +419,23 @@ class FolderSyncEngine(Greenlet):
         new_uid = self.add_message_attrs(db_session, new_uid, msg)
         return new_uid
 
-    def fetch_similar_threads(self, db_session, new_uid):
-        # FIXME: restrict this to messages in the same folder?
-        clean_subject = cleanup_subject(new_uid.message.subject)
-        # Return similar threads ordered by descending id, so that we append
-        # to the most recently created similar thread.
-        return db_session.query(ImapThread).filter(
-            ImapThread.namespace_id == self.namespace_id,
-            ImapThread.subject.like(clean_subject)). \
-            order_by(desc(ImapThread.id)).all()
+    def _count_thread_messages(self, thread_id, db_session):
+        count, = db_session.query(func.count(Message.id)). \
+                    filter(Message.thread_id == thread_id).one()
+        return count
 
     def add_message_attrs(self, db_session, new_uid, msg):
         """ Post-create-message bits."""
         with db_session.no_autoflush:
-            parent_threads = self.fetch_similar_threads(db_session, new_uid)
+            parent_thread = fetch_corresponding_thread(db_session,
+                            self.namespace_id, new_uid.message)
             construct_new_thread = True
 
-            if parent_threads:
+            if parent_thread:
                 # If there's a parent thread that isn't too long already,
                 # add to it. Otherwise create a new thread.
-                parent_thread = parent_threads[0]
-                parent_message_count, = db_session.query(
-                    func.count(Message.id)). \
-                    filter(Message.thread_id == parent_thread.id).one()
+                parent_message_count = self._count_thread_messages(
+                                        parent_thread.id, db_session)
                 if parent_message_count < MAX_THREAD_LENGTH:
                     construct_new_thread = False
 
@@ -451,7 +444,6 @@ class FolderSyncEngine(Greenlet):
                     db_session, new_uid.account.namespace, new_uid.message)
                 new_uid.message.thread_order = 0
             else:
-                parent_thread = parent_threads[0]
                 parent_thread.messages.append(new_uid.message)
                 constructed_thread = thread_messages(parent_thread.messages)
                 for index, message in enumerate(constructed_thread):

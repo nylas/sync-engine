@@ -1,0 +1,56 @@
+#!/usr/bin/env python
+# compute the value of _cleaned_subject for a thread.
+import gevent
+import gevent.monkey
+import gevent.pool
+gevent.monkey.patch_all()
+import click
+from inbox.log import configure_logging, get_logger
+from inbox.models.session import session_scope
+from inbox.models import Namespace
+from inbox.models.backends.imap import ImapAccount, ImapThread
+from inbox.mailsync.backends.imap.common import recompute_thread_labels
+from inbox.sqlalchemy_ext.util import safer_yield_per
+from inbox.util.misc import cleanup_subject
+configure_logging(False)
+log = get_logger()
+
+
+def compute_cleaned_subject(namespace_id):
+    log.info('Computing cleaned subjects for namespace',
+             namespace_id=namespace_id)
+    with session_scope() as db_session:
+        namespace = db_session.query(Namespace).get(namespace_id)
+        account = namespace.account
+        if not isinstance(account, ImapAccount):
+            return
+        query = db_session.query(ImapThread).filter(
+            ImapThread.namespace_id == namespace_id)
+        index = 0
+        for thread in safer_yield_per(query, ImapThread.id, 0, 100):
+            index += 1
+            thread._cleaned_subject = cleanup_subject(thread.subject)
+            log.info('Cleaned subject', thread_id=thread.id,
+                     namespace_id=namespace_id)
+            if index % 100 == 0:
+                db_session.commit()
+        db_session.commit()
+
+
+@click.command()
+@click.option('--namespace_ids')
+def main(namespace_ids):
+    if namespace_ids:
+        ns_ids = [int(ns_id) for ns_id in namespace_ids.split(',')]
+    else:
+        with session_scope() as db_session:
+            ns_ids = [ns.id for ns in db_session.query(Namespace)]
+    pool = gevent.pool.Pool(size=10)
+    for ns_id in ns_ids:
+        pool.add(gevent.spawn(compute_cleaned_subject, ns_id))
+
+    pool.join()
+
+
+if __name__ == '__main__':
+    main()

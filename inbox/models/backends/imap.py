@@ -16,6 +16,8 @@ from inbox.models.account import Account
 from inbox.models.thread import Thread
 from inbox.models.message import Message
 from inbox.models.folder import Folder
+from inbox.util.misc import cleanup_subject
+
 
 PROVIDER = 'imap'
 
@@ -248,12 +250,12 @@ class ImapThread(Thread):
 
     @classmethod
     def from_imap_message(cls, session, namespace, message):
-        """ For now, each message is its own thread. """
         if message.thread is not None:
             # If this message *already* has a thread associated with it, don't
             # create a new one.
             return message.thread
-        thread = cls(subject=message.subject, recentdate=message.received_date,
+        clean_subject = cleanup_subject(message.subject)
+        thread = cls(subject=clean_subject, recentdate=message.received_date,
                      namespace=namespace, subjectdate=message.received_date,
                      snippet=message.snippet)
         if not message.is_read:

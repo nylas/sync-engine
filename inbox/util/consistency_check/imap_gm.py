@@ -20,7 +20,7 @@ from flanker.mime.message.headers.parsing import parse_header_value
 from imapclient import IMAPClient
 from inbox.providers import provider_info
 from inbox.util.addr import parse_email_address_list
-from inbox.util.threading import cleanup_subject
+from inbox.util.misc import cleanup_subject
 
 from .dump_gm import DumpGmailMixin
 

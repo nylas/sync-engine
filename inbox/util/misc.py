@@ -1,6 +1,7 @@
 import sys
 import pkgutil
 import time
+import re
 
 from datetime import datetime
 from email.utils import parsedate_tz, mktime_tz
@@ -183,3 +184,14 @@ def register_backends(base_name, base_path):
                 mod_for[provider_name] = module
 
     return mod_for
+
+
+def cleanup_subject(subject_str):
+    """Clean-up a message subject-line.
+    For instance, 'Re: Re: Re: Birthday party' becomes 'Birthday party'"""
+    if subject_str is None:
+        return ''
+    # TODO consider expanding to all
+    # http://en.wikipedia.org/wiki/List_of_email_subject_abbreviations
+    cleanup_regexp = "(?i)^((re|fw|fwd|aw|wg):\s*)+"
+    return re.sub(cleanup_regexp, "", subject_str)

@@ -5,7 +5,8 @@ from collections import namedtuple
 from inbox.auth.generic import GenericAuthHandler
 from inbox.models import Folder
 from inbox.models.backends.imap import ImapUid
-from tests.util.base import add_fake_thread, add_fake_message
+from inbox.util.threading import fetch_corresponding_thread
+from tests.util.base import add_fake_thread, add_fake_message, generic_account
 
 NAMESPACE_ID = 1
 ACCOUNT_ID = 1
@@ -35,15 +36,20 @@ def folder_sync_engine(db, monkeypatch):
     return engine
 
 
-def test_generic_foldersyncengine(db, folder_sync_engine):
+def test_generic_grouping(db, generic_account):
     thread = add_fake_thread(db.session, NAMESPACE_ID)
     message = add_fake_message(db.session, NAMESPACE_ID, thread,
                                subject="Golden Gate Park next Sat")
     imapuid = ImapUid(message=message, account_id=ACCOUNT_ID,
                       msg_uid=2222)
-    messages = folder_sync_engine.fetch_similar_threads(db.session, imapuid)
-    assert messages == [], ("fetch_similar_threads should "
-                            "heed namespace boundaries")
+
+    thread = add_fake_thread(db.session, generic_account.namespace.id)
+    message = add_fake_message(db.session, NAMESPACE_ID + 1, thread,
+                               subject="Golden Gate Park next Sat")
+
+    thread = fetch_corresponding_thread(db.session, generic_account.namespace.id, message)
+    assert thread is None, ("fetch_similar_threads should "
+                             "heed namespace boundaries")
 
 
 def test_threading_limit(db, folder_sync_engine, monkeypatch):
@@ -72,6 +78,8 @@ def test_threading_limit(db, folder_sync_engine, monkeypatch):
         m.references = []
         m.size = 0
         m.sanitized_body = ''
+        m.from_addr = [("Karim Hamidou", "karim@nilas.com")]
+        m.to_addr = [("Eben Freeman", "eben@nilas.com")]
         m.snippet = ''
         m.subject = 'unique subject'
         uid = ImapUid(message=m, account=account, msg_uid=2222 + i,

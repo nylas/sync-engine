@@ -16,6 +16,8 @@ from inbox.models.action_log import schedule_action_for_tag
 from inbox.models.folder import FolderItem
 from inbox.models.tag import Tag
 
+from inbox.util.misc import cleanup_subject
+
 
 class Thread(MailSyncBase, HasPublicID, HasRevisions):
     """ Threads are a first-class object in Inbox. This thread aggregates
@@ -29,6 +31,10 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
     """
     API_OBJECT_NAME = 'thread'
     subject = Column(String(255), nullable=True)
+    # a column with the cleaned up version of a subject string, to speed up
+    # threading queries.
+    _cleaned_subject = Column(String(255), nullable=True)
+
     subjectdate = Column(DateTime, nullable=False, index=True)
     recentdate = Column(DateTime, nullable=False, index=True)
     snippet = Column(String(191), nullable=True, default='')
@@ -37,6 +43,11 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
     folders = association_proxy(
         'folderitems', 'folder',
         creator=lambda folder: FolderItem(folder=folder))
+
+    @validates('subject')
+    def compute_cleaned_up_subject(self, key, value):
+        self._cleaned_subject = cleanup_subject(value)
+        return value
 
     @validates('messages')
     def update_from_message(self, k, message):
@@ -229,6 +240,7 @@ Index('ix_thread_namespace_id_recentdate_deleted_at',
 # Need to explicitly specify the index length for MySQL 5.6, because the
 # subject column is too long to be fully indexed with utf8mb4 collation.
 Index('ix_thread_subject', Thread.subject, mysql_length=191)
+Index('ix_cleaned_subject', Thread._cleaned_subject, mysql_length=191)
 
 
 class TagItem(MailSyncBase):

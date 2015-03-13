@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 import pytest
 from datetime import datetime
-from inbox.util.threading import cleanup_subject, thread_messages
+from inbox.util.threading import thread_messages, fetch_corresponding_thread
+from inbox.util.misc import cleanup_subject
 from collections import namedtuple
+from tests.util.base import (add_fake_message, add_fake_thread,
+                             add_fake_imapuid)
 
 
 def test_message_cleanup():
@@ -43,7 +46,51 @@ def test_threading():
     assert thread_messages(messages3) == messages3
 
 
-# hack but my test won't run in the test runner. All the
-# tests hang.
+def test_basic_message_grouping(db, default_namespace):
+    first_thread = add_fake_thread(db.session, default_namespace.id)
+    first_thread.subject = 'Some kind of test'
+
+    msg1 = add_fake_message(db.session, default_namespace.id, first_thread)
+    msg1.subject = 'Some kind of test'
+    msg1.from_addr = [('Karim Hamidou', 'karim@nilas.com')]
+    msg1.to_addr =   [('Eben Freeman', 'emfree@nilas.com')]
+    msg1.bcc_addr =  [('Some person', 'person@nilas.com')]
+
+    msg2 = add_fake_message(db.session, default_namespace.id, thread=None)
+    msg2.subject = 'Re: Some kind of test'
+    msg2.from_addr = [('Some random dude', 'random@pobox.com')]
+    msg2.to_addr =   [('Karim Hamidou', 'karim@nilas.com')]
+
+    matched_thread = fetch_corresponding_thread(db.session,
+                                                default_namespace.id, msg2)
+    assert matched_thread is None, "the algo shouldn't thread different convos"
+
+    msg3 = add_fake_message(db.session, default_namespace.id, thread=None)
+    msg3.subject = 'Re: Some kind of test'
+    msg3.from_addr = [('Eben Freeman', 'emfree@nilas.com')]
+    msg3.to_addr =   [('Karim Hamidou', 'karim@nilas.com')]
+
+    matched_thread = fetch_corresponding_thread(db.session, default_namespace.id, msg3)
+    assert matched_thread is first_thread, "Should match on participants"
+
+
+def test_self_send(db, default_namespace):
+    first_thread = add_fake_thread(db.session, default_namespace.id)
+    first_thread.subject = 'Some kind of test'
+
+    msg1 = add_fake_message(db.session, default_namespace.id, first_thread)
+    msg1.subject = 'Some kind of test'
+    msg1.from_addr = [('Karim Hamidou', 'karim@nilas.com')]
+    msg1.to_addr =   [('Karim Hamidou', 'karim@nilas.com')]
+
+    msg2 = add_fake_message(db.session, default_namespace.id, thread=None)
+    msg2.subject = 'Re: Some kind of test'
+    msg2.from_addr = [('Karim Hamidou', 'karim@nilas.com')]
+    msg2.to_addr =   [('Karim Hamidou', 'karim@nilas.com')]
+
+    matched_thread = fetch_corresponding_thread(db.session, default_namespace.id, msg2)
+    assert matched_thread is first_thread, "Should match on self-send"
+
+
 if __name__ == '__main__':
     pytest.main([__file__])

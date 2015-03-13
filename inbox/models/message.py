@@ -2,8 +2,10 @@ import os
 import json
 import datetime
 import base64
+import itertools
 from hashlib import sha256
 from flanker import mime
+from collections import defaultdict
 
 from sqlalchemy import (Column, Integer, BigInteger, String, DateTime,
                         Boolean, Enum, ForeignKey, Text, Index)
@@ -397,6 +399,39 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         json_headers = json.JSONDecoder().decode(headers)
 
         return json_headers
+
+    @property
+    def participants(self):
+        """
+        Different messages in the thread may reference the same email
+        address with different phrases. We partially deduplicate: if the same
+        email address occurs with both empty and nonempty phrase, we don't
+        separately return the (empty phrase, address) pair.
+
+        """
+        deduped_participants = defaultdict(set)
+        chain = []
+        if self.from_addr:
+            chain.append(self.from_addr)
+
+        if self.to_addr:
+            chain.append(self.to_addr)
+
+        if self.cc_addr:
+            chain.append(self.cc_addr)
+
+        if self.bcc_addr:
+            chain.append(self.bcc_addr)
+
+        for phrase, address in itertools.chain.from_iterable(chain):
+            deduped_participants[address].add(phrase.strip())
+
+        p = []
+        for address, phrases in deduped_participants.iteritems():
+            for phrase in phrases:
+                if phrase != '' or len(phrases) == 1:
+                    p.append((phrase, address))
+        return p
 
     @property
     def folders(self):

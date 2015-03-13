@@ -219,6 +219,19 @@ def default_account(db):
 
 
 @fixture(scope='function')
+def generic_account(db):
+    from inbox.auth.generic import GenericAuthHandler
+
+    handler = GenericAuthHandler(provider_name='generic')
+    acc = handler.create_account(db.session, 'user@generic_email.com',
+                                 {'email': 'user@genericemail.com',
+                                  'password': 'hunter2'})
+    db.session.add(acc)
+    db.session.commit()
+    return acc
+
+
+@fixture(scope='function')
 def contact_sync(config, db):
     from inbox.contacts.remote_sync import ContactSync
     return ContactSync('inboxapptest@gmail.com', 'gmail', 1, 1)
@@ -267,7 +280,7 @@ def add_fake_account(db_session, email_address='test@nilas.com'):
     return account
 
 
-def add_fake_message(db_session, namespace_id, thread, from_addr=None,
+def add_fake_message(db_session, namespace_id, thread=None, from_addr=None,
                      to_addr=None, cc_addr=None, bcc_addr=None,
                      received_date=None, subject=None):
     from inbox.models import Message
@@ -283,10 +296,13 @@ def add_fake_message(db_session, namespace_id, thread, from_addr=None,
     m.sanitized_body = ''
     m.snippet = ''
     m.subject = subject or ''
-    thread.messages.append(m)
-    update_contacts_from_message(db_session, m, thread.namespace)
-    db_session.add(m)
-    db_session.commit()
+
+    if thread:
+        thread.messages.append(m)
+        update_contacts_from_message(db_session, m, thread.namespace)
+
+        db_session.add(m)
+        db_session.commit()
     return m
 
 
