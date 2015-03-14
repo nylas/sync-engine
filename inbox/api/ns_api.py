@@ -1084,7 +1084,7 @@ def stream_changes():
     g.parser.add_argument('exclude_types', type=valid_delta_object_types,
                           location='args')
     args = strict_parse_args(g.parser, request.args)
-    timeout = args['timeout'] or 3600
+    timeout = args['timeout'] or 1800
     transaction_pointer = None
     cursor = args['cursor']
     if cursor == '0':
