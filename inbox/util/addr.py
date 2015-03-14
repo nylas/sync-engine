@@ -7,10 +7,11 @@ def canonicalize_address(addr):
     parsed_address = address.parse(addr, addr_spec_only=True)
     if not isinstance(parsed_address, address.EmailAddress):
         return addr
-    local_part = parsed_address.mailbox
-    if parsed_address.hostname in ('gmail.com', 'googlemail.com'):
+    local_part = parsed_address.mailbox.lower()
+    hostname = parsed_address.hostname.lower()
+    if hostname in ('gmail.com', 'googlemail.com'):
         local_part = local_part.replace('.', '')
-    return '@'.join((local_part, parsed_address.hostname))
+    return '@'.join((local_part, hostname))
 
 
 def parse_mimepart_address_header(mimepart, header_name):

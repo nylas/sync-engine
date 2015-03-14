@@ -38,11 +38,12 @@ def test_addresses_canonicalized(db):
         namespace_id=NAMESPACE_ID).first()
     msg = add_fake_message(db.session, NAMESPACE_ID, thread,
                            from_addr=[('', 'alpha.beta@gmail.com')],
-                           cc_addr=[('', 'alphabeta@gmail.com')])
+                           cc_addr=[('', 'alphabeta@gmail.com')],
+                           bcc_addr=[('', 'ALPHABETA@GMAIL.COM')])
 
     # Because Gmail addresses with and without periods are the same, check that
-    # there are two MessageContactAssociation instances attached to the message
-    # (one for the from field, one for the cc field), but that that they
-    # reference the same contact.
-    assert len(msg.contacts) == 2
+    # there are three MessageContactAssociation instances attached to the
+    # message (one each from the from/to/cc fields), but that they reference
+    # the same contact.
+    assert len(msg.contacts) == 3
     assert len(set(association.contact for association in msg.contacts)) == 1
