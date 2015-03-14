@@ -38,16 +38,6 @@ The thread object includes useful information like subject, participants, and ti
             "email": "wrogers@mit.edu"
         }
     ],
-    "senders": [
-        {
-            "name": "Ben Bitdiddle",
-            "email": "ben.bitdiddle@gmail.com"
-        },
-        {
-            "name": "Bill Rogers",
-            "email": "wrogers@mit.edu"
-        }
-    ]
     "snippet": "Hey Bill, Looking forward to getting together for dinner on Friday. What can I bring? I have a couple bottles of wine or could put together",
     "tags": [
         {
@@ -143,11 +133,6 @@ The `name` field may also be blank. In this case, you may want to display the em
     }
 ]
 ```
-
-# Senders
-
-The list of senders is the subset of participants which have sent at least one message in the thread. Many email client UIs choose to display these names in a list of threads, in order to show the active members of a discussion.
-
 
 # Snippets
 

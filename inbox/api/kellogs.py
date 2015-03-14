@@ -109,7 +109,6 @@ def encode(obj, namespace_public_id=None):
             'namespace_id': _get_namespace_public_id(obj),
             'subject': obj.subject,
             'participants': format_address_list(obj.participants),
-            'senders': format_address_list(obj.senders),
             'last_message_timestamp': obj.recentdate,
             'first_message_timestamp': obj.subjectdate,
             'snippet': obj.snippet,
