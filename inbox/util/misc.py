@@ -195,3 +195,19 @@ def cleanup_subject(subject_str):
     # http://en.wikipedia.org/wiki/List_of_email_subject_abbreviations
     cleanup_regexp = "(?i)^((re|fw|fwd|aw|wg):\s*)+"
     return re.sub(cleanup_regexp, "", subject_str)
+
+
+def dedupe_envelope(deduped_participants):
+    """
+    Different messages in the thread may reference the same email
+    address with different phrases. We partially deduplicate: if the same
+    email address occurs with both empty and nonempty phrase, we don't
+    separately return the (empty phrase, address) pair.
+
+    """
+    p = []
+    for address, phrases in deduped_participants.iteritems():
+        for phrase in phrases:
+            if phrase != '' or len(phrases) == 1:
+                p.append((phrase, address))
+    return p

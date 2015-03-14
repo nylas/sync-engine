@@ -16,7 +16,7 @@ from inbox.models.action_log import schedule_action_for_tag
 from inbox.models.folder import FolderItem
 from inbox.models.tag import Tag
 
-from inbox.util.misc import cleanup_subject
+from inbox.util.misc import cleanup_subject, dedupe_envelope
 
 
 class Thread(MailSyncBase, HasPublicID, HasRevisions):
@@ -120,27 +120,24 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
 
     @property
     def participants(self):
-        """
-        Different messages in the thread may reference the same email
-        address with different phrases. We partially deduplicate: if the same
-        email address occurs with both empty and nonempty phrase, we don't
-        separately return the (empty phrase, address) pair.
-
-        """
         deduped_participants = defaultdict(set)
         for m in self.messages:
             if m.is_draft:
-                # Don't use drafts to compute participants.
-                continue
+                continue  # Don't use drafts to compute participants.
             for phrase, address in itertools.chain(m.from_addr, m.to_addr,
                                                    m.cc_addr, m.bcc_addr):
                     deduped_participants[address].add(phrase.strip())
-        p = []
-        for address, phrases in deduped_participants.iteritems():
-            for phrase in phrases:
-                if phrase != '' or len(phrases) == 1:
-                    p.append((phrase, address))
-        return p
+        return dedupe_envelope(deduped_participants)
+
+    @property
+    def senders(self):
+        deduped_participants = defaultdict(set)
+        for m in self.messages:
+            if m.is_draft:
+                continue  # Don't use drafts to compute participants.
+            for phrase, address in m.from_addr:  # spec allows multiple
+                    deduped_participants[address].add(phrase.strip())
+        return dedupe_envelope(deduped_participants)
 
     def apply_tag(self, tag, execute_action=False):
         """Add the given Tag instance to this thread. Does nothing if the tag
