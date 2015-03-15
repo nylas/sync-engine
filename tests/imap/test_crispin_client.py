@@ -144,3 +144,34 @@ def test_body(generic_client, constants):
                    g_thrid=None,
                    g_msgid=None)
     ]
+
+
+def test_internaldate(generic_client, constants):
+    """ Test that our monkeypatched imaplib works through imapclient """
+    dates_to_test = [
+        ('6-Mar-2015 10:02:32 +0900', datetime(2015, 3, 6, 1, 2, 32)),
+        (' 6-Mar-2015 10:02:32 +0900', datetime(2015, 3, 6, 1, 2, 32)),
+        ('06-Mar-2015 10:02:32 +0900', datetime(2015, 3, 6, 1, 2, 32)),
+        ('6-Mar-2015 07:02:32 +0900', datetime(2015, 3, 5, 22, 2, 32)),
+        (' 3-Sep-1922 09:16:51 +0000', datetime(1922, 9, 3, 9, 16, 51)),
+        ('2-Jan-2015 03:05:37 +0800', datetime(2015, 1, 1, 19, 5, 37))
+    ]
+
+    for internaldate_string, native_date in dates_to_test:
+        constants['internaldate'] = internaldate_string
+        expected_resp = ('{seq} (UID {uid} MODSEQ ({modseq}) '
+                         'INTERNALDATE "{internaldate}" FLAGS {flags} '
+                         'BODY[] {{{body_size}}}'.format(**constants),
+                         constants['body'])
+        patch_imap4(generic_client, [expected_resp, ')'])
+
+        uid = constants['uid']
+        assert generic_client.uids([uid]) == [
+            RawMessage(uid=long(uid),
+                       internaldate=native_date,
+                       flags=constants['flags'],
+                       body=constants['body'],
+                       g_labels=None,
+                       g_thrid=None,
+                       g_msgid=None)
+        ]

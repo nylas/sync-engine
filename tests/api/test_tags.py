@@ -304,7 +304,7 @@ def test_unread_cascades_to_messages(patch_network_functions, log, api_client,
     assert all([msg['unread'] for msg in messages])
 
     api_client.put_data(thread_path, {'remove_tags': ['unread']})
-    gevent.sleep(2)
+    gevent.sleep(3)
     messages = api_client.get_data('/messages?thread_id={}'.format(thread_id))
     assert not any([msg['unread'] for msg in messages])
 

@@ -102,7 +102,7 @@ def test_deletion_deferred_with_longer_ttl(db, default_account,
     handler = DeleteHandler(account_id=default_account.id,
                             namespace_id=default_namespace.id,
                             uid_accessor=lambda m: m.imapuids,
-                            message_ttl=1)
+                            message_ttl=5)
     remove_deleted_uids(default_account.id, db.session, [msg_uid], folder.id)
     handler.check()
     # Would raise ObjectDeletedError if objects were deleted

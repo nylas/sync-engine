@@ -5,7 +5,23 @@ have to shunt off dealing with the connection pool to the caller or we'll end
 up trying to execute calls with the wrong folder selected some amount of the
 time. That's why functions take a connection argument.
 """
+import re
 import imaplib
+
+# Even though RFC 2060 says that the date component must have two characters
+# (either two digits or space+digit), it seems that some IMAP servers only
+# return one digit. Fun times.
+imaplib.InternalDate = re.compile(
+    r'.*INTERNALDATE "'
+    r'(?P<day>[ 0123]?[0-9])-'   # insert that `?` to make first digit optional
+    r'(?P<mon>[A-Z][a-z][a-z])-'
+    r'(?P<year>[0-9][0-9][0-9][0-9])'
+    r' (?P<hour>[0-9][0-9]):'
+    r'(?P<min>[0-9][0-9]):'
+    r'(?P<sec>[0-9][0-9])'
+    r' (?P<zonen>[-+])(?P<zoneh>[0-9][0-9])(?P<zonem>[0-9][0-9])'
+    r'"')
+
 import functools
 import threading
 from email.parser import HeaderParser
@@ -176,7 +192,7 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
 
         # Ensure that connections are initialized serially, so as not to use
         # many db sessions on startup.
-        with self._new_conn_lock as _:
+        with self._new_conn_lock:
             auth_handler = handler_from_provider(self.provider_name)
 
             for retry_count in range(MAX_TRANSIENT_ERRORS):
