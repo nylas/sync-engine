@@ -103,7 +103,7 @@ def test_gmail_body(gmail_client, constants):
     g_msgid = constants['g_msgid']
     body = constants['body']
     assert gmail_client.uids([uid]) == [
-        RawMessage(uid=uid,
+        RawMessage(uid=long(uid),
                    internaldate=datetime(2015, 3, 2, 23, 36, 20),
                    flags=flags,
                    body=body,
@@ -134,8 +134,9 @@ def test_body(generic_client, constants):
     uid = constants['uid']
     flags = constants['flags']
     body = constants['body']
+
     assert generic_client.uids([uid]) == [
-        RawMessage(uid=uid,
+        RawMessage(uid=long(uid),
                    internaldate=datetime(2015, 3, 2, 23, 36, 20),
                    flags=flags,
                    body=body,

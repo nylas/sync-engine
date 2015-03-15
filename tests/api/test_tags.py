@@ -348,7 +348,7 @@ def test_actions_syncback(patch_network_functions, api_client, db,
     api_client.put_data(thread_path, {'add_tags': ['starred']})
     api_client.put_data(thread_path, {'remove_tags': ['starred']})
 
-    gevent.sleep(0.5)
+    gevent.sleep(2)
 
     action_log_entries = db.session.query(ActionLog)
     assert ({log_entry.action for log_entry in action_log_entries} ==

@@ -301,6 +301,7 @@ def test_get_full_status(store):
     proxy_for(1, -1)
     proxy_for(1, -2)
 
+    time.sleep(0.5)
     status = get_heartbeat_status()
 
     assert status.keys() == [1]
