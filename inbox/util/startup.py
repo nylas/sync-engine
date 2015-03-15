@@ -4,6 +4,7 @@ import gc
 import os
 import sys
 import json
+import time
 
 import sqlalchemy
 from alembic.script import ScriptDirectory
@@ -74,6 +75,17 @@ def check_sudo():
         raise Exception("Don't run Inbox as root!")
 
 
+def check_tz():
+    if time.tzname[time.daylight] != 'UTC':
+        sys.exit("\nWARNING!\n\n"
+            "System time is not set to UTC! This is a problem because " +
+            "imapclient will normalize INTERNALDATE responses to the 'local' "+
+            "timezone. \n\nYou can fix this by running \n\n" +
+            "$ echo 'UTC' | sudo tee /etc/timezone \n\n" +
+            "and then checking that it worked with \n\n"+
+            "$ sudo dpkg-reconfigure --frontend noninteractive tzdata\n\n")
+
+
 def load_overrides(file_path):
     """
     Convenience function for overriding default configuration.
@@ -100,6 +112,7 @@ def load_overrides(file_path):
 def preflight():
     check_sudo()
     check_db()
+    check_tz()
 
     # Print a traceback when the process receives signal SIGSEGV, SIGFPE,
     # SIGABRT, SIGBUS or SIGILL
