@@ -25,12 +25,12 @@ Perform a POST request with the POST body below to send an existing draft. If th
 
 You can send messages without saving them as drafts beforehand. Instead of providing a draft ID, simply provide the JSON of the message object you want to send.
 
-If the message is in reply to a thread, provide the `thread_id` key with the ID of the existing thread.  Note that you must explicitly specify the message's recipients in the `to`, `cc` and `bcc` fields of the post body; this is to prevent any ambiguity about whom the message will be sent to.
+If the message is in reply to an existing message, provide the `reply_to_message_id` key with the ID of the message you are replying to.  Note that you must still explicitly specify the new message's recipients in the `to`, `cc` and `bcc` fields of the post body; this is to prevent any ambiguity about whom the message will be sent to.
 
 ```
 :::json
 {
-    "thread_id": "84umizq7c4jtrew491brpa6iu",
+    "reply_to_message_id": "84umizq7c4jtrew491brpa6iu",
     "body" : "Sounds great! See you then.",
 
     "to": [
