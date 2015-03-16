@@ -1,5 +1,4 @@
 import pytz
-import uuid
 from datetime import datetime, date
 from icalendar import Calendar as iCalendar
 
@@ -143,9 +142,7 @@ def events_from_ics(namespace, calendar, ics_str):
             event = Event(
                 namespace=namespace,
                 calendar=calendar,
-                # FIXME @karim: use correct uid when syncing events,
-                # instead of a randomly-generated one.
-                uid=uuid.uuid4().hex,
+                uid=uid,
                 provider_name='ics',
                 raw_data=component.to_ical(),
                 title=title,
