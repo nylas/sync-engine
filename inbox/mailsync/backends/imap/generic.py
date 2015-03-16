@@ -181,6 +181,8 @@ class FolderSyncEngine(Greenlet):
     def _run(self):
         # Bind greenlet-local logging context.
         log.new(account_id=self.account_id, folder=self.folder_name)
+        # eagerly signal the sync status
+        self.heartbeat_status.publish()
         return retry_and_report_killed(self._run_impl,
                                        account_id=self.account_id,
                                        folder_name=self.folder_name,
@@ -196,8 +198,6 @@ class FolderSyncEngine(Greenlet):
         # objects are the only objects deleted by the mail sync backends
         # anyway.
         saved_folder_status = self._load_state()
-        # eagerly signal the sync status
-        self.heartbeat_status.publish(state=self.state)
         # NOTE: The parent ImapSyncMonitor handler could kill us at any
         # time if it receives a shutdown command. The shutdown command is
         # equivalent to ctrl-c.
