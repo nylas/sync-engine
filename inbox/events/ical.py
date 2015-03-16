@@ -19,8 +19,7 @@ STATUS_MAP = {'NEEDS-ACTION': 'noreply',
 
 def _remove_tz(d):
     if d.tzinfo:
-        d = d - d.utcoffset()
-        d = d.replace(tzinfo=None)
+        d = d.astimezone(pytz.utc).replace(tzinfo=None)
     return d
 
 
@@ -93,7 +92,7 @@ def events_from_ics(namespace, calendar, ics_str):
                 if organizer.startswith('mailto:'):
                     organizer = organizer[7:]
 
-            # FIXME: normalize email address too
+            # FIXME: canonicalize email address too
             if namespace.account.email_address == organizer:
                 is_owner = True
             else:
@@ -168,23 +167,17 @@ def events_from_ics(namespace, calendar, ics_str):
 
 
 def import_attached_events(account_id, ics_str):
-    """Import events from a file in the 'Attached Events' calendar."""
+    """Import events from a file in the 'Events emailed to' calendar."""
 
     with session_scope() as db_session:
         account = db_session.query(Account).get(account_id)
         assert account is not None
 
+        calname = "Events emailed to {}".format(account.email_address)
         calendar = db_session.query(Calendar).filter(
             Calendar.namespace_id == account.namespace.id,
-            Calendar.name == 'Attached Events').first()
-        if not calendar:
-            calendar = Calendar(
-                namespace_id=account.namespace.id,
-                description='Attached Events',
-                name='Attached Events')
-            db_session.add(calendar)
+            Calendar.name == calname).first()
 
         events = events_from_ics(account.namespace, calendar, ics_str)
-        db_session.add(calendar)
         db_session.add_all(events)
         db_session.flush()
