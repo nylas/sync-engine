@@ -143,11 +143,16 @@ class GoogleEventsProvider(object):
                     return items
             elif r.status_code == 401:
                 # get a new access token and retry
-                self.log.warning('google calendar API request rejected; '
-                                 'refreshing token')
+                self.log.warning('HTTP 401 making Google Calendar API request;'
+                                 ' refreshing token',
+                                 url=r.url, response=r.content,
+                                 status=r.status_code)
                 token = self._get_access_token()
             # TODO(emfree): handle HTTP 403 / Calendar API not enabled here.
             else:
+                self.log.error('HTTP error making Google Calendar API request',
+                               url=r.url, response=r.content,
+                               status=r.status_code)
                 r.raise_for_status()
 
     def _make_event_request(self, method, calendar_uid, event_uid=None,

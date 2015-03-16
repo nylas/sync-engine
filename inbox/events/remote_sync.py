@@ -20,8 +20,6 @@ class EventSync(BaseSyncMonitor):
     def __init__(self, email_address, provider_name, account_id, namespace_id,
                  poll_frequency=300):
         bind_context(self, 'eventsync', account_id)
-        self.log = logger.new(account_id=account_id, component='event sync')
-        self.log.info('Begin syncing Events...')
         # Only Google for now, can easily parametrize by provider later.
         self.provider = GoogleEventsProvider(account_id, namespace_id)
 
@@ -38,6 +36,7 @@ class EventSync(BaseSyncMonitor):
         """Query a remote provider for updates and persist them to the
         database. This function runs every `self.poll_frequency`.
         """
+        self.log.info('syncing events')
         # Get a timestamp before polling, so that we don't subsequently miss
         # remote updates that happen while the poll loop is executing.
         sync_timestamp = datetime.utcnow()
@@ -113,7 +112,8 @@ def handle_calendar_updates(namespace_id, calendars, log, db_session):
 
         ids_.append((local_calendar.uid, local_calendar.id))
 
-    log.info('calendar sync', added=added_count, updated=updated_count)
+    log.info('synced added and updated calendars', added=added_count,
+             updated=updated_count)
     return ids_
 
 

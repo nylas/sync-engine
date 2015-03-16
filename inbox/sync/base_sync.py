@@ -43,6 +43,8 @@ class BaseSyncMonitor(Greenlet):
         Greenlet.__init__(self)
 
     def _run(self):
+        # Bind greenlet-local logging context.
+        self.log = self.log.new(account_id=self.account_id)
         return retry_and_report_killed(self._run_impl,
                                        account_id=self.account_id,
                                        logger=self.log,
