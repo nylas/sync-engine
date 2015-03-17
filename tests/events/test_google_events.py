@@ -1,6 +1,8 @@
 from datetime import datetime
 import json
+import gevent
 import mock
+import pytest
 import requests
 from inbox.events.google import GoogleEventsProvider
 from inbox.models import Calendar, Event
@@ -233,3 +235,114 @@ def test_pagination():
     provider._get_access_token = mock.Mock(return_value='token')
     items = provider._get_resource_list('https://googleapis.com/testurl')
     assert items == ['A', 'B', 'C', 'D', 'E']
+
+
+def test_handle_http_401():
+    first_response = requests.Response()
+    first_response.status_code = 401
+
+    second_response = requests.Response()
+    second_response.status_code = 200
+    second_response._content = json.dumps({
+        'items': ['A', 'B', 'C']
+    })
+
+    requests.get = mock.Mock(side_effect=[first_response, second_response])
+    provider = GoogleEventsProvider(1, 1)
+    provider._get_access_token = mock.Mock(return_value='token')
+    items = provider._get_resource_list('https://googleapis.com/testurl')
+    assert items == ['A', 'B', 'C']
+    # Check that we actually refreshed the access token
+    assert len(provider._get_access_token.mock_calls) == 2
+
+
+def test_handle_quota_exceeded():
+    first_response = requests.Response()
+    first_response.status_code = 403
+    first_response._content = json.dumps({
+        'error': {
+            'errors': [
+                {'domain': 'usageLimits',
+                 'reason': 'userRateLimitExceeded',
+                 'message': 'User Rate Limit Exceeded'}
+            ],
+            'code': 403,
+            'message': 'User Rate Limit Exceeded'
+        }
+    })
+
+    second_response = requests.Response()
+    second_response.status_code = 200
+    second_response._content = json.dumps({
+        'items': ['A', 'B', 'C']
+    })
+
+    requests.get = mock.Mock(side_effect=[first_response, second_response])
+    gevent.sleep = mock.Mock()
+    provider = GoogleEventsProvider(1, 1)
+    provider._get_access_token = mock.Mock(return_value='token')
+    items = provider._get_resource_list('https://googleapis.com/testurl')
+    # Check that we slept, then retried.
+    gevent.sleep.assert_called_once_with(30)
+    assert items == ['A', 'B', 'C']
+
+
+def test_handle_internal_server_error():
+    first_response = requests.Response()
+    first_response.status_code = 503
+
+    second_response = requests.Response()
+    second_response.status_code = 200
+    second_response._content = json.dumps({
+        'items': ['A', 'B', 'C']
+    })
+
+    requests.get = mock.Mock(side_effect=[first_response, second_response])
+    gevent.sleep = mock.Mock()
+    provider = GoogleEventsProvider(1, 1)
+    provider._get_access_token = mock.Mock(return_value='token')
+    items = provider._get_resource_list('https://googleapis.com/testurl')
+    # Check that we slept, then retried.
+    gevent.sleep.assert_called_once_with(30)
+    assert items == ['A', 'B', 'C']
+
+
+def test_handle_api_not_enabled():
+    response = requests.Response()
+    response.status_code = 403
+    response._content = json.dumps({
+        'error': {
+            'code': 403,
+            'message': 'Access Not Configured.',
+            'errors': [
+                {'domain': 'usageLimits', 'message': 'Access Not Configured',
+                  'reason': 'accessNotConfigured',
+                 'extendedHelp': 'https://console.developers.google.com'}
+            ]
+        }
+    })
+
+    requests.get = mock.Mock(return_value=response)
+    provider = GoogleEventsProvider(1, 1)
+    provider._get_access_token = mock.Mock(return_value='token')
+    items = provider._get_resource_list('https://googleapis.com/testurl')
+    assert items == []
+
+
+def test_handle_other_errors():
+    response = requests.Response()
+    response.status_code = 403
+    response._content = "This is not the JSON you're looking for"
+    requests.get = mock.Mock(return_value=response)
+    provider = GoogleEventsProvider(1, 1)
+    provider._get_access_token = mock.Mock(return_value='token')
+    with pytest.raises(requests.exceptions.HTTPError):
+        provider._get_resource_list('https://googleapis.com/testurl')
+
+    response = requests.Response()
+    response.status_code = 404
+    requests.get = mock.Mock(return_value=response)
+    provider = GoogleEventsProvider(1, 1)
+    provider._get_access_token = mock.Mock(return_value='token')
+    with pytest.raises(requests.exceptions.HTTPError):
+        provider._get_resource_list('https://googleapis.com/testurl')

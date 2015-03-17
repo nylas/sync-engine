@@ -3,6 +3,7 @@ import collections
 import datetime
 import json
 import urllib
+import gevent
 import requests
 
 from inbox.log import get_logger
@@ -141,18 +142,35 @@ class GoogleEventsProvider(object):
                 next_page_token = data.get('nextPageToken')
                 if next_page_token is None:
                     return items
-            elif r.status_code == 401:
-                # get a new access token and retry
-                self.log.warning('HTTP 401 making Google Calendar API request;'
-                                 ' refreshing token',
-                                 url=r.url, response=r.content,
-                                 status=r.status_code)
-                token = self._get_access_token()
-            # TODO(emfree): handle HTTP 403 / Calendar API not enabled here.
             else:
-                self.log.error('HTTP error making Google Calendar API request',
-                               url=r.url, response=r.content,
-                               status=r.status_code)
+                self.log.warning(
+                    'HTTP error making Google Calendar API request', url=r.url,
+                    response=r.content, status=r.status_code)
+                if r.status_code == 401:
+                    self.log.warning(
+                        'Invalid access token; refreshing and retrying',
+                        url=r.url, response=r.content, status=r.status_code)
+                    token = self._get_access_token()
+                    continue
+                elif r.status_code in (500, 503):
+                    log.warning('Backend error in calendar API; retrying')
+                    gevent.sleep(30)
+                    continue
+                elif r.status_code == 403:
+                    try:
+                        reason = r.json()['error']['errors'][0]['reason']
+                    except (KeyError, ValueError):
+                        log.error("Couldn't parse API error response",
+                                  response=r.content, status=r.status_code)
+                        r.raise_for_status()
+                    if reason == 'userRateLimitExceeded':
+                        log.warning('API request was rate-limited; retrying')
+                        gevent.sleep(30)
+                        continue
+                    elif reason == 'accessNotConfigured':
+                        log.warning('API not enabled; returning empty result')
+                        return []
+                # Unexpected error; raise.
                 r.raise_for_status()
 
     def _make_event_request(self, method, calendar_uid, event_uid=None,
