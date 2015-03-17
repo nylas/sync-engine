@@ -8,6 +8,7 @@ from inbox.log import configure_logging, get_logger
 from inbox.models.session import session_scope
 from inbox.models import Namespace
 from inbox.models.backends.imap import ImapAccount, ImapThread
+from inbox.models.backends.gmail import GmailAccount
 from inbox.mailsync.backends.imap.common import recompute_thread_labels
 from inbox.sqlalchemy_ext.util import safer_yield_per
 configure_logging(False)
@@ -17,19 +18,39 @@ log = get_logger()
 def regen_labels_for_namespace(namespace_id):
     log.info('Regenerating labels for namespace',
              namespace_id=namespace_id)
+
+    flags_related_tags = ["file", "attachment", "unread", "unseen", "starred"]
+
     with session_scope() as db_session:
         namespace = db_session.query(Namespace).get(namespace_id)
         account = namespace.account
-        if not isinstance(account, ImapAccount):
+        if not isinstance(account, GmailAccount):
             return
         query = db_session.query(ImapThread).filter(
             ImapThread.namespace_id == namespace_id)
         index = 0
+
         for thread in safer_yield_per(query, ImapThread.id, 0, 100):
             index += 1
+
             recompute_thread_labels(thread, db_session)
+            folders = set()
+            for folder in thread.folders:
+                if folder.canonical_name:
+                    folders.add(folder.canonical_name)
+                elif folder.name:
+                    folders.add(folder.name.lower())
+
+            tags_by_name = {t.name.lower(): t for t in thread.tags
+                            if t.name not in flags_related_tags}
+
+            for tag in tags_by_name:
+                if tag not in folders:
+                    thread.tags.discard(tags_by_name[tag])
+
             log.info('Recomputed labels', thread_id=thread.id,
                      namespace_id=namespace_id)
+            print [t.name for t in thread.tags]
             if index % 100 == 0:
                 db_session.commit()
         db_session.commit()
