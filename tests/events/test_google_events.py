@@ -4,6 +4,7 @@ import gevent
 import mock
 import pytest
 import requests
+from inbox.basicauth import AccessNotEnabledError
 from inbox.events.google import GoogleEventsProvider
 from inbox.models import Calendar, Event
 
@@ -325,8 +326,8 @@ def test_handle_api_not_enabled():
     requests.get = mock.Mock(return_value=response)
     provider = GoogleEventsProvider(1, 1)
     provider._get_access_token = mock.Mock(return_value='token')
-    items = provider._get_resource_list('https://googleapis.com/testurl')
-    assert items == []
+    with pytest.raises(AccessNotEnabledError):
+        provider._get_resource_list('https://googleapis.com/testurl')
 
 
 def test_handle_other_errors():

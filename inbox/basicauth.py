@@ -38,3 +38,7 @@ class ConfigError(Exception):
 
 class UserRecoverableConfigError(ConfigError):
     pass
+
+
+class AccessNotEnabledError(Exception):
+    pass

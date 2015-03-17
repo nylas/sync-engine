@@ -3,6 +3,7 @@ from datetime import datetime
 from inbox.log import get_logger
 logger = get_logger()
 
+from inbox.basicauth import AccessNotEnabledError
 from inbox.sync.base_sync import BaseSyncMonitor
 from inbox.models import Event, Account, Calendar
 from inbox.util.debug import bind_context
@@ -45,7 +46,12 @@ class EventSync(BaseSyncMonitor):
             account = db_session.query(Account).get(self.account_id)
             last_sync = account.last_synced_events
 
-        deleted_uids, calendar_changes = self.provider.sync_calendars()
+        try:
+            deleted_uids, calendar_changes = self.provider.sync_calendars()
+        except AccessNotEnabledError:
+            self.log.warning(
+                'Access to provider calendar API not enabled; bypassing sync')
+            return
         with session_scope() as db_session:
             handle_calendar_deletes(self.namespace_id, deleted_uids,
                                     self.log, db_session)

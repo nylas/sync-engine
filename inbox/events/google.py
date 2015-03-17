@@ -6,6 +6,7 @@ import urllib
 import gevent
 import requests
 
+from inbox.basicauth import AccessNotEnabledError
 from inbox.log import get_logger
 from inbox.models import Event, Calendar, Account
 from inbox.models.session import session_scope
@@ -169,7 +170,7 @@ class GoogleEventsProvider(object):
                         continue
                     elif reason == 'accessNotConfigured':
                         log.warning('API not enabled; returning empty result')
-                        return []
+                        raise AccessNotEnabledError()
                 # Unexpected error; raise.
                 r.raise_for_status()
 
