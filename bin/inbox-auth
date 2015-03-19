@@ -11,6 +11,7 @@ from inbox.models.session import session_scope
 from inbox.models import Account
 from inbox.basicauth import NotSupportedError
 from inbox.log import configure_logging
+
 configure_logging(False)
 
 

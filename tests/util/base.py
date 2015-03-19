@@ -326,12 +326,25 @@ def add_fake_imapuid(db_session, account_id, message, folder, msg_uid):
     return imapuid
 
 
+def add_fake_calendar(db_session, namespace_id, name="Cal",
+                      description="A Calendar", uid="UID", read_only=False):
+    from inbox.models import Calendar
+    calendar = Calendar(namespace_id=namespace_id,
+                        name=name,
+                        description=description,
+                        uid=uid,
+                        read_only=read_only)
+    db_session.add(calendar)
+    db_session.commit()
+    return calendar
+
+
 def add_fake_event(db_session, namespace_id):
     from inbox.models import Namespace, Event
     start = datetime.utcnow()
     end = datetime.utcnow() + timedelta(seconds=1)
     account = db_session.query(Namespace).get(namespace_id).account
-    calendar = account.default_calendar
+    calendar = add_fake_calendar(db_session, namespace_id)
     event = Event(namespace_id=namespace_id,
                   calendar=calendar,
                   title='title',
@@ -378,3 +391,8 @@ def folder(db, default_account):
 def imapuid(db, default_account, message, folder):
     return add_fake_imapuid(db.session, default_account.id, message,
                             folder, 2222)
+
+
+@fixture(scope='function')
+def calendar(db, default_account):
+    return add_fake_calendar(db.session, default_account.namespace.id)

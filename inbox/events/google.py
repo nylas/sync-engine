@@ -254,6 +254,8 @@ def parse_event_response(event):
         start = parse_datetime(_start['dateTime'])
         end = parse_datetime(_end['dateTime'])
 
+    last_modified = parse_datetime(event.get('updated'))
+
     description = event.get('description')
     location = event.get('location')
     busy = event.get('transparency') != 'transparent'
@@ -299,6 +301,7 @@ def parse_event_response(event):
                  read_only=read_only,
                  participants=participants,
                  recurrence=recurrence,
+                 last_modified=last_modified,
                  # TODO(emfree): remove after data cleanup
                  source='local')
 

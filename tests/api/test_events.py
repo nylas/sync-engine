@@ -2,7 +2,7 @@ import json
 
 from inbox.sqlalchemy_ext.util import generate_public_id
 from inbox.models import Account, Event
-from tests.util.base import api_client
+from tests.util.base import api_client, default_account, calendar
 
 __all__ = ['api_client']
 
@@ -10,26 +10,30 @@ __all__ = ['api_client']
 ACCOUNT_ID = 1
 
 
-def test_create_event(db, api_client):
+def test_create_event(db, api_client, calendar):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {'title': 'subj', 'description': 'body1',
+              'calendar_id': calendar.public_id,
               'when': {'time': 1}, 'location': 'InboxHQ'}
     e_data2 = {'title': 'subj2', 'description': 'body2',
+               'calendar_id': calendar.public_id,
                'when': {'time': 1}, 'location': 'InboxHQ'}
     api_client.post_data('/events', e_data, ns_id)
     api_client.post_data('/events', e_data2, ns_id)
     db.session.commit()
 
 
-def test_api_list(db, api_client):
+def test_api_list(db, api_client, calendar):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {'title': 'subj', 'description': 'body1',
+              'calendar_id': calendar.public_id,
               'when': {'time': 1}, 'location': 'InboxHQ'}
     e_data2 = {'title': 'subj2', 'description': 'body2',
+               'calendar_id': calendar.public_id,
                'when': {'time': 1}, 'location': 'InboxHQ'}
     api_client.post_data('/events', e_data, ns_id)
     api_client.post_data('/events', e_data2, ns_id)
@@ -51,12 +55,14 @@ def test_api_list(db, api_client):
     db.session.commit()
 
 
-def test_api_get(db, api_client):
+def test_api_get(db, api_client, calendar):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
-    e_data = {'title': 'subj', 'when': {'time': 1}, 'location': 'InboxHQ'}
-    e_data2 = {'title': 'subj2', 'when': {'time': 1}, 'location': 'InboxHQ'}
+    e_data = {'title': 'subj', 'when': {'time': 1},
+              'calendar_id': calendar.public_id, 'location': 'InboxHQ'}
+    e_data2 = {'title': 'subj2', 'when': {'time': 1},
+               'calendar_id': calendar.public_id, 'location': 'InboxHQ'}
     api_client.post_data('/events', e_data, ns_id)
     api_client.post_data('/events', e_data2, ns_id)
 
@@ -79,12 +85,13 @@ def test_api_get(db, api_client):
     assert c2found
 
 
-def test_api_create(db, api_client):
+def test_api_create(db, api_client, calendar):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'title': 'Friday Office Party',
+        'calendar_id': calendar.public_id,
         'when': {'time': 1407542195},
         'location': 'Inbox HQ',
     }
@@ -107,12 +114,13 @@ def test_api_create(db, api_client):
     assert e_get_resp['when']['time'] == e_data['when']['time']
 
 
-def test_api_create_no_title(db, api_client):
+def test_api_create_no_title(db, api_client, calendar):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'title': '',
+        'calendar_id': calendar.public_id,
         'when': {'time': 1407542195},
     }
 
@@ -133,12 +141,13 @@ def test_api_create_no_title(db, api_client):
     assert e_get_resp['when']['time'] == e_data['when']['time']
 
 
-def test_api_update_title(db, api_client):
+def test_api_update_title(db, api_client, calendar):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'title': '',
+        'calendar_id': calendar.public_id,
         'when': {'time': 1407542195},
     }
 
@@ -163,7 +172,7 @@ def test_api_update_title(db, api_client):
     assert e_put_data['when']['time'] == e_data['when']['time']
 
 
-def test_api_update_invalid(db, api_client):
+def test_api_update_invalid(db, api_client, calendar):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
     e_update_data = {'title': 'new title'}
@@ -172,12 +181,13 @@ def test_api_update_invalid(db, api_client):
     assert e_put_resp.status_code != 200
 
 
-def test_api_delete(db, api_client):
+def test_api_delete(db, api_client, calendar):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
     e_data = {
         'title': '',
+        'calendar_id': calendar.public_id,
         'when': {'time': 1407542195},
     }
 
@@ -196,7 +206,7 @@ def test_api_delete(db, api_client):
     assert event['type'] == 'invalid_request_error'
 
 
-def test_api_delete_invalid(db, api_client):
+def test_api_delete_invalid(db, api_client, calendar):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 
@@ -209,7 +219,7 @@ def test_api_delete_invalid(db, api_client):
     assert resp.status_code != 200
 
 
-def test_api_update_read_only(db, api_client):
+def test_api_update_read_only(db, api_client, calendar):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
     event_list = api_client.get_data('/events', ns_id)
@@ -228,7 +238,7 @@ def test_api_update_read_only(db, api_client):
     assert e_put_resp.status_code != 200
 
 
-def test_api_filter(db, api_client):
+def test_api_filter(db, api_client, calendar):
     acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
     ns_id = acct.namespace.public_id
 

@@ -74,6 +74,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     end = Column(DateTime, nullable=True)
     all_day = Column(Boolean, nullable=False)
     is_owner = Column(Boolean, nullable=False, default=True)
+    last_modified = Column(DateTime, nullable=True)
 
     __table_args__ = (Index('ix_event_ns_uid_calendar_id',
                             'namespace_id', 'uid', 'calendar_id'),)
@@ -131,3 +132,4 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
         self.busy = event.busy
         self.reminders = event.reminders
         self.recurrence = event.recurrence
+        self.last_modified = event.last_modified

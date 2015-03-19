@@ -7,7 +7,8 @@ from flanker import mime
 from inbox.models import Message
 from inbox.models.message import _get_errfilename
 from inbox.util.addr import parse_mimepart_address_header
-from tests.util.base import default_account, default_namespace, thread
+from tests.util.base import (default_account, default_namespace,
+                             thread, add_fake_calendar)
 
 __all__ = ['default_namespace', 'thread']
 
@@ -46,6 +47,13 @@ def raw_message_with_bad_date():
     # Message with a MIME part that has an invalid content-disposition.
     raw_msg_path = full_path(
         '../data/raw_message_with_bad_date')
+    with open(raw_msg_path) as f:
+        return f.read()
+
+
+@pytest.fixture
+def raw_message_with_ical_invite():
+    raw_msg_path = full_path('../data/raw_message_with_ical_invite')
     with open(raw_msg_path) as f:
         return f.read()
 
@@ -200,3 +208,19 @@ def test_calculate_snippet():
                        'voces coniurationis tuae potest, si illustrantur,'
     assert len(expected_snippet) == 191
     assert m.calculate_html_snippet(body) == expected_snippet
+
+
+@pytest.mark.only
+def test_integrated_ical_parsing(
+        db, default_account, default_namespace,
+        raw_message_with_ical_invite):
+
+    cal = add_fake_calendar(db.session, default_namespace.id, name="Emailed events",
+                            read_only=True)
+
+    received_date = datetime.datetime(2014, 9, 22, 17, 25, 46)
+    m = Message.create_from_synced(default_account, 139219, '[Gmail]/All Mail',
+                                   received_date,
+                                   raw_message_with_ical_invite)
+    assert len(cal.events) == 1
+    assert cal.events[0].title == 'Nilas test drive'
