@@ -191,7 +191,7 @@ class MessageQuery(Query):
         self.apply_weights()
 
     def apply_weights(self):
-        if not self.query or not 'all' in self.query:
+        if not self.query or 'all' not in self.query:
             return
 
         # Arbitrarily assigned boost_score
@@ -234,7 +234,7 @@ class ThreadQuery(Query):
         self.apply_weights()
 
     def apply_weights(self):
-        if not self.query or not 'all' in self.query:
+        if not self.query or 'all' not in self.query:
             return
 
         # Arbitrarily assigned boost_score
