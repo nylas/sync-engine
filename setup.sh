@@ -59,9 +59,17 @@ set -e
 
 apt-get -y install python-software-properties
 
-# Preconfigure MySQL root password
-echo "mysql-server mysql-server/root_password password root" | debconf-set-selections
-echo "mysql-server mysql-server/root_password_again password root" | debconf-set-selections
+
+{ \
+echo "mysql-community-server mysql-community-server/data-dir select ''"; \
+echo "mysql-community-server mysql-community-server/root-pass password root"; \
+echo "mysql-community-server mysql-community-server/re-root-pass password root"; \
+echo "mysql-community-server mysql-community-server/remove-test-db select false"; \
+echo "mysql-server mysql-server/root_password password root";
+echo "mysql-server mysql-server/root_password_again password root";
+  } | sudo debconf-set-selections
+
+
 
 color '35;1' 'Installing dependencies from apt-get...'
 apt-get -y install git \
@@ -290,5 +298,8 @@ mkdir -p /var/log/inboxapp
 chown $SUDO_UID:$SUDO_GID /var/log/inboxapp
 
 git config branch.master.rebase true
+
+# Set proper timezone
+echo 'UTC' | sudo tee /etc/timezone
 
 color '35;1' 'Done!.'
