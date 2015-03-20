@@ -8,7 +8,7 @@ from inbox.models.session import session_scope
 
 from flask import request, g, Blueprint, make_response, Response
 from flask import jsonify as flask_jsonify
-from flask.ext.restful import reqparse, inputs
+from flask.ext.restful import reqparse
 from sqlalchemy import asc, or_, func
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -83,23 +83,16 @@ def start():
         valid_public_id(g.namespace_public_id)
         g.namespace = g.db_session.query(Namespace) \
             .filter(Namespace.public_id == g.namespace_public_id).one()
+
+        g.encoder = APIEncoder(g.namespace.public_id)
     except NoResultFound:
         raise NotFoundError("Couldn't find namespace  `{0}` ".format(
             g.namespace_public_id))
-
-    # Pretty is optional, so parse it here using a different parser
-    pretty_parser = reqparse.RequestParser(argument_class=ValidatableArgument)
-    pretty_parser.add_argument('pretty', type=inputs.boolean, location='args',
-                               default=False)
-    args = pretty_parser.parse_args()
-    g.pretty = args['pretty']
 
     g.parser = reqparse.RequestParser(argument_class=ValidatableArgument)
     g.parser.add_argument('limit', default=DEFAULT_LIMIT, type=limit,
                           location='args')
     g.parser.add_argument('offset', default=0, type=int, location='args')
-    g.parser.add_argument('pretty', type=inputs.boolean, location='args',
-                          default=False)
 
 
 @app.after_request
@@ -126,20 +119,12 @@ def handle_input_error(error):
     return response
 
 
-def jsonify(to_return, expand=False, pretty=False):
-    encoder = APIEncoder(g.namespace.public_id,
-                          expand=expand,
-                          pretty=g.pretty)
-    return Response(encoder.cereal(to_return),
-                    mimetype='application/json')
-
-
 #
 # General namespace info
 #
 @app.route('/')
 def index():
-    return jsonify(g.namespace)
+    return g.encoder.jsonify(g.namespace)
 
 
 ##
@@ -169,7 +154,7 @@ def tag_query_api():
         query = query.filter_by(public_id=args['tag_id'])
 
     if args['view'] == 'count':
-        return jsonify({"count": query.one()[0]})
+        return g.encoder.jsonify({"count": query.one()[0]})
 
     query = query.order_by(Tag.id)
     query = query.limit(args['limit'])
@@ -180,7 +165,7 @@ def tag_query_api():
         results = [x[0] for x in query.all()]
     else:
         results = query.all()
-    return jsonify(results)
+    return g.encoder.jsonify(results)
 
 
 @app.route('/tags/<public_id>', methods=['GET'])
@@ -199,7 +184,7 @@ def tag_read_api(public_id):
     if unread_tag:
         tag.unread_count = tag.intersection(unread_tag.id, g.db_session)
         tag.thread_count = tag.count_threads()
-    return jsonify(tag)
+    return g.encoder.jsonify(tag)
 
 
 @app.route('/tags/<public_id>', methods=['PUT'])
@@ -231,7 +216,7 @@ def tag_update_api(public_id):
         tag.name = new_name
         g.db_session.commit()
 
-    return jsonify(tag)
+    return g.encoder.jsonify(tag)
 
 
 @app.route('/tags/', methods=['POST'])
@@ -253,7 +238,7 @@ def tag_create_api():
 
     tag = Tag(name=tag_name, namespace=g.namespace, user_created=True)
     g.db_session.commit()
-    return jsonify(tag)
+    return g.encoder.jsonify(tag)
 
 
 @app.route('/tags/<public_id>', methods=['DELETE'])
@@ -272,7 +257,7 @@ def tag_delete_api(public_id):
 
         # This is essentially what our other API endpoints do after deleting.
         # Effectively no error == success
-        return jsonify(None)
+        return g.encoder.jsonify(None)
     except NoResultFound:
         raise NotFoundError('No tag found')
 
@@ -298,9 +283,6 @@ def thread_query_api():
     g.parser.add_argument('thread_id', type=valid_public_id, location='args')
     g.parser.add_argument('tag', type=bounded_str, location='args')
     g.parser.add_argument('view', type=view, location='args')
-    g.parser.add_argument('expand', type=inputs.boolean, location='args',
-                          default=False)
-
     args = strict_parse_args(g.parser, request.args)
 
     threads = filtering.threads(
@@ -321,10 +303,9 @@ def thread_query_api():
         limit=args['limit'],
         offset=args['offset'],
         view=args['view'],
-        expand=args['expand'],
         db_session=g.db_session)
 
-    return jsonify(threads, expand=args['expand'], pretty=args['pretty'])
+    return g.encoder.jsonify(threads)
 
 
 @app.route('/threads/search', methods=['POST'])
@@ -348,20 +329,17 @@ def thread_search_api():
         g.log.error('Search error: {0}'.format(e))
         return err(501, 'Search error')
 
-    return jsonify(results)
+    return g.encoder.jsonify(results)
 
 
 @app.route('/threads/<public_id>')
 def thread_api(public_id):
-    g.parser.add_argument('expand', type=inputs.boolean, location='args',
-                          default=False)
-    args = strict_parse_args(g.parser, request.args)
     try:
         valid_public_id(public_id)
         thread = g.db_session.query(Thread).filter(
             Thread.public_id == public_id,
             Thread.namespace_id == g.namespace.id).one()
-        return jsonify(thread, expand=args['expand'])
+        return g.encoder.jsonify(thread)
     except NoResultFound:
         raise NotFoundError("Couldn't find thread `{0}`".format(public_id))
 
@@ -420,7 +398,7 @@ def thread_api_update(public_id):
             return err(e.error, str(e))
 
     g.db_session.commit()
-    return jsonify(thread)
+    return g.encoder.jsonify(thread)
 
 
 #
@@ -474,7 +452,7 @@ def message_query_api():
         view=args['view'],
         db_session=g.db_session)
 
-    return jsonify(messages)
+    return g.encoder.jsonify(messages)
 
 
 @app.route('/messages/search', methods=['POST'])
@@ -498,7 +476,7 @@ def message_search_api():
         g.log.error('Search error: {0}'.format(e))
         return err(501, 'Search error')
 
-    return jsonify(results)
+    return g.encoder.jsonify(results)
 
 
 @app.route('/messages/<public_id>', methods=['GET', 'PUT'])
@@ -513,7 +491,7 @@ def message_api(public_id):
     if request.method == 'GET':
         if request.headers.get('Accept', None) == 'message/rfc822':
             return Response(message.full_body.data, mimetype='message/rfc822')
-        return jsonify(message)
+        return g.encoder.jsonify(message)
     elif request.method == 'PUT':
         data = request.get_json(force=True)
         if data.keys() != ['unread'] or not isinstance(data['unread'], bool):
@@ -533,7 +511,7 @@ def message_api(public_id):
             message.thread.remove_tag(unseen_tag)
             if all(m.is_read for m in message.thread.messages):
                 message.thread.remove_tag(unread_tag)
-        return jsonify(message)
+        return g.encoder.jsonify(message)
 
 
 # TODO Deprecate this endpoint once API usage falls off
@@ -551,7 +529,7 @@ def raw_message_api(public_id):
         raise NotFoundError("Couldn't find message {0}".format(public_id))
 
     b64_contents = base64.b64encode(message.full_body.data)
-    return jsonify({"rfc2822": b64_contents})
+    return g.encoder.jsonify({"rfc2822": b64_contents})
 
 
 #
@@ -580,10 +558,10 @@ def contact_search_api():
                              term_filter).order_by(asc(Contact.id))
 
     if args['view'] == 'count':
-        return jsonify({"count": results.all()})
+        return g.encoder.jsonify({"count": results.all()})
 
     results = results.limit(args['limit']).offset(args['offset']).all()
-    return jsonify(results)
+    return g.encoder.jsonify(results)
 
 
 @app.route('/contacts/<public_id>', methods=['GET'])
@@ -593,7 +571,7 @@ def contact_read_api(public_id):
     result = inbox.contacts.crud.read(g.namespace, g.db_session, public_id)
     if result is None:
         raise NotFoundError("Couldn't find contact {0}".format(public_id))
-    return jsonify(result)
+    return g.encoder.jsonify(result)
 
 
 ##
@@ -634,7 +612,7 @@ def event_search_api():
         expand_recurring=args['expand_recurring'],
         db_session=g.db_session)
 
-    return jsonify(results)
+    return g.encoder.jsonify(results)
 
 
 @app.route('/events/', methods=['POST'])
@@ -678,7 +656,7 @@ def event_create_api():
     g.db_session.flush()
 
     schedule_action('create_event', event, g.namespace.id, g.db_session)
-    return jsonify(event)
+    return g.encoder.jsonify(event)
 
 
 @app.route('/events/<public_id>', methods=['GET'])
@@ -691,7 +669,7 @@ def event_read_api(public_id):
             Event.public_id == public_id).one()
     except NoResultFound:
         raise NotFoundError("Couldn't find event id {0}".format(public_id))
-    return jsonify(event)
+    return g.encoder.jsonify(event)
 
 
 @app.route('/events/<public_id>', methods=['PUT'])
@@ -720,7 +698,7 @@ def event_update_api(public_id):
 
     g.db_session.commit()
     schedule_action('update_event', event, g.namespace.id, g.db_session)
-    return jsonify(event)
+    return g.encoder.jsonify(event)
 
 
 @app.route('/events/<public_id>', methods=['DELETE'])
@@ -742,7 +720,7 @@ def event_delete_api(public_id):
                     calendar_uid=event.calendar.uid)
     g.db_session.delete(event)
     g.db_session.commit()
-    return jsonify(None)
+    return g.encoder.jsonify(None)
 
 
 #
@@ -766,7 +744,7 @@ def files_api():
         view=args['view'],
         db_session=g.db_session)
 
-    return jsonify(files)
+    return g.encoder.jsonify(files)
 
 
 @app.route('/files/<public_id>', methods=['GET'])
@@ -776,7 +754,7 @@ def file_read_api(public_id):
         f = g.db_session.query(Block).filter(
             Block.public_id == public_id,
             Block.namespace_id == g.namespace.id).one()
-        return jsonify(f)
+        return g.encoder.jsonify(f)
     except NoResultFound:
         raise NotFoundError("Couldn't find file {0} ".format(public_id))
 
@@ -798,7 +776,7 @@ def file_delete_api(public_id):
 
         # This is essentially what our other API endpoints do after deleting.
         # Effectively no error == success
-        return jsonify(None)
+        return g.encoder.jsonify(None)
     except NoResultFound:
         raise NotFoundError("Couldn't find file {0} ".format(public_id))
 
@@ -823,7 +801,7 @@ def file_upload_api():
     g.db_session.add_all(all_files)
     g.db_session.commit()  # to generate public_ids
 
-    return jsonify(all_files)
+    return g.encoder.jsonify(all_files)
 
 
 #
@@ -893,13 +871,13 @@ def calendar_search_api():
         order_by(asc(Calendar.id))
 
     if view == 'count':
-        return jsonify({"count": results.one()[0]})
+        return g.encoder.jsonify({"count": results.one()[0]})
 
     results = results.limit(args['limit'])
 
     results = results.offset(args['offset']).all()
 
-    return jsonify(results)
+    return g.encoder.jsonify(results)
 
 
 @app.route('/calendars/<public_id>', methods=['GET'])
@@ -913,7 +891,7 @@ def calendar_read_api(public_id):
             Calendar.namespace_id == g.namespace.id).one()
     except NoResultFound:
         raise NotFoundError("Couldn't find calendar {0}".format(public_id))
-    return jsonify(calendar)
+    return g.encoder.jsonify(calendar)
 
 
 ##
@@ -961,7 +939,7 @@ def draft_query_api():
         view=args['view'],
         db_session=g.db_session)
 
-    return jsonify(drafts)
+    return g.encoder.jsonify(drafts)
 
 
 @app.route('/drafts/<public_id>', methods=['GET'])
@@ -972,7 +950,7 @@ def draft_get_api(public_id):
         Message.namespace_id == g.namespace.id).first()
     if draft is None:
         raise NotFoundError("Couldn't find draft {}".format(public_id))
-    return jsonify(draft)
+    return g.encoder.jsonify(draft)
 
 
 @app.route('/drafts/', methods=['POST'])
@@ -985,7 +963,7 @@ def draft_create_api():
     except ActionError as e:
         return err(e.error, str(e))
 
-    return jsonify(draft)
+    return g.encoder.jsonify(draft)
 
 
 @app.route('/drafts/<public_id>', methods=['PUT'])
@@ -1013,7 +991,7 @@ def draft_update_api(public_id):
     except ActionError as e:
         return err(e.error, str(e))
 
-    return jsonify(draft)
+    return g.encoder.jsonify(draft)
 
 
 @app.route('/drafts/<public_id>', methods=['DELETE'])
@@ -1028,7 +1006,7 @@ def draft_delete_api(public_id):
     except ActionError as e:
         return err(e.error, str(e))
 
-    return jsonify(result)
+    return g.encoder.jsonify(result)
 
 
 @app.route('/send', methods=['POST'])
@@ -1040,12 +1018,12 @@ def draft_send_api():
                           g.db_session)
         validate_draft_recipients(draft)
         resp = send_draft(g.namespace.account, draft, g.db_session,
-                          schedule_remote_delete=True, pretty=g.pretty)
+                          schedule_remote_delete=True)
     else:
         draft = create_draft(data, g.namespace, g.db_session, syncback=False)
         validate_draft_recipients(draft)
         resp = send_draft(g.namespace.account, draft, g.db_session,
-                          schedule_remote_delete=False, pretty=g.pretty)
+                          schedule_remote_delete=False)
         if resp.status_code == 200:
             # At this point, the message has been successfully sent. If there's
             # any sort of error in committing the updated state, don't allow it
@@ -1102,18 +1080,18 @@ def sync_deltas():
         }
         if deltas:
             response['cursor_end'] = deltas[-1]['cursor']
-            return jsonify(response)
+            return g.encoder.jsonify(response)
 
         # No changes. perhaps wait
         elif args['wait']:
             gevent.sleep(poll_interval)
         else:  # Return immediately
             response['cursor_end'] = cursor
-            return jsonify(response)
+            return g.encoder.jsonify(response)
 
     # If nothing happens until timeout, just return the end of the cursor
     response['cursor_end'] = cursor
-    return jsonify(response)
+    return g.encoder.jsonify(response)
 
 
 @app.route('/delta/generate_cursor', methods=['POST'])
@@ -1126,7 +1104,7 @@ def generate_cursor():
     timestamp = int(data['start'])
     cursor = delta_sync.get_transaction_cursor_near_timestamp(
         g.namespace.id, timestamp, g.db_session)
-    return jsonify({'cursor': cursor})
+    return g.encoder.jsonify({'cursor': cursor})
 
 
 ##
@@ -1140,8 +1118,6 @@ def stream_changes():
                           required=True)
     g.parser.add_argument('exclude_types', type=valid_delta_object_types,
                           location='args')
-    g.parser.add_argument('expand', type=inputs.boolean, location='args',
-                          default=False)
     args = strict_parse_args(g.parser, request.args)
     timeout = args['timeout'] or 1800
     transaction_pointer = None
@@ -1160,9 +1136,7 @@ def stream_changes():
     # Hack to not keep a database session open for the entire (long) request
     # duration.
     g.db_session.close()
-    # TODO make transaction log support the `expand` feature
     generator = delta_sync.streaming_change_generator(
         g.namespace.id, transaction_pointer=transaction_pointer,
-        poll_interval=1, timeout=timeout, exclude_types=exclude_types,
-        pretty=g.pretty)
+        poll_interval=1, timeout=timeout, exclude_types=exclude_types)
     return Response(generator, mimetype='text/event-stream')

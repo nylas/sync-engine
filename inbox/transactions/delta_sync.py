@@ -148,8 +148,7 @@ def format_transactions_after_pointer(namespace_id, pointer, db_session,
 
 
 def streaming_change_generator(namespace_id, poll_interval, timeout,
-                               transaction_pointer, exclude_types=None,
-                               pretty=False):
+                               transaction_pointer, exclude_types=None):
     """
     Poll the transaction log for the given `namespace_id` until `timeout`
     expires, and yield each time new entries are detected.
@@ -166,7 +165,7 @@ def streaming_change_generator(namespace_id, poll_interval, timeout,
         `transaction_pointer`.
 
     """
-    encoder = APIEncoder(pretty=pretty)
+    encoder = APIEncoder()
     start_time = time.time()
     while time.time() - start_time < timeout:
         with session_scope() as db_session:

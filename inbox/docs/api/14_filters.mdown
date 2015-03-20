@@ -22,8 +22,6 @@ Filters allow you to query mail data based on specific parameters. The more spec
 
 * **`offset`** (integer) Zero-based offset; use with `limit` for pagination of results.
 
-* **`pretty`** (boolean) Pretty-print the API response with indentation and newlines.
-
 ### Additional Message Filters
 
 * **`thread_id`** Return messages on the thread with the given id.
