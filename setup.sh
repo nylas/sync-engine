@@ -42,8 +42,8 @@ fi
 color '35;1' 'Updating packages...'
 
 
-if command -v mysql >/dev/null 2>&1 
-then 
+if command -v mysql >/dev/null 2>&1
+then
     echo "MySQL Exists. Not adding upstream mysql package";
 else
     echo "Adding MySQL APT Repo";
@@ -167,6 +167,9 @@ color '35;1' 'Ensuring setuptools and pip versions...'
 pip install 'pip>=1.5.6' 'setuptools>=5.3'
 hash pip        # /usr/bin/pip might now be /usr/local/bin/pip
 pip install 'pip>=1.5.6' 'setuptools>=5.3'
+
+# Doing pip upgrade setuptools leaves behind this problematic symlink
+rm -rf /usr/lib/python2.7/dist-packages/setuptools.egg-info
 
 # Install tox for running tests
 pip install 'tox'
