@@ -11,7 +11,9 @@ from inbox.log import get_logger
 from inbox.models import Event, Calendar, Account
 from inbox.models.session import session_scope
 from inbox.models.backends.oauth import token_manager
-from inbox.events.util import parse_datetime
+from inbox.events.util import (google_to_event_time, parse_google_time,
+                               parse_datetime)
+
 
 log = get_logger()
 CALENDARS_URL = 'https://www.googleapis.com/calendar/v3/users/me/calendarList'
@@ -78,7 +80,9 @@ class GoogleEventsProvider(object):
         updates = []
         items = self._get_raw_events(calendar_uid, sync_from_time)
         for item in items:
-            if item.get('status') == 'cancelled':
+            # We need to instantiate recurring event cancellations as overrides
+            if item.get('status') == 'cancelled' and not \
+                    item.get('recurringEventId'):
                 deletes.append(item['id'])
             else:
                 updates.append(parse_event_response(item))
@@ -246,13 +250,11 @@ def parse_event_response(event):
     # Timing data
     _start = event['start']
     _end = event['end']
-    all_day = ('date' in _start and 'date' in _end)
-    if all_day:
-        start = parse_datetime(_start['date'])
-        end = parse_datetime(_end['date']) - datetime.timedelta(days=1)
-    else:
-        start = parse_datetime(_start['dateTime'])
-        end = parse_datetime(_end['dateTime'])
+    _original = event.get('originalStartTime', {})
+
+    event_time = google_to_event_time(_start, _end)
+    original_start = parse_google_time(_original)
+    start_tz = _start.get('timeZone')
 
     last_modified = parse_datetime(event.get('updated'))
 
@@ -283,9 +285,10 @@ def parse_event_response(event):
             'notes': attendee.get('comment')
         })
 
-    recurrence = None
-    if 'recurrence' in event:
-        recurrence = str(event['recurrence'])
+    # Recurring master or override info
+    recurrence = event.get('recurrence')
+    master_uid = event.get('recurringEventId')
+    cancelled = (event.get('status') == 'cancelled')
 
     return Event(uid=uid,
                  raw_data=raw_data,
@@ -293,15 +296,19 @@ def parse_event_response(event):
                  description=description,
                  location=location,
                  busy=busy,
-                 start=start,
-                 end=end,
-                 all_day=all_day,
+                 start=event_time.start,
+                 end=event_time.end,
+                 all_day=event_time.all_day,
                  owner=owner,
                  is_owner=is_owner,
                  read_only=read_only,
                  participants=participants,
                  recurrence=recurrence,
                  last_modified=last_modified,
+                 original_start_tz=start_tz,
+                 original_start_time=original_start,
+                 master_event_uid=master_uid,
+                 cancelled=cancelled,
                  # TODO(emfree): remove after data cleanup
                  source='local')
 

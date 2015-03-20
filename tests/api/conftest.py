@@ -4,7 +4,8 @@
 from gevent import monkey
 monkey.patch_all(aggressive=False)
 # fixtures that are available by default
-from tests.util.base import config, db, log, absolute_path
+from tests.util.base import (config, db, log, absolute_path,
+                             default_account, calendar)
 
 
 def pytest_generate_tests(metafunc):

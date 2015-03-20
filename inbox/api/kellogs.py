@@ -1,10 +1,12 @@
+import arrow
 import datetime
 import calendar
 from json import JSONEncoder, dumps
 
-from inbox.models import (Message, Contact, Calendar, Event,
+from inbox.models import (Message, Contact, Calendar, Event, When,
                           Time, TimeSpan, Date, DateSpan,
                           Thread, Namespace, Block, Tag)
+from inbox.models.event import RecurringEvent, RecurringEventOverride
 
 
 def format_address_list(addresses):
@@ -51,10 +53,19 @@ def encode(obj, namespace_public_id=None, expand=False):
 
         return dct
 
+    def _get_lowercase_class_name(obj):
+        return type(obj).__name__.lower()
+
     # Flask's jsonify() doesn't handle datetimes or json arrays as primary
     # objects.
     if isinstance(obj, datetime.datetime):
         return calendar.timegm(obj.utctimetuple())
+
+    if isinstance(obj, datetime.date):
+        return obj.isoformat()
+
+    if isinstance(obj, arrow.arrow.Arrow):
+        return encode(obj.datetime)
 
     elif isinstance(obj, Namespace):
         return {
@@ -166,7 +177,7 @@ def encode(obj, namespace_public_id=None, expand=False):
         }
 
     elif isinstance(obj, Event):
-        return {
+        resp = {
             'id': obj.public_id,
             'object': 'event',
             'namespace_id': _get_namespace_public_id(obj),
@@ -180,6 +191,17 @@ def encode(obj, namespace_public_id=None, expand=False):
             'when': encode(obj.when),
             'busy': obj.busy,
         }
+        if isinstance(obj, RecurringEvent):
+            resp['recurrence'] = {
+                'rrule': obj.recurrence,
+                'timezone': obj.start_timezone
+            }
+        if isinstance(obj, RecurringEventOverride):
+            resp['cancelled'] = obj.cancelled
+            resp['original_start_time'] = encode(obj.original_start_time)
+            if obj.master:
+                resp['master_event_id'] = obj.master.public_id
+        return resp
 
     elif isinstance(obj, Calendar):
         return {
@@ -191,31 +213,12 @@ def encode(obj, namespace_public_id=None, expand=False):
             'read_only': obj.read_only,
         }
 
-    elif isinstance(obj, Time):
-        return {
-            'object': 'time',
-            'time': obj.time
-        }
-
-    elif isinstance(obj, TimeSpan):
-        return {
-            'object': 'timespan',
-            'start_time': obj.start_time,
-            'end_time': obj.end_time
-        }
-
-    elif isinstance(obj, Date):
-        return {
-            'object': 'date',
-            'date': obj.date.isoformat()
-        }
-
-    elif isinstance(obj, DateSpan):
-        return {
-            'object': 'datespan',
-            'start_date': obj.start_date.isoformat(),
-            'end_date': obj.end_date.isoformat()
-        }
+    elif isinstance(obj, When):
+        # Get time dictionary e.g. 'start_time': x, 'end_time': y or 'date': z
+        times = obj.get_time_dict()
+        resp = {k: encode(v) for k, v in times.iteritems()}
+        resp['object'] = _get_lowercase_class_name(obj)
+        return resp
 
     elif isinstance(obj, Block):  # ie: Attachments/Files
         resp = {

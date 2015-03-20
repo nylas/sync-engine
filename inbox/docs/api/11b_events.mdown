@@ -57,6 +57,7 @@ This endpoint supports [filters](#filters), which allow you to fetch multiple ev
 * **`starts_after`** (integer, Unix timestamp) Return events that start after this timestamp.
 * **`ends_before`** (integer, Unix timestamp) Return events that end before this timestamp.
 * **`ends_after`** (integer, Unix timestamp) Return events that end after this timestamp.
+* **`expand_recurring`** (Boolean) If set to true, expands recurring events into individual event instances.
 
 For example, the following will limit the number of results to 3.
 
@@ -64,6 +65,23 @@ For example, the following will limit the number of results to 3.
 :::xml
 GET https://api.nilas.com/n/<namespace_id>/events?limit=3
 ```
+
+## Recurring events
+
+If requesting recurring events without `expand_recurring`, we will only return the 'master' recurring event, and only if it falls within the requested time range. `recurrence` contains recurrence info in RRULE form; [this tool](http://jakubroztocil.github.io/rrule/) is helpful in understanding the RRULE spec.
+
+For convenience, the `expand_recurring` option will include single instances of a recurring event that fall within the requested time range. These look and behave just like non-recurring events. We recommend using a specific time range with this option.
+
+```
+:::xml
+GET https://api.nilas.com/n/<namespace_id>/events?expand_recurring=true
+```
+
+Currently, these instances of recurring events are read-only.
+
+If the recurring event has individual modifications (overrides), such as a one-off time change, we will return these as individual events regardless of whether `expand_recurring` is set or not.
+
+If `expand_recurring` is not set, we will return one-off cancellations as well as the base event, so that clients can accurately expand the recurrence. A cancellation has the field `cancelled` set to `true`.
 
 # Adding a new event
 
@@ -147,7 +165,7 @@ American Declaration of Independence:
 :::json
 {
     "object": "date",
-    "start_date": "1776-07-04"
+    "date": "1776-07-04"
 }
 ```
 

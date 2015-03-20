@@ -76,7 +76,7 @@ def real_test_event_crud(client, real_db):
     # create an event
     ns = client.namespaces[0]
     ev = ns.events.create()
-    ev.calendar_id = ns.calendars[0].id
+    ev.calendar_id = ns.calendars[1].id
     ev.title = "Rodomontades"
     d1 = datetime.datetime.now() + datetime.timedelta(hours=2)
     d2 = datetime.datetime.now() + datetime.timedelta(hours=9)

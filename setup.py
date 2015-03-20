@@ -13,7 +13,7 @@ setup(
         "click>=2.4",
         "cpu_affinity>=0.1.0",
         "pyyaml",
-        "SQLAlchemy==0.9.6",
+        "SQLAlchemy==0.9.8",
         "alembic>=0.6.4",
         "requests>=2.4.3",
         "raven>=5.0.0",
@@ -25,7 +25,7 @@ setup(
         "elasticsearch>=1.2.0",
         "setproctitle>=1.1.8",
         "pymongo>=2.5.2",
-        "python-dateutil>=2.3",
+        "python-dateutil>=2.4",
         "ipython>=1.0.0",
         "enum34==1.0.4",
         "gdata>=2.0.18",
@@ -42,13 +42,14 @@ setup(
         "httplib2>=0.8",
         "six>=1.8",
         "vobject>=0.8.1c",
-        "lxml>=3.4.2"
+        "lxml>=3.4.2",
+        "arrow==0.5.4"
     ],
     dependency_links=[],
 
     include_package_data=True,
     package_data={
-        #"inbox-sync": ["alembic.ini"],
+        # "inbox-sync": ["alembic.ini"],
         # If any package contains *.txt or *.rst files, include them:
         # '': ['*.txt', '*.rst'],
         # And include any *.msg files found in the 'hello' package, too:

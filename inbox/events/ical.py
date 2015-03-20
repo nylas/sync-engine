@@ -1,4 +1,5 @@
 import pytz
+import arrow
 from datetime import datetime, date
 from icalendar import Calendar as iCalendar
 
@@ -16,12 +17,6 @@ STATUS_MAP = {'NEEDS-ACTION': 'noreply',
               'TENTATIVE': 'maybe'}
 
 
-def _remove_tz(d):
-    if d.tzinfo:
-        d = d.astimezone(pytz.utc).replace(tzinfo=None)
-    return d
-
-
 def events_from_ics(namespace, calendar, ics_str):
     try:
         cal = iCalendar.from_ical(ics_str)
@@ -34,18 +29,24 @@ def events_from_ics(namespace, calendar, ics_str):
         if component.name == "VTIMEZONE":
             tzname = component.get('TZID')
             assert tzname in timezones_table,\
-                 "Non-UTC timezone should be in table"
+                "Non-UTC timezone should be in table"
 
         if component.name == "VEVENT":
             # Make sure the times are in UTC.
-            original_start = component.get('dtstart').dt
-            original_end = component.get('dtend').dt
+            try:
+                original_start = component.get('dtstart').dt
+                original_end = component.get('dtend').dt
+            except AttributeError:
+                raise MalformedEventError("Event lacks start and/or end time")
 
             start = original_start
             end = original_end
+            original_start_tz = None
 
             if isinstance(start, datetime) and isinstance(end, datetime):
                 all_day = False
+                original_start_tz = str(original_start.tzinfo)
+
                 # icalendar doesn't parse Windows timezones yet
                 # (see: https://github.com/collective/icalendar/issues/44)
                 # so we look if the timezone isn't in our Windows-TZ
@@ -53,9 +54,11 @@ def events_from_ics(namespace, calendar, ics_str):
                 if original_start.tzinfo is None:
                     tzid = component.get('dtstart').params.get('TZID', None)
                     assert tzid in timezones_table,\
-                         "Non-UTC timezone should be in table"
+                        "Non-UTC timezone should be in table"
 
                     corresponding_tz = timezones_table[tzid]
+                    original_start_tz = corresponding_tz
+
                     local_timezone = pytz.timezone(corresponding_tz)
                     start = local_timezone.localize(original_start)
 
@@ -68,13 +71,10 @@ def events_from_ics(namespace, calendar, ics_str):
                     local_timezone = pytz.timezone(corresponding_tz)
                     end = local_timezone.localize(original_end)
 
-                # MySQL doesn't like localized datetimes.
-                start = _remove_tz(start)
-                end = _remove_tz(end)
             elif isinstance(start, date) and isinstance(end, date):
                 all_day = True
-                start = datetime.combine(start, datetime.min.time())
-                end = datetime.combine(end, datetime.min.time())
+                start = arrow.get(start)
+                end = arrow.get(end)
 
             # Get the last modification date.
             # Exchange uses DtStamp, iCloud and Gmail LAST-MODIFIED.
@@ -95,18 +95,16 @@ def events_from_ics(namespace, calendar, ics_str):
                 # Note: LAST-MODIFIED is always in UTC.
                 # http://www.kanzaki.com/docs/ical/lastModified.html
                 last_modified = component.get('last-modified').dt
-                assert last_modified is not None,\
-                 "Event should have a DtStamp or LAST-MODIFIED timestamp"
+                assert last_modified is not None, \
+                    "Event should have a DtStamp or LAST-MODIFIED timestamp"
 
-            last_modified = _remove_tz(last_modified)
             title = component.get('summary')
             description = unicode(component.get('description'))
 
-            reccur = component.get('rrule')
-            if reccur:
-                reccur = reccur.to_ical()
-            else:
-                reccur = ''
+            recur = component.get('rrule')
+            if recur:
+                recur = "RRULE:{}".format(recur.to_ical())
+
             participants = []
 
             organizer = component.get('organizer')
@@ -187,7 +185,7 @@ def events_from_ics(namespace, calendar, ics_str):
                 description=description,
                 location=location,
                 reminders=str([]),
-                recurrence=reccur,
+                recurrence=recur,
                 start=start,
                 end=end,
                 busy=True,
@@ -195,6 +193,7 @@ def events_from_ics(namespace, calendar, ics_str):
                 read_only=True,
                 is_owner=is_owner,
                 last_modified=last_modified,
+                original_start_tz=original_start_tz,
                 source='local',
                 participants=participants)
 

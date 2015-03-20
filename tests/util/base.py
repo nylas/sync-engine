@@ -211,7 +211,7 @@ def default_account(db):
     import platform
     from inbox.models import Account
     account = db.session.query(Account).filter_by(id=1).one()
-
+    account.create_emailed_events_calendar()
     # Ensure that the account is set to sync locally for unit tests
     account.sync_host = platform.node()
     db.session.commit()
@@ -340,10 +340,9 @@ def add_fake_calendar(db_session, namespace_id, name="Cal",
 
 
 def add_fake_event(db_session, namespace_id):
-    from inbox.models import Namespace, Event
+    from inbox.models import Event
     start = datetime.utcnow()
     end = datetime.utcnow() + timedelta(seconds=1)
-    account = db_session.query(Namespace).get(namespace_id).account
     calendar = add_fake_calendar(db_session, namespace_id)
     event = Event(namespace_id=namespace_id,
                   calendar=calendar,

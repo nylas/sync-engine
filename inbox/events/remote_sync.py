@@ -6,9 +6,11 @@ logger = get_logger()
 from inbox.basicauth import AccessNotEnabledError
 from inbox.sync.base_sync import BaseSyncMonitor
 from inbox.models import Event, Account, Calendar
+from inbox.models.event import RecurringEvent, RecurringEventOverride
 from inbox.util.debug import bind_context
 from inbox.models.session import session_scope
 
+from inbox.events.recurring import link_events
 from inbox.events.google import GoogleEventsProvider
 
 
@@ -44,6 +46,7 @@ class EventSync(BaseSyncMonitor):
 
         with session_scope() as db_session:
             account = db_session.query(Account).get(self.account_id)
+
             last_sync = account.last_synced_events
 
         try:
@@ -134,6 +137,9 @@ def handle_event_deletes(namespace_id, calendar_id, deleted_event_uids,
             Event.uid == uid,
             Event.calendar_id == calendar_id).first()
         if local_event is not None:
+            # Delete stored overrides for this event too, if it is recurring
+            if isinstance(local_event, RecurringEvent):
+                deleted_event_uids.extend(list(local_event.override_uids))
             deleted_count += 1
             db_session.delete(local_event)
     log.info('synced deleted events',
@@ -160,11 +166,18 @@ def handle_event_updates(namespace_id, calendar_id, events, log, db_session):
             local_event.update(event)
             updated_count += 1
         else:
-            local_event = Event(namespace_id=namespace_id,
-                                calendar_id=calendar_id)
-            local_event.update(event)
+            local_event = event
+            local_event.namespace_id = namespace_id
+            local_event.calendar_id = calendar_id
             db_session.add(local_event)
             added_count += 1
+
+        # If we just updated/added a recurring event or override, make sure
+        # we link it to the right master event.
+        if isinstance(event, RecurringEvent) or \
+                isinstance(event, RecurringEventOverride):
+            db_session.flush()
+            link_events(db_session, event)
 
     log.info('synced added and updated events',
              calendar_id=calendar_id,

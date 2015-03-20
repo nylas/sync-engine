@@ -3,6 +3,7 @@ from sqlalchemy.orm import subqueryload, contains_eager
 from inbox.models import (Contact, Event, Calendar, Message,
                           MessageContactAssociation, Thread, Tag,
                           TagItem, Block, Part)
+from inbox.models.event import RecurringEvent
 
 
 def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
@@ -28,8 +29,7 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
         filters.append(Thread.subjectdate > started_after)
 
     if last_message_before is not None:
-        filters.append(Thread.recentdate <
-                               last_message_before)
+        filters.append(Thread.recentdate < last_message_before)
 
     if last_message_after is not None:
         filters.append(Thread.recentdate > last_message_after)
@@ -311,22 +311,94 @@ def files(namespace_id, message_public_id, filename, content_type,
         return query.all()
 
 
+def filter_event_query(query, event_cls, namespace_id, event_public_id,
+                       calendar_public_id, title, description, location, busy):
+
+    query = query.filter(event_cls.namespace_id == namespace_id)
+
+    if event_public_id:
+        query = query.filter(event_cls.public_id == event_public_id)
+
+    if calendar_public_id is not None:
+        query = query.join(Calendar). \
+            filter(Calendar.public_id == calendar_public_id,
+                   Calendar.namespace_id == namespace_id)
+
+    if title is not None:
+        query = query.filter(event_cls.title.like('%{}%'.format(title)))
+
+    if description is not None:
+        query = query.filter(event_cls.description.like('%{}%'
+                                                        .format(description)))
+
+    if location is not None:
+        query = query.filter(event_cls.location.like('%{}%'.format(location)))
+
+    if busy is not None:
+        query = query.filter(event_cls.busy == busy)
+
+    query = query.filter(event_cls.source == 'local')
+
+    return query
+
+
+def recurring_events(filters, starts_before, starts_after, ends_before,
+                     ends_after, db_session):
+    # Expands individual recurring events into full instances.
+    # If neither starts_before or ends_before is given, the recurring range
+    # defaults to now + 1 year (see events/recurring.py)
+
+    recur_query = db_session.query(RecurringEvent)
+    recur_query = filter_event_query(recur_query, RecurringEvent, *filters)
+
+    before_criteria = []
+    if starts_before:
+        before_criteria.append(RecurringEvent.start < starts_before)
+    if ends_before:
+        # start < end, so event start < ends_before
+        before_criteria.append(RecurringEvent.start < ends_before)
+    recur_query = recur_query.filter(and_(*before_criteria))
+    after_criteria = []
+    if starts_after:
+        after_criteria.append(or_(RecurringEvent.until > starts_after,
+                                  RecurringEvent.until == None))
+    if ends_after:
+        after_criteria.append(or_(RecurringEvent.until > ends_after,
+                                  RecurringEvent.until == None))
+
+    recur_query = recur_query.filter(and_(*after_criteria))
+
+    recur_instances = []
+    for r in recur_query:
+        # the occurrences check only checks starting timestamps
+        if ends_before and not starts_before:
+            starts_before = ends_before - r.length
+        if ends_after and not starts_after:
+            starts_after = ends_after - r.length
+        instances = r.all_events(start=starts_after, end=starts_before)
+        recur_instances.extend(instances)
+
+    return recur_instances
+
+
 def events(namespace_id, event_public_id, calendar_public_id, title,
            description, location, busy, starts_before, starts_after,
-           ends_before, ends_after, limit, offset, view, db_session):
+           ends_before, ends_after, limit, offset, view,
+           expand_recurring, db_session):
 
-    if view == 'count':
-        query = db_session.query(func.count(Event.id))
-    elif view == 'ids':
-        query = db_session.query(Event.public_id)
-    else:
-        query = db_session.query(Event)
+    query = db_session.query(Event)
 
-    query = query.filter(Event.namespace_id == namespace_id)
+    if not expand_recurring:
+        if view == 'count':
+            query = db_session.query(func.count(Event.id))
+        elif view == 'ids':
+            query = db_session.query(Event.public_id)
+
+    filters = [namespace_id, event_public_id, calendar_public_id,
+               title, description, location, busy]
+    query = filter_event_query(query, Event, *filters)
 
     event_criteria = []
-    if event_public_id:
-        query = query.filter(Event.public_id == event_public_id)
 
     if starts_before is not None:
         event_criteria.append(Event.start < starts_before)
@@ -343,40 +415,32 @@ def events(namespace_id, event_public_id, calendar_public_id, title,
     event_predicate = and_(*event_criteria)
     query = query.filter(event_predicate)
 
-    if calendar_public_id is not None:
-        query = query.join(Calendar). \
-            filter(Calendar.public_id == calendar_public_id,
-                   Calendar.namespace_id == namespace_id)
+    if expand_recurring:
+        expanded = recurring_events(filters, starts_before, starts_after,
+                                    ends_before, ends_after, db_session)
 
-    if title is not None:
-        query = query.filter(Event.title.like('%{}%'.format(title)))
+        # Combine non-recurring events with expanded recurring ones
+        all_events = query.filter(Event.discriminator == 'event').all() + \
+            expanded
 
-    if description is not None:
-        query = query.filter(Event.description.like('%{}%'
-                                                    .format(description)))
+        if view == 'count':
+            return {"count": len(all_events)}
 
-    if location is not None:
-        query = query.filter(Event.location.like('%{}%'.format(location)))
-
-    # Only return "local" events
-    # TODO(emfree): remove 'remote' events from datastore and remove this
-    # criterion.
-    query = query.filter(Event.source == 'local')
-
-    if busy is not None:
-        query = query.filter(Event.busy == busy)
-
-    if view == 'count':
-        return {"count": query.one()[0]}
-
-    query = query.order_by(asc(Event.start)).limit(limit)
-
-    if offset:
-        query = query.offset(offset)
-
-    if view == 'ids':
-        return [x[0] for x in query.all()]
+        all_events = sorted(all_events, key=lambda e: e.start)
+        if limit:
+            offset = offset or 0
+            all_events = all_events[offset:offset + limit]
     else:
+        if view == 'count':
+            return {"count": query.one()[0]}
+        query = query.order_by(asc(Event.start)).limit(limit)
+        if offset:
+            query = query.offset(offset)
         # Eager-load some objects in order to make constructing API
         # representations faster.
-        return query.all()
+        all_events = query.all()
+
+    if view == 'ids':
+        return [x[0] for x in all_events]
+    else:
+        return all_events

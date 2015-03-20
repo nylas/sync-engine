@@ -4,7 +4,6 @@ from sqlalchemy import (Column, Integer, String, DateTime, Boolean, ForeignKey,
                         Enum)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql.expression import true, false
-from inbox.sqlalchemy_ext.util import generate_public_id
 
 from inbox.sqlalchemy_ext.util import JSON, MutableDict
 from inbox.util.file import Lock
@@ -124,14 +123,15 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
                                     foreign_keys=[important_folder_id])
 
     emailed_events_calendar_id = Column(Integer,
-                                 ForeignKey('calendar.id',
-                                            ondelete='SET NULL',
-                                            use_alter=True,
-                                            name='emailed_events_cal'),
-                                            nullable=True)
+                                        ForeignKey('calendar.id',
+                                                   ondelete='SET NULL',
+                                                   use_alter=True,
+                                                   name='emailed_events_cal'),
+                                        nullable=True)
 
-    _emailed_events_calendar = relationship('Calendar', post_update=True,
-                                            foreign_keys=[emailed_events_calendar_id])
+    _emailed_events_calendar = relationship(
+        'Calendar', post_update=True,
+        foreign_keys=[emailed_events_calendar_id])
 
     def create_emailed_events_calendar(self):
         if not self._emailed_events_calendar:

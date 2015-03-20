@@ -214,10 +214,7 @@ def test_calculate_snippet():
 def test_integrated_ical_parsing(
         db, default_account, default_namespace,
         raw_message_with_ical_invite):
-
-    cal = add_fake_calendar(db.session, default_namespace.id, name="Emailed events",
-                            read_only=True)
-
+    cal = default_account.emailed_events_calendar
     received_date = datetime.datetime(2014, 9, 22, 17, 25, 46)
     m = Message.create_from_synced(default_account, 139219, '[Gmail]/All Mail',
                                    received_date,

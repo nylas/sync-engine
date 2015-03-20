@@ -1,0 +1,17 @@
+BEGIN:VCALENDAR
+PRODID:-//Meetup//Meetup Events v1.0//EN
+X-ORIGINAL-URL:http://www.meetup.com/sfgamedevelopers/events/16078654/
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+DTSTAMP:20110418T211031Z
+DTSTART;TZID=America/Los_Angeles:20110419T170000
+SUMMARY:Bay Area Video Game Development Meetup Group Monthly Meetup
+URL:http://www.meetup.com/sfgamedevelopers/events/16078654/
+LOCATION:Jillian's (Metreon (101 4th St.)\, San Francisco\, CA 94101)
+SUMMARY:Bay Area Video Game Development Meetup Group Monthly Meetup
+DESCRIPTION:Bay Area Video Game Development Meetup Group\nTuesday\, April 19 at 8:00 PM\n\nHey Gamers\,\n\nWe will be meeting again this month at Jillian's.  We will do our best to get the front lounge area near the entrance.  If you do not see...\n\nDetails: http://www.meetup.com/sfgamedevelopers/events/16078654/
+ORGANIZER;CN=Meetup Reminder:MAILTO:info@meetup.com
+END:VEVENT
+END:VCALENDAR

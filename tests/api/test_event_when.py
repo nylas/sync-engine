@@ -2,7 +2,7 @@ import json
 import pytest
 
 from inbox.models import Account
-from tests.util.base import api_client, default_account, calendar
+from tests.util.base import api_client
 
 __all__ = ['api_client']
 
@@ -166,7 +166,7 @@ def test_api_invalid_event_when_timespan_bad_params(db, api_client, calendar):
     with pytest.raises(CreateError):
         _verify_create(ns_id, api_client, e_data)
 
-    e_data['when'] = {'start_time': 0, 'end_time': 0}
+    e_data['when'] = {'start_time': 1, 'end_time': 0}
     with pytest.raises(CreateError):
         _verify_create(ns_id, api_client, e_data)
 
@@ -204,7 +204,7 @@ def test_api_invalid_event_when_datespan_bad_params(db, api_client, calendar):
         _verify_create(ns_id, api_client, e_data)
 
     e_data['when'] = {'start_date': '2014-08-27',
-                      'end_date': '2014-08-27'}
+                      'end_date': '2014-08-26'}
     with pytest.raises(CreateError):
         _verify_create(ns_id, api_client, e_data)
 
@@ -261,7 +261,6 @@ def test_api_event_when_update(db, api_client, calendar):
         'location': 'home',
         'calendar_id': calendar.public_id,
     }
-
 
     e_data['when'] = {'time': 0}
     e_resp_data = _verify_create(ns_id, api_client, e_data)
