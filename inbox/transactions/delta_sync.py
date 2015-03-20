@@ -31,15 +31,35 @@ def get_transaction_cursor_near_timestamp(namespace_id, timestamp, db_session):
 
     """
     dt = datetime.utcfromtimestamp(timestamp)
-    transaction = db_session.query(Transaction). \
+
+    # We want this guarantee: if you pass a timestamp for, say,
+    # '2015-03-20 12:22:20', and you have multiple transactions immediately
+    # prior, e.g.:
+    # id | created_at
+    # ---+-----------
+    # 23 | 2015-03-20 12:22:19
+    # 24 | 2015-03-20 12:22:19
+    # 25 | 2015-03-20 12:22:19
+    # then you get the last one by id (25). Otherwise you might pass a
+    # timestamp far in the future, but not actually get the last cursor.
+    # The obvious way to accomplish this is to filter by `created_at` but order
+    # by `id`. However, that causes MySQL to perform a potentially expensive
+    # filesort. Instead, get transactions with timestamp *matching* the last
+    # one before what you have, and sort those by id:
+    latest_timestamp = db_session.query(Transaction.created_at). \
         order_by(desc(Transaction.created_at)). \
         filter(Transaction.created_at < dt,
-               Transaction.namespace_id == namespace_id).first()
-    if transaction is None:
+               Transaction.namespace_id == namespace_id).limit(1).subquery()
+    latest_transaction = db_session.query(Transaction). \
+        filter(Transaction.created_at == latest_timestamp). \
+        order_by(desc(Transaction.id)).first()
+
+    if latest_transaction is None:
         # If there are no earlier deltas, use '0' as a special stamp parameter
         # to signal 'process from the start of the log'.
         return '0'
-    return transaction.public_id
+
+    return latest_transaction.public_id
 
 
 def format_transactions_after_pointer(namespace_id, pointer, db_session,
