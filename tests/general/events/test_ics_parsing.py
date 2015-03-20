@@ -8,6 +8,13 @@ from inbox.events.ical import events_from_ics, import_attached_events
 from tests.util.base import absolute_path, add_fake_calendar
 
 
+@pytest.fixture
+def emailed_events_calendar(db, default_account):
+    cal = add_fake_calendar(db.session, default_account.namespace.id,
+                            name="Emailed events", read_only=True)
+    return cal
+
+
 def test_invalid_ical(db, default_account):
     with pytest.raises(MalformedEventError):
         events_from_ics(default_account.namespace,
@@ -63,10 +70,7 @@ def test_iphone_through_exchange(db, default_account):
     assert ev.end == datetime.datetime(2014, 12, 27, 16, 0)
 
 
-def test_event_update(db, default_account):
-    cal = add_fake_calendar(db.session, default_account.namespace.id,
-                            name="Emailed events", read_only=True)
-
+def test_event_update(db, default_account, emailed_events_calendar):
     data = None
     with open(absolute_path('./general/events/fixtures/gcal_v1.ics')) as fd:
         data = fd.read()
@@ -91,3 +95,31 @@ def test_event_update(db, default_account):
 
     assert ev.location == (u"Le Zenith, 211 Avenue Jean Jaures, "
                             "75019 Paris, France")
+
+
+def test_event_no_participants(db, default_account):
+    data = None
+    with open(absolute_path('./general/events/fixtures/event_with_no_participants.ics')) as fd:
+        data = fd.read()
+
+    events = events_from_ics(default_account.namespace,
+                             default_account.emailed_events_calendar, data)
+    assert len(events) == 1, "There should be only one event in the test file"
+    ev = events[0]
+    assert len(ev.participants) == 0
+
+
+def test_multiple_events(db, default_account):
+    data = None
+    with open(absolute_path('./general/events/fixtures/multiple_events.ics')) as fd:
+        data = fd.read()
+
+    events = events_from_ics(default_account.namespace,
+                             default_account.emailed_events_calendar, data)
+    assert len(events) == 2
+    ev0 = events[0]
+    ev1 = events[1]
+    assert len(ev0.participants) == 0
+    assert len(ev1.participants) == 0
+
+    assert ev1.start == datetime.datetime(2015, 03, 17, 0, 0)

@@ -108,7 +108,6 @@ def events_from_ics(namespace, calendar, ics_str):
             else:
                 reccur = ''
             participants = []
-            attendees = component.get('attendee')
 
             organizer = component.get('organizer')
             if organizer:
@@ -133,6 +132,8 @@ def events_from_ics(namespace, calendar, ics_str):
                 is_owner = True
             else:
                 is_owner = False
+
+            attendees = component.get('attendee', [])
 
             # the iCalendar python module doesn't return a list when
             # there's only one attendee. Go figure.
