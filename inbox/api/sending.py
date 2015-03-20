@@ -1,4 +1,5 @@
 from datetime import datetime
+from flask import Response
 from inbox.log import get_logger
 from inbox.api.err import err
 from inbox.api.kellogs import APIEncoder
@@ -7,7 +8,8 @@ from inbox.sendmail.base import get_sendmail_client, SendMailException
 log = get_logger()
 
 
-def send_draft(account, draft, db_session, schedule_remote_delete):
+def send_draft(account, draft, db_session, schedule_remote_delete,
+               pretty=False):
     """Send the draft with id = `draft_id`."""
     try:
         sendmail_client = get_sendmail_client(account)
@@ -50,4 +52,6 @@ def send_draft(account, draft, db_session, schedule_remote_delete):
     except Exception as e:
         log.error('Error in post-send processing', error=e, exc_info=True)
 
-    return APIEncoder().jsonify(draft)
+    encoder = APIEncoder(pretty=pretty)
+    return Response(encoder.cereal(draft),
+                    mimetype='application/json')

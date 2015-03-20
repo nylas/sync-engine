@@ -8,7 +8,7 @@ from inbox.models import (Contact, Event, Calendar, Message,
 def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
             any_email, thread_public_id, started_before, started_after,
             last_message_before, last_message_after, filename, tag, limit,
-            offset, view, db_session):
+            offset, view, expand, db_session):
 
     if view == 'count':
         query = db_session.query(func.count(Thread.id))
@@ -101,11 +101,24 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
     # representations faster.
     if view != 'ids':
         query = query.options(
-            subqueryload(Thread.messages).
-            load_only('public_id', 'is_draft', 'from_addr', 'to_addr',
-                      'cc_addr', 'bcc_addr'),
             subqueryload('tagitems').joinedload('tag').
             load_only('public_id', 'name'))
+
+        if expand:
+            query = query.options(
+                subqueryload(Thread.messages).
+                load_only('public_id', 'subject', 'is_draft', 'version',
+                          'from_addr', 'to_addr', 'cc_addr', 'bcc_addr',
+                          'received_date', 'snippet', 'is_read',
+                          'reply_to_message_id')
+                .joinedload(Message.parts)
+                .joinedload(Part.block))
+
+        else:
+            query = query.options(
+                subqueryload(Thread.messages).
+                load_only('public_id', 'is_draft', 'from_addr', 'to_addr',
+                          'cc_addr', 'bcc_addr'))
 
     query = query.order_by(desc(Thread.recentdate)).limit(limit)
     if offset:

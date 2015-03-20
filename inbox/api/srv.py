@@ -1,5 +1,5 @@
-from flask import Flask, request, jsonify
-from flask.ext.restful import reqparse
+from flask import Flask, request, jsonify, Response
+from flask.ext.restful import reqparse, inputs
 from werkzeug.exceptions import default_exceptions, HTTPException
 
 from inbox.api.kellogs import APIEncoder
@@ -62,20 +62,25 @@ def ns_all():
                             location='args')
         parser.add_argument('offset', default=0, type=int, location='args')
         parser.add_argument('email_address', type=bounded_str, location='args')
-        args = strict_parse_args(parser, request.args)
+        parser.add_argument('pretty', type=inputs.boolean, location='args',
+                              default=False)
+        req_args = strict_parse_args(parser, request.args)
 
         query = db_session.query(Namespace)
-        if args['email_address']:
+        if req_args['email_address']:
             query = query.join(Account)
-            query = query.filter_by(email_address=args['email_address'])
+            query = query.filter_by(
+                email_address=req_args['email_address'])
 
-        query = query.limit(args['limit'])
-        if args['offset']:
-            query = query.offset(args['offset'])
+        query = query.limit(req_args['limit'])
+        if req_args['offset']:
+            query = query.offset(req_args['offset'])
 
         namespaces = query.all()
-        encoder = APIEncoder()
-        return encoder.jsonify(namespaces)
+
+        encoder = APIEncoder(expand=False, pretty=req_args['pretty'])
+        return Response(encoder.cereal(namespaces),
+                        mimetype='application/json')
 
 
 @app.route('/')

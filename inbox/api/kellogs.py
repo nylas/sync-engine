@@ -2,8 +2,6 @@ import datetime
 import calendar
 from json import JSONEncoder, dumps
 
-from flask import Response
-
 from inbox.models import (Message, Contact, Calendar, Event,
                           Time, TimeSpan, Date, DateSpan,
                           Thread, Namespace, Block, Tag)
@@ -21,7 +19,7 @@ def format_tags_list(tags):
     return [{'name': tag.name, 'id': tag.public_id} for tag in tags]
 
 
-def encode(obj, namespace_public_id=None):
+def encode(obj, namespace_public_id=None, expand=False):
     """
     Returns a dictionary representation of an Inbox model object obj, or
     None if there is no such representation defined. If the optional
@@ -103,7 +101,7 @@ def encode(obj, namespace_public_id=None):
         return resp
 
     elif isinstance(obj, Thread):
-        return {
+        base = {
             'id': obj.public_id,
             'object': 'thread',
             'namespace_id': _get_namespace_public_id(obj),
@@ -112,12 +110,51 @@ def encode(obj, namespace_public_id=None):
             'last_message_timestamp': obj.recentdate,
             'first_message_timestamp': obj.subjectdate,
             'snippet': obj.snippet,
-            'message_ids': [m.public_id for m in obj.messages if not
-                            m.is_draft],
-            'draft_ids': [m.public_id for m in obj.drafts],
             'tags': format_tags_list(obj.tags),
             'version': obj.version
         }
+
+        if not expand:
+            base['message_ids'] = \
+                [m.public_id for m in obj.messages if not m.is_draft]
+            base['draft_ids'] = [m.public_id for m in obj.drafts]
+            return base
+
+        # Expand messages within threads
+        all_expanded_messages = []
+        all_expanded_drafts = []
+        for msg in obj.messages:
+            resp = {
+                'id': msg.public_id,
+                'object': 'message',
+                'namespace_id': _get_namespace_public_id(msg),
+                'subject': msg.subject,
+                'from': format_address_list(msg.from_addr),
+                'to': format_address_list(msg.to_addr),
+                'cc': format_address_list(msg.cc_addr),
+                'bcc': format_address_list(msg.bcc_addr),
+                'date': msg.received_date,
+                'thread_id': msg.thread.public_id,
+                'snippet': msg.snippet,
+                'unread': not msg.is_read,
+                'files': msg.api_attachment_metadata
+            }
+
+            if msg.is_draft:
+                resp['object'] = 'draft'
+                resp['version'] = msg.version
+                if msg.reply_to_message is not None:
+                    resp['reply_to_message_id'] = \
+                        msg.reply_to_message.public_id
+                else:
+                    resp['reply_to_message_id'] = None
+                all_expanded_drafts.append(resp)
+            else:
+                all_expanded_messages.append(resp)
+
+        base['messages'] = all_expanded_messages
+        base['drafts'] = all_expanded_drafts
+        return base
 
     elif isinstance(obj, Contact):
         return {
@@ -228,20 +265,24 @@ class APIEncoder(object):
         public id of the namespace to which the object to serialize belongs.
 
     """
-    def __init__(self, namespace_public_id=None):
-        self.encoder_class = self._encoder_factory(namespace_public_id)
+    def __init__(self, namespace_public_id=None, expand=False, pretty=False):
+        self.expand = expand
+        self.pretty = pretty
+        self.encoder_class = self._encoder_factory(namespace_public_id, expand)
 
-    def _encoder_factory(self, namespace_public_id):
+    def _encoder_factory(self, namespace_public_id, expand):
         class InternalEncoder(JSONEncoder):
             def default(self, obj):
-                custom_representation = encode(obj, namespace_public_id)
+                custom_representation = encode(obj,
+                                               namespace_public_id,
+                                               expand=expand)
                 if custom_representation is not None:
                     return custom_representation
                 # Let the base class default method raise the TypeError
                 return JSONEncoder.default(self, obj)
         return InternalEncoder
 
-    def cereal(self, obj, pretty=False):
+    def cereal(self, obj):
         """
         Returns the JSON string representation of obj.
 
@@ -257,28 +298,10 @@ class APIEncoder(object):
             If obj is not serializable.
 
         """
-        if pretty:
+        if self.pretty:
             return dumps(obj,
                          sort_keys=True,
                          indent=4,
                          separators=(',', ': '),
                          cls=self.encoder_class)
         return dumps(obj, cls=self.encoder_class)
-
-    def jsonify(self, obj):
-        """
-        Returns a Flask Response object encapsulating the JSON
-        representation of obj.
-
-        Parameters
-        ----------
-        obj: serializable object
-
-        Raises
-        ------
-        TypeError
-            If obj is not serializable.
-
-        """
-        return Response(self.cereal(obj, pretty=True),
-                        mimetype='application/json')
