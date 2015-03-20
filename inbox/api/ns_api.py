@@ -1,6 +1,10 @@
 import os
 import base64
 import uuid
+import gevent
+import time
+from inbox.models.session import session_scope
+
 
 from flask import request, g, Blueprint, make_response, Response
 from flask import jsonify as flask_jsonify
@@ -41,6 +45,7 @@ engine = main_engine()
 
 DEFAULT_LIMIT = 100
 MAX_LIMIT = 1000
+LONG_POLL_REQUEST_TIMEOUT = 120
 
 
 app = Blueprint(
@@ -1041,7 +1046,10 @@ def sync_deltas():
                           required=True)
     g.parser.add_argument('exclude_types', type=valid_delta_object_types,
                           location='args')
+    g.parser.add_argument('wait', type=bool, default=False,
+                          location='args')
     args = strict_parse_args(g.parser, request.args)
+    exclude_types = args.get('exclude_types')
     cursor = args['cursor']
     if cursor == '0':
         start_pointer = 0
@@ -1052,19 +1060,35 @@ def sync_deltas():
                        Transaction.namespace_id == g.namespace.id).one()
         except NoResultFound:
             raise InputError('Invalid cursor parameter')
-    exclude_types = args.get('exclude_types')
-    deltas, _ = delta_sync.format_transactions_after_pointer(
-        g.namespace.id, start_pointer, g.db_session, args['limit'],
-        delta_sync._format_transaction_for_delta_sync, exclude_types)
-    response = {
-        'cursor_start': cursor,
-        'deltas': deltas,
-    }
-    if deltas:
-        response['cursor_end'] = deltas[-1]['cursor']
-    else:
-        # No changes.
-        response['cursor_end'] = cursor
+
+    # The client wants us to wait until there are changes
+    g.db_session.close()  # hack to close the flask session
+    poll_interval = 1
+
+    start_time = time.time()
+    while time.time() - start_time < LONG_POLL_REQUEST_TIMEOUT:
+        with session_scope() as db_session:
+            deltas, _ = delta_sync.format_transactions_after_pointer(
+                g.namespace.id, start_pointer, db_session, args['limit'],
+                delta_sync._format_transaction_for_delta_sync, exclude_types)
+
+        response = {
+            'cursor_start': cursor,
+            'deltas': deltas,
+        }
+        if deltas:
+            response['cursor_end'] = deltas[-1]['cursor']
+            return g.encoder.jsonify(response)
+
+        # No changes. perhaps wait
+        elif args['wait']:
+            gevent.sleep(poll_interval)
+        else:  # Return immediately
+            response['cursor_end'] = cursor
+            return g.encoder.jsonify(response)
+
+    # If nothing happens until timeout, just return the end of the cursor
+    response['cursor_end'] = cursor
     return g.encoder.jsonify(response)
 
 
