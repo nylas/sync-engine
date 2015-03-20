@@ -276,3 +276,8 @@ def validate_search_query(query):
         return
 
     return
+
+
+def validate_search_sort(sort):
+    if sort not in ('datetime', 'relevance', None):
+        raise InputError("Sort order must be 'datetime' or 'relevance'")

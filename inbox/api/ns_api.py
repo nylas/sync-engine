@@ -21,6 +21,7 @@ from inbox.api.validation import (get_tags, get_attachments, get_calendar,
                                   ValidatableArgument,
                                   validate_draft_recipients,
                                   validate_search_query,
+                                  validate_search_sort,
                                   valid_delta_object_types)
 import inbox.contacts.crud
 from inbox.sendmail.base import (create_draft, update_draft, delete_draft)
@@ -307,13 +308,17 @@ def thread_query_api():
 def thread_search_api():
     args = strict_parse_args(g.parser, request.args)
     data = request.get_json(force=True)
-    query = data.get('query')
 
+    query = data.get('query')
     validate_search_query(query)
+
+    sort = data.get('sort')
+    validate_search_sort(sort)
 
     try:
         search_engine = NamespaceSearchEngine(g.namespace_public_id)
         results = search_engine.threads.search(query=query,
+                                               sort=sort,
                                                max_results=args.limit,
                                                offset=args.offset)
     except SearchEngineError as e:
@@ -454,9 +459,13 @@ def message_search_api():
 
     validate_search_query(query)
 
+    sort = data.get('sort')
+    validate_search_sort(sort)
+
     try:
         search_engine = NamespaceSearchEngine(g.namespace_public_id)
         results = search_engine.messages.search(query=query,
+                                                sort=sort,
                                                 max_results=args.limit,
                                                 offset=args.offset)
     except SearchEngineError as e:

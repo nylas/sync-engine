@@ -10,6 +10,18 @@ log = get_logger()
 from inbox.search.query import DSLQueryEngine, MessageQuery, ThreadQuery
 from inbox.search.mappings import NAMESPACE_INDEX_MAPPING
 
+# Uncomment to enable logging of exactly which queries are made against the
+# elasticsearch server, which you can paste directly into curl... also logs
+# results, which is VERY verbose.
+# import logging
+# es_tracer = logging.getLogger('elasticsearch.trace')
+# es_tracer.propagate = True
+
+# Uncomment to disable verbose elasticsearch module logging.
+# import logging
+# es_logger = logging.getLogger('elasticsearch')
+# es_logger.propagate = False
+
 
 class SearchEngineError(Exception):
     """ Raised when connecting to the Elasticsearch server fails. """
@@ -115,7 +127,7 @@ class NamespaceSearchEngine(object):
 
 class BaseSearchAdaptor(object):
     """
-    Base adaptor between the Inbox API and Elasticsearch for a single index and
+    Base adaptor between the Nilas API and Elasticsearch for a single index and
     document type. Subclasses implement the document type specific logic.
 
     """
@@ -133,7 +145,7 @@ class BaseSearchAdaptor(object):
     @wrap_es_errors
     def _index_document(self, object_repr, **kwargs):
         """
-        (Re)index a document for the object with Inbox API representation
+        (Re)index a document for the object with Nilas API representation
         `object_repr`.
 
         """
@@ -215,19 +227,29 @@ class BaseSearchAdaptor(object):
         return count
 
     @wrap_es_errors
-    def search(self, query, max_results=100, offset=0, explain=True):
+    def search(self, query, sort, max_results=100, offset=0, explain=True):
         """ Perform a search and return the results. """
         dsl_query = self.query_engine.generate_query(query)
 
         self.log.debug('search query', query=query, dsl_query=dsl_query)
 
-        raw_results = self._connection.search(
-            index=self.index_id,
-            doc_type=self.doc_type,
-            body=dsl_query,
-            size=max_results,
-            from_=offset,
-            explain=explain)
+        search_kwargs = dict(index=self.index_id,
+                             doc_type=self.doc_type,
+                             body=dsl_query,
+                             size=max_results,
+                             from_=offset,
+                             explain=explain)
+
+        # Split this out to a Sort class with subclasses for
+        # MessageSort/ThreadSort if we expand sorting to be more flexible.
+        if sort != 'relevance':
+            if self.doc_type == 'message':
+                timestamp_field = 'date'
+            if self.doc_type == 'thread':
+                timestamp_field = 'last_message_timestamp'
+            search_kwargs['sort'] = '{}:desc'.format(timestamp_field)
+
+        raw_results = self._connection.search(**search_kwargs)
 
         self._log_query(query, raw_results)
 
