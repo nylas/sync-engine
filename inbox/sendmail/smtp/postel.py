@@ -255,8 +255,22 @@ class SMTPClient(object):
         blocks = [p.block for p in draft.attachments]
         attachments = generate_attachments(blocks)
 
+        # @emfree - 3/19/2015
+        #
         # Note that we intentionally don't set the Bcc header in the message we
-        # construct.
+        # construct, because this would would result in a MIME message being
+        # generated with a Bcc header which all recipients can see.
+        #
+        # Arguably we should send each Bcc'ed recipient a MIME message that has
+        # a Bcc: <only them> header. This is what the Gmail web UI appears to
+        # do. However, this would need to be carefully implemented and tested.
+        # The current approach was chosen for its comparative simplicity. I'm
+        # pretty sure that other clients do it this way as well. It is the
+        # first of the three implementations described here:
+        # http://tools.ietf.org/html/rfc2822#section-3.6.3
+        #
+        # Note that we ensure in our SMTP code BCCed recipients still actually
+        # get the message.
         msg = create_email(sender_name=self.sender_name,
                            sender_email=self.email_address,
                            inbox_uid=draft.inbox_uid,
