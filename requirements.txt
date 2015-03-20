@@ -39,7 +39,7 @@ pyinstrument==0.12
 structlog==0.4.1
 raven==5.0.0
 simplejson==3.6.0
-Flask-RESTful==0.2.12
+Flask-RESTful==0.3.2
 uritemplate==0.6
 icalendar==3.8.2
 git+https://github.com/kav-ya/pynacl.git@libsodium_fix#egg=pynacl
