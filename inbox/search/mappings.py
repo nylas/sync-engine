@@ -9,7 +9,8 @@ THREAD_MAPPING = {
         'participants': {'type': 'nested', 'properties': {'email': {'type': 'string'}, 'name': {'type': 'string'}}},
         'first_message_timestamp': {'type': 'date', 'format': 'dateOptionalTime'},
         'id': {'type': 'string'},
-        'subject': {'type': 'string'}
+        'subject': {'type': 'string'},
+        'version': {'type': 'long'}
     }
 }
 
