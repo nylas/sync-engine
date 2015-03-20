@@ -36,7 +36,7 @@ setup(
         "imapclient>=0.11",
         "Flask>=0.10.1",
         "futures>=2.1.3",
-        "Flask-RESTful>=0.2.12",
+        "Flask-RESTful>=0.3.2",
         "pynacl>=0.2.3",
         "flanker>=0.4.26",
         "httplib2>=0.8",
