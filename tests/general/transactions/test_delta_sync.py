@@ -54,6 +54,7 @@ def test_event_generation(api_client):
         thread_path = '/threads/{}'.format(thread_id)
         api_client.put_data(thread_path, {'add_tags': ['foo']})
 
+    time.sleep(1)
     cursor = get_cursor(api_client, ts)
 
     sync_data = api_client.get_data('/delta?cursor={0}&limit={1}'.

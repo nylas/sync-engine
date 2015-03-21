@@ -9,7 +9,7 @@ from inbox.models.event import RecurringEvent
 def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
             any_email, thread_public_id, started_before, started_after,
             last_message_before, last_message_after, filename, tag, limit,
-            offset, view, expand, db_session):
+            offset, view, db_session):
 
     if view == 'count':
         query = db_session.query(func.count(Thread.id))
@@ -104,7 +104,7 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
             subqueryload('tagitems').joinedload('tag').
             load_only('public_id', 'name'))
 
-        if expand:
+        if view == 'expand':
             query = query.options(
                 subqueryload(Thread.messages).
                 load_only('public_id', 'subject', 'is_draft', 'version',

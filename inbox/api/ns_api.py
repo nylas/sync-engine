@@ -283,11 +283,8 @@ def thread_query_api():
     g.parser.add_argument('thread_id', type=valid_public_id, location='args')
     g.parser.add_argument('tag', type=bounded_str, location='args')
     g.parser.add_argument('view', type=view, location='args')
-    g.parser.add_argument('expand', type=inputs.boolean, location='args',
-                          default=False)
 
     args = strict_parse_args(g.parser, request.args)
-    expand = args['expand']
 
     threads = filtering.threads(
         namespace_id=g.namespace.id,
@@ -307,11 +304,10 @@ def thread_query_api():
         limit=args['limit'],
         offset=args['offset'],
         view=args['view'],
-        expand=expand,
         db_session=g.db_session)
 
     # Use a new encoder object with the expand parameter set.
-    encoder = APIEncoder(g.namespace.public_id, expand=expand)
+    encoder = APIEncoder(g.namespace.public_id, args['view']=='expanded')
     return encoder.jsonify(threads)
 
 
@@ -341,12 +337,10 @@ def thread_search_api():
 
 @app.route('/threads/<public_id>')
 def thread_api(public_id):
-    g.parser.add_argument('expand', type=inputs.boolean, location='args',
-                          default=False)
+    g.parser.add_argument('view', type=view, location='args')
     args = strict_parse_args(g.parser, request.args)
-    expand = args['expand']
-    # Use custom encoder to support expand property.
-    encoder = APIEncoder(g.namespace.public_id, expand=expand)
+    # Use a new encoder object with the expand parameter set.
+    encoder = APIEncoder(g.namespace.public_id, args['view']=='expanded')
     try:
         valid_public_id(public_id)
         thread = g.db_session.query(Thread).filter(

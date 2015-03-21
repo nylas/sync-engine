@@ -124,7 +124,7 @@ def test_expanded_threads(stub_message, api_client):
 
     # /threads/<thread_id>
     resp = api_client.client.get(api_client.full_path(
-        '/threads/{}?expand=true'.format(stub_message.thread.public_id),
+        '/threads/{}?view=expanded'.format(stub_message.thread.public_id),
         ns_id=stub_message.namespace_id))
     assert resp.status_code == 200
     resp_dict = json.loads(resp.data)
@@ -132,7 +132,7 @@ def test_expanded_threads(stub_message, api_client):
 
     # /threads/
     resp = api_client.client.get(api_client.full_path(
-        '/threads/?expand=true'.format(stub_message.thread.public_id),
+        '/threads/?view=expanded'.format(stub_message.thread.public_id),
         ns_id=stub_message.namespace_id))
     assert resp.status_code == 200
     resp_dict = json.loads(resp.data)

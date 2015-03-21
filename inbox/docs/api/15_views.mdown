@@ -41,3 +41,114 @@ GET https://api.inboxapp.com/n/<namespace_id>/messages?thread_id=aqb0llc2ioo0bcl
    "4vfg8p1om177q2cfx9sselkea"
 ]
 ```
+
+
+## Expanded:
+
+Expands threads response to contain message/drafts sub-objects. Adding `view=expanded` will remove `message_ids` and `draft_ids`, and `messages` and `drafts`. Note the message and draft sub-objects do not include body parameter.
+
+```
+:::xml
+GET https://api.inboxapp.com/n/<namespace_id>/threads/<thread_id>?view=count
+```
+
+**Response**
+
+```
+:::json
+**Sample response:**
+
+```
+:::json
+{
+    "id": "evh5uy0shhpm5d0le89goor17",
+    "object": "thread",
+    "namespace_id": "awa6ltos76vz5hvphkp8k17nt",
+    "subject": "Dinner Party on Friday",
+    "last_message_timestamp": 1398229259,
+    "first_message_timestamp": 1298229259,
+    "participants": [
+        {
+            "name": "Ben Bitdiddle",
+            "email": "ben.bitdiddle@gmail.com"
+        },
+        {
+            "name": "Charles Mason",
+            "email": "cmason@cmu.edu"
+        },
+        {
+            "name": "Bill Rogers",
+            "email": "wrogers@mit.edu"
+        }
+    ],
+    "snippet": "Hey Bill, Looking forward to getting together for dinner on Friday. What can I bring? I have a couple bottles of wine or could put together",
+    "tags": [
+        {
+            "name": "inbox",
+            "id": "f0idlvozkrpj3ihxze7obpivh"
+        },
+        {
+            "name": "unread",
+            "id": "8keda28h8ijj2nogpj83yjep8"
+        }
+    ],
+    "messages": [
+        "id": "251r594smznew6yhiocht2v29",
+        "object": "message",
+        "subject": "Dinner on Friday?",
+        "from": [
+            {
+                "name": "Ben Bitdiddle",
+                "email": "ben.bitdiddle@gmail.com"
+            }
+        ],
+        "to": [
+            {
+                "name": "Bill Rogers",
+                "email": "wbrogers@mit.edu"
+            }
+        ],
+        "cc": [],
+        "bcc": [],
+        "date": 1370084645,
+        "thread_id": "5vryyrki4fqt7am31uso27t3f",
+        "files": [],
+        "snippet": "Hey Bill, Looking forward to getting together for dinner on Friday. What can I bring? I have a couple bottles of wine or could put together",
+        "unread": false
+    ],
+    "drafts": [
+        "id": "251r594smznew6yhi12312saq",
+        "object": "draft",
+        "subject": "Re: Dinner on Friday?",
+        "from": [
+            {
+                "name": "Bill Rogers",
+                "email": "wbrogers@mit.edu"
+            }
+        ],
+        "to": [
+            {
+                "name": "Ben Bitdiddle",
+                "email": "ben.bitdiddle@gmail.com"
+            }
+        ],
+        "cc": [],
+        "bcc": [],
+        "date": 1370084645,
+        "thread_id": "5vryyrki4fqt7am31uso27t3f",
+        "files": [
+            {
+                "content_type": "image/jpeg",
+                "filename": "walter.jpg",
+                "id": "7jm8bplrg5tx0c7pon56tx30r",
+                "size": 38633,
+                "content_id": "ii_i2cg7byn1_1499bfd99727e569"
+            }
+        ],
+        "snippet": "Sounds good--that bottle of Pinot should go well with the meal. I'll also bring a surprise for dessert. :) Do you have ice cream? Looking fo",
+        "unread": false
+    ]
+}
+```
+
+```

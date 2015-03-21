@@ -32,7 +32,7 @@ def strict_bool(value, key):
 
 
 def view(value, key):
-    allowed_views = ["count", "ids"]
+    allowed_views = ["count", "ids", "expanded"]
     if value not in allowed_views:
         raise ValueError('Unknown view type {}.'.format(value))
     return value
