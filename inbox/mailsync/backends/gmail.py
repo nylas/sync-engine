@@ -241,7 +241,6 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
             new_uid.message.g_thrid = msg.g_thrid
 
             # we rely on Gmail's threading instead of our threading algorithm.
-            new_uid.message.thread_order = 0
             new_uid.update_flags_and_labels(msg.flags, msg.g_labels)
 
             thread = new_uid.message.thread = ImapThread.from_gmail_message(

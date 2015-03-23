@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 import pytest
-from datetime import datetime
-from inbox.util.threading import thread_messages, fetch_corresponding_thread
+from inbox.util.threading import fetch_corresponding_thread
 from inbox.util.misc import cleanup_subject
-from collections import namedtuple
 from tests.util.base import (add_fake_message, add_fake_thread,
                              add_fake_imapuid)
 
@@ -20,30 +18,6 @@ def test_message_cleanup():
     assert cleanup_subject("Aw:Re:wienerschnitzel") == "wienerschnitzel"
     assert cleanup_subject("Aw: wienerschnitzel") == "wienerschnitzel"
     assert cleanup_subject("aw: wg:wienerschnitzel") == "wienerschnitzel"
-
-
-def test_threading():
-    Message = namedtuple('Message', ['message_id_header', 'references',
-                                     'received_date'])
-    messages = [Message("aaa_header", [], datetime(1999, 1, 23)),
-                Message("bbb_header", ["aaa_header"], datetime(2000, 12, 23)),
-                Message("ccc_header", ["bbb_header"], datetime(2000, 12, 24))]
-
-    assert thread_messages(messages) == messages
-
-    messages2 = [Message("aaa_header", [], datetime(1999, 1, 23)),
-                 Message("bbb_header", ["aaa_header"], datetime(2000, 12, 23)),
-                 Message("ccc_header", ["aaa_header"], datetime(2000, 12, 24)),
-                 Message("ddd_header", ["bbb_header"], datetime(2000, 12, 25))]
-
-    assert thread_messages(messages2) == messages2
-
-    messages3 = [Message("aaa_header", [], datetime(1999, 1, 23)),
-                 Message("bbb_header", ["aaa_header"], datetime(2000, 12, 23)),
-                 Message("ccc_header", [], datetime(2000, 12, 23)),
-                 Message("ddd_header", ["bbb_header"], datetime(2000, 12, 23))]
-
-    assert thread_messages(messages3) == messages3
 
 
 def test_basic_message_grouping(db, default_namespace):
