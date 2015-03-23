@@ -2,7 +2,8 @@ import arrow
 from datetime import timedelta
 
 from inbox.models.when import Time, TimeSpan, Date, DateSpan, parse_as_when
-from inbox.events.util import google_to_event_time, parse_google_time
+from inbox.events.util import (google_to_event_time, parse_google_time,
+                               parse_datetime)
 
 
 def test_when_time():
@@ -80,6 +81,24 @@ def test_when_spans_arent_spans():
                 'end_time': end_time.timestamp}
     ts = parse_as_when(timespan)
     assert isinstance(ts, Time)
+
+
+def test_parse_datetime():
+    t = '20140104T102030Z'
+    dt = parse_datetime(t)
+    assert dt == arrow.get(2014, 01, 04, 10, 20, 30)
+
+    t = '2014-01-15T17:00:00-05:00'
+    dt = parse_datetime(t)
+    assert dt == arrow.get(2014, 01, 15, 22, 00, 00)
+
+    t = None
+    dt = parse_datetime(t)
+    assert dt is None
+
+    t = 1426008600
+    dt = parse_datetime(t)
+    assert dt == arrow.get(2015, 03, 10, 17, 30, 00)
 
 
 def test_parse_google_time():

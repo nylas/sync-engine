@@ -1,4 +1,5 @@
 import arrow
+from dateutil.parser import parse
 from collections import namedtuple
 from inbox.models.when import parse_as_when
 
@@ -9,8 +10,14 @@ class MalformedEventError(Exception):
 
 
 def parse_datetime(datetime):
-    # returns a UTC-aware datetime
-    return arrow.get(datetime).to('utc')
+    # returns a UTC-aware datetime as an Arrow object.
+    # to access the `datetime` object: `obj.datetime`
+    # to convert to a naive datetime: `obj.naive`
+    # http://crsmithdev.com/arrow/
+    if datetime is not None:
+        if isinstance(datetime, int):
+            return arrow.get(datetime).to('utc')
+        return arrow.get(parse(datetime)).to('utc')
 
 
 def parse_rrule_datetime(datetime, tzinfo=None):
