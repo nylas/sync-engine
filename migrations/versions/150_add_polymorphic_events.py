@@ -157,7 +157,7 @@ def populate():
                 raw_data = json.loads(r.raw_data)
             except:
                 try:
-                    raw_data = ast.literal_eval(e.raw_data)
+                    raw_data = ast.literal_eval(r.raw_data)
                 except:
                     print "Could not load raw data for event {}".format(r.id)
                     continue
