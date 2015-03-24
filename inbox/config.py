@@ -93,8 +93,17 @@ def _update_config_from_env(config):
                 # this also parses json, which is a subset of yaml
                 config.update(yaml.safe_load(f))
 
+
+def _get_local_feature_flags(config):
+    if os.environ.get('FEATURE_FLAGS') is not None:
+        flags = os.environ.get('FEATURE_FLAGS').split()
+    else:
+        flags = config.get('FEATURE_FLAGS', '').split()
+    config['FEATURE_FLAGS'] = flags
+
 config = Configuration()
 _update_config_from_env(config)
+_get_local_feature_flags(config)
 
 if 'MYSQL_PASSWORD' not in config:
     raise Exception(
@@ -116,8 +125,8 @@ def engine_uri(database=None):
     # So we can use docker links to dynamically attach containerized databases
     # https://docs.docker.com/userguide/dockerlinks/#environment-variables
 
-    info['host'] = os.getenv("MYSQL_PORT_3306_TCP_ADDR",info['host'])
-    info['port'] = os.getenv("MYSQL_PORT_3306_TCP_PORT",info['port'])
+    info['host'] = os.getenv("MYSQL_PORT_3306_TCP_ADDR", info['host'])
+    info['port'] = os.getenv("MYSQL_PORT_3306_TCP_PORT", info['port'])
 
     uri_template = 'mysql+pymysql://{username}:{password}@{host}' \
                    ':{port}/{database}?charset=utf8mb4'

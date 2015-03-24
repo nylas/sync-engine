@@ -15,7 +15,7 @@ import gevent
 # fail to provision the box appropriately; this check is a reasonable
 # approximation of "Did the setup script run?"
 try:
-    from inbox.config import config
+    from inbox.config import config as inbox_config
 except ImportError:
     sys.exit("Could not find Inbox installation. "
              "Maybe the Vagrant box provisioning didn't succeed?\n"
@@ -78,6 +78,10 @@ def main(prod, config, process_num):
 
      Use CTRL-C to stop.
      """
+
+    if inbox_config.get('FEATURE_FLAGS', []) != []:
+        print >>sys.stderr, "Feature flags enabled: {}\n".format(
+            ' '.join(inbox_config['FEATURE_FLAGS']))
 
     gevent.spawn(trace_greenlets)
     global sync_service

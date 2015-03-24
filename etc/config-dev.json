@@ -32,6 +32,7 @@
 "ENCRYPT_SECRETS": false,
 "DEBUG_CONSOLE_ON": true,
 
-"ELASTICSEARCH_HOSTS": [{"host": "localhost", "port": 9200}]
+"ELASTICSEARCH_HOSTS": [{"host": "localhost", "port": 9200}],
 
+"FEATURE_FLAGS": "ical_autoimport"
 }

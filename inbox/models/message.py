@@ -263,7 +263,8 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                                 mid=mid)
                     continue  # TODO should we store relations?
                 msg._parse_mimepart(mimepart, mid, i, account.namespace.id)
-                if (mimepart.content_type.format_type == 'text' and
+                if 'ical_autoimport' in config.get('FEATURE_FLAGS') and \
+                    (mimepart.content_type.format_type == 'text' and
                         mimepart.content_type.subtype == 'calendar'):
 
                     from inbox.events.ical import import_attached_events
@@ -279,9 +280,9 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                         log.error('Unhandled exception during message parsing',
                                   mid=mid,
                                   traceback=traceback.format_exception(
-                                                sys.exc_info()[0],
-                                                sys.exc_info()[1],
-                                                sys.exc_info()[2]))
+                                      sys.exc_info()[0],
+                                      sys.exc_info()[1],
+                                      sys.exc_info()[2]))
 
             msg.calculate_sanitized_body()
         except (mime.DecodingError, AttributeError, RuntimeError, TypeError,
