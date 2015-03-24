@@ -15,6 +15,7 @@ from inbox.models.base import MailSyncBase
 from inbox.models.mixins import HasPublicID, HasRevisions
 from inbox.models.calendar import Calendar
 from inbox.models.namespace import Namespace
+from inbox.models.message import Message
 from inbox.models.when import Time, TimeSpan, Date, DateSpan
 from inbox.events.util import parse_rrule_datetime
 
@@ -110,6 +111,16 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     is_owner = Column(Boolean, nullable=False, default=True)
     last_modified = Column(FlexibleDateTime, nullable=True)
 
+    # This column is only used for events that are synced from iCalendar
+    # files.
+    message_id = Column(ForeignKey(Message.id, ondelete='CASCADE'),
+                        nullable=True)
+
+    message = relationship(Message,
+                           backref=backref('events',
+                                           order_by='Event.last_modified',
+                                           cascade='all, delete-orphan'))
+
     __table_args__ = (Index('ix_event_ns_uid_calendar_id',
                             'namespace_id', 'uid', 'calendar_id'),)
 
@@ -172,6 +183,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
         self.reminders = event.reminders
         self.recurrence = event.recurrence
         self.last_modified = event.last_modified
+        self.message = event.message
 
     @property
     def recurring(self):

@@ -265,5 +265,4 @@ def create_imap_message(db_session, log, account, folder, msg):
     new_msg.is_read = imapuid.is_seen
 
     update_contacts_from_message(db_session, new_msg, account.namespace)
-
     return imapuid

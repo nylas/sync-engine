@@ -7,8 +7,7 @@ from flanker import mime
 from inbox.models import Message
 from inbox.models.message import _get_errfilename
 from inbox.util.addr import parse_mimepart_address_header
-from tests.util.base import (default_account, default_namespace,
-                             thread, add_fake_calendar)
+from tests.util.base import default_account, default_namespace, thread
 
 __all__ = ['default_namespace', 'thread']
 
@@ -208,16 +207,3 @@ def test_calculate_snippet():
                        'voces coniurationis tuae potest, si illustrantur,'
     assert len(expected_snippet) == 191
     assert m.calculate_html_snippet(body) == expected_snippet
-
-
-@pytest.mark.only
-def test_integrated_ical_parsing(
-        db, default_account, default_namespace,
-        raw_message_with_ical_invite):
-    cal = default_account.emailed_events_calendar
-    received_date = datetime.datetime(2014, 9, 22, 17, 25, 46)
-    m = Message.create_from_synced(default_account, 139219, '[Gmail]/All Mail',
-                                   received_date,
-                                   raw_message_with_ical_invite)
-    assert len(cal.events) == 1
-    assert cal.events[0].title == 'Nilas test drive'

@@ -3,23 +3,32 @@
 # add any attached event to the "Emailed events" calendar.
 from inbox.models.session import session_scope
 from inbox.models.account import Account
-from inbox.models.block import Block
+from inbox.models.message import Message
+from inbox.models.block import Part, Block
 from inbox.events.ical import import_attached_events
 from inbox.events.util import MalformedEventError
 from inbox.sqlalchemy_ext.util import safer_yield_per
+
+from sqlalchemy.orm import lazyload, joinedload
 
 
 with session_scope() as db_session:
     accounts = db_session.query(Account)
     for account in accounts:
-        print "Processing account: %s" % account.email_address
+        print "Processing account {} ({})".format(
+            account.id, account.email_address)
 
-        query = db_session.query(Block).filter(
-            Block.namespace_id == account.namespace.id,
-            Block._content_type_other == "text/calendar")
-        for block in safer_yield_per(query, Block.id, 0, 100):
+        query = db_session.query(Message).join(Part).join(Block).filter(
+            Message.namespace_id == account.namespace.id,
+            Block._content_type_other == 'text/calendar').options(
+                lazyload(Message.namespace),
+                joinedload(Message.parts).joinedload('block'))
+
+        for message in safer_yield_per(query, Message.id, 0, 100):
+            print "- importing events from message {}".format(message.id)
             try:
-                import_attached_events(account.id, block.data)
-            except MalformedEventError as e:
-                    print "Malformed event - ignoring.", e
+                import_attached_events(db_session, account, message)
+            except MalformedEventError:
+                    print ("Malformed event for message {}. "
+                           "Ignoring.".format(message.id))
         db_session.commit()

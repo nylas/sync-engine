@@ -2,12 +2,38 @@
 
 import pytest
 import arrow
+from inbox.models.block import Part, Block
 from inbox.models.event import Event, RecurringEvent
 from inbox.events.util import MalformedEventError
 from inbox.events.ical import events_from_ics, import_attached_events
-from tests.util.base import absolute_path
+from tests.util.base import (absolute_path, add_fake_calendar,
+                             add_fake_thread, add_fake_message)
 
 FIXTURES = './events/fixtures/'
+
+
+def add_fake_msg_with_calendar_part(db_session, account, ics_str):
+    thread = add_fake_thread(db_session, account.namespace.id)
+    msg = add_fake_message(db_session, account.namespace.id, thread=thread)
+
+    if not msg.parts:
+        walk_index = 1
+    else:
+        walk_index = msg.parts[-1].walk_index + 1
+
+    ics_part = Part(
+            message=msg,
+            block=Block(
+                data=ics_str,
+                namespace_id=msg.namespace_id),
+            walk_index=walk_index)
+    ics_part.block.content_type = 'text/calendar'
+
+    assert msg.has_attached_events
+    db_session.add(msg)
+    db_session.commit()
+
+    return msg
 
 
 def test_invalid_ical(db, default_account):
@@ -65,12 +91,17 @@ def test_iphone_through_exchange(db, default_account):
     assert ev.end == arrow.get(2014, 12, 27, 16, 0)
 
 
-def test_event_update(db, default_account):
+def test_event_update(db, default_account, message):
+    add_fake_calendar(db.session, default_account.namespace.id,
+                      name="Emailed events", read_only=True)
 
     with open(absolute_path(FIXTURES + 'gcal_v1.ics')) as fd:
-        data = fd.read()
+        ics_data = fd.read()
 
-    import_attached_events(default_account.id, data)
+    msg = add_fake_msg_with_calendar_part(
+        db.session, default_account, ics_data)
+
+    import_attached_events(db.session, default_account, msg)
     db.session.commit()
 
     ev = db.session.query(Event).filter(
@@ -80,24 +111,30 @@ def test_event_update(db, default_account):
                            "75009 Paris, France")
 
     with open(absolute_path(FIXTURES + 'gcal_v2.ics')) as fd:
-        data = fd.read()
+        ics_data = fd.read()
 
-    import_attached_events(default_account.id, data)
+    msg = add_fake_msg_with_calendar_part(
+        db.session, default_account, ics_data)
+
+    import_attached_events(db.session, default_account, msg)
     db.session.commit()
 
     ev = db.session.query(Event).filter(
         Event.uid == "jvbroggos139aumnj4p5og9rd0@google.com").one()
 
     assert ev.location == (u"Le Zenith, 211 Avenue Jean Jaures, "
-                           "75019 Paris, France")
+                            "75019 Paris, France")
 
 
 def test_recurring_ical(db, default_account):
 
     with open(absolute_path(FIXTURES + 'gcal_recur.ics')) as fd:
-        data = fd.read()
+        ics_data = fd.read()
 
-    import_attached_events(default_account.id, data)
+    msg = add_fake_msg_with_calendar_part(
+        db.session, default_account, ics_data)
+
+    import_attached_events(db.session, default_account, msg)
     db.session.commit()
 
     ev = db.session.query(Event).filter(
@@ -111,12 +148,15 @@ def test_recurring_ical(db, default_account):
 def test_event_no_end_time(db, default_account):
     # With no end time, import should fail
     with open(absolute_path(FIXTURES + 'meetup_infinite.ics')) as fd:
-        data = fd.read()
+        ics_data = fd.read()
 
-    with pytest.raises(MalformedEventError) as exc:
-        import_attached_events(default_account.id, data)
+    add_fake_msg_with_calendar_part(db.session, default_account, ics_data)
 
-        assert exc.message == 'Event lacks start and/or end time'
+    # doesn't raise an exception (to not derail message parsing, but also
+    # doesn't create an event)
+    ev = db.session.query(Event).filter(
+        Event.uid == "nih2h78am1cb1uqetgfkslrfrc@meetup.com").first()
+    assert not ev
 
 
 def test_event_no_participants(db, default_account):

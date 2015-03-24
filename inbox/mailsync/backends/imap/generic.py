@@ -92,6 +92,7 @@ from inbox.mailsync.backends.base import (create_db_objects,
                                           mailsync_session_scope,
                                           THROTTLE_WAIT)
 from inbox.heartbeat.store import HeartbeatStatusProxy
+from inbox.events.ical import import_attached_events
 
 GenericUIDMetadata = namedtuple('GenericUIDMetadata', 'throttled')
 
@@ -415,6 +416,15 @@ class FolderSyncEngine(Greenlet):
         new_uid = common.create_imap_message(db_session, log, acct, folder,
                                              msg)
         new_uid = self.add_message_attrs(db_session, new_uid, msg)
+
+        # We're calling import_attached_events here instead of some more
+        # obvious place (like Message.create_from_synced) because the function
+        # requires new_uid.message to have been flushed.
+        # This is necessary because the import_attached_events does db lookups.
+        if new_uid.message.has_attached_events:
+            with db_session.no_autoflush:
+                import_attached_events(db_session, acct, new_uid.message)
+
         return new_uid
 
     def _count_thread_messages(self, thread_id, db_session):

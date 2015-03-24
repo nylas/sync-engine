@@ -1,10 +1,8 @@
-import sys
 import os
 import json
 import datetime
 import base64
 import itertools
-import traceback
 from hashlib import sha256
 from flanker import mime
 from collections import defaultdict
@@ -25,7 +23,6 @@ from inbox.util.misc import parse_references, get_internaldate
 from inbox.models.mixins import HasPublicID, HasRevisions
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
-from inbox.events.util import MalformedEventError
 
 
 from inbox.log import get_logger
@@ -263,27 +260,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                                 mid=mid)
                     continue  # TODO should we store relations?
                 msg._parse_mimepart(mimepart, mid, i, account.namespace.id)
-                if 'ical_autoimport' in config.get('FEATURE_FLAGS') and \
-                    (mimepart.content_type.format_type == 'text' and
-                        mimepart.content_type.subtype == 'calendar'):
-
-                    from inbox.events.ical import import_attached_events
-                    try:
-                        import_attached_events(account.id, mimepart.body)
-                    except MalformedEventError as e:
-                        log.error('Attached event parsing error',
-                                  account_id=account.id, mid=mid)
-                    except (AssertionError, TypeError, RuntimeError,
-                            AttributeError, ValueError) as e:
-                        # Kind of ugly but we don't want to derail message
-                        # parsing because of an error in the attached calendar.
-                        log.error('Unhandled exception during message parsing',
-                                  mid=mid,
-                                  traceback=traceback.format_exception(
-                                      sys.exc_info()[0],
-                                      sys.exc_info()[1],
-                                      sys.exc_info()[2]))
-
             msg.calculate_sanitized_body()
         except (mime.DecodingError, AttributeError, RuntimeError, TypeError,
                 ValueError) as e:
@@ -495,6 +471,15 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     @property
     def versioned_relationships(self):
         return ['parts']
+
+    @property
+    def has_attached_events(self):
+        return 'text/calendar' in [p.block.content_type for p in self.parts]
+
+    @property
+    def attached_event_files(self):
+        return [part for part in self.parts
+                if part.block.content_type == 'text/calendar']
 
 
 # Need to explicitly specify the index length for MySQL 5.6, because the

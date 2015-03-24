@@ -98,7 +98,8 @@ def encode(obj, namespace_public_id=None, expand=False):
             'snippet': obj.snippet,
             'body': obj.sanitized_body,
             'unread': not obj.is_read,
-            'files': obj.api_attachment_metadata
+            'files': obj.api_attachment_metadata,
+            'events': [event.public_id for event in obj.events],
         }
 
         # If the message is a draft (Inbox-created or otherwise):
@@ -182,6 +183,7 @@ def encode(obj, namespace_public_id=None, expand=False):
             'object': 'event',
             'namespace_id': _get_namespace_public_id(obj),
             'calendar_id': obj.calendar.public_id if obj.calendar else None,
+            'message_id': obj.message.public_id if obj.message else None,
             'title': obj.title,
             'description': obj.description,
             'participants': [_format_participant_data(participant)

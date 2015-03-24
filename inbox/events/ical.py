@@ -1,14 +1,17 @@
+import sys
 import pytz
 import arrow
+import traceback
 from datetime import datetime, date
 from icalendar import Calendar as iCalendar
 
 from inbox.models.event import Event
-from inbox.models.calendar import Calendar
-from inbox.models.session import session_scope
 from inbox.events.util import MalformedEventError
 from inbox.util.addr import canonicalize_address
 from timezones import timezones_table
+
+from inbox.log import get_logger
+log = get_logger()
 
 
 STATUS_MAP = {'NEEDS-ACTION': 'noreply',
@@ -201,38 +204,55 @@ def events_from_ics(namespace, calendar, ics_str):
     return events
 
 
-def import_attached_events(account_id, ics_str):
+def import_attached_events(db_session, account, message):
     """Import events from a file into the 'Emailed events' calendar."""
-    from inbox.models.account import Account
 
-    with session_scope() as db_session:
-        account = db_session.query(Account).get(account_id)
-        assert account is not None
+    assert account is not None
 
-        calendar = db_session.query(Calendar).filter(
-            Calendar.namespace_id == account.namespace.id,
-            Calendar.name == "Emailed events").one()
+    for part in message.attached_event_files:
+        try:
+            new_events = events_from_ics(account.namespace,
+                                         account.emailed_events_calendar,
+                                         part.block.data)
+        except MalformedEventError:
+            log.error('Attached event parsing error',
+                      account_id=account.id, message_id=message.id)
+            continue
+        except (AssertionError, TypeError, RuntimeError,
+                AttributeError, ValueError):
+            # Kind of ugly but we don't want to derail message
+            # creation because of an error in the attached calendar.
+            log.error('Unhandled exception during message parsing',
+                      message_id=message.id,
+                      traceback=traceback.format_exception(
+                                    sys.exc_info()[0],
+                                    sys.exc_info()[1],
+                                    sys.exc_info()[2]))
+            continue
 
-        new_events = events_from_ics(account.namespace, calendar, ics_str)
-        uids_table = {event.uid: event for event in new_events}
+        new_uids = [event.uid for event in new_events]
 
         # Get the list of events which share a uid with those we received.
         existing_events = db_session.query(Event).filter(
-            Event.calendar_id == calendar.id,
+            Event.calendar_id == account.emailed_events_calendar.id,
             Event.namespace_id == account.namespace.id,
-            Event.uid.in_(uids_table.keys())).all()
+            Event.uid.in_(new_uids)).all()
 
         existing_events_table = {event.uid: event for event in existing_events}
 
-        to_add = []
         for event in new_events:
             if event.uid not in existing_events_table:
-                to_add.append(event)
+                # This is some SQLAlchemy trickery -- the events returned
+                # by events_from_ics aren't bound to a session. Because of
+                # this, we don't care if they get garbage-collected.
+                # By associating the event to the message we make sure it
+                # will be flushed to the db.
+                event.message = message
             else:
                 # This is an event we already have in the db.
                 # Let's see if the version we have is older or newer.
                 existing_event = existing_events_table[event.uid]
+
                 if event.last_modified > existing_event.last_modified:
                     existing_event.update(event)
-        db_session.add_all(to_add)
-        db_session.flush()
+                    existing_event.message = message
