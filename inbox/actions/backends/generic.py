@@ -224,9 +224,9 @@ def set_remote_spam(account, thread_id, spam, db_session):
             remote_move(account, thread_id, folder,
                         account.spam_folder.name, db_session,
                         create_destination=True)
-        else:
-            remote_move(account, thread_id, account.spam_folder.name,
-                        account.inbox_folder.name, db_session)
+    else:
+        remote_move(account, thread_id, account.spam_folder.name,
+                    account.inbox_folder.name, db_session)
 
 
 def set_remote_trash(account, thread_id, trash, db_session):
@@ -247,6 +247,6 @@ def set_remote_trash(account, thread_id, trash, db_session):
             remote_move(account, thread_id, folder,
                         account.trash_folder.name, db_session,
                         create_destination=True)
-        else:
-            remote_move(account, thread_id, account.trash_folder.name,
-                        account.inbox_folder.name, db_session)
+    else:
+        remote_move(account, thread_id, account.trash_folder.name,
+                    account.inbox_folder.name, db_session)
