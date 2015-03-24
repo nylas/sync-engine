@@ -91,7 +91,7 @@ Threads are returned in order of their latest message date, most recent first.
 
 The `limit` [filter](#filters) allows you to specify how many threads you would like returned. If your application only needs a few threads, you should explicitly provide a `limit` to improve performance. If your application needs to fetch a large number of threads, you can implement basic pagination using the `offset` [filter](#filters). If a request returns less than `limit` threads, you have run out of threads.
 
-If you are building an application that intends to sync all of the user's threads, like a full-featured mail client, you should use the [delta sync protocol](#sync-protocol) to avoid repeatedly paginating over the entire set of threads in the user's inbox.
+If you are building an application that intends to sync all of the user's threads, like a full-featured mail client, you should use the [delta enpoint](#deltas) to avoid repeatedly paginating over the entire set of threads in the user's inbox.
 
 
 # Participants

@@ -68,7 +68,7 @@ def test_event_generation(api_client):
 
 def test_events_are_condensed(api_client):
     """Test that multiple revisions of the same object are rolled up in the
-    delta sync response."""
+    delta response."""
     ts = int(time.time())
     api_client.post_data('/tags/', {'name': 'foo'})
     cursor = get_cursor(api_client, ts)

@@ -8,7 +8,7 @@ from inbox.models.session import session_scope
 
 from flask import request, g, Blueprint, make_response, Response
 from flask import jsonify as flask_jsonify
-from flask.ext.restful import reqparse, inputs
+from flask.ext.restful import reqparse
 from sqlalchemy import asc, or_, func
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -307,7 +307,7 @@ def thread_query_api():
         db_session=g.db_session)
 
     # Use a new encoder object with the expand parameter set.
-    encoder = APIEncoder(g.namespace.public_id, args['view']=='expanded')
+    encoder = APIEncoder(g.namespace.public_id, args['view'] == 'expanded')
     return encoder.jsonify(threads)
 
 
@@ -340,7 +340,7 @@ def thread_api(public_id):
     g.parser.add_argument('view', type=view, location='args')
     args = strict_parse_args(g.parser, request.args)
     # Use a new encoder object with the expand parameter set.
-    encoder = APIEncoder(g.namespace.public_id, args['view']=='expanded')
+    encoder = APIEncoder(g.namespace.public_id, args['view'] == 'expanded')
     try:
         valid_public_id(public_id)
         thread = g.db_session.query(Thread).filter(
@@ -1057,7 +1057,7 @@ def sync_deltas():
                           location='args')
     g.parser.add_argument('wait', type=bool, default=False,
                           location='args')
-    # TODO(emfree): should support `expand` parameter in delta sync endpoints.
+    # TODO(emfree): should support `expand` parameter in delta endpoints.
     args = strict_parse_args(g.parser, request.args)
     exclude_types = args.get('exclude_types')
     cursor = args['cursor']
