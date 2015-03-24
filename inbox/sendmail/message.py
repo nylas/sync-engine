@@ -26,6 +26,29 @@ VERSION = pkg_resources.get_distribution('inbox-sync').version
 REPLYSTR = 'Re: '
 
 
+# Patch flanker to use base64 rather than quoted-printable encoding for
+# MIME parts with long lines. Flanker's implementation of quoted-printable
+# encoding (which ultimately relies on the Python quopri module) inserts soft
+# line breaks that end with '=\n'. Some Exchange servers fail to handle this,
+# and garble the encoded messages when sending, unless you break the lines with
+# '=\r\n'. Their expectation seems to be technically correct, per RFC1521
+# section 5.1. However, we opt to simply avoid this mess entirely.
+def fallback_to_base64(charset, preferred_encoding, body):
+    if charset in ('ascii', 'iso8859=1', 'us-ascii'):
+        if mime.message.part.has_long_lines(body):
+            # In the original implementation, this was
+            # return stronger_encoding(preferred_encoding, 'quoted-printable')
+            return mime.message.part.stronger_encoding(preferred_encoding,
+                                                       'base64')
+        else:
+            return preferred_encoding
+    else:
+        return mime.message.part.stronger_encoding(preferred_encoding,
+                                                   'base64')
+
+mime.message.part.choose_text_encoding = fallback_to_base64
+
+
 def create_email(sender_name,
                  sender_email,
                  inbox_uid,

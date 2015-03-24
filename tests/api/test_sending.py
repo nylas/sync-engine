@@ -302,12 +302,9 @@ def test_reply_headers_set(patch_smtp, api_client, example_draft):
     assert 'References' in parsed.headers
 
 
-def test_body_construction(patch_smtp, api_client, example_draft):
-    thread_id = api_client.get_data('/threads')[0]['id']
-
+def test_body_construction(patch_smtp, api_client):
     api_client.post_data('/send',
                          {'to': [{'email': 'bob@foocorp.com'}],
-                          'thread_id': thread_id,
                           'subject': 'Banalities',
                           'body': '<html>Hello there</html>'})
     _, msg = patch_smtp[-1]
@@ -323,6 +320,36 @@ def test_body_construction(patch_smtp, api_client, example_draft):
             html_part_found = True
             assert part.body.strip() == '<html>Hello there</html>'
     assert plain_part_found and html_part_found
+
+
+def test_quoted_printable_encoding_avoided_for_compatibility(
+        patch_smtp, api_client):
+    # Test that messages with long lines don't get quoted-printable encoded,
+    # for maximum server compatibility.
+    api_client.post_data(
+        '/send',
+        {'to': [{'email': 'bob@foocorp.com'}],
+         'subject': 'In Catilinam',
+         'body': 'Etenim quid est, Catilina, quod iam amplius exspectes, si '
+         'neque nox tenebris obscurare coeptus nefarios neque privata domus '
+         'parietibus continere voces conjurationis tuae potest? Si '
+         'illustrantur, si erumpunt omnia? Muta iam istam mentem, mihi crede! '
+         'obliviscere caedis atque incendiorum. Teneris undique: luce sunt '
+         'clariora nobis tua consilia omnia; quae iam mecum licet recognoscas.'
+         ' Meministine me ante diem duodecimum Kalendas Novembres dicere in '
+         'senatu, fore in armis certo die, qui dies futurus esset ante diem '
+         'sextum Kalendas Novembres, C. Manlium, audaciae satellitem atque '
+         'administrum tuae? Num me fefellit, Catilina, non modo res tanta, tam'
+         ' atrox, tamque incredibilis, verum id quod multo magis admirandum, '
+         'dies? '})
+    _, msg = patch_smtp[-1]
+    parsed = mime.from_string(msg)
+    assert len(parsed.parts) == 2
+    for part in parsed.parts:
+        if part.content_type.value == 'text/html':
+            assert part.content_encoding[0] == 'base64'
+        elif part.content_type.value == 'text/plain':
+            assert part.content_encoding[0] in ('7bit', 'base64')
 
 
 def test_draft_not_persisted_if_sending_fails(recipients_refused, api_client,
