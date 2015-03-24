@@ -24,8 +24,9 @@ def main(prod, config):
     if config is not None:
         config_path = os.path.abspath(config)
         load_overrides(config_path)
-    preflight()
     configure_logging(prod)
+    if not prod:
+        preflight()
 
     search_indexer = SearchIndexService()
 

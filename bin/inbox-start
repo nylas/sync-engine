@@ -53,7 +53,8 @@ def main(prod, config, process_num):
         config_path = os.path.abspath(config)
         load_overrides(config_path)
 
-    preflight()
+    if not prod:
+        preflight()
 
     total_processes = int(os.environ.get('MAILSYNC_PROCESSES', 1))
 

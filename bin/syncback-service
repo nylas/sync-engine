@@ -39,11 +39,11 @@ def main(prod, config):
     if config is not None:
         config_path = os.path.abspath(config)
         load_overrides(config_path)
-    preflight()
     configure_logging(prod)
     if prod:
         start()
     else:
+        preflight()
         from werkzeug.serving import run_with_reloader
         run_with_reloader(start)
 

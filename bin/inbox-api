@@ -53,11 +53,10 @@ def main(prod, start_syncback, config, port):
         config_path = os.path.abspath(config)
         load_overrides(config_path)
 
-    preflight()
-
     if prod:
         start(port, start_syncback)
     else:
+        preflight()
         from werkzeug.serving import run_with_reloader
         run_with_reloader(lambda: start(port, start_syncback))
 
