@@ -51,7 +51,8 @@ def get_transaction_cursor_near_timestamp(namespace_id, timestamp, db_session):
         filter(Transaction.created_at < dt,
                Transaction.namespace_id == namespace_id).limit(1).subquery()
     latest_transaction = db_session.query(Transaction). \
-        filter(Transaction.created_at == latest_timestamp). \
+        filter(Transaction.created_at == latest_timestamp,
+               Transaction.namespace_id == namespace_id). \
         order_by(desc(Transaction.id)).first()
 
     if latest_transaction is None:
