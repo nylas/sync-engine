@@ -53,8 +53,9 @@ def google_to_event_time(start_raw, end_raw):
     start = parse_google_time(start_raw)
     end = parse_google_time(end_raw)
     if 'date' in start_raw:
-        # Google all-day events end a 'day' later than they should
-        end = end.replace(days=-1)
+        # Google all-day events normally end a 'day' later than they should,
+        # but not always if they were created by a third-party client.
+        end = max(start, end.replace(days=-1))
         d = {'start_date': start, 'end_date': end}
     else:
         d = {'start_time': start, 'end_time': end}
