@@ -12,7 +12,6 @@ from inbox.models.mixins import HasPublicID, HasEmailAddress
 from inbox.models.base import MailSyncBase
 from inbox.models.folder import Folder
 from inbox.models.calendar import Calendar
-from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from inbox.providers import provider_info
 
 
@@ -175,13 +174,6 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
 
     _sync_status = Column(MutableDict.as_mutable(JSON), default={},
                           nullable=True)
-
-    # We want to have only one account per email address. Unfortunately,
-    # because of a bug/feature in SQLAlchemy, redefining __table_args doesn't
-    # work. To work around this, we redefine _canonicalized_address.
-    # - karim
-    _canonicalized_address = Column(String(MAX_INDEXABLE_LENGTH),
-                                    nullable=True, index=True, unique=True)
 
     @property
     def sync_status(self):
