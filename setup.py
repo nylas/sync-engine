@@ -73,6 +73,7 @@ setup(
              'bin/regen-labels',
              'bin/delete-account',
              'bin/alive-dead-metrics',
+             'bin/create-db',
              'bin/syncback-service'],
 
     # See:
