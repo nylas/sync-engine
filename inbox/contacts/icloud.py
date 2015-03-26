@@ -54,7 +54,6 @@ class ICloudContactsProvider(object):
 
         return Contact(namespace_id=self.namespace_id,
                        provider_name=self.PROVIDER_NAME,
-                       source='remote',
                        uid=uid,
                        name=name,
                        email_address=email_address,
