@@ -89,7 +89,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     message_id_header = Column(String(998), nullable=True)
     # There is no hard limit on subject limit in the spec, but 255 is common.
     subject = Column(String(255), nullable=True, default='')
-    received_date = Column(DateTime, nullable=False)
+    received_date = Column(DateTime, nullable=False, index=True)
     size = Column(Integer, nullable=False)
     data_sha256 = Column(String(255), nullable=True)
 
@@ -482,9 +482,10 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                 if part.block.content_type == 'text/calendar']
 
 
-# Need to explicitly specify the index length for MySQL 5.6, because the
-# subject column is too long to be fully indexed with utf8mb4 collation.
+# Need to explicitly specify the index length for table generation with MySQL
+# 5.6 when columns are too long to be fully indexed with utf8mb4 collation.
 Index('ix_message_subject', Message.subject, mysql_length=191)
+Index('ix_message_data_sha256', Message.data_sha256, mysql_length=191)
 
 # For API querying performance.
 Index('ix_message_ns_id_is_draft_received_date', Message.namespace_id,
