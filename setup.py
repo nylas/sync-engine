@@ -74,6 +74,7 @@ setup(
              'bin/delete-account',
              'bin/alive-dead-metrics',
              'bin/create-db',
+             'bin/inbox-api',
              'bin/syncback-service'],
 
     # See:
