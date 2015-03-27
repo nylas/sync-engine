@@ -58,8 +58,8 @@ class OAuthAuthHandler(AuthHandler):
             log.error('IMAP Login error during connection. '
                       'Account: {}, error: {}'.format(email, e),
                       account_id=account_id)
-            if str(e) == '[ALERT] Invalid credentials (Failure)' or \
-               str(e) == '[AUTHENTICATIONFAILED] OAuth authentication failed.':
+            if (str(e) == '[ALERT] Invalid credentials (Failure)' or
+                    str(e).startswith('[AUTHENTICATIONFAILED]')):
                 raise ValidationError(str(e))
             else:
                 raise ConnectionError(str(e))
