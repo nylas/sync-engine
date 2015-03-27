@@ -133,14 +133,6 @@ Each element of the response contains the following fields:
 After you've processed the deltas, your application should update its stored
 `cursor` to the value of `cursor_end` in the response. Nilas may only return the first batch of changes, so it's important to make this API call repeatedly until you receive the same `cursor_end` that you sent (`cursor_start`). This indicates that you have consumed the entire transaction log of the user's mailbox and your application is up-to-date.
 
-# Long-polling Delta Updates
-Normally a request with the latest cursor will immediately return an empty list with no deltas. Adding the URL parameter `wait=true` will instruct the server to hold open the request until either new changes are available, or a 2-minute timeout occurs. This behavior can be used to provide real-time updates on platforms that do not support partial response parsing (such as web browsers).
-
-```
-:::xml
-GET https://api.nilas.com/n/<namespace_id>/delta?cursor=<cursor>&wait=true
-```
-
 
 # Streaming Delta Updates
 The streaming endpoint allows you to get changes in real time, without needing to repeatedly poll. First obtain a delta cursor as described above, and then use it to query the `/delta/streaming` endpoint:
