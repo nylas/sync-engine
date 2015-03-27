@@ -24,16 +24,18 @@ def test_basic_message_grouping(db, default_namespace):
     first_thread = add_fake_thread(db.session, default_namespace.id)
     first_thread.subject = 'Some kind of test'
 
-    msg1 = add_fake_message(db.session, default_namespace.id, first_thread)
-    msg1.subject = 'Some kind of test'
-    msg1.from_addr = [('Karim Hamidou', 'karim@nilas.com')]
-    msg1.to_addr =   [('Eben Freeman', 'emfree@nilas.com')]
-    msg1.bcc_addr =  [('Some person', 'person@nilas.com')]
+    add_fake_message(db.session, default_namespace.id,
+                     thread=first_thread,
+                     subject='Some kind of test',
+                     from_addr=[('Karim Hamidou', 'karim@nilas.com')],
+                     to_addr=[('Eben Freeman', 'emfree@nilas.com')],
+                     bcc_addr=[('Some person', 'person@nilas.com')])
 
-    msg2 = add_fake_message(db.session, default_namespace.id, thread=None)
-    msg2.subject = 'Re: Some kind of test'
-    msg2.from_addr = [('Some random dude', 'random@pobox.com')]
-    msg2.to_addr =   [('Karim Hamidou', 'karim@nilas.com')]
+    msg2 = add_fake_message(db.session, default_namespace.id, thread=None,
+                            subject='Re: Some kind of test',
+                            from_addr=[('Some random dude',
+                                        'random@pobox.com')],
+                            to_addr=[('Karim Hamidou', 'karim@nilas.com')])
 
     matched_thread = fetch_corresponding_thread(db.session,
                                                 default_namespace.id, msg2)
@@ -52,17 +54,20 @@ def test_self_send(db, default_namespace):
     first_thread = add_fake_thread(db.session, default_namespace.id)
     first_thread.subject = 'Some kind of test'
 
-    msg1 = add_fake_message(db.session, default_namespace.id, first_thread)
-    msg1.subject = 'Some kind of test'
-    msg1.from_addr = [('Karim Hamidou', 'karim@nilas.com')]
-    msg1.to_addr =   [('Karim Hamidou', 'karim@nilas.com')]
+    add_fake_message(db.session, default_namespace.id,
+                     thread=first_thread,
+                     subject='Some kind of test',
+                     from_addr=[('Karim Hamidou', 'karim@nilas.com')],
+                     to_addr=[('Karim Hamidou', 'karim@nilas.com')])
 
-    msg2 = add_fake_message(db.session, default_namespace.id, thread=None)
-    msg2.subject = 'Re: Some kind of test'
-    msg2.from_addr = [('Karim Hamidou', 'karim@nilas.com')]
-    msg2.to_addr =   [('Karim Hamidou', 'karim@nilas.com')]
+    msg2 = add_fake_message(db.session, default_namespace.id,
+                            thread=None,
+                            subject='Re: Some kind of test',
+                            from_addr=[('Karim Hamidou', 'karim@nilas.com')],
+                            to_addr=[('Karim Hamidou', 'karim@nilas.com')])
 
-    matched_thread = fetch_corresponding_thread(db.session, default_namespace.id, msg2)
+    matched_thread = fetch_corresponding_thread(db.session,
+                                                default_namespace.id, msg2)
     assert matched_thread is first_thread, "Should match on self-send"
 
 

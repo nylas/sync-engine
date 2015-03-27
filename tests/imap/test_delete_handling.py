@@ -1,4 +1,5 @@
 from datetime import datetime
+import gevent
 import pytest
 from sqlalchemy.orm.exc import ObjectDeletedError
 from inbox.crispin import GmailFlags
@@ -53,6 +54,8 @@ def test_deletion_with_short_ttl(db, default_account, default_namespace,
                             uid_accessor=lambda m: m.imapuids,
                             message_ttl=0)
     remove_deleted_uids(default_account.id, db.session, [msg_uid], folder.id)
+    # Sleep to prevent issues with MySQL rounding fractional seconds.
+    gevent.sleep(1)
     handler.check()
     # Check that objects were actually deleted
     with pytest.raises(ObjectDeletedError):
@@ -66,6 +69,8 @@ def test_non_orphaned_messages_get_unmarked(db, default_account,
                                             folder, imapuid):
     message.deleted_at = datetime.utcnow()
     db.session.commit()
+    # Sleep to prevent issues with MySQL rounding fractional seconds.
+    gevent.sleep(1)
     handler = DeleteHandler(account_id=default_account.id,
                             namespace_id=default_namespace.id,
                             uid_accessor=lambda m: m.imapuids,
@@ -87,6 +92,8 @@ def test_threads_only_deleted_when_no_messages_left(db, default_account,
     # Add another message onto the thread
     add_fake_message(db.session, default_namespace.id, thread)
     remove_deleted_uids(default_account.id, db.session, [msg_uid], folder.id)
+    # Sleep to prevent issues with MySQL rounding fractional seconds.
+    gevent.sleep(1)
     handler.check()
     # Check that the orphaned message was deleted.
     with pytest.raises(ObjectDeletedError):
@@ -104,6 +111,8 @@ def test_deletion_deferred_with_longer_ttl(db, default_account,
                             uid_accessor=lambda m: m.imapuids,
                             message_ttl=5)
     remove_deleted_uids(default_account.id, db.session, [msg_uid], folder.id)
+    # Sleep to prevent issues with MySQL rounding fractional seconds.
+    gevent.sleep(1)
     handler.check()
     # Would raise ObjectDeletedError if objects were deleted
     message.id

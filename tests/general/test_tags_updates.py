@@ -87,6 +87,7 @@ def test_adding_message_to_thread(db):
 
 
 def test_update_unread_status(db, thread, message, imapuid):
+    message.is_read = True
     imapuid.is_seen = False
     update_unread_status(imapuid)
 
