@@ -23,7 +23,7 @@ STATUS_MAP = {'NEEDS-ACTION': 'noreply',
 def events_from_ics(namespace, calendar, ics_str):
     try:
         cal = iCalendar.from_ical(ics_str)
-    except (ValueError, IndexError):
+    except (ValueError, IndexError, KeyError):
         raise MalformedEventError()
 
     events = []
