@@ -1,7 +1,6 @@
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, func
 from sqlalchemy.orm import relationship, backref, aliased
 from sqlalchemy.sql.expression import false
-from sqlalchemy.ext.associationproxy import association_proxy
 
 from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.schema import UniqueConstraint
@@ -102,10 +101,8 @@ class Tag(MailSyncBase, HasRevisions):
             filter(tagitem_alias.tag_id == tag_id)
         return query.scalar()
 
-    threads = association_proxy('tagitems', 'thread')
-
     def count_threads(self):
-        return len(self.threads)
+        return self.tagitems.count()
 
     __table_args__ = (UniqueConstraint('namespace_id', 'name'),
                       UniqueConstraint('namespace_id', 'public_id'))

@@ -257,7 +257,7 @@ class TagItem(MailSyncBase):
     tag = relationship(
         Tag,
         backref=backref('tagitems',
-                        cascade='all, delete-orphan'))
+                        cascade='all, delete-orphan', lazy='dynamic'))
 
     @property
     def namespace(self):
