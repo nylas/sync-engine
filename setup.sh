@@ -196,6 +196,7 @@ pip install -e .
 if [ -d "../inbox-eas" ]; then
     pip install -r ../inbox-eas/requirements.txt
     pip install -e ../inbox-eas
+    python ../inbox-eas/bin/create-test-db
 fi
 
 color '35;1' 'Finished installing dependencies.'
