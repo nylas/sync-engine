@@ -185,3 +185,15 @@ def test_multiple_events(db, default_account):
     assert len(ev1.participants) == 0
 
     assert ev1.start == arrow.get(2015, 03, 17, 0, 0)
+
+
+def test_multiple_summaries(db, default_account):
+    data = None
+    with open(absolute_path(FIXTURES + 'multiple_summaries.ics')) as fd:
+        data = fd.read()
+
+    events = events_from_ics(default_account.namespace,
+                             default_account.emailed_events_calendar, data)
+
+    assert len(events) == 1
+    assert events[0].title == 'The Strokes - Is this it?'

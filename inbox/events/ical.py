@@ -101,7 +101,14 @@ def events_from_ics(namespace, calendar, ics_str):
                 assert last_modified is not None, \
                     "Event should have a DtStamp or LAST-MODIFIED timestamp"
 
-            title = component.get('summary')
+            title = None
+            summaries = component.get('summary', [])
+            if not isinstance(summaries, list):
+                summaries = [summaries]
+
+            if summaries != []:
+                title = " - ".join(summaries)
+
             description = unicode(component.get('description'))
 
             recur = component.get('rrule')
