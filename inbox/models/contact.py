@@ -70,7 +70,7 @@ class MessageContactAssociation(MailSyncBase):
                         primary_key=True)
     message_id = Column(Integer, ForeignKey(Message.id, ondelete='CASCADE'),
                         primary_key=True)
-    field = Column(Enum('from_addr', 'to_addr', 'cc_addr', 'bcc_addr'))
+    field = Column(Enum('from_addr', 'to_addr', 'cc_addr', 'bcc_addr', 'reply_to'))
     # Note: The `cascade` properties need to be a parameter of the backref
     # here, and not of the relationship. Otherwise a sqlalchemy error is thrown
     # when you try to delete a message or a contact.

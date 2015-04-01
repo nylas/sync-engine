@@ -1,14 +1,14 @@
 """add last_modified column for events
 
 Revision ID: 54dcea22a268
-Revises: 486c7fa5b533
+Revises: 41f957b595fc
 Create Date: 2015-03-16 23:15:55.908307
 
 """
 
 # revision identifiers, used by Alembic.
 revision = '54dcea22a268'
-down_revision = '486c7fa5b533'
+down_revision = '41f957b595fc'
 
 from alembic import op
 from sqlalchemy.sql import text

@@ -37,7 +37,7 @@ def update_contacts_from_message(db_session, message, namespace):
                 contact_map[canonicalized_address] = new_contact
 
         # Now associate each contact to the message.
-        for field_name in ('from_addr', 'to_addr', 'cc_addr', 'bcc_addr'):
+        for field_name in ('from_addr', 'to_addr', 'cc_addr', 'bcc_addr', 'reply_to'):
             field = getattr(message, field_name)
             if field is None:
                 continue
