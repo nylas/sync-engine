@@ -1,6 +1,6 @@
 Title: Deltas
 
-The Nilas Sync Engine builds a transaction log that records every change as it sychronizes your users' mailboxes. Your application can use these changes, exposed through the Delta endpoint, to build email applications that process new data quickly without fetching an index of the user's mailbox or performing a large number of API calls.
+The Nylas Sync Engine builds a transaction log that records every change as it sychronizes your users' mailboxes. Your application can use these changes, exposed through the Delta endpoint, to build email applications that process new data quickly without fetching an index of the user's mailbox or performing a large number of API calls.
 
 To use the Delta API, your application needs to maintain a sync `cursor`,
 a record of the last change you successfully processed. Each time you perform a
@@ -15,7 +15,7 @@ Once you have a cursor, you should store it and update it as you make sync reque
 
 ```
 :::xml
-POST https://api.nilas.com/n/<namespace_id>/delta/generate_cursor
+POST https://api.nylas.com/n/<namespace_id>/delta/generate_cursor
 ```
 
 ```
@@ -36,14 +36,14 @@ POST https://api.nilas.com/n/<namespace_id>/delta/generate_cursor
 
 # Requesting a Delta
 
-Each time your application syncs with Nilas, you provide the cursor indicating
+Each time your application syncs with Nylas, you provide the cursor indicating
 your position in the user's mailbox history. The API request below returns a
 set of JSON objects representing individual changes to the user's mailbox: tag
 changes, new messages, etc.
 
 ```
 :::xml
-GET https://api.nilas.com/n/<namespace_id>/delta?cursor=<cursor>
+GET https://api.nylas.com/n/<namespace_id>/delta?cursor=<cursor>
 ```
 
 **Sample response:**
@@ -105,7 +105,7 @@ GET https://api.nilas.com/n/<namespace_id>/delta?cursor=<cursor>
                         "name": "Michael Grinich"
                     },
                     {
-                        "email": "ben@nilas.com",
+                        "email": "ben@nylas.com",
                         "name": ""
                     }
                 ],
@@ -131,7 +131,7 @@ Each element of the response contains the following fields:
 * `"attributes"`: The state of the object when the delta was generated.
 
 After you've processed the deltas, your application should update its stored
-`cursor` to the value of `cursor_end` in the response. Nilas may only return the first batch of changes, so it's important to make this API call repeatedly until you receive the same `cursor_end` that you sent (`cursor_start`). This indicates that you have consumed the entire transaction log of the user's mailbox and your application is up-to-date.
+`cursor` to the value of `cursor_end` in the response. Nylas may only return the first batch of changes, so it's important to make this API call repeatedly until you receive the same `cursor_end` that you sent (`cursor_start`). This indicates that you have consumed the entire transaction log of the user's mailbox and your application is up-to-date.
 
 
 # Streaming Delta Updates
@@ -139,7 +139,7 @@ The streaming endpoint allows you to get changes in real time, without needing t
 
 ```
 :::xml
-GET https://api.nilas.com/n/<namespace_id>/delta/streaming?cursor=<cursor>
+GET https://api.nylas.com/n/<namespace_id>/delta/streaming?cursor=<cursor>
 ```
 
 This will start a long-polling HTTP connection. The server will stream deltas
@@ -171,7 +171,7 @@ request
 ```
 :::xml
 GET
-https://api.nilas.com/n/<namespace_id>/delta/streaming?cursor=<cursor>&exclude_types=message,contact
+https://api.nylas.com/n/<namespace_id>/delta/streaming?cursor=<cursor>&exclude_types=message,contact
 ```
 
 The value of `exclude_types` must be a comma-separated list whose elements are

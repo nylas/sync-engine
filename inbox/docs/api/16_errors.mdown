@@ -1,6 +1,6 @@
 Title: Errors
 
-Nilas uses conventional HTTP response codes to indicate the success or failure of an API request.
+Nylas uses conventional HTTP response codes to indicate the success or failure of an API request.
 
 Code | Description
 --- | ---
@@ -10,7 +10,7 @@ Code | Description
 402 | Request Failed -- Parameters were valid but the request failed.
 404 | Not Found -- The requested item doesn't exist.
 429 | Too Many Requests.
-500, 502, <br/>503, 504 | Server errors --  An error occured in the Nilas server.
+500, 502, <br/>503, 504 | Server errors --  An error occured in the Nylas server.
 
 For a full list of possible codes, we recommend the [Wikipedia article](http://en.wikipedia.org/wiki/List_of_HTTP_status_codes).
 

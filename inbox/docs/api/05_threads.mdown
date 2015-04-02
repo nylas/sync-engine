@@ -1,14 +1,14 @@
 Title: Threads
 
 
-Threads are the main object in Nilas. They can be read, archived, and deleted. All messages are part of a thread, even if that thread has only one message. Operations like flagging and marking as read are only done at the thread level.
+Threads are the main object in Nylas. They can be read, archived, and deleted. All messages are part of a thread, even if that thread has only one message. Operations like flagging and marking as read are only done at the thread level.
 
 
 # Retrieving a Thread
 
 ```
 :::xml
-GET https://api.nilas.com/n/<namespace_id>/threads/<thread_id>
+GET https://api.nylas.com/n/<namespace_id>/threads/<thread_id>
 ```
 
 The thread object includes useful information like subject, participants, and time of the most recently received message.
@@ -68,21 +68,21 @@ See [Message section](#retrieving-messages-in-a-thread).
 
 ```
 :::xml
-GET https://api.nilas.com/n/<namespace_id>/threads?<filter_parameters>
+GET https://api.nylas.com/n/<namespace_id>/threads?<filter_parameters>
 ```
 
 This API supports [Filters](#filters), making it easy to return a subset of threads matching your needs. You can specify one or more filter parameters to return threads with a specific tag, from a specific sender, etc. For example, this request would return only threads in the user's inbox:
 
 ```
 :::xml
-GET https://api.nilas.com/n/<namespace_id>/threads?tag=inbox
+GET https://api.nylas.com/n/<namespace_id>/threads?tag=inbox
 ```
 
-Filters also allow you to make more complex queries like the one below, which shows threads that include `mark@nilas.com` as a participant and are unread, ordered by date:
+Filters also allow you to make more complex queries like the one below, which shows threads that include `mark@nylas.com` as a participant and are unread, ordered by date:
 
 ```
 :::xml
-GET https://api.nilas.com/n/<namespace_id>/threads?tag=unread&any_email=mark@nilas.com
+GET https://api.nylas.com/n/<namespace_id>/threads?tag=unread&any_email=mark@nylas.com
 ```
 
 Threads are returned in order of their latest message date, most recent first.
@@ -96,7 +96,7 @@ If you are building an application that intends to sync all of the user's thread
 
 # Participants
 
-The list of thread participants includes everyone involved in the thread. The `name` field on each participant is the underlying `phrase` associated with their email address. In typical IMAP clients you set the phrase manually when you configure the account, so it's possible for phrases to vary for the same email address, or for the phrase to be missing entirely. When Nilas displays lists of participants it does not consolidate copies of an email addresses with different phrases, because phrases are often overloaded to provide context. For example, this is a valid set of participants:
+The list of thread participants includes everyone involved in the thread. The `name` field on each participant is the underlying `phrase` associated with their email address. In typical IMAP clients you set the phrase manually when you configure the account, so it's possible for phrases to vary for the same email address, or for the phrase to be missing entirely. When Nylas displays lists of participants it does not consolidate copies of an email addresses with different phrases, because phrases are often overloaded to provide context. For example, this is a valid set of participants:
 
 ```
 :::json
@@ -106,17 +106,17 @@ The list of thread participants includes everyone involved in the thread. The `n
         "email": "wrogers@mit.edu"
     },
     {
-        "name": "Jon Smith (via Nilas Support)",
-        "email": "support@nilas.com"
+        "name": "Jon Smith (via Nylas Support)",
+        "email": "support@nylas.com"
     },
     {
-        "name": "Mark Tanner (via Nilas Support)",
-        "email": "support@nilas.com"
+        "name": "Mark Tanner (via Nylas Support)",
+        "email": "support@nylas.com"
     }
 ]
 ```
 
-Nilas does not consolidate these two participants based on their email address `support@nilas.com`, because they could (and in this case do) represent two separate participants in the thread.
+Nylas does not consolidate these two participants based on their email address `support@nylas.com`, because they could (and in this case do) represent two separate participants in the thread.
 
 The `name` field may also be blank. In this case, you may want to display the email address or look up the email address in an external address book.
 
@@ -136,7 +136,7 @@ The `name` field may also be blank. In this case, you may want to display the em
 
 # Snippets
 
-Nilas provides a snippet for each thread so that your application can preview message content without making additional API calls. The snippet is a small excerpt of text from the most recent message in the thread. It is automatically updated when messages are added to threads.
+Nylas provides a snippet for each thread so that your application can preview message content without making additional API calls. The snippet is a small excerpt of text from the most recent message in the thread. It is automatically updated when messages are added to threads.
 
 Snippets are always provided as plain text with HTML tags and other content stripped from the body. Their length varies based on the length of the underlying messages, and a thread may have an empty snippet if the message in thread has no body text.
 

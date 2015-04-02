@@ -15,7 +15,7 @@ def main():
     parser.add_option('--server', action="store", dest="server", default=None)
     options, remainder = parser.parse_args(sys.argv[1:])
     if options.start == options.stop:
-        print "usage: start-stop-account [--start|--stop] --email karim@nilas.com --server sync-engine-debug"
+        print "usage: start-stop-account [--start|--stop] --email benbitdiddle@gmail.com --server sync-engine-debug"
         print "       start-stop-account [--start|--stop] --id 1000 --server sync-engine-debug"
         sys.exit(-1)
 

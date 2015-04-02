@@ -1,12 +1,12 @@
 Title: Contacts
 
-The Nilas API provides access to the user's contacts, making it easy to add contact autocomplete, address book integration, and more to your application. Note that contacts are current read-only.
+The Nylas API provides access to the user's contacts, making it easy to add contact autocomplete, address book integration, and more to your application. Note that contacts are current read-only.
 
 # Retrieving contacts
 
 ```
 :::xml
-GET https://api.nilas.com/n/<namespace_id>/contacts
+GET https://api.nylas.com/n/<namespace_id>/contacts
 ```
 
 Fetch the user's contact list. Note This API supports query parameters which make it easy to search the user's contacts. Available query parameters are listed below:
@@ -37,7 +37,7 @@ Fetch the user's contact list. Note This API supports query parameters which mak
 
 ```
 :::xml
-GET https://api.nilas.com/n/<namespace_id>/contacts/<contact_id>
+GET https://api.nylas.com/n/<namespace_id>/contacts/<contact_id>
 ```
 
 This endpoint retrieves details about a specific contact.

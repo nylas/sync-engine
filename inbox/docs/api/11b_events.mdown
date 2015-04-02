@@ -8,7 +8,7 @@ Each event has a `title` and `description` as well as a list of participants and
 
 ```
 :::xml
-GET https://api.nilas.com/n/<namespace_id>/events/<event_id>
+GET https://api.nylas.com/n/<namespace_id>/events/<event_id>
 ```
 
 **Response:**
@@ -63,7 +63,7 @@ For example, the following will limit the number of results to 3.
 
 ```
 :::xml
-GET https://api.nilas.com/n/<namespace_id>/events?limit=3
+GET https://api.nylas.com/n/<namespace_id>/events?limit=3
 ```
 
 ## Recurring events
@@ -74,7 +74,7 @@ For convenience, the `expand_recurring` option will include single instances of 
 
 ```
 :::xml
-GET https://api.nilas.com/n/<namespace_id>/events?expand_recurring=true
+GET https://api.nylas.com/n/<namespace_id>/events?expand_recurring=true
 ```
 
 Currently, these instances of recurring events are read-only.
@@ -91,7 +91,7 @@ Note that timestamps are expected to be in UTC timezone.
 
 ```
 :::xml
-POST https://api.nilas.com/n/<namespace_id>/events
+POST https://api.nylas.com/n/<namespace_id>/events
 ```
 
 **Sample post body**
@@ -104,7 +104,7 @@ POST https://api.nilas.com/n/<namespace_id>/events
         "start_time": 1407542195,
         "end_time": 1407543195
     },
-    "location": "Nilas HQ",
+    "location": "Nylas HQ",
     "calendar_id": "ci0k1wfyv533ccgox4t7uri4h",
     "participants": [
         {
@@ -123,7 +123,7 @@ Updating and deleting an event is managed in a similar fashion to other endpoint
 
 ```
 :::xml
-PUT https://api.nilas.com/n/<namespace_id>/events/<event_id>
+PUT https://api.nylas.com/n/<namespace_id>/events/<event_id>
 ```
 
 **Sample post body**
@@ -189,7 +189,7 @@ The 2014 San Francisco earthquake:
 }
 ```
 
-The last NilasHQ Monday meeting:
+The last NylasHQ Monday meeting:
 ```
 :::json
 {

@@ -1,12 +1,12 @@
 Title: Messages
 
-Messages are a sub-object of threads. The content of a message is immutable (with the exception being [drafts](#drafts)). Nilas does not support operations such as move or delete on individual messages; those operations should be performed on the message's thread. All messages are part of a thread, even if that thread has only one message.
+Messages are a sub-object of threads. The content of a message is immutable (with the exception being [drafts](#drafts)). Nylas does not support operations such as move or delete on individual messages; those operations should be performed on the message's thread. All messages are part of a thread, even if that thread has only one message.
 
 # Retrieving a Message
 
 ```
 :::xml
-GET https://api.nilas.com/n/<namespace_id>/messages/<message_id>
+GET https://api.nylas.com/n/<namespace_id>/messages/<message_id>
 ```
 
 **Sample Response**
@@ -54,7 +54,7 @@ The messages endpoint supports [Filters](#filters), making it easy to return a s
 
 ```
 :::xml
-GET https://api.nilas.com/n/<namespace_id>/messages?<filter_parameters>
+GET https://api.nylas.com/n/<namespace_id>/messages?<filter_parameters>
 ```
 
 **Sample Response**
@@ -77,14 +77,14 @@ One of the filter parameters available on messages is `thread`. Given a `thread_
 
 ```
 :::xml
-GET https://api.nilas.com/n/<namespace_id>/messages?thread_id=<thread_id>
+GET https://api.nylas.com/n/<namespace_id>/messages?thread_id=<thread_id>
 ```
 
 # Marking a message as read
 
 ```
 :::xml
-PUT https://api.nilas.com/n/<namespace_id>/messages/<message_id>
+PUT https://api.nylas.com/n/<namespace_id>/messages/<message_id>
 ```
 
 ```
@@ -102,7 +102,7 @@ If you need to access some specific email headers that are not exposed by our AP
 ```
 :::xml
 curl -H "Accept: message/rfc822" \
-    https://api.nilas.com/n/<namespace_id>/messages/<message_id>
+    https://api.nylas.com/n/<namespace_id>/messages/<message_id>
 ```
 
 ```

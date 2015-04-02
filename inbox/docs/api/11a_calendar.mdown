@@ -1,6 +1,6 @@
 Title: Calendars
 
-Nilas supports calendars and events with a variety of functionality. Each namespace has one or more calendars, and each calendar has a collection of individual events. Each event has a title and description as well as a list of participants.
+Nylas supports calendars and events with a variety of functionality. Each namespace has one or more calendars, and each calendar has a collection of individual events. Each event has a title and description as well as a list of participants.
 
 The calendars endpoint is used to manage calendars which hold events. Calendars are quite simple, having only a name and description. **Note**: The `read_only` flag on a calendar indicates whether or not you can modify its properties or make changes to its events. Event changes are currently automatically synced back for Gmail and Exchange accounts.
 
@@ -9,7 +9,7 @@ The calendars endpoint is used to manage calendars which hold events. Calendars 
 
 ```
 :::xml
-GET https://api.nilas.com/n/<namespace_id>/calendars
+GET https://api.nylas.com/n/<namespace_id>/calendars
 ```
 
 **Response:**
@@ -37,7 +37,7 @@ GET https://api.nilas.com/n/<namespace_id>/calendars
 ]
 ```
 
-From this response we can see that there are two available calendars. The first calendar is the user's default calendar. When events are created, if a specific calendar is not provided, they will be added to this calendar. Additionally, there is a calendar being synced from a provider. In this situation we can see that the provider-backed calendar is marked as *read_only* and therefore events cannot be added to it through the Nilas API.
+From this response we can see that there are two available calendars. The first calendar is the user's default calendar. When events are created, if a specific calendar is not provided, they will be added to this calendar. Additionally, there is a calendar being synced from a provider. In this situation we can see that the provider-backed calendar is marked as *read_only* and therefore events cannot be added to it through the Nylas API.
 
 **Options:**
 
@@ -48,5 +48,5 @@ Like other endpoints, the metadata can be retrieved for a specific calendar by s
 
 ```
 :::xml
-GET https://api.nilas.com/n/<namespace_id>/calendars/<calendar_id>
+GET https://api.nylas.com/n/<namespace_id>/calendars/<calendar_id>
 ```

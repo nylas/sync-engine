@@ -1,6 +1,6 @@
 Title: Installation
 
-You can run the Nilas Sync Engine almost anywhere. A [hosted version of the Nilas platform](https://www.nilas.com) is also available (including extra features such as Microsoft Exchange support and authentication).
+You can run the Nylas Sync Engine almost anywhere. A [hosted version of the Nylas platform](https://www.nylas.com) is also available (including extra features such as Microsoft Exchange support and authentication).
 
 For development, we recommend installing on a VirtualBox or VMWare Fusion virtual machine and running it with Vagrant:
 
@@ -22,4 +22,4 @@ For development, we recommend installing on a VirtualBox or VMWare Fusion virtua
 
     The `inbox` directory you started with should be synced to `/vagrant`. If this directory is empty, then logout and run `vagrant reload` and `vagrant ssh` again.
 
-At this point the Nilas Sync Engine is installed and ready to process mail! The next steps are to start the processes that come with the open-source toolkit and authenticate a mail account.
+At this point the Nylas Sync Engine is installed and ready to process mail! The next steps are to start the processes that come with the open-source toolkit and authenticate a mail account.

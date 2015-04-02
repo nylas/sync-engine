@@ -1,10 +1,10 @@
 Title: Sending
 
-Nilas provides a single API for sending mail:
+Nylas provides a single API for sending mail:
 
 ```
 :::xml
-POST https://api.nilas.com/n/<namespace_id>/send
+POST https://api.nylas.com/n/<namespace_id>/send
 ```
 
 You can use this API in two ways:

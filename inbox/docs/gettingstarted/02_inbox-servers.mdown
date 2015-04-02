@@ -1,8 +1,8 @@
 Title: Sync Engine Services
 
-The open source Nilas Sync Engine includes two separate processes, one for syncing accounts with underlying providers, and another for responding to REST API requests. To use your development environment, you need to start both processes.
+The open source Nylas Sync Engine includes two separate processes, one for syncing accounts with underlying providers, and another for responding to REST API requests. To use your development environment, you need to start both processes.
 
-Nilas Sync Service
+Nylas Sync Service
 -----
 
 Start the sync process by running the command below from the `/vagrant` directory of your VirtualBox. Note that you may want to run the server in a separate shell within tmux or in the background.
@@ -18,14 +18,14 @@ Once the sync process is running, you can authenticate an email account and star
 $ bin/inbox-auth [YOUR_ACCOUNT]@gmail.com
 ```
 
-The `inbox-auth` command will walk you through the process of obtaining an authorization token from Google or another service for syncing your mail. In the open-source version of the sync engine, your credentials are stored to the local MySQL database for simplicity. The open-source Nilas Sync Engine does not support Exchange, but the [hosted](https://www.nilas.com) version does.
+The `inbox-auth` command will walk you through the process of obtaining an authorization token from Google or another service for syncing your mail. In the open-source version of the sync engine, your credentials are stored to the local MySQL database for simplicity. The open-source Nylas Sync Engine does not support Exchange, but the [hosted](https://www.nylas.com) version does.
 
 The sync engine will automatically begin syncing your account with the underlying provider. The `inbox-sync` command allows you to manually stop or restart the sync by running `inbox-sync stop [YOUR_ACCOUNT]@gmail.com` or `inbox-sync start [YOUR_ACCOUNT]@gmail.com`. Note that an initial sync can take quite a while depending on how much mail you have.
 
-Nilas API Service
+Nylas API Service
 -----
 
-The Nilas API service provides a REST API for interacting with your data. To start it in your development environment, run command below from the `/vagrant` folder within your VM:
+The Nylas API service provides a REST API for interacting with your data. To start it in your development environment, run command below from the `/vagrant` folder within your VM:
 
 ```
 :::bash
@@ -41,5 +41,5 @@ You can test that the server is working properly by hitting the `/n/` API which 
 $ curl http://localhost:5555/n/
 ```
 
-Now you can start writing your own application on top of the Nilas API! For more information about the internals of the Nilas Sync Engine, see the <a href="/docs/api">Nilas API Documentation</a>.
+Now you can start writing your own application on top of the Nylas API! For more information about the internals of the Nylas Sync Engine, see the <a href="/docs/api">Nylas API Documentation</a>.
 
