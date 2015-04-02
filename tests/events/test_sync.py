@@ -86,7 +86,8 @@ def test_handle_changes(db, new_account):
     event_sync.sync()
 
     assert db.session.query(Calendar).filter(
-        Calendar.namespace_id == namespace_id).count() == 2
+        Calendar.namespace_id == namespace_id,
+        Calendar.name != 'Emailed events').count() == 2
 
     assert db.session.query(Event).join(Calendar).filter(
         Event.namespace_id == namespace_id,
@@ -103,7 +104,8 @@ def test_handle_changes(db, new_account):
 
     # Check that we have the same number of calendars and events as before
     assert db.session.query(Calendar).filter(
-        Calendar.namespace_id == namespace_id).count() == 2
+        Calendar.namespace_id == namespace_id,
+        Calendar.name != 'Emailed events').count() == 2
 
     assert db.session.query(Event).join(Calendar).filter(
         Event.namespace_id == namespace_id,

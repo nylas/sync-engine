@@ -235,7 +235,7 @@ CREATE TABLE `calendar` (
   `uid` varchar(767) CHARACTER SET ascii NOT NULL,
   `read_only` tinyint(1) NOT NULL,
   `provider_name` varchar(64) NOT NULL,
-  `namespace_id` int(11) DEFAULT NULL,
+  `namespace_id` int(11) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uuid` (`namespace_id`,`uid`,`name`),
   CONSTRAINT `calendar_ibfk_2` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`)
@@ -248,7 +248,7 @@ CREATE TABLE `calendar` (
 
 LOCK TABLES `calendar` WRITE;
 /*!40000 ALTER TABLE `calendar` DISABLE KEYS */;
-INSERT INTO `calendar` VALUES (1,'Ï5ö¬F\0»í«öÃÀ','default',NULL,NULL,NULL,NULL,'default',0,'',1),(2,'Ï5ö¬F\0»3«öÃÀ','provider_default',NULL,NULL,NULL,NULL,'provider_default',1,'',1),(3,'Ï5ö¬F\0»5«öÃÀ','default',NULL,NULL,NULL,NULL,'167wjlgf89za2cdhy17p9bsu8',0,'',NULL);
+INSERT INTO `calendar` VALUES (1,'Ï5ö¬F\0»í«öÃÀ','default',NULL,NULL,NULL,NULL,'default',0,'',1),(2,'Ï5ö¬F\0»3«öÃÀ','provider_default',NULL,NULL,NULL,NULL,'provider_default',1,'',1),(3,'Ï5ö¬F\0»5«öÃÀ','default',NULL,NULL,NULL,NULL,'167wjlgf89za2cdhy17p9bsu8',0,'',0);
 /*!40000 ALTER TABLE `calendar` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1837,4 +1837,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-03-25 23:47:46
+-- Dump completed on 2015-04-02 21:11:03

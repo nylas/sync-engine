@@ -5,10 +5,11 @@ from sqlalchemy.orm import relationship
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
 
-from inbox.models.mixins import HasPublicID
+from inbox.models.mixins import HasPublicID, HasRevisions
 
 
-class Calendar(MailSyncBase, HasPublicID):
+class Calendar(MailSyncBase, HasPublicID, HasRevisions):
+    API_OBJECT_NAME = 'calendar'
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           nullable=False)
 

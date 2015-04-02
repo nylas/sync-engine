@@ -271,11 +271,9 @@ class ContactsProviderStub(object):
 
 def add_fake_account(db_session, email_address='test@nilas.com'):
     from inbox.models import Account, Namespace
-    account = Account(email_address=email_address)
     namespace = Namespace()
-    namespace.account = account
+    account = Account(email_address=email_address, namespace=namespace)
     db_session.add(account)
-    db_session.add(namespace)
     db_session.commit()
     return account
 
