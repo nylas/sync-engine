@@ -24,7 +24,7 @@ def main(prod, config):
     if config is not None:
         config_path = os.path.abspath(config)
         load_overrides(config_path)
-    configure_logging(prod)
+    configure_logging()
     if not prod:
         preflight()
 

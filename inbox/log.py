@@ -136,9 +136,10 @@ structlog.configure(
 get_logger = structlog.get_logger
 
 
-def configure_logging(is_prod):
+def configure_logging(is_prod=False):
+    # The is_prod argument is ignored and only retained for compatibility.
     tty_handler = logging.StreamHandler(sys.stdout)
-    if not is_prod:
+    if sys.stdout.isatty():
         # Use a more human-friendly format.
         formatter = colorlog.ColoredFormatter(
             '%(log_color)s[%(levelname)s]%(reset)s %(message)s',

@@ -104,5 +104,5 @@ class InboxWSGIWorker(GeventWorker):
 class GunicornLogger(gunicorn.glogging.Logger):
     def __init__(self, cfg):
         gunicorn.glogging.Logger.__init__(self, cfg)
-        inbox.log.configure_logging(is_prod=True)
+        inbox.log.configure_logging()
         self.error_log = log

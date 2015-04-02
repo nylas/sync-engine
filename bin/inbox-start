@@ -46,7 +46,7 @@ def signal_handler(signum, frame):
                    "number satisfying 0 <= process_num < total_processes.")
 def main(prod, config, process_num):
     """ Launch the Inbox sync service. """
-    configure_logging(prod)
+    configure_logging()
 
     if config is not None:
         from inbox.util.startup import load_overrides

@@ -12,7 +12,7 @@ from inbox.models.backends.imap import ImapAccount, ImapThread
 from inbox.mailsync.backends.imap.common import recompute_thread_labels
 from inbox.sqlalchemy_ext.util import safer_yield_per
 from inbox.util.misc import cleanup_subject
-configure_logging(False)
+configure_logging()
 log = get_logger()
 
 

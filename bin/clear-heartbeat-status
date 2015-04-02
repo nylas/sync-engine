@@ -6,7 +6,7 @@ from sys import exit
 from inbox.heartbeat.status import clear_heartbeat_status
 from inbox.log import configure_logging, get_logger
 
-configure_logging(False)
+configure_logging()
 log = get_logger()
 
 
