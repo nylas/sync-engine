@@ -139,4 +139,4 @@ def test_api_override_serialization(db, api_client):
     assert events[0].get('object') == 'event'
     assert events[0].get('recurrence') is not None
     assert events[1].get('object') == 'event'
-    assert events[1].get('status') == 'cancelled'
+    assert events[1].get('cancelled') is True

@@ -599,7 +599,6 @@ def event_search_api():
     g.parser.add_argument('view', type=bounded_str, location='args')
     g.parser.add_argument('expand_recurring', type=strict_bool,
                           location='args')
-    g.parser.add_argument('show_cancelled', type=strict_bool, location='args')
     args = strict_parse_args(g.parser, request.args)
 
     results = filtering.events(
@@ -618,7 +617,6 @@ def event_search_api():
         offset=args['offset'],
         view=args['view'],
         expand_recurring=args['expand_recurring'],
-        show_cancelled=args['show_cancelled'],
         db_session=g.db_session)
 
     return g.encoder.jsonify(results)

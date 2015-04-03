@@ -33,7 +33,6 @@ _LENGTHS = {'location': LOCATION_MAX_LEN,
             'reminders': REMINDER_MAX_LEN,
             'title': TITLE_MAX_LEN,
             'raw_data': MAX_TEXT_LENGTH}
-EVENT_STATUSES = ["confirmed", "tentative", "cancelled"]
 
 
 class FlexibleDateTime(TypeDecorator):
@@ -111,8 +110,6 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     all_day = Column(Boolean, nullable=False)
     is_owner = Column(Boolean, nullable=False, default=True)
     last_modified = Column(FlexibleDateTime, nullable=True)
-    status = Column('status', Enum(*EVENT_STATUSES),
-                    server_default='confirmed')
 
     # This column is only used for events that are synced from iCalendar
     # files.
@@ -187,7 +184,6 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
         self.recurrence = event.recurrence
         self.last_modified = event.last_modified
         self.message = event.message
-        self.status = event.status
 
     @property
     def recurring(self):
@@ -209,17 +205,6 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     @property
     def length(self):
         return self.when.delta
-
-    @property
-    def cancelled(self):
-        return self.status == 'cancelled'
-
-    @cancelled.setter
-    def cancelled(self, is_cancelled):
-        if is_cancelled:
-            self.status = 'cancelled'
-        else:
-            self.status = 'confirmed'
 
     @classmethod
     def __new__(cls, *args, **kwargs):
@@ -333,6 +318,10 @@ class RecurringEventOverride(Event, HasRevisions):
     master_event_uid = Column(String(767, collation='ascii_general_ci'),
                               index=True)
     original_start_time = Column(FlexibleDateTime)
+    # We have to store individual cancellations as overrides, as the EXDATE
+    # isn't always updated. (Fun, right?)
+    cancelled = Column(Boolean, default=False)
+
     master = relationship(RecurringEvent, foreign_keys=[master_event_id],
                           backref=backref('overrides', lazy="dynamic"))
 

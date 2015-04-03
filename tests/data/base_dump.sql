@@ -1,13 +1,13 @@
--- MySQL dump 10.13  Distrib 5.6.23, for Linux (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.41, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.6.23-log
+-- Server version	5.5.41-0ubuntu0.12.04.1
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8mb4 */;
+/*!40101 SET NAMES utf8 */;
 /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
 /*!40103 SET TIME_ZONE='+00:00' */;
 /*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
@@ -71,6 +71,7 @@ CREATE TABLE `account` (
   KEY `ix_account__raw_address` (`_raw_address`),
   KEY `default_calendar_ibfk_1` (`default_calendar_id`),
   KEY `emailed_events_fk` (`emailed_events_calendar_id`),
+  CONSTRAINT `emailed_events_fk` FOREIGN KEY (`emailed_events_calendar_id`) REFERENCES `calendar` (`id`),
   CONSTRAINT `account_ibfk_10` FOREIGN KEY (`default_calendar_id`) REFERENCES `calendar` (`id`),
   CONSTRAINT `account_ibfk_2` FOREIGN KEY (`inbox_folder_id`) REFERENCES `folder` (`id`),
   CONSTRAINT `account_ibfk_3` FOREIGN KEY (`sent_folder_id`) REFERENCES `folder` (`id`),
@@ -79,8 +80,7 @@ CREATE TABLE `account` (
   CONSTRAINT `account_ibfk_6` FOREIGN KEY (`trash_folder_id`) REFERENCES `folder` (`id`),
   CONSTRAINT `account_ibfk_7` FOREIGN KEY (`archive_folder_id`) REFERENCES `folder` (`id`),
   CONSTRAINT `account_ibfk_8` FOREIGN KEY (`all_folder_id`) REFERENCES `folder` (`id`),
-  CONSTRAINT `account_ibfk_9` FOREIGN KEY (`starred_folder_id`) REFERENCES `folder` (`id`),
-  CONSTRAINT `emailed_events_fk` FOREIGN KEY (`emailed_events_calendar_id`) REFERENCES `calendar` (`id`)
+  CONSTRAINT `account_ibfk_9` FOREIGN KEY (`starred_folder_id`) REFERENCES `folder` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -150,7 +150,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('3c7f059a68ba');
+INSERT INTO `alembic_version` VALUES ('4032709362da');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -465,9 +465,9 @@ CREATE TABLE `easfoldersyncstatus` (
   KEY `ix_easfoldersyncstatus_deleted_at` (`deleted_at`),
   KEY `ix_easfoldersyncstatus_updated_at` (`updated_at`),
   KEY `device_id` (`device_id`),
+  CONSTRAINT `easfoldersyncstatus_ibfk_3` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`) ON DELETE CASCADE,
   CONSTRAINT `easfoldersyncstatus_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `easaccount` (`id`),
-  CONSTRAINT `easfoldersyncstatus_ibfk_2` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`),
-  CONSTRAINT `easfoldersyncstatus_ibfk_3` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`) ON DELETE CASCADE
+  CONSTRAINT `easfoldersyncstatus_ibfk_2` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -535,9 +535,9 @@ CREATE TABLE `easuid` (
   KEY `ix_easuid_created_at` (`created_at`),
   KEY `ix_easuid_updated_at` (`updated_at`),
   KEY `device_id` (`device_id`),
+  CONSTRAINT `easuid_ibfk_3` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`) ON DELETE CASCADE,
   CONSTRAINT `easuid_ibfk_1` FOREIGN KEY (`easaccount_id`) REFERENCES `easaccount` (`id`) ON DELETE CASCADE,
   CONSTRAINT `easuid_ibfk_2` FOREIGN KEY (`message_id`) REFERENCES `message` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `easuid_ibfk_3` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`) ON DELETE CASCADE,
   CONSTRAINT `easuid_ibfk_4` FOREIGN KEY (`device_id`) REFERENCES `easdevice` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -586,15 +586,14 @@ CREATE TABLE `event` (
   `last_modified` datetime DEFAULT NULL,
   `type` varchar(30) DEFAULT NULL,
   `message_id` int(11) DEFAULT NULL,
-  `status` enum('tentative','confirmed','cancelled') DEFAULT 'confirmed',
   PRIMARY KEY (`id`),
   KEY `event_ibfk_2` (`calendar_id`),
   KEY `namespace_id` (`namespace_id`),
   KEY `ix_event_ns_uid_calendar_id` (`namespace_id`,`uid`,`calendar_id`),
   KEY `message_ifbk` (`message_id`),
+  CONSTRAINT `message_ifbk` FOREIGN KEY (`message_id`) REFERENCES `message` (`id`) ON DELETE CASCADE,
   CONSTRAINT `event_ibfk_2` FOREIGN KEY (`calendar_id`) REFERENCES `calendar` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `event_ibfk_3` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`),
-  CONSTRAINT `message_ifbk` FOREIGN KEY (`message_id`) REFERENCES `message` (`id`) ON DELETE CASCADE
+  CONSTRAINT `event_ibfk_3` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -604,7 +603,7 @@ CREATE TABLE `event` (
 
 LOCK TABLES `event` WRITE;
 /*!40000 ALTER TABLE `event` DISABLE KEYS */;
-INSERT INTO `event` VALUES (1,'3bd5983f9d1748d0bca5719c57f72815','inbox','p5ßë‹\rD_∂Î ä@Ø◊˝','','desc1','data1','InboxHeadquarters',1,NULL,NULL,'1970-01-01 00:00:01','1970-02-01 00:00:01',0,'local','2014-08-29 01:22:53','2014-08-29 01:22:53',NULL,1,NULL,1,0,1,'[]',NULL,'event',NULL,'confirmed'),(2,'b9f18495985f4814a95e28f3e119a730','inbox','◊éÌv‘êAπ‡FcÕVø\n','','desc2','data2','InboxHeadquarters',1,NULL,NULL,'1970-01-01 00:00:01','1970-01-01 00:00:01',0,'local','2014-08-29 01:22:54','2014-08-29 01:22:54',NULL,2,NULL,1,1,1,'[]',NULL,'event',NULL,'confirmed'),(3,'c9f18495985f4814a95e28f3e119a730','inbox','◊éÌv‘êAπjFcÕVø\n','','desc5','data3','InboxHeadquarters',1,NULL,NULL,'1970-02-01 00:00:01','1970-03-01 00:00:01',0,'local','2014-08-29 01:22:54','2014-08-29 01:22:54',NULL,1,NULL,1,1,1,'[]',NULL,'event',NULL,'confirmed');
+INSERT INTO `event` VALUES (1,'3bd5983f9d1748d0bca5719c57f72815','inbox','p5ßë‹\rD_∂Î ä@Ø◊˝','','desc1','data1','InboxHeadquarters',1,NULL,NULL,'1970-01-01 00:00:01','1970-02-01 00:00:01',0,'local','2014-08-29 01:22:53','2014-08-29 01:22:53',NULL,1,NULL,1,0,1,'[]',NULL,'event',NULL),(2,'b9f18495985f4814a95e28f3e119a730','inbox','◊éÌv‘êAπ‡FcÕVø\n','','desc2','data2','InboxHeadquarters',1,NULL,NULL,'1970-01-01 00:00:01','1970-01-01 00:00:01',0,'local','2014-08-29 01:22:54','2014-08-29 01:22:54',NULL,2,NULL,1,1,1,'[]',NULL,'event',NULL),(3,'c9f18495985f4814a95e28f3e119a730','inbox','◊éÌv‘êAπjFcÕVø\n','','desc5','data3','InboxHeadquarters',1,NULL,NULL,'1970-02-01 00:00:01','1970-03-01 00:00:01',0,'local','2014-08-29 01:22:54','2014-08-29 01:22:54',NULL,1,NULL,1,1,1,'[]',NULL,'event',NULL);
 /*!40000 ALTER TABLE `event` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -763,8 +762,8 @@ CREATE TABLE `genericaccount` (
   `supports_condstore` tinyint(1) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `genericaccount_ibfk_2` (`password_id`),
-  CONSTRAINT `genericaccount_ibfk_1` FOREIGN KEY (`id`) REFERENCES `imapaccount` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `genericaccount_ibfk_2` FOREIGN KEY (`password_id`) REFERENCES `secret` (`id`)
+  CONSTRAINT `genericaccount_ibfk_2` FOREIGN KEY (`password_id`) REFERENCES `secret` (`id`),
+  CONSTRAINT `genericaccount_ibfk_1` FOREIGN KEY (`id`) REFERENCES `imapaccount` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -868,8 +867,8 @@ CREATE TABLE `imapfolderinfo` (
   KEY `ix_uidvalidity_deleted_at` (`deleted_at`),
   KEY `ix_uidvalidity_updated_at` (`updated_at`),
   KEY `imapfolderinfo_ibfk_2` (`folder_id`),
-  CONSTRAINT `imapfolderinfo_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `imapaccount` (`id`),
-  CONSTRAINT `imapfolderinfo_ibfk_3` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`) ON DELETE CASCADE
+  CONSTRAINT `imapfolderinfo_ibfk_3` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `imapfolderinfo_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `imapaccount` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -905,8 +904,8 @@ CREATE TABLE `imapfoldersyncstatus` (
   KEY `ix_foldersync_deleted_at` (`deleted_at`),
   KEY `ix_foldersync_updated_at` (`updated_at`),
   KEY `imapfoldersyncstatus_ibfk_2` (`folder_id`),
-  CONSTRAINT `imapfoldersyncstatus_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `imapaccount` (`id`),
-  CONSTRAINT `imapfoldersyncstatus_ibfk_3` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`) ON DELETE CASCADE
+  CONSTRAINT `imapfoldersyncstatus_ibfk_3` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `imapfoldersyncstatus_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `imapaccount` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1165,8 +1164,8 @@ CREATE TABLE `messagecontactassociation` (
   KEY `ix_messagecontactassociation_created_at` (`created_at`),
   KEY `ix_messagecontactassociation_deleted_at` (`deleted_at`),
   KEY `ix_messagecontactassociation_updated_at` (`updated_at`),
-  CONSTRAINT `messagecontactassociation_ibfk_1` FOREIGN KEY (`contact_id`) REFERENCES `contact` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `messagecontactassociation_ibfk_2` FOREIGN KEY (`message_id`) REFERENCES `message` (`id`) ON DELETE CASCADE
+  CONSTRAINT `messagecontactassociation_ibfk_2` FOREIGN KEY (`message_id`) REFERENCES `message` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `messagecontactassociation_ibfk_1` FOREIGN KEY (`contact_id`) REFERENCES `contact` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1360,6 +1359,7 @@ CREATE TABLE `recurringeventoverride` (
   `master_event_id` int(11) DEFAULT NULL,
   `master_event_uid` varchar(767) CHARACTER SET ascii DEFAULT NULL,
   `original_start_time` datetime DEFAULT NULL,
+  `cancelled` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   KEY `master_event_id` (`master_event_id`),
   CONSTRAINT `recurringeventoverride_ibfk_1` FOREIGN KEY (`id`) REFERENCES `event` (`id`),
@@ -1790,8 +1790,8 @@ CREATE TABLE `webhook` (
   KEY `ix_webhook_created_at` (`created_at`),
   KEY `ix_webhook_deleted_at` (`deleted_at`),
   KEY `ix_webhook_updated_at` (`updated_at`),
-  CONSTRAINT `webhook_ibfk_1` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `webhooks_ibfk_1` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE
+  CONSTRAINT `webhooks_ibfk_1` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `webhook_ibfk_1` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
