@@ -49,11 +49,11 @@ class DeleteHandler(gevent.Greenlet):
 
     def _run_impl(self):
         while True:
-            self.check()
+            current_time = datetime.datetime.utcnow()
+            self.check(current_time)
             gevent.sleep(self.message_ttl.total_seconds())
 
-    def check(self):
-        current_time = datetime.datetime.utcnow()
+    def check(self, current_time):
         with session_scope() as db_session:
             dangling_messages = db_session.query(Message).filter(
                 Message.namespace_id == self.namespace_id,

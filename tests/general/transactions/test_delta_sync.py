@@ -44,25 +44,19 @@ def test_event_generation(api_client):
     sync_data = api_client.get_data('/delta?cursor={}'.format(cursor))
     assert len(sync_data['deltas']) == 2
 
-    time.sleep(1)
-
-    ts = int(time.time())
-
+    cursor = sync_data['cursor_end']
     # Test result limiting
     for i in range(1, 10):
         thread_id = api_client.get_data('/threads/')[i]['id']
         thread_path = '/threads/{}'.format(thread_id)
         api_client.put_data(thread_path, {'add_tags': ['foo']})
 
-    time.sleep(1)
-    cursor = get_cursor(api_client, ts)
-
     sync_data = api_client.get_data('/delta?cursor={0}&limit={1}'.
                                     format(cursor, 8))
     assert len(sync_data['deltas']) == 8
 
-    cursor = sync_data['cursor_end']
-    sync_data = api_client.get_data('/delta?cursor={0}'.format(cursor))
+    new_cursor = sync_data['cursor_end']
+    sync_data = api_client.get_data('/delta?cursor={0}'.format(new_cursor))
     assert len(sync_data['deltas']) == 1
 
 

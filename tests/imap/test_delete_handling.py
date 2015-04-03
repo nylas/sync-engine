@@ -1,5 +1,4 @@
-from datetime import datetime
-import gevent
+from datetime import datetime, timedelta
 import pytest
 from sqlalchemy.orm.exc import ObjectDeletedError
 from inbox.crispin import GmailFlags
@@ -7,6 +6,14 @@ from inbox.mailsync.backends.imap.common import (remove_deleted_uids,
                                                  update_metadata)
 from inbox.mailsync.gc import DeleteHandler
 from tests.util.base import add_fake_imapuid, add_fake_message
+
+
+@pytest.fixture()
+def marked_deleted_message(db, message):
+    deleted_timestamp = datetime(2015, 2, 22, 22, 22, 22)
+    message.deleted_at = deleted_timestamp
+    db.session.commit()
+    return message
 
 
 def test_only_uids_deleted_synchronously(db, default_account,
@@ -47,73 +54,66 @@ def test_deleting_from_a_message_with_multiple_uids(db, default_account,
 
 
 def test_deletion_with_short_ttl(db, default_account, default_namespace,
-                                 message, thread, folder, imapuid):
-    msg_uid = imapuid.msg_uid
+                                 marked_deleted_message, thread, folder):
     handler = DeleteHandler(account_id=default_account.id,
                             namespace_id=default_namespace.id,
                             uid_accessor=lambda m: m.imapuids,
                             message_ttl=0)
-    remove_deleted_uids(default_account.id, db.session, [msg_uid], folder.id)
-    # Sleep to prevent issues with MySQL rounding fractional seconds.
-    gevent.sleep(1)
-    handler.check()
+    handler.check(marked_deleted_message.deleted_at + timedelta(seconds=1))
+    db.session.expire_all()
     # Check that objects were actually deleted
     with pytest.raises(ObjectDeletedError):
-        message.id
+        marked_deleted_message.id
     with pytest.raises(ObjectDeletedError):
         thread.id
 
 
 def test_non_orphaned_messages_get_unmarked(db, default_account,
-                                            default_namespace, message, thread,
+                                            default_namespace,
+                                            marked_deleted_message, thread,
                                             folder, imapuid):
-    message.deleted_at = datetime.utcnow()
-    db.session.commit()
-    # Sleep to prevent issues with MySQL rounding fractional seconds.
-    gevent.sleep(1)
     handler = DeleteHandler(account_id=default_account.id,
                             namespace_id=default_namespace.id,
                             uid_accessor=lambda m: m.imapuids,
                             message_ttl=0)
-    handler.check()
+    handler.check(marked_deleted_message.deleted_at + timedelta(seconds=1))
+    db.session.expire_all()
     # message actually has an imapuid associated, so check that the
     # DeleteHandler unmarked it.
-    assert message.deleted_at is None
+    assert marked_deleted_message.deleted_at is None
 
 
 def test_threads_only_deleted_when_no_messages_left(db, default_account,
-                                                    default_namespace, message,
-                                                    thread, folder, imapuid):
-    msg_uid = imapuid.msg_uid
+                                                    default_namespace,
+                                                    marked_deleted_message,
+                                                    thread, folder):
     handler = DeleteHandler(account_id=default_account.id,
                             namespace_id=default_namespace.id,
                             uid_accessor=lambda m: m.imapuids,
                             message_ttl=0)
     # Add another message onto the thread
     add_fake_message(db.session, default_namespace.id, thread)
-    remove_deleted_uids(default_account.id, db.session, [msg_uid], folder.id)
-    # Sleep to prevent issues with MySQL rounding fractional seconds.
-    gevent.sleep(1)
-    handler.check()
+
+    handler.check(marked_deleted_message.deleted_at + timedelta(seconds=1))
+    db.session.expire_all()
     # Check that the orphaned message was deleted.
     with pytest.raises(ObjectDeletedError):
-        message.id
+        marked_deleted_message.id
     # Would raise ObjectDeletedError if thread was deleted.
     thread.id
 
 
 def test_deletion_deferred_with_longer_ttl(db, default_account,
-                                           default_namespace, message, thread,
-                                           folder, imapuid):
-    msg_uid = imapuid.msg_uid
+                                           default_namespace,
+                                           marked_deleted_message, thread,
+                                           folder):
     handler = DeleteHandler(account_id=default_account.id,
                             namespace_id=default_namespace.id,
                             uid_accessor=lambda m: m.imapuids,
                             message_ttl=5)
-    remove_deleted_uids(default_account.id, db.session, [msg_uid], folder.id)
-    # Sleep to prevent issues with MySQL rounding fractional seconds.
-    gevent.sleep(1)
-    handler.check()
+    db.session.commit()
+
+    handler.check(marked_deleted_message.deleted_at + timedelta(seconds=1))
     # Would raise ObjectDeletedError if objects were deleted
-    message.id
+    marked_deleted_message.id
     thread.id
