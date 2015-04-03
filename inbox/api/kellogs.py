@@ -192,6 +192,7 @@ def encode(obj, namespace_public_id=None, expand=False):
             'location': obj.location,
             'when': encode(obj.when),
             'busy': obj.busy,
+            'status': obj.status,
         }
         if isinstance(obj, RecurringEvent):
             resp['recurrence'] = {
@@ -199,7 +200,6 @@ def encode(obj, namespace_public_id=None, expand=False):
                 'timezone': obj.start_timezone
             }
         if isinstance(obj, RecurringEventOverride):
-            resp['cancelled'] = obj.cancelled
             resp['original_start_time'] = encode(obj.original_start_time)
             if obj.master:
                 resp['master_event_id'] = obj.master.public_id
