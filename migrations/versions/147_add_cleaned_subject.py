@@ -22,7 +22,7 @@ def upgrade():
     op.add_column('thread', sa.Column('_cleaned_subject',
                                       sa.String(length=255), nullable=True))
     op.create_index('ix_cleaned_subject', 'thread', ['_cleaned_subject'],
-                    unique=False)
+                    unique=False, mysql_length=191)
 
 
 def downgrade():
