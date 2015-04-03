@@ -13,7 +13,7 @@ def update_contacts_from_message(db_session, message, namespace):
         canonicalized_addresses = []
         all_addresses = []
         for field in (message.from_addr, message.to_addr, message.cc_addr,
-                      message.bcc_addr):
+                      message.bcc_addr, message.reply_to):
             # We generally require these attributes to be non-null, but only
             # set them to the default empty list at flush time. So it's better
             # to be safe here.
@@ -37,7 +37,8 @@ def update_contacts_from_message(db_session, message, namespace):
                 contact_map[canonicalized_address] = new_contact
 
         # Now associate each contact to the message.
-        for field_name in ('from_addr', 'to_addr', 'cc_addr', 'bcc_addr', 'reply_to'):
+        for field_name in ('from_addr', 'to_addr', 'cc_addr', 'bcc_addr',
+                           'reply_to'):
             field = getattr(message, field_name)
             if field is None:
                 continue
