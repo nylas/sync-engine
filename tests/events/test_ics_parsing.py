@@ -186,6 +186,75 @@ def test_multiple_events(db, default_account):
     assert ev1.start == arrow.get(2015, 03, 17, 0, 0)
 
 
+def test_participant_merging(db, default_account, message):
+    add_fake_calendar(db.session, default_account.namespace.id,
+                      name="Emailed events", read_only=True)
+
+    with open(absolute_path(FIXTURES + 'invite_w_rsvps1.ics')) as fd:
+        ics_data = fd.read()
+
+    msg = add_fake_msg_with_calendar_part(
+        db.session, default_account, ics_data)
+
+    import_attached_events(db.session, default_account, msg)
+    db.session.commit()
+
+    ev = db.session.query(Event).filter(
+        Event.uid == ("040000008200E00074C5B7101A82E00800000000"
+                      "F9125A30B06BD001000000000000000010000000"
+                      "9D791C7548BFD144BFA54F14213CAD25")).one()
+
+    assert len(ev.participants) == 2
+    for participant in ev.participants:
+        assert participant['status'] == 'noreply'
+
+    with open(absolute_path(FIXTURES + 'invite_w_rsvps2.ics')) as fd:
+        ics_data = fd.read()
+
+    msg2 = add_fake_msg_with_calendar_part(
+        db.session, default_account, ics_data)
+
+    import_attached_events(db.session, default_account, msg2)
+    db.session.commit()
+
+    ev = db.session.query(Event).filter(
+        Event.uid == ("040000008200E00074C5B7101A82E00800000000"
+                      "F9125A30B06BD001000000000000000010000000"
+                      "9D791C7548BFD144BFA54F14213CAD25")).one()
+
+    assert len(ev.participants) == 2
+    for participant in ev.participants:
+        if participant['email'] == 'test1@example.com':
+            assert participant['status'] == 'maybe'
+            assert participant['name'] == 'Inbox Apptest'
+        elif participant['email'] == 'karim@example.com':
+            assert participant['status'] == 'noreply'
+
+    with open(absolute_path(FIXTURES + 'invite_w_rsvps3.ics')) as fd:
+        ics_data = fd.read()
+
+    msg3 = add_fake_msg_with_calendar_part(
+        db.session, default_account, ics_data)
+
+    import_attached_events(db.session, default_account, msg3)
+    db.session.commit()
+
+    ev = db.session.query(Event).filter(
+        Event.uid == ("040000008200E00074C5B7101A82E00800000000"
+                      "F9125A30B06BD001000000000000000010000000"
+                      "9D791C7548BFD144BFA54F14213CAD25")).one()
+
+    assert len(ev.participants) == 2
+
+    for participant in ev.participants:
+        if participant['email'] == 'test1@example.com':
+            assert participant['status'] == 'maybe'
+            assert participant['name'] == 'Inbox Apptest'
+        elif participant['email'] == 'karim@example.com':
+            assert participant['name'] == 'Karim Hamidou'
+            assert participant['status'] == 'yes'
+
+
 def test_cancelled_event(db, default_account):
     with open(absolute_path(FIXTURES + 'google_cancelled1.ics')) as fd:
         ics_data = fd.read()
@@ -204,10 +273,10 @@ def test_cancelled_event(db, default_account):
     with open(absolute_path(FIXTURES + 'google_cancelled2.ics')) as fd:
         ics_data = fd.read()
 
-    msg = add_fake_msg_with_calendar_part(
+    msg2 = add_fake_msg_with_calendar_part(
         db.session, default_account, ics_data)
 
-    import_attached_events(db.session, default_account, msg)
+    import_attached_events(db.session, default_account, msg2)
     db.session.commit()
 
     ev = db.session.query(Event).filter(

@@ -169,6 +169,74 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
             self.end = date_parse(when['end_date'])
             self.all_day = True
 
+    def _merge_participant_attributes(self, left, right):
+        """Merge right into left. Right takes precedence unless it's null."""
+        for attribute in right.keys():
+                # Special cases:
+                if right[attribute] is None:
+                    continue
+                elif right[attribute] == '':
+                    continue
+                elif right['status'] == 'noreply':
+                    continue
+                else:
+                    left[attribute] = right[attribute]
+
+        return left
+
+    def _partial_participants_merge(self, event):
+        """Merge the participants from event into self.participants.
+        event always takes precedence over self, except if
+        a participant in self isn't in event.
+
+        This method is only called by the ical merging code because
+        iCalendar attendance updates are partial: an RSVP reply often
+        only contains the status of the person that RSVPs.
+        It would be very wrong to call this method to merge, say, Google
+        Events participants because they handle the merging themselves.
+        """
+
+        # We have to jump through some hoops because a participant may
+        # not have an email or may not have a name, so we build a hash
+        # where we can find both. Also note that we store names in the
+        # hash only if the email is None.
+        self_hash = {}
+        for participant in self.participants:
+            email = participant['email']
+            name = participant['name']
+            if email is not None:
+                self_hash[email] = participant
+            elif name is not None:
+                # We have a name without an email.
+                self_hash[name] = participant
+
+        for participant in event.participants:
+            email = participant['email']
+            name = participant['name']
+
+            # This is the tricky part --- we only want to store one entry per
+            # participant --- we check if there's an email we already know, if
+            # not we create it. Otherwise we use the name. This sorta works
+            # because we're merging updates to an event and ical updates
+            # always have an email address.
+            # - karim
+            if email is not None:
+                if email in self_hash:
+                    self_hash[email] =\
+                     self._merge_participant_attributes(self_hash[email],
+                                                        participant)
+                else:
+                    self_hash[email] = participant
+            elif name is not None:
+                if name in self_hash:
+                    self_hash[name] =\
+                     self._merge_participant_attributes(self_hash[name],
+                                                        participant)
+                else:
+                    self_hash[name] = participant
+
+        return self_hash.values()
+
     def update(self, event):
         self.uid = event.uid
         self.raw_data = event.raw_data

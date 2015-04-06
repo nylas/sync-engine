@@ -287,5 +287,39 @@ def import_attached_events(db_session, account, message):
                 existing_event = existing_events_table[event.uid]
 
                 if event.last_modified > existing_event.last_modified:
+                    # Most RSVP replies only contain the status of the person
+                    # replying. We need to merge the reply with the data we
+                    # already have otherwise we'd be losing information.
+                    merged_participants = existing_event.\
+                        _partial_participants_merge(event)
+
+                    # FIXME: What we really should do here is distinguish
+                    # between the case where we're organizing an event and
+                    # receiving RSVP messages and the case where we're just an
+                    # attendant getting updates from the organizer.
+                    #
+                    # We don't store (yet) information about the organizer so
+                    # we assume we're the creator of the event. We'll do soon
+                    # though.
                     existing_event.update(event)
                     existing_event.message = message
+
+                    # We have to do this mumbo-jumbo because MutableList does
+                    # not register changes to nested elements.
+                    # We could probably change MutableList to handle it (see:
+                    # https://groups.google.com/d/msg/sqlalchemy/i2SIkLwVYRA/mp2WJFaQxnQJ)
+                    # but this sounds a very brittle.
+                    existing_event.participants = []
+                    for participant in merged_participants:
+                        existing_event.participants.append(participant)
+                else:
+                    # This is an older message but it still may contain
+                    # valuable RSVP information --- remember that when someone
+                    # RSVPs, the event's participant list often only
+                    # contains the RSVPing person.
+                    merged_participants = existing_event.\
+                        _partial_participants_merge(event)
+
+                    existing_event.participants = []
+                    for participant in merged_participants:
+                        existing_event.participants.append(participant)
