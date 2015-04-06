@@ -5,7 +5,7 @@ import traceback
 from datetime import datetime, date
 from icalendar import Calendar as iCalendar
 
-from inbox.models.event import Event
+from inbox.models.event import Event, EVENT_STATUSES
 from inbox.events.util import MalformedEventError
 from inbox.util.addr import canonicalize_address
 from timezones import timezones_table
@@ -28,7 +28,13 @@ def events_from_ics(namespace, calendar, ics_str):
 
     events = []
 
+    # See: https://tools.ietf.org/html/rfc5546#section-3.2
+    calendar_method = None
+
     for component in cal.walk():
+        if component.name == "VCALENDAR":
+            calendar_method = component.get('method')
+
         if component.name == "VTIMEZONE":
             tzname = component.get('TZID')
             assert tzname in timezones_table,\
@@ -110,6 +116,25 @@ def events_from_ics(namespace, calendar, ics_str):
                 title = " - ".join(summaries)
 
             description = unicode(component.get('description'))
+
+            event_status = component.get('status')
+            if event_status is not None:
+                event_status = event_status.lower()
+            else:
+                # Some providers (e.g: iCloud) don't use the status field.
+                # Instead they use the METHOD field to signal cancellations.
+                method = component.get('method')
+                if method and method.lower() == 'cancel':
+                    event_status = 'cancelled'
+                elif calendar_method and calendar_method.lower() == 'cancel':
+                    # So, this particular event was not cancelled. Maybe the
+                    # whole calendar was.
+                    event_status = 'cancelled'
+                else:
+                    # Otherwise assume the event has been confirmed.
+                    event_status = 'confirmed'
+
+            assert event_status in EVENT_STATUSES
 
             recur = component.get('rrule')
             if recur:
@@ -205,6 +230,7 @@ def events_from_ics(namespace, calendar, ics_str):
                 last_modified=last_modified,
                 original_start_tz=original_start_tz,
                 source='local',
+                status=event_status,
                 participants=participants)
 
             events.append(event)

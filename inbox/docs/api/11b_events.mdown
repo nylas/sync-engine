@@ -36,9 +36,11 @@ GET https://api.nylas.com/n/<namespace_id>/events/<event_id>
         "end_time": 1408123800,
         "start_time": 1408120200
     },
-    "busy": true
+    "busy": true,
+    "status": "confirmed", // other possible values: "tentative" and "cancelled"
 }
 ```
+
 
 # Retrieving many events
 
@@ -58,6 +60,7 @@ This endpoint supports [filters](#filters), which allow you to fetch multiple ev
 * **`ends_before`** (integer, Unix timestamp) Return events that end before this timestamp.
 * **`ends_after`** (integer, Unix timestamp) Return events that end after this timestamp.
 * **`expand_recurring`** (Boolean) If set to true, expands recurring events into individual event instances.
+* **`show_cancelled`** (Boolean) If set to true, also show cancelled events.
 
 For example, the following will limit the number of results to 3.
 

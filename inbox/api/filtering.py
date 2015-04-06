@@ -384,7 +384,7 @@ def recurring_events(filters, starts_before, starts_after, ends_before,
 def events(namespace_id, event_public_id, calendar_public_id, title,
            description, location, busy, starts_before, starts_after,
            ends_before, ends_after, limit, offset, view,
-           expand_recurring, db_session):
+           expand_recurring, show_cancelled, db_session):
 
     query = db_session.query(Event)
 
@@ -411,6 +411,20 @@ def events(namespace_id, event_public_id, calendar_public_id, title,
 
     if ends_after is not None:
         event_criteria.append(Event.end > ends_after)
+
+    if not show_cancelled:
+        if expand_recurring:
+            event_criteria.append(Event.status != 'cancelled')
+        else:
+            # It doesn't make sense to hide cancelled events
+            # when we're not expanding recurring events,
+            # so don't do it.
+            # We still need to show cancelled recurringevents
+            # for those users who want to do event expansion themselves.
+            event_criteria.append(
+                (Event.discriminator == 'recurringeventoverride') |
+                ((Event.status != 'cancelled') & (Event.discriminator !=
+                                                  'recurringeventoverride')))
 
     event_predicate = and_(*event_criteria)
     query = query.filter(event_predicate)

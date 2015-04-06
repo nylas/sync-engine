@@ -127,7 +127,6 @@ def test_event_update(db, default_account, message):
 
 
 def test_recurring_ical(db, default_account):
-
     with open(absolute_path(FIXTURES + 'gcal_recur.ics')) as fd:
         ics_data = fd.read()
 
@@ -185,6 +184,66 @@ def test_multiple_events(db, default_account):
     assert len(ev1.participants) == 0
 
     assert ev1.start == arrow.get(2015, 03, 17, 0, 0)
+
+
+def test_cancelled_event(db, default_account):
+    with open(absolute_path(FIXTURES + 'google_cancelled1.ics')) as fd:
+        ics_data = fd.read()
+
+    msg = add_fake_msg_with_calendar_part(
+        db.session, default_account, ics_data)
+
+    import_attached_events(db.session, default_account, msg)
+    db.session.commit()
+
+    ev = db.session.query(Event).filter(
+        Event.uid == "c74p2nmutcd0kt69ku7rs8vu2g@google.com").one()
+
+    assert ev.status == 'confirmed'
+
+    with open(absolute_path(FIXTURES + 'google_cancelled2.ics')) as fd:
+        ics_data = fd.read()
+
+    msg = add_fake_msg_with_calendar_part(
+        db.session, default_account, ics_data)
+
+    import_attached_events(db.session, default_account, msg)
+    db.session.commit()
+
+    ev = db.session.query(Event).filter(
+        Event.uid == "c74p2nmutcd0kt69ku7rs8vu2g@google.com").one()
+
+    assert ev.status == 'cancelled'
+
+
+def test_icloud_cancelled_event(db, default_account):
+    with open(absolute_path(FIXTURES + 'icloud_cancelled1.ics')) as fd:
+        ics_data = fd.read()
+
+    msg = add_fake_msg_with_calendar_part(
+        db.session, default_account, ics_data)
+
+    import_attached_events(db.session, default_account, msg)
+    db.session.commit()
+
+    ev = db.session.query(Event).filter(
+        Event.uid == "5919D444-7C99-4687-A526-FC5D10091318").one()
+
+    assert ev.status == 'confirmed'
+
+    with open(absolute_path(FIXTURES + 'icloud_cancelled2.ics')) as fd:
+        ics_data = fd.read()
+
+    msg = add_fake_msg_with_calendar_part(
+        db.session, default_account, ics_data)
+
+    import_attached_events(db.session, default_account, msg)
+    db.session.commit()
+
+    ev = db.session.query(Event).filter(
+        Event.uid == "5919D444-7C99-4687-A526-FC5D10091318").one()
+
+    assert ev.status == 'cancelled'
 
 
 def test_multiple_summaries(db, default_account):

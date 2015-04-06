@@ -8,7 +8,8 @@ import requests
 
 from inbox.basicauth import AccessNotEnabledError
 from inbox.log import get_logger
-from inbox.models import Event, Calendar, Account
+from inbox.models import Calendar, Account
+from inbox.models.event import Event, EVENT_STATUSES
 from inbox.models.session import session_scope
 from inbox.models.backends.oauth import token_manager
 from inbox.events.util import (google_to_event_time, parse_google_time,
@@ -262,6 +263,11 @@ def parse_event_response(event):
     location = event.get('location')
     busy = event.get('transparency') != 'transparent'
 
+    # We're lucky because an event statuses follow the icalendar
+    # spec.
+    event_status = event.get('status', 'confirmed')
+    assert event_status in EVENT_STATUSES
+
     # Ownership, read_only information
     creator = event.get('creator')
 
@@ -309,6 +315,7 @@ def parse_event_response(event):
                  original_start_time=original_start,
                  master_event_uid=master_uid,
                  cancelled=cancelled,
+                 status=event_status,
                  # TODO(emfree): remove after data cleanup
                  source='local')
 
