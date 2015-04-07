@@ -13,7 +13,8 @@ __all__ = ['provider_info', 'providers', 'PluginInterface', 'ProvidersDict']
 
 
 def provider_info(provider_name, email_address=None):
-    """Like providers[provider_name] except raises
+    """
+    Like providers[provider_name] except raises
     inbox.basicauth.NotSupportedError instead of KeyError when the provider is
     not found.
 
@@ -22,16 +23,18 @@ def provider_info(provider_name, email_address=None):
     email_address : str or None
         Allows further customization of the return value on a per-account
         basis.
+
     """
     if provider_name not in providers:
-        raise NotSupportedError("Provider: {} not supported.".format(
+        raise NotSupportedError('Provider: {} not supported.'.format(
             provider_name))
 
     return providers.lookup_info(provider_name, email_address)
 
 
 class ProvidersDict(MutableMapping):
-    """ProvidersDict dictionary with support for lazy-loading plugins.
+    """
+    ProvidersDict dictionary with support for lazy-loading plugins.
 
     Example setup.py boilerplate:
 
@@ -56,8 +59,8 @@ class ProvidersDict(MutableMapping):
                 "domains": ["example.com"],
                 "mx_servers": ["mx.example.net"]
             })
-    """
 
+    """
     def __init__(self):
         self._d = {}
         self._filters = defaultdict(list)
@@ -128,7 +131,8 @@ class ProvidersDict(MutableMapping):
         self._loaded = True
 
     def register_info(self, name, info):
-        """Register information for a new provider.
+        """
+        Register information for a new provider.
 
         Parameters
         ----------
@@ -170,8 +174,8 @@ class ProvidersDict(MutableMapping):
                 "mx_servers": ["mailin-01.mx.aol.com", "mailin-02.mx.aol.com",
                                "mailin-03.mx.aol.com", "mailin-04.mx.aol.com"],
             })
-        """
 
+        """
         if not isinstance(name, str):
             raise TypeError('name must by a str')
         if not isinstance(info, Mapping):
@@ -181,7 +185,8 @@ class ProvidersDict(MutableMapping):
         self._d[name] = info
 
     def register_info_filter(self, name, func):
-        """Register a filter for the return value of __getitem__.
+        """
+        Register a filter for the return value of __getitem__.
 
         Parameters
         ----------
@@ -204,6 +209,7 @@ class ProvidersDict(MutableMapping):
 
         This function is experimental; It may change or be removed in a future
         release without warning.
+
         """
         if not callable(func):
             raise TypeError('func should be callable')
@@ -241,7 +247,8 @@ get_default_providers = lambda: {
             "onmicrosoft.com",
             "exchange.mit.edu",
         ],
-        "mx_servers": ["protection.outlook.com"]
+        # Office365
+        "mx_servers": ["mail.protection.outlook.com", "mail.eo.outlook.com"]
     },
     "fastmail": {
         "type": "generic",
