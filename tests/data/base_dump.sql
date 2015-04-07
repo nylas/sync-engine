@@ -1,13 +1,13 @@
--- MySQL dump 10.13  Distrib 5.6.23, for Linux (x86_64)
+-- MySQL dump 10.13  Distrib 5.5.41, for debian-linux-gnu (x86_64)
 --
 -- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.6.23-log
+-- Server version	5.5.41-0ubuntu0.12.04.1
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8mb4 */;
+/*!40101 SET NAMES utf8 */;
 /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
 /*!40103 SET TIME_ZONE='+00:00' */;
 /*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
@@ -150,7 +150,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('3c7f059a68ba');
+INSERT INTO `alembic_version` VALUES ('4e6eedda36af');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -385,11 +385,23 @@ CREATE TABLE `easdevice` (
   `eas_device_type` varchar(32) NOT NULL,
   `eas_policy_key` varchar(64) DEFAULT NULL,
   `eas_sync_key` varchar(64) NOT NULL DEFAULT '0',
+  `archive_foldersync_id` int(11) DEFAULT NULL,
+  `inbox_foldersync_id` int(11) DEFAULT NULL,
+  `sent_foldersync_id` int(11) DEFAULT NULL,
+  `trash_foldersync_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `ix_easdevice_created_at` (`created_at`),
   KEY `ix_easdevice_updated_at` (`updated_at`),
   KEY `ix_easdevice_deleted_at` (`deleted_at`),
-  KEY `ix_easdevice_eas_device_id` (`eas_device_id`)
+  KEY `ix_easdevice_eas_device_id` (`eas_device_id`),
+  KEY `archive_foldersync_ibfk` (`archive_foldersync_id`),
+  KEY `inbox_foldersync_ibfk` (`inbox_foldersync_id`),
+  KEY `sent_foldersync_ibfk` (`sent_foldersync_id`),
+  KEY `trash_foldersync_ibfk` (`trash_foldersync_id`),
+  CONSTRAINT `easdevice_ibfk_1` FOREIGN KEY (`archive_foldersync_id`) REFERENCES `easfoldersyncstatus` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `easdevice_ibfk_2` FOREIGN KEY (`inbox_foldersync_id`) REFERENCES `easfoldersyncstatus` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `easdevice_ibfk_3` FOREIGN KEY (`sent_foldersync_id`) REFERENCES `easfoldersyncstatus` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `easdevice_ibfk_4` FOREIGN KEY (`trash_foldersync_id`) REFERENCES `easfoldersyncstatus` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -449,7 +461,6 @@ CREATE TABLE `easfoldersyncstatus` (
   `deleted_at` datetime DEFAULT NULL,
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `account_id` int(11) NOT NULL,
-  `folder_id` int(11) NOT NULL,
   `state` enum('initial','initial keyinvalid','poll','poll keyinvalid','finish') NOT NULL DEFAULT 'initial',
   `eas_folder_sync_key` varchar(64) NOT NULL,
   `eas_folder_id` varchar(64) DEFAULT NULL,
@@ -457,17 +468,15 @@ CREATE TABLE `easfoldersyncstatus` (
   `eas_parent_id` varchar(64) DEFAULT NULL,
   `_metrics` text,
   `device_id` int(11) NOT NULL,
+  `name` varchar(191) NOT NULL,
+  `canonical_name` varchar(191) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `account_id` (`account_id`,`device_id`,`folder_id`),
   UNIQUE KEY `account_id_2` (`account_id`,`device_id`,`eas_folder_id`),
-  KEY `folder_id` (`folder_id`),
   KEY `ix_easfoldersyncstatus_created_at` (`created_at`),
   KEY `ix_easfoldersyncstatus_deleted_at` (`deleted_at`),
   KEY `ix_easfoldersyncstatus_updated_at` (`updated_at`),
   KEY `device_id` (`device_id`),
-  CONSTRAINT `easfoldersyncstatus_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `easaccount` (`id`),
-  CONSTRAINT `easfoldersyncstatus_ibfk_2` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`),
-  CONSTRAINT `easfoldersyncstatus_ibfk_3` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`) ON DELETE CASCADE
+  CONSTRAINT `easfoldersyncstatus_ibfk_1` FOREIGN KEY (`account_id`) REFERENCES `easaccount` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -521,23 +530,20 @@ CREATE TABLE `easuid` (
   `message_id` int(11) DEFAULT NULL,
   `fld_uid` int(11) NOT NULL,
   `msg_uid` int(11) DEFAULT NULL,
-  `folder_id` int(11) NOT NULL,
-  `is_draft` tinyint(1) NOT NULL,
+  `is_draft` tinyint(1) NOT NULL DEFAULT '0',
   `is_flagged` tinyint(1) NOT NULL,
   `is_seen` tinyint(1) DEFAULT NULL,
   `device_id` int(11) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `folder_id` (`folder_id`,`msg_uid`,`easaccount_id`,`device_id`),
+  UNIQUE KEY `easaccount_id` (`easaccount_id`,`device_id`,`fld_uid`,`msg_uid`),
   KEY `message_id` (`message_id`),
   KEY `ix_easuid_deleted_at` (`deleted_at`),
   KEY `ix_easuid_msg_uid` (`msg_uid`),
-  KEY `easuid_easaccount_id_folder_id` (`easaccount_id`,`folder_id`),
   KEY `ix_easuid_created_at` (`created_at`),
   KEY `ix_easuid_updated_at` (`updated_at`),
   KEY `device_id` (`device_id`),
   CONSTRAINT `easuid_ibfk_1` FOREIGN KEY (`easaccount_id`) REFERENCES `easaccount` (`id`) ON DELETE CASCADE,
   CONSTRAINT `easuid_ibfk_2` FOREIGN KEY (`message_id`) REFERENCES `message` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `easuid_ibfk_3` FOREIGN KEY (`folder_id`) REFERENCES `folder` (`id`) ON DELETE CASCADE,
   CONSTRAINT `easuid_ibfk_4` FOREIGN KEY (`device_id`) REFERENCES `easdevice` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1837,4 +1843,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-04-02 21:11:03
+-- Dump completed on 2015-04-07  0:18:09
