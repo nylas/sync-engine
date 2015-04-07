@@ -29,7 +29,7 @@ def test_provider_resolution():
     assert provider_from_address('foo@gmx.com') == 'gmx'
     assert provider_from_address('foo@gandi.net') == 'gandi'
     assert provider_from_address('foo@debuggers.co') == 'gandi'
-    assert provider_from_address('foo@getrhombus.com') == 'outlook'
+    assert provider_from_address('foo@getrhombus.com') == 'eas'
     assert provider_from_address('foo@forumone.com') == 'gmail'
     assert provider_from_address('foo@getbannerman.com') == 'gmail'
     assert provider_from_address('foo@inboxapp.onmicrosoft.com') == 'eas'
