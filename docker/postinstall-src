@@ -23,11 +23,11 @@ if [ -e '.git' ]; then
 fi
 
 # Change the ownership & permissions on the source directory
-chown -R admin .
+chown -R root .
 chmod -R u=rwX,g=rX,o=rX .
 
 # Install the package and its dependencies
-sudo -u admin pip install -e .
+sudo -u root pip install -e .
 
 # Clear out potentially stale .pyc files
 # XXX: Is this necessary?
