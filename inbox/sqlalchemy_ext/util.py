@@ -74,6 +74,7 @@ class JSON(TypeDecorator):
     def process_bind_param(self, value, dialect):
         if value is None:
             return None
+
         return json_util.dumps(value)
 
     def process_result_value(self, value, dialect):
@@ -274,9 +275,10 @@ def safer_yield_per(query, id_field, start_id, count):
         The number of results to fetch at a time.
     """
     while True:
-        results = query.filter(id_field >= start_id).limit(count).all()
+        results = query.filter(id_field >= start_id).order_by(id_field).\
+            limit(count).all()
         if not results:
             return
         for result in results:
-            start_id = result.id + 1
             yield result
+        start_id = start_id + count
