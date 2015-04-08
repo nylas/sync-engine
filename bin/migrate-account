@@ -35,6 +35,7 @@ def main(account_id, host):
             time.sleep(1)
 
         account.enable_sync(host)
+        mailsync_session.commit()
 
 
 if __name__ == "__main__":
