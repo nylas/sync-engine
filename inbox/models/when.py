@@ -3,12 +3,14 @@ import arrow
 
 
 def parse_as_when(raw):
-    """Tries to parse a dictionary into a corresponding Date, DateSpan,
+    """
+    Tries to parse a dictionary into a corresponding Date, DateSpan,
     Time, or TimeSpan instance.
 
     Raises
     -------
     ValueError
+
     """
     when_classes = [TimeSpan, Time, DateSpan, Date]
     keys_for_type = {tuple(cls_.json_keys): cls_ for cls_ in when_classes}
@@ -25,15 +27,16 @@ def parse_utc(datetime):
 
 
 class When(object):
-    """ Abstract class which can represent a moment in time or a span between
+    """
+    Abstract class which can represent a moment in time or a span between
         two moments. Initialize one of its subclasses `Time`, `TimeSpan`,
         `Date` or `DateSpan` to concretely define which type you need.
 
-        Args:
-            start (datetime): Starting time
-            end (datetime, optional): End time. If missing, start will be used.
-    """
+    Args:
+        start (datetime): Starting time
+        end (datetime, optional): End time. If missing, start will be used.
 
+    """
     __metaclass__ = abc.ABCMeta  # Needed?
     json_keys = abc.abstractproperty()
     all_day = False

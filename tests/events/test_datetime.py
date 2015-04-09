@@ -1,7 +1,9 @@
 import arrow
 from datetime import timedelta
 
-from inbox.models.when import Time, TimeSpan, Date, DateSpan, parse_as_when
+from inbox.models.when import (Time, TimeSpan, Date, DateSpan, parse_as_when,
+                               parse_utc)
+from inbox.models.event import time_parse
 from inbox.events.util import (google_to_event_time, parse_google_time,
                                parse_datetime)
 
@@ -99,6 +101,20 @@ def test_parse_datetime():
     t = 1426008600
     dt = parse_datetime(t)
     assert dt == arrow.get(2015, 03, 10, 17, 30, 00)
+
+
+def test_time_parse():
+    t = 1426008600
+    validated = parse_utc(t)
+    stored = time_parse(t)
+
+    assert validated.naive == stored
+
+    t = str(1426008600)
+    validated = parse_utc(t)
+    stored = time_parse(t)
+
+    assert validated.naive == stored
 
 
 def test_parse_google_time():

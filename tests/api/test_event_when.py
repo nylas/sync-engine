@@ -1,6 +1,8 @@
 import json
 import pytest
 
+import arrow
+
 from inbox.models import Account
 from tests.util.base import api_client
 
@@ -24,7 +26,7 @@ def _verify_create(ns_id, api_client, e_data):
     assert e_resp_data['title'] == e_data['title']
     assert e_resp_data['location'] == e_data['location']
     for k, v in e_data['when'].iteritems():
-        assert e_resp_data['when'][k] == v
+        assert arrow.get(e_resp_data['when'][k]) == arrow.get(v)
     assert 'id' in e_resp_data
     e_id = e_resp_data['id']
     e_get_resp = api_client.get_data('/events/' + e_id, ns_id)
@@ -34,9 +36,24 @@ def _verify_create(ns_id, api_client, e_data):
     assert e_get_resp['id'] == e_id
     assert e_get_resp['title'] == e_data['title']
     for k, v in e_data['when'].iteritems():
-        assert e_get_resp['when'][k] == v
+        assert arrow.get(e_get_resp['when'][k]) == arrow.get(v)
 
     return e_resp_data
+
+
+def test_api_when_as_str(db, api_client, calendar):
+    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
+    ns_id = acct.namespace.public_id
+
+    e_data = {
+        'title': 'Friday Office Party',
+        'when': {'time': '1407542195'},
+        'calendar_id': calendar.public_id,
+        'location': 'Inbox HQ',
+    }
+
+    e_resp_data = _verify_create(ns_id, api_client, e_data)
+    assert e_resp_data['when']['object'] == 'time'
 
 
 def test_api_time(db, api_client, calendar):
