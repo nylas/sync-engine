@@ -20,14 +20,15 @@ from inbox.util.misc import cleanup_subject
 
 
 class Thread(MailSyncBase, HasPublicID, HasRevisions):
-    """ Threads are a first-class object in Inbox. This thread aggregates
-        the relevant thread metadata from elsewhere so that clients can only
-        query on threads.
+    """ Threads are a first-class object.
 
-        A thread can be a member of an arbitrary number of folders.
+    This thread aggregates the relevant thread metadata from elsewhere so that
+    clients can query only on threads.
 
-        If you're attempting to display _all_ messages a la Gmail's All Mail,
-        don't query based on folder!
+    A thread can be a member of an arbitrary number of folders.
+
+    If you're attempting to display _all_ messages a la Gmail's All Mail,
+    don't query based on folder!
     """
     API_OBJECT_NAME = 'thread'
     subject = Column(String(255), nullable=True)
