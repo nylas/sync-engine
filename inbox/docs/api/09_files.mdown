@@ -19,7 +19,7 @@ GET https://api.nylas.com/n/<namespace_id>/files/<file_id>
     "namespace_id": "awa6ltos76vz5hvphkp8k17nt",
     "filename": "House-Blueprints.zip",
     "size": 3145728,
-    "content-type": "application/zip",
+    "content_type": "application/zip",
     "message_ids": ["152ev3uktfrtk3y2subs4i9mn"],
 }
 ```

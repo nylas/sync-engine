@@ -52,7 +52,7 @@ Note that all of these parameters are optional. If omitted, an empty draft will 
         "bgmzg0qp61oqrrmpadboiiyg3",
         "aikfl1kl73r69hevrm018jqzw"
     ]
-    "version": "evrm018jqzwbgmzg0qp61oqrr"
+    "version": 2
 }
 ```
 

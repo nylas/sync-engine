@@ -56,7 +56,8 @@ The thread object includes useful information like subject, participants, and ti
     ],
     "draft_ids": [
         "251r594smznew6yhi12312saq"
-    ]
+    ],
+    "version": 2
 }
 ```
 

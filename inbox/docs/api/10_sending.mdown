@@ -17,7 +17,7 @@ Perform a POST request with the POST body below to send an existing draft. If th
 :::json
 {
     "draft_id": "9nhhb7w3tinsn4zkg9vjr3cxz",
-    "version": "evrm018jqzwbgmzg0qp61oqrr"
+    "version": 2
 }
 ```
 
