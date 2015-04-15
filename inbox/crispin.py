@@ -787,7 +787,12 @@ class GmailCrispinClient(CondStoreCrispinClient):
         """
         self.log.debug('fetching X-GM-MSGID and X-GM-THRID',
                        uid_count=len(uids))
-        data = self.conn.fetch(uids, ['X-GM-MSGID', 'X-GM-THRID'])
+        # Super long sets of uids may fail with BAD ['Could not parse command']
+        # In that case, just fetch metadata for /all/ uids.
+        if len(uids) > 1e6:
+            data = self.conn.fetch('1:*', ['X-GM-MSGID', 'X-GM-THRID'])
+        else:
+            data = self.conn.fetch(uids, ['X-GM-MSGID', 'X-GM-THRID'])
         uid_set = set(uids)
         return {uid: GMetadata(ret['X-GM-MSGID'], ret['X-GM-THRID'])
                 for uid, ret in data.items() if uid in uid_set}
