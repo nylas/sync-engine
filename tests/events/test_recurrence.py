@@ -5,7 +5,7 @@ from dateutil.rrule import rrulestr
 from datetime import timedelta
 from inbox.models.event import Event, RecurringEvent, RecurringEventOverride
 from inbox.models.when import Date, Time, DateSpan, TimeSpan
-from inbox.events.remote_sync import handle_event_updates, handle_event_deletes
+from inbox.events.remote_sync import handle_event_updates
 from inbox.events.recurring import (link_events, get_start_times,
                                     parse_exdate, rrule_to_json)
 
@@ -22,10 +22,13 @@ TEST_EXDATE_RULE.extend(TEST_EXDATE)
 def recurring_event(db, account, calendar, rrule,
                     start=arrow.get(2014, 8, 7, 20, 30, 00),
                     end=arrow.get(2014, 8, 7, 21, 30, 00),
-                    all_day=False):
-    ev = db.session.query(Event).filter_by(uid='myuid').first()
-    if ev:
-        db.session.delete(ev)
+                    all_day=False, commit=True):
+
+    # commit: are we returning a commited instance object?
+    if commit:
+        ev = db.session.query(Event).filter_by(uid='myuid').first()
+        if ev:
+            db.session.delete(ev)
     ev = Event(namespace_id=account.namespace.id,
                calendar=calendar,
                title='recurring',
@@ -47,8 +50,11 @@ def recurring_event(db, account, calendar, rrule,
                original_start_time=None,
                master_event_uid=None,
                source='local')
-    db.session.add(ev)
-    db.session.commit()
+
+    if commit:
+        db.session.add(ev)
+        db.session.commit()
+
     return ev
 
 
@@ -434,25 +440,6 @@ def test_new_instance_cancelled(db, default_account, calendar):
     assert find_override.cancelled is True
 
 
-def test_master_cancelled(db, default_account, calendar):
-    # Test that when the master recurring event is cancelled, we delete it
-    # in its entirety, including all overrides.
-    event = recurring_event(db, default_account, calendar, TEST_EXDATE_RULE)
-    override = recurring_override(db, event,
-                                  arrow.get(2014, 9, 4, 20, 30, 00),
-                                  arrow.get(2014, 9, 4, 21, 30, 00),
-                                  arrow.get(2014, 9, 4, 22, 30, 00))
-    deletes = [event.uid]
-    handle_event_deletes(default_account.namespace.id,
-                         calendar.id,
-                         deletes, log, db.session)
-    db.session.commit()
-    find_master = db.session.query(Event).filter_by(uid=event.uid).first()
-    assert find_master is None
-    find_override = db.session.query(Event).filter_by(uid=override.uid).first()
-    assert find_override is None
-
-
 def test_when_delta():
     # Test that the event length is calculated correctly
     ev = Event(namespace_id=0)
@@ -501,3 +488,28 @@ def test_rrule_to_json():
     j = rrule_to_json(r)
     assert j.get('until') is None
     assert j.get('byminute') is 42
+
+
+def test_master_cancelled(db, default_account, calendar):
+    # Test that when the master recurring event is cancelled, we cancel every
+    # override too.
+    event = recurring_event(db, default_account, calendar, TEST_EXDATE_RULE)
+    override = recurring_override(db, event,
+                                  arrow.get(2014, 9, 4, 20, 30, 00),
+                                  arrow.get(2014, 9, 4, 21, 30, 00),
+                                  arrow.get(2014, 9, 4, 22, 30, 00))
+
+    update = recurring_event(db, default_account, calendar, TEST_EXDATE_RULE,
+                             commit=False)
+    update.status = 'cancelled'
+    updates = [update]
+
+    handle_event_updates(default_account.namespace.id,
+                         calendar.id,
+                         updates, log, db.session)
+    db.session.commit()
+    find_master = db.session.query(Event).filter_by(uid=event.uid).first()
+    assert find_master.status == 'cancelled'
+
+    find_override = db.session.query(Event).filter_by(uid=override.uid).first()
+    assert find_override.status == 'cancelled'

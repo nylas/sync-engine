@@ -1,5 +1,6 @@
 from datetime import datetime
 from inbox.events.remote_sync import EventSync
+from inbox.events.util import CalendarSyncResponse
 from inbox.models import Calendar, Event, Transaction
 from tests.util.base import new_account
 
@@ -19,7 +20,7 @@ default_params = dict(raw_data='',
 
 
 def calendar_response():
-    return ([], [
+    return CalendarSyncResponse([], [
         Calendar(name='Important Meetings',
                  uid='first_calendar_uid',
                  read_only=False),
@@ -30,9 +31,10 @@ def calendar_response():
 
 
 def calendar_response_with_update():
-    return ([], [Calendar(name='Super Important Meetings',
-                          uid='first_calendar_uid',
-                          read_only=False)])
+    return CalendarSyncResponse(
+                [], [Calendar(name='Super Important Meetings',
+                     uid='first_calendar_uid',
+                     read_only=False)])
 
 
 def calendar_response_with_delete():
@@ -41,7 +43,7 @@ def calendar_response_with_delete():
 
 def event_response(calendar_uid, sync_from_time):
     if calendar_uid == 'first_calendar_uid':
-        return ([], [
+        return [
             Event(uid='first_event_uid',
                   title='Plotting Meeting',
                   **default_params),
@@ -51,28 +53,29 @@ def event_response(calendar_uid, sync_from_time):
             Event(uid='third_event_uid',
                   title='Innocent Meeting',
                   **default_params)
-        ])
+        ]
     else:
-        return ([], [
+        return [
             Event(uid='second_event_uid',
                   title='Plotting Meeting',
                   **default_params),
             Event(uid='third_event_uid',
                   title='Scheming meeting',
                   **default_params)
-        ])
+        ]
 
 
 def event_response_with_update(calendar_uid, sync_from_time):
     if calendar_uid == 'first_calendar_uid':
-        return ([], [Event(uid='first_event_uid',
-                           title='Top Secret Plotting Meeting',
-                           **default_params)])
+        return [Event(uid='first_event_uid',
+                      title='Top Secret Plotting Meeting',
+                      **default_params)]
 
 
 def event_response_with_delete(calendar_uid, sync_from_time):
     if calendar_uid == 'first_calendar_uid':
-        return (['first_event_uid'], [])
+        return [Event(uid='first_event_uid', status='cancelled',
+                      **default_params)]
 
 
 def test_handle_changes(db, new_account):
@@ -139,7 +142,9 @@ def test_handle_changes(db, new_account):
         Event.namespace_id == namespace_id,
         Event.calendar_id == first_calendar.id,
         Event.uid == 'first_event_uid').first()
-    assert first_event is None
+
+    db.session.refresh(first_event)
+    assert first_event.status == 'cancelled'
 
     # Sync a calendar delete
     event_public_ids = [id_ for id_, in db.session.query(Event.public_id).
@@ -158,7 +163,7 @@ def test_handle_changes(db, new_account):
         Transaction.command == 'delete',
         Transaction.namespace_id == namespace_id,
         Transaction.object_public_id.in_(event_public_ids)).all()
-    assert len(deleted_event_transactions) == 2
+    assert len(deleted_event_transactions) == 3
 
     # Check that events with the same uid but associated to a different
     # calendar still survive.

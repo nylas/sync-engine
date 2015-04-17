@@ -1,5 +1,4 @@
 """Provide Google Calendar events."""
-import collections
 import datetime
 import json
 import urllib
@@ -13,21 +12,13 @@ from inbox.models.event import Event, EVENT_STATUSES
 from inbox.models.session import session_scope
 from inbox.models.backends.oauth import token_manager
 from inbox.events.util import (google_to_event_time, parse_google_time,
-                               parse_datetime)
+                               parse_datetime, CalendarSyncResponse)
 
 
 log = get_logger()
 CALENDARS_URL = 'https://www.googleapis.com/calendar/v3/users/me/calendarList'
 STATUS_MAP = {'accepted': 'yes', 'needsAction': 'noreply',
               'declined': 'no', 'tentative': 'maybe'}
-
-
-# Container for a parsed API response. API calls return adds/updates/deletes
-# all together, but we want to handle deletions separately in our persistence
-# logic. deleted_uids should be a list of uids, and updated_objects should be a
-# list of (un-added, uncommitted) model instances.
-SyncResponse = collections.namedtuple('SyncResponse',
-                                      ['deleted_uids', 'updated_objects'])
 
 
 class GoogleEventsProvider(object):
@@ -45,7 +36,7 @@ class GoogleEventsProvider(object):
         """ Fetches data for the user's calendars.
         Returns
         -------
-        SyncResponse
+        CalendarSyncResponse
         """
 
         deletes = []
@@ -57,7 +48,7 @@ class GoogleEventsProvider(object):
             else:
                 updates.append(parse_calendar_response(item))
 
-        return SyncResponse(deletes, updates)
+        return CalendarSyncResponse(deletes, updates)
 
     def sync_events(self, calendar_uid, sync_from_time=None):
         """ Fetches event data for an individual calendar.
@@ -75,19 +66,14 @@ class GoogleEventsProvider(object):
 
         Returns
         -------
-        SyncResponse
+        A list of uncommited Event instances.
         """
-        deletes = []
         updates = []
         items = self._get_raw_events(calendar_uid, sync_from_time)
         for item in items:
-            # We need to instantiate recurring event cancellations as overrides
-            if item.get('status') == 'cancelled' and not \
-                    item.get('recurringEventId'):
-                deletes.append(item['id'])
-            else:
-                updates.append(parse_event_response(item))
-        return SyncResponse(deletes, updates)
+            updates.append(parse_event_response(item))
+
+        return updates
 
     def _get_raw_calendars(self):
         """Gets raw data for the user's calendars."""

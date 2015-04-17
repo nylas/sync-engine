@@ -63,3 +63,12 @@ def google_to_event_time(start_raw, end_raw):
     event_time = when_to_event_time(d)
 
     return event_time
+
+
+# Container for a parsed API response. API calls return adds/updates/deletes
+# all together, but we want to handle deletions separately in our persistence
+# logic. deleted_uids should be a list of uids, and updated_objects should be a
+# list of (un-added, uncommitted) model instances.
+CalendarSyncResponse = namedtuple('CalendarSyncResponse',
+                                  ['deleted_uids',
+                                   'updated_objects'])

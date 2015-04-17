@@ -217,8 +217,18 @@ def test_event_parsing():
     provider = GoogleEventsProvider(1, 1)
     provider._get_raw_events = mock.MagicMock(
         return_value=raw_response)
-    deletes, updates = provider.sync_events('uid', 1)
-    assert deletes == expected_deletes
+    updates = provider.sync_events('uid', 1)
+
+    # deleted events are actually only marked as
+    # cancelled. Look for them in the updates stream.
+    found_cancelled_event = False
+    for event in updates:
+        if event.uid in expected_deletes and event.status == 'cancelled':
+            found_cancelled_event = True
+            break
+
+    assert found_cancelled_event
+
     for obtained, expected in zip(updates, expected_updates):
         print obtained, expected
         assert cmp_event_attrs(obtained, expected)
@@ -533,6 +543,5 @@ def test_cancelled_override_creation():
     provider = GoogleEventsProvider(1, 1)
     provider._get_raw_events = mock.MagicMock(
         return_value=raw_response)
-    deletes, updates = provider.sync_events('uid', 1)
-    assert len(deletes) == 0
+    updates = provider.sync_events('uid', 1)
     assert updates[0].cancelled is True

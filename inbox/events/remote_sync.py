@@ -65,11 +65,10 @@ class EventSync(BaseSyncMonitor):
             db_session.commit()
 
         for (uid, id_) in calendar_uids_and_ids:
-            deleted_uids, event_changes = self.provider.sync_events(
+            event_changes = self.provider.sync_events(
                 uid, sync_from_time=last_sync)
+
             with session_scope() as db_session:
-                handle_event_deletes(self.namespace_id, id_, deleted_uids,
-                                     self.log, db_session)
                 handle_event_updates(self.namespace_id, id_, event_changes,
                                      self.log, db_session)
                 db_session.commit()
@@ -126,27 +125,6 @@ def handle_calendar_updates(namespace_id, calendars, log, db_session):
     return ids_
 
 
-def handle_event_deletes(namespace_id, calendar_id, deleted_event_uids,
-                         log, db_session):
-    """Deletes any local Event rows with the given calendar_id and uid in
-    `deleted_event_uids`."""
-    deleted_count = 0
-    for uid in deleted_event_uids:
-        local_event = db_session.query(Event).filter(
-            Event.namespace_id == namespace_id,
-            Event.uid == uid,
-            Event.calendar_id == calendar_id).first()
-        if local_event is not None:
-            # Delete stored overrides for this event too, if it is recurring
-            if isinstance(local_event, RecurringEvent):
-                deleted_event_uids.extend(list(local_event.override_uids))
-            deleted_count += 1
-            db_session.delete(local_event)
-    log.info('synced deleted events',
-             calendar_id=calendar_id,
-             deleted=deleted_count)
-
-
 def handle_event_updates(namespace_id, calendar_id, events, log, db_session):
     """Persists new or updated Event objects to the database."""
     added_count = 0
@@ -163,6 +141,14 @@ def handle_event_updates(namespace_id, calendar_id, events, log, db_session):
             Event.uid == event.uid).first()
 
         if local_event is not None:
+            # We also need to mark all overrides as cancelled if we're
+            # cancelling a recurring event.
+            if isinstance(event, RecurringEvent) and \
+                    event.status == 'cancelled' and \
+                    local_event.status != 'cancelled':
+                for override in local_event.overrides:
+                    override.status = 'cancelled'
+
             local_event.update(event)
             updated_count += 1
         else:
