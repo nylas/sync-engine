@@ -665,7 +665,8 @@ def event_create_api():
     g.db_session.add(event)
     g.db_session.flush()
 
-    schedule_action('create_event', event, g.namespace.id, g.db_session)
+    schedule_action('create_event', event, g.namespace.id, g.db_session,
+                    calendar_uid=event.calendar.uid)
     return g.encoder.jsonify(event)
 
 
@@ -707,7 +708,8 @@ def event_update_api(public_id):
             setattr(event, attr, data[attr])
 
     g.db_session.commit()
-    schedule_action('update_event', event, g.namespace.id, g.db_session)
+    schedule_action('update_event', event, g.namespace.id, g.db_session,
+                    calendar_uid=event.calendar.uid)
     return g.encoder.jsonify(event)
 
 
@@ -725,8 +727,7 @@ def event_delete_api(public_id):
                          'calendar.'.format(public_id))
 
     schedule_action('delete_event', event, g.namespace.id, g.db_session,
-                    event_uid=event.uid,
-                    calendar_name=event.calendar.name,
+                    event_uid=event.uid, calendar_name=event.calendar.name,
                     calendar_uid=event.calendar.uid)
     g.db_session.delete(event)
     g.db_session.commit()

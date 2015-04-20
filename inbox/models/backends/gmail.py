@@ -39,3 +39,8 @@ class GmailAccount(OAuthAccount, ImapAccount):
     def thread_cls(self):
         from inbox.models.backends.imap import ImapThread
         return ImapThread
+
+    @property
+    def actionlog_cls(self):
+        from inbox.models.action_log import ActionLog
+        return ActionLog

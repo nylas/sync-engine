@@ -21,10 +21,11 @@ not really a problem because of the limited ways mail messages can change.
 
 ACTIONS MUST BE IDEMPOTENT! We are going to have task workers guarantee
 at-least-once semantics.
+
 """
 from inbox.actions.backends import module_registry
 
-from inbox.models import Account, Message, Thread, Folder
+from inbox.models import Account, Message, Folder
 from inbox.sendmail.base import generate_attachments
 from inbox.sendmail.message import create_email
 from inbox.log import get_logger
@@ -65,9 +66,6 @@ def unstar(account_id, thread_id, db_session):
 
 
 def mark_unread(account_id, thread_id, db_session):
-    thread = db_session.query(Thread).get(thread_id)
-    for message in thread.messages:
-        message.is_read = False
     account = db_session.query(Account).get(account_id)
     set_remote_unread = module_registry[account.provider]. \
         set_remote_unread
@@ -75,9 +73,6 @@ def mark_unread(account_id, thread_id, db_session):
 
 
 def mark_read(account_id, thread_id, db_session):
-    thread = db_session.query(Thread).get(thread_id)
-    for message in thread.messages:
-        message.is_read = True
     account = db_session.query(Account).get(account_id)
     set_remote_unread = module_registry[account.provider]. \
         set_remote_unread
@@ -168,9 +163,12 @@ def save_draft(account_id, message_id, db_session, args):
 
 
 def delete_draft(account_id, draft_id, db_session, args):
-    """ Delete a draft from the remote backend. `args` should contain an
+    """
+    Delete a draft from the remote backend. `args` should contain an
     `inbox_uid` or a `message_id_header` key. This is used to find the draft on
-    "the backend."""
+    "the backend.
+
+    """
     inbox_uid = args.get('inbox_uid')
     message_id_header = args.get('message_id_header')
     assert inbox_uid or message_id_header, 'Need at least one header value'
@@ -180,9 +178,12 @@ def delete_draft(account_id, draft_id, db_session, args):
 
 
 def save_sent_email(account_id, message_id, db_session):
-    """ Create an email on the remote backend. Only used to work
+    """
+    Create an email on the remote backend. Only used to work
     around providers who don't save sent messages themselves
-    (I'm looking at you, iCloud)."""
+    (I'm looking at you, iCloud).
+
+    """
     account = db_session.query(Account).get(account_id)
     message = db_session.query(Message).get(message_id)
     if message is None:

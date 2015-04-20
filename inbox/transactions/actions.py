@@ -1,9 +1,11 @@
-"""Monitor the transaction log for changes that should be synced back to the
-account backend.
+"""
+Monitor the action log for changes that should be synced back to the remote
+backend.
 
 TODO(emfree):
- * Make this more robust across multiple machines. If you started two instances
-   talking to the same database backend things could go really badly.
+* Make this more robust across multiple machines. If you started two instances
+talking to the same database backend things could go really badly.
+
 """
 from collections import defaultdict
 from datetime import datetime
@@ -75,11 +77,11 @@ class SyncbackService(gevent.Greenlet):
     def _process_log(self):
         with session_scope() as db_session:
             # Only actions on accounts associated with this sync-engine
-            query = db_session.query(ActionLog). \
-                join(Namespace).join(Account). \
-                filter(ActionLog.status == 'pending',
-                       Account.sync_host == platform.node()). \
-                order_by(ActionLog.id). \
+            query = db_session.query(ActionLog).join(Namespace).join(Account).\
+                filter(ActionLog.discriminator == 'actionlog',
+                       ActionLog.status == 'pending',
+                       Account.sync_host == platform.node()).\
+                order_by(ActionLog.id).\
                 options(contains_eager(ActionLog.namespace, Namespace.account))
 
             running_action_ids = [worker.action_log_id for worker in
@@ -118,7 +120,8 @@ class SyncbackService(gevent.Greenlet):
 
 
 class SyncbackWorker(gevent.Greenlet):
-    """ Worker greenlet responsible for executing a single syncback action.
+    """
+    Worker greenlet responsible for executing a single syncback action.
     The worker can retry the action up to ACTION_MAX_NR_OF_RETRIES times
     before marking it as failed.
     Note: Each worker holds an account-level lock, in order to ensure that
@@ -130,6 +133,7 @@ class SyncbackWorker(gevent.Greenlet):
     TODO(emfree): Fix this with more granular locking (or a better strategy
     altogether). We only really need ordering guarantees for actions on any
     given object, not on the whole account.
+
     """
     def __init__(self, action_name, semaphore, action_log_id, record_id,
                  account_id, retry_interval=30, extra_args=None):

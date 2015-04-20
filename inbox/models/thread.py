@@ -20,15 +20,16 @@ from inbox.util.misc import cleanup_subject
 
 
 class Thread(MailSyncBase, HasPublicID, HasRevisions):
-    """ Threads are a first-class object.
-
-    This thread aggregates the relevant thread metadata from elsewhere so that
-    clients can query only on threads.
+    """
+    Threads are a first-class object in Inbox. This thread aggregates
+    the relevant thread metadata from elsewhere so that clients can only
+    query on threads.
 
     A thread can be a member of an arbitrary number of folders.
 
     If you're attempting to display _all_ messages a la Gmail's All Mail,
     don't query based on folder!
+
     """
     API_OBJECT_NAME = 'thread'
     subject = Column(String(255), nullable=True)
@@ -55,7 +56,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         with object_session(self).no_autoflush:
             if message.attachments:
                 attachment_tag = self.namespace.tags['attachment']
-                self.apply_tag(attachment_tag)
+                self.tags.add(attachment_tag)
 
             if message.is_draft:
                 # Don't change subjectdate, recentdate, or unread/unseen based
@@ -72,10 +73,11 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
                 unread_tag = self.namespace.tags['unread']
                 unseen_tag = self.namespace.tags['unseen']
                 if message.is_read:
-                    self.remove_tag(unread_tag)
+                    self.tags.discard(unread_tag)
+                    self.tags.discard(unseen_tag)
                 else:
-                    self.apply_tag(unread_tag)
-                    self.apply_tag(unseen_tag)
+                    self.tags.add(unread_tag)
+                    self.tags.add(unseen_tag)
                 self.snippet = message.snippet
 
             # subject is subject of original message in the thread
@@ -144,7 +146,8 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         return p
 
     def apply_tag(self, tag, execute_action=False):
-        """Add the given Tag instance to this thread. Does nothing if the tag
+        """
+        Add the given Tag instance to this thread. Does nothing if the tag
         is already applied. Contains extra logic for validating input and
         triggering dependent changes. Callers should use this method instead of
         directly calling Thread.tags.add(tag).
@@ -154,6 +157,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         tag: Tag instance
         execute_action: bool
             True if adding the tag should trigger a syncback action.
+
         """
         if tag not in self.tags:
             self.tags.add(tag)
@@ -181,8 +185,14 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         elif tag == trash_tag:
             self.tags.discard(inbox_tag)
 
+        unread_tag = self.namespace.tags['unread']
+        if tag == unread_tag:
+            for message in self.messages:
+                message.is_read = False
+
     def remove_tag(self, tag, execute_action=False):
-        """Remove the given Tag instance from this thread. Does nothing if the
+        """
+        Remove the given Tag instance from this thread. Does nothing if the
         tag isn't present. Contains extra logic for validating input and
         triggering dependent changes. Callers should use this method instead of
         directly calling Thread.tags.discard(tag).
@@ -192,6 +202,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
         tag: Tag instance
         execute_action: bool
             True if removing the tag should trigger a syncback action.
+
         """
         if tag not in self.tags:
             return
@@ -219,6 +230,10 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
             self.tags.add(inbox_tag)
         elif tag == spam_tag:
             self.tags.add(inbox_tag)
+
+        if tag == unread_tag:
+            for message in self.messages:
+                message.is_read = True
 
     @property
     def drafts(self):

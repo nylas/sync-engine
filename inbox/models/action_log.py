@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Text, ForeignKey, Enum, Index
+from sqlalchemy import Column, Integer, Text, ForeignKey, Enum, Index, String
 from sqlalchemy.orm import relationship
 
 from inbox.sqlalchemy_ext.util import JSON
@@ -53,7 +53,7 @@ def schedule_action(func_name, record, namespace_id, db_session, **kwargs):
     if account.sync_state == 'invalid':
         raise ActionError(error=403, namespace_id=namespace_id)
 
-    log_entry = ActionLog(
+    log_entry = account.actionlog_cls.create(
         action=func_name,
         table_name=record.__tablename__,
         record_id=record.id,
@@ -76,5 +76,14 @@ class ActionLog(MailSyncBase):
     retries = Column(Integer, server_default='0', nullable=False)
 
     extra_args = Column(JSON, nullable=True)
+
+    @classmethod
+    def create(cls, action, table_name, record_id, namespace_id, extra_args):
+        return cls(action=action, table_name=table_name, record_id=record_id,
+                   namespace_id=namespace_id, extra_args=extra_args)
+
+    discriminator = Column('type', String(16))
+    __mapper_args__ = {'polymorphic_identity': 'actionlog',
+                       'polymorphic_on': discriminator}
 
 Index('ix_actionlog_status_retries', ActionLog.status, ActionLog.retries)
