@@ -127,6 +127,30 @@ def example_draft(db):
     }
 
 
+@pytest.fixture
+def example_draft_bad_subject(db):
+    from inbox.models import Account
+    account = db.session.query(Account).get(1)
+    return {
+        'subject': ['draft', 'test'],
+        'body': '<html><body><h2>Sea, birds and sand.</h2></body></html>',
+        'to': [{'name': 'The red-haired mermaid',
+                'email': account.email_address}]
+    }
+
+
+@pytest.fixture
+def example_draft_bad_body(db):
+    from inbox.models import Account
+    account = db.session.query(Account).get(1)
+    return {
+        'subject': 'Draft test',
+        'body': {'foo': 'bar'},
+        'to': [{'name': 'The red-haired mermaid',
+                'email': account.email_address}]
+    }
+
+
 def test_send_existing_draft(patch_smtp, api_client, example_draft):
     r = api_client.post_data('/drafts', example_draft)
     draft_public_id = json.loads(r.data)['id']
@@ -188,6 +212,25 @@ def test_send_new_draft(patch_smtp, api_client, default_account,
     assert r.status_code == 200
     sent_threads = api_client.get_data('/threads?tag=sent')
     assert len(sent_threads) == 1
+
+
+def test_malformed_body_rejected(api_client, example_draft_bad_body):
+    r = api_client.post_data('/send', example_draft_bad_body)
+
+    assert r.status_code == 400
+
+    decoded = json.loads(r.get_data())
+    assert decoded['type'] == 'invalid_request_error'
+    assert decoded['message'] == '"body" should be a string'
+
+
+def test_malformed_subject_rejected(api_client, example_draft_bad_subject):
+    r = api_client.post_data('/send', example_draft_bad_subject)
+    assert r.status_code == 400
+
+    decoded = json.loads(r.get_data())
+    assert decoded['type'] == 'invalid_request_error'
+    assert decoded['message'] == '"subject" should be a string'
 
 
 def test_malformed_request_rejected(api_client):

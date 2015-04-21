@@ -53,7 +53,11 @@ def create_draft(data, namespace, db_session, syncback):
     cc_addr = get_recipients(data.get('cc'), 'cc')
     bcc_addr = get_recipients(data.get('bcc'), 'bcc')
     subject = data.get('subject')
-    body = data.get('body')
+    if subject is not None and not isinstance(subject, basestring):
+        raise InputError('"subject" should be a string')
+    body = data.get('body', '')
+    if not isinstance(body, basestring):
+        raise InputError('"body" should be a string')
     tags = get_tags(data.get('tags'), namespace.id, db_session)
     blocks = get_attachments(data.get('file_ids'), namespace.id, db_session)
     reply_to_thread = get_thread(data.get('thread_id'), namespace.id,
@@ -74,7 +78,6 @@ def create_draft(data, namespace, db_session, syncback):
         cc_addr = cc_addr or []
         bcc_addr = bcc_addr or []
         blocks = blocks or []
-        body = body or ''
         if subject is None:
             # If this is a reply with no explicitly specified subject, set the
             # subject from the prior message/thread by default.
