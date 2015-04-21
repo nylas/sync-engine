@@ -1,5 +1,6 @@
 import os
 import base64
+import email.header
 import uuid
 import gevent
 import time
@@ -855,8 +856,15 @@ def file_download_api(public_id):
     response = make_response(f.data)
 
     response.headers['Content-Type'] = 'application/octet-stream'  # ct
+    # Werkzeug will try to encode non-ascii header values as latin-1. Try that
+    # first; if it fails, use RFC2047/MIME encoding. See
+    # https://tools.ietf.org/html/rfc7230#section-3.2.4.
+    try:
+        name = name.encode('latin-1')
+    except UnicodeEncodeError:
+        name = email.header.Header(name, 'utf-8').encode()
     response.headers['Content-Disposition'] = \
-        u"attachment; filename={0}".format(name)
+        'attachment; filename={0}'.format(name)
     g.log.info(response.headers)
     return response
 

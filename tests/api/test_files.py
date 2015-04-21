@@ -12,7 +12,8 @@ from tests.util.base import api_client
 
 __all__ = ['api_client']
 
-FILENAMES = ['muir.jpg', 'LetMeSendYouEmail.wav', 'piece-jointe.jpg']
+FILENAMES = ['muir.jpg', 'LetMeSendYouEmail.wav', 'piece-jointe.jpg',
+             'andra-moi-ennepe.txt']
 
 
 @pytest.fixture
@@ -48,6 +49,8 @@ def uploaded_file_ids(api_client, files):
         # instead.
         if filename == 'piece-jointe.jpg':
             filename = u'pièce-jointe.jpg'
+        elif filename == 'andra-moi-ennepe.txt':
+            filename = u'ἄνδρα μοι ἔννεπε'
         data = {'file': (open(path, 'rb'), filename)}
         r = api_client.client.post(upload_path, data=data)
         assert r.status_code == 200
@@ -64,14 +67,14 @@ def test_file_filtering(api_client, uploaded_file_ids, draft):
     assert r.status_code == 200
 
     draft_resp = json.loads(r.data)
-    assert len(draft_resp['files']) == 3
+    assert len(draft_resp['files']) == 4
     d_id = draft_resp['id']
 
     results = api_client.get_data('/files?message_id={}'
                                   .format(d_id))
 
     assert all([d_id in f['message_ids'] for f in results])
-    assert len(results) == 3
+    assert len(results) == 4
 
     results = api_client.get_data('/files?message_id={}&limit=1'
                                   .format(d_id))
@@ -79,7 +82,7 @@ def test_file_filtering(api_client, uploaded_file_ids, draft):
 
     results = api_client.get_data('/files?message_id={}&offset=2'
                                   .format(d_id))
-    assert len(results) == 1
+    assert len(results) == 2
 
     results = api_client.get_data('/files?filename=LetMeSendYouEmail.wav')
     assert len(results) == 1
@@ -133,6 +136,8 @@ def test_get_with_id(api_client, uploaded_file_ids, filename):
     # See comment in uploaded_file_ids()
     if filename == 'piece-jointe.jpg':
         filename = u'pièce-jointe.jpg'
+    elif filename == 'andra-moi-ennepe.txt':
+        filename = u'ἄνδρα μοι ἔννεπε'
     in_file = api_client.get_data(u'/files?filename={}'.format(filename))[0]
     data = api_client.get_data('/files/{}'.format(in_file['id']))
     assert data['filename'] == filename
@@ -161,6 +166,8 @@ def test_download(api_client, uploaded_file_ids, filename):
     original_filename = filename
     if filename == 'piece-jointe.jpg':
         filename = u'pièce-jointe.jpg'
+    elif filename == 'andra-moi-ennepe.txt':
+        filename = u'ἄνδρα μοι ἔννεπε'
 
     in_file = api_client.get_data(u'/files?filename={}'.format(filename))[0]
     data = api_client.get_raw('/files/{}/download'.format(in_file['id'])).data
