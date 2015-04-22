@@ -50,6 +50,14 @@ def test_all_mail_missing(monkeypatch):
 def test_all_mail_present(monkeypatch):
     """Test that the validate_folders passes if All Mail is present.
     """
-    g = get_auth_handler(monkeypatch, {'all': 'ALL', 'inbox': 'INBOX'})
+    g = get_auth_handler(monkeypatch, {'all': 'ALL', 'inbox': 'INBOX',
+                                       'trash': 'TRASH'})
 
     assert g.verify_config(AccountStub())
+
+
+def test_trash_missing(monkeypatch):
+    g = get_auth_handler(monkeypatch, {'inbox': 'INBOX', 'all': 'ALL'})
+
+    with pytest.raises(GmailSettingError):
+        g.verify_config(AccountStub())

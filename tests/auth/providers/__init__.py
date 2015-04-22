@@ -1,3 +1,6 @@
+# Override the default inbox.auth.module_registry with this one
+# to allow testing of different auth scenarios.
+
 # Allow out-of-tree auth submodules.
 from pkgutil import extend_path
 from inbox.util.misc import register_backends
