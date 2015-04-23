@@ -157,11 +157,15 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         self.deleted_at = datetime.datetime.utcnow()
 
     @validates('subject')
-    def validate_length(self, key, value):
+    def sanitize_subject(self, key, value):
+        # Trim overlong subjects, and remove null bytes. The latter can result
+        # when, for example, UTF-8 text decoded from an RFC2047-encoded header
+        # contains null bytes.
         if value is None:
             return
         if len(value) > 255:
             value = value[:255]
+        value = value.replace('\0', '')
         return value
 
     @classmethod

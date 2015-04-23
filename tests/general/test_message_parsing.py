@@ -207,3 +207,31 @@ def test_calculate_snippet():
                        'voces coniurationis tuae potest, si illustrantur,'
     assert len(expected_snippet) == 191
     assert m.calculate_html_snippet(body) == expected_snippet
+
+
+def test_sanitize_subject(default_account):
+    from inbox.log import configure_logging
+    configure_logging()
+    # Raw message with encoded null bytes in subject header.
+    raw_message_with_wonky_subject = \
+'''From: "UPS My Choice" <mcinfo@ups.com>
+To: ben.bitdiddle2222@gmail.com
+Subject: =?UTF-8?B?WW91ciBVUFMgUGFja2FnZSB3YXMgZGVsaXZlcmVkAAAA?=
+Content-Type: text/html; charset=UTF-8
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary=--==_mimepart_553921a23aa2c_3aee3fe2e442b2b815347
+
+--==_mimepart_553921a23aa2c_3aee3fe2e442b2b815347
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+--==_mimepart_553921a23aa2c_3aee3fe2e442b2b815347
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+--==_mimepart_553921a23aa2c_3aee3fe2e442b2b815347
+'''
+    m = Message.create_from_synced(default_account, 22, '[Gmail]/All Mail',
+                                   datetime.datetime.utcnow(),
+                                   raw_message_with_wonky_subject)
+    assert m.subject == u'Your UPS Package was delivered'
