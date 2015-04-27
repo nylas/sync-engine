@@ -162,12 +162,16 @@ def add_inbox_headers(msg, inbox_uid):
     public_id of the message object.
 
     """
-    # Set our own custom header for tracking in `Sent Mail` folder
-    msg.headers['X-INBOX-ID'] = inbox_uid if inbox_uid else \
+
+    our_uid = inbox_uid if inbox_uid else \
         generate_public_id()  # base-36 encoded string
 
+    # Set our own custom header for tracking in `Sent Mail` folder
+    msg.headers['X-INBOX-ID'] = our_uid
+    mgs.headers['Message-Id'] = '<{}@mailer.nylas.com>'.format(our_uid)
+
     # Potentially also use `X-Mailer`
-    msg.headers['User-Agent'] = 'Inbox/{0}'.format(VERSION)
+    msg.headers['User-Agent'] = 'NylasMailer/{0}'.format(VERSION)
 
 
 def _rfc_transform(msg):
