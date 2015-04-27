@@ -401,3 +401,27 @@ def test_draft_not_persisted_if_sending_fails(recipients_refused, api_client,
                                    'subject': 'some unique subject'})
     assert db.session.query(Message).filter_by(
         subject='some unique subject').first() is None
+
+
+def test_setting_reply_to_headers(patch_smtp, api_client):
+    api_client.post_data('/send',
+                         {'to': [{'email': 'bob@foocorp.com'}],
+                          'reply_to': {'name':'admin', 'email':'prez@whitehouse.gov'},
+                          'subject': 'Banalities',
+                          'body': '<html>Hello there</html>'})
+    _, msg = patch_smtp[-1]
+    parsed = mime.from_string(msg)
+    assert 'Reply-To' in parsed.headers
+    assert parsed.headers['Reply-To'] == 'admin <prez@whitehouse.gov>'
+    
+
+def test_sending_from_email_alias(patch_smtp, api_client):
+    api_client.post_data('/send',
+                         {'to': [{'email': 'bob@foocorp.com'}],
+                          'from': {'name':'admin', 'email':'prez@whitehouse.gov'},
+                          'subject': 'Banalities',
+                          'body': '<html>Hello there</html>'})
+    _, msg = patch_smtp[-1]
+    parsed = mime.from_string(msg)
+    assert 'From' in parsed.headers
+    assert parsed.headers['From'] == 'admin <prez@whitehouse.gov>'

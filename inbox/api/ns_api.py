@@ -23,7 +23,7 @@ from inbox.api.validation import (get_tags, get_attachments, get_calendar,
                                   valid_event, valid_event_update, timestamp,
                                   bounded_str, view, strict_parse_args,
                                   limit, ValidatableArgument, strict_bool,
-                                  validate_draft_recipients,
+                                  validate_draft_recipients, get_recipient,
                                   validate_search_query,
                                   validate_search_sort,
                                   valid_delta_object_types)
@@ -998,6 +998,8 @@ def draft_update_api(public_id):
     to = get_recipients(data.get('to'), 'to')
     cc = get_recipients(data.get('cc'), 'cc')
     bcc = get_recipients(data.get('bcc'), 'bcc')
+    from_addr = get_recipient(data.get('from_addr'), 'from_addr')
+    reply_to = get_recipient(data.get('reply_to'), 'reply_to')
     subject = data.get('subject')
     body = data.get('body')
     tags = get_tags(data.get('tags'), g.namespace.id, g.db_session)
@@ -1005,7 +1007,7 @@ def draft_update_api(public_id):
 
     try:
         draft = update_draft(g.db_session, g.namespace.account, original_draft,
-                             to, subject, body, files, cc, bcc, tags)
+                             to, subject, body, files, cc, bcc, from_addr, reply_to, tags)
     except ActionError as e:
         return err(e.error, str(e))
 

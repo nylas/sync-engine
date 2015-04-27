@@ -26,6 +26,8 @@ Post body parameters:
 * `to`
 * `cc`
 * `bcc`
+* `from`
+* `reply_to`
 * `thread_id`
 * `body`
 * `file_ids`
@@ -130,4 +132,42 @@ In some scenarios, you may want to display all of the threads in the user's inbo
 ```
 :::xml
 GET https://api.nylas.com/n/<namespace_id>/threads?tag=drafts
+```
+
+
+# Using an email alias
+
+If you would like to use an alias for sending and/or receiving emails, you can set the `from` and `reply_to` fields. Note that if the alias is not set up properly, the Gmail API will replace the `From` header with the original sender.
+
+```
+:::json
+{
+    "subject": "Dinner on Friday?",
+    "to": [
+        {
+            "name": "Ben Bitdiddle",
+            "email": "ben.bitdiddle@gmail.com"
+        },
+    ],
+    "from": [
+        {
+            "name": "Bill Rogers",
+            "email": "wbrogers@mit.edu"
+        },
+    ],
+    "reply_to": [
+        {
+            "name": "Bill Rogers",
+            "email": "wbrogers@mit.edu"
+        },
+    ],
+    "cc": [],
+    "bcc": [],
+    "body": "<html><body>....</body></html>",
+    "file_ids": [
+        "bgmzg0qp61oqrrmpadboiiyg3",
+        "aikfl1kl73r69hevrm018jqzw"
+    ]
+    "version": 2
+}
 ```

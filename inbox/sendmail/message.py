@@ -49,8 +49,9 @@ def fallback_to_base64(charset, preferred_encoding, body):
 mime.message.part.choose_text_encoding = fallback_to_base64
 
 
-def create_email(sender_name,
-                 sender_email,
+def create_email(from_name,
+                 from_email,
+                 reply_to,
                  inbox_uid,
                  to_addr,
                  cc_addr,
@@ -65,12 +66,15 @@ def create_email(sender_name,
 
     Parameters
     ----------
-    sender_name: string
+    from_name: string
         The name aka phrase of the sender.
-    sender_email: string
+    from_email: string
         The sender's email address.
     to_addr, cc_addr, bcc_addr: list of pairs (name, email_address), or None
         Message recipients.
+    reply_to: tuple or None
+        Indicates the mailbox in (name, email_address) format to which 
+        the author of the message suggests that replies be sent.
     subject : string
         a utf-8 encoded string
     html : string
@@ -117,7 +121,7 @@ def create_email(sender_name,
     # email address (useful if the user has multiple aliases and wants to
     # specify which to send as), see: http://lee-phillips.org/gmailRewriting/
     # For other providers, we simply use name = ''
-    from_addr = address.EmailAddress(sender_name, sender_email)
+    from_addr = address.EmailAddress(from_name, from_email)
     msg.headers['From'] = from_addr.full_spec()
 
     # Need to set these headers so recipients know we sent the email to them
@@ -134,7 +138,11 @@ def create_email(sender_name,
         full_bcc_specs = [address.EmailAddress(name, spec).full_spec()
                           for name, spec in bcc_addr]
         msg.headers['Bcc'] = u', '.join(full_bcc_specs)
-
+    if reply_to:
+        # reply_to is only ever a list with one element
+        reply_to_spec = address.EmailAddress(reply_to[0][0], reply_to[0][1])
+        msg.headers['Reply-To'] = reply_to_spec.full_spec()
+              
     add_inbox_headers(msg, inbox_uid)
 
     if in_reply_to:
