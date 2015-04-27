@@ -76,6 +76,7 @@ Nylas exposes a set of standard, canonical tags: an extended version of [RFC-615
 * **`starred`**
 * **`unread`**
 * **`trash`**
+* **`attachment`**
 * **`unseen`**
 
 
