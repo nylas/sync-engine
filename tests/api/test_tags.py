@@ -356,3 +356,21 @@ def test_actions_syncback(patch_network_functions, api_client, db,
              'unstar'})
     assert all([log_entry.status == 'successful'
                for log_entry in action_log_entries])
+
+
+def test_actions_dont_duplicate(patch_network_functions, api_client, db,
+                                syncback_service, default_account):
+    """ Test that a client invocation that would cause the same action to
+        be scheduled multiple times only inserts one row into ActionLog.
+    """
+    from inbox.models import ActionLog
+
+    thread_id = api_client.get_data('/threads/')[0]['id']
+    thread_path = '/threads/{}'.format(thread_id)
+
+    # Make sure tags are removed to start with
+    api_client.put_data(thread_path, {'add_tags': ['archive'],
+                                      'remove_tags': ['inbox']})
+
+    action_log_count = db.session.query(ActionLog).count()
+    assert action_log_count == 1

@@ -53,13 +53,26 @@ def schedule_action(func_name, record, namespace_id, db_session, **kwargs):
     if account.sync_state == 'invalid':
         raise ActionError(error=403, namespace_id=namespace_id)
 
-    log_entry = account.actionlog_cls.create(
+    # Check we don't already have a pending log entry for this action.
+    # Some actions (e.g. client adds tag 'archive' and removes tag 'inbox')
+    # translate to the same ActionLog entry.
+    existing = db_session.query(account.actionlog_cls).filter_by(
         action=func_name,
         table_name=record.__tablename__,
         record_id=record.id,
         namespace_id=namespace_id,
-        extra_args=kwargs)
-    db_session.add(log_entry)
+        extra_args=kwargs,
+        status='pending').first()
+
+    if not existing:
+        # Create the ActionLog entry
+        log_entry = account.actionlog_cls.create(
+            action=func_name,
+            table_name=record.__tablename__,
+            record_id=record.id,
+            namespace_id=namespace_id,
+            extra_args=kwargs)
+        db_session.add(log_entry)
 
 
 class ActionLog(MailSyncBase):
