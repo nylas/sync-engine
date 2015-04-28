@@ -513,3 +513,25 @@ def test_master_cancelled(db, default_account, calendar):
 
     find_override = db.session.query(Event).filter_by(uid=override.uid).first()
     assert find_override.status == 'cancelled'
+
+
+def test_made_recurring_then_cancelled(db, default_account, calendar):
+    # Test that when an event is updated with a recurrence and cancelled at
+    # the same time, we cancel it.
+    normal = recurring_event(db, default_account, calendar, None)
+    # Check this is specifically an Event, not a RecurringEvent
+    assert type(normal) == Event
+
+    # Update with a recurrence rule *and* cancellation
+    update = recurring_event(db, default_account, calendar, TEST_EXDATE_RULE,
+                             commit=False)
+    update.status = 'cancelled'
+    updates = [update]
+
+    handle_event_updates(default_account.namespace.id,
+                         calendar.id,
+                         updates, log, db.session)
+    db.session.commit()
+
+    find_master = db.session.query(Event).filter_by(uid=normal.uid).first()
+    assert find_master.status == 'cancelled'

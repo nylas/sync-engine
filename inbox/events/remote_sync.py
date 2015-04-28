@@ -142,13 +142,13 @@ def handle_event_updates(namespace_id, calendar_id, events, log, db_session):
 
         if local_event is not None:
             # We also need to mark all overrides as cancelled if we're
-            # cancelling a recurring event.
-            if isinstance(event, RecurringEvent) and \
+            # cancelling a recurring event. However, note the original event
+            # may not itself be recurring (recurrence may have been added).
+            if isinstance(local_event, RecurringEvent) and \
                     event.status == 'cancelled' and \
                     local_event.status != 'cancelled':
-                for override in local_event.overrides:
-                    override.status = 'cancelled'
-
+                    for override in local_event.overrides:
+                        override.status = 'cancelled'
             local_event.update(event)
             updated_count += 1
         else:
