@@ -12,6 +12,7 @@ from inbox.mailsync.backends.base import (save_folder_names,
                                           thread_polling, thread_finished)
 from inbox.mailsync.backends.imap.generic import _pool, FolderSyncEngine
 from inbox.mailsync.backends.imap.condstore import CondstoreFolderSyncEngine
+from inbox.heartbeat.status import clear_heartbeat_status
 from inbox.mailsync.gc import DeleteHandler
 log = get_logger()
 
@@ -111,6 +112,9 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                          account_id=self.account_id,
                          folder_id=folder_id,
                          folder_name=folder_name)
+                # clear the heartbeat for this folder-thread
+                clear_heartbeat_status(self.account_id, folder_id)
+
                 # note: thread is automatically removed from
                 # self.folder_monitors
             else:

@@ -9,7 +9,8 @@ import mock
 import imapclient
 import pytest
 from inbox.crispin import (CrispinClient, GmailCrispinClient, GMetadata,
-                           GmailFlags, RawMessage, Flags)
+                           GmailFlags, RawMessage, Flags,
+                           FolderMissingError)
 
 
 class MockedIMAPClient(imapclient.IMAPClient):
@@ -175,3 +176,19 @@ def test_internaldate(generic_client, constants):
                        g_thrid=None,
                        g_msgid=None)
         ]
+
+
+def test_deleted_folder(monkeypatch, generic_client, constants):
+    """ Test that a 'select failed EXAMINE' error specifying that a folder
+        doesn't exist is converted into a FolderMissingError. (Yahoo style)
+    """
+    def raise_invalid_folder_exc(*args, **kwargs):
+        raise imapclient.IMAPClient.Error("select failed: '[TRYCREATE] EXAMINE"
+                                          " error - Folder does not exist or"
+                                          " server encountered an error")
+
+    monkeypatch.setattr('imapclient.IMAPClient.select_folder',
+                        raise_invalid_folder_exc)
+
+    with pytest.raises(FolderMissingError):
+        generic_client.select_folder('missing_folder', lambda: True)

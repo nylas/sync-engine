@@ -70,8 +70,9 @@ from gevent import Greenlet, kill, spawn, sleep
 from gevent.queue import LifoQueue
 from hashlib import sha256
 from sqlalchemy import func
-from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm import load_only
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.util.concurrency import retry_and_report_killed
 from inbox.util.debug import bind_context
@@ -81,7 +82,7 @@ from inbox.util.threading import fetch_corresponding_thread, MAX_THREAD_LENGTH
 from inbox.basicauth import AuthError
 from inbox.log import get_logger
 log = get_logger()
-from inbox.crispin import connection_pool, retry_crispin
+from inbox.crispin import connection_pool, retry_crispin, FolderMissingError
 from inbox.models import Folder, Account, Message
 from inbox.models.backends.imap import (ImapFolderSyncStatus, ImapThread,
                                         ImapUid, ImapFolderInfo)
@@ -196,7 +197,17 @@ class FolderSyncEngine(Greenlet):
         # complicated handling e.g. when backends reuse imapids. ImapUid
         # objects are the only objects deleted by the mail sync backends
         # anyway.
-        saved_folder_status = self._load_state()
+        try:
+            saved_folder_status = self._load_state()
+        except IntegrityError:
+            # The state insert failed because the folder ID ForeignKey
+            # was no longer valid, ie. the folder for this engine was deleted
+            # while we were starting up.
+            # Exit the sync and let the monitor sort things out.
+            log.info("Folder state loading failed due to IntegrityError",
+                     folder_id=self.folder_id, account_id=self.account_id)
+            raise MailsyncDone()
+
         # NOTE: The parent ImapSyncMonitor handler could kill us at any
         # time if it receives a shutdown command. The shutdown command is
         # equivalent to ctrl-c.
@@ -208,6 +219,10 @@ class FolderSyncEngine(Greenlet):
             except UidInvalid:
                 self.state = self.state + ' uidinvalid'
                 self.heartbeat_status.publish(state=self.state)
+            except FolderMissingError:
+                log.error('Folder missing: {}'.format(self.folder_name),
+                          account_id=self.account_id, folder_id=self.folder_id)
+                raise MailsyncDone()
             # State handlers are idempotent, so it's okay if we're
             # killed between the end of the handler and the commit.
             if self.state != old_state:
@@ -429,7 +444,7 @@ class FolderSyncEngine(Greenlet):
 
     def _count_thread_messages(self, thread_id, db_session):
         count, = db_session.query(func.count(Message.id)). \
-                    filter(Message.thread_id == thread_id).one()
+            filter(Message.thread_id == thread_id).one()
         return count
 
     def add_message_attrs(self, db_session, new_uid, msg):
@@ -443,7 +458,7 @@ class FolderSyncEngine(Greenlet):
                 # If there's a parent thread that isn't too long already,
                 # add to it. Otherwise create a new thread.
                 parent_message_count = self._count_thread_messages(
-                                        parent_thread.id, db_session)
+                    parent_thread.id, db_session)
                 if parent_message_count < MAX_THREAD_LENGTH:
                     construct_new_thread = False
 

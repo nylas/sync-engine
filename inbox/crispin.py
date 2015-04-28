@@ -3,6 +3,7 @@
 """
 import re
 import imaplib
+import imapclient
 
 # Even though RFC 2060 says that the date component must have two characters
 # (either two digits or space+digit), it seems that some IMAP servers only
@@ -67,6 +68,10 @@ _lock_map = defaultdict(threading.Lock)
 
 class GmailSettingError(Exception):
     """ Thrown on misconfigured Gmail accounts. """
+    pass
+
+
+class FolderMissingError(Exception):
     pass
 
 
@@ -347,8 +352,18 @@ class CrispinClient(object):
         this does things like e.g. makes sure we're not getting
         cached/out-of-date values for HIGHESTMODSEQ from the IMAP server.
         """
-        select_info = self.conn.select_folder(
-            folder, readonly=self.readonly)
+        try:
+            select_info = self.conn.select_folder(
+                folder, readonly=self.readonly)
+        except imapclient.IMAPClient.Error as e:
+            # Specifically point out folders that come back as missing by
+            # checking for Yahoo / Gmail / Outlook (Hotmail) specific errors:
+            if 'EXAMINE error - Folder does not exist' in e.message or \
+               '[NONEXISTENT] Unknown Mailbox:' in e.message or \
+               '[TRYCREATE] Specified mailbox does not exist' in e.message:
+                raise FolderMissingError(folder)
+            raise
+
         select_info['UIDVALIDITY'] = long(select_info['UIDVALIDITY'])
         self.selected_folder = (folder, select_info)
         # don't propagate cached information from previous session

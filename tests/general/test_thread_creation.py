@@ -32,7 +32,7 @@ def folder_sync_engine(db, monkeypatch):
     engine = None
     engine = FolderSyncEngine(account.id, "Inbox", 0,
                               email, "fastmail",
-                              3200, None, 20, None)
+                              3200, None, 20, [])
     return engine
 
 
@@ -40,16 +40,17 @@ def test_generic_grouping(db, generic_account):
     thread = add_fake_thread(db.session, NAMESPACE_ID)
     message = add_fake_message(db.session, NAMESPACE_ID, thread,
                                subject="Golden Gate Park next Sat")
-    imapuid = ImapUid(message=message, account_id=ACCOUNT_ID,
-                      msg_uid=2222)
+    ImapUid(message=message, account_id=ACCOUNT_ID,
+            msg_uid=2222)
 
     thread = add_fake_thread(db.session, generic_account.namespace.id)
     message = add_fake_message(db.session, NAMESPACE_ID + 1, thread,
                                subject="Golden Gate Park next Sat")
 
-    thread = fetch_corresponding_thread(db.session, generic_account.namespace.id, message)
+    thread = fetch_corresponding_thread(db.session,
+                                        generic_account.namespace.id, message)
     assert thread is None, ("fetch_similar_threads should "
-                             "heed namespace boundaries")
+                            "heed namespace boundaries")
 
 
 def test_threading_limit(db, folder_sync_engine, monkeypatch):
