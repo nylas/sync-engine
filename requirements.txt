@@ -20,7 +20,7 @@ requests==2.4.3
 chardet==2.1.1
 setproctitle==1.1.8
 gdata==2.0.18
-python-dateutil==2.4.1
+git+https://github.com/nylas/dateutil.git#egg=python-dateutil
 flanker==0.4.26
 imapclient==0.12
 alembic==0.6.4
