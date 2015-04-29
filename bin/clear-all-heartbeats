@@ -1,0 +1,28 @@
+#!/usr/bin/env python
+
+import click
+from sys import exit
+
+from inbox.heartbeat.config import STATUS_DATABASE, get_redis_client
+
+
+@click.command()
+@click.option('--host', '-h', type=str, default='localhost')
+@click.option('--port', '-p', type=int, default=6379)
+@click.option('--database', '-d', type=int, default=STATUS_DATABASE)
+def main(host, port, database):
+    client = get_redis_client(host, port, database)
+    batch_client = client.pipeline()
+    count = 0
+    for name in client.scan_iter(count=100):
+        if name == 'ElastiCacheMasterReplicationTimestamp':
+            continue
+        batch_client.delete(name)
+        count += 1
+    batch_client.execute()
+    print "{} heartbeats deleted!".format(count)
+    exit(0)
+
+
+if __name__ == '__main__':
+    main()
