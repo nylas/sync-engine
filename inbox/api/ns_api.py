@@ -1007,7 +1007,8 @@ def draft_update_api(public_id):
 
     try:
         draft = update_draft(g.db_session, g.namespace.account, original_draft,
-                             to, subject, body, files, cc, bcc, from_addr, reply_to, tags)
+                             to, subject, body, files, cc, bcc, from_addr,
+                             reply_to, tags)
     except ActionError as e:
         return err(e.error, str(e))
 

@@ -73,7 +73,7 @@ def create_email(from_name,
     to_addr, cc_addr, bcc_addr: list of pairs (name, email_address), or None
         Message recipients.
     reply_to: tuple or None
-        Indicates the mailbox in (name, email_address) format to which 
+        Indicates the mailbox in (name, email_address) format to which
         the author of the message suggests that replies be sent.
     subject : string
         a utf-8 encoded string
@@ -142,7 +142,7 @@ def create_email(from_name,
         # reply_to is only ever a list with one element
         reply_to_spec = address.EmailAddress(reply_to[0][0], reply_to[0][1])
         msg.headers['Reply-To'] = reply_to_spec.full_spec()
-              
+
     add_inbox_headers(msg, inbox_uid)
 
     if in_reply_to:
