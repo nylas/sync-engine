@@ -54,9 +54,6 @@ GET https://api.inboxapp.com/n/<namespace_id>/threads/<thread_id>?view=count
 
 **Response**
 
-```
-:::json
-**Sample response:**
 
 ```
 :::json
@@ -149,6 +146,5 @@ GET https://api.inboxapp.com/n/<namespace_id>/threads/<thread_id>?view=count
         "unread": false
     ]
 }
-```
 
 ```
