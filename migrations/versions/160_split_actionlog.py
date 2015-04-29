@@ -54,4 +54,11 @@ def upgrade():
 
 
 def downgrade():
-    raise Exception('Downgrade -> lost data!')
+    from inbox.ignition import main_engine
+
+    engine = main_engine(pool_size=1, max_overflow=0)
+    if not engine.has_table('easaccount'):
+        return
+
+    op.drop_column('actionlog', 'type')
+    op.drop_table('easactionlog')
