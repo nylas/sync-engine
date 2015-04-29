@@ -2,6 +2,7 @@
 
 """
 import re
+import time
 import imaplib
 import imapclient
 
@@ -469,8 +470,20 @@ class CrispinClient(object):
         list
             UIDs as integers sorted in ascending order.
         """
-        data = self.conn.search(['UNDELETED'])
-        return sorted([long(s) for s in data])
+        # Note that this list may include items which have been marked for
+        # deletion with the \Deleted flag, but not yet actually removed via
+        # an EXPUNGE command. I choose to include them here since most clients
+        # will still display them (sometimes with a strikethrough). If showing
+        # these is a problem, we can either switch back to searching for
+        # 'UNDELETED' or doing a fetch for ['UID', 'FLAGS'] and filtering.
+
+        t = time.time()
+        fetch_result = self.conn.search(['ALL'])
+        elapsed = time.time() - t
+        self.log.debug('Searching for `ALL` when getting UIDs',
+                         search_time=elapsed,
+                         total_uids=len(fetch_result))
+        return sorted([long(uid) for uid in fetch_result])
 
     def uids(self, uids):
         raw_messages = self.conn.fetch(uids,
