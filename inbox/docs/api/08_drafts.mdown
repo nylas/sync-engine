@@ -137,7 +137,9 @@ GET https://api.nylas.com/n/<namespace_id>/threads?tag=drafts
 
 # Using an email alias
 
-If you would like to use an alias for sending and/or receiving emails, you can set the `from` and `reply_to` fields. Note that if the alias is not set up properly, the Gmail API will replace the `From` header with the original sender.
+If you would like to use an alias for sending and/or receiving emails, you can optinally set the `from` and `reply_to` fields. Note that if the given value is actually not an alias, most SMTP servers will either reject the message or silently replace it with the primary sending address.
+
+If the `from` and `reply_to` fields are omitted, the namespace's default sending name and address will be used.
 
 ```
 :::json
@@ -157,17 +159,13 @@ If you would like to use an alias for sending and/or receiving emails, you can s
     ],
     "reply_to": [
         {
-            "name": "Bill Rogers",
-            "email": "wbrogers@mit.edu"
+            "name": "MIT Help Desk",
+            "email": "help-desk@mit.edu"
         },
     ],
     "cc": [],
     "bcc": [],
     "body": "<html><body>....</body></html>",
-    "file_ids": [
-        "bgmzg0qp61oqrrmpadboiiyg3",
-        "aikfl1kl73r69hevrm018jqzw"
-    ]
-    "version": 2
+    "version": 1
 }
 ```
