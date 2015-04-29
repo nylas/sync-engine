@@ -3,6 +3,7 @@ import datetime
 from inbox.models.account import Account
 from inbox.models.thread import Thread
 from inbox.models.folder import Folder, FolderItem
+from inbox.models.tag import Tag
 from inbox.models.message import Message
 from inbox.models.backends.imap import ImapUid
 from inbox.mailsync.backends.imap.common import (recompute_thread_labels,
@@ -103,3 +104,17 @@ def test_update_unread_status(db, thread, message, imapuid):
 
     tag_names = [tag.name for tag in thread.tags]
     assert 'unread' not in tag_names, "thread should be read"
+
+
+def test_tag_deletion_removes_it_from_thread(db, thread):
+    tag = Tag(namespace_id=thread.namespace_id,
+              name='RandomTag123')
+    thread.apply_tag(tag)
+    db.session.commit()
+
+    assert 'RandomTag123' in [t.name for t in thread.tags]
+
+    db.session.delete(tag)
+    db.session.commit()
+
+    assert 'RandomTag123' not in [t.name for t in thread.tags]

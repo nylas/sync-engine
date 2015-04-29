@@ -86,7 +86,7 @@ class Folder(MailSyncBase):
             raise
         return obj
 
-    def get_associated_tag(self, db_session):
+    def get_associated_tag(self, db_session, create_if_missing=True):
         if self.canonical_name is not None:
             try:
                 return db_session.query(Tag). \
@@ -96,11 +96,12 @@ class Folder(MailSyncBase):
                 # Explicitly set the namespace_id instead of the namespace
                 # attribute to avoid autoflush-induced IntegrityErrors where
                 # the namespace_id is null on flush.
-                tag = Tag(namespace_id=self.account.namespace.id,
-                          name=self.canonical_name,
-                          public_id=self.canonical_name)
-                db_session.add(tag)
-                return tag
+                if create_if_missing:
+                    tag = Tag(namespace_id=self.account.namespace.id,
+                              name=self.canonical_name,
+                              public_id=self.canonical_name)
+                    db_session.add(tag)
+                    return tag
 
         else:
             tag_name = self.name.lower()[:MAX_INDEXABLE_LENGTH]
@@ -112,10 +113,11 @@ class Folder(MailSyncBase):
                 # Explicitly set the namespace_id instead of the namespace
                 # attribute to avoid autoflush-induced IntegrityErrors where
                 # the namespace_id is null on flush.
-                tag = Tag(namespace_id=self.account.namespace.id,
-                          name=tag_name)
-                db_session.add(tag)
-                return tag
+                if create_if_missing:
+                    tag = Tag(namespace_id=self.account.namespace.id,
+                              name=tag_name)
+                    db_session.add(tag)
+                    return tag
 
 
 class FolderItem(MailSyncBase):
