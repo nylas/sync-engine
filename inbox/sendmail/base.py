@@ -1,10 +1,7 @@
 from datetime import datetime
 
-from flanker.addresslib import address
-
 from inbox.api.validation import (
-    get_recipients, get_tags, get_attachments, get_thread, get_message,
-    get_recipient)
+    get_recipients, get_tags, get_attachments, get_thread, get_message)
 from inbox.api.err import InputError
 from inbox.contacts.process_mail import update_contacts_from_message
 from inbox.models import Message, Part
@@ -56,8 +53,14 @@ def create_draft(data, namespace, db_session, syncback):
     to_addr = get_recipients(data.get('to'), 'to')
     cc_addr = get_recipients(data.get('cc'), 'cc')
     bcc_addr = get_recipients(data.get('bcc'), 'bcc')
-    from_addr = get_recipient(data.get('from'), 'from')
-    reply_to = get_recipient(data.get('reply_to'), 'reply_to')
+    from_addr = get_recipients(data.get('from'), 'from')
+    reply_to = get_recipients(data.get('reply_to'), 'reply_to')
+
+    if from_addr and len(from_addr) > 1:
+        raise InputError("from_addr field can have at most one item")
+    if reply_to and len(reply_to) > 1:
+        raise InputError("reply_to field can have at most one item")
+
     subject = data.get('subject')
     if subject is not None and not isinstance(subject, basestring):
         raise InputError('"subject" should be a string')
@@ -99,10 +102,8 @@ def create_draft(data, namespace, db_session, syncback):
         message.namespace = namespace
         message.is_created = True
         message.is_draft = True
-        if isinstance(from_addr, tuple) and address.parse(from_addr[1]):
-            message.from_addr = [from_addr]
-        else:
-            message.from_addr = [(account.name, account.email_address)]
+        message.from_addr = from_addr if from_addr else \
+            [(account.name, account.email_address)]
         # TODO(emfree): we should maybe make received_date nullable, so its
         # value doesn't change in the case of a drafted-and-later-reconciled
         # message.
@@ -112,10 +113,7 @@ def create_draft(data, namespace, db_session, syncback):
         message.to_addr = to_addr
         message.cc_addr = cc_addr
         message.bcc_addr = bcc_addr
-        if isinstance(reply_to, tuple) and address.parse(reply_to[1]):
-            message.reply_to = [reply_to]
-        else:
-            message.reply_to = []
+        message.reply_to = reply_to
         # TODO(emfree): this is different from the normal 'size' value of a
         # message, which is the size of the entire MIME message.
         message.size = len(body)

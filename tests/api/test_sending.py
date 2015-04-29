@@ -7,8 +7,11 @@ from inbox.basicauth import OAuthError
 from inbox.models import Message
 from tests.util.base import api_client, default_account
 
+__all__ = ['api_client', 'default_account']
+
 
 class MockTokenManager(object):
+
     def __init__(self, allow_auth=True):
         self.allow_auth = allow_auth
 
@@ -36,6 +39,7 @@ def patch_smtp(patch_token_manager, monkeypatch):
     submitted_messages = []
 
     class MockSMTPConnection(object):
+
         def __init__(self, *args, **kwargs):
             pass
 
@@ -55,6 +59,7 @@ def patch_smtp(patch_token_manager, monkeypatch):
 
 def erring_smtp_connection(exc_type, *args):
     class ErringSMTPConnection(object):
+
         def __init__(self, *args, **kwargs):
             pass
 
@@ -406,8 +411,8 @@ def test_draft_not_persisted_if_sending_fails(recipients_refused, api_client,
 def test_setting_reply_to_headers(patch_smtp, api_client):
     api_client.post_data('/send',
                          {'to': [{'email': 'bob@foocorp.com'}],
-                          'reply_to': {'name': 'admin',
-                                       'email': 'prez@whitehouse.gov'},
+                          'reply_to': [{'name': 'admin',
+                                        'email': 'prez@whitehouse.gov'}],
                           'subject': 'Banalities',
                           'body': '<html>Hello there</html>'})
     _, msg = patch_smtp[-1]
@@ -419,11 +424,34 @@ def test_setting_reply_to_headers(patch_smtp, api_client):
 def test_sending_from_email_alias(patch_smtp, api_client):
     api_client.post_data('/send',
                          {'to': [{'email': 'bob@foocorp.com'}],
-                          'from': {'name': 'admin',
-                                   'email': 'prez@whitehouse.gov'},
+                          'from': [{'name': 'admin',
+                                    'email': 'prez@whitehouse.gov'}],
                           'subject': 'Banalities',
                           'body': '<html>Hello there</html>'})
     _, msg = patch_smtp[-1]
     parsed = mime.from_string(msg)
     assert 'From' in parsed.headers
     assert parsed.headers['From'] == 'admin <prez@whitehouse.gov>'
+
+
+def test_sending_from_email_multiple_aliases(patch_smtp, patch_token_manager,
+                                             api_client):
+    res = api_client.post_data('/send',
+                               {'to': [{'email': 'bob@foocorp.com'}],
+                                'from': [{'name': 'admin',
+                                          'email': 'prez@whitehouse.gov'},
+                                         {'name': 'the rock',
+                                          'email': 'd.johnson@gmail.com'}],
+                                'subject': 'Banalities',
+                                'body': '<html>Hello there</html>'})
+    assert res.status_code == 400
+
+    res = api_client.post_data('/send',
+                               {'to': [{'email': 'bob@foocorp.com'}],
+                                'reply_to': [{'name': 'admin',
+                                              'email': 'prez@whitehouse.gov'},
+                                             {'name': 'the rock',
+                                              'email': 'd.johnson@gmail.com'}],
+                                'subject': 'Banalities',
+                                'body': '<html>Hello there</html>'})
+    assert res.status_code == 400

@@ -23,7 +23,7 @@ from inbox.api.validation import (get_tags, get_attachments, get_calendar,
                                   valid_event, valid_event_update, timestamp,
                                   bounded_str, view, strict_parse_args,
                                   limit, ValidatableArgument, strict_bool,
-                                  validate_draft_recipients, get_recipient,
+                                  validate_draft_recipients,
                                   validate_search_query,
                                   validate_search_sort,
                                   valid_delta_object_types)
@@ -998,8 +998,14 @@ def draft_update_api(public_id):
     to = get_recipients(data.get('to'), 'to')
     cc = get_recipients(data.get('cc'), 'cc')
     bcc = get_recipients(data.get('bcc'), 'bcc')
-    from_addr = get_recipient(data.get('from_addr'), 'from_addr')
-    reply_to = get_recipient(data.get('reply_to'), 'reply_to')
+    from_addr = get_recipients(data.get('from_addr'), 'from_addr')
+    reply_to = get_recipients(data.get('reply_to'), 'reply_to')
+
+    if from_addr and len(from_addr) > 1:
+        raise InputError("from_addr field can have at most one item")
+    if reply_to and len(reply_to) > 1:
+        raise InputError("reply_to field can have at most one item")
+
     subject = data.get('subject')
     body = data.get('body')
     tags = get_tags(data.get('tags'), g.namespace.id, g.db_session)
