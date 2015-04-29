@@ -7,6 +7,7 @@ def test_unread(db, default_namespace):
     thread = add_fake_thread(db.session, default_namespace.id)
     thread_id = thread.id
     message = add_fake_message(db.session, default_namespace.id, thread)
+    db.session.commit()
 
     unread_tag = default_namespace.tags['unread']
 
