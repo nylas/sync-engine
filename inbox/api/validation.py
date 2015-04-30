@@ -220,10 +220,14 @@ def valid_event(event):
 
     valid_when(event['when'])
 
-    if 'busy' in event and not isinstance(event.get('busy'), bool):
-        raise InputError("'busy' must be true or false")
+    if 'busy' in event and event.get('busy') is not None:
+        # client libraries can send busy: None
+        if not isinstance(event.get('busy'), bool):
+            raise InputError("'busy' must be true or false")
 
-    participants = event.get('participants', [])
+    participants = event.get('participants')
+    if participants is None:
+        participants = []
     for p in participants:
         if 'email' not in p:
             raise InputError("'participants' must must have email")

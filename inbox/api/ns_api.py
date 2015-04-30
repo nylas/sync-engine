@@ -227,9 +227,10 @@ def tag_create_api():
         raise InputError('Malformed tag request')
     if 'namespace_id' in data.keys():
         ns_id = data['namespace_id']
-        valid_public_id(ns_id)
-        if ns_id != g.namespace.public_id:
-            raise InputError('Cannot change the namespace on a tag.')
+        if ns_id is not None:
+            valid_public_id(ns_id)
+            if ns_id != g.namespace.public_id:
+                raise InputError('Cannot change the namespace on a tag.')
     # Lowercase tag name, regardless of input casing.
     tag_name = data['name'].lower()
     if not Tag.name_available(tag_name, g.namespace.id, g.db_session):
@@ -640,9 +641,15 @@ def event_create_api():
     description = data.get('description')
     location = data.get('location')
     when = data.get('when')
-    busy = data.get('busy', True)
+    busy = data.get('busy')
+    # client libraries can send explicit key = None automagically
+    if busy is None:
+        busy = True
 
-    participants = data.get('participants', [])
+    participants = data.get('participants')
+    if participants is None:
+        participants = []
+
     for p in participants:
         if 'status' not in p:
             p['status'] = 'noreply'
