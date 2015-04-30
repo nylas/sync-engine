@@ -118,8 +118,10 @@ def unmark_trash(account_id, thread_id, db_session):
 def _create_email(account, message):
     blocks = [p.block for p in message.attachments]
     attachments = generate_attachments(blocks)
-    msg = create_email(sender_name=account.name,
-                       sender_email=account.email_address,
+    from_name, from_email = message.from_addr[0]
+    msg = create_email(from_name=from_name,
+                       from_email=from_email,
+                       reply_to=message.reply_to,
                        inbox_uid=message.inbox_uid,
                        to_addr=message.to_addr,
                        cc_addr=message.cc_addr,
