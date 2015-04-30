@@ -61,7 +61,7 @@ def show_keys(store, account_id=None):
     all_folders = store.get_folder_list()
     all_folders = [(k, int(now - ts)) for (k, ts) in all_folders]
     if account_id:
-        all_folders = filter(lambda (f, t): f.startswith(str(account_id)),
+        all_folders = filter(lambda (f, t): f.startswith(str(account_id)+":"),
                              all_folders)
     print all_folders
 
