@@ -3,7 +3,7 @@ from inbox.models.event import Event
 from inbox.events.actions.backends import module_registry
 
 
-def create_event(account_id, event_id, db_session):
+def create_event(account_id, event_id, db_session, *args):
     account = db_session.query(Account).get(account_id)
     event = db_session.query(Event).get(event_id)
 
@@ -12,7 +12,7 @@ def create_event(account_id, event_id, db_session):
     remote_create_event(account, event, db_session)
 
 
-def update_event(account_id, event_id, db_session):
+def update_event(account_id, event_id, db_session, *args):
     account = db_session.query(Account).get(account_id)
     event = db_session.query(Event).get(event_id)
 
