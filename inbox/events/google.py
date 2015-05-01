@@ -249,7 +249,7 @@ def parse_event_response(event):
     location = event.get('location')
     busy = event.get('transparency') != 'transparent'
 
-    # We're lucky because an event statuses follow the icalendar
+    # We're lucky because event statuses follow the icalendar
     # spec.
     event_status = event.get('status', 'confirmed')
     assert event_status in EVENT_STATUSES

@@ -5,7 +5,7 @@ import ast
 
 from sqlalchemy import (Column, String, ForeignKey, Text, Boolean, Integer,
                         DateTime, Enum, Index, event)
-from sqlalchemy.orm import relationship, backref, validates
+from sqlalchemy.orm import relationship, backref, validates, reconstructor
 from sqlalchemy.types import TypeDecorator
 from sqlalchemy.ext.associationproxy import association_proxy
 
@@ -239,6 +239,15 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
         return self_hash.values()
 
     def update(self, event):
+        if event.namespace is not None and event.namespace.id is not None:
+            self.namespace_id = event.namespace.id
+
+        if event.calendar is not None and event.calendar.id is not None:
+            self.calendar_id = event.calendar.id
+
+        if event.provider_name is not None:
+            self.provider_name = event.provider_name
+
         self.uid = event.uid
         self.raw_data = event.raw_data
         self.title = event.title
@@ -337,6 +346,15 @@ class RecurringEvent(Event, HasRevisions):
             self.unwrap_rrule()
         except Exception as e:
             log.error("Error parsing RRULE entry", event_id=self.id,
+                      error=e, exc_info=True)
+
+    # FIXME @karim: use an overrided property instead of a reconstructor.
+    @reconstructor
+    def reconstruct(self):
+        try:
+            self.unwrap_rrule()
+        except Exception as e:
+            log.error("Error parsing stored RRULE entry", event_id=self.id,
                       error=e, exc_info=True)
 
     def inflate(self, start=None, end=None):
