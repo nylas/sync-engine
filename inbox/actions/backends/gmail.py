@@ -62,8 +62,12 @@ def set_remote_unread(account, thread_id, unread, db_session):
         g_thrid = _get_g_thrid(account.namespace.id, thread_id, db_session)
         crispin_client.set_unread(g_thrid, unread)
 
-    for folder in [account.all_folder.name, account.trash_folder.name,
-                   account.spam_folder.name]:
+    folders = [account.all_folder.name]
+    if account.spam_folder:
+        folders.append(account.spam_folder.name)
+    if account.trash_folder:
+        folders.append(account.trash_folder.name)
+    for folder in folders:
         syncback_action(fn, account, folder, db_session)
 
 
