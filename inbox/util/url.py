@@ -31,8 +31,8 @@ def _fallback_get_mx_domains(domain):
     """
     try:
         query = dns.message.make_query(domain, dns.rdatatype.MX)
-        answer = dns.query.udp(query, GOOGLE_DNS_IP).answer[0]
-        return answer
+        answers = dns.query.udp(query, GOOGLE_DNS_IP).answer[0]
+        return [a for a in answers if a.rdtype == dns.rdatatype.MX]
     except:
         return []
 
