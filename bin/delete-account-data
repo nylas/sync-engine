@@ -1,0 +1,108 @@
+#!/usr/bin/env python
+
+import click
+from sqlalchemy.orm import subqueryload
+
+from inbox.models.session import session_scope
+from inbox.models import Namespace, Message, Part
+from inbox.search.util import delete_index
+from inbox.search.adaptor import SearchEngineError
+
+CHUNK_SIZE = 500
+
+
+@click.command()
+@click.argument('namespace_id')
+def delete_account_data(namespace_id):
+    with session_scope() as db_session:
+        namespace = db_session.query(Namespace).get(namespace_id)
+        namespace_public_id = namespace.public_id
+        account_id = namespace.account.id
+        email_address = namespace.account.email_address
+
+    message = 'Are you sure you want to delete all data for '\
+              'namespace_id: {}, with account_id: {} and '\
+              'email_address: {}? [yes / no]'.\
+              format(namespace_id, account_id, email_address)
+
+    answer = raw_input(message).strip().lower()
+
+    if answer != 'yes':
+        print 'Will not delete, goodbye.'
+        return
+
+    print 'Deleting...'
+
+    # Delete data in s3
+    deleted_from_s3 = delete_from_s3()
+
+    # Delete data in Elasticsearch
+    deleted_from_elasticsearch = \
+        delete_from_elasticsearch(namespace_id, namespace_public_id)
+
+    if not (deleted_from_s3 and deleted_from_elasticsearch):
+        print 'Deletion from s3 [or] Elasticsearch failed. '\
+            'Will NOT delete from database'
+        return
+
+    # Delete data in database
+    deleted_from_database = delete_from_database()
+
+    if not deleted_from_database:
+        return
+
+    print 'All data deleted successfully!'
+
+
+def delete_from_elasticsearch(namespace_id, namespace_public_id):
+    print 'Deleting Elasticsearch data -'
+
+    try:
+        delete_index(namespace_id, namespace_public_id)
+    except SearchEngineError as e:
+        print 'Elasticsearch data deletion failed! Error: {}'.format(str(e))
+        return False
+
+    print 'Elasticsearch data deleted'
+    return True
+
+
+def delete_from_s3(namespace_id):
+    print 'Deleting s3 data -'
+
+    try:
+        with session_scope() as db_session:
+            q = db_session.query(Message).filter(
+                Message.namespace_id == namespace_id).options(
+                subqueryload(Message.parts).joinedload(Part.block))
+
+            for message in q.yield_per(CHUNK_SIZE):
+                for part in message.parts:
+                    del(part.block.data)
+                db_session.commit()
+    except Exception as e:
+        print 's3 data deletion failed! Error: {}'.format(str(e))
+        return False
+
+    print 's3 data deleted'
+    return True
+
+
+def delete_from_database(namespace_id):
+    print 'Deleting database data -'
+
+    try:
+        with session_scope() as db_session:
+            namespace = db_session.query(Namespace).get(namespace_id)
+            db_session.delete(namespace)
+            db_session.commit()
+    except Exception as e:
+        print 'Database data deletion failed! Error: {}'.format(str(e))
+        return False
+
+    print 'Database data deleted'
+    return True
+
+
+if __name__ == '__main__':
+    delete_account_data()

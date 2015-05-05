@@ -4,7 +4,8 @@ monkey.patch_all(aggressive=False)
 
 # fixtures that are available by default
 from tests.util.base import (config, db, log, absolute_path, default_namespace,
-                             default_account, thread, folder, message, imapuid)
+                             default_account, thread, folder, message, imapuid,
+                             raw_message)
 
 
 def pytest_generate_tests(metafunc):

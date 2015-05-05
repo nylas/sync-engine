@@ -71,7 +71,8 @@ def index_threads(namespace_id, namespace_public_id, created_before=None):
         created_before = dateutil.parser.parse(created_before)
 
     indexed_count = 0
-    search_engine = NamespaceSearchEngine(namespace_public_id)
+    search_engine = NamespaceSearchEngine(namespace_public_id,
+                                          create_index=True)
 
     with session_scope() as db_session:
         query = db_session.query(Thread).filter(
@@ -112,7 +113,8 @@ def index_messages(namespace_id, namespace_public_id, created_before=None):
         created_before = dateutil.parser.parse(created_before)
 
     indexed_count = 0
-    search_engine = NamespaceSearchEngine(namespace_public_id)
+    search_engine = NamespaceSearchEngine(namespace_public_id,
+                                          create_index=True)
 
     with session_scope() as db_session:
         query = db_session.query(Message).filter(

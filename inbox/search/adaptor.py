@@ -57,7 +57,7 @@ class NamespaceSearchEngine(object):
     """
     MAPPINGS = NAMESPACE_INDEX_MAPPING
 
-    def __init__(self, namespace_public_id):
+    def __init__(self, namespace_public_id, create_index=False):
         self.index_id = namespace_public_id
 
         # TODO(emfree): probably want to try to keep persistent connections
@@ -65,7 +65,8 @@ class NamespaceSearchEngine(object):
         self._connection = new_connection()
         self.log = log.new(component='search', index=namespace_public_id)
 
-        self.create_index()
+        if create_index:
+            self.create_index()
 
         self.messages = MessageSearchAdaptor(index_id=namespace_public_id,
                                              log=self.log)

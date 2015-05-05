@@ -12,7 +12,8 @@ DEFAULT_MESSAGE_TTL = 120
 
 
 class DeleteHandler(gevent.Greenlet):
-    """We don't outright delete message objects when all their associated
+    """
+    We don't outright delete message objects when all their associated
     uids are deleted. Instead, we mark them by setting a deleted_at
     timestamp. This is so that we can identify when a message is moved between
     folders, or when a draft is updated.
@@ -32,6 +33,7 @@ class DeleteHandler(gevent.Greenlet):
     nessage_ttl: int
         Number of seconds to wait after a message is marked for deletion before
         deleting it for good.
+
     """
     def __init__(self, account_id, namespace_id, uid_accessor,
                  message_ttl=DEFAULT_MESSAGE_TTL):
