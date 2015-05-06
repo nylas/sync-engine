@@ -414,7 +414,10 @@ get_default_providers = lambda: {
     },
     "custom": {
         "type": "generic",
-        "auth": "password"
+        "auth": "password",
+        "folder_map": {"INBOX.Archive": "archive",
+                       "INBOX.Drafts": "drafts", "INBOX.Junk Mail": "spam",
+                       "INBOX.Sent Items": "sent", "INBOX.Trash": "trash"},
     }
 }
 
