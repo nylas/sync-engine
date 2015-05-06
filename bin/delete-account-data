@@ -95,7 +95,17 @@ def delete_from_database(namespace_id):
     try:
         with session_scope() as db_session:
             namespace = db_session.query(Namespace).get(namespace_id)
-            db_session.delete(namespace)
+            account = namespace.account
+
+            # TODO[k]: Why do we get an `full_body_id` IntegrityError without
+            # this?
+            db_session.execute(
+                '''DELETE FROM message WHERE namespace_id = :namespace_id;''',
+                {'namespace_id': namespace_id})
+
+            # Need to delete /account/ because of bizarre Namespace-Account
+            # delete cascade
+            db_session.delete(account)
             db_session.commit()
     except Exception as e:
         print 'Database data deletion failed! Error: {}'.format(str(e))
