@@ -7,6 +7,7 @@ from collections import defaultdict
 
 from sqlalchemy import (Column, Integer, BigInteger, String, DateTime,
                         Boolean, Enum, ForeignKey, Text, Index)
+from sqlalchemy.dialects.mysql import LONGBLOB
 from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy.sql.expression import false
 
@@ -19,6 +20,7 @@ from inbox.util.misc import parse_references, get_internaldate
 from inbox.models.mixins import HasPublicID, HasRevisions
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
+from inbox.security.blobstorage import encode_blob, decode_blob
 
 
 from inbox.log import get_logger
@@ -79,14 +81,10 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     # DEPRECATED
     state = Column(Enum('draft', 'sending', 'sending failed', 'sent'))
 
-    # Most messages are short and include a lot of quoted text. Preprocessing
-    # just the relevant part out makes a big difference in how much data we
-    # need to send over the wire.
-    # Maximum length is determined by typical email size limits (25 MB body +
-    # attachments on Gmail), assuming a maximum # of chars determined by
-    # 1-byte (ASCII) chars.
-    # NOTE: always HTML :)
-    sanitized_body = Column(Text(length=26214400), nullable=False)
+    # DEPRECATED
+    _sanitized_body = Column('sanitized_body', Text(length=26214400),
+                             nullable=False, default='')
+    _compacted_body = Column(LONGBLOB, nullable=True)
     snippet = Column(String(191), nullable=False)
     SNIPPET_LENGTH = 191
 
@@ -227,7 +225,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                               folder_name=folder_name, account_id=account.id,
                               error=e)
                     msg._mark_error()
-            msg.calculate_sanitized_body()
+            msg.calculate_body()
 
             # Occasionally people try to send messages to way too many
             # recipients. In such cases, empty the field and treat as a parsing
@@ -344,23 +342,23 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         self.size = 0
         if self.received_date is None:
             self.received_date = datetime.datetime.utcnow()
-        if self.sanitized_body is None:
-            self.sanitized_body = ''
+        if self.body is None:
+            self.body = ''
         if self.snippet is None:
             self.snippet = ''
 
-    def calculate_sanitized_body(self):
-        plain_part, html_part = self.body
+    def calculate_body(self):
+        plain_part, html_part = self.body_parts
         # TODO: also strip signatures.
         if html_part:
             assert '\r' not in html_part, "newlines not normalized"
             self.snippet = self.calculate_html_snippet(html_part)
-            self.sanitized_body = html_part
+            self.body = html_part
         elif plain_part:
             self.snippet = self.calculate_plaintext_snippet(plain_part)
-            self.sanitized_body = plaintext2html(plain_part, False)
+            self.body = plaintext2html(plain_part, False)
         else:
-            self.sanitized_body = u''
+            self.body = u''
             self.snippet = u''
 
     def calculate_html_snippet(self, text):
@@ -371,8 +369,8 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         return ' '.join(text.split())[:self.SNIPPET_LENGTH]
 
     @property
-    def body(self):
-        """ Returns (plaintext, html) body for the message, decoded. """
+    def body_parts(self):
+        """ Returns (plaintext, html) body parts for the message, decoded. """
         assert self.parts, \
             "Can't calculate body before parts have been parsed"
 
@@ -389,6 +387,26 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                 break
 
         return plain_data, html_data
+
+    @property
+    def body(self):
+        if self._compacted_body is None:
+            # Return from legacy _sanitized_body column to support online data
+            # migration.
+            return self._sanitized_body
+        return decode_blob(self._compacted_body).decode('utf-8')
+
+    @body.setter
+    def body(self, value):
+        if value is None:
+            self._compacted_body = None
+        else:
+            self._compacted_body = encode_blob(value.encode('utf-8'))
+            # Also write to the _sanitized_body column for now, so there's no
+            # possibility that concurrent data migration from
+            # _sanitized_body --> _compacted_body accidentally ends up writing
+            # an empty value to _compacted_body
+            self._sanitized_body = value
 
     @property
     def participants(self):

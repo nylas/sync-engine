@@ -97,7 +97,7 @@ def encode(obj, namespace_public_id=None, expand=False):
             'date': obj.received_date,
             'thread_id': obj.thread.public_id,
             'snippet': obj.snippet,
-            'body': obj.sanitized_body,
+            'body': obj.body,
             'unread': not obj.is_read,
             'files': obj.api_attachment_metadata,
             'events': [event.public_id for event in obj.events],

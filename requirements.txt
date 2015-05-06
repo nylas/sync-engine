@@ -55,3 +55,4 @@ mockredispy==2.9.0.10
 vobject==0.8.1c
 lxml==3.4.2
 arrow==0.5.4
+hypothesis==1.4.1

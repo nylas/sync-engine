@@ -109,7 +109,7 @@ def create_draft(data, namespace, db_session, syncback):
         # message.
         message.received_date = dt
         message.subject = subject
-        message.sanitized_body = body
+        message.body = body
         message.to_addr = to_addr
         message.cc_addr = cc_addr
         message.bcc_addr = bcc_addr
@@ -194,7 +194,7 @@ def update_draft(db_session, account, draft, to_addr=None,
         if value is not None:
             setattr(draft, attr, value)
 
-            if attr == 'sanitized_body':
+            if attr == 'body':
                 # Update size, snippet too
                 draft.size = len(value)
                 draft.snippet = draft.calculate_html_snippet(
@@ -206,7 +206,7 @@ def update_draft(db_session, account, draft, to_addr=None,
     update('reply_to', reply_to)
     update('from_addr', from_addr)
     update('subject', subject if subject else None)
-    update('sanitized_body', body if body else None)
+    update('body', body if body else None)
     update('received_date', datetime.utcnow())
 
     # Remove any attachments that aren't specified

@@ -1,0 +1,44 @@
+#!/usr/bin/env python
+import math
+import multiprocessing
+import click
+from sqlalchemy.orm import load_only
+from inbox.models import Message
+from inbox.log import configure_logging, get_logger
+configure_logging()
+
+
+CHUNK_SIZE = 1000
+
+
+def migrate_bodies((start_id, end_id)):
+    from inbox.models.session import session_scope
+    log = get_logger()
+    with session_scope() as db_session:
+        for i in range(start_id, end_id, CHUNK_SIZE):
+            messages = db_session.query(Message). \
+                filter(Message.id > i,
+                       Message.id <= i + min(CHUNK_SIZE, end_id)). \
+                options(load_only('_sanitized_body', '_compacted_body'))
+            for message in messages:
+                if message._compacted_body is None:
+                    message.body = message._sanitized_body
+            db_session.commit()
+            log.info('Migrated bodies', start=i + 1,
+                     end=min(i + CHUNK_SIZE, end_id))
+
+
+@click.command()
+@click.option('--jobs', '-j', type=int, default=1)
+@click.option('--max_id', '-m', type=int)
+def main(jobs, max_id):
+    bucket_size = int(math.ceil(float(max_id + 1) / jobs))
+    buckets = [(i * bucket_size, (i + 1) * bucket_size + 1) for i in
+               range(jobs)]
+
+    pool = multiprocessing.Pool(jobs)
+    pool.map(migrate_bodies, buckets)
+
+
+if __name__ == '__main__':
+    main()

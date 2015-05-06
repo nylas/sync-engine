@@ -46,7 +46,7 @@ def stub_message(db, new_message_from_synced):
                                from_addr=[('alice', 'alice@example.com')],
                                to_addr=[('bob', 'bob@example.com')])
     message.snippet = 'Banh mi paleo pickled, sriracha'
-    message.sanitized_body = """
+    message.body = """
 Banh mi paleo pickled, sriracha biodiesel chambray seitan
 mumblecore mustache. Raw denim gastropub 8-bit, butcher
 PBR sartorial photo booth Pinterest blog Portland roof party
@@ -59,7 +59,7 @@ cliche bitters aesthetic. Ugh.
                                to_addr=[('alice', 'alice@example.com')],
                                cc_addr=[('Cheryl', 'cheryl@gmail.com')])
     message.snippet = 'Bushwick meggings ethical keffiyeh'
-    message.sanitized_body = """
+    message.body = """
 Bushwick meggings ethical keffiyeh. Chambray lumbersexual wayfarers,
 irony Banksy cred bicycle rights scenester artisan tote bag YOLO gastropub.
 """
@@ -70,7 +70,7 @@ irony Banksy cred bicycle rights scenester artisan tote bag YOLO gastropub.
                                to_addr=[('bob', 'bob@example.com')],
                                cc_addr=[('Cheryl', 'cheryl@gmail.com')])
     draft.snippet = 'Hey there friend writing a draft'
-    draft.sanitized_body = """
+    draft.body = """
 DIY tousled Tumblr, VHS meditation 3 wolf moon listicle fingerstache viral
 bicycle rights. Thundercats kale chips church-key American Apparel.
 """

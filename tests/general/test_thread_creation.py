@@ -78,7 +78,7 @@ def test_threading_limit(db, folder_sync_engine, monkeypatch):
         m.received_date = datetime.datetime.utcnow()
         m.references = []
         m.size = 0
-        m.sanitized_body = ''
+        m.body = ''
         m.from_addr = [("Karim Hamidou", "karim@nilas.com")]
         m.to_addr = [("Eben Freeman", "eben@nilas.com")]
         m.snippet = ''

@@ -378,7 +378,7 @@ class SMTPClient(object):
                            cc_addr=draft.cc_addr,
                            bcc_addr=None,
                            subject=draft.subject,
-                           html=draft.sanitized_body,
+                           html=draft.body,
                            in_reply_to=draft.in_reply_to,
                            references=draft.references,
                            attachments=attachments)

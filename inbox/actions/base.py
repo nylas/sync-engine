@@ -127,7 +127,7 @@ def _create_email(account, message):
                        cc_addr=message.cc_addr,
                        bcc_addr=message.bcc_addr,
                        subject=message.subject,
-                       html=message.sanitized_body,
+                       html=message.body,
                        in_reply_to=message.in_reply_to,
                        references=message.references,
                        attachments=attachments)

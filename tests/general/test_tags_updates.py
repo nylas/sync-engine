@@ -57,7 +57,7 @@ def test_adding_message_to_thread(db):
     folder_names = [folder.name for folder in thread.folders]
     m = Message(namespace_id=account.namespace.id, subject='test message',
                 thread_id=thread.id, received_date=datetime.datetime.now(),
-                size=64, sanitized_body="body", snippet="snippet")
+                size=64, body="body", snippet="snippet")
 
     uid = ImapUid(account=account, message=m,
                   g_labels=['\\Inbox', 'test-label'],

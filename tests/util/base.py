@@ -292,7 +292,7 @@ def add_fake_message(db_session, namespace_id, thread=None, from_addr=None,
     m.bcc_addr = bcc_addr or []
     m.received_date = received_date or datetime.utcnow()
     m.size = 0
-    m.sanitized_body = ''
+    m.body = ''
     m.snippet = ''
     m.subject = subject or ''
 

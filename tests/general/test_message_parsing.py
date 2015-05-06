@@ -185,10 +185,10 @@ def test_parse_body_on_bad_attachment(
                                    received_date,
                                    raw_message_with_bad_attachment)
     assert m.decode_error
-    plain_part, html_part = m.body
+    plain_part, html_part = m.body_parts
     assert 'dingy blue carpet' in plain_part
     assert 'dingy blue carpet' in html_part
-    assert 'dingy blue carpet' in m.sanitized_body
+    assert 'dingy blue carpet' in m.body
 
 
 def test_calculate_snippet():
