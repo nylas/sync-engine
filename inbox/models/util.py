@@ -50,6 +50,4 @@ def transaction_objects():
 
     """
     from inbox.models.mixins import HasRevisions
-
-    return dict((m.__tablename__, m.API_OBJECT_NAME) for
-                m in HasRevisions.__subclasses__())
+    return {m.API_OBJECT_NAME: m for m in HasRevisions.__subclasses__()}

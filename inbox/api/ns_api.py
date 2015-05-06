@@ -1107,7 +1107,7 @@ def sync_deltas():
         with session_scope() as db_session:
             deltas, _ = delta_sync.format_transactions_after_pointer(
                 g.namespace.id, start_pointer, db_session, args['limit'],
-                delta_sync._format_transaction_for_delta_sync, exclude_types)
+                exclude_types)
 
         response = {
             'cursor_start': cursor,
