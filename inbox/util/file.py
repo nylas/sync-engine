@@ -122,32 +122,3 @@ class Lock(object):
 
     def __del__(self):
         self.handle.close()
-
-
-def human_readable_filesize(size_bytes, suffixes=None):
-    """ Format a size in bytes into a 'human' file size.
-
-    For example, bytes, KB, MB, GB, TB, PB. Note that bytes/KB will be
-    reported in whole numbers but MB and above will have greater precision e.g.
-    1 byte, 43 bytes, 443 KB, 4.3 MB, 4.43 GB, etc.
-    """
-    if size_bytes == 1:
-        # because I really hate unnecessary plurals
-        return "1 byte"
-
-    if not suffixes:
-        suffixes = [('bytes', 0), ('KB', 0), ('MB', 1), ('GB', 2), ('TB', 2),
-                    ('PB', 2)]
-
-    num = float(size_bytes)
-    for suffix, precision in suffixes:
-        if num < 1024.0:
-            break
-        num /= 1024.0
-
-    if precision == 0:
-        formatted_size = "{:.0f}".format(num)
-    else:
-        formatted_size = str(round(num, ndigits=precision))
-
-    return "{} {}".format(formatted_size, suffix)

@@ -391,17 +391,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         return plain_data, html_data
 
     @property
-    def headers(self):
-        """ Returns headers for the message, decoded. """
-        assert self.parts, \
-            "Can't provide headers before parts have been parsed"
-
-        headers = self.parts[0].block.data
-        json_headers = json.JSONDecoder().decode(headers)
-
-        return json_headers
-
-    @property
     def participants(self):
         """
         Different messages in the thread may reference the same email
@@ -433,10 +422,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                 if phrase != '' or len(phrases) == 1:
                     p.append((phrase, address))
         return p
-
-    @property
-    def folders(self):
-        return self.thread.folders
 
     @property
     def attachments(self):
