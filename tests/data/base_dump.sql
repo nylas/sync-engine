@@ -1613,7 +1613,7 @@ CREATE TABLE `tag` (
   `name` varchar(191) NOT NULL,
   `user_created` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `namespace_id` (`namespace_id`,`name`),
+  UNIQUE KEY `nsid_public_name` (`namespace_id`,`public_id`,`name`),
   UNIQUE KEY `namespace_id_2` (`namespace_id`,`public_id`),
   KEY `ix_tag_created_at` (`created_at`),
   KEY `ix_tag_deleted_at` (`deleted_at`),

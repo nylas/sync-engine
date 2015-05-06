@@ -105,9 +105,16 @@ class Folder(MailSyncBase):
 
         else:
             tag_name = self.name.lower()[:MAX_INDEXABLE_LENGTH]
+            if tag_name in Tag.CANONICAL_TAG_NAMES:
+                tag_name = 'imap/{}'.format(tag_name)
             try:
+                # In looking for a non-canonical tag, we want to make sure we
+                # don't return a canonical tag with the same name (e.g. a
+                # user-created 'spam' or 'important' folder), so we exclude
+                # tags with the public_id set to the tag name.
                 return db_session.query(Tag). \
                     filter(Tag.namespace_id == self.namespace.id,
+                           Tag.public_id != tag_name,
                            Tag.name == tag_name).one()
             except NoResultFound:
                 # Explicitly set the namespace_id instead of the namespace

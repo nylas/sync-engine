@@ -35,8 +35,8 @@ def save_folder_names(log, account_id, folder_names, db_session):
     Folders that belong to an account and no longer exist in `folder_names`
     ARE DELETED, unless they are "dangling" (do not have a 'name' set).
 
-    We don't canonicalizing folder names to lowercase when saving
-    because different backends may be case-sensitive or not. Code that
+    We don't canonicalize folder names to lowercase when saving
+    because different backends may be case-sensitive or otherwise. Code that
     references saved folder names should canonicalize if needed when doing
     comparisons.
 
@@ -50,27 +50,27 @@ def save_folder_names(log, account_id, folder_names, db_session):
     # dangled_folders don't map to upstream account folders (may be used for
     # keeping track of e.g. special Gmail labels which are exposed as IMAP
     # flags but not folders)
-    folder_for = {f.name: f for f in all_folders if f.name is not None}
-    dangled_folder_for = {f.canonical_name: f for f in all_folders
-                          if f.name is None}
+    local_folders = {f.name: f for f in all_folders if f.name is not None}
+    dangled_local_folders = {f.canonical_name: f for f in all_folders
+                             if f.name is None}
 
     canonical_names = {'inbox', 'drafts', 'sent', 'spam', 'trash',
                        'starred', 'important', 'archive', 'all'}
     for canonical_name in canonical_names:
         if canonical_name in folder_names:
             backend_folder_name = folder_names[canonical_name]
-            if backend_folder_name not in folder_for:
+            if backend_folder_name not in local_folders:
                 # Reconcile dangled folders which now exist on the remote
-                if canonical_name in dangled_folder_for:
-                    folder = dangled_folder_for[canonical_name]
+                if canonical_name in dangled_local_folders:
+                    folder = dangled_local_folders[canonical_name]
                     folder.name = folder_names[canonical_name]
-                    del dangled_folder_for[canonical_name]
+                    del dangled_local_folders[canonical_name]
                 else:
                     folder = Folder.find_or_create(
                         db_session, account, None, canonical_name)
                     if folder.name != folder_names[canonical_name]:
                         if folder.name is not None:
-                            del folder_for[folder.name]
+                            del local_folders[folder.name]
                         folder.name = folder_names[canonical_name]
                         folder.get_associated_tag(db_session)
                 attr_name = '{}_folder'.format(canonical_name)
@@ -80,24 +80,24 @@ def save_folder_names(log, account_id, folder_names, db_session):
                     # updates the associated foreign key (i.e., id_attr_name)
                     setattr(account, attr_name, folder)
             else:
-                del folder_for[backend_folder_name]
+                del local_folders[backend_folder_name]
 
     # Gmail labels, user-created IMAP/EAS folders, etc.
     if 'extra' in folder_names:
         for name in folder_names['extra']:
             name = name[:MAX_FOLDER_NAME_LENGTH]
-            if name not in folder_for:
+            if name not in local_folders:
                 # Folder.create() takes care of adding to the session
                 folder = Folder.create(account, name, db_session)
                 folder.get_associated_tag(db_session)
             else:
-                del folder_for[name]
+                del local_folders[name]
 
     # This may cascade to FolderItems and ImapUid (ONLY), which is what we
     # want--doing the update here short-circuits us syncing that change later.
-    if len(folder_for):
-        log.info("folders deleted from remote", folders=folder_for.keys())
-    for name, folder in folder_for.iteritems():
+    if len(local_folders):
+        log.info("folders deleted from remote", folders=local_folders.keys())
+    for name, folder in local_folders.iteritems():
         tag = folder.get_associated_tag(db_session, create_if_missing=False)
         if tag:
             if tag.name in tag.CANONICAL_TAG_NAMES:
