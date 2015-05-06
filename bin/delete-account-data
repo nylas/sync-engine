@@ -76,6 +76,7 @@ def delete_from_s3(namespace_id):
                 Message.namespace_id == namespace_id).options(
                 subqueryload(Message.parts).joinedload(Part.block))
 
+            # TODO[k]: Use s3 multi-object delete API
             for message in q.yield_per(CHUNK_SIZE):
                 for part in message.parts:
                     del(part.block.data)

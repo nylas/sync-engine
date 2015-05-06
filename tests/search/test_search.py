@@ -5,15 +5,9 @@ from gevent import monkey
 from pytest import yield_fixture
 
 from inbox.models.message import Message
-from inbox.models.thread import Thread
 from inbox.search.adaptor import NamespaceSearchEngine
-from inbox.search.util import index_namespaces, index_messages, index_threads
-from inbox.search.mappings import THREAD_MAPPING, MESSAGE_MAPPING
+from inbox.search.util import index_namespaces
 #from inbox.util.misc import dt_to_timestamp
-
-from tests.util.base import api_client, default_namespace
-
-__all__ = ['api_client', 'default_namespace']
 
 
 @yield_fixture(scope='function')
@@ -30,7 +24,8 @@ def search_index_service(db):
 def search_engine(db, default_namespace):
     index_namespaces([default_namespace.id])
 
-    engine = NamespaceSearchEngine(default_namespace.public_id)
+    engine = NamespaceSearchEngine(default_namespace.public_id,
+                                   create_index=True)
     engine.refresh_index()
 
     yield engine
@@ -60,31 +55,6 @@ def search_engine(db, default_namespace):
 #     assert resp.status_code == 200
 #     results = json.loads(resp.data)
 #     assert len(results) == thread_count
-
-
-def test_index_creation(db, default_namespace, search_engine):
-    namespace_id = default_namespace.id
-    namespace_public_id = default_namespace.public_id
-
-    # Test number of indices
-    message_indices = index_messages(namespace_id, namespace_public_id)
-    message_count = db.session.query(Message).filter(
-        Message.namespace_id == namespace_id).count()
-
-    thread_indices = index_threads(namespace_id, namespace_public_id)
-    thread_count = db.session.query(Thread).filter(
-        Thread.namespace_id == namespace_id).count()
-
-    assert message_indices == message_count and thread_indices == thread_count
-
-    # Test index mappings
-    thread_mapping = search_engine.threads.get_mapping()
-    assert thread_mapping[namespace_public_id]['mappings']['thread']['properties'] == \
-        THREAD_MAPPING['properties']
-
-    message_mapping = search_engine.messages.get_mapping()
-    assert all(item in message_mapping[namespace_public_id]['mappings']['message']['properties']
-               for item in MESSAGE_MAPPING['properties'])
 
 
 def test_message_search(db, api_client, search_engine):
