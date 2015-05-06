@@ -18,7 +18,6 @@ def test_thread_insert_creates_transaction(db):
     transaction = get_latest_transaction(db.session, 'thread', thr.id,
                                          NAMESPACE_ID)
     assert transaction.command == 'insert'
-    assert transaction.snapshot
 
 
 def test_thread_tag_updates_create_transactions(db):

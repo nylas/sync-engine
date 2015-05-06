@@ -21,7 +21,6 @@ class Transaction(MailSyncBase, HasPublicID):
     command = Column(Enum('insert', 'update', 'delete'), nullable=False)
     # The API representation of the object at the time the transaction is
     # generated.
-    snapshot = Column(BigJSON, nullable=True)
 
 
 Index('namespace_id_deleted_at', Transaction.namespace_id,
@@ -41,7 +40,6 @@ def create_revisions(session):
 
 
 def create_revision(obj, session, revision_type):
-    from inbox.api.kellogs import encode
     assert revision_type in ('insert', 'update', 'delete')
     if (not isinstance(obj, HasRevisions) or
             obj.should_suppress_transaction_creation):
@@ -52,8 +50,6 @@ def create_revision(obj, session, revision_type):
                            object_type=obj.API_OBJECT_NAME,
                            object_public_id=obj.public_id,
                            namespace_id=obj.namespace.id)
-    if revision_type != 'delete':
-        revision.snapshot = encode(obj)
     session.add(revision)
 
 
