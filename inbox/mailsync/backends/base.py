@@ -14,7 +14,7 @@ from inbox.models.session import session_scope
 from inbox.mailsync.exc import SyncException
 from inbox.heartbeat.status import clear_heartbeat_status
 
-THROTTLE_WAIT = 300
+THROTTLE_WAIT = 60
 
 mailsync_session_scope = functools.partial(session_scope,
                                            ignore_soft_deletes=False)
