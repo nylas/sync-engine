@@ -74,7 +74,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
         try:
             with mailsync_session_scope() as db_session:
                 local_uids = common.all_uids(self.account_id, db_session,
-                                             self.folder_name)
+                                             self.folder_id)
             remote_uids = sorted(crispin_client.all_uids(), key=int)
             remote_uid_count = len(remote_uids)
             with self.syncmanager_lock:

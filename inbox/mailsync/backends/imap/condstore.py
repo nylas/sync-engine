@@ -90,7 +90,7 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
         remote_uids = crispin_client.all_uids()
         with mailsync_session_scope() as db_session:
             local_uids = common.all_uids(self.account_id, db_session,
-                                         self.folder_name)
+                                         self.folder_id)
         stack_uids = {uid for uid, _ in download_stack}
         local_with_pending_uids = local_uids | stack_uids
         new, updated = new_or_updated(changed_uids, local_with_pending_uids)

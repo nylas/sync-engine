@@ -21,10 +21,10 @@ from inbox.log import get_logger
 log = get_logger()
 
 
-def all_uids(account_id, session, folder_name):
-    return {uid for uid, in session.query(ImapUid.msg_uid).join(Folder).filter(
+def all_uids(account_id, session, folder_id):
+    return {uid for uid, in session.query(ImapUid.msg_uid).filter(
         ImapUid.account_id == account_id,
-        Folder.name == folder_name)}
+        ImapUid.folder_id == folder_id)}
 
 
 def _folders_for_labels(g_labels, account, db_session):

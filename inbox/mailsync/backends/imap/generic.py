@@ -294,7 +294,7 @@ class FolderSyncEngine(Greenlet):
             with self.syncmanager_lock:
                 with mailsync_session_scope() as db_session:
                     local_uids = common.all_uids(self.account_id, db_session,
-                                                 self.folder_name)
+                                                 self.folder_id)
                     self.remove_deleted_uids(db_session, local_uids,
                                              remote_uids)
 
@@ -542,7 +542,7 @@ class FolderSyncEngine(Greenlet):
         with self.syncmanager_lock:
             with mailsync_session_scope() as db_session:
                 local_uids = common.all_uids(self.account_id, db_session,
-                                             self.folder_name)
+                                             self.folder_id)
                 # Download new UIDs.
                 stack_uids = {uid for uid, _ in download_stack}
                 local_with_pending_uids = local_uids | stack_uids
