@@ -59,7 +59,8 @@ class OAuthAuthHandler(AuthHandler):
                       'Account: {}, error: {}'.format(email, e),
                       account_id=account_id)
             if (str(e) == '[ALERT] Invalid credentials (Failure)' or
-                    str(e).startswith('[AUTHENTICATIONFAILED]')):
+                    str(e).startswith('[AUTHENTICATIONFAILED]') or
+                    str(e).startswith('[AUTHORIZATIONFAILED]')):
                 raise ValidationError(str(e))
             else:
                 raise ConnectionError(str(e))
