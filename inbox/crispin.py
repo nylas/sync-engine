@@ -360,7 +360,8 @@ class CrispinClient(object):
             # checking for Yahoo / Gmail / Outlook (Hotmail) specific errors:
             if 'EXAMINE error - Folder does not exist' in e.message or \
                '[NONEXISTENT] Unknown Mailbox:' in e.message or \
-               '[TRYCREATE] Specified mailbox does not exist' in e.message:
+               '[TRYCREATE] Specified mailbox does not exist' in e.message or \
+               '[TRYCREATE] SELECT error - Folder does not exist' in e.message:
                 raise FolderMissingError(folder)
             raise
 
