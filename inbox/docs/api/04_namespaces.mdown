@@ -24,7 +24,7 @@ GET https://api.nylas.com/n
         "account_id": "c5zc216uat483slypx67mu8i3",
         "email_address": "ben.bitdiddle@gmail.com",
         "name": "Ben Bitdiddle",
-        "provider": "Gmail"
+        "provider": "gmail"
     }
 ]
 ```
