@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-from inbox.sqlalchemy_ext.util import safer_yield_per
 from inbox.models.thread import Thread
 from sqlalchemy import desc
+from sqlalchemy.orm import joinedload
 from inbox.util.misc import cleanup_subject
 
 
@@ -15,12 +15,14 @@ def fetch_corresponding_thread(db_session, namespace_id, message):
     # to a message always has a similar subject. This is only
     # right 95% of the time.
     clean_subject = cleanup_subject(message.subject)
-    threads = db_session.query(Thread).filter(
-        Thread.namespace_id == namespace_id,
-        Thread._cleaned_subject == clean_subject). \
-        order_by(desc(Thread.id))
+    threads = db_session.query(Thread). \
+        filter(Thread.namespace_id == namespace_id,
+               Thread._cleaned_subject == clean_subject). \
+        order_by(desc(Thread.id)). \
+        options(joinedload(Thread.messages).load_only(
+            'from_addr', 'to_addr', 'bcc_addr', 'cc_addr'))
 
-    for thread in safer_yield_per(threads, Thread.id, 0, 100):
+    for thread in threads:
         for match in thread.messages:
             # A lot of people BCC some address when sending mass
             # emails so ignore BCC.
