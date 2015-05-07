@@ -53,11 +53,6 @@ class GmailSyncMonitor(ImapSyncMonitor):
         ImapSyncMonitor.__init__(self, *args, **kwargs)
         self.sync_engine_class = GmailFolderSyncEngine
 
-    def sync(self):
-        self.start_delete_handler()
-        self.start_new_folder_sync_engines()
-        self.folder_monitors.join()
-
 log = get_logger()
 
 
