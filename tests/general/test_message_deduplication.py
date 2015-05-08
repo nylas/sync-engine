@@ -1,5 +1,3 @@
-import os
-import datetime
 from tests.util.base import (add_fake_thread, add_fake_account,
                              new_message_from_synced)
 

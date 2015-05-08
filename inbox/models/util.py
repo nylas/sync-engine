@@ -1,4 +1,6 @@
+from inbox.models.session import session_scope
 from inbox.models.message import Message
+from inbox.models.namespace import Namespace
 
 
 def reconcile_message(new_message, session):
@@ -51,3 +53,25 @@ def transaction_objects():
     """
     from inbox.models.mixins import HasRevisions
     return {m.API_OBJECT_NAME: m for m in HasRevisions.__subclasses__()}
+
+
+def delete_namespace(namespace_id):
+    """
+    Delete all the data associated with a namespace from the database.
+    USE WITH CAUTION.
+
+    """
+    with session_scope() as session:
+        namespace = session.query(Namespace).get(namespace_id)
+        account = namespace.account
+
+        # TODO[k]: Why do we get an `full_body_id` IntegrityError without
+        # this?
+        session.execute(
+            '''DELETE FROM message WHERE namespace_id = :namespace_id;''',
+            {'namespace_id': namespace_id})
+
+        # Need to delete /account/ because of bizarre Namespace-Account
+        # delete cascade
+        session.delete(account)
+        session.commit()

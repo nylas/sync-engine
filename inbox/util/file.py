@@ -49,10 +49,12 @@ def mkdirp(path):
 
 
 def remove_file(filename):
-    """ Delete a file and don't raise an error if it doesn't exist.
+    """
+    Delete a file and don't raise an error if it doesn't exist.
 
     From:
     http://stackoverflow.com/questions/10840533/most-pythonic-way-to-delete-a-file-which-may-not-exist
+
     """
     try:
         os.remove(filename)

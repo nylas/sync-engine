@@ -1,5 +1,8 @@
+import pytest
+
 from inbox.models import Message, Thread
-from inbox.search.adaptor import NamespaceSearchEngine, new_connection
+from inbox.search.adaptor import (NamespaceSearchEngine, SearchEngineError,
+                                  new_connection)
 from inbox.search.mappings import THREAD_MAPPING, MESSAGE_MAPPING
 from inbox.search.util import index_messages, index_threads, delete_index
 
@@ -47,3 +50,7 @@ def test_index_deletion(db, default_namespace):
     # Test index deletion
     client = new_connection()
     assert client.indices.exists([namespace_public_id]) is False
+
+    # Test non-existent index deletion
+    with pytest.raises(SearchEngineError):
+        delete_index(namespace_id, 'Non-existent index')

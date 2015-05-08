@@ -2,11 +2,12 @@ import os
 from hashlib import sha256
 
 from sqlalchemy import Column, Integer, String
-from sqlalchemy.orm import object_session
 
 from inbox.config import config
 from inbox.log import get_logger
 log = get_logger()
+from inbox.models.session import session_scope
+from inbox.util.itert import chunk
 
 # TODO: store AWS credentials in a better way.
 STORE_MSG_ON_S3 = config.get('STORE_MESSAGES_ON_S3', None)
@@ -14,8 +15,16 @@ STORE_MSG_ON_S3 = config.get('STORE_MESSAGES_ON_S3', None)
 if STORE_MSG_ON_S3:
     from boto.s3.connection import S3Connection
     from boto.s3.key import Key
+
+    CHUNK_SIZE = 1000
 else:
     from inbox.util.file import mkdirp, remove_file
+
+    _data_file_directory = \
+        lambda h: os.path.join(config.get_required('MSG_PARTS_DIRECTORY'),
+                               h[0], h[1], h[2], h[3], h[4], h[5])
+
+    _data_file_path = lambda h: os.path.join(_data_file_directory(h), h)
 
 
 class Blob(object):
@@ -69,41 +78,6 @@ class Blob(object):
             log.warning('Not saving 0-length {1} {0}'.format(
                 self.id, self.__class__.__name__))
 
-    @data.deleter
-    def data(self):
-        assert self.data_sha256
-
-        # Message deletion via mailsync/ syncback only deletes the Message row
-        # in the database; not the data stored on disk/ in s3.
-        # This might change in the future, but right now deletion of data
-        # occurs via the delete-account-data script /only/.
-        # Since the script deletes all data for the namespace, we can delete
-        # de-duped Blobs if all copies belong to the same namespace.
-        cls = self.__class__
-        with object_session(self).no_autoflush as db_session:
-            q = db_session.query(cls).filter(
-                cls.namespace_id != self.namespace_id,
-                cls.data_sha256 == self.data_sha256)
-            shared = db_session.query(q.exists()).scalar()
-
-        if shared:
-            # De-duplicated across namespaces.
-            # Do /not/ delete data on disk/ in s3, merely set this Blob's
-            # attributes accordingly.
-            log.info('Not deleting {} shared across namespaces'.format(cls))
-
-            self.size = None
-            self.data_sha256 = None
-            return
-
-        if STORE_MSG_ON_S3:
-            self._delete_from_s3()
-        else:
-            self._delete_from_disk()
-
-        self.size = None
-        self.data_sha256 = None
-
     def _save_to_s3(self, data):
         assert 'AWS_ACCESS_KEY_ID' in config, 'Need AWS key!'
         assert 'AWS_SECRET_ACCESS_KEY' in config, 'Need AWS secret!'
@@ -142,29 +116,11 @@ class Blob(object):
 
         return key.get_contents_as_string()
 
-    def _delete_from_s3(self):
-        conn = S3Connection(config.get('AWS_ACCESS_KEY_ID'),
-                            config.get('AWS_SECRET_ACCESS_KEY'))
-        bucket = conn.get_bucket(config.get('MESSAGE_STORE_BUCKET_NAME'),
-                                 validate=False)
-        bucket.delete_key(self.data_sha256)
-
-    # Helpers
-    @property
-    def _data_file_directory(self):
-        # Nest it 6 items deep so we don't have folders with too many files.
-        h = self.data_sha256
-        root = config.get_required('MSG_PARTS_DIRECTORY')
-        return os.path.join(root,
-                            h[0], h[1], h[2], h[3], h[4], h[5])
-
-    @property
-    def _data_file_path(self):
-        return os.path.join(self._data_file_directory, self.data_sha256)
-
     def _save_to_disk(self, data):
-        mkdirp(self._data_file_directory)
-        with open(self._data_file_path, 'wb') as f:
+        directory = _data_file_directory(self.data_sha256)
+        mkdirp(directory)
+
+        with open(_data_file_path(self.data_sha256), 'wb') as f:
             f.write(data)
 
     def _get_from_disk(self):
@@ -172,11 +128,83 @@ class Blob(object):
             return None
 
         try:
-            with open(self._data_file_path, 'rb') as f:
+            with open(_data_file_path(self.data_sha256), 'rb') as f:
                 return f.read()
         except IOError:
             log.error('No file with name: {}!'.format(self.data_sha256))
             return
 
-    def _delete_from_disk(self):
-        remove_file(self._data_file_path)
+
+def delete_blocks(namespace_id):
+    """
+    Delete the namespace's data from the blockstore.
+    USE WITH CAUTION.
+
+    Notes
+    -----
+    Message/ Block deletion via mailsync/ syncback only deletes the
+    Message/ Block row in the database; not the data stored on disk/ in s3.
+    This might change in the future, but right now deletion of data
+    occurs via the delete-account-data script /only/.
+    Since the script deletes all data for the namespace, we can delete
+    de-duped Blobs if all copies belong to the same namespace.
+
+    """
+    from inbox.models.block import Block
+
+    checked = set()
+    delete = []
+
+    with session_scope() as session:
+        q = session.query(Block).filter(Block.namespace_id == namespace_id)
+
+        for block in q.yield_per(CHUNK_SIZE):
+            if block.data_sha256 not in checked:
+                # We haven't checked whether this hash can be deleted.
+                # If it passes the check, add it to the delete list now too.
+                checked.add(block.data_sha256)
+
+                subquery = session.query(Block).filter(
+                    Block.namespace_id != namespace_id,
+                    Block.data_sha256 == block.data_sha256)
+                shared = session.query(subquery.exists()).scalar()
+
+                if not shared:
+                    # /Not/ de-duplicated across namespaces.
+                    # Therefore can be deleted
+                    delete.append(block.data_sha256)
+
+            block.size = None
+            block.data_sha256 = None
+
+        session.commit()
+
+    if STORE_MSG_ON_S3:
+        _delete_from_s3(delete)
+    else:
+        _delete_from_disk(delete)
+
+
+def _delete_from_s3(keys):
+    conn = S3Connection(config.get('AWS_ACCESS_KEY_ID'),
+                        config.get('AWS_SECRET_ACCESS_KEY'))
+    bucket = conn.get_bucket(config.get('MESSAGE_STORE_BUCKET_NAME'),
+                             validate=False)
+
+    print 'keys: ', keys
+
+    # TODO[k]: Rigorous error handling?
+    for key_chunk in chunk(keys, CHUNK_SIZE):
+        result = bucket.delete_keys(list(key_chunk), quiet=True)
+
+        #print 's3 deletion result: ', result.errors
+
+        if result.errors:
+            print 'ERRORS! ', [e.key for e in result.errors]
+            log.error('Failed to delete the following keys: {}'.
+                      format([e.key for e in result.errors]))
+
+
+def _delete_from_disk(keys):
+    for k in keys:
+        remove_file(_data_file_path(k))
