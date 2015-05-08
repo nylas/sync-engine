@@ -1075,7 +1075,6 @@ def draft_send_api():
 ##
 # Client syncing
 ##
-
 @app.route('/delta')
 def sync_deltas():
     g.parser.add_argument('cursor', type=valid_public_id, location='args',
@@ -1106,7 +1105,7 @@ def sync_deltas():
     while time.time() - start_time < LONG_POLL_REQUEST_TIMEOUT:
         with session_scope() as db_session:
             deltas, _ = delta_sync.format_transactions_after_pointer(
-                g.namespace.id, start_pointer, db_session, args['limit'],
+                g.namespace, start_pointer, db_session, args['limit'],
                 exclude_types)
 
         response = {
