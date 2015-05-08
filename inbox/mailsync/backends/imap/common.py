@@ -30,9 +30,6 @@ def all_uids(account_id, session, folder_id):
 def _folders_for_labels(g_labels, account, db_session):
     """Given a set of Gmail label strings, return the set of associated Folder
     objects. Creates new (un-added, uncommitted) Folder instances if needed."""
-    # Elements of g_labels may not have unicode type (in particular, if you
-    # have a numeric label, e.g., '42'), so we need to coerce to unicode.
-    labels = {unicode(l).lstrip('\\').lower() for l in g_labels}
 
     # The problem here is that Gmail's attempt to squash labels and
     # IMAP folders into the same abstraction doesn't work perfectly. In
@@ -50,6 +47,17 @@ def _folders_for_labels(g_labels, account, db_session):
         'important': account.important_folder,
         'trash': account.trash_folder,
     }
+
+    # Elements of g_labels may not have unicode type (in particular, if you
+    # have a numeric label, e.g., '42'), so we need to coerce to unicode.
+    labels = []
+    for l in g_labels:
+        # Preserve the original case unless it's a special folder
+        san = unicode(l).lstrip('\\')
+        if san.lower() in special_folders:
+            labels.append(san.lower())
+        else:
+            labels.append(san)
 
     folders = set()
     for label in labels:

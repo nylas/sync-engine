@@ -65,9 +65,12 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         order)."""
         with mailsync_session_scope() as db_session:
             with _pool(self.account_id).get() as crispin_client:
+                # the folders we should be syncing
                 sync_folders = crispin_client.sync_folders()
+                # get a fresh list of the folder names from the remote
+                remote_folders = crispin_client.folder_names(force_resync=True)
                 save_folder_names(log, self.account_id,
-                                  crispin_client.folder_names(), db_session)
+                                  remote_folders, db_session)
 
             sync_folder_names_ids = []
             for folder_name in sync_folders:

@@ -395,7 +395,7 @@ class CrispinClient(object):
                 to_sync.append(folders[tag])
         return to_sync
 
-    def folder_names(self):
+    def folder_names(self, force_resync=False):
         # Different providers have different names for folders, here
         # we have a default map for common name mapping, additional
         # mappings can be provided via the provider configuration file
@@ -414,7 +414,7 @@ class CrispinClient(object):
         # don't fit into the defaults.
         folder_map = self.provider_info.get('folder_map', {})
 
-        if self._folder_names is None:
+        if force_resync or self._folder_names is None:
             folders = self._fetch_folder_list()
             self._folder_names = dict()
             for flags, delimiter, name in folders:
@@ -737,7 +737,7 @@ class GmailCrispinClient(CondStoreCrispinClient):
         return {uid: ret['X-GM-MSGID']
                 for uid, ret in data.items() if uid in uid_set}
 
-    def folder_names(self):
+    def folder_names(self, force_resync=False):
         """ Parses out Gmail-specific folder names based on Gmail IMAP flags.
 
         If the user's account is localized to a different language, it will
@@ -746,7 +746,7 @@ class GmailCrispinClient(CondStoreCrispinClient):
         Caches the call since we use it all over the place and folders never
         change names during a session.
         """
-        if self._folder_names is None:
+        if force_resync or self._folder_names is None:
             folders = self._fetch_folder_list()
             self._folder_names = dict()
             for flags, delimiter, name in folders:

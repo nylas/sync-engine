@@ -1,4 +1,3 @@
-import pytest
 import datetime
 from inbox.models.account import Account
 from inbox.models.thread import Thread
@@ -23,7 +22,7 @@ def test_recompute_thread_labels(db):
     g_labels.append('Random-label-1')
     recompute_thread_labels(thread, db.session)
     folders = {folder.name: folder for folder in thread.folders}
-    assert 'random-label-1' in folders
+    assert 'Random-label-1' in folders
 
 
 def test_recompute_thread_labels_removes_trash(db):
@@ -53,14 +52,15 @@ def test_adding_message_to_thread(db):
     account.namespace.create_canonical_tags()
     thread = db.session.query(Thread).get(THREAD_ID)
     account.trash_folder = Folder(name='Trash', account=account)
-    fld_item = FolderItem(thread=thread, folder=account.trash_folder)
+    FolderItem(thread=thread, folder=account.trash_folder)
 
     folder_names = [folder.name for folder in thread.folders]
     m = Message(namespace_id=account.namespace.id, subject='test message',
                 thread_id=thread.id, received_date=datetime.datetime.now(),
                 size=64, sanitized_body="body", snippet="snippet")
 
-    uid = ImapUid(account=account, message=m, g_labels=['\\Inbox', 'test-label'],
+    uid = ImapUid(account=account, message=m,
+                  g_labels=['\\Inbox', 'test-label'],
                   msg_uid=22L, folder_id=account.inbox_folder.id)
     uid.folder = account.inbox_folder
     uid2 = ImapUid(account=account, message=m, g_labels=['test-2'],
