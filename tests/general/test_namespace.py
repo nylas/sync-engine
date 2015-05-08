@@ -1,7 +1,5 @@
 from pytest import yield_fixture
 
-from inbox.models import *
-
 from tests.util.base import TestDB, absolute_path
 
 
@@ -15,6 +13,9 @@ def latest_db(config):
 
 
 def test_namespace_deletion(latest_db):
+    from inbox.models import *
+    from inbox.models.util import delete_namespace
+
     namespace = latest_db.session.query(Namespace).first()
     namespace_id = namespace.id
 
@@ -28,11 +29,8 @@ def test_namespace_deletion(latest_db):
         assert latest_db.session.query(m).filter(
             m.namespace_id == namespace_id).count() != 0
 
-    # Delete
-    latest_db.session.execute(
-        '''DELETE FROM message WHERE namespace_id = :namespace_id;''',
-        {'namespace_id': namespace_id})
-    latest_db.session.delete(account)
+    # Delete namespace
+    delete_namespace(namespace_id)
     latest_db.session.commit()
 
     account = latest_db.session.query(Account).get(account_id)

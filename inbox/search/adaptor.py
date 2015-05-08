@@ -114,13 +114,14 @@ class NamespaceSearchEngine(object):
         Delete the index for the namespace.
         Use with care.
 
-        Raises SearchEngineError if deletion fails.
+        Raises SearchEngineError if deletion fails for any error except
+        'IndexNotFound' (ignores).
 
         """
         self.log.info('delete_index')
 
         # TODO[k]: Rigorous error handling?
-        self._connection.indices.delete(index=[self.index_id])
+        self._connection.indices.delete(index=[self.index_id], ignore=[404])
 
     @wrap_es_errors
     def refresh_index(self):

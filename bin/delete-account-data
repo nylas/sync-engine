@@ -14,26 +14,26 @@ USE WITH CAUTION.
 import click
 
 from inbox.models.session import session_scope
-from inbox.models import Namespace
-from inbox.models.util import delete_blocks, delete_namespace
+from inbox.models import Account
 from inbox.search.util import delete_index
+from inbox.models.roles import delete_blocks
+from inbox.models.util import delete_namespace
 
 
 @click.command()
-@click.argument('namespace_id')
-def delete_account_data(namespace_id):
+@click.argument('account_id', type=int)
+def delete_account_data(account_id):
     with session_scope() as db_session:
-        namespace = db_session.query(Namespace).get(namespace_id)
-        namespace_public_id = namespace.public_id
-
-        account = namespace.account
-
-        account_id = account.id
+        account = db_session.query(Account).get(account_id)
         email_address = account.email_address
 
+        namespace = account.namespace
+        namespace_id = namespace.id
+        namespace_public_id = namespace.public_id
+
         if account.sync_should_run or not account.is_deleted:
-            'Account with id: {}, email_address: {} and namespace_id: {} '
-            'NOT marked for deletion. Will NOT delete, goodbye. '.\
+            print 'Account with id: {}, email_address: {} and namespace_id: {} '\
+                'NOT marked for deletion.\nWill NOT delete, goodbye. '.\
                 format(account_id, email_address, namespace_id)
 
             return

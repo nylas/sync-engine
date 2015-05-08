@@ -9,14 +9,14 @@ log = get_logger()
 from inbox.models.session import session_scope
 from inbox.util.itert import chunk
 
+CHUNK_SIZE = 1000
+
 # TODO: store AWS credentials in a better way.
 STORE_MSG_ON_S3 = config.get('STORE_MESSAGES_ON_S3', None)
 
 if STORE_MSG_ON_S3:
     from boto.s3.connection import S3Connection
     from boto.s3.key import Key
-
-    CHUNK_SIZE = 1000
 else:
     from inbox.util.file import mkdirp, remove_file
 
