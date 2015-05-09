@@ -8,33 +8,30 @@ from tests.util.crispin import crispin_client
 
 
 @pytest.fixture
-def example_draft(db):
-    from inbox.models import Account
-    account = db.session.query(Account).get(1)
+def example_draft(db, default_account):
     return {
         'subject': 'Draft test at {}'.format(datetime.utcnow()),
         'body': '<html><body><h2>Sea, birds and sand.</h2></body></html>',
         'to': [{'name': 'The red-haired mermaid',
-                'email': account.email_address}]
+                'email': default_account.email_address}]
     }
 
 
 def test_send_draft(db, api_client, example_draft, default_account):
-    """ Tests the save_draft function, which saves the draft to the remote. """
-    from inbox.actions import _send
 
     r = api_client.post_data('/drafts', example_draft)
     assert r.status_code == 200
-
     public_id = json.loads(r.data)['id']
+    version = json.loads(r.data)['version']
 
-    r = api_client.get_data('/drafts')
-    matching_saved_drafts = [draft for draft in r if draft['id'] == public_id]
-    assert len(matching_saved_drafts) == 1
-    draft = matching_saved_drafts[0]
+    r = api_client.post_data('/send', {'draft_id': public_id,
+                                       'version': version})
+    assert r.status_code == 200
 
-    sent = _send(default_account.id, draft.id, db.session)
-    assert not sent.is_draft and sent.state == 'sent'
+    draft = api_client.get_data('/drafts/{}'.format(public_id))
+    assert draft is not None
+
+    assert draft['object'] != 'draft'
 
     with crispin_client(default_account.id, default_account.provider) as c:
         criteria = ['NOT DELETED', 'SUBJECT "{0}"'.format(
