@@ -87,7 +87,6 @@ def test_client(db):
         yield c
 
 
-# TODO(emfree) can we make this into a yield_fixture without the tests hanging?
 @yield_fixture
 def api_client(db):
     from inbox.api.srv import app
