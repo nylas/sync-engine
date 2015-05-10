@@ -23,8 +23,7 @@ def stub_message_from_raw(db, new_message_from_synced):
 def test_rfc822_format(stub_message_from_raw, api_client):
     """ Test the API response to retreive raw message contents """
     full_path = api_client.full_path('/messages/{}'.format(
-        stub_message_from_raw.public_id),
-        ns_id=stub_message_from_raw.namespace_id)
+        stub_message_from_raw.public_id))
 
     results = api_client.client.get(full_path,
                                     headers={'Accept': 'message/rfc822'})
@@ -84,8 +83,7 @@ bicycle rights. Thundercats kale chips church-key American Apparel.
 
 def test_sender_and_participants(stub_message, api_client):
     resp = api_client.client.get(api_client.full_path(
-        '/threads/{}'.format(stub_message.thread.public_id),
-        ns_id=stub_message.namespace_id))
+        '/threads/{}'.format(stub_message.thread.public_id)))
     assert resp.status_code == 200
     resp_dict = json.loads(resp.data)
     participants = resp_dict['participants']
@@ -124,16 +122,14 @@ def test_expanded_threads(stub_message, api_client):
 
     # /threads/<thread_id>
     resp = api_client.client.get(api_client.full_path(
-        '/threads/{}?view=expanded'.format(stub_message.thread.public_id),
-        ns_id=stub_message.namespace_id))
+        '/threads/{}?view=expanded'.format(stub_message.thread.public_id)))
     assert resp.status_code == 200
     resp_dict = json.loads(resp.data)
     _check_json_thread(resp_dict)
 
     # /threads/
     resp = api_client.client.get(api_client.full_path(
-        '/threads/?view=expanded'.format(stub_message.thread.public_id),
-        ns_id=stub_message.namespace_id))
+        '/threads/?view=expanded'.format(stub_message.thread.public_id)))
     assert resp.status_code == 200
     resp_dict = json.loads(resp.data)
 

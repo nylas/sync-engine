@@ -16,8 +16,7 @@ def test_rfc822_format(db, api_client, new_message_from_synced):
     db.session.add_all([new_msg, fake_thread])
     db.session.commit()
 
-    full_path = api_client.full_path('/messages/{}'.format(new_msg.public_id),
-                                     ns_id=NAMESPACE_ID)
+    full_path = api_client.full_path('/messages/{}'.format(new_msg.public_id))
 
     results = api_client.client.get(full_path,
                                     headers={'Accept': 'message/rfc822'})

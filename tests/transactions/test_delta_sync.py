@@ -17,7 +17,7 @@ def test_invalid_input(api_client):
     assert cursor_response.status_code == 400
 
     sync_response = api_client.client.get(api_client.full_path(
-        '/delta?cursor={}'.format('fake cursor'), 1))
+        '/delta?cursor={}'.format('fake cursor')))
     assert sync_response.status_code == 400
 
 

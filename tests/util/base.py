@@ -99,46 +99,45 @@ class TestAPIClient(object):
     """Provide more convenient access to the API for testing purposes."""
     def __init__(self, test_client):
         self.client = test_client
-        self.ns_public_ids = {}
+        self.default_ns_public_id = None
 
-    def full_path(self, path, ns_id=1):
-        """
-        For testing purposes, replace a path such as '/tags' by
-        '/n/<ns_id>/tags', where <ns_id> is the id of the first result of a
-        call to '/n/'.
+    def full_path(self, path, ns_public_id=None):
+        """ Replace a path such as `/tags` by `/n/<ns_public_id>/tags`.
 
+        If no `ns_public_id` is specified, uses the id of the first namespace
+        returned by a call to `/n/`.
         """
-        if ns_id in self.ns_public_ids:
-            ns_public_id = self.ns_public_ids[ns_id]
-        else:
-            # Get the public id corresponding to ns_id and cache it for future
-            # use.
-            ns_public_id = json.loads(self.client.get('/n/').data)[0]['id']
-            self.ns_public_ids[ns_id] = ns_public_id
+        if ns_public_id is None:
+            if self.default_ns_public_id is None:
+                self.default_ns_public_id = ns_public_id = \
+                    json.loads(self.client.get('/n/').data)[0]['id']
+            else:
+                ns_public_id = self.default_ns_public_id
+
         return '/n/{}'.format(ns_public_id) + path
 
-    def get_raw(self, short_path, ns_id=1):
-        path = self.full_path(short_path, ns_id)
+    def get_raw(self, short_path, ns_public_id=None):
+        path = self.full_path(short_path, ns_public_id)
         return self.client.get(path)
 
-    def get_data(self, short_path, ns_id=1):
-        path = self.full_path(short_path, ns_id)
+    def get_data(self, short_path, ns_public_id=None):
+        path = self.full_path(short_path, ns_public_id)
         return json.loads(self.client.get(path).data)
 
-    def post_data(self, short_path, data, ns_id=1):
-        path = self.full_path(short_path, ns_id)
+    def post_data(self, short_path, data, ns_public_id=None):
+        path = self.full_path(short_path, ns_public_id)
         return self.client.post(path, data=json.dumps(data))
 
-    def post_raw(self, short_path, data, ns_id=1, headers=''):
-        path = self.full_path(short_path, ns_id)
+    def post_raw(self, short_path, data, ns_public_id=None, headers=''):
+        path = self.full_path(short_path, ns_public_id)
         return self.client.post(path, data=data, headers=headers)
 
-    def put_data(self, short_path, data, ns_id=1):
-        path = self.full_path(short_path, ns_id)
+    def put_data(self, short_path, data, ns_public_id=None):
+        path = self.full_path(short_path, ns_public_id)
         return self.client.put(path, data=json.dumps(data))
 
-    def delete(self, short_path, data=None, ns_id=1):
-        path = self.full_path(short_path, ns_id)
+    def delete(self, short_path, data=None, ns_public_id=None):
+        path = self.full_path(short_path, ns_public_id)
         return self.client.delete(path, data=json.dumps(data))
 
 

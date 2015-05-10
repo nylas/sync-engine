@@ -1,17 +1,11 @@
-from inbox.models import Account, Calendar
-from tests.util.base import api_client
+from inbox.models import Calendar
+from tests.util.base import api_client, default_account
 
 __all__ = ['api_client']
 
 
-ACCOUNT_ID = 1
-
-
-def test_api_list(db, api_client):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
-    calendar_list = api_client.get_data('/calendars', ns_id)
+def test_api_list(db, default_account, api_client):
+    calendar_list = api_client.get_data('/calendars')
 
     cal = None
     for c in calendar_list:
@@ -21,14 +15,12 @@ def test_api_list(db, api_client):
     assert cal['object'] == 'calendar'
     assert cal['name'] == 'default'
     assert cal['read_only'] is False
-    assert cal['namespace_id'] == ns_id
+    assert cal['namespace_id'] == default_account.namespace.public_id
 
 
-def test_get_calendar(db, api_client):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
+def test_get_calendar(db, default_account, api_client):
     cal = Calendar(
-        namespace_id=acct.namespace.id,
+        namespace_id=default_account.namespace.id,
         uid='uid',
         provider_name='WTF',
         name='Holidays')
@@ -36,8 +28,8 @@ def test_get_calendar(db, api_client):
     db.session.commit()
     cal_id = cal.public_id
 
-    resp_data = api_client.get_data('/calendars/' + cal_id, ns_id)
-    assert resp_data['namespace_id'] == ns_id
+    resp_data = api_client.get_data('/calendars/' + cal_id)
+    assert resp_data['namespace_id'] == default_account.namespace.public_id
     assert resp_data['name'] == 'Holidays'
     assert resp_data['description'] is None
     assert resp_data['read_only'] is False
@@ -49,11 +41,9 @@ def test_handle_not_found_calendar(api_client):
     assert resp_data.status_code == 404
 
 
-def test_add_to_specific_calendar(db, api_client):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
+def test_add_to_specific_calendar(db, default_account, api_client):
     cal = Calendar(
-        namespace_id=acct.namespace.id,
+        namespace_id=default_account.namespace.id,
         uid='uid',
         provider_name='WTF',
         name='Custom')
@@ -64,7 +54,7 @@ def test_add_to_specific_calendar(db, api_client):
     e_data = {'calendar_id': cal_id,
               'title': 'subj', 'description': 'body1',
               'when': {'time': 1}, 'location': 'InboxHQ'}
-    r = api_client.post_data('/events', e_data, ns_id)
+    r = api_client.post_data('/events', e_data)
     assert r.status_code == 200
 
     events = api_client.get_data('/events?calendar_id={}'.format(cal_id))
@@ -72,10 +62,7 @@ def test_add_to_specific_calendar(db, api_client):
 
 
 def test_add_to_read_only_calendar(db, api_client):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
-    cal_list = api_client.get_data('/calendars', ns_id)
+    cal_list = api_client.get_data('/calendars')
     assert len(cal_list) == 2
     ro_cal = None
     for c in cal_list:
@@ -87,14 +74,12 @@ def test_add_to_read_only_calendar(db, api_client):
     e_data = {'calendar_id': ro_cal['id'],
               'title': 'subj', 'description': 'body1',
               'when': {'time': 1}, 'location': 'InboxHQ'}
-    resp = api_client.post_data('/events', e_data, ns_id)
+    resp = api_client.post_data('/events', e_data)
     assert resp.status_code == 400
 
 
 def test_delete_from_readonly_calendar(db, api_client):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-    calendar_list = api_client.get_data('/calendars', ns_id)
+    calendar_list = api_client.get_data('/calendars')
 
     read_only_calendar = None
     for c in calendar_list:
@@ -111,5 +96,5 @@ def test_delete_from_readonly_calendar(db, api_client):
     assert read_only_calendar
     assert read_only_event
     e_id = read_only_event['id']
-    resp = api_client.delete('/events/' + e_id, ns_id=ns_id)
+    resp = api_client.delete('/events/{}'.format(e_id))
     assert resp.status_code == 400
