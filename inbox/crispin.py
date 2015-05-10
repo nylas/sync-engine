@@ -477,12 +477,23 @@ class CrispinClient(object):
         # these is a problem, we can either switch back to searching for
         # 'UNDELETED' or doing a fetch for ['UID', 'FLAGS'] and filtering.
 
-        t = time.time()
-        fetch_result = self.conn.search(['ALL'])
+        try:
+            t = time.time()
+            fetch_result = self.conn.search(['ALL'])
+        except imaplib.IMAP4.error as e:
+            # Mail2World servers fail for the valid command 'UID SEARCH ALL'
+            # but strangely pass for 'UID SEARCH ALL UID'
+            self.log.debug("Getting UIDs failed when using 'UID SEARCH ALL'. "
+                           "Switching to alternative 'UID SEARCH ALL UID",
+                           exception=e)
+            t = time.time()
+            fetch_result = self.conn.search(['ALL', 'UID'])
+
         elapsed = time.time() - t
-        self.log.debug('Searching for `ALL` when getting UIDs',
-                         search_time=elapsed,
-                         total_uids=len(fetch_result))
+        self.log.debug('Requested all UIDs',
+                        selected_folder=self.selected_folder_name,
+                        search_time=elapsed,
+                        total_uids=len(fetch_result))
         return sorted([long(uid) for uid in fetch_result])
 
     def uids(self, uids):
