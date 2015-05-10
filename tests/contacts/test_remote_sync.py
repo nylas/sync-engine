@@ -90,7 +90,7 @@ def test_deletes(contacts_provider, contact_sync, db):
     assert num_current_contacts == num_original_contacts
 
 
-def test_auth_error_handling(contact_sync, db):
+def test_auth_error_handling(contact_sync, default_account, db):
     """Test that the contact sync greenlet stops if account credentials are
     invalid."""
     # Give the default test account patently invalid OAuth credentials.
