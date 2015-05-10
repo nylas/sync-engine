@@ -481,13 +481,16 @@ class CrispinClient(object):
             t = time.time()
             fetch_result = self.conn.search(['ALL'])
         except imaplib.IMAP4.error as e:
-            # Mail2World servers fail for the valid command 'UID SEARCH ALL'
-            # but strangely pass for 'UID SEARCH ALL UID'
-            self.log.debug("Getting UIDs failed when using 'UID SEARCH ALL'. "
-                           "Switching to alternative 'UID SEARCH ALL UID",
-                           exception=e)
-            t = time.time()
-            fetch_result = self.conn.search(['ALL', 'UID'])
+            if e.message.find('UID SEARCH wrong arguments passed') >= 0:
+                # Mail2World servers fail for the otherwise valid command
+                # 'UID SEARCH ALL' but strangely pass for 'UID SEARCH ALL UID'
+                self.log.debug("Getting UIDs failed when using 'UID SEARCH "
+                               "ALL'. Switching to alternative 'UID SEARCH "
+                               "ALL UID", exception=e)
+                t = time.time()
+                fetch_result = self.conn.search(['ALL', 'UID'])
+            else:
+                raise
 
         elapsed = time.time() - t
         self.log.debug('Requested all UIDs',
