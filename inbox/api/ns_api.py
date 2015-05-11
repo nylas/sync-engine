@@ -399,7 +399,7 @@ def thread_api_update(public_id):
         if tag is None:
             raise NotFoundError("Couldn't find tag {}".format(tag_identifier))
         if not tag.user_addable:
-            raise InputError('Cannot remove tag {}'.format(tag_identifier))
+            raise InputError('Cannot add tag {}'.format(tag_identifier))
 
         try:
             thread.apply_tag(tag, execute_action=True)
