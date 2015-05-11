@@ -1,7 +1,12 @@
+import ssl
+import sys
 import base64
+import socket
 import itertools
 
 import smtplib
+
+import requests
 
 from inbox.log import get_logger
 from inbox.models.session import session_scope
@@ -19,6 +24,7 @@ AUTH_EXTNS = {'oauth2': 'XOAUTH2',
 
 SMTP_MAX_RETRIES = 1
 SMTP_OVER_SSL_PORT = 465
+SMTP_OVER_SSL_TEST_PORT = 64465
 
 # Relevant protocol constants; see
 # https://tools.ietf.org/html/rfc4954 and
@@ -26,6 +32,83 @@ SMTP_OVER_SSL_PORT = 465
 SMTP_AUTH_SUCCESS = 235
 SMTP_AUTH_CHALLENGE = 334
 SMTP_TEMP_AUTH_FAIL = 454
+
+
+def ssl_wrap_socket(sock, server_hostname):
+    """ SSL-enable the given socket, requiring valid certs (incl. hostnames).
+
+    Supports certificate verification and hostname-checking on Python 2.7.x,
+    as well as SNI on 2.7.9.
+    """
+    try:
+        # In Python 2.7.9, this context sets good options (disabling buggy
+        # versions of the SSL protocol, etc.), requires a valid certificate,
+        # and verifies hostnames match. Supports SNI.
+        context = ssl.create_default_context()
+        return context.wrap_socket(sock, server_hostname=server_hostname)
+    except AttributeError:
+        # All previous versions: requires a valid certificate and verifies
+        # hostnames match, but does not support SNI. SSL options subject to
+        # whichever version of Python being run on, as SSL Contexts weren't
+        # added until 2.7.9.
+        #
+        # Using requests' CA bundle liberates us from the woes of having to
+        # figure out where the system CA bundle is.
+        return ssl.wrap_socket(sock,
+                               cert_reqs=ssl.CERT_REQUIRED,
+                               ca_certs=requests.certs.where())
+
+
+class SMTP_SSL_VerifyCerts(smtplib.SMTP_SSL):
+    """ Derived class which connects via SSL (not starttls) and actually
+        verifies SSL certificates on Python 2.
+    """
+    def connect(self, host, port):
+        self._server_hostname = host
+        smtplib.SMTP_SSL.connect(self, host, port)
+
+    def _get_socket(self, host, port, timeout):
+        """ Code copied directly from Python 2.7.(3-9) (same code) with
+            modifications to verify certificates.
+        """
+        if self.debuglevel > 0:
+            print>>sys.stderr, 'connect:', (host, port)
+        new_socket = socket.create_connection((host, port), timeout)
+        new_socket = ssl_wrap_socket(new_socket,
+                                     server_hostname=self._server_hostname)
+        self.file = smtplib.SSLFakeFile(new_socket)
+        return new_socket
+
+
+class SMTP_VerifyCerts(smtplib.SMTP):
+    """ Derived class which connects via starttls and actually
+        verifies SSL certificates on Python 2.
+    """
+    def connect(self, host, port):
+        self._server_hostname = host
+        smtplib.SMTP.connect(self, host, port)
+
+    def starttls(self):
+        """ Code copied directly from Python 2.7.(3-9) (same code) with
+            modifications to verify certificates.
+        """
+        self.ehlo_or_helo_if_needed()
+        if not self.has_extn("starttls"):
+            raise smtplib.SMTPException(
+                "STARTTLS extension not supported by server.")
+        (resp, reply) = self.docmd("STARTTLS")
+        if resp == 220:
+            self.sock = ssl_wrap_socket(self.sock, self._server_hostname)
+            self.file = smtplib.SSLFakeFile(self.sock)
+            # RFC 3207:
+            # The client MUST discard any knowledge obtained from
+            # the server, such as the list of SMTP service extensions,
+            # which was not obtained from the TLS negotiation itself.
+            self.helo_resp = None
+            self.ehlo_resp = None
+            self.esmtp_features = {}
+            self.does_esmtp = 0
+        return (resp, reply)
 
 
 class SMTPConnection(object):
@@ -51,19 +134,33 @@ class SMTPConnection(object):
         except smtplib.SMTPServerDisconnected:
             return
 
+    def _connect(self, host, port):
+        """ Connect, with error-handling """
+        try:
+            self.connection.connect(host, port)
+        except socket.error as e:
+            # clean up errors like:
+            # _ssl.c:510: error:14090086:SSL routines:SSL3_GET_SERVER_CERTIFICATE:certificate verify failed
+            if e.strerror.endswith('certificate verify failed'):
+                msg = 'SSL certificate verify failed'
+            else:
+                # 'Connection refused', etc.
+                msg = e.strerror
+            raise SendMailException(msg, 503)
+
     def setup(self):
         host, port = self.smtp_endpoint
-        if port == SMTP_OVER_SSL_PORT:
-            self.connection = smtplib.SMTP_SSL()
-            self.connection.connect(host, port)
+        if port in (SMTP_OVER_SSL_PORT, SMTP_OVER_SSL_TEST_PORT):
+            self.connection = SMTP_SSL_VerifyCerts()
+            self._connect(host, port)
         else:
-            self.connection = smtplib.SMTP()
-            self.connection.connect(host, port)
+            self.connection = SMTP_VerifyCerts()
+            self._connect(host, port)
             # Put the SMTP connection in TLS mode
             self.connection.ehlo()
             if not self.connection.has_extn('starttls'):
                 raise SendMailException('Required SMTP STARTTLS not '
-                                        'supported.')
+                                        'supported.', 403)
             self.connection.starttls()
 
         # Auth the connection
@@ -75,14 +172,14 @@ class SMTPConnection(object):
 
         # Auth mechanisms supported by the server
         if not c.has_extn('auth'):
-            raise SendMailException('Required SMTP AUTH not supported.')
+            raise SendMailException('Required SMTP AUTH not supported.', 403)
 
         supported_types = c.esmtp_features['auth'].strip().split()
 
         # Auth mechanism needed for this account
         if AUTH_EXTNS.get(self.auth_type) not in supported_types:
             raise SendMailException(
-                'Required SMTP Auth mechanism not supported.')
+                'Required SMTP Auth mechanism not supported.', 403)
 
         auth_handler = self.auth_handlers.get(self.auth_type)
         auth_handler()
