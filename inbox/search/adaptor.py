@@ -4,6 +4,7 @@ import functools
 import elasticsearch
 from elasticsearch.helpers import bulk
 
+from inbox.api.kellogs import encode
 from inbox.config import config
 from inbox.log import get_logger
 log = get_logger()
@@ -23,6 +24,16 @@ from inbox.search.mappings import NAMESPACE_INDEX_MAPPING
 # es_logger.propagate = False
 
 
+class Serializer(elasticsearch.serializer.JSONSerializer):
+    """Override the Elasticsearch client's default serializer so that we
+    serialize datetimes as Unix timestamps."""
+    def default(self, data):
+        serialized = encode(data)
+        if serialized is not None:
+            return serialized
+        raise TypeError
+
+
 class SearchEngineError(Exception):
     """ Raised when connecting to the Elasticsearch server fails. """
     pass
@@ -36,7 +47,8 @@ def new_connection():
     elasticsearch_hosts = config.get('ELASTICSEARCH_HOSTS')
     if not elasticsearch_hosts:
         raise SearchEngineError('No search hosts configured')
-    return elasticsearch.Elasticsearch(hosts=elasticsearch_hosts)
+    return elasticsearch.Elasticsearch(hosts=elasticsearch_hosts,
+                                       serializer=Serializer())
 
 
 def wrap_es_errors(func):
