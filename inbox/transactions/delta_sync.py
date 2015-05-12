@@ -222,4 +222,5 @@ def streaming_change_generator(namespace, poll_interval, timeout,
             for delta in deltas:
                 yield encoder.cereal(delta) + '\n'
         else:
+            yield '\n'
             gevent.sleep(poll_interval)
