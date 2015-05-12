@@ -56,7 +56,7 @@ def test_empty_response_when_latest_cursor_given(db, api_prefix,
                                   'cursor': cursor})
     r = streaming_test_client.get(url)
     assert r.status_code == 200
-    assert r.data == ''
+    assert r.data.strip() == ''
 
 
 def test_gracefully_handle_new_namespace(db, streaming_test_client):
