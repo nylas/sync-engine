@@ -191,7 +191,7 @@ def format_transactions_after_pointer(namespace, pointer, db_session,
     return (deltas, results[-1][0])
 
 
-def streaming_change_generator(namespace_id, poll_interval, timeout,
+def streaming_change_generator(namespace, poll_interval, timeout,
                                transaction_pointer, exclude_types=None):
     """
     Poll the transaction log for the given `namespace_id` until `timeout`
@@ -213,7 +213,6 @@ def streaming_change_generator(namespace_id, poll_interval, timeout,
     start_time = time.time()
     while time.time() - start_time < timeout:
         with session_scope() as db_session:
-            namespace = db_session.query(Namespace).get(namespace_id)
             deltas, new_pointer = format_transactions_after_pointer(
                 namespace, transaction_pointer, db_session, 100,
                 exclude_types)

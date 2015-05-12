@@ -1171,9 +1171,10 @@ def stream_changes():
 
     # Hack to not keep a database session open for the entire (long) request
     # duration.
+    g.db_session.expunge(g.namespace)
     g.db_session.close()
     # TODO make transaction log support the `expand` feature
     generator = delta_sync.streaming_change_generator(
-        g.namespace.id, transaction_pointer=transaction_pointer,
+        g.namespace, transaction_pointer=transaction_pointer,
         poll_interval=1, timeout=timeout, exclude_types=exclude_types)
     return Response(generator, mimetype='text/event-stream')
