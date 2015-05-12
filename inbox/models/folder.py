@@ -39,7 +39,7 @@ class Folder(MailSyncBase):
     identifier = Column(String(MAX_FOLDER_NAME_LENGTH), nullable=True)
 
     __table_args__ = (UniqueConstraint('account_id', 'name',
-                                       'canonical_name', 'identifier'),)
+                                       name='account_id_2'),)
 
     @property
     def lowercase_name(self):
