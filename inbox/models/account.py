@@ -282,6 +282,12 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
         return self.sync_state == 'running'
 
     @property
+    def is_deleted(self):
+        return self.sync_state == 'stopped' and \
+            self.sync_should_run is False and \
+            self._sync_status.get('sync_disabled_reason') == 'account deleted'
+
+    @property
     def is_sync_locked(self):
         return self._sync_lock.locked()
 

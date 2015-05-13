@@ -1,25 +1,14 @@
 # -*- coding: utf-8 -*-
 """Sanity-check our construction of a Message object from raw synced data."""
 import datetime
-import os
 import pytest
 from flanker import mime
 from inbox.models import Message
 from inbox.util.addr import parse_mimepart_address_header
-from tests.util.base import default_account, default_namespace, thread
+from tests.util.base import (default_account, default_namespace, thread,
+                             full_path, new_message_from_synced)
 
-__all__ = ['default_namespace', 'thread']
-
-
-def full_path(relpath):
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), relpath)
-
-
-@pytest.fixture
-def raw_message():
-    raw_msg_path = full_path('../data/raw_message')
-    with open(raw_msg_path) as f:
-        return f.read()
+__all__ = ['default_namespace', 'thread', 'default_account']
 
 
 @pytest.fixture
@@ -65,21 +54,9 @@ def raw_message_with_bad_attachment():
         return f.read()
 
 
-@pytest.fixture
-def new_message_from_synced(db):
-    received_date = datetime.datetime(2014, 9, 22, 17, 25, 46)
-    new_msg = Message.create_from_synced(default_account(db),
-                                         139219,
-                                         '[Gmail]/All Mail',
-                                         received_date,
-                                         raw_message())
-    assert new_msg.received_date == received_date
-    return new_msg
-
-
 def test_message_from_synced(db, default_account, default_namespace,
                              raw_message):
-    m = new_message_from_synced(db)
+    m = new_message_from_synced(db, default_account, raw_message)
     assert m.namespace_id == default_namespace.id
     assert sorted(m.to_addr) == [(u'', u'csail-all.lists@mit.edu'),
                                  (u'', u'csail-announce@csail.mit.edu'),

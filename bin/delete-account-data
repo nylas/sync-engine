@@ -1,0 +1,80 @@
+#!/usr/bin/env python
+"""
+Deletes an account's data permanently.
+
+Includes:
+* Data indexed for search (in Elasticsearch).
+* All data in the database.
+* Account liveness/status data (in Redis).
+
+USE WITH CAUTION.
+
+"""
+import click
+
+from inbox.models.session import session_scope
+from inbox.models import Account
+from inbox.search.util import delete_index
+from inbox.models.util import delete_namespace
+from inbox.heartbeat.status import clear_heartbeat_status
+
+
+@click.command()
+@click.argument('account_id', type=int)
+def delete_account_data(account_id):
+    with session_scope() as db_session:
+        account = db_session.query(Account).get(account_id)
+        email_address = account.email_address
+
+        namespace = account.namespace
+        namespace_id = namespace.id
+        namespace_public_id = namespace.public_id
+
+        if account.sync_should_run or not account.is_deleted:
+            print 'Account with id: {}, email_address: {} and namespace_id: {} '\
+                'NOT marked for deletion.\nWill NOT delete, goodbye. '.\
+                format(account_id, email_address, namespace_id)
+            return -1
+
+    question = 'Are you sure you want to delete all data for account with '\
+               'id: {}, email_address: {} and namespace_id: {}? [yes / no]'.\
+               format(account_id, email_address, namespace_id)
+
+    answer = raw_input(question).strip().lower()
+
+    if answer != 'yes':
+        print 'Will NOT delete, goodbye.'
+        return 0
+
+    print 'Deleting...'
+
+    # Delete search data
+    try:
+        print 'Deleting search data -'
+        delete_index(namespace_id, namespace_public_id)
+        print 'Search data deleted.'
+    except Exception as e:
+        error = 'Deletion of search data failed! Error: {}'\
+            '\nWill NOT delete from database, goodbye.'.format(str(e))
+
+        print error
+        return -1
+
+    # Delete data in database
+    try:
+        print 'Deleting database data -'
+        delete_namespace(account_id, namespace_id)
+        print 'Database data deleted.'
+    except Exception as e:
+        print 'Database data deletion failed! Error: {}'.format(str(e))
+        return -1
+
+    # Delete liveness data
+    clear_heartbeat_status(account_id)
+
+    print 'All data deleted successfully!'
+    return 0
+
+
+if __name__ == '__main__':
+    delete_account_data()

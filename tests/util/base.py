@@ -394,3 +394,26 @@ def imapuid(db, default_account, message, folder):
 @fixture(scope='function')
 def calendar(db, default_account):
     return add_fake_calendar(db.session, default_account.namespace.id)
+
+
+def full_path(relpath):
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), relpath)
+
+
+@fixture
+def raw_message():
+    raw_msg_path = full_path('../data/raw_message')
+    with open(raw_msg_path) as f:
+        return f.read()
+
+
+def new_message_from_synced(db, account, raw_message):
+    from inbox.models import Message
+    received_date = datetime(2014, 9, 22, 17, 25, 46)
+    new_msg = Message.create_from_synced(account,
+                                         139219,
+                                         '[Gmail]/All Mail',
+                                         received_date,
+                                         raw_message)
+    assert new_msg.received_date == received_date
+    return new_msg

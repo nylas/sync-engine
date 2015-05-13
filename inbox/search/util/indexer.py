@@ -10,7 +10,6 @@ from inbox.models import Namespace, Thread, Message
 from inbox.api.kellogs import encode
 from inbox.search.adaptor import NamespaceSearchEngine
 from inbox.sqlalchemy_ext.util import safer_yield_per
-from inbox.transactions.search import _process_attributes
 
 CHUNK_SIZE = 500
 
@@ -71,7 +70,8 @@ def index_threads(namespace_id, namespace_public_id, created_before=None):
         created_before = dateutil.parser.parse(created_before)
 
     indexed_count = 0
-    search_engine = NamespaceSearchEngine(namespace_public_id)
+    search_engine = NamespaceSearchEngine(namespace_public_id,
+                                          create_index=True)
 
     with session_scope() as db_session:
         query = db_session.query(Thread).filter(
@@ -89,9 +89,7 @@ def index_threads(namespace_id, namespace_public_id, created_before=None):
 
         encoded = []
         for obj in safer_yield_per(query, Thread.id, 0, CHUNK_SIZE):
-            encoded_obj = encode(obj, namespace_public_id=namespace_public_id)
-            index_obj = _process_attributes(encoded_obj)
-
+            index_obj = encode(obj, namespace_public_id=namespace_public_id)
             encoded.append(('index', index_obj))
 
     log.info('Going to index threads', namespace_id=namespace_id,
@@ -112,7 +110,8 @@ def index_messages(namespace_id, namespace_public_id, created_before=None):
         created_before = dateutil.parser.parse(created_before)
 
     indexed_count = 0
-    search_engine = NamespaceSearchEngine(namespace_public_id)
+    search_engine = NamespaceSearchEngine(namespace_public_id,
+                                          create_index=True)
 
     with session_scope() as db_session:
         query = db_session.query(Message).filter(
@@ -126,9 +125,7 @@ def index_messages(namespace_id, namespace_public_id, created_before=None):
 
         encoded = []
         for obj in safer_yield_per(query, Message.id, 0, CHUNK_SIZE):
-            encoded_obj = encode(obj, namespace_public_id=namespace_public_id)
-            index_obj = _process_attributes(encoded_obj)
-
+            index_obj = encode(obj, namespace_public_id=namespace_public_id)
             encoded.append(('index', index_obj))
 
     log.info('Going to index messages', namespace_id=namespace_id,
@@ -144,8 +141,14 @@ def index_messages(namespace_id, namespace_public_id, created_before=None):
 
 
 def delete_index(namespace_id, namespace_public_id):
-    """ Delete a namespace index. """
+    """
+    Delete a namespace index.
+    USE WITH CAUTION.
+
+    """
     search_engine = NamespaceSearchEngine(namespace_public_id)
+
+    # TODO[k]: Error handling
     search_engine.delete_index()
 
     log.info('Deleted namespace index', namespace_id=namespace_id,

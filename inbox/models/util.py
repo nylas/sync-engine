@@ -1,5 +1,8 @@
-from inbox.models import (Calendar, Contact, Message, Event, Block, Tag,
-                          Thread)
+from collections import OrderedDict
+
+from sqlalchemy import func
+
+CHUNK_SIZE = 1000
 
 
 def reconcile_message(new_message, session):
@@ -10,6 +13,8 @@ def reconcile_message(new_message, session):
     and return it.
 
     """
+    from inbox.models.message import Message
+
     if new_message.inbox_uid is None:
         return None
 
@@ -50,6 +55,9 @@ def transaction_objects():
     models that implement the HasRevisions mixin).
 
     """
+    from inbox.models import (Calendar, Contact, Message, Event, Block, Tag,
+                              Thread)
+
     return {
         'calendar': Calendar,
         'contact': Contact,
@@ -60,3 +68,80 @@ def transaction_objects():
         'tag': Tag,
         'thread': Thread
     }
+
+
+def delete_namespace(account_id, namespace_id):
+    """
+    Delete all the data associated with a namespace from the database.
+    USE WITH CAUTION.
+
+    """
+    from inbox.models.session import session_scope
+    from inbox.models import (Message, Block, Thread, Transaction, ActionLog,
+                              Contact, Event, Account, Folder, Calendar, Tag,
+                              Namespace)
+
+    # Chunk delete for tables that might have a large concurrent write volume
+    # to prevent those transactions from blocking.
+    # NOTE: ImapFolderInfo does not fall into this category but we include it
+    # here for simplicity.
+
+    filters = OrderedDict()
+
+    for cls in [Message, Block, Thread, Transaction, ActionLog, Contact,
+                Event]:
+        filters[cls] = cls.namespace_id == namespace_id
+
+    with session_scope() as db_session:
+        account = db_session.query(Account).get(account_id)
+        if account.discriminator != 'easaccount':
+            from inbox.models.backends.imap import (ImapUid,
+                                                    ImapFolderSyncStatus,
+                                                    ImapFolderInfo)
+            filters[ImapUid] = ImapUid.account_id == account_id
+            filters[ImapFolderSyncStatus] = \
+                ImapFolderSyncStatus.account_id == account_id
+            filters[ImapFolderInfo] = ImapFolderInfo.account_id == account_id
+        else:
+            from inbox.models.backends.eas import (EASUid, EASFolderSyncStatus)
+            filters[EASUid] = EASUid.easaccount_id == account_id
+            filters[EASFolderSyncStatus] = \
+                EASFolderSyncStatus.account_id == account_id
+
+    for cls in filters:
+        with session_scope() as db_session:
+            min_ = db_session.query(func.min(cls.id)).scalar()
+            max_ = db_session.query(func.max(cls.id)).scalar()
+
+        if not min_:
+            continue
+
+        for i in range(min_, max_, CHUNK_SIZE):
+            # Set versioned=False since we do /not/ want Transaction records
+            # created for these deletions.
+            with session_scope(versioned=False) as db_session:
+                db_session.query(cls).filter(
+                    cls.id >= i, cls.id <= i + CHUNK_SIZE,
+                    filters[cls]).delete(synchronize_session=False)
+                db_session.commit()
+
+    # Bulk delete for the other tables
+    # NOTE: Namespace, Account are deleted at the end too.
+
+    classes = [Folder, Calendar, Tag, Namespace, Account]
+    for cls in classes:
+        if cls in [Calendar, Tag]:
+            filter_ = cls.namespace_id == namespace_id
+        elif cls in [Folder]:
+            filter_ = cls.account_id == account_id
+        elif cls in [Namespace]:
+            filter_ = cls.id == namespace_id
+        elif cls in [Account]:
+            filter_ = cls.id == account_id
+
+        # Set versioned=False since we do /not/ want Transaction records
+        # created for these deletions.
+        with session_scope(versioned=False) as db_session:
+            db_session.query(cls).filter(filter_).\
+                delete(synchronize_session=False)
+            db_session.commit()

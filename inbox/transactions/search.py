@@ -88,7 +88,7 @@ class SearchIndexService(Greenlet):
         self.log.info('namespaces to index count', count=len(namespace_map))
 
         for namespace_id in namespace_map:
-            engine = NamespaceSearchEngine(namespace_id)
+            engine = NamespaceSearchEngine(namespace_id, create_index=True)
 
             messages = namespace_map[namespace_id]['message']
             message_count = engine.messages.bulk_index(messages) if messages \

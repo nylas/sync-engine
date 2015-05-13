@@ -27,6 +27,10 @@
 "MS_LIVE_OAUTH_REDIRECT_URI": "https://login.live.com/oauth20_desktop.srf",
 
 "STORE_MESSAGES_ON_S3": false,
+"MESSAGE_STORE_BUCKET_NAME": "nylas-mailsync-blocks-test",
+"AWS_ACCESS_KEY_ID": "AKIAIQFF2ZVIJPCPULWQ",
+"AWS_SECRET_ACCESS_KEY": "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",
+
 "MSG_PARTS_DIRECTORY": "tests/data/parts",
 
 "EMAIL_EXCEPTIONS": false,
