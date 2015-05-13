@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+# Query the id corresponding to a public id and vice-versa.
+
+import click
+import sys
+from inbox.models import (Account, Message, Namespace, Thread, Event,
+                          Calendar, Transaction)
+from inbox.models.session import session_scope
+
+@click.command()
+@click.option('--type', '-t', type=str, required=True)
+@click.option('--id', type=str, default=None)
+@click.option('--public_id', type=str, default=None)
+def main(type, id, public_id):
+
+    type = type.lower()
+    cls = None
+    if type == 'account':
+        cls = Account
+    elif type == 'message':
+        cls = Message
+    elif type == 'namespace':
+        cls = Namespace
+    elif type == 'thread':
+        cls = Thread
+    elif type == 'event':
+        cls = Event
+    elif type == 'calendar':
+        cls = Calendar
+    elif type == 'transaction':
+        cls = Transaction
+
+    if public_id is None and id is None:
+        print "Error: you should specify an id or public id to query."
+        sys.exit(-1)
+
+    with session_scope() as db_session:
+        if public_id:
+            obj = db_session.query(cls).filter(cls.public_id == public_id).one()
+            print obj.id
+        elif id:
+            obj = db_session.query(cls).filter(cls.id == id).one()
+            print obj.public_id
+
+if __name__ == '__main__':
+    main()

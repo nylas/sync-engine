@@ -75,6 +75,7 @@ setup(
              'bin/alive-dead-metrics',
              'bin/create-db',
              'bin/inbox-api',
+             'bin/get-id',
              'bin/syncback-service'],
 
     # See:
