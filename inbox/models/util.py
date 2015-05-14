@@ -1,5 +1,5 @@
-from inbox.models import (Calendar, Contact, Message, Event, Block, Message,
-                          Tag, Thread)
+from inbox.models import (Calendar, Contact, Message, Event, Block, Tag,
+                          Thread)
 
 
 def reconcile_message(new_message, session):
