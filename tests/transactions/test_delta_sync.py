@@ -1,8 +1,8 @@
 import json
 import time
-from tests.util.base import api_client
+from tests.util.base import api_client, add_fake_message, db, thread
 
-__all__ = ['api_client']
+__all__ = ['api_client', 'db', 'thread']
 
 
 def get_cursor(api_client, timestamp):
@@ -80,3 +80,20 @@ def test_events_are_condensed(api_client):
     # Check that we got the later of the two tag deltas, i.e., that we serve
     # the later delta when condensing.
     assert sync_data['deltas'][-1]['event'] == 'delete'
+
+
+def test_handle_missing_objects(api_client, db, thread, default_namespace):
+    ts = int(time.time())
+    cursor = get_cursor(api_client, ts)
+
+    messages = []
+    for _ in range(100):
+        messages.append(add_fake_message(db.session, default_namespace.id,
+                                         thread))
+    for message in messages:
+        db.session.delete(message)
+    db.session.commit()
+    sync_data = api_client.get_data('/delta?cursor={}&exclude_types=thread'.
+                                    format(cursor))
+    assert len(sync_data['deltas']) == 100
+    assert all(delta['event'] == 'delete' for delta in sync_data['deltas'])
