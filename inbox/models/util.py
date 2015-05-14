@@ -1,4 +1,5 @@
-from inbox.models.message import Message
+from inbox.models import (Calendar, Contact, Message, Event, Block, Message,
+                          Tag, Thread)
 
 
 def reconcile_message(new_message, session):
@@ -44,10 +45,18 @@ def reconcile_message(new_message, session):
 
 def transaction_objects():
     """
-    Return the mapping from model name to API object name - which becomes the
+    Return the mapping from API object name - which becomes the
     Transaction.object_type - for models that generate Transactions (i.e.
     models that implement the HasRevisions mixin).
 
     """
-    from inbox.models.mixins import HasRevisions
-    return {m.API_OBJECT_NAME: m for m in HasRevisions.__subclasses__()}
+    return {
+        'calendar': Calendar,
+        'contact': Contact,
+        'draft': Message,
+        'event': Event,
+        'file': Block,
+        'message': Message,
+        'tag': Tag,
+        'thread': Thread
+    }

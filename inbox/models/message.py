@@ -34,7 +34,9 @@ def _trim_filename(s, mid, max_len=64):
 
 
 class Message(MailSyncBase, HasRevisions, HasPublicID):
-    API_OBJECT_NAME = 'message'
+    @property
+    def API_OBJECT_NAME(self):
+        return 'message' if not self.is_draft else 'draft'
 
     # Do delete messages if their associated thread is deleted.
     thread_id = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),

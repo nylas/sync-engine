@@ -1,5 +1,7 @@
 from sqlalchemy import desc
 from inbox.models import Transaction, Tag, Calendar
+from inbox.models.mixins import HasRevisions
+from inbox.models.util import transaction_objects
 from tests.util.base import add_fake_message, add_fake_thread, add_fake_event
 
 NAMESPACE_ID = 1
@@ -65,14 +67,21 @@ def test_message_updates_create_transaction(db):
         assert transaction.object_type == 'message'
         assert transaction.command == 'update'
 
+
+def test_object_type_distinguishes_messages_and_draftss(db):
+    with db.session.no_autoflush:
+        thr = add_fake_thread(db.session, NAMESPACE_ID)
         msg = add_fake_message(db.session, NAMESPACE_ID, thr)
-        msg.is_draft = True
+        msg.is_draft = 1
         db.session.commit()
-        transaction = get_latest_transaction(db.session, 'message', msg.id,
+        transaction = get_latest_transaction(db.session, 'draft', msg.id,
                                              NAMESPACE_ID)
-        assert transaction.record_id == msg.id
-        assert transaction.object_type == 'message'
         assert transaction.command == 'update'
+        db.session.delete(msg)
+        db.session.commit()
+        transaction = get_latest_transaction(db.session, 'draft', msg.id,
+                                             NAMESPACE_ID)
+        assert transaction.command == 'delete'
 
 
 def test_event_insert_creates_transaction(db):
@@ -134,3 +143,10 @@ def test_object_deletions_create_transaction(db):
         assert transaction.record_id == thr.id
         assert transaction.object_type == 'thread'
         assert transaction.command == 'delete'
+
+
+def test_transaction_objects_mapped_for_all_models(db):
+    """Test that all subclasses of HasRevisions are mapped by the
+    transaction_objects() function."""
+    assert set(HasRevisions.__subclasses__()).issubset(
+        transaction_objects().values())
