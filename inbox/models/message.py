@@ -1,7 +1,5 @@
-import os
 import json
 import datetime
-import base64
 import itertools
 from hashlib import sha256
 from flanker import mime
@@ -15,9 +13,7 @@ from sqlalchemy.sql.expression import false
 from inbox.util.html import plaintext2html, strip_tags
 from inbox.sqlalchemy_ext.util import JSON, json_field_too_long
 
-from inbox.config import config
 from inbox.util.addr import parse_mimepart_address_header
-from inbox.util.file import mkdirp
 from inbox.util.misc import parse_references, get_internaldate
 
 from inbox.models.mixins import HasPublicID, HasRevisions
@@ -35,27 +31,6 @@ def _trim_filename(s, mid, max_len=64):
                     mid=mid, max_len=max_len, filename=s)
         return s[:max_len - 8] + s[-8:]  # Keep extension
     return s
-
-
-def _get_errfilename(account_id, folder_name, uid):
-    try:
-        errdir = os.path.join(config['LOGDIR'], str(account_id), 'errors',
-                              folder_name)
-        errfile = os.path.join(errdir, str(uid))
-        mkdirp(errdir)
-    except UnicodeEncodeError:
-        # Rather than wrangling character encodings, just base64-encode the
-        # folder name to construct a directory.
-        b64_folder_name = base64.b64encode(folder_name.encode('utf-8'))
-        return _get_errfilename(account_id, b64_folder_name, uid)
-    return errfile
-
-
-def _log_decode_error(account_id, folder_name, uid, msg_string):
-    """ msg_string is in the original encoding pulled off the wire """
-    errfile = _get_errfilename(account_id, folder_name, uid)
-    with open(errfile, 'w') as fh:
-        fh.write(msg_string)
 
 
 class Message(MailSyncBase, HasRevisions, HasPublicID):
@@ -201,50 +176,17 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
         msg = Message()
 
+        from inbox.models.block import Block, Part
+        body_block = Block()
+        body_block.namespace_id = account.namespace.id
+        body_block.data = body_string
+        body_block.content_type = "text/plain"
+        msg.full_body = body_block
+
+        msg.namespace_id = account.namespace.id
+
         try:
-            from inbox.models.block import Block, Part
-            body_block = Block()
-            body_block.namespace_id = account.namespace.id
-            body_block.data = body_string
-            body_block.content_type = "text/plain"
-            msg.full_body = body_block
-
-            msg.namespace_id = account.namespace.id
             parsed = mime.from_string(body_string)
-
-            mime_version = parsed.headers.get('Mime-Version')
-            # sometimes MIME-Version is '1.0 (1.0)', hence the .startswith()
-            if mime_version is not None and not mime_version.startswith('1.0'):
-                log.warning('Unexpected MIME-Version',
-                            account_id=account.id, folder_name=folder_name,
-                            mid=mid, mime_version=mime_version)
-
-            msg.data_sha256 = sha256(body_string).hexdigest()
-
-            msg.subject = parsed.subject
-            msg.from_addr = parse_mimepart_address_header(parsed, 'From')
-            msg.sender_addr = parse_mimepart_address_header(parsed, 'Sender')
-            msg.reply_to = parse_mimepart_address_header(parsed, 'Reply-To')
-            msg.to_addr = parse_mimepart_address_header(parsed, 'To')
-            msg.cc_addr = parse_mimepart_address_header(parsed, 'Cc')
-            msg.bcc_addr = parse_mimepart_address_header(parsed, 'Bcc')
-
-            msg.in_reply_to = parsed.headers.get('In-Reply-To')
-            msg.message_id_header = parsed.headers.get('Message-Id')
-
-            msg.received_date = received_date if received_date else \
-                get_internaldate(parsed.headers.get('Date'),
-                                 parsed.headers.get('Received'))
-
-            # Custom Inbox header
-            msg.inbox_uid = parsed.headers.get('X-INBOX-ID')
-
-            # In accordance with JWZ (http://www.jwz.org/doc/threading.html)
-            msg.references = parse_references(
-                parsed.headers.get('References', ''),
-                parsed.headers.get('In-Reply-To', ''))
-
-            msg.size = len(body_string)  # includes headers text
 
             i = 0  # for walk_index
 
@@ -256,44 +198,84 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             headers_part = Part(block=block, message=msg)
             headers_part.walk_index = i
 
+            msg._parse_metadata(parsed, body_string, received_date, account.id,
+                                folder_name, mid)
+        except (mime.DecodingError, AttributeError, RuntimeError, TypeError,
+                ValueError) as e:
+            parsed = None
+            log.error('Error parsing message metadata',
+                      folder_name=folder_name, account_id=account.id, error=e)
+            msg._mark_error()
+
+        if parsed is not None:
             for mimepart in parsed.walk(
                     with_self=parsed.content_type.is_singlepart()):
                 i += 1
-                if mimepart.content_type.is_multipart():
-                    log.warning('multipart sub-part found',
-                                account_id=account.id, folder_name=folder_name,
-                                mid=mid)
-                    continue  # TODO should we store relations?
-                msg._parse_mimepart(mimepart, mid, i, account.namespace.id)
+                try:
+                    if mimepart.content_type.is_multipart():
+                        log.warning('multipart sub-part found',
+                                    account_id=account.id,
+                                    folder_name=folder_name,
+                                    mid=mid)
+                        continue  # TODO should we store relations?
+                    msg._parse_mimepart(mimepart, mid, i, account.namespace.id)
+                except (mime.DecodingError, AttributeError, RuntimeError,
+                        TypeError, ValueError) as e:
+                    log.error('Error parsing message MIME parts',
+                              folder_name=folder_name, account_id=account.id,
+                              error=e)
+                    msg._mark_error()
             msg.calculate_sanitized_body()
-        except (mime.DecodingError, AttributeError, RuntimeError, TypeError,
-                ValueError) as e:
-            # Message parsing can fail for several reasons. Occasionally iconv
-            # will fail via maximum recursion depth. EAS messages may be
-            # missing Date and Received headers. In such cases, we still keep
-            # the metadata and mark it as b0rked.
-            _log_decode_error(account.id, folder_name, mid, body_string)
-            err_filename = _get_errfilename(account.id, folder_name, mid)
-            log.error('Message parsing error',
-                      folder_name=folder_name, account_id=account.id,
-                      err_filename=err_filename, error=e)
-            msg._mark_error()
 
-        # Occasionally people try to send messages to way too many
-        # recipients. In such cases, empty the field and treat as a parsing
-        # error so that we don't break the entire sync.
-        for field in ('to_addr', 'cc_addr', 'bcc_addr', 'references'):
-            value = getattr(msg, field)
-            if json_field_too_long(value):
-                _log_decode_error(account.id, folder_name, mid, body_string)
-                err_filename = _get_errfilename(account.id, folder_name, mid)
-                log.error('Recipient field too long', field=field,
-                          account_id=account.id, folder_name=folder_name,
-                          mid=mid)
-                setattr(msg, field, [])
-                msg._mark_error()
+            # Occasionally people try to send messages to way too many
+            # recipients. In such cases, empty the field and treat as a parsing
+            # error so that we don't break the entire sync.
+            for field in ('to_addr', 'cc_addr', 'bcc_addr', 'references'):
+                value = getattr(msg, field)
+                if json_field_too_long(value):
+                    log.error('Recipient field too long', field=field,
+                              account_id=account.id, folder_name=folder_name,
+                              mid=mid)
+                    setattr(msg, field, [])
+                    msg._mark_error()
 
         return msg
+
+    def _parse_metadata(self, parsed, body_string, received_date,
+                        account_id, folder_name, mid):
+        mime_version = parsed.headers.get('Mime-Version')
+        # sometimes MIME-Version is '1.0 (1.0)', hence the .startswith()
+        if mime_version is not None and not mime_version.startswith('1.0'):
+            log.warning('Unexpected MIME-Version',
+                        account_id=account_id, folder_name=folder_name,
+                        mid=mid, mime_version=mime_version)
+
+        self.data_sha256 = sha256(body_string).hexdigest()
+
+        self.subject = parsed.subject
+        self.from_addr = parse_mimepart_address_header(parsed, 'From')
+        self.sender_addr = parse_mimepart_address_header(parsed, 'Sender')
+        self.reply_to = parse_mimepart_address_header(parsed, 'Reply-To')
+        self.to_addr = parse_mimepart_address_header(parsed, 'To')
+        self.cc_addr = parse_mimepart_address_header(parsed, 'Cc')
+        self.bcc_addr = parse_mimepart_address_header(parsed, 'Bcc')
+
+        self.in_reply_to = parsed.headers.get('In-Reply-To')
+        self.message_id_header = parsed.headers.get('Message-Id')
+
+        self.received_date = received_date if received_date else \
+            get_internaldate(parsed.headers.get('Date'),
+                                parsed.headers.get('Received'))
+
+        # Custom Inbox header
+        self.inbox_uid = parsed.headers.get('X-INBOX-ID')
+
+        # In accordance with JWZ (http://www.jwz.org/doc/threading.html)
+        self.references = parse_references(
+            parsed.headers.get('References', ''),
+            parsed.headers.get('In-Reply-To', ''))
+
+        self.size = len(body_string)  # includes headers text
 
     def _parse_mimepart(self, mimepart, mid, index, namespace_id):
         """Parse a single MIME part into a Block and Part object linked to this
@@ -314,7 +296,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         block.filename = _trim_filename(
             mimepart.content_type.params.get('name'), mid)
 
-        new_part = Part(block=block, message=self)
+        new_part = Part(block=block)
         new_part.walk_index = index
 
         # TODO maybe also trim other headers?
@@ -340,7 +322,21 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
         block.data = data_to_write
 
+        # Wait until end so we don't create incomplete blocks/parts for MIME
+        # parts which fail to parse.
+        new_part.message = self
+
     def _mark_error(self):
+        """ Mark message as having encountered errors while parsing.
+
+        Message parsing can fail for several reasons. Occasionally iconv will
+        fail via maximum recursion depth. EAS messages may be missing Date and
+        Received headers. Flanker may fail to handle some out-of-spec messages.
+
+        In this case, we keep what metadata we've managed to parse but also
+        mark the message as having failed to parse properly.
+
+        """
         self.decode_error = True
         # fill in required attributes with filler data if could not parse them
         self.size = 0

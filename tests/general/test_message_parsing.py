@@ -5,7 +5,6 @@ import os
 import pytest
 from flanker import mime
 from inbox.models import Message
-from inbox.models.message import _get_errfilename
 from inbox.util.addr import parse_mimepart_address_header
 from tests.util.base import default_account, default_namespace, thread
 
@@ -58,6 +57,15 @@ def raw_message_with_ical_invite():
 
 
 @pytest.fixture
+def raw_message_with_bad_attachment():
+    # Message with a MIME part that has an invalid content-disposition.
+    raw_msg_path = full_path(
+        '../data/raw_message_with_bad_attachment')
+    with open(raw_msg_path) as f:
+        return f.read()
+
+
+@pytest.fixture
 def new_message_from_synced(db):
     received_date = datetime.datetime(2014, 9, 22, 17, 25, 46)
     new_msg = Message.create_from_synced(default_account(db),
@@ -91,13 +99,6 @@ def test_truncate_recipients(db, default_account, default_namespace, thread,
     db.session.add(m)
     # Check that no database error is raised.
     db.session.commit()
-
-
-def test_decode_error_file():
-    """Test that we can save decode errors from non-Unicode folders without
-    getting UnicodeEncodeErrors"""
-    fname = _get_errfilename(1, u'迷惑メール', 22)
-    os.rmdir(os.path.dirname(fname))
 
 
 def test_address_parsing_edge_cases():
@@ -174,6 +175,20 @@ def test_store_full_body_on_parse_error(
                                    received_date,
                                    raw_message_with_bad_date)
     assert m.full_body
+
+
+def test_parse_body_on_bad_attachment(
+        default_account, default_namespace,
+        raw_message_with_bad_attachment):
+    received_date = None
+    m = Message.create_from_synced(default_account, 139219, '[Gmail]/All Mail',
+                                   received_date,
+                                   raw_message_with_bad_attachment)
+    assert m.decode_error
+    plain_part, html_part = m.body
+    assert 'dingy blue carpet' in plain_part
+    assert 'dingy blue carpet' in html_part
+    assert 'dingy blue carpet' in m.sanitized_body
 
 
 def test_calculate_snippet():

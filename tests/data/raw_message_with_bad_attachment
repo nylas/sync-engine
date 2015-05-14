@@ -1,0 +1,43 @@
+From: Ben Bitdiddle <ben@example.com>
+To: Helena Handbasket <helena@example.com>
+Subject: The Monsters of MIME
+Date: Thu, 30 Apr 2015 16:55:12 +0000
+Content-Type: multipart/related; boundary="_004_143041291414210227nylascom_";
+  type="multipart/alternative"
+MIME-Version: 1.0
+
+--_004_143041291414210227nylascom_
+
+EMPTY 😊
+
+--_004_143041291414210227nylascom_
+Content-Type: multipart/alternative;
+  boundary="_000_143041291414210227nylascom_"
+
+--_000_143041291414210227nylascom_
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+Cgo+IGxvb2sKCllvdSBhcmUgaW4gYSByb29tIHdpdGggdGFsbCBjZWlsaW5ncywgYSBkaW5neSBi
+bHVlIGNhcnBldCB3aXRoIHN0YWlucywKYW5kIGFuIGltcHJlc3NpdmUgc2V0IG9mIGJyaWdodGx5
+IHBhaW50ZWQgcmVkIHNpZWdlIGRvb3JzLiBTdW5saWdodApzdHJlYW1zIHRocm91Z2ggdGhlIGNv
+cGlvdXMgd2luZG93cyBvbnRvIHNvbWUgY291Y2hlcyBpbiB0aGUgY29ybmVyLgpTb21lIGVtcHR5
+IHdoaXRlIGRlc2tzIG9uIHRoZSBvdGhlciBzaWRlIG9mIHRoZSByb29tIGFyZSBjb3ZlcmVkIGlu
+CnBlbnMsIHBhcGVycywgc3RpY2tlcnMsIG11Z3MsIGhlYWRwaG9uZXMsIGFuZCB2YXJpb3VzIG90
+aGVyIG9kZHMgYW5kCmVuZHMuCg==
+
+--_000_143041291414210227nylascom_
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: base64
+
+PHA+CiZndDsgbG9vawo8L3A+CjxwPllvdSBhcmUgaW4gYSByb29tIHdpdGggdGFsbCBjZWlsaW5n
+cywgYSBkaW5neSBibHVlIGNhcnBldCB3aXRoIHN0YWlucywKYW5kIGFuIGltcHJlc3NpdmUgc2V0
+IG9mIGJyaWdodGx5IHBhaW50ZWQgcmVkIHNpZWdlIGRvb3JzLiBTdW5saWdodApzdHJlYW1zIHRo
+cm91Z2ggdGhlIGNvcGlvdXMgd2luZG93cyBvbnRvIHNvbWUgY291Y2hlcyBpbiB0aGUgY29ybmVy
+LgpTb21lIGVtcHR5IHdoaXRlIGRlc2tzIG9uIHRoZSBvdGhlciBzaWRlIG9mIHRoZSByb29tIGFy
+ZSBjb3ZlcmVkIGluCnBlbnMsIHBhcGVycywgc3RpY2tlcnMsIG11Z3MsIGhlYWRwaG9uZXMsIGFu
+ZCB2YXJpb3VzIG90aGVyIG9kZHMgYW5kCmVuZHMuCjwvcD4K
+
+--_000_143041291414210227nylascom_--
+
+--_004_143041291414210227nylascom_--
