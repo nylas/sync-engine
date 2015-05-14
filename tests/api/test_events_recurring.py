@@ -1,5 +1,6 @@
 import arrow
 import urllib
+import pytest
 from inbox.models import Account, Event, Calendar
 from tests.util.base import api_client
 
@@ -9,11 +10,17 @@ __all__ = ['api_client']
 ACCOUNT_ID = 1
 
 
-def add_recurring_event(db, account):
-    rrule = ["RRULE:FREQ=WEEKLY"]
-    ev = db.session.query(Event).filter_by(uid='recurapitest').first()
-    if ev:
-        db.session.delete(ev)
+@pytest.fixture
+def account(db):
+    return db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
+
+
+@pytest.fixture(params=[{"all_day": True}, {"all_day": False}])
+def recurring_event(db, account, request):
+    params = request.param
+    all_day = params.get('all_day', False)
+
+    rrule = ["RRULE:FREQ=WEEKLY", "EXDATE:20150324T013000,20150331T013000Z"]
     cal = db.session.query(Calendar).filter_by(
         namespace_id=account.namespace.id).order_by('id').first()
     ev = Event(namespace_id=account.namespace.id,
@@ -28,7 +35,7 @@ def add_recurring_event(db, account):
                recurrence=rrule,
                start=arrow.get(2015, 3, 17, 1, 30, 00),
                end=arrow.get(2015, 3, 17, 1, 45, 00),
-               all_day=False,
+               all_day=all_day,
                is_owner=True,
                participants=[],
                provider_name='inbox',
@@ -42,10 +49,9 @@ def add_recurring_event(db, account):
     return ev
 
 
-def test_api_expand_recurring(db, api_client):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-    event = add_recurring_event(db, acct)
+def test_api_expand_recurring(db, api_client, account, recurring_event):
+    ns_id = account.namespace.public_id
+    event = recurring_event
 
     # 3 existing test events in database + 1 new one
     events = api_client.get_data('/events?expand_recurring=false', ns_id)
@@ -60,13 +66,30 @@ def test_api_expand_recurring(db, api_client):
     recur = 'expand_recurring=true&starts_after={}&ends_before={}'.format(
         urllib.quote_plus(starts_after), urllib.quote_plus(thirty_weeks))
     all_events = api_client.get_data('/events?' + recur, ns_id)
-    assert len(all_events) == 30
 
-    # the ordering should be correct
-    prev = all_events[0]['when']['start_time']
-    for e in all_events[1:]:
-        assert e['when']['start_time'] > prev
-        prev = e['when']['start_time']
+    if not event.all_day:
+        assert len(all_events) == 28
+
+        # the ordering should be correct
+        prev = all_events[0]['when']['start_time']
+        for e in all_events[1:]:
+            assert e['when']['start_time'] > prev
+            prev = e['when']['start_time']
+
+        events = api_client.get_data('/events?' + recur + '&view=count', ns_id)
+        assert events.get('count') == 28
+    else:
+        # Since an all-day event starts at 00:00 we're returning one
+        # more event.
+        assert len(all_events) == 29
+        # the ordering should be correct
+        prev = all_events[0]['when']['date']
+        for e in all_events[1:]:
+            assert e['when']['date'] > prev
+            prev = e['when']['date']
+
+        events = api_client.get_data('/events?' + recur + '&view=count', ns_id)
+        assert events.get('count') == 29
 
     events = api_client.get_data('/events?' + recur + '&limit=5', ns_id)
     assert len(events) == 5
@@ -74,18 +97,16 @@ def test_api_expand_recurring(db, api_client):
     events = api_client.get_data('/events?' + recur + '&offset=5', ns_id)
     assert events[0]['id'] == all_events[5]['id']
 
-    events = api_client.get_data('/events?' + recur + '&view=count', ns_id)
-    assert events.get('count') == 30
-
 
 def urlsafe(dt):
     return urllib.quote_plus(dt.isoformat())
 
 
-def test_api_expand_recurring_before_after(db, api_client):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-    event = add_recurring_event(db, acct)
+def test_api_expand_recurring_before_after(db, api_client, account,
+                                           recurring_event):
+    account = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
+    event = recurring_event
+    ns_id = account.namespace.public_id
 
     starts_after = event.start.replace(weeks=+15)
     ends_before = starts_after.replace(days=+1)
@@ -111,14 +132,13 @@ def test_api_expand_recurring_before_after(db, api_client):
     assert len(all_events) == 1
 
 
-def test_api_override_serialization(db, api_client):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-    event = add_recurring_event(db, acct)
+def test_api_override_serialization(db, api_client, account, recurring_event):
+    ns_id = account.namespace.public_id
+    event = recurring_event
 
     override = Event(original_start_time=event.start,
                      master_event_uid=event.uid,
-                     namespace_id=acct.namespace.id,
+                     namespace_id=account.namespace.id,
                      calendar_id=event.calendar_id)
     override.update(event)
     override.uid = event.uid + "_" + event.start.strftime("%Y%m%dT%H%M%SZ")

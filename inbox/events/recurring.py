@@ -59,6 +59,7 @@ def parse_rrule(event):
         try:
             rrule = rrulestr(event.rrule, dtstart=start,
                              compatible=True)
+
             return rrule
         except Exception as e:
             log.error("Error parsing RRULE entry", event_id=event.id,
@@ -115,6 +116,10 @@ def get_start_times(event, start=None, end=None):
         if len(excl_dates) > 0:
             if not isinstance(rrules, rruleset):
                 rrules = rruleset().rrule(rrules)
+
+            # We want naive-everything for all-day events.
+            if event.all_day:
+                excl_dates = map(lambda x: x.naive, excl_dates)
             map(rrules.exdate, excl_dates)
 
         # Return all start times between start and end, including start and
