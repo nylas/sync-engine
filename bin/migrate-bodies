@@ -14,7 +14,7 @@ CHUNK_SIZE = 1000
 def migrate_bodies((start_id, end_id)):
     from inbox.models.session import session_scope
     log = get_logger()
-    with session_scope() as db_session:
+    with session_scope(versioned=False) as db_session:
         for i in range(start_id, end_id, CHUNK_SIZE):
             messages = db_session.query(Message). \
                 filter(Message.id > i,

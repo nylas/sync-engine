@@ -19,7 +19,7 @@ CHUNK_SIZE = 1000
 def upgrade():
     from inbox.models import Message
     from inbox.models.session import session_scope
-    with session_scope() as db_session:
+    with session_scope(versioned=False) as db_session:
         max_id, = db_session.query(sa.func.max(Message.id)).one()
         for i in range(0, max_id, CHUNK_SIZE):
             messages = db_session.query(Message). \
