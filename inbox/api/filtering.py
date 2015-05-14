@@ -110,7 +110,7 @@ def threads(namespace_id, subject, from_addr, to_addr, cc_addr, bcc_addr,
                 load_only('public_id', 'subject', 'is_draft', 'version',
                           'from_addr', 'to_addr', 'cc_addr', 'bcc_addr',
                           'received_date', 'snippet', 'is_read',
-                          'reply_to_message_id')
+                          'reply_to_message_id', 'reply_to')
                 .joinedload(Message.parts)
                 .joinedload(Part.block))
 
