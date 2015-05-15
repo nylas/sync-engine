@@ -10,6 +10,7 @@ from inbox.log import get_logger
 log = get_logger()
 
 from inbox.auth.base import AuthHandler
+import inbox.auth.starttls
 from inbox.basicauth import (ConnectionError, ValidationError,
                              TransientConnectionError,
                              UserRecoverableConfigError)
@@ -62,7 +63,10 @@ class GenericAuthHandler(AuthHandler):
         """
         host, port = imap_endpoint
         try:
-            conn = IMAPClient(host, port=port, use_uid=True, ssl=True)
+            conn = IMAPClient(host, port=port, use_uid=True, ssl=(port == 993))
+            if port != 993:
+                # Raises an exception if TLS can't be established
+                conn._imap.starttls()
         except IMAPClient.AbortError as e:
             log.error('account_connect_failed',
                       account_id=account_id,
