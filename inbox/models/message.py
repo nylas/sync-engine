@@ -6,7 +6,7 @@ from flanker import mime
 from collections import defaultdict
 
 from sqlalchemy import (Column, Integer, BigInteger, String, DateTime,
-                        Boolean, Enum, ForeignKey, Index)
+                        Boolean, Enum, ForeignKey, Text, Index)
 from sqlalchemy.dialects.mysql import LONGBLOB
 from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy.sql.expression import false
@@ -81,6 +81,9 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     # DEPRECATED
     state = Column(Enum('draft', 'sending', 'sending failed', 'sent'))
 
+    # DEPRECATED
+    _sanitized_body = Column('sanitized_body', Text(length=26214400),
+                             nullable=False, default='')
     _compacted_body = Column(LONGBLOB, nullable=True)
     snippet = Column(String(191), nullable=False)
     SNIPPET_LENGTH = 191
@@ -388,7 +391,9 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     @property
     def body(self):
         if self._compacted_body is None:
-            return None
+            # Return from legacy _sanitized_body column to support online data
+            # migration.
+            return self._sanitized_body
         return decode_blob(self._compacted_body).decode('utf-8')
 
     @body.setter
@@ -397,6 +402,11 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             self._compacted_body = None
         else:
             self._compacted_body = encode_blob(value.encode('utf-8'))
+            # Also write to the _sanitized_body column for now, so there's no
+            # possibility that concurrent data migration from
+            # _sanitized_body --> _compacted_body accidentally ends up writing
+            # an empty value to _compacted_body
+            self._sanitized_body = value
 
     @property
     def participants(self):
