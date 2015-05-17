@@ -1,8 +1,8 @@
 # Nylas Sync Engine
 
-
 The Nylas Sync Engine provides a RESTful API on top of a powerful email sync platform, making it easy to build apps on top of email. See the [full API documentation](https://www.nylas.com/docs/api#overview) for more details.
 
+[Join our Slack channel ![Slack Invite Button](http://slack-invite.nylas.com/badge.svg)](http://slack-invite.nylas.com)
 
 
 ### Installation and Setup
@@ -31,7 +31,6 @@ And _voilà_! Auth an account via the commandline to start syncing:
 ## Production Support
 
 We provide a fully manged and supported version of the Nylas sync engine for production apps. Read more at https://nylas.com
-
 
 ## Pull Requests
 
