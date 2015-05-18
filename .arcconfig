@@ -1,6 +1,6 @@
 {
   "project_id" : "inbox",
-  "conduit_uri" : "https://review.inboxapp.com/",
+  "conduit_uri" : "https://phab.nylas.com/",
   "lint.engine" : "InboxServerLintEngine",
   "unit.engine" : "PytestTestEngine",
   "load" : [
