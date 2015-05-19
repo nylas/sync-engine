@@ -13,7 +13,7 @@ from inbox.models.backends.eas import EASFolderSyncStatus
 def delete_extra_eas_folders(account_id):
     start = time.time()
 
-    with session_scope(ignore_soft_deletes=False) as db_session:
+    with session_scope() as db_session:
         folders = [f for f, in db_session.query(
                    EASFolderSyncStatus.folder_id).filter(
                    EASFolderSyncStatus.account_id == account_id).all()]
@@ -23,7 +23,7 @@ def delete_extra_eas_folders(account_id):
     mid = time.time()
     print 'db query time:', mid - start
 
-    with session_scope(ignore_soft_deletes=False) as db_session:
+    with session_scope() as db_session:
         deletes = db_session.query(Folder).filter(
             Folder.account_id == account_id,
             Folder.id.notin_(folders)).all()

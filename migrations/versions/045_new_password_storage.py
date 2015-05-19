@@ -78,7 +78,7 @@ def upgrade():
                     key = self.key + key
                     return decrypt_aes(self.password_aes, key)
 
-        with session_scope(ignore_soft_deletes=False) as db_session:
+        with session_scope() as db_session:
             for account in db_session.query(EASAccount):
                 account.password = account.get_old_password()
                 db_session.add(account)

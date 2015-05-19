@@ -33,7 +33,7 @@ def upgrade():
 
     print 'Deleting imapuid objects with NULL message_id...'
 
-    with session_scope(versioned=False, ignore_soft_deletes=False) as session:
+    with session_scope(versioned=False) as session:
         session.query(ImapUid).filter_by(message_id=None).delete()
         session.commit()
 

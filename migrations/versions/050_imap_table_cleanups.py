@@ -82,7 +82,7 @@ def upgrade():
     class ImapFolderInfo(Base):
         __table__ = Base.metadata.tables['imapfolderinfo']
 
-    with session_scope(versioned=False, ignore_soft_deletes=False) \
+    with session_scope(versioned=False) \
             as db_session:
         folder_id_for = dict([((account_id, name.lower()), id_)
                               for id_, account_id, name in
@@ -134,7 +134,7 @@ def upgrade():
     op.create_unique_constraint('account_id', 'imapfoldersyncstatus',
                                 ['account_id', 'folder_id'])
 
-    with session_scope(versioned=False, ignore_soft_deletes=False) \
+    with session_scope(versioned=False) \
             as db_session:
         for info in db_session.query(ImapFolderInfo):
             print "migrating", info.folder_name

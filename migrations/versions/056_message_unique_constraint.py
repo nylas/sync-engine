@@ -31,7 +31,7 @@ def upgrade():
     from inbox.models import Message
     from inbox.models.session import session_scope
 
-    with session_scope(versioned=False, ignore_soft_deletes=False) \
+    with session_scope(versioned=False) \
             as db_session:
         groups = db_session.query(
             Message.id, Message.thread_id, Message.g_msgid)\

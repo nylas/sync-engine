@@ -20,7 +20,7 @@ def upgrade():
     from inbox.heartbeat.config import STATUS_DATABASE, get_redis_client
     from inbox.heartbeat.status import HeartbeatStatusKey
     redis_client = get_redis_client(STATUS_DATABASE)
-    with session_scope(ignore_soft_deletes=False, versioned=False) as \
+    with session_scope(versioned=False) as \
             db_session:
         for account in db_session.query(GmailAccount):
             if account.inbox_folder is None:

@@ -52,7 +52,7 @@ def upgrade():
     class Secret(Base):
         __table__ = Base.metadata.tables['secret']
 
-    with session_scope(versioned=False, ignore_soft_deletes=False) \
+    with session_scope(versioned=False) \
             as db_session:
         for acct in db_session.query(YahooAccount):
             secret = Secret(acl_id=0, type=0, secret=acct.password,
@@ -127,7 +127,7 @@ def downgrade():
     class GenericAccount(Base):
         __table__ = Base.metadata.tables['genericaccount']
 
-    with session_scope(versioned=False, ignore_soft_deletes=False) \
+    with session_scope(versioned=False) \
             as db_session:
         for acct in db_session.query(GenericAccount):
             secret = db_session.query(Secret) \

@@ -27,7 +27,7 @@ def upgrade():
     from inbox.models.session import session_scope
     from inbox.models import Thread
 
-    with session_scope(versioned=False, ignore_soft_deletes=False) as db_session:
+    with session_scope(versioned=False) as db_session:
         num_threads, = db_session.query(sa.func.max(Thread.id)).one()
         if num_threads is None:
             # There aren't actually any threads to update.

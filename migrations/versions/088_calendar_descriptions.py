@@ -52,7 +52,7 @@ def upgrade():
     class Event(Base):
         __table__ = Base.metadata.tables['event']
 
-    with session_scope(versioned=False, ignore_soft_deletes=False) \
+    with session_scope(versioned=False) \
             as db_session:
         for calendar in db_session.query(Calendar):
             if calendar.name and '-' in calendar.name:

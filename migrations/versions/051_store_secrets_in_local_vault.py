@@ -48,7 +48,7 @@ def upgrade():
     class Secret(Base):
         __table__ = Base.metadata.tables['secret']
 
-    with session_scope(versioned=False, ignore_soft_deletes=False) \
+    with session_scope(versioned=False) \
             as db_session:
         for acct in db_session.query(GmailAccount):
             secret = Secret(acl_id=0, type=0, secret=acct.refresh_token,
@@ -92,7 +92,7 @@ def downgrade():
     op.add_column('gmailaccount', sa.Column('refresh_token',
                   sa.String(length=512), nullable=True))
 
-    with session_scope(versioned=False, ignore_soft_deletes=False) \
+    with session_scope(versioned=False) \
             as db_session:
         for acct in db_session.query(GmailAccount):
             secret = db_session.query(Secret) \

@@ -23,7 +23,7 @@ def upgrade():
     class Folder(Base):
         __table__ = Base.metadata.tables['folder']
 
-    with session_scope(ignore_soft_deletes=False, versioned=False) as db_session:
+    with session_scope(versioned=False) as db_session:
         for folder in db_session.query(Folder).filter(
                 Folder.name == 'Inbox'):
             folder.public_id = 'inbox'

@@ -188,7 +188,7 @@ def upgrade():
 
     print 'Creating Folder rows and migrating FolderItems...'
     # not many folders per account, so shouldn't grow that big
-    with session_scope(versioned=False, ignore_soft_deletes=False) as db_session:
+    with session_scope(versioned=False) as db_session:
         folders = dict([((i.account_id, i.name), i)
                         for i in db_session.query(Folder).all()])
         count = 0

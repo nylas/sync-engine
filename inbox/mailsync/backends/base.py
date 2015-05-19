@@ -1,5 +1,3 @@
-import functools
-
 from gevent import Greenlet, joinall, sleep, GreenletExit, event
 from sqlalchemy.exc import DataError
 
@@ -16,8 +14,7 @@ from inbox.heartbeat.status import clear_heartbeat_status
 
 THROTTLE_WAIT = 60
 
-mailsync_session_scope = functools.partial(session_scope,
-                                           ignore_soft_deletes=False)
+mailsync_session_scope = session_scope
 
 
 class MailsyncError(Exception):

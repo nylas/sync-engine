@@ -41,7 +41,7 @@ def upgrade():
     class EASDevice(Base):
         __table__ = Base.metadata.tables['easdevice']
 
-    with session_scope(ignore_soft_deletes=False, versioned=False) as \
+    with session_scope(versioned=False) as \
             db_session:
 
         accts = db_session.query(EASAccount).all()

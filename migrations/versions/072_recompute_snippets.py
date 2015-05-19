@@ -49,7 +49,7 @@ def upgrade():
     def calculate_plaintext_snippet(msg, text):
         msg.snippet = ' '.join(text.split())[:SNIPPET_LENGTH]
 
-    with session_scope(ignore_soft_deletes=False, versioned=False)\
+    with session_scope(versioned=False)\
             as db_session:
         for message in page_query(db_session.query(Message)):
             if not message.decode_error:

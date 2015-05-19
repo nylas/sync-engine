@@ -55,7 +55,7 @@ def upgrade():
     class SpoolMessage(Base):
         __table__ = Base.metadata.tables['spoolmessage']
 
-    with session_scope(versioned=False, ignore_soft_deletes=False) \
+    with session_scope(versioned=False) \
             as db_session:
 
         for sm in db_session.query(SpoolMessage).yield_per(250):

@@ -5,7 +5,7 @@ from inbox.models.backends.eas import EASAccount, EASFolderSyncStatus
 
 
 def check_extra_eas_folders():
-    with session_scope(ignore_soft_deletes=False) as db_session:
+    with session_scope() as db_session:
         accounts = db_session.query(EASAccount).all()
 
         print 'eas accounts: ', len(accounts)

@@ -48,7 +48,7 @@ def upgrade():
                                'ImapUid.message_id == Message.id,'
                                'Message.deleted_at == None)')
 
-    with session_scope(versioned=False, ignore_soft_deletes=False) as db_session:
+    with session_scope(versioned=False) as db_session:
         for uid in db_session.query(ImapUid).yield_per(500):
             if uid.is_seen:
                 uid.message.is_read = True

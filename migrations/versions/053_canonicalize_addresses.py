@@ -58,7 +58,7 @@ def upgrade():
     class Contact(Base):
         __table__ = Base.metadata.tables['contact']
 
-    with session_scope(versioned=False, ignore_soft_deletes=False) \
+    with session_scope(versioned=False) \
             as db_session:
         for acct in db_session.query(Account):
             acct._raw_address = acct.email_address
@@ -103,7 +103,7 @@ def downgrade():
     class Contact(Base):
         __table__ = Base.metadata.tables['contact']
 
-    with session_scope(versioned=False, ignore_soft_deletes=False) \
+    with session_scope(versioned=False) \
             as db_session:
         for acct in db_session.query(Account):
             acct.email_address = acct._raw_address

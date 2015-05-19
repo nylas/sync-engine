@@ -25,7 +25,7 @@ def upgrade():
         from inbox.models import Folder
         from inbox.util.eas.constants import SKIP_FOLDERS
 
-        with session_scope(versioned=False, ignore_soft_deletes=False) as \
+        with session_scope(versioned=False) as \
                 db_session:
             statuses = db_session.query(EASFolderSyncStatus).filter(
                 EASFolderSyncStatus.eas_folder_type.in_(SKIP_FOLDERS)).all()

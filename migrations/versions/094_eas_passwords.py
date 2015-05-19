@@ -38,7 +38,7 @@ def upgrade():
     class Secret(Base):
         __table__ = Base.metadata.tables['secret']
 
-    with session_scope(ignore_soft_deletes=False, versioned=False) as \
+    with session_scope(versioned=False) as \
             db_session:
         accounts = db_session.query(EASAccount).all()
         print '# EAS accounts: ', len(accounts)

@@ -31,7 +31,7 @@ def upgrade():
     class Account(Base):
         __table__ = Base.metadata.tables['account']
 
-    with session_scope(versioned=False, ignore_soft_deletes=False) \
+    with session_scope(versioned=False) \
             as db_session:
         for acct in db_session.query(Account):
             d = dict(sync_start_time=str(acct.sync_start_time),

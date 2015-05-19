@@ -38,7 +38,7 @@ def upgrade():
     class Transaction(Base):
         __table__ = Base.metadata.tables['transaction']
 
-    with session_scope(versioned=False, ignore_soft_deletes=False) as db_session:
+    with session_scope(versioned=False) as db_session:
         count = 0
         num_transactions, = db_session.query(sa.func.max(Transaction.id)).one()
         print 'Adding public ids to {} transactions'.format(num_transactions)

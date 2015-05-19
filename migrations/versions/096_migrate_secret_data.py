@@ -30,7 +30,7 @@ def upgrade():
     class GenericAccount(Base):
         __table__ = Base.metadata.tables['genericaccount']
 
-    with session_scope(ignore_soft_deletes=False, versioned=False) as \
+    with session_scope(versioned=False) as \
             db_session:
         secrets = db_session.query(Secret).filter(
             Secret.secret.isnot(None)).all()

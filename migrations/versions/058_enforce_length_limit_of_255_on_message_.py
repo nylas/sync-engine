@@ -37,7 +37,7 @@ def upgrade():
     class Thread(Base):
         __table__ = Base.metadata.tables['thread']
 
-    with session_scope(versioned=False, ignore_soft_deletes=False) \
+    with session_scope(versioned=False) \
             as db_session:
         count = 0
         for msg in db_session.query(Message).options(

@@ -26,7 +26,7 @@ def upgrade():
     class Message(Base):
         __table__ = Base.metadata.tables['message']
 
-    with session_scope(versioned=False, ignore_soft_deletes=False) \
+    with session_scope(versioned=False) \
             as db_session:
         null_field_count = db_session.query(func.count(Message.id)). \
             filter(or_(Message.from_addr.is_(None),

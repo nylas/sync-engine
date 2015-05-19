@@ -71,7 +71,7 @@ def upgrade():
     # here. (I tried it, and decided this way was better.)
     from inbox.models import FolderItem, Tag, Namespace
 
-    with session_scope(versioned=False, ignore_soft_deletes=False) as db_session:
+    with session_scope(versioned=False) as db_session:
         # create canonical tags that don't already exist.
         CANONICAL_TAG_NAMES = ['inbox', 'all', 'archive', 'drafts', 'send',
                                'sending', 'sent', 'spam', 'starred',

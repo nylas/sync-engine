@@ -60,7 +60,7 @@ def upgrade():
     class GmailAccount(Base):
         __table__ = Base.metadata.tables['gmailaccount']
 
-    with session_scope(versioned=False, ignore_soft_deletes=False) as db_session:
+    with session_scope(versioned=False) as db_session:
         for acct in db_session.query(Account):
             if acct.provider == 'Gmail':
                 imap_acct = db_session.query(ImapAccount). \

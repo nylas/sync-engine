@@ -15,7 +15,7 @@ log = get_logger()
 cached_engine = None
 
 
-def new_session(engine, versioned=True, ignore_soft_deletes=False):
+def new_session(engine, versioned=True):
     """Returns a session bound to the given engine."""
     session = Session(bind=engine, autoflush=True, autocommit=False)
     if versioned:
@@ -40,7 +40,7 @@ InboxSession = new_session
 
 
 @contextmanager
-def session_scope(versioned=True, ignore_soft_deletes=False):
+def session_scope(versioned=True, debug=False):
     """ Provide a transactional scope around a series of operations.
 
     Takes care of rolling back failed transactions and closing the session
@@ -55,6 +55,9 @@ def session_scope(versioned=True, ignore_soft_deletes=False):
     ----------
     versioned : bool
         Do you want to enable the transaction log?
+    debug : bool
+        Do you want to turn on SQL echoing? Use with caution. Engine is not
+        cached in this case!
 
     Yields
     ------
@@ -63,12 +66,16 @@ def session_scope(versioned=True, ignore_soft_deletes=False):
     """
 
     global cached_engine
-    if cached_engine is None:
+    if cached_engine is None and not debug:
         cached_engine = main_engine()
         log.info("Don't yet have engine... creating default from ignition",
                  engine=id(cached_engine))
 
-    session = new_session(cached_engine, versioned)
+    if debug:
+        session = new_session(main_engine(echo=True), versioned)
+    else:
+        session = new_session(cached_engine, versioned)
+
     try:
         if config.get('LOG_DB_SESSIONS'):
             start_time = time.time()
