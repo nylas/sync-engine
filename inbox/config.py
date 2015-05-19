@@ -56,13 +56,13 @@ def _update_config_from_env(config):
     srcdir = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
 
     if 'INBOX_ENV' in os.environ:
-        assert os.environ['INBOX_ENV'] in ('dev', 'test', 'prod'), \
-            "INBOX_ENV must be either 'dev', 'test', or 'prod'"
+        assert os.environ['INBOX_ENV'] in ('dev', 'test', 'staging', 'prod'), \
+            "INBOX_ENV must be either 'dev', 'test', staging, or 'prod'"
         env = os.environ['INBOX_ENV']
     else:
         env = 'prod'
 
-    if env == 'prod':
+    if env in ['prod', 'staging']:
         base_cfg_path = [
             '/etc/inboxapp/secrets.yml',
             '/etc/inboxapp/config.json',
