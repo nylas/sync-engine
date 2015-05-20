@@ -1,0 +1,31 @@
+#!/usr/bin/env python
+# go through all the non-gmail invalid accounts and restart them.
+# at the end, print a summary of the account which are still alive.
+from inbox.models.session import session_scope
+from inbox.models.account import Account
+import time
+
+
+DELAY = 60 * 5
+
+
+def main():
+    with session_scope() as db_session:
+        accounts = db_session.query(Account).filter(Account.provider != 'gmail',
+                                                    Account.sync_state == 'invalid').all()
+        print "Kickstarting accounts:"
+        for account in accounts:
+            print account.email_address
+            account.enable_sync()
+            db_session.commit()
+            time.sleep(DELAY)
+
+        print "The following accounts seems to have been marked as invalid erronously:"
+        db_session.expire_all()
+        for account in accounts:
+            if account.sync_state == 'running':
+                print account.email_address
+
+
+if __name__ == '__main__':
+    main()

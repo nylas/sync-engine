@@ -174,7 +174,8 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
                     self.credential = token_manager.get_token(account)
                 except ValidationError as e:
                     logger.error("Error obtaining access token",
-                                 account_id=self.account_id)
+                                 account_id=self.account_id,
+                                 logstash_tag='mark_invalid')
                     account.mark_invalid()
                     account.update_sync_error(str(e))
                     db_session.commit()
@@ -240,7 +241,8 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
                                 account, force_refresh=True)
                     else:
                         logger.error('Error validating',
-                                     account_id=self.account_id)
+                                     account_id=self.account_id,
+                                     logstash_tag='mark_invalid')
                         with session_scope() as db_session:
                             query = db_session.query(ImapAccount)
                             account = query.get(self.account_id)

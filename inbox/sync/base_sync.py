@@ -74,7 +74,8 @@ class BaseSyncMonitor(Greenlet):
         except ValidationError:
             # Bad account credentials; exit.
             self.log.error('Error while establishing the connection',
-                           exc_info=True)
+                           account_id=self.account_id,
+                           exc_info=True, logstash_tag='mark_invalid')
             self._cleanup()
             with session_scope() as db_session:
                 account = db_session.query(Account).get(self.account_id)
