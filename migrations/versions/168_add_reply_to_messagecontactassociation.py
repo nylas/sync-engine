@@ -1,14 +1,14 @@
 """Add reply_to to MessageContactAssociation
 
 Revision ID: 41f957b595fc
-Revises: 16e33ed6775b
+Revises: 576f5310e8fc
 Create Date: 2015-03-18 17:46:01.393708
 
 """
 
 # revision identifiers, used by Alembic.
 revision = '41f957b595fc'
-down_revision = '16e33ed6775b'
+down_revision = '576f5310e8fc'
 
 from alembic import op
 import sqlalchemy as sa
