@@ -327,6 +327,7 @@ class FolderSyncEngine(Greenlet):
             download_stack = UIDStack()
             self.check_uid_changes(crispin_client, download_stack,
                                    async_download=False)
+        sleep(self.poll_frequency)
 
     def resync_uids_impl(self):
         # NOTE: first, let's check if the UIVDALIDITY change was spurious, if
