@@ -263,7 +263,9 @@ get_default_providers = lambda: {
         "mx_servers": ["in1-smtp.messagingengine.com",
                        "in2-smtp.messagingengine.com"],
         "ns_servers": ["ns1.messagingengine.com.",
-                       "ns2.messagingengine.com."]
+                       "ns2.messagingengine.com."],
+        "transient_error_messages": [("Temporary user lookup error - "
+                                      "please try again later")],
     },
     "gandi": {
         "type": "generic",
@@ -386,6 +388,9 @@ get_default_providers = lambda: {
         "mx_servers": ["mx-biz.mail.am0.yahoodns.net",
                        "mx1.biz.mail.yahoo.com", "mx5.biz.mail.yahoo.com",
                        "mxvm2.mail.yahoo.com", "mx-van.mail.am0.yahoodns.net"],
+        "transient_error_messages": [("[UNAVAILABLE] (#AUTH701) Service "
+                                      "is not available; please try again "
+                                      "later.")],
     },
     "yandex": {
         "type": "generic",
@@ -418,6 +423,9 @@ get_default_providers = lambda: {
         "folder_map": {"INBOX.Archive": "archive",
                        "INBOX.Drafts": "drafts", "INBOX.Junk Mail": "spam",
                        "INBOX.Sent Items": "sent", "INBOX.Trash": "trash"},
+        "transient_error_messages": [("LOGIN internal error(getting user "
+                                      "information), please contact to "
+                                      "administrator"), ],
     }
 }
 

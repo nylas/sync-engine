@@ -16,6 +16,8 @@ from inbox.basicauth import (ConnectionError, ValidationError,
                              UserRecoverableConfigError)
 from inbox.models import Namespace
 from inbox.models.backends.generic import GenericAccount
+from inbox.providers import provider_info
+
 
 PROVIDER = 'generic'
 AUTH_HANDLER_CLS = 'GenericAuthHandler'
@@ -96,13 +98,28 @@ class GenericAuthHandler(AuthHandler):
                       error="[ALERT] Can't connect to host - may be transient")
             raise TransientConnectionError(str(e))
         except IMAPClient.Error as e:
-            log.error('account_verify_failed',
-                      account_id=account_id,
-                      email=email,
-                      host=host,
-                      port=port,
-                      error='[ALERT] Invalid credentials (Failure)')
-            raise ValidationError(str(e))
+            # Providers like Yahoo sometimes throw harmless
+            # invalid connection errors.
+            error_msgs = provider_info(
+                self.provider_name).get('transient_error_messages', [])
+
+            if str(e) in error_msgs:
+                log.warning('account_verify_failed',
+                            account_id=account_id,
+                            email=email,
+                            host=host,
+                            port=port,
+                            error='Transient auth error',
+                            transient_message=str(e))
+                raise TransientConnectionError(str(e))
+            else:
+                log.error('account_verify_failed',
+                          account_id=account_id,
+                          email=email,
+                          host=host,
+                          port=port,
+                          error='[ALERT] Invalid credentials (Failure)')
+                raise ValidationError(str(e))
         except SSLError as e:
             log.error('account_verify_failed',
                       account_id=account_id,
