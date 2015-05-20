@@ -69,7 +69,7 @@ setup(
              'bin/start-stop-account',
              'bin/inbox-auth',
              'bin/regen-labels',
-             'bin/delete-account',
+             'bin/delete-account-data',
              'bin/alive-dead-metrics',
              'bin/create-db',
              'bin/inbox-api',
