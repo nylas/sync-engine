@@ -330,7 +330,12 @@ get_default_providers = lambda: {
         "domains": ["icloud.com"],
         "mx_servers": ["mx1.mail.icloud.com", "mx2.mail.icloud.com",
                        "mx3.mail.icloud.com", "mx4.mail.icloud.com",
-                       "mx5.mail.icloud.com", "mx6.mail.icloud.com"]
+                       "mx5.mail.icloud.com", "mx6.mail.icloud.com"],
+        "transient_error_messages": [("[UNAVAILABLE] Service temporarily "
+                                      "unavailable"),
+                                     ("LOGIN command error: BAD ["
+                                      "'[UNAVAILABLE] Service temporarily "
+                                      "unavailable']"), ],
     },
     "mail.ru": {
         "type": "generic",
