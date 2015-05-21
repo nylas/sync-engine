@@ -295,6 +295,7 @@ def add_fake_message(db_session, namespace_id, thread=None, from_addr=None,
     m.body = ''
     m.snippet = ''
     m.subject = subject or ''
+    m.is_read = False
 
     if thread:
         thread.messages.append(m)

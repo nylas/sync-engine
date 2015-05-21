@@ -21,9 +21,30 @@ def test_unread(db, default_namespace):
         assert unread_tag not in thread.tags
 
         for m in thread.messages:
-            assert m.is_read is True
+            assert m.is_read is False
 
     thread.apply_tag(unread_tag)
+    db.session.commit()
+
+    thread = db.session.query(Thread).get(thread_id)
+    assert unread_tag in thread.tags
+
+    for m in thread.messages:
+        assert m.is_read is False
+
+    if unread_tag in thread.tags:
+        assert message.is_read is False
+
+        thread.remove_tag(unread_tag, execute_action=True)
+        db.session.commit()
+
+        thread = db.session.query(Thread).get(thread_id)
+        assert unread_tag not in thread.tags
+
+        for m in thread.messages:
+            assert m.is_read is True
+
+    thread.apply_tag(unread_tag, execute_action=True)
     db.session.commit()
 
     thread = db.session.query(Thread).get(thread_id)
