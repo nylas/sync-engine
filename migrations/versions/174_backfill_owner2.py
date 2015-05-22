@@ -21,9 +21,6 @@ def upgrade():
     print "Copying data."
     conn.execute(text("UPDATE event set owner2 = owner where owner2 IS NULL"))
 
-    #print "Dropping old column."
-    #conn.execute(text("ALTER TABLE event DROP COLUMN owner"))
-
 
 def downgrade():
     raise Exception("Can't undo an UPDATE")
