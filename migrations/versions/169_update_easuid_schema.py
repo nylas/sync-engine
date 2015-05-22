@@ -1,14 +1,14 @@
 """update eas schema
 
 Revision ID: 281b07fa75bb
-Revises:576f5310e8fc
+Revises:1740b45aa815
 Create Date: 2015-05-19 01:08:57.101681
 
 """
 
 # revision identifiers, used by Alembic.
 revision = '281b07fa75bb'
-down_revision = '576f5310e8fc'
+down_revision = '1740b45aa815'
 
 from alembic import op
 
