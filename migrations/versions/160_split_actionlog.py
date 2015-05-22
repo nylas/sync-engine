@@ -18,22 +18,7 @@ from sqlalchemy.orm import contains_eager
 def upgrade():
     from inbox.ignition import main_engine
 
-    engine = main_engine(pool_size=1, max_overflow=0)
-    if not engine.has_table('easaccount'):
-        return
-
     op.add_column('actionlog', sa.Column('type', sa.String(16)))
-
-    op.create_table('easactionlog',
-                    sa.Column('id', sa.Integer()),
-                    sa.Column('secondary_status',
-                              sa.Enum('pending', 'successful', 'failed'),
-                              server_default='pending'),
-                    sa.Column('secondary_retries', sa.Integer(),
-                              nullable=False, server_default='0'),
-                    sa.PrimaryKeyConstraint('id'),
-                    sa.ForeignKeyConstraint(['id'], ['actionlog.id'],
-                                            ondelete='CASCADE'))
 
     # Update action_log entries
     from inbox.models import Namespace, Account, ActionLog
@@ -52,13 +37,29 @@ def upgrade():
 
         db_session.commit()
 
+    engine = main_engine(pool_size=1, max_overflow=0)
+    if not engine.has_table('easaccount'):
+        return
+
+    op.create_table('easactionlog',
+                    sa.Column('id', sa.Integer()),
+                    sa.Column('secondary_status',
+                              sa.Enum('pending', 'successful', 'failed'),
+                              server_default='pending'),
+                    sa.Column('secondary_retries', sa.Integer(),
+                              nullable=False, server_default='0'),
+                    sa.PrimaryKeyConstraint('id'),
+                    sa.ForeignKeyConstraint(['id'], ['actionlog.id'],
+                                            ondelete='CASCADE'))
+
 
 def downgrade():
     from inbox.ignition import main_engine
+
+    op.drop_column('actionlog', 'type')
 
     engine = main_engine(pool_size=1, max_overflow=0)
     if not engine.has_table('easaccount'):
         return
 
-    op.drop_column('actionlog', 'type')
     op.drop_table('easactionlog')
