@@ -100,15 +100,8 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     raw_data = Column(Text, nullable=False)
 
     title = Column(String(TITLE_MAX_LEN), nullable=True)
-    _owner2 = Column('owner2', String(OWNER_MAX_LEN), nullable=True)
-
-    @property
-    def owner(self):
-        return self._owner2
-
-    @owner.setter
-    def owner(self, value):
-        self._owner2 = value
+    # The database column is named differently for legacy reasons.
+    owner = Column('owner2', String(OWNER_MAX_LEN), nullable=True)
 
     description = Column(Text, nullable=True)
     location = Column(String(LOCATION_MAX_LEN), nullable=True)
