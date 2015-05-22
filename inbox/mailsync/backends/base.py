@@ -84,8 +84,8 @@ def save_folder_names(log, account_id, folder_names, db_session):
         for name in folder_names['extra']:
             name = name[:MAX_FOLDER_NAME_LENGTH]
             if name not in local_folders:
-                # Folder.create() takes care of adding to the session
-                folder = Folder.create(account, name, db_session)
+                # This takes care of adding the folder to the session.
+                folder = Folder.find_or_create(db_session, account, name)
                 folder.get_associated_tag(db_session)
             else:
                 del local_folders[name]
@@ -122,14 +122,14 @@ def gevent_check_join(log, threads, errmsg):
 
 
 def create_db_objects(account_id, db_session, log, folder_name, raw_messages,
-                      msg_create_fn, canonical_name=None, identifier=None):
+                      msg_create_fn, canonical_name=None):
     new_uids = []
     # TODO: Detect which namespace to add message to. (shared folders)
     # Look up message thread,
     acc = db_session.query(Account).get(account_id)
 
     folder = Folder.find_or_create(db_session, acc, folder_name,
-                                   canonical_name, identifier)
+                                   canonical_name)
 
     for msg in raw_messages:
         uid = msg_create_fn(db_session, acc, folder, msg)

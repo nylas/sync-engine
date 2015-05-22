@@ -52,34 +52,30 @@ class Folder(MailSyncBase):
         return self.account.namespace
 
     @classmethod
-    def create(cls, account, name, session, canonical_name=None,
-               identifier=None):
+    def create(cls, account, name, session, canonical_name=None):
         if name is not None and len(name) > MAX_FOLDER_NAME_LENGTH:
             log.warning("Truncating long folder name for account {}; "
                         "original name was '{}'" .format(account.id, name))
             name = name[:MAX_FOLDER_NAME_LENGTH]
-        obj = cls(account=account, name=name,
-                  canonical_name=canonical_name, identifier=identifier)
+        obj = cls(account=account, name=name, canonical_name=canonical_name)
         session.add(obj)
         return obj
 
     @classmethod
-    def find_or_create(cls, session, account, name, canonical_name=None,
-                       identifier=None):
+    def find_or_create(cls, session, account, name, canonical_name=None):
+        q = session.query(cls).filter_by(account_id=account.id)
+        if name is not None:
+            # Remove trailing whitespace and truncate to max folder name
+            # length. Not ideal but necessary to work around MySQL limitations.
+            name = name.rstrip()
+            name = name[:MAX_FOLDER_NAME_LENGTH]
+            q = q.filter_by(name=name)
+        if canonical_name is not None:
+            q = q.filter_by(canonical_name=canonical_name)
         try:
-            if name is not None and len(name) > MAX_FOLDER_NAME_LENGTH:
-                name = name[:MAX_FOLDER_NAME_LENGTH]
-            q = session.query(cls).filter_by(account_id=account.id)
-            if name is not None:
-                q = q.filter_by(name=name)
-            if canonical_name is not None:
-                q = q.filter_by(canonical_name=canonical_name)
-            if identifier is not None:
-                q = q.filter_by(identifier=identifier)
             obj = q.one()
         except NoResultFound:
-            obj = cls.create(account, name, session, canonical_name,
-                             identifier)
+            obj = cls.create(account, name, session, canonical_name)
         except MultipleResultsFound:
             log.info("Duplicate folder rows for folder {} for account {}"
                      .format(name, account.id))

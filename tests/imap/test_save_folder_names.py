@@ -148,6 +148,17 @@ def test_name_collision_folders(db, folder_name_mapping):
         assert spam_tags.count() == 0
 
 
+def test_handle_trailing_whitespace(db, default_account, folder_name_mapping):
+    folder_name_mapping['extra'] = ['label', 'label ']
+    log = get_logger()
+    save_folder_names(log, default_account.id, folder_name_mapping, db.session)
+
+    # Would raise if tag for label was not committed.
+    db.session.query(Tag).filter_by(
+        namespace_id=default_account.namespace.id,
+        name='label').one()
+
+
 def test_parallel_folder_syncs(db, folder_name_mapping, monkeypatch):
     # test that when we run save_folder_names in parallel, we only create one
     # tag for that folder. this happens when the CondstoreFolderSyncEngine
