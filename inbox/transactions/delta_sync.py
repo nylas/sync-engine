@@ -6,7 +6,7 @@ from datetime import datetime
 from sqlalchemy import asc, desc
 from sqlalchemy.orm import subqueryload
 from inbox.api.kellogs import APIEncoder, encode
-from inbox.models import Transaction, Message, Thread, Namespace
+from inbox.models import Transaction, Message, Thread
 from inbox.models.session import session_scope
 from inbox.models.util import transaction_objects
 
@@ -152,14 +152,14 @@ def format_transactions_after_pointer(namespace, pointer, db_session,
             trxs_by_obj_type[trx.object_type].append(trx)
 
         for obj_type, trxs in trxs_by_obj_type.items():
-            # Build a dictionary mapping record_id to transaction. If an object
-            # appears repeatedly in the list of transactions, this will only
-            # keep the latest transaction for that record_id (which is what we
-            # want).
-            latest_trxs = {trx.record_id: trx for trx in
-                           sorted(trxs, key=lambda t: t.id)}
+            # Build a dictionary mapping pairs (record_id, command) to
+            # transaction. If successive modifies for a given record id appear
+            # in the list of transactions, this will only keep the latest
+            # one (which is what we want).
+            latest_trxs = {(trx.record_id, trx.command): trx for trx in
+                           sorted(trxs, key=lambda t: t.id)}.values()
             # Load all referenced not-deleted objects.
-            ids_to_query = [record_id for record_id, trx in latest_trxs.items()
+            ids_to_query = [trx.record_id for trx in latest_trxs
                             if trx.command != 'delete']
 
             object_cls = transaction_objects()[obj_type]
@@ -170,7 +170,7 @@ def format_transactions_after_pointer(namespace, pointer, db_session,
                 query = query.options(*QUERY_OPTIONS[object_cls])
             objects = {obj.id: obj for obj in query}
 
-            for trx in latest_trxs.values():
+            for trx in latest_trxs:
                 delta = {
                     'object': trx.object_type,
                     'event': EVENT_NAME_FOR_COMMAND[trx.command],

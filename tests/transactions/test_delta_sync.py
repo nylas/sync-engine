@@ -66,20 +66,33 @@ def test_events_are_condensed(api_client):
     ts = int(time.time())
     cursor = get_cursor(api_client, ts)
 
+    # Create, then modify a tag; then modify it again
     tag = json.loads(api_client.post_data('/tags/', {'name': 'foo'}).data)
+    tag_id = tag['id']
+    api_client.put_data('/tags/{}'.format(tag_id), {'name': 'bar'})
+    api_client.put_data('/tags/{}'.format(tag_id), {'name': 'baz'})
+
+    # Modify a thread, then modify it again
     thread_id = api_client.get_data('/threads/')[0]['id']
     thread_path = '/threads/{}'.format(thread_id)
-    api_client.put_data(thread_path, {'add_tags': ['foo']})
-    api_client.put_data(thread_path, {'remove_tags': ['foo']})
-    api_client.delete('/tags/{}'.format(tag['id']))
+    api_client.put_data(thread_path, {'add_tags': [tag_id]})
+    api_client.put_data(thread_path, {'remove_tags': [tag_id]})
 
     sync_data = api_client.get_data('/delta?cursor={}'.format(cursor))
-    assert len(sync_data['deltas']) == 2
-    assert sync_data['deltas'][0]['object'] == 'thread'
-    assert sync_data['deltas'][1]['object'] == 'tag'
-    # Check that we got the later of the two tag deltas, i.e., that we serve
-    # the later delta when condensing.
-    assert sync_data['deltas'][-1]['event'] == 'delete'
+    assert len(sync_data['deltas']) == 3
+    first_delta = sync_data['deltas'][0]
+    assert first_delta['object'] == 'tag' and first_delta['event'] == 'create'
+
+    # Check that successive modifies are condensed.
+
+    second_delta = sync_data['deltas'][1]
+    assert (second_delta['object'] == 'tag' and
+            second_delta['event'] == 'modify')
+    assert second_delta['attributes']['name'] == 'baz'
+
+    third_delta = sync_data['deltas'][2]
+    assert (third_delta['object'] == 'thread' and
+            third_delta['event'] == 'modify')
 
 
 def test_handle_missing_objects(api_client, db, thread, default_namespace):
