@@ -29,7 +29,6 @@ OAUTH_BASE_URL = 'https://apis.live.net/v5.0/'
 OAUTH_SCOPE = ' '.join([
     'wl.basic',            # Read access for basic profile info + contacts
     'wl.offline_access',   # ability to read / update user's info at any time
-    'wl.signin',           # users already signed in:  also signed in to app
     'wl.emails',           # Read access to user's email addresses
     'wl.imap'])            # R/W access to user's email using IMAP / SMTP
 
