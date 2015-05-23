@@ -67,6 +67,10 @@ class OutlookAuthHandler(OAuthAuthHandler):
         account.link = response.get('link')
         account.locale = response.get('locale')
 
+        # Unlike Gmail, Outlook doesn't return the client_id and secret here
+        account.client_id = OAUTH_CLIENT_ID
+        account.client_secret = OAUTH_CLIENT_SECRET
+
         # Ensure account has sync enabled.
         account.enable_sync()
 
