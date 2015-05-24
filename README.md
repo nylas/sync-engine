@@ -27,6 +27,32 @@ And _voilà_! Auth an account via the commandline to start syncing:
 
     bin/inbox-auth ben.bitdiddle1861@gmail.com
 
+The `inbox-auth` command will walk you through the process of obtaining an authorization token from Google or another service for syncing your mail. In the open-source version of the sync engine, your credentials are stored to the local MySQL database for simplicity. The open-source Nylas Sync Engine does not support Exchange, but the [hosted](https://www.nylas.com) version does.
+
+The sync engine will automatically begin syncing your account with the underlying provider. The `inbox-sync` command allows you to manually stop or restart the sync by running `inbox-sync stop [YOUR_ACCOUNT]@example.com` or `inbox-sync start [YOUR_ACCOUNT]@example.com`. Note that an initial sync can take quite a while depending on how much mail you have.
+
+
+
+### Nylas API Service
+
+The Nylas API service provides a REST API for interacting with your data. To start it in your development environment, run command below from the `/vagrant` folder within your VM:
+
+```
+:::bash
+$ bin/inbox-api
+```
+
+This will start the API Server on port 5555. At this point **You're now ready to make requests!** If you're using VirtualBox or VMWare fusion with Vagrant, port 5555 has already been forwarded to your host machine, so you can hit the API from your regular web browser.
+
+You can test that the server is working properly by hitting the `/n/` API which lists synced accounts. There is no authentication built in to the open source sync engine, so you query the API with a simple cURL command:
+
+```
+:::bash
+$ curl http://localhost:5555/n/
+```
+
+Now you can start writing your own application on top of the Nylas API! For more information about the internals of the Nylas Sync Engine, see the <a href="https://nylas.com/docs/api">Nylas API Documentation</a>.
+
 
 ## Production Support
 
