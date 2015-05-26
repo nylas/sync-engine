@@ -270,6 +270,9 @@ class BaseSearchAdaptor(object):
             if self.doc_type == 'thread':
                 timestamp_field = 'last_message_timestamp'
             search_kwargs['sort'] = '{}:desc'.format(timestamp_field)
+            # Uncomment this to include calculated scores in the results'
+            # _score field (a little slower):
+            # search_kwargs['body']['track_scores'] = True
 
         raw_results = self._connection.search(**search_kwargs)
 
