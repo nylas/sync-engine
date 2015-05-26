@@ -31,6 +31,8 @@ def upgrade():
 
     with session_scope(versioned=False) as db_session:
         max_id, = db_session.query(sa.func.max(Message.id)).one()
+        if max_id is None:
+            max_id = 0
         for i in range(0, max_id, CHUNK_SIZE):
             messages = db_session.query(Message). \
                 filter(Message.id > i, Message.id <= i + CHUNK_SIZE). \
