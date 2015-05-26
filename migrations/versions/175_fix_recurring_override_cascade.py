@@ -17,6 +17,19 @@ from sqlalchemy.sql import text
 
 def upgrade():
     conn = op.get_bind()
+    # Check this migration is needed
+    fk_name, fk_delete = conn.execute(
+        '''SELECT constraint_name, delete_rule FROM
+           information_schema.referential_constraints WHERE
+           constraint_schema=DATABASE() AND
+           table_name='recurringeventoverride' AND
+           constraint_name='recurringeventoverride_ibfk_2'
+           ''').fetchone()
+
+    if fk_delete == 'CASCADE':
+        print 'Checked fk: {}. This migration is not needed, skipping.'.format(fk_name)
+        return
+
     conn.execute(text("set @@lock_wait_timeout = 20;"))
     conn.execute(text("SET FOREIGN_KEY_CHECKS=0;"))
     conn.execute(text("ALTER TABLE recurringeventoverride DROP FOREIGN KEY "
