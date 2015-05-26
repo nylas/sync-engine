@@ -34,11 +34,11 @@ def upgrade():
         for i in range(0, max_id, CHUNK_SIZE):
             messages = db_session.query(Message). \
                 filter(Message.id > i, Message.id <= i + CHUNK_SIZE). \
-                options(load_only('_compacted_body', '_sanitized_body'))
+                options(load_only('_compacted_body', 'sanitized_body'))
             for message in messages:
                 if message._compacted_body is None:
                     message._compacted_body = encode_blob(
-                        message._sanitized_body.encode('utf-8'))
+                        message.sanitized_body.encode('utf-8'))
             db_session.commit()
 
 
