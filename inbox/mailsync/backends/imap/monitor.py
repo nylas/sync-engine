@@ -111,12 +111,22 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             # allow individual folder sync monitors to shut themselves down
             # after completing the initial sync
             if thread_finished(thread) or thread.ready():
-                log.info('Folder sync engine finished/killed',
-                         account_id=self.account_id,
-                         folder_id=folder_id,
-                         folder_name=folder_name)
-                # clear the heartbeat for this folder-thread
-                clear_heartbeat_status(self.account_id, folder_id)
+                if thread.exception:
+                    # Exceptions causing the folder sync to exit should not
+                    # clear the heartbeat.
+                    log.info('Folder sync engine exited with error',
+                             account_id=self.account_id,
+                             folder_id=folder_id,
+                             folder_name=folder_name,
+                             error=thread.exception)
+                else:
+                    log.info('Folder sync engine finished',
+                             account_id=self.account_id,
+                             folder_id=folder_id,
+                             folder_name=folder_name)
+                    # clear the heartbeat for this folder-thread since it
+                    # exited cleanly.
+                    clear_heartbeat_status(self.account_id, folder_id)
 
                 # note: thread is automatically removed from
                 # self.folder_monitors
