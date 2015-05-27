@@ -66,6 +66,7 @@ setup(
              'bin/inbox-console',
              'bin/search-index-service',
              'bin/migrate-bodies',
+             'bin/migrate-account',
              'bin/start-stop-account',
              'bin/inbox-auth',
              'bin/regen-labels',
