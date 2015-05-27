@@ -86,7 +86,6 @@ class GenericAuthHandler(AuthHandler):
                       error='[ALERT] (Failure): {0}'.format(str(e)))
             raise ConnectionError(str(e))
 
-        conn.debug = False
         try:
             conn.login(email, credential)
         except IMAPClient.AbortError as e:
