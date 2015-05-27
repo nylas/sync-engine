@@ -10,13 +10,19 @@ Includes:
 USE WITH CAUTION.
 
 """
+import time
+from collections import OrderedDict
+import math
+
 import click
+from sqlalchemy import func
 
 from inbox.models.session import session_scope
 from inbox.models import Account
 from inbox.search.util import delete_index
-from inbox.models.util import delete_namespace
 from inbox.heartbeat.status import clear_heartbeat_status
+
+CHUNK_SIZE = 1000
 
 
 @click.command()
@@ -24,16 +30,18 @@ from inbox.heartbeat.status import clear_heartbeat_status
 def delete_account_data(account_id):
     with session_scope() as db_session:
         account = db_session.query(Account).get(account_id)
-        email_address = account.email_address
 
-        namespace = account.namespace
-        namespace_id = namespace.id
-        namespace_public_id = namespace.public_id
+        if not account:
+            print 'Account with id {} does NOT exist.'.format(account_id)
+            return
+
+        email_address = account.email_address
+        namespace_id = account.namespace.id
+        namespace_public_id = account.namespace.public_id
 
         if account.sync_should_run or not account.is_deleted:
-            print 'Account with id: {}, email_address: {} and namespace_id: {} '\
-                'NOT marked for deletion.\nWill NOT delete, goodbye. '.\
-                format(account_id, email_address, namespace_id)
+            print 'Account with id {} NOT marked for deletion.\n'\
+                  'Will NOT delete, goodbye.'.format(account_id)
             return -1
 
     question = 'Are you sure you want to delete all data for account with '\
@@ -46,34 +54,148 @@ def delete_account_data(account_id):
         print 'Will NOT delete, goodbye.'
         return 0
 
-    print 'Deleting...'
+    print 'Deleting account with id: {}...'.format(account_id)
+    start = time.time()
 
     # Delete search data
     try:
-        print 'Deleting search data -'
+        print 'Deleting search data'
         delete_index(namespace_id, namespace_public_id)
-        print 'Search data deleted.'
     except Exception as e:
-        error = 'Deletion of search data failed! Error: {}'\
-            '\nWill NOT delete from database, goodbye.'.format(str(e))
-
-        print error
+        print 'Deletion of search data failed! Error: {}\n'\
+              'Will NOT delete from database, goodbye.'.format(str(e))
         return -1
+
+    search_end = time.time()
+    print 'Search data deleted. Time taken: {}'.format(search_end - start)
 
     # Delete data in database
     try:
-        print 'Deleting database data -'
+        print 'Deleting database data'
         delete_namespace(account_id, namespace_id)
-        print 'Database data deleted.'
     except Exception as e:
         print 'Database data deletion failed! Error: {}'.format(str(e))
         return -1
 
+    database_end = time.time()
+    print 'Database data deleted. Time taken: {}'.\
+        format(database_end - search_end)
+
     # Delete liveness data
+    print 'Deleting liveness data'
     clear_heartbeat_status(account_id)
 
-    print 'All data deleted successfully!'
+    end = time.time()
+    print 'All data deleted successfully! TOTAL time taken: {}'.\
+        format(end - start)
     return 0
+
+
+def delete_namespace(account_id, namespace_id):
+    """
+    Delete all the data associated with a namespace from the database.
+    USE WITH CAUTION.
+
+    """
+    from inbox.models import (Message, Block, Thread, Transaction, ActionLog,
+                              Contact, Event, Account, Folder, Calendar, Tag,
+                              Namespace)
+
+    # Chunk delete for tables that might have a large concurrent write volume
+    # to prevent those transactions from blocking.
+    # NOTE: ImapFolderInfo does not fall into this category but we include it
+    # here for simplicity.
+
+    filters = OrderedDict()
+
+    for cls in [Message, Block, Thread, Transaction, ActionLog, Contact,
+                Event]:
+        filters[cls] = cls.namespace_id == namespace_id
+
+    with session_scope() as db_session:
+        account = db_session.query(Account).get(account_id)
+        if account.discriminator != 'easaccount':
+            from inbox.models.backends.imap import (ImapUid,
+                                                    ImapFolderSyncStatus,
+                                                    ImapFolderInfo)
+            filters[ImapUid] = ImapUid.account_id == account_id
+            filters[ImapFolderSyncStatus] = \
+                ImapFolderSyncStatus.account_id == account_id
+            filters[ImapFolderInfo] = ImapFolderInfo.account_id == account_id
+        else:
+            from inbox.models.backends.eas import (EASUid, EASFolderSyncStatus)
+            filters[EASUid] = EASUid.easaccount_id == account_id
+            filters[EASFolderSyncStatus] = \
+                EASFolderSyncStatus.account_id == account_id
+
+    for cls in filters:
+        _batch_delete(cls, filters[cls])
+
+    # Bulk delete for the other tables
+    # NOTE: Namespace, Account are deleted at the end too.
+
+    classes = [Folder, Calendar, Tag, Namespace, Account]
+    for cls in classes:
+        if cls in [Calendar, Tag]:
+            filter_ = cls.namespace_id == namespace_id
+        elif cls in [Folder]:
+            filter_ = cls.account_id == account_id
+        elif cls in [Namespace]:
+            filter_ = cls.id == namespace_id
+        elif cls in [Account]:
+            filter_ = cls.id == account_id
+
+        print 'Performing bulk deletion for table: {}'.format(cls.__name__)
+        start = time.time()
+
+        # Set versioned=False since we do /not/ want Transaction records
+        # created for these deletions.
+        with session_scope(versioned=False) as db_session:
+            db_session.query(cls).filter(filter_).\
+                delete(synchronize_session=False)
+            db_session.commit()
+
+        end = time.time()
+        print 'Completed bulk deletion for table: {}, time taken: {}'.\
+            format(cls.__name__, end - start)
+
+
+def _batch_delete(cls, filter_):
+    with session_scope() as db_session:
+        min_ = db_session.query(func.min(cls.id)).filter(filter_).scalar()
+        max_ = db_session.query(func.max(cls.id)).filter(filter_).scalar()
+
+        if not min_:
+            print 'Completed batch deletion for table: {}'.format(cls.__name__)
+            return
+
+        batches = math.ceil((max_ - min_) / CHUNK_SIZE) or 1.0
+
+        print 'Starting batch deletion for table: {}.\n'\
+              'min id: {}, max id: {}, number of batches: {}'.\
+              format(cls.__name__, min_, max_, batches)
+
+        start = time.time()
+
+        count = 0
+        for i in range(min_, max_, CHUNK_SIZE):
+            count += 1
+
+            progress = count / batches
+            if progress in (0.25, 0.5, 0.75):
+                print '~{}% done'.format(progress * 100)
+
+            # Set versioned=False since we do /not/ want Transaction records
+            # created for these deletions.
+            with session_scope(versioned=False) as db_session:
+                db_session.query(cls).filter(
+                    cls.id >= i, cls.id <= i + CHUNK_SIZE, filter_).\
+                    delete(synchronize_session=False)
+                db_session.commit()
+
+        end = time.time()
+        print 'Completed batch deletion for table: {}, time taken: {}'.\
+            format(cls.__name__, end - start)
 
 
 if __name__ == '__main__':
