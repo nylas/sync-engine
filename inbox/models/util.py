@@ -2,10 +2,6 @@ import time
 import math
 from collections import OrderedDict
 
-from sqlalchemy import func
-
-from inbox.models.session import session_scope
-
 CHUNK_SIZE = 1000
 
 
@@ -83,9 +79,14 @@ def delete_namespace(account_id, namespace_id):
     It prints to stdout.
 
     """
-    from inbox.models import (Message, Block, Thread, Transaction, ActionLog,
-                              Contact, Event, Account, Folder, Calendar, Tag,
-                              Namespace)
+    from inbox.models.session import session_scope
+    from inbox.models import Account
+    from inbox.ignition import main_engine
+
+    # Bypass the ORM for performant bulk deletion;
+    # we do /not/ want Transaction records created for these deletions,
+    # so this is okay.
+    engine = main_engine()
 
     # Chunk delete for tables that might have a large concurrent write volume
     # to prevent those transactions from blocking.
@@ -94,91 +95,73 @@ def delete_namespace(account_id, namespace_id):
 
     filters = OrderedDict()
 
-    for cls in [Message, Block, Thread, Transaction, ActionLog, Contact,
-                Event]:
-        filters[cls] = cls.namespace_id == namespace_id
+    for table in ['message', 'block', 'thread', 'transaction', 'actionlog',
+                  'contact', 'event']:
+        filters[table] = ('namespace_id', namespace_id)
 
     with session_scope() as db_session:
         account = db_session.query(Account).get(account_id)
         if account.discriminator != 'easaccount':
-            from inbox.models.backends.imap import (ImapUid,
-                                                    ImapFolderSyncStatus,
-                                                    ImapFolderInfo)
-            filters[ImapUid] = ImapUid.account_id == account_id
-            filters[ImapFolderSyncStatus] = \
-                ImapFolderSyncStatus.account_id == account_id
-            filters[ImapFolderInfo] = ImapFolderInfo.account_id == account_id
+            filters['imapuid'] = ('account_id', account_id)
+            filters['imapfoldersyncstatus'] = ('account_id', account_id)
+            filters['imapfolderinfo'] = ('account_id', account_id)
         else:
-            from inbox.models.backends.eas import (EASUid, EASFolderSyncStatus)
-            filters[EASUid] = EASUid.easaccount_id == account_id
-            filters[EASFolderSyncStatus] = \
-                EASFolderSyncStatus.account_id == account_id
+            filters['easuid'] = ('easaccount_id', account_id)
+            filters['easfoldersyncstatus'] = ('account_id', account_id)
 
     for cls in filters:
-        _batch_delete(cls, filters[cls])
+        _batch_delete(engine, cls, filters[cls])
 
-    # Bulk delete for the other tables
+    # Use a single delete for the other tables
     # NOTE: Namespace, Account are deleted at the end too.
 
-    classes = [Folder, Calendar, Tag, Namespace, Account]
-    for cls in classes:
-        if cls in [Calendar, Tag]:
-            filter_ = cls.namespace_id == namespace_id
-        elif cls in [Folder]:
-            filter_ = cls.account_id == account_id
-        elif cls in [Namespace]:
-            filter_ = cls.id == namespace_id
-        elif cls in [Account]:
-            filter_ = cls.id == account_id
+    query = 'DELETE FROM {} WHERE {}={};'
 
-        print 'Performing bulk deletion for table: {}'.format(cls.__name__)
+    for table in ['folder', 'calendar', 'tag', 'namespace', 'account']:
+        if table in ['calendar', 'tag']:
+            filter_ = ('namespace_id', namespace_id)
+        elif table in ['folder']:
+            filter_ = ('account_id', account_id)
+        elif table in ['namespace']:
+            filter_ = ('id', namespace_id)
+        elif table in ['account']:
+            filter_ = ('id', account_id)
+
+        print 'Performing bulk deletion for table: {}'.format(table)
         start = time.time()
 
-        # Set versioned=False since we do /not/ want Transaction records
-        # created for these deletions.
-        with session_scope(versioned=False) as db_session:
-            db_session.query(cls).filter(filter_).\
-                delete(synchronize_session=False)
-            db_session.commit()
+        engine.execute(query.format(table, filter_[0], filter_[1]))
 
         end = time.time()
         print 'Completed bulk deletion for table: {}, time taken: {}'.\
-            format(cls.__name__, end - start)
+            format(table, end - start)
 
 
-def _batch_delete(cls, filter_):
-    with session_scope() as db_session:
-        min_ = db_session.query(func.min(cls.id)).filter(filter_).scalar()
-        max_ = db_session.query(func.max(cls.id)).filter(filter_).scalar()
+def _batch_delete(engine, table, (column, id_)):
+    count = engine.execute(
+        'SELECT COUNT(*) FROM {} WHERE {}={};'.format(table, column, id_)).\
+        scalar()
 
-        if not min_:
-            print 'Completed batch deletion for table: {}'.format(cls.__name__)
-            return
+    if count == 0:
+        print 'Completed batch deletion for table: {}'.format(table)
+        return
 
-        batches = math.ceil((max_ - min_) / CHUNK_SIZE) or 1.0
+    batches = int(math.ceil(float(count) / CHUNK_SIZE))
 
-        print 'Starting batch deletion for table: {}.\n'\
-              'min id: {}, max id: {}, number of batches: {}'.\
-              format(cls.__name__, min_, max_, batches)
+    print 'Starting batch deletion for table: {}, number of batches: {}'.\
+          format(table, batches)
+    start = time.time()
 
-        start = time.time()
+    query = 'DELETE FROM {} WHERE {}={} LIMIT 1000;'.format(table, column, id_)
 
-        count = 0
-        for i in range(min_, max_, CHUNK_SIZE):
-            count += 1
+    for i in range(0, batches):
+        engine.execute(query)
 
-            progress = count / batches
-            if progress in (0.25, 0.5, 0.75):
-                print '~{}% done'.format(progress * 100)
+        # The batch_number deleted = i+1
+        progress = (i + 1) / batches
+        if progress in (0.25, 0.5, 0.75):
+            print '~{}% done'.format(progress * 100)
 
-            # Set versioned=False since we do /not/ want Transaction records
-            # created for these deletions.
-            with session_scope(versioned=False) as db_session:
-                db_session.query(cls).filter(
-                    cls.id >= i, cls.id <= i + CHUNK_SIZE, filter_).\
-                    delete(synchronize_session=False)
-                db_session.commit()
-
-        end = time.time()
-        print 'Completed batch deletion for table: {}, time taken: {}'.\
-            format(cls.__name__, end - start)
+    end = time.time()
+    print 'Completed batch deletion for table: {}, time taken: {}'.\
+        format(table, end - start)
