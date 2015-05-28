@@ -157,11 +157,6 @@ def _batch_delete(engine, table, (column, id_)):
     for i in range(0, batches):
         engine.execute(query)
 
-        # The batch_number deleted = i+1
-        progress = (i + 1) / batches
-        if progress in (0.25, 0.5, 0.75):
-            print '~{}% done'.format(progress * 100)
-
     end = time.time()
     print 'Completed batch deletion for table: {}, time taken: {}'.\
         format(table, end - start)

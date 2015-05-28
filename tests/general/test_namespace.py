@@ -1,41 +1,51 @@
-from pytest import yield_fixture
-
-from tests.util.base import TestDB, absolute_path
+from tests.util.base import add_fake_account, add_fake_thread, add_fake_message
 
 
-# TODO[k]: FIX standard test dump to have right schema instead.
-@yield_fixture(scope='function')
-def latest_db(config):
-    dumpfile = absolute_path('data/base_dump.sql')
-    testdb = TestDB(config, dumpfile)
-    yield testdb
-    testdb.teardown()
-
-
-def test_namespace_deletion(latest_db):
-    from inbox.models import *
+def test_namespace_deletion(db):
+    from inbox.models import (Namespace, Account, Thread, Message, Block,
+                              Contact, Event, Transaction)
     from inbox.models.util import delete_namespace
 
-    namespace = latest_db.session.query(Namespace).first()
-    namespace_id = namespace.id
-
-    account_id = namespace.account.id
     models = [Thread, Message, Block, Contact, Event, Transaction]
 
-    account = latest_db.session.query(Account).get(account_id)
+    namespace = db.session.query(Namespace).first()
+    namespace_id = namespace.id
+    account_id = namespace.account.id
+
+    account = db.session.query(Account).get(account_id)
     assert account
 
     for m in models:
-        assert latest_db.session.query(m).filter(
+        assert db.session.query(m).filter(
             m.namespace_id == namespace_id).count() != 0
 
-    # Delete namespace
-    delete_namespace(account_id, namespace_id)
-    latest_db.session.commit()
+    fake_account = add_fake_account(db.session)
+    fake_account_id = fake_account.id
 
-    account = latest_db.session.query(Account).get(account_id)
+    assert fake_account_id != account.id and \
+        fake_account.namespace.id != namespace_id
+
+    thread = add_fake_thread(db.session, fake_account.namespace.id)
+    thread_id = thread.id
+
+    message = add_fake_message(db.session, fake_account.namespace.id, thread)
+    message_id = message.id
+
+    # Delete namespace, verify data corresponding to this namespace /only/
+    # is deleted
+    delete_namespace(account_id, namespace_id)
+    db.session.commit()
+
+    account = db.session.query(Account).get(account_id)
     assert not account
 
     for m in models:
-        assert latest_db.session.query(m).filter(
+        assert db.session.query(m).filter(
             m.namespace_id == namespace_id).count() == 0
+
+    fake_account = db.session.query(Account).get(fake_account_id)
+    assert fake_account
+
+    thread = db.session.query(Thread).get(thread_id)
+    message = db.session.query(Message).get(message_id)
+    assert thread and message
