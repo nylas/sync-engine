@@ -198,7 +198,7 @@ def encode(obj, namespace_public_id=None, expand=False):
         }
         if isinstance(obj, RecurringEvent):
             resp['recurrence'] = {
-                'rrule': obj.recurrence,
+                'rrule': obj.recurring,
                 'timezone': obj.start_timezone
             }
         if isinstance(obj, RecurringEventOverride):
