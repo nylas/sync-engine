@@ -932,6 +932,7 @@ CREATE TABLE `imapfoldersyncstatus` (
   `deleted_at` datetime DEFAULT NULL,
   `_metrics` text,
   `folder_id` int(11) NOT NULL,
+  `sync_should_run` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_id` (`account_id`,`folder_id`),
   KEY `ix_foldersync_created_at` (`created_at`),
@@ -949,7 +950,7 @@ CREATE TABLE `imapfoldersyncstatus` (
 
 LOCK TABLES `imapfoldersyncstatus` WRITE;
 /*!40000 ALTER TABLE `imapfoldersyncstatus` DISABLE KEYS */;
-INSERT INTO `imapfoldersyncstatus` VALUES (2,1,'poll','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL,2);
+INSERT INTO `imapfoldersyncstatus` VALUES (2,1,'poll','2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,NULL,2,1);
 /*!40000 ALTER TABLE `imapfoldersyncstatus` ENABLE KEYS */;
 UNLOCK TABLES;
 

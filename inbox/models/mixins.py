@@ -1,6 +1,6 @@
 import abc
 from datetime import datetime
-from sqlalchemy import Column, DateTime, String, inspect
+from sqlalchemy import Column, DateTime, String, inspect, Boolean, sql
 from sqlalchemy.ext.hybrid import hybrid_property, Comparator
 
 from inbox.sqlalchemy_ext.util import Base36UID, generate_public_id, ABCMixin
@@ -106,3 +106,20 @@ class AutoTimestampMixin(object):
     # MOSTLY DEPRECATED (but currently used for async deletion of Message
     # objects).
     deleted_at = Column(DateTime, nullable=True, index=True)
+
+
+class HasRunState(ABCMixin):
+    # Track whether this object (e.g. folder, account) should be running
+    # or not. Used to compare against reported data points to see if all is
+    # well.
+
+    # Is sync enabled for this object? The sync_enabled property should be
+    # a Boolean that reflects whether the object should be reporting
+    # a heartbeat. For folder-level objects, this property can be used to
+    # combine local run state with the parent account's state, so we don't
+    # need to cascade account-level start/stop status updates down to folders.
+    sync_enabled = abc.abstractproperty()
+
+    # Database-level tracking of whether the sync should be running.
+    sync_should_run = Column(Boolean, default=True, nullable=False,
+                             server_default=sql.expression.true())

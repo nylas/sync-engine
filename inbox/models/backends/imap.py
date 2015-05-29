@@ -16,6 +16,7 @@ from inbox.models.account import Account
 from inbox.models.thread import Thread
 from inbox.models.message import Message
 from inbox.models.folder import Folder
+from inbox.models.mixins import HasRunState
 from inbox.util.misc import cleanup_subject
 
 
@@ -266,7 +267,7 @@ class ImapThread(Thread):
     __mapper_args__ = {'polymorphic_identity': 'imapthread'}
 
 
-class ImapFolderSyncStatus(MailSyncBase):
+class ImapFolderSyncStatus(MailSyncBase, HasRunState):
     """ Per-folder status state saving for IMAP folders. """
     account_id = Column(ForeignKey(ImapAccount.id, ondelete='CASCADE'),
                         nullable=False)
@@ -327,5 +328,13 @@ class ImapFolderSyncStatus(MailSyncBase):
             self._metrics.update(metrics)
         else:
             self._metrics = metrics
+
+    @property
+    def sync_enabled(self):
+        # sync is enabled if the folder's run bit is set, and the account's
+        # run bit is set. (this saves us needing to reproduce account-state
+        # transition logic on the folder level, and gives us a comparison bit
+        # against folder heartbeats.)
+        return self.sync_should_run and self.account.sync_should_run
 
     __table_args__ = (UniqueConstraint('account_id', 'folder_id'),)

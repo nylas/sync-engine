@@ -8,14 +8,14 @@ from sqlalchemy.sql.expression import true, false
 from inbox.sqlalchemy_ext.util import JSON, MutableDict
 from inbox.util.file import Lock
 
-from inbox.models.mixins import HasPublicID, HasEmailAddress
+from inbox.models.mixins import HasPublicID, HasEmailAddress, HasRunState
 from inbox.models.base import MailSyncBase
 from inbox.models.folder import Folder
 from inbox.models.calendar import Calendar
 from inbox.providers import provider_info
 
 
-class Account(MailSyncBase, HasPublicID, HasEmailAddress):
+class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState):
     @property
     def provider(self):
         """ A constant, unique lowercase identifier for the account provider
@@ -156,6 +156,14 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
     # current state of this account
     state = Column(Enum('live', 'down', 'invalid'), nullable=True)
 
+    # Based on account status, should the sync be running?
+    # (Note, this is stored via a mixin.)
+    # This is set to false if:
+    #  - Account credentials are invalid (see mark_invalid())
+    #  - External factors no longer require this account to sync
+    # The value of this bit should always equal the AND value of all its
+    # folders and heartbeats.
+
     @property
     def sync_enabled(self):
         return self.sync_should_run
@@ -163,14 +171,6 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress):
     sync_state = Column(Enum('running', 'stopped', 'killed',
                              'invalid', 'connerror'),
                         nullable=True)
-
-    # Based on account status, should the sync be running?
-    # This is set to false if:
-    #  - Account credentials are invalid (see mark_invalid())
-    #  - External factors no longer require this account to sync
-    # The value of this bit should always equal the AND value of all its
-    # folders and heartbeats.
-    sync_should_run = Column(Boolean, server_default=true())
 
     _sync_status = Column(MutableDict.as_mutable(JSON), default={},
                           nullable=True)
