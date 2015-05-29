@@ -220,8 +220,11 @@ class FolderSyncEngine(Greenlet):
                 self.state = self.state + ' uidinvalid'
                 self.heartbeat_status.publish(state=self.state)
             except FolderMissingError:
-                log.error('Folder missing: {}'.format(self.folder_name),
-                          account_id=self.account_id, folder_id=self.folder_id)
+                # Folder was deleted by monitor while its sync was running.
+                # TODO: Monitor should handle shutting down the folder engine.
+                log.info('Folder disappeared: {}. Stopping sync.'.format(
+                    self.folder_name), account_id=self.account_id,
+                    folder_id=self.folder_id)
                 raise MailsyncDone()
             # State handlers are idempotent, so it's okay if we're
             # killed between the end of the handler and the commit.

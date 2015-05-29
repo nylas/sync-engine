@@ -361,11 +361,16 @@ class CrispinClient(object):
         except imapclient.IMAPClient.Error as e:
             # Specifically point out folders that come back as missing by
             # checking for Yahoo / Gmail / Outlook (Hotmail) specific errors:
-            if 'EXAMINE error - Folder does not exist' in e.message or \
-               '[NONEXISTENT] Unknown Mailbox:' in e.message or \
-               '[TRYCREATE] Specified mailbox does not exist' in e.message or \
-               '[TRYCREATE] SELECT error - Folder does not exist' in e.message:
+            if '[NONEXISTENT] Unknown Mailbox:' in e.message or \
+               'does not exist' in e.message or \
+               "doesn't exist" in e.message:
                 raise FolderMissingError(folder)
+            # We can't assume that all errors here are caused by the folder
+            # being deleted, as other connection errors could occur - but we
+            # want to make sure we keep track of different providers'
+            # "nonexistent" messages, so log this event.
+            self.log.error("IMAPClient error selecting folder. May be deleted",
+                           error=str(e))
             raise
 
         select_info['UIDVALIDITY'] = long(select_info['UIDVALIDITY'])
