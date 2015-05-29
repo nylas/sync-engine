@@ -82,7 +82,9 @@ def save_folder_names(log, account_id, folder_names, db_session):
     # Gmail labels, user-created IMAP/EAS folders, etc.
     if 'extra' in folder_names:
         for name in folder_names['extra']:
+            # MySQL sanitization
             name = name[:MAX_FOLDER_NAME_LENGTH]
+            name = name.rstrip()
             if name not in local_folders:
                 # This takes care of adding the folder to the session.
                 folder = Folder.find_or_create(db_session, account, name)
