@@ -58,9 +58,9 @@ def test_message_from_synced(db, default_account, default_namespace,
                              raw_message):
     m = new_message_from_synced(db, default_account, raw_message)
     assert m.namespace_id == default_namespace.id
-    assert sorted(m.to_addr) == [(u'', u'csail-all.lists@mit.edu'),
-                                 (u'', u'csail-announce@csail.mit.edu'),
-                                 (u'', u'csail-related@csail.mit.edu')]
+    assert sorted(m.to_addr) == [[u'', u'csail-all.lists@mit.edu'],
+                                 [u'', u'csail-announce@csail.mit.edu'],
+                                 [u'', u'csail-related@csail.mit.edu']]
     assert len(m.parts) == 4
     assert 'Attached Message Part' in [part.block.filename for part in m.parts]
     assert all(part.block.namespace_id == m.namespace_id for part in m.parts)
@@ -83,33 +83,33 @@ def test_address_parsing_edge_cases():
     # Extra quotes around display name
     mimepart = mime.from_string('From: ""Bob"" <bob@foocorp.com>')
     parsed = parse_mimepart_address_header(mimepart, 'From')
-    assert parsed == [(' Bob ', 'bob@foocorp.com')]
+    assert parsed == [[' Bob ', 'bob@foocorp.com']]
 
     # Comments after addr-spec
     mimepart = mime.from_string(
         'From: "Bob" <bob@foocorp.com>(through Yahoo!  Store Order System)')
     parsed = parse_mimepart_address_header(mimepart, 'From')
-    assert parsed == [('Bob', 'bob@foocorp.com')]
+    assert parsed == [['Bob', 'bob@foocorp.com']]
 
     mimepart = mime.from_string(
         'From: Indiegogo <noreply@indiegogo.com> (no reply)')
     parsed = parse_mimepart_address_header(mimepart, 'From')
-    assert parsed == [('Indiegogo', 'noreply@indiegogo.com')]
+    assert parsed == [['Indiegogo', 'noreply@indiegogo.com']]
 
     mimepart = mime.from_string(
         'From: Anon <support@github.com> (GitHub Staff)')
     parsed = parse_mimepart_address_header(mimepart, 'From')
-    assert parsed == [('Anon', 'support@github.com')]
+    assert parsed == [['Anon', 'support@github.com']]
 
     # Display name in comment
     mimepart = mime.from_string('From: root@gunks (Cron Daemon)')
     parsed = parse_mimepart_address_header(mimepart, 'From')
-    assert parsed == [('Cron Daemon', 'root@gunks')]
+    assert parsed == [['Cron Daemon', 'root@gunks']]
 
     # Missing closing angle bracket
     mimepart = mime.from_string('From: Bob <bob@foocorp.com')
     parsed = parse_mimepart_address_header(mimepart, 'From')
-    assert parsed == [('Bob', 'bob@foocorp.com')]
+    assert parsed == [['Bob', 'bob@foocorp.com']]
 
     # Blank (spammers)
     mimepart = mime.from_string('From:  ()')
@@ -125,7 +125,7 @@ def test_address_parsing_edge_cases():
     mimepart = mime.from_string('From: bob@foocorp.com\r\n'
                                 'From: bob@foocorp.com')
     parsed = parse_mimepart_address_header(mimepart, 'From')
-    assert parsed == [('', 'bob@foocorp.com')]
+    assert parsed == [['', 'bob@foocorp.com']]
 
 
 def test_handle_bad_content_disposition(
@@ -136,9 +136,9 @@ def test_handle_bad_content_disposition(
                                    received_date,
                                    raw_message_with_bad_content_disposition)
     assert m.namespace_id == default_namespace.id
-    assert sorted(m.to_addr) == [(u'', u'csail-all.lists@mit.edu'),
-                                 (u'', u'csail-announce@csail.mit.edu'),
-                                 (u'', u'csail-related@csail.mit.edu')]
+    assert sorted(m.to_addr) == [[u'', u'csail-all.lists@mit.edu'],
+                                 [u'', u'csail-announce@csail.mit.edu'],
+                                 [u'', u'csail-related@csail.mit.edu']]
     assert len(m.parts) == 3
     assert m.received_date == received_date
     assert all(part.block.namespace_id == m.namespace_id for part in m.parts)

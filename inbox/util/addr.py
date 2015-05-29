@@ -17,7 +17,13 @@ def canonicalize_address(addr):
 def parse_mimepart_address_header(mimepart, header_name):
     header_list_string = ', '.join(mimepart.headers.getall(header_name))
     addresslist = rfc822.AddressList(header_list_string).addresslist
+
+    l = addresslist
     if len(addresslist) > 1:
         # Deduplicate entries
-        return list(set(addresslist))
-    return addresslist
+        l = list(set(addresslist))
+
+    # Addresslist is a list of tuples --- turn it into a list of lists
+    # because it makes it easier to compare an address field to one which
+    # has been fetched from the db.
+    return [list(elem) for elem in l]
