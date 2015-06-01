@@ -10,12 +10,6 @@ class ConnectionError(AuthError):
     pass
 
 
-class TransientConnectionError(ConnectionError):
-    """A potentially transient error. Handler should retry
-    the call, at least once."""
-    pass
-
-
 class ValidationError(AuthError):
     pass
 

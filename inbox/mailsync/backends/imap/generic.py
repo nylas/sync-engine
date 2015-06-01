@@ -74,12 +74,12 @@ from sqlalchemy.orm import load_only
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
+from inbox.basicauth import ValidationError
 from inbox.util.concurrency import retry_and_report_killed
 from inbox.util.debug import bind_context
 from inbox.util.itert import chunk
 from inbox.util.misc import or_none
 from inbox.util.threading import fetch_corresponding_thread, MAX_THREAD_LENGTH
-from inbox.basicauth import AuthError
 from inbox.log import get_logger
 log = get_logger()
 from inbox.crispin import connection_pool, retry_crispin, FolderMissingError
@@ -96,14 +96,6 @@ from inbox.heartbeat.store import HeartbeatStatusProxy
 from inbox.events.ical import import_attached_events
 
 GenericUIDMetadata = namedtuple('GenericUIDMetadata', 'throttled')
-
-
-def _pool(account_id):
-    """Get a crispin pool, throwing an error if it's invalid."""
-    try:
-        return connection_pool(account_id)
-    except AuthError:
-        raise MailsyncDone()
 
 
 class UIDStack(object):
@@ -180,7 +172,7 @@ class FolderSyncEngine(Greenlet):
 
     def _run(self):
         # Bind greenlet-local logging context.
-        log.new(account_id=self.account_id, folder=self.folder_name)
+        self.log = log.new(account_id=self.account_id, folder=self.folder_name)
         # eagerly signal the sync status
         self.heartbeat_status.publish()
         return retry_and_report_killed(self._run_impl,
@@ -192,11 +184,7 @@ class FolderSyncEngine(Greenlet):
     def _run_impl(self):
         # We defer initializing the pool to here so that we'll retry if there
         # are any errors (remote server 503s or similar) when initializing it.
-        self.conn_pool = _pool(self.account_id)
-        # We do NOT ignore soft deletes in the mail sync because it gets real
-        # complicated handling e.g. when backends reuse imapids. ImapUid
-        # objects are the only objects deleted by the mail sync backends
-        # anyway.
+        self.conn_pool = connection_pool(self.account_id)
         try:
             saved_folder_status = self._load_state()
         except IntegrityError:
@@ -226,6 +214,11 @@ class FolderSyncEngine(Greenlet):
                     self.folder_name), account_id=self.account_id,
                     folder_id=self.folder_id)
                 raise MailsyncDone()
+            except ValidationError:
+                log.error('Error authenticating; stopping sync', exc_info=True,
+                          account_id=self.account_id, folder_id=self.folder_id)
+                raise MailsyncDone()
+
             # State handlers are idempotent, so it's okay if we're
             # killed between the end of the handler and the commit.
             if self.state != old_state:

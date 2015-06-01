@@ -1,6 +1,7 @@
 """ IMAPClient wrapper for the Nilas Sync Engine.
 
 """
+import contextlib
 import re
 import time
 import imaplib
@@ -27,20 +28,16 @@ from email.parser import HeaderParser
 from collections import namedtuple, defaultdict
 
 import gevent
-from gevent import socket, GreenletExit
-from gevent.coros import BoundedSemaphore
-
-import geventconnpool
+from gevent import socket
+from gevent.lock import BoundedSemaphore
+from gevent.queue import Queue
 
 from inbox.util.concurrency import retry
 from inbox.util.itert import chunk
 from inbox.util.misc import or_none, timed
-from inbox.basicauth import (ConnectionError, ValidationError,
-                             TransientConnectionError, AuthError)
+from inbox.basicauth import ValidationError
 from inbox.models.session import session_scope
 from inbox.models.account import Account
-from inbox.models.backends.imap import ImapAccount
-from inbox.models.backends.oauth import token_manager
 
 from inbox.log import get_logger
 logger = get_logger()
@@ -57,14 +54,13 @@ RawMessage = namedtuple(
     'RawImapMessage',
     'uid internaldate flags body g_thrid g_msgid g_labels')
 
-# We will retry a couple of times for transient errors, such as an invalid
-# access token or the server being temporariliy unavailable.
-MAX_TRANSIENT_ERRORS = 2
-
 # Lazily-initialized map of account ids to lock objects.
 # This prevents multiple greenlets from concurrently creating duplicate
 # connection pools for a given account.
 _lock_map = defaultdict(threading.Lock)
+
+
+CONN_DISCARD_EXC_CLASSES = (socket.error, imaplib.IMAP4.error)
 
 
 class GmailSettingError(Exception):
@@ -78,17 +74,10 @@ class FolderMissingError(Exception):
 
 def _get_connection_pool(account_id, pool_size, pool_map, readonly):
     with _lock_map[account_id]:
-        try:
-            pool = pool_map.get(account_id)
-            return pool if pool else \
-                pool_map.setdefault(
-                    account_id,
-                    CrispinConnectionPool(account_id,
-                                          num_connections=pool_size,
-                                          readonly=readonly))
-        except AuthError:
-            logger.error('Auth error for account {}'.format(account_id))
-            raise GreenletExit()
+        if account_id not in pool_map:
+            pool_map[account_id] = CrispinConnectionPool(
+                account_id, num_connections=pool_size, readonly=readonly)
+        return pool_map[account_id]
 
 
 def connection_pool(account_id, pool_size=3, pool_map=dict()):
@@ -119,10 +108,8 @@ def writable_connection_pool(account_id, pool_size=1, pool_map=dict()):
     """
     return _get_connection_pool(account_id, pool_size, pool_map, False)
 
-CONN_DISCARD_EXC_CLASSES = (socket.error, imaplib.IMAP4.error)
 
-
-class CrispinConnectionPool(geventconnpool.ConnectionPool):
+class CrispinConnectionPool(object):
     """
     Connection pool for Crispin clients.
 
@@ -142,123 +129,90 @@ class CrispinConnectionPool(geventconnpool.ConnectionPool):
                     'connections'.format(account_id, num_connections))
         self.account_id = account_id
         self.readonly = readonly
-        self._new_conn_lock = BoundedSemaphore(1)
+        self._queue = Queue(num_connections, items=num_connections * [None])
+        self._sem = BoundedSemaphore(num_connections)
         self._set_account_info()
 
-        # 1200s == 20min
-        geventconnpool.ConnectionPool.__init__(
-            self, num_connections, keepalive=1200,
-            exc_classes=CONN_DISCARD_EXC_CLASSES)
+    @contextlib.contextmanager
+    def get(self):
+        """ Get a connection from the pool, or instantiate a new one if needed.
+        If `num_connections` connections are already in use, block until one is
+        available.
+        """
+        # A gevent semaphore is granted in the order that greenlets tried to
+        # acquire it, so we use a semaphore here to prevent potential
+        # starvation of greenlets if there is high contention for the pool.
+        # The queue implementation does not have that property; having
+        # greenlets simply block on self._queue.get(block=True) could cause
+        # individual greenlets to block for arbitrarily long.
+        self._sem.acquire()
+        client = self._queue.get()
+        try:
+            if client is None:
+                client = self._new_connection()
+            yield client
+        except CONN_DISCARD_EXC_CLASSES as exc:
+            # Discard the connection on socket or IMAP errors. Technically this
+            # isn't always necessary, since if you got e.g. a FETCH failure you
+            # could reuse the same connection. But for now it's the simplest
+            # thing to do.
+            logger.info('IMAP connection error; discarding connection',
+                        exc_info=True)
+            if client is not None:
+                try:
+                    client.logout()
+                except:
+                    logger.error('Error on IMAP logout', exc_info=True)
+                client = None
+            raise exc
+        except:
+            raise
+        finally:
+            self._queue.put(client)
+            self._sem.release()
 
     def _set_account_info(self):
         with session_scope() as db_session:
             account = db_session.query(Account).get(self.account_id)
-            self.provider_name = account.provider
-            self.email_address = account.email_address
-            self.provider_info = account.provider_info
-            self.imap_endpoint = account.imap_endpoint
             self.sync_state = account.sync_state
-
-            if self.provider_name == 'gmail':
+            self.provider_info = account.provider_info
+            self.email_address = account.email_address
+            self.auth_handler = account.auth_handler
+            if account.provider == 'gmail':
                 self.client_cls = GmailCrispinClient
-            elif getattr(account, 'supports_condstore', False):
-                self.client_cls = CondStoreCrispinClient
-            elif self.provider_info.get('condstore'):
+            elif (getattr(account, 'supports_condstore', None) or
+                  account.provider_info.get('condstore')):
                 self.client_cls = CondStoreCrispinClient
             else:
                 self.client_cls = CrispinClient
 
-            # Refresh token if need be, for OAuthed accounts
-            if self.provider_info['auth'] == 'oauth2':
-                try:
-                    self.credential = token_manager.get_token(account)
-                except ValidationError as e:
-                    logger.error("Error obtaining access token",
-                                 account_id=self.account_id,
-                                 logstash_tag='mark_invalid')
-                    account.mark_invalid()
-                    account.update_sync_error(str(e))
-                    db_session.commit()
-                    raise
-                except ConnectionError as e:
-                    logger.error("Error connecting",
-                                 account_id=self.account_id)
-                    account.sync_state = 'connerror'
-                    account.update_sync_error(str(e))
-                    db_session.commit()
-                    raise
-            else:
-                self.credential = account.password
-
     def _new_connection(self):
-        from inbox.auth.base import handler_from_provider
-
-        # Ensure that connections are initialized serially, so as not to use
-        # many db sessions on startup.
-        with self._new_conn_lock:
-            auth_handler = handler_from_provider(self.provider_name)
-
-            for retry_count in range(MAX_TRANSIENT_ERRORS):
-                try:
-                    conn = auth_handler.connect_account(self.email_address,
-                                                        self.credential,
-                                                        self.imap_endpoint,
-                                                        self.account_id)
-
-                    # If we can connect the account, then we can set the sate
-                    # to 'running' if it wasn't already
-                    if self.sync_state != 'running':
-                        with session_scope() as db_session:
-                            query = db_session.query(ImapAccount)
-                            account = query.get(self.account_id)
-                            self.sync_state = account.sync_state = 'running'
-                    return self.client_cls(self.account_id, self.provider_info,
-                                           self.email_address, conn,
-                                           readonly=self.readonly)
-
-                except ConnectionError, e:
-                    if isinstance(e, TransientConnectionError):
-                        return None
-                    else:
-                        logger.error('Error connecting',
-                                     account_id=self.account_id)
-                        with session_scope() as db_session:
-                            query = db_session.query(ImapAccount)
-                            account = query.get(self.account_id)
-                            account.sync_state = 'connerror'
-                            account.update_sync_error(str(e))
-                        return None
-                except ValidationError, e:
-                    # If we failed to validate, but the account is oauth2, we
-                    # may just need to refresh the access token. Try this one
-                    # time.
-                    if (self.provider_info['auth'] == 'oauth2' and
-                            retry_count == 0):
-                        with session_scope() as db_session:
-                            query = db_session.query(ImapAccount)
-                            account = query.get(self.account_id)
-                            self.credential = token_manager.get_token(
-                                account, force_refresh=True)
-                    else:
-                        logger.error('Error validating',
-                                     account_id=self.account_id,
-                                     logstash_tag='mark_invalid')
-                        with session_scope() as db_session:
-                            query = db_session.query(ImapAccount)
-                            account = query.get(self.account_id)
-                            account.mark_invalid()
-                            account.update_sync_error(str(e))
-                        raise
-            return None
-
-    def _keepalive(self, c):
-        c.conn.noop()
+        try:
+            with session_scope() as db_session:
+                account = db_session.query(Account).get(self.account_id)
+                conn = self.auth_handler.connect_account(account)
+                # If we can connect the account, then we can set the state
+                # to 'running' if it wasn't already
+                if self.sync_state != 'running':
+                    self.sync_state = account.sync_state = 'running'
+            return self.client_cls(self.account_id, self.provider_info,
+                                   self.email_address, conn,
+                                   readonly=self.readonly)
+        except ValidationError, e:
+            logger.error('Error validating',
+                         account_id=self.account_id,
+                         logstash_tag='mark_invalid')
+            with session_scope() as db_session:
+                account = db_session.query(Account).get(self.account_id)
+                account.mark_invalid()
+                account.update_sync_error(str(e))
+            raise
 
 
 def _exc_callback():
-    gevent.sleep(5)
     logger.info('Connection broken with error; retrying with new connection',
                 exc_info=True)
+    gevent.sleep(5)
 
 
 def _fail_callback():
@@ -644,6 +598,9 @@ class CrispinClient(object):
             return
         self.conn.delete_messages(matching_uids)
         self.conn.expunge()
+
+    def logout(self):
+        self.conn.logout()
 
 
 class CondStoreCrispinClient(CrispinClient):

@@ -8,7 +8,6 @@ from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declared_attr
 
-from inbox.basicauth import AuthError
 from inbox.models.secret import Secret
 from inbox.log import get_logger
 log = get_logger()
@@ -25,7 +24,6 @@ class TokenManager(object):
                 return token
 
         new_token, expires_in = account.new_token()
-        account.validate_token(new_token)
         self.cache_token(account, new_token, expires_in)
         return new_token
 
@@ -74,15 +72,6 @@ class OAuthAccount(object):
         self.secret.secret = value
         self.secret.type = 'token'
 
-    def validate_token(self, tok):
-        try:
-            return self.auth_handler.validate_token(tok)
-        except Exception as e:
-            log.error(u"Error while validating access token: {}".format(e),
-                      account_id=self.id,
-                      exc_info=True)
-            raise
-
     def new_token(self):
         try:
             return self.auth_handler.new_token(self.refresh_token,
@@ -95,8 +84,6 @@ class OAuthAccount(object):
             raise
 
     def verify(self):
+        # TODO(emfree): update callers and remove this silliness.
         token = token_manager.get_token(self)
-        try:
-            return self.validate_token(token)
-        except AuthError:
-            raise
+        return self.auth_handler.validate_token(token)

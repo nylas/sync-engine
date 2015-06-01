@@ -28,7 +28,7 @@ def test_imap_not_fully_enabled(monkeypatch):
     monkeypatch.setattr('imapclient.IMAPClient.list_folders',
                         folder_list_fail)
 
-    def fake_connect(email, credential, imap_endpoint):
+    def fake_connect(account):
         return MockIMAPClient()
 
     response = {

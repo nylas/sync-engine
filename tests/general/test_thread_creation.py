@@ -15,12 +15,8 @@ MockRawMessage = namedtuple('RawMessage', ['flags'])
 
 
 @pytest.fixture
-def folder_sync_engine(db, monkeypatch):
-    # super ugly, but I don't want to have to mock tons of stuff
-    import inbox.mailsync.backends.imap.generic
+def folder_sync_engine(db):
     from inbox.mailsync.backends.imap.generic import FolderSyncEngine
-    monkeypatch.setattr(inbox.mailsync.backends.imap.generic,
-                        "_pool", lambda(account): True)
     # setup a dummy FolderSyncEngine - we only need to call a couple
     # methods.
     email = "inboxapptest1@fastmail.fm"

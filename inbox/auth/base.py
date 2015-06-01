@@ -44,9 +44,8 @@ class AuthHandler(object):
         self.provider_name = provider_name
 
     # optional
-    def connect_account(self, email, secret, imap_endpoint):
-        """Return an authenticated IMAPClient instance for the given
-        credentials.
+    def connect_account(self, account):
+        """Return an authenticated IMAPClient instance for the given account.
 
         This is an optional interface, which is only needed for accounts that
         are synced using IMAP.

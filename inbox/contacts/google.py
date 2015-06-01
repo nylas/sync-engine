@@ -92,9 +92,6 @@ class GoogleContactsProvider(object):
 
             except ConnectionError:
                 self.log.error('Connection error')
-                account.sync_state = 'connerror'
-                db_session.add(account)
-                db_session.commit()
                 raise
 
     def _parse_contact_result(self, google_contact):

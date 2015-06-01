@@ -30,7 +30,6 @@ setup(
         "enum34==1.0.4",
         "gdata>=2.0.18",
         "simplejson>=3.6.0",
-        "geventconnpool>=0.2.1",
         "icalendar>=3.8.2",
         "simplejson>=3.6.0",
         "imapclient>=0.11",

@@ -114,11 +114,7 @@ class GmailAuthHandler(OAuthAuthHandler):
         """Verifies configuration, specifically presence of 'All Mail' folder.
            Will raise an inbox.crispin.GmailSettingError if not present.
         """
-        access_token = token_manager.get_token(account)
-        conn = self.connect_account(account.email_address,
-                                    access_token,
-                                    account.imap_endpoint,
-                                    account.id)
+        conn = self.connect_account(account)
         # make a crispin client and check the folders
         client = GmailCrispinClient(account.id,
                                     provider_info('gmail'),

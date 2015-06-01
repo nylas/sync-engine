@@ -38,10 +38,6 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState):
     def provider_info(self):
         return provider_info(self.provider, self.email_address)
 
-    def verify(self):
-        """ Verify that the account is still valid."""
-        raise NotImplementedError
-
     @property
     def thread_cls(self):
         from inbox.models.thread import Thread

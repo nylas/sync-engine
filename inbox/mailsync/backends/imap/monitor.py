@@ -3,14 +3,14 @@ from gevent.pool import Group
 from gevent.coros import BoundedSemaphore
 from sqlalchemy.orm.exc import NoResultFound
 from inbox.log import get_logger
-from inbox.crispin import retry_crispin
+from inbox.crispin import retry_crispin, connection_pool
 from inbox.models import Folder
 from inbox.mailsync.backends.base import BaseMailSyncMonitor
 from inbox.mailsync.backends.base import (save_folder_names,
                                           MailsyncError,
                                           mailsync_session_scope,
                                           thread_polling, thread_finished)
-from inbox.mailsync.backends.imap.generic import _pool, FolderSyncEngine
+from inbox.mailsync.backends.imap.generic import FolderSyncEngine
 from inbox.mailsync.backends.imap.condstore import CondstoreFolderSyncEngine
 from inbox.heartbeat.status import clear_heartbeat_status
 from inbox.mailsync.gc import DeleteHandler
@@ -64,7 +64,7 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
         of tuples (folder_name, folder_id) for each folder we want to sync (in
         order)."""
         with mailsync_session_scope() as db_session:
-            with _pool(self.account_id).get() as crispin_client:
+            with connection_pool(self.account_id).get() as crispin_client:
                 # the folders we should be syncing
                 sync_folders = crispin_client.sync_folders()
                 # get a fresh list of the folder names from the remote

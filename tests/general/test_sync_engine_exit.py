@@ -28,11 +28,7 @@ def raise_folder_error(*args, **kwargs):
 
 
 @pytest.fixture
-def sync_engine_stub(db, yahoo_account, monkeypatch):
-    # setup a dummy FolderSyncEngine which raises a FolderMissingError
-    monkeypatch.setattr('inbox.mailsync.backends.imap.generic._pool',
-                        lambda account: True)
-
+def sync_engine_stub(db, yahoo_account):
     engine = FolderSyncEngine(yahoo_account.id, "Inbox", 0,
                               TEST_YAHOO_EMAIL, "yahoo",
                               3200, None, 20, [])
