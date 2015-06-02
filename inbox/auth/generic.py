@@ -97,6 +97,25 @@ class GenericAuthHandler(AuthHandler):
                           port=port,
                           error=exc)
                 raise
+
+        if 'ID' in conn.capabilities():
+            # Try to issue an IMAP ID command. Some whacky servers
+            # (163.com) require this, but it's an encouraged practice in any
+            # case. Since this isn't integral to the sync in general, don't
+            # fail if there are any errors.
+            # (Note that as of May 2015, this depends on a patched imapclient
+            # that implements the ID command.)
+            try:
+                conn.id_({'name': 'Nylas Sync Engine', 'vendor': 'Nylas',
+                          'contact': 'support@nylas.com'})
+            except Exception as exc:
+                log.warning('Error issuing IMAP ID command; continuing',
+                            account_id=account.id,
+                            email=account.email_address,
+                            host=host,
+                            port=port,
+                            error=exc)
+
         return conn
 
     def _supports_condstore(self, conn):
