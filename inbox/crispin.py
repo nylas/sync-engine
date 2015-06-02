@@ -461,10 +461,28 @@ class CrispinClient(object):
         return sorted([long(uid) for uid in fetch_result])
 
     def uids(self, uids):
-        raw_messages = self.conn.fetch(uids,
-                                       ['BODY.PEEK[] INTERNALDATE FLAGS'])
         uid_set = set(uids)
         messages = []
+        raw_messages = {}
+
+        for uid in uid_set:
+            try:
+                raw_messages.update(self.conn.fetch(uid,
+                   ['BODY.PEEK[] INTERNALDATE FLAGS']))
+            except imapclient.IMAPClient.Error as e:
+                if ('[UNAVAILABLE] UID FETCH Server error '
+                    'while fetching messages') in str(e):
+                    self.log.info('Got an exception while requesting an UID',
+                                  uid=uid, error=e,
+                                  logstash_tag='imap_download_exception')
+                    continue
+                else:
+                    self.log.info(('Got an unhandled exception while '
+                                   'requesting an UID'),
+                                  uid=uid, error=e,
+                                  logstash_tag='imap_download_exception')
+                    raise
+
         for uid in sorted(raw_messages.iterkeys(), key=long):
             # Skip handling unsolicited FETCH responses
             if uid not in uid_set:
@@ -474,6 +492,7 @@ class CrispinClient(object):
                 raise Exception(
                     'No BODY[] element in IMAP response. Tags given: {}'
                     .format(msg.keys()))
+
             messages.append(RawMessage(uid=long(uid),
                                        internaldate=msg['INTERNALDATE'],
                                        flags=msg['FLAGS'],
