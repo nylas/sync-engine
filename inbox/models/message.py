@@ -1,26 +1,25 @@
 import datetime
 import itertools
 from hashlib import sha256
-from flanker import mime
 from collections import defaultdict
 
+from flanker import mime
 from sqlalchemy import (Column, Integer, BigInteger, String, DateTime,
                         Boolean, Enum, ForeignKey, Index)
 from sqlalchemy.dialects.mysql import LONGBLOB
 from sqlalchemy.orm import relationship, backref, validates
 from sqlalchemy.sql.expression import false
+from sqlalchemy.ext.associationproxy import association_proxy
 
 from inbox.util.html import plaintext2html, strip_tags
 from inbox.sqlalchemy_ext.util import JSON, json_field_too_long
-
 from inbox.util.addr import parse_mimepart_address_header
 from inbox.util.misc import parse_references, get_internaldate
-
 from inbox.models.mixins import HasPublicID, HasRevisions
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
+from inbox.models.category import Category
 from inbox.security.blobstorage import encode_blob, decode_blob
-
 from inbox.log import get_logger
 log = get_logger()
 
@@ -38,21 +37,20 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     def API_OBJECT_NAME(self):
         return 'message' if not self.is_draft else 'draft'
 
-    # Do delete messages if their associated thread is deleted.
-    thread_id = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
-                       nullable=False)
-
-    thread = relationship(
-        'Thread',
-        backref=backref('messages', order_by='Message.received_date',
-                        passive_deletes=True, cascade='all, delete-orphan'))
-
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           index=True, nullable=False)
     namespace = relationship(
         'Namespace',
         lazy='joined',
         load_on_pending=True)
+
+    # Do delete messages if their associated thread is deleted.
+    thread_id = Column(Integer, ForeignKey('thread.id', ondelete='CASCADE'),
+                       nullable=False)
+    thread = relationship(
+        'Thread',
+        backref=backref('messages', order_by='Message.received_date',
+                        passive_deletes=True, cascade='all, delete-orphan'))
 
     from_addr = Column(JSON, nullable=False, default=lambda: [])
     sender_addr = Column(JSON, nullable=True)
@@ -71,6 +69,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     data_sha256 = Column(String(255), nullable=True)
 
     is_read = Column(Boolean, server_default=false(), nullable=False)
+    is_starred = Column(Boolean, server_default=false(), nullable=False)
 
     # For drafts (both Inbox-created and otherwise)
     is_draft = Column(Boolean, server_default=false(), nullable=False)
@@ -92,6 +91,12 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     decode_error = Column(Boolean, server_default=false(), nullable=False,
                           index=True)
 
+    # In accordance with JWZ (http://www.jwz.org/doc/threading.html)
+    references = Column(JSON, nullable=True)
+
+    # Only used for drafts.
+    version = Column(Integer, nullable=False, server_default='0')
+
     # only on messages from Gmail (TODO: use different table)
     #
     # X-GM-MSGID is guaranteed unique across an account but not globally
@@ -110,7 +115,8 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
     inbox_uid = Column(String(64), nullable=True, index=True)
 
     def regenerate_inbox_uid(self):
-        """The value of inbox_uid is simply the draft public_id and version,
+        """
+        The value of inbox_uid is simply the draft public_id and version,
         concatenated. Because the inbox_uid identifies the draft on the remote
         provider, we regenerate it on each draft revision so that we can delete
         the old draft and add the new one on the remote."""
@@ -119,15 +125,27 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         self.inbox_uid = '{}-{}'.format(self.public_id, self.version)
         self.message_id_header = generate_message_id_header(self.inbox_uid)
 
-    # In accordance with JWZ (http://www.jwz.org/doc/threading.html)
-    references = Column(JSON, nullable=True)
+    categories = association_proxy(
+        'messagecategories', 'category',
+        creator=lambda category: MessageCategory(category=category))
 
-    # Only used for drafts.
-    version = Column(Integer, nullable=False, server_default='0')
+    # FOR INBOX-CREATED MESSAGES:
+
+    is_created = Column(Boolean, server_default=false(), nullable=False)
+
+    # Whether this draft is a reply to an existing thread.
+    is_reply = Column(Boolean)
+
+    reply_to_message_id = Column(Integer, ForeignKey('message.id'),
+                                 nullable=True)
+    reply_to_message = relationship('Message', uselist=False)
 
     def mark_for_deletion(self):
-        """Mark this message to be deleted by an asynchronous delete
-        handler."""
+        """
+        Mark this message to be deleted by an asynchronous delete
+        handler.
+
+        """
         self.deleted_at = datetime.datetime.utcnow()
 
     @validates('subject')
@@ -440,20 +458,13 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             resp.append(k)
         return resp
 
-    # FOR INBOX-CREATED MESSAGES:
-
-    is_created = Column(Boolean, server_default=false(), nullable=False)
-
-    # Whether this draft is a reply to an existing thread.
-    is_reply = Column(Boolean)
-
-    reply_to_message_id = Column(Integer, ForeignKey('message.id'),
-                                 nullable=True)
-    reply_to_message = relationship('Message', uselist=False)
-
     @property
     def versioned_relationships(self):
         return ['parts']
+
+    @property
+    def propagated_attributes(self):
+        return ['is_read', 'is_starred', 'messagecategories']
 
     @property
     def has_attached_events(self):
@@ -464,6 +475,10 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         return [part for part in self.parts
                 if part.block.content_type == 'text/calendar']
 
+    @property
+    def account(self):
+        return self.namespace.account
+
     def get_header(self, header, mid):
         if self.decode_error:
             log.warning('Error getting message header', mid=mid)
@@ -471,6 +486,37 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
         parsed = mime.from_string(self.full_body.data)
         return parsed.headers.get(header)
+
+    def update_metadata(self, is_draft):
+        account = self.namespace.account
+        if account.discriminator == 'easaccount':
+            uids = self.easuids
+        else:
+            uids = self.imapuids
+
+        self.is_read = any(i.is_seen for i in uids)
+        self.is_starred = any(i.is_flagged for i in uids)
+        self.is_draft = is_draft
+
+        categories = set()
+        for i in uids:
+            categories.update(i.categories)
+
+        if account.category_type == 'folder':
+            categories = [select_category(categories)]
+
+        self.categories = categories
+
+        # TODO[k]: Update from pending actions here?
+
+    def add_category(self, category):
+        if category not in self.categories:
+            self.categories.add(category)
+
+    def remove_category(self, category):
+        if category not in self.categories:
+            return
+        self.categories.remove(category)
 
 # Need to explicitly specify the index length for table generation with MySQL
 # 5.6 when columns are too long to be fully indexed with utf8mb4 collation.
@@ -488,3 +534,34 @@ Index('ix_message_namespace_id_deleted_at', Message.namespace_id,
 # For statistics about messages sent via Nylas
 Index('ix_message_namespace_id_is_created', Message.namespace_id,
       Message.is_created)
+
+
+class MessageCategory(MailSyncBase):
+    """ Mapping between messages and categories. """
+    message_id = Column(Integer, ForeignKey(Message.id, ondelete='CASCADE'),
+                        nullable=False)
+    message = relationship(
+        'Message',
+        backref=backref('messagecategories',
+                        collection_class=set,
+                        cascade='all, delete-orphan'))
+
+    category_id = Column(Integer, ForeignKey(Category.id, ondelete='CASCADE'),
+                         nullable=False)
+    category = relationship(
+        Category,
+        backref=backref('messagecategories',
+                        cascade='all, delete-orphan',
+                        lazy='dynamic'))
+
+    @property
+    def namespace(self):
+        return self.message.namespace
+
+Index('message_category_ids',
+      MessageCategory.message_id, MessageCategory.category_id)
+
+
+def select_category(categories):
+    # TODO[k]: Implement proper ranking function
+    return list(categories)[0]

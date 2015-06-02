@@ -25,94 +25,46 @@ at-least-once semantics.
 """
 from inbox.actions.backends import module_registry
 
-from inbox.models import Account, Message, Folder
+from inbox.models import Account, Message
 from inbox.sendmail.base import generate_attachments
 from inbox.sendmail.message import create_email
 from inbox.log import get_logger
 log = get_logger()
 
 
-def archive(account_id, thread_id, db_session):
-    """Sync an archive action back to the backend. """
-    account = db_session.query(Account).get(account_id)
+def mark_unread(account_id, message_id, db_session, args):
+    unread = args['unread']
 
-    set_remote_archived = module_registry[account.provider]. \
-        set_remote_archived
-    set_remote_archived(account, thread_id, True, db_session)
-
-
-def unarchive(account_id, thread_id, db_session):
-    account = db_session.query(Account).get(account_id)
-
-    set_remote_archived = module_registry[account.provider]. \
-        set_remote_archived
-    set_remote_archived(account, thread_id, False, db_session)
-
-
-def star(account_id, thread_id, db_session):
-    account = db_session.query(Account).get(account_id)
-
-    set_remote_starred = module_registry[account.provider]. \
-        set_remote_starred
-    set_remote_starred(account, thread_id, True, db_session)
-
-
-def unstar(account_id, thread_id, db_session):
-    account = db_session.query(Account).get(account_id)
-
-    set_remote_starred = module_registry[account.provider]. \
-        set_remote_starred
-    set_remote_starred(account, thread_id, False, db_session)
-
-
-def mark_unread(account_id, thread_id, db_session):
     account = db_session.query(Account).get(account_id)
     set_remote_unread = module_registry[account.provider]. \
         set_remote_unread
-    set_remote_unread(account, thread_id, True, db_session)
+    set_remote_unread(account, message_id, db_session, unread)
 
 
-def mark_read(account_id, thread_id, db_session):
+def mark_starred(account_id, message_id, db_session, args):
+    starred = args['starred']
     account = db_session.query(Account).get(account_id)
-    set_remote_unread = module_registry[account.provider]. \
-        set_remote_unread
-    set_remote_unread(account, thread_id, False, db_session)
+    set_remote_starred = module_registry[account.provider]. \
+        set_remote_starred
+    set_remote_starred(account, message_id, db_session, starred)
 
 
-def mark_spam(account_id, thread_id, db_session):
-    """Sync a mark as spam action back to the backend. """
+def move(account_id, message_id, db_session, args):
+    destination = args['destination']
     account = db_session.query(Account).get(account_id)
-
-    set_remote_spam = module_registry[account.provider]. \
-        set_remote_spam
-    set_remote_spam(account, thread_id, True, db_session)
+    remote_move = module_registry[account.provider].remote_move
+    remote_move(account, message_id, db_session, destination)
 
 
-def unmark_spam(account_id, thread_id, db_session):
-    """Sync an unmark as spam action back to the backend. """
+def change_labels(account_id, message_id, db_session, args):
+    added_labels = args['added_labels']
+    removed_labels = args['removed_labels']
     account = db_session.query(Account).get(account_id)
-
-    set_remote_spam = module_registry[account.provider]. \
-        set_remote_spam
-    set_remote_spam(account, thread_id, False, db_session)
-
-
-def mark_trash(account_id, thread_id, db_session):
-    """Sync an trash action back to the backend. """
-    account = db_session.query(Account).get(account_id)
-
-    set_remote_trash = module_registry[account.provider]. \
-        set_remote_trash
-    set_remote_trash(account, thread_id, True, db_session)
-
-
-def unmark_trash(account_id, thread_id, db_session):
-    """Sync an trash action back to the backend. """
-    account = db_session.query(Account).get(account_id)
-
-    set_remote_trash = module_registry[account.provider]. \
-        set_remote_trash
-    set_remote_trash(account, thread_id, False, db_session)
+    assert account.provider == 'gmail'
+    remote_change_labels = module_registry[account.provider]. \
+        remote_change_labels
+    remote_change_labels(account, message_id, db_session, removed_labels,
+                         added_labels)
 
 
 def _create_email(account, message):
@@ -152,16 +104,9 @@ def save_draft(account_id, message_id, db_session, args):
         log.warning('tried to save outdated version of draft')
         return
 
-    if account.drafts_folder is None:
-        # account has no detected drafts folder - create one.
-        drafts_folder = Folder.find_or_create(db_session, account, 'Drafts',
-                                              'drafts')
-        account.drafts_folder = drafts_folder
-
     mimemsg = _create_email(account, message)
     remote_save_draft = module_registry[account.provider].remote_save_draft
-    remote_save_draft(account, account.drafts_folder.name,
-                      mimemsg, db_session, message.created_at)
+    remote_save_draft(account, mimemsg, db_session, message.created_at)
 
 
 def delete_draft(account_id, draft_id, db_session, args):
@@ -193,16 +138,6 @@ def save_sent_email(account_id, message_id, db_session):
                  message_id=message_id, account_id=account_id)
         return
 
-    create_backend_sent_folder = False
-    if account.sent_folder is None:
-        # account has no detected drafts folder - create one.
-        sent_folder = Folder.find_or_create(db_session, account,
-                                            'Sent', 'sent')
-        account.sent_folder = sent_folder
-        create_backend_sent_folder = True
-
     mimemsg = _create_email(account, message)
     remote_save_sent = module_registry[account.provider].remote_save_sent
-    remote_save_sent(account, account.sent_folder.name,
-                     mimemsg, message.created_at,
-                     create_backend_sent_folder)
+    remote_save_sent(account, mimemsg, message.created_at)

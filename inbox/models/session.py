@@ -20,10 +20,12 @@ def new_session(engine, versioned=True):
     session = Session(bind=engine, autoflush=True, autocommit=False)
     if versioned:
         from inbox.models.transaction import (create_revisions,
+                                              propagate_changes,
                                               increment_versions)
 
         @event.listens_for(session, 'before_flush')
         def before_flush(session, flush_context, instances):
+            propagate_changes(session)
             increment_versions(session)
 
         @event.listens_for(session, 'after_flush')
@@ -31,8 +33,10 @@ def new_session(engine, versioned=True):
             """
             Hook to log revision snapshots. Must be post-flush in order to
             grab object IDs on new objects.
+
             """
             create_revisions(session)
+
     return session
 
 # Old name for legacy code.

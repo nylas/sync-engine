@@ -8,6 +8,7 @@ from inbox.models.mixins import AutoTimestampMixin
 class MailSyncBase(AutoTimestampMixin):
     """
     Provides automated table name, primary key column, and audit timestamps.
+
     """
     id = Column(Integer, primary_key=True, autoincrement=True)
 

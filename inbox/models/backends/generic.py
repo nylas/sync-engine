@@ -45,6 +45,10 @@ class GenericAccount(ImapAccount):
         self.secret.type = 'password'
 
     @property
+    def category_type(self):
+        return 'folder'
+
+    @property
     def thread_cls(self):
         from inbox.models.backends.imap import ImapThread
         return ImapThread

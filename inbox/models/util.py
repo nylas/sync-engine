@@ -55,8 +55,8 @@ def transaction_objects():
     models that implement the HasRevisions mixin).
 
     """
-    from inbox.models import (Calendar, Contact, Message, Event, Block, Tag,
-                              Thread)
+    from inbox.models import (Calendar, Contact, Message, Event, Block,
+                              Category, Thread)
 
     return {
         'calendar': Calendar,
@@ -65,8 +65,9 @@ def transaction_objects():
         'event': Event,
         'file': Block,
         'message': Message,
-        'tag': Tag,
-        'thread': Thread
+        'thread': Thread,
+        'label': Category,
+        'folder': Category
     }
 
 
@@ -117,14 +118,14 @@ def delete_namespace(account_id, namespace_id):
 
     query = 'DELETE FROM {} WHERE {}={};'
 
-    for table in ['folder', 'calendar', 'tag', 'namespace', 'account']:
-        if table in ['calendar', 'tag']:
+    for table in ['folder', 'calendar', 'namespace', 'account']:
+        if table == 'calendar':
             filter_ = ('namespace_id', namespace_id)
-        elif table in ['folder']:
+        elif table == 'folder':
             filter_ = ('account_id', account_id)
-        elif table in ['namespace']:
+        elif table == 'namespace':
             filter_ = ('id', namespace_id)
-        elif table in ['account']:
+        elif table == 'account':
             filter_ = ('id', account_id)
 
         print 'Performing bulk deletion for table: {}'.format(table)

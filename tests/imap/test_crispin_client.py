@@ -50,6 +50,25 @@ def constants():
                 body=body, body_size=body_size, internaldate=internaldate)
 
 
+def patch_gmail_client(monkeypatch, folders):
+    monkeypatch.setattr(GmailCrispinClient, '_fetch_folder_list',
+                        lambda x: folders)
+
+    conn = MockedIMAPClient(host='somehost')
+    return GmailCrispinClient(account_id=1, provider_info=None,
+                              email_address='inboxapptest@gmail.com',
+                              conn=conn)
+
+
+def patch_generic_client(monkeypatch, folders):
+    monkeypatch.setattr(CrispinClient, '_fetch_folder_list',
+                        lambda x: folders)
+
+    conn = MockedIMAPClient(host='somehost')
+    return CrispinClient(account_id=1, provider_info={},
+                         email_address='inboxapptest@fastmail.fm', conn=conn)
+
+
 def patch_imap4(crispin_client, resp):
     crispin_client.conn._imap._command_complete.return_value = (
         'OK', ['Success'])
@@ -178,7 +197,7 @@ def test_internaldate(generic_client, constants):
         ]
 
 
-def test_deleted_folder(monkeypatch, generic_client, constants):
+def test_deleted_folder_on_select(monkeypatch, generic_client, constants):
     """ Test that a 'select failed EXAMINE' error specifying that a folder
         doesn't exist is converted into a FolderMissingError. (Yahoo style)
     """
@@ -194,16 +213,102 @@ def test_deleted_folder(monkeypatch, generic_client, constants):
         generic_client.select_folder('missing_folder', lambda: True)
 
 
-def test_deleted_folder(monkeypatch, generic_client, constants):
+def test_deleted_folder_on_fetch(monkeypatch, generic_client, constants):
     """ Test that a 'select failed EXAMINE' error specifying that a folder
         doesn't exist is converted into a FolderMissingError. (Yahoo style)
     """
     def raise_invalid_uid_exc(*args, **kwargs):
-        raise imapclient.IMAPClient.Error('[UNAVAILABLE] UID FETCH Server error '
-                                          'while fetching messages')
+        raise imapclient.IMAPClient.Error(
+            '[UNAVAILABLE] UID FETCH Server error while fetching messages')
 
     monkeypatch.setattr('imapclient.IMAPClient.fetch',
                         raise_invalid_uid_exc)
 
     # Simply check that the Error exception is handled.
     generic_client.uids(["125"])
+
+
+def test_gmail_folders(monkeypatch):
+    folders = \
+        [(('\\HasNoChildren',), '/', u'INBOX'),
+         (('\\Noselect', '\\HasChildren'), '/', u'[Gmail]'),
+         (('\\HasNoChildren', '\\All'), '/', u'[Gmail]/All Mail'),
+         (('\\HasNoChildren', '\\Drafts'), '/', u'[Gmail]/Drafts'),
+         (('\\HasNoChildren', '\\Important'), '/', u'[Gmail]/Important'),
+         (('\\HasNoChildren', '\\Sent'), '/', u'[Gmail]/Sent Mail'),
+         (('\\HasNoChildren', '\\Junk'), '/', u'[Gmail]/Spam'),
+         (('\\Flagged', '\\HasNoChildren'), '/', u'[Gmail]/Starred'),
+         (('\\HasNoChildren', '\\Trash'), '/', u'[Gmail]/Trash'),
+         (('\\HasNoChildren',), '/', u'reference')]
+
+    role_map = {
+        '[Gmail]/All Mail': 'all',
+        'INBOX': 'inbox',
+        '[Gmail]/Trash': 'trash',
+        '[Gmail]/Spam': 'spam',
+        '[Gmail]/Drafts': 'drafts',
+        '[Gmail]/Sent Mail': 'sent',
+        '[Gmail]/Important': 'important',
+        '[Gmail]/Starred': 'starred',
+        'reference': None
+    }
+
+    client = patch_gmail_client(monkeypatch, folders)
+
+    raw_folders = client.folders()
+    # Should not contain the `\\Noselect' folder
+    assert len(raw_folders) == len(folders) - 1
+    assert {f.display_name: f.role for f in raw_folders} == role_map
+
+    folder_names = client.folder_names()
+    for role in ['inbox', 'all', 'trash', 'drafts', 'important', 'sent',
+                 'spam', 'starred']:
+        assert role in folder_names
+
+        names = folder_names[role]
+        assert isinstance(names, list) and len(names) == 1
+
+
+def test_imap_folders(monkeypatch):
+    folders = \
+        [(('\\HasNoChildren',), '/', u'INBOX'),
+         (('\\Noselect', '\\HasChildren'), '/', u'SKIP'),
+         (('\\HasNoChildren', '\\Drafts'), '/', u'Drafts'),
+         (('\\HasNoChildren', '\\Sent'), '/', u'Sent'),
+         (('\\HasNoChildren', '\\Sent'), '/', u'Sent Items'),
+         (('\\HasNoChildren', '\\Junk'), '/', u'Spam'),
+         (('\\HasNoChildren', '\\Trash'), '/', u'Trash'),
+         (('\\HasNoChildren',), '/', u'reference')]
+
+    role_map = {
+        'INBOX': 'inbox',
+        'Trash': 'trash',
+        'Drafts': 'drafts',
+        'Sent': 'sent',
+        'Sent Items': 'sent',
+        'Spam': 'spam'
+    }
+
+    client = patch_generic_client(monkeypatch, folders)
+
+    raw_folders = client.folders()
+    # Should not contain the `\\Noselect' folder
+    assert len(raw_folders) == len(folders) - 1
+    for f in raw_folders:
+        if f.display_name in role_map:
+            assert f.role == role_map[f.display_name]
+        else:
+            assert f.display_name in ['reference']
+            assert f.role is None
+
+    folder_names = client.folder_names()
+    for role in ['inbox', 'trash', 'drafts', 'sent', 'spam']:
+        assert role in folder_names
+
+        names = folder_names[role]
+        assert isinstance(names, list)
+
+        if role == 'sent':
+            assert len(names) == 2
+        else:
+            assert len(names) == 1

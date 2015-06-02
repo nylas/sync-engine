@@ -29,17 +29,17 @@ from inbox.util.debug import bind_context
 
 from inbox.crispin import GmailSettingError
 from inbox.log import get_logger
-from inbox.models import Message, Folder, Namespace, Account
+from inbox.models import Message, Folder, Namespace, Account, Label
 from inbox.models.backends.gmail import GmailAccount
 from inbox.models.backends.imap import ImapFolderInfo, ImapUid, ImapThread
-from inbox.mailsync.backends.base import (create_db_objects,
-                                          commit_uids,
-                                          mailsync_session_scope,
+from inbox.models.constants import MAX_LABEL_NAME_LENGTH
+from inbox.mailsync.backends.base import (mailsync_session_scope,
                                           THROTTLE_WAIT)
 from inbox.mailsync.backends.imap.generic import UIDStack
 from inbox.mailsync.backends.imap.condstore import CondstoreFolderSyncEngine
 from inbox.mailsync.backends.imap.monitor import ImapSyncMonitor
 from inbox.mailsync.backends.imap import common
+log = get_logger()
 
 PROVIDER = 'gmail'
 SYNC_MONITOR_CLS = 'GmailSyncMonitor'
@@ -53,7 +53,63 @@ class GmailSyncMonitor(ImapSyncMonitor):
         ImapSyncMonitor.__init__(self, *args, **kwargs)
         self.sync_engine_class = GmailFolderSyncEngine
 
-log = get_logger()
+    def save_folder_names(self, db_session, raw_folders):
+        """
+        Save the folders, labels present on the remote backend for an account.
+
+        * Create Folder/ Label objects.
+        * Delete Folders/ Labels that no longer exist on the remote.
+
+        Notes
+        -----
+        Gmail uses IMAP folders and labels.
+        Canonical folders ('inbox', 'all') are therefore mapped to both
+        Folder and Label objects, everything else is created as a Label only.
+
+        We don't canonicalize names to lowercase when saving because
+        different backends may be case-sensitive or otherwise - code that
+        references saved names should canonicalize if needed when doing
+        comparisons.
+
+        """
+        account = db_session.query(Account).get(self.account_id)
+        remote_label_names = {l.display_name.rstrip()[:MAX_LABEL_NAME_LENGTH]
+                              for l in raw_folders}
+
+        assert 'all' in {f.role for f in raw_folders},\
+            'Account {} has no detected All Mail folder'.\
+            format(account.email_address)
+
+        local_labels = {l.name: l for l in db_session.query(Label).filter(
+                        Label.account_id == self.account_id).all()}
+
+        # Delete labels no longer present on the remote.
+        # Note that the label with canonical_name='all' cannot be deleted;
+        # remote_label_names will always contain an entry corresponding to it.
+        discard = set(local_labels) - set(remote_label_names)
+        for name in discard:
+            log.info('Label deleted from remote',
+                     account_id=self.account_id, name=name)
+            db_session.delete(local_labels[name])
+
+        # Create new labels, folders
+        for raw_folder in raw_folders:
+            Label.find_or_create(db_session, account, raw_folder.display_name,
+                                 raw_folder.role)
+
+            if raw_folder.role in ('all', 'spam', 'trash'):
+                folder = Folder.find_or_create(db_session, account,
+                                               raw_folder.display_name,
+                                               raw_folder.role)
+                if folder.name != raw_folder.display_name:
+                    log.info('Folder name changed on remote',
+                             account_id=account_id,
+                             role=raw_folder.role,
+                             new_name=raw_folder.display_name,
+                             name=folder.name)
+                    folder.name = raw_folder.display_name
+
+        db_session.commit()
 
 
 class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
@@ -62,7 +118,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
         self.saved_uids = set()
 
     def is_all_mail(self, crispin_client):
-        return self.folder_name == crispin_client.folder_names()['all']
+        return self.folder_name in crispin_client.folder_names()['all']
 
     def should_idle(self, crispin_client):
         return self.is_all_mail(crispin_client)
@@ -145,8 +201,9 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                          joinedload('message').load_only('g_msgid'))\
                 .filter_by(account_id=self.account_id,
                            folder_id=self.folder_id)
-            CHUNK_SIZE = 1000
-            for entry in imap_uid_entries.yield_per(CHUNK_SIZE):
+
+            chunk_size = 1000
+            for entry in imap_uid_entries.yield_per(chunk_size):
                 if entry.message.g_msgid in mapping:
                     log.debug('X-GM-MSGID {} from UID {} to UID {}'.format(
                         entry.message.g_msgid,
@@ -226,22 +283,21 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
         # thread_id, causing a crash, and so that we don't flush on each
         # added/removed label.
         with db_session.no_autoflush:
-            new_uid.message.g_msgid = msg.g_msgid
             # NOTE: g_thrid == g_msgid on the first message in the thread :)
+            new_uid.message.g_msgid = msg.g_msgid
             new_uid.message.g_thrid = msg.g_thrid
 
-            # we rely on Gmail's threading instead of our threading algorithm.
-            new_uid.update_flags_and_labels(msg.flags, msg.g_labels)
-
-            thread = new_uid.message.thread = ImapThread.from_gmail_message(
+            # We rely on Gmail's threading instead of our threading algorithm.
+            new_uid.message.thread = ImapThread.from_gmail_message(
                 db_session, new_uid.account.namespace, new_uid.message)
 
-        # make sure this thread has all the correct labels
-        common.add_any_new_thread_labels(thread, new_uid, db_session)
         return new_uid
 
-    def download_and_commit_uids(self, crispin_client, folder_name, uids):
+    def download_and_commit_uids(self, crispin_client, uids):
         raw_messages = crispin_client.uids(uids)
+        if not raw_messages:
+            return 0
+        new_uids = set()
         with self.syncmanager_lock:
             # there is the possibility that another green thread has already
             # downloaded some message(s) from this batch... check within the
@@ -251,12 +307,20 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                     db_session, raw_messages)
                 if not raw_messages:
                     return 0
-                new_imapuids = create_db_objects(
-                    self.account_id, db_session, log, folder_name,
-                    raw_messages, self.create_message)
-                commit_uids(db_session, new_imapuids, self.provider_name)
-        self.saved_uids.update(uids)
-        return len(new_imapuids)
+
+                account = db_session.query(Account).get(self.account_id)
+                folder = db_session.query(Folder).get(self.folder_id)
+                for msg in raw_messages:
+                    uid = self.create_message(db_session, account, folder,
+                                              msg)
+                    if uid is not None:
+                        db_session.add(uid)
+                        db_session.flush()
+                        new_uids.add(uid)
+                db_session.commit()
+
+        self.saved_uids.update(new_uids)
+        return len(new_uids)
 
     def __download_queued_threads(self, crispin_client, download_stack):
         """
@@ -326,7 +390,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
         log.debug(deduplicated_message_count=len(to_download))
         for uids in chunk(to_download, crispin_client.CHUNK_SIZE):
             self.download_and_commit_uids(
-                crispin_client, crispin_client.selected_folder_name, uids)
+                crispin_client, uids)
         return len(to_download)
 
 
@@ -381,7 +445,7 @@ def add_new_imapuids(crispin_client, remote_g_metadata, syncmanager_lock,
                 acc = db_session.query(GmailAccount).get(
                     crispin_client.account_id)
 
-                # collate message objects to relate the new imapuids to
+                # Collate message objects to relate the new imapuids to
                 imapuid_for = dict([(metadata.msgid, uid) for (uid, metadata)
                                     in remote_g_metadata.items()
                                     if uid in uids])
@@ -395,7 +459,7 @@ def add_new_imapuids(crispin_client, remote_g_metadata, syncmanager_lock,
                                         acc.namespace.id)])
 
                 # Stop Folder.find_or_create()'s query from triggering a flush.
-                with db_session.no_autoflush:
+                with db_session.no_autoflush as session:
                     new_imapuids = [ImapUid(
                         account=acc,
                         folder=Folder.find_or_create(
@@ -403,22 +467,13 @@ def add_new_imapuids(crispin_client, remote_g_metadata, syncmanager_lock,
                             crispin_client.selected_folder_name),
                         msg_uid=uid, message=message_for[uid]) for uid in uids
                         if uid in message_for]
-                    for item in new_imapuids:
-                        # skip uids which have disappeared in the meantime
-                        if item.msg_uid in flags:
-                            item.update_flags_and_labels(
-                                flags[item.msg_uid].flags,
-                                flags[item.msg_uid].labels)
+                    for uid in new_imapuids:
+                        # Skip uids which have disappeared in the meantime
+                        if uid.msg_uid in flags:
+                            uid.update_flags(flags[uid.msg_uid].flags)
+                            uid.update_labels(flags[uid.msg_uid].labels)
 
-                            item.message.is_draft = item.is_draft
-                            common.update_unread_status(item)
+                            common.update_message_metadata(session, uid)
+
                 db_session.add_all(new_imapuids)
-                db_session.flush()
-
-                # Don't forget to update thread labels.
-                messages = set(message_for.values())
-                unique_threads = set([message.thread for message in messages])
-
-                for thread in unique_threads:
-                    common.recompute_thread_labels(thread, db_session)
                 db_session.commit()

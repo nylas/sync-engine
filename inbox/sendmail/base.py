@@ -2,7 +2,7 @@ import pkg_resources
 from datetime import datetime
 
 from inbox.api.validation import (
-    get_recipients, get_tags, get_attachments, get_thread, get_message)
+    get_recipients, get_attachments, get_thread, get_message)
 from inbox.api.err import InputError
 from inbox.contacts.process_mail import update_contacts_from_message
 from inbox.models import Message, Part
@@ -78,9 +78,6 @@ def create_draft_from_mime(account, raw_mime, db_session):
             recentdate=msg.received_date,
             namespace=account.namespace,
             subjectdate=msg.received_date)
-        if msg.attachments:
-                attachment_tag = account.namespace.tags['attachment']
-                msg.thread.apply_tag(attachment_tag)
 
         msg.is_created = True
         msg.is_sent = True
@@ -96,7 +93,7 @@ def create_draft(data, namespace, db_session, syncback):
     representing the POST body of an API request. All new objects are added to
     the session, but not committed."""
 
-    # Validate the input and get referenced objects (tags, thread, attachments)
+    # Validate the input and get referenced objects (thread, attachments)
     # as necessary.
     to_addr = get_recipients(data.get('to'), 'to')
     cc_addr = get_recipients(data.get('cc'), 'cc')
@@ -115,7 +112,6 @@ def create_draft(data, namespace, db_session, syncback):
     body = data.get('body', '')
     if not isinstance(body, basestring):
         raise InputError('"body" should be a string')
-    tags = get_tags(data.get('tags'), namespace.id, db_session)
     blocks = get_attachments(data.get('file_ids'), namespace.id, db_session)
     reply_to_thread = get_thread(data.get('thread_id'), namespace.id,
                                  db_session)
@@ -215,14 +211,8 @@ def create_draft(data, namespace, db_session, syncback):
                 recentdate=message.received_date,
                 namespace=namespace,
                 subjectdate=message.received_date)
-            if message.attachments:
-                attachment_tag = namespace.tags['attachment']
-                thread.apply_tag(attachment_tag)
 
         message.thread = thread
-        thread.apply_tag(namespace.tags['drafts'])
-        for tag in tags:
-            thread.apply_tag(tag)
 
     db_session.add(message)
     if syncback:
@@ -234,7 +224,7 @@ def create_draft(data, namespace, db_session, syncback):
 
 def update_draft(db_session, account, draft, to_addr=None,
                  subject=None, body=None, blocks=None, cc_addr=None,
-                 bcc_addr=None, from_addr=None, reply_to=None, tags=None):
+                 bcc_addr=None, from_addr=None, reply_to=None):
     """
     Update draft with new attributes.
     """
@@ -265,7 +255,7 @@ def update_draft(db_session, account, draft, to_addr=None,
         draft.parts.remove(part)
         db_session.delete(part)
 
-    # Parts, tags require special handling
+    # Parts require special handling
     for block in blocks:
         # Don't re-add attachments that are already attached
         if block.id in [p.block_id for p in draft.parts]:
@@ -283,15 +273,6 @@ def update_draft(db_session, account, draft, to_addr=None,
         thread.subject = draft.subject
         thread.subjectdate = draft.received_date
         thread.recentdate = draft.received_date
-        attachment_tag = thread.namespace.tags['attachment']
-        if draft.attachments:
-            thread.apply_tag(attachment_tag)
-        else:
-            thread.remove_tag(attachment_tag)
-
-    if tags:
-        tags_to_keep = {tag for tag in thread.tags if not tag.user_created}
-        thread.tags = tags | tags_to_keep
 
     # Remove previous message-contact associations, and create new ones.
     draft.contacts = []
@@ -320,7 +301,6 @@ def update_draft(db_session, account, draft, to_addr=None,
 def delete_draft(db_session, account, draft):
     """ Delete the given draft. """
     thread = draft.thread
-    namespace = draft.namespace
     assert draft.is_draft
 
     # Delete remotely.
@@ -333,10 +313,6 @@ def delete_draft(db_session, account, draft):
     # Delete the thread if it would now be empty.
     if not thread.messages:
         db_session.delete(thread)
-    elif not thread.drafts:
-        # Otherwise, remove the drafts tag from the thread if there are no more
-        # drafts on it.
-        thread.remove_tag(namespace.tags['drafts'])
 
     db_session.commit()
 

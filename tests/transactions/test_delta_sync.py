@@ -1,8 +1,6 @@
 import json
 import time
-from tests.util.base import add_fake_message, add_fake_thread
-
-__all__ = ['api_client', 'db', 'thread']
+from tests.util.base import add_fake_message
 
 
 def get_cursor(api_client, timestamp):
@@ -21,80 +19,71 @@ def test_invalid_input(api_client):
     assert sync_response.status_code == 400
 
 
-def test_event_generation(api_client, db, default_namespace):
-    """Test that deltas are returned in response to client sync API calls.
-    Doesn't test formatting of individual deltas in the response."""
-    for i in range(10):
-        add_fake_thread(db.session, default_namespace.id)
+def test_events_are_condensed(api_client, message):
+    """
+    Test that multiple revisions of the same object are rolled up in the
+    delta response.
+
+    """
     ts = int(time.time() + 22)
     cursor = get_cursor(api_client, ts)
 
-    sync_data = api_client.get_data('/delta?cursor={}'.format(cursor))
-    assert len(sync_data['deltas']) == 0
-    assert sync_data['cursor_end'] == cursor
-    assert sync_data['cursor_end'] == sync_data['cursor_start']
-
-    api_client.post_data('/tags/', {'name': 'foo'})
-
-    sync_data = api_client.get_data('/delta?cursor={}'.format(cursor))
-    assert len(sync_data['deltas']) == 1
-
-    thread_id = api_client.get_data('/threads/')[0]['id']
-    thread_path = '/threads/{}'.format(thread_id)
-    api_client.put_data(thread_path, {'add_tags': ['foo']})
-
-    sync_data = api_client.get_data('/delta?cursor={}'.format(cursor))
-    assert len(sync_data['deltas']) == 2
-
-    cursor = sync_data['cursor_end']
-    # Test result limiting
-    for i in range(1, 10):
-        thread_id = api_client.get_data('/threads/')[i]['id']
-        thread_path = '/threads/{}'.format(thread_id)
-        api_client.put_data(thread_path, {'add_tags': ['foo']})
-
-    sync_data = api_client.get_data('/delta?cursor={0}&limit={1}'.
-                                    format(cursor, 8))
-    assert len(sync_data['deltas']) == 8
-
-    new_cursor = sync_data['cursor_end']
-    sync_data = api_client.get_data('/delta?cursor={0}'.format(new_cursor))
-    assert len(sync_data['deltas']) == 1
-
-
-def test_events_are_condensed(api_client, thread):
-    """Test that multiple revisions of the same object are rolled up in the
-    delta response."""
-    ts = int(time.time() + 22)
-    cursor = get_cursor(api_client, ts)
-
-    # Create, then modify a tag; then modify it again
-    tag = json.loads(api_client.post_data('/tags/', {'name': 'foo'}).data)
-    tag_id = tag['id']
-    api_client.put_data('/tags/{}'.format(tag_id), {'name': 'bar'})
-    api_client.put_data('/tags/{}'.format(tag_id), {'name': 'baz'})
-
-    # Modify a thread, then modify it again
-    thread_id = api_client.get_data('/threads/')[0]['id']
-    thread_path = '/threads/{}'.format(thread_id)
-    api_client.put_data(thread_path, {'add_tags': [tag_id]})
-    api_client.put_data(thread_path, {'remove_tags': [tag_id]})
-
-    sync_data = api_client.get_data('/delta?cursor={}'.format(cursor))
-    assert len(sync_data['deltas']) == 3
-    first_delta = sync_data['deltas'][0]
-    assert first_delta['object'] == 'tag' and first_delta['event'] == 'create'
+    # Modify a message, then modify it again
+    message_id = api_client.get_data('/messages/')[0]['id']
+    message_path = '/messages/{}'.format(message_id)
+    api_client.put_data(message_path, {'unread': True})
+    api_client.put_data(message_path, {'unread': False})
+    api_client.put_data(message_path, {'unread': True})
 
     # Check that successive modifies are condensed.
+    sync_data = api_client.get_data('/delta?cursor={}'.format(cursor))
+    deltas = sync_data['deltas']
+    # A message modify propagates to its thread
+    message_deltas = [d for d in deltas if d['object'] == 'message']
+    assert len(message_deltas) == 1
 
-    second_delta = sync_data['deltas'][1]
-    assert (second_delta['object'] == 'tag' and
-            second_delta['event'] == 'modify')
-    assert second_delta['attributes']['name'] == 'baz'
+    delta = message_deltas[0]
+    assert delta['object'] == 'message' and delta['event'] == 'modify'
+    assert delta['attributes']['unread'] is True
 
-    third_delta = sync_data['deltas'][2]
-    assert (third_delta['object'] == 'thread' and
-            third_delta['event'] == 'modify')
+
+def test_message_events_are_propagated_to_thread(api_client, message):
+    """
+    Test that a revision to a message's `propagated_attributes` returns a delta
+    for the message and for its thread.
+
+    """
+    ts = int(time.time() + 22)
+    cursor = get_cursor(api_client, ts)
+
+    message = api_client.get_data('/messages/')[0]
+    message_id = message['id']
+    assert message['unread'] is True
+
+    thread = api_client.get_data('/threads/{}'.format(message['thread_id']))
+    assert thread['unread'] is True
+
+    # Modify a `propagated_attribute` of the message
+    message_path = '/messages/{}'.format(message_id)
+    api_client.put_data(message_path, {'unread': False})
+
+    # Verify that a `message` and a `thread` modify delta is returned
+    sync_data = api_client.get_data('/delta?cursor={}'.format(cursor))
+    deltas = sync_data['deltas']
+    assert len(deltas) == 2
+
+    message_deltas = [d for d in deltas if d['object'] == 'message']
+    assert len(message_deltas) == 1
+    delta = message_deltas[0]
+    assert delta['object'] == 'message' and delta['event'] == 'modify'
+    assert delta['attributes']['unread'] is False
+
+    thread_deltas = [d for d in deltas if d['object'] == 'thread']
+    assert len(thread_deltas) == 1
+    delta = thread_deltas[0]
+    assert delta['object'] == 'thread' and delta['event'] == 'modify'
+    assert delta['attributes']['unread'] is False
+    assert delta['attributes']['version'] == thread['version'] + 1
 
 
 def test_handle_missing_objects(api_client, db, thread, default_namespace):

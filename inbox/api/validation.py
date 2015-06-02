@@ -4,7 +4,7 @@ from arrow.parser import ParserError
 from flanker.addresslib import address
 from flask.ext.restful import reqparse
 from sqlalchemy.orm.exc import NoResultFound
-from inbox.models import Calendar, Tag, Thread, Block, Message
+from inbox.models import Calendar, Thread, Block, Message
 from inbox.models.when import parse_as_when
 from inbox.api.err import InputError, NotFoundError, ConflictError
 from inbox.search.query import MessageQuery, ThreadQuery
@@ -119,28 +119,6 @@ def get_draft(draft_public_id, version, namespace_id, db_session):
             'Draft {0}.{1} has already been updated to version {2}'.
             format(draft_public_id, version, draft.version))
     return draft
-
-
-def get_tags(tag_public_ids, namespace_id, db_session):
-    tags = set()
-    if tag_public_ids is None:
-        return tags
-    if not isinstance(tag_public_ids, list):
-        raise InputError('{} is not a list of tag ids'.format(tag_public_ids))
-    for tag_public_id in tag_public_ids:
-        # Validate public id before querying with it
-        valid_public_id(tag_public_id)
-        try:
-            # We're trading a bit of performance for more meaningful error
-            # messages here by looking these up one-by-one.
-            tag = db_session.query(Tag). \
-                filter(Tag.namespace_id == namespace_id,
-                       Tag.public_id == tag_public_id,
-                       Tag.user_created).one()
-            tags.add(tag)
-        except NoResultFound:
-            raise InputError('Invalid tag public id {}'.format(tag_public_id))
-    return tags
 
 
 def get_attachments(block_public_ids, namespace_id, db_session):
@@ -268,7 +246,7 @@ def valid_event_update(event, namespace, db_session):
 def valid_delta_object_types(types_arg):
     types = [item.strip() for item in types_arg.split(',')]
     allowed_types = ('contact', 'message', 'event', 'file', 'tag',
-                     'thread', 'calendar', 'draft')
+                     'thread', 'calendar', 'draft', 'folder', 'label')
     for type_ in types:
         if type_ not in allowed_types:
             raise InputError('Invalid object type {}'.format(type_))

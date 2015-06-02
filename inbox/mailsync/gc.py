@@ -12,7 +12,8 @@ DEFAULT_MESSAGE_TTL = 120
 
 
 class DeleteHandler(gevent.Greenlet):
-    """We don't outright delete message objects when all their associated
+    """
+    We don't outright delete message objects when all their associated
     uids are deleted. Instead, we mark them by setting a deleted_at
     timestamp. This is so that we can identify when a message is moved between
     folders, or when a draft is updated.
@@ -29,8 +30,9 @@ class DeleteHandler(gevent.Greenlet):
         Function that takes a message and returns a list of associated uid
         objects. For IMAP sync, this would just be
         `uid_accessor=lambda m: m.imapuids`
-    nessage_ttl: int
+    message_ttl: int
         Number of seconds to wait after a message is marked for deletion before
+
         deleting it for good.
     """
     def __init__(self, account_id, namespace_id, uid_accessor,
@@ -86,12 +88,7 @@ class DeleteHandler(gevent.Greenlet):
                     thread.subject = first_message.subject
                     thread.subjectdate = first_message.received_date
                     thread.recentdate = last_message.received_date
-                    unread_tag = thread.namespace.tags['unread']
-                    attachment_tag = thread.namespace.tags['attachment']
-                    if all(m.is_read for m in non_draft_messages):
-                        thread.tags.discard(unread_tag)
-                    if not any(m.attachments for m in non_draft_messages):
-                        thread.tags.discard(attachment_tag)
+                    thread.snippet = last_message.snippet
                 # YES this is at the right indentation level. Delete statements
                 # may cause InnoDB index locks to be acquired, so we opt to
                 # simply commit after each delete in order to prevent bulk

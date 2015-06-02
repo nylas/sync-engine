@@ -167,12 +167,7 @@ def test_send_existing_draft(patch_smtp, api_client, example_draft):
     assert r.status_code == 400
 
     drafts = api_client.get_data('/drafts')
-    threads_with_drafts = api_client.get_data('/threads?tag=drafts')
     assert not drafts
-    assert not threads_with_drafts
-
-    sent_threads = api_client.get_data('/threads?tag=sent')
-    assert len(sent_threads) == 1
 
     message = api_client.get_data('/messages/{}'.format(draft_public_id))
     assert message['object'] == 'message'
@@ -207,10 +202,7 @@ def test_send_rejected_without_recipients(api_client):
 def test_send_new_draft(patch_smtp, api_client, default_account,
                         example_draft):
     r = api_client.post_data('/send', example_draft)
-
     assert r.status_code == 200
-    sent_threads = api_client.get_data('/threads?tag=sent')
-    assert len(sent_threads) == 1
 
 
 def test_malformed_body_rejected(api_client, example_draft_bad_body):

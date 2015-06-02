@@ -1,186 +1,83 @@
 # -*- coding: utf-8 -*-
 """ Operations for syncing back local datastore changes to
     generic IMAP providers.
-
-See imap.py for notes about implementation.
 """
-from sqlalchemy.orm import joinedload
-
+from collections import defaultdict
 from inbox.crispin import writable_connection_pool, retry_crispin
-from inbox.actions.backends.imap import syncback_action
+from inbox.log import get_logger
 from inbox.mailsync.backends.imap.generic import uidvalidity_cb
-from inbox.models.backends.imap import ImapThread, ImapUid
+from inbox.models.backends.imap import ImapUid
 from inbox.models.folder import Folder
-from inbox.models.thread import Thread
-from inbox.models.message import Message
+
+log = get_logger()
 
 PROVIDER = 'generic'
 
-__all__ = ['set_remote_archived', 'set_remote_starred', 'set_remote_unread',
-           'remote_save_draft', 'remote_delete_draft', 'set_remote_spam',
-           'set_remote_trash']
+__all__ = ['set_remote_starred', 'set_remote_unread', 'remote_move',
+           'remote_save_draft', 'remote_delete_draft']
+
+# STOPSHIP(emfree):
+# * should update local UID state here after action succeeds, instead of
+#   waiting for sync to pick it up
+# * should add support for rolling back message.categories() on failure.
 
 
-def get_thread_uids(db_session, thread_id, namespace_id):
-    """A shortcut method to get uids of the messages in a thread
-    thread_id: integer
-    """
-    opts = joinedload('messages').joinedload('imapuids').load_only('msg_uid')
-    return db_session.query(ImapThread).options(opts).filter_by(
-        namespace_id=namespace_id, id=thread_id).one()
-
-
-def get_imapuids_in_folder(db_session, thread_id, folder_id, account_id):
-    return db_session.query(ImapUid).join(Message).filter(
-        ImapUid.folder_id == folder_id,
-        ImapUid.account_id == account_id,
-        Message.thread_id == thread_id)
-
-
-def set_remote_archived(account, thread_id, archived, db_session):
-    if account.archive_folder is None:
-        # account has no detected archive folder - create one.
-        archive_folder = Folder.find_or_create(db_session, account,
-                                               'Archive', 'archive')
-        account.archive_folder = archive_folder
-        db_session.commit()
-
-    thread = db_session.query(Thread).get(thread_id)
-
-    # FIXME @karim: not sure if we should exclude sent or not.
-    folders = [folder.name for folder in thread.folders]
-
-    if archived:
-        for folder in folders:
-            remote_move(account, thread_id, folder,
-                        account.archive_folder.name, db_session,
-                        create_destination=True)
-    else:
-        remote_move(account, thread_id, account.archive_folder.name,
-                    account.inbox_folder.name, db_session)
-
-
-def set_remote_starred(account, thread_id, starred, db_session):
-    thread = db_session.query(Thread).get(thread_id)
-    folders = {folder.name: folder.id for folder in thread.folders}
-
-    for folder in folders:
-        uids = get_imapuids_in_folder(db_session, thread_id,
-                                      folders[folder], account.id)
-
-        uids = [uid.msg_uid for uid in uids]
-
-        # No need to open a connection if there's no messages to star
-        if not uids:
-            continue
-
-        @retry_crispin
-        def fn():
-            with writable_connection_pool(account.id).get() as crispin_client:
-                crispin_client.select_folder(folder, uidvalidity_cb)
-                crispin_client.set_starred(uids, starred)
-        fn()
-
-
-def set_remote_unread(account, thread_id, unread, db_session):
-    thread = db_session.query(Thread).get(thread_id)
-    folders = {folder.name: folder.id for folder in thread.folders}
-
-    for folder in folders:
-        uids = get_imapuids_in_folder(db_session, thread_id,
-                                      folders[folder], account.id)
-
-        uids = [uid.msg_uid for uid in uids]
-
-        # No need to open a connection if there's no messages from
-        # this thread in the folder
-        if not uids:
-            continue
-
-        @retry_crispin
-        def fn():
-            with writable_connection_pool(account.id).get() as crispin_client:
-                crispin_client.select_folder(folder, uidvalidity_cb)
-                crispin_client.set_unread(uids, unread)
-        fn()
+def uids_by_folder(message_id, db_session):
+    results = db_session.query(ImapUid.msg_uid, Folder.name).join(Folder). \
+        filter(ImapUid.message_id == message_id).all()
+    mapping = defaultdict(list)
+    for uid, folder_name in results:
+        mapping[folder_name].append(uid)
+    return mapping
 
 
 @retry_crispin
-def remote_move(account, thread_id, from_folder, to_folder, db_session,
-                create_destination=False):
-    if from_folder == to_folder:
-        return
-
-    uids = []
-    thread = get_thread_uids(db_session, thread_id, account.namespace.id)
-    for msg in thread.messages:
-        uids.extend([uid.msg_uid for uid in msg.imapuids])
-
-    if not uids:
+def _set_flag(account, message_id, flag_name, db_session, is_add):
+    uids_for_message = uids_by_folder(message_id, db_session)
+    if not uids_for_message:
+        log.warning('No UIDs found for message', message_id=message_id)
         return
 
     with writable_connection_pool(account.id).get() as crispin_client:
-        crispin_client.select_folder(from_folder, uidvalidity_cb)
-
-        folders = crispin_client.folder_names()
-
-        if from_folder not in folders.values() and \
-           from_folder not in folders['extra']:
-                raise Exception("Unknown from_folder '{}'".format(from_folder))
-
-        if to_folder not in folders.values() and \
-           to_folder not in folders['extra']:
-            if create_destination:
-                crispin_client.create_folder(to_folder)
+        for folder_name, uids in uids_for_message.items():
+            crispin_client.select_folder(folder_name, uidvalidity_cb)
+            if is_add:
+                crispin_client.conn.add_flags(uids, [flag_name])
             else:
-                raise Exception("Unknown to_folder '{}'".format(to_folder))
+                crispin_client.conn.remove_flags(uids, [flag_name])
 
-        crispin_client.select_folder(from_folder, uidvalidity_cb)
-        crispin_client.copy_uids(uids, to_folder)
-        crispin_client.delete_uids(uids)
+
+def set_remote_starred(account, message_id, db_session, starred):
+    _set_flag(account, message_id, '\\Flagged', db_session, starred)
+
+
+def set_remote_unread(account, message_id, db_session, unread):
+    _set_flag(account, message_id, '\\Seen', db_session, not unread)
 
 
 @retry_crispin
-def remote_copy(account, thread_id, from_folder, to_folder, db_session):
-    if from_folder == to_folder:
-        return
-
-    uids = []
-    thread = get_thread_uids(db_session, thread_id, account.namespace.id)
-    for msg in thread.messages:
-        uids.extend([uid.msg_uid for uid in msg.imapuids])
-
-    if not uids:
+def remote_move(account, message_id, db_session, destination):
+    uids_for_message = uids_by_folder(message_id, db_session)
+    if not uids_for_message:
+        log.warning('No UIDs found for message', message_id=message_id)
         return
 
     with writable_connection_pool(account.id).get() as crispin_client:
-        crispin_client.select_folder(from_folder, uidvalidity_cb)
-
-        folders = crispin_client.folder_names()
-
-        if from_folder not in folders.values() and \
-           from_folder not in folders['extra']:
-                raise Exception("Unknown from_folder '{}'".format(from_folder))
-
-        if to_folder not in folders.values() and \
-           to_folder not in folders['extra']:
-                raise Exception("Unknown to_folder '{}'".format(to_folder))
-
-        crispin_client.copy_uids(uids, to_folder)
-
-
-# TODO(emfree) ensure that drafts folder exists locally and remotely for custom
-# IMAP accounts.
+        for folder_name, uids in uids_for_message.items():
+            crispin_client.select_folder(folder_name, uidvalidity_cb)
+            crispin_client.conn.copy(uids, destination)
+            crispin_client.delete_uids(uids)
 
 
 @retry_crispin
-def remote_save_draft(account, folder_name, message, db_session, date=None):
+def remote_save_draft(account, message, db_session, date=None):
     with writable_connection_pool(account.id).get() as crispin_client:
         # Create drafts folder on the backend if it doesn't exist.
         if 'drafts' not in crispin_client.folder_names():
-            crispin_client.create_folder('Drafts')
-
-        assert folder_name == crispin_client.folder_names()['drafts']
+            log.info('Account has no detected drafts folder; not saving draft',
+                     account_id=account.id)
+            return
+        folder_name = crispin_client.folder_names()['drafts'][0]
         crispin_client.select_folder(folder_name, uidvalidity_cb)
         crispin_client.save_draft(message, date)
 
@@ -191,62 +88,14 @@ def remote_delete_draft(account, inbox_uid, message_id_header, db_session):
         crispin_client.delete_draft(inbox_uid, message_id_header)
 
 
-def remote_save_sent(account, folder_name, message, db_session, date=None,
-                     create_backend_sent_folder=False):
-    def fn(account, db_session, crispin_client):
-        if create_backend_sent_folder:
-            if 'sent' not in crispin_client.folder_names():
-                crispin_client.create_folder('Sent')
+@retry_crispin
+def remote_save_sent(account, message, date=None):
+    with writable_connection_pool(account.id).get() as crispin_client:
+        if 'sent' not in crispin_client.folder_names():
+            log.info('Account has no detected sent folder; not saving message',
+                     account_id=account.id)
+            return
 
+        folder_name = crispin_client.folder_names()['sent'][0]
         crispin_client.select_folder(folder_name, uidvalidity_cb)
         crispin_client.create_message(message, date)
-
-    return syncback_action(fn, account, folder_name, db_session,
-                           select_folder=False)
-
-
-def set_remote_spam(account, thread_id, spam, db_session):
-
-    if account.spam_folder is None:
-        # account has no detected spam folder - create one.
-        spam_folder = Folder.find_or_create(db_session, account,
-                                            'Spam', 'spam')
-        account.spam_folder = spam_folder
-        db_session.commit()
-
-    thread = db_session.query(Thread).get(thread_id)
-
-    # FIXME @karim: not sure if we should exclude sent or not.
-    folders = [folder.name for folder in thread.folders]
-
-    if spam:
-        for folder in folders:
-            remote_move(account, thread_id, folder,
-                        account.spam_folder.name, db_session,
-                        create_destination=True)
-    else:
-        remote_move(account, thread_id, account.spam_folder.name,
-                    account.inbox_folder.name, db_session)
-
-
-def set_remote_trash(account, thread_id, trash, db_session):
-    if account.trash_folder is None:
-        # account has no detected trash folder - create one.
-        trash_folder = Folder.find_or_create(db_session, account,
-                                             'Trash', 'trash')
-        account.trash_folder = trash_folder
-        db_session.commit()
-
-    thread = db_session.query(Thread).get(thread_id)
-
-    # FIXME @karim: not sure if we should exclude sent or not.
-    folders = [folder.name for folder in thread.folders]
-
-    if trash:
-        for folder in folders:
-            remote_move(account, thread_id, folder,
-                        account.trash_folder.name, db_session,
-                        create_destination=True)
-    else:
-        remote_move(account, thread_id, account.trash_folder.name,
-                    account.inbox_folder.name, db_session)

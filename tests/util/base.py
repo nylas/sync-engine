@@ -70,6 +70,13 @@ def db(dbloader):
     dbloader.session.close()
 
 
+@yield_fixture(scope='function')
+def empty_db(request, config):
+    testdb = TestDB(config, None)
+    yield testdb
+    testdb.teardown()
+
+
 def mock_redis_client(*args, **kwargs):
     return None
 
@@ -142,6 +149,7 @@ class TestDB(object):
     def __init__(self):
         from inbox.ignition import main_engine
         engine = main_engine()
+
         # Set up test database
         self.engine = engine
 
@@ -193,7 +201,7 @@ def syncback_service():
 def default_account(db):
     import platform
     from inbox.models.backends.gmail import GmailAccount
-    from inbox.models import Namespace, Folder
+    from inbox.models import Namespace
     ns = Namespace()
     account = GmailAccount(
         sync_host=platform.node(),
@@ -201,13 +209,6 @@ def default_account(db):
     account.namespace = ns
     account.create_emailed_events_calendar()
     account.refresh_token = 'faketoken'
-    account.inbox_folder = Folder(canonical_name='inbox', name='Inbox',
-                                  account=account)
-    account.sent_folder = Folder(canonical_name='sent', name='[Gmail]/Sent',
-                                 account=account)
-    account.drafts_folder = Folder(canonical_name='drafts',
-                                   name='[Gmail]/Drafts',
-                                   account=account)
     db.session.add(account)
     db.session.commit()
     return account
@@ -216,6 +217,44 @@ def default_account(db):
 @fixture(scope='function')
 def default_namespace(db, default_account):
     return default_account.namespace
+
+
+@fixture(scope='function')
+def generic_account(db):
+    from inbox.models.backends.generic import GenericAccount
+    from inbox.models import Namespace
+    ns = Namespace()
+    account = GenericAccount(
+        email_address='inboxapptest@example.com',
+        provider='custom')
+    account.namespace = ns
+    account.create_emailed_events_calendar()
+    account.password = 'bananagrams'
+    db.session.add(account)
+    db.session.commit()
+    return account
+
+
+@fixture(scope='function')
+def gmail_account(db):
+    import platform
+    from inbox.models import Namespace
+    from inbox.models.backends.gmail import GmailAccount
+
+    account = db.session.query(GmailAccount).first()
+    if account is None:
+        with db.session.no_autoflush:
+            namespace = Namespace()
+            account = GmailAccount(
+                email_address='almondsunshine@gmail.com',
+                refresh_token='tearsofgold',
+                sync_host=platform.node(),
+                namespace=namespace)
+            account.password = 'COyPtHmj9E9bvGdN'
+            db.session.add(account)
+    db.session.commit()
+
+    return account
 
 
 @fixture(scope='function')
@@ -281,6 +320,7 @@ def add_fake_message(db_session, namespace_id, thread=None, from_addr=None,
     m.received_date = received_date or datetime.utcnow()
     m.size = 0
     m.is_read = False
+    m.is_starred = False
     m.body = body
     m.snippet = snippet
     m.subject = subject
@@ -354,6 +394,16 @@ def add_fake_event(db_session, namespace_id, calendar=None,
     return event
 
 
+def add_fake_category(db_session, namespace_id, display_name, name=None):
+    from inbox.models import Category
+    category = Category(namespace_id=namespace_id,
+                        display_name=display_name,
+                        name=name)
+    db_session.add(category)
+    db_session.commit()
+    return category
+
+
 @fixture
 def new_account(db):
     return add_fake_account(db.session)
@@ -414,4 +464,6 @@ def new_message_from_synced(db, default_account, mime_message):
                                          received_date,
                                          mime_message.to_string())
     assert new_msg.received_date == received_date
+    new_msg.is_read = True
+    new_msg.is_starred = False
     return new_msg

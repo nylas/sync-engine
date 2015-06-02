@@ -20,10 +20,8 @@ logger = get_logger()
 from inbox.models.session import session_scope
 from inbox.models import ActionLog, Namespace, Account
 from inbox.util.file import Lock
-from inbox.actions.base import (mark_read, mark_unread, archive, unarchive,
-                                star, unstar, save_draft, delete_draft,
-                                mark_spam, unmark_spam, mark_trash,
-                                unmark_trash, save_sent_email)
+from inbox.actions.base import (mark_unread, mark_starred, move, change_labels,
+                                save_draft, delete_draft, save_sent_email)
 from inbox.events.actions.base import (create_event, delete_event,
                                        update_event)
 
@@ -34,16 +32,10 @@ syncback_lock = Lock('/var/lock/inbox_syncback/global.lock', block=True)
 
 
 ACTION_FUNCTION_MAP = {
-    'archive': archive,
-    'unarchive': unarchive,
-    'mark_read': mark_read,
     'mark_unread': mark_unread,
-    'star': star,
-    'unstar': unstar,
-    'mark_spam': mark_spam,
-    'unmark_spam': unmark_spam,
-    'mark_trash': mark_trash,
-    'unmark_trash': unmark_trash,
+    'mark_starred': mark_starred,
+    'move': move,
+    'change_labels': change_labels,
     'save_draft': save_draft,
     'delete_draft': delete_draft,
     'save_sent_email': save_sent_email,

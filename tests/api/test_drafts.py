@@ -108,14 +108,6 @@ def test_create_and_get_draft(api_client, example_draft):
 
     assert all(saved_draft[k] == v for k, v in example_draft.iteritems())
 
-    # Check that thread gets the draft tag
-    threads_with_drafts = api_client.get_data('/threads?tag=drafts')
-    assert len(threads_with_drafts) == 1
-
-    # Check that thread doesn't get the attachment tag, in this case
-    thread_tags = threads_with_drafts[0]['tags']
-    assert not any('attachment' == tag['name'] for tag in thread_tags)
-
 
 def test_create_draft_replying_to_thread(api_client, thread, message):
     thread = api_client.get_data('/threads')[0]
@@ -230,13 +222,6 @@ def test_create_draft_with_attachments(api_client, attachments, example_draft):
     for file_id in attachment_ids:
         r = api_client.delete('/files/{}'.format(file_id))
         assert r.status_code == 400
-
-    threads_with_drafts = api_client.get_data('/threads?tag=drafts')
-    assert len(threads_with_drafts) == 1
-
-    # Check that thread also gets the attachment tag
-    thread_tags = threads_with_drafts[0]['tags']
-    assert any('attachment' == tag['name'] for tag in thread_tags)
 
     # Now remove the attachment
     example_draft['file_ids'] = [first_attachment]
@@ -359,12 +344,12 @@ def test_delete_draft(api_client, thread, message):
     public_id = json.loads(r.data)['id']
     version = json.loads(r.data)['version']
     thread = api_client.get_data('/threads/{}'.format(thread_public_id))
-    assert 'drafts' in [t['name'] for t in thread['tags']]
+    assert len(thread['draft_ids']) > 0
     api_client.delete('/drafts/{}'.format(public_id),
                       {'version': version})
     thread = api_client.get_data('/threads/{}'.format(thread_public_id))
     assert thread
-    assert 'drafts' not in [t['name'] for t in thread['tags']]
+    assert len(thread['draft_ids']) == 0
 
 
 def test_delete_remote_draft(db, api_client, message):

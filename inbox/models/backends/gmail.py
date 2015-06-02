@@ -40,6 +40,10 @@ class GmailAccount(OAuthAccount, ImapAccount):
         return PROVIDER
 
     @property
+    def category_type(self):
+        return 'label'
+
+    @property
     def thread_cls(self):
         from inbox.models.backends.imap import ImapThread
         return ImapThread

@@ -11,12 +11,12 @@ def user_console(user_email_address):
             email_address=user_email_address).one()
 
         with writable_connection_pool(account.id, pool_size=1).get()\
-             as crispin_client:
-                if account.provider == 'gmail' \
-                        and 'all' in crispin_client.folder_names():
-                    crispin_client.select_folder(
-                        crispin_client.folder_names()['all'],
-                        uidvalidity_cb)
+                as crispin_client:
+            if account.provider == 'gmail' \
+                    and 'all' in crispin_client.folder_names():
+                crispin_client.select_folder(
+                    crispin_client.folder_names()['all'][0],
+                    uidvalidity_cb)
 
                 banner = """
         You can access the crispin instance with the 'crispin_client' variable.

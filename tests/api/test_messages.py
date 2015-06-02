@@ -1,9 +1,11 @@
 import pytest
 import json
 from tests.util.base import (api_client, add_fake_message, default_namespace,
-                             new_message_from_synced, mime_message, thread)
+                             new_message_from_synced, mime_message, thread,
+                             add_fake_thread, generic_account, gmail_account)
 
-__all__ = ['api_client', 'default_namespace']
+__all__ = ['api_client', 'default_namespace', 'new_message_from_synced',
+           'mime_message', 'thread', 'generic_account', 'gmail_account']
 
 
 @pytest.fixture
@@ -13,17 +15,6 @@ def stub_message_from_raw(db, thread, new_message_from_synced):
     db.session.add(new_msg)
     db.session.commit()
     return new_msg
-
-
-# TODO(emfree) clean up fixture dependencies
-def test_rfc822_format(stub_message_from_raw, api_client, mime_message):
-    """ Test the API response to retreive raw message contents """
-    full_path = api_client.full_path('/messages/{}'.format(
-        stub_message_from_raw.public_id))
-
-    results = api_client.client.get(full_path,
-                                    headers={'Accept': 'message/rfc822'})
-    assert results.data == mime_message.to_string()
 
 
 @pytest.fixture
@@ -66,6 +57,17 @@ bicycle rights. Thundercats kale chips church-key American Apparel.
 
     db.session.commit()
     return message
+
+
+# TODO(emfree) clean up fixture dependencies
+def test_rfc822_format(stub_message_from_raw, api_client, mime_message):
+    """ Test the API response to retreive raw message contents """
+    full_path = api_client.full_path('/messages/{}'.format(
+        stub_message_from_raw.public_id))
+
+    results = api_client.client.get(full_path,
+                                    headers={'Accept': 'message/rfc822'})
+    assert results.data == mime_message.to_string()
 
 
 def test_sender_and_participants(stub_message, api_client):
@@ -155,3 +157,48 @@ def test_expanded_message(stub_message, api_client):
     for message_json in resp_dict:
         if message_json['id'] == stub_message.public_id:
             _check_json_message(message_json)
+
+
+def test_folders_labels(db, api_client, generic_account, gmail_account):
+    # Generic IMAP threads, messages have a 'folders' field
+    generic_thread = add_fake_thread(db.session, generic_account.namespace.id)
+    generic_message = add_fake_message(db.session,
+                                       generic_account.namespace.id,
+                                       generic_thread)
+
+    resp_data = api_client.get_data(
+        '/threads/{}'.format(generic_thread.public_id),
+        generic_account.namespace.public_id)
+
+    assert resp_data['id'] == generic_thread.public_id
+    assert resp_data['object'] == 'thread'
+    assert 'folders' in resp_data and 'labels' not in resp_data
+
+    resp_data = api_client.get_data(
+        '/messages/{}'.format(generic_message.public_id),
+        generic_account.namespace.public_id)
+
+    assert resp_data['id'] == generic_message.public_id
+    assert resp_data['object'] == 'message'
+    assert 'folder' in resp_data and 'labels' not in resp_data
+
+    # Gmail threads, messages have a 'labels' field
+    gmail_thread = add_fake_thread(db.session, gmail_account.namespace.id)
+    gmail_message = add_fake_message(db.session,
+                                     gmail_account.namespace.id, gmail_thread)
+
+    resp_data = api_client.get_data(
+        '/threads/{}'.format(gmail_thread.public_id),
+        gmail_account.namespace.public_id)
+
+    assert resp_data['id'] == gmail_thread.public_id
+    assert resp_data['object'] == 'thread'
+    assert 'labels' in resp_data and 'folders' not in resp_data
+
+    resp_data = api_client.get_data(
+        '/messages/{}'.format(gmail_message.public_id),
+        gmail_account.namespace.public_id)
+
+    assert resp_data['id'] == gmail_message.public_id
+    assert resp_data['object'] == 'message'
+    assert 'labels' in resp_data and 'folders' not in resp_data

@@ -1,17 +1,24 @@
-from inbox.log import get_logger
-log = get_logger()
-
+from inbox.crispin import RawFolder
 from inbox.models import Folder
-from inbox.mailsync.backends.base import save_folder_names
+from inbox.mailsync.backends.imap.monitor import ImapSyncMonitor
 
-from test_save_folder_names import (folder_name_mapping,
-                                    add_imap_status_info_rows)
+from test_save_folder_names import add_imap_status_info_rows
 
 
 def create_foldersyncstatuses(db, default_account):
     # Create a bunch of folder sync statuses.
-    mapping = folder_name_mapping()
-    save_folder_names(log, default_account.id, mapping, db.session)
+    monitor = ImapSyncMonitor(default_account)
+
+    folder_names_and_roles = {
+        RawFolder('INBOX', 'inbox'),
+        RawFolder('Sent Mail', 'sent'),
+        RawFolder('Sent Messages', 'sent'),
+        RawFolder('Drafts', 'drafts'),
+        RawFolder('Miscellania', None),
+        RawFolder('miscellania', None),
+        RawFolder('Recipes', None),
+    }
+    monitor.save_folder_names(db.session, folder_names_and_roles)
     folders = db.session.query(Folder).filter_by(account_id=default_account.id)
     for folder in folders:
         add_imap_status_info_rows(folder.id, default_account.id, db.session)

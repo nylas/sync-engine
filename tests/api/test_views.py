@@ -18,10 +18,6 @@ def generic_test_resource(resource_name, db, client):
         assert elem["id"] == ids[i], "view=ids should preserve order"
 
 
-def test_tags(db, api_client):
-    generic_test_resource("tags", db, api_client)
-
-
 def test_messages(db, api_client):
     generic_test_resource("messages", db, api_client)
 

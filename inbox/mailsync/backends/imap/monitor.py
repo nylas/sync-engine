@@ -4,10 +4,10 @@ from gevent.coros import BoundedSemaphore
 from sqlalchemy.orm.exc import NoResultFound
 from inbox.log import get_logger
 from inbox.crispin import retry_crispin, connection_pool
-from inbox.models import Folder
+from inbox.models import Account, Folder
+from inbox.models.constants import MAX_FOLDER_NAME_LENGTH
 from inbox.mailsync.backends.base import BaseMailSyncMonitor
-from inbox.mailsync.backends.base import (save_folder_names,
-                                          MailsyncError,
+from inbox.mailsync.backends.base import (MailsyncError,
                                           mailsync_session_scope,
                                           thread_polling, thread_finished)
 from inbox.mailsync.backends.imap.generic import FolderSyncEngine
@@ -59,18 +59,18 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
 
     @retry_crispin
     def prepare_sync(self):
-        """Ensures that canonical tags are created for the account, and gets
-        and save Folder objects for folders on the IMAP backend. Returns a list
-        of tuples (folder_name, folder_id) for each folder we want to sync (in
-        order)."""
+        """
+        Gets and save Folder objects for folders on the IMAP backend. Returns a
+        list of tuples (folder_name, folder_id) for each folder we want to sync
+        (in order).
+        """
         with mailsync_session_scope() as db_session:
             with connection_pool(self.account_id).get() as crispin_client:
-                # the folders we should be syncing
+                # Get a fresh list of the folder names from the remote
+                remote_folders = crispin_client.folders()
+                self.save_folder_names(db_session, remote_folders)
+                # The folders we should be syncing
                 sync_folders = crispin_client.sync_folders()
-                # get a fresh list of the folder names from the remote
-                remote_folders = crispin_client.folder_names(force_resync=True)
-                save_folder_names(log, self.account_id,
-                                  remote_folders, db_session)
 
             sync_folder_names_ids = []
             for folder_name in sync_folders:
@@ -80,11 +80,57 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
                                Folder.account_id == self.account_id).one()
                     sync_folder_names_ids.append((folder_name, id_))
                 except NoResultFound:
-                    log.error("Missing Folder object when starting sync",
+                    log.error('Missing Folder object when starting sync',
                               folder_name=folder_name)
                     raise MailsyncError("Missing Folder '{}' on account {}"
                                         .format(folder_name, self.account_id))
             return sync_folder_names_ids
+
+    def save_folder_names(self, db_session, raw_folders):
+        """
+        Save the folders present on the remote backend for an account.
+
+        * Create Folder objects.
+        * Delete Folders that no longer exist on the remote.
+
+        Notes
+        -----
+        Generic IMAP uses folders (not labels).
+        Canonical folders ('inbox') and other folders are created as Folder
+        objects only accordingly.
+
+        We don't canonicalize folder names to lowercase when saving because
+        different backends may be case-sensitive or otherwise - code that
+        references saved folder names should canonicalize if needed when doing
+        comparisons.
+
+        """
+        account = db_session.query(Account).get(self.account_id)
+        remote_folder_names = {f.display_name.rstrip()[:MAX_FOLDER_NAME_LENGTH]
+                               for f in raw_folders}
+
+        assert 'inbox' in {f.role for f in raw_folders},\
+            'Account {} has no detected inbox folder'.\
+            format(account.email_address)
+
+        local_folders = {f.name: f for f in db_session.query(Folder).filter(
+                         Folder.account_id == self.account_id)}
+
+        # Delete folders no longer present on the remote.
+        # Note that the folder with canonical_name='inbox' cannot be deleted;
+        # remote_folder_names will always contain an entry corresponding to it.
+        discard = set(local_folders) - remote_folder_names
+        for name in discard:
+            log.info('Folder deleted from remote', account_id=self.account_id,
+                     name=name)
+            db_session.delete(local_folders[name])
+
+        # Create new folders
+        for raw_folder in raw_folders:
+            Folder.find_or_create(db_session, account, raw_folder.display_name,
+                                  raw_folder.role)
+
+        db_session.commit()
 
     def start_new_folder_sync_engines(self, folders=set()):
         new_folders = [f for f in self.prepare_sync() if f not in folders]

@@ -73,7 +73,6 @@ setup(
              'bin/summary-stats',
              'bin/start-stop-account',
              'bin/inbox-auth',
-             'bin/regen-labels',
              'bin/delete-account-data',
              'bin/alive-dead-metrics',
              'bin/create-db',
@@ -81,7 +80,8 @@ setup(
              'bin/get-id',
              'bin/get-object',
              'bin/syncback-service',
-             'bin/test_contact_groups'],
+             'bin/test_contact_groups',
+             'bin/migrate-tags'],
 
     # See:
     # https://pythonhosted.org/setuptools/setuptools.html#dynamic-discovery-of-services-and-plugins

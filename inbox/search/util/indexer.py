@@ -88,9 +88,8 @@ def index_threads(namespace_id, namespace_public_id, created_before=None):
         query = query.options(
             subqueryload(Thread.messages).
             load_only('public_id', 'is_draft', 'from_addr', 'to_addr',
-                      'cc_addr', 'bcc_addr'),
-            subqueryload('tagitems').joinedload('tag').
-            load_only('public_id', 'name'))
+                      'cc_addr', 'bcc_addr')
+        )
 
         encoded = []
 

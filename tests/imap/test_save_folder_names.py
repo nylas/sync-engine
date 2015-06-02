@@ -1,25 +1,8 @@
-import pytest
-import gevent
-from gevent.pool import Group
-
-
-from inbox.mailsync.backends.base import (save_folder_names,
-                                          mailsync_session_scope)
-from inbox.models import Folder, Tag, Account
+from inbox.crispin import RawFolder
+from inbox.mailsync.backends.imap.monitor import ImapSyncMonitor
+from inbox.mailsync.backends.gmail import GmailSyncMonitor
+from inbox.models import Folder, Label, Category
 from inbox.models.backends.imap import ImapFolderSyncStatus, ImapFolderInfo
-from inbox.log import get_logger
-
-
-@pytest.fixture
-def folder_name_mapping():
-    return {
-        'inbox': 'Inbox',
-        'spam': '[Gmail]/Spam',
-        'all': '[Gmail]/All Mail',
-        'sent': '[Gmail]/Sent Mail',
-        'drafts': '[Gmail]/Drafts',
-        'extra': ['Jobslist', 'Random']
-    }
 
 
 def add_imap_status_info_rows(folder_id, account_id, db_session):
@@ -42,163 +25,88 @@ def add_imap_status_info_rows(folder_id, account_id, db_session):
             highestmodseq=22))
 
 
-def test_save_folder_names(db, default_account, folder_name_mapping):
-    with mailsync_session_scope() as db_session:
-        log = get_logger()
-        save_folder_names(log, default_account.id, folder_name_mapping,
-                          db_session)
-        saved_folder_names = {name for name, in
-                              db_session.query(Folder.name).filter(
-                                  Folder.account_id == default_account.id)}
-        assert saved_folder_names == {'Inbox', '[Gmail]/Spam',
-                                      '[Gmail]/All Mail', '[Gmail]/Sent Mail',
-                                      '[Gmail]/Drafts', 'Jobslist', 'Random'}
+def test_save_generic_folder_names(db, default_account):
+    monitor = ImapSyncMonitor(default_account)
+    folder_names_and_roles = {
+        ('INBOX', 'inbox'),
+        ('Sent Mail', 'sent'),
+        ('Sent Messages', 'sent'),
+        ('Drafts', 'drafts'),
+        ('Miscellania', None),
+        ('miscellania', None),
+        ('Recipes', None),
+    }
+    raw_folders = [RawFolder(*args) for args in folder_names_and_roles]
+    monitor.save_folder_names(db.session, raw_folders)
+    saved_folder_data = set(
+        db.session.query(Folder.name, Folder.canonical_name).filter(
+            Folder.account_id == default_account.id).all())
+    assert saved_folder_data == folder_names_and_roles
 
 
-def test_sync_folder_deletes(db, default_account, folder_name_mapping):
-    """Test that folder deletions properly cascade to deletions of
-       ImapFolderSyncStatus and ImapFolderInfo.
-    """
-    with mailsync_session_scope() as db_session:
-        log = get_logger()
-        save_folder_names(log, default_account.id, folder_name_mapping,
-                          db_session)
-        folders = db_session.query(Folder).filter_by(
-            account_id=default_account.id)
-        for folder in folders:
-            add_imap_status_info_rows(folder.id, default_account.id,
-                                      db_session)
-        db_session.commit()
-        assert db_session.query(ImapFolderInfo).filter_by(
-            account_id=default_account.id).count() == 7
-        assert db_session.query(ImapFolderSyncStatus).filter_by(
-            account_id=default_account.id).count() == 7
+def test_handle_folder_deletions(db, default_account):
+    monitor = ImapSyncMonitor(default_account)
+    folder_names_and_roles = {
+        ('INBOX', 'inbox'),
+        ('Miscellania', None),
+    }
+    raw_folders = [RawFolder(*args) for args in folder_names_and_roles]
+    monitor.save_folder_names(db.session, raw_folders)
+    assert len(db.session.query(Folder).filter(
+        Folder.account_id == default_account.id).all()) == 2
 
-        folder_name_mapping['extra'] = ['Jobslist']
-        save_folder_names(log, default_account.id, folder_name_mapping,
-                          db_session)
-        saved_folder_names = {name for name, in
-                              db_session.query(Folder.name).filter(
-                                  Folder.account_id == default_account.id)}
-        assert saved_folder_names == {'Inbox', '[Gmail]/Spam',
-                                      '[Gmail]/All Mail', '[Gmail]/Sent Mail',
-                                      '[Gmail]/Drafts', 'Jobslist'}
-        assert db_session.query(ImapFolderInfo).filter_by(
-            account_id=default_account.id).count() == 6
-        assert db_session.query(ImapFolderSyncStatus).filter_by(
-            account_id=default_account.id).count() == 6
+    monitor.save_folder_names(db.session, [RawFolder('INBOX', 'inbox')])
+    saved_folder_data = set(
+        db.session.query(Folder.name, Folder.canonical_name).filter(
+            Folder.account_id == default_account.id).all())
+    assert saved_folder_data == {('INBOX', 'inbox')}
 
 
-def test_folder_delete_cascades_to_tag(db, default_account,
-                                       folder_name_mapping):
-    """Test that when a tag (folder) is deleted, we properly cascade to delete
-       the Tag object too.
-    """
-    with mailsync_session_scope() as db_session:
-        log = get_logger()
-        save_folder_names(log, default_account.id, folder_name_mapping,
-                          db_session)
-        folders = db_session.query(Folder).filter_by(
-            account_id=default_account.id)
-        assert folders.count() == 7
-        random_folder = folders.filter_by(name='Random').first()
-        assert random_folder is not None
-        random_tag = random_folder.get_associated_tag(db_session)
-        random_tag_id = random_tag.id
-        db.session.commit()
+def test_save_gmail_folder_names(db, default_account):
+    monitor = GmailSyncMonitor(default_account)
+    folder_names_and_roles = {
+        ('INBOX', 'inbox'),
+        ('[Gmail]/All Mail', 'all'),
+        ('[Gmail]/Trash', 'trash'),
+        ('[Gmail]/Spam', 'spam'),
+        ('Miscellania', None),
+        ('Recipes', None),
+    }
+    raw_folders = [RawFolder(*args) for args in folder_names_and_roles]
+    monitor.save_folder_names(db.session, raw_folders)
 
-        folder_name_mapping['extra'] = ['Jobslist']
-        save_folder_names(log, default_account.id, folder_name_mapping,
-                          db_session)
-        db.session.commit()
-        random_tag = db_session.query(Tag).get(random_tag_id)
-        assert random_tag is None
+    saved_folder_data = set(
+        db.session.query(Folder.name, Folder.canonical_name).filter(
+            Folder.account_id == default_account.id)
+    )
+    assert saved_folder_data == {
+        ('[Gmail]/All Mail', 'all'),
+        ('[Gmail]/Trash', 'trash'),
+        ('[Gmail]/Spam', 'spam')
+    }
 
-
-def test_name_collision_folders(db, default_account, folder_name_mapping):
-    # test that when a user-created folder called 'spam' is created, we don't
-    # associate it with the canonical spam tag, but instead give it its own
-    # tag
-
-    folder_name_mapping['extra'] = ['spam']
-
-    with mailsync_session_scope() as db_session:
-        log = get_logger()
-        save_folder_names(log, default_account.id, folder_name_mapping,
-                          db_session)
-        spam_tags = db_session.query(Tag).filter_by(
-            namespace_id=default_account.namespace.id,
-            name='spam')
-        # There should be one 'Gmail/Spam' canonical tag
-        assert spam_tags.count() == 1
-        assert spam_tags.first().public_id == 'spam'
-        # and one 'imap/spam' non-canonical tag with public_id != 'spam'
-        spam_tags = db_session.query(Tag).filter_by(
-            namespace_id=default_account.namespace.id,
-            name='imap/spam')
-        assert spam_tags.count() == 1
-        assert spam_tags.first().public_id != 'spam'
-
-    # test that when a folder called 'spam' is deleted, we don't delete
-    # the canonical 'spam' tag
-    folder_name_mapping['extra'] = []
-    with mailsync_session_scope() as db_session:
-        log = get_logger()
-        save_folder_names(log, default_account.id, folder_name_mapping,
-                          db_session)
-        spam_tags = db_session.query(Tag).filter_by(
-            namespace_id=default_account.namespace.id,
-            name='spam')
-        # The 'Gmail/Spam' canonical tag should still remain.
-        assert spam_tags.count() == 1
-        assert spam_tags.first().public_id == 'spam'
-        # The 'imap/spam' non-canonical tag shouldn't
-        spam_tags = db_session.query(Tag).filter_by(
-            namespace_id=default_account.namespace.id,
-            name='imap/spam')
-        assert spam_tags.count() == 0
+    saved_label_data = set(
+        db.session.query(Label.name, Label.canonical_name).filter(
+            Label.account_id == default_account.id)
+    )
+    saved_category_data = set(
+        db.session.query(Category.display_name, Category.name).filter(
+            Category.namespace_id == default_account.namespace.id)
+    )
+    assert saved_label_data == folder_names_and_roles
+    assert saved_category_data == folder_names_and_roles
 
 
-def test_handle_trailing_whitespace(db, default_account, folder_name_mapping):
-    folder_name_mapping['extra'] = ['label', 'label ']
-    log = get_logger()
-    save_folder_names(log, default_account.id, folder_name_mapping, db.session)
-
-    # Would raise if tag for label was not committed.
-    db.session.query(Tag).filter_by(
-        namespace_id=default_account.namespace.id,
-        name='label').one()
-
-
-def test_parallel_folder_syncs(db, folder_name_mapping, default_account,
-                               monkeypatch):
-    # test that when we run save_folder_names in parallel, we only create one
-    # tag for that folder. this happens when the CondstoreFolderSyncEngine
-    # checks for UID changes.
-
-    # patching the heartbeat clear means that we force the first greenlet to
-    # wait around (there is a deleted folder in folder_name_mapping), thereby
-    # assuring that the second greenlet will overtake it and force any
-    # potential race condition around tag creation.
-    def clear_heartbeat_patch(w, x, y, z):
-        gevent.sleep(1)
-
-    monkeypatch.setattr('inbox.heartbeat.store.HeartbeatStore.remove_folders',
-                        clear_heartbeat_patch)
-
-    log = get_logger()
-    group = Group()
-    with mailsync_session_scope() as db_session:
-        group.spawn(save_folder_names, log, default_account.id,
-                    folder_name_mapping, db_session)
-    with mailsync_session_scope() as db_session:
-        group.spawn(save_folder_names, log, default_account.id,
-                    folder_name_mapping, db_session)
-    group.join()
-
-    with mailsync_session_scope() as db_session:
-        account = db_session.query(Account).get(default_account.id)
-        random_tags = db_session.query(Tag).filter_by(
-            namespace_id=account.namespace.id,
-            name='random')
-        assert random_tags.count() == 1
+def test_handle_trailing_whitespace(db, default_account):
+    raw_folders = [
+        RawFolder('Miscellania', None),
+        RawFolder('Miscellania  ', None),
+        RawFolder('Inbox', 'inbox')
+    ]
+    monitor = ImapSyncMonitor(default_account)
+    monitor.save_folder_names(db.session, raw_folders)
+    saved_folder_data = set(
+        db.session.query(Folder.name, Folder.canonical_name).filter(
+            Folder.account_id == default_account.id)
+    )
+    assert saved_folder_data == {('Miscellania', None), ('Inbox', 'inbox')}

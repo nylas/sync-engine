@@ -5,6 +5,7 @@ from inbox.crispin import GmailFlags
 from inbox.mailsync.backends.imap.common import (remove_deleted_uids,
                                                  update_metadata)
 from inbox.mailsync.gc import DeleteHandler
+from inbox.models import Folder
 from tests.util.base import add_fake_imapuid, add_fake_message
 
 
@@ -22,19 +23,21 @@ def test_only_uids_deleted_synchronously(db, default_account,
     msg_uid = imapuid.msg_uid
     update_metadata(default_account.id, db.session, folder.name, folder.id,
                     [msg_uid], {msg_uid: GmailFlags((), ('label',))})
-    assert 'label' in [t.name for t in thread.tags]
+    assert 'label' in [cat.display_name for cat in message.categories]
     remove_deleted_uids(default_account.id, db.session, [msg_uid], folder.id)
     assert abs((message.deleted_at - datetime.utcnow()).total_seconds()) < 2
-    # Check that thread tags do get updated synchronously.
-    assert 'label' not in [t.name for t in thread.tags]
+    # Check that message categories do get updated synchronously.
+    assert 'label' not in [cat.display_name for cat in message.categories]
 
 
 def test_deleting_from_a_message_with_multiple_uids(db, default_account,
                                                     message, thread):
     """Check that deleting a imapuid from a message with
     multiple uids doesn't mark the message for deletion."""
-    inbox_folder = default_account.inbox_folder
-    sent_folder = default_account.sent_folder
+    inbox_folder = Folder.find_or_create(db.session, default_account, 'inbox',
+                                         'inbox')
+    sent_folder = Folder.find_or_create(db.session, default_account, 'sent',
+                                         'sent')
 
     add_fake_imapuid(db.session, default_account.id, message, sent_folder,
                      1337)

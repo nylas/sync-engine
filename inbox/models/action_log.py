@@ -6,33 +6,6 @@ from inbox.sqlalchemy_ext.util import JSON
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
 
-ADD_TAG_ACTIONS = {
-    'inbox': 'unarchive',
-    'archive': 'archive',
-    'starred': 'star',
-    'unread': 'mark_unread',
-    'spam': 'mark_spam',
-    'trash': 'mark_trash'
-}
-
-REMOVE_TAG_ACTIONS = {
-    'inbox': 'archive',
-    'archive': 'unarchive',
-    'starred': 'unstar',
-    'unread': 'mark_read',
-    'spam': 'unmark_spam',
-    'trash': 'unmark_trash'
-}
-
-
-def schedule_action_for_tag(tag_public_id, thread, db_session, tag_added):
-    if tag_added:
-        action = ADD_TAG_ACTIONS.get(tag_public_id)
-    else:
-        action = REMOVE_TAG_ACTIONS.get(tag_public_id)
-    if action is not None:
-        schedule_action(action, thread, thread.namespace_id, db_session)
-
 
 def schedule_action(func_name, record, namespace_id, db_session, **kwargs):
     # Ensure that the record's id is non-null

@@ -15,14 +15,13 @@ QUERY_OPTIONS = {
     Message: (
         subqueryload('parts').joinedload('block'),
         subqueryload('thread').load_only('public_id', 'discriminator'),
-        subqueryload('events').load_only('public_id', 'discriminator')
+        subqueryload('events').load_only('public_id', 'discriminator'),
+        subqueryload('messagecategories').joinedload('category')
     ),
     Thread: (
         subqueryload('messages').load_only(
             'public_id', 'is_draft', 'from_addr', 'to_addr', 'cc_addr',
             'bcc_addr'),
-        subqueryload('tagitems').joinedload('tag').load_only(
-            'public_id', 'name')
     )
 }
 
@@ -157,6 +156,8 @@ def format_transactions_after_pointer(namespace, pointer, db_session,
             trxs_by_obj_type[trx.object_type].append(trx)
 
         for obj_type, trxs in trxs_by_obj_type.items():
+            if obj_type == 'tag':
+                continue
             # Build a dictionary mapping pairs (record_id, command) to
             # transaction. If successive modifies for a given record id appear
             # in the list of transactions, this will only keep the latest

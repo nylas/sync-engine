@@ -11,18 +11,20 @@ def load_models():
     from inbox.models.calendar import Calendar
     from inbox.models.data_processing import DataProcessingCache
     from inbox.models.event import Event
-    from inbox.models.folder import Folder, FolderItem
-    from inbox.models.message import Message
+    from inbox.models.folder import Folder
+    from inbox.models.message import Message, MessageCategory
     from inbox.models.namespace import Namespace
     from inbox.models.search import SearchIndexCursor
     from inbox.models.secret import Secret
-    from inbox.models.tag import Tag
-    from inbox.models.thread import Thread, TagItem
+    from inbox.models.thread import Thread
     from inbox.models.transaction import Transaction
     from inbox.models.when import When, Time, TimeSpan, Date, DateSpan
+    from inbox.models.label import Label
+    from inbox.models.category import Category
     exports = [Account, MailSyncBase, ActionLog, Block, Part,
                MessageContactAssociation, Contact, Calendar,
-               DataProcessingCache, Event, Folder, FolderItem, Message,
-               Namespace, SearchIndexCursor, Secret, Tag, Thread, TagItem,
-               Transaction, When, Time, TimeSpan, Date, DateSpan]
+               DataProcessingCache, Event, Folder,
+               Message, Namespace, SearchIndexCursor, Secret,
+               Thread, Transaction, When, Time, TimeSpan, Date, DateSpan,
+               Label, Category, MessageCategory]
     return exports

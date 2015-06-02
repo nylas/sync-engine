@@ -33,15 +33,7 @@ def update_draft_on_send(account, draft, db_session):
     draft.is_sent = True
     draft.is_draft = False
     draft.received_date = datetime.utcnow()
-
-    # Update thread
-    sent_tag = account.namespace.tags['sent']
-    draft_tag = account.namespace.tags['drafts']
     thread = draft.thread
-    thread.apply_tag(sent_tag)
-    # Remove the drafts tag from the thread if there are no more drafts.
-    if not draft.thread.drafts:
-        thread.remove_tag(draft_tag)
     thread.update_from_message(None, draft)
 
     db_session.flush()
