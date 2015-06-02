@@ -192,3 +192,18 @@ def test_deleted_folder(monkeypatch, generic_client, constants):
 
     with pytest.raises(FolderMissingError):
         generic_client.select_folder('missing_folder', lambda: True)
+
+
+def test_deleted_folder(monkeypatch, generic_client, constants):
+    """ Test that a 'select failed EXAMINE' error specifying that a folder
+        doesn't exist is converted into a FolderMissingError. (Yahoo style)
+    """
+    def raise_invalid_uid_exc(*args, **kwargs):
+        raise imapclient.IMAPClient.Error('[UNAVAILABLE] UID FETCH Server error '
+                                          'while fetching messages')
+
+    monkeypatch.setattr('imapclient.IMAPClient.fetch',
+                        raise_invalid_uid_exc)
+
+    # Simply check that the Error exception is handled.
+    generic_client.uids(["125"])
