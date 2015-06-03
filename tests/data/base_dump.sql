@@ -7,7 +7,7 @@
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8 */;
+/*!40101 SET NAMES utf8mb4 */;
 /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
 /*!40103 SET TIME_ZONE='+00:00' */;
 /*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
@@ -150,7 +150,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('1740b45aa815');
+INSERT INTO `alembic_version` VALUES ('6e5b154d917');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -496,6 +496,7 @@ CREATE TABLE `easfoldersyncstatus` (
   `device_id` int(11) NOT NULL,
   `name` varchar(191) NOT NULL,
   `canonical_name` varchar(191) DEFAULT NULL,
+  `sync_should_run` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
   UNIQUE KEY `account_id_2` (`account_id`,`device_id`,`eas_folder_id`),
   KEY `ix_easfoldersyncstatus_created_at` (`created_at`),
@@ -625,8 +626,8 @@ CREATE TABLE `event` (
   KEY `namespace_id` (`namespace_id`),
   KEY `ix_event_ns_uid_calendar_id` (`namespace_id`,`uid`,`calendar_id`),
   KEY `message_ifbk` (`message_id`),
-  CONSTRAINT `event_ibfk_3` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE,
   CONSTRAINT `event_ibfk_2` FOREIGN KEY (`calendar_id`) REFERENCES `calendar` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `event_ibfk_3` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE,
   CONSTRAINT `message_ifbk` FOREIGN KEY (`message_id`) REFERENCES `message` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1191,7 +1192,7 @@ CREATE TABLE `messagecontactassociation` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `contact_id` int(11) NOT NULL,
   `message_id` int(11) NOT NULL,
-  `field` enum('from_addr','to_addr','cc_addr','bcc_addr') DEFAULT NULL,
+  `field` enum('from_addr','to_addr','cc_addr','bcc_addr','reply_to') DEFAULT NULL,
   `created_at` datetime NOT NULL,
   `updated_at` datetime NOT NULL,
   `deleted_at` datetime DEFAULT NULL,
@@ -1398,8 +1399,8 @@ CREATE TABLE `recurringeventoverride` (
   `original_start_time` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `master_event_id` (`master_event_id`),
-  CONSTRAINT `recurringeventoverride_ibfk_2` FOREIGN KEY (`master_event_id`) REFERENCES `event` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `recurringeventoverride_ibfk_1` FOREIGN KEY (`id`) REFERENCES `event` (`id`)
+  CONSTRAINT `recurringeventoverride_ibfk_1` FOREIGN KEY (`id`) REFERENCES `event` (`id`),
+  CONSTRAINT `recurringeventoverride_ibfk_2` FOREIGN KEY (`master_event_id`) REFERENCES `event` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1656,8 +1657,8 @@ CREATE TABLE `tagitem` (
   KEY `ix_tagitem_deleted_at` (`deleted_at`),
   KEY `ix_tagitem_updated_at` (`updated_at`),
   KEY `tag_thread_ids` (`thread_id`,`tag_id`),
-  CONSTRAINT `tagitem_ibfk_2` FOREIGN KEY (`tag_id`) REFERENCES `tag` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `tagitem_ibfk_1` FOREIGN KEY (`thread_id`) REFERENCES `thread` (`id`) ON DELETE CASCADE
+  CONSTRAINT `tagitem_ibfk_1` FOREIGN KEY (`thread_id`) REFERENCES `thread` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `tagitem_ibfk_2` FOREIGN KEY (`tag_id`) REFERENCES `tag` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=38 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -1872,4 +1873,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-05-20 23:57:21
+-- Dump completed on 2015-06-03  2:44:22
