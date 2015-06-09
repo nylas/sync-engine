@@ -2,6 +2,7 @@ import json
 import os
 import subprocess
 from datetime import datetime, timedelta
+from flanker import mime
 
 from pytest import fixture, yield_fixture
 
@@ -281,7 +282,8 @@ def add_fake_account(db_session, email_address='test@nilas.com'):
 
 def add_fake_message(db_session, namespace_id, thread=None, from_addr=None,
                      to_addr=None, cc_addr=None, bcc_addr=None,
-                     received_date=None, subject=None):
+                     received_date=None, subject='',
+                     body='', snippet=''):
     from inbox.models import Message
     from inbox.contacts.process_mail import update_contacts_from_message
     m = Message()
@@ -292,10 +294,10 @@ def add_fake_message(db_session, namespace_id, thread=None, from_addr=None,
     m.bcc_addr = bcc_addr or []
     m.received_date = received_date or datetime.utcnow()
     m.size = 0
-    m.body = ''
-    m.snippet = ''
-    m.subject = subject or ''
     m.is_read = False
+    m.body = body
+    m.snippet = snippet
+    m.subject = subject
 
     if thread:
         thread.messages.append(m)
@@ -402,19 +404,26 @@ def full_path(relpath):
 
 
 @fixture
-def raw_message():
-    raw_msg_path = full_path('../data/raw_message')
-    with open(raw_msg_path) as f:
-        return f.read()
+def mime_message():
+    msg = mime.create.multipart('alternative')
+    msg.append(
+        mime.create.text('plain', 'Hello World!'),
+        mime.create.text('html', '<html>Hello World!</html>')
+    )
+    msg.headers['To'] = 'Alice <alice@example.com>'
+    msg.headers['Cc'] = 'Bob <bob@example.com>'
+    msg.headers['Subject'] = 'Hello'
+    return msg
 
 
-def new_message_from_synced(db, account, raw_message):
+@fixture
+def new_message_from_synced(db, default_account, mime_message):
     from inbox.models import Message
     received_date = datetime(2014, 9, 22, 17, 25, 46)
-    new_msg = Message.create_from_synced(account,
+    new_msg = Message.create_from_synced(default_account,
                                          139219,
                                          '[Gmail]/All Mail',
                                          received_date,
-                                         raw_message)
+                                         mime_message.to_string())
     assert new_msg.received_date == received_date
     return new_msg

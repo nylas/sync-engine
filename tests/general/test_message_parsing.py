@@ -6,9 +6,15 @@ from flanker import mime
 from inbox.models import Message
 from inbox.util.addr import parse_mimepart_address_header
 from tests.util.base import (default_account, default_namespace, thread,
-                             full_path, new_message_from_synced)
+                             full_path, new_message_from_synced, mime_message)
 
 __all__ = ['default_namespace', 'thread', 'default_account']
+
+
+def create_from_synced(account, raw_message):
+    received_date = datetime.datetime.utcnow()
+    return Message.create_from_synced(account, 22, '[Gmail]/All Mail',
+                                      received_date, raw_message)
 
 
 @pytest.fixture
@@ -21,21 +27,9 @@ def raw_message_with_many_recipients():
 
 
 @pytest.fixture
-def raw_message_with_bad_content_disposition():
-    # Message with a MIME part that has an invalid content-disposition.
-    raw_msg_path = full_path(
-        '../data/raw_message_with_bad_content_disposition')
-    with open(raw_msg_path) as f:
-        return f.read()
-
-
-@pytest.fixture
-def raw_message_with_bad_date():
-    # Message with a MIME part that has an invalid content-disposition.
-    raw_msg_path = full_path(
-        '../data/raw_message_with_bad_date')
-    with open(raw_msg_path) as f:
-        return f.read()
+def mime_message_with_bad_date(mime_message):
+    mime_message.headers['Date'] = 'unparseable'
+    return mime_message
 
 
 @pytest.fixture
@@ -47,31 +41,162 @@ def raw_message_with_ical_invite():
 
 @pytest.fixture
 def raw_message_with_bad_attachment():
-    # Message with a MIME part that has an invalid content-disposition.
+    # Message with a MIME part that has an invalid attachment.
     raw_msg_path = full_path(
         '../data/raw_message_with_bad_attachment')
     with open(raw_msg_path) as f:
         return f.read()
 
 
-def test_message_from_synced(db, default_account, default_namespace,
-                             raw_message):
-    m = new_message_from_synced(db, default_account, raw_message)
+def test_message_from_synced(db, new_message_from_synced, default_namespace):
+    m = new_message_from_synced
     assert m.namespace_id == default_namespace.id
-    assert sorted(m.to_addr) == [[u'', u'csail-all.lists@mit.edu'],
-                                 [u'', u'csail-announce@csail.mit.edu'],
-                                 [u'', u'csail-related@csail.mit.edu']]
-    assert len(m.parts) == 4
-    assert 'Attached Message Part' in [part.block.filename for part in m.parts]
-    assert all(part.block.namespace_id == m.namespace_id for part in m.parts)
+    assert m.to_addr == [['Alice', 'alice@example.com']]
+    assert m.cc_addr == [['Bob', 'bob@example.com']]
+    assert m.subject == 'Hello'
+    assert m.body == '<html>Hello World!</html>'
+    assert len(m.parts) == 0
 
 
-def test_truncate_recipients(db, default_account, default_namespace, thread,
+def test_save_attachments(default_account):
+    mime_msg = mime.create.multipart('mixed')
+    mime_msg.append(
+        mime.create.text('plain', 'This is a message with attachments'),
+        mime.create.attachment('image/png', 'filler', 'attached_image.png',
+                               'attachment'),
+        mime.create.attachment('application/pdf', 'filler',
+                               'attached_file.pdf', 'attachment')
+    )
+    msg = create_from_synced(default_account, mime_msg.to_string())
+    assert len(msg.parts) == 2
+    assert all(part.content_disposition == 'attachment' for part in msg.parts)
+    assert {part.block.filename for part in msg.parts} == \
+        {'attached_image.png', 'attached_file.pdf'}
+    assert {part.block.content_type for part in msg.parts} == \
+        {'image/png', 'application/pdf'}
+
+
+def test_save_inline_attachments(default_account):
+    mime_msg = mime.create.multipart('mixed')
+    inline_attachment = mime.create.attachment('image/png', 'filler',
+                                               'inline_image.png', 'inline')
+    inline_attachment.headers['Content-Id'] = '<content_id@mailer.nylas.com>'
+    mime_msg.append(inline_attachment)
+    return mime_msg
+    msg = create_from_synced(default_account, mime_message.to_string())
+    assert len(msg.parts) == 1
+    part = msg.parts[0]
+    assert part.content_disposition == 'inline'
+    assert part.content_id == '<content_id@mailer.nylas.com>'
+    assert part.block.content_type == 'image/png'
+    assert part.block.data == 'filler'
+
+
+def test_concatenate_parts_for_body(default_account):
+    # Test that when a message has multiple inline attachments / text parts, we
+    # concatenate to form the text body (Apple Mail constructs such messages).
+    # Example MIME structure:
+    # multipart/mixed
+    # |
+    # +-text/html
+    # |
+    # +-image/jpeg
+    # |
+    # +-text/html
+    # |
+    # +-image/jpeg
+    # |
+    # +-text/html
+    mime_msg = mime.create.multipart('mixed')
+    mime_msg.append(
+        mime.create.text('html', '<html>First part</html>'),
+        mime.create.attachment('image/png', 'filler', disposition='inline'),
+        mime.create.text('html', '<html>Second part</html>'),
+        mime.create.attachment('image/png', 'more filler',
+                               disposition='inline'),
+        mime.create.text('html', '<html>3rd part</html>'),
+    )
+    m = create_from_synced(default_account, mime_msg.to_string())
+    assert m.body == \
+        '<html>First part</html><html>Second part</html><html>3rd part</html>'
+    assert len(m.parts) == 2
+
+
+def test_inline_parts_may_form_body_text(default_account):
+    # Some clients (Slack) will set Content-Disposition: inline on text/plain
+    # or text/html parts that are really just the body text. Check that we
+    # don't save them as inline atrachments, but just use them to form the body
+    # text.
+    mime_msg = mime.create.multipart('mixed')
+    mime_msg.append(
+        mime.create.attachment('text/html', '<html>Hello World!</html>',
+                               disposition='inline'),
+        mime.create.attachment('text/plain', 'Hello World!',
+                               disposition='inline')
+    )
+    m = create_from_synced(default_account, mime_msg.to_string())
+    assert m.body == '<html>Hello World!</html>'
+    assert len(m.parts) == 0
+
+
+def test_convert_plaintext_body_to_html(default_account):
+    mime_msg = mime.create.text('plain', 'Hello World!')
+    m = create_from_synced(default_account, mime_msg.to_string())
+    assert m.body == '<p>Hello World!</p>'
+
+
+def test_save_parts_without_disposition_as_attachments(default_account):
+    mime_msg = mime.create.multipart('mixed')
+    mime_msg.append(
+        mime.create.attachment('image/png', 'filler',
+                               disposition=None)
+    )
+    m = create_from_synced(default_account, mime_msg.to_string())
+    assert len(m.parts) == 1
+    assert m.parts[0].content_disposition == 'attachment'
+    assert m.parts[0].block.content_type == 'image/png'
+    assert m.parts[0].block.data == 'filler'
+
+
+def test_handle_long_filenames(default_account):
+    mime_msg = mime.create.multipart('mixed')
+    mime_msg.append(
+        mime.create.attachment('image/png', 'filler',
+                               filename=990 * 'A' + '.png',
+                               disposition='attachment')
+    )
+    m = create_from_synced(default_account, mime_msg.to_string())
+    assert len(m.parts) == 1
+    saved_filename = m.parts[0].block.filename
+    assert len(saved_filename) < 256
+    # Check that we kept the extension
+    assert saved_filename.endswith('.png')
+
+
+def test_handle_long_subjects(default_account, mime_message):
+    mime_message.headers['Subject'] = 4096 * 'A'
+    m = create_from_synced(default_account, mime_message.to_string())
+    assert len(m.subject) < 256
+
+
+def test_dont_use_attached_html_to_form_body(default_account):
+    mime_msg = mime.create.multipart('mixed')
+    mime_msg.append(
+        mime.create.text('plain', 'Please see attachment'),
+        mime.create.attachment('text/html', '<html>This is attached</html>',
+                               disposition='attachment',
+                               filename='attachment.html')
+    )
+    m = create_from_synced(default_account, mime_msg.to_string())
+    assert len(m.parts) == 1
+    assert m.parts[0].content_disposition == 'attachment'
+    assert m.parts[0].block.content_type == 'text/html'
+    assert m.body == '<p>Please see attachment</p>'
+
+
+def test_truncate_recipients(db, default_account, thread,
                              raw_message_with_many_recipients):
-    received_date = datetime.datetime(2014, 9, 22, 17, 25, 46)
-    m = Message.create_from_synced(default_account, 139219, '[Gmail]/All Mail',
-                                   received_date,
-                                   raw_message_with_many_recipients)
+    m = create_from_synced(default_account, raw_message_with_many_recipients)
     m.thread = thread
     db.session.add(m)
     # Check that no database error is raised.
@@ -128,43 +253,37 @@ def test_address_parsing_edge_cases():
     assert parsed == [['', 'bob@foocorp.com']]
 
 
-def test_handle_bad_content_disposition(
-        default_account, default_namespace,
-        raw_message_with_bad_content_disposition):
-    received_date = datetime.datetime(2014, 9, 22, 17, 25, 46)
-    m = Message.create_from_synced(default_account, 139219, '[Gmail]/All Mail',
-                                   received_date,
-                                   raw_message_with_bad_content_disposition)
+def test_handle_bad_content_disposition(default_account, default_namespace,
+                                        mime_message):
+    # Message with a MIME part that has an invalid content-disposition.
+    mime_message.append(
+        mime.create.attachment('image/png', 'filler', 'attached_image.png',
+                               disposition='alternative')
+    )
+    m = create_from_synced(default_account, mime_message.to_string())
     assert m.namespace_id == default_namespace.id
-    assert sorted(m.to_addr) == [[u'', u'csail-all.lists@mit.edu'],
-                                 [u'', u'csail-announce@csail.mit.edu'],
-                                 [u'', u'csail-related@csail.mit.edu']]
-    assert len(m.parts) == 3
-    assert m.received_date == received_date
-    assert all(part.block.namespace_id == m.namespace_id for part in m.parts)
+    assert m.to_addr == [['Alice', 'alice@example.com']]
+    assert m.cc_addr == [['Bob', 'bob@example.com']]
+    assert m.body == '<html>Hello World!</html>'
+    assert len(m.parts) == 0
 
 
 def test_store_full_body_on_parse_error(
-        default_account, default_namespace,
-        raw_message_with_bad_date):
+        default_account, mime_message_with_bad_date):
     received_date = None
     m = Message.create_from_synced(default_account, 139219, '[Gmail]/All Mail',
                                    received_date,
-                                   raw_message_with_bad_date)
+                                   mime_message_with_bad_date.to_string())
     assert m.full_body
 
 
 def test_parse_body_on_bad_attachment(
-        default_account, default_namespace,
-        raw_message_with_bad_attachment):
+        default_account, raw_message_with_bad_attachment):
     received_date = None
     m = Message.create_from_synced(default_account, 139219, '[Gmail]/All Mail',
                                    received_date,
                                    raw_message_with_bad_attachment)
     assert m.decode_error
-    plain_part, html_part = m.body_parts
-    assert 'dingy blue carpet' in plain_part
-    assert 'dingy blue carpet' in html_part
     assert 'dingy blue carpet' in m.body
 
 
@@ -201,29 +320,12 @@ def test_calculate_snippet():
     assert m.calculate_html_snippet(body) == expected_snippet
 
 
-def test_sanitize_subject(default_account):
-    from inbox.log import configure_logging
-    configure_logging()
-    # Raw message with encoded null bytes in subject header.
-    raw_message_with_wonky_subject = \
-'''From: "UPS My Choice" <mcinfo@ups.com>
-To: ben.bitdiddle2222@gmail.com
-Subject: =?UTF-8?B?WW91ciBVUFMgUGFja2FnZSB3YXMgZGVsaXZlcmVkAAAA?=
-Content-Type: text/html; charset=UTF-8
-MIME-Version: 1.0
-Content-Type: multipart/alternative; boundary=--==_mimepart_553921a23aa2c_3aee3fe2e442b2b815347
-
---==_mimepart_553921a23aa2c_3aee3fe2e442b2b815347
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-
---==_mimepart_553921a23aa2c_3aee3fe2e442b2b815347
-Content-Type: text/html; charset=UTF-8
-Content-Transfer-Encoding: quoted-printable
-
---==_mimepart_553921a23aa2c_3aee3fe2e442b2b815347
-'''
-    m = Message.create_from_synced(default_account, 22, '[Gmail]/All Mail',
-                                   datetime.datetime.utcnow(),
-                                   raw_message_with_wonky_subject)
+def test_sanitize_subject(default_account, mime_message):
+    # Parse a raw message with encoded null bytes in subject header;
+    # check that we strip the null bytes.
+    mime_message.headers['Subject'] = \
+        '=?UTF-8?B?WW91ciBVUFMgUGFja2FnZSB3YXMgZGVsaXZlcmVkAAAA?='
+    m = Message.create_from_synced(
+        default_account, 22, '[Gmail]/All Mail', datetime.datetime.utcnow(),
+        mime_message.to_string())
     assert m.subject == u'Your UPS Package was delivered'

@@ -1,4 +1,3 @@
-import json
 import datetime
 import itertools
 from hashlib import sha256
@@ -173,7 +172,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
         msg = Message()
 
-        from inbox.models.block import Block, Part
+        from inbox.models.block import Block
         body_block = Block()
         body_block.namespace_id = account.namespace.id
         body_block.data = body_string
@@ -184,30 +183,20 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
         try:
             parsed = mime.from_string(body_string)
-
-            i = 0  # for walk_index
-
-            # Store all message headers as object with index 0
-            block = Block()
-            block.namespace_id = account.namespace.id
-            block.data = json.dumps(parsed.headers.items())
-
-            headers_part = Part(block=block, message=msg)
-            headers_part.walk_index = i
-
             msg._parse_metadata(parsed, body_string, received_date, account.id,
                                 folder_name, mid)
-        except (mime.DecodingError, AttributeError, RuntimeError, TypeError,
-                ValueError) as e:
+        except (mime.DecodingError, AttributeError, RuntimeError,
+                TypeError) as e:
             parsed = None
             log.error('Error parsing message metadata',
                       folder_name=folder_name, account_id=account.id, error=e)
             msg._mark_error()
 
         if parsed is not None:
+            plain_parts = []
+            html_parts = []
             for mimepart in parsed.walk(
                     with_self=parsed.content_type.is_singlepart()):
-                i += 1
                 try:
                     if mimepart.content_type.is_multipart():
                         log.warning('multipart sub-part found',
@@ -215,14 +204,15 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
                                     folder_name=folder_name,
                                     mid=mid)
                         continue  # TODO should we store relations?
-                    msg._parse_mimepart(mimepart, mid, i, account.namespace.id)
+                    msg._parse_mimepart(mid, mimepart, account.namespace.id,
+                                        html_parts, plain_parts)
                 except (mime.DecodingError, AttributeError, RuntimeError,
-                        TypeError, ValueError) as e:
+                        TypeError) as e:
                     log.error('Error parsing message MIME parts',
                               folder_name=folder_name, account_id=account.id,
                               error=e)
                     msg._mark_error()
-            msg.calculate_body()
+            msg.calculate_body(html_parts, plain_parts)
 
             # Occasionally people try to send messages to way too many
             # recipients. In such cases, empty the field and treat as a parsing
@@ -274,54 +264,68 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
         self.size = len(body_string)  # includes headers text
 
-    def _parse_mimepart(self, mimepart, mid, index, namespace_id):
-        """Parse a single MIME part into a Block and Part object linked to this
-        message."""
-        from inbox.models.block import Block, Part
-        disposition, disposition_params = mimepart.content_disposition
-        if (disposition is not None and
-                disposition not in ['inline', 'attachment']):
-            cd = mimepart.content_disposition
+    def _parse_mimepart(self, mid, mimepart, namespace_id, html_parts,
+                        plain_parts):
+        disposition, _ = mimepart.content_disposition
+        content_id = mimepart.headers.get('Content-Id')
+        content_type, params = mimepart.content_type
+        filename = params.get('name')
+        is_text = content_type.startswith('text')
+        if disposition not in (None, 'inline', 'attachment'):
             log.error('Unknown Content-Disposition',
-                      mid=mid, bad_content_disposition=cd,
-                      parsed_content_disposition=disposition)
+                      message_public_id=self.public_id,
+                      bad_content_disposition=mimepart.content_disposition)
             self._mark_error()
             return
+
+        if disposition == 'attachment':
+            self._save_attachment(mimepart, disposition, content_type,
+                                  filename, content_id, namespace_id, mid)
+            return
+
+        if (disposition == 'inline' and
+                not (is_text and filename is None and content_id is None)):
+            # Some clients set Content-Disposition: inline on text MIME parts
+            # that we really want to treat as part of the text body. Don't
+            # treat those as attachments.
+            self._save_attachment(mimepart, disposition, content_type,
+                                  filename, content_id, namespace_id, mid)
+            return
+
+        if is_text:
+            if mimepart.body is None:
+                return
+            normalized_data = mimepart.body.encode('utf-8', 'strict')
+            normalized_data = normalized_data.replace('\r\n', '\n'). \
+                replace('\r', '\n')
+            if content_type == 'text/html':
+                html_parts.append(normalized_data)
+            elif content_type == 'text/plain':
+                plain_parts.append(normalized_data)
+            else:
+                log.warning('Skipping unexpected text MIME part',
+                            content_type=content_type, mid=mid)
+            return
+
+        # Finally, if we get a non-text MIME part without Content-Disposition,
+        # treat it as an attachment.
+        self._save_attachment(mimepart, 'attachment', content_type,
+                              filename, content_id, namespace_id, mid)
+
+    def _save_attachment(self, mimepart, content_disposition, content_type,
+                         filename, content_id, namespace_id, mid):
+        from inbox.models import Part, Block
         block = Block()
         block.namespace_id = namespace_id
-        block.content_type = mimepart.content_type.value
-        block.filename = _trim_filename(
-            mimepart.content_type.params.get('name'), mid)
-
-        new_part = Part(block=block)
-        new_part.walk_index = index
-
-        # TODO maybe also trim other headers?
-        if disposition is not None:
-            new_part.content_disposition = disposition
-            if disposition == 'attachment':
-                new_part.block.filename = _trim_filename(
-                    disposition_params.get('filename'), mid)
-
-        if mimepart.body is None:
-            data_to_write = ''
-        elif new_part.block.content_type.startswith('text'):
-            data_to_write = mimepart.body.encode('utf-8', 'strict')
-            # normalize mac/win/unix newlines
-            data_to_write = data_to_write.replace('\r\n', '\n'). \
-                replace('\r', '\n')
-        else:
-            data_to_write = mimepart.body
-        if data_to_write is None:
-            data_to_write = ''
-
-        new_part.content_id = mimepart.headers.get('Content-Id')
-
-        block.data = data_to_write
-
-        # Wait until end so we don't create incomplete blocks/parts for MIME
-        # parts which fail to parse.
-        new_part.message = self
+        block.filename = _trim_filename(filename, mid=mid)
+        block.content_type = content_type
+        part = Part(block=block, message=self)
+        part.content_id = content_id
+        part.content_disposition = content_disposition
+        data = mimepart.body or ''
+        if isinstance(data, unicode):
+            data = data.encode('utf-8', 'strict')
+        block.data = data
 
     def _mark_error(self):
         """ Mark message as having encountered errors while parsing.
@@ -344,16 +348,15 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         if self.snippet is None:
             self.snippet = ''
 
-    def calculate_body(self):
-        plain_part, html_part = self.body_parts
-        # TODO: also strip signatures.
-        if html_part:
-            assert '\r' not in html_part, "newlines not normalized"
-            self.snippet = self.calculate_html_snippet(html_part)
-            self.body = html_part
-        elif plain_part:
-            self.snippet = self.calculate_plaintext_snippet(plain_part)
-            self.body = plaintext2html(plain_part, False)
+    def calculate_body(self, html_parts, plain_parts):
+        html_body = ''.join(html_parts).decode('utf-8').strip()
+        plain_body = '\n'.join(plain_parts).decode('utf-8').strip()
+        if html_body:
+            self.snippet = self.calculate_html_snippet(html_body)
+            self.body = html_body
+        elif plain_body:
+            self.snippet = self.calculate_plaintext_snippet(plain_body)
+            self.body = plaintext2html(plain_body, False)
         else:
             self.body = u''
             self.snippet = u''
@@ -364,26 +367,6 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
     def calculate_plaintext_snippet(self, text):
         return ' '.join(text.split())[:self.SNIPPET_LENGTH]
-
-    @property
-    def body_parts(self):
-        """ Returns (plaintext, html) body parts for the message, decoded. """
-        assert self.parts, \
-            "Can't calculate body before parts have been parsed"
-
-        plain_data = None
-        html_data = None
-
-        for part in self.parts:
-            if part.block.content_type == 'text/html':
-                html_data = part.block.data.decode('utf-8').strip()
-                break
-        for part in self.parts:
-            if part.block.content_type == 'text/plain':
-                plain_data = part.block.data.decode('utf-8').strip()
-                break
-
-        return plain_data, html_data
 
     @property
     def body(self):

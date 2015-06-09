@@ -1,45 +1,34 @@
 import pytest
 import json
-from tests.util.base import (api_client, add_fake_thread, add_fake_message,
-                             default_namespace, new_message_from_synced)
+from tests.util.base import (api_client, add_fake_message, default_namespace,
+                             new_message_from_synced, mime_message, thread)
 
 __all__ = ['api_client', 'default_namespace']
 
 
 @pytest.fixture
-def stub_message_from_raw(db, raw_message):
-    namespace_id = default_namespace(db).id
-    new_msg = new_message_from_synced(db, default_namespace(db).account,
-                                      raw_message)
-    fake_thread = add_fake_thread(db.session, namespace_id)
-    new_msg.thread = fake_thread
-    db.session.add_all([new_msg, fake_thread])
+def stub_message_from_raw(db, thread, new_message_from_synced):
+    new_msg = new_message_from_synced
+    new_msg.thread = thread
+    db.session.add(new_msg)
     db.session.commit()
     return new_msg
 
 
-def test_rfc822_format(stub_message_from_raw, api_client, raw_message):
+# TODO(emfree) clean up fixture dependencies
+def test_rfc822_format(stub_message_from_raw, api_client, mime_message):
     """ Test the API response to retreive raw message contents """
     full_path = api_client.full_path('/messages/{}'.format(
         stub_message_from_raw.public_id))
 
     results = api_client.client.get(full_path,
                                     headers={'Accept': 'message/rfc822'})
-    assert results.data == raw_message
+    assert results.data == mime_message.to_string()
 
 
 @pytest.fixture
-def stub_message(db):
-    namespace_id = default_namespace(db).id
-    # new_msg = new_message_from_synced
-    # fake_thread = add_fake_thread(db.session, NAMESPACE_ID)
-    # new_msg.thread = fake_thread
-    # db.session.add_all([new_msg, fake_thread])
-    # db.session.commit()
-    # return new_msg
-
-    thread = add_fake_thread(db.session, namespace_id)
-    message = add_fake_message(db.session, namespace_id, thread,
+def stub_message(db, new_message_from_synced, default_namespace, thread):
+    message = add_fake_message(db.session, default_namespace.id, thread,
                                subject="Golden Gate Park next Sat",
                                from_addr=[('alice', 'alice@example.com')],
                                to_addr=[('bob', 'bob@example.com')])
@@ -51,7 +40,7 @@ PBR sartorial photo booth Pinterest blog Portland roof party
 cliche bitters aesthetic. Ugh.
 """
 
-    message = add_fake_message(db.session, namespace_id, thread,
+    message = add_fake_message(db.session, default_namespace.id, thread,
                                subject="Re:Golden Gate Park next Sat",
                                from_addr=[('bob', 'bob@example.com')],
                                to_addr=[('alice', 'alice@example.com')],
@@ -62,11 +51,11 @@ Bushwick meggings ethical keffiyeh. Chambray lumbersexual wayfarers,
 irony Banksy cred bicycle rights scenester artisan tote bag YOLO gastropub.
 """
 
-    draft = add_fake_message(db.session, namespace_id, thread,
-                               subject="Re:Golden Gate Park next Sat",
-                               from_addr=[('alice', 'alice@example.com')],
-                               to_addr=[('bob', 'bob@example.com')],
-                               cc_addr=[('Cheryl', 'cheryl@gmail.com')])
+    draft = add_fake_message(db.session, default_namespace.id, thread,
+                             subject="Re:Golden Gate Park next Sat",
+                             from_addr=[('alice', 'alice@example.com')],
+                             to_addr=[('bob', 'bob@example.com')],
+                             cc_addr=[('Cheryl', 'cheryl@gmail.com')])
     draft.snippet = 'Hey there friend writing a draft'
     draft.body = """
 DIY tousled Tumblr, VHS meditation 3 wolf moon listicle fingerstache viral
