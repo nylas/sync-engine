@@ -18,15 +18,6 @@ from inbox.models.backends.generic import GenericAccount
 PROVIDER = 'generic'
 AUTH_HANDLER_CLS = 'GenericAuthHandler'
 
-AUTH_INVALID_RESPONSES = [
-    '[AUTHENTICATIONFAILED] Authentication failed.',
-    '[AUTHENTICATIONFAILED] Invalid credentials (Failure)',
-    '[AUTHENTICATIONFAILED] Invalid username or password.',
-    '[AUTHENTICATIONFAILED] (#MBR1212) Incorrect username or password.',
-    'Incorrect username or password.',
-    'LOGIN failed'
-]
-
 
 class GenericAuthHandler(AuthHandler):
     def create_account(self, db_session, email_address, response):
@@ -82,7 +73,7 @@ class GenericAuthHandler(AuthHandler):
         try:
             conn.login(account.email_address, account.password)
         except IMAPClient.Error as exc:
-            if exc.message in AUTH_INVALID_RESPONSES:
+            if _auth_is_invalid(exc):
                 log.error('IMAP login failed',
                           account_id=account.id,
                           email=account.email_address,
@@ -179,3 +170,17 @@ class GenericAuthHandler(AuthHandler):
                             smtp_server_port=smtp_server_port)
 
         return response
+
+
+def _auth_is_invalid(exc):
+    # IMAP doesn't really have error semantics, so we have to match the error
+    # message against a list of known response strings to determine whether we
+    # couldn't log in because the credentials are invalid, or because of some
+    # temporary server error.
+    AUTH_INVALID_PREFIXES = (
+        '[authenticationfailed]',
+        'incorrect username or password',
+        'login failed',
+    )
+    return any(exc.message.lower().startswith(msg) for msg in
+               AUTH_INVALID_PREFIXES)
