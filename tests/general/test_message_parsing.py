@@ -203,7 +203,7 @@ def test_truncate_recipients(db, default_account, thread,
     db.session.commit()
 
 
-def test_address_parsing_edge_cases():
+def test_address_parsing():
     """Check that header parsing can handle a variety of tricky input."""
     # Extra quotes around display name
     mimepart = mime.from_string('From: ""Bob"" <bob@foocorp.com>')
@@ -251,6 +251,25 @@ def test_address_parsing_edge_cases():
                                 'From: bob@foocorp.com')
     parsed = parse_mimepart_address_header(mimepart, 'From')
     assert parsed == [['', 'bob@foocorp.com']]
+
+    # RFC2047-encoded phrases with commas
+    mimepart = mime.from_string(
+        'From: =?utf-8?Q?Foo=2C=20Corp.?= <info@foocorp.com>')
+    parsed = parse_mimepart_address_header(mimepart, 'From')
+    assert parsed == [['Foo, Corp.', 'info@foocorp.com']]
+
+    mimepart = mime.from_string(
+        'To: =?utf-8?Q?Foo=2C=20Corp.?= <info@foocorp.com>, '
+        '=?utf-8?Q?Support?= <support@foocorp.com>')
+    parsed = parse_mimepart_address_header(mimepart, 'To')
+    assert parsed == [['Foo, Corp.', 'info@foocorp.com'],
+                      ['Support', 'support@foocorp.com']]
+
+    # Multiple header lines
+    mimepart = mime.from_string(
+        'To: alice@foocorp.com\nSubject: Hello\nTo: bob@foocorp.com')
+    parsed = parse_mimepart_address_header(mimepart, 'To')
+    assert parsed == [['', 'alice@foocorp.com'], ['', 'bob@foocorp.com']]
 
 
 def test_handle_bad_content_disposition(default_account, default_namespace,
