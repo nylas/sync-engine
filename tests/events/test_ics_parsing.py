@@ -2,37 +2,30 @@
 
 import pytest
 import arrow
-from inbox.models.block import Part, Block
+from datetime import datetime
+from flanker import mime
+from inbox.models import Message
 from inbox.models.event import Event, RecurringEvent
 from inbox.events.util import MalformedEventError
 from inbox.events.ical import events_from_ics, import_attached_events
 from tests.util.base import (absolute_path, add_fake_calendar,
-                             add_fake_thread, add_fake_message)
+                             add_fake_thread)
 
 FIXTURES = './events/fixtures/'
 
 
 def add_fake_msg_with_calendar_part(db_session, account, ics_str):
-    thread = add_fake_thread(db_session, account.namespace.id)
-    msg = add_fake_message(db_session, account.namespace.id, thread=thread)
-
-    if not msg.parts:
-        walk_index = 1
-    else:
-        walk_index = msg.parts[-1].walk_index + 1
-
-    ics_part = Part(
-            message=msg,
-            block=Block(
-                data=ics_str,
-                namespace_id=msg.namespace_id),
-            walk_index=walk_index)
-    ics_part.block.content_type = 'text/calendar'
+    parsed = mime.create.multipart('mixed')
+    parsed.append(
+        mime.create.attachment('text/calendar',
+                               ics_str,
+                               disposition=None)
+    )
+    msg = Message.create_from_synced(
+        account, 22, '[Gmail]/All Mail', datetime.utcnow(), parsed.to_string())
+    msg.thread = add_fake_thread(db_session, account.namespace.id)
 
     assert msg.has_attached_events
-    db_session.add(msg)
-    db_session.commit()
-
     return msg
 
 
@@ -98,8 +91,8 @@ def test_event_update(db, default_account, message):
     with open(absolute_path(FIXTURES + 'gcal_v1.ics')) as fd:
         ics_data = fd.read()
 
-    msg = add_fake_msg_with_calendar_part(
-        db.session, default_account, ics_data)
+    msg = add_fake_msg_with_calendar_part(db.session, default_account,
+                                          ics_data)
 
     import_attached_events(db.session, default_account, msg)
     db.session.commit()

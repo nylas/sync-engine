@@ -303,8 +303,10 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
             elif content_type == 'text/plain':
                 plain_parts.append(normalized_data)
             else:
-                log.warning('Skipping unexpected text MIME part',
+                log.info('Saving other text MIME part as attachment',
                             content_type=content_type, mid=mid)
+                self._save_attachment(mimepart, 'attachment', content_type,
+                                      filename, content_id, namespace_id, mid)
             return
 
         # Finally, if we get a non-text MIME part without Content-Disposition,
