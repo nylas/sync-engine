@@ -192,8 +192,8 @@ class FolderSyncEngine(Greenlet):
             # was no longer valid, ie. the folder for this engine was deleted
             # while we were starting up.
             # Exit the sync and let the monitor sort things out.
-            log.info("Folder state loading failed due to IntegrityError",
-                     folder_id=self.folder_id, account_id=self.account_id)
+            self.log.info("Folder state loading failed due to IntegrityError",
+                          folder_id=self.folder_id, account_id=self.account_id)
             raise MailsyncDone()
 
         # NOTE: The parent ImapSyncMonitor handler could kill us at any
@@ -210,13 +210,14 @@ class FolderSyncEngine(Greenlet):
             except FolderMissingError:
                 # Folder was deleted by monitor while its sync was running.
                 # TODO: Monitor should handle shutting down the folder engine.
-                log.info('Folder disappeared: {}. Stopping sync.'.format(
+                self.log.info('Folder disappeared: {}. Stopping sync.'.format(
                     self.folder_name), account_id=self.account_id,
                     folder_id=self.folder_id)
                 raise MailsyncDone()
             except ValidationError:
-                log.error('Error authenticating; stopping sync', exc_info=True,
-                          account_id=self.account_id, folder_id=self.folder_id)
+                self.log.error('Error authenticating; stopping sync',
+                               exc_info=True, account_id=self.account_id,
+                               folder_id=self.folder_id)
                 raise MailsyncDone()
 
             # State handlers are idempotent, so it's okay if we're
@@ -258,8 +259,8 @@ class FolderSyncEngine(Greenlet):
 
     @retry_crispin
     def initial_sync(self):
-        log.bind(state='initial')
-        log.info('starting initial sync')
+        self.log.bind(state='initial')
+        self.log.info('starting initial sync')
 
         with self.conn_pool.get() as crispin_client:
             crispin_client.select_folder(self.folder_name, uidvalidity_cb)
@@ -268,15 +269,15 @@ class FolderSyncEngine(Greenlet):
 
     @retry_crispin
     def poll(self):
-        log.bind(state='poll')
-        log.info('polling')
+        self.log.bind(state='poll')
+        self.log.info('polling')
         self.poll_impl()
         return 'poll'
 
     @retry_crispin
     def resync_uids(self):
-        log.bind(state=self.state)
-        log.info('UIDVALIDITY changed')
+        self.log.bind(state=self.state)
+        self.log.info('UIDVALIDITY changed')
         self.resync_uids_impl()
         return 'initial'
 
@@ -341,7 +342,7 @@ class FolderSyncEngine(Greenlet):
                                              lambda *args: True)
                 uidvalidity = crispin_client.selected_uidvalidity
                 if uidvalidity <= cached_uidvalidity:
-                    log.debug('UIDVALIDITY unchanged')
+                    self.log.debug('UIDVALIDITY unchanged')
                     return
                 invalid_uids = db_session.query(ImapUid). \
                     filter_by(account_id=self.account_id,
@@ -408,7 +409,7 @@ class FolderSyncEngine(Greenlet):
                     acc = db_session.query(Account).get(self.account_id)
                     self.throttled = acc.throttled
                 if self.throttled:
-                    log.debug('throttled; sleeping')
+                    self.log.debug('throttled; sleeping')
                     sleep(THROTTLE_WAIT)
 
     def create_message(self, db_session, acct, folder, msg):
@@ -420,9 +421,9 @@ class FolderSyncEngine(Greenlet):
             ImapUid.account_id == acct.id, ImapUid.folder_id == folder.id,
             ImapUid.msg_uid == msg.uid).first()
         if existing_imapuid is not None:
-            log.error('Expected to create imapuid, but existing row found',
-                      remote_msg_uid=msg.uid,
-                      existing_imapuid=existing_imapuid.id)
+            self.log.error('Expected to create imapuid, but existing row found',
+                           remote_msg_uid=msg.uid,
+                           existing_imapuid=existing_imapuid.id)
             return None
 
         new_uid = common.create_imap_message(db_session, log, acct, folder,

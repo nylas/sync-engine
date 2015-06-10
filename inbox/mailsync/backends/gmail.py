@@ -135,7 +135,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                     # from my (siro) understanding it should not be less than -
                     # the local UIDVALIDITY log a debug message and exit right
                     # away
-                    log.debug('UIDVALIDITY unchanged')
+                    self.log.debug('UIDVALIDITY unchanged')
                     return
                 msg_uids = crispin_client.all_uids()
                 mapping = {g_msgid: msg_uid for msg_uid, g_msgid in
@@ -148,14 +148,14 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
             CHUNK_SIZE = 1000
             for entry in imap_uid_entries.yield_per(CHUNK_SIZE):
                 if entry.message.g_msgid in mapping:
-                    log.debug('X-GM-MSGID {} from UID {} to UID {}'.format(
+                    self.log.debug('X-GM-MSGID {} from UID {} to UID {}'.format(
                         entry.message.g_msgid,
                         entry.msg_uid,
                         mapping[entry.message.g_msgid]))
                     entry.msg_uid = mapping[entry.message.g_msgid]
                 else:
                     db_session.delete(entry)
-            log.debug('UIDVALIDITY from {} to {}'.format(
+            self.log.debug('UIDVALIDITY from {} to {}'.format(
                 imap_folder_info_entry.uidvalidity, uidvalidity))
             imap_folder_info_entry.uidvalidity = uidvalidity
             imap_folder_info_entry.highestmodseq = None
@@ -163,7 +163,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
 
     def highestmodseq_callback(self, crispin_client, new_uids, updated_uids,
                                download_stack, async_download):
-        log.debug('running highestmodseq callback')
+        self.log.debug('running highestmodseq callback')
         uids = new_uids + updated_uids
         g_metadata = crispin_client.g_metadata(uids)
         to_download = self.__deduplicate_message_download(
@@ -206,8 +206,8 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
             remote_g_metadata[uid].msgid in local_g_msgids,
             sorted(uids, key=int))
         if imapuid_only:
-            log.info('skipping already downloaded uids',
-                     count=len(imapuid_only))
+            self.log.info('skipping already downloaded uids',
+                          count=len(imapuid_only))
             # Since we always download messages via All Mail and create the
             # relevant All Mail ImapUids too at that time, we don't need to
             # create them again here if we're deduping All Mail downloads.
@@ -278,9 +278,9 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
 
         """
         num_total_messages = download_stack.qsize()
-        log.info(num_total_messages=num_total_messages)
+        self.log.info(num_total_messages=num_total_messages)
 
-        log.info('Expanding threads and downloading messages.')
+        self.log.info('Expanding threads and downloading messages.')
         # Since we do thread expansion, for any given thread, even if we
         # already have the UID in the given GMessage downloaded, we may not
         # have _every_ message in the thread. We have to expand it and make
@@ -304,10 +304,10 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
                 with mailsync_session_scope() as db_session:
                     acc = db_session.query(Account).get(self.account_id)
                     self.throttled = acc.throttled
-                log.debug('throttled; sleeping')
+                self.log.debug('throttled; sleeping')
                 if self.throttled:
                     sleep(THROTTLE_WAIT)
-        log.info('Message download queue emptied')
+        self.log.info('Message download queue emptied')
         # Intentionally don't report which UIDVALIDITY we've saved messages to
         # because we have All Mail selected and don't have the UIDVALIDITY for
         # the folder we're actually downloading messages for.
@@ -323,11 +323,11 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
         Inbox API, we can reconcile this thread appropriately with the existing
         message/thread.
         """
-        log.debug('downloading thread',
-                  g_thrid=g_thrid, message_count=len(thread_uids))
+        self.log.debug('downloading thread',
+                       g_thrid=g_thrid, message_count=len(thread_uids))
         to_download = self.__deduplicate_message_download(
             crispin_client, thread_g_metadata, thread_uids)
-        log.debug(deduplicated_message_count=len(to_download))
+        self.log.debug(deduplicated_message_count=len(to_download))
         for uids in chunk(to_download, crispin_client.CHUNK_SIZE):
             self.download_and_commit_uids(
                 crispin_client, crispin_client.selected_folder_name, uids)

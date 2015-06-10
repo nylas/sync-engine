@@ -38,9 +38,8 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
 
     @retry_crispin
     def poll_for_changes(self, download_stack):
-        log.new(account_id=self.account_id, folder=self.folder_name)
         while True:
-            log.debug('polling for changes')
+            self.log.debug('polling for changes')
             with self.conn_pool.get() as crispin_client:
                 self.check_uid_changes(crispin_client, download_stack,
                                        async_download=True)
@@ -79,10 +78,10 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
                 return
             elif new_highestmodseq < saved_highestmodseq:
                 # This should really never happen, but if it does, handle it.
-                log.warning('got server highestmodseq less than saved '
-                            'highestmodseq',
-                            new_highestmodseq=new_highestmodseq,
-                            saved_highestmodseq=saved_highestmodseq)
+                self.log.warning('got server highestmodseq less than saved '
+                                 'highestmodseq',
+                                 new_highestmodseq=new_highestmodseq,
+                                 saved_highestmodseq=saved_highestmodseq)
                 return
         # Highestmodseq has changed, update accordingly.
         new_uidvalidity = crispin_client.selected_uidvalidity
@@ -95,9 +94,10 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
         local_with_pending_uids = local_uids | stack_uids
         new, updated = new_or_updated(changed_uids, local_with_pending_uids)
         if changed_uids:
-            log.info("Changed UIDs", message="new: {} updated: {}"
+            self.log.info("Changed UIDs", message="new: {} updated: {}"
                                              .format(len(new), len(updated)),
-                     new_uid_count=len(new), updated_uid_count=len(updated))
+                          new_uid_count=len(new),
+                          updated_uid_count=len(updated))
             self.update_metadata(crispin_client, updated)
             self.highestmodseq_callback(crispin_client, new, updated,
                                         download_stack, async_download)
@@ -124,5 +124,5 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
         # idle for very long, or we won't detect things like
         # messages being marked as read.
         idle_frequency = 30
-        log.info('idling', timeout=idle_frequency)
+        self.log.info('idling', timeout=idle_frequency)
         crispin_client.idle(idle_frequency)
