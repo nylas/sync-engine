@@ -578,8 +578,9 @@ def uidvalidity_cb(account_id, folder_name, select_info):
         if not is_valid:
             raise UidInvalid(
                 'folder: {}, remote uidvalidity: {}, '
-                'cached uidvalidity: {}'.format(
-                    folder_name, selected_uidvalidity, saved_uidvalidity))
+                'cached uidvalidity: {}'.format(folder_name.encode('utf-8'),
+                                                selected_uidvalidity,
+                                                saved_uidvalidity))
     return select_info
 
 
