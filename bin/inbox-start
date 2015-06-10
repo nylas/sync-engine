@@ -2,14 +2,12 @@
 from gevent import monkey
 monkey.patch_all()
 
-import multiprocessing
 import os
 import platform
 import signal
 import sys
 
 import click
-import gevent
 
 # Check that the inbox package is installed. It seems Vagrant may sometimes
 # fail to provision the box appropriately; this check is a reasonable
@@ -22,7 +20,7 @@ except ImportError:
              "Try running sudo ./setup.sh")
 
 from inbox.util.startup import preflight
-from inbox.util.debug import trace_greenlets
+from inbox.util.debug import Tracer
 from inbox.log import get_logger, configure_logging
 from inbox.mailsync.service import SyncService
 
@@ -87,7 +85,8 @@ def main(prod, config, process_num):
         print >>sys.stderr, "Feature flags enabled: {}\n".format(
             ' '.join(inbox_config['FEATURE_FLAGS']))
 
-    gevent.spawn(trace_greenlets)
+    tracer = Tracer(gather_stats=True)
+    tracer.start()
     global sync_service
     sync_service = SyncService(process_num, total_processes)
     sync_service.run()
