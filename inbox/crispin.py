@@ -40,7 +40,7 @@ from inbox.models.session import session_scope
 from inbox.models.account import Account
 
 from inbox.log import get_logger
-logger = get_logger()
+log = get_logger()
 
 __all__ = ['CrispinClient', 'GmailCrispinClient', 'CondStoreCrispinClient']
 
@@ -125,8 +125,8 @@ class CrispinConnectionPool(object):
         Is the connection to the IMAP server read-only?
     """
     def __init__(self, account_id, num_connections, readonly):
-        logger.info('Creating Crispin connection pool for account {} with {} '
-                    'connections'.format(account_id, num_connections))
+        log.info('Creating Crispin connection pool for account {} with {} '
+                 'connections'.format(account_id, num_connections))
         self.account_id = account_id
         self.readonly = readonly
         self._queue = Queue(num_connections, items=num_connections * [None])
@@ -156,13 +156,13 @@ class CrispinConnectionPool(object):
             # isn't always necessary, since if you got e.g. a FETCH failure you
             # could reuse the same connection. But for now it's the simplest
             # thing to do.
-            logger.info('IMAP connection error; discarding connection',
-                        exc_info=True)
+            log.info('IMAP connection error; discarding connection',
+                     exc_info=True)
             if client is not None:
                 try:
                     client.logout()
                 except:
-                    logger.error('Error on IMAP logout', exc_info=True)
+                    log.error('Error on IMAP logout', exc_info=True)
                 client = None
             raise exc
         except:
@@ -199,9 +199,9 @@ class CrispinConnectionPool(object):
                                    self.email_address, conn,
                                    readonly=self.readonly)
         except ValidationError, e:
-            logger.error('Error validating',
-                         account_id=self.account_id,
-                         logstash_tag='mark_invalid')
+            log.error('Error validating',
+                      account_id=self.account_id,
+                      logstash_tag='mark_invalid')
             with session_scope() as db_session:
                 account = db_session.query(Account).get(self.account_id)
                 account.mark_invalid()
@@ -210,13 +210,13 @@ class CrispinConnectionPool(object):
 
 
 def _exc_callback():
-    logger.info('Connection broken with error; retrying with new connection',
-                exc_info=True)
+    log.info('Connection broken with error; retrying with new connection',
+             exc_info=True)
     gevent.sleep(5)
 
 
 def _fail_callback():
-    logger.error('Max retries reached. Aborting', exc_info=True)
+    log.error('Max retries reached. Aborting', exc_info=True)
 
 
 retry_crispin = functools.partial(
@@ -263,7 +263,6 @@ class CrispinClient(object):
 
     def __init__(self, account_id, provider_info, email_address, conn,
                  readonly=True):
-        self.log = logger.new(account_id=account_id, module='crispin')
         self.account_id = account_id
         self.provider_info = provider_info
         self.email_address = email_address
@@ -323,7 +322,7 @@ class CrispinClient(object):
             # being deleted, as other connection errors could occur - but we
             # want to make sure we keep track of different providers'
             # "nonexistent" messages, so log this event.
-            self.log.error("IMAPClient error selecting folder. May be deleted",
+            log.error("IMAPClient error selecting folder. May be deleted",
                            error=str(e))
             raise
 
@@ -445,19 +444,19 @@ class CrispinClient(object):
             if e.message.find('UID SEARCH wrong arguments passed') >= 0:
                 # Mail2World servers fail for the otherwise valid command
                 # 'UID SEARCH ALL' but strangely pass for 'UID SEARCH ALL UID'
-                self.log.debug("Getting UIDs failed when using 'UID SEARCH "
-                               "ALL'. Switching to alternative 'UID SEARCH "
-                               "ALL UID", exception=e)
+                log.debug("Getting UIDs failed when using 'UID SEARCH "
+                          "ALL'. Switching to alternative 'UID SEARCH "
+                          "ALL UID", exception=e)
                 t = time.time()
                 fetch_result = self.conn.search(['ALL', 'UID'])
             else:
                 raise
 
         elapsed = time.time() - t
-        self.log.debug('Requested all UIDs',
-                        selected_folder=self.selected_folder_name,
-                        search_time=elapsed,
-                        total_uids=len(fetch_result))
+        log.debug('Requested all UIDs',
+                   selected_folder=self.selected_folder_name,
+                   search_time=elapsed,
+                   total_uids=len(fetch_result))
         return sorted([long(uid) for uid in fetch_result])
 
     def uids(self, uids):
@@ -467,20 +466,20 @@ class CrispinClient(object):
 
         for uid in uid_set:
             try:
-                raw_messages.update(self.conn.fetch(uid,
-                   ['BODY.PEEK[] INTERNALDATE FLAGS']))
+                raw_messages.update(self.conn.fetch(
+                    uid, ['BODY.PEEK[] INTERNALDATE FLAGS']))
             except imapclient.IMAPClient.Error as e:
                 if ('[UNAVAILABLE] UID FETCH Server error '
                     'while fetching messages') in str(e):
-                    self.log.info('Got an exception while requesting an UID',
-                                  uid=uid, error=e,
-                                  logstash_tag='imap_download_exception')
+                    log.info('Got an exception while requesting an UID',
+                             uid=uid, error=e,
+                             logstash_tag='imap_download_exception')
                     continue
                 else:
-                    self.log.info(('Got an unhandled exception while '
-                                   'requesting an UID'),
-                                  uid=uid, error=e,
-                                  logstash_tag='imap_download_exception')
+                    log.info(('Got an unhandled exception while '
+                              'requesting an UID'),
+                             uid=uid, error=e,
+                             logstash_tag='imap_download_exception')
                     raise
 
         for uid in sorted(raw_messages.iterkeys(), key=long):
@@ -605,15 +604,15 @@ class CrispinClient(object):
             matching_uids = self.find_by_header('Message-Id',
                                                 message_id_header)
         if not matching_uids:
-            self.log.error('No remote messages found to delete',
-                           inbox_uid=inbox_uid,
-                           message_id_header=message_id_header)
+            log.error('No remote messages found to delete',
+                      inbox_uid=inbox_uid,
+                      message_id_header=message_id_header)
             return
         if len(matching_uids) > 1:
-            self.log.error('Multiple remote messages found to delete',
-                           inbox_uid=inbox_uid,
-                           message_id_header=message_id_header,
-                           uids=matching_uids)
+            log.error('Multiple remote messages found to delete',
+                      inbox_uid=inbox_uid,
+                      message_id_header=message_id_header,
+                      uids=matching_uids)
             return
         self.conn.delete_messages(matching_uids)
         self.conn.expunge()
@@ -817,8 +816,8 @@ class GmailCrispinClient(CondStoreCrispinClient):
         dict
             uid: GMetadata(msgid, thrid)
         """
-        self.log.debug('fetching X-GM-MSGID and X-GM-THRID',
-                       uid_count=len(uids))
+        log.debug('fetching X-GM-MSGID and X-GM-THRID',
+                  uid_count=len(uids))
         # Super long sets of uids may fail with BAD ['Could not parse command']
         # In that case, just fetch metadata for /all/ uids.
         if len(uids) > 1e6:
