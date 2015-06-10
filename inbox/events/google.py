@@ -167,28 +167,43 @@ class GoogleEventsProvider(object):
 
     def _make_event_request(self, method, calendar_uid, event_uid=None,
                             **kwargs):
-        """Makes a POST/PUT/DELETE request for a particular event."""
+        """ Makes a POST/PUT/DELETE request for a particular event. """
         event_uid = event_uid or ''
         url = 'https://www.googleapis.com/calendar/v3/' \
               'calendars/{}/events/{}'.format(urllib.quote(calendar_uid),
                                               urllib.quote(event_uid))
         token = self._get_access_token()
-        r = requests.request(method, url, auth=OAuth(token), **kwargs)
-        r.raise_for_status()
-        return r
+        response = requests.request(method, url, auth=OAuth(token), **kwargs)
+        return response
 
     def create_remote_event(self, event):
         data = _dump_event(event)
-        r = self._make_event_request('post', event.calendar.uid, json=data)
-        return r.json()
+        response = self._make_event_request('post', event.calendar.uid,
+                                            json=data)
+
+        # All non-200 statuses are considered errors
+        response.raise_for_status()
+        return response.json()
 
     def update_remote_event(self, event):
         data = _dump_event(event)
-        self._make_event_request('put', event.calendar.uid, event.uid,
-                                 json=data)
+        response = self._make_event_request('put', event.calendar.uid,
+                                            event.uid, json=data)
+
+        # All non-200 statuses are considered errors
+        response.raise_for_status()
 
     def delete_remote_event(self, calendar_uid, event_uid):
-        self._make_event_request('delete', calendar_uid, event_uid)
+        response = self._make_event_request('delete', calendar_uid, event_uid)
+
+        if response.status_code == 410:
+            # The Google API returns an 'HTTPError: 410 Client Error: Gone'
+            # for an event that no longer exists on the remote
+            log.warning('Event no longer exists on remote',
+                        calendar_uid=calendar_uid, event_uid=event_uid)
+        else:
+            # All other non-200 statuses are considered errors
+            response.raise_for_status()
 
 
 def parse_calendar_response(calendar):
