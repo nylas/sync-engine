@@ -7,6 +7,16 @@ from inbox.models import (Account, Message, Namespace, Thread, Event,
                           Calendar, Transaction)
 from inbox.models.session import session_scope
 
+cls_for_type = dict(
+    account=Account,
+    message=Message,
+    namespace=Namespace,
+    thread=Thread,
+    event=Event,
+    calendar=Calendar,
+    transaction=Transaction)
+
+
 @click.command()
 @click.option('--type', '-t', type=str, required=True)
 @click.option('--id', type=str, default=None)
@@ -14,21 +24,12 @@ from inbox.models.session import session_scope
 def main(type, id, public_id):
 
     type = type.lower()
-    cls = None
-    if type == 'account':
-        cls = Account
-    elif type == 'message':
-        cls = Message
-    elif type == 'namespace':
-        cls = Namespace
-    elif type == 'thread':
-        cls = Thread
-    elif type == 'event':
-        cls = Event
-    elif type == 'calendar':
-        cls = Calendar
-    elif type == 'transaction':
-        cls = Transaction
+
+    if type not in cls_for_type:
+        print "Error: unknown type '{}'".format(type)
+        sys.exit(-1)
+
+    cls = cls_for_type[type]
 
     if public_id is None and id is None:
         print "Error: you should specify an id or public id to query."
