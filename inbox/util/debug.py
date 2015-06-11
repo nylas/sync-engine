@@ -137,7 +137,10 @@ class Tracer(object):
                 # to get the main thread's frame.
                 frame = sys._current_frames()[self._main_thread_id]
                 formatted_frame = '\t'.join(traceback.format_stack(frame))
-                self.log.warning('greenlet blocking', frame=formatted_frame)
+                self.log.warning(
+                    'greenlet blocking', frame=formatted_frame,
+                    context=getattr(active_greenlet, 'context', None),
+                    blocking_greenlet_id=id(active_greenlet))
         self._switch_flag = False
 
     def _monitoring_thread(self):
