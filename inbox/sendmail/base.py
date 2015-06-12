@@ -29,9 +29,8 @@ class SendMailException(Exception):
         self.http_code = http_code
         self.server_error = server_error
         self.failures = failures
-
-    def __str__(self):
-        return self.message
+        super(SendMailException, self).__init__(
+            message, http_code, server_error, failures)
 
 
 def get_sendmail_client(account):

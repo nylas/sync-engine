@@ -13,6 +13,7 @@ import inbox.auth.starttls
 from inbox.basicauth import ValidationError, UserRecoverableConfigError
 from inbox.models import Namespace
 from inbox.models.backends.generic import GenericAccount
+from inbox.sendmail.smtp.postel import SMTPClient
 
 
 PROVIDER = 'generic'
@@ -149,6 +150,19 @@ class GenericAuthHandler(AuthHandler):
                                              "administrator and try again.")
         finally:
             conn.logout()
+        try:
+            # Check that SMTP settings work by establishing and closing and
+            # SMTP session.
+            smtp_client = SMTPClient(account)
+            with smtp_client._get_connection():
+                pass
+        except Exception as exc:
+            log.error('Failed to establish an SMTP connection',
+                      email=account.email_address,
+                      account_id=account.id,
+                      error=exc)
+            raise UserRecoverableConfigError("Please check that your SMTP "
+                                             "settings are correct.")
         return True
 
     def interactive_auth(self, email_address):

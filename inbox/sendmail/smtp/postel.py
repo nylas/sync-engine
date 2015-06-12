@@ -23,6 +23,9 @@ AUTH_EXTNS = {'oauth2': 'XOAUTH2',
               'password': 'PLAIN'}
 
 SMTP_MAX_RETRIES = 1
+# Timeout in seconds for blocking operations. If no timeout is specified,
+# attempts to, say, connect to the wrong port may hang forever.
+SMTP_TIMEOUT = 45
 SMTP_OVER_SSL_PORT = 465
 SMTP_OVER_SSL_TEST_PORT = 64465
 
@@ -151,10 +154,10 @@ class SMTPConnection(object):
     def setup(self):
         host, port = self.smtp_endpoint
         if port in (SMTP_OVER_SSL_PORT, SMTP_OVER_SSL_TEST_PORT):
-            self.connection = SMTP_SSL_VerifyCerts()
+            self.connection = SMTP_SSL_VerifyCerts(timeout=SMTP_TIMEOUT)
             self._connect(host, port)
         else:
-            self.connection = SMTP_VerifyCerts()
+            self.connection = SMTP_VerifyCerts(timeout=SMTP_TIMEOUT)
             self._connect(host, port)
             # Put the SMTP connection in TLS mode
             self.connection.ehlo()
