@@ -322,6 +322,8 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         block.filename = _trim_filename(filename, mid=mid)
         block.content_type = content_type
         part = Part(block=block, message=self)
+        if content_id:
+            content_id = content_id[:255]
         part.content_id = content_id
         part.content_disposition = content_disposition
         data = mimepart.body or ''

@@ -33,6 +33,15 @@ def mime_message_with_bad_date(mime_message):
 
 
 @pytest.fixture
+def raw_message_with_long_content_id():
+    # Message that has a long Content-ID
+    raw_msg_path = full_path(
+        '../data/raw_message_with_long_content_id')
+    with open(raw_msg_path) as f:
+        return f.read()
+
+
+@pytest.fixture
 def raw_message_with_ical_invite():
     raw_msg_path = full_path('../data/raw_message_with_ical_invite')
     with open(raw_msg_path) as f:
@@ -294,6 +303,15 @@ def test_store_full_body_on_parse_error(
                                    received_date,
                                    mime_message_with_bad_date.to_string())
     assert m.full_body
+
+
+def test_long_content_id(db, default_account, thread,
+                         raw_message_with_long_content_id):
+    m = create_from_synced(default_account, raw_message_with_long_content_id)
+    m.thread = thread
+    db.session.add(m)
+    # Check that no database error is raised.
+    db.session.commit()
 
 
 def test_parse_body_on_bad_attachment(
