@@ -1,3 +1,5 @@
+import socket
+import errno
 from gevent.pywsgi import WSGIHandler, WSGIServer
 from gunicorn.workers.ggevent import GeventWorker
 import gunicorn.glogging
@@ -49,6 +51,16 @@ class InboxWSGIHandler(WSGIHandler):
         env['gunicorn.sock'] = self.socket
         env['RAW_URI'] = self.path
         return env
+
+    def handle_error(self, type, value, tb):
+        # Suppress tracebacks when e.g. a client disconnects from the streaming
+        # API.
+        if (issubclass(type, socket.error) and value.args[0] == errno.EPIPE and
+                self.response_length):
+            self.server.log.info('Socket error', exc=value)
+            self.close_connection = True
+        else:
+            super(InboxWSGIHandler, self).handle_error(type, value, tb)
 
 
 class InboxWSGIWorker(GeventWorker):
