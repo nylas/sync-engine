@@ -4,7 +4,7 @@ from inbox.sqlalchemy_ext.util import generate_public_id
 from inbox.models import Event
 from tests.util.base import api_client, default_account, calendar
 
-__all__ = ['api_client']
+__all__ = ['api_client', 'default_account', 'calendar']
 
 
 def test_create_event(db, api_client, calendar):
@@ -173,10 +173,11 @@ def test_api_delete(db, api_client, calendar, default_account):
     assert 'id' in e_resp_data
     e_id = e_resp_data['id']
 
-    api_client.delete('/events/' + e_id)
+    e_delete_resp = api_client.delete('/events/' + e_id)
+    assert e_delete_resp.status_code == 200
 
-    event = api_client.get_data('/events/' + e_id)
-    assert event['type'] == 'invalid_request_error'
+    e_resp = api_client.get_data('/events/' + e_id)
+    assert e_resp['status'] == 'cancelled'
 
 
 def test_api_delete_invalid(db, api_client, calendar):
