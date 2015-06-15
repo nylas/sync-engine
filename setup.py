@@ -64,7 +64,7 @@ setup(
     scripts=['bin/inbox-start',
              'bin/inbox-console',
              'bin/search-index-service',
-             'bin/search-backfill-namespace',
+             'bin/search-backfill-namespaces',
              'bin/search-backfill-checker',
              'bin/migrate-bodies',
              'bin/migrate-account',
