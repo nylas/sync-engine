@@ -12,6 +12,7 @@ from inbox.search.adaptor import NamespaceSearchEngine
 from inbox.sqlalchemy_ext.util import safer_yield_per
 
 CHUNK_SIZE = 500
+INDEX_CHUNK_SIZE = 500
 
 
 def index_namespaces(namespace_ids=None, created_before=None):
@@ -88,14 +89,17 @@ def index_threads(namespace_id, namespace_public_id, created_before=None):
             load_only('public_id', 'name'))
 
         encoded = []
+
         for obj in safer_yield_per(query, Thread.id, 0, CHUNK_SIZE):
+            if len(encoded) >= INDEX_CHUNK_SIZE:
+                indexed_count += search_engine.threads.bulk_index(encoded)
+                encoded = []
+
             index_obj = encode(obj, namespace_public_id=namespace_public_id)
             encoded.append(('index', index_obj))
 
-    log.info('Going to index threads', namespace_id=namespace_id,
-             namespace_public_id=namespace_public_id)
-
-    indexed_count += search_engine.threads.bulk_index(encoded)
+        if encoded:
+            indexed_count += search_engine.threads.bulk_index(encoded)
 
     log.info('Indexed threads', namespace_id=namespace_id,
              namespace_public_id=namespace_public_id,
@@ -125,13 +129,15 @@ def index_messages(namespace_id, namespace_public_id, created_before=None):
 
         encoded = []
         for obj in safer_yield_per(query, Message.id, 0, CHUNK_SIZE):
+            if len(encoded) >= INDEX_CHUNK_SIZE:
+                indexed_count += search_engine.messages.bulk_index(encoded)
+                encoded = []
+
             index_obj = encode(obj, namespace_public_id=namespace_public_id)
             encoded.append(('index', index_obj))
 
-    log.info('Going to index messages', namespace_id=namespace_id,
-             namespace_public_id=namespace_public_id)
-
-    indexed_count += search_engine.messages.bulk_index(encoded)
+        if encoded:
+            indexed_count += search_engine.messages.bulk_index(encoded)
 
     log.info('Indexed messages', namespace_id=namespace_id,
              namespace_public_id=namespace_public_id,
