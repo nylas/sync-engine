@@ -462,6 +462,13 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         return [part for part in self.parts
                 if part.block.content_type == 'text/calendar']
 
+    def get_header(self, header, mid):
+        if self.decode_error:
+            log.warning('Error getting message header', mid=mid)
+            return
+
+        parsed = mime.from_string(self.full_body.data)
+        return parsed.headers.get(header)
 
 # Need to explicitly specify the index length for table generation with MySQL
 # 5.6 when columns are too long to be fully indexed with utf8mb4 collation.
