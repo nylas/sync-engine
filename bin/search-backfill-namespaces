@@ -16,7 +16,8 @@ log = logging.getLogger('search-backfill-namespaces')
 @click.command()
 @click.argument('filename')
 @click.option('--created_before', default=None)
-def create_namespace_indexes(filename, created_before):
+@click.option('--replace_index/--no-replace_index', default=False)
+def create_namespace_indexes(filename, created_before, replace_index):
     """
     Create Elasticsearch indexes for the namespace_ids contained in the
     file specified by `filename`, the expected format is one namespace_id/
@@ -39,7 +40,7 @@ def create_namespace_indexes(filename, created_before):
 
     for id_chunk in chunks:
         log.info('namespace id_chunk: {}'.format(id_chunk))
-        index_namespaces(id_chunk, created_before)
+        index_namespaces(id_chunk, created_before, replace_index)
 
 
 if __name__ == '__main__':

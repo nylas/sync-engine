@@ -4,7 +4,6 @@ import gevent
 from sqlalchemy.orm import joinedload, subqueryload
 
 from inbox.log import get_logger
-log = get_logger()
 from inbox.models.session import session_scope
 from inbox.models import Namespace, Thread, Message
 from inbox.api.kellogs import encode
@@ -14,8 +13,11 @@ from inbox.sqlalchemy_ext.util import safer_yield_per
 CHUNK_SIZE = 500
 INDEX_CHUNK_SIZE = 500
 
+log = get_logger()
 
-def index_namespaces(namespace_ids=None, created_before=None):
+
+def index_namespaces(namespace_ids=None, created_before=None,
+                     replace_index=False):
     """
     Create an Elasticsearch index for each namespace in the `namespace_ids`
     list (specified by id), and index its threads and messages.
@@ -23,6 +25,9 @@ def index_namespaces(namespace_ids=None, created_before=None):
 
     """
     pool = []
+
+    if replace_index:
+        delete_namespace_indexes(namespace_ids)
 
     with session_scope() as db_session:
         q = db_session.query(Namespace.id, Namespace.public_id)
