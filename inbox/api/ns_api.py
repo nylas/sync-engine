@@ -22,8 +22,8 @@ from inbox.api.validation import (get_tags, get_attachments, get_calendar,
                                   get_recipients, get_draft, valid_public_id,
                                   valid_event, valid_event_update, timestamp,
                                   bounded_str, view, strict_parse_args,
-                                  limit, ValidatableArgument, strict_bool,
-                                  validate_draft_recipients,
+                                  limit, offset, ValidatableArgument,
+                                  strict_bool, validate_draft_recipients,
                                   validate_search_query,
                                   validate_search_sort,
                                   valid_delta_object_types)
@@ -93,7 +93,7 @@ def start():
     g.parser = reqparse.RequestParser(argument_class=ValidatableArgument)
     g.parser.add_argument('limit', default=DEFAULT_LIMIT, type=limit,
                           location='args')
-    g.parser.add_argument('offset', default=0, type=int, location='args')
+    g.parser.add_argument('offset', default=0, type=offset, location='args')
 
 
 @app.after_request

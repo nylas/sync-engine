@@ -52,6 +52,16 @@ def limit(value):
     return value
 
 
+def offset(value):
+    try:
+        value = int(value)
+    except ValueError:
+        raise ValueError('Offset parameter must be an integer.')
+    if value < 0:
+        raise ValueError('Offset parameter must be nonnegative.')
+    return value
+
+
 def valid_public_id(value):
     try:
         # raise ValueError on malformed public ids
