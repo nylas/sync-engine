@@ -7,9 +7,10 @@ from elasticsearch.helpers import bulk
 from inbox.api.kellogs import encode
 from inbox.config import config
 from inbox.log import get_logger
-log = get_logger()
 from inbox.search.query import DSLQueryEngine, MessageQuery, ThreadQuery
 from inbox.search.mappings import NAMESPACE_INDEX_MAPPING
+
+log = get_logger()
 
 # Uncomment to enable logging of exactly which queries are made against the
 # elasticsearch server, which you can paste directly into curl... also logs
@@ -22,6 +23,10 @@ from inbox.search.mappings import NAMESPACE_INDEX_MAPPING
 # import logging
 # es_logger = logging.getLogger('elasticsearch')
 # es_logger.propagate = False
+
+INDEX_SETTINGS = {
+    "number_of_shards": 1
+}
 
 
 class Serializer(elasticsearch.serializer.JSONSerializer):
@@ -96,7 +101,9 @@ class NamespaceSearchEngine(object):
             self.log.info('create_index')
             self._connection.indices.create(
                 index=self.index_id,
-                body={'mappings': NAMESPACE_INDEX_MAPPING})
+                body={'mappings': NAMESPACE_INDEX_MAPPING,
+                      'settings': INDEX_SETTINGS})
+
         except elasticsearch.exceptions.RequestError:
             self.log.warning('create_index error, will re-configure.')
             # If the index already exists, ensure the right mappings are still
