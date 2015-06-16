@@ -116,7 +116,7 @@ class Base36UID(TypeDecorator):
         return int128_to_b36(value)
 
 
-# http://docs.sqlalchemy.org/en/rel_0_9/orm/extensions/mutable.html#sqlalchemy.ext.mutable.Mutable.as_mutable
+# http://bit.ly/1LbMnqu
 # Can simply use this as is because though we use bson.json_util, loads()
 # dumps() return standard Python dicts like the json.* equivalents
 # (because these are simply called under the hood)
@@ -274,11 +274,12 @@ def safer_yield_per(query, id_field, start_id, count):
     count: int
         The number of results to fetch at a time.
     """
+    cur_id = start_id
     while True:
-        results = query.filter(id_field >= start_id).order_by(id_field).\
+        results = query.filter(id_field >= cur_id).order_by(id_field).\
             limit(count).all()
         if not results:
             return
         for result in results:
             yield result
-        start_id = start_id + count
+        cur_id = results[-1].id + 1
