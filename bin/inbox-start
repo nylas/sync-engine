@@ -3,6 +3,7 @@ from gevent import monkey
 monkey.patch_all()
 
 import os
+import socket
 import platform
 import signal
 import sys
@@ -25,6 +26,10 @@ from inbox.log import get_logger, configure_logging
 from inbox.mailsync.service import SyncService
 
 sync_service = None
+
+# Set a default timeout for sockets.
+SOCKET_TIMEOUT = 2 * 60
+socket.setdefaulttimeout(SOCKET_TIMEOUT)
 
 
 def signal_handler(signum, frame):
