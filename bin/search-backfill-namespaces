@@ -2,6 +2,7 @@
 import logging
 
 import click
+from gevent import monkey
 
 from inbox.search.util import index_namespaces
 
@@ -11,6 +12,7 @@ logging.basicConfig(filename='/var/log/inbox/search-backfill-namespaces.log',
                     format='%(asctime)s %(message)s',
                     level=logging.INFO)
 log = logging.getLogger('search-backfill-namespaces')
+monkey.patch_all()
 
 
 @click.command()

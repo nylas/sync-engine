@@ -1,6 +1,6 @@
 import dateutil.parser
 
-import gevent
+from gevent.pool import Pool
 from sqlalchemy.orm import joinedload, subqueryload
 
 from inbox.log import get_logger
@@ -10,8 +10,9 @@ from inbox.api.kellogs import encode
 from inbox.search.adaptor import NamespaceSearchEngine
 from inbox.sqlalchemy_ext.util import safer_yield_per
 
-CHUNK_SIZE = 500
-INDEX_CHUNK_SIZE = 500
+CHUNK_SIZE = 2000
+INDEX_CHUNK_SIZE = 2000
+INDEXER_POOL_SIZE = 10
 
 log = get_logger()
 
@@ -24,7 +25,7 @@ def index_namespaces(namespace_ids=None, created_before=None,
     If `namespace_ids` is None, all namespaces are indexed.
 
     """
-    pool = []
+    pool = Pool(size=INDEXER_POOL_SIZE)
 
     if replace_index:
         delete_namespace_indexes(namespace_ids)
@@ -38,12 +39,10 @@ def index_namespaces(namespace_ids=None, created_before=None,
             namespaces = q.all()
 
     for (id_, public_id) in namespaces:
-        pool.append(gevent.spawn(index_threads, id_, public_id,
-                                 created_before))
-        pool.append(gevent.spawn(index_messages, id_, public_id,
-                                 created_before))
+        pool.spawn(index_threads, id_, public_id, created_before)
+        pool.spawn(index_messages, id_, public_id, created_before)
 
-    gevent.joinall(pool)
+    pool.join()
 
     return sum([g.value for g in pool])
 
@@ -54,7 +53,7 @@ def delete_namespace_indexes(namespace_ids):
     list.
 
     """
-    pool = []
+    pool = Pool(size=INDEXER_POOL_SIZE)
 
     with session_scope() as db_session:
         q = db_session.query(Namespace.id, Namespace.public_id)
@@ -65,9 +64,9 @@ def delete_namespace_indexes(namespace_ids):
             namespaces = q.all()
 
     for (id_, public_id) in namespaces:
-        pool.append(gevent.spawn(delete_index, id_, public_id))
+        pool.spawn(delete_index, id_, public_id)
 
-    gevent.joinall(pool)
+    pool.join()
 
 
 def index_threads(namespace_id, namespace_public_id, created_before=None):
