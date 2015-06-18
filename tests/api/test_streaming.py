@@ -1,9 +1,14 @@
 import json
 import time
+
 import pytest
-from tests.util.base import default_namespace
+
 from inbox.models import Namespace
 from inbox.util.url import url_concat
+
+from tests.util.base import default_namespace
+
+__all__ = ['default_namespace']
 
 
 @pytest.yield_fixture
@@ -92,3 +97,17 @@ def test_exclude_object_types(db, api_prefix, streaming_test_client):
     parsed_responses = [json.loads(resp) for resp in responses if resp != '']
     assert not any(resp['object'] == 'message' for resp in parsed_responses)
     assert not any(resp['object'] == 'contact' for resp in parsed_responses)
+
+
+def test_invalid_timestamp(streaming_test_client, default_namespace):
+    # Valid UNIX timestamp
+    response = streaming_test_client.post(
+        '/n/{}/delta/generate_cursor'.format(default_namespace.public_id),
+        data=json.dumps({'start': int(time.time())}))
+    assert response.status_code == 200
+
+    # Invalid timestamp
+    response = streaming_test_client.post(
+        '/n/{}/delta/generate_cursor'.format(default_namespace.public_id),
+        data=json.dumps({'start': 1434591487647}))
+    assert response.status_code == 400
