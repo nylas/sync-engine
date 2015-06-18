@@ -66,6 +66,7 @@ setup(
              'bin/search-index-service',
              'bin/search-backfill-namespaces',
              'bin/search-backfill-checker',
+             'bin/search-account-health',
              'bin/migrate-bodies',
              'bin/migrate-account',
              'bin/start-stop-account',
