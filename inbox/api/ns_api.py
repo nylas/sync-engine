@@ -4,8 +4,7 @@ import email.header
 import uuid
 import gevent
 import time
-from inbox.models.session import session_scope
-
+from datetime import datetime
 
 from flask import request, g, Blueprint, make_response, Response
 from flask import jsonify as flask_jsonify
@@ -13,6 +12,7 @@ from flask.ext.restful import reqparse
 from sqlalchemy import asc, or_, func
 from sqlalchemy.orm.exc import NoResultFound
 
+from inbox.models.session import session_scope
 from inbox.models import (Message, Block, Part, Thread, Namespace,
                           Tag, Contact, Calendar, Event, Transaction)
 from inbox.api.sending import send_draft
@@ -1140,11 +1140,19 @@ def sync_deltas():
 @app.route('/delta/generate_cursor', methods=['POST'])
 def generate_cursor():
     data = request.get_json(force=True)
+
     if data.keys() != ['start'] or not isinstance(data['start'], int):
         raise InputError('generate_cursor request body must have the format '
-                         '{"start": <Unix timestamp>}')
+                         '{"start": <Unix timestamp> (seconds)}')
 
     timestamp = int(data['start'])
+
+    try:
+        datetime.utcfromtimestamp(timestamp)
+    except ValueError:
+        raise InputError('generate_cursor request body must have the format '
+                         '{"start": <Unix timestamp> (seconds)}')
+
     cursor = delta_sync.get_transaction_cursor_near_timestamp(
         g.namespace.id, timestamp, g.db_session)
     return g.encoder.jsonify({'cursor': cursor})
