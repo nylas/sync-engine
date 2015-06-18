@@ -21,7 +21,7 @@ setproctitle==1.1.8
 gdata==2.0.18
 git+https://github.com/nylas/dateutil.git#egg=python-dateutil
 flanker==0.4.28
-git+https://github.com/nylas/imapclient.git@master#egg=imapclient
+git+https://github.com/nylas/imapclient.git@timeouts_quickfix#egg=imapclient
 alembic==0.6.4
 iconv==1.0
 pep8==1.4.6
