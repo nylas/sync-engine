@@ -27,6 +27,7 @@ log = get_logger()
 INDEX_SETTINGS = {
     "number_of_shards": 1
 }
+ES_DEFAULT_TIMEOUT = 60
 
 
 class Serializer(elasticsearch.serializer.JSONSerializer):
@@ -53,7 +54,8 @@ def new_connection():
     if not elasticsearch_hosts:
         raise SearchEngineError('No search hosts configured')
     return elasticsearch.Elasticsearch(hosts=elasticsearch_hosts,
-                                       serializer=Serializer())
+                                       serializer=Serializer(),
+                                       timeout=ES_DEFAULT_TIMEOUT)
 
 
 def wrap_es_errors(func):
