@@ -64,10 +64,10 @@ sessions reduce scalability.
 """
 from __future__ import division
 
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 from datetime import datetime
 from gevent import Greenlet, kill, spawn, sleep
-from gevent.queue import LifoQueue
+import gevent.lock
 from hashlib import sha256
 from sqlalchemy import func
 from sqlalchemy.orm import load_only
@@ -99,36 +99,40 @@ GenericUIDMetadata = namedtuple('GenericUIDMetadata', 'throttled')
 
 
 class UIDStack(object):
-    """Thin convenience wrapper around gevent.queue.LifoQueue.
-    Each entry in the stack is a pair (uid, metadata), where the metadata may
-    be None."""
-    def __init__(self):
-        self._lifoqueue = LifoQueue()
+    """Container class for UIDs and metadata. Basically acts like a LIFO queue
+    of key-value pairs, except that you can remove a specific key."""
+    def __init__(self, *args):
+        self._data = OrderedDict(*args)
+        # Technically we really shouldn't need this, since no context-switch
+        # should occur in member functions, but I really just don't want to
+        # think about it so here's a semaphore.
+        self._sem = gevent.lock.BoundedSemaphore(1)
 
     def empty(self):
-        return self._lifoqueue.empty()
+        with self._sem:
+            return not self._data
 
-    def get(self):
-        return self._lifoqueue.get_nowait()
+    def peekitem(self):
+        with self._sem:
+            k, v = self._data.popitem()
+            self._data[k] = v
+            return k, v
 
-    def peek(self):
-        # This should be LifoQueue.peek_nowait(), which is currently buggy in
-        # gevent. Can update with gevent version 1.0.2.
-        return self._lifoqueue.queue[-1]
+    def pop(self, k):
+        with self._sem:
+            return self._data.pop(k)
 
-    def put(self, uid, metadata):
-        self._lifoqueue.put((uid, metadata))
+    def put(self, k, v):
+        with self._sem:
+            self._data[k] = v
 
-    def discard(self, objects):
-        self._lifoqueue.queue = [item for item in self._lifoqueue.queue if item
-                                 not in objects]
+    def keys(self):
+        with self._sem:
+            return self._data.keys()
 
-    def qsize(self):
-        return self._lifoqueue.qsize()
-
-    def __iter__(self):
-        for item in self._lifoqueue.queue:
-            yield item
+    def __len__(self):
+        with self._sem:
+            return len(self._data)
 
 
 class FolderSyncEngine(Greenlet):
@@ -297,8 +301,7 @@ class FolderSyncEngine(Greenlet):
             new_uids = set(remote_uids) - local_uids
             download_stack = UIDStack()
             for uid in sorted(new_uids):
-                download_stack.put(
-                    uid, GenericUIDMetadata(self.throttled))
+                download_stack.put(uid, GenericUIDMetadata(self.throttled))
 
             with mailsync_session_scope() as db_session:
                 self.update_uid_counts(
@@ -392,14 +395,12 @@ class FolderSyncEngine(Greenlet):
 
     def download_uids(self, crispin_client, download_stack):
         while not download_stack.empty():
-            # Defer removing UID from queue until after it's committed to the
-            # DB' to avoid races with poll_for_changes().
-            uid, metadata = download_stack.peek()
+            uid, metadata = download_stack.peekitem()
             self.download_and_commit_uids(crispin_client, self.folder_name,
                                           [uid])
-            download_stack.get()
+            download_stack.pop(uid)
             report_progress(self.account_id, self.folder_name, 1,
-                            download_stack.qsize())
+                            len(download_stack))
             self.heartbeat_status.publish()
             if self.throttled and metadata is not None and metadata.throttled:
                 # Check to see if the account's throttled state has been
@@ -493,7 +494,7 @@ class FolderSyncEngine(Greenlet):
         # Note that folder_name here might *NOT* be equal to self.folder_name,
         # because, for example, we download messages via the 'All Mail' folder
         # in Gmail.
-        raw_messages = safe_download(crispin_client, uids)
+        raw_messages = crispin_client.uids(uids)
         if not raw_messages:
             return 0
         with self.syncmanager_lock:
@@ -541,11 +542,8 @@ class FolderSyncEngine(Greenlet):
                 local_uids = common.all_uids(self.account_id, db_session,
                                              self.folder_id)
                 # Download new UIDs.
-                stack_uids = {uid for uid, _ in download_stack}
+                stack_uids = set(download_stack.keys())
                 local_with_pending_uids = local_uids | stack_uids
-                # filter out messages that have disappeared on the remote side
-                download_stack.discard([item for item in download_stack if
-                                        item[0] not in remote_uids])
                 for uid in sorted(remote_uids):
                     if uid not in local_with_pending_uids:
                         download_stack.put(uid, None)
@@ -556,7 +554,7 @@ class FolderSyncEngine(Greenlet):
                 self.update_uid_counts(
                     db_session,
                     remote_uid_count=len(remote_uids),
-                    download_uid_count=download_stack.qsize())
+                    download_uid_count=len(download_stack))
         to_refresh = sorted(remote_uids &
                             local_uids)[-self.refresh_flags_max:]
         self.update_metadata(crispin_client, to_refresh)
@@ -582,16 +580,6 @@ def uidvalidity_cb(account_id, folder_name, select_info):
                                                 selected_uidvalidity,
                                                 saved_uidvalidity))
     return select_info
-
-
-def safe_download(crispin_client, uids):
-    try:
-        raw_messages = crispin_client.uids(uids)
-    except MemoryError, e:
-        log.error('ran out of memory while fetching UIDs', uids=uids)
-        raise e
-
-    return raw_messages
 
 
 def report_progress(account_id, folder_name, downloaded_uid_count,

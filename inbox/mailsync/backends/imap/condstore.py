@@ -12,8 +12,8 @@ from gevent import sleep
 from inbox.crispin import retry_crispin
 from inbox.mailsync.backends.base import new_or_updated, mailsync_session_scope
 from inbox.mailsync.backends.imap import common
-from inbox.mailsync.backends.imap.generic import (FolderSyncEngine,
-                                                  uidvalidity_cb, UIDStack)
+from inbox.mailsync.backends.imap.generic import (
+    FolderSyncEngine, uidvalidity_cb, UIDStack)
 from inbox.log import get_logger
 log = get_logger()
 
@@ -91,7 +91,7 @@ class CondstoreFolderSyncEngine(FolderSyncEngine):
         with mailsync_session_scope() as db_session:
             local_uids = common.all_uids(self.account_id, db_session,
                                          self.folder_id)
-        stack_uids = {uid for uid, _ in download_stack}
+        stack_uids = set(download_stack.keys())
         local_with_pending_uids = local_uids | stack_uids
         new, updated = new_or_updated(changed_uids, local_with_pending_uids)
         if changed_uids:

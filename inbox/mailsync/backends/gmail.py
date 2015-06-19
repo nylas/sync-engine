@@ -36,7 +36,7 @@ from inbox.mailsync.backends.base import (create_db_objects,
                                           commit_uids,
                                           mailsync_session_scope,
                                           THROTTLE_WAIT)
-from inbox.mailsync.backends.imap.generic import safe_download, UIDStack
+from inbox.mailsync.backends.imap.generic import UIDStack
 from inbox.mailsync.backends.imap.condstore import CondstoreFolderSyncEngine
 from inbox.mailsync.backends.imap.monitor import ImapSyncMonitor
 from inbox.mailsync.backends.imap import common
@@ -206,15 +206,10 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
             remote_g_metadata[uid].msgid in local_g_msgids,
             sorted(uids, key=int))
         if imapuid_only:
-            log.info('skipping already downloaded uids',
+            log.info('downloading new uids for existing messages',
                      count=len(imapuid_only))
-            # Since we always download messages via All Mail and create the
-            # relevant All Mail ImapUids too at that time, we don't need to
-            # create them again here if we're deduping All Mail downloads.
-            if crispin_client.selected_folder_name != \
-                    crispin_client.folder_names()['all']:
-                add_new_imapuids(crispin_client, remote_g_metadata,
-                                 self.syncmanager_lock, imapuid_only)
+            add_new_imapuids(crispin_client, remote_g_metadata,
+                             self.syncmanager_lock, imapuid_only)
 
         return full_download
 
@@ -246,7 +241,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
         return new_uid
 
     def download_and_commit_uids(self, crispin_client, folder_name, uids):
-        raw_messages = safe_download(crispin_client, uids)
+        raw_messages = crispin_client.uids(uids)
         with self.syncmanager_lock:
             # there is the possibility that another green thread has already
             # downloaded some message(s) from this batch... check within the
@@ -277,8 +272,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
         to the given uids.)
 
         """
-        num_total_messages = download_stack.qsize()
-        log.info(num_total_messages=num_total_messages)
+        log.info('Total pending UIDS', num_total_messages=len(download_stack))
 
         log.info('Expanding threads and downloading messages.')
         # Since we do thread expansion, for any given thread, even if we
@@ -286,8 +280,9 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
         # have _every_ message in the thread. We have to expand it and make
         # sure we have all messages.
         while not download_stack.empty():
-            uid, metadata = download_stack.get()
+            uid, metadata = download_stack.peekitem()
             if uid in self.saved_uids:
+                download_stack.pop(uid)
                 continue
             # TODO(emfree): a significantly higher-performing alternative would
             # be to maintain a complete metadata map `self.g_metadata` and just
@@ -297,6 +292,7 @@ class GmailFolderSyncEngine(CondstoreFolderSyncEngine):
             self.__download_thread(crispin_client,
                                    thread_g_metadata,
                                    metadata.thrid, thread_uids)
+            download_stack.pop(uid)
             self.heartbeat_status.publish()
             if self.throttled and metadata is not None and metadata.throttled:
                 # Check to see if the account's throttled state has been
