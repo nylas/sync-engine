@@ -15,7 +15,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from inbox.models.session import session_scope
 from inbox.models import (Message, Block, Part, Thread, Namespace,
                           Tag, Contact, Calendar, Event, Transaction)
-from inbox.api.sending import send_draft
+from inbox.api.sending import send_draft, send_raw_mime
 from inbox.api.kellogs import APIEncoder
 from inbox.api import filtering
 from inbox.api.validation import (get_tags, get_attachments, get_calendar,
@@ -28,7 +28,8 @@ from inbox.api.validation import (get_tags, get_attachments, get_calendar,
                                   validate_search_sort,
                                   valid_delta_object_types)
 import inbox.contacts.crud
-from inbox.sendmail.base import (create_draft, update_draft, delete_draft)
+from inbox.sendmail.base import (create_draft, update_draft, delete_draft,
+                                    create_draft_from_mime)
 from inbox.log import get_logger
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from inbox.models.action_log import schedule_action, ActionError
@@ -1054,6 +1055,24 @@ def draft_delete_api(public_id):
 
 @app.route('/send', methods=['POST'])
 def draft_send_api():
+    if request.content_type == "message/rfc822":
+        msg = create_draft_from_mime(g.namespace.account, request.data,
+                                                                 g.db_session)
+        validate_draft_recipients(msg)
+        resp = send_raw_mime(g.namespace.account, g.db_session, msg)
+        if resp.status_code == 200:
+            # At this point, the message has been successfully sent. If there's
+            # any sort of error in committing the updated state, don't allow it
+            # to cause the request to fail. Otherwise a client may think their
+            # message hasn't been sent, when it fact it has.
+            try:
+                g.db_session.add(msg)
+                g.db_session.commit()
+            except Exception as exc:
+                g.log.critical('Error committing draft after successful send',
+                               exc_info=True, error=exc)
+        return resp
+
     data = request.get_json(force=True)
     draft_public_id = data.get('draft_id')
     if draft_public_id is not None:

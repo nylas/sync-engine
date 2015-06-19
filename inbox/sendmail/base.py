@@ -1,3 +1,4 @@
+import pkg_resources
 from datetime import datetime
 
 from inbox.api.validation import (
@@ -7,6 +8,9 @@ from inbox.contacts.process_mail import update_contacts_from_message
 from inbox.models import Message, Part
 from inbox.models.action_log import schedule_action
 from inbox.sqlalchemy_ext.util import generate_public_id
+
+
+VERSION = pkg_resources.get_distribution('inbox-sync').version
 
 
 class SendMailException(Exception):
@@ -40,6 +44,51 @@ def get_sendmail_client(account):
     sendmail_cls = getattr(sendmail_mod, sendmail_mod.SENDMAIL_CLS)
     sendmail_client = sendmail_cls(account)
     return sendmail_client
+
+
+def create_draft_from_mime(account, raw_mime, db_session):
+    our_uid = generate_public_id()  # base-36 encoded string
+    new_headers = ('X-INBOX-ID: {0}-0\r\n'
+                    'Message-Id: <{0}-0@mailer.nylas.com>\r\n'
+                    'User-Agent: NylasMailer/{1}\r\n').format(our_uid,
+                                                                    VERSION)
+    new_body = new_headers + raw_mime
+
+    with db_session.no_autoflush:
+        msg = Message.create_from_synced(account, '', account.sent_folder,
+                                                  datetime.utcnow(), new_body)
+
+        if msg.from_addr and len(msg.from_addr) > 1:
+            raise InputError("from_addr field can have at most one item")
+        if msg.reply_to and len(msg.reply_to) > 1:
+            raise InputError("reply_to field can have at most one item")
+
+        if msg.subject is not None and not \
+                                        isinstance(msg.subject, basestring):
+            raise InputError('"subject" should be a string')
+
+        if not isinstance(msg.body, basestring):
+            raise InputError('"body" should be a string')
+
+        if msg.references or msg.in_reply_to:
+            msg.is_reply = True
+
+        thread_cls = account.thread_cls
+        msg.thread = thread_cls(
+            subject=msg.subject,
+            recentdate=msg.received_date,
+            namespace=account.namespace,
+            subjectdate=msg.received_date)
+        if msg.attachments:
+                attachment_tag = account.namespace.tags['attachment']
+                msg.thread.apply_tag(attachment_tag)
+
+        msg.is_created = True
+        msg.is_sent = True
+        msg.is_draft = False
+        msg.is_read = True
+
+        return msg
 
 
 def create_draft(data, namespace, db_session, syncback):

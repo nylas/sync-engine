@@ -125,9 +125,9 @@ class TestAPIClient(object):
         path = self.full_path(short_path, ns_public_id)
         return json.loads(self.client.get(path).data)
 
-    def post_data(self, short_path, data, ns_public_id=None):
+    def post_data(self, short_path, data, ns_public_id=None, headers=''):
         path = self.full_path(short_path, ns_public_id)
-        return self.client.post(path, data=json.dumps(data))
+        return self.client.post(path, data=json.dumps(data), headers=headers)
 
     def post_raw(self, short_path, data, ns_public_id=None, headers=''):
         path = self.full_path(short_path, ns_public_id)

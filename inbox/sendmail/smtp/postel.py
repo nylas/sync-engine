@@ -1,3 +1,4 @@
+import re
 import ssl
 import sys
 import base64
@@ -392,6 +393,14 @@ class SMTPClient(object):
 
         # Sent to all successfully
         self.log.info('Sending successful', sender=from_addr[1],
+                      recipients=recipient_emails)
+
+    def send_raw(self, from_addr, raw_mime, recipient_emails):
+        msg = re.sub(r'Bcc: [^\r\n]*\r\n', '', raw_mime)
+        self._send(recipient_emails, msg)
+
+        # Sent to all successfully
+        self.log.info('Sending successful', sender=from_addr,
                       recipients=recipient_emails)
 
     def _get_connection(self):
