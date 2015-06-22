@@ -39,6 +39,7 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
 
     subjectdate = Column(DateTime, nullable=False, index=True)
     recentdate = Column(DateTime, nullable=False, index=True)
+    receivedrecentdate = Column(DateTime, nullable=False, index=True)
     snippet = Column(String(191), nullable=True, default='')
     version = Column(Integer, nullable=True, server_default='0')
 
@@ -64,6 +65,9 @@ class Thread(MailSyncBase, HasPublicID, HasRevisions):
                 return message
 
             if message.received_date > self.recentdate:
+                # TODO: update this based on per-message folders/labels
+                if self.namespace.tags['sent'] in self.tags:
+                    self.recentreceiveddate = message.received_date
                 self.recentdate = message.received_date
                 # Only update the thread's unread/unseen properties if this is
                 # the most recent message we have synced in the thread.
