@@ -19,8 +19,12 @@ class DeviceHeartbeatStatus(object):
 
     def __init__(self, device_id, device_status, threshold=ALIVE_THRESHOLD):
         self.id = device_id
-        self.heartbeat_at = datetime.strptime(device_status['heartbeat_at'],
-                                              '%Y-%m-%d %H:%M:%S.%f')
+        try:
+            self.heartbeat_at = datetime.strptime(device_status['heartbeat_at'],
+                                                  '%Y-%m-%d %H:%M:%S.%f')
+        except ValueError:
+            self.heartbeat_at = datetime.strptime(device_status['heartbeat_at'],
+                                                  '%Y-%m-%d %H:%M:%S')
         self.state = device_status.get('state', None)
         time_since_heartbeat = (datetime.utcnow() - self.heartbeat_at)
         self.alive = time_since_heartbeat < threshold
