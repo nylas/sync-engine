@@ -29,6 +29,15 @@ class ConflictError(APIException):
         self.message = message
 
 
+class ActionError(APIException):
+    """Raised when an account's credentials aren't valid. (We don't accept
+    actions if they can't be synced back."""
+    status_code = 403
+    message = "This action can't be performed because the account's " \
+              "credentials are out of date. Please reauthenticate and try " \
+              "again."
+
+
 def err(http_code, message, **kwargs):
     resp = {
         'type': 'api_error',

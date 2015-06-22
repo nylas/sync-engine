@@ -29,10 +29,10 @@ from inbox.api.validation import (get_tags, get_attachments, get_calendar,
                                   valid_delta_object_types)
 import inbox.contacts.crud
 from inbox.sendmail.base import (create_draft, update_draft, delete_draft,
-                                    create_draft_from_mime)
+                                 create_draft_from_mime)
 from inbox.log import get_logger
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
-from inbox.models.action_log import schedule_action, ActionError
+from inbox.models.action_log import schedule_action
 from inbox.models.session import InboxSession
 from inbox.search.adaptor import NamespaceSearchEngine, SearchEngineError
 from inbox.transactions import delta_sync
@@ -387,10 +387,7 @@ def thread_api_update(public_id):
             raise InputError('Cannot remove read-only tag {}'.
                              format(tag_identifier))
 
-        try:
-            thread.remove_tag(tag, execute_action=True)
-        except ActionError as e:
-            return err(e.error, str(e))
+        thread.remove_tag(tag, execute_action=True)
 
     additions = data.get('add_tags', [])
     for tag_identifier in additions:
@@ -404,10 +401,7 @@ def thread_api_update(public_id):
             raise InputError('Cannot add read-only tag {}'.
                              format(tag_identifier))
 
-        try:
-            thread.apply_tag(tag, execute_action=True)
-        except ActionError as e:
-            return err(e.error, str(e))
+        thread.apply_tag(tag, execute_action=True)
 
     g.db_session.commit()
     return g.encoder.jsonify(thread)
@@ -991,13 +985,7 @@ def draft_get_api(public_id):
 @app.route('/drafts/', methods=['POST'])
 def draft_create_api():
     data = request.get_json(force=True)
-    try:
-        draft = create_draft(data, g.namespace, g.db_session, syncback=True)
-        g.db_session.add(draft)
-        g.db_session.commit()
-    except ActionError as e:
-        return err(e.error, str(e))
-
+    draft = create_draft(data, g.namespace, g.db_session, syncback=True)
     return g.encoder.jsonify(draft)
 
 
@@ -1028,13 +1016,9 @@ def draft_update_api(public_id):
     tags = get_tags(data.get('tags'), g.namespace.id, g.db_session)
     files = get_attachments(data.get('file_ids'), g.namespace.id, g.db_session)
 
-    try:
-        draft = update_draft(g.db_session, g.namespace.account, original_draft,
-                             to, subject, body, files, cc, bcc, from_addr,
-                             reply_to, tags)
-    except ActionError as e:
-        return err(e.error, str(e))
-
+    draft = update_draft(g.db_session, g.namespace.account, original_draft,
+                         to, subject, body, files, cc, bcc, from_addr,
+                         reply_to, tags)
     return g.encoder.jsonify(draft)
 
 
@@ -1045,11 +1029,7 @@ def draft_delete_api(public_id):
     draft = get_draft(public_id, data.get('version'), g.namespace.id,
                       g.db_session)
 
-    try:
-        result = delete_draft(g.db_session, g.namespace.account, draft)
-    except ActionError as e:
-        return err(e.error, str(e))
-
+    result = delete_draft(g.db_session, g.namespace.account, draft)
     return g.encoder.jsonify(result)
 
 
@@ -1057,20 +1037,9 @@ def draft_delete_api(public_id):
 def draft_send_api():
     if request.content_type == "message/rfc822":
         msg = create_draft_from_mime(g.namespace.account, request.data,
-                                                                 g.db_session)
+                                     g.db_session)
         validate_draft_recipients(msg)
         resp = send_raw_mime(g.namespace.account, g.db_session, msg)
-        if resp.status_code == 200:
-            # At this point, the message has been successfully sent. If there's
-            # any sort of error in committing the updated state, don't allow it
-            # to cause the request to fail. Otherwise a client may think their
-            # message hasn't been sent, when it fact it has.
-            try:
-                g.db_session.add(msg)
-                g.db_session.commit()
-            except Exception as exc:
-                g.log.critical('Error committing draft after successful send',
-                               exc_info=True, error=exc)
         return resp
 
     data = request.get_json(force=True)
@@ -1078,25 +1047,14 @@ def draft_send_api():
     if draft_public_id is not None:
         draft = get_draft(draft_public_id, data.get('version'), g.namespace.id,
                           g.db_session)
-        validate_draft_recipients(draft)
-        resp = send_draft(g.namespace.account, draft, g.db_session,
-                          schedule_remote_delete=True)
+        schedule_action('delete_draft', draft, draft.namespace.id,
+                        g.db_session, inbox_uid=draft.inbox_uid,
+                        message_id_header=draft.message_id_header)
     else:
         draft = create_draft(data, g.namespace, g.db_session, syncback=False)
-        validate_draft_recipients(draft)
-        resp = send_draft(g.namespace.account, draft, g.db_session,
-                          schedule_remote_delete=False)
-        if resp.status_code == 200:
-            # At this point, the message has been successfully sent. If there's
-            # any sort of error in committing the updated state, don't allow it
-            # to cause the request to fail. Otherwise a client may think their
-            # message hasn't been sent, when it fact it has.
-            try:
-                g.db_session.add(draft)
-                g.db_session.commit()
-            except Exception as exc:
-                g.log.critical('Error committing draft after successful send',
-                               exc_info=True, error=exc)
+
+    validate_draft_recipients(draft)
+    resp = send_draft(g.namespace.account, draft, g.db_session)
     return resp
 
 

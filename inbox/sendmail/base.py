@@ -49,14 +49,13 @@ def get_sendmail_client(account):
 def create_draft_from_mime(account, raw_mime, db_session):
     our_uid = generate_public_id()  # base-36 encoded string
     new_headers = ('X-INBOX-ID: {0}-0\r\n'
-                    'Message-Id: <{0}-0@mailer.nylas.com>\r\n'
-                    'User-Agent: NylasMailer/{1}\r\n').format(our_uid,
-                                                                    VERSION)
+                   'Message-Id: <{0}-0@mailer.nylas.com>\r\n'
+                   'User-Agent: NylasMailer/{1}\r\n').format(our_uid, VERSION)
     new_body = new_headers + raw_mime
 
     with db_session.no_autoflush:
         msg = Message.create_from_synced(account, '', account.sent_folder,
-                                                  datetime.utcnow(), new_body)
+                                         datetime.utcnow(), new_body)
 
         if msg.from_addr and len(msg.from_addr) > 1:
             raise InputError("from_addr field can have at most one item")
@@ -87,14 +86,15 @@ def create_draft_from_mime(account, raw_mime, db_session):
         msg.is_sent = True
         msg.is_draft = False
         msg.is_read = True
-
-        return msg
+    db_session.add(msg)
+    db_session.flush()
+    return msg
 
 
 def create_draft(data, namespace, db_session, syncback):
     """ Construct a draft object (a Message instance) from `data`, a dictionary
-    representing the POST body of an API request. All new objects are un-added
-    and uncommitted."""
+    representing the POST body of an API request. All new objects are added to
+    the session, but not committed."""
 
     # Validate the input and get referenced objects (tags, thread, attachments)
     # as necessary.
@@ -185,7 +185,6 @@ def create_draft(data, namespace, db_session, syncback):
             part.content_disposition = 'attachment'
             part.is_inboxapp_attachment = True
             message.parts.append(part)
-            db_session.add(part)
 
         update_contacts_from_message(db_session, message, namespace)
 
@@ -225,10 +224,12 @@ def create_draft(data, namespace, db_session, syncback):
         for tag in tags:
             thread.apply_tag(tag)
 
-        if syncback:
-            schedule_action('save_draft', message, namespace.id, db_session,
-                            version=message.version)
-        return message
+    db_session.add(message)
+    if syncback:
+        schedule_action('save_draft', message, namespace.id, db_session,
+                        version=message.version)
+    db_session.flush()
+    return message
 
 
 def update_draft(db_session, account, draft, to_addr=None,
@@ -274,8 +275,6 @@ def update_draft(db_session, account, draft, to_addr=None,
         part.content_disposition = 'attachment'
         part.is_inboxapp_attachment = True
         draft.parts.append(part)
-
-        db_session.add(part)
 
     thread = draft.thread
     if len(thread.messages) == 1:

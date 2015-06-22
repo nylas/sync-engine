@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, Text, ForeignKey, Enum, Index, String
 from sqlalchemy.orm import relationship
 
+from inbox.api.err import ActionError
 from inbox.sqlalchemy_ext.util import JSON
 from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
@@ -24,16 +25,6 @@ REMOVE_TAG_ACTIONS = {
 }
 
 
-class ActionError(Exception):
-    def __init__(self, error, namespace_id):
-        self.error = error
-        self.namespace_id = namespace_id
-
-    def __str__(self):
-        return 'Error {0} for namespace_id {1}'.format(
-            self.error, self.namespace_id)
-
-
 def schedule_action_for_tag(tag_public_id, thread, db_session, tag_added):
     if tag_added:
         action = ADD_TAG_ACTIONS.get(tag_public_id)
@@ -51,7 +42,7 @@ def schedule_action(func_name, record, namespace_id, db_session, **kwargs):
     account = db_session.query(Namespace).get(namespace_id).account
 
     if account.sync_state == 'invalid':
-        raise ActionError(error=403, namespace_id=namespace_id)
+        raise ActionError()
 
     log_entry = account.actionlog_cls.create(
         action=func_name,
