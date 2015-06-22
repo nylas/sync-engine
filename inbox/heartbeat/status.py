@@ -1,10 +1,11 @@
+from collections import namedtuple
 from datetime import datetime, timedelta
 import json
 import time
 
 from inbox.log import get_logger
 from inbox.heartbeat.config import ALIVE_EXPIRY
-from inbox.heartbeat.store import HeartbeatStore, HeartbeatStatusKey
+from inbox.heartbeat.store import HeartbeatStore
 
 
 ALIVE_THRESHOLD = timedelta(seconds=ALIVE_EXPIRY)
@@ -137,6 +138,42 @@ class AccountHeartbeatStatus(object):
                             for folder in self.folders}}
 
 
+# More lightweight statuses (dead/alive signals only) - placeholder name Pings
+AccountPing = namedtuple('AccountPing', ['id', 'alive', 'timestamp',
+                                         'folders'])
+FolderPing = namedtuple('FolderPing', ['id', 'alive', 'timestamp'])
+
+
+def get_ping_status(host=None, port=6379, account_id=None,
+                    threshold=ALIVE_EXPIRY):
+    # Query the indexes and not the per-folder info for faster lookup.
+    store = HeartbeatStore.store(host, port)
+    now = time.time()
+    expiry = now - threshold
+    if account_id:
+        # Get a single account's heartbeat
+        folder_heartbeats = store.get_account_folders(account_id)
+        folders = [FolderPing(int(id), ts > expiry, ts)
+                   for (id, ts) in folder_heartbeats]
+        account_ts = store.get_account_timestamp(account_id)
+        account = AccountPing(account_id, account_ts > expiry, account_ts,
+                              folders)
+        return {account_id: account}
+    else:
+        # Start from the account index
+        account_heartbeats = store.get_account_list()
+        accounts = {}
+        for (account_id, account_ts) in account_heartbeats:
+            account_id = int(account_id)
+            folder_heartbeats = store.get_account_folders(account_id)
+            folders = [FolderPing(int(id), ts > expiry, ts)
+                       for (id, ts) in folder_heartbeats]
+            account = AccountPing(account_id, account_ts > expiry, account_ts,
+                                  folders)
+            accounts[account_id] = account
+        return accounts
+
+
 def load_folder_status(k, v):
     folder = {}
     for device_id in v:
@@ -254,9 +291,9 @@ def heartbeat_summary(host=None, port=None, dead_threshold=ALIVE_EXPIRY):
     num_dead_accounts = list_dead_accounts(host, port,
                                            dead_threshold=dead_threshold,
                                            count=True)
-    num_alive_accounts = list_alive_accounts(host, port, 
-                                            alive_since=dead_threshold,
-                                            count=True)
+    num_alive_accounts = list_alive_accounts(host, port,
+                                             alive_since=dead_threshold,
+                                             count=True)
     num_accounts = num_alive_accounts + num_dead_accounts
     if num_alive_accounts:
         accounts_percent = float(num_alive_accounts) / num_accounts

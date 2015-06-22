@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+""" NOTE - THIS IS DEPRECATED, THE LATEST VERSION OF THIS IS IN REDWOOD
+    TODO (STOPSHIP) - FIX THIS MESSAGE
+"""
 
 import click
 import json

@@ -8,7 +8,7 @@ from inbox.heartbeat.store import (HeartbeatStore, HeartbeatStatusProxy,
 from inbox.heartbeat.status import (clear_heartbeat_status, list_all_accounts,
                                     list_alive_accounts, list_dead_accounts,
                                     heartbeat_summary, get_account_metadata,
-                                    get_heartbeat_status,
+                                    get_heartbeat_status, get_ping_status,
                                     AccountHeartbeatStatus)
 from inbox.heartbeat.config import ALIVE_EXPIRY
 
@@ -317,3 +317,25 @@ def test_missing_status(store):
     assert status.keys() == [12]
     assert status[12].missing
     assert not status[12].alive
+
+
+def test_ping(random_heartbeats):
+    # Get the lightweight ping (only checks indices) and make sure it conforms
+    # to the expected format.
+    ping = get_ping_status()
+    assert isinstance(ping, dict)
+    assert sorted(ping.keys()) == sorted(random_heartbeats.keys())
+    single = ping[0]
+    attrs = ('id', 'alive', 'timestamp', 'folders')
+    for attr in attrs:
+        assert hasattr(single, attr)
+    assert single.alive
+    for f in single.folders:
+        assert f.alive
+
+
+def test_ping_single(random_heartbeats):
+    ping = get_ping_status(0)
+    assert isinstance(ping, dict)
+    single = ping[0]
+    assert single.alive

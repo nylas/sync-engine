@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+""" THIS IS DEPRECATED - ACCOUNT ALIVE/DEADNESS IS CALCULATED IN
+    REDWOOD - BUT THIS MAY CHANGE (STOPSHIP - FIX THIS MESSAGE)
+"""
+
 import click
 import datetime
 
