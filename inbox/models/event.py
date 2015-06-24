@@ -104,8 +104,7 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     # The database column is named differently for legacy reasons.
     owner = Column('owner2', String(OWNER_MAX_LEN), nullable=True)
 
-    _description_deprecated = Column('description', Text, nullable=True)
-    _description = Column(LONGTEXT, nullable=True)
+    description = Column('_description', LONGTEXT, nullable=True)
     location = Column(String(LOCATION_MAX_LEN), nullable=True)
     busy = Column(Boolean, nullable=False, default=True)
     read_only = Column(Boolean, nullable=False)
@@ -144,15 +143,6 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     def validate_length(self, key, value):
         max_len = _LENGTHS[key]
         return value if value is None else value[:max_len]
-
-    @property
-    def description(self):
-        return self._description or self._description_deprecated
-
-    @description.setter
-    def description(self, value):
-        self._description = value
-        self._description_deprecated = value
 
     @property
     def when(self):
