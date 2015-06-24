@@ -54,7 +54,7 @@ def create_draft_from_mime(account, raw_mime, db_session):
     new_body = new_headers + raw_mime
 
     with db_session.no_autoflush:
-        msg = Message.create_from_synced(account, '', account.sent_folder,
+        msg = Message.create_from_synced(account, '', '',
                                          datetime.utcnow(), new_body)
 
         if msg.from_addr and len(msg.from_addr) > 1:
