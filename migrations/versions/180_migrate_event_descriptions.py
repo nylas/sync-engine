@@ -18,7 +18,7 @@ def upgrade():
     while True:
         res = conn.execute(
             'UPDATE event SET _description=description '
-            'WHERE _description IS NULL AND _description!=description LIMIT 100000')
+            'WHERE _description IS NULL AND description IS NOT NULL LIMIT 100000')
         print 'Updated {} rows'.format(res.rowcount)
         if res.rowcount == 0:
             return
