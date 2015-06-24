@@ -395,12 +395,16 @@ class SMTPClient(object):
         self.log.info('Sending successful', sender=from_addr[1],
                       recipients=recipient_emails)
 
-    def send_raw(self, from_addr, raw_mime, recipient_emails):
-        msg = re.sub(r'Bcc: [^\r\n]*\r\n', '', raw_mime)
-        self._send(recipient_emails, msg)
+    def send_raw(self, msg):
+        recipient_emails = [email for name, email in itertools.chain(
+            msg.bcc_addr, msg.cc_addr, msg.to_addr)]
+
+        mime_body = re.sub(r'Bcc: [^\r\n]*\r\n', '', msg.full_body.data)
+        self._send(recipient_emails, mime_body)
 
         # Sent to all successfully
-        self.log.info('Sending successful', sender=from_addr,
+        sender_email = msg.from_addr[0][1]
+        self.log.info('Sending successful', sender=sender_email,
                       recipients=recipient_emails)
 
     def _get_connection(self):

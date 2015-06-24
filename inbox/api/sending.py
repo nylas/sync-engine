@@ -1,4 +1,3 @@
-import itertools
 from datetime import datetime
 from inbox.log import get_logger
 from inbox.api.err import err
@@ -55,9 +54,8 @@ def send_raw_mime(account, db_session, msg):
     response_on_success = APIEncoder().jsonify(msg)
     try:
         sendmail_client = get_sendmail_client(account)
-        # msg.full_body.data includes inbox headers
-        sendmail_client.send_raw(msg.from_addr, msg.full_body.data,
-                                 recipient_emails)
+        sendmail_client.send_raw(msg)
+
     except SendMailException as exc:
         kwargs = {}
         if exc.failures:
