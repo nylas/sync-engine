@@ -8,23 +8,18 @@ import gevent
 
 import pytest
 
-from tests.util.base import (api_client, default_account, default_namespace,
-                             message, thread)
+from tests.util.base import add_fake_message, add_fake_thread
 
-__all__ = ['default_account', 'api_client']
-
-NAMESPACE_ID = 1
+__all__ = ['message', 'thread']
 
 
 @pytest.fixture
-def example_draft(db):
-    from inbox.models import Account
-    account = db.session.query(Account).get(1)
+def example_draft(db, default_account):
     return {
         'subject': 'Draft test at {}'.format(datetime.utcnow()),
         'body': '<html><body><h2>Sea, birds and sand.</h2></body></html>',
         'to': [{'name': 'The red-haired mermaid',
-                'email': account.email_address}]
+                'email': default_account.email_address}]
     }
 
 
@@ -68,7 +63,7 @@ def test_create_and_get_draft(api_client, example_draft):
     assert not any('attachment' == tag['name'] for tag in thread_tags)
 
 
-def test_create_draft_replying_to_thread(api_client):
+def test_create_draft_replying_to_thread(api_client, thread, message):
     thread = api_client.get_data('/threads')[0]
     thread_id = thread['id']
     latest_message_id = thread['message_ids'][-1]
@@ -91,7 +86,7 @@ def test_create_draft_replying_to_thread(api_client):
     assert draft_id in thread_data['draft_ids']
 
 
-def test_create_draft_replying_to_message(api_client):
+def test_create_draft_replying_to_message(api_client, message):
     message = api_client.get_data('/messages')[0]
     reply_draft = {
         'subject': 'test reply',
@@ -104,15 +99,18 @@ def test_create_draft_replying_to_message(api_client):
     assert data['thread_id'] == message['thread_id']
 
 
-def test_reject_incompatible_reply_thread_and_message(api_client):
-    # TODO(emfree) set up this state instead of making assumptions about the
-    # contents of the test dump.
-    message = api_client.get_data('/messages')[0]
-    thread = api_client.get_data('/threads')[-1]
-    assert thread['id'] != message['thread_id']
+def test_reject_incompatible_reply_thread_and_message(
+    db, api_client, message, thread, default_namespace):
+    alt_thread = add_fake_thread(db.session, default_namespace.id)
+    add_fake_message(db.session, default_namespace.id, alt_thread)
+
+    thread = api_client.get_data('/threads')[0]
+    alt_message_id = api_client.get_data('/threads')[1]['message_ids'][0]
+    alt_message = api_client.get_data('/messages/{}'.format(alt_message_id))
+    assert thread['id'] != alt_message['thread_id']
     reply_draft = {
         'subject': 'test reply',
-        'reply_to_message_id': message['id'],
+        'reply_to_message_id': alt_message['id'],
         'thread_id': thread['id']
     }
     r = api_client.post_data('/drafts', reply_draft)
@@ -263,7 +261,7 @@ def test_update_draft(api_client):
     assert thread['last_message_timestamp'] == drafts[0]['date']
 
 
-def test_delete_draft(api_client):
+def test_delete_draft(api_client, thread, message):
     original_draft = {
         'subject': 'parent draft',
         'body': 'parent draft'
@@ -297,6 +295,7 @@ def test_delete_draft(api_client):
 
     # And check that threads aren't deleted if they still have messages.
     thread_public_id = api_client.get_data('/threads')[0]['id']
+
     reply_draft = {
         'subject': 'test reply',
         'body': 'test reply',

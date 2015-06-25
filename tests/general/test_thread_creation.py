@@ -3,13 +3,10 @@ import datetime
 import pytest
 from collections import namedtuple
 from inbox.auth.generic import GenericAuthHandler
-from inbox.models import Folder
+from inbox.models import Folder, Namespace
 from inbox.models.backends.imap import ImapUid
 from inbox.util.threading import fetch_corresponding_thread
-from tests.util.base import add_fake_thread, add_fake_message, generic_account
-
-NAMESPACE_ID = 1
-ACCOUNT_ID = 1
+from tests.util.base import add_fake_thread, add_fake_message
 
 MockRawMessage = namedtuple('RawMessage', ['flags'])
 
@@ -32,19 +29,23 @@ def folder_sync_engine(db):
     return engine
 
 
-def test_generic_grouping(db, generic_account):
-    thread = add_fake_thread(db.session, NAMESPACE_ID)
-    message = add_fake_message(db.session, NAMESPACE_ID, thread,
-                               subject="Golden Gate Park next Sat")
-    ImapUid(message=message, account_id=ACCOUNT_ID,
-            msg_uid=2222)
+def test_generic_grouping(db, default_account):
+    thread = add_fake_thread(db.session, default_account.namespace.id)
+    message = add_fake_message(db.session, default_account.namespace.id,
+                               thread, subject="Golden Gate Park next Sat")
+    ImapUid(message=message, account_id=default_account.id,
+            msg_uid=2222, folder=default_account.inbox_folder)
 
-    thread = add_fake_thread(db.session, generic_account.namespace.id)
-    message = add_fake_message(db.session, NAMESPACE_ID + 1, thread,
-                               subject="Golden Gate Park next Sat")
+    thread = add_fake_thread(db.session, default_account.namespace.id)
+
+    new_namespace = Namespace()
+    db.session.add(new_namespace)
+    db.session.commit()
+    message = add_fake_message(db.session, new_namespace.id,
+                               thread, subject="Golden Gate Park next Sat")
 
     thread = fetch_corresponding_thread(db.session,
-                                        generic_account.namespace.id, message)
+                                        default_account.namespace.id, message)
     assert thread is None, ("fetch_similar_threads should "
                             "heed namespace boundaries")
 

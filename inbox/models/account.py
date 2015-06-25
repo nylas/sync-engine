@@ -287,15 +287,6 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState):
     def is_sync_locked(self):
         return self._sync_lock.locked()
 
-    def __init__(self, *args, **kwargs):
-        MailSyncBase.__init__(self, *args, **kwargs)
-
-        # Note: SQLAlchemy calls an object's constructor only when
-        # it's created, not on subsequent db reads
-        # (http://docs.sqlalchemy.org/en/rel_0_9/orm/constructors.html)
-        # so it's safe to call a method that creates a calendar here.
-        self.create_emailed_events_calendar()
-
     discriminator = Column('type', String(16))
     __mapper_args__ = {'polymorphic_identity': 'account',
                        'polymorphic_on': discriminator}

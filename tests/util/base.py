@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import uuid
 from datetime import datetime, timedelta
 from flanker import mime
 
@@ -56,18 +57,17 @@ def log(request, config):
     request.addfinalizer(remove_logs)
 
 
-@yield_fixture(scope='function')
-def db(request, config):
-    """
-    NOTE: You cannot rely on IMAP UIDs from the test db being correctly
-    up-to-date. If you need to test sync functionality, start with a
-    test database containing only an authed user, not this dump.
+@fixture(scope='session')
+def dbloader(config):
+    return TestDB()
 
-    """
-    dumpfile = request.param[0]
-    testdb = TestDB(config, dumpfile)
-    yield testdb
-    testdb.teardown()
+
+@yield_fixture(scope='function')
+def db(dbloader):
+    from inbox.models.session import InboxSession
+    dbloader.session = InboxSession(dbloader.engine)
+    yield dbloader
+    dbloader.session.close()
 
 
 def mock_redis_client(*args, **kwargs):
@@ -89,18 +89,18 @@ def test_client(db):
 
 
 @yield_fixture
-def api_client(db):
+def api_client(db, default_namespace):
     from inbox.api.srv import app
     app.config['TESTING'] = True
     with app.test_client() as c:
-        yield TestAPIClient(c)
+        yield TestAPIClient(c, default_namespace.public_id)
 
 
 class TestAPIClient(object):
     """Provide more convenient access to the API for testing purposes."""
-    def __init__(self, test_client):
+    def __init__(self, test_client, default_ns_public_id):
         self.client = test_client
-        self.default_ns_public_id = None
+        self.default_ns_public_id = default_ns_public_id
 
     def full_path(self, path, ns_public_id=None):
         """ Replace a path such as `/tags` by `/n/<ns_public_id>/tags`.
@@ -109,11 +109,7 @@ class TestAPIClient(object):
         returned by a call to `/n/`.
         """
         if ns_public_id is None:
-            if self.default_ns_public_id is None:
-                self.default_ns_public_id = ns_public_id = \
-                    json.loads(self.client.get('/n/').data)[0]['id']
-            else:
-                ns_public_id = self.default_ns_public_id
+            ns_public_id = self.default_ns_public_id
 
         return '/n/{}'.format(ns_public_id) + path
 
@@ -143,39 +139,30 @@ class TestAPIClient(object):
 
 
 class TestDB(object):
-    def __init__(self, config, dumpfile):
-        from inbox.models.session import InboxSession
+    def __init__(self):
         from inbox.ignition import main_engine
         engine = main_engine()
         # Set up test database
-        self.session = InboxSession(engine)
         self.engine = engine
-        self.config = config
-        self.dumpfile = dumpfile
 
         # Populate with test data
-        self.populate()
+        self.setup()
 
-    def populate(self):
-        """ Populates database with data from the test dumpfile. """
-        database = self.config.get('MYSQL_DATABASE')
-        user = self.config.get('MYSQL_USER')
-        password = self.config.get('MYSQL_PASSWORD')
-        hostname = self.config.get('MYSQL_HOSTNAME')
-        port = self.config.get('MYSQL_PORT')
-
-        cmd = 'mysql {0} -h{1} -P{2} -u{3} -p{4} < {5}'. \
-            format(database, hostname, port, user, password, self.dumpfile)
-        subprocess.check_call(cmd, shell=True)
-
-    def teardown(self):
+    def setup(self):
+        from inbox.ignition import init_db
         """
-        Closes the session. We need to explicitly do this to prevent certain
-        tests from hanging. Note that we don't need to actually destroy or
-        rolback the database because we create it anew on each test.
+        Creates a new, empty test database with table structure generated
+        from declarative model classes.
 
         """
-        self.session.close()
+        db_invocation = 'DROP DATABASE IF EXISTS test; ' \
+                        'CREATE DATABASE IF NOT EXISTS test ' \
+                        'DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE ' \
+                        'utf8mb4_general_ci'
+
+        subprocess.check_call('mysql -uinboxtest -pinboxtest '
+                              '-e "{}"'.format(db_invocation), shell=True)
+        init_db(self.engine)
 
 
 @fixture
@@ -202,41 +189,40 @@ def syncback_service():
     s.join()
 
 
-@fixture(scope='function')
-def default_namespace(db):
-    from inbox.models import Namespace
-    return db.session.query(Namespace).first()
-
-
-@fixture(scope='function')
+@fixture(scope='function', autouse=True)
 def default_account(db):
     import platform
-    from inbox.models import Account
-    account = db.session.query(Account).filter_by(id=1).one()
+    from inbox.models.backends.gmail import GmailAccount
+    from inbox.models import Namespace, Folder
+    ns = Namespace()
+    account = GmailAccount(
+        sync_host=platform.node(),
+        email_address='inboxapptest@gmail.com')
+    account.namespace = ns
     account.create_emailed_events_calendar()
-    # Ensure that the account is set to sync locally for unit tests
-    account.sync_host = platform.node()
+    account.refresh_token = 'faketoken'
+    account.inbox_folder = Folder(canonical_name='inbox', name='Inbox',
+                                  account=account)
+    account.sent_folder = Folder(canonical_name='sent', name='[Gmail]/Sent',
+                                 account=account)
+    account.drafts_folder = Folder(canonical_name='drafts',
+                                   name='[Gmail]/Drafts',
+                                   account=account)
+    db.session.add(account)
     db.session.commit()
     return account
 
 
 @fixture(scope='function')
-def generic_account(db):
-    from inbox.auth.generic import GenericAuthHandler
-
-    handler = GenericAuthHandler(provider_name='generic')
-    acc = handler.create_account(db.session, 'user@generic_email.com',
-                                 {'email': 'user@genericemail.com',
-                                  'password': 'hunter2'})
-    db.session.add(acc)
-    db.session.commit()
-    return acc
+def default_namespace(db, default_account):
+    return default_account.namespace
 
 
 @fixture(scope='function')
-def contact_sync(config, db):
+def contact_sync(config, db, default_account):
     from inbox.contacts.remote_sync import ContactSync
-    return ContactSync('inboxapptest@gmail.com', 'gmail', 1, 1)
+    return ContactSync('inboxapptest@gmail.com', 'gmail', default_account.id,
+                       default_account.namespace.id)
 
 
 @fixture(scope='function')
@@ -341,26 +327,28 @@ def add_fake_calendar(db_session, namespace_id, name="Cal",
     return calendar
 
 
-def add_fake_event(db_session, namespace_id):
+def add_fake_event(db_session, namespace_id, calendar=None,
+                   title='title', description='', location='',
+                   busy=False, read_only=False, reminders='', recurrence='',
+                   start=None, end=None, all_day=False):
     from inbox.models import Event
-    start = datetime.utcnow()
-    end = datetime.utcnow() + timedelta(seconds=1)
-    calendar = add_fake_calendar(db_session, namespace_id)
+    start = start or datetime.utcnow()
+    end = end or (datetime.utcnow() + timedelta(seconds=1))
+    calendar = calendar or add_fake_calendar(db_session, namespace_id)
     event = Event(namespace_id=namespace_id,
                   calendar=calendar,
-                  title='title',
-                  description='',
-                  location='',
-                  busy=False,
-                  read_only=False,
-                  reminders='',
-                  recurrence='',
+                  title=title,
+                  description=description,
+                  location=location,
+                  busy=busy,
+                  read_only=read_only,
+                  reminders=reminders,
+                  recurrence=recurrence,
                   start=start,
                   end=end,
-                  all_day=False,
-                  provider_name='inbox',
+                  all_day=all_day,
                   raw_data='',
-                  source='local')
+                  uid=str(uuid.uuid4()))
     db_session.add(event)
     db_session.commit()
     return event

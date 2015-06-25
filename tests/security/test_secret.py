@@ -96,7 +96,7 @@ def test_token(db, config, encrypt):
 
 
 @pytest.mark.parametrize('encrypt', [True, False])
-def test_token_inputs(db, config, encrypt):
+def test_token_inputs(db, config, encrypt, default_account):
     """
     Ensure unicode tokens are converted to bytes.
     Ensure invalid UTF-8 tokens are handled correctly.
@@ -112,24 +112,23 @@ def test_token_inputs(db, config, encrypt):
     # NULL byte
     null_token = b'\x1f\x00\xf1'
 
-    account = db.session.query(GmailAccount).get(ACCOUNT_ID)
+    default_account.refresh_token = unicode_token
+    db.session.commit()
 
-    account.refresh_token = unicode_token
-
-    secret_id = account.refresh_token_id
+    secret_id = default_account.refresh_token_id
     secret = db.session.query(Secret).get(secret_id)
 
     assert not isinstance(secret.secret, unicode), 'secret cannot be unicode'
     assert secret.secret == unicode_token, 'token not decrypted correctly'
 
     with pytest.raises(ValueError) as e:
-        account.refresh_token = invalid_token
+        default_account.refresh_token = invalid_token
 
     assert e.typename == 'ValueError', 'token cannot be invalid UTF-8'
 
     with pytest.raises(ValueError) as f:
-        account.refresh_token = null_token
+        default_account.refresh_token = null_token
 
     assert f.typename == 'ValueError', 'token cannot contain NULL byte'
 
-    assert account.refresh_token == unicode_token
+    assert default_account.refresh_token == unicode_token

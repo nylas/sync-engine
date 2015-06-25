@@ -1,17 +1,13 @@
 """Sanity-check our logic for updating contact data from message addressees
 during a sync."""
-from inbox.models import Thread, Contact
-from tests.util.base import add_fake_message
-
-NAMESPACE_ID = 1
+from inbox.models import Contact
+from tests.util.base import add_fake_message, thread
 
 
-def test_update_contacts_from_message(db):
-    thread = db.session.query(Thread).filter_by(
-        namespace_id=NAMESPACE_ID).first()
+def test_update_contacts_from_message(db, default_namespace, thread):
     # Check that only one Contact is created for repeatedly-referenced
     # addresses.
-    add_fake_message(db.session, NAMESPACE_ID, thread,
+    add_fake_message(db.session, default_namespace.id, thread,
                      from_addr=[('', 'alpha@example.com')],
                      cc_addr=[('', 'alpha@example.com')])
 
@@ -20,23 +16,23 @@ def test_update_contacts_from_message(db):
 
     # Check that existing Contacts are used when we process a new message
     # referencing them.
-    add_fake_message(db.session, NAMESPACE_ID, thread,
+    add_fake_message(db.session, default_namespace.id, thread,
                      from_addr=[('', 'alpha@example.com')],
                      cc_addr=[('', 'alpha@example.com')],
                      to_addr=[('', 'beta@example.com'),
                               ('', 'gamma@example.com')])
 
     assert db.session.query(Contact).filter(
-        Contact.email_address.like('%@example.com')).count() == 3
+        Contact.email_address.like('%@example.com'),
+        Contact.namespace_id == default_namespace.id).count() == 3
     alpha = db.session.query(Contact).filter_by(
-        email_address='alpha@example.com').one()
+        email_address='alpha@example.com',
+        namespace_id=default_namespace.id).one()
     assert len(alpha.message_associations) == 4
 
 
-def test_addresses_canonicalized(db):
-    thread = db.session.query(Thread).filter_by(
-        namespace_id=NAMESPACE_ID).first()
-    msg = add_fake_message(db.session, NAMESPACE_ID, thread,
+def test_addresses_canonicalized(db, default_namespace, thread):
+    msg = add_fake_message(db.session, default_namespace.id, thread,
                            from_addr=[('', 'alpha.beta@gmail.com')],
                            cc_addr=[('', 'alphabeta@gmail.com')],
                            bcc_addr=[('', 'ALPHABETA@GMAIL.COM')])

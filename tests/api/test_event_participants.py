@@ -1,19 +1,14 @@
 import pytest
 import json
 
-from inbox.models import Account
-from tests.util.base import api_client, default_account, calendar
+from tests.util.base import calendar
 
-__all__ = ['api_client']
+__all__ = ['calendar']
 
 
-ACCOUNT_ID = 1
-
+# TODO(emfree) WTF is all this crap anyways?
 
 def test_api_create(db, api_client, calendar):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
     e_data = {
         'title': 'Friday Office Party',
         'when': {'time': 1407542195},
@@ -24,7 +19,7 @@ def test_api_create(db, api_client, calendar):
             }]
     }
 
-    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
 
     assert len(e_resp_data['participants']) == 1
@@ -33,7 +28,7 @@ def test_api_create(db, api_client, calendar):
     assert participant['email'] == e_data['participants'][0]['email']
     assert participant['status'] == 'noreply'
 
-    e_resp_data = api_client.get_data('/events/' + e_resp_data['id'], ns_id)
+    e_resp_data = api_client.get_data('/events/' + e_resp_data['id'])
 
     assert len(e_resp_data['participants']) == 1
     participant = e_resp_data['participants'][0]
@@ -43,9 +38,6 @@ def test_api_create(db, api_client, calendar):
 
 
 def test_api_create_status_yes(db, api_client, calendar):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
     e_data = {
         'title': 'Friday Office Party',
         'when': {'time': 1407542195},
@@ -56,7 +48,7 @@ def test_api_create_status_yes(db, api_client, calendar):
             }]
     }
 
-    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
 
     assert len(e_resp_data['participants']) == 1
@@ -67,9 +59,6 @@ def test_api_create_status_yes(db, api_client, calendar):
 
 
 def test_api_create_multiple(db, api_client, calendar):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
     e_data = {
         'title': 'Friday Office Party',
         'when': {'time': 1407542195},
@@ -81,7 +70,7 @@ def test_api_create_multiple(db, api_client, calendar):
         }]
     }
 
-    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
 
     assert len(e_resp_data['participants']) == 2
@@ -99,9 +88,6 @@ def test_api_create_multiple(db, api_client, calendar):
 
 
 def test_api_create_status_no(db, api_client, calendar):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
     e_data = {
         'title': 'Friday Office Party',
         'when': {'time': 1407542195},
@@ -112,7 +98,7 @@ def test_api_create_status_no(db, api_client, calendar):
             }]
     }
 
-    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
 
     assert len(e_resp_data['participants']) == 1
@@ -123,9 +109,6 @@ def test_api_create_status_no(db, api_client, calendar):
 
 
 def test_api_create_status_maybe(db, api_client, calendar):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
     e_data = {
         'title': 'Friday Office Party',
         'when': {'time': 1407542195},
@@ -136,7 +119,7 @@ def test_api_create_status_maybe(db, api_client, calendar):
             }]
     }
 
-    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
 
     assert len(e_resp_data['participants']) == 1
@@ -147,9 +130,6 @@ def test_api_create_status_maybe(db, api_client, calendar):
 
 
 def test_api_create_status_noreply(db, api_client, calendar):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
     e_data = {
         'title': 'Friday Office Party',
         'when': {'time': 1407542195},
@@ -160,7 +140,7 @@ def test_api_create_status_noreply(db, api_client, calendar):
             }]
     }
 
-    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
 
     assert len(e_resp_data['participants']) == 1
@@ -171,9 +151,6 @@ def test_api_create_status_noreply(db, api_client, calendar):
 
 
 def test_api_create_no_name(db, api_client, calendar):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
     e_data = {
         'title': 'Friday Office Party',
         'when': {'time': 1407542195},
@@ -183,7 +160,7 @@ def test_api_create_no_name(db, api_client, calendar):
             }]
     }
 
-    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
 
     assert len(e_resp_data['participants']) == 1
@@ -194,9 +171,6 @@ def test_api_create_no_name(db, api_client, calendar):
 
 
 def test_api_create_no_email(db, api_client, calendar):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
     e_data = {
         'title': 'Friday Office Party',
         'when': {'time': 1407542195},
@@ -206,16 +180,13 @@ def test_api_create_no_email(db, api_client, calendar):
             }]
     }
 
-    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
 
     assert e_resp_data["type"] == "invalid_request_error"
 
 
 def test_api_create_bad_status(db, api_client, calendar):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
     e_data = {
         'title': 'Friday Office Party',
         'when': {'time': 1407542195},
@@ -227,16 +198,13 @@ def test_api_create_bad_status(db, api_client, calendar):
             }]
     }
 
-    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
 
     assert e_resp_data["type"] == "invalid_request_error"
 
 
 def test_api_add_participant(db, api_client, calendar):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
     e_data = {
         'title': 'Friday Office Party',
         'when': {'time': 1407542195},
@@ -248,7 +216,7 @@ def test_api_add_participant(db, api_client, calendar):
                          {'email': 'john.q@example.com'}]
     }
 
-    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
     assert len(e_resp_data['participants']) == 5
     for i, p in enumerate(e_resp_data['participants']):
@@ -259,7 +227,7 @@ def test_api_add_participant(db, api_client, calendar):
 
     event_id = e_resp_data['id']
     e_data['participants'].append({'email': 'filet.minyon@example.com'})
-    e_resp = api_client.put_data('/events/' + event_id, e_data, ns_id)
+    e_resp = api_client.put_data('/events/' + event_id, e_data)
     e_resp_data = json.loads(e_resp.data)
 
     assert len(e_resp_data['participants']) == 6
@@ -271,9 +239,6 @@ def test_api_add_participant(db, api_client, calendar):
 
 
 def test_api_remove_participant(db, api_client, calendar):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
     e_data = {
         'title': 'Friday Office Party',
         'when': {'time': 1407542195},
@@ -285,7 +250,7 @@ def test_api_remove_participant(db, api_client, calendar):
                          {'email': 'john.q@example.com'}]
     }
 
-    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
     assert len(e_resp_data['participants']) == 5
     for i, p in enumerate(e_resp_data['participants']):
@@ -296,7 +261,7 @@ def test_api_remove_participant(db, api_client, calendar):
 
     event_id = e_resp_data['id']
     e_data['participants'].pop()
-    e_resp = api_client.put_data('/events/' + event_id, e_data, ns_id)
+    e_resp = api_client.put_data('/events/' + event_id, e_data)
     e_resp_data = json.loads(e_resp.data)
     assert len(e_resp_data['participants']) == 4
     for i, p in enumerate(e_resp_data['participants']):
@@ -307,9 +272,6 @@ def test_api_remove_participant(db, api_client, calendar):
 
 
 def test_api_update_participant_status(db, api_client, calendar):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
     e_data = {
         'title': 'Friday Office Party',
         'when': {'time': 1407542195},
@@ -321,7 +283,7 @@ def test_api_update_participant_status(db, api_client, calendar):
                          {'email': 'john.q@example.com'}]
     }
 
-    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
     assert len(e_resp_data['participants']) == 5
     for i, p in enumerate(e_resp_data['participants']):
@@ -343,7 +305,7 @@ def test_api_update_participant_status(db, api_client, calendar):
                          {'email': 'john.q@example.com'}]
     }
 
-    e_resp = api_client.put_data('/events/' + event_id, update_data, ns_id)
+    e_resp = api_client.put_data('/events/' + event_id, update_data)
     e_resp_data = json.loads(e_resp.data)
 
     # Make sure that nothing changed that we didn't specify
@@ -360,8 +322,6 @@ def test_api_update_participant_status(db, api_client, calendar):
 
 @pytest.mark.parametrize('rsvp', ['yes', 'no', 'maybe'])
 def test_api_participant_reply(db, api_client, rsvp, calendar):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
 
     e_data = {
         'title': 'Friday Office Party',
@@ -374,7 +334,7 @@ def test_api_participant_reply(db, api_client, rsvp, calendar):
                          {'email': 'john.q@example.com'}]
     }
 
-    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
     assert len(e_resp_data['participants']) == 5
 
@@ -396,9 +356,6 @@ def test_api_participant_reply(db, api_client, rsvp, calendar):
 
 
 def test_api_participant_reply_invalid_rsvp(db, api_client, calendar):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
     e_data = {
         'title': 'Friday Office Party',
         'calendar_id': calendar.public_id,
@@ -410,7 +367,7 @@ def test_api_participant_reply_invalid_rsvp(db, api_client, calendar):
                          {'email': 'john.q@example.com'}]
     }
 
-    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
     assert len(e_resp_data['participants']) == 5
 
@@ -427,8 +384,6 @@ def test_api_participant_reply_invalid_rsvp(db, api_client, calendar):
 
 
 def test_api_participant_reply_invalid_participant(db, api_client, calendar):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
 
     e_data = {
         'title': 'Friday Office Party',
@@ -441,7 +396,7 @@ def test_api_participant_reply_invalid_participant(db, api_client, calendar):
                          {'email': 'john.q@example.com'}]
     }
 
-    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
     assert len(e_resp_data['participants']) == 5
 
@@ -455,9 +410,6 @@ def test_api_participant_reply_invalid_participant(db, api_client, calendar):
 
 
 def test_api_participant_reply_invalid_event(db, api_client, calendar):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
     e_data = {
         'title': 'Friday Office Party',
         'when': {'time': 1407542195},
@@ -469,7 +421,7 @@ def test_api_participant_reply_invalid_event(db, api_client, calendar):
                          {'email': 'john.q@example.com'}]
     }
 
-    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
     assert len(e_resp_data['participants']) == 5
 
@@ -485,9 +437,6 @@ def test_api_participant_reply_invalid_event(db, api_client, calendar):
 
 
 def test_api_participant_reply_invalid_event2(db, api_client, calendar):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
     e_data = {
         'title': 'Friday Office Party',
         'when': {'time': 1407542195},
@@ -499,16 +448,13 @@ def test_api_participant_reply_invalid_event2(db, api_client, calendar):
                          {'email': 'john.q@example.com'}]
     }
 
-    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
     assert len(e_resp_data['participants']) == 5
 
     participants = e_resp_data['participants']
 
 def test_api_participant_reply_invalid_action(db, api_client, calendar):
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
-
     e_data = {
         'title': 'Friday Office Party',
         'when': {'time': 1407542195},
@@ -520,7 +466,7 @@ def test_api_participant_reply_invalid_action(db, api_client, calendar):
                          {'email': 'john.q@example.com'}]
     }
 
-    e_resp = api_client.post_data('/events', e_data, ns_id)
+    e_resp = api_client.post_data('/events', e_data)
     e_resp_data = json.loads(e_resp.data)
     assert len(e_resp_data['participants']) == 5
 

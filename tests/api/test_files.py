@@ -7,24 +7,18 @@ from datetime import datetime
 
 import pytest
 
-from tests.util.base import api_client
-
-
-__all__ = ['api_client']
 
 FILENAMES = ['muir.jpg', 'LetMeSendYouEmail.wav', 'piece-jointe.jpg',
              'andra-moi-ennepe.txt']
 
 
 @pytest.fixture
-def draft(db):
-    from inbox.models import Account
-    account = db.session.query(Account).get(1)
+def draft(db, default_account):
     return {
         'subject': 'Draft test at {}'.format(datetime.utcnow()),
         'body': '<html><body><h2>Sea, birds and sand.</h2></body></html>',
         'to': [{'name': 'The red-haired mermaid',
-                'email': account.email_address}]
+                'email': default_account.email_address}]
     }
 
 

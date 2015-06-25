@@ -1,14 +1,11 @@
-from inbox.models import Account
 from tests.util.base import (contact_sync, contacts_provider,
                              api_client)
 
 __all__ = ['contacts_provider', 'contact_sync', 'api_client']
 
 
-ACCOUNT_ID = 1
-
-
-def test_api_list(contacts_provider, contact_sync, db, api_client):
+def test_api_list(contacts_provider, contact_sync, db, api_client,
+                  default_namespace):
     contacts_provider.supply_contact('Contact One',
                                      'contact.one@email.address')
     contacts_provider.supply_contact('Contact Two',
@@ -16,8 +13,7 @@ def test_api_list(contacts_provider, contact_sync, db, api_client):
 
     contact_sync.provider = contacts_provider
     contact_sync.sync()
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
+    ns_id = default_namespace.public_id
 
     contact_list = api_client.get_data('/contacts', ns_id)
     contact_names = [contact['name'] for contact in contact_list]
@@ -29,7 +25,8 @@ def test_api_list(contacts_provider, contact_sync, db, api_client):
     assert 'contact.two@email.address' in contact_emails
 
 
-def test_api_get(contacts_provider, contact_sync, db, api_client):
+def test_api_get(contacts_provider, contact_sync, db, api_client,
+                 default_namespace):
     contacts_provider.supply_contact('Contact One',
                                      'contact.one@email.address')
     contacts_provider.supply_contact('Contact Two',
@@ -37,8 +34,7 @@ def test_api_get(contacts_provider, contact_sync, db, api_client):
 
     contact_sync.provider = contacts_provider
     contact_sync.sync()
-    acct = db.session.query(Account).filter_by(id=ACCOUNT_ID).one()
-    ns_id = acct.namespace.public_id
+    ns_id = default_namespace.public_id
 
     contact_list = api_client.get_data('/contacts', ns_id)
 

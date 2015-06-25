@@ -1,6 +1,4 @@
 import datetime
-from inbox.models.account import Account
-from inbox.models.thread import Thread
 from inbox.models.folder import Folder, FolderItem
 from inbox.models.tag import Tag
 from inbox.models.message import Message
@@ -8,15 +6,16 @@ from inbox.models.backends.imap import ImapUid
 from inbox.mailsync.backends.imap.common import (recompute_thread_labels,
                                                  add_any_new_thread_labels,
                                                  update_unread_status)
-
-ACCOUNT_ID = 1
-THREAD_ID = 1
+from tests.util.base import add_fake_message, add_fake_imapuid
 
 
-def test_recompute_thread_labels(db):
+def test_recompute_thread_labels(db, thread, default_namespace):
     # This is smoke test that checks that a lone label gets
     # added to a thread's labels.
-    thread = db.session.query(Thread).get(THREAD_ID)
+    account = default_namespace.account
+    message = add_fake_message(db.session, default_namespace.id, thread)
+    add_fake_imapuid(db.session, account.id, message,
+                     account.inbox_folder, 22)
     g_labels = thread.messages[-1].imapuids[-1].g_labels
 
     g_labels.append('Random-label-1')
@@ -25,11 +24,14 @@ def test_recompute_thread_labels(db):
     assert 'Random-label-1' in folders
 
 
-def test_recompute_thread_labels_removes_trash(db):
-    account = db.session.query(Account).get(ACCOUNT_ID)
-    thread = db.session.query(Thread).get(THREAD_ID)
-    account.trash_folder = Folder(name='Trash', account_id=account.id)
-    db.session.flush()
+def test_recompute_thread_labels_removes_trash(db, default_account, thread):
+    default_account.trash_folder = Folder(name='Trash',
+                                          account_id=default_account.id)
+    message = add_fake_message(db.session, default_account.namespace.id,
+                               thread)
+    add_fake_imapuid(db.session, default_account.id, message,
+                     default_account.inbox_folder, 22)
+    db.session.commit()
 
     # Check that the we remove the trash folder from a thread
     # if the latest message has the inbox flag.
@@ -38,34 +40,32 @@ def test_recompute_thread_labels_removes_trash(db):
     if '\\Inbox' not in g_labels:
         g_labels.append('\\Inbox')
 
-    thread.folders.add(account.trash_folder)
+    thread.folders.add(default_account.trash_folder)
     recompute_thread_labels(thread, db.session)
-    assert account.trash_folder not in thread.folders,\
+    assert default_account.trash_folder not in thread.folders,\
         "should have removed trash folder from thread"
 
 
-def test_adding_message_to_thread(db):
+def test_adding_message_to_thread(db, default_account, thread):
     """recompute_thread_labels is not invoked when a new message is added
      (only when UID metadata changes, or when a UID is deleted). Test that
      tag changes work when adding messages to a thread."""
-    account = db.session.query(Account).get(ACCOUNT_ID)
-    account.namespace.create_canonical_tags()
-    thread = db.session.query(Thread).get(THREAD_ID)
-    account.trash_folder = Folder(name='Trash', account=account)
-    FolderItem(thread=thread, folder=account.trash_folder)
+    default_account.trash_folder = Folder(name='Trash', account=default_account)
+    FolderItem(thread=thread, folder=default_account.trash_folder)
 
     folder_names = [folder.name for folder in thread.folders]
-    m = Message(namespace_id=account.namespace.id, subject='test message',
-                thread_id=thread.id, received_date=datetime.datetime.now(),
+    m = Message(namespace_id=default_account.namespace.id,
+                subject='test message', thread_id=thread.id,
+                received_date=datetime.datetime.now(),
                 size=64, body="body", snippet="snippet")
 
-    uid = ImapUid(account=account, message=m,
+    uid = ImapUid(account=default_account, message=m,
                   g_labels=['\\Inbox', 'test-label'],
-                  msg_uid=22L, folder_id=account.inbox_folder.id)
-    uid.folder = account.inbox_folder
-    uid2 = ImapUid(account=account, message=m, g_labels=['test-2'],
-                   msg_uid=24L, folder_id=account.trash_folder.id)
-    uid2.folder = account.trash_folder
+                  msg_uid=22L, folder_id=default_account.inbox_folder.id)
+    uid.folder = default_account.inbox_folder
+    uid2 = ImapUid(account=default_account, message=m, g_labels=['test-2'],
+                   msg_uid=24L, folder_id=default_account.trash_folder.id)
+    uid2.folder = default_account.trash_folder
 
     thread.messages.append(m)
     add_any_new_thread_labels(thread, uid, db.session)

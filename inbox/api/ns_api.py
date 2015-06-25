@@ -12,7 +12,6 @@ from flask.ext.restful import reqparse
 from sqlalchemy import asc, or_, func
 from sqlalchemy.orm.exc import NoResultFound
 
-from inbox.models.session import session_scope
 from inbox.models import (Message, Block, Part, Thread, Namespace,
                           Tag, Contact, Calendar, Event, Transaction,
                           DataProcessingCache)
@@ -36,7 +35,7 @@ from inbox.sendmail.base import (create_draft, update_draft, delete_draft,
                                  create_draft_from_mime)
 from inbox.log import get_logger
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
-from inbox.models.action_log import schedule_action, ActionError
+from inbox.models.action_log import schedule_action
 from inbox.models.session import InboxSession, session_scope
 from inbox.search.adaptor import NamespaceSearchEngine, SearchEngineError
 from inbox.transactions import delta_sync

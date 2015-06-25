@@ -4,16 +4,21 @@ import calendar
 from sqlalchemy import desc
 from inbox.models import Message, Thread, Namespace, Block
 from inbox.util.misc import dt_to_timestamp
-from tests.util.base import api_client, test_client, add_fake_message
+from tests.util.base import (api_client, test_client, add_fake_message,
+                             add_fake_thread, thread)
 
 __all__ = ['api_client', 'test_client']
 
-NAMESPACE_ID = 1
 
-
-def test_filtering(db, api_client):
-    message = db.session.query(Message).filter_by(id=2).one()
-    thread = message.thread
+def test_filtering(db, api_client, default_namespace):
+    thread = add_fake_thread(db.session, default_namespace.id)
+    thread.tags.add(default_namespace.tags['inbox'])
+    message = add_fake_message(db.session, default_namespace.id, thread,
+                               to_addr=[('Bob', 'bob@foocorp.com')],
+                               from_addr=[('Alice', 'alice@foocorp.com')],
+                               subject='some subject')
+    thread.subject = message.subject
+    db.session.commit()
     t_start = dt_to_timestamp(thread.subjectdate)
     t_lastmsg = dt_to_timestamp(thread.recentdate)
 
@@ -24,11 +29,11 @@ def test_filtering(db, api_client):
     received_date = message.received_date
 
     results = api_client.get_data('/threads?thread_id={}'
-                                  .format('e6z26rjrxs2gu8at6gsa8svr1'))
+                                  .format(thread.public_id))
     assert len(results) == 1
 
     results = api_client.get_data('/messages?thread_id={}'
-                                  .format('e6z26rjrxs2gu8at6gsa8svr1'))
+                                  .format(thread.public_id))
     assert len(results) == 1
 
     results = api_client.get_data('/threads?cc={}'
@@ -81,6 +86,12 @@ def test_filtering(db, api_client):
     assert len(results) == 1
     results = api_client.get_data('/threads?subject={}'.format(subject))
     assert len(results) == 1
+
+    for _ in range(3):
+        add_fake_message(db.session, default_namespace.id,
+                         to_addr=[('', 'inboxapptest@gmail.com')],
+                         thread=add_fake_thread(db.session,
+                                                default_namespace.id))
 
     results = api_client.get_data('/messages?any_email={}'.
                                   format('inboxapptest@gmail.com'))
@@ -164,7 +175,7 @@ def test_filtering(db, api_client):
 
     results = api_client.get_data('/threads?view=count')
 
-    assert results['count'] == 16
+    assert results['count'] == 4
 
     results = api_client.get_data('/threads?view=ids&to={}&limit=3'.
                                   format('inboxapptest@gmail.com', 3))
@@ -174,15 +185,23 @@ def test_filtering(db, api_client):
                for r in results), "Returns a list of string"
 
 
-def test_ordering(api_client, db):
+def test_ordering(api_client, db, default_namespace):
+    for i in range(3):
+        thr = add_fake_thread(db.session, default_namespace.id)
+        received_date = (datetime.datetime.utcnow() +
+                         datetime.timedelta(seconds=22 * (i + 1)))
+        add_fake_message(db.session, default_namespace.id,
+                         thr, received_date=received_date)
     ordered_results = api_client.get_data('/messages')
     ordered_dates = [result['date'] for result in ordered_results]
     assert ordered_dates == sorted(ordered_dates, reverse=True)
 
     ordered_results = api_client.get_data('/messages?limit=3')
-    expected_public_ids = [public_id for public_id, in
-                           db.session.query(Message.public_id).
-                           order_by(desc(Message.received_date)).limit(3)]
+    expected_public_ids = [
+        public_id for public_id, in
+        db.session.query(Message.public_id).
+        filter(Message.namespace_id == default_namespace.id).
+        order_by(desc(Message.received_date)).limit(3)]
     assert expected_public_ids == [r['id'] for r in ordered_results]
 
 
@@ -191,29 +210,29 @@ def test_strict_argument_parsing(api_client):
     assert r.status_code == 400
 
 
-def test_distinct_results(api_client, db):
+def test_distinct_results(api_client, db, default_namespace):
     """Test that limit and offset parameters work correctly when joining on
     multiple matching messages per thread."""
     # Create a thread with multiple messages on it.
-    first_thread = db.session.query(Thread).filter(
-        Thread.namespace_id == NAMESPACE_ID)[0]
-    add_fake_message(db.session, NAMESPACE_ID, first_thread,
+    first_thread = add_fake_thread(db.session, default_namespace.id)
+    add_fake_message(db.session, default_namespace.id, first_thread,
                      from_addr=[('', 'hello@example.com')],
                      received_date=datetime.datetime.utcnow())
-    add_fake_message(db.session, NAMESPACE_ID, first_thread,
+    add_fake_message(db.session, default_namespace.id, first_thread,
                      from_addr=[('', 'hello@example.com')],
                      received_date=datetime.datetime.utcnow())
 
     # Now create another thread with the same participants
     older_date = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
-    second_thread = db.session.query(Thread).filter(
-        Thread.namespace_id == NAMESPACE_ID)[1]
-    add_fake_message(db.session, NAMESPACE_ID, second_thread,
+    second_thread = add_fake_thread(db.session, default_namespace.id)
+    add_fake_message(db.session, default_namespace.id, second_thread,
                      from_addr=[('', 'hello@example.com')],
                      received_date=older_date)
-    add_fake_message(db.session, NAMESPACE_ID, second_thread,
+    add_fake_message(db.session, default_namespace.id, second_thread,
                      from_addr=[('', 'hello@example.com')],
                      received_date=older_date)
+    second_thread.recentdate = older_date
+    db.session.commit()
 
     filtered_results = api_client.get_data('/threads?from=hello@example.com'
                                            '&limit=1&offset=0')
@@ -238,14 +257,14 @@ def test_filtering_namespaces(db, test_client):
     all_namespaces = json.loads(test_client.get('/n/').data)
     email = all_namespaces[0]['email_address']
 
+    some_namespaces = json.loads(test_client.get('/n/?offset=1').data)
+    assert len(some_namespaces) == len(all_namespaces) - 1
+
     no_namespaces = json.loads(test_client.get('/n/?limit=0').data)
     assert no_namespaces == []
 
     all_namespaces = json.loads(test_client.get('/n/?limit=1').data)
     assert len(all_namespaces) == 1
-
-    some_namespaces = json.loads(test_client.get('/n/?offset=1').data)
-    assert len(some_namespaces) == len(all_namespaces) - 1
 
     filter_ = '?email_address={}'.format(email)
     namespaces = json.loads(test_client.get('/n/' + filter_).data)

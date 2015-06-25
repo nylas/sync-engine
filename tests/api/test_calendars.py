@@ -1,39 +1,23 @@
+from tests.util.base import add_fake_event
 from inbox.models import Calendar
-from tests.util.base import api_client, default_account
-
-__all__ = ['api_client']
 
 
-def test_api_list(db, default_account, api_client):
-    calendar_list = api_client.get_data('/calendars')
-
-    cal = None
-    for c in calendar_list:
-        if c['name'] == 'default':
-            cal = c
-    assert cal
-    assert cal['object'] == 'calendar'
-    assert cal['name'] == 'default'
-    assert cal['read_only'] is False
-    assert cal['namespace_id'] == default_account.namespace.public_id
-
-
-def test_get_calendar(db, default_account, api_client):
+def test_get_calendar(db, default_namespace, api_client):
     cal = Calendar(
-        namespace_id=default_account.namespace.id,
+        namespace_id=default_namespace.id,
         uid='uid',
         provider_name='WTF',
         name='Holidays')
     db.session.add(cal)
     db.session.commit()
     cal_id = cal.public_id
+    calendar_item = api_client.get_data('/calendars/{}'.format(cal_id))
 
-    resp_data = api_client.get_data('/calendars/' + cal_id)
-    assert resp_data['namespace_id'] == default_account.namespace.public_id
-    assert resp_data['name'] == 'Holidays'
-    assert resp_data['description'] is None
-    assert resp_data['read_only'] is False
-    assert resp_data['object'] == 'calendar'
+    assert calendar_item['namespace_id'] == default_namespace.public_id
+    assert calendar_item['name'] == 'Holidays'
+    assert calendar_item['description'] is None
+    assert calendar_item['read_only'] is False
+    assert calendar_item['object'] == 'calendar'
 
 
 def test_handle_not_found_calendar(api_client):
@@ -41,9 +25,9 @@ def test_handle_not_found_calendar(api_client):
     assert resp_data.status_code == 404
 
 
-def test_add_to_specific_calendar(db, default_account, api_client):
+def test_add_to_specific_calendar(db, default_namespace, api_client):
     cal = Calendar(
-        namespace_id=default_account.namespace.id,
+        namespace_id=default_namespace.id,
         uid='uid',
         provider_name='WTF',
         name='Custom')
@@ -63,7 +47,6 @@ def test_add_to_specific_calendar(db, default_account, api_client):
 
 def test_add_to_read_only_calendar(db, api_client):
     cal_list = api_client.get_data('/calendars')
-    assert len(cal_list) == 2
     ro_cal = None
     for c in cal_list:
         if c['read_only']:
@@ -78,7 +61,13 @@ def test_add_to_read_only_calendar(db, api_client):
     assert resp.status_code == 400
 
 
-def test_delete_from_readonly_calendar(db, api_client):
+def test_delete_from_readonly_calendar(db, default_namespace, api_client):
+
+    add_fake_event(db.session, default_namespace.id,
+                   calendar=db.session.query(Calendar).filter(
+                       Calendar.namespace_id == default_namespace.id,
+                       Calendar.read_only == True).first(),
+                   read_only=True)
     calendar_list = api_client.get_data('/calendars')
 
     read_only_calendar = None

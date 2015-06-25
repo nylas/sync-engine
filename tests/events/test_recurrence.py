@@ -436,7 +436,8 @@ def test_new_instance_cancelled(db, default_account, calendar):
                          [override], log, db.session)
     db.session.commit()
     # Check the event got saved with the cancelled flag
-    find_override = db.session.query(Event).filter_by(uid=override_uid).one()
+    find_override = db.session.query(Event).filter_by(
+        uid=override_uid, namespace_id=default_account.namespace.id).one()
     assert find_override.cancelled is True
 
 

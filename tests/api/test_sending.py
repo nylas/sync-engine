@@ -5,9 +5,9 @@ import pytest
 from flanker import mime
 from inbox.basicauth import OAuthError
 from inbox.models import Message
-from tests.util.base import api_client, default_account
+from tests.util.base import thread, message
 
-__all__ = ['api_client', 'default_account']
+__all__ = ['thread', 'message']
 
 
 class MockTokenManager(object):
@@ -121,38 +121,32 @@ def insecure_content(patch_token_manager, monkeypatch):
 
 
 @pytest.fixture
-def example_draft(db):
-    from inbox.models import Account
-    account = db.session.query(Account).get(1)
+def example_draft(db, default_account):
     return {
         'subject': 'Draft test',
         'body': '<html><body><h2>Sea, birds and sand.</h2></body></html>',
         'to': [{'name': 'The red-haired mermaid',
-                'email': account.email_address}]
+                'email': default_account.email_address}]
     }
 
 
 @pytest.fixture
-def example_draft_bad_subject(db):
-    from inbox.models import Account
-    account = db.session.query(Account).get(1)
+def example_draft_bad_subject(db, default_account):
     return {
         'subject': ['draft', 'test'],
         'body': '<html><body><h2>Sea, birds and sand.</h2></body></html>',
         'to': [{'name': 'The red-haired mermaid',
-                'email': account.email_address}]
+                'email': default_account.email_address}]
     }
 
 
 @pytest.fixture
-def example_draft_bad_body(db):
-    from inbox.models import Account
-    account = db.session.query(Account).get(1)
+def example_draft_bad_body(db, default_account):
     return {
         'subject': 'Draft test',
         'body': {'foo': 'bar'},
         'to': [{'name': 'The red-haired mermaid',
-                'email': account.email_address}]
+                'email': default_account.email_address}]
     }
 
 
@@ -339,7 +333,10 @@ def test_bcc_in_recipients_but_stripped_from_headers(patch_smtp, api_client):
     assert parsed.headers.get('Cc') == 'jane@foocorp.com'
 
 
-def test_reply_headers_set(patch_smtp, api_client, example_draft):
+def test_reply_headers_set(db, patch_smtp, api_client, example_draft, thread,
+                           message):
+    message.message_id_header = '<exampleheader@example.com>'
+    db.session.commit()
     thread_id = api_client.get_data('/threads')[0]['id']
 
     api_client.post_data('/send', {'to': [{'email': 'bob@foocorp.com'}],

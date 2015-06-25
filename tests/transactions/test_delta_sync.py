@@ -1,6 +1,6 @@
 import json
 import time
-from tests.util.base import api_client, add_fake_message, db, thread
+from tests.util.base import add_fake_message, add_fake_thread
 
 __all__ = ['api_client', 'db', 'thread']
 
@@ -21,10 +21,12 @@ def test_invalid_input(api_client):
     assert sync_response.status_code == 400
 
 
-def test_event_generation(api_client):
+def test_event_generation(api_client, db, default_namespace):
     """Test that deltas are returned in response to client sync API calls.
     Doesn't test formatting of individual deltas in the response."""
-    ts = int(time.time())
+    for i in range(10):
+        add_fake_thread(db.session, default_namespace.id)
+    ts = int(time.time() + 22)
     cursor = get_cursor(api_client, ts)
 
     sync_data = api_client.get_data('/delta?cursor={}'.format(cursor))
@@ -60,10 +62,10 @@ def test_event_generation(api_client):
     assert len(sync_data['deltas']) == 1
 
 
-def test_events_are_condensed(api_client):
+def test_events_are_condensed(api_client, thread):
     """Test that multiple revisions of the same object are rolled up in the
     delta response."""
-    ts = int(time.time())
+    ts = int(time.time() + 22)
     cursor = get_cursor(api_client, ts)
 
     # Create, then modify a tag; then modify it again
@@ -96,7 +98,7 @@ def test_events_are_condensed(api_client):
 
 
 def test_handle_missing_objects(api_client, db, thread, default_namespace):
-    ts = int(time.time())
+    ts = int(time.time() + 22)
     cursor = get_cursor(api_client, ts)
 
     messages = []

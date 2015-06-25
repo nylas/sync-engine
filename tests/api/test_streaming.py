@@ -2,13 +2,9 @@ import json
 import time
 
 import pytest
-
+from tests.util.base import add_fake_message, thread
 from inbox.models import Namespace
 from inbox.util.url import url_concat
-
-from tests.util.base import default_namespace
-
-__all__ = ['default_namespace']
 
 
 @pytest.yield_fixture
@@ -55,7 +51,7 @@ def test_response_when_old_cursor_given(db, api_prefix, streaming_test_client,
 def test_empty_response_when_latest_cursor_given(db, api_prefix,
                                                  streaming_test_client,
                                                  default_namespace):
-    cursor = get_cursor(streaming_test_client, int(time.time()),
+    cursor = get_cursor(streaming_test_client, int(time.time() + 22),
                         default_namespace)
     url = url_concat(api_prefix, {'timeout': .1,
                                   'cursor': cursor})
@@ -76,7 +72,10 @@ def test_gracefully_handle_new_namespace(db, streaming_test_client):
     assert r.status_code == 200
 
 
-def test_exclude_object_types(db, api_prefix, streaming_test_client):
+def test_exclude_object_types(db, api_prefix, streaming_test_client, thread,
+                              default_namespace):
+    add_fake_message(db.session, default_namespace.id, thread,
+                     from_addr=[('Bob', 'bob@foocorp.com')])
     # Check that we do get message and contact changes by default.
     url = url_concat(api_prefix, {'timeout': .1,
                                   'cursor': '0'})

@@ -8,9 +8,9 @@ from tests.util.base import (api_client, add_fake_thread,
 __all__ = ['api_client', 'default_namespace']
 
 
-def test_contact_rankings(db, api_client):
+def test_contact_rankings(db, api_client, default_namespace):
     # Clear cached data (if it exists)
-    namespace_id = default_namespace(db).id
+    namespace_id = default_namespace.id
     try:
         cached_data = db.session.query(DataProcessingCache) \
                       .filter(DataProcessingCache.namespace_id ==
@@ -22,7 +22,7 @@ def test_contact_rankings(db, api_client):
         pass
 
     # Send some emails
-    namespace_email = default_namespace(db).email_address
+    namespace_email = default_namespace.email_address
 
     me = ('me', namespace_email)
     recipients = ([[('first', 'number1@nylas.com')]] * 8 +
@@ -77,9 +77,9 @@ def test_contact_rankings(db, api_client):
         assert False, "Contact rankings not cached"
 
 
-def test_contact_groups(db, api_client):
+def test_contact_groups(db, api_client, default_namespace):
     # Clear cached data (if it exists)
-    namespace_id = default_namespace(db).id
+    namespace_id = default_namespace.id
     try:
         cached_data = db.session.query(DataProcessingCache) \
                       .filter(DataProcessingCache.namespace_id ==
@@ -91,7 +91,7 @@ def test_contact_groups(db, api_client):
         pass
 
     # Send some emails
-    namespace_email = default_namespace(db).email_address
+    namespace_email = default_namespace.email_address
     me = ('me', namespace_email)
     recipients = ([[('a', 'a@nylas.com'),
                    ('b', 'b@nylas.com'),

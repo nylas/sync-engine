@@ -2,22 +2,20 @@
 
 from datetime import datetime
 
-ACCOUNT_ID = 1
 
-
-def test_mutable_json_type(db, config):
+def test_mutable_json_type(db, config, default_account, folder):
     """
     Test that FolderSync._sync_status which is a mutable JSON column is
     updated as expected.
 
     """
-    from inbox.models.account import Account
     from inbox.models.backends.imap import ImapFolderSyncStatus
 
-    account = db.session.query(Account).get(ACCOUNT_ID)
-
-    sync_status = db.session.query(ImapFolderSyncStatus).filter_by(
-        account_id=ACCOUNT_ID, folder_id=account.inbox_folder_id).one()
+    sync_status = ImapFolderSyncStatus(
+        account_id=default_account.id,
+        folder=folder)
+    db.session.add(sync_status)
+    db.session.commit()
 
     original_metrics = sync_status.metrics
 
