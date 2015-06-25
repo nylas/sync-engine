@@ -42,12 +42,14 @@ def signal_handler(signum, frame):
 @click.option('--prod/--no-prod', default=False,
               help='Disables the autoreloader and potentially other '
                    'non-production features.')
+@click.option('--enable-tracer/--disable-tracer', default=True,
+              help='Disables the stuck greenlet tracer')
 @click.option('-c', '--config', default=None,
               help='Path to JSON configuration file.')
 @click.option('--process_num', default=0,
               help="This process's number in the process group: a unique "
                    "number satisfying 0 <= process_num < total_processes.")
-def main(prod, config, process_num):
+def main(prod, enable_tracer, config, process_num):
     """ Launch the Inbox sync service. """
     configure_logging()
 
@@ -90,8 +92,10 @@ def main(prod, config, process_num):
         print >>sys.stderr, "Feature flags enabled: {}\n".format(
             ' '.join(inbox_config['FEATURE_FLAGS']))
 
-    tracer = Tracer(gather_stats=True)
-    tracer.start()
+    if enable_tracer:
+        tracer = Tracer(gather_stats=True)
+        tracer.start()
+
     global sync_service
     sync_service = SyncService(process_num, total_processes)
     sync_service.run()
