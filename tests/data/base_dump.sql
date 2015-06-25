@@ -1,13 +1,13 @@
--- MySQL dump 10.13  Distrib 5.5.41, for debian-linux-gnu (x86_64)
+-- MySQL dump 10.13  Distrib 5.6.24, for Linux (x86_64)
 --
 -- Host: localhost    Database: test
 -- ------------------------------------------------------
--- Server version	5.5.41-0ubuntu0.12.04.1
+-- Server version	5.6.24-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8 */;
+/*!40101 SET NAMES utf8mb4 */;
 /*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
 /*!40103 SET TIME_ZONE='+00:00' */;
 /*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
@@ -150,7 +150,7 @@ CREATE TABLE `alembic_version` (
 
 LOCK TABLES `alembic_version` WRITE;
 /*!40000 ALTER TABLE `alembic_version` DISABLE KEYS */;
-INSERT INTO `alembic_version` VALUES ('10da2e0bc3bb');
+INSERT INTO `alembic_version` VALUES ('3857f395fb1d');
 /*!40000 ALTER TABLE `alembic_version` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -296,6 +296,38 @@ LOCK TABLES `contact` WRITE;
 /*!40000 ALTER TABLE `contact` DISABLE KEYS */;
 INSERT INTO `contact` VALUES (1,'ï¿½Zï¿½zoï¿½L?ï¿','ac99aa06-5604-4234-9ccc-dfb5f41973d1','inbox','local','',NULL,24,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'inboxapptest@gmail.com','inboxapptest@gmail.com',1),(2,'ï¿½6\",NA@ï¿½ï¿½ï','523f7769-c26e-4728-921d-ffd43e5bb1b4','inbox','local','Ben Bitdiddle',NULL,10,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'benbitdiddle1861@gmail.com','benbitdiddle1861@gmail.com',1),(3,'ï¿½4ï¿½-;Kï¿½ï¿','0ff75111-5a72-46a4-a0d0-d1d189422117','inbox','local','Paul Tiseo',NULL,10,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'paulxtiseo@gmail.com','paulxtiseo@gmail.com',1),(4,'ï¿½ï¿½ï¿½&mN@ï¿½','6840fd76-34e3-4b1a-b0a3-6b797bbf92d7','inbox','local','golang-nuts',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'golang-nuts@googlegroups.com','golang-nuts@googlegroups.com',1),(5,'ï¿½`<]Jï¿½ï¿½','31d28d81-67df-479b-ae79-6f19589a88dd','inbox','local','Gmail Team',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'mail-noreply@google.com','mail-noreply@google.com',1),(6,'\\ï¿½#eï¿½Hxï¿½ï','c0849c30-e29d-4404-b931-ddf9c3d06201','inbox','local','Christine Spang',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'christine@spang.cc','christine@spang.cc',1),(7,'ï¿½ï¿½>J0ï¿½','94d616ac-3963-442a-9d05-b88d43a94758','inbox','local','',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'no-reply@accounts.google.com','no-reply@accounts.google.com',1),(8,'amXï¿½T@Â˜6ï¿½>','47c6565a-2c8e-49a5-a32c-9a7aff921248','inbox','local','kavya joshi',NULL,9,'2014-05-13 02:19:12','2014-05-13 02:19:12',NULL,'kavya719@gmail.com','kavya719@gmail.com',1);
 /*!40000 ALTER TABLE `contact` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `dataprocessingcache`
+--
+
+DROP TABLE IF EXISTS `dataprocessingcache`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `dataprocessingcache` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `namespace_id` int(11) NOT NULL,
+  `contact_rankings` mediumblob,
+  `contact_rankings_last_updated` datetime DEFAULT NULL,
+  `contact_groups` mediumblob,
+  `contact_groups_last_updated` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `namespace_id` (`namespace_id`),
+  CONSTRAINT `dataprocessingcache_ibfk_1` FOREIGN KEY (`namespace_id`) REFERENCES `namespace` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `dataprocessingcache`
+--
+
+LOCK TABLES `dataprocessingcache` WRITE;
+/*!40000 ALTER TABLE `dataprocessingcache` DISABLE KEYS */;
+/*!40000 ALTER TABLE `dataprocessingcache` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -1873,4 +1905,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-06-24  6:12:06
+-- Dump completed on 2015-06-25 13:19:43
