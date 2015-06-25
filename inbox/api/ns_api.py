@@ -14,7 +14,8 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.models.session import session_scope
 from inbox.models import (Message, Block, Part, Thread, Namespace,
-                          Tag, Contact, Calendar, Event, Transaction)
+                          Tag, Contact, Calendar, Event, Transaction,
+                          DataProcessingCache)
 from inbox.api.sending import send_draft, send_raw_mime
 from inbox.api.kellogs import APIEncoder
 from inbox.api import filtering
@@ -27,13 +28,16 @@ from inbox.api.validation import (get_tags, get_attachments, get_calendar,
                                   validate_search_query,
                                   validate_search_sort,
                                   valid_delta_object_types)
+from inbox.contacts.algorithms import (calculate_contact_scores,
+                                       calculate_group_scores,
+                                       calculate_group_counts, is_stale)
 import inbox.contacts.crud
 from inbox.sendmail.base import (create_draft, update_draft, delete_draft,
                                  create_draft_from_mime)
 from inbox.log import get_logger
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
-from inbox.models.action_log import schedule_action
-from inbox.models.session import InboxSession
+from inbox.models.action_log import schedule_action, ActionError
+from inbox.models.session import InboxSession, session_scope
 from inbox.search.adaptor import NamespaceSearchEngine, SearchEngineError
 from inbox.transactions import delta_sync
 
@@ -538,7 +542,7 @@ def raw_message_api(public_id):
     return g.encoder.jsonify({"rfc2822": b64_contents})
 
 
-#
+##
 # Contacts
 ##
 @app.route('/contacts/', methods=['GET'])
@@ -1170,3 +1174,113 @@ def stream_changes():
         g.namespace, transaction_pointer=transaction_pointer,
         poll_interval=1, timeout=timeout, exclude_types=exclude_types)
     return Response(generator, mimetype='text/event-stream')
+
+
+##
+# Groups and Contact Rankings
+##
+
+@app.route('/groups/intrinsic')
+def groups_intrinsic():
+    g.parser.add_argument('force_recalculate', type=strict_bool,
+                          location='args')
+    g.parser.add_argument('alias', type=bounded_str, location='args')
+    args = strict_parse_args(g.parser, request.args)
+    try:
+        dpcache = g.db_session.query(DataProcessingCache).filter(
+            DataProcessingCache.namespace_id == g.namespace.id).one()
+    except NoResultFound:
+        dpcache = DataProcessingCache(namespace_id=g.namespace.id)
+
+    last_updated = dpcache.contact_groups_last_updated
+    cached_data = dpcache.contact_groups
+
+    use_cached_data = (not (is_stale(last_updated) or cached_data is None) and
+                       args['force_recalculate'] is not True)
+
+    # With folders update, how we get these messages should change (?)
+    from_email = g.namespace.email_address
+
+    if not use_cached_data:
+        last_updated = None
+
+    messages = filtering.messages_for_contact_scores(
+        g.db_session, g.namespace.id, from_email, last_updated)
+    if args['alias'] is not None:
+        messages.extend(
+            filtering.messages_for_contact_scores(
+                g.db_session, g.namespace.id, args['alias'], last_updated
+            )
+        )
+
+    if use_cached_data:
+        result = cached_data
+        new_guys = calculate_group_counts(messages, from_email)
+        # result['use_cached_data'] = -1  # debug
+        for k, v in new_guys.items():
+            if k in result:
+                result[k] += v
+            else:
+                result[k] = v
+    else:
+        result = calculate_group_scores(messages, from_email)
+        dpcache.contact_groups = result
+        g.db_session.add(dpcache)
+        g.db_session.commit()
+
+    result = sorted(result.items(), key=lambda x: x[1], reverse=True)
+    # result.append(('total_messages_fetched', len(messages)))  # debug
+    return g.encoder.jsonify(result)
+
+
+@app.route('/contacts/rankings')
+def contact_rankings():
+    g.parser.add_argument('force_recalculate', type=strict_bool,
+                          location='args')
+    g.parser.add_argument('alias', type=bounded_str, location='args')
+    args = strict_parse_args(g.parser, request.args)
+    try:
+        dpcache = g.db_session.query(DataProcessingCache).filter(
+            DataProcessingCache.namespace_id == g.namespace.id).one()
+    except NoResultFound:
+        dpcache = DataProcessingCache(namespace_id=g.namespace.id)
+
+    last_updated = dpcache.contact_rankings_last_updated
+    cached_data = dpcache.contact_rankings
+
+    use_cached_data = (not (is_stale(last_updated) or cached_data is None) and
+                       args['force_recalculate'] is not True)
+
+    # With folders update, how we get these messages should change (?)
+    from_email = g.namespace.email_address
+
+    if not use_cached_data:
+        last_updated = None
+
+    messages = filtering.messages_for_contact_scores(
+        g.db_session, g.namespace.id, from_email, last_updated)
+    if args['alias'] is not None:
+        messages.extend(
+            filtering.messages_for_contact_scores(
+                g.db_session, g.namespace.id, args['alias'], last_updated
+            )
+        )
+
+    if use_cached_data:
+        new_guys = calculate_contact_scores(messages, time_dependent=False)
+        result = cached_data
+        # result['use_cached_data'] = -1  # debug
+        for k, v in new_guys.items():
+            if k in result:
+                result[k] += v
+            else:
+                result[k] = v
+    else:
+        result = calculate_contact_scores(messages)
+        dpcache.contact_rankings = result
+        g.db_session.add(dpcache)
+        g.db_session.commit()
+
+    result = sorted(result.items(), key=lambda x: x[1], reverse=True)
+    # result.append(('total messages fetched', len(messages)))  # debug
+    return g.encoder.jsonify(result)

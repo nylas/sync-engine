@@ -1,0 +1,135 @@
+#!/usr/bin/env python
+import json
+import time
+
+from inbox.api import filtering
+from inbox.contacts.algorithms import calculate_group_scores
+from inbox.contacts.algorithms import calculate_contact_scores
+from inbox.models import Namespace
+from inbox.models.session import InboxSession, session_scope
+from inbox.ignition import main_engine
+engine = main_engine()
+
+
+def _get_contact_groups(messages, namespace_email):
+    result = calculate_group_scores(messages, namespace_email)
+    return sorted(result.items(), key=lambda x: x[1], reverse=True)
+
+
+def _get_contact_rankings(messages):
+    result = calculate_contact_scores(messages)
+    return sorted(result.items(), key=lambda x: x[1], reverse=True)
+
+
+def _get_messages(namespace_id, from_address, db_session):
+    return filtering.messages_for_contact_scores(
+        db_session, namespace_id, from_address)
+
+
+def main(db_session):
+    print
+    print '----------------------------------------'
+    print 'Testing contact groupings and rankings'
+    print '----------------------------------------'
+    print
+    namespaces = db_session.query(Namespace).all()
+    print "Total namespaces:", len(namespaces)
+    print
+
+    total_messages = 0.0
+    total_fetch_time = 0
+    total_rankings_time = 0
+    total_groups_time = 0
+
+    most_messages = (0, 'email')
+    highest_fetch_time = (0, 'email', 0) # (fetchtime, email, num_messages)
+    highest_rankings_time = (0, 'email', 0)
+    highest_groups_time = (0, 'email', 0)
+
+    results = [] #will be tuples: (#messages, fetch time, rankings time, groups time)
+
+    for ns in namespaces:
+        nsid, from_addr = ns.id, ns.email_address
+        print 'Account:', from_addr
+        if from_addr == 'dmmanesh@gmail.com':
+            from_addr = 'maneshd@mit.edu'
+
+        begin_time = time.time()
+        messages = _get_messages(nsid, from_addr, db_session)
+        fetch_messages_time = time.time() - begin_time
+        total_fetch_time += fetch_messages_time
+        total_messages += len(messages)
+        most_messages = max(most_messages, (len(messages), from_addr))
+        highest_fetch_time = max(
+            highest_fetch_time,
+            (fetch_messages_time, from_addr, len(messages)))
+        print 'Total messages: %d' % len(messages)
+        print 'Time to fetch messages: %f' % fetch_messages_time
+
+        begin_time = time.time()
+        contact_rankings = _get_contact_rankings(messages)
+        contact_rankings_time = time.time() - begin_time
+        total_rankings_time += contact_rankings_time
+        highest_rankings_time = max(
+            highest_rankings_time,
+            (contact_rankings_time, from_addr, len(messages)))
+        print 'Time to get contact rankings: %f' % contact_rankings_time
+
+        begin_time = time.time()
+        contact_groups = _get_contact_groups(messages, from_addr)
+        contact_groups_time = time.time() - begin_time
+        total_groups_time += contact_groups_time
+        highest_groups_time = max(
+            highest_groups_time,
+            (contact_groups_time, from_addr, len(messages)))
+        print 'time to get contact groups: %f' % contact_groups_time
+        print
+        results.append(
+            (len(messages), fetch_messages_time,
+            contact_rankings_time, contact_groups_time)
+        )
+
+    print
+    print 'SUMMARY'
+    print '-------'
+    print 'Total time spent...'
+    print 'fetching messages: %f' % total_fetch_time
+    print 'calculating rankings: %f' % total_rankings_time
+    print 'caclulating groups: %f' % total_groups_time
+    print
+    print 'Average time spent per account...'
+    print 'fetching messages: %f' % (total_fetch_time / len(namespaces))
+    print 'calculating rankings: %f' % (total_rankings_time / len(namespaces))
+    print 'calculating groups: %f' % (total_groups_time / len(namespaces))
+    print
+    print 'Average time per message spent...'
+    print 'fetching messages: %f' % (total_fetch_time / total_messages)
+    print 'calculating rankings: %f' % (total_rankings_time / total_messages)
+    print 'calculating groups: %f' % (total_groups_time / total_messages)
+    print
+    print '-------'
+    print
+    print 'Max number of messages'
+    print 'Messages: %d \nAccount %s' % most_messages
+    print
+    print 'Highest fetch time'
+    print 'Fetch time: %f \nAccount: %s \nTotal Messages: %d' % \
+           highest_fetch_time
+    print
+    print 'Highest contact rankings time'
+    print 'Ranking time: %f \nAccount: %s \nTotal Messages: %d' % \
+           highest_rankings_time
+    print
+    print 'Highest grouping time'
+    print 'Grouping time: %f \nAccount: %s \nTotal Messages: %d' % \
+           highest_groups_time
+    print
+    print '-------'
+    print
+    print 'Data for graphing:'
+    print sorted(results)
+
+
+if __name__ == '__main__':
+    with session_scope() as db_session:
+        main(db_session)

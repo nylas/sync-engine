@@ -77,7 +77,8 @@ setup(
              'bin/create-db',
              'bin/inbox-api',
              'bin/get-id',
-             'bin/syncback-service'],
+             'bin/syncback-service',
+             'bin/test_contact_groups'],
 
     # See:
     # https://pythonhosted.org/setuptools/setuptools.html#dynamic-discovery-of-services-and-plugins
