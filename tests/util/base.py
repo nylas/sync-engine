@@ -189,7 +189,7 @@ def syncback_service():
     s.join()
 
 
-@fixture(scope='function', autouse=True)
+@fixture(scope='function')
 def default_account(db):
     import platform
     from inbox.models.backends.gmail import GmailAccount
