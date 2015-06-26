@@ -500,7 +500,15 @@ def message_api(public_id):
         raise NotFoundError("Couldn't find message {0} ".format(public_id))
     if request.method == 'GET':
         if request.headers.get('Accept', None) == 'message/rfc822':
-            return Response(message.full_body.data, mimetype='message/rfc822')
+            if message.full_body is not None:
+                return Response(message.full_body.data,
+                                mimetype='message/rfc822')
+            else:
+                g.log.error("Message without full_body attribute: id='{0}'"
+                            .format(message.id))
+                raise NotFoundError(
+                    "Couldn't find raw contents for message `{0}` "
+                    .format(public_id))
         return g.encoder.jsonify(message)
     elif request.method == 'PUT':
         data = request.get_json(force=True)
@@ -538,7 +546,14 @@ def raw_message_api(public_id):
     if message.full_body is None:
         raise NotFoundError("Couldn't find message {0}".format(public_id))
 
-    b64_contents = base64.b64encode(message.full_body.data)
+    if message.full_body is not None:
+        b64_contents = base64.b64encode(message.full_body.data)
+    else:
+        g.log.error("Message without full_body attribute: id='{0}'"
+                    .format(message.id))
+        raise NotFoundError(
+                    "Couldn't find raw contents for message `{0}` "
+                    .format(public_id))
     return g.encoder.jsonify({"rfc2822": b64_contents})
 
 
