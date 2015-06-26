@@ -1,6 +1,5 @@
 import datetime
 from collections import defaultdict
-from itertools import combinations
 
 '''
 This file currently contains algorithms for the contacts/rankings endpoint
@@ -13,9 +12,13 @@ MIN_MESSAGE_WEIGHT = .01
 
 # For calculate_group_scores
 MIN_GROUP_SIZE = 2
-MIN_MESSAGE_COUNT = 1.5  # Might want to tune this param. (2.5?)
+MIN_MESSAGE_COUNT = 2.5  # Might want to tune this param. (1.5, 2.5?)
 SELF_IDENTITY_THRESHOLD = 0.3  # Also tunable
 JACCARD_THRESHOLD = .35  # probably shouldn't tune this
+
+SOCIAL_MOLECULE_EXPANSION_LIMIT = 1000  # Don't add too many molecules!
+SOCIAL_MOLECULE_LIMIT = 5000  # Give up if there are too many messages
+
 
 ##
 # Helper functions
@@ -39,6 +42,17 @@ def _get_participants(msg, excluded_emails=[]):
     participants = msg.to_addr + msg.cc_addr + msg.bcc_addr
     return sorted(list(set([email.lower() for _, email in participants
                             if email not in excluded_emails])))
+
+
+# Not really an algorithm, but it seemed reasonable to put this here?
+def is_stale(last_updated, lifespan=14):
+    """ last_updated is a datetime.datetime object
+        lifespan is measured in days
+    """
+    if last_updated is None:
+        return True
+    expiration_date = last_updated + datetime.timedelta(days=lifespan)
+    return datetime.datetime.now() > expiration_date
 
 
 ##
@@ -72,7 +86,7 @@ def calculate_group_counts(messages, user_email):
 
 
 def calculate_group_scores(messages, user_email):
-    """This is an implementation of the algorithm described
+    """This is a (modified) implementation of the algorithm described
     in this paper: http://mobisocial.stanford.edu/papers/iui11g.pdf
 
     messages must have the following properties:
@@ -83,13 +97,12 @@ def calculate_group_scores(messages, user_email):
     """
     now = datetime.datetime.now()
     message_ids_to_scores = {}
-    # molecules_dict maps (tuple of emails,) -> [list of message ids]
-    molecules_dict = defaultdict(set)
+    molecules_dict = defaultdict(set)  # (emails, ...) -> {message ids, ...}
 
     def get_message_list_weight(message_ids):
         return sum([message_ids_to_scores[m_id] for m_id in message_ids])
 
-    # STEP 1: Gather initial candidate social molecules
+    # Gather initial candidate social molecules
     for msg in messages:
         participants = _get_participants(msg, [user_email])
         if len(participants) >= MIN_GROUP_SIZE:
@@ -97,125 +110,87 @@ def calculate_group_scores(messages, user_email):
             message_ids_to_scores[msg.id] = \
                 _get_message_weight(now, msg.date)
 
-    # STEP 2: Expand pool of social molecules by taking pairwise intersections.
-    new_guys = [1]  # random filler, because python has no do...while loop
-    while len(new_guys) > 0:
-        new_guys = {}
-        for ((g1, m1), (g2, m2)) in combinations(molecules_dict.items(), 2):
-            new_set = set(g1).intersection(set(g2))
-            new_molecule = tuple(sorted(list(new_set)))
-            if len(new_molecule) >= MIN_GROUP_SIZE:
-                if new_molecule not in molecules_dict:
-                    if new_molecule in new_guys:
-                        # update the messages!
-                        new_guys[new_molecule] = \
-                            new_guys[new_molecule].union(m1).union(m2)
-                    else:
-                        new_guys[new_molecule] = m1.union(m2)
-                else:
-                    # update the messages!
-                    molecules_dict[new_molecule] = \
-                        molecules_dict[new_molecule].union(m1).union(m2)
-        molecules_dict.update(new_guys)
+    if len(molecules_dict) > SOCIAL_MOLECULE_LIMIT:
+        return {}  # Not worth the calculation
 
-    # STEP 3: Filter out infrequent molecules
+    # Expand pool of social molecules by taking pairwise intersections.
+    # If there are already too many molecules, skip this step.
+    if len(molecules_dict) < SOCIAL_MOLECULE_EXPANSION_LIMIT:
+        _expand_molecule_pool(molecules_dict)
+
+    # Filter out infrequent molecules
     molecules_list = [(set(emails), set(msgs))
                       for (emails, msgs) in molecules_dict.iteritems()
                       if get_message_list_weight(msgs) >= MIN_MESSAGE_COUNT]
 
-    # STEP 4: Test each molecule to see if it can be subsumed by a
-    #         superset molecule (with minimal information loss)
+    # Subsets get absorbed by supersets (if minimal info lost)
+    molecules_list = _subsume_molecules(
+        molecules_list, get_message_list_weight)
 
-    # sort by number of participants
-    molecules_list.sort(key=lambda x: len(x[0]), reverse=True)
-    if len(molecules_list) == 0:
-        return {}
-    surviving_molecules = [molecules_list[0]]
-    subsumed = set()    # Keep track of indices of subsumed molecules
+    molecules_list = _combine_similar_molecules(molecules_list)
 
-    for i in xrange(1, len(molecules_list)):
-        is_subsumed = False
-        g1, m1 = molecules_list[i]  # Smaller group
-        m1_size = get_message_list_weight(m1)
-
-        for j in xrange(i):
-            if j in subsumed:
-                continue
-
-            g2, m2 = molecules_list[j]  # Bigger group
-            m2_size = get_message_list_weight(m2)
-            if g1.issubset(g2):
-                # Sharing error
-                serr = ((len(g2) - len(g1)) * (m1_size - m2_size) /
-                        (1.0 * (len(g2) * m1_size)))
-                if serr < SELF_IDENTITY_THRESHOLD:
-                    subsumed.add(i)
-                    is_subsumed = True
-                    break
-        if not is_subsumed:
-            surviving_molecules.append(molecules_list[i])
-
-    molecules_list = surviving_molecules
-
-    # STEP 5: Merge similar molecules
-    # best = float('infinity')
-    # while best > JACCARD_THRESHOLD:
-    #     best = -float('infinity')
-    #     best_values = None
-
-    #     for ((g1, m1), (g2, m2)) in combinations(molecules_list, 2):
-    #         js = _jaccard_similarity(g1, g2)
-    #         if js > best:
-    #             best = js
-    #             best_values = (g1, m1), (g2, m2)
-
-    #     if best > JACCARD_THRESHOLD:
-    #         (g1, m1), (g2, m2) = best_values
-    #         molecules_list.remove((g1, m1))
-    #         molecules_list.remove((g2, m2))
-    #         molecules_list.append((g1.union(g2), m1.union(m2)))
-
-    # ALTERNATE STEP 5: Considerably more performant
-    # Old version: iteratively combine best pair. Once combined,
-    #              had to recalculate all pairs to find new best
-    # New version: calculate score for each pair, then combine
-    #              all pairs that meet the threshold on each step,
-    #              starting from the highest-scoring pair.
-    new_guys = [1]
-    while len(new_guys) > 0:
-        combined = [False] * len(molecules_list)
-        scores_combo_idxs = []
-        new_guys = []
-
-        for (i, j) in combinations(xrange(len(molecules_list)), 2):
-            (g1, m1), (g2, m2) = molecules_list[i], molecules_list[j]
-            js = _jaccard_similarity(g1, g2)
-            scores_combo_idxs.append((js, (i, j)))
-
-        for (score, (i, j)) in sorted(scores_combo_idxs, reverse=True):
-            if score < JACCARD_THRESHOLD:
-                break   # score < threshold for all to follow
-            if not combined[i] and not combined[j]:
-                (g1, m1), (g2, m2) = molecules_list[i], molecules_list[j]
-                new_guys.append((g1.union(g2), m1.union(m2)))
-                combined[i], combined[j] = True, True
-
-        molecules_list = [molecule for molecule, was_combined
-                          in zip(molecules_list, combined)
-                          if not was_combined]
-        molecules_list.extend(new_guys)
-
-    # STEP 6: Give a score to each group.
+    # Give a score to each group.
     return {', '.join(sorted(g)): get_message_list_weight(m)
             for (g, m) in molecules_list}
 
 
-# Not really an algorithm, but it seemed reasonable to put this here?
-def is_stale(last_updated, lifespan=14):
-    """ last_updated is a datetime.datetime object
-        lifespan is measured in days
-    """
-    if last_updated is None:
-        return True
-    expiration_date = last_updated + datetime.timedelta(days=lifespan)
-    return datetime.datetime.now() > expiration_date
+# Helper functions for calculating group scores
+def _expand_molecule_pool(molecules_dict):
+    mditems = [(set(g), msgs) for (g, msgs) in molecules_dict.items()]
+    for i in xrange(len(mditems)):
+        g1, m1 = mditems[i]
+        for j in xrange(i, len(mditems)):
+            g2, m2 = mditems[j]
+            new_molecule = tuple(sorted(list(g1.intersection(g2))))
+            if len(new_molecule) >= MIN_GROUP_SIZE:
+                molecules_dict[new_molecule] = \
+                        molecules_dict[new_molecule].union(m1).union(m2)
+
+
+def _subsume_molecules(molecules_list, get_message_list_weight):
+    molecules_list.sort(key=lambda x: len(x[0]), reverse=True)
+    is_subsumed = [False] * len(molecules_list)
+    mol_weights = [get_message_list_weight(m) for (_, m) in molecules_list]
+
+    for i in xrange(1, len(molecules_list)):
+        g1, m1 = molecules_list[i]  # Smaller group
+        m1_size = mol_weights[i]
+        for j in xrange(i):
+            if is_subsumed[j]:
+                continue
+            g2, m2 = molecules_list[j]  # Bigger group
+            m2_size = mol_weights[j]
+            if g1.issubset(g2):
+                sharing_error = ((len(g2) - len(g1)) * (m1_size - m2_size) /
+                                 (1.0 * (len(g2) * m1_size)))
+                if sharing_error < SELF_IDENTITY_THRESHOLD:
+                    is_subsumed[i] = True
+                    break
+
+    return [ml for (ml, dead) in zip(molecules_list, is_subsumed) if not dead]
+
+
+def _combine_similar_molecules(molecules_list):
+    """Using a greedy approach here for speed"""
+    new_guys_start_idx = 0
+    while new_guys_start_idx < len(molecules_list):
+        combined = [False] * len(molecules_list)
+        new_guys = []
+        for j in xrange(new_guys_start_idx, len(molecules_list)):
+            for i in xrange(0, j):
+                if combined[i]:
+                    continue
+                (g1, m1), (g2, m2) = molecules_list[i], molecules_list[j]
+                js = _jaccard_similarity(g1, g2)
+                if js > JACCARD_THRESHOLD:
+                    new_guys.append((g1.union(g2), m1.union(m2)))
+                    combined[i], combined[j] = True, True
+                    break
+
+        molecules_list = [molecule for molecule, was_combined
+                          in zip(molecules_list, combined)
+                          if not was_combined]
+        new_guys_start_idx = len(molecules_list)
+        molecules_list.extend(new_guys)
+
+    return molecules_list

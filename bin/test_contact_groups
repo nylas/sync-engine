@@ -83,6 +83,7 @@ def main(db_session):
             highest_groups_time,
             (contact_groups_time, from_addr, len(messages)))
         print 'time to get contact groups: %f' % contact_groups_time
+        print 'Total groups: %d' % len(contact_groups)
         print
         results.append(
             (len(messages), fetch_messages_time,
