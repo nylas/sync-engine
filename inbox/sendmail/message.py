@@ -19,8 +19,6 @@ from flanker import mime
 from flanker.addresslib import address
 from html2text import html2text
 
-from inbox.sqlalchemy_ext.util import generate_public_id
-
 VERSION = pkg_resources.get_distribution('inbox-sync').version
 
 REPLYSTR = 'Re: '
@@ -171,15 +169,15 @@ def add_inbox_headers(msg, inbox_uid):
 
     """
 
-    our_uid = inbox_uid if inbox_uid else \
-        generate_public_id()  # base-36 encoded string
-
     # Set our own custom header for tracking in `Sent Mail` folder
-    msg.headers['X-INBOX-ID'] = our_uid
-    msg.headers['Message-Id'] = '<{}@mailer.nylas.com>'.format(our_uid)
-
+    msg.headers['X-INBOX-ID'] = inbox_uid
+    msg.headers['Message-Id'] = generate_message_id_header(inbox_uid)
     # Potentially also use `X-Mailer`
     msg.headers['User-Agent'] = 'NylasMailer/{0}'.format(VERSION)
+
+
+def generate_message_id_header(uid):
+    return '<{}@mailer.nylas.com>'.format(uid)
 
 
 def _rfc_transform(msg):

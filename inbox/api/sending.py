@@ -43,6 +43,7 @@ def update_draft_on_send(account, draft, db_session):
     if not draft.thread.drafts:
         thread.remove_tag(draft_tag)
     thread.update_from_message(None, draft)
+
     db_session.flush()
 
 

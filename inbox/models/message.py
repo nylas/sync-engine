@@ -21,7 +21,6 @@ from inbox.models.base import MailSyncBase
 from inbox.models.namespace import Namespace
 from inbox.security.blobstorage import encode_blob, decode_blob
 
-
 from inbox.log import get_logger
 log = get_logger()
 
@@ -57,7 +56,7 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
 
     from_addr = Column(JSON, nullable=False, default=lambda: [])
     sender_addr = Column(JSON, nullable=True)
-    reply_to = Column(JSON, nullable=True)
+    reply_to = Column(JSON, nullable=True, default=lambda: [])
     to_addr = Column(JSON, nullable=False, default=lambda: [])
     cc_addr = Column(JSON, nullable=False, default=lambda: [])
     bcc_addr = Column(JSON, nullable=False, default=lambda: [])
@@ -115,7 +114,10 @@ class Message(MailSyncBase, HasRevisions, HasPublicID):
         concatenated. Because the inbox_uid identifies the draft on the remote
         provider, we regenerate it on each draft revision so that we can delete
         the old draft and add the new one on the remote."""
+
+        from inbox.sendmail.message import generate_message_id_header
         self.inbox_uid = '{}-{}'.format(self.public_id, self.version)
+        self.message_id_header = generate_message_id_header(self.inbox_uid)
 
     # In accordance with JWZ (http://www.jwz.org/doc/threading.html)
     references = Column(JSON, nullable=True)
