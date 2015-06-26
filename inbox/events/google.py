@@ -32,6 +32,11 @@ class GoogleEventsProvider(object):
         self.namespace_id = namespace_id
         self.log = log.new(account_id=account_id)
 
+        # A hash to store whether a calendar is read-only or not.
+        # This is a bit of a hack because this isn't exposed at the event level
+        # by the Google Event API.
+        self.calendars_table = {}
+
     def sync_calendars(self):
         """ Fetches data for the user's calendars.
         Returns
@@ -46,7 +51,9 @@ class GoogleEventsProvider(object):
             if item.get('deleted'):
                 deletes.append(item['id'])
             else:
-                updates.append(parse_calendar_response(item))
+                cal = parse_calendar_response(item)
+                self.calendars_table[item['id']] = cal.read_only
+                updates.append(cal)
 
         return CalendarSyncResponse(deletes, updates)
 
@@ -70,8 +77,9 @@ class GoogleEventsProvider(object):
         """
         updates = []
         items = self._get_raw_events(calendar_uid, sync_from_time)
+        read_only_calendar = self.calendars_table.get(calendar_uid, True)
         for item in items:
-            updates.append(parse_event_response(item))
+            updates.append(parse_event_response(item, read_only_calendar))
 
         return updates
 
@@ -222,7 +230,12 @@ def parse_calendar_response(calendar):
     """
     uid = calendar['id']
     name = calendar['summary']
-    read_only = calendar['accessRole'] == 'reader'
+
+    role = calendar['accessRole']
+    read_only = True
+    if role == "owner" or role == "writer":
+        read_only = False
+
     description = calendar.get('description', None)
     return Calendar(uid=uid,
                     name=name,
@@ -230,7 +243,7 @@ def parse_calendar_response(calendar):
                     description=description)
 
 
-def parse_event_response(event):
+def parse_event_response(event, read_only_calendar):
     """
     Constructs an Event object from a Google event resource (a dictionary).
     See https://developers.google.com/google-apps/calendar/v3/reference/events
@@ -278,9 +291,6 @@ def parse_event_response(event):
     else:
         owner = ''
 
-    is_owner = bool(creator and creator.get('self'))
-    read_only = not (is_owner or event.get('guestsCanModify'))
-
     participants = []
     attendees = event.get('attendees', [])
     for attendee in attendees:
@@ -291,6 +301,16 @@ def parse_event_response(event):
             'status': status,
             'notes': attendee.get('comment')
         })
+
+    organizer = event.get('organizer')
+    is_owner = bool(organizer and organizer.get('self'))
+
+    # FIXME @karim: The right thing here would be to use Google's ACL API.
+    # There's some obscure cases, like an autoimported event which guests can
+    # edit that can't be modified.
+    read_only = True
+    if not read_only_calendar:
+        read_only = False
 
     # Recurring master or override info
     recurrence = event.get('recurrence')

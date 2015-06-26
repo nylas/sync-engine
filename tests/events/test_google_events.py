@@ -215,6 +215,7 @@ def test_event_parsing():
     ]
 
     provider = GoogleEventsProvider(1, 1)
+    provider.calendars_table = {'uid': False}
     provider._get_raw_events = mock.MagicMock(
         return_value=raw_response)
     updates = provider.sync_events('uid', 1)
@@ -232,6 +233,45 @@ def test_event_parsing():
     for obtained, expected in zip(updates, expected_updates):
         print obtained, expected
         assert cmp_event_attrs(obtained, expected)
+
+    # Test read-only support
+    raw_response = [
+        {
+            'created': '2014-01-09T03:33:02.000Z',
+            'creator': {
+                'displayName': 'Holidays in United States',
+                'email': 'en.usa#holiday@group.v.calendar.google.com',
+                'self': True
+            },
+            'end': {u'date': '2014-06-16'},
+            'etag': '"2778476764000000"',
+            'htmlLink': 'https://www.google.com/calendar/event?eid=BAR',
+            'iCalUID': '20140615_60o30dr564o30c1g60o30dr4ck@google.com',
+            'id': '20140615_60o30dr564o30c1g60o30dr4ck',
+            'kind': 'calendar#event',
+            'organizer': {
+                'displayName': 'Holidays in United States',
+                'email': 'en.usa#holiday@group.v.calendar.google.com',
+                'self': True
+            },
+            'sequence': 0,
+            'start': {'date': '2014-06-15'},
+            'status': 'confirmed',
+            'summary': "Fathers' Day",
+            'transparency': 'transparent',
+            'updated': '2014-01-09T03:33:02.000Z',
+            'visibility': 'public',
+            'guestCanModify': True}]
+
+    provider = GoogleEventsProvider(1, 1)
+
+    # This is a read-only calendar
+    provider.calendars_table = {'uid': True}
+    provider._get_raw_events = mock.MagicMock(
+        return_value=raw_response)
+    updates = provider.sync_events('uid', 1)
+    assert len(updates) == 1
+    assert updates[0].read_only is True
 
 
 def test_handle_offset_all_day_events():
@@ -271,7 +311,7 @@ def test_handle_offset_all_day_events():
                      all_day=True,
                      owner='Ben Bitdiddle <ben.bitdiddle2222@gmail.com>',
                      participants=[])
-    assert cmp_event_attrs(expected, parse_event_response(raw_event))
+    assert cmp_event_attrs(expected, parse_event_response(raw_event, False))
 
 
 def test_pagination():
@@ -442,7 +482,7 @@ def test_recurrence_creation():
         'summary': 'BOD Meeting',
         'updated': '2014-06-21T21:42:09.072Z'
     }
-    event = parse_event_response(event)
+    event = parse_event_response(event, False)
     assert isinstance(event, RecurringEvent)
     assert event.rrule == 'RRULE:FREQ=WEEKLY;UNTIL=20150209T075959Z;BYDAY=MO'
     assert event.exdate == 'EXDATE;TZID=America/Los_Angeles:20150208T010000'
@@ -490,7 +530,7 @@ def test_override_creation():
         'summary': 'BOD Meeting',
         'updated': '2014-06-21T21:42:09.072Z'
     }
-    event = parse_event_response(event)
+    event = parse_event_response(event, False)
     assert isinstance(event, RecurringEventOverride)
     assert event.master_event_uid == 'tn7krk4cekt8ag3pk6gapqqbro'
     assert event.original_start_time == arrow.get(2012, 10, 23, 00, 00, 00)
