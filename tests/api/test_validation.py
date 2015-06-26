@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 import json
-
+from inbox.models import Namespace
 from inbox.sqlalchemy_ext.util import generate_public_id
-from tests.util.base import api_client
 
 
-def test_namespace_id_validation(api_client, db):
-    from inbox.models import Namespace
+def test_namespace_id_validation(api_client, db, default_namespace):
     actual_namespace_id, = db.session.query(Namespace.public_id).first()
     r = api_client.client.get('/n/{}'.format(actual_namespace_id))
     assert r.status_code == 200
@@ -23,8 +21,7 @@ def test_namespace_id_validation(api_client, db):
 # TODO(emfree): Add more comprehensive parameter-validation tests.
 
 
-def test_account_validation(api_client, db):
-    from inbox.models import Namespace
+def test_account_validation(api_client, db, default_namespace):
 
     draft = {
         'body': '<html><body><h2>Sea, birds and sand.</h2></body></html>'
