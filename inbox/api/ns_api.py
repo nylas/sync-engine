@@ -566,11 +566,6 @@ def contact_search_api():
     g.parser.add_argument('view', type=bounded_str, location='args')
 
     args = strict_parse_args(g.parser, request.args)
-    term_filter_string = '%{}%'.format(args['filter'])
-    term_filter = or_(
-        Contact.name.like(term_filter_string),
-        Contact.email_address.like(term_filter_string))
-
     if args['view'] == 'count':
         results = g.db_session.query(func.count(Contact.id))
     elif args['view'] == 'ids':
@@ -578,8 +573,11 @@ def contact_search_api():
     else:
         results = g.db_session.query(Contact)
 
-    results = results.filter(Contact.namespace_id == g.namespace.id,
-                             term_filter).order_by(asc(Contact.id))
+    results = results.filter(Contact.namespace_id == g.namespace.id)
+
+    if args['filter']:
+        results = results.filter(Contact.email_address == args['filter'])
+    results = results.order_by(asc(Contact.id))
 
     if args['view'] == 'count':
         return g.encoder.jsonify({"count": results.all()})
