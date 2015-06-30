@@ -122,3 +122,36 @@ def test_expanded_threads(stub_message, api_client):
     for thread_json in resp_dict:
         if thread_json['id'] == stub_message.thread.public_id:
             _check_json_thread(thread_json)
+
+
+def test_expanded_message(stub_message, api_client):
+    def _check_json_message(msg_dict):
+        assert 'body' in msg_dict
+        assert msg_dict['object'] == 'message'
+        assert msg_dict['thread_id'] == stub_message.thread.public_id
+
+        assert isinstance(msg_dict['headers'], dict)
+        assert 'In-Reply-To' in msg_dict['headers']
+        assert 'References' in msg_dict['headers']
+        assert 'Message-Id' in msg_dict['headers']
+
+        valid_keys = ['namespace_id', 'to', 'from', 'files', 'unread',
+                      'unread', 'date', 'snippet']
+        assert all(x in msg_dict for x in valid_keys)
+
+    # /message/<message_id>
+    resp = api_client.client.get(api_client.full_path(
+        '/messages/{}?view=expanded'.format(stub_message.public_id)))
+    assert resp.status_code == 200
+    resp_dict = json.loads(resp.data)
+    _check_json_message(resp_dict)
+
+    # /messages/
+    resp = api_client.client.get(api_client.full_path(
+        '/messages/?view=expanded'))
+    assert resp.status_code == 200
+    resp_dict = json.loads(resp.data)
+
+    for message_json in resp_dict:
+        if message_json['id'] == stub_message.public_id:
+            _check_json_message(message_json)

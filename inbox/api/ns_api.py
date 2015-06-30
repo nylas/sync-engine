@@ -461,7 +461,9 @@ def message_query_api():
         view=args['view'],
         db_session=g.db_session)
 
-    return g.encoder.jsonify(messages)
+    # Use a new encoder object with the expand parameter set.
+    encoder = APIEncoder(g.namespace.public_id, args['view'] == 'expanded')
+    return encoder.jsonify(messages)
 
 
 @app.route('/messages/search', methods=['POST'])
@@ -488,8 +490,11 @@ def message_search_api():
     return g.encoder.jsonify(results)
 
 
-@app.route('/messages/<public_id>', methods=['GET', 'PUT'])
-def message_api(public_id):
+@app.route('/messages/<public_id>', methods=['GET'])
+def message_read_api(public_id):
+    g.parser.add_argument('view', type=view, location='args')
+    args = strict_parse_args(g.parser, request.args)
+    encoder = APIEncoder(g.namespace.public_id, args['view'] == 'expanded')
     try:
         valid_public_id(public_id)
         message = g.db_session.query(Message).filter(
@@ -497,38 +502,47 @@ def message_api(public_id):
             Message.namespace_id == g.namespace.id).one()
     except NoResultFound:
         raise NotFoundError("Couldn't find message {0} ".format(public_id))
-    if request.method == 'GET':
-        if request.headers.get('Accept', None) == 'message/rfc822':
-            if message.full_body is not None:
-                return Response(message.full_body.data,
-                                mimetype='message/rfc822')
-            else:
-                g.log.error("Message without full_body attribute: id='{0}'"
-                            .format(message.id))
-                raise NotFoundError(
-                    "Couldn't find raw contents for message `{0}` "
-                    .format(public_id))
-        return g.encoder.jsonify(message)
-    elif request.method == 'PUT':
-        data = request.get_json(force=True)
-        if data.keys() != ['unread'] or not isinstance(data['unread'], bool):
-            raise InputError('Can only change the unread attribute of a '
-                             'message')
-
-        # TODO(emfree): Shouldn't allow this on messages that are actually
-        # drafts.
-
-        unread_tag = message.namespace.tags['unread']
-        unseen_tag = message.namespace.tags['unseen']
-        if data['unread']:
-            message.is_read = False
-            message.thread.apply_tag(unread_tag)
+    if request.headers.get('Accept', None) == 'message/rfc822':
+        if message.full_body is not None:
+            return Response(message.full_body.data,
+                            mimetype='message/rfc822')
         else:
-            message.is_read = True
-            message.thread.remove_tag(unseen_tag)
-            if all(m.is_read for m in message.thread.messages):
-                message.thread.remove_tag(unread_tag)
-        return g.encoder.jsonify(message)
+            g.log.error("Message without full_body attribute: id='{0}'"
+                        .format(message.id))
+            raise NotFoundError(
+                "Couldn't find raw contents for message `{0}` "
+                .format(public_id))
+    return encoder.jsonify(message)
+
+
+@app.route('/messages/<public_id>', methods=['PUT'])
+def message_update_api(public_id):
+    data = request.get_json(force=True)
+    try:
+        valid_public_id(public_id)
+        message = g.db_session.query(Message).filter(
+            Message.public_id == public_id,
+            Message.namespace_id == g.namespace.id).one()
+    except NoResultFound:
+        raise NotFoundError("Couldn't find message {0} ".format(public_id))
+    if data.keys() != ['unread'] or not isinstance(data['unread'], bool):
+        raise InputError('Can only change the unread attribute of a '
+                         'message')
+
+    # TODO(emfree): Shouldn't allow this on messages that are actually
+    # drafts.
+
+    unread_tag = message.namespace.tags['unread']
+    unseen_tag = message.namespace.tags['unseen']
+    if data['unread']:
+        message.is_read = False
+        message.thread.apply_tag(unread_tag)
+    else:
+        message.is_read = True
+        message.thread.remove_tag(unseen_tag)
+        if all(m.is_read for m in message.thread.messages):
+            message.thread.remove_tag(unread_tag)
+    return g.encoder.jsonify(message)
 
 
 # TODO Deprecate this endpoint once API usage falls off

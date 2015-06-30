@@ -100,8 +100,15 @@ def encode(obj, namespace_public_id=None, expand=False):
             'body': obj.body,
             'unread': not obj.is_read,
             'files': obj.api_attachment_metadata,
-            'events': [event.public_id for event in obj.events],
+            'events': [encode(e) for e in obj.events]
         }
+
+        if expand:
+            resp['headers'] = {
+                'Message-Id': obj.message_id_header,
+                'In-Reply-To': obj.in_reply_to,
+                'References': obj.references
+            }
 
         # If the message is a draft (Inbox-created or otherwise):
         if obj.is_draft:
