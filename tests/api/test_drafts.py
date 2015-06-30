@@ -23,6 +23,25 @@ def example_draft(db, default_account):
     }
 
 
+@pytest.fixture
+def example_bad_recipient_drafts():
+    bad_email = {
+        'subject': 'Draft test at {}'.format(datetime.utcnow()),
+        'body': '<html><body><h2>Sea, birds and sand.</h2></body></html>',
+        'to': [{'name': 'The red-haired mermaid',
+                'email': 'froop'}]
+    }
+
+    empty_email = {
+        'subject': 'Draft test at {}'.format(datetime.utcnow()),
+        'body': '<html><body><h2>Sea, birds and sand.</h2></body></html>',
+        'to': [{'name': 'The red-haired mermaid',
+                'email': ''}]
+    }
+
+    return [empty_email, bad_email]
+
+
 @pytest.fixture(scope='function')
 def attachments(db):
     filenames = ['muir.jpg', 'LetMeSendYouEmail.wav', 'piece-jointe.jpg']
@@ -37,6 +56,41 @@ def attachments(db):
             filename = u'pièce-jointe.jpg'
         data.append((filename, path))
     return data
+
+
+@pytest.fixture
+def patch_remote_save_draft(monkeypatch):
+
+    saved_drafts = []
+    def mock_remote_save_draft(account, fname, message, db_sess, date=None):
+        saved_drafts.append((message, date))
+
+    # Patch both, just in case
+    monkeypatch.setattr('inbox.actions.backends.generic.remote_save_draft',
+                        mock_remote_save_draft)
+    monkeypatch.setattr('inbox.actions.backends.gmail.remote_save_draft',
+                        mock_remote_save_draft)
+
+    return saved_drafts
+
+
+def test_save_update_bad_recipient_draft(db, patch_remote_save_draft,
+                                         default_account,
+                                         example_bad_recipient_drafts):
+    # You should be able to save a draft, even if
+    # the recipient's email is invalid.
+    from inbox.sendmail.base import create_draft
+    from inbox.actions.base import save_draft as save_draft_remote
+    from inbox.models import Account
+
+    for example_draft in example_bad_recipient_drafts:
+        draft = create_draft(example_draft, default_account.namespace,
+                             db.session, syncback=False)
+
+        save_draft_remote(default_account.id, draft.id, db.session,
+                          {'version': draft.version})
+
+    assert len(patch_remote_save_draft) == 2
 
 
 def test_create_and_get_draft(api_client, example_draft):
