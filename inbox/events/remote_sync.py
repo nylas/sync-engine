@@ -4,6 +4,7 @@ from inbox.log import get_logger
 logger = get_logger()
 
 from inbox.basicauth import AccessNotEnabledError
+from inbox.config import config
 from inbox.sync.base_sync import BaseSyncMonitor
 from inbox.models import Event, Account, Calendar
 from inbox.models.event import RecurringEvent, RecurringEventOverride
@@ -16,12 +17,13 @@ from inbox.events.google import GoogleEventsProvider
 
 EVENT_SYNC_FOLDER_ID = -2
 EVENT_SYNC_FOLDER_NAME = 'Events'
+POLL_FREQUENCY = config.get('CALENDAR_POLL_FREQUENCY', 300)
 
 
 class EventSync(BaseSyncMonitor):
     """Per-account event sync engine."""
     def __init__(self, email_address, provider_name, account_id, namespace_id,
-                 poll_frequency=300):
+                 poll_frequency=POLL_FREQUENCY):
         bind_context(self, 'eventsync', account_id)
         # Only Google for now, can easily parametrize by provider later.
         self.provider = GoogleEventsProvider(account_id, namespace_id)
