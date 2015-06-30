@@ -1083,12 +1083,20 @@ def sync_deltas():
                           required=True)
     g.parser.add_argument('exclude_types', type=valid_delta_object_types,
                           location='args')
+    g.parser.add_argument('include_types', type=valid_delta_object_types,
+                          location='args')
     g.parser.add_argument('wait', type=bool, default=False,
                           location='args')
     # TODO(emfree): should support `expand` parameter in delta endpoints.
     args = strict_parse_args(g.parser, request.args)
     exclude_types = args.get('exclude_types')
+    include_types = args.get('include_types')
     cursor = args['cursor']
+
+    if include_types and exclude_types:
+        return err(400, "Invalid Request. Cannot specify both include_types"
+                   "and exclude_types")
+
     if cursor == '0':
         start_pointer = 0
     else:
@@ -1108,7 +1116,7 @@ def sync_deltas():
         with session_scope() as db_session:
             deltas, _ = delta_sync.format_transactions_after_pointer(
                 g.namespace, start_pointer, db_session, args['limit'],
-                exclude_types)
+                exclude_types, include_types)
 
         response = {
             'cursor_start': cursor,
@@ -1162,10 +1170,19 @@ def stream_changes():
                           required=True)
     g.parser.add_argument('exclude_types', type=valid_delta_object_types,
                           location='args')
+    g.parser.add_argument('include_types', type=valid_delta_object_types,
+                          location='args')
     args = strict_parse_args(g.parser, request.args)
     timeout = args['timeout'] or 1800
     transaction_pointer = None
     cursor = args['cursor']
+    exclude_types = args.get('exclude_types')
+    include_types = args.get('include_types')
+
+    if include_types and exclude_types:
+        return err(400, "Invalid Request. Cannot specify both include_types"
+                   "and exclude_types")
+
     if cursor == '0':
         transaction_pointer = 0
     else:
@@ -1175,7 +1192,6 @@ def stream_changes():
         if query_result is None:
             raise InputError('Invalid cursor {}'.format(args['cursor']))
         transaction_pointer = query_result[0]
-    exclude_types = args.get('exclude_types')
 
     # Hack to not keep a database session open for the entire (long) request
     # duration.
@@ -1184,7 +1200,8 @@ def stream_changes():
     # TODO make transaction log support the `expand` feature
     generator = delta_sync.streaming_change_generator(
         g.namespace, transaction_pointer=transaction_pointer,
-        poll_interval=1, timeout=timeout, exclude_types=exclude_types)
+        poll_interval=1, timeout=timeout, exclude_types=exclude_types,
+        include_types=include_types)
     return Response(generator, mimetype='text/event-stream')
 
 

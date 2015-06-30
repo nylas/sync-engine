@@ -2,7 +2,7 @@ import json
 import time
 
 import pytest
-from tests.util.base import add_fake_message, thread
+from tests.util.base import add_fake_message
 from inbox.models import Namespace
 from inbox.util.url import url_concat
 
@@ -72,8 +72,10 @@ def test_gracefully_handle_new_namespace(db, streaming_test_client):
     assert r.status_code == 200
 
 
-def test_exclude_object_types(db, api_prefix, streaming_test_client, thread,
-                              default_namespace):
+def test_exclude_and_include_object_types(db, api_prefix,
+                                          streaming_test_client, thread,
+                                          default_namespace):
+
     add_fake_message(db.session, default_namespace.id, thread,
                      from_addr=[('Bob', 'bob@foocorp.com')])
     # Check that we do get message and contact changes by default.
@@ -96,6 +98,16 @@ def test_exclude_object_types(db, api_prefix, streaming_test_client, thread,
     parsed_responses = [json.loads(resp) for resp in responses if resp != '']
     assert not any(resp['object'] == 'message' for resp in parsed_responses)
     assert not any(resp['object'] == 'contact' for resp in parsed_responses)
+
+    # And check we only get message objects if we use include_types
+    url = url_concat(api_prefix, {'timeout': .1,
+                                  'cursor': '0',
+                                  'include_types': 'message'})
+    r = streaming_test_client.get(url)
+    assert r.status_code == 200
+    responses = r.data.split('\n')
+    parsed_responses = [json.loads(resp) for resp in responses if resp != '']
+    assert all(resp['object'] == 'message' for resp in parsed_responses)
 
 
 def test_invalid_timestamp(streaming_test_client, default_namespace):
