@@ -1,5 +1,5 @@
 from sqlalchemy import (Column, String, Text, Boolean,
-                        UniqueConstraint, ForeignKey)
+                        UniqueConstraint, ForeignKey, DateTime)
 from sqlalchemy.orm import relationship
 
 from inbox.models.base import MailSyncBase
@@ -23,6 +23,8 @@ class Calendar(MailSyncBase, HasPublicID, HasRevisions):
     uid = Column(String(767, collation='ascii_general_ci'), nullable=False)
 
     read_only = Column(Boolean, nullable=False, default=False)
+
+    last_synced = Column(DateTime, nullable=True)
 
     __table_args__ = (UniqueConstraint('namespace_id', 'provider_name',
                                        'name', 'uid', name='uuid'),)

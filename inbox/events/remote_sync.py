@@ -6,7 +6,7 @@ logger = get_logger()
 from inbox.basicauth import AccessNotEnabledError
 from inbox.config import config
 from inbox.sync.base_sync import BaseSyncMonitor
-from inbox.models import Event, Account, Calendar
+from inbox.models import Event, Calendar
 from inbox.models.event import RecurringEvent, RecurringEventOverride
 from inbox.util.debug import bind_context
 from inbox.models.session import session_scope
@@ -42,14 +42,6 @@ class EventSync(BaseSyncMonitor):
         database. This function runs every `self.poll_frequency`.
         """
         self.log.info('syncing events')
-        # Get a timestamp before polling, so that we don't subsequently miss
-        # remote updates that happen while the poll loop is executing.
-        sync_timestamp = datetime.utcnow()
-
-        with session_scope() as db_session:
-            account = db_session.query(Account).get(self.account_id)
-
-            last_sync = account.last_synced_events
 
         try:
             deleted_uids, calendar_changes = self.provider.sync_calendars()
@@ -67,18 +59,22 @@ class EventSync(BaseSyncMonitor):
             db_session.commit()
 
         for (uid, id_) in calendar_uids_and_ids:
+            # Get a timestamp before polling, so that we don't subsequently
+            # miss remote updates that happen while the poll loop is executing.
+            sync_timestamp = datetime.utcnow()
+            with session_scope() as db_session:
+                last_sync = db_session.query(Calendar.last_synced).filter(
+                    Calendar.id == id_).scalar()
+
             event_changes = self.provider.sync_events(
                 uid, sync_from_time=last_sync)
 
             with session_scope() as db_session:
                 handle_event_updates(self.namespace_id, id_, event_changes,
                                      self.log, db_session)
+                cal = db_session.query(Calendar).get(id_)
+                cal.last_synced = sync_timestamp
                 db_session.commit()
-
-        with session_scope() as db_session:
-            account = db_session.query(Account).get(self.account_id)
-            account.last_synced_events = sync_timestamp
-            db_session.commit()
 
 
 def handle_calendar_deletes(namespace_id, deleted_calendar_uids, log,

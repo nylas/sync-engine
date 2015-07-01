@@ -58,6 +58,8 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState):
     sync_events = Column(Boolean, nullable=False, default=False)
 
     last_synced_contacts = Column(DateTime, nullable=True)
+
+    # DEPRECATED
     last_synced_events = Column(DateTime, nullable=True)
 
     # Folder mappings for the data we sync back to the account backend.  All
