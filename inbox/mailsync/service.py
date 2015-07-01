@@ -78,9 +78,14 @@ class SyncService(object):
             gevent.kill(v)
         self.keep_running = False
 
+    @staticmethod
+    def account_cpu_filter(cpu_id, total_cpus):
+        return (Account.id % total_cpus == cpu_id)
+
     def accounts_to_start(self):
         with session_scope() as db_session:
-            start_on_this_cpu = (Account.id % self.total_cpus == self.cpu_id)
+            start_on_this_cpu = self.account_cpu_filter(self.cpu_id,
+                                                        self.total_cpus)
             if config.get('SYNC_STEAL_ACCOUNTS', True):
                 # First, atomically claim unscheduled syncs by setting
                 # sync_host.

@@ -69,6 +69,7 @@ setup(
              'bin/search-account-health',
              'bin/migrate-bodies',
              'bin/migrate-account',
+             'bin/migrate-account-bulk',
              'bin/start-stop-account',
              'bin/inbox-auth',
              'bin/regen-labels',
