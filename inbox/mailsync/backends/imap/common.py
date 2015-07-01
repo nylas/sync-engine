@@ -9,7 +9,6 @@ Types returned for data are the column types defined via SQLAlchemy.
 Eventually we're going to want a better way of ACLing functions that operate on
 accounts.
 """
-from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.contacts.process_mail import update_contacts_from_message
@@ -148,8 +147,7 @@ def update_metadata(account_id, session, folder_name, folder_id, uids,
     for item in session.query(ImapUid). \
             filter(ImapUid.account_id == account_id,
                    ImapUid.msg_uid.in_(uids),
-                   ImapUid.folder_id == folder_id). \
-            options(joinedload(ImapUid.message)):
+                   ImapUid.folder_id == folder_id):
         flags = new_flags[item.msg_uid].flags
         labels = getattr(new_flags[item.msg_uid], 'labels', None)
         changed = item.update_flags_and_labels(flags, labels)
