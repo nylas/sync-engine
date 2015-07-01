@@ -252,7 +252,8 @@ def import_attached_events(db_session, account, message):
                       account_id=account.id, message_id=message.id)
             continue
         except (AssertionError, TypeError, RuntimeError,
-                AttributeError, ValueError):
+                AttributeError, ValueError, UnboundLocalError,
+                LookupError, ImportError, NameError):
             # Kind of ugly but we don't want to derail message
             # creation because of an error in the attached calendar.
             log.error('Unhandled exception during message parsing',
