@@ -1,0 +1,49 @@
+#!/usr/bin/env python
+
+import click
+import json
+from sqlalchemy import func
+from sqlalchemy.sql.expression import false, true
+
+from inbox.models.session import session_scope
+from inbox.models.backends.imap import ImapFolderSyncStatus, ImapAccount
+
+
+def _fetch_folder_status_data():
+    folder_status_data = {}
+    with session_scope() as db_session:
+        throttled_state_data = db_session \
+            .query(ImapFolderSyncStatus.state,
+                   func.count(ImapFolderSyncStatus.state)) \
+            .join(ImapAccount).filter(ImapAccount.throttled == true()) \
+            .group_by(ImapFolderSyncStatus.state) \
+            .all()
+
+        folder_status_data.update(
+            dict([(".".join(["throttled", k]), v)
+                  for k, v in throttled_state_data]))
+
+        normal_state_data = db_session \
+            .query(ImapFolderSyncStatus.state,
+                   func.count(ImapFolderSyncStatus.state)) \
+            .join(ImapAccount).filter(ImapAccount.throttled == false()) \
+            .group_by(ImapFolderSyncStatus.state) \
+            .all()
+
+        folder_status_data.update(
+            dict([(".".join(["normal", k]), v) for k, v in normal_state_data]))
+
+    return folder_status_data
+
+
+@click.command()
+@click.option('--prefix', '-p', type=str, default="stats")
+def main(prefix):
+    data = {}
+    data.update(dict([(".".join([prefix, k]), v)
+                      for k, v in _fetch_folder_status_data().items()]))
+
+    print json.dumps(data)
+
+if __name__ == "__main__":
+    main()
