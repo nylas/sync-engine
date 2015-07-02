@@ -1,0 +1,58 @@
+#!/usr/bin/env python
+# Query the id corresponding to a public id and vice-versa.
+
+import click
+import sys
+import IPython
+import base64
+from inbox.models import (Account, Message, Namespace, Thread, Event,
+                          Calendar, Transaction)
+from inbox.models.session import session_scope
+
+cls_for_type = dict(
+    account=Account,
+    message=Message,
+    namespace=Namespace,
+    thread=Thread,
+    event=Event,
+    calendar=Calendar,
+    transaction=Transaction)
+
+
+@click.command()
+@click.option('--type', '-t', type=str, required=True)
+@click.option('--id', type=str, default=None)
+@click.option('--public-id', type=str, default=None)
+@click.option('--readwrite', is_flag=True, default=False)
+def main(type, id, public_id, readwrite):
+    type = type.lower()
+
+    if type not in cls_for_type:
+        print "Error: unknown type '{}'".format(type)
+        sys.exit(-1)
+
+    cls = cls_for_type[type]
+
+    if public_id is None and id is None:
+        print "Error: you should specify an id or public id to query."
+        sys.exit(-1)
+
+    with session_scope() as db_session:
+        with db_session.no_autoflush:
+            if public_id:
+                obj = db_session.query(cls).filter(cls.public_id == public_id)\
+                    .one()
+            elif id:
+                obj = db_session.query(cls).filter(cls.id == id).one()
+
+            banner = """The object you queried is accessible as `obj`.
+Note that the db session is read-only, unless if you start this script with --readwrite"""
+            IPython.embed(banner1=banner)
+
+            if readwrite is False:
+                print "Rolling-back db session."
+                db_session.rollback()
+
+
+if __name__ == '__main__':
+    main()

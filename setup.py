@@ -78,6 +78,7 @@ setup(
              'bin/create-db',
              'bin/inbox-api',
              'bin/get-id',
+             'bin/get-object',
              'bin/syncback-service',
              'bin/test_contact_groups'],
 
