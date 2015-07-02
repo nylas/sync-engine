@@ -9,6 +9,14 @@ Includes:
 
 USE WITH CAUTION.
 
+If you need to delete the data for an account, it MUST be marked as deleted.
+You can do this manually like this:
+
+./bin/inbox-console -e foo@bar.com
+
+    account.disable_sync("account deleted")
+    db_session.commit()
+
 """
 import time
 
