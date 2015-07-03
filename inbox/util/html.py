@@ -41,7 +41,7 @@ class HTMLTagStripper(HTMLParser):
             else:
                 val = int(d)
             self.fed.append(unichr(val))
-        except ValueError:
+        except (ValueError, OverflowError):
             return
 
     def handle_entityref(self, d):
