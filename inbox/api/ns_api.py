@@ -1092,6 +1092,7 @@ def draft_send_api():
 # Client syncing
 ##
 @app.route('/delta')
+@app.route('/delta/longpoll')
 def sync_deltas():
     g.parser.add_argument('cursor', type=valid_public_id, location='args',
                           required=True)
@@ -1099,13 +1100,14 @@ def sync_deltas():
                           location='args')
     g.parser.add_argument('include_types', type=valid_delta_object_types,
                           location='args')
-    g.parser.add_argument('wait', type=bool, default=False,
-                          location='args')
+    g.parser.add_argument('timeout', type=int,
+                          default=LONG_POLL_REQUEST_TIMEOUT, location='args')
     # TODO(emfree): should support `expand` parameter in delta endpoints.
     args = strict_parse_args(g.parser, request.args)
     exclude_types = args.get('exclude_types')
     include_types = args.get('include_types')
     cursor = args['cursor']
+    timeout = args['timeout']
 
     if include_types and exclude_types:
         return err(400, "Invalid Request. Cannot specify both include_types"
@@ -1126,7 +1128,7 @@ def sync_deltas():
     poll_interval = 1
 
     start_time = time.time()
-    while time.time() - start_time < LONG_POLL_REQUEST_TIMEOUT:
+    while time.time() - start_time < timeout:
         with session_scope() as db_session:
             deltas, _ = delta_sync.format_transactions_after_pointer(
                 g.namespace, start_pointer, db_session, args['limit'],
@@ -1141,7 +1143,7 @@ def sync_deltas():
             return g.encoder.jsonify(response)
 
         # No changes. perhaps wait
-        elif args['wait']:
+        elif '/delta/longpoll' in request.url_rule.rule:
             gevent.sleep(poll_interval)
         else:  # Return immediately
             response['cursor_end'] = cursor

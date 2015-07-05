@@ -1,10 +1,14 @@
 import json
 import time
+from gevent import Greenlet
 
 import pytest
 from tests.util.base import add_fake_message
 from inbox.models import Namespace
 from inbox.util.url import url_concat
+
+GEVENT_EPSILON = .2  # Greenlet switching time
+LONGPOLL_EPSILON = 1 + GEVENT_EPSILON  # API implementation polls every second
 
 
 @pytest.yield_fixture
@@ -18,6 +22,11 @@ def streaming_test_client(db):
 @pytest.fixture
 def api_prefix(default_namespace):
     return '/n/{}/delta/streaming'.format(default_namespace.public_id)
+
+
+@pytest.fixture
+def longpoll_prefix(default_namespace):
+    return '/n/{}/delta/longpoll'.format(default_namespace.public_id)
 
 
 def get_cursor(api_client, timestamp, namespace):
@@ -122,3 +131,43 @@ def test_invalid_timestamp(streaming_test_client, default_namespace):
         '/n/{}/delta/generate_cursor'.format(default_namespace.public_id),
         data=json.dumps({'start': 1434591487647}))
     assert response.status_code == 400
+
+
+def test_longpoll_delta_newitem(db, longpoll_prefix, streaming_test_client,
+                                default_namespace, thread):
+    cursor = get_cursor(streaming_test_client, int(time.time() + 22),
+                        default_namespace)
+    url = url_concat(longpoll_prefix, {'cursor': cursor})
+    start_time = time.time()
+    # Spawn the request in background greenlet
+    longpoll_greenlet = Greenlet.spawn(streaming_test_client.get, url)
+    # This should make it return immediately
+    add_fake_message(db.session, default_namespace.id, thread,
+                     from_addr=[('Bob', 'bob@foocorp.com')])
+    longpoll_greenlet.join()  # now block and wait
+    end_time = time.time()
+    assert end_time - start_time < LONGPOLL_EPSILON
+    parsed_responses = json.loads(longpoll_greenlet.value.data)
+    assert len(parsed_responses['deltas']) == 3
+    assert set(k['object'] for k in parsed_responses['deltas']) == \
+           set([u'message', u'contact', u'thread'])
+
+
+def test_longpoll_delta_timeout(db, longpoll_prefix, streaming_test_client,
+                                default_namespace):
+    test_timeout = 2
+    cursor = get_cursor(streaming_test_client, int(time.time() + 22),
+                        default_namespace)
+    url = url_concat(longpoll_prefix, {'timeout': test_timeout,
+                                       'cursor': cursor})
+    start_time = time.time()
+    resp = streaming_test_client.get(url)
+    end_time = time.time()
+    assert resp.status_code == 200
+
+    assert end_time - start_time - test_timeout < GEVENT_EPSILON
+    parsed_responses = json.loads(resp.data)
+    assert len(parsed_responses['deltas']) == 0
+    assert type(parsed_responses['deltas']) == list
+    assert parsed_responses['cursor_start'] == cursor
+    assert parsed_responses['cursor_end'] == cursor
