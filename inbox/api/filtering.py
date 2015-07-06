@@ -343,13 +343,16 @@ def filter_event_query(query, event_cls, namespace_id, event_public_id,
 
 
 def recurring_events(filters, starts_before, starts_after, ends_before,
-                     ends_after, db_session):
+                     ends_after, db_session, show_cancelled=False):
     # Expands individual recurring events into full instances.
     # If neither starts_before or ends_before is given, the recurring range
     # defaults to now + 1 year (see events/recurring.py)
 
     recur_query = db_session.query(RecurringEvent)
     recur_query = filter_event_query(recur_query, RecurringEvent, *filters)
+
+    if show_cancelled is False:
+        recur_query = recur_query.filter(RecurringEvent.status != 'cancelled')
 
     before_criteria = []
     if starts_before:
@@ -431,7 +434,8 @@ def events(namespace_id, event_public_id, calendar_public_id, title,
 
     if expand_recurring:
         expanded = recurring_events(filters, starts_before, starts_after,
-                                    ends_before, ends_after, db_session)
+                                    ends_before, ends_after, db_session,
+                                    show_cancelled=show_cancelled)
 
         # Combine non-recurring events with expanded recurring ones
         all_events = query.filter(Event.discriminator == 'event').all() + \
