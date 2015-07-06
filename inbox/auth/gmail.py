@@ -3,6 +3,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from inbox.models import Namespace
 from inbox.models.backends.gmail import GmailAccount
+from inbox.models.backends.gmail import GmailAuthCredentials
 from inbox.models.backends.oauth import token_manager
 from inbox.config import config
 from inbox.auth.oauth import OAuthAuthHandler
@@ -97,6 +98,20 @@ class GmailAuthHandler(OAuthAuthHandler):
 
         # Ensure account has sync enabled.
         account.enable_sync()
+
+        # See if we've already stored this refresh token
+        match = [auth_creds for auth_creds in account.auth_credentials
+                 if auth_creds.refresh_token == new_refresh_token]
+
+        # For new refresh_tokens, create new GmailAuthCredentials entry
+        if new_refresh_token and len(match) == 0:
+            auth_creds = GmailAuthCredentials()
+            auth_creds.gmailaccount = account
+            auth_creds.scopes = response.get('scope')
+            auth_creds.g_id_token = response.get('id_token')
+            auth_creds.client_id = response.get('client_id')
+            auth_creds.client_secret = response.get('client_secret')
+            auth_creds.refresh_token = new_refresh_token
 
         return account
 
