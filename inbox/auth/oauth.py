@@ -93,6 +93,10 @@ class OAuthAuthHandler(AuthHandler):
                 # This is raised if the user has revoked access to the
                 # application (or if the refresh token is otherwise invalid).
                 raise OAuthError('invalid_grant')
+            elif session_dict['error'] == 'deleted_client':
+                # If the developer has outright deleted their Google OAuth app
+                # ID. We treat this too as a case of 'invalid credentials'.
+                raise OAuthError('deleted_client')
             else:
                 # You can also get e.g. {"error": "internal_failure"}
                 log.error('Error renewing access token',
