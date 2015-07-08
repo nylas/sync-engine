@@ -64,11 +64,9 @@ class GmailAuthCredentials(MailSyncBase):
     """
 
     gmailaccount_id = Column(Integer,
-                             ForeignKey(GmailAccount.id, ondelete='CASCADE'),
-                             primary_key=True)
+                             ForeignKey(GmailAccount.id, ondelete='CASCADE'))
     refresh_token_id = Column(Integer,
-                              ForeignKey(Secret.id, ondelete='CASCADE'),
-                              primary_key=True)
+                              ForeignKey(Secret.id, ondelete='CASCADE'))
 
     scopes = Column(String(512))
     g_id_token = Column(String(1024))

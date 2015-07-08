@@ -27,7 +27,7 @@ def upgrade():
         sa.Column('scopes', mysql.VARCHAR(length=512), nullable=False),
         sa.Column('g_id_token', mysql.VARCHAR(length=1024), nullable=False),
         sa.Column('client_id', mysql.VARCHAR(length=256), nullable=False),
-        sa.Column('client_secret', mysql.VARCHAR(length=256)),
+        sa.Column('client_secret', mysql.VARCHAR(length=256), nullable=False),
         sa.Column('is_valid', sa.Boolean(),
                   nullable=False, server_default=sa.sql.expression.true()),
         sa.ForeignKeyConstraint(
@@ -36,7 +36,7 @@ def upgrade():
         sa.ForeignKeyConstraint(
             ['refresh_token_id'], [u'secret.id'], ondelete='CASCADE'
         ),
-        sa.PrimaryKeyConstraint('id', 'gmailaccount_id', 'refresh_token_id'),
+        sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('refresh_token_id'),
     )
 
