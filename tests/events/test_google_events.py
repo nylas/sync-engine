@@ -380,7 +380,7 @@ def test_handle_quota_exceeded():
     provider._get_access_token = mock.Mock(return_value='token')
     items = provider._get_resource_list('https://googleapis.com/testurl')
     # Check that we slept, then retried.
-    gevent.sleep.assert_called_once_with(30)
+    gevent.sleep.assert_called()
     assert items == ['A', 'B', 'C']
 
 
