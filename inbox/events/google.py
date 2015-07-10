@@ -185,48 +185,25 @@ class GoogleEventsProvider(object):
         response = requests.request(method, url, auth=OAuth(token), **kwargs)
         return response
 
-    def create_remote_event(self, event, **kwargs):
+    def create_remote_event(self, event):
         data = _dump_event(event)
-        params = {}
-
-        if kwargs.get('notify_participants') is True:
-            params["sendNotifications"] = "true"
-        else:
-            params["sendNotifications"] = "false"
-
         response = self._make_event_request('post', event.calendar.uid,
-                                            json=data, params=params)
+                                            json=data)
 
         # All non-200 statuses are considered errors
         response.raise_for_status()
         return response.json()
 
-    def update_remote_event(self, event, **kwargs):
+    def update_remote_event(self, event):
         data = _dump_event(event)
-        params = {}
-
-        if kwargs.get('notify_participants') is True:
-            params["sendNotifications"] = "true"
-        else:
-            params["sendNotifications"] = "false"
-
         response = self._make_event_request('put', event.calendar.uid,
-                                            event.uid, json=data,
-                                            params=params)
+                                            event.uid, json=data)
 
         # All non-200 statuses are considered errors
         response.raise_for_status()
 
-    def delete_remote_event(self, calendar_uid, event_uid, **kwargs):
-        params = {}
-
-        if kwargs.get('notify_participants') is True:
-            params["sendNotifications"] = "true"
-        else:
-            params["sendNotifications"] = "false"
-
-        response = self._make_event_request('delete', calendar_uid, event_uid,
-                                            params=params)
+    def delete_remote_event(self, calendar_uid, event_uid):
+        response = self._make_event_request('delete', calendar_uid, event_uid)
 
         if response.status_code == 410:
             # The Google API returns an 'HTTPError: 410 Client Error: Gone'
@@ -300,7 +277,6 @@ def parse_event_response(event, read_only_calendar):
     description = event.get('description')
     location = event.get('location')
     busy = event.get('transparency') != 'transparent'
-    sequence = event.get('sequence', 0)
 
     # We're lucky because event statuses follow the icalendar
     # spec.
@@ -362,7 +338,7 @@ def parse_event_response(event, read_only_calendar):
                  master_event_uid=master_uid,
                  cancelled=cancelled,
                  status=event_status,
-                 sequence_number=sequence,
+                 # TODO(emfree): remove after data cleanup
                  source='local')
 
 

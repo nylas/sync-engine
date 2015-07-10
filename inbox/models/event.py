@@ -69,6 +69,13 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
     """Data for events."""
     API_OBJECT_NAME = 'event'
 
+    # Don't surface 'remote' events in the transaction log since
+    # they're an implementation detail we don't want our customers
+    # to worry about.
+    @property
+    def should_suppress_transaction_creation(self):
+        return self.source == 'remote'
+
     namespace_id = Column(ForeignKey(Namespace.id, ondelete='CASCADE'),
                           nullable=False)
 
@@ -126,10 +133,6 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
 
     participants = Column(MutableList.as_mutable(BigJSON), default=[],
                           nullable=True)
-
-    # This is only used by the iCalendar invite code. The sequence number
-    # stores the version number of the invite.
-    sequence_number = Column(Integer, nullable=True)
 
     discriminator = Column('type', String(30))
     __mapper_args__ = {'polymorphic_on': discriminator,
@@ -203,8 +206,8 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
         # hash only if the email is None.
         self_hash = {}
         for participant in self.participants:
-            email = participant.get('email')
-            name = participant.get('name')
+            email = participant['email']
+            name = participant['name']
             if email is not None:
                 self_hash[email] = participant
             elif name is not None:
@@ -212,8 +215,8 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
                 self_hash[name] = participant
 
         for participant in event.participants:
-            email = participant.get('email')
-            name = participant.get('name')
+            email = participant['email']
+            name = participant['name']
 
             # This is the tricky part --- we only want to store one entry per
             # participant --- we check if there's an email we already know, if
@@ -266,9 +269,6 @@ class Event(MailSyncBase, HasRevisions, HasPublicID):
         self.last_modified = event.last_modified
         self.message = event.message
         self.status = event.status
-
-        if event.sequence_number is not None:
-            self.sequence_number = event.sequence_number
 
     @property
     def recurring(self):

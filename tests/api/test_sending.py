@@ -150,28 +150,6 @@ def example_draft_bad_body(db, default_account):
     }
 
 
-@pytest.fixture
-def example_event(db, api_client):
-    from inbox.models.calendar import Calendar
-    cal = db.session.query(Calendar).get(1)
-
-    event = {
-        'title': 'Invite test',
-        'when': {
-            "end_time": 1436210662,
-            "start_time": 1436207062
-        },
-        'participants': [
-            {'email': 'helena@nylas.com'}
-        ],
-        'calendar_id': cal.public_id,
-    }
-
-    r = api_client.post_data('/events', event)
-    event_public_id = json.loads(r.data)['id']
-    return event_public_id
-
-
 def test_send_existing_draft(patch_smtp, api_client, example_draft):
     r = api_client.post_data('/drafts', example_draft)
     draft_public_id = json.loads(r.data)['id']

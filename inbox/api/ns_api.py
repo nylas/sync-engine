@@ -40,7 +40,6 @@ from inbox.models.session import InboxSession, session_scope
 from inbox.search.adaptor import NamespaceSearchEngine, SearchEngineError
 from inbox.transactions import delta_sync
 from inbox.api.err import (err, APIException, NotFoundError, InputError)
-from inbox.events.ical import (generate_icalendar_invite, send_invite)
 from inbox.ignition import main_engine
 engine = main_engine()
 
@@ -534,11 +533,6 @@ def event_search_api():
 
 @app.route('/events/', methods=['POST'])
 def event_create_api():
-    g.parser.add_argument('notify_participants', type=strict_bool,
-                          location='args')
-    args = strict_parse_args(g.parser, request.args)
-    notify_participants = args['notify_participants']
-
     data = request.get_json(force=True)
     calendar = get_calendar(data.get('calendar_id'),
                             g.namespace, g.db_session)
@@ -579,14 +573,12 @@ def event_create_api():
         read_only=False,
         is_owner=True,
         participants=participants,
-        sequence_number=0,
         source='local')
     g.db_session.add(event)
     g.db_session.flush()
 
     schedule_action('create_event', event, g.namespace.id, g.db_session,
-                    calendar_uid=event.calendar.uid,
-                    notify_participants=notify_participants)
+                    calendar_uid=event.calendar.uid)
     return g.encoder.jsonify(event)
 
 
@@ -605,11 +597,6 @@ def event_read_api(public_id):
 
 @app.route('/events/<public_id>', methods=['PUT'])
 def event_update_api(public_id):
-    g.parser.add_argument('notify_participants', type=strict_bool,
-                          location='args')
-    args = strict_parse_args(g.parser, request.args)
-    notify_participants = args['notify_participants']
-
     valid_public_id(public_id)
     try:
         event = g.db_session.query(Event).filter(
@@ -632,23 +619,16 @@ def event_update_api(public_id):
         if attr in data:
             setattr(event, attr, data[attr])
 
-    event.sequence_number += 1
     g.db_session.commit()
 
     schedule_action('update_event', event, g.namespace.id, g.db_session,
-                    calendar_uid=event.calendar.uid,
-                    notify_participants=notify_participants)
+                    calendar_uid=event.calendar.uid)
 
     return g.encoder.jsonify(event)
 
 
 @app.route('/events/<public_id>', methods=['DELETE'])
 def event_delete_api(public_id):
-    g.parser.add_argument('notify_participants', type=strict_bool,
-                          location='args')
-    args = strict_parse_args(g.parser, request.args)
-    notify_participants = args['notify_participants']
-
     valid_public_id(public_id)
     try:
         event = g.db_session.query(Event).filter_by(
@@ -663,25 +643,12 @@ def event_delete_api(public_id):
     # Set the local event status to 'cancelled' rather than deleting it,
     # in order to be consistent with how we sync deleted events from the
     # remote, and consequently return them through the events, delta sync APIs
-    event.sequence_number += 1
     event.status = 'cancelled'
     g.db_session.commit()
 
-    account = g.namespace.account
-
-    # FIXME @karim: do this in the syncback thread instead.
-    if notify_participants and account.provider != 'gmail':
-        ical_file = generate_icalendar_invite(event,
-                                              invite_type='cancel').to_ical()
-
-        html_body = ''
-        send_invite(ical_file, event, html_body, account,
-                    invite_type='cancel')
-
     schedule_action('delete_event', event, g.namespace.id, g.db_session,
                     event_uid=event.uid, calendar_name=event.calendar.name,
-                    calendar_uid=event.calendar.uid,
-                    notify_participants=notify_participants)
+                    calendar_uid=event.calendar.uid)
 
     return g.encoder.jsonify(None)
 

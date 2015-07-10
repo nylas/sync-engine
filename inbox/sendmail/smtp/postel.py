@@ -344,11 +344,6 @@ class SMTPClient(object):
             raise SendMailException('Sending failed', http_code=503,
                                     server_error=str(err))
 
-    def send_generated_email(self, recipients, raw_message):
-        # A tiny wrapper over _send because the API differs
-        # between SMTP and EAS.
-        return self._send(recipients, raw_message)
-
     def send(self, draft):
         """
         Turn a draft object into a MIME message and send it.
