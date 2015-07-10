@@ -33,6 +33,11 @@ def parse_rrule_datetime(datetime, tzinfo=None):
         dt = arrow.get(dt.datetime, tzinfo)
     return dt
 
+
+def serialize_datetime(d):
+    return d.strftime('%Y%m%dT%H%M%SZ')
+
+
 EventTime = namedtuple('EventTime', ['start', 'end', 'all_day'])
 
 

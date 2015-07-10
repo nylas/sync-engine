@@ -221,11 +221,13 @@ def default_namespace(db, default_account):
 
 @fixture(scope='function')
 def generic_account(db):
+    import platform
     from inbox.models.backends.generic import GenericAccount
     from inbox.models import Namespace
     ns = Namespace()
     account = GenericAccount(
         email_address='inboxapptest@example.com',
+        sync_host=platform.node(),
         provider='custom')
     account.namespace = ns
     account.create_emailed_events_calendar()
@@ -435,6 +437,11 @@ def imapuid(db, default_account, message, folder):
 @fixture(scope='function')
 def calendar(db, default_account):
     return add_fake_calendar(db.session, default_account.namespace.id)
+
+
+@fixture(scope='function')
+def event(db, default_account):
+    return add_fake_event(db.session, default_account.namespace.id)
 
 
 def full_path(relpath):
