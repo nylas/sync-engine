@@ -25,9 +25,8 @@ from inbox.api.validation import (get_attachments, get_calendar,
                                   bounded_str, view, strict_parse_args,
                                   limit, offset, ValidatableArgument,
                                   strict_bool, validate_draft_recipients,
-                                  validate_search_query,
-                                  validate_search_sort,
-                                  valid_delta_object_types)
+                                  validate_search_query, validate_search_sort,
+                                  valid_delta_object_types, valid_display_name)
 from inbox.contacts.algorithms import (calculate_contact_scores,
                                        calculate_group_scores,
                                        calculate_group_counts, is_stale)
@@ -408,8 +407,8 @@ def raw_message_api(public_id):
 @app.route('/folders')
 @app.route('/labels')
 def folders_labels_query_api():
-    categories = g.db_session.query(Category). \
-        filter(Category.namespace_id == g.namespace.id).all()
+    categories = g.db_session.query(Category).filter(
+        Category.namespace_id == g.namespace.id).all()
     return g.encoder.jsonify(categories)
 
 
@@ -426,11 +425,71 @@ def label_api(public_id):
 def folders_labels_api_impl(public_id):
     valid_public_id(public_id)
     try:
-        category = g.db_session.query(Category). \
-            filter(Category.namespace_id == g.namespace.id,
-                   Category.public_id == public_id).all()
+        category = g.db_session.query(Category).filter(
+            Category.namespace_id == g.namespace.id,
+            Category.public_id == public_id).all()
     except NoResultFound:
-        raise NotFoundError("Object not found")
+        raise NotFoundError('Object not found')
+    return g.encoder.jsonify(category)
+
+
+@app.route('/folders', methods=['POST'])
+@app.route('/labels', methods=['POST'])
+def folders_labels_create_api():
+    category_type = g.namespace.account.category_type
+    data = request.get_json(force=True)
+    display_name = data.get('display_name')
+
+    valid_display_name(g.namespace.id, category_type, display_name,
+                       g.db_session)
+
+    category = Category.find_or_create(g.db_session, g.namespace.id,
+                                       name=None, display_name=display_name,
+                                       type_=category_type)
+    g.db_session.flush()
+
+    if category_type == 'folder':
+        schedule_action('create_folder', category, g.namespace.id, g.db_session)
+    else:
+        schedule_action('create_label', category, g.namespace.id, g.db_session)
+
+    return g.encoder.jsonify(category)
+
+
+@app.route('/folders/<public_id>', methods=['PUT'])
+@app.route('/labels/<public_id>', methods=['PUT'])
+def folder_label_update_api(public_id):
+    category_type = g.namespace.account.category_type
+    valid_public_id(public_id)
+    try:
+        category = g.db_session.query(Category).filter(
+            Category.namespace_id == g.namespace.id,
+            Category.public_id == public_id).one()
+    except NoResultFound:
+        raise InputError("Couldn't find {} {}".format(
+            category_type, public_id))
+    if category.name is not None:
+        raise InputError("Cannot modify a standard {}".format(category_type))
+
+    data = request.get_json(force=True)
+    display_name = data.get('display_name')
+    valid_display_name(g.namespace.id, category_type, display_name,
+                       g.db_session)
+
+    current_name = category.display_name
+    category.display_name = display_name
+    g.db_session.flush()
+
+    if category_type == 'folder':
+        schedule_action('update_folder', category, g.namespace.id,
+                        g.db_session, old_name=current_name)
+    else:
+        schedule_action('update_label', category, g.namespace.id,
+                        g.db_session, old_name=current_name)
+
+    # TODO[k]: Update corresponding folder/ label once syncback is successful,
+    # rather than waiting for sync to pick it up?
+
     return g.encoder.jsonify(category)
 
 

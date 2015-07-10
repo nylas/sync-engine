@@ -21,7 +21,9 @@ from inbox.models.session import session_scope
 from inbox.models import ActionLog, Namespace, Account
 from inbox.util.file import Lock
 from inbox.actions.base import (mark_unread, mark_starred, move, change_labels,
-                                save_draft, delete_draft, save_sent_email)
+                                save_draft, delete_draft, save_sent_email,
+                                create_folder, create_label, update_folder,
+                                update_label)
 from inbox.events.actions.base import (create_event, delete_event,
                                        update_event)
 
@@ -42,6 +44,10 @@ ACTION_FUNCTION_MAP = {
     'create_event': create_event,
     'delete_event': delete_event,
     'update_event': update_event,
+    'create_folder': create_folder,
+    'create_label': create_label,
+    'update_folder': update_folder,
+    'update_label': update_label
 }
 
 

@@ -1,7 +1,7 @@
 import abc
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, String, inspect, Boolean, sql
+from sqlalchemy import Column, DateTime, String, inspect, Boolean, sql, func
 from sqlalchemy.ext.hybrid import hybrid_property, Comparator
 
 from inbox.sqlalchemy_ext.util import Base36UID, generate_public_id, ABCMixin
@@ -88,8 +88,14 @@ class AddressComparator(Comparator):
         return self.__clause_element__().like(term, escape=escape)
 
 
+class CaseInsensitiveComparator(Comparator):
+    def __eq__(self, other):
+        return func.lower(self.__clause_element__()) == func.lower(other)
+
+
 class HasEmailAddress(object):
-    """Provides an email_address attribute, which returns as value whatever you
+    """
+    Provides an email_address attribute, which returns as value whatever you
     set it to, but uses a canonicalized form for comparisons. So e.g.
     >>> db_session.query(Account).filter_by(
     ...    email_address='ben.bitdiddle@gmail.com').all()
@@ -99,7 +105,9 @@ class HasEmailAddress(object):
     ...    email_address='ben.bitdiddle@gmail.com').all()
     [...]
     will return the same results, because the two Gmail addresses are
-    equivalent."""
+    equivalent.
+
+    """
     _raw_address = Column(String(MAX_INDEXABLE_LENGTH),
                           nullable=True, index=True)
     _canonicalized_address = Column(String(MAX_INDEXABLE_LENGTH),

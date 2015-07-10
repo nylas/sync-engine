@@ -2,11 +2,12 @@ from sqlalchemy import Column, String, Integer, ForeignKey, Enum
 from sqlalchemy.orm import relationship
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
+from sqlalchemy.ext.hybrid import hybrid_property
 
 from inbox.models.base import MailSyncBase
-from inbox.models.mixins import HasRevisions, HasPublicID
+from inbox.models.mixins import (HasRevisions, HasPublicID,
+                                 CaseInsensitiveComparator)
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
-from inbox.sqlalchemy_ext.util import generate_public_id
 from inbox.log import get_logger
 log = get_logger()
 
@@ -22,9 +23,6 @@ class Category(MailSyncBase, HasRevisions, HasPublicID):
                                      name='category_fk1',
                                      ondelete='CASCADE'), nullable=False)
     namespace = relationship('Namespace', load_on_pending=True)
-
-    #public_id = Column(String(MAX_INDEXABLE_LENGTH), nullable=False,
-    #                   default=generate_public_id, index=True)
 
     # STOPSHIP(emfree): need to index properly for API filtering performance.
     name = Column(String(MAX_INDEXABLE_LENGTH), nullable=True)
@@ -59,6 +57,14 @@ class Category(MailSyncBase, HasRevisions, HasPublicID):
     @property
     def type(self):
         return self.account.category_type
+
+    @hybrid_property
+    def lowercase_name(self):
+        return self.display_name.lower()
+
+    @lowercase_name.comparator
+    def lowercase_name(cls):
+        return CaseInsensitiveComparator(cls.display_name)
 
     __table_args__ = (UniqueConstraint('namespace_id', 'name', 'display_name'),
                       UniqueConstraint('namespace_id', 'public_id'))

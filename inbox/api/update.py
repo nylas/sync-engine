@@ -66,7 +66,6 @@ def update_thread(thread, request_data, db_session):
         else:
             folder_public_id = inbox_category.public_id
 
-
     for message in thread.messages:
         if message.is_draft:
             continue

@@ -4,8 +4,9 @@ from arrow.parser import ParserError
 from flanker.addresslib import address
 from flask.ext.restful import reqparse
 from sqlalchemy.orm.exc import NoResultFound
-from inbox.models import Calendar, Thread, Block, Message
+from inbox.models import Calendar, Thread, Block, Message, Category
 from inbox.models.when import parse_as_when
+from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from inbox.api.err import InputError, NotFoundError, ConflictError
 from inbox.search.query import MessageQuery, ThreadQuery
 
@@ -266,8 +267,11 @@ def valid_email(email_address):
 
 
 def validate_draft_recipients(draft):
-    """Check that a draft has at least one recipient, and that all recipient
-    emails are at least plausible email addresses, before we try to send it."""
+    """
+    Check that a draft has at least one recipient, and that all recipient
+    emails are at least plausible email addresses, before we try to send it.
+
+    """
     if not any((draft.to_addr, draft.bcc_addr, draft.cc_addr)):
         raise InputError('No recipients specified')
     for field in draft.to_addr, draft.bcc_addr, draft.cc_addr:
@@ -277,6 +281,24 @@ def validate_draft_recipients(draft):
                 if not isinstance(parsed, address.EmailAddress):
                     raise InputError(u'Invalid recipient address {}'.
                                      format(email_address))
+
+
+def valid_display_name(namespace_id, category_type, display_name, db_session):
+    if display_name is None or not isinstance(display_name, basestring):
+        raise InputError('"display_name" must be a valid string')
+
+    display_name = display_name.rstrip()
+    if len(display_name) > MAX_INDEXABLE_LENGTH:
+        # Set as MAX_FOLDER_LENGTH, MAX_LABEL_LENGTH
+        raise InputError('"display_name" is too long')
+
+    if db_session.query(Category).filter(
+            Category.namespace_id == namespace_id,
+            Category.lowercase_name == display_name).first() is not None:
+        raise InputError('{} with name "{}" already exists'.format(
+                         category_type, display_name))
+
+    return display_name
 
 
 def validate_search_query(query):

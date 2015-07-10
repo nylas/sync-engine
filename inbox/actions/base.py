@@ -67,6 +67,34 @@ def change_labels(account_id, message_id, db_session, args):
                          added_labels)
 
 
+def create_folder(account_id, category_id, db_session):
+    account = db_session.query(Account).get(account_id)
+    remote_create = module_registry[account.provider].remote_create_folder
+    remote_create(account, category_id, db_session)
+
+
+def create_label(account_id, category_id, db_session):
+    account = db_session.query(Account).get(account_id)
+    assert account.provider == 'gmail'
+    remote_create = module_registry[account.provider].remote_create_label
+    remote_create(account, category_id, db_session)
+
+
+def update_folder(account_id, category_id, db_session, args):
+    old_name = args['old_name']
+    account = db_session.query(Account).get(account_id)
+    remote_update = module_registry[account.provider].remote_update_folder
+    remote_update(account, category_id, db_session, old_name)
+
+
+def update_label(account_id, category_id, db_session, args):
+    old_name = args['old_name']
+    account = db_session.query(Account).get(account_id)
+    assert account.provider == 'gmail'
+    remote_update = module_registry[account.provider].remote_update_label
+    remote_update(account, category_id, db_session, old_name)
+
+
 def _create_email(account, message):
     blocks = [p.block for p in message.attachments]
     attachments = generate_attachments(blocks)
