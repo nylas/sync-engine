@@ -96,19 +96,28 @@ def migrate_account_metadata(account_id):
 def migrate_messages(account_id):
     from inbox.models.session import session_scope
     from inbox.models import Message, Namespace
+    from inbox.ignition import main_engine
+
+    engine = main_engine(pool_size=1, max_overflow=0)
+
     with session_scope(versioned=False) as db_session:
         namespace = db_session.query(Namespace).filter_by(
             account_id=account_id).one()
         offset = 0
         while True:
+            if engine.has_table('easuid'):
+                additional_options = [subqueryload(Message.easuids)]
+            else:
+                additional_options = []
+
             messages = db_session.query(Message). \
                 filter(Message.namespace_id == namespace.id). \
                 options(load_only(Message.id, Message.is_read,
                                   Message.is_starred, Message.is_draft),
                         joinedload(Message.namespace).load_only('id'),
                         subqueryload(Message.imapuids),
-                        subqueryload(Message.easuids),
-                        subqueryload(Message.messagecategories)). \
+                        subqueryload(Message.messagecategories),
+                        *additional_options). \
                 with_hint(Message, 'USE INDEX (ix_message_namespace_id)'). \
                 order_by(asc(Message.id)).limit(1000).offset(offset).all()
             if not messages:
