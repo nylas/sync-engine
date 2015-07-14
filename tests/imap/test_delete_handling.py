@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
 import pytest
+from sqlalchemy import desc
 from sqlalchemy.orm.exc import ObjectDeletedError
 from inbox.crispin import GmailFlags
 from inbox.mailsync.backends.imap.common import (remove_deleted_uids,
                                                  update_metadata)
 from inbox.mailsync.gc import DeleteHandler
-from inbox.models import Folder
+from inbox.models import Folder, Transaction
 from tests.util.base import add_fake_imapuid, add_fake_message
 
 
@@ -120,3 +121,28 @@ def test_deletion_deferred_with_longer_ttl(db, default_account,
     # Would raise ObjectDeletedError if objects were deleted
     marked_deleted_message.id
     thread.id
+
+
+def test_deletion_creates_revision(db, default_account, default_namespace,
+                                   marked_deleted_message, thread, folder):
+    message_id = marked_deleted_message.id
+    thread_id = thread.id
+    handler = DeleteHandler(account_id=default_account.id,
+                            namespace_id=default_namespace.id,
+                            uid_accessor=lambda m: m.imapuids,
+                            message_ttl=0)
+    handler.check(marked_deleted_message.deleted_at + timedelta(seconds=1))
+    db.session.commit()
+    latest_message_transaction = db.session.query(Transaction). \
+        filter(Transaction.record_id == message_id,
+               Transaction.object_type == 'message',
+               Transaction.namespace_id == default_namespace.id). \
+        order_by(desc(Transaction.id)).first()
+    assert latest_message_transaction.command == 'delete'
+
+    latest_thread_transaction = db.session.query(Transaction). \
+        filter(Transaction.record_id == thread_id,
+               Transaction.object_type == 'thread',
+               Transaction.namespace_id == default_namespace.id). \
+        order_by(desc(Transaction.id)).first()
+    assert latest_thread_transaction.command == 'delete'

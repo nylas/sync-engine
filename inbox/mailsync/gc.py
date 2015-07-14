@@ -68,10 +68,12 @@ class DeleteHandler(gevent.Greenlet):
                     continue
 
                 thread = message.thread
-                # Remove message from thread rather than deleting it
-                # outright, so that the change to the thread gets properly
-                # versioned.
+                # Remove message from thread, so that the change to the thread
+                # gets properly versioned.
                 thread.messages.remove(message)
+                # Also need to explicitly delete, so that message shows up in
+                # db_session.deleted.
+                db_session.delete(message)
                 if not thread.messages:
                     db_session.delete(thread)
                 else:
