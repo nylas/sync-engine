@@ -1,4 +1,5 @@
 import arrow
+import string
 from dateutil.parser import parse
 from collections import namedtuple
 from inbox.models.when import parse_as_when
@@ -33,6 +34,11 @@ def parse_rrule_datetime(datetime, tzinfo=None):
         dt = arrow.get(dt.datetime, tzinfo)
     return dt
 
+
+def serialize_datetime(d):
+    return d.strftime('%Y%m%dT%H%M%SZ')
+
+
 EventTime = namedtuple('EventTime', ['start', 'end', 'all_day'])
 
 
@@ -63,6 +69,11 @@ def google_to_event_time(start_raw, end_raw):
     event_time = when_to_event_time(d)
 
     return event_time
+
+
+def valid_base36(uid):
+    # Check that an uid is a base36 element.
+    return all(c in (string.ascii_lowercase + string.digits) for c in uid)
 
 
 # Container for a parsed API response. API calls return adds/updates/deletes

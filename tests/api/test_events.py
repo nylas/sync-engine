@@ -3,7 +3,7 @@ import pytest
 
 from inbox.sqlalchemy_ext.util import generate_public_id
 from inbox.models import Event
-from tests.util.base import api_client, calendar, add_fake_event
+from tests.util.base import db, api_client, calendar, add_fake_event
 
 __all__ = ['api_client', 'calendar']
 

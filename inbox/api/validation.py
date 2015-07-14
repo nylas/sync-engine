@@ -220,6 +220,10 @@ def valid_event(event):
     for p in participants:
         if 'email' not in p:
             raise InputError("'participants' must must have email")
+
+        if not valid_email(p['email']):
+            raise InputError("'{}' is not a valid email".format(p['email']))
+
         if 'status' in p:
             if p['status'] not in ('yes', 'no', 'maybe', 'noreply'):
                 raise InputError("'participants' status must be one of: "
@@ -251,6 +255,14 @@ def valid_delta_object_types(types_arg):
         if type_ not in allowed_types:
             raise InputError('Invalid object type {}'.format(type_))
     return types
+
+
+def valid_email(email_address):
+    parsed = address.parse(email_address, addr_spec_only=True)
+    if isinstance(parsed, address.EmailAddress):
+        return True
+
+    return False
 
 
 def validate_draft_recipients(draft):
