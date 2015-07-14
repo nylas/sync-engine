@@ -12,7 +12,8 @@ import requests
 from inbox.log import get_logger
 from inbox.models.session import session_scope
 from inbox.models.backends.imap import ImapAccount
-from inbox.models.backends.oauth import token_manager
+from inbox.models.backends.oauth import token_manager as default_token_manager
+from inbox.models.backends.gmail import g_token_manager
 from inbox.sendmail.base import generate_attachments, SendMailException
 from inbox.sendmail.message import create_email
 from inbox.basicauth import OAuthError
@@ -36,6 +37,19 @@ SMTP_OVER_SSL_TEST_PORT = 64465
 SMTP_AUTH_SUCCESS = 235
 SMTP_AUTH_CHALLENGE = 334
 SMTP_TEMP_AUTH_FAIL = 454
+
+
+class _TokenManagerWrapper:
+    def get_token(self, account, force_refresh=False):
+        if account.provider == 'gmail':
+            return g_token_manager.get_token_for_email(
+                account, force_refresh=force_refresh)
+        else:
+            return default_token_manager.get_token(
+                account, force_refresh=force_refresh)
+
+
+token_manager = _TokenManagerWrapper()
 
 
 def ssl_wrap_socket(sock, server_hostname):
@@ -192,8 +206,8 @@ class SMTPConnection(object):
     def _smtp_oauth2_try_refresh(self):
         with session_scope() as db_session:
             account = db_session.query(ImapAccount).get(self.account_id)
-            self.auth_token = token_manager.get_token(account,
-                                                      force_refresh=True)
+            self.auth_token = token_manager.get_token(
+                account, force_refresh=True)
 
     def _try_xoauth2(self):
         auth_string = 'user={0}\1auth=Bearer {1}\1\1'.\

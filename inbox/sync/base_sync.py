@@ -25,12 +25,13 @@ class BaseSyncMonitor(Greenlet):
     """
     def __init__(self, account_id, namespace_id, email_address, folder_id,
                  folder_name, provider_name, poll_frequency=1,
-                 retry_fail_classes=[]):
+                 retry_fail_classes=[], scope=None):
 
         self.account_id = account_id
         self.namespace_id = namespace_id
         self.poll_frequency = poll_frequency
         self.retry_fail_classes = retry_fail_classes
+        self.scope = scope
 
         self.log = logger.new(account_id=account_id)
 
@@ -79,7 +80,7 @@ class BaseSyncMonitor(Greenlet):
             self._cleanup()
             with session_scope() as db_session:
                 account = db_session.query(Account).get(self.account_id)
-                account.mark_invalid()
+                account.mark_invalid(scope=self.scope)
 
             return False
 

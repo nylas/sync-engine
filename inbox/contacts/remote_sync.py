@@ -56,7 +56,8 @@ class ContactSync(BaseSyncMonitor):
                                  CONTACT_SYNC_FOLDER_NAME,
                                  provider_name,
                                  poll_frequency=poll_frequency,
-                                 retry_fail_classes=[ValidationError])
+                                 retry_fail_classes=[ValidationError],
+                                 scope='contacts')
 
     def sync(self):
         """Query a remote provider for updates and persist them to the

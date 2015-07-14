@@ -170,13 +170,18 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState):
         if reason:
             self._sync_status['sync_disabled_reason'] = reason
 
-    def mark_invalid(self, reason='invalid credentials'):
+    def mark_invalid(self, reason='invalid credentials', scope='mail'):
         """ In the event that the credentials for this account are invalid,
             update the status and sync flag accordingly. Should only be called
             after trying to re-authorize / get new token.
         """
-        self.disable_sync(reason)
-        self.sync_state = 'invalid'
+        if scope == 'calendar':
+            self.sync_events = False
+        elif scope == 'contacts':
+            self.sync_contacts = False
+        else:
+            self.disable_sync(reason)
+            self.sync_state = 'invalid'
 
     def sync_stopped(self, reason=None):
         """ Record transition to stopped state. Should be called after the

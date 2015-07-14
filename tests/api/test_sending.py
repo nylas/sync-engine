@@ -22,16 +22,31 @@ class MockTokenManager(object):
         raise OAuthError()
 
 
+class MockGoogleTokenManager(object):
+
+    def __init__(self, allow_auth=True):
+        self.allow_auth = allow_auth
+
+    def get_token_for_email(self, account, force_refresh=False):
+        if self.allow_auth:
+            return 'foo'
+        raise OAuthError()
+
+
 @pytest.fixture
 def patch_token_manager(monkeypatch):
-    monkeypatch.setattr('inbox.sendmail.smtp.postel.token_manager',
+    monkeypatch.setattr('inbox.sendmail.smtp.postel.default_token_manager',
                         MockTokenManager())
+    monkeypatch.setattr('inbox.sendmail.smtp.postel.g_token_manager',
+                        MockGoogleTokenManager())
 
 
 @pytest.fixture
 def disallow_auth(monkeypatch):
-    monkeypatch.setattr('inbox.sendmail.smtp.postel.token_manager',
+    monkeypatch.setattr('inbox.sendmail.smtp.postel.default_token_manager',
                         MockTokenManager(allow_auth=False))
+    monkeypatch.setattr('inbox.sendmail.smtp.postel.g_token_manager',
+                        MockGoogleTokenManager(allow_auth=False))
 
 
 @pytest.fixture

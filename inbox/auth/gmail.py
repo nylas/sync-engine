@@ -1,10 +1,11 @@
 import requests
 from sqlalchemy.orm.exc import NoResultFound
 
+from imapclient import IMAPClient
 from inbox.models import Namespace
 from inbox.models.backends.gmail import GmailAccount
 from inbox.models.backends.gmail import GmailAuthCredentials
-from inbox.models.backends.oauth import token_manager
+from inbox.models.backends.gmail import g_token_manager
 from inbox.config import config
 from inbox.auth.oauth import OAuthAuthHandler
 from inbox.basicauth import OAuthError, UserRecoverableConfigError
@@ -28,6 +29,7 @@ OAUTH_ACCESS_TOKEN_URL = 'https://accounts.google.com/o/oauth2/token'
 OAUTH_TOKEN_VALIDATION_URL = 'https://www.googleapis.com/oauth2/v1/tokeninfo'
 OAUTH_USER_INFO_URL = 'https://www.googleapis.com/oauth2/v1/userinfo'
 
+# NOTE: urls for email address and G+ profile are deprecated
 OAUTH_SCOPE = ' '.join([
     'https://www.googleapis.com/auth/userinfo.email',  # email address
     'https://www.googleapis.com/auth/userinfo.profile',  # G+ profile
@@ -47,6 +49,24 @@ class GmailAuthHandler(OAuthAuthHandler):
     OAUTH_USER_INFO_URL = OAUTH_USER_INFO_URL
     OAUTH_SCOPE = OAUTH_SCOPE
 
+    def _authenticate_IMAP_connection(self, account, conn):
+        """
+        Overrides the same method in OAuthAuthHandler so that
+        we can choose a token w/ the appropriate scope.
+        """
+        host, port = account.imap_endpoint
+        try:
+            token = g_token_manager.get_token_for_email(account)
+            conn.oauth2_login(account.email_address, token)
+        except IMAPClient.Error as exc:
+            log.error('Error during IMAP XOAUTH2 login',
+                      account_id=account.id,
+                      email=account.email_address,
+                      host=host,
+                      port=port,
+                      error=exc)
+            raise
+
     def create_account(self, db_session, email_address, response):
         email_address = response.get('email')
         # See if the account exists in db, otherwise create it
@@ -64,15 +84,13 @@ class GmailAuthHandler(OAuthAuthHandler):
         if new_refresh_token:
             account.refresh_token = new_refresh_token
         else:
-            if not account.refresh_token or account.sync_state == 'invalid':
+            if (len(account.valid_auth_credentials) == 0 or
+                    account.sync_state == 'invalid'):
                 # We got a new auth without a refresh token, so we need to back
                 # out and force the auth flow, since we don't already have
-                # a refresh (or the one we have doesn't work.)
-                raise OAuthError("Missing refresh token")
+                # a refresh (or the ones we have don't work.)
+                raise OAuthError("No valid refresh tokens")
 
-        tok = response.get('access_token')
-        expires_in = response.get('expires_in')
-        token_manager.cache_token(account, tok, expires_in)
         account.scope = response.get('scope')
         account.email_address = email_address
         account.family_name = response.get('family_name')
@@ -88,8 +106,37 @@ class GmailAuthHandler(OAuthAuthHandler):
         account.home_domain = response.get('hd')
         account.client_id = response.get('client_id')
         account.client_secret = response.get('client_secret')
-        account.sync_contacts = response.get('contacts', True)
-        account.sync_events = response.get('events', True)
+        account.sync_contacts = (account.sync_contacts or
+                                 response.get('contacts', True))
+        account.sync_events = (account.sync_events or
+                               response.get('events', True))
+
+        # TODO: if these are None, use default? Maybe not?
+        client_id = response.get('client_id')
+        client_secret = response.get('client_secret')
+
+        # Don't need to actually save these now
+        # tok = response.get('access_token')
+        # expires_in = response.get('expires_in')
+
+        if new_refresh_token:
+            # See if we already have credentials for this client_id/secret
+            # pair. If those don't exist, make a new GmailAuthCredentials
+            auth_creds = next(
+                (auth_creds for auth_creds in account.auth_credentials
+                 if (auth_creds.client_id == client_id and
+                     auth_creds.client_secret == client_secret)),
+                GmailAuthCredentials())
+
+            auth_creds.gmailaccount = account
+            auth_creds.scopes = response.get('scope')
+            auth_creds.g_id_token = response.get('id_token')
+            auth_creds.client_id = response.get('client_id')
+            auth_creds.client_secret = response.get('client_secret')
+            auth_creds.refresh_token = new_refresh_token
+            auth_creds.is_valid = True
+
+            db_session.add(auth_creds)
 
         try:
             self.verify_config(account)
@@ -98,20 +145,6 @@ class GmailAuthHandler(OAuthAuthHandler):
 
         # Ensure account has sync enabled.
         account.enable_sync()
-
-        # See if we've already stored this refresh token
-        match = [auth_creds for auth_creds in account.auth_credentials
-                 if auth_creds.refresh_token == new_refresh_token]
-
-        # For new refresh_tokens, create new GmailAuthCredentials entry
-        if new_refresh_token and len(match) == 0:
-            auth_creds = GmailAuthCredentials()
-            auth_creds.gmailaccount = account
-            auth_creds.scopes = response.get('scope')
-            auth_creds.g_id_token = response.get('id_token')
-            auth_creds.client_id = response.get('client_id')
-            auth_creds.client_secret = response.get('client_secret')
-            auth_creds.refresh_token = new_refresh_token
 
         return account
 

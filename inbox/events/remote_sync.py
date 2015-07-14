@@ -35,7 +35,8 @@ class EventSync(BaseSyncMonitor):
                                  EVENT_SYNC_FOLDER_ID,
                                  EVENT_SYNC_FOLDER_NAME,
                                  provider_name,
-                                 poll_frequency=poll_frequency)
+                                 poll_frequency=poll_frequency,
+                                 scope='calendar')
 
     def sync(self):
         """Query a remote provider for updates and persist them to the

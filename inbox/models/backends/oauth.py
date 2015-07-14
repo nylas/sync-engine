@@ -17,8 +17,6 @@ class TokenManager(object):
     def __init__(self):
         self._tokens = {}
 
-    # TODO(dannyman): add a 'scopes' arg (list of needed scopes)
-    # (This'll really just be for gmail.)
     def get_token(self, account, force_refresh=False):
         if account.id in self._tokens:
             token, expiration = self._tokens[account.id]

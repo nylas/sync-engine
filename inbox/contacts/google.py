@@ -13,11 +13,8 @@ from inbox.basicauth import ConnectionError, ValidationError, PermissionsError
 from inbox.basicauth import OAuthError
 from inbox.models.session import session_scope
 from inbox.models import Contact
-from inbox.models.backends.gmail import GmailAccount
-from inbox.models.backends.oauth import token_manager
-from inbox.auth.gmail import (OAUTH_CLIENT_ID,
-                              OAUTH_CLIENT_SECRET,
-                              OAUTH_SCOPE)
+from inbox.models.backends.gmail import GmailAccount, g_token_manager
+from inbox.models.backends.gmail import GmailAuthCredentials
 
 SOURCE_APP_NAME = 'Nilas Sync Engine'
 
@@ -58,37 +55,34 @@ class GoogleContactsProvider(object):
         with session_scope() as db_session:
             try:
                 account = db_session.query(GmailAccount).get(self.account_id)
-                client_id = account.client_id or OAUTH_CLIENT_ID
-                client_secret = (account.client_secret or
-                                 OAUTH_CLIENT_SECRET)
-                access_token = token_manager.get_token(account)
+                access_token, auth_creds_id = \
+                    g_token_manager.get_token_and_auth_creds_id_for_contacts(
+                        account)
+                auth_creds = db_session.query(GmailAuthCredentials) \
+                             .get(auth_creds_id)
+
                 two_legged_oauth_token = gdata.gauth.OAuth2Token(
-                    client_id=client_id,
-                    client_secret=client_secret,
-                    scope=OAUTH_SCOPE,
+                    client_id=auth_creds.client_id,
+                    client_secret=auth_creds.client_secret,
+                    scope=auth_creds.scopes,  # FIXME: string not list?
                     user_agent=SOURCE_APP_NAME,
                     access_token=access_token,
-                    refresh_token=account.refresh_token)
+                    refresh_token=auth_creds.refresh_token)
                 google_client = gdata.contacts.client.ContactsClient(
                     source=SOURCE_APP_NAME)
                 google_client.auth_token = two_legged_oauth_token
                 return google_client
-            except (gdata.client.BadAuthentication, OAuthError) as e:
-                self.log.debug('Invalid user credentials given: {}'
-                               .format(e), logstash_tag='mark_invalid',
-                               account_id=account.id)
-                account.mark_invalid()
-                db_session.add(account)
-                db_session.commit()
+            except (gdata.client.BadAuthentication,
+                    gdata.client.Unauthorized, OAuthError):
 
                 if not retry_conn_errors:  # end of the line
                     raise ValidationError
 
-                try:
-                    token_manager.get_token(account, force_refresh=True)
-                    return self._get_google_client(retry_conn_errors=False)
-                except OAuthError as e:
-                    raise ValidationError
+                # If there are no valid refresh_tokens, will raise an
+                # OAuthError, stopping the sync
+                g_token_manager.get_token_for_contacts(
+                    account, force_refresh=True)
+                return self._google_client(retry_conn_errors=False)
 
             except ConnectionError:
                 self.log.error('Connection error')
@@ -185,3 +179,15 @@ class GoogleContactsProvider(object):
             # credentials for which the contacts API is not enabled.
             self.log.info('contact sync request failure', message=e)
             raise PermissionsError('contact sync request failure')
+        except gdata.client.Unauthorized:
+            self.log.warning(
+                        'Invalid access token; refreshing and retrying')
+            # Raises an OAuth error if no valid token exists
+            with session_scope() as db_session:
+                account = db_session.query(GmailAccount).get(self.account_id)
+                g_token_manager.get_token_for_contacts(
+                        account, force_refresh=True)
+
+            # Retry - there must be some valid credentials left
+            return self.get_items(self, sync_from_dt=sync_from_dt,
+                                  max_results=max_results)

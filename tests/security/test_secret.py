@@ -96,7 +96,9 @@ def test_token(db, config, encrypt):
     # Remove auth credentials row, else weird things
     # happen when we try to read both encrypted and
     # unencrypted data from the database.
-    db.session.delete(account.auth_credentials[0])
+    for ac in account.auth_credentials:
+        db.session.delete(ac)
+    # db.session.delete(account.auth_credentials[0])
     db.session.commit()
 
 

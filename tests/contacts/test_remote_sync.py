@@ -71,6 +71,8 @@ def test_auth_error_handling(contact_sync, default_account, db):
     invalid."""
     # Give the default test account patently invalid OAuth credentials.
     default_account.refresh_token = 'foo'
+    for auth_creds in default_account.auth_credentials:
+        auth_creds.refresh_token = 'foo'
     db.session.commit()
 
     contact_sync.start()

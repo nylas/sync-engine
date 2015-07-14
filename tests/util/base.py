@@ -198,10 +198,13 @@ def syncback_service():
 
 
 @fixture(scope='function')
-def default_account(db):
+def default_account(db, config):
     import platform
     from inbox.models.backends.gmail import GmailAccount
+    from inbox.models.backends.gmail import GmailAuthCredentials
+    from inbox.auth.gmail import OAUTH_SCOPE
     from inbox.models import Namespace
+
     ns = Namespace()
     account = GmailAccount(
         sync_host=platform.node(),
@@ -209,7 +212,20 @@ def default_account(db):
     account.namespace = ns
     account.create_emailed_events_calendar()
     account.refresh_token = 'faketoken'
+
+    auth_creds = GmailAuthCredentials()
+    auth_creds.client_id = config.get_required('GOOGLE_OAUTH_CLIENT_ID')
+    auth_creds.client_secret = \
+        config.get_required('GOOGLE_OAUTH_CLIENT_SECRET')
+    auth_creds.refresh_token = 'faketoken'
+    auth_creds.g_id_token = 'foo'
+    auth_creds.created_at = datetime.utcnow()
+    auth_creds.updated_at = datetime.utcnow()
+    auth_creds.gmailaccount = account
+    auth_creds.scopes = OAUTH_SCOPE
+
     db.session.add(account)
+    db.session.add(auth_creds)
     db.session.commit()
     return account
 
