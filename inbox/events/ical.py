@@ -487,12 +487,7 @@ def generate_invite_message(ical_txt, event, html_body, account,
 
     assert invite_type in ['request', 'cancel']
 
-    if invite_type == 'request':
-        html_body = """<b>{title}</b><br>
-        Start: {start}<br>
-        End: {end}""".format(title=event.title, start=event.start, end=event.end)
-    elif invite_type == 'cancel':
-        html_body = """The event "{title}" has been cancelled.""".format(title=event.title)
+    html_body = ""
 
     text_body = html2text(html_body)
     msg = mime.create.multipart('mixed')
