@@ -51,11 +51,4 @@ def test_message_generation(event, default_account):
                                       ('text', 'calendar; method=request'),
                                       ('application', 'ics')]:
             count += 1
-
-        if (format_type, subtype) == ('text', 'html'):
-            assert 'A long walk on the beach' in mimepart.body
-
-        if (format_type, subtype) == ('text', 'plain'):
-            assert '**A long walk on the beach**' in mimepart.body
-
     assert count == 3
