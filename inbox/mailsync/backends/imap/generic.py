@@ -149,12 +149,19 @@ class FolderSyncEngine(Greenlet):
         self.retry_fail_classes = retry_fail_classes
         self.state = None
         self.provider_name = provider_name
+        self.is_initial_sync = False
+        self.is_first_sync = False
 
         with mailsync_session_scope() as db_session:
             account = db_session.query(Account).get(self.account_id)
             self.throttled = account.throttled
             self.namespace_id = account.namespace.id
             assert self.namespace_id is not None, "namespace_id is None"
+
+            folder = db_session.query(Folder).get(self.folder_id)
+            if folder:
+                self.is_initial_sync = folder.initial_sync_end is None
+                self.is_first_sync = folder.initial_sync_start is None
 
         self.state_handlers = {
             'initial': self.initial_sync,
@@ -258,14 +265,33 @@ class FolderSyncEngine(Greenlet):
         saved_folder_status.stop_sync()
         self.state = saved_folder_status.state
 
+    def _report_initial_sync_start(self):
+        with mailsync_session_scope as db_session:
+            q = db_session.query(Folder).get(self.folder_id)
+            q.initial_sync_start = datetime.utcnow()
+
+    def _report_initial_sync_end(self):
+        with mailsync_session_scope as db_session:
+            q = db_session.query(Folder).get(self.folder_id)
+            q.initial_sync_end = datetime.utcnow()
+
     @retry_crispin
     def initial_sync(self):
         log.bind(state='initial')
         log.info('starting initial sync')
 
+        if self.is_first_sync:
+            self._report_initial_sync_start()
+            self.is_first_sync = False
+
         with self.conn_pool.get() as crispin_client:
             crispin_client.select_folder(self.folder_name, uidvalidity_cb)
             self.initial_sync_impl(crispin_client)
+
+        if self.is_initial_sync:
+            self._report_initial_sync_end()
+            self.is_initial_sync = False
+
         return 'poll'
 
     @retry_crispin

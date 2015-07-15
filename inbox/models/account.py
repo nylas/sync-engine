@@ -137,6 +137,18 @@ class Account(MailSyncBase, HasPublicID, HasEmailAddress, HasRunState):
     def sync_error(self):
         return self._sync_status.get('sync_error')
 
+    @property
+    def initial_sync_start(self):
+        if any([f.initial_sync_start is None for f in self.folders]):
+            return None
+        return min([f.initial_sync_start for f in self.folders])
+
+    @property
+    def initial_sync_end(self):
+        if any([f.initial_sync_end is None for f in self.folders]):
+            return None
+        return max([f.initial_sync_end for f in self.folders])
+
     def update_sync_error(self, error=None):
         self._sync_status['sync_error'] = error
 

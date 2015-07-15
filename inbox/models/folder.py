@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.schema import UniqueConstraint
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
@@ -44,6 +44,9 @@ class Folder(MailSyncBase):
         Category,
         backref=backref('folders',
                         cascade='all, delete-orphan'))
+
+    initial_sync_start = Column(DateTime, nullable=True)
+    initial_sync_end = Column(DateTime, nullable=True)
 
     @classmethod
     def find_or_create(cls, session, account, name, role=None):
