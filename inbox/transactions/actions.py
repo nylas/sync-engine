@@ -20,6 +20,7 @@ logger = get_logger()
 from inbox.models.session import session_scope
 from inbox.models import ActionLog, Namespace, Account
 from inbox.util.file import Lock
+from inbox.util.stats import statsd_client
 from inbox.actions.base import (mark_unread, mark_starred, move, change_labels,
                                 save_draft, delete_draft, save_sent_email,
                                 create_folder, create_label, update_folder,
@@ -145,6 +146,18 @@ class SyncbackWorker(gevent.Greenlet):
         self.retry_interval = retry_interval
         gevent.Greenlet.__init__(self)
 
+
+    def _log_to_statsd(self, action_log_status, latency=None):
+        metric_names = [
+            "syncback.overall.{}".format(action_log_status),
+            "syncback.accounts.{}.{}".format(self.account_id, action_log_status)
+        ]
+
+        for metric in metric_names:
+            statsd_client.incr(metric)
+            if latency:
+                statsd_client.timing(metric, latency)
+
     def _run(self):
         with self.semaphore:
             log = logger.new(
@@ -171,6 +184,7 @@ class SyncbackWorker(gevent.Greenlet):
                         log.info('syncback action completed',
                                  action_id=self.action_log_id,
                                  latency=latency)
+                        self._log_to_statsd(action_log_entry.status, latency)
                         return
 
                     except Exception:
@@ -182,6 +196,7 @@ class SyncbackWorker(gevent.Greenlet):
                                 log.critical('Max retries reached, giving up.',
                                              exc_info=True)
                                 action_log_entry.status = 'failed'
+                                self._log_to_statsd(action_log_entry.status)
                             db_session.commit()
 
                 # Wait before retrying
