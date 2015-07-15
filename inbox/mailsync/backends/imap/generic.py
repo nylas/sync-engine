@@ -80,6 +80,7 @@ from inbox.util.debug import bind_context
 from inbox.util.itert import chunk
 from inbox.util.misc import or_none
 from inbox.util.threading import fetch_corresponding_thread, MAX_THREAD_LENGTH
+from inbox.util.stats import statsd_client
 from inbox.log import get_logger
 log = get_logger()
 from inbox.crispin import connection_pool, retry_crispin, FolderMissingError
@@ -619,6 +620,10 @@ def uidvalidity_cb(account_id, folder_name, select_info):
 def report_progress(account_id, folder_name, downloaded_uid_count,
                     num_remaining_messages):
     """ Inform listeners of sync progress. """
+    statsd_client.incr(
+        ".".join(["accounts", str(account_id), "messages_downloaded"]),
+        downloaded_uid_count)
+
     with mailsync_session_scope() as db_session:
         saved_status = db_session.query(ImapFolderSyncStatus).join(Folder)\
             .filter(

@@ -42,7 +42,8 @@ setup(
         "six>=1.8",
         "vobject>=0.8.1c",
         "lxml>=3.4.2",
-        "arrow==0.5.4"
+        "arrow==0.5.4",
+        "statsd>=3.1"
     ],
     dependency_links=[],
 

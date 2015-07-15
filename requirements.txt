@@ -55,3 +55,4 @@ vobject==0.8.1c
 lxml==3.4.2
 arrow==0.5.4
 hypothesis==1.4.1
+statsd==3.1
