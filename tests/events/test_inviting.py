@@ -36,8 +36,7 @@ def test_message_generation(event, default_account):
     from inbox.events.ical import generate_invite_message
     event.title = 'A long walk on the beach'
     event.participants = [{'email': 'helena@nylas.com'}]
-    msg = generate_invite_message('empty', event, "",
-                                  default_account)
+    msg = generate_invite_message('empty', event, default_account)
 
     # Check that we have an email with an HTML part, a plain text part, a
     # text/calendar with METHOD=REQUEST and an attachment.

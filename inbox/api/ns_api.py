@@ -737,9 +737,7 @@ def event_delete_api(public_id):
         ical_file = generate_icalendar_invite(event,
                                               invite_type='cancel').to_ical()
 
-        html_body = ''
-        send_invite(ical_file, event, html_body, account,
-                    invite_type='cancel')
+        send_invite(ical_file, event, account, invite_type='cancel')
 
     schedule_action('delete_event', event, g.namespace.id, g.db_session,
                     event_uid=event.uid, calendar_name=event.calendar.name,

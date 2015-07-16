@@ -18,9 +18,7 @@ def create_event(account_id, event_id, db_session, extra_args):
     # for non-gmail accounts.
     if notify_participants and account.provider != 'gmail':
         ical_file = generate_icalendar_invite(event).to_ical()
-
-        html_body = ''
-        send_invite(ical_file, event, html_body, account)
+        send_invite(ical_file, event, account, invite_type='request')
 
 
 def update_event(account_id, event_id, db_session, extra_args):
@@ -35,9 +33,7 @@ def update_event(account_id, event_id, db_session, extra_args):
 
     if notify_participants and account.provider != 'gmail':
         ical_file = generate_icalendar_invite(event).to_ical()
-
-        html_body = ''
-        send_invite(ical_file, event, html_body, account)
+        send_invite(ical_file, event, account, invite_type='update')
 
 
 def delete_event(account_id, event_id, db_session, extra_args):

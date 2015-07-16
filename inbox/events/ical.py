@@ -413,7 +413,8 @@ def import_attached_events(db_session, account, message):
         # ourselves.
         # - karim
         if account.provider != 'gmail':
-            process_nylas_rsvps(db_session, message, account, new_events['rsvps'])
+            process_nylas_rsvps(db_session, message, account,
+                                new_events['rsvps'])
 
 
 def generate_icalendar_invite(event, invite_type='request'):
@@ -422,7 +423,12 @@ def generate_icalendar_invite(event, invite_type='request'):
 
     cal = iCalendar()
     cal.add('PRODID', '-//Nylas sync engine//nylas.com//')
-    cal.add('METHOD', invite_type.upper())
+
+    if invite_type in ['request', 'update']:
+        cal.add('METHOD', 'REQUEST')
+    elif invite_type == 'cancel':
+        cal.add('METHOD', 'CANCEL')
+
     cal.add('VERSION', '2.0')
     cal.add('CALSCALE', 'GREGORIAN')
 
@@ -444,15 +450,15 @@ def generate_icalendar_invite(event, invite_type='request'):
         icalendar_event['status'] = 'CONFIRMED'
 
     icalendar_event['uid'] = "{}@nylas.com".format(event.public_id)
+    icalendar_event['description'] = event.description or ''
+    icalendar_event['summary'] = event.title or ''
     icalendar_event['last-modified'] = serialize_datetime(event.updated_at)
     icalendar_event['dtstamp'] = icalendar_event['last-modified']
     icalendar_event['created'] = serialize_datetime(event.created_at)
     icalendar_event['dtstart'] = serialize_datetime(event.start)
     icalendar_event['dtend'] = serialize_datetime(event.end)
     icalendar_event['transp'] = 'OPAQUE' if event.busy else 'TRANSPARENT'
-    icalendar_event['description'] = event.description or ''
     icalendar_event['location'] = event.location or ''
-    icalendar_event['summary'] = event.title or ''
 
     attendees = []
     for participant in event.participants:
@@ -482,12 +488,10 @@ def generate_icalendar_invite(event, invite_type='request'):
     return cal
 
 
-def generate_invite_message(ical_txt, event, html_body, account,
-                            invite_type='request'):
+def generate_invite_message(ical_txt, event, account, invite_type='request'):
+    assert invite_type in ['request', 'update', 'cancel']
 
-    assert invite_type in ['request', 'cancel']
-
-    html_body = ""
+    html_body = event.description
 
     text_body = html2text(html_body)
     msg = mime.create.multipart('mixed')
@@ -501,7 +505,7 @@ def generate_invite_message(ical_txt, event, html_body, account,
     # attachment to make sure it makes it through. Luckily, Gmail is smart
     # enough to cancel the event anyway.
     # - karim
-    if invite_type == 'request':
+    if invite_type in ['request', 'update']:
         body.append(
             mime.create.text('plain', text_body),
             mime.create.text('html', html_body),
@@ -528,13 +532,15 @@ def generate_invite_message(ical_txt, event, html_body, account,
 
     if invite_type == 'request':
         msg.headers['Subject'] = "Invitation: {}".format(event.title)
+    elif invite_type == 'update':
+        msg.headers['Subject'] = "Updated Invitation: {}".format(event.title)
     elif invite_type == 'cancel':
         msg.headers['Subject'] = "Cancelled: {}".format(event.title)
 
     return msg
 
 
-def send_invite(ical_txt, event, html_body, account, invite_type='request'):
+def send_invite(ical_txt, event, account, invite_type='request'):
     from inbox.sendmail.base import get_sendmail_client, SendMailException
 
     for participant in event.participants:
@@ -542,8 +548,7 @@ def send_invite(ical_txt, event, html_body, account, invite_type='request'):
         if email is None:
             continue
 
-        msg = generate_invite_message(ical_txt, event, html_body, account,
-                                      invite_type)
+        msg = generate_invite_message(ical_txt, event, account, invite_type)
         msg.headers['To'] = email
         final_message = msg.to_string()
 
@@ -555,7 +560,7 @@ def send_invite(ical_txt, event, html_body, account, invite_type='request'):
                       event_id=event.id, account_id=account.id,
                       logstash_tag='invite_sending', exception=str(e))
 
-        if account.provider == 'eas' and invite_type == 'request':
+        if account.provider == 'eas' and invite_type in ['request', 'update']:
             # Exchange very surprisingly goes out of the way to send an invite
             # to all participants.
             # We only do this for invites and not cancelled because of the
