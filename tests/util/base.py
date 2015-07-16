@@ -314,6 +314,19 @@ class ContactsProviderStub(object):
         return self._contacts
 
 
+def new_api_client(db, namespace):
+    from inbox.api.srv import app
+    app.config['TESTING'] = True
+    with app.test_client() as c:
+        return TestAPIClient(c, namespace.public_id)
+
+
+def add_fake_folder(db, default_account):
+    from inbox.models.folder import Folder
+    return Folder.find_or_create(db.session, default_account,
+                                 'All Mail', 'all')
+
+
 def add_fake_account(db_session, email_address='test@nilas.com'):
     from inbox.models import Account, Namespace
     namespace = Namespace()

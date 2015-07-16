@@ -38,6 +38,7 @@ from inbox.sendmail.base import (create_draft, update_draft, delete_draft,
 from inbox.log import get_logger
 from inbox.models.action_log import schedule_action
 from inbox.models.session import InboxSession, session_scope
+from inbox.search.base import get_search_client
 from inbox.search.adaptor import NamespaceSearchEngine, SearchEngineError
 from inbox.transactions import delta_sync
 from inbox.api.err import (err, APIException, NotFoundError, InputError)
@@ -188,26 +189,37 @@ def thread_query_api():
     return encoder.jsonify(threads)
 
 
-@app.route('/threads/search', methods=['POST'])
+@app.route('/threads/search', methods=['GET', 'POST'])
 def thread_search_api():
+    g.parser.add_argument('q', type=bounded_str, location='args')
     args = strict_parse_args(g.parser, request.args)
-    data = request.get_json(force=True)
+    if request.method == 'GET':
+        if not args['q']:
+            err_string = ('GET HTTP method must include query'
+                          ' url parameter')
+            g.log.error(err_string)
+            return err(400, err_string)
 
-    query = data.get('query')
-    validate_search_query(query)
+        search_client = get_search_client(g.namespace.account)
+        results = search_client.search_threads(g.db_session, args['q'])
+    else:
+        data = request.get_json(force=True)
 
-    sort = data.get('sort')
-    validate_search_sort(sort)
+        query = data.get('query')
+        validate_search_query(query)
 
-    try:
-        search_engine = NamespaceSearchEngine(g.namespace_public_id)
-        results = search_engine.threads.search(query=query,
-                                               sort=sort,
-                                               max_results=args.limit,
-                                               offset=args.offset)
-    except SearchEngineError as e:
-        g.log.error('Search error: {0}'.format(e))
-        return err(501, 'Search error')
+        sort = data.get('sort')
+        validate_search_sort(sort)
+
+        try:
+            search_engine = NamespaceSearchEngine(g.namespace_public_id)
+            results = search_engine.threads.search(query=query,
+                                                   sort=sort,
+                                                   max_results=args.limit,
+                                                   offset=args.offset)
+        except SearchEngineError as e:
+            g.log.error('Search error: {0}'.format(e))
+            return err(501, 'Search error')
 
     return g.encoder.jsonify(results)
 
@@ -313,26 +325,36 @@ def message_query_api():
     return encoder.jsonify(messages)
 
 
-@app.route('/messages/search', methods=['POST'])
+@app.route('/messages/search', methods=['GET', 'POST'])
 def message_search_api():
+    g.parser.add_argument('q', type=bounded_str, location='args')
     args = strict_parse_args(g.parser, request.args)
-    data = request.get_json(force=True)
-    query = data.get('query')
+    if request.method == 'GET':
+        if not args['q']:
+            err_string = ('GET HTTP method must include query'
+                          ' url parameter')
+            g.log.error(err_string)
+            return err(400, err_string)
 
-    validate_search_query(query)
+        search_client = get_search_client(g.namespace.account)
+        results = search_client.search_messages(g.db_session, args['q'])
+    else:
+        data = request.get_json(force=True)
+        query = data.get('query')
 
-    sort = data.get('sort')
-    validate_search_sort(sort)
+        validate_search_query(query)
 
-    try:
-        search_engine = NamespaceSearchEngine(g.namespace_public_id)
-        results = search_engine.messages.search(query=query,
-                                                sort=sort,
-                                                max_results=args.limit,
-                                                offset=args.offset)
-    except SearchEngineError as e:
-        g.log.error('Search error: {0}'.format(e))
-        return err(501, 'Search error')
+        sort = data.get('sort')
+        validate_search_sort(sort)
+        try:
+            search_engine = NamespaceSearchEngine(g.namespace_public_id)
+            results = search_engine.messages.search(query=query,
+                                                    sort=sort,
+                                                    max_results=args.limit,
+                                                    offset=args.offset)
+        except SearchEngineError as e:
+            g.log.error('Search error: {0}'.format(e))
+            return err(501, 'Search error')
 
     return g.encoder.jsonify(results)
 
@@ -513,7 +535,7 @@ def tag_query_api():
 # Contacts
 ##
 @app.route('/contacts/', methods=['GET'])
-def contact_search_api():
+def contact_api():
     g.parser.add_argument('filter', type=bounded_str, default='',
                           location='args')
     g.parser.add_argument('view', type=bounded_str, location='args')
@@ -553,7 +575,7 @@ def contact_read_api(public_id):
 # Events
 ##
 @app.route('/events/', methods=['GET'])
-def event_search_api():
+def event_api():
     g.parser.add_argument('event_id', type=valid_public_id, location='args')
     g.parser.add_argument('calendar_id', type=valid_public_id, location='args')
     g.parser.add_argument('title', type=bounded_str, location='args')
@@ -893,7 +915,7 @@ def file_download_api(public_id):
 # Calendars
 ##
 @app.route('/calendars/', methods=['GET'])
-def calendar_search_api():
+def calendar_api():
     g.parser.add_argument('view', type=view, location='args')
 
     args = strict_parse_args(g.parser, request.args)
