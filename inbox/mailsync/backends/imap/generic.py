@@ -267,12 +267,12 @@ class FolderSyncEngine(Greenlet):
         self.state = saved_folder_status.state
 
     def _report_initial_sync_start(self):
-        with mailsync_session_scope as db_session:
+        with mailsync_session_scope() as db_session:
             q = db_session.query(Folder).get(self.folder_id)
             q.initial_sync_start = datetime.utcnow()
 
     def _report_initial_sync_end(self):
-        with mailsync_session_scope as db_session:
+        with mailsync_session_scope() as db_session:
             q = db_session.query(Folder).get(self.folder_id)
             q.initial_sync_end = datetime.utcnow()
 
