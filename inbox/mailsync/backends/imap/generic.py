@@ -466,6 +466,16 @@ class FolderSyncEngine(Greenlet):
             with db_session.no_autoflush:
                 import_attached_events(db_session, acct, new_uid.message)
 
+        # If we're in the polling state, then we want to report the metric
+        # for latency when the message was received vs created
+        if self.state == 'poll':
+            latency_millis = (
+                new_uid.message.created_at - new_uid.message.received_date) \
+                .total_seconds() * 1000
+            statsd_client.timing(
+                '.'.join(['accounts', str(acct.id), 'message_latency']),
+                latency_millis)
+
         return new_uid
 
     def _count_thread_messages(self, thread_id, db_session):
@@ -620,10 +630,6 @@ def uidvalidity_cb(account_id, folder_name, select_info):
 def report_progress(account_id, folder_name, downloaded_uid_count,
                     num_remaining_messages):
     """ Inform listeners of sync progress. """
-    statsd_client.incr(
-        ".".join(["accounts", str(account_id), "messages_downloaded"]),
-        downloaded_uid_count)
-
     with mailsync_session_scope() as db_session:
         saved_status = db_session.query(ImapFolderSyncStatus).join(Folder)\
             .filter(
@@ -640,3 +646,7 @@ def report_progress(account_id, folder_name, downloaded_uid_count,
 
         saved_status.update_metrics(metrics)
         db_session.commit()
+
+    statsd_client.gauge(
+        ".".join(["accounts", str(account_id), "messages_downloaded"]),
+        metrics.get("num_downloaded_since_timestamp"))
