@@ -473,6 +473,9 @@ class FolderSyncEngine(Greenlet):
                 datetime.utcnow() - new_uid.message.received_date) \
                 .total_seconds() * 1000
             statsd_client.timing(
+                '.'.join(['accounts', 'overall', 'message_latency']),
+                latency_millis)
+            statsd_client.timing(
                 '.'.join(['accounts', str(acct.id), 'message_latency']),
                 latency_millis)
 
