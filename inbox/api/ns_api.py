@@ -15,6 +15,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from inbox.models import (Message, Block, Part, Thread, Namespace,
                           Contact, Calendar, Event, Transaction,
                           DataProcessingCache, Category)
+from inbox.models.event import RecurringEvent, RecurringEventOverride
 from inbox.api.sending import send_draft, send_raw_mime
 from inbox.api.update import update_message, update_thread
 from inbox.api.kellogs import APIEncoder
@@ -678,6 +679,9 @@ def event_update_api(public_id):
         raise NotFoundError("Couldn't find event {0}".format(public_id))
     if event.read_only:
         raise InputError('Cannot update read_only event.')
+    if (isinstance(event, RecurringEvent) or
+            isinstance(event, RecurringEventOverride)):
+        raise InputError('Cannot update a recurring event yet.')
 
     data = request.get_json(force=True)
     valid_event_update(data, g.namespace, g.db_session)
