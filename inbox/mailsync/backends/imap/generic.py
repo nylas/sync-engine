@@ -470,7 +470,7 @@ class FolderSyncEngine(Greenlet):
         # for latency when the message was received vs created
         if self.state == 'poll':
             latency_millis = (
-                new_uid.message.created_at - new_uid.message.received_date) \
+                datetime.utcnow() - new_uid.message.received_date) \
                 .total_seconds() * 1000
             statsd_client.timing(
                 '.'.join(['accounts', str(acct.id), 'message_latency']),
