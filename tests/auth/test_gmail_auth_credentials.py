@@ -325,6 +325,8 @@ def test_g_token_manager(
             ACCESS_TOKEN)
     assert (g_token_manager.get_token(account, GOOGLE_CALENDAR_SCOPE) ==
             ACCESS_TOKEN)
+    for auth_creds in account.auth_credentials:
+        assert auth_creds.is_valid
 
     # existing account w/ multiple credentials: some valid
     patch_access_token_getter.revoke_refresh_token(refresh_token1)
@@ -349,6 +351,9 @@ def test_g_token_manager(
         g_token_manager.get_token(account, GOOGLE_CALENDAR_SCOPE)
     with pytest.raises(OAuthError):
         g_token_manager.get_token(account, GOOGLE_CONTACTS_SCOPE)
+    db.session.refresh(account)
+    for auth_creds in account.auth_credentials:
+        assert not auth_creds.is_valid
 
     # existing account w/ one credential
     account = account_with_single_auth_creds
@@ -376,3 +381,5 @@ def test_new_token_with_non_oauth_error(
 
     with pytest.raises(ConnectionError):
         g_token_manager.get_token(account, GOOGLE_EMAIL_SCOPE)
+    db.session.refresh(account)
+    assert len(account.valid_auth_credentials) == 1

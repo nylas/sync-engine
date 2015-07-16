@@ -91,7 +91,6 @@ class GmailAuthHandler(OAuthAuthHandler):
                 # a refresh (or the ones we have don't work.)
                 raise OAuthError("No valid refresh tokens")
 
-        account.scope = response.get('scope')
         account.email_address = email_address
         account.family_name = response.get('family_name')
         account.given_name = response.get('given_name')
@@ -99,25 +98,29 @@ class GmailAuthHandler(OAuthAuthHandler):
         account.gender = response.get('gender')
         account.g_id = response.get('id')
         account.g_user_id = response.get('user_id')
-        account.g_id_token = response.get('id_token')
         account.link = response.get('link')
         account.locale = response.get('locale')
         account.picture = response.get('picture')
         account.home_domain = response.get('hd')
-        account.client_id = response.get('client_id')
-        account.client_secret = response.get('client_secret')
         account.sync_contacts = (account.sync_contacts or
                                  response.get('contacts', True))
         account.sync_events = (account.sync_events or
                                response.get('events', True))
 
-        # TODO: if these are None, use default? Maybe not?
-        client_id = response.get('client_id')
-        client_secret = response.get('client_secret')
+        # These values are deprecated and should not be used, along
+        # with the account's refresh_token. Access all these values
+        # through the GmailAuthCredentials objects instead.
+        account.client_id = response.get('client_id')
+        account.client_secret = response.get('client_secret')
+        account.scope = response.get('scope')
+        account.g_id_token = response.get('id_token')
 
         # Don't need to actually save these now
         # tok = response.get('access_token')
         # expires_in = response.get('expires_in')
+
+        client_id = response.get('client_id') or OAUTH_CLIENT_ID
+        client_secret = response.get('client_secret') or OAUTH_CLIENT_SECRET
 
         if new_refresh_token:
             # See if we already have credentials for this client_id/secret
@@ -131,8 +134,8 @@ class GmailAuthHandler(OAuthAuthHandler):
             auth_creds.gmailaccount = account
             auth_creds.scopes = response.get('scope')
             auth_creds.g_id_token = response.get('id_token')
-            auth_creds.client_id = response.get('client_id')
-            auth_creds.client_secret = response.get('client_secret')
+            auth_creds.client_id = client_id
+            auth_creds.client_secret = client_secret
             auth_creds.refresh_token = new_refresh_token
             auth_creds.is_valid = True
 

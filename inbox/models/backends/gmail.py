@@ -3,9 +3,10 @@ from datetime import datetime, timedelta
 
 from sqlalchemy import Boolean, Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm.session import object_session
 from sqlalchemy.ext.hybrid import hybrid_property
 
-from inbox.basicauth import OAuthError
+from inbox.basicauth import ConnectionError, OAuthError
 from inbox.models.backends.imap import ImapAccount
 from inbox.models.backends.oauth import OAuthAccount
 from inbox.models.base import MailSyncBase
@@ -47,7 +48,16 @@ class GTokenManager(object):
             except KeyError:
                 pass
 
-        gtoken = account.new_token(scope)
+        # If we find invalid GmailAuthCredentials while trying to
+        # get a new token, we mark them as invalid. We want to make
+        # sure we commit those changes to the database before we
+        # actually throw an error.
+        try:
+            gtoken = account.new_token(scope)
+        except (ConnectionError, OAuthError):
+            object_session(account).commit()
+            raise
+
         self.cache_token(account, gtoken)
         return gtoken
 
@@ -231,15 +241,17 @@ class GmailAuthCredentials(MailSyncBase):
     """
 
     gmailaccount_id = Column(Integer,
-                             ForeignKey(GmailAccount.id, ondelete='CASCADE'))
+                             ForeignKey(GmailAccount.id, ondelete='CASCADE'),
+                             nullable=False)
     refresh_token_id = Column(Integer,
-                              ForeignKey(Secret.id, ondelete='CASCADE'))
+                              ForeignKey(Secret.id, ondelete='CASCADE'),
+                              nullable=False)
 
-    _scopes = Column('scopes', String(512))
-    g_id_token = Column(String(1024))
-    client_id = Column(String(256))
-    client_secret = Column(String(256))
-    is_valid = Column(Boolean, default=True)
+    _scopes = Column('scopes', String(512), nullable=False)
+    g_id_token = Column(String(1024), nullable=False)
+    client_id = Column(String(256), nullable=False)
+    client_secret = Column(String(256), nullable=False)
+    is_valid = Column(Boolean, default=True, nullable=False)
 
     gmailaccount = relationship(
         GmailAccount,
