@@ -2,6 +2,8 @@
 import json
 from inbox.models import Namespace
 from inbox.sqlalchemy_ext.util import generate_public_id
+from inbox.api.validation import noop_event_update
+from tests.util.base import db, api_client, calendar, add_fake_event
 
 
 def test_namespace_id_validation(api_client, db, default_namespace):
@@ -39,3 +41,48 @@ def test_account_validation(api_client, db, default_namespace):
 
     r = api_client.post_data('/drafts', draft)
     assert r.status_code == 403
+
+
+def test_noop_event_update(db, default_namespace, calendar):
+    event = add_fake_event(db.session, default_namespace.id,
+                           calendar=calendar,
+                           read_only=True)
+
+    event.title = 'Test event'
+    event.participants = [{'email': 'helena@nylas.com'},
+                          {'email': 'benb@nylas.com'}]
+
+    assert noop_event_update(event, {}) is True
+
+    update = {'title': 'Test event'}
+    assert noop_event_update(event, update) is True
+
+    update = {'title': 'Different'}
+    assert noop_event_update(event, update) is False
+
+    update = {'location': 'Different'}
+    assert noop_event_update(event, update) is False
+
+    update = {'description': 'Different'}
+    assert noop_event_update(event, update) is False
+
+    update = {'when': {'start_time': 123453453, 'end_time': 1231231}}
+    assert noop_event_update(event, update) is False
+
+    event.when = {'start_time': 123453453, 'end_time': 1231231}
+    update = {'when': {'start_time': 123453453, 'end_time': 1231231}}
+    assert noop_event_update(event, update) is True
+
+    update = {'participants': [{'email': 'benb@nylas.com'},
+                               {'email': 'helena@nylas.com'}]}
+    assert noop_event_update(event, update) is True
+
+    update = {'participants': [{'email': 'benb@nylas.com', 'status': 'yes'},
+                               {'email': 'helena@nylas.com'}]}
+    assert noop_event_update(event, update) is False
+
+    event.participants = [{'email': 'benb@nylas.com', 'status': 'yes'},
+                          {'email': 'helena@nylas.com'}]
+    update = {'participants': [{'email': 'benb@nylas.com', 'status': 'yes'},
+                               {'email': 'helena@nylas.com'}]}
+    assert noop_event_update(event, update) is True

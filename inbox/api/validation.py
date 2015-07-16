@@ -4,7 +4,7 @@ from arrow.parser import ParserError
 from flanker.addresslib import address
 from flask.ext.restful import reqparse
 from sqlalchemy.orm.exc import NoResultFound
-from inbox.models import Calendar, Thread, Block, Message, Category
+from inbox.models import Calendar, Thread, Block, Message, Category, Event
 from inbox.models.when import parse_as_when
 from inbox.models.constants import MAX_INDEXABLE_LENGTH
 from inbox.api.err import InputError, NotFoundError, ConflictError
@@ -246,6 +246,57 @@ def valid_event_update(event, namespace, db_session):
             if p['status'] not in ('yes', 'no', 'maybe', 'noreply'):
                 raise InputError("'participants' status must be one of: "
                                  "yes, no, maybe, noreply")
+
+
+def noop_event_update(event, data):
+    # Check whether the update is actually updating fields.
+    # We do this by cloning the event, updating the fields and
+    # comparing them. This is less cumbersome than having to think
+    # about the multiple values of the `when` field.
+    e = Event()
+    e.update(event)
+
+    for attr in ['title', 'description', 'location', 'when', 'participants']:
+        if attr in data:
+            setattr(e, attr, data[attr])
+
+    for attr in ['title', 'description', 'location']:
+        event_value = getattr(event, attr)
+        e_value = getattr(e, attr)
+        if event_value != e_value:
+            return False
+
+    for attr in ['start', 'end']:
+        # This code can get datetimes and Arrow datetimes
+        # so we convert everything to Arrow datetimes.
+        event_value = arrow.get(getattr(event, attr))
+        e_value = arrow.get(getattr(e, attr))
+        if event_value != e_value:
+            return False
+
+    e_participants = {p['email']: p for p in e.participants}
+    event_participants = {p['email']: p for p in event.participants}
+    if len(e_participants.keys()) != len(event_participants.keys()):
+        return False
+
+    for email in e_participants:
+        if email not in event_participants:
+            return False
+
+        p1 = e_participants[email]
+        p2 = event_participants[email]
+
+        p1_status = p1.get('status')
+        p2_status = p2.get('status')
+        if p1_status != p2_status:
+            return False
+
+        p1_comment = p1.get('comment')
+        p2_comment = p2.get('comment')
+        if p1_comment != p2_comment:
+            return False
+
+    return True
 
 
 def valid_delta_object_types(types_arg):
