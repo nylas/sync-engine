@@ -1,4 +1,5 @@
 import smtplib
+import mock
 from inbox.sendmail.smtp.postel import SMTPConnection
 from inbox.log import get_logger
 
@@ -6,6 +7,7 @@ from inbox.log import get_logger
 def test_use_smtp_over_ssl():
     # Auth won't actually work but we just want to test connection
     # initialization here and below.
+    SMTPConnection.smtp_password = mock.Mock()
     conn = SMTPConnection(account_id=1,
                           email_address='inboxapptest@gmail.com',
                           auth_type='password',
