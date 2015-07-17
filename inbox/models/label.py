@@ -44,31 +44,25 @@ class Label(MailSyncBase):
 
         if role is not None:
             q = q.filter(cls.canonical_name == role)
+        else:
+            # g_label may not have unicode type (in particular for a numeric
+            # label, e.g. '42'), so coerce to unicode.
+            name = unicode(name)
+            # Remove trailing whitespace, truncate (due to MySQL limitations).
+            name = name.rstrip()
+            if len(name) > MAX_LABEL_NAME_LENGTH:
+                log.warning("Truncating label name for account {}; "
+                            "original name was '{}'" .format(account.id, name))
+                name = name[:MAX_LABEL_NAME_LENGTH]
+            q = q.filter(cls.name == name)
 
-        # g_label may not have unicode type (in particular for a numeric
-        # label, e.g. '42'), so coerce to unicode.
-        name = unicode(name)
-        # Remove trailing whitespace, truncate (due to MySQL limitations).
-        name = name.rstrip()
-        if len(name) > MAX_LABEL_NAME_LENGTH:
-            log.warning("Truncating label name for account {}; "
-                        "original name was '{}'" .format(account.id, name))
-            name = name[:MAX_LABEL_NAME_LENGTH]
-        q = q.filter(cls.name == name)
-
-        try:
-            obj = q.one()
-        except NoResultFound:
+        obj = q.first()
+        if obj is None:
             obj = cls(account=account, name=name, canonical_name=role)
             obj.category = Category.find_or_create(
                 session, namespace_id=account.namespace.id, name=role,
                 display_name=name, type_='label')
             session.add(obj)
-        except MultipleResultsFound:
-            log.error('Duplicate label rows for name {}, account_id {}'
-                      .format(name, account.id))
-            raise
-
         return obj
 
     __table_args__ = \

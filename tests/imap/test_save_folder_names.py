@@ -85,6 +85,17 @@ def test_save_gmail_folder_names(db, default_account):
         ('[Gmail]/Spam', 'spam')
     }
 
+    # Casing on "Inbox" is different to make what we get from folder listing
+    # consistent with what we get in X-GM-LABELS during sync.
+    expected_saved_names_and_roles = {
+        ('Inbox', 'inbox'),
+        ('[Gmail]/All Mail', 'all'),
+        ('[Gmail]/Trash', 'trash'),
+        ('[Gmail]/Spam', 'spam'),
+        ('Miscellania', None),
+        ('Recipes', None),
+    }
+
     saved_label_data = set(
         db.session.query(Label.name, Label.canonical_name).filter(
             Label.account_id == default_account.id)
@@ -93,8 +104,8 @@ def test_save_gmail_folder_names(db, default_account):
         db.session.query(Category.display_name, Category.name).filter(
             Category.namespace_id == default_account.namespace.id)
     )
-    assert saved_label_data == folder_names_and_roles
-    assert saved_category_data == folder_names_and_roles
+    assert saved_label_data == expected_saved_names_and_roles
+    assert saved_category_data == expected_saved_names_and_roles
 
 
 def test_handle_trailing_whitespace(db, default_account):

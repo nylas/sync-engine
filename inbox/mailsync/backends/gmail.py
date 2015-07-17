@@ -94,8 +94,15 @@ class GmailSyncMonitor(ImapSyncMonitor):
 
         # Create new labels, folders
         for raw_folder in raw_folders:
-            Label.find_or_create(db_session, account, raw_folder.display_name,
-                                 raw_folder.role)
+            if raw_folder.role == 'inbox':
+                # Special-case the display name here. In Gmail, the inbox
+                # folder shows up in the folder list as 'INBOX', and in sync as
+                # the label '\\Inbox'. We're just always going to handle it
+                # like this:
+                Label.find_or_create(db_session, account, 'Inbox', 'inbox')
+            else:
+                Label.find_or_create(db_session, account,
+                                     raw_folder.display_name, raw_folder.role)
 
             if raw_folder.role in ('all', 'spam', 'trash'):
                 folder = Folder.find_or_create(db_session, account,
