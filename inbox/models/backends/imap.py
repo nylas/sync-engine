@@ -325,7 +325,7 @@ class ImapFolderSyncStatus(MailSyncBase, HasRunState):
                        nullable=False)
     # We almost always need the folder name too, so eager load by default.
     folder = relationship('Folder', lazy='joined', backref=backref(
-        'imapsyncstatus', passive_deletes=True))
+        'imapsyncstatus', uselist=False, passive_deletes=True))
 
     # see state machine in mailsync/backends/imap/imap.py
     state = Column(Enum('initial', 'initial uidinvalid',

@@ -103,12 +103,18 @@ class GmailSyncMonitor(ImapSyncMonitor):
                                                raw_folder.role)
                 if folder.name != raw_folder.display_name:
                     log.info('Folder name changed on remote',
-                             account_id=account_id,
+                             account_id=self.account_id,
                              role=raw_folder.role,
                              new_name=raw_folder.display_name,
                              name=folder.name)
                     folder.name = raw_folder.display_name
 
+        # Ensure sync_should_run is True for the folders we want to sync (for
+        # Gmail, that's just all folders, since we created them above if
+        # they didn't exist.)
+        for folder in account.folders:
+            if folder.imapsyncstatus:
+                folder.imapsyncstatus.sync_should_run = True
         db_session.commit()
 
 

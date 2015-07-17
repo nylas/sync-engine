@@ -124,11 +124,17 @@ class ImapSyncMonitor(BaseMailSyncMonitor):
             log.info('Folder deleted from remote', account_id=self.account_id,
                      name=name)
             db_session.delete(local_folders[name])
+            del local_folders[name]
 
         # Create new folders
         for raw_folder in raw_folders:
             Folder.find_or_create(db_session, account, raw_folder.display_name,
                                   raw_folder.role)
+        # Set the should_run bit for existing folders to True (it's True by
+        # default for new ones.)
+        for f in local_folders.values():
+            if f.imapsyncstatus:
+                f.imapsyncstatus.sync_should_run = True
 
         db_session.commit()
 
