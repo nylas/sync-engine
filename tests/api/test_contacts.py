@@ -1,3 +1,4 @@
+from inbox.models import Contact
 from tests.util.base import (contact_sync, contacts_provider,
                              api_client)
 
@@ -23,6 +24,10 @@ def test_api_list(contacts_provider, contact_sync, db, api_client,
     contact_emails = [contact['email'] for contact in contact_list]
     assert 'contact.one@email.address' in contact_emails
     assert 'contact.two@email.address' in contact_emails
+
+    contact_count = api_client.get_data('/contacts?view=count')
+    assert contact_count['count'] == db.session.query(Contact). \
+        filter(Contact.namespace_id == default_namespace.id).count()
 
 
 def test_api_get(contacts_provider, contact_sync, db, api_client,

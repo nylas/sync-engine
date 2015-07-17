@@ -555,7 +555,7 @@ def contact_api():
     results = results.order_by(asc(Contact.id))
 
     if args['view'] == 'count':
-        return g.encoder.jsonify({"count": results.all()})
+        return g.encoder.jsonify({"count": results.scalar()})
 
     results = results.limit(args['limit']).offset(args['offset']).all()
     return g.encoder.jsonify(results)
