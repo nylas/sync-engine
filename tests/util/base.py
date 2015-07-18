@@ -458,6 +458,25 @@ def folder(db, default_account):
 
 
 @fixture
+def label(db, default_account):
+    from inbox.models import Label
+    return Label.find_or_create(db.session, default_account,
+                                 'Inbox', 'inbox')
+
+
+@fixture
+def contact(db, default_account):
+    from inbox.models import Contact
+    contact = Contact(namespace_id=default_account.namespace.id,
+                      name='Ben Bitdiddle',
+                      email_address='inboxapptest@gmail.com',
+                      uid='22')
+    db.session.add(contact)
+    db.session.commit()
+    return contact
+
+
+@fixture
 def imapuid(db, default_account, message, folder):
     return add_fake_imapuid(db.session, default_account.id, message,
                             folder, 2222)

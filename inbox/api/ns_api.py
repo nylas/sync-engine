@@ -431,9 +431,25 @@ def raw_message_api(public_id):
 @app.route('/folders')
 @app.route('/labels')
 def folders_labels_query_api():
-    categories = g.db_session.query(Category).filter(
-        Category.namespace_id == g.namespace.id).all()
-    return g.encoder.jsonify(categories)
+    g.parser.add_argument('view', type=bounded_str, location='args')
+    args = strict_parse_args(g.parser, request.args)
+    if args['view'] == 'count':
+        results = g.db_session.query(func.count(Category.id))
+    elif args['view'] == 'ids':
+        results = g.db_session.query(Category.public_id)
+    else:
+        results = g.db_session.query(Category)
+
+    results = results.filter(Category.namespace_id == g.namespace.id)
+    results = results.order_by(asc(Category.id))
+
+    if args['view'] == 'count':
+        return g.encoder.jsonify({"count": results.scalar()})
+
+    results = results.limit(args['limit']).offset(args['offset']).all()
+    if args['view'] == 'ids':
+        return g.encoder.jsonify([r for r, in results])
+    return g.encoder.jsonify(results)
 
 
 @app.route('/folders/<public_id>')
@@ -544,7 +560,7 @@ def contact_api():
     if args['view'] == 'count':
         results = g.db_session.query(func.count(Contact.id))
     elif args['view'] == 'ids':
-        results = g.db_session.query(Contact.id)
+        results = g.db_session.query(Contact.public_id)
     else:
         results = g.db_session.query(Contact)
 
@@ -558,6 +574,9 @@ def contact_api():
         return g.encoder.jsonify({"count": results.scalar()})
 
     results = results.limit(args['limit']).offset(args['offset']).all()
+    if args['view'] == 'ids':
+        return g.encoder.jsonify([r for r, in results])
+
     return g.encoder.jsonify(results)
 
 
@@ -919,22 +938,22 @@ def calendar_api():
     g.parser.add_argument('view', type=view, location='args')
 
     args = strict_parse_args(g.parser, request.args)
-    if view == 'count':
+    if args['view'] == 'count':
         query = g.db_session.query(func.count(Calendar.id))
-    elif view == 'ids':
-        query = g.db_session.query(Calendar.id)
+    elif args['view'] == 'ids':
+        query = g.db_session.query(Calendar.public_id)
     else:
         query = g.db_session.query(Calendar)
 
     results = query.filter(Calendar.namespace_id == g.namespace.id). \
         order_by(asc(Calendar.id))
 
-    if view == 'count':
-        return g.encoder.jsonify({"count": results.one()[0]})
+    if args['view'] == 'count':
+        return g.encoder.jsonify({"count": results.scalar()})
 
-    results = results.limit(args['limit'])
-
-    results = results.offset(args['offset']).all()
+    results = results.limit(args['limit']).offset(args['offset']).all()
+    if args['view'] == 'ids':
+        return g.encoder.jsonify([r for r, in results])
 
     return g.encoder.jsonify(results)
 
