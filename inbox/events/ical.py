@@ -369,14 +369,15 @@ def import_attached_events(db_session, account, message):
     """Import events from a file into the 'Emailed events' calendar."""
 
     assert account is not None
-    from_addr = message.from_addr[0][1]
-
     # FIXME @karim - Don't import iCalendar events from messages we've sent.
+
     # This is only a stopgap measure -- what we need to have instead is
     # smarter event merging (i.e: looking at whether the sender is the
     # event organizer or not, and if the sequence number got incremented).
-    if from_addr == account.email_address:
-        return
+    if message.from_addr:
+        from_addr = message.from_addr[0][1]
+        if from_addr == account.email_address:
+            return
 
     for part in message.attached_event_files:
         try:
