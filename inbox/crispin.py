@@ -875,7 +875,12 @@ class GmailCrispinClient(CondStoreCrispinClient):
         if '\\All' in flags:
             role = 'all'
         elif display_name.lower() == 'inbox':
+            # Special-case the display name here. In Gmail, the inbox
+            # folder shows up in the folder list as 'INBOX', and in sync as
+            # the label '\\Inbox'. We're just always going to give it the
+            # display name 'Inbox'.
             role = 'inbox'
+            display_name = 'Inbox'
         else:
             for flag in flags:
                 if flag in flag_map:

@@ -54,7 +54,7 @@ def set_labels_for_imapuids(account, db_session):
         log.info('Updated UID labels', account_id=account.id, uid=uid.id)
 
 
-def create_categories_for_folders(account, db_session):
+def create_categories_for_imap_folders(account, db_session):
     for folder in db_session.query(Folder).filter(
             Folder.account_id == account.id):
         cat = Category.find_or_create(
@@ -62,6 +62,20 @@ def create_categories_for_folders(account, db_session):
             name=folder.canonical_name, display_name=folder.name,
             type_='folder')
         folder.category = cat
+    db_session.commit()
+
+
+def create_categories_for_gmail_folders(account, db_session):
+    for folder in db_session.query(Folder).filter(
+            Folder.account_id == account.id):
+        if folder.canonical_name in ('all', 'spam', 'trash'):
+            cat = Category.find_or_create(
+                db_session, namespace_id=account.namespace.id,
+                name=folder.canonical_name, display_name=folder.name,
+                type_='folder')
+            folder.category = cat
+        Label.find_or_create(db_session, account, folder.name,
+                             folder.canonical_name)
     db_session.commit()
 
 
@@ -77,8 +91,10 @@ def migrate_account_metadata(account_id):
         account = db_session.query(Account).get(account_id)
         if account.discriminator == 'easaccount':
             create_categories_for_easfoldersyncstatuses(account, db_session)
+        elif account.discriminator == 'gmailaccount':
+            create_categories_for_gmail_folders(account, db_session)
         else:
-            create_categories_for_folders(account, db_session)
+            create_categories_for_imap_folders(account, db_session)
         if account.discriminator == 'gmailaccount':
             set_labels_for_imapuids(account, db_session)
         db_session.commit()
