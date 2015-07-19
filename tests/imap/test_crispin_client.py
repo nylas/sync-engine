@@ -243,7 +243,7 @@ def test_gmail_folders(monkeypatch):
 
     role_map = {
         '[Gmail]/All Mail': 'all',
-        'INBOX': 'inbox',
+        'Inbox': 'inbox',
         '[Gmail]/Trash': 'trash',
         '[Gmail]/Spam': 'spam',
         '[Gmail]/Drafts': 'drafts',

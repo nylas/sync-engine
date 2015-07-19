@@ -65,7 +65,7 @@ def test_handle_folder_deletions(db, default_account):
 def test_save_gmail_folder_names(db, default_account):
     monitor = GmailSyncMonitor(default_account)
     folder_names_and_roles = {
-        ('INBOX', 'inbox'),
+        ('Inbox', 'inbox'),
         ('[Gmail]/All Mail', 'all'),
         ('[Gmail]/Trash', 'trash'),
         ('[Gmail]/Spam', 'spam'),
