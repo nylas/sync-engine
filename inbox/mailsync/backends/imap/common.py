@@ -82,12 +82,17 @@ def remove_deleted_uids(account_id, session, uids, folder_id):
             session.delete(uid)
         session.commit()
 
-        # Don't outright delete messages. Just mark them as 'deleted' and wait
-        # for the asynchronous dangling-message-collector to delete them.
         for message in affected_messages:
-            message.update_metadata(message.is_draft)
-            if not message.imapuids:
-                message.mark_for_deletion()
+            if not message.imapuids and message.is_draft:
+                # Synchronously delete drafts.
+                session.delete(message)
+            else:
+                message.update_metadata(message.is_draft)
+                if not message.imapuids:
+                    # But don't outright delete messages. Just mark them as
+                    # 'deleted' and wait for the asynchronous
+                    # dangling-message-collector to delete them.
+                    message.mark_for_deletion()
 
         session.commit()
 
