@@ -98,6 +98,7 @@ class SyncbackService(gevent.Greenlet):
                                         action_log_id=log_entry.id,
                                         record_id=log_entry.record_id,
                                         account_id=namespace.account_id,
+                                        provider=namespace.account.provider,
                                         retry_interval=self.retry_interval,
                                         extra_args=log_entry.extra_args)
                 self.workers.add(worker)
@@ -135,28 +136,30 @@ class SyncbackWorker(gevent.Greenlet):
 
     """
     def __init__(self, action_name, semaphore, action_log_id, record_id,
-                 account_id, retry_interval=30, extra_args=None):
+                 account_id, provider, retry_interval=30, extra_args=None):
         self.action_name = action_name
         self.semaphore = semaphore
         self.func = ACTION_FUNCTION_MAP[action_name]
         self.action_log_id = action_log_id
         self.record_id = record_id
         self.account_id = account_id
+        self.provider = provider
         self.extra_args = extra_args
         self.retry_interval = retry_interval
         gevent.Greenlet.__init__(self)
 
-
     def _log_to_statsd(self, action_log_status, latency=None):
         metric_names = [
             "syncback.overall.{}".format(action_log_status),
-            "syncback.accounts.{}.{}".format(self.account_id, action_log_status)
+            "syncback.accounts.{}.{}".format(self.account_id,
+                                             action_log_status),
+            "syncback.providers.{}.{}".format(self.provider, action_log_status)
         ]
 
         for metric in metric_names:
             statsd_client.incr(metric)
             if latency:
-                statsd_client.timing(metric, latency)
+                statsd_client.timing(metric, latency * 1000)
 
     def _run(self):
         with self.semaphore:
