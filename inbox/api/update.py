@@ -76,13 +76,14 @@ def update_thread(thread, request_data, db_session):
     # -- End tags API shim
 
     if accept_labels:
-        new_labels = labels - set(thread.categories)
-        removed_labels = set(thread.categories) - labels
+        if labels is not None:
+            new_labels = labels - set(thread.categories)
+            removed_labels = set(thread.categories) - labels
 
-        for message in thread.messages:
-            if not message.is_draft:
-                update_message_labels(message, db_session, new_labels,
-                                      removed_labels)
+            for message in thread.messages:
+                if not message.is_draft:
+                    update_message_labels(message, db_session, new_labels,
+                                          removed_labels)
 
     elif folder is not None:
         for message in thread.messages:
