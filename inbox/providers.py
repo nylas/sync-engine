@@ -478,7 +478,7 @@ get_default_providers = lambda: {
 	"imap":("imap.aliyun.com", 993),
 	"smtp":("smtp.aliyun.com", 465),
 	"auth":"password",
-	"domains":"password",
+	"domains":"aliyun",
 	"mx_servers":["mx2.mail.aliyun.com"]
     },
     "139":{
